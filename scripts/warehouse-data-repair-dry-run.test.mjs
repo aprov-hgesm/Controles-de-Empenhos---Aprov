@@ -143,7 +143,8 @@ test('prova mecanismo de OUTBOUND sem lotId quando excesso fecha por posição',
 
   assert.equal(materialB.lotExcess, 10);
   assert.equal(materialB.netNoLotOutbound, 10);
-  assert.equal(materialB.causeProven, true);
+  assert.equal(materialB.noLotQuantityMatch, true);
+  assert.equal(materialB.causeProven, false);
   assert.equal(materialB.repairDeterministic, false);
   assert.equal(materialB.repairCandidates.length, 0);
   assert.equal(materialB.duplicateLotGroups.length, 1);
