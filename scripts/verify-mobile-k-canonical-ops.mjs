@@ -48,12 +48,16 @@ assert.match(adapter, /Compatibility adapter/);
 
 const transferUi = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
 assert.match(transferUi, /transferWarehouseStock/);
+assert.match(transferUi, /technicalOperationCode/);
 assert.doesNotMatch(transferUi, /listWarehouseMobileTransferLotsCritical/);
 assert.doesNotMatch(transferUi, /lotAllocations\s*:/);
 assert.doesNotMatch(transferUi, /relocateLotIds\s*:/);
 
 const outboundUi = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
 assert.match(outboundUi, /finalizeWarehouseMaterialWithdrawal/);
+assert.match(outboundUi, /Saída confirmada\. A atualização visual dos saldos falhou/);
+assert.match(outboundUi, /Replay idempotente confirmou que a saída já estava finalizada/);
+assert.match(outboundUi, /technicalConfirmationCode/);
 assert.match(outboundUi, /createWarehouseWithdrawalId/);
 assert.match(outboundUi, /createWarehouseWithdrawalLineId/);
 assert.match(outboundUi, /listWarehouseDestinationsCached/);
