@@ -150,8 +150,7 @@ function ensureGcloud(explicitCommand) {
     'gcloud',
   ].filter(Boolean);
   for (const candidate of [...new Set(candidates.map(String))]) {
-    if (/[
-]/.test(candidate)) continue;
+    if (/[\r\n]/.test(candidate)) continue;
     const result = spawnGcloud(candidate, ['--version']);
     if (!result.error && result.status === 0) {
       gcloudCommand = candidate;
