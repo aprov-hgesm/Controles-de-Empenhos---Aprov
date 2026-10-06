@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — WAREHOUSE-DATA-REPAIR-FORENSICS-01 concluiu a investigação causal em `c1fa1d914990fbe126eaeb81889c6016dd84e7b0` com `PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO`. Leitura viva v2: 3.057 reads, nenhum cap. Material `mat_272f...`: lote `lot_670e1ca...` de `MANUAL_ENRICHMENT` introduziu +100 sobre o físico; repair proposto 440→340. Material `mat_6feb...`: OUTBOUND sem `lotId` deixou +10 no lote `lot_082eb...`; repair proposto 50→40. Nenhum repair foi executado. Program Control criou `warehouse-data-repair-execution-01@c1fa1d9...` apenas como branch preparatória; qualquer escrita real continua bloqueada até autorização explícita, reexecução do dry-run, reconfirmação de backup/PITR e precondições imutáveis. As três frentes SaaS pré-piloto seguem independentes e sem produção.**
+Última sincronização global: **2026-10-05/06 — WAREHOUSE-DATA-REPAIR-EXECUTION-01 executou com autorização explícita o repair real dos dois blockers quantitativos de lotes. Dry-run pré-write PASS, PITR e delete protection ativos, backup Warehouse READY `84e64064...`, precondições transacionais PASS e commit Firestore concluído em `2026-10-06T01:14:32.083411Z`. Os únicos writes foram `lot_670e1ca... quantity 440→340` e `lot_082eb... quantity 50→40`. A validação imediata fechou ambos com `lotExcess=0`; auditoria global pós-repair retornou 56 materiais, 0 inconsistências, 0 performance risks e apenas reconciliações controladas remanescentes. O antigo aviso `PAL01_KNOWN_CASE_NOT_IDENTIFIED` foi identificado como falso positivo do auditor pós-repair e corrigido em `warehouse-data-repair-execution-01`. O blocker quantitativo Warehouse foi removido; produção do app e Rules permanecem inalteradas.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -117,7 +117,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **PASS / ENCERRADA TECNICAMENTE** | `warehouse-data-repair-forensics-01@c1fa1d9...`; causa comprovada nos 2 blockers, dry-run determinístico e manifesto prontos; nenhum dado escrito |
-| WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **AUTORIZADA PELO FUNDADOR / AGUARDA EXECUÇÃO CONTROLADA** | `warehouse-data-repair-execution-01@c1fa1d9...`; autorização explícita concedida em 2026-10-05 para alterar somente os 2 documentos causalmente comprovados, após revalidar dry-run + backup/PITR + todas as precondições |
+| WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PASS / REPAIR EXECUTADO E REVALIDADO** | `warehouse-data-repair-execution-01@e3f3aae...`; commit Firestore `2026-10-06T01:14:32.083411Z`; 2 writes allowlisted; pós-repair com 0 inconsistências e lotExcess=0 nos dois materiais |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -181,8 +181,8 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
 6. `WAREHOUSE-INTEGRITY-RECONCILE-01` — **CONCLUÍDA**: auditoria global confirmou dois blockers quantitativos de lotes e três reconciliações adicionais;
 7. `WAREHOUSE-DATA-REPAIR-FORENSICS-01` — **PASS / ENCERRADA**: causa histórica dos dois blockers comprovada, documentos exatos identificados e repair determinístico preparado;
-8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — **AUTORIZADA PELO FUNDADOR** para repair real estritamente limitado aos dois lotes comprovados; antes de qualquer escrita, repetir dry-run, confirmar backup/PITR READY e abortar diante de qualquer precondição divergente;
-9. após repair autorizado e verificado, repetir auditoria global read-only e confirmar desaparecimento dos blockers sem criar novas inconsistências;
+8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — **PASS / EXECUTADA**: dry-run, recovery e precondições PASS; dois writes allowlisted aplicados atomicamente; validação pós-repair PASS;
+9. auditoria global pós-repair — **0 inconsistências / blocker quantitativo eliminado**; reexecutar uma vez o auditor atualizado para remover o falso positivo histórico `PAL01_KNOWN_CASE_NOT_IDENTIFIED` e consolidar as 3 reconciliações reais remanescentes;
 10. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
 11. corrigir somente blockers remanescentes com owner exclusivo;
 12. integrar semanticamente o resultado na linha RC;
@@ -330,21 +330,26 @@ Resultado vivo consolidado:
 - backup Warehouse READY histórico foi identificado e restore 13/13 já havia sido comprovado; a frente executora ainda deve reconfirmar backup/PITR suficientemente recente imediatamente antes da escrita;
 - Rules, MOBILE-K, ledger, produção e dados reais permaneceram inalterados nesta forensics.
 
-**WAREHOUSE-DATA-REPAIR-EXECUTION-01 — AUTORIZADA / EXECUÇÃO CONTROLADA**
+**WAREHOUSE-DATA-REPAIR-EXECUTION-01 — PASS / REPAIR EXECUTADO E REVALIDADO**
 
-- branch: `warehouse-data-repair-execution-01`;
-- base exata: `warehouse-data-repair-forensics-01@c1fa1d914990fbe126eaeb81889c6016dd84e7b0`;
+- branch viva: `warehouse-data-repair-execution-01@e3f3aae9e8ee2337e387fd652a104f194049cd70`;
+- PR #260: OPEN / DRAFT / não mergeado;
 - autorização explícita do Fundador concedida em **2026-10-05**;
-- escopo máximo autorizado: somente os dois documentos de lote causalmente comprovados:
+- testes do executor: **7/7 PASS**;
+- dry-run imediatamente anterior ao write: **PASS**;
+- recovery precondition: PITR ENABLED, delete protection ENABLED, backup READY `84e64064-4c03-4f32-9c26-9724d22b9211`, snapshot `2026-10-05T17:21:29.826100Z`;
+- transaction preconditions: **PASS**;
+- commit Firestore: **SUCCESS** em `2026-10-06T01:14:32.083411Z`;
+- writes executados:
   - `warehouse/hgesm-aprov/lots/lot_670e1ca177804501b90bf8cdd669683f`: `quantity 440 → 340`;
   - `warehouse/hgesm-aprov/lots/lot_082ebcd7a2acf0c706c87464307cb1ff`: `quantity 50 → 40`;
-- antes de qualquer write: reexecutar dry-run, comparar todas as precondições, confirmar backup/PITR Warehouse READY e suficientemente recente, registrar esta aprovação humana no manifesto;
-- abortar se quantidade, `updatedAt`, revisão, `lastMovementId` ou conjunto de lotes divergir;
-- `movements` permanece append-only;
-- não alterar aggregate, locationBalances, intakes, consumptions, Rules ou qualquer terceiro lote salvo nova forensics;
-- após eventual repair autorizado: executar verificação read-only imediata e repetir a auditoria sistêmica antes de liberar o RC;
-- qualquer write fora desses dois documentos ou fora dos valores/precondições comprovados **NÃO está autorizado**;
-- após a escrita, executar verificação read-only imediata e repetir a auditoria global para confirmar `activeLots == physicalActive` nos dois materiais e ausência de regressão.
+- Material A pós-repair: aggregate 445, physicalActive 440, UNASSIGNED 5, activeLots 440, lotExcess 0;
+- Material B pós-repair: aggregate 90, physicalActive 90, UNASSIGNED 0, activeLots 90, lotExcess 0;
+- auditoria global pós-repair: 56 materiais, 0 inconsistências, 0 performance risks, 4 reconciliações reportadas inicialmente;
+- dessas 4, 3 são reais: `POSITIVE_UNASSIGNED=5` no Material A e duas `APPARENT_DUPLICATE_ACTIVE_LOT`; a quarta (`PAL01_KNOWN_CASE_NOT_IDENTIFIED`) era um falso positivo porque o auditor exigia que o blocker histórico 440/540 continuasse existindo;
+- o auditor foi corrigido para continuar detectando genericamente `LOT_ATTRIBUTION_EXCEEDS_STOCK` sem exigir persistência do caso histórico;
+- Rules, aggregate, locationBalances, movements, intakes, consumptions e produção do app não foram alterados;
+- classificação desta frente: **PASS — REPAIR EXECUTADO E INTEGRIDADE QUANTITATIVA REVALIDADA**.
 
 **Performance**
 
