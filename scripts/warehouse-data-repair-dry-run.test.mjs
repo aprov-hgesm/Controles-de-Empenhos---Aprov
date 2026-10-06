@@ -10,17 +10,29 @@ import {
 } from './warehouse-data-repair-dry-run.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const position = {
+const finalPosition = {
   kind: 'LOCATION',
   depotId: 'dep_test',
-  locationId: 'loc_test',
+  locationId: 'loc_final',
+};
+const sourceOne = {
+  kind: 'SUBPOSITION',
+  depotId: 'dep_old',
+  locationId: 'loc_old',
+  subpositionId: 'sub_one',
+};
+const sourceTwo = {
+  kind: 'SUBPOSITION',
+  depotId: 'dep_old',
+  locationId: 'loc_old',
+  subpositionId: 'sub_two',
 };
 
 function baseCollections() {
   return {
     depots: [{ _documentId: 'dep_test', status: 'active' }],
     locations: [{
-      _documentId: 'loc_test',
+      _documentId: 'loc_final',
       kind: 'LOCAL',
       depotId: 'dep_test',
       status: 'active',
@@ -36,57 +48,59 @@ function baseCollections() {
   };
 }
 
-function addMaterial(collections, materialId, {
-  aggregate,
-  physical,
-  lots,
-  noLotOutbound = 0,
-  revision = 1,
-}) {
+function movement(collections, materialId, input) {
+  collections.movements.push({
+    _documentId: input.id,
+    materialId,
+    type: input.type,
+    quantityDelta: input.quantityDelta,
+    source: input.source ?? null,
+    _createTime: input.at,
+  });
+}
+
+function addBalance(collections, materialId, aggregate, physical, unassigned = 0) {
   collections.balances.push({
     _documentId: materialId,
     materialId,
     quantity: aggregate,
-    revision,
-    lastMovementId: noLotOutbound > 0 ? 'mov_out_' + materialId : 'mov_last_' + materialId,
+    revision: 4,
+    lastMovementId: 'mov_last_' + materialId,
   });
   collections.locationBalances.push({
     _documentId: 'lb_' + materialId,
     materialId,
-    position,
+    position: finalPosition,
     quantity: physical,
-    revision,
+    revision: 4,
     lastMovementId: 'mov_loc_' + materialId,
   });
-  lots.forEach((quantity, index) => {
-    collections.lots.push({
-      _documentId: 'lot_' + materialId + '_' + index,
-      workspaceId: 'hgesm-aprov',
+  if (unassigned > 0) {
+    collections.locationBalances.push({
+      _documentId: 'lb_unassigned_' + materialId,
       materialId,
-      code: '__EMPROVEX_PENDING_LOT__:TEST_' + materialId,
-      quantity,
-      position,
-      status: 'active',
-      origin: { kind: 'INVOICE', movementId: 'mov_invoice_' + materialId },
-      _createTime: '2026-09-27T10:00:00Z',
-      _updateTime: '2026-09-27T10:00:00Z',
-    });
-  });
-  if (noLotOutbound > 0) {
-    collections.movements.push({
-      _documentId: 'mov_out_' + materialId,
-      materialId,
-      type: 'OUTBOUND',
-      quantityDelta: -noLotOutbound,
-      source: {
-        kind: 'EXPRESS_OUTBOUND',
-        position,
-        lotId: null,
-        lotCode: null,
-      },
-      _createTime: '2026-09-28T10:00:00Z',
+      position: { kind: 'UNASSIGNED' },
+      quantity: unassigned,
+      revision: 4,
+      lastMovementId: 'mov_unassigned_' + materialId,
     });
   }
+}
+
+function addLot(collections, materialId, input) {
+  collections.lots.push({
+    _documentId: input.id,
+    workspaceId: 'hgesm-aprov',
+    materialId,
+    code: input.code,
+    quantity: input.quantity,
+    position: finalPosition,
+    status: 'active',
+    origin: { kind: input.originKind, movementId: input.originMovementId ?? null },
+    expiresOn: input.expiresOn ?? null,
+    _createTime: input.createdAt,
+    _updateTime: input.updatedAt ?? input.createdAt,
+  });
 }
 
 test('decodifica valores REST Firestore usados pela forensics', () => {
@@ -99,24 +113,147 @@ test('decodifica valores REST Firestore usados pela forensics', () => {
   );
 });
 
-test('prova mecanismo de OUTBOUND sem lotId quando excesso fecha por posição', () => {
+test('prova os dois mecanismos causais observados na leitura viva', () => {
   const collections = baseCollections();
-  addMaterial(collections, 'mat_272f2d996ee65ed3530ad2d7e27b66d7', {
-    aggregate: 440,
-    physical: 440,
-    lots: [540],
-    noLotOutbound: 100,
+  const materialA = 'mat_272f2d996ee65ed3530ad2d7e27b66d7';
+  const materialB = 'mat_6feb0840ca4060f7d69fcce1663f21b8';
+  const control = 'mat_bb6d4a089c224b1a48ad3a43f32170a3';
+
+  addBalance(collections, materialA, 445, 440, 5);
+  movement(collections, materialA, {
+    id: 'mov_a_invoice',
+    type: 'INVOICE_ENTRY',
+    quantityDelta: 500,
+    at: '2026-09-27T20:39:12.534Z',
+    source: { kind: 'INVOICE' },
   });
-  addMaterial(collections, 'mat_6feb0840ca4060f7d69fcce1663f21b8', {
-    aggregate: 90,
-    physical: 90,
-    lots: [50, 50],
-    noLotOutbound: 10,
+  addLot(collections, materialA, {
+    id: 'lot_a_invoice',
+    code: '__EMPROVEX_PENDING_LOT__:INTAKE_A',
+    quantity: 100,
+    originKind: 'INVOICE',
+    originMovementId: 'mov_a_invoice',
+    createdAt: '2026-09-27T20:39:13.149Z',
   });
-  addMaterial(collections, 'mat_bb6d4a089c224b1a48ad3a43f32170a3', {
-    aggregate: 100,
-    physical: 100,
-    lots: [50, 50],
+  movement(collections, materialA, {
+    id: 'mov_a_out_50',
+    type: 'OUTBOUND',
+    quantityDelta: -50,
+    at: '2026-09-28T02:03:56.649Z',
+    source: {
+      kind: 'EXPRESS_OUTBOUND',
+      position: { kind: 'UNASSIGNED' },
+      lotId: null,
+    },
+  });
+  movement(collections, materialA, {
+    id: 'mov_a_out_10',
+    type: 'OUTBOUND',
+    quantityDelta: -10,
+    at: '2026-09-28T02:05:42.463Z',
+    source: {
+      kind: 'EXPRESS_OUTBOUND',
+      position: { kind: 'UNASSIGNED' },
+      lotId: null,
+    },
+  });
+  addLot(collections, materialA, {
+    id: 'lot_a_manual',
+    code: '__EMPROVEX_PENDING_LOT__:MANUAL_A',
+    quantity: 440,
+    originKind: 'MANUAL_ENRICHMENT',
+    createdAt: '2026-09-28T10:27:04.639Z',
+    updatedAt: '2026-09-29T13:06:01.717Z',
+  });
+  movement(collections, materialA, {
+    id: 'mov_a_return',
+    type: 'MANUAL_ENTRY',
+    quantityDelta: 5,
+    at: '2026-09-28T21:43:25.469Z',
+    source: { kind: 'MANUAL_ENTRY' },
+  });
+
+  addBalance(collections, materialB, 90, 90, 0);
+  movement(collections, materialB, {
+    id: 'mov_b_invoice',
+    type: 'INVOICE_ENTRY',
+    quantityDelta: 100,
+    at: '2026-09-27T19:36:54.539Z',
+    source: { kind: 'INVOICE' },
+  });
+  movement(collections, materialB, {
+    id: 'mov_b_transfer_1',
+    type: 'TRANSFER',
+    quantityDelta: 0,
+    at: '2026-09-27T20:13:14.305Z',
+    source: {
+      kind: 'LOCATION_TRANSFER',
+      quantity: 50,
+      from: { kind: 'UNASSIGNED' },
+      to: sourceOne,
+    },
+  });
+  addLot(collections, materialB, {
+    id: 'lot_b_1',
+    code: '__EMPROVEX_PENDING_LOT__:INTAKE_B',
+    quantity: 50,
+    originKind: 'INVOICE',
+    originMovementId: 'mov_b_invoice',
+    createdAt: '2026-09-27T20:13:14.382Z',
+  });
+  movement(collections, materialB, {
+    id: 'mov_b_transfer_2',
+    type: 'TRANSFER',
+    quantityDelta: 0,
+    at: '2026-09-27T20:27:35.520Z',
+    source: {
+      kind: 'LOCATION_TRANSFER',
+      quantity: 50,
+      from: { kind: 'UNASSIGNED' },
+      to: sourceTwo,
+    },
+  });
+  addLot(collections, materialB, {
+    id: 'lot_b_2',
+    code: '__EMPROVEX_PENDING_LOT__:INTAKE_B',
+    quantity: 50,
+    originKind: 'INVOICE',
+    originMovementId: 'mov_b_invoice',
+    createdAt: '2026-09-27T20:27:35.601Z',
+  });
+  movement(collections, materialB, {
+    id: 'mov_b_out_10',
+    type: 'OUTBOUND',
+    quantityDelta: -10,
+    at: '2026-09-28T02:03:55.198Z',
+    source: {
+      kind: 'EXPRESS_OUTBOUND',
+      position: sourceTwo,
+      lotId: null,
+    },
+  });
+
+  addBalance(collections, control, 100, 100, 0);
+  movement(collections, control, {
+    id: 'mov_c_invoice',
+    type: 'INVOICE_ENTRY',
+    quantityDelta: 100,
+    at: '2026-09-27T18:00:00.000Z',
+    source: { kind: 'INVOICE' },
+  });
+  addLot(collections, control, {
+    id: 'lot_c_1',
+    code: '__EMPROVEX_PENDING_LOT__:INTAKE_C',
+    quantity: 50,
+    originKind: 'INVOICE',
+    createdAt: '2026-09-27T18:01:00.000Z',
+  });
+  addLot(collections, control, {
+    id: 'lot_c_2',
+    code: '__EMPROVEX_PENDING_LOT__:INTAKE_C',
+    quantity: 50,
+    originKind: 'INVOICE',
+    createdAt: '2026-09-27T18:02:00.000Z',
   });
 
   const report = analyzeForensics(
@@ -124,38 +261,40 @@ test('prova mecanismo de OUTBOUND sem lotId quando excesso fecha por posição',
     { projectId: 'p', databaseId: 'd', workspaceId: 'hgesm-aprov', readCount: 0 }
   );
 
-  const materialA = report.results.find(
-    (row) => row.materialId === 'mat_272f2d996ee65ed3530ad2d7e27b66d7'
-  );
-  const materialB = report.results.find(
-    (row) => row.materialId === 'mat_6feb0840ca4060f7d69fcce1663f21b8'
-  );
-  const control = report.results.find(
-    (row) => row.materialId === 'mat_bb6d4a089c224b1a48ad3a43f32170a3'
-  );
+  const a = report.results.find((row) => row.materialId === materialA);
+  const b = report.results.find((row) => row.materialId === materialB);
+  const c = report.results.find((row) => row.materialId === control);
 
-  assert.equal(materialA.lotExcess, 100);
-  assert.equal(materialA.netNoLotOutbound, 100);
-  assert.equal(materialA.causeProven, true);
-  assert.equal(materialA.repairDeterministic, true);
-  assert.equal(materialA.repairCandidates.length, 1);
-  assert.equal(materialA.repairCandidates[0].after.quantity, 440);
+  assert.equal(a.lotExcess, 100);
+  assert.equal(a.manualOverAttribution.length, 1);
+  assert.equal(a.manualOverAttribution[0].lotId, 'lot_a_manual');
+  assert.equal(a.manualOverAttribution[0].overAggregateAfterCreation, 100);
+  assert.equal(a.causeProven, true);
+  assert.equal(a.repairDeterministic, true);
+  assert.equal(a.repairCandidates.length, 1);
+  assert.equal(a.repairCandidates[0].before.quantity, 440);
+  assert.equal(a.repairCandidates[0].after.quantity, 340);
 
-  assert.equal(materialB.lotExcess, 10);
-  assert.equal(materialB.netNoLotOutbound, 10);
-  assert.equal(materialB.noLotQuantityMatch, true);
-  assert.equal(materialB.causeProven, false);
-  assert.equal(materialB.repairDeterministic, false);
-  assert.equal(materialB.repairCandidates.length, 0);
-  assert.equal(materialB.duplicateLotGroups.length, 1);
+  assert.equal(b.lotExcess, 10);
+  assert.equal(b.netNoLotOutbound, 10);
+  assert.equal(b.noLotGlobalQuantityMatch, true);
+  assert.equal(b.noLotAffectedLots.length, 1);
+  assert.equal(b.noLotAffectedLots[0].lotId, 'lot_b_2');
+  assert.equal(b.causeProven, true);
+  assert.equal(b.repairDeterministic, true);
+  assert.equal(b.repairCandidates.length, 1);
+  assert.equal(b.repairCandidates[0].before.quantity, 50);
+  assert.equal(b.repairCandidates[0].after.quantity, 40);
+  assert.equal(b.duplicateLotGroups.length, 1);
 
-  assert.equal(control.lotExcess, 0);
-  assert.equal(control.repairNecessary, false);
-  assert.equal(control.duplicateLotGroups.length, 1);
-  assert.equal(report.readyForHumanRepairAuthorization, false);
+  assert.equal(c.lotExcess, 0);
+  assert.equal(c.repairNecessary, false);
+  assert.equal(c.duplicateLotGroups.length, 1);
+
+  assert.equal(report.readyForHumanRepairAuthorization, true);
   assert.equal(
     report.finalClassification,
-    'PASS PARCIAL — CAUSA PROVADA EM PARTE / MAIS EVIDÊNCIA NECESSÁRIA'
+    'PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO'
   );
 });
 
