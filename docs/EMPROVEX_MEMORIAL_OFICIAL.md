@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05/06 — blockers Warehouse quantitativos encerrados e Inventário Físico corrigido. `WAREHOUSE-DATA-REPAIR-EXECUTION-01@e3f3aae9...` executou os dois writes autorizados com dry-run/recovery/precondições PASS e pós-repair com `lotExcess=0`; Core Protection e Application CI SUCCESS. `INVENTORY-PHYSICAL-FIX-01@5255bbcbc43593bcf66001adf85eb5d6264a121e` fechou PASS com Core Protection e Application CI SUCCESS: Inventário TOTAL considera somente `LOCATION`/`SUBPOSITION` e exclui `UNASSIGNED`, inclusive bloqueando ajuste físico sobre item histórico `UNASSIGNED`. Program Control abriu `rc-r1-composition-01@bd27da91da92642d5a5fea08f7020c6cea658a62` para composição semântica do novo RC. A fonte runtime principal é `inventory-physical-fix-01@5255bbcb...`, que já contém integralmente MOBILE-K; SaaS-FINAL-AUDIT, Rules audit e tooling Warehouse devem ser reconciliados seletivamente, nunca por merge cego. Produção e Rules permanecem inalteradas.**
+Última sincronização global: **2026-10-05/06 — `SAAS-PILOT-JOURNEY-01` foi encerrada em `f3f699a796566fe03dcc137f22791d2ed8259940` com `PASS COM PENDÊNCIAS EXTERNAS`, PR #259 OPEN/DRAFT/MERGEABLE e delta final exclusivamente documental (`docs/SAAS_PILOT_JOURNEY_01.md`, 181 linhas). O runtime validado no commit funcional `75f302e...` recebeu Application CI, SAAS Pilot Journey 01 e Core Protection SUCCESS; Browser E2E dirigido fechou 8/8 PASS. Não houve alteração runtime, Rules, dados produtivos, cobrança/suspensão real ou piloto real. `warehouseAccess` ficou `PASS COM RISCO RESIDUAL DE COMPATIBILIDADE`, sem blocker. Program Control liberou `SAAS-PILOT-OPS-01@4cc5b379...` como próxima frente paralela estritamente operacional/documental, sem competir com `RC-COMPOSITION-01`. Produção e Rules permanecem inalteradas.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -95,7 +95,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Produção — app | **Performance R3 / INALTERADA** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`; app RC não publicado |
 | Produção — Firestore Rules | **RULES RC PUBLICADAS EM 2026-10-05** | publicação autorizada apenas de Rules; principal source blob `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse source blob `6e1f1050005314db4e17cb3136409abbddb0ee91` |
 | Rollback Rules | **PREPARADO** | baseline anterior principal `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`; Warehouse `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` |
-| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / AUDITORIA FINAL PASS** | SAAS-FINAL-AUDIT-01 `4cc5b379...`: PASS com riscos residuais documentados; Application CI, Legal, Core e Recovery SUCCESS; nenhum blocker funcional SaaS |
+| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / JORNADA PRÉ-PILOTO PASS** | SAAS-FINAL-AUDIT-01 `4cc5b379...` PASS; SAAS-PILOT-JOURNEY-01 `f3f699a...` = `PASS COM PENDÊNCIAS EXTERNAS`; 8/8 Browser E2E dirigido; nenhum blocker funcional SaaS conhecido |
 | Mobile R1 | **FUNCIONAL A–I ENCERRADO / J EM CERTIFICAÇÃO FÍSICA** | MOBILE-J encontrou e corrigiu defeitos reais no Preview; ainda não encerrada |
 | SESSION-CAP-01 | **PASS / INTEGRADA** | candidato sem teto fixo de sessões externas; lease/revogação/telemetria preservados |
 | RULES-AUDIT-01 | **PASS / EXECUTADA NO ROLLOUT DE RULES** | Rules RC publicadas antes do app, conforme contrato de compatibilidade |
@@ -220,8 +220,8 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 | --- | --- | --- | --- | --- | --- |
 | RULES-COMPAT-01 | `rules-compat-01@97442b5f...` | RC estável `bd27da91...` | **PASS / ENCERRADA** — Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | `docs/RULES_COMPAT_01_AUDIT.md`; PR #254 DRAFT | Rules não alteradas; comentário antigo `queueExclusions` continua apenas inconsistência textual |
 | SAAS-FINAL-AUDIT-01 | `saas-final-audit-01@4cc5b379...` | base congelada `d7837257...` | **PASS COM RISCOS RESIDUAIS DOCUMENTADOS** — billing, onboarding, legal, lifecycle, sessão, recovery | PR #256 DRAFT; CI/Legal/Core/Recovery SUCCESS | nenhum blocker funcional SaaS; sem produção |
-| SAAS-PILOT-JOURNEY-01 | `saas-pilot-journey-01@4cc5b379...` | HEAD auditado SaaS | jornada E2E não produtiva: onboarding → login → Legal → trial/billing → lifecycle → sessões | matriz executável + testes/smoke | sem cliente real, sem cobrança/suspensão produtiva |
-| SAAS-PILOT-OPS-01 | `saas-pilot-ops-01@4cc5b379...` | HEAD auditado SaaS | operação do piloto: checklist, evidências, suporte, billing manual, participantes, rollback | runbook operacional do piloto | sem iniciar piloto real ou alterar produção |
+| SAAS-PILOT-JOURNEY-01 | `saas-pilot-journey-01@f3f699a...` | `saas-final-audit-01@4cc5b379...` | **PASS COM PENDÊNCIAS EXTERNAS / ENCERRADA** — onboarding, Auth, Legal, billing/trial, lifecycle, sessões, multi-tenant e warehouseAccess | PR #259 DRAFT; delta final só `docs/SAAS_PILOT_JOURNEY_01.md`; runtime funcional validado com CI/Core/Journey SUCCESS e Browser E2E 8/8 | sem runtime/Rules/dados/produção |
+| SAAS-PILOT-OPS-01 | `saas-pilot-ops-01@4cc5b379...` | HEAD auditado SaaS | **ATIVADA** — operação do piloto: critérios de entrada, checklist, suporte, billing manual, evidências, incidentes, rollback e encerramento | runbook operacional executável do piloto | sem iniciar piloto real, cobrança/suspensão real, deploy, Rules ou alteração de dados produtivos |
 | SAAS-UPTIME-READINESS-01 | `saas-uptime-readiness-01@4cc5b379...` | HEAD auditado SaaS | health/Cloud Monitoring: configuração reproduzível e validação prévia | runbook/scripts dry-run para uptime/alert/canal | não criar check/alert/channel produtivo antes de publicação autorizada |
 | WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01@07265b2...` | RC estável `bd27da91...`; MOBILE-K somente leitura | **BLOCKER RC** — integridade logística/legado | `docs/WAREHOUSE_DATA_AUDIT_01.md`; PR #255 DRAFT | nenhuma escrita/migração; Inventário TOTAL + UNASSIGNED precisa correção isolada; PAL-01 precisa diagnóstico read-only |
 | RC-READINESS-01 | `rc-readiness-01@bd27da91...` | RC estável `bd27da91...` | **SUPERSEDIDA / SEM DELTA** | ownership transferido para RC-COMPOSITION-01 | não executar em paralelo |
@@ -285,8 +285,8 @@ Regra de saída do blocker:
 
 Com a auditoria final SaaS tecnicamente verde, três frentes podem trabalhar enquanto os blockers Warehouse são tratados. Elas não alteram o motor logístico e não iniciam piloto real.
 
-- `SAAS-PILOT-JOURNEY-01`: validar de ponta a ponta, em ambiente não produtivo/emulador/Preview quando disponível, onboarding assistido, primeiro login, aceite legal, trial/billing exibido, suspensão/regularização/reativação e sessões. Não usar cliente real nem cobrança real.
-- `SAAS-PILOT-OPS-01`: preparar operação do piloto controlado, critérios de participante, evidências J01–J24, suporte, billing manual, checklist de entrada/saída, rollback e matriz de riscos. Documento/runbook; sem publicação.
+- `SAAS-PILOT-JOURNEY-01`: **PASS COM PENDÊNCIAS EXTERNAS / ENCERRADA** em `f3f699a...`; delta final somente documental. Runtime funcional anterior recebeu Application CI + Journey + Core SUCCESS e Browser E2E 8/8. Pendências externas: novo Preview/RC, smoke humano nesse deployment e operações comerciais reais.
+- `SAAS-PILOT-OPS-01`: **ATIVADA** na base congelada `4cc5b379...`; preparar operação do piloto controlado, critérios de participante, evidências J01–J24, suporte, billing manual, incidentes, checklist de entrada/saída, rollback e matriz de riscos. Documento/runbook; sem publicação ou operação real.
 - `SAAS-UPTIME-READINESS-01`: fechar artefatos reproduzíveis para `/api/health`, uptime check, alert policy e notification channel, com dry-run/validação estática. A aplicação real desses controles permanece bloqueada até publicação controlada autorizada.
 
 Base comum congelada das três frentes:
@@ -299,6 +299,39 @@ Regras:
 2. achado funcional vira handoff ao Coordenador, não feature oportunista;
 3. mudanças em Auth, sessão, lifecycle, legal, `warehouseAccess` ou Rules compartilhadas exigem impacto Mobile explícito;
 4. RC-COMPOSITION-01 é o owner de composição/re-freeze; estas frentes apenas antecipam evidência e operação SaaS e não entram na candidata sem handoff aprovado.
+
+#### Fechamento SAAS-PILOT-JOURNEY-01
+
+Estado aceito pelo Coordenador:
+
+- branch: `saas-pilot-journey-01@f3f699a796566fe03dcc137f22791d2ed8259940`;
+- HEAD inicial/base: `saas-final-audit-01@4cc5b3797747d4d49591f4a68196e723700daa74`;
+- PR #259: OPEN / DRAFT / MERGEABLE / não mergeado;
+- delta final: somente `docs/SAAS_PILOT_JOURNEY_01.md` (181 linhas); **nenhum delta runtime final**;
+- HEAD funcional validado: `75f302e4554336f3646b38e068c4530f6625c7d1`;
+- Application CI `37395922059`: SUCCESS;
+- SAAS Pilot Journey 01 `37395922126`: SUCCESS;
+- Core Protection `37395922283`: SUCCESS;
+- Browser E2E dirigido: **8/8 PASS**;
+- TypeScript, production build e diff hygiene: PASS;
+- Blocos 16–21 finais do Application CI: verdes;
+- onboarding, UID/e-mail/workspace/UG, provider password, e-mail verificado, Auth, primeiro login, Legal Gate, trial 30d, billing R$70, founder/VIP exempt, lifecycle, suspensão técnica, reativação, recuperação de acesso, sessões/revogação e isolamento multi-tenant: PASS técnico;
+- `warehouseAccess`: **PASS COM RISCO RESIDUAL DE COMPATIBILIDADE**, sem blocker; lifecycle sincroniza `active ↔ disabled` e há compensação de falha Warehouse; fallback histórico das Rules preservado;
+- Rules permaneceram nos hashes `bc91185f...` e `6e1f1050...`;
+- classificação final: **PASS COM PENDÊNCIAS EXTERNAS**;
+- pendências externas aceitas: novo Preview/RC, smoke humano nesse deployment e operações comerciais reais;
+- para RC-COMPOSITION, esta frente é **evidência documental aprovada** e pode ser referenciada/incorporada como documentação sem trazer runtime.
+
+#### Ativação SAAS-PILOT-OPS-01
+
+- branch: `saas-pilot-ops-01@4cc5b3797747d4d49591f4a68196e723700daa74`;
+- base congelada: SAAS-FINAL-AUDIT-01;
+- ownership: **somente operação do piloto**, sem código de domínio;
+- produzir runbook executável com critérios de participante, entrada, suporte, billing manual, incidentes, observabilidade, evidências, rollback operacional e encerramento;
+- usar o resultado da SAAS-PILOT-JOURNEY-01 como evidência de jornada, mas não incorporar sua branch por merge;
+- nenhum deploy Production, piloto real, cobrança/suspensão real, escrita em dados produtivos ou Rules;
+- achado funcional vira `PILOT OPS BLOCKER — COORDENADOR REVIEW`, não correção oportunista;
+- RC-COMPOSITION-01 permanece owner exclusivo da candidata/re-freeze.
 
 #### Frentes corretivas derivadas da auditoria logística
 
