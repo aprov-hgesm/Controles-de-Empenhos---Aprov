@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — WAREHOUSE-INTEGRITY-RECONCILE-01 confirmou blockers sistêmicos de dados e abriu a frente forensics sem escrita. Em paralelo, SAAS-FINAL-AUDIT-01 fechou tecnicamente em `4cc5b3797747d4d49591f4a68196e723700daa74` com `PASS COM RISCOS RESIDUAIS DOCUMENTADOS`; Application CI, Legal Validation, Core Protection e Recovery guardrails estão SUCCESS, sem blocker funcional SaaS. Para aproveitar o tempo enquanto o RC permanece bloqueado por Warehouse, Program Control abriu três frentes SaaS não produtivas e independentes: `saas-pilot-journey-01`, `saas-pilot-ops-01` e `saas-uptime-readiness-01`, todas baseadas no HEAD auditado do SaaS. Nenhuma delas autoriza produção ou piloto real.**
+Última sincronização global: **2026-10-05 — WAREHOUSE-DATA-REPAIR-FORENSICS-01 concluiu a investigação causal em `c1fa1d914990fbe126eaeb81889c6016dd84e7b0` com `PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO`. Leitura viva v2: 3.057 reads, nenhum cap. Material `mat_272f...`: lote `lot_670e1ca...` de `MANUAL_ENRICHMENT` introduziu +100 sobre o físico; repair proposto 440→340. Material `mat_6feb...`: OUTBOUND sem `lotId` deixou +10 no lote `lot_082eb...`; repair proposto 50→40. Nenhum repair foi executado. Program Control criou `warehouse-data-repair-execution-01@c1fa1d9...` apenas como branch preparatória; qualquer escrita real continua bloqueada até autorização explícita, reexecução do dry-run, reconfirmação de backup/PITR e precondições imutáveis. As três frentes SaaS pré-piloto seguem independentes e sem produção.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -116,7 +116,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Onda paralela de auditoria | **3/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; SAAS-FINAL-AUDIT-01 = PASS COM RISCOS RESIDUAIS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando RC-READINESS-01 |
 | INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
-| WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **ATIVADA / READ-ONLY + DRY-RUN** | `warehouse-data-repair-forensics-01@b8dbc33...`; investigar causalidade dos blockers, preparar plano/script de repair idempotente e reversível; nenhuma escrita até autorização explícita |
+| WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **PASS / ENCERRADA TECNICAMENTE** | `warehouse-data-repair-forensics-01@c1fa1d9...`; causa comprovada nos 2 blockers, dry-run determinístico e manifesto prontos; nenhum dado escrito |
+| WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PREPARADA / BLOQUEADA POR AUTORIZAÇÃO HUMANA** | `warehouse-data-repair-execution-01@c1fa1d9...`; poderá alterar somente 2 documentos de lote após revalidar dry-run + backup/PITR + precondições; nenhuma escrita autorizada neste checkpoint |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -179,14 +180,15 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
 5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
 6. `WAREHOUSE-INTEGRITY-RECONCILE-01` — **CONCLUÍDA**: auditoria global confirmou dois blockers quantitativos de lotes e três reconciliações adicionais;
-7. executar `WAREHOUSE-DATA-REPAIR-FORENSICS-01` para provar causalidade e preparar dry-run/repair plan sem escrita;
-8. somente após causa comprovada, backup confirmado e aprovação explícita, abrir frente separada de repair real;
-9. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
-10. corrigir somente blockers remanescentes com owner exclusivo;
-11. integrar semanticamente o resultado na linha RC;
-12. repetir gates afetados no SHA final;
-13. executar teste físico curto das operações críticas;
-14. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
+7. `WAREHOUSE-DATA-REPAIR-FORENSICS-01` — **PASS / ENCERRADA**: causa histórica dos dois blockers comprovada, documentos exatos identificados e repair determinístico preparado;
+8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — branch preparada, porém **BLOQUEADA POR AUTORIZAÇÃO HUMANA**; antes de qualquer escrita, repetir dry-run, confirmar backup/PITR READY e abortar diante de qualquer precondição divergente;
+9. após repair autorizado e verificado, repetir auditoria global read-only e confirmar desaparecimento dos blockers sem criar novas inconsistências;
+10. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
+11. corrigir somente blockers remanescentes com owner exclusivo;
+12. integrar semanticamente o resultado na linha RC;
+13. repetir gates afetados no SHA final;
+14. executar teste físico curto das operações críticas;
+15. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -314,16 +316,31 @@ Resultado vivo consolidado:
 - RC pode avançar sem repair de dados: **NÃO**;
 - Application CI do HEAD anterior falhou somente por linha vazia extra no EOF do relatório; higiene corrigida em `b8dbc33...`, Core Protection novamente PASS e Application CI reexecutando.
 
-**WAREHOUSE-DATA-REPAIR-FORENSICS-01 — ATIVADA / SEM ESCRITA**
+**WAREHOUSE-DATA-REPAIR-FORENSICS-01 — PASS / ENCERRADA TECNICAMENTE**
 
-- branch: `warehouse-data-repair-forensics-01`;
-- base exata: `warehouse-integrity-reconcile-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f`;
-- objetivo: identificar a causa histórica específica dos +100 e +10 de lotes e das duplicidades aparentes;
-- começar pelos materiais `mat_272f...` e `mat_6feb...`, usando `mat_bb6d...` como controle de duplicidade sem divergência quantitativa;
-- reconstruir cronologia por intake/lote/movimento/saída/retorno/posição;
-- produzir dry-run e plano de repair, mas sem executar escrita;
-- repair futuro deve ser idempotente, reversível, respaldado por backup, auditável e aprovado explicitamente;
-- nenhuma Rule, saldo, lote, movimento ou documento real pode ser alterado nesta frente.
+- branch final: `warehouse-data-repair-forensics-01@c1fa1d914990fbe126eaeb81889c6016dd84e7b0`;
+- PR #258: OPEN / DRAFT / MERGEABLE / não mergeado;
+- leitura viva v2: 3.057 reads; nenhum cap;
+- classificação: **PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO**;
+- Material A `mat_272f2d996ee65ed3530ad2d7e27b66d7`: o lote `lot_670e1ca177804501b90bf8cdd669683f` de origem `MANUAL_ENRICHMENT` levou a soma ativa a 540 quando o ledger estava em 440, introduzindo exatamente +100; repair proposto `quantity 440 → 340`;
+- Material B `mat_6feb0840ca4060f7d69fcce1663f21b8`: o OUTBOUND sem `lotId` `mov_fc391dd2a9b6b0fbbee257595376305ab1c3dd39352241a1b8896c24a912a3b6` reduziu 10 do físico sem reduzir o lote histórico `lot_082ebcd7a2acf0c706c87464307cb1ff`; repair proposto `quantity 50 → 40`;
+- `readyForHumanRepairAuthorization=true`, porém **isso não equivale a autorização de escrita**;
+- dry-run e manifesto preservam idempotência, expected-before/after, `updatedAt`, revisão/lastMovementId e conjunto esperado de lotes;
+- qualquer divergência na revalidação deve abortar com `ABORT — REFORENSICS REQUIRED`;
+- backup Warehouse READY histórico foi identificado e restore 13/13 já havia sido comprovado; a frente executora ainda deve reconfirmar backup/PITR suficientemente recente imediatamente antes da escrita;
+- Rules, MOBILE-K, ledger, produção e dados reais permaneceram inalterados nesta forensics.
+
+**WAREHOUSE-DATA-REPAIR-EXECUTION-01 — PREPARADA / NÃO AUTORIZADA**
+
+- branch: `warehouse-data-repair-execution-01`;
+- base exata: `warehouse-data-repair-forensics-01@c1fa1d914990fbe126eaeb81889c6016dd84e7b0`;
+- escopo futuro máximo: somente os dois documentos de lote causalmente comprovados;
+- antes de qualquer write: reexecutar dry-run, comparar todas as precondições, confirmar backup/PITR Warehouse READY e suficientemente recente, registrar aprovação humana explícita;
+- abortar se quantidade, `updatedAt`, revisão, `lastMovementId` ou conjunto de lotes divergir;
+- `movements` permanece append-only;
+- não alterar aggregate, locationBalances, intakes, consumptions, Rules ou qualquer terceiro lote salvo nova forensics;
+- após eventual repair autorizado: executar verificação read-only imediata e repetir a auditoria sistêmica antes de liberar o RC;
+- **nenhuma escrita está autorizada por este Memorial neste checkpoint**.
 
 **Performance**
 
