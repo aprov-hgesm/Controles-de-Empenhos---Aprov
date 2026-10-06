@@ -160,7 +160,9 @@ Contrato:
 - calcula OUTBOUND sem lote bruto e líquido de devoluções;
 - compara excesso por posição com OUTBOUND sem lote líquido;
 - identifica duplicidade técnica de lote;
-- só gera candidato de repair quando o mecanismo fecha quantitativamente **e existe exatamente um lote afetado**, evitando escolher arbitrariamente entre múltiplos lotes;
+- falha fechado se houver OUTBOUND legado/não classificável;
+- falha fechado se houver movimento quantitativo concorrente (`INVENTORY_ADJUSTMENT`, `INVOICE_CORRECTION`, `REVERSAL`, `OUTBOUND_RETURN`);
+- só gera candidato de repair quando o mecanismo fecha quantitativamente, não há hipótese concorrente concreta **e existe exatamente um lote afetado**, evitando escolher arbitrariamente entre múltiplos lotes;
 - gera precondições de concorrência usando quantidade do lote, `updatedAt`, revisão/lastMovementId do balance e conjunto de lotes ativos da posição;
 - mantém `approvedBy = null` e `executedAt = null`.
 
@@ -209,7 +211,7 @@ Validação executada neste worker sobre o conteúdo exato do HEAD:
 
 O shell isolado não conseguiu resolver `github.com` para executar `node --test` em checkout local; por isso o CI do PR continua sendo a evidência de integração no repositório.
 
-## 7. Backup que protege o futuro repair
+## 7. Evidência de recovery/backup identificada
 
 Backup Warehouse já comprovado em HARDEN-B:
 
@@ -227,6 +229,8 @@ Esse backup já foi restaurado com sucesso no target isolado:
 `emprovex-restore-warehouse-2026-10-04`
 
 A validação pós-restore registrou igualdade exata em **13/13 coleções** verificadas.
+
+Esse backup comprova recuperabilidade e fornece um ponto de recuperação concreto. Ele **não substitui** a precondição operacional do repair futuro: imediatamente antes de qualquer escrita autorizada, a frente executora deverá reconfirmar um backup/PITR válido e suficientemente recente para preservar o estado pré-repair.
 
 Nenhum novo backup ou restore foi executado nesta frente.
 
@@ -302,8 +306,9 @@ A análise só pode promover a hipótese de OUTBOUND sem lote para **CAUSA COMPR
 1. o excesso global de lotes corresponder ao OUTBOUND sem `lotId` líquido de devoluções;
 2. a mesma igualdade fechar por posição;
 3. timestamps forem coerentes com lote existente antes das saídas;
-4. não houver operação concorrente ou outro mecanismo quantitativo capaz de explicar o mesmo delta;
-5. o documento de lote a corrigir puder ser determinado sem escolha arbitrária.
+4. não houver OUTBOUND legado/não classificável nem movimento quantitativo concorrente capaz de explicar o mesmo delta;
+5. não houver duplicidade ativa de lote concorrendo como hipótese causal sem evidência histórica que a resolva;
+6. o documento de lote a corrigir puder ser determinado sem escolha arbitrária.
 
 Se múltiplos lotes permanecerem elegíveis para receber a redução e nenhum vínculo histórico os distinguir, o caso continua:
 
