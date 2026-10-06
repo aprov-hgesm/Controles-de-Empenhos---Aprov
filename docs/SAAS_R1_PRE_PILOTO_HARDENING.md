@@ -375,4 +375,3 @@ Status: **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**
 - produção: não alterada.
 
 Não criar nova frente Firebase/gRPC sem nova evidência técnica.
-
