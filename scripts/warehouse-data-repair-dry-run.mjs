@@ -442,71 +442,120 @@ function analyzeMaterial(
       );
 
   const duplicateLotGroups = duplicateLots(activeLots);
-  const noLotQuantityMatch =
-    lotExcess > EPSILON
+  const lotLineage = activeLots.map((lot) =>
+    buildLotLineage(lot, movements)
+  );
+  const lotCreationAttribution = buildLotCreationAttribution(
+    activeLots,
+    movements
+  );
+  const manualOverAttribution = lotCreationAttribution.filter(
+    (row) =>
+      row.originKind === 'MANUAL_ENRICHMENT'
+      && row.overAggregateAfterCreation > EPSILON
+  );
+
+  const currentAggregate = round(number(balance?.quantity) ?? 0);
+  const lotVsAggregateExcess = round(globalLotQuantity - currentAggregate);
+  const noLotGlobalQuantityMatch =
+    lotVsAggregateExcess > EPSILON
     && netNoLotOutbound > EPSILON
-    && approx(lotExcess, netNoLotOutbound)
-    && perPositionNoLotMatch;
-  // Igualdade quantitativa não prova causalidade quando existe uma hipótese
-  // concorrente concreta (duplicidade ativa de lote). Nessa situação a
-  // forensics permanece inconclusiva até distinguir os documentos históricos.
-  const codeMechanismProven =
-    noLotQuantityMatch
-    && duplicateLotGroups.length === 0
-    && unclassifiedOutbounds.length === 0
+    && approx(lotVsAggregateExcess, netNoLotOutbound);
+
+  const noLotAffectedLots = inferNoLotOutboundAffectedLots({
+    noLotOutbounds,
+    activeLots,
+    movements,
+  });
+
+  const noCompetingQuantitativeEvidence =
+    unclassifiedOutbounds.length === 0
     && competingQuantitativeMovements.length === 0;
 
-  const affectedLots = excessByPosition.flatMap((row) =>
-    activeLots.filter((lot) => positionKey(lot.position) === row.positionKey)
-  );
+  const manualCauseSignal =
+    manualOverAttribution.length === 1
+    && approx(
+      manualOverAttribution[0].overAggregateAfterCreation,
+      lotExcess
+    );
+
+  const outboundCauseSignal =
+    noLotGlobalQuantityMatch
+    && noLotAffectedLots.length === 1
+    && noCompetingQuantitativeEvidence;
+
   const repairCandidates = [];
+  let cause = lotExcess <= EPSILON
+    ? 'SEM_BLOCKER_QUANTITATIVO'
+    : 'INCONCLUSIVO';
+  let causeProven = false;
   let repairDeterministic = false;
-  if (codeMechanismProven && affectedLots.length === 1) {
-    const lot = affectedLots[0];
-    const excess = lotExcess;
-    const before = number(lot.quantity) ?? 0;
-    const after = round(before - excess);
-    if (after >= -EPSILON) {
+
+  if (manualCauseSignal) {
+    const signal = manualOverAttribution[0];
+    const lot = activeLots.find((item) => item._documentId === signal.lotId) || null;
+    const before = number(lot?.quantity) ?? 0;
+    const correction = signal.overAggregateAfterCreation;
+    const after = round(before - correction);
+    if (lot && after >= -EPSILON) {
+      cause = 'MANUAL_ENRICHMENT_CRIou_ATRIBUICAO_DE_LOTE_ACIMA_DO_LEDGER';
+      causeProven = true;
       repairDeterministic = true;
-      repairCandidates.push({
-        path: 'warehouse/' + (lot.workspaceId || EXPECTED.workspaceId) + '/lots/' + lot._documentId,
-        type: 'warehouse_lot_v1',
-        materialId,
-        before: {
-          quantity: before,
-          status: lot.status,
-          position: lot.position,
-          code: lot.code,
-          updatedAt: lot._updateTime,
-        },
-        after: {
-          quantity: Math.max(0, after),
-          status: lot.status,
-          position: lot.position,
-          code: lot.code,
-        },
-        delta: round(-excess),
-        cause:
-          'OUTBOUND sem lotId reduziu saldo físico/agregado sem reduzir a única atribuição de lote da posição.',
-        preconditions: {
-          expectedLotQuantity: before,
-          expectedLotUpdatedAt: lot._updateTime,
-          expectedBalanceRevision: balance?.revision ?? null,
-          expectedBalanceLastMovementId: balance?.lastMovementId ?? null,
-          activeLotIdsAtPosition: affectedLots.map((item) => item._documentId).sort(),
-        },
-        rollback:
-          'Restaurar exatamente o documento before somente sob manifesto aprovado; ledger permanece imutável.',
-      });
+      repairCandidates.push(
+        createLotRepairCandidate({
+          lot,
+          materialId,
+          balance,
+          delta: round(-correction),
+          afterQuantity: Math.max(0, after),
+          cause:
+            'A criação MANUAL_ENRICHMENT elevou a soma das atribuições de lote acima do saldo derivado do ledger exatamente pelo blocker observado.',
+          evidence: signal,
+          activeLotIdsAtPosition: activeLots
+            .filter((item) => positionKey(item.position) === positionKey(lot.position))
+            .map((item) => item._documentId)
+            .sort(),
+        })
+      );
+    }
+  } else if (outboundCauseSignal) {
+    const affected = noLotAffectedLots[0];
+    const lot = activeLots.find((item) => item._documentId === affected.lotId) || null;
+    const correction = affected.netOutboundQuantity;
+    const before = number(lot?.quantity) ?? 0;
+    const after = round(before - correction);
+    if (
+      lot
+      && correction > EPSILON
+      && after >= -EPSILON
+      && approx(correction, lotExcess)
+    ) {
+      cause = 'OUTBOUND_SEM_LOTID_NAO_REDUZIU_ATRIBUICAO_LOGISTICA_DE_LOTE';
+      causeProven = true;
+      repairDeterministic = true;
+      repairCandidates.push(
+        createLotRepairCandidate({
+          lot,
+          materialId,
+          balance,
+          delta: round(-correction),
+          afterQuantity: Math.max(0, after),
+          cause:
+            'OUTBOUND sem lotId reduziu o estoque físico/agregado na posição historicamente vinculada a este lote sem reduzir a atribuição logística correspondente.',
+          evidence: affected,
+          activeLotIdsAtPosition: activeLots
+            .filter((item) => positionKey(item.position) === positionKey(lot.position))
+            .map((item) => item._documentId)
+            .sort(),
+        })
+      );
     }
   }
 
-  const causeProven = codeMechanismProven;
-  const cause = causeProven
-    ? 'OUTBOUND_SEM_LOTID_NAO_REDUZIU_ATRIBUICAO_LOGISTICA_DE_LOTE'
-    : lotExcess <= EPSILON
-      ? 'SEM_BLOCKER_QUANTITATIVO'
-      : 'INCONCLUSIVO';
+  const noLotQuantityMatch =
+    lotExcess > EPSILON
+    && netNoLotOutbound > EPSILON
+    && approx(lotExcess, netNoLotOutbound);
 
   const timeline = buildTimeline({
     lots,
@@ -549,6 +598,9 @@ function analyzeMaterial(
     unclassifiedOutbounds: unclassifiedOutbounds.map(summarizeMovement),
     competingQuantitativeMovements: competingQuantitativeMovements.map(summarizeMovement),
     lots: lots.map(summarizeLot),
+    transfers: movements
+      .filter((row) => row.type === 'TRANSFER')
+      .map(summarizeMovement),
     intakes: intakes.map(summarizeIntake),
     consumptions: consumptions.map(summarizeConsumption),
     returns: returns.map(summarizeReturn),
@@ -559,8 +611,14 @@ function analyzeMaterial(
       updatedAt: row._updateTime,
     })),
     duplicateLotGroups,
+    lotLineage,
+    lotCreationAttribution,
+    manualOverAttribution,
+    noLotAffectedLots,
+    lotVsAggregateExcess,
     perPositionNoLotMatch,
     noLotQuantityMatch,
+    noLotGlobalQuantityMatch,
     causeProven,
     cause,
     repairNecessary: lotExcess > EPSILON,
@@ -598,6 +656,18 @@ function buildTimeline({ lots, movements, intakes, consumptions, returns, withdr
     type: row.type ?? null,
     quantity: number(row.quantityDelta),
     position: row.source?.position || row.source?.to || null,
+    transferQuantity:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? number(row.source.quantity)
+        : null,
+    from:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? row.source.from ?? null
+        : null,
+    to:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? row.source.to ?? null
+        : null,
     lotId: row.source?.lotId ?? null,
     sourceKind: row.source?.kind ?? null,
   });
@@ -656,6 +726,209 @@ function buildTimeline({ lots, movements, intakes, consumptions, returns, withdr
   );
 }
 
+function isoMs(value) {
+  if (typeof value !== 'string') return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function movementLedgerBalanceAt(movements, at) {
+  const target = isoMs(at);
+  if (target === null) return null;
+  let total = 0;
+  for (const movement of movements) {
+    const movementAt = isoMs(timestamp(movement));
+    const delta = number(movement.quantityDelta);
+    if (movementAt === null || delta === null || movementAt > target) continue;
+    total += delta;
+  }
+  return round(total);
+}
+
+function closestTransferBefore(movements, at, maxGapMs = 2000) {
+  const target = isoMs(at);
+  if (target === null) return null;
+  const candidates = movements
+    .filter(
+      (movement) =>
+        movement.type === 'TRANSFER'
+        && movement.source?.kind === 'LOCATION_TRANSFER'
+        && movement.source.to
+    )
+    .map((movement) => ({
+      movement,
+      atMs: isoMs(timestamp(movement)),
+    }))
+    .filter(
+      (item) =>
+        item.atMs !== null
+        && item.atMs <= target
+        && target - item.atMs <= maxGapMs
+    )
+    .sort((left, right) => right.atMs - left.atMs);
+  if (candidates.length !== 1) return null;
+  const match = candidates[0].movement;
+  return {
+    movementId: match._documentId,
+    at: timestamp(match),
+    deltaMs: target - candidates[0].atMs,
+    quantity: number(match.source?.quantity),
+    from: match.source?.from ?? null,
+    to: match.source?.to ?? null,
+  };
+}
+
+function buildLotLineage(lot, movements) {
+  return {
+    lotId: lot._documentId,
+    quantity: number(lot.quantity),
+    originKind: lot.origin?.kind ?? null,
+    createdAt: lot._createTime,
+    updatedAt: lot._updateTime,
+    currentPosition: lot.position ?? null,
+    inferredCreationTransfer: closestTransferBefore(
+      movements,
+      lot._createTime,
+      2000
+    ),
+    inferredLastUpdateTransfer: closestTransferBefore(
+      movements,
+      lot._updateTime,
+      2000
+    ),
+  };
+}
+
+function buildLotCreationAttribution(activeLots, movements) {
+  const sorted = [...activeLots].sort((left, right) =>
+    String(left._createTime || '').localeCompare(String(right._createTime || ''))
+  );
+  let cumulativeLots = 0;
+  return sorted.map((lot) => {
+    const quantity = number(lot.quantity) ?? 0;
+    cumulativeLots = round(cumulativeLots + quantity);
+    const ledgerAtCreation = movementLedgerBalanceAt(
+      movements,
+      lot._createTime
+    );
+    return {
+      lotId: lot._documentId,
+      originKind: lot.origin?.kind ?? null,
+      createdAt: lot._createTime,
+      quantity,
+      cumulativeActiveLotQuantityAfterCreation: cumulativeLots,
+      ledgerBalanceAtCreation: ledgerAtCreation,
+      overAggregateAfterCreation:
+        ledgerAtCreation === null
+          ? null
+          : round(cumulativeLots - ledgerAtCreation),
+      inferredCreationTransfer: closestTransferBefore(
+        movements,
+        lot._createTime,
+        2000
+      ),
+    };
+  });
+}
+
+function inferNoLotOutboundAffectedLots({
+  noLotOutbounds,
+  activeLots,
+  movements,
+}) {
+  const lineage = activeLots.map((lot) => ({
+    lot,
+    creationTransfer: closestTransferBefore(
+      movements,
+      lot._createTime,
+      2000
+    ),
+  }));
+  const byLot = new Map();
+
+  for (const outbound of noLotOutbounds) {
+    const outboundPosition = outbound.source?.position;
+    if (!outboundPosition || outboundPosition.kind === 'UNASSIGNED') continue;
+
+    const candidates = lineage.filter(({ lot, creationTransfer }) => {
+      if (!creationTransfer?.to) return false;
+      const createdAt = isoMs(lot._createTime);
+      const outboundAt = isoMs(timestamp(outbound));
+      if (createdAt === null || outboundAt === null || createdAt > outboundAt) {
+        return false;
+      }
+      return positionKey(creationTransfer.to) === positionKey(outboundPosition);
+    });
+    if (candidates.length !== 1) continue;
+
+    const { lot, creationTransfer } = candidates[0];
+    const quantity = Math.abs(number(outbound.quantityDelta) ?? 0);
+    const current = byLot.get(lot._documentId) || {
+      lotId: lot._documentId,
+      originalPosition: creationTransfer.to,
+      outboundMovementIds: [],
+      grossOutboundQuantity: 0,
+      netOutboundQuantity: 0,
+    };
+    current.outboundMovementIds.push(outbound._documentId);
+    current.grossOutboundQuantity = round(
+      current.grossOutboundQuantity + quantity
+    );
+    current.netOutboundQuantity = current.grossOutboundQuantity;
+    byLot.set(lot._documentId, current);
+  }
+
+  return [...byLot.values()];
+}
+
+function createLotRepairCandidate({
+  lot,
+  materialId,
+  balance,
+  delta,
+  afterQuantity,
+  cause,
+  evidence,
+  activeLotIdsAtPosition,
+}) {
+  return {
+    path:
+      'warehouse/'
+      + (lot.workspaceId || EXPECTED.workspaceId)
+      + '/lots/'
+      + lot._documentId,
+    type: 'warehouse_lot_v1',
+    materialId,
+    before: {
+      quantity: number(lot.quantity) ?? 0,
+      status: lot.status,
+      position: lot.position,
+      code: lot.code,
+      expiresOn: lot.expiresOn ?? null,
+      updatedAt: lot._updateTime,
+    },
+    after: {
+      quantity: afterQuantity,
+      status: lot.status,
+      position: lot.position,
+      code: lot.code,
+      expiresOn: lot.expiresOn ?? null,
+    },
+    delta,
+    cause,
+    evidence,
+    preconditions: {
+      expectedLotQuantity: number(lot.quantity) ?? 0,
+      expectedLotUpdatedAt: lot._updateTime,
+      expectedBalanceRevision: balance?.revision ?? null,
+      expectedBalanceLastMovementId: balance?.lastMovementId ?? null,
+      activeLotIdsAtPosition,
+    },
+    rollback:
+      'Restaurar exatamente o documento before somente sob manifesto aprovado; ledger permanece imutável.',
+  };
+}
+
 function duplicateLots(lots) {
   const groups = new Map();
   for (const lot of lots) {
@@ -685,6 +958,18 @@ function summarizeMovement(row) {
     at: timestamp(row),
     sourceKind: row.source?.kind ?? null,
     position: row.source?.position ?? null,
+    transferQuantity:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? number(row.source.quantity)
+        : null,
+    from:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? row.source.from ?? null
+        : null,
+    to:
+      row.source?.kind === 'LOCATION_TRANSFER'
+        ? row.source.to ?? null
+        : null,
     lotId: row.source?.lotId ?? null,
     lotCode: row.source?.lotCode ?? null,
     withdrawalOrReference:
@@ -702,6 +987,9 @@ function summarizeLot(row) {
     position: row.position ?? null,
     status: row.status ?? null,
     origin: row.origin ?? null,
+    expiresOn: row.expiresOn ?? null,
+    createdBy: row.createdBy ?? null,
+    updatedBy: row.updatedBy ?? null,
     createdAt: row._createTime,
     updatedAt: row._updateTime,
   };
