@@ -197,7 +197,17 @@ Cobre:
 4. material de controle com duplicidade documental sem excesso;
 5. guard estático que exige `method: 'GET'` e rejeita POST/PUT/PATCH/DELETE, `:commit`, `:batchWrite`, `:rollback` e SDK Firestore.
 
-O teste foi criado, mas não foi declarado como executado localmente neste worker: o ambiente de shell disponível não conseguiu resolver `github.com` para montar um checkout. A validação deve ser observada no CI do PR ou executada em checkout local.
+Validação executada neste worker sobre o conteúdo exato do HEAD:
+
+- sintaxe do módulo e do teste: **PASS** após correção do guard de newline;
+- núcleo analítico executado em runtime JavaScript com fixtures equivalentes: **15/15 asserções PASS**;
+- guard estático GET-only: **PASS**;
+- ausência de métodos HTTP POST/PUT/PATCH/DELETE: **PASS**;
+- ausência de endpoints `:commit`, `:batchWrite`, `:rollback`: **PASS**;
+- ausência de SDK Firestore/Admin no dry-run: **PASS**;
+- ausência de caracteres de controle inválidos: **PASS**.
+
+O shell isolado não conseguiu resolver `github.com` para executar `node --test` em checkout local; por isso o CI do PR continua sendo a evidência de integração no repositório.
 
 ## 7. Backup que protege o futuro repair
 
