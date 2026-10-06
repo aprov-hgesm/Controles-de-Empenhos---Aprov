@@ -66,23 +66,47 @@ test('plano só aceita os dois candidatos causalmente autorizados', () => {
     materialId: target.materialId,
     before: { quantity: target.beforeQuantity },
     after: { quantity: target.afterQuantity },
-    cause: target.cause,
+    cause: 'explicação humana do candidato — não é o código causal canônico',
     preconditions: { expectedLotUpdatedAt: '2026-10-06T00:00:00Z' },
+  }));
+  const results = TARGETS.map((target) => ({
+    materialId: target.materialId,
+    cause: target.cause,
+    causeProven: true,
+    repairDeterministic: true,
   }));
   const plan = validateAuthorizedPlan(
     {
       readyForHumanRepairAuthorization: true,
+      results,
       repairManifest: { candidates },
     },
     { cappedCollections: [] }
   );
   assert.equal(plan.length, 2);
 
+  const wrongCauseResults = results.map((row, index) =>
+    index === 0 ? { ...row, cause: 'INCONCLUSIVO' } : row
+  );
   assert.throws(
     () =>
       validateAuthorizedPlan(
         {
           readyForHumanRepairAuthorization: true,
+          results: wrongCauseResults,
+          repairManifest: { candidates },
+        },
+        { cappedCollections: [] }
+      ),
+    /causa canônica diverge/
+  );
+
+  assert.throws(
+    () =>
+      validateAuthorizedPlan(
+        {
+          readyForHumanRepairAuthorization: true,
+          results,
           repairManifest: {
             candidates: [
               ...candidates,
