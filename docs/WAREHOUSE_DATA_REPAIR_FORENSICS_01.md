@@ -1,6 +1,6 @@
 # WAREHOUSE-DATA-REPAIR-FORENSICS-01
 
-Status: **BLOCKED — CAUSALIDADE INSUFICIENTE PARA REPAIR SEGURO**
+Status: **PASS PARCIAL — LEITURA VIVA CONCLUÍDA / ANALISADOR CAUSAL V2 AGUARDA REEXECUÇÃO**
 
 Esta frente é exclusivamente de investigação causal, dry-run e preparação de repair.
 **Nenhum write em dados reais foi autorizado ou executado.**
@@ -126,19 +126,120 @@ Por isso, qualquer prova causal precisa calcular **OUTBOUND sem lote líquido de
 
 Transferência pode explicar divergência **por posição**, mas não cria sozinha excesso global de lotes sobre o físico. Ainda assim, deve aparecer na timeline para excluir casos históricos de posição de lote desatualizada.
 
-## 4. Hipótese causal principal
+## 4. Leitura viva forense #1 e evolução causal
 
-Hipótese forte:
+A primeira execução viva do dry-run foi concluída em
+`2026-10-06T00:25:48.658Z`, com **3.057 reads** e nenhuma coleção
+capped. Nenhuma escrita foi realizada.
 
-**OUTBOUND sem `lotId` reduziu saldo físico/agregado sem reduzir a atribuição logística de lote.**
+### 4.1 Material A — evidência viva
 
-Essa hipótese é sustentada pelo código e pelo contrato da FASE 8, mas **ainda não é classificada como CAUSA COMPROVADA nos dados reais** porque o relatório preservado da auditoria anterior não imprimiu os movimentos OUTBOUND individuais, seus `lotId`, quantidades, posições e timestamps.
+`mat_272f2d996ee65ed3530ad2d7e27b66d7`
 
-Não é seguro inferir que:
+A leitura mostrou:
 
-- os +100 do Material A correspondem ao líquido de OUTBOUND sem lote;
-- os +10 do Material B correspondem ao líquido de OUTBOUND sem lote;
-- um dos lotes duplicados do Material B é necessariamente o documento incorreto.
+- lotExcess: **100**;
+- OUTBOUND sem lote bruto: **60**;
+- devolução: **5**;
+- OUTBOUND sem lote líquido: **55**;
+- dois OUTBOUNDs históricos, ambos em `UNASSIGNED`, de 50 e 10;
+- lote de origem INVOICE com quantidade **100**;
+- lote `lot_670e1ca177804501b90bf8cdd669683f` de origem
+  `MANUAL_ENRICHMENT`, quantidade **440**, criado em
+  `2026-09-28T10:27:04.639462Z`.
+
+Conclusão da primeira versão do analisador: OUTBOUND sem lote **não explica
+sozinho** o +100, porque 55 líquidos != 100.
+
+A reconstrução temporal revelou um mecanismo causal mais forte:
+
+1. INVOICE_ENTRY colocou **500** no ledger;
+2. foi criado um lote INVOICE de **100**;
+3. ocorreram saídas sem lote de **50** e **10**;
+4. no instante da criação do lote MANUAL_ENRICHMENT de **440**, o saldo
+   derivado do ledger era **440**;
+5. a nova atribuição de 440 foi criada sem substituir/inativar o lote INVOICE
+   preexistente de 100;
+6. a soma de lotes passou para **540** enquanto o ledger estava em **440**;
+7. o excesso introduzido naquele evento foi exatamente **+100**.
+
+O código histórico que permitia adicionar validade a item sem lote criava uma
+nova referência técnica com `quantity = row.quantity`. O contrato de
+`createWarehouseLot()` valida a quantidade do **novo lote** contra o saldo,
+mas não valida a soma de todos os lotes ativos existentes contra o saldo.
+Esse mecanismo é compatível com o documento vivo `MANUAL_ENRICHMENT`.
+
+**Candidato causal v2, ainda pendente de confirmação pela reexecução viva:**
+
+`lot_670e1ca177804501b90bf8cdd669683f`
+
+Estado previsto pelo v2:
+
+`440 -> 340`
+
+O valor não é escolhido por diferença bruta arbitrária: ele deriva do evento
+de criação que introduziu exatamente +100 de sobre-atribuição.
+
+### 4.2 Material B — evidência viva
+
+`mat_6feb0840ca4060f7d69fcce1663f21b8`
+
+A leitura mostrou:
+
+- lotExcess: **10**;
+- OUTBOUND sem lote líquido: **10**;
+- nenhum retorno;
+- dois lotes de 50, ambos ligados ao mesmo intake/NF;
+- o primeiro lote foi criado **77 ms** depois do primeiro TRANSFER de
+  alocação;
+- o segundo lote `lot_082ebcd7a2acf0c706c87464307cb1ff` foi criado
+  **81 ms** depois do segundo TRANSFER de alocação;
+- esse segundo TRANSFER tinha como destino a subposição
+  `sub_43397d13f1924addb1383aa31c151b62`;
+- a única saída de 10 ocorreu depois exatamente dessa subposição e com
+  `lotId = null`.
+
+A primeira versão do dry-run retornou `perPositionNoLotMatch=false` porque
+comparava a posição histórica da saída com a posição **final atual** do lote.
+Isso era conservador, mas insuficiente para seguir a linhagem.
+
+O analisador v2 agora recupera `TRANSFER.quantity/from/to` e infere a posição
+de origem histórica de cada lote pelo TRANSFER imediatamente anterior à sua
+criação. Com isso, o segundo lote de 50 pode ser distinguido do primeiro sem
+depender apenas do código técnico duplicado.
+
+**Candidato causal v2, ainda pendente de confirmação pela reexecução viva:**
+
+`lot_082ebcd7a2acf0c706c87464307cb1ff`
+
+Estado previsto pelo v2:
+
+`50 -> 40`
+
+### 4.3 Material de controle
+
+`mat_bb6d4a089c224b1a48ad3a43f32170a3`
+
+Permanece quantitativamente canônico:
+
+`aggregate = physical = activeLots = ledger = 100`
+
+A duplicidade técnica aparente continua sendo evidência de que dois documentos
+com o mesmo código técnico não são, isoladamente, prova de erro quantitativo.
+
+### 4.4 Estado probatório
+
+A leitura viva #1 é suficiente para rejeitar a hipótese simplista
+"todo excesso = soma global de OUTBOUND sem lote".
+
+O analisador causal v2 foi implementado e validado com fixtures que reproduzem
+os eventos vivos. Porém, **ainda precisa ser reexecutado contra o Firestore
+real** antes de promover os dois candidatos acima a documentos de repair
+formalmente comprovados.
+
+Até essa reexecução:
+
+**NÃO EXECUTE REPAIR.**
 
 ## 5. Dry-run criado
 
@@ -157,9 +258,13 @@ Contrato:
 - analisa os dois blockers e o material de controle;
 - reconstrói timeline por material;
 - cruza movimentos, consumptions, withdrawals, returns, intakes, lotes e location balances;
+- preserva em TRANSFER: quantidade, posição de origem e posição de destino;
+- reconstrói linhagem provável de lote a partir do TRANSFER imediatamente anterior à criação/atualização;
+- calcula saldo derivado do ledger no instante de cada criação de lote;
+- detecta MANUAL_ENRICHMENT que introduz sobre-atribuição exatamente mensurável;
 - calcula OUTBOUND sem lote bruto e líquido de devoluções;
-- compara excesso por posição com OUTBOUND sem lote líquido;
-- identifica duplicidade técnica de lote;
+- relaciona OUTBOUND sem lote à posição histórica de criação do lote;
+- identifica duplicidade técnica de lote sem tratá-la automaticamente como causa;
 - falha fechado se houver OUTBOUND legado/não classificável;
 - falha fechado se houver movimento quantitativo concorrente (`INVENTORY_ADJUSTMENT`, `INVOICE_CORRECTION`, `REVERSAL`, `OUTBOUND_RETURN`);
 - só gera candidato de repair quando o mecanismo fecha quantitativamente, não há hipótese concorrente concreta **e existe exatamente um lote afetado**, evitando escolher arbitrariamente entre múltiplos lotes;
@@ -183,7 +288,7 @@ node scripts/warehouse-data-repair-dry-run.mjs `
 Remove-Item Env:WAREHOUSE_AUDIT_ACCESS_TOKEN
 ```
 
-A execução viva deve ser feita somente com credencial de leitura adequada. O worker atual não recebeu token/gcloud utilizável no ambiente de execução e, portanto, **não fabricou uma leitura viva**.
+A primeira execução viva foi realizada pelo Fundador e preservada como evidência. Após essa execução, o analisador foi evoluído para v2. É necessária **uma segunda execução viva, ainda somente leitura**, para confirmar os documentos candidatos e o manifesto final.
 
 ## 6. Teste de contrato criado
 
@@ -194,23 +299,28 @@ Arquivo:
 Cobre:
 
 1. decodificação REST;
-2. cenário com OUTBOUND sem `lotId` fechando o excesso por posição;
-3. cenário com duplicidade de lote e repair não determinístico;
+2. Material A: INVOICE_ENTRY 500 + lote 100 + saídas 50/10 +
+   MANUAL_ENRICHMENT 440, provando sobre-atribuição de +100;
+3. Material B: duas alocações de 50 em posições distintas, OUTBOUND sem lotId
+   de 10 na segunda posição, identificando o lote causal 50 -> 40;
 4. material de controle com duplicidade documental sem excesso;
-5. guard estático que exige `method: 'GET'` e rejeita POST/PUT/PATCH/DELETE, `:commit`, `:batchWrite`, `:rollback` e SDK Firestore.
+5. guard estático que exige `method: 'GET'` e rejeita POST/PUT/PATCH/DELETE,
+   `:commit`, `:batchWrite`, `:rollback` e SDK Firestore.
 
-Validação executada neste worker sobre o conteúdo exato do HEAD:
+Validação executada neste worker sobre o conteúdo do analisador v2:
 
-- sintaxe do módulo e do teste: **PASS** após correção do guard de newline;
-- núcleo analítico executado em runtime JavaScript com fixtures equivalentes: **15/15 asserções PASS**;
+- sintaxe do módulo e do teste: **PASS**;
+- cenário sintético equivalente ao Material A: **PASS**;
+- cenário sintético equivalente ao Material B: **PASS**;
+- controle sem blocker: **PASS**;
+- classificação sintética combinada:
+  **PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO**;
 - guard estático GET-only: **PASS**;
 - ausência de métodos HTTP POST/PUT/PATCH/DELETE: **PASS**;
 - ausência de endpoints `:commit`, `:batchWrite`, `:rollback`: **PASS**;
-- ausência de SDK Firestore/Admin no dry-run: **PASS**;
-- ausência de caracteres de controle inválidos: **PASS**.
+- ausência de SDK Firestore/Admin no dry-run: **PASS**.
 
-O shell isolado não conseguiu resolver `github.com` para executar `node --test` em checkout local; por isso o CI do PR continua sendo a evidência de integração no repositório.
-
+Essa validação prova o algoritmo, não substitui a reexecução viva v2.
 ## 7. Evidência de recovery/backup identificada
 
 Backup Warehouse já comprovado em HARDEN-B:
@@ -281,19 +391,23 @@ Enquanto os documentos exatos não forem causalmente identificados, rollback exe
 
 | Critério | Material A | Material B |
 | --- | --- | --- |
-| CAUSA COMPROVADA? | **NÃO** | **NÃO** |
+| CAUSA COMPROVADA NO LIVE V2? | **PENDENTE** | **PENDENTE** |
 | REPAIR NECESSÁRIO? | **SIM** | **SIM** |
-| REPAIR DETERMINÍSTICO? | **NÃO** | **NÃO** |
-| DOCUMENTOS EXATOS IDENTIFICADOS? | **NÃO** | **NÃO** |
+| CANDIDATO CAUSAL V2? | **lot_670e1ca...** | **lot_082ebcd7...** |
+| DELTA CANDIDATO V2 | **440 -> 340** | **50 -> 40** |
+| REPAIR DETERMINÍSTICO NO ALGORITMO? | **SIM** | **SIM** |
 | BACKUP IDENTIFICADO? | **SIM** | **SIM** |
-| ROLLBACK DEFINIDO? | **NÃO** | **NÃO** |
-| PRONTO PARA AUTORIZAÇÃO HUMANA DE REPAIR? | **NÃO** | **NÃO** |
+| ROLLBACK E PRECONDIÇÕES PREPARADOS? | **SIM** | **SIM** |
+| PRONTO PARA AUTORIZAÇÃO HUMANA DE REPAIR? | **NÃO, falta live v2** | **NÃO, falta live v2** |
 
-Observação: “REPAIR NECESSÁRIO = SIM” decorre do blocker quantitativo já comprovado. Isso não autoriza escolher `540 → 440` ou `100 → 90` sem identificar documentalmente **qual lote está errado e por quê**.
+Os candidatos acima são derivados de causalidade histórica reconstruída. Eles
+**não são autorização de escrita** e só podem ser promovidos ao manifesto final
+se a reexecução viva do analisador v2 reproduzir os mesmos paths, estados
+before/after e precondições.
 
 ## 10. Evidência adicional obrigatória
 
-Para sair de BLOCKED é necessário executar o dry-run vivo e preservar o JSON entre:
+Para concluir a forensics, reexecutar o dry-run v2 e preservar o JSON entre:
 
 `FORENSICS_JSON_BEGIN`
 
@@ -301,19 +415,21 @@ e:
 
 `FORENSICS_JSON_END`
 
-A análise só pode promover a hipótese de OUTBOUND sem lote para **CAUSA COMPROVADA** quando, para cada blocker:
+A promoção para **CAUSA COMPROVADA** exige, no live v2:
 
-1. o excesso global de lotes corresponder ao OUTBOUND sem `lotId` líquido de devoluções;
-2. a mesma igualdade fechar por posição;
-3. timestamps forem coerentes com lote existente antes das saídas;
-4. não houver OUTBOUND legado/não classificável nem movimento quantitativo concorrente capaz de explicar o mesmo delta;
-5. não houver duplicidade ativa de lote concorrendo como hipótese causal sem evidência histórica que a resolva;
-6. o documento de lote a corrigir puder ser determinado sem escolha arbitrária.
+1. Material A: `manualOverAttribution` identificar exatamente
+   `lot_670e1ca177804501b90bf8cdd669683f`, com overage **100**;
+2. Material A: candidato before **440**, after **340**;
+3. Material B: `noLotAffectedLots` identificar exatamente
+   `lot_082ebcd7a2acf0c706c87464307cb1ff`;
+4. Material B: candidato before **50**, after **40**;
+5. nenhuma evidência quantitativa concorrente nova;
+6. nenhuma coleção capped;
+7. `readyForHumanRepairAuthorization = true`.
 
-Se múltiplos lotes permanecerem elegíveis para receber a redução e nenhum vínculo histórico os distinguir, o caso continua:
+Qualquer divergência mantém:
 
 **FORENSICS INCONCLUSIVE — REPAIR NÃO AUTORIZÁVEL**
-
 ## 11. Hipóteses descartadas ou não provadas
 
 - **UNASSIGNED +5 do Material A:** fato separado; explica aggregate 445 vs physical 440, mas não explica automaticamente +100 de lotes.
@@ -341,14 +457,20 @@ Se uma futura execução de repair exigir permissão adicional:
 
 ## 13. Classificação final desta entrega
 
-**BLOCKED — CAUSALIDADE INSUFICIENTE PARA REPAIR SEGURO**
+**PASS PARCIAL — CAUSA PROVADA EM PARTE / MAIS EVIDÊNCIA NECESSÁRIA**
 
 Motivo:
 
-- mecanismo causal plausível e reproduzível no código foi identificado;
-- tooling read-only de forensics/dry-run foi preparado;
-- backup válido foi identificado;
-- porém os eventos reais individuais ainda não foram lidos nesta frente;
-- portanto não há base para selecionar documentos de repair nem autorizar escrita.
+- a leitura viva #1 foi concluída, com 3.057 reads e sem cap;
+- os eventos individuais de intake, lotes, saídas, devolução e transfers foram
+  obtidos;
+- a hipótese simplista original foi corretamente rejeitada para o Material A;
+- duas cadeias causais mais específicas foram reconstruídas;
+- o analisador v2 identifica deterministicamente os candidatos em fixtures
+  equivalentes aos dados vivos;
+- falta somente reexecutar o v2 contra o Firestore real para confirmar paths,
+  deltas e precondições antes de qualquer autorização humana.
+
+Até essa confirmação:
 
 **NÃO EXECUTE REPAIR.**
