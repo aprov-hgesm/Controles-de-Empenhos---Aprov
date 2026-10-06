@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05/06 — WAREHOUSE-DATA-REPAIR-EXECUTION-01 executou com autorização explícita o repair real dos dois blockers quantitativos de lotes. Dry-run pré-write PASS, PITR e delete protection ativos, backup Warehouse READY `84e64064...`, precondições transacionais PASS e commit Firestore concluído em `2026-10-06T01:14:32.083411Z`. Os únicos writes foram `lot_670e1ca... quantity 440→340` e `lot_082eb... quantity 50→40`. A validação imediata fechou ambos com `lotExcess=0`; auditoria global pós-repair retornou 56 materiais, 0 inconsistências, 0 performance risks e apenas reconciliações controladas remanescentes. O antigo aviso `PAL01_KNOWN_CASE_NOT_IDENTIFIED` foi identificado como falso positivo do auditor pós-repair e corrigido em `warehouse-data-repair-execution-01`. O blocker quantitativo Warehouse foi removido; produção do app e Rules permanecem inalteradas.**
+Última sincronização global: **2026-10-05/06 — blockers Warehouse quantitativos encerrados e Inventário Físico corrigido. `WAREHOUSE-DATA-REPAIR-EXECUTION-01@e3f3aae9...` executou os dois writes autorizados com dry-run/recovery/precondições PASS e pós-repair com `lotExcess=0`; Core Protection e Application CI SUCCESS. `INVENTORY-PHYSICAL-FIX-01@5255bbcbc43593bcf66001adf85eb5d6264a121e` fechou PASS com Core Protection e Application CI SUCCESS: Inventário TOTAL considera somente `LOCATION`/`SUBPOSITION` e exclui `UNASSIGNED`, inclusive bloqueando ajuste físico sobre item histórico `UNASSIGNED`. Program Control abriu `rc-r1-composition-01@bd27da91da92642d5a5fea08f7020c6cea658a62` para composição semântica do novo RC. A fonte runtime principal é `inventory-physical-fix-01@5255bbcb...`, que já contém integralmente MOBILE-K; SaaS-FINAL-AUDIT, Rules audit e tooling Warehouse devem ser reconciliados seletivamente, nunca por merge cego. Produção e Rules permanecem inalteradas.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` permanece baseline histórica. A certificação física MOBILE-J encontrou defeitos reais de etiqueta, consulta, reconciliação de lotes e UX. O Fundador autorizou agora uma correção arquitetural transversal: Mobile deve deixar de manter regras operacionais paralelas e tornar-se camada fina de scanner/UX sobre o mesmo motor canônico usado pela Central Desktop. A linha RC viva é `rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`; o worker isolado partirá exatamente desse SHA em `mobile-r1-k-canonical-ops-engine`. PR #252 continua draft e não mergeado; produção do app/main não foi alterada.**
+Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC já publicadas permanecem congeladas; o RC original `54e60c...` é baseline histórica e a linha de correção `bd27da91...` continua a base da composição. MOBILE-K fechou em `9f1035ac...`; o Inventory Physical Fix, descendente linear de MOBILE-K, fechou em `5255bbcb...` com os dois gates principais verdes. O repair Warehouse real foi executado e revalidado sem alterar runtime, Rules ou ledger. O próximo owner exclusivo é `RC-COMPOSITION-01`, que deve compor semanticamente a candidata final sem publicar produção, sem executar novo repair e sem incorporar frentes SaaS pré-piloto ainda não certificadas.**
 
 ---
 
@@ -113,11 +113,12 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-K — Canonical Ops Engine | **CONCLUÍDA PELO WORKER / APTO PARA REVISÃO** | `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`; PR #253 OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás; 26 arquivos; gates completos verdes; Rules inalteradas |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
-| Onda paralela de auditoria | **3/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; SAAS-FINAL-AUDIT-01 = PASS COM RISCOS RESIDUAIS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando RC-READINESS-01 |
-| INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
+| Onda paralela de auditoria | **ENCERRADA / HANDOFF PARA COMPOSIÇÃO** | RULES-COMPAT-01 PASS; SAAS-FINAL-AUDIT-01 PASS com riscos residuais; WAREHOUSE audit/forensics/repair concluídos; `rc-readiness-01` não avançou e seu ownership foi absorvido por `RC-COMPOSITION-01` |
+| INVENTORY-PHYSICAL-FIX-01 | **PASS / ENCERRADA TECNICAMENTE** | `inventory-physical-fix-01@5255bbcb...`; PR #261 DRAFT; TOTAL/DEPOT/LOCATION/SUBPOSITION excluem `UNASSIGNED` do inventário físico; Core Protection + Application CI SUCCESS |
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **PASS / ENCERRADA TECNICAMENTE** | `warehouse-data-repair-forensics-01@c1fa1d9...`; causa comprovada nos 2 blockers, dry-run determinístico e manifesto prontos; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PASS / REPAIR EXECUTADO E REVALIDADO** | `warehouse-data-repair-execution-01@e3f3aae...`; commit Firestore `2026-10-06T01:14:32.083411Z`; 2 writes allowlisted; pós-repair com 0 inconsistências e lotExcess=0 nos dois materiais; Core Protection e Application CI SUCCESS |
+| RC-COMPOSITION-01 | **ATIVADA / OWNER DO NOVO RC** | `rc-r1-composition-01@bd27da91...`; compor semanticamente runtime `5255bbcb...` + gates SaaS aplicáveis + evidências/auditorias, sem merge cego, sem Rules, sem produção e sem novo repair |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -170,25 +171,46 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O próximo gate **não é produção** e também **não é continuar remendando avisos da UI móvel um a um**.
+O gate vigente é **RC-COMPOSITION-01 — composição semântica e preparação do novo re-freeze**.
 
-A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo worker e está em revisão coordenada. O gate imediato agora é receber e cruzar os quatro handoffs paralelos antes de qualquer integração do PR #253:
+Branch exclusiva já criada:
 
-1. RULES-COMPAT-01 — **PASS / ENCERRADA**: compatibilidade antiga + RC e ALLOW/DENY preservados, sem necessidade de mudança de Rules;
-2. SAAS-FINAL-AUDIT-01 — **PASS / ENCERRADA TECNICAMENTE**: completude SaaS R1 confirmada; nenhum blocker funcional; riscos residuais de uptime externo, A2, `warehouseAccess` inicial e Rules documentados;
-3. WAREHOUSE-DATA-AUDIT-01 — **ENCERRADA / BLOCKER RC**: Inventário TOTAL inclui `UNASSIGNED`; PAL-01 exige diagnóstico read-only; performance risk em movimentos por material;
-4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
-5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
-6. `WAREHOUSE-INTEGRITY-RECONCILE-01` — **CONCLUÍDA**: auditoria global confirmou dois blockers quantitativos de lotes e três reconciliações adicionais;
-7. `WAREHOUSE-DATA-REPAIR-FORENSICS-01` — **PASS / ENCERRADA**: causa histórica dos dois blockers comprovada, documentos exatos identificados e repair determinístico preparado;
-8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — **PASS / EXECUTADA**: dry-run, recovery e precondições PASS; dois writes allowlisted aplicados atomicamente; validação pós-repair PASS;
-9. auditoria global pós-repair — **0 inconsistências / blocker quantitativo eliminado**; reexecutar uma vez o auditor atualizado para remover o falso positivo histórico `PAL01_KNOWN_CASE_NOT_IDENTIFIED` e consolidar as 3 reconciliações reais remanescentes;
-10. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
-11. corrigir somente blockers remanescentes com owner exclusivo;
-12. integrar semanticamente o resultado na linha RC;
-13. repetir gates afetados no SHA final;
-14. executar teste físico curto das operações críticas;
-15. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
+`rc-r1-composition-01@bd27da91da92642d5a5fea08f7020c6cea658a62`
+
+Fontes congeladas para o worker:
+
+1. **base RC viva:** `rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`;
+2. **runtime operacional alvo:** `inventory-physical-fix-01@5255bbcbc43593bcf66001adf85eb5d6264a121e` — descendente linear da base RC e já contém todo `MOBILE-K@9f1035ac...` + 3 commits do Inventory Physical Fix;
+3. **SaaS final audit:** `saas-final-audit-01@4cc5b3797747d4d49591f4a68196e723700daa74` — branch divergente; somente mudanças ainda aplicáveis de CI/Legal/guard/docs devem ser reconciliadas arquivo a arquivo, nunca mergeadas em bloco;
+4. **Rules compatibility:** `rules-compat-01@97442b5f11779b7b434cba8d0a9a2c9ab843ac66` — documental; Rules permanecem nos hashes `bc91185f...` e `6e1f1050...`;
+5. **Warehouse repair/evidence:** `warehouse-data-repair-execution-01@e3f3aae9e8ee2337e387fd652a104f194049cd70` — dados já reparados; não repetir escrita. Seus scripts/docs read-only podem ser incorporados seletivamente se ajudarem a certificar o RC;
+6. **SaaS pré-piloto:** `saas-pilot-journey-01`, `saas-pilot-ops-01`, `saas-uptime-readiness-01` ficam fora desta composição enquanto não houver handoff aprovado.
+
+Estado já resolvido antes da composição:
+
+- MOBILE-K: PASS / candidata à integração;
+- Inventory Physical Fix: PASS / Core + Application CI SUCCESS;
+- dois excessos de lotes +100/+10: reparados e revalidados;
+- auditoria pós-repair: 0 inconsistências quantitativas;
+- Rules compatibility: PASS;
+- SaaS final audit: PASS com riscos residuais documentados;
+- produção: inalterada;
+- Rules: inalteradas.
+
+O worker de composição deve:
+
+1. confirmar que `5255bbcb...` é exatamente 25 commits à frente / 0 atrás de `bd27da91...`;
+2. trazer esse runtime para `rc-r1-composition-01` preservando os commits auditados — fast-forward é aceitável por ser relação linear comprovada, mas somente após conferência;
+3. reconciliar semanticamente o delta SaaS final, preservando quaisquer guards Mobile/RC mais novos do `application-ci.yml` e evitando regressão por substituição de arquivo;
+4. decidir explicitamente quais artifacts read-only Warehouse entram na candidata; **não executar** `warehouse-data-repair-execute.mjs --apply`;
+5. preservar integralmente os dois arquivos de Rules nos hashes auditados;
+6. executar suites Warehouse/Mobile/SaaS/Legal/TypeScript/build/diff hygiene/Core/Recovery aplicáveis;
+7. produzir release manifest com SHAs, Rules hashes, estado de dados reparados, riscos residuais, rollback e testes físicos ainda necessários;
+8. abrir PR DRAFT contra `rc-r1-mobile-j-fix-label-readability`;
+9. classificar a candidata como `APTA PARA RE-FREEZE`, `PASS COM PENDÊNCIAS DE CERTIFICAÇÃO FÍSICA` ou `BLOCKER`;
+10. **não** mergear `main`, publicar Production, publicar Rules, executar novo repair, iniciar piloto ou declarar GO.
+
+A antiga branch `rc-readiness-01@bd27da91...` não recebeu delta e fica **SUPERSEDIDA por RC-COMPOSITION-01** para evitar dois owners da mesma etapa.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -202,7 +224,8 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 | SAAS-PILOT-OPS-01 | `saas-pilot-ops-01@4cc5b379...` | HEAD auditado SaaS | operação do piloto: checklist, evidências, suporte, billing manual, participantes, rollback | runbook operacional do piloto | sem iniciar piloto real ou alterar produção |
 | SAAS-UPTIME-READINESS-01 | `saas-uptime-readiness-01@4cc5b379...` | HEAD auditado SaaS | health/Cloud Monitoring: configuração reproduzível e validação prévia | runbook/scripts dry-run para uptime/alert/canal | não criar check/alert/channel produtivo antes de publicação autorizada |
 | WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01@07265b2...` | RC estável `bd27da91...`; MOBILE-K somente leitura | **BLOCKER RC** — integridade logística/legado | `docs/WAREHOUSE_DATA_AUDIT_01.md`; PR #255 DRAFT | nenhuma escrita/migração; Inventário TOTAL + UNASSIGNED precisa correção isolada; PAL-01 precisa diagnóstico read-only |
-| RC-READINESS-01 | `rc-readiness-01` | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
+| RC-READINESS-01 | `rc-readiness-01@bd27da91...` | RC estável `bd27da91...` | **SUPERSEDIDA / SEM DELTA** | ownership transferido para RC-COMPOSITION-01 | não executar em paralelo |
+| RC-COMPOSITION-01 | `rc-r1-composition-01@bd27da91...` | base RC viva | composição semântica, release manifest, gates, rollback e preparação do re-freeze | PR DRAFT contra `rc-r1-mobile-j-fix-label-readability` | sem main/Production/Rules/repair/piloto |
 
 #### Regras de concorrência
 
@@ -275,7 +298,7 @@ Regras:
 1. nenhum worker faz merge em `main`, deploy Production, publicação de Rules, cobrança real, suspensão de cliente real ou início de piloto;
 2. achado funcional vira handoff ao Coordenador, não feature oportunista;
 3. mudanças em Auth, sessão, lifecycle, legal, `warehouseAccess` ou Rules compartilhadas exigem impacto Mobile explícito;
-4. RC-READINESS continua owner de composição/re-freeze; estas frentes apenas antecipam evidência e operação SaaS.
+4. RC-COMPOSITION-01 é o owner de composição/re-freeze; estas frentes apenas antecipam evidência e operação SaaS e não entram na candidata sem handoff aprovado.
 
 #### Frentes corretivas derivadas da auditoria logística
 
