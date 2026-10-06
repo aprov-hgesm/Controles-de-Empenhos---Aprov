@@ -732,6 +732,9 @@ export async function applyWarehouseInventoryAdjustment(
         itemSnapshot.data() as Record<string, unknown>
       ).item;
 
+      if (item.position.kind === 'UNASSIGNED') {
+        throw new Error('WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED');
+      }
       if (session.status !== 'CONFIRMING') throw new Error('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
       if (item.status === 'MATCHED') throw new Error('WAREHOUSE_INVENTORY_ZERO_DIFFERENCE');
       if (item.status === 'STALE') throw new Error('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');

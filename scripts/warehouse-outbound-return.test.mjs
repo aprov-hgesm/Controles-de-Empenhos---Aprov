@@ -120,19 +120,20 @@ test('status de devolução usa marcador separado e não atualiza consumptions',
   );
 });
 
-test('devolução interna aceita posição UNASSIGNED sem afrouxar Entrada Avulsa comum', () => {
+test('devolução exige posição física e Entrada Avulsa não usa UNASSIGNED operacional', () => {
   assert.match(
     manualEntrySource,
-    /position\.kind === 'UNASSIGNED' && !input\.allowUnassignedPosition/
+    /!position \|\| position\.kind === 'UNASSIGNED'/
   );
+  assert.doesNotMatch(manualEntrySource, /allowUnassignedPosition/);
+  assert.doesNotMatch(manualEntrySource, /transferWarehouseStock\s*\(/);
+  assert.match(manualEntrySource, /applyWarehouseManualLocatedEntry/);
   assert.match(
     repositorySource,
-    /allowUnassignedPosition: originalSource\.position\.kind === 'UNASSIGNED'/
+    /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/
   );
-  assert.match(
-    manualEntrySource,
-    /position\.kind === 'UNASSIGNED'\s*\? null\s*:\s*await transferWarehouseStock/
-  );
+  assert.doesNotMatch(repositorySource, /allowUnassignedPosition/);
+  assert.match(repositorySource, /returnedEntry\.locationBalance/);
 });
 
 test('reserva pendente sem movimento pode ser assumida por nova tentativa', () => {

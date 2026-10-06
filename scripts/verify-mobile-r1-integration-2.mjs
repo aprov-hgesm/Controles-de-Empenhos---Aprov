@@ -28,10 +28,10 @@ assert.match(
   /return classifyWarehouseMobileProductScan\(value\)/,
   'MOBILE-D deve delegar ao classificador canônico da MOBILE-C'
 );
-assert.match(transfer, /WAREHOUSE_MOBILE_TRANSFER_MAX_RELOCATE_LOTS = 24/);
-assert.match(transfer, /TOO_MANY_ACTIVE_LOTS/);
-assert.match(transfer, /LOT_ATTRIBUTION_EXCEEDS_STOCK/);
-assert.match(transfer, /lotAllocations/);
+assert.match(transfer, /WAREHOUSE_TRANSFER_MAX_ACTIVE_LOTS/);
+assert.match(transfer, /planWarehouseTransferLots/);
+assert.match(transfer, /prepareWarehousePhysicalTransfer/);
+assert.match(transfer, /isWarehousePhysicalStockPosition/);
 assert.doesNotMatch(
   transfer,
   /PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED/,
@@ -70,8 +70,9 @@ assert.doesNotMatch(allocationPage, /\bupdateDoc\s*\(/);
 
 const transferPage = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
 assert.match(transferPage, /transferWarehouseStock/);
-assert.match(transferPage, /listWarehouseMobileTransferLotsCritical/);
-assert.match(transferPage, /lotAllocations: prepared\.lotAllocations/);
+assert.doesNotMatch(transferPage, /listWarehouseMobileTransferLotsCritical/);
+assert.doesNotMatch(transferPage, /lotAllocations\s*:/);
+assert.doesNotMatch(transferPage, /relocateLotIds\s*:/);
 assert.doesNotMatch(transferPage, /\bsetDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bOUTBOUND\b/);
@@ -80,6 +81,9 @@ const locationRepository = read('lib/warehouse/locationRepository.ts');
 assert.match(locationRepository, /createWarehouseTransferSplitLotId/);
 assert.match(locationRepository, /WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID/);
 assert.match(locationRepository, /validateWarehouseLot/);
+assert.match(locationRepository, /WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION/);
+assert.match(locationRepository, /buildCanonicalWarehouseTransferLotPlan/);
+assert.doesNotMatch(locationRepository, /UNASSIGNED flows keep the legacy explicit/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(

@@ -1158,6 +1158,9 @@ export async function returnWarehouseStockOutbound(
   ) {
     throw new Error('WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_INVALID');
   }
+  if (originalSource.position.kind === 'UNASSIGNED') {
+    throw new Error('WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED');
+  }
 
   const summaryRef = doc(db, returnSummaryPath);
 
@@ -1285,41 +1288,13 @@ export async function returnWarehouseStockOutbound(
       provenance: 'Devolução de saída',
       reference: consumptionId,
       position: originalSource.position,
-      allowUnassignedPosition: originalSource.position.kind === 'UNASSIGNED',
       expiresOn,
       barcode: null,
     }
   );
   warnings.push(...returnedEntry.warnings);
 
-  let returnedLocationBalance: WarehouseLocationBalance;
-  if (returnedEntry.transfer) {
-    returnedLocationBalance = returnedEntry.transfer.toBalance;
-  } else {
-    const unassignedPosition: WarehouseStockPosition = { kind: 'UNASSIGNED' };
-    const unassignedBalanceId = await createWarehouseLocationBalanceId(
-      scope.workspaceId,
-      consumption.materialId,
-      unassignedPosition
-    );
-    const unassignedBalancePath = warehouseDocumentPath(
-      scope.workspaceId,
-      'locationBalances',
-      unassignedBalanceId
-    );
-    const unassignedSnapshot = await getDoc(doc(db, unassignedBalancePath));
-    if (!unassignedSnapshot.exists()) {
-      throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_NOT_FOUND');
-    }
-    returnedLocationBalance = parseLocationBalance(
-      scope.workspaceId,
-      unassignedSnapshot.id,
-      unassignedSnapshot.data() as Record<string, unknown>
-    );
-    warnings.push(
-      'A saída original estava sem localização física; o material retornou ao estoque como sem localização.'
-    );
-  }
+  const returnedLocationBalance = returnedEntry.locationBalance;
 
   const finalizedSummary = await runTransaction(
     db,

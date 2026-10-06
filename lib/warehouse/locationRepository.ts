@@ -69,6 +69,10 @@ import {
   warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalMaterialReadInput,
 } from './readCompatibility';
+import {
+  isWarehousePhysicalStockPosition,
+  planWarehouseTransferLots,
+} from './transfer';
 
 export interface WarehouseDepotListItem {
   depot: WarehouseDepot;
@@ -928,7 +932,9 @@ async function assertPositionActive(
   workspaceId: string,
   position: WarehouseStockPosition
 ): Promise<void> {
-  if (position.kind === 'UNASSIGNED') return;
+  if (!isWarehousePhysicalStockPosition(position)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
 
   const depotPath = warehouseDocumentPath(workspaceId, 'depots', position.depotId);
   const locationPath = warehouseDocumentPath(workspaceId, 'locations', position.locationId);
@@ -992,6 +998,91 @@ function parseTransferLot(
   return result.data;
 }
 
+const WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS = 500;
+
+async function buildCanonicalWarehouseTransferLotPlan(input: {
+  workspaceId: string;
+  ug: string;
+  materialId: string;
+  from: WarehouseStockPosition;
+  quantity: number;
+  fromBalanceId: string;
+}): Promise<TransferWarehouseLotAllocation[]> {
+  if (!isWarehousePhysicalStockPosition(input.from)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
+
+  const fromBalancePath = warehouseDocumentPath(
+    input.workspaceId,
+    'locationBalances',
+    input.fromBalanceId
+  );
+  const lotsPath = warehouseDomainPath(input.workspaceId, 'lots');
+  const [fromSnapshot, lotSnapshot] = await Promise.all([
+    getDoc(doc(db, fromBalancePath)),
+    getDocs(
+      query(
+        collection(db, lotsPath),
+        where('materialId', '==', input.materialId),
+        limit(WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS + 1)
+      )
+    ),
+  ]);
+  recordWarehouseDocumentReads(
+    input.workspaceId,
+    1 + lotSnapshot.size
+  );
+
+  if (!fromSnapshot.exists()) {
+    throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+  }
+  if (lotSnapshot.size > WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS) {
+    throw new Error('WAREHOUSE_TRANSFER_LOTS_SATURATED');
+  }
+
+  const fromBalance = parseLocationBalance(
+    input.workspaceId,
+    fromSnapshot.id,
+    fromSnapshot.data() as Record<string, unknown>
+  );
+  if (
+    fromBalance.ug !== input.ug
+    || fromBalance.materialId !== input.materialId
+    || !warehouseStockPositionsEqual(fromBalance.position, input.from)
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_SOURCE_BALANCE_MISMATCH');
+  }
+
+  const lots = lotSnapshot.docs.map((item) =>
+    parseTransferLot(
+      input.workspaceId,
+      input.ug,
+      input.materialId,
+      item.id,
+      item.data() as Record<string, unknown>
+    )
+  );
+  const plan = planWarehouseTransferLots({
+    materialId: input.materialId,
+    source: input.from,
+    quantity: input.quantity,
+    availableQuantity: fromBalance.quantity,
+    lots,
+  });
+  if (plan.ok) return plan.lotAllocations;
+
+  if (plan.error === 'INSUFFICIENT_STOCK') {
+    throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+  }
+  if (plan.error === 'LOT_ATTRIBUTION_EXCEEDS_STOCK') {
+    throw new Error('WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK');
+  }
+  if (plan.error === 'TOO_MANY_ACTIVE_LOTS') {
+    throw new Error('WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS');
+  }
+  throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_PLAN');
+}
+
 export async function transferWarehouseStock(
   workspaceId: string,
   input: TransferWarehouseStockInput
@@ -1000,6 +1091,12 @@ export async function transferWarehouseStock(
   const from = validateWarehouseStockPosition(input.from);
   const to = validateWarehouseStockPosition(input.to);
   if (!from || !to) throw new Error('WAREHOUSE_TRANSFER_INVALID_POSITION');
+  if (
+    !isWarehousePhysicalStockPosition(from)
+    || !isWarehousePhysicalStockPosition(to)
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
   if (warehouseStockPositionsEqual(from, to)) throw new Error('WAREHOUSE_TRANSFER_SAME_POSITION');
 
   const normalizedQuantity = normalizeWarehouseLocationQuantity(input.quantity);
@@ -1017,18 +1114,26 @@ export async function transferWarehouseStock(
   const fromBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, from);
   const toBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, to);
 
-  const relocateLotIds = Array.from(new Set(input.relocateLotIds || []));
-  if (relocateLotIds.length > 24 || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))) {
+  // Physical transfers never trust caller-specific lot hints. The canonical
+  // repository derives lot allocations from the current physical source
+  // balance and canonical lot documents.
+  const lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
+    workspaceId: scope.workspaceId,
+    ug: scope.ug,
+    materialId: input.materialId,
+    from,
+    quantity: normalizedQuantity,
+    fromBalanceId,
+  });
+  const relocateLotIds: string[] = [];
+
+  if (
+    relocateLotIds.length > 24
+    || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))
+  ) {
     throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_RELOCATION');
   }
 
-  const lotAllocations = (input.lotAllocations || []).map((item) => {
-    const quantity = normalizeWarehouseLocationQuantity(item.quantity);
-    if (!isValidWarehouseLotId(item.lotId) || quantity === null || quantity <= 0) {
-      throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_ALLOCATION');
-    }
-    return { lotId: item.lotId, quantity };
-  });
   const allocationIds = new Set(lotAllocations.map((item) => item.lotId));
   if (
     lotAllocations.length > 24
@@ -1149,10 +1254,7 @@ export async function transferWarehouseStock(
         };
       }
 
-      const fromInitial = from.kind === 'UNASSIGNED' && !existingFrom
-        ? currentBalance.quantity
-        : 0;
-      const available = existingFrom?.quantity ?? fromInitial;
+      const available = existingFrom?.quantity ?? 0;
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
 
       const nextFrom = applyWarehouseLocationDelta(existingFrom, {
@@ -1163,7 +1265,6 @@ export async function transferWarehouseStock(
         position: from,
         quantityDelta: -normalizedQuantity,
         movementId,
-        initialQuantity: fromInitial,
       });
       const nextTo = applyWarehouseLocationDelta(existingTo, {
         id: toBalanceId,
@@ -1305,7 +1406,7 @@ export function buildWarehousePositionLabel(
   depots: WarehouseDepotListItem[],
   locations: WarehouseLocationListItem[]
 ): string {
-  if (position.kind === 'UNASSIGNED') return 'Sem localização';
+  if (position.kind === 'UNASSIGNED') return 'Reconciliação necessária';
   const depot = depots.find((item) => item.depot.id === position.depotId)?.depot;
   const local = locations.find((item) => item.location.id === position.locationId)?.location;
   const base = [depot?.code || position.depotId, local?.code || position.locationId].join(' → ');

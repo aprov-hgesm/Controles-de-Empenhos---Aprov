@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -54,6 +54,13 @@ const POSITION = {
   subpositionId: null,
 };
 
+const SUBPOSITION = {
+  kind: 'SUBPOSITION',
+  depotId: DEPOT,
+  locationId: LOCATION,
+  subpositionId: SUB,
+};
+
 function inventoryItem(overrides = {}) {
   return {
     schemaVersion: 'warehouse_inventory_item_v1',
@@ -85,11 +92,35 @@ test('inventário total e parcial usam a mesma abstração de escopo', () => {
   assert.equal(inventory.validateWarehouseInventoryScope({ kind: 'LOCATION', depotId: DEPOT, locationId: LOCATION }).kind, 'LOCATION');
   assert.equal(inventory.validateWarehouseInventoryScope({ kind: 'SUBPOSITION', depotId: DEPOT, locationId: LOCATION, subpositionId: SUB }).kind, 'SUBPOSITION');
 
-  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'TOTAL' }, { kind: 'UNASSIGNED' }), true);
+  const unassigned = { kind: 'UNASSIGNED' };
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'TOTAL' }, POSITION), true);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'TOTAL' }, SUBPOSITION), true);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'TOTAL' }, unassigned), false);
   assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'DEPOT', depotId: DEPOT }, POSITION), true);
   assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'LOCATION', depotId: DEPOT, locationId: LOCATION }, POSITION), true);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'SUBPOSITION', depotId: DEPOT, locationId: LOCATION, subpositionId: SUB }, SUBPOSITION), true);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'DEPOT', depotId: DEPOT }, unassigned), false);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'LOCATION', depotId: DEPOT, locationId: LOCATION }, unassigned), false);
+  assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'SUBPOSITION', depotId: DEPOT, locationId: LOCATION, subpositionId: SUB }, unassigned), false);
   assert.equal(inventory.warehouseInventoryScopeIncludesPosition({ kind: 'DEPOT', depotId: 'dep_' + '1'.repeat(32) }, POSITION), false);
 });
+
+test('inventário físico não cria nem ajusta projeção UNASSIGNED', () => {
+  const repositorySource = readFileSync(
+    resolve(root, 'lib/warehouse/inventoryRepository.ts'),
+    'utf8'
+  );
+
+  assert.match(
+    repositorySource,
+    /warehouseInventoryScopeIncludesPosition\(inventoryScope, balance\.position\)/
+  );
+  assert.match(
+    repositorySource,
+    /item\.position\.kind === 'UNASSIGNED'[\s\S]{0,180}WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED/
+  );
+});
+
 
 test('divergência é contado menos esperado', () => {
   assert.equal(inventory.calculateWarehouseInventoryDifference(100, 100), 0);

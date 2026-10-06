@@ -5,7 +5,6 @@ import { ArrowLeftRight, CheckCircle2, MapPinned, RefreshCw } from 'lucide-react
 
 import { listWarehouseBalances } from '../../../lib/warehouse/ledgerRepository';
 import {
-  deriveUnassignedQuantity,
   warehouseStockPositionKey,
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
@@ -219,15 +218,14 @@ export function WarehouseLocationsOperational({
       const physical = explicit.filter(
         (item) => item.position.kind !== 'UNASSIGNED'
       );
-      const unassignedQuantity = explicitUnassigned
-        ? explicitUnassigned.quantity
-        : deriveUnassignedQuantity(balance.quantity, physical);
       const rows: DistributionRow[] = [
-        {
-          position: { kind: 'UNASSIGNED' },
-          quantity: unassignedQuantity,
-          virtual: !explicitUnassigned,
-        },
+        ...(explicitUnassigned && explicitUnassigned.quantity > 0
+          ? [{
+              position: { kind: 'UNASSIGNED' } as WarehouseStockPosition,
+              quantity: explicitUnassigned.quantity,
+              virtual: false,
+            }]
+          : []),
         ...physical.map((item) => ({
           position: item.position,
           quantity: item.quantity,
@@ -262,10 +260,8 @@ export function WarehouseLocationsOperational({
       (distributionByMaterial.get(transferMaterialId) || []).filter(
         (row) =>
           row.quantity > 0
-          && (
-            row.position.kind === 'UNASSIGNED'
-            || positions.has(warehouseStockPositionKey(row.position))
-          )
+          && row.position.kind !== 'UNASSIGNED'
+          && positions.has(warehouseStockPositionKey(row.position))
       ),
     [distributionByMaterial, positions, transferMaterialId]
   );
@@ -499,8 +495,8 @@ export function WarehouseLocationsOperational({
         </div>
         <div className="rounded-2xl border border-amber-300/10 bg-amber-400/[0.035] p-4">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300/70">Migração segura</p>
-          <p className="mt-2 text-sm font-black text-slate-200">Sem localização</p>
-          <p className="mt-2 text-xs leading-5 text-slate-500">Saldos anteriores à FASE 6 permanecem íntegros até serem organizados fisicamente.</p>
+          <p className="mt-2 text-sm font-black text-slate-200">Legado em reconciliação</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Projeções históricas UNASSIGNED permanecem legíveis, mas não são estoque físico nem origem de transferência normal.</p>
         </div>
       </div>
 
@@ -726,7 +722,7 @@ export function WarehouseLocationsOperational({
 
       <section className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
         <h3 className="text-sm font-black text-slate-200">Distribuição física do estoque</h3>
-        <p className="mt-2 text-xs leading-5 text-slate-500">“Sem localização” representa saldo real ainda não organizado fisicamente; não é um segundo estoque.</p>
+        <p className="mt-2 text-xs leading-5 text-slate-500">Registros históricos UNASSIGNED aparecem apenas para reconciliação. Estoque operacional disponível existe somente em LOCAL/SUBPOSIÇÃO ativa.</p>
         {state.balances.length === 0 ? (
           <p className="mt-4 text-xs text-slate-600">Ainda não há saldo de materiais para distribuir.</p>
         ) : (
@@ -757,7 +753,7 @@ export function WarehouseLocationsOperational({
                         <div key={key} className="rounded-lg border border-white/[0.05] bg-black/10 px-3 py-2">
                           <p className="text-[10px] font-bold text-slate-400">{buildWarehousePositionLabel(row.position, state.depots, state.locations)}</p>
                           <p className="mt-1 text-sm font-black text-slate-200">{row.quantity.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}</p>
-                          {row.virtual && <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-amber-300/60">saldo legado ainda não materializado</p>}
+                          {row.virtual && <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-amber-300/60">compatibilidade legada — não operacional</p>}
                         </div>
                       );
                     })}

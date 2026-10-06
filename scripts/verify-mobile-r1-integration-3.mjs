@@ -46,8 +46,13 @@ assert.doesNotMatch(inventory, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(inventory, /\brunTransaction\s*\(/);
 
 const outbound = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
-assert.match(outbound, /applyWarehouseExpressOutbound/);
-assert.match(outbound, /createWarehouseOutboundIdempotencyKey/);
+assert.match(outbound, /finalizeWarehouseMaterialWithdrawal/);
+assert.match(outbound, /createWarehouseWithdrawalId/);
+assert.match(outbound, /createWarehouseWithdrawalLineId/);
+assert.match(outbound, /listWarehouseDestinationsCached/);
+assert.match(outbound, /createWarehouseDestination/);
+assert.match(outbound, /destinationId/);
+assert.doesNotMatch(outbound, /applyWarehouseExpressOutbound\s*\(/);
 assert.match(outbound, /CONFIRMAR SAÍDA/);
 assert.doesNotMatch(outbound, /\bsetDoc\s*\(/);
 assert.doesNotMatch(outbound, /\bupdateDoc\s*\(/);
@@ -98,6 +103,6 @@ for (const marker of [
 console.log('MOBILE-R1 INTEGRATION 3: PASS');
 console.log('- F/G/H coexistem sobre os contratos canônicos da Central Móvel');
 console.log('- inventário não cria write direto de saldo/ledger');
-console.log('- saída delega exclusivamente ao OUTBOUND canônico');
+console.log('- saída delega ao withdrawal canônico, que aplica o OUTBOUND transacional');
 console.log('- conferência permanece read-only');
 console.log('- Home, package e CI preservam as três frentes');

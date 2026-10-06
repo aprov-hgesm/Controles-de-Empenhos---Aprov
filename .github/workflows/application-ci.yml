@@ -95,6 +95,9 @@ jobs:
       - name: SAAS R1 integrated contract guard
         run: npm run verify:saas-r1-integration
 
+      - name: SAAS R1 final audit contract guard
+        run: npm run verify:saas-r1-final-audit
+
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
 
@@ -238,6 +241,12 @@ jobs:
 
       - name: Central Móvel R1 MOBILE-I integrated product guard
         run: npm run verify:mobile-r1-integration-final
+
+      - name: MOBILE-K canonical ops domain tests
+        run: npm run test:mobile-k-canonical-ops
+
+      - name: MOBILE-K canonical ops permanent guard
+        run: npm run verify:mobile-k-canonical-ops
 
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout

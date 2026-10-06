@@ -157,7 +157,7 @@ test('um mesmo material pode manter projeções em múltiplas localizações', a
   assert.match(idB, /^locbal_[a-f0-9]{64}$/);
 });
 
-test('saldo legado é representado como Sem localização sem alterar o total', () => {
+test('helper legado calcula residual UNASSIGNED sem promovê-lo a estoque operacional', () => {
   const physical = [{
     schemaVersion: location.WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION,
     id: 'locbal_' + '1'.repeat(64),
@@ -466,6 +466,51 @@ test('MOBILE-D transfere primeiro a parcela sem lote sem inventar procedência',
   assert.deepEqual(result.lotAllocations, []);
 });
 
+test('MOBILE-K transferência física rejeita UNASSIGNED e aceita combinações físicas', () => {
+  const locationA = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const locationB = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const subpositionA = { kind: 'SUBPOSITION', depotId, locationId: localA, subpositionId: subA };
+  const subpositionB = {
+    kind: 'SUBPOSITION',
+    depotId,
+    locationId: localB,
+    subpositionId: 'sub_' + 'e'.repeat(32),
+  };
+  const unassigned = { kind: 'UNASSIGNED' };
+
+  for (const [from, to] of [
+    [locationA, locationB],
+    [locationA, subpositionB],
+    [subpositionA, locationB],
+    [subpositionA, subpositionB],
+  ]) {
+    const result = mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId,
+      from,
+      to,
+      quantity: 1,
+      availableQuantity: 5,
+      lots: [],
+    });
+    assert.equal(result.ok, true);
+  }
+
+  for (const [from, to] of [
+    [unassigned, locationA],
+    [locationA, unassigned],
+  ]) {
+    const result = mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId,
+      from,
+      to,
+      quantity: 1,
+      availableQuantity: 5,
+      lots: [],
+    });
+    assert.deepEqual(result, { ok: false, error: 'NON_PHYSICAL_POSITION' });
+  }
+});
+
 test('MOBILE-D revalida concorrência usando o saldo físico mais recente', () => {
   const source = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
   const staleReviewQuantity = 3;
@@ -610,8 +655,10 @@ test('MOBILE-D usa reader crítico sem retorno vazio silencioso e sem escrita di
     'utf8'
   );
 
-  assert.match(ui, /listWarehouseMobileTransferLotsCritical/);
+  assert.doesNotMatch(ui, /listWarehouseMobileTransferLotsCritical/);
   assert.doesNotMatch(ui, /listWarehouseLots\s*\(/);
+  assert.doesNotMatch(ui, /lotAllocations\s*:/);
+  assert.match(ui, /transferWarehouseStock/);
   assert.match(ui, /classifyWarehouseMobileTransferProductScan/);
   assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT/);
   assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_LOTS_SATURATED/);

@@ -184,6 +184,23 @@ test('LOCATION e SUBPOSITION podem ser oferecidas com saldo suficiente', () => {
   assert.ok(result.options.some((item) => item.position.kind === 'SUBPOSITION'));
 });
 
+test('UNASSIGNED legado nunca vira opção de saída física', () => {
+  const unassigned = { kind: 'UNASSIGNED' };
+  const result = mobile.prepareWarehouseMobileOutboundOptions({
+    material,
+    balance,
+    barcodeAssociation: association,
+    requestedQuantity: 2,
+    locationBalances: [
+      locationBalance(unassigned, 20, '7'),
+      locationBalance(positionA, 5, '2'),
+    ],
+    lots: [],
+  });
+  assert.equal(result.options.length, 1);
+  assert.equal(result.options[0].position.kind, 'LOCATION');
+});
+
 test('saldo agregado insuficiente falha antes da revisão', () => {
   assert.throws(
     () => mobile.prepareWarehouseMobileOutboundOptions({
