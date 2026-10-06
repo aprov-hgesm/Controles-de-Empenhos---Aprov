@@ -79,6 +79,23 @@ assert.match(
   'Guard fundador deve comparar a identidade operacional normalizada'
 );
 
+const warehouseShell = read('features/warehouse/components/WarehouseModuleShell.tsx');
+assert.match(
+  warehouseShell,
+  /showMobileAccess/,
+  'Central de Depósitos deve decidir visibilidade da Central Móvel pela identidade fundadora'
+);
+assert.match(
+  warehouseShell,
+  /HGESM_SECTOR_EMAIL/,
+  'Botão da Central Móvel deve permanecer associado à conta fundadora'
+);
+
+const warehouseSidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
+assert.match(warehouseSidebar, /showMobileAccess &&/);
+assert.match(warehouseSidebar, /href="\/central-mobile"/);
+assert.match(warehouseSidebar, /warehouse-nav-central-mobile/);
+
 const warehouseBoundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 for (const contract of [
   'LegalAcceptanceGate',
