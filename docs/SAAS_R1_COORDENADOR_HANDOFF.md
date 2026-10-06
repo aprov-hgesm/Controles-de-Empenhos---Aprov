@@ -1015,4 +1015,3 @@ Artefato integrado:
 `docs/SAAS_R1_HARDEN_A2_FIREBASE_FIRESTORE_GRPC.md`
 
 A2 encerrada. Não abrir nova wave funcional/dependências. Próximo objetivo do programa: concluir o hardening remanescente e preparar composição do **RC ÚNICO SAAS R1 + MOBILE R1**.
-
