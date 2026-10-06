@@ -466,6 +466,7 @@ function analyzeMaterial(
     noLotOutbounds,
     activeLots,
     movements,
+    noLotReturnQuantityByMovement,
   });
 
   const noCompetingQuantitativeEvidence =
@@ -835,6 +836,7 @@ function inferNoLotOutboundAffectedLots({
   noLotOutbounds,
   activeLots,
   movements,
+  noLotReturnQuantityByMovement,
 }) {
   const lineage = activeLots.map((lot) => ({
     lot,
@@ -863,18 +865,27 @@ function inferNoLotOutboundAffectedLots({
 
     const { lot, creationTransfer } = candidates[0];
     const quantity = Math.abs(number(outbound.quantityDelta) ?? 0);
+    const returned =
+      noLotReturnQuantityByMovement?.get(outbound._documentId) || 0;
+    const net = Math.max(0, quantity - returned);
     const current = byLot.get(lot._documentId) || {
       lotId: lot._documentId,
       originalPosition: creationTransfer.to,
       outboundMovementIds: [],
       grossOutboundQuantity: 0,
+      returnedQuantity: 0,
       netOutboundQuantity: 0,
     };
     current.outboundMovementIds.push(outbound._documentId);
     current.grossOutboundQuantity = round(
       current.grossOutboundQuantity + quantity
     );
-    current.netOutboundQuantity = current.grossOutboundQuantity;
+    current.returnedQuantity = round(
+      current.returnedQuantity + returned
+    );
+    current.netOutboundQuantity = round(
+      current.netOutboundQuantity + net
+    );
     byLot.set(lot._documentId, current);
   }
 
