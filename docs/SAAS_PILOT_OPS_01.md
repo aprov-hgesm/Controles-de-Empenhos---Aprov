@@ -1,9 +1,9 @@
 # SAAS-PILOT-OPS-01 — Runbook operacional do piloto controlado SaaS R1
 
-Data de preparação: **2026-10-05/06**  
-Branch: `saas-pilot-ops-01`  
-HEAD inicial obrigatório: `4cc5b3797747d4d49591f4a68196e723700daa74`  
-Base do PR: `saas-final-audit-01`  
+Data de preparação: **2026-10-05/06**
+Branch: `saas-pilot-ops-01`
+HEAD inicial obrigatório: `4cc5b3797747d4d49591f4a68196e723700daa74`
+Base do PR: `saas-final-audit-01`
 Escopo: **documental / operacional somente**
 
 > Este documento prepara a operação futura do primeiro piloto controlado. Ele **não autoriza** Production, piloto real, cobrança real, suspensão/reativação real, publicação de Rules, escrita em dados produtivos, alteração de Warehouse ou qualquer mudança de runtime.
