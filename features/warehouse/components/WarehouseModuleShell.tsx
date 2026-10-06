@@ -7,6 +7,8 @@ import { usePathname } from 'next/navigation';
 import { AppBackground } from '../../../components/layout/AppBackground';
 import { AppHeader } from '../../../components/layout/AppHeader';
 import { auth } from '../../../lib/firebase';
+import { HGESM_SECTOR_EMAIL } from '../../../lib/hgesmWorkspace';
+import { normalizePlatformEmail } from '../../../lib/platformIdentity';
 import { resetActiveProfileMode } from '../../../lib/profileMode';
 import {
   clearResolvedWorkspaceContext,
@@ -35,6 +37,8 @@ export function WarehouseModuleShell({
   const section = activeSection.id;
   const isImmersive = section === 'home' || section === 'overview';
   const currentUser = auth.currentUser;
+  const showMobileAccess =
+    normalizePlatformEmail(workspaceContext.email) === HGESM_SECTOR_EMAIL;
   const userDisplayName =
     currentUser?.displayName
     || workspaceContext.workspaceName
@@ -91,6 +95,7 @@ export function WarehouseModuleShell({
           activeSection={section}
           open={sidebarOpen}
           userDisplayName={userDisplayName}
+          showMobileAccess={showMobileAccess}
           onClose={() => setSidebarOpen(false)}
           onLogout={handleLogout}
         />

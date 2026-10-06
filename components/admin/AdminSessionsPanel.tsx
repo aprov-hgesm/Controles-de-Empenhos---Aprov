@@ -16,7 +16,6 @@ import {
   isAdminWorkspaceSessionActive,
   type AdminWorkspaceSession,
 } from '../../lib/platformAdminSessions';
-import { DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT } from '../../lib/platformCapacity';
 
 interface AdminSessionsPanelProps {
   workspaces: Workspace[];
@@ -70,16 +69,17 @@ export function AdminSessionsPanel({
     [now, sessions]
   );
 
-  const fullWorkspaceCount = externalWorkspaces.filter((workspace) => (
-    activeSessions.filter((session) => session.workspaceId === workspace.id).length
-      >= DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT
-  )).length;
+  const activeWorkspaceCount = new Set(
+    activeSessions
+      .map((session) => session.workspaceId)
+      .filter((workspaceId) => externalWorkspaces.some((workspace) => workspace.id === workspaceId))
+  ).size;
 
   const confirmTermination = async () => {
     if (!candidate) return;
     try {
       await onTerminateSession(candidate);
-      onNotify('Sessão encerrada remotamente. A vaga foi liberada.', 'success');
+      onNotify('Sessão encerrada remotamente.', 'success');
       setCandidate(null);
     } catch (terminationError) {
       onNotify(
@@ -104,7 +104,7 @@ export function AdminSessionsPanel({
           </div>
           <h3 className="text-lg font-extrabold text-white">Sessões simultâneas por UG</h3>
           <p className="mt-1 text-xs text-slate-400">
-            Acompanhe as vagas ocupadas e encerre acessos externos quando necessário.
+            Acompanhe as sessões ativas e encerre acessos externos quando necessário.
           </p>
         </div>
 
@@ -116,13 +116,18 @@ export function AdminSessionsPanel({
             </p>
           </div>
           <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">UGs lotadas</p>
-            <p className="mt-1 text-xl font-black text-white">{fullWorkspaceCount}</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">UGs em uso</p>
+            <p className="mt-1 text-xl font-black text-white">{activeWorkspaceCount}</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-4 p-5 sm:p-6">
+        <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.05] px-4 py-3 text-[11px] text-cyan-50/80">
+          Setores externos operam sem teto fixo de sessões. Cada navegador mantém lease,
+          heartbeat e revogação próprios; o painel continua permitindo encerramento individual.
+        </div>
+
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-blue-300/15 bg-blue-400/[0.06] px-4 py-3.5">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl border border-blue-300/15 bg-blue-400/[0.08] text-blue-200">
@@ -163,7 +168,7 @@ export function AdminSessionsPanel({
             (session) => session.workspaceId === workspace.id
           );
           const occupied = workspaceSessions.length;
-          const full = occupied >= DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT;
+          const hasActiveSessions = occupied > 0;
 
           return (
             <div
@@ -183,12 +188,12 @@ export function AdminSessionsPanel({
                 </div>
 
                 <div className={`inline-flex items-center gap-2 self-start rounded-xl border px-3 py-2 text-xs font-extrabold sm:self-auto ${
-                  full
-                    ? 'border-amber-300/20 bg-amber-400/[0.07] text-amber-100'
-                    : 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-100'
+                  hasActiveSessions
+                    ? 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-100'
+                    : 'border-white/[0.08] bg-white/[0.025] text-slate-300'
                 }`}>
                   <Users className="h-4 w-4" />
-                  {occupied} / {DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT} sessões
+                  {occupied} sessões · sem teto fixo
                 </div>
               </div>
 
@@ -245,7 +250,7 @@ export function AdminSessionsPanel({
             </div>
             <h4 className="text-lg font-extrabold text-white">Encerrar sessão remotamente?</h4>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              O acesso desta sessão será revogado e a vaga será liberada. O operador poderá entrar novamente depois, criando uma nova sessão.
+              O acesso desta sessão será revogado e o lease ativo será removido. O operador poderá entrar novamente depois, criando uma nova sessão.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setCandidate(null)} className="rounded-xl border border-white/[0.08] px-4 py-2.5 text-xs font-bold text-slate-300">

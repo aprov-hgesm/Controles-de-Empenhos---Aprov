@@ -1,4 +1,9 @@
 import type { WarehouseDepot, WarehouseLocation } from './location';
+import {
+  encodeWarehouseCompactLocationBarcode,
+  encodeWarehouseLocationBarcode,
+  tryEncodeWarehouseNumericLocationBarcode,
+} from './locationBarcode';
 
 export type WarehouseLabelKind = 'DEPOT' | 'LOCAL' | 'SUBPOSITION';
 export type WarehouseLabelSheetPreset = 'COMPACT' | 'MEDIUM' | 'LARGE';
@@ -15,6 +20,7 @@ export interface WarehouseLabelItem {
   hierarchy: string[];
   workspaceId: string;
   ug: string;
+  physicalBarcode: string;
 }
 
 export interface WarehouseLabelLayoutPreset {
@@ -26,18 +32,22 @@ export interface WarehouseLabelLayoutPreset {
   perPage: number;
   gapMm: number;
   marginMm: number;
+  widthMm?: number;
+  heightMm?: number;
 }
 
 export const WAREHOUSE_LABEL_PRESETS: Record<WarehouseLabelSheetPreset, WarehouseLabelLayoutPreset> = {
   COMPACT: {
     id: 'COMPACT',
     label: 'Compacta',
-    description: '21 por folha · ideal para prateleiras e nichos',
-    columns: 3,
-    rows: 7,
-    perPage: 21,
-    gapMm: 3,
-    marginMm: 8,
+    description: '8 por folha · 14 × 3,5 cm · prateleiras e nichos',
+    columns: 1,
+    rows: 8,
+    perPage: 8,
+    gapMm: 0.5,
+    marginMm: 6.75,
+    widthMm: 140,
+    heightMm: 35,
   },
   MEDIUM: {
     id: 'MEDIUM',
@@ -80,6 +90,13 @@ export function buildDepotLabel(depot: WarehouseDepot): WarehouseLabelItem {
     hierarchy: [depot.name],
     workspaceId: depot.workspaceId,
     ug: depot.ug,
+    physicalBarcode: tryEncodeWarehouseNumericLocationBarcode({
+      kind: 'DEPOT',
+      depotCode: depot.code,
+    }) ?? encodeWarehouseCompactLocationBarcode({
+      kind: 'DEPOT',
+      depotCode: depot.code,
+    }),
   };
 }
 
@@ -101,6 +118,15 @@ export function buildLocationLabel(
       hierarchy: [depot.name, location.name],
       workspaceId: location.workspaceId,
       ug: location.ug,
+      physicalBarcode: tryEncodeWarehouseNumericLocationBarcode({
+        kind: 'LOCAL',
+        depotCode: depot.code,
+        locationCode: location.code,
+      }) ?? encodeWarehouseCompactLocationBarcode({
+        kind: 'LOCAL',
+        depotCode: depot.code,
+        locationCode: location.code,
+      }),
     };
   }
 
@@ -123,6 +149,24 @@ export function buildLocationLabel(
     hierarchy: [depot.name, parent?.name ?? 'Local', location.name],
     workspaceId: location.workspaceId,
     ug: location.ug,
+    physicalBarcode: parent
+      ? (
+          tryEncodeWarehouseNumericLocationBarcode({
+            kind: 'SUBPOSITION',
+            depotCode: depot.code,
+            parentCode: parent.code,
+            locationCode: location.code,
+          }) ?? encodeWarehouseCompactLocationBarcode({
+            kind: 'SUBPOSITION',
+            depotCode: depot.code,
+            parentCode: parent.code,
+            locationCode: location.code,
+          })
+        )
+      : encodeWarehouseLocationBarcode({
+          kind: 'SUBPOSITION',
+          entityId: location.id,
+        }),
   };
 }
 
@@ -137,6 +181,8 @@ export function buildWarehouseLabelsForScope(input: {
     | 'LOCATION_ONLY'
     | 'LOCATION_SUBPOSITIONS';
 }): WarehouseLabelItem[] {
+  if (input.depot.status !== 'active') return [];
+
   const active = input.locations.filter(
     (location) =>
       location.status === 'active'

@@ -16,10 +16,15 @@ import {
 import {
   DEFAULT_PLATFORM_BILLING_CONFIG,
   EMPROVEX_BILLING_CONFIG_ID,
+  EMPROVEX_FULL_PLAN_PRICE_CENTS,
   buildBillingCycle,
+  buildBillingCycleStatusTransition,
+  buildBillingExemptionUpdate,
   buildInitialBillingAccount,
   buildPlatformBillingConfig,
   billingCycleId,
+  migrateBillingAccountToSaasR1,
+  migratePlatformBillingConfigToSaasR1,
   type BillingAccount,
   type BillingAccountStatus,
   type BillingCycle,
@@ -48,6 +53,8 @@ export interface UpdatePlatformBillingConfigInput {
   pixKey?: string;
   pixKeyType?: PlatformBillingConfig['pixKeyType'];
   pixRecipientName?: string;
+  paymentLinkUrl?: string;
+  supportContact?: string;
   holidayDates?: string[];
 }
 
@@ -63,6 +70,24 @@ function normalizeActor(email: string): string {
   const actor = normalizePlatformEmail(email);
   if (!actor) throw new Error('Sessão administrativa inválida.');
   return actor;
+}
+
+function sanitizeHttpsUrl(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) return '';
+
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    throw new Error('O Link de Pagamento precisa ser uma URL HTTPS válida.');
+  }
+
+  if (url.protocol !== 'https:') {
+    throw new Error('O Link de Pagamento precisa usar HTTPS.');
+  }
+
+  return url.toString();
 }
 
 function sanitizeHolidayDates(values: string[]): string[] {
@@ -88,30 +113,34 @@ export async function ensurePlatformBillingFoundation(
     }
 
     const current = snapshot.data() as PlatformBillingConfig;
-    if (current.monthlyPriceCents === 7000) {
-      const now = new Date().toISOString();
-      const updated: PlatformBillingConfig = {
-        ...current,
-        monthlyPriceCents: DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
-        updatedAt: now,
-        updatedBy: actor,
-      };
-      transaction.set(configRef, updated);
+    const updated = migratePlatformBillingConfigToSaasR1(current, actor);
+    if (!updated) return;
 
-      appendPlatformAuditEvent(transaction, {
-        operation: 'billing.price_migration',
-        source: 'admin',
-        entityType: 'billing_config',
-        entityId: EMPROVEX_BILLING_CONFIG_ID,
-        correlationId: createPlatformAuditCorrelationId(),
-        workspaceId: HGESM_WORKSPACE_ID,
-        ug: HGESM_UG,
-        actorEmail: actor,
-        before: { monthlyPriceCents: 7000 },
-        after: { monthlyPriceCents: updated.monthlyPriceCents },
-        metadata: { reason: 'monthly_price_reduced_to_50_brl' },
-      });
-    }
+    transaction.set(configRef, updated);
+
+    appendPlatformAuditEvent(transaction, {
+      operation: current.monthlyPriceCents === updated.monthlyPriceCents
+        ? 'billing.config_update'
+        : 'billing.price_migration',
+      source: 'admin',
+      entityType: 'billing_config',
+      entityId: EMPROVEX_BILLING_CONFIG_ID,
+      correlationId: createPlatformAuditCorrelationId(),
+      workspaceId: HGESM_WORKSPACE_ID,
+      ug: HGESM_UG,
+      actorEmail: actor,
+      before: {
+        monthlyPriceCents: current.monthlyPriceCents,
+        paymentLinkConfigured: Boolean(current.paymentLinkUrl),
+        supportContactConfigured: Boolean(current.supportContact),
+      },
+      after: {
+        monthlyPriceCents: updated.monthlyPriceCents,
+        paymentLinkConfigured: Boolean(updated.paymentLinkUrl),
+        supportContactConfigured: Boolean(updated.supportContact),
+      },
+      metadata: { reason: 'saas_r1_full_plan_70_brl' },
+    });
   });
 
   for (const workspace of workspaces) {
@@ -120,33 +149,40 @@ export async function ensurePlatformBillingFoundation(
       const snapshot = await transaction.get(ref);
       if (snapshot.exists()) {
         const current = snapshot.data() as BillingAccount;
-        if (
-          workspace.id !== HGESM_WORKSPACE_ID
-          && current.monthlyPriceCents === 7000
-        ) {
-          const now = new Date().toISOString();
-          const updated: BillingAccount = {
-            ...current,
-            monthlyPriceCents: DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
-            updatedAt: now,
-            updatedBy: actor,
-          };
-          transaction.set(ref, updated);
+        const updated = migrateBillingAccountToSaasR1(
+          current,
+          workspace.id === HGESM_WORKSPACE_ID,
+          actor
+        );
+        if (!updated) return;
 
-          appendPlatformAuditEvent(transaction, {
-            operation: 'billing.price_migration',
-            source: 'admin',
-            entityType: 'billing_account',
-            entityId: workspace.id,
-            correlationId: createPlatformAuditCorrelationId(),
-            workspaceId: workspace.id,
-            ug: workspace.ug || null,
-            actorEmail: actor,
-            before: { monthlyPriceCents: 7000 },
-            after: { monthlyPriceCents: updated.monthlyPriceCents },
-            metadata: { reason: 'monthly_price_reduced_to_50_brl' },
-          });
-        }
+        transaction.set(ref, updated);
+
+        appendPlatformAuditEvent(transaction, {
+          operation: current.monthlyPriceCents === updated.monthlyPriceCents
+            ? 'billing.status_change'
+            : 'billing.price_migration',
+          source: 'admin',
+          entityType: 'billing_account',
+          entityId: workspace.id,
+          correlationId: createPlatformAuditCorrelationId(),
+          workspaceId: workspace.id,
+          ug: workspace.ug || null,
+          actorEmail: actor,
+          before: {
+            status: current.status,
+            monthlyPriceCents: current.monthlyPriceCents,
+          },
+          after: {
+            status: updated.status,
+            monthlyPriceCents: updated.monthlyPriceCents,
+          },
+          metadata: {
+            reason: updated.status === 'exempt'
+              ? 'saas_r1_exempt_zero_brl'
+              : 'saas_r1_full_plan_70_brl',
+          },
+        });
         return;
       }
 
@@ -210,10 +246,15 @@ export async function updatePlatformBillingConfig(
       ? snapshot.data() as PlatformBillingConfig
       : buildPlatformBillingConfig(actor);
 
+    if (
+      input.monthlyPriceCents !== undefined
+      && Math.trunc(input.monthlyPriceCents) !== EMPROVEX_FULL_PLAN_PRICE_CENTS
+    ) {
+      throw new Error('O Plano Completo EMPROVEX possui mensalidade fixa de R$ 70,00 na R1.');
+    }
+
     const now = new Date().toISOString();
-    const monthlyPriceCents = input.monthlyPriceCents === undefined
-      ? current.monthlyPriceCents
-      : Math.max(0, Math.trunc(input.monthlyPriceCents));
+    const monthlyPriceCents = EMPROVEX_FULL_PLAN_PRICE_CENTS;
     const defaultTrialDays = input.defaultTrialDays === undefined
       ? current.defaultTrialDays
       : Math.max(1, Math.min(365, Math.trunc(input.defaultTrialDays)));
@@ -234,6 +275,12 @@ export async function updatePlatformBillingConfig(
       pixRecipientName: input.pixRecipientName === undefined
         ? current.pixRecipientName
         : input.pixRecipientName.trim(),
+      paymentLinkUrl: input.paymentLinkUrl === undefined
+        ? current.paymentLinkUrl || ''
+        : sanitizeHttpsUrl(input.paymentLinkUrl),
+      supportContact: input.supportContact === undefined
+        ? current.supportContact || ''
+        : input.supportContact.trim().slice(0, 240),
       holidayDates: input.holidayDates === undefined
         ? current.holidayDates
         : sanitizeHolidayDates(input.holidayDates),
@@ -295,6 +342,10 @@ export async function grantBillingTrial(
       ? snapshot.data() as BillingAccount
       : buildInitialBillingAccount(workspace, actor, false);
 
+    if (current.status === 'exempt') {
+      throw new Error('Remova a isenção VIP antes de conceder um período de teste.');
+    }
+
     const trial = buildInitialBillingAccount(
       workspace,
       current.createdBy || actor,
@@ -304,7 +355,7 @@ export async function grantBillingTrial(
     const updated: BillingAccount = {
       ...current,
       status: 'trial',
-      monthlyPriceCents: current.monthlyPriceCents || DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+      monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
       trialGranted: true,
       trialStartedAt: trial.trialStartedAt,
       trialEndsAt: trial.trialEndsAt,
@@ -344,6 +395,67 @@ export async function grantBillingTrial(
   });
 }
 
+export async function setBillingExemption(
+  workspace: Workspace,
+  exempt: boolean,
+  adminEmail: string
+): Promise<BillingAccount> {
+  if (workspace.id === HGESM_WORKSPACE_ID) {
+    throw new Error('A conta fundadora permanece isenta.');
+  }
+
+  const actor = normalizeActor(adminEmail);
+  const ref = accountRef(workspace.id);
+  const correlationId = createPlatformAuditCorrelationId();
+
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.exists()
+      ? snapshot.data() as BillingAccount
+      : buildInitialBillingAccount(workspace, actor, false);
+    const updated = buildBillingExemptionUpdate(current, exempt, actor);
+
+    if (
+      current.status === updated.status
+      && current.monthlyPriceCents === updated.monthlyPriceCents
+      && current.paymentRequired === updated.paymentRequired
+    ) {
+      return current;
+    }
+
+    transaction.set(ref, updated);
+
+    appendPlatformAuditEvent(transaction, {
+      operation: 'billing.status_change',
+      source: 'admin',
+      entityType: 'billing_account',
+      entityId: workspace.id,
+      correlationId,
+      workspaceId: workspace.id,
+      ug: workspace.ug || null,
+      actorEmail: actor,
+      before: {
+        status: current.status,
+        monthlyPriceCents: current.monthlyPriceCents,
+      },
+      after: {
+        status: updated.status,
+        monthlyPriceCents: updated.monthlyPriceCents,
+      },
+      metadata: {
+        commercialExemption: exempt,
+        exemptionSource: updated.exemptionSource || null,
+        presentation: updated.exemptionSource === 'legacy_vip'
+          ? 'VIP legado / Isento'
+          : exempt ? 'VIP / Isento' : 'Plano Completo',
+        enforcementActive: false,
+      },
+    });
+
+    return updated;
+  });
+}
+
 export async function setBillingCommercialStatus(
   workspace: Workspace,
   status: Exclude<BillingAccountStatus, 'exempt'>,
@@ -362,10 +474,17 @@ export async function setBillingCommercialStatus(
     const current = snapshot.exists()
       ? snapshot.data() as BillingAccount
       : buildInitialBillingAccount(workspace, actor, false);
+
+    if (current.status === 'exempt') {
+      throw new Error('Remova a isenção VIP antes de alterar o status comercial.');
+    }
+
     const now = new Date().toISOString();
     const updated: BillingAccount = {
       ...current,
       status,
+      monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+      paymentRequired: false,
       updatedAt: now,
       updatedBy: actor,
     };
@@ -415,34 +534,53 @@ export async function setBillingCycleStatus(
     const persistedAccount = accountSnapshot.exists()
       ? accountSnapshot.data() as BillingAccount
       : account;
+
+    if (persistedAccount.status === 'exempt') {
+      throw new Error('Conta isenta não possui competência de pagamento.');
+    }
+
     const base = cycleSnapshot.exists()
       ? cycleSnapshot.data() as BillingCycle
       : buildBillingCycle(persistedAccount, referenceMonth, config, actor);
     const now = new Date().toISOString();
     const confirmed = status === 'paid' || status === 'waived';
-    const updated: BillingCycle = {
-      ...base,
+    const transition = buildBillingCycleStatusTransition(
+      base,
       status,
-      confirmedAt: confirmed ? now : '',
-      confirmedBy: confirmed ? actor : '',
-      note: note.trim(),
-      updatedAt: now,
-      updatedBy: actor,
-    };
+      actor,
+      note,
+      now
+    );
+    const updated = transition.cycle;
+    const targetAccountStatus = confirmed ? 'active' : 'pending';
+    const accountChanged = workspace.id !== HGESM_WORKSPACE_ID
+      && (
+        persistedAccount.status !== targetAccountStatus
+        || persistedAccount.monthlyPriceCents !== EMPROVEX_FULL_PLAN_PRICE_CENTS
+        || persistedAccount.paymentRequired !== false
+      );
 
-    transaction.set(ref, updated);
+    if (!transition.changed && !accountChanged) {
+      return base;
+    }
 
-    if (workspace.id !== HGESM_WORKSPACE_ID) {
+    if (transition.changed || !cycleSnapshot.exists()) {
+      transaction.set(ref, updated);
+    }
+
+    if (workspace.id !== HGESM_WORKSPACE_ID && accountChanged) {
       transaction.set(accountDocument, {
         ...persistedAccount,
-        status: confirmed ? 'active' : 'pending',
+        status: targetAccountStatus,
+        monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+        paymentRequired: false,
         updatedAt: now,
         updatedBy: actor,
       } satisfies BillingAccount);
     }
 
     appendPlatformAuditEvent(transaction, {
-      operation: status === 'paid' || status === 'waived'
+      operation: confirmed
         ? 'billing.payment_confirm'
         : 'billing.payment_reopen',
       source: 'admin',
@@ -464,6 +602,7 @@ export async function setBillingCycleStatus(
       },
       metadata: {
         manualConfirmation: true,
+        idempotentDocumentId: updated.id,
         note: updated.note,
       },
     });

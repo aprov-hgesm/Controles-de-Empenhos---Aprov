@@ -26,7 +26,8 @@ assert(hook.includes("fetch('/api/admin/reset-sector-password'"), 'hook não usa
 assert(modal.includes('Definir / redefinir senha'), 'edição do setor não expõe reset administrativo');
 assert(modal.includes('A senha atual nunca é exibida nem armazenada no Firestore.'), 'UI não explicita proteção da senha');
 assert(operationalData.includes('firebaseCredentialAccepted'), 'login não separa autenticação de autorização');
-assert(operationalData.includes('O Firebase rejeitou o e-mail ou a senha informados.'), 'login não distingue rejeição de credencial');
-assert(operationalData.includes('A credencial foi aceita pelo Firebase'), 'login não distingue falha de workspace');
+assert(operationalData.includes("throw new Error('E-mail ou senha inválidos.')"), 'login não distingue rejeição de credencial');
+assert(operationalData.includes('A credencial foi aceita, mas não foi possível concluir a autorização do setor.'), 'login não distingue falha posterior de autorização');
+assert(!operationalData.includes('Falha de autorização do workspace ['), 'login não deve expor código técnico de workspace');
 
 console.log('SECTOR PASSWORD RESET GUARD: READY');

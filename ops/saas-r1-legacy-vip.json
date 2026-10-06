@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "migrationId": "saas-r1-legacy-vip-2026-10-02",
+  "cutoffDate": "2026-10-02",
+  "cutoffInstant": "2026-10-03T02:59:59.999Z",
+  "timezone": "America/Sao_Paulo",
+  "databaseRole": "operational-main",
+  "founderWorkspaceId": "hgesm-aprov",
+  "billingAccountStatus": "exempt",
+  "monthlyPriceCents": 0,
+  "exemptionSource": "legacy_vip",
+  "requireExplicitAllowlistForApply": true
+}

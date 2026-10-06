@@ -35,6 +35,7 @@ interface EmprovexLoginProps {
   toast: LoginToast;
   onCloseToast: () => void;
   onSectorLogin: (email: string, password: string) => Promise<boolean>;
+  onRequestPasswordReset: (email: string) => Promise<string>;
   onFounderLogin: () => Promise<void>;
 }
 
@@ -52,6 +53,7 @@ export function EmprovexLogin({
   toast,
   onCloseToast,
   onSectorLogin,
+  onRequestPasswordReset,
   onFounderLogin,
 }: EmprovexLoginProps) {
   const [loginEmail, setLoginEmail] = useState('');
@@ -59,6 +61,11 @@ export function EmprovexLogin({
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<FocusedField>(null);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoverySending, setRecoverySending] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const credentialsReady = Boolean(loginEmail.trim() && loginPassword);
 
@@ -105,6 +112,35 @@ export function EmprovexLogin({
       await onFounderLogin();
     } finally {
       setAuthMode(null);
+    }
+  };
+
+  const openPasswordRecovery = () => {
+    setRecoveryEmail(loginEmail.trim());
+    setRecoveryMessage(null);
+    setRecoveryError(null);
+    setRecoveryOpen(true);
+  };
+
+  const handlePasswordRecovery = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (recoverySending) return;
+
+    setRecoverySending(true);
+    setRecoveryMessage(null);
+    setRecoveryError(null);
+
+    try {
+      const message = await onRequestPasswordReset(recoveryEmail);
+      setRecoveryMessage(message);
+    } catch (error) {
+      setRecoveryError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível solicitar a redefinição agora.'
+      );
+    } finally {
+      setRecoverySending(false);
     }
   };
 
@@ -293,6 +329,87 @@ export function EmprovexLogin({
                       </button>
                     </div>
                   </label>
+
+                  <div className="-mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={openPasswordRecovery}
+                      disabled={isSigningIn}
+                      className="text-[11px] font-bold text-blue-300/85 transition hover:text-blue-200 disabled:opacity-50"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+
+                  {recoveryOpen && (
+                    <div
+                      className="rounded-2xl border border-blue-300/[0.12] bg-blue-400/[0.045] p-4"
+                      data-testid="sector-password-recovery"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-extrabold text-blue-100">Redefinir senha</p>
+                          <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                            Informe o e-mail de acesso. Por segurança, a resposta não confirma se existe uma conta cadastrada.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRecoveryOpen(false)}
+                          disabled={recoverySending}
+                          className="text-[11px] font-bold text-slate-500 transition hover:text-slate-300 disabled:opacity-50"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      <form onSubmit={handlePasswordRecovery} className="mt-3 space-y-3">
+                        <div className="relative">
+                          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                          <input
+                            data-testid="sector-password-recovery-email"
+                            type="email"
+                            value={recoveryEmail}
+                            onChange={(event) => setRecoveryEmail(event.target.value)}
+                            autoComplete="email"
+                            inputMode="email"
+                            required
+                            disabled={recoverySending}
+                            placeholder="setor@exemplo.mil.br"
+                            className="h-11 w-full rounded-xl border border-white/[0.09] bg-slate-950/35 pl-10 pr-3 text-xs font-medium text-white outline-none placeholder:text-slate-600 focus:border-blue-400/40 disabled:opacity-60"
+                          />
+                        </div>
+
+                        {recoveryMessage && (
+                          <p
+                            role="status"
+                            className="rounded-xl border border-emerald-300/15 bg-emerald-400/[0.07] px-3 py-2 text-[11px] leading-5 text-emerald-100"
+                          >
+                            {recoveryMessage}
+                          </p>
+                        )}
+
+                        {recoveryError && (
+                          <p
+                            role="alert"
+                            className="rounded-xl border border-rose-300/15 bg-rose-400/[0.07] px-3 py-2 text-[11px] leading-5 text-rose-100"
+                          >
+                            {recoveryError}
+                          </p>
+                        )}
+
+                        <button
+                          data-testid="sector-password-recovery-submit"
+                          type="submit"
+                          disabled={recoverySending || !recoveryEmail.trim()}
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-blue-300/10 bg-blue-600/90 px-4 text-xs font-extrabold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                          {recoverySending && <Loader2 className="h-4 w-4 animate-spin" />}
+                          {recoverySending ? 'Enviando…' : 'Enviar instruções'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
 
                   <button
                     data-testid="sector-login-submit"

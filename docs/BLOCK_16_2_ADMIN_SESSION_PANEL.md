@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Dar à conta fundadora uma visão centralizada das sessões simultâneas dos setores externos e permitir encerramento remoto seguro sem alterar o limite de duas vagas definido no Bloco 16.1.
+Dar à conta fundadora uma visão centralizada das sessões simultâneas dos setores externos e permitir encerramento remoto seguro sob o contrato SESSION-CAP-01, sem teto fixo de sessões por workspace/UG.
 
 ## Painel
 
@@ -10,32 +10,32 @@ A Administração passa a exibir uma seção "Sessões simultâneas por UG" com:
 
 - conta fundadora explicitamente marcada como ilimitada;
 - quantidade total de sessões externas ativas;
-- quantidade de UGs com as duas vagas ocupadas;
-- ocupação por workspace/UG no formato 0/2, 1/2 ou 2/2;
-- slot ocupado;
+- quantidade de UGs com ao menos uma sessão ativa;
+- quantidade de sessões ativas por workspace/UG, sem denominador de capacidade;
+- identificador do lease (dinâmico por `browserInstanceId`; `slot-1`/`slot-2` somente no legado transitório);
 - identificador abreviado da sessão;
 - horário de início;
 - último heartbeat;
 - ação administrativa "Encerrar".
 
-Slots expirados permanecem tecnicamente no Firestore até serem reutilizados, porém não são contabilizados como sessões ativas no painel.
+Leases expirados podem permanecer tecnicamente no Firestore até reutilização/TTL, porém não são contabilizados como sessões ativas no painel.
 
 ## Observabilidade
 
 A conta fundadora usa um único listener de collection group em `sessionSlots`. Isso evita um listener separado para cada UG e mantém o custo administrativo limitado mesmo com crescimento do número de workspaces.
 
-Setores externos continuam sem acesso aos slots de outras UGs.
+Setores externos continuam sem acesso às sessões de outras UGs.
 
 ## Encerramento remoto
 
 O encerramento remoto é uma transação única que:
 
-1. confirma que o slot ainda representa a sessão selecionada;
+1. confirma que o lease ainda representa a sessão selecionada;
 2. cria `workspaces/{workspaceId}/sessionRevocations/{sessionId}`;
-3. exclui o slot ativo, liberando a vaga;
+3. exclui o lease ativo selecionado;
 4. grava `session.terminate` em `platformAuditEvents`.
 
-A revogação possui validade lógica de 24 horas e impede a mesma sessão lógica de recriar a vaga.
+A revogação possui validade lógica de 24 horas e impede o mesmo `sessionId` revogado de retomar acesso.
 
 ## Reação do cliente
 
@@ -48,14 +48,14 @@ Quando a revogação aparece:
 - o Firebase Auth é finalizado;
 - o operador retorna ao login.
 
-Se o computador estava offline durante a revogação, a próxima resolução de workspace consulta o tombstone e recusa o antigo `sessionId`. Depois disso, um novo login cria um novo identificador e pode ocupar uma vaga disponível.
+Se o computador estava offline durante a revogação, a próxima resolução de workspace consulta o tombstone e recusa o antigo `sessionId`. Depois disso, um novo login cria um novo identificador e passa a operar com um lease dinâmico próprio.
 
 ## Segurança
 
 As Firestore Rules garantem que:
 
 - somente a conta fundadora pode criar revogações;
-- uma exclusão administrativa de slot exige a revogação correspondente na mesma transação;
+- uma exclusão administrativa de lease exige a revogação correspondente na mesma transação;
 - o setor pode fazer `get` pontual de revogações somente dentro do próprio workspace, inclusive quando o documento ainda não existe;
 - o setor não pode listar revogações e outro workspace não pode lê-las;
 - revogações são append-only;
@@ -65,7 +65,7 @@ As Firestore Rules garantem que:
 
 O Bloco 16.2 não:
 
-- altera o limite padrão de 2 sessões;
+- reintroduz teto fixo de sessões;
 - cria configuração variável de limite por UG;
 - integra Cloud Monitoring;
 - calcula reads/writes por UG;

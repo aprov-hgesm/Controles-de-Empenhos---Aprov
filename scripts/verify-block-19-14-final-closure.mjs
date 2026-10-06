@@ -128,7 +128,7 @@ requireText(performance, 'visibilitychange', 'Animações não reagem à visibil
 requireText(e2e, "const OPERATOR_A = 'sector-lifecycle@example.test'", 'Operador externo A ausente do E2E.');
 requireText(e2e, "const OPERATOR_B = 'sector-b@example.test'", 'Operador externo B ausente do E2E.');
 requireText(e2e, "test('segundo workspace não enxerga a NS nem o fornecedor do primeiro'", 'E2E não cobre isolamento entre workspaces externos.');
-requireText(e2e, "test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada'", 'E2E não cobre limite de sessões externas.');
+requireText(e2e, "test('quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica'", 'E2E não cobre sessões simultâneas sem teto fixo.');
 requireText(e2e, "test('perfil realtime acompanha a seção ativa sem manter coleções ociosas'", 'E2E não cobre consumo realtime por superfície.');
 requireText(e2e, "test('Início permanece responsivo em celular, tablet e landscape sem overflow horizontal'", 'E2E não cobre responsividade final.');
 requireText(e2e, 'expectRealtimeProfile(page, 1)', 'E2E não comprova perfil econômico do Início.');

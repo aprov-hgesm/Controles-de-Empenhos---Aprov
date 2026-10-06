@@ -15,6 +15,7 @@ import {
   ensurePlatformBillingFoundation,
   grantBillingTrial,
   setBillingCommercialStatus,
+  setBillingExemption,
   setBillingCycleStatus,
   subscribePlatformBillingAccounts,
   subscribePlatformBillingConfig,
@@ -162,6 +163,17 @@ export function usePlatformAdminBilling(
     );
   }, [adminEmail, runMutation]);
 
+  const setExemption = useCallback((
+    workspace: Workspace,
+    exempt: boolean
+  ) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    return runMutation(
+      `exempt:${workspace.id}`,
+      () => setBillingExemption(workspace, exempt, adminEmail)
+    );
+  }, [adminEmail, runMutation]);
+
   const setStatus = useCallback((
     workspace: Workspace,
     status: Exclude<BillingAccountStatus, 'exempt'>
@@ -208,6 +220,7 @@ export function usePlatformAdminBilling(
     mutatingKey,
     updateConfig,
     grantTrial,
+    setExemption,
     setStatus,
     setCycleStatus,
   };

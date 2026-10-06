@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMissingGcloud, spawnGcloudSync } from "./lib/gcloud-command.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const policy = JSON.parse(
@@ -12,64 +12,43 @@ const policy = JSON.parse(
 
 const command = process.argv[2] || "plan";
 const flags = parseFlags(process.argv.slice(3));
-const expectedResource = `projects/${policy.projectId}/databases/${policy.databaseId}`;
-
-const commands = {
-  enableProtection: [
-    "firestore",
-    "databases",
-    "update",
-    `--project=${policy.projectId}`,
-    `--database=${policy.databaseId}`,
-    "--enable-pitr",
-    "--delete-protection",
-    "--quiet",
-  ],
-  createDailySchedule: [
-    "firestore",
-    "backups",
-    "schedules",
-    "create",
-    `--project=${policy.projectId}`,
-    `--database=${policy.databaseId}`,
-    `--retention=${policy.dailyBackupRetention}`,
-    "--recurrence=daily",
-  ],
-};
 
 main().catch((error) => {
-  console.error(`\nERRO: ${error.message}`);
+  console.error("\nERRO: " + error.message);
   process.exitCode = 1;
 });
 
 async function main() {
   switch (command) {
     case "plan":
-      printPlan();
+      printPlan(resolveDatabasePolicies());
       return;
-    case "status":
+    case "status": {
       ensureGcloud();
-      printStatus(await inspect());
-      return;
-    case "verify": {
-      ensureGcloud();
-      const status = await inspect();
-      printStatus(status);
-      if (!status.ready) process.exitCode = 2;
+      printStatus(await inspectMany(resolveDatabasePolicies()));
       return;
     }
-    case "apply":
-      ensureApplyConfirmation();
+    case "verify": {
+      ensureGcloud();
+      const statuses = await inspectMany(resolveDatabasePolicies());
+      printStatus(statuses);
+      if (!statuses.every((status) => status.ready)) process.exitCode = 2;
+      return;
+    }
+    case "apply": {
+      const databasePolicy = resolveDatabasePolicies({ requireExplicit: true })[0];
+      ensureApplyConfirmation(databasePolicy);
       ensureGcloud();
       await ensureBilling();
-      await applyRecoveryControls();
+      await applyRecoveryControls(databasePolicy);
       return;
+    }
     case "restore-plan":
-      printRestorePlan();
+      printRestorePlan(resolveDatabasePolicies({ requireExplicit: true })[0]);
       return;
     default:
       throw new Error(
-        `Comando desconhecido: ${command}. Use plan, status, verify, apply ou restore-plan.`,
+        "Comando desconhecido: " + command + ". Use plan, status, verify, apply ou restore-plan.",
       );
   }
 }
@@ -83,21 +62,50 @@ function parseFlags(args) {
   );
 }
 
-function ensureGcloud() {
-  const check = spawnSync("gcloud", ["--version"], { encoding: "utf8" });
-  if (check.error?.code === "ENOENT") {
+function resolveDatabasePolicies({ requireExplicit = false } = {}) {
+  const selector = String(flags.database || (requireExplicit ? "" : "all")).trim();
+
+  if (!selector) {
     throw new Error(
-      "Google Cloud CLI não encontrado. Instale o gcloud ou use o Cloud Shell.",
+      "Informe --database=<id> para esta operação. O modo de escrita nunca seleciona bancos implicitamente.",
+    );
+  }
+
+  if (selector === "all") {
+    if (requireExplicit) {
+      throw new Error("Esta operação exige um único --database=<id>; --database=all é bloqueado.");
+    }
+    return policy.databases;
+  }
+
+  const selected = policy.databases.find((item) => item.id === selector);
+  if (!selected) {
+    throw new Error(
+      "Banco não reconhecido: " + selector + ". Permitidos: " + policy.databases.map((item) => item.id).join(", ") + ".",
+    );
+  }
+  return [selected];
+}
+
+function expectedResource(databasePolicy) {
+  return "projects/" + policy.projectId + "/databases/" + databasePolicy.id;
+}
+
+function ensureGcloud() {
+  const check = spawnGcloudSync(["--version"]);
+  if (isMissingGcloud(check)) {
+    throw new Error(
+      "Google Cloud CLI não encontrado. Use o Cloud Shell ou instale o gcloud.",
     );
   }
   if (check.status !== 0) throw new Error("Não foi possível executar o gcloud.");
 }
 
 function runGcloud(args) {
-  const result = spawnSync("gcloud", args, { encoding: "utf8" });
+  const result = spawnGcloudSync(args);
   if (result.status !== 0) {
     const detail = result.stderr.trim() || result.stdout.trim();
-    throw new Error(`gcloud falhou: ${detail || args.join(" ")}`);
+    throw new Error("gcloud falhou: " + (detail || args.join(" ")));
   }
   return result.stdout.trim();
 }
@@ -107,28 +115,72 @@ function runJson(args) {
   return output ? JSON.parse(output) : null;
 }
 
-function printPlan() {
-  console.log("Plano de recuperação do Firestore (nenhuma alteração executada)\n");
-  console.log(`Projeto:  ${policy.projectId}`);
-  console.log(`Banco:    ${policy.databaseId}`);
-  console.log(`Região:   ${policy.location}`);
-  console.log(`Backup:   diário, retenção ${policy.dailyBackupRetention}`);
-  console.log("Proteção: PITR + proteção contra exclusão\n");
-  console.log("Comandos que o modo apply poderá executar:");
-  console.log(`gcloud ${commands.enableProtection.join(" ")}`);
-  console.log(`gcloud ${commands.createDailySchedule.join(" ")}`);
-  console.log("\nO modo apply exige faturamento ativo e confirmação literal do banco.");
+function protectionCommand(databasePolicy) {
+  return [
+    "firestore",
+    "databases",
+    "update",
+    "--project=" + policy.projectId,
+    "--database=" + databasePolicy.id,
+    "--enable-pitr",
+    "--delete-protection",
+    "--quiet",
+  ];
 }
 
-async function inspect() {
+function createDailyScheduleCommand(databasePolicy) {
+  return [
+    "firestore",
+    "backups",
+    "schedules",
+    "create",
+    "--project=" + policy.projectId,
+    "--database=" + databasePolicy.id,
+    "--retention=" + databasePolicy.dailyBackupRetention,
+    "--recurrence=daily",
+  ];
+}
+
+function printPlan(databasePolicies) {
+  console.log("Plano de recuperação do Firestore (nenhuma alteração executada)\n");
+  console.log("Projeto: " + policy.projectId);
+  for (const databasePolicy of databasePolicies) {
+    console.log("\nBanco: " + databasePolicy.id + " (" + databasePolicy.role + ")");
+    console.log("Backup: diário, retenção " + databasePolicy.dailyBackupRetention);
+    console.log("Objetivos: RPO " + databasePolicy.rpoHours + "h / RTO " + databasePolicy.rtoHours + "h");
+    console.log("Proteção: PITR + proteção contra exclusão");
+    console.log("Comandos que o modo apply poderá executar:");
+    console.log("gcloud " + protectionCommand(databasePolicy).join(" "));
+    console.log("gcloud " + createDailyScheduleCommand(databasePolicy).join(" "));
+  }
+  console.log(
+    "\nO modo apply exige faturamento ativo, um único --database e confirmação literal do recurso.",
+  );
+}
+
+async function inspectMany(databasePolicies) {
+  const statuses = [];
+  for (const databasePolicy of databasePolicies) {
+    statuses.push(await inspectDatabase(databasePolicy));
+  }
+  return statuses;
+}
+
+async function inspectDatabase(databasePolicy) {
+  const resource = expectedResource(databasePolicy);
   const database = runJson([
     "firestore",
     "databases",
     "describe",
-    `--project=${policy.projectId}`,
-    `--database=${policy.databaseId}`,
+    "--project=" + policy.projectId,
+    "--database=" + databasePolicy.id,
   ]);
-  assertDatabase(database);
+  assertDatabase(databasePolicy, database);
+
+  const location = String(database.locationId || "").trim();
+  if (!location) {
+    throw new Error("O banco " + databasePolicy.id + " não informou locationId.");
+  }
 
   const schedules =
     runJson([
@@ -136,8 +188,8 @@ async function inspect() {
       "backups",
       "schedules",
       "list",
-      `--project=${policy.projectId}`,
-      `--database=${policy.databaseId}`,
+      "--project=" + policy.projectId,
+      "--database=" + databasePolicy.id,
     ]) || [];
   const dailySchedules = schedules.filter(isDailySchedule);
 
@@ -146,12 +198,12 @@ async function inspect() {
       "firestore",
       "backups",
       "list",
-      `--project=${policy.projectId}`,
-      `--location=${policy.location}`,
+      "--project=" + policy.projectId,
+      "--location=" + location,
     ]) || [];
   const completedBackups = backups.filter(
     (backup) =>
-      backup.database === expectedResource &&
+      backup.database === resource &&
       String(backup.state).toUpperCase() === "READY",
   );
 
@@ -163,34 +215,35 @@ async function inspect() {
   const dailyScheduleReady =
     dailySchedules.length === 1 &&
     retentionSeconds(dailySchedules[0].retention) ===
-      policy.dailyBackupRetentionSeconds;
+      databasePolicy.dailyBackupRetentionSeconds;
   const backupReady = completedBackups.length > 0;
+
+  const controlsReady =
+    (!databasePolicy.requirePitr || pitrEnabled) &&
+    (!databasePolicy.requireDeleteProtection || deleteProtectionEnabled) &&
+    dailyScheduleReady;
 
   return {
     projectId: policy.projectId,
-    databaseId: policy.databaseId,
+    databaseId: databasePolicy.id,
+    role: databasePolicy.role,
+    location,
     pitrEnabled,
     deleteProtectionEnabled,
     dailyScheduleReady,
     backupReady,
     completedBackupCount: completedBackups.length,
-    ready:
-      pitrEnabled &&
-      deleteProtectionEnabled &&
-      dailyScheduleReady &&
-      backupReady,
+    rpoHours: databasePolicy.rpoHours,
+    rtoHours: databasePolicy.rtoHours,
+    ready: controlsReady && backupReady,
   };
 }
 
-function assertDatabase(database) {
-  if (!database || database.name !== expectedResource) {
+function assertDatabase(databasePolicy, database) {
+  const resource = expectedResource(databasePolicy);
+  if (!database || database.name !== resource) {
     throw new Error(
-      `Banco retornado não corresponde ao alvo protegido: ${expectedResource}`,
-    );
-  }
-  if (database.locationId && database.locationId !== policy.location) {
-    throw new Error(
-      `Região inesperada: ${database.locationId}; esperado ${policy.location}.`,
+      "Banco retornado não corresponde ao alvo protegido: " + resource,
     );
   }
 }
@@ -208,31 +261,41 @@ function retentionSeconds(value) {
   return match ? Number(match[1]) : NaN;
 }
 
-function printStatus(status) {
-  console.log(JSON.stringify(status, null, 2));
-  if (!status.ready) {
+function printStatus(statuses) {
+  console.log(
+    JSON.stringify(
+      {
+        projectId: policy.projectId,
+        databases: statuses,
+        ready: statuses.every((status) => status.ready),
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (!statuses.every((status) => status.ready)) {
     console.log(
-      "\nBloco 0 ainda não concluído: todos os controles e pelo menos um backup READY são obrigatórios.",
+      "\nRecuperação nativa ainda não certificada: cada banco precisa dos controles e de pelo menos um backup READY.",
     );
   }
 }
 
-function ensureApplyConfirmation() {
+function ensureApplyConfirmation(databasePolicy) {
   const suppliedProject = flags.project;
-  const suppliedDatabase = flags.database;
   const suppliedConfirmation = flags.confirm;
+  const resource = expectedResource(databasePolicy);
 
   if (
     suppliedProject !== policy.projectId ||
-    suppliedDatabase !== policy.databaseId ||
-    suppliedConfirmation !== expectedResource
+    suppliedConfirmation !== resource
   ) {
     throw new Error(
       [
         "Aplicação bloqueada. Informe explicitamente o alvo correto:",
-        `--project=${policy.projectId}`,
-        `--database=${policy.databaseId}`,
-        `--confirm=${expectedResource}`,
+        "--project=" + policy.projectId,
+        "--database=" + databasePolicy.id,
+        "--confirm=" + resource,
       ].join("\n"),
     );
   }
@@ -247,17 +310,20 @@ async function ensureBilling() {
   ]);
   if (billing?.billingEnabled !== true) {
     throw new Error(
-      "Faturamento não está ativo. PITR e backups programados exigem o plano Blaze.",
+      "Faturamento não está ativo. PITR e backups programados exigem billing habilitado.",
     );
   }
 }
 
-async function applyRecoveryControls() {
-  const before = await inspect();
+async function applyRecoveryControls(databasePolicy) {
+  const before = await inspectDatabase(databasePolicy);
 
-  if (!before.pitrEnabled || !before.deleteProtectionEnabled) {
-    console.log("Ativando PITR e proteção contra exclusão...");
-    runGcloud(commands.enableProtection);
+  if (
+    (databasePolicy.requirePitr && !before.pitrEnabled) ||
+    (databasePolicy.requireDeleteProtection && !before.deleteProtectionEnabled)
+  ) {
+    console.log("Ativando proteções em " + databasePolicy.id + "...");
+    runGcloud(protectionCommand(databasePolicy));
   }
 
   const schedules =
@@ -266,40 +332,47 @@ async function applyRecoveryControls() {
       "backups",
       "schedules",
       "list",
-      `--project=${policy.projectId}`,
-      `--database=${policy.databaseId}`,
+      "--project=" + policy.projectId,
+      "--database=" + databasePolicy.id,
     ]) || [];
   const dailySchedules = schedules.filter(isDailySchedule);
 
   if (dailySchedules.length > 1) {
-    throw new Error("Mais de um agendamento diário encontrado; revisão manual necessária.");
+    throw new Error(
+      "Mais de um agendamento diário encontrado em " + databasePolicy.id + "; revisão manual necessária.",
+    );
   }
 
   if (dailySchedules.length === 0) {
-    console.log("Criando backup diário com retenção de 14 semanas...");
-    runGcloud(commands.createDailySchedule);
+    console.log(
+      "Criando backup diário de " + databasePolicy.id + " com retenção " + databasePolicy.dailyBackupRetention + "...",
+    );
+    runGcloud(createDailyScheduleCommand(databasePolicy));
   } else if (
     retentionSeconds(dailySchedules[0].retention) !==
-    policy.dailyBackupRetentionSeconds
+    databasePolicy.dailyBackupRetentionSeconds
   ) {
     const scheduleId = String(dailySchedules[0].name || "").split("/").pop();
     if (!scheduleId) throw new Error("Agendamento diário sem identificador válido.");
-    console.log("Atualizando retenção do backup diário para 14 semanas...");
+    console.log(
+      "Atualizando retenção do backup diário de " + databasePolicy.id + " para " + databasePolicy.dailyBackupRetention + "...",
+    );
     runGcloud([
       "firestore",
       "backups",
       "schedules",
       "update",
-      `--project=${policy.projectId}`,
-      `--database=${policy.databaseId}`,
-      `--backup-schedule=${scheduleId}`,
-      `--retention=${policy.dailyBackupRetention}`,
+      "--project=" + policy.projectId,
+      "--database=" + databasePolicy.id,
+      "--backup-schedule=" + scheduleId,
+      "--retention=" + databasePolicy.dailyBackupRetention,
       "--quiet",
     ]);
   }
 
-  const after = await inspect();
-  printStatus(after);
+  const after = await inspectDatabase(databasePolicy);
+  printStatus([after]);
+
   if (
     !after.pitrEnabled ||
     !after.deleteProtectionEnabled ||
@@ -316,28 +389,54 @@ async function applyRecoveryControls() {
   }
 }
 
-function printRestorePlan() {
-  const backup = flags.backup;
-  const target = flags.target;
+function printRestorePlan(databasePolicy) {
+  const backup = String(flags.backup || "").trim();
+  const target = String(flags.target || "").trim();
+
   if (!backup || !target) {
     throw new Error(
-      "Informe --backup=projects/.../locations/.../backups/... e --target=emprovex-restore-AAAA-MM-DD.",
+      "Informe --database=<origem> --backup=projects/.../locations/.../backups/... e --target=emprovex-restore-AAAA-MM-DD.",
     );
   }
-  const backupPrefix = `projects/${policy.projectId}/locations/${policy.location}/backups/`;
-  if (!backup.startsWith(backupPrefix)) {
-    throw new Error(`O backup precisa pertencer a ${backupPrefix}`);
+
+  const backupPrefix = "projects/" + policy.projectId + "/locations/";
+  if (
+    !backup.startsWith(backupPrefix) ||
+    !/\/backups\/[^/]+$/.test(backup)
+  ) {
+    throw new Error("O backup precisa pertencer ao projeto " + policy.projectId + ".");
   }
+
   if (!/^[a-z][a-z0-9-]{2,61}[a-z0-9]$/.test(target)) {
     throw new Error("ID do banco de restauração inválido.");
   }
-  if (target === policy.databaseId || target === "(default)") {
-    throw new Error("A restauração deve usar um banco novo e isolado.");
+
+  const protectedIds = new Set(policy.databases.map((item) => item.id));
+  if (protectedIds.has(target) || target === "(default)") {
+    throw new Error(
+      "A restauração deve usar um banco novo e isolado; bancos de produção são bloqueados.",
+    );
   }
 
   console.log("Plano de restauração (nenhuma alteração executada)\n");
+  console.log("Origem declarada: " + databasePolicy.id + " (" + databasePolicy.role + ")");
+  console.log("Backup: " + backup);
+  console.log("Destino isolado: " + target + "\n");
   console.log(
-    `gcloud firestore databases restore --project=${policy.projectId} --source-backup=${backup} --destination-database=${target}`,
+    "gcloud firestore databases restore --project=" + policy.projectId +
+      " --source-backup=" + backup +
+      " --destination-database=" + target,
   );
-  console.log("\nApós restaurar, valide IAM, regras, índices e contagens antes de remover o banco de teste.");
+  console.log("\nVerificação pós-restore, somente leitura:");
+  console.log(
+    "gcloud firestore databases describe --project=" + policy.projectId +
+      " --database=" + target,
+  );
+  console.log(
+    "gcloud firestore operations list --project=" + policy.projectId +
+      " --database=" + target,
+  );
+  console.log(
+    "\nDepois valide IAM, Rules, TTL e amostras de dados antes de qualquer decisão sobre o banco restaurado.",
+  );
 }

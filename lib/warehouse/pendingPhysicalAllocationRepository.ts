@@ -2,8 +2,6 @@ import type { WarehouseMaterialUnit } from './material';
 import type { WarehouseSiscofisPreviewRow } from './siscofis';
 import {
   listWarehousePositiveLocationBalances,
-  transferWarehouseStock,
-  type TransferWarehouseStockResult,
 } from './locationRepository';
 import type { WarehouseStockPosition } from './location';
 import { listWarehouseMaterials } from './materialRepository';
@@ -107,7 +105,7 @@ export async function listWarehousePendingPhysicalAllocations(
 export async function allocateWarehousePendingPhysicalStock(
   workspaceId: string,
   input: AllocateWarehousePendingPhysicalStockInput
-): Promise<TransferWarehouseStockResult> {
+): Promise<never> {
   if (input.position.kind === 'UNASSIGNED') {
     throw new Error('WAREHOUSE_PENDING_ALLOCATION_LOCATION_REQUIRED');
   }
@@ -117,16 +115,12 @@ export async function allocateWarehousePendingPhysicalStock(
     throw new Error('WAREHOUSE_PENDING_ALLOCATION_INVALID_OPERATION_ID');
   }
 
-  return transferWarehouseStock(workspaceId, {
-    materialId: input.materialId,
-    quantity: input.quantity,
-    from: { kind: 'UNASSIGNED' },
-    to: input.position,
-    idempotencyKey: [
-      'pending-physical-allocation',
-      input.materialId,
-      operationId,
-    ].join(':').slice(0, 240),
-    note: 'Alocação física de saldo sem localização',
-  });
+  // Compatibility surface only. Marco Zero records can prove historical
+  // UNASSIGNED evidence, but they are neither physical stock nor intake-v2
+  // pending quantity. A dedicated reconciliation/migration path is required
+  // before any balance can become operational stock in LOCATION/SUBPOSITION.
+  void workspaceId;
+  void input.materialId;
+  void input.quantity;
+  throw new Error('WAREHOUSE_PENDING_ALLOCATION_RECONCILIATION_REQUIRED');
 }

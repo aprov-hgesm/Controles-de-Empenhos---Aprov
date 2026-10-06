@@ -44,11 +44,34 @@ service cloud.firestore {
         && isValidUnitUg(request.auth.token.emprovexUg);
     }
 
+    function warehouseLifecycleAllowsAccess(workspaceId) {
+      return !exists(
+          /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+        )
+        || (
+          get(
+            /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+          ).data.schemaVersion == 'warehouse_workspace_access_v1'
+          && get(
+            /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+          ).data.workspaceId == workspaceId
+          && get(
+            /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+          ).data.status == 'active'
+          && get(
+            /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+          ).data.ug == request.auth.token.emprovexUg
+        );
+    }
+
     function canAccessWarehouseModule(workspaceId) {
       return warehouseModuleEnabled()
         && (
           (workspaceId == 'hgesm-aprov' && isHgesmFounder())
-          || isExternalWarehouseSectorSession(workspaceId)
+          || (
+            isExternalWarehouseSectorSession(workspaceId)
+            && warehouseLifecycleAllowsAccess(workspaceId)
+          )
         );
     }
 

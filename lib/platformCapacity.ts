@@ -10,16 +10,36 @@ import {
 export const CAPACITY_POLICY_VERSION = 'emprovex_capacity_v1';
 export const USAGE_TELEMETRY_VERSION = 'emprovex_usage_v1';
 
-export const DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = 2;
+export type SimultaneousSessionLimit = number | null;
+
+/**
+ * SESSION-CAP-01 — não existe mais teto funcional de sessões externas.
+ * null representa capacidade ilimitada. Valores numéricos históricos continuam
+ * sendo aceitos apenas para leitura/compatibilidade de documentos já existentes.
+ */
+export const DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT: SimultaneousSessionLimit = null;
 export const SESSION_LEASE_VERSION = 'emprovex_session_v1';
 export const SESSION_REVOCATION_VERSION = 'emprovex_session_revocation_v1';
 export const SESSION_REVOCATION_TTL_MS = 24 * 60 * 60 * 1000;
-export const SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;
+
+/**
+ * IDs fixos são preservados somente para a janela de transição/rollback.
+ * O runtime RC cria leases dinâmicos e não usa esta lista para limitar capacidade.
+ */
+export const LEGACY_SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;
+export const SESSION_SLOT_IDS = LEGACY_SESSION_SLOT_IDS;
 export const SESSION_LEASE_DURATION_MS = 30 * 60 * 1000;
 export const SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000;
 
-export type SimultaneousSessionLimit = number | null;
-export type WorkspaceSessionSlotId = (typeof SESSION_SLOT_IDS)[number];
+export type WorkspaceSessionSlotId = string;
+
+export function isLegacyWorkspaceSessionSlotId(
+  value: string
+): value is (typeof LEGACY_SESSION_SLOT_IDS)[number] {
+  return LEGACY_SESSION_SLOT_IDS.includes(
+    value as (typeof LEGACY_SESSION_SLOT_IDS)[number]
+  );
+}
 
 export type UsageBudgetLevel =
   | 'unconfigured'
@@ -40,8 +60,9 @@ export interface WorkspaceCapacityPolicy {
   workspaceId: string;
   ug: string;
   /**
-   * null = unlimited. This value is reserved for the founder identity.
-   * External sectors default to DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT.
+   * null = unlimited. SESSION-CAP-01 aplica este contrato tanto ao fundador
+   * quanto aos setores externos; a segurança continua baseada em identidade,
+   * workspace/UG, lease, heartbeat, revogação e lifecycle.
    */
   simultaneousSessionLimit: SimultaneousSessionLimit;
   dailyUsageBudget: InternalDailyUsageBudget;
@@ -135,9 +156,8 @@ export function isFounderCapacityExempt(accountEmail?: string | null): boolean {
 export function getDefaultSimultaneousSessionLimit(
   accountEmail?: string | null
 ): SimultaneousSessionLimit {
-  return isFounderCapacityExempt(accountEmail)
-    ? null
-    : DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT;
+  void accountEmail;
+  return DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT;
 }
 
 export function createDefaultWorkspaceCapacityPolicy(input: {

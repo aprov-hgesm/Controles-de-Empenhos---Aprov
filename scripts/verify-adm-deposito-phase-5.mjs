@@ -14,6 +14,10 @@ function requireText(content, marker, message) {
   if (!content.includes(marker)) findings.push(message);
 }
 
+function forbidText(content, marker, message) {
+  if (content.includes(marker)) findings.push(message);
+}
+
 const domain = read('lib/warehouse/siscofis.ts');
 const pdfExtractor = read('lib/warehouse/siscofisPdf.ts');
 const service = read('lib/warehouse/siscofisService.ts');
@@ -243,30 +247,44 @@ for (const marker of [
   "snapshot.status === 'CONFIRMED'",
   "balance.position.kind !== 'UNASSIGNED'",
   'listWarehousePositiveLocationBalances(workspaceId, 500)',
-  'transferWarehouseStock(workspaceId, {',
-  "from: { kind: 'UNASSIGNED' }",
+  'WAREHOUSE_PENDING_ALLOCATION_RECONCILIATION_REQUIRED',
 ]) {
   requireText(
     pendingAllocation,
     marker,
-    'Fila física SISCOFIS perdeu contrato operacional: ' + marker
+    'Fila legada SISCOFIS perdeu contrato de reconciliação: ' + marker
   );
 }
+forbidText(
+  pendingAllocation,
+  'transferWarehouseStock(workspaceId, {',
+  'Legado SISCOFIS não pode usar TRANSFER físico comum para sair de UNASSIGNED.'
+);
+forbidText(
+  pendingAllocation,
+  "from: { kind: 'UNASSIGNED' }",
+  'Legado SISCOFIS não pode promover UNASSIGNED a origem operacional de transferência.'
+);
 if (pendingAllocation.includes('applyWarehouseMovement(')) {
-  findings.push('Alocação física SISCOFIS voltou a criar saldo em vez de apenas transferir localização.');
+  findings.push('Reconciliação SISCOFIS não pode criar saldo automaticamente.');
 }
 for (const marker of [
   'data-testid="warehouse-siscofis-pending-allocation"',
-  'Materiais importados ainda sem localização física',
-  'Confirmar alocação',
+  'Registros legados do Marco Zero que exigem reconciliação',
+  'Revisar reconciliação',
   'allocateWarehousePendingPhysicalStock(workspaceId, {',
 ]) {
   requireText(
     pendingAllocationUi,
     marker,
-    'Superfície de pendências físicas SISCOFIS incompleta: ' + marker
+    'Superfície de reconciliação legada SISCOFIS incompleta: ' + marker
   );
 }
+forbidText(
+  pendingAllocationUi,
+  'Saldo sem localização',
+  'UI SISCOFIS voltou a apresentar UNASSIGNED como saldo operacional normal.'
+);
 
 requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
 requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');

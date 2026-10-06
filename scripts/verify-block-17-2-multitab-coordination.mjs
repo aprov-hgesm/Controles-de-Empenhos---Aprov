@@ -83,7 +83,8 @@ forbidText(
 for (const invariant of [
   'SESSION_LEASE_DURATION_MS = 30 * 60 * 1000',
   'SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000',
-  'DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = 2',
+  'DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT: SimultaneousSessionLimit = null',
+  "LEGACY_SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
 ]) {
   requireText(capacity, invariant, `Contrato 17.1/17.2 regrediu: ${invariant}`);
 }
@@ -96,7 +97,7 @@ for (const invariant of [
   requireText(lease, invariant, `Lease perdeu invariante: ${invariant}`);
 }
 
-requireText(rules, "return slotId in ['slot-1', 'slot-2'];", 'Rules perderam limite físico de dois slots.');
+requireText(rules, 'workspaceSessionSlotBindingMatches(slotId, request.resource.data)', 'Rules perderam vínculo dinâmico do lease ao browserInstanceId.');
 requireText(rules, 'sameWorkspaceSessionLeaseOwner()', 'Rules perderam vínculo de identidade do lease.');
 
 for (const scenario of [
@@ -112,8 +113,8 @@ for (const scenario of [
 }
 
 for (const scenario of [
-  'duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada',
-  'Limite de acessos simultâneos atingido.',
+  'quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica',
+  'Navegadores/contextos independentes deixam de disputar um teto fixo.',
 ]) {
   requireText(operatorE2e, scenario, `E2E operacional perdeu cenário: ${scenario}`);
 }
@@ -161,5 +162,5 @@ if (findings.length) {
   console.log('Heartbeat: MUTEX CURTO QUANDO NECESSÁRIO');
   console.log('Liderança persistente: REMOVIDA');
   console.log('BroadcastChannel: REMOVIDO');
-  console.log('Limite externo: 2 SESSÕES — PRESERVADO');
+  console.log('Limite externo: SEM TETO FIXO');
 }

@@ -10,6 +10,7 @@ import {
 
 import {
   buildWarehouseLabelsForScope,
+  warehouseLabelKindLabel,
   WAREHOUSE_LABEL_PRESETS,
   type WarehouseLabelSheetPreset,
 } from '../../../lib/warehouse/labels';
@@ -79,7 +80,7 @@ export function WarehouseLabelsR1({
   selectedLocationId,
 }: Props) {
   const [scope, setScope] = useState<Scope>('DEPOT_FULL');
-  const [preset, setPreset] = useState<WarehouseLabelSheetPreset>('MEDIUM');
+  const [preset, setPreset] = useState<WarehouseLabelSheetPreset>('COMPACT');
   const [includeUg, setIncludeUg] = useState(true);
   const [includeHierarchy, setIncludeHierarchy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -113,7 +114,7 @@ export function WarehouseLabelsR1({
   const pages = labels.length === 0
     ? 0
     : Math.ceil(labels.length / selectedPreset.perPage);
-
+  const previewLabel = labels[0] ?? null;
 
   function buildPdf() {
     if (!selectedDepot) {
@@ -291,28 +292,87 @@ export function WarehouseLabelsR1({
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border-2 border-gray-900 bg-white p-4">
-                <div className="flex items-start justify-between gap-3 border-l-4 border-black pl-3">
-                  <div>
-                    <p className="text-[9px] font-black tracking-wider text-black">EMPROVEX</p>
-                    <p className="text-[8px] font-medium text-gray-600">ADM DEPÓSITO</p>
+              {preset === 'COMPACT' ? (
+                <div className="mt-5 overflow-hidden rounded-2xl border-2 border-gray-900 bg-white p-3">
+                  <div className="grid min-h-[112px] grid-cols-[43%_57%]">
+                    <div className="flex min-w-0 flex-col border-r border-gray-500 pr-3">
+                      <p className="text-[9px] font-black tracking-wider text-black">EMPROVEX</p>
+                      <p className="text-[7px] font-black text-gray-700">CENTRAL DE DEPÓSITOS</p>
+                      <p className="mt-2 truncate font-mono text-2xl font-black tracking-tight text-black">
+                        {previewLabel?.code ?? 'PAL-01'}
+                      </p>
+                      <p className="truncate text-[11px] font-black text-black">
+                        {previewLabel?.name ?? 'Palete 01'}
+                      </p>
+                      <p className="mt-1 text-[8px] font-black text-black">
+                        {previewLabel ? warehouseLabelKindLabel(previewLabel.kind) : 'LOCAL'}
+                      </p>
+                      <p className="text-[8px] font-black text-black">ESTRUTURA FÍSICA</p>
+                      <div className="mt-auto border-t border-gray-400 pt-1 text-[6px] font-bold text-gray-700">
+                        {previewLabel?.depotCode ?? 'DEP-001'}
+                        {includeUg && previewLabel ? '   UG ' + previewLabel.ug : ''}
+                        {'   '}
+                        {(previewLabel?.workspaceId ?? 'workspace').toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-col justify-center pl-3">
+                      <div className="flex h-14 items-stretch justify-between gap-[2px]">
+                        {Array.from({ length: 31 }, (_, index) => (
+                          <span
+                            key={index}
+                            className="bg-black"
+                            style={{ width: index % 5 === 0 ? 4 : index % 3 === 0 ? 3 : 2 }}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-1 text-center font-mono text-[9px] font-black tracking-[0.12em] text-black">
+                        {previewLabel?.physicalBarcode ?? '9812001101000'}
+                      </p>
+                    </div>
                   </div>
-                  <span className="rounded border border-black px-2 py-0.5 text-[8px] font-black text-black">
-                    LOCAL
-                  </span>
                 </div>
-                <p className="mt-5 font-mono text-2xl font-black tracking-tight text-black">EST-01</p>
-                <p className="mt-1 text-sm font-black text-black">Estante 01</p>
-                <p className="mt-3 text-[9px] text-gray-700">
-                  {includeHierarchy ? 'Gêneros Secos › Estante 01' : ' '}
-                </p>
-                <div className="mt-4 border-t border-gray-400 pt-2 text-[8px] text-gray-600">
-                  {includeUg ? 'UG 160416 · ' : ''}hgesm-aprov
+              ) : (
+                <div className="mt-5 rounded-2xl border-2 border-gray-900 bg-white p-4">
+                  <div className="flex items-start justify-between gap-3 border-l-4 border-black pl-3">
+                    <div>
+                      <p className="text-[9px] font-black tracking-wider text-black">EMPROVEX</p>
+                      <p className="text-[8px] font-medium text-gray-600">ADM DEPÓSITO</p>
+                    </div>
+                    <span className="rounded border border-black px-2 py-0.5 text-[8px] font-black text-black">
+                      {previewLabel ? warehouseLabelKindLabel(previewLabel.kind) : 'LOCAL'}
+                    </span>
+                  </div>
+                  <p className="mt-5 font-mono text-2xl font-black tracking-tight text-black">
+                    {previewLabel?.code ?? 'EST-01'}
+                  </p>
+                  <p className="mt-1 text-sm font-black text-black">
+                    {previewLabel?.name ?? 'Estante 01'}
+                  </p>
+                  <p className="mt-3 min-h-4 text-[9px] text-gray-700">
+                    {includeHierarchy && previewLabel
+                      ? previewLabel.hierarchy.join(' › ')
+                      : ' '}
+                  </p>
+                  <div className="mt-3 rounded border border-gray-400 px-2 py-1.5 text-center">
+                    <p className="text-[7px] font-black uppercase tracking-[0.14em] text-gray-500">
+                      Código físico · Code 128 no PDF
+                    </p>
+                    <p className="mt-1 break-all font-mono text-[7px] font-bold tracking-tight text-black">
+                      {previewLabel?.physicalBarcode ?? 'EPX1…'}
+                    </p>
+                  </div>
+                  <div className="mt-3 border-t border-gray-400 pt-2 text-[8px] text-gray-600">
+                    {previewLabel && previewLabel.kind !== 'DEPOT'
+                      ? 'DEP ' + previewLabel.depotCode + ' · '
+                      : ''}
+                    {includeUg && previewLabel ? 'UG ' + previewLabel.ug + ' · ' : ''}
+                    {previewLabel?.workspaceId ?? 'workspace'}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <p className="mt-3 text-[10px] leading-4 text-gray-400">
-                A amostra representa a linguagem visual. O PDF final adapta tipografia e margens conforme o tamanho escolhido.
+                A amostra mostra também a identidade física estável. O PDF final renderiza o código em Code 128 e adapta tipografia, barras e margens ao tamanho escolhido.
               </p>
             </section>
 

@@ -161,18 +161,19 @@ function clearAlertEnvironment() {
   delete sandboxProcess.env.EMPROVEX_WORKSPACE_DAILY_USAGE_BUDGETS_JSON;
 }
 
-test('capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 30/15 minutos', () => {
+test('capacidade integrada preserva sessões externas ilimitadas e lease/heartbeat em 30/15 minutos', () => {
   assert.equal(
     capacity.getDefaultSimultaneousSessionLimit(['aprov1hgesm', 'gmail.com'].join('@')),
     null
   );
   assert.equal(
     capacity.getDefaultSimultaneousSessionLimit('setor@example.test'),
-    2
+    null
   );
   assert.equal(capacity.SESSION_LEASE_DURATION_MS, 30 * 60 * 1000);
   assert.equal(capacity.SESSION_HEARTBEAT_INTERVAL_MS, 15 * 60 * 1000);
-  assert.deepEqual([...capacity.SESSION_SLOT_IDS], ['slot-1', 'slot-2']);
+  assert.deepEqual([...capacity.LEGACY_SESSION_SLOT_IDS], ['slot-1', 'slot-2']);
+  assert.equal(capacity.DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT, null);
 });
 
 test('limiares de consumo permanecem determinísticos em 70%, 85%, 95%, 100% e acima de 100%', () => {

@@ -32,16 +32,16 @@ const docs = read('docs/BLOCK_16_8_INTEGRATED_E2E.md');
 
 for (const scenario of [
   'heartbeat eficiente renova lease de 30 minutos sem redescobrir capacidade',
-  'slot expirado pode ser retomado por uma nova identidade de sessão',
-  'duas tentativas concorrentes disputando o último slot produzem exatamente um vencedor',
+  'lease dinâmico expirado é reaproveitado pelo mesmo navegador',
+  'duas tentativas concorrentes criam leases dinâmicos independentes',
   'revogação administrativa derruba a sessão, tombstone bloqueia retorno e novo login cria nova identidade',
 ]) {
   requireText(browserIntegrated, scenario, `Browser E2E integrado perdeu cenário: ${scenario}`);
 }
 
 for (const existingScenario of [
-  'duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada',
-  'Liberar a segunda sessão devolve a vaga imediatamente.',
+  'quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica',
+  'Navegadores/contextos independentes deixam de disputar um teto fixo.',
   'segundo workspace não enxerga a NS nem o fornecedor do primeiro',
 ]) {
   requireText(
@@ -52,9 +52,9 @@ for (const existingScenario of [
 }
 
 for (const emulatorScenario of [
-  'Slot expirado pode ser retomado por uma nova sessão',
-  'Administrador lista slots de sessão de toda a plataforma',
-  'Administrador revoga e libera uma sessão na mesma transação',
+  'Lease dinâmico expirado pode ser retomado no mesmo navegador',
+  'Administrador lista leases de sessão de toda a plataforma',
+  'Administrador revoga e libera uma sessão dinâmica na mesma transação',
   'Tombstone existente é imutável e não pode ser reciclado pelo administrador',
   'Administrador lê a estimativa consolidada por UG',
   'Outro workspace não grava telemetria no Setor A',
@@ -68,7 +68,7 @@ for (const emulatorScenario of [
 }
 
 for (const contract of [
-  'capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 30/15 minutos',
+  'capacidade integrada preserva sessões externas ilimitadas e lease/heartbeat em 30/15 minutos',
   'limiares de consumo permanecem determinísticos em 70%, 85%, 95%, 100% e acima de 100%',
   'política sem referências não fabrica alertas, franquia ou cobrança',
   'política com referências separa métrica global real de estimativa interna por UG',

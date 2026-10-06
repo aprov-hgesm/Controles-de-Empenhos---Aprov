@@ -58,8 +58,21 @@ import {
   type WarehouseStockPosition,
 } from './location';
 import { validateWarehouseBalance } from './movement';
-import { isValidWarehouseLotId } from './lot';
+import {
+  WAREHOUSE_LOT_SCHEMA_VERSION,
+  isValidWarehouseLotId,
+  validateWarehouseLot,
+  type WarehouseLot,
+} from './lot';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
+import {
+  isWarehousePhysicalStockPosition,
+  planWarehouseTransferLots,
+} from './transfer';
 
 export interface WarehouseDepotListItem {
   depot: WarehouseDepot;
@@ -111,6 +124,11 @@ export interface UpdateWarehouseLocationInput {
   status?: WarehouseEntityStatus;
 }
 
+export interface TransferWarehouseLotAllocation {
+  lotId: string;
+  quantity: number;
+}
+
 export interface TransferWarehouseStockInput {
   materialId: string;
   quantity: number;
@@ -119,10 +137,17 @@ export interface TransferWarehouseStockInput {
   idempotencyKey: string;
   note?: string | null;
   /**
-   * Lotes ativos que ocupam a posição de origem e devem acompanhar uma
-   * realocação integral. A atualização ocorre na mesma transação do TRANSFER.
+   * Compatibilidade com o fluxo integral legado: move o documento inteiro do
+   * lote para o destino.
    */
   relocateLotIds?: string[];
+  /**
+   * Parcelas de lotes que acompanham a transferência física. Quando a parcela
+   * é menor que o lote, o lote é dividido atomicamente: a origem perde a
+   * quantidade e um novo documento no destino preserva código, validade e
+   * origem logística.
+   */
+  lotAllocations?: TransferWarehouseLotAllocation[];
 }
 
 export interface TransferWarehouseStockResult {
@@ -235,17 +260,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      position: data.position,
-      quantity: data.quantity,
-      revision: data.revision,
-      lastMovementId: data.lastMovementId,
-    },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) {
@@ -303,7 +318,10 @@ function parseMovement(
 }
 
 function parseMaterial(workspaceId: string, id: string, data: Record<string, unknown>): WarehouseMaterial {
-  const result = validateWarehouseMaterial({ ...data, id }, { expectedWorkspaceId: workspaceId });
+  const result = validateWarehouseMaterial(
+    warehouseCanonicalMaterialReadInput(id, data),
+    { expectedWorkspaceId: workspaceId }
+  );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
   return result.data;
 }
@@ -712,6 +730,42 @@ export async function getWarehouseDepot(
   }
 }
 
+export async function getWarehouseDepotByCode(
+  workspaceId: string,
+  code: string
+): Promise<WarehouseDepotListItem | null> {
+  const scope = currentScope(workspaceId);
+  const normalized = normalizeWarehouseLogicalCode(code);
+  if (!normalized) return null;
+  const path = warehouseDomainPath(scope.workspaceId, 'depots');
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('code', '==', normalized),
+        limit(5)
+      )
+    );
+    recordWarehouseDocumentReads(scope.workspaceId, snapshot.size);
+    const matches = snapshot.docs
+      .map((item) => ({
+        depot: parseDepot(
+          scope.workspaceId,
+          item.id,
+          item.data() as Record<string, unknown>
+        ),
+        createdAt: timestampToIso((item.data() as Record<string, unknown>).createdAt),
+        updatedAt: timestampToIso((item.data() as Record<string, unknown>).updatedAt),
+      }))
+      .filter((item) => item.depot.status === 'active');
+
+    return matches.length === 1 ? matches[0] : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return null;
+  }
+}
+
 export async function getWarehouseDepotCached(
   workspaceId: string,
   depotId: string
@@ -745,6 +799,54 @@ export async function getWarehouseLocation(
     return await loadWarehouseLocationFromFirestore(scope.workspaceId, locationId);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export async function getWarehouseLocationByCode(
+  workspaceId: string,
+  input: {
+    depotId: string;
+    kind: WarehouseLocationKind;
+    parentLocationId: string | null;
+    code: string;
+  }
+): Promise<WarehouseLocationListItem | null> {
+  const scope = currentScope(workspaceId);
+  const normalized = normalizeWarehouseLogicalCode(input.code);
+  if (!normalized || !isValidWarehouseDepotId(input.depotId)) return null;
+  const path = warehouseDomainPath(scope.workspaceId, 'locations');
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('code', '==', normalized),
+        limit(20)
+      )
+    );
+    recordWarehouseDocumentReads(scope.workspaceId, snapshot.size);
+
+    const matches = snapshot.docs
+      .map((item) => ({
+        location: parseLocation(
+          scope.workspaceId,
+          item.id,
+          item.data() as Record<string, unknown>
+        ),
+        createdAt: timestampToIso((item.data() as Record<string, unknown>).createdAt),
+        updatedAt: timestampToIso((item.data() as Record<string, unknown>).updatedAt),
+      }))
+      .filter(({ location }) =>
+        location.status === 'active'
+        && location.depotId === input.depotId
+        && location.kind === input.kind
+        && location.parentLocationId === input.parentLocationId
+      );
+
+    return matches.length === 1 ? matches[0] : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
     return null;
   }
 }
@@ -830,7 +932,9 @@ async function assertPositionActive(
   workspaceId: string,
   position: WarehouseStockPosition
 ): Promise<void> {
-  if (position.kind === 'UNASSIGNED') return;
+  if (!isWarehousePhysicalStockPosition(position)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
 
   const depotPath = warehouseDocumentPath(workspaceId, 'depots', position.depotId);
   const locationPath = warehouseDocumentPath(workspaceId, 'locations', position.locationId);
@@ -856,6 +960,129 @@ async function assertPositionActive(
   }
 }
 
+async function createWarehouseTransferSplitLotId(
+  movementId: string,
+  sourceLotId: string
+): Promise<string> {
+  const payload = new TextEncoder().encode(
+    movementId + '\n' + sourceLotId + '\nLOT_SPLIT'
+  );
+  const digest = await crypto.subtle.digest('SHA-256', payload);
+  const hash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return 'lot_' + hash.slice(0, 32);
+}
+
+function parseTransferLot(
+  workspaceId: string,
+  ug: string,
+  materialId: string,
+  id: string,
+  data: Record<string, unknown>
+): WarehouseLot {
+  const result = validateWarehouseLot(
+    { ...data, id },
+    {
+      expectedWorkspaceId: workspaceId,
+      expectedUg: ug,
+      expectedMaterialId: materialId,
+    }
+  );
+  if (!result.ok) {
+    throw new Error(
+      'WAREHOUSE_TRANSFER_LOT_INVALID: '
+      + result.issues.map((item) => item.path + ': ' + item.message).join('; ')
+    );
+  }
+  return result.data;
+}
+
+const WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS = 500;
+
+async function buildCanonicalWarehouseTransferLotPlan(input: {
+  workspaceId: string;
+  ug: string;
+  materialId: string;
+  from: WarehouseStockPosition;
+  quantity: number;
+  fromBalanceId: string;
+}): Promise<TransferWarehouseLotAllocation[]> {
+  if (!isWarehousePhysicalStockPosition(input.from)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
+
+  const fromBalancePath = warehouseDocumentPath(
+    input.workspaceId,
+    'locationBalances',
+    input.fromBalanceId
+  );
+  const lotsPath = warehouseDomainPath(input.workspaceId, 'lots');
+  const [fromSnapshot, lotSnapshot] = await Promise.all([
+    getDoc(doc(db, fromBalancePath)),
+    getDocs(
+      query(
+        collection(db, lotsPath),
+        where('materialId', '==', input.materialId),
+        limit(WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS + 1)
+      )
+    ),
+  ]);
+  recordWarehouseDocumentReads(
+    input.workspaceId,
+    1 + lotSnapshot.size
+  );
+
+  if (!fromSnapshot.exists()) {
+    throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+  }
+  if (lotSnapshot.size > WAREHOUSE_TRANSFER_LOT_QUERY_MAX_RESULTS) {
+    throw new Error('WAREHOUSE_TRANSFER_LOTS_SATURATED');
+  }
+
+  const fromBalance = parseLocationBalance(
+    input.workspaceId,
+    fromSnapshot.id,
+    fromSnapshot.data() as Record<string, unknown>
+  );
+  if (
+    fromBalance.ug !== input.ug
+    || fromBalance.materialId !== input.materialId
+    || !warehouseStockPositionsEqual(fromBalance.position, input.from)
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_SOURCE_BALANCE_MISMATCH');
+  }
+
+  const lots = lotSnapshot.docs.map((item) =>
+    parseTransferLot(
+      input.workspaceId,
+      input.ug,
+      input.materialId,
+      item.id,
+      item.data() as Record<string, unknown>
+    )
+  );
+  const plan = planWarehouseTransferLots({
+    materialId: input.materialId,
+    source: input.from,
+    quantity: input.quantity,
+    availableQuantity: fromBalance.quantity,
+    lots,
+  });
+  if (plan.ok) return plan.lotAllocations;
+
+  if (plan.error === 'INSUFFICIENT_STOCK') {
+    throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+  }
+  if (plan.error === 'LOT_ATTRIBUTION_EXCEEDS_STOCK') {
+    throw new Error('WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK');
+  }
+  if (plan.error === 'TOO_MANY_ACTIVE_LOTS') {
+    throw new Error('WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS');
+  }
+  throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_PLAN');
+}
+
 export async function transferWarehouseStock(
   workspaceId: string,
   input: TransferWarehouseStockInput
@@ -864,6 +1091,12 @@ export async function transferWarehouseStock(
   const from = validateWarehouseStockPosition(input.from);
   const to = validateWarehouseStockPosition(input.to);
   if (!from || !to) throw new Error('WAREHOUSE_TRANSFER_INVALID_POSITION');
+  if (
+    !isWarehousePhysicalStockPosition(from)
+    || !isWarehousePhysicalStockPosition(to)
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
   if (warehouseStockPositionsEqual(from, to)) throw new Error('WAREHOUSE_TRANSFER_SAME_POSITION');
 
   const normalizedQuantity = normalizeWarehouseLocationQuantity(input.quantity);
@@ -881,10 +1114,47 @@ export async function transferWarehouseStock(
   const fromBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, from);
   const toBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, to);
 
-  const relocateLotIds = Array.from(new Set(input.relocateLotIds || []));
-  if (relocateLotIds.length > 24 || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))) {
+  // Physical transfers never trust caller-specific lot hints. The canonical
+  // repository derives lot allocations from the current physical source
+  // balance and canonical lot documents.
+  const lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
+    workspaceId: scope.workspaceId,
+    ug: scope.ug,
+    materialId: input.materialId,
+    from,
+    quantity: normalizedQuantity,
+    fromBalanceId,
+  });
+  const relocateLotIds: string[] = [];
+
+  if (
+    relocateLotIds.length > 24
+    || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))
+  ) {
     throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_RELOCATION');
   }
+
+  const allocationIds = new Set(lotAllocations.map((item) => item.lotId));
+  if (
+    lotAllocations.length > 24
+    || allocationIds.size !== lotAllocations.length
+    || relocateLotIds.some((lotId) => allocationIds.has(lotId))
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_ALLOCATION');
+  }
+  const allocatedQuantity = lotAllocations.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+  if (allocatedQuantity > normalizedQuantity + 0.000001) {
+    throw new Error('WAREHOUSE_TRANSFER_LOT_ALLOCATION_EXCEEDS_TRANSFER');
+  }
+
+  const splitLotIds = await Promise.all(
+    lotAllocations.map((item) =>
+      createWarehouseTransferSplitLotId(movementId, item.lotId)
+    )
+  );
 
   const materialPath = warehouseDocumentPath(scope.workspaceId, 'materials', input.materialId);
   const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
@@ -892,6 +1162,12 @@ export async function transferWarehouseStock(
   const fromBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', fromBalanceId);
   const toBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', toBalanceId);
   const relocateLotPaths = relocateLotIds.map((lotId) =>
+    warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
+  );
+  const allocationLotPaths = lotAllocations.map((item) =>
+    warehouseDocumentPath(scope.workspaceId, 'lots', item.lotId)
+  );
+  const splitLotPaths = splitLotIds.map((lotId) =>
     warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
   );
 
@@ -903,6 +1179,8 @@ export async function transferWarehouseStock(
       const fromBalanceRef = doc(db, fromBalancePath);
       const toBalanceRef = doc(db, toBalancePath);
       const relocateLotRefs = relocateLotPaths.map((path) => doc(db, path));
+      const allocationLotRefs = allocationLotPaths.map((path) => doc(db, path));
+      const splitLotRefs = splitLotPaths.map((path) => doc(db, path));
 
       const [materialSnapshot, movementSnapshot, balanceSnapshot, fromSnapshot, toSnapshot] = await Promise.all([
         transaction.get(materialRef),
@@ -911,9 +1189,11 @@ export async function transferWarehouseStock(
         transaction.get(fromBalanceRef),
         transaction.get(toBalanceRef),
       ]);
-      const relocateLotSnapshots = await Promise.all(
-        relocateLotRefs.map((lotRef) => transaction.get(lotRef))
-      );
+      const [relocateLotSnapshots, allocationLotSnapshots, splitLotSnapshots] = await Promise.all([
+        Promise.all(relocateLotRefs.map((lotRef) => transaction.get(lotRef))),
+        Promise.all(allocationLotRefs.map((lotRef) => transaction.get(lotRef))),
+        Promise.all(splitLotRefs.map((lotRef) => transaction.get(lotRef))),
+      ]);
 
       if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
       if (!balanceSnapshot.exists()) throw new Error('WAREHOUSE_BALANCE_NOT_FOUND');
@@ -974,10 +1254,7 @@ export async function transferWarehouseStock(
         };
       }
 
-      const fromInitial = from.kind === 'UNASSIGNED' && !existingFrom
-        ? currentBalance.quantity
-        : 0;
-      const available = existingFrom?.quantity ?? fromInitial;
+      const available = existingFrom?.quantity ?? 0;
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
 
       const nextFrom = applyWarehouseLocationDelta(existingFrom, {
@@ -988,7 +1265,6 @@ export async function transferWarehouseStock(
         position: from,
         quantityDelta: -normalizedQuantity,
         movementId,
-        initialQuantity: fromInitial,
       });
       const nextTo = applyWarehouseLocationDelta(existingTo, {
         id: toBalanceId,
@@ -999,25 +1275,110 @@ export async function transferWarehouseStock(
         quantityDelta: normalizedQuantity,
         movementId,
       });
+
       relocateLotSnapshots.forEach((lotSnapshot, index) => {
         if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
-        const lot = lotSnapshot.data() as Record<string, unknown>;
-        const lotPosition = validateWarehouseStockPosition(lot.position);
+        const lot = parseTransferLot(
+          scope.workspaceId,
+          scope.ug,
+          material.id,
+          lotSnapshot.id,
+          lotSnapshot.data() as Record<string, unknown>
+        );
         if (
-          lot.workspaceId !== scope.workspaceId
-          || lot.ug !== scope.ug
-          || lot.materialId !== material.id
-          || lot.status !== 'active'
-          || typeof lot.quantity !== 'number'
+          lot.status !== 'active'
           || lot.quantity <= 0
-          || !lotPosition
-          || !warehouseStockPositionsEqual(lotPosition, from)
+          || !warehouseStockPositionsEqual(lot.position, from)
         ) {
           throw new Error('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH');
         }
         transaction.update(relocateLotRefs[index], {
           position: to,
           updatedBy: scope.uid,
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      lotAllocations.forEach((allocation, index) => {
+        const lotSnapshot = allocationLotSnapshots[index];
+        if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
+
+        const lot = parseTransferLot(
+          scope.workspaceId,
+          scope.ug,
+          material.id,
+          lotSnapshot.id,
+          lotSnapshot.data() as Record<string, unknown>
+        );
+        if (
+          lot.status !== 'active'
+          || lot.quantity <= 0
+          || !warehouseStockPositionsEqual(lot.position, from)
+        ) {
+          throw new Error('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH');
+        }
+        if (allocation.quantity > lot.quantity + 0.000001) {
+          throw new Error('WAREHOUSE_TRANSFER_LOT_INSUFFICIENT_ATTRIBUTION');
+        }
+
+        const movesWholeLot = Math.abs(allocation.quantity - lot.quantity) <= 0.000001;
+        if (movesWholeLot) {
+          if (splitLotSnapshots[index].exists()) {
+            throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT');
+          }
+          transaction.update(allocationLotRefs[index], {
+            position: to,
+            updatedBy: scope.uid,
+            updatedAt: serverTimestamp(),
+          });
+          return;
+        }
+
+        if (splitLotSnapshots[index].exists()) {
+          throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT');
+        }
+
+        const nextSourceQuantity = normalizeWarehouseLocationQuantity(
+          lot.quantity - allocation.quantity
+        );
+        if (nextSourceQuantity === null || nextSourceQuantity <= 0) {
+          throw new Error('WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID');
+        }
+
+        const splitCandidate = validateWarehouseLot(
+          {
+            schemaVersion: WAREHOUSE_LOT_SCHEMA_VERSION,
+            id: splitLotIds[index],
+            workspaceId: scope.workspaceId,
+            ug: scope.ug,
+            materialId: material.id,
+            code: lot.code,
+            expiresOn: lot.expiresOn,
+            quantity: allocation.quantity,
+            position: to,
+            origin: lot.origin,
+            status: 'active',
+            createdBy: scope.uid,
+            updatedBy: scope.uid,
+          },
+          {
+            expectedWorkspaceId: scope.workspaceId,
+            expectedUg: scope.ug,
+            expectedMaterialId: material.id,
+          }
+        );
+        if (!splitCandidate.ok) {
+          throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_INVALID');
+        }
+
+        transaction.update(allocationLotRefs[index], {
+          quantity: nextSourceQuantity,
+          updatedBy: scope.uid,
+          updatedAt: serverTimestamp(),
+        });
+        transaction.set(splitLotRefs[index], {
+          ...splitCandidate.data,
+          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
       });
@@ -1045,7 +1406,7 @@ export function buildWarehousePositionLabel(
   depots: WarehouseDepotListItem[],
   locations: WarehouseLocationListItem[]
 ): string {
-  if (position.kind === 'UNASSIGNED') return 'Sem localização';
+  if (position.kind === 'UNASSIGNED') return 'Reconciliação necessária';
   const depot = depots.find((item) => item.depot.id === position.depotId)?.depot;
   const local = locations.find((item) => item.location.id === position.locationId)?.location;
   const base = [depot?.code || position.depotId, local?.code || position.locationId].join(' → ');

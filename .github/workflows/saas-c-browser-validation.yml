@@ -1,0 +1,54 @@
+name: SAAS-C Browser Validation
+
+on:
+  pull_request:
+    branches:
+      - feat/saas-r1-commercializacao
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saas-c-browser-validation
+  cancel-in-progress: true
+
+jobs:
+  browser-e2e-emulator:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'saas-r1-c-onboarding'
+    name: SAAS-C Browser E2E with Firebase Emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java for Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright test runner
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: SAAS-C directed browser smoke
+        shell: bash
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --config firebase.security-test.json \
+            --project demo-emprovex-security \
+            --only auth,firestore \
+            'node scripts/e2e-browser-emulator.mjs operator-critical-flow.spec.mjs --grep "login -> relatório|usuário externo autenticado vê a Central de Depósitos|segundo workspace não enxerga"'

@@ -8,6 +8,7 @@ import {
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoading';
+import { LegalAcceptanceGate } from '../../../components/legal/LegalAcceptanceGate';
 import { auth } from '../../../lib/firebase';
 import { resolveAuthenticatedWorkspaceContext } from '../../../lib/platformAccess';
 import { startWorkspaceSessionControl } from '../../../lib/platformSessionControl';
@@ -28,7 +29,6 @@ interface WarehouseStatusPayload {
   ug?: string;
   claimsUpdated?: boolean;
 }
-
 
 async function requestWarehouseStatus(
   currentUser: User,
@@ -56,10 +56,10 @@ async function requestWarehouseStatus(
   };
 }
 
-export function WarehouseProtectedLayout({
+export function WarehouseAccessBoundary({
   children,
 }: {
-  children: ReactNode;
+  children: (workspaceContext: SectorWorkspaceContext) => ReactNode;
 }) {
   const [gateState, setGateState] = useState<GateState>('checking');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -201,11 +201,38 @@ export function WarehouseProtectedLayout({
     );
   }
 
+  if (!currentUser) {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
+  }
+
   return (
-    <WarehouseWorkspaceProvider value={workspaceContext}>
-      <WarehouseModuleShell workspaceContext={workspaceContext}>
-        {children}
-      </WarehouseModuleShell>
-    </WarehouseWorkspaceProvider>
+    <LegalAcceptanceGate
+      identity={{
+        workspaceId: workspaceContext.workspaceId,
+        uid: currentUser.uid,
+        email: currentUser.email || workspaceContext.email,
+        ug: workspaceContext.ug,
+      }}
+    >
+      <WarehouseWorkspaceProvider value={workspaceContext}>
+        {children(workspaceContext)}
+      </WarehouseWorkspaceProvider>
+    </LegalAcceptanceGate>
+  );
+}
+
+export function WarehouseProtectedLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <WarehouseAccessBoundary>
+      {(workspaceContext) => (
+        <WarehouseModuleShell workspaceContext={workspaceContext}>
+          {children}
+        </WarehouseModuleShell>
+      )}
+    </WarehouseAccessBoundary>
   );
 }

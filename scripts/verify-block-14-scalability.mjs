@@ -44,10 +44,10 @@ for (const expected of [
 requireText(plan, 'countRealtimeOperationalCollections', 'Plano não expõe contagem técnica de listeners.');
 requireText(realtime, 'useRealtimeCollectionSubscription', 'Subscriptions opcionais não estão isoladas por coleção.');
 requireText(realtime, "collectionName: 'empenhos'", 'Empenhos não possui subscription dedicada.');
-requireText(realtime, "enabled: plan.alerts", 'Alerts não respeita plano ativo.');
-requireText(realtime, "enabled: plan.invoices", 'Invoices não respeita plano ativo.');
-requireText(realtime, "enabled: plan.comissoes", 'Comissões não respeita plano ativo.');
-requireText(realtime, "enabled: plan.cronogramas", 'Cronogramas não respeita plano ativo.');
+requireText(realtime, "enabled: enabled && plan.alerts", 'Alerts não respeita plano ativo.');
+requireText(realtime, "enabled: enabled && plan.invoices", 'Invoices não respeita plano ativo.');
+requireText(realtime, "enabled: enabled && plan.comissoes", 'Comissões não respeita plano ativo.');
+requireText(realtime, "enabled: enabled && plan.cronogramas", 'Cronogramas não respeita plano ativo.');
 requireText(realtime, 'activeOperationalDataReady', 'Hook não protege prontidão da seção.');
 
 forbidText(dataHook, "operationalCollectionRef(scope, 'alerts')", 'useOperationalData voltou a abrir alerts diretamente.');
@@ -58,7 +58,11 @@ requireText(dataHook, 'useOperationalRealtimeCollections', 'useOperationalData n
 requireText(dataHook, 'useMemo(', 'Seletores derivados não estão memoizados.');
 requireText(dataHook, 'useCallback(', 'Cálculo por classe não está memoizado.');
 
-requireText(page, 'useOperationalData(activeTab)', 'Página não informa a aba ativa ao plano realtime.');
+requireText(
+  page,
+  'useOperationalData(activeTab, acceptedLegalIdentityKey)',
+  'Página não informa aba ativa + aceite legal ao plano realtime.'
+);
 requireText(page, 'data-active-realtime-collections={activeRealtimeCollectionCount}', 'Shell não expõe contagem realtime para E2E.');
 requireText(page, '<OperationalSurfaceLoading', 'Página não bloqueia interação antes da sincronização requerida.');
 requireText(surfaceLoading, 'operational-section-loading', 'Loading operacional perdeu o marcador usado pela validação de prontidão.');

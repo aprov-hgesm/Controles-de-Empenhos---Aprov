@@ -197,8 +197,8 @@ export function warehouseInventoryScopeIncludesPosition(
   scope: WarehouseInventoryScope,
   position: WarehouseStockPosition
 ): boolean {
-  if (scope.kind === 'TOTAL') return true;
   if (position.kind === 'UNASSIGNED') return false;
+  if (scope.kind === 'TOTAL') return true;
   if (scope.depotId !== position.depotId) return false;
   if (scope.kind === 'DEPOT') return true;
   if (scope.locationId !== position.locationId) return false;

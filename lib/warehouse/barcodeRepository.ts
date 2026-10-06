@@ -29,8 +29,13 @@ import {
   type WarehouseMaterial,
   type WarehouseMaterialUnit,
 } from './material';
+import { isWarehouseLocationBarcode } from './locationBarcode';
 import { validateWarehouseMaterial } from './material';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 export interface WarehouseBarcodeListItem {
   association: WarehouseBarcodeAssociation;
@@ -74,7 +79,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
@@ -87,19 +92,7 @@ function parseAssociation(
   data: Record<string, unknown>
 ): WarehouseBarcodeAssociation {
   const result = validateWarehouseBarcodeAssociation(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      barcode: data.barcode,
-      presentation: data.presentation,
-      factorToBaseUnit: data.factorToBaseUnit,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalBarcodeReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) {
@@ -167,6 +160,9 @@ export async function saveWarehouseBarcodeAssociation(
   const barcode = normalizeWarehouseBarcode(input.barcode);
   const presentation = normalizeWarehouseMaterialUnit(input.presentation);
   if (!barcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
+  if (isWarehouseLocationBarcode(barcode)) {
+    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
+  }
   if (!presentation) throw new Error('WAREHOUSE_BARCODE_INVALID_PRESENTATION');
 
   const id = await createWarehouseBarcodeId(scope.workspaceId, barcode);
@@ -290,6 +286,9 @@ export async function replaceWarehouseBarcodeAssociation(
   }
   const nextBarcode = normalizeWarehouseBarcode(nextBarcodeInput);
   if (!nextBarcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
+  if (isWarehouseLocationBarcode(nextBarcode)) {
+    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
+  }
 
   const currentPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
 

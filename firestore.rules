@@ -173,8 +173,24 @@ service cloud.firestore {
         );
     }
 
-    function isValidSessionSlotId(slotId) {
+    function isLegacySessionSlotId(slotId) {
       return slotId in ['slot-1', 'slot-2'];
+    }
+
+    function isValidSessionSlotId(slotId) {
+      return slotId is string
+        && (
+          isLegacySessionSlotId(slotId)
+          || (slotId.size() > 8 && slotId.size() <= 128)
+        );
+    }
+
+    function workspaceSessionSlotBindingMatches(slotId, data) {
+      return isLegacySessionSlotId(slotId)
+        || (
+          data.browserInstanceId is string
+          && data.browserInstanceId == slotId
+        );
     }
 
     function validWorkspaceSessionLeaseShape(workspaceId, slotId) {
@@ -182,6 +198,7 @@ service cloud.firestore {
       return canAccessWorkspace(workspaceId)
         && !isHgesmFounder()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, request.resource.data)
         && 'ug' in workspace
         && isValidUnitUg(workspace.ug)
         && request.resource.data.keys().hasAll([
@@ -270,6 +287,7 @@ service cloud.firestore {
       return canAccessWorkspace(workspaceId)
         && !isHgesmFounder()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, resource.data)
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && resource.data.uid == request.auth.uid
@@ -408,6 +426,7 @@ service cloud.firestore {
     function validAdminSessionSlotDelete(workspaceId, slotId) {
       return isPlatformAdmin()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, resource.data)
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && existsAfter(
@@ -644,6 +663,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -663,6 +684,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -672,8 +695,7 @@ service cloud.firestore {
         && request.resource.data.billingMode == 'observe'
         && request.resource.data.requirePayment == false
         && request.resource.data.automaticSuspension == false
-        && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && request.resource.data.monthlyPriceCents == 7000
         && request.resource.data.currency == 'BRL'
         && request.resource.data.defaultTrialDays is int
         && request.resource.data.defaultTrialDays >= 1
@@ -686,6 +708,14 @@ service cloud.firestore {
         && request.resource.data.pixKey is string
         && request.resource.data.pixKeyType in ['', 'cpf', 'cnpj', 'email', 'phone', 'random']
         && request.resource.data.pixRecipientName is string
+        && request.resource.data.paymentLinkUrl is string
+        && request.resource.data.paymentLinkUrl.size() <= 2048
+        && (
+          request.resource.data.paymentLinkUrl == ''
+          || request.resource.data.paymentLinkUrl.matches('^https://.+')
+        )
+        && request.resource.data.supportContact is string
+        && request.resource.data.supportContact.size() <= 240
         && request.resource.data.holidayDates is list
         && request.resource.data.holidayDates.size() <= 128
         && request.resource.data.createdAt is string
@@ -725,6 +755,8 @@ service cloud.firestore {
           'trialStartedAt',
           'trialEndsAt',
           'paymentRequired',
+          'exemptionSource',
+          'legacyVipCutoff',
           'createdAt',
           'updatedAt',
           'createdBy',
@@ -743,12 +775,58 @@ service cloud.firestore {
           'exempt'
         ]
         && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+          )
+          || (
+            workspaceId != 'hgesm-aprov'
+            && (
+              (
+                request.resource.data.status == 'exempt'
+                && request.resource.data.monthlyPriceCents == 0
+              )
+              || (
+                request.resource.data.status != 'exempt'
+                && request.resource.data.monthlyPriceCents == 7000
+              )
+            )
+          )
+        )
         && request.resource.data.currency == 'BRL'
         && request.resource.data.trialGranted is bool
         && request.resource.data.trialStartedAt is string
         && request.resource.data.trialEndsAt is string
         && request.resource.data.paymentRequired == false
+        && (
+          !('exemptionSource' in request.resource.data)
+          || (
+            request.resource.data.exemptionSource == 'founder'
+            && workspaceId == 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+          )
+          || (
+            request.resource.data.exemptionSource == 'manual'
+            && workspaceId != 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+          )
+          || (
+            request.resource.data.exemptionSource == 'legacy_vip'
+            && workspaceId != 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+            && request.resource.data.legacyVipCutoff == '2026-10-02'
+          )
+        )
+        && (
+          !('legacyVipCutoff' in request.resource.data)
+          || (
+            request.resource.data.legacyVipCutoff is string
+            && request.resource.data.legacyVipCutoff == '2026-10-02'
+            && request.resource.data.exemptionSource == 'legacy_vip'
+          )
+        )
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string
         && request.resource.data.createdBy is string
@@ -761,7 +839,17 @@ service cloud.firestore {
         && request.resource.data.ug == resource.data.ug
         && request.resource.data.authorizedEmail == resource.data.authorizedEmail
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (
+          !('exemptionSource' in resource.data)
+          || resource.data.exemptionSource != 'legacy_vip'
+          || (
+            request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+            && request.resource.data.exemptionSource == 'legacy_vip'
+            && request.resource.data.legacyVipCutoff == resource.data.legacyVipCutoff
+          )
+        );
     }
 
     function validBillingCycle(cycleId) {
@@ -1743,6 +1831,45 @@ service cloud.firestore {
         && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
     }
 
+    function validLegalAcceptanceCreate(workspaceId, acceptanceId) {
+      let workspace = workspaceData(workspaceId);
+      return canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'uid',
+          'email',
+          'legalBundleVersion',
+          'termsVersion',
+          'privacyVersion',
+          'acceptedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'uid',
+          'email',
+          'legalBundleVersion',
+          'termsVersion',
+          'privacyVersion',
+          'acceptedAt'
+        ])
+        && request.resource.data.schemaVersion == 'emprovex_legal_acceptance_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email == workspace.authorizedEmail
+        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug)
+        && request.resource.data.legalBundleVersion == 'saas-r1-2026-10-01'
+        && request.resource.data.termsVersion == 'terms-2026-10-01-r1'
+        && request.resource.data.privacyVersion == 'privacy-2026-10-01-r1'
+        && acceptanceId == request.auth.uid + '__saas-r1-2026-10-01'
+        && request.resource.data.acceptedAt is timestamp
+        && request.resource.data.acceptedAt == request.time;
+    }
+
     function validPlatformAuditEvent(eventId) {
       return isPlatformAdmin()
         && validAuditEventShape(
@@ -1988,11 +2115,15 @@ service cloud.firestore {
       allow list: if isPlatformAdmin();
     }
 
-    // Block 16.1 — capacity metadata. These two fixed slots enforce a maximum of
-    // two simultaneous external-sector browser sessions without query/count races.
-    // The founder is exempt and never claims a slot.
+    // SESSION-CAP-01 — leases externos são dinâmicos por browserInstanceId.
+    // slot-1/slot-2 permanecem válidos somente para compatibilidade transitória
+    // com clientes antigos durante rollout/rollback. Não existe teto fixo de
+    // sessões no ruleset RC; identidade, tenant, lease e lifecycle seguem fail-closed.
     match /workspaces/{workspaceId}/sessionSlots/{slotId} {
-      allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      // Clientes externos conhecem apenas o próprio caminho de lease. LIST fica
+      // restrito à administração para evitar enumeração de sessões do setor.
+      allow get: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
       allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
       allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId)
@@ -2143,6 +2274,18 @@ service cloud.firestore {
       allow read: if canAccessWorkspace(workspaceId);
       allow create: if canAccessWorkspace(workspaceId)
         && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    // SaaS R1 — aceite legal versionado. O runtime consulta somente o documento
+    // determinístico da versão vigente; histórico não precisa ser listado pelo tenant.
+    match /workspaces/{workspaceId}/legalAcceptances/{acceptanceId} {
+      // O GET precisa funcionar também antes de o documento existir, para que o
+      // primeiro uso consiga distinguir "aceite ausente" de erro de autorização.
+      allow get: if canAccessWorkspace(workspaceId)
+        && acceptanceId == request.auth.uid + '__saas-r1-2026-10-01';
+      allow list: if false;
+      allow create: if validLegalAcceptanceCreate(workspaceId, acceptanceId);
       allow update, delete: if false;
     }
 

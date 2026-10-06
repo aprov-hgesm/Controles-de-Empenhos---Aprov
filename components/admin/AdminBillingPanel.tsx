@@ -25,6 +25,7 @@ import {
   type BillingCycleStatus,
   type PlatformBillingConfig,
 } from '../../lib/billing';
+import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { UpdatePlatformBillingConfigInput } from '../../lib/platformBillingStore';
 
@@ -38,6 +39,7 @@ interface AdminBillingPanelProps {
   mutatingKey: string | null;
   onUpdateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   onGrantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  onSetExemption: (workspace: Workspace, exempt: boolean) => Promise<unknown>;
   onSetStatus: (
     workspace: Workspace,
     status: Exclude<BillingAccountStatus, 'exempt'>
@@ -101,18 +103,20 @@ export function AdminBillingPanel({
   mutatingKey,
   onUpdateConfig,
   onGrantTrial,
+  onSetExemption,
   onSetStatus,
   onSetCycleStatus,
 }: AdminBillingPanelProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | BillingAccountStatus>('all');
   const [editingConfig, setEditingConfig] = useState(false);
-  const [price, setPrice] = useState('50,00');
   const [trialDays, setTrialDays] = useState('30');
   const [graceDays, setGraceDays] = useState('10');
   const [pixKey, setPixKey] = useState('');
   const [pixRecipientName, setPixRecipientName] = useState('');
   const [pixKeyType, setPixKeyType] = useState<PlatformBillingConfig['pixKeyType']>('');
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState('');
+  const [supportContact, setSupportContact] = useState('');
   const [holidayDates, setHolidayDates] = useState('');
 
   const workspaceMap = useMemo(
@@ -184,33 +188,32 @@ export function AdminBillingPanel({
 
   const beginConfigEdit = () => {
     if (!config) return;
-    setPrice((config.monthlyPriceCents / 100).toFixed(2).replace('.', ','));
     setTrialDays(String(config.defaultTrialDays));
     setGraceDays(String(config.gracePeriodDays));
     setPixKey(config.pixKey);
     setPixRecipientName(config.pixRecipientName);
     setPixKeyType(config.pixKeyType);
+    setPaymentLinkUrl(config.paymentLinkUrl || '');
+    setSupportContact(config.supportContact || '');
     setHolidayDates(config.holidayDates.join('\n'));
     setEditingConfig(true);
   };
 
   const saveConfig = async () => {
     if (!config) return;
-    const normalizedPrice = Number(price.replace('.', '').replace(',', '.'));
     const parsedHolidays = holidayDates
       .split(/[\s,;]+/)
       .map((value) => value.trim())
       .filter(Boolean);
 
     await onUpdateConfig({
-      monthlyPriceCents: Number.isFinite(normalizedPrice)
-        ? Math.round(normalizedPrice * 100)
-        : config.monthlyPriceCents,
       defaultTrialDays: Number(trialDays),
       gracePeriodDays: Number(graceDays),
       pixKey,
       pixKeyType,
       pixRecipientName,
+      paymentLinkUrl,
+      supportContact,
       holidayDates: parsedHolidays,
       billingMode: 'observe',
       requirePayment: false,
@@ -307,9 +310,9 @@ export function AdminBillingPanel({
                 Política comercial
               </p>
             </div>
-            <h3 className="mt-1 text-lg font-extrabold text-white">EMPROVEX completo</h3>
+            <h3 className="mt-1 text-lg font-extrabold text-white">Plano Completo EMPROVEX</h3>
             <p className="mt-1 text-xs text-slate-400">
-              Pix manual preparado administrativamente; ainda não é exibido ao usuário externo.
+              R$ 70,00 por workspace, com pagamento externo por Link de Pagamento e/ou Pix. O EMPROVEX não processa dados financeiros.
             </p>
           </div>
           {!editingConfig && (
@@ -324,24 +327,45 @@ export function AdminBillingPanel({
         </div>
 
         {!editingConfig ? (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 5000)} />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 7000)} />
             <InfoBox label="Trial padrão" value={`${config?.defaultTrialDays ?? 30} dias`} />
             <InfoBox label="Vencimento" value="5º dia útil" />
             <InfoBox label="Tolerância" value={`${config?.gracePeriodDays ?? 10} dias`} />
+            <InfoBox label="Link" value={config?.paymentLinkUrl ? 'Configurado' : 'A configurar'} />
             <InfoBox label="Pix" value={config?.pixKey ? 'Configurado' : 'A configurar'} />
           </div>
         ) : (
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <ConfigField label="Mensalidade (R$)">
-                <input value={price} onChange={(event) => setPrice(event.target.value)} className={inputClass} />
+              <ConfigField label="Mensalidade (R$)" hint="Preço fixo do Plano Completo na R1.">
+                <input value="70,00" readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
               </ConfigField>
               <ConfigField label="Trial padrão (dias)">
                 <input type="number" min={1} max={365} value={trialDays} onChange={(event) => setTrialDays(event.target.value)} className={inputClass} />
               </ConfigField>
               <ConfigField label="Tolerância (dias corridos)">
                 <input type="number" min={0} max={90} value={graceDays} onChange={(event) => setGraceDays(event.target.value)} className={inputClass} />
+              </ConfigField>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ConfigField label="Link de Pagamento" hint="Somente URL pública HTTPS. Nenhuma credencial do provedor é armazenada.">
+                <input
+                  type="url"
+                  value={paymentLinkUrl}
+                  onChange={(event) => setPaymentLinkUrl(event.target.value)}
+                  placeholder="https://..."
+                  className={inputClass}
+                />
+              </ConfigField>
+              <ConfigField label="Contato de suporte" hint="E-mail, WhatsApp ou outro canal comercial exibido na regularização.">
+                <input
+                  value={supportContact}
+                  onChange={(event) => setSupportContact(event.target.value)}
+                  placeholder="suporte@... ou (55) ..."
+                  className={inputClass}
+                />
               </ConfigField>
             </div>
 
@@ -430,7 +454,7 @@ export function AdminBillingPanel({
               <option value="active">Em dia</option>
               <option value="pending">Pendentes</option>
               <option value="suspended">Suspensos comerciais</option>
-              <option value="exempt">Isentos</option>
+              <option value="exempt">VIP / Isentos</option>
               <option value="canceled">Cancelados</option>
             </select>
           </div>
@@ -444,7 +468,14 @@ export function AdminBillingPanel({
             const attention = getBillingAttention(account, workspaceCycles, config);
             const currentCycle = attention.currentCycle;
             const busy = Boolean(mutatingKey?.includes(workspace.id));
-            const isFounder = account.status === 'exempt';
+            const isFounder = workspace.id === HGESM_WORKSPACE_ID;
+            const isVip = !isFounder && account.status === 'exempt';
+            const isLegacyVip = isVip && account.exemptionSource === 'legacy_vip';
+            const statusLabel = account.status === 'exempt'
+              ? isFounder
+                ? 'Fundador / Isento'
+                : isLegacyVip ? 'VIP legado / Isento' : 'VIP / Isento'
+              : STATUS_LABEL[account.status];
 
             return (
               <article
@@ -456,7 +487,7 @@ export function AdminBillingPanel({
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="truncate text-sm font-extrabold text-white">{workspace.name}</h4>
                       <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.10em] ${statusTone(account.status)}`}>
-                        {STATUS_LABEL[account.status]}
+                        {statusLabel}
                       </span>
                       {attention.needsAttention && (
                         <span className="rounded-full border border-amber-300/20 bg-amber-400/[0.08] px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.10em] text-amber-100">
@@ -497,60 +528,109 @@ export function AdminBillingPanel({
                   </div>
 
                   {!isFounder && (
-                    <div className="flex flex-wrap gap-2 xl:max-w-[520px] xl:justify-end">
-                      <ActionButton
-                        icon={<Sparkles className="h-3.5 w-3.5" />}
-                        label={account.status === 'trial' ? 'Renovar trial 30d' : 'Conceder trial'}
-                        busy={mutatingKey === `trial:${workspace.id}`}
-                        disabled={busy}
-                        onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
-                      />
-                      {currentCycle?.status === 'paid' ? (
-                        <ActionButton
-                          icon={<Clock3 className="h-3.5 w-3.5" />}
-                          label="Reabrir mês"
-                          busy={mutatingKey === `cycle:${workspace.id}:${attention.referenceMonth}`}
-                          disabled={busy}
-                          onClick={() => void onSetCycleStatus(workspace, attention.referenceMonth, 'pending')}
-                        />
+                    <div className="flex flex-wrap gap-2 xl:max-w-[620px] xl:justify-end">
+                      {isVip ? (
+                        isLegacyVip ? (
+                          <span className="inline-flex items-center rounded-xl border border-blue-300/15 bg-blue-400/[0.07] px-3 py-2 text-[10px] font-extrabold text-blue-100">
+                            Isenção legado protegida
+                          </span>
+                        ) : (
+                          <ActionButton
+                            icon={<PlayCircle className="h-3.5 w-3.5" />}
+                            label="Remover VIP"
+                            busy={mutatingKey === `exempt:${workspace.id}`}
+                            disabled={busy}
+                            onClick={() => void onSetExemption(workspace, false)}
+                          />
+                        )
                       ) : (
-                        <ActionButton
-                          icon={<BadgeCheck className="h-3.5 w-3.5" />}
-                          label="Confirmar pagamento"
-                          busy={mutatingKey === `cycle:${workspace.id}:${attention.referenceMonth}`}
-                          disabled={busy}
-                          onClick={() => void onSetCycleStatus(workspace, attention.referenceMonth, 'paid')}
-                        />
-                      )}
-                      {account.status === 'suspended' ? (
-                        <ActionButton
-                          icon={<PlayCircle className="h-3.5 w-3.5" />}
-                          label="Regularizar status"
-                          busy={mutatingKey === `status:${workspace.id}`}
-                          disabled={busy}
-                          onClick={() => void onSetStatus(workspace, 'active')}
-                        />
-                      ) : (
-                        <ActionButton
-                          icon={<PauseCircle className="h-3.5 w-3.5" />}
-                          label="Suspender comercial"
-                          busy={mutatingKey === `status:${workspace.id}`}
-                          disabled={busy}
-                          onClick={() => void onSetStatus(workspace, 'suspended')}
-                        />
+                        <>
+                          <ActionButton
+                            icon={<Sparkles className="h-3.5 w-3.5" />}
+                            label={account.status === 'trial' ? 'Renovar trial 30d' : 'Conceder trial'}
+                            busy={mutatingKey === `trial:${workspace.id}`}
+                            disabled={busy}
+                            onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
+                          />
+                          {currentCycle?.status === 'paid' ? (
+                            <ActionButton
+                              icon={<Clock3 className="h-3.5 w-3.5" />}
+                              label="Reabrir mês"
+                              busy={mutatingKey === `cycle:${workspace.id}:${attention.referenceMonth}`}
+                              disabled={busy}
+                              onClick={() => void onSetCycleStatus(workspace, attention.referenceMonth, 'pending')}
+                            />
+                          ) : (
+                            <ActionButton
+                              icon={<BadgeCheck className="h-3.5 w-3.5" />}
+                              label="Confirmar pagamento"
+                              busy={mutatingKey === `cycle:${workspace.id}:${attention.referenceMonth}`}
+                              disabled={busy}
+                              onClick={() => {
+                                const note = window.prompt(
+                                  'Referência ou observação administrativa do pagamento (opcional):',
+                                  ''
+                                );
+                                if (note === null) return;
+                                void onSetCycleStatus(
+                                  workspace,
+                                  attention.referenceMonth,
+                                  'paid',
+                                  note
+                                );
+                              }}
+                            />
+                          )}
+                          {account.status === 'suspended' ? (
+                            <ActionButton
+                              icon={<PlayCircle className="h-3.5 w-3.5" />}
+                              label="Regularizar status"
+                              busy={mutatingKey === `status:${workspace.id}`}
+                              disabled={busy}
+                              onClick={() => void onSetStatus(workspace, 'active')}
+                            />
+                          ) : (
+                            <ActionButton
+                              icon={<PauseCircle className="h-3.5 w-3.5" />}
+                              label="Suspender comercial"
+                              busy={mutatingKey === `status:${workspace.id}`}
+                              disabled={busy}
+                              onClick={() => void onSetStatus(workspace, 'suspended')}
+                            />
+                          )}
+                          <ActionButton
+                            icon={<KeyRound className="h-3.5 w-3.5" />}
+                            label="Tornar VIP / Isento"
+                            busy={mutatingKey === `exempt:${workspace.id}`}
+                            disabled={busy}
+                            onClick={() => void onSetExemption(workspace, true)}
+                          />
+                        </>
                       )}
                     </div>
                   )}
                 </div>
 
-                {account.trialGranted && (
-                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-white/[0.05] pt-3 text-[10px] text-slate-500">
-                    <span>Trial iniciado: {dateLabel(account.trialStartedAt)}</span>
-                    <span>Trial termina: {dateLabel(account.trialEndsAt)}</span>
-                    <span>Mensalidade prevista: {money(account.monthlyPriceCents)}</span>
-                    <span className="text-blue-300/70">Acesso operacional não é afetado nesta fase.</span>
-                  </div>
-                )}
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-white/[0.05] pt-3 text-[10px] text-slate-500">
+                  {account.trialGranted && (
+                    <>
+                      <span>Trial iniciado: {dateLabel(account.trialStartedAt)}</span>
+                      <span>Trial termina: {dateLabel(account.trialEndsAt)}</span>
+                    </>
+                  )}
+                  <span>Plano: Plano Completo</span>
+                  <span>Valor vigente: {money(account.monthlyPriceCents)}</span>
+                  {isLegacyVip ? (
+                    <span className="text-blue-200/80">
+                      VIP legado: isenção permanente vinculada ao workspace, sem cobrança.
+                    </span>
+                  ) : isVip ? (
+                    <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>
+                  ) : null}
+                  <span className="text-blue-300/70">Billing não suspende o acesso automaticamente; suspensão operacional é uma ação administrativa separada.</span>
+                </div>
+
+
               </article>
             );
           })}

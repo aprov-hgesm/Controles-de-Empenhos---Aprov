@@ -7,11 +7,26 @@ const RECORD_KEY = 'nf_11111111000191_1001';
 const NS = '2026NS009999';
 const UG = '160416';
 
+async function acceptLegalIfRequired(page) {
+  const navigation = page.getByRole('navigation', { name: 'Navegação principal' });
+  const legalTitle = page.getByRole('heading', { name: 'Termos e Privacidade' });
+
+  await expect(navigation.or(legalTitle)).toBeVisible({ timeout: 20_000 });
+
+  if (await legalTitle.isVisible().catch(() => false)) {
+    await page.getByRole('checkbox', {
+      name: 'Li e aceito os Termos de Serviço e a Política de Privacidade.',
+    }).check();
+    await page.getByRole('button', { name: 'Aceitar e continuar' }).click();
+  }
+}
+
 async function loginSector(page, email) {
   await page.getByTestId('sector-login-email').fill(email);
   await page.getByTestId('sector-login-password').fill(PASSWORD);
   await page.getByTestId('sector-login-submit').click();
 
+  await acceptLegalIfRequired(page);
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
     timeout: 20_000,
   });
@@ -321,57 +336,54 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     }
   });
 
-  test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
-    test.setTimeout(90_000);
+  test('quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica', async ({ browser }) => {
+    test.setTimeout(120_000);
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
     const contextC = await browser.newContext();
+    const contextD = await browser.newContext();
 
     const pageA1 = await contextA.newPage();
     const pageB = await contextB.newPage();
     const pageC = await contextC.newPage();
+    const pageD = await contextD.newPage();
 
     try {
       await pageA1.goto('/');
       await loginSector(pageA1, OPERATOR_A);
 
-      // Mesma instância de navegador: a segunda aba reutiliza browserInstanceId +
-      // sessionId e não consome o segundo slot.
+      // Mesma instância de navegador reutiliza browserInstanceId + sessionId e
+      // continua representando uma única sessão lógica.
       const pageA2 = await contextA.newPage();
       await pageA2.goto('/');
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
 
-      // Segundo navegador/contexto consome a segunda vaga.
-      await pageB.goto('/');
-      await loginSector(pageB, OPERATOR_A);
-
-      // Terceiro navegador autentica no Firebase, mas é recusado pelo lease.
-      await pageC.goto('/');
-      await pageC.getByTestId('sector-login-email').fill(OPERATOR_A);
-      await pageC.getByTestId('sector-login-password').fill(PASSWORD);
-      await pageC.getByTestId('sector-login-submit').click();
+      // Navegadores/contextos independentes deixam de disputar um teto fixo.
+      for (const page of [pageB, pageC, pageD]) {
+        await page.goto('/');
+        await loginSector(page, OPERATOR_A);
+        await expect(
+          page.getByText('Limite de acessos simultâneos atingido.', { exact: false })
+        ).toHaveCount(0);
+      }
 
       await expect(
-        pageC.getByText('Limite de acessos simultâneos atingido.', { exact: false })
-      ).toBeVisible({ timeout: 20_000 });
-      await expect(pageC.getByTestId('sector-login-email')).toBeVisible();
-      await expect(
-        pageC.getByRole('navigation', { name: 'Navegação principal' })
-      ).toHaveCount(0);
+        pageA2.getByRole('navigation', { name: 'Navegação principal' })
+      ).toBeVisible();
+      for (const page of [pageB, pageC, pageD]) {
+        await expect(
+          page.getByRole('navigation', { name: 'Navegação principal' })
+        ).toBeVisible({ timeout: 20_000 });
+      }
 
-      // Liberar a segunda sessão devolve a vaga imediatamente.
-      await logoutIfAuthenticated(pageB);
-
-      await pageC.getByTestId('sector-login-submit').click();
-      await expect(
-        pageC.getByRole('navigation', { name: 'Navegação principal' })
-      ).toBeVisible({ timeout: 20_000 });
-
+      await logoutIfAuthenticated(pageD);
       await logoutIfAuthenticated(pageC);
+      await logoutIfAuthenticated(pageB);
       await logoutIfAuthenticated(pageA1);
     } finally {
+      await contextD.close();
       await contextC.close();
       await contextB.close();
       await contextA.close();

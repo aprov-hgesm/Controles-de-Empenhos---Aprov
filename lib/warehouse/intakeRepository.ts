@@ -13,7 +13,6 @@ import {
 import { recordWarehouseDocumentReads } from './telemetry';
 
 import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
-import { normalizeSupplierCnpj } from '../invoiceIdentity';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import type { Empenho, Invoice } from '../types';
 import { saveWarehouseBarcodeAssociation } from './barcodeRepository';
@@ -28,20 +27,7 @@ import {
   type WarehouseItemIntake,
   type WarehouseItemIntakeListItem,
 } from './intake';
-import {
-  warehouseStockPositionsEqual,
-  type WarehouseStockPosition,
-} from './location';
-import {
-  transferWarehouseStock,
-} from './locationRepository';
-import {
-  applyWarehouseMovement,
-} from './ledgerRepository';
-import {
-  createWarehouseLot,
-  listWarehouseLots,
-} from './lotRepository';
+import type { WarehouseStockPosition } from './location';
 import {
   getWarehouseMaterial,
   saveWarehouseMaterial,
@@ -267,156 +253,14 @@ export async function allocateWarehouseInvoiceItem(
   workspaceId: string,
   input: AllocateWarehouseInvoiceItemInput
 ): Promise<WarehouseItemIntake> {
-  const scope = currentScope(workspaceId);
-  const recordKey = invoiceRecordKey(input.invoice);
-  if (!recordKey) throw new Error('WAREHOUSE_INTAKE_INVOICE_IDENTITY_REQUIRED');
-  if (input.invoice.empenhoId !== input.empenho.id) {
-    throw new Error('WAREHOUSE_INTAKE_EMPENHO_MISMATCH');
-  }
-  if (input.position.kind === 'UNASSIGNED') {
-    throw new Error('WAREHOUSE_INTAKE_LOCATION_REQUIRED');
-  }
-  const lotCode = input.lotCode.trim();
-  if (!lotCode) throw new Error('WAREHOUSE_INTAKE_LOT_REQUIRED');
+  currentScope(workspaceId);
+  void input;
 
-  const existing = await existingIntakeFor(workspaceId, input.invoice, input.itemId);
-  if (existing) {
-    if (existing.mode !== 'ALLOCATED') throw new Error('WAREHOUSE_INTAKE_ALREADY_DECIDED');
-    return existing;
-  }
-
-  const invoiceItem = findInvoiceItem(input.invoice, input.itemId);
-  const { material, item } = await ensureMaterial(
-    scope.workspaceId,
-    scope.ug,
-    input.empenho,
-    input.itemId
-  );
-
-  const source = {
-    kind: 'INVOICE' as const,
-    action: 'ENTRY' as const,
-    invoiceRecordKey: recordKey,
-    invoiceId: input.invoice.id,
-    empenhoId: input.invoice.empenhoId,
-    itemIds: [input.itemId],
-    supplier: input.invoice.supplier || input.empenho.supplier,
-    supplierCnpj: normalizeSupplierCnpj(
-      input.invoice.supplierCnpj || input.empenho.supplierCnpj
-    ) || null,
-    actorUid: scope.uid,
-  };
-
-  const entry = await applyWarehouseMovement(scope.workspaceId, {
-    materialId: material.id,
-    type: 'INVOICE_ENTRY',
-    quantityDelta: invoiceItem.quantity,
-    idempotencyKey: [
-      'adm-intake',
-      recordKey,
-      input.itemId,
-      'entry',
-    ].join(':').slice(0, 240),
-    note: 'Entrada confirmada no Cadastro de Itens do ADM Depósito',
-    source,
-  });
-
-  const transfer = await transferWarehouseStock(scope.workspaceId, {
-    materialId: material.id,
-    quantity: invoiceItem.quantity,
-    from: { kind: 'UNASSIGNED' },
-    to: input.position,
-    idempotencyKey: [
-      'adm-intake',
-      recordKey,
-      input.itemId,
-      'location',
-      input.position.kind,
-      input.position.depotId,
-      input.position.locationId,
-      input.position.kind === 'SUBPOSITION' ? input.position.subpositionId : '',
-    ].join(':').slice(0, 240),
-    note: 'Alocação inicial do item recebido por NF',
-  });
-
-  const existingLots = await listWarehouseLots(scope.workspaceId, 500, material.id);
-  let lot = existingLots.find(({ lot: candidate }) =>
-    candidate.status === 'active'
-    && candidate.code === lotCode
-    && candidate.origin.kind === 'INVOICE'
-    && candidate.origin.movementId === entry.movement.id
-    && warehouseStockPositionsEqual(candidate.position, input.position)
-  )?.lot || null;
-
-  if (!lot) {
-    lot = await createWarehouseLot(scope.workspaceId, {
-      materialId: material.id,
-      code: lotCode,
-      expiresOn: input.expiresOn?.trim() || null,
-      quantity: invoiceItem.quantity,
-      position: input.position,
-      origin: {
-        kind: 'INVOICE',
-        movementId: entry.movement.id,
-        invoiceRecordKey: recordKey,
-        invoiceId: input.invoice.id,
-        supplier: input.invoice.supplier || input.empenho.supplier,
-        supplierCnpj: normalizeSupplierCnpj(
-          input.invoice.supplierCnpj || input.empenho.supplierCnpj
-        ) || null,
-      },
-    });
-  }
-
-  const barcode = input.barcode?.trim() || null;
-  if (barcode) {
-    await saveWarehouseBarcodeAssociation(scope.workspaceId, {
-      barcode,
-      materialId: material.id,
-      presentation: material.unit,
-    });
-  }
-
-  const id = await createWarehouseItemIntakeId(
-    scope.workspaceId,
-    recordKey,
-    input.itemId
-  );
-  const candidate = validateWarehouseItemIntake(
-    {
-      schemaVersion: 'warehouse_item_intake_v1',
-      id,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      invoiceRecordKey: recordKey,
-      invoiceId: input.invoice.id,
-      empenhoId: input.invoice.empenhoId,
-      itemId: input.itemId,
-      materialId: material.id,
-      description: item.name,
-      unitLabel: item.unit || material.unit.label || material.unit.code,
-      quantity: invoiceItem.quantity,
-      mode: 'ALLOCATED',
-      position: input.position,
-      lotId: lot.id,
-      lotCode: lot.code,
-      expiresOn: lot.expiresOn,
-      barcode,
-      entryMovementId: entry.movement.id,
-      transferMovementId: transfer.movement.id,
-      siscofisStatus: 'NOT_APPLICABLE',
-      createdBy: scope.uid,
-      updatedBy: scope.uid,
-    },
-    { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug }
-  );
-  if (!candidate.ok) {
-    throw new Error(
-      'WAREHOUSE_INVALID_ITEM_INTAKE: ' +
-      candidate.issues.map((issue) => issue.path + ': ' + issue.message).join('; ')
-    );
-  }
-  return persistCompletedIntake(candidate.data);
+  // Compatibilidade v1 apenas. O fluxo antigo criava INVOICE_ENTRY e depois
+  // promovia UNASSIGNED a origem de TRANSFER. Isso conflita com o contrato
+  // canônico atual: pendência pertence ao intake v2 e estoque operacional
+  // existe somente em LOCATION/SUBPOSITION.
+  throw new Error('WAREHOUSE_LEGACY_INTAKE_RECONCILIATION_REQUIRED');
 }
 
 export async function registerWarehouseImmediateConsumption(

@@ -11,7 +11,7 @@ if (after.fixedInfrastructure.globalBrandingRealtimeListener !== 0 || after.fixe
 if (after.multiTabControl.strategy !== 'autonomous-control-per-tab' || after.multiTabControl.controlListenersPerActiveTab !== 3 || after.multiTabControl.persistentLeaderElection !== false || after.multiTabControl.broadcastChannel !== false) failures.push('Modelo multiaba simplificado está incorreto.');
 if (after.reports.unboundedInvoicesRealtime !== false) failures.push('Relatórios voltaram a depender de invoices realtime ilimitadas.');
 for (const marker of [
-  'duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada',
+  'quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica',
   "expectRealtimeProfile(page, 2)"
 ]) if(!e2e.includes(marker)) failures.push('E2E operacional perdeu cenário: '+marker);
 for (const marker of ['heartbeat eficiente renova lease de 30 minutos','abas da mesma sessão compartilham identidade e permanecem autônomas ao fechar uma delas','revogação administrativa derruba todas as abas da mesma sessão lógica']) {

@@ -22,6 +22,7 @@ const PROJECT_ID = 'demo-emprovex-security';
 const API_KEY = 'fake-api-key';
 const PASSWORD = 'Emprovex-Teste!2026';
 const AUTH_BASE = 'http://127.0.0.1:9099';
+const FIRESTORE_BASE = 'http://127.0.0.1:8080';
 const WAREHOUSE_DATABASE_ID = 'emprovex-warehouse';
 
 const apps = [];
@@ -95,6 +96,35 @@ async function setEmulatorCustomClaims(uid, claims) {
   if (!response.ok) {
     throw new Error(
       `Não foi possível aplicar custom claims no Auth Emulator: ${await response.text()}`
+    );
+  }
+}
+
+async function setWarehouseLifecycle(workspaceId, ug, status) {
+  const response = await fetch(
+    `${FIRESTORE_BASE}/v1/projects/${PROJECT_ID}/databases/${WAREHOUSE_DATABASE_ID}/documents/warehouseAccess/${workspaceId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer owner',
+      },
+      body: JSON.stringify({
+        fields: {
+          schemaVersion: { stringValue: 'warehouse_workspace_access_v1' },
+          workspaceId: { stringValue: workspaceId },
+          ug: { stringValue: ug },
+          status: { stringValue: status },
+          updatedAt: { stringValue: new Date().toISOString() },
+          updatedBy: { stringValue: 'saas-ds-emulator@test.local' },
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Não foi possível materializar lifecycle no Firestore Emulator: ${await response.text()}`
     );
   }
 }
@@ -209,6 +239,16 @@ async function main() {
   const own = await getDoc(refA);
   assert.equal(own.exists(), true);
   console.log('  [PASS] ALLOW — setor A lê o próprio workspace');
+
+  await setWarehouseLifecycle('workspace-a', '160500', 'disabled');
+  await expectDenied('workspace suspenso perde acesso à Central com a sessão já aberta', () =>
+    getDoc(refA)
+  );
+
+  await setWarehouseLifecycle('workspace-a', '160500', 'active');
+  const reactivated = await getDoc(refA);
+  assert.equal(reactivated.exists(), true);
+  console.log('  [PASS] ALLOW — reativação restaura a Central sem reutilizar billing');
 
   const intakeQueueStateRef = doc(
     a.db,

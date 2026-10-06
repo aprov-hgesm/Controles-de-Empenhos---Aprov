@@ -2,6 +2,7 @@ import type { Workspace } from './platformIdentity';
 
 export const EMPROVEX_BILLING_VERSION = 'emprovex_billing_v1' as const;
 export const EMPROVEX_BILLING_CONFIG_ID = 'main' as const;
+export const EMPROVEX_FULL_PLAN_PRICE_CENTS = 7000 as const;
 
 export type BillingMode = 'off' | 'observe' | 'enforce';
 export type BillingAccountStatus =
@@ -11,6 +12,7 @@ export type BillingAccountStatus =
   | 'suspended'
   | 'canceled'
   | 'exempt';
+export type BillingExemptionSource = 'founder' | 'manual' | 'legacy_vip';
 export type BillingCycleStatus = 'open' | 'pending' | 'paid' | 'waived';
 export type BillingPaymentMethod = 'pix_manual';
 export type BillingPixKeyType = 'cpf' | 'cnpj' | 'email' | 'phone' | 'random' | '';
@@ -29,6 +31,8 @@ export interface PlatformBillingConfig {
   pixKey: string;
   pixKeyType: BillingPixKeyType;
   pixRecipientName: string;
+  paymentLinkUrl: string;
+  supportContact: string;
   holidayDates: string[];
   createdAt: string;
   updatedAt: string;
@@ -47,6 +51,8 @@ export interface BillingAccount {
   trialStartedAt: string;
   trialEndsAt: string;
   paymentRequired: boolean;
+  exemptionSource?: BillingExemptionSource;
+  legacyVipCutoff?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -78,7 +84,7 @@ export const DEFAULT_PLATFORM_BILLING_CONFIG: Omit<
   billingMode: 'observe',
   requirePayment: false,
   automaticSuspension: false,
-  monthlyPriceCents: 5000,
+  monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
   currency: 'BRL',
   defaultTrialDays: 30,
   dueBusinessDay: 5,
@@ -87,6 +93,8 @@ export const DEFAULT_PLATFORM_BILLING_CONFIG: Omit<
   pixKey: '',
   pixKeyType: '',
   pixRecipientName: '',
+  paymentLinkUrl: '',
+  supportContact: '',
   holidayDates: [],
 };
 
@@ -258,11 +266,142 @@ export function buildInitialBillingAccount(
     trialStartedAt: grantTrial && !isFounder ? now : '',
     trialEndsAt,
     paymentRequired: false,
+    ...(isFounder ? { exemptionSource: 'founder' as const } : {}),
     createdAt: now,
     updatedAt: now,
     createdBy,
     updatedBy: createdBy,
   };
+}
+
+export function migratePlatformBillingConfigToSaasR1(
+  current: PlatformBillingConfig,
+  actorEmail: string,
+  now: string = new Date().toISOString()
+): PlatformBillingConfig | null {
+  const paymentLinkUrl = typeof current.paymentLinkUrl === 'string'
+    ? current.paymentLinkUrl
+    : '';
+  const supportContact = typeof current.supportContact === 'string'
+    ? current.supportContact
+    : '';
+  const changed = current.monthlyPriceCents !== EMPROVEX_FULL_PLAN_PRICE_CENTS
+    || paymentLinkUrl !== current.paymentLinkUrl
+    || supportContact !== current.supportContact;
+
+  if (!changed) return null;
+
+  return {
+    ...current,
+    monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+    paymentLinkUrl,
+    supportContact,
+    updatedAt: now,
+    updatedBy: actorEmail,
+  };
+}
+
+export function migrateBillingAccountToSaasR1(
+  account: BillingAccount,
+  isFounder: boolean,
+  actorEmail: string,
+  now: string = new Date().toISOString()
+): BillingAccount | null {
+  const status: BillingAccountStatus = isFounder ? 'exempt' : account.status;
+  const monthlyPriceCents = status === 'exempt'
+    ? 0
+    : EMPROVEX_FULL_PLAN_PRICE_CENTS;
+  const exemptionSource = isFounder
+    ? 'founder' as const
+    : account.exemptionSource;
+  const changed = account.status !== status
+    || account.monthlyPriceCents !== monthlyPriceCents
+    || account.paymentRequired !== false
+    || account.exemptionSource !== exemptionSource;
+
+  if (!changed) return null;
+
+  return {
+    ...account,
+    status,
+    monthlyPriceCents,
+    paymentRequired: false,
+    ...(exemptionSource ? { exemptionSource } : {}),
+    updatedAt: now,
+    updatedBy: actorEmail,
+  };
+}
+
+export function buildBillingExemptionUpdate(
+  account: BillingAccount,
+  exempt: boolean,
+  actorEmail: string,
+  now: string = new Date().toISOString(),
+  exemptionSource: BillingExemptionSource = 'manual'
+): BillingAccount {
+  if (!exempt && account.exemptionSource === 'legacy_vip') {
+    throw new Error('A isenção da coorte VIP legado é permanente e não pode ser removida.');
+  }
+
+  if (exempt) {
+    return {
+      ...account,
+      status: 'exempt',
+      monthlyPriceCents: 0,
+      paymentRequired: false,
+      exemptionSource,
+      ...(exemptionSource === 'legacy_vip'
+        ? { legacyVipCutoff: '2026-10-02' }
+        : {}),
+      updatedAt: now,
+      updatedBy: actorEmail,
+    };
+  }
+
+  const {
+    exemptionSource: _previousExemptionSource,
+    legacyVipCutoff: _previousLegacyVipCutoff,
+    ...rest
+  } = account;
+
+  return {
+    ...rest,
+    status: 'active',
+    monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+    paymentRequired: false,
+    updatedAt: now,
+    updatedBy: actorEmail,
+  };
+}
+
+export function buildBillingCycleStatusTransition(
+  base: BillingCycle,
+  status: BillingCycleStatus,
+  actorEmail: string,
+  note = '',
+  now: string = new Date().toISOString()
+): { cycle: BillingCycle; changed: boolean } {
+  const confirmed = status === 'paid' || status === 'waived';
+  const normalizedNote = note.trim();
+  const confirmedAt = confirmed ? base.confirmedAt || now : '';
+  const confirmedBy = confirmed ? base.confirmedBy || actorEmail : '';
+  const nextNote = normalizedNote || base.note;
+  const unchanged = base.status === status
+    && base.confirmedAt === confirmedAt
+    && base.confirmedBy === confirmedBy
+    && base.note === nextNote;
+
+  const cycle: BillingCycle = {
+    ...base,
+    status,
+    confirmedAt,
+    confirmedBy,
+    note: nextNote,
+    updatedAt: unchanged ? base.updatedAt : now,
+    updatedBy: unchanged ? base.updatedBy : actorEmail,
+  };
+
+  return { cycle, changed: !unchanged };
 }
 
 export function billingCycleId(workspaceId: string, referenceMonth: string): string {

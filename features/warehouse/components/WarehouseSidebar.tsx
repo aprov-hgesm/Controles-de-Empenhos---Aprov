@@ -12,6 +12,7 @@ import {
   ScanLine,
   Warehouse,
   ShieldCheck,
+  Smartphone,
   UserRound,
   X,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ interface WarehouseSidebarProps {
   activeSection: WarehouseSectionId;
   open: boolean;
   userDisplayName: string;
+  showMobileAccess: boolean;
   onClose: () => void;
   onLogout: () => void | Promise<void>;
 }
@@ -41,6 +43,7 @@ export function WarehouseSidebar({
   activeSection,
   open,
   userDisplayName,
+  showMobileAccess,
   onClose,
   onLogout,
 }: WarehouseSidebarProps) {
@@ -123,6 +126,21 @@ export function WarehouseSidebar({
             </Link>
 
             <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
+
+            {showMobileAccess && (
+              <>
+                <Link
+                  href="/central-mobile"
+                  className="emprovex-sidebar-nav-item"
+                  onClick={onClose}
+                  data-testid="warehouse-nav-central-mobile"
+                >
+                  <Smartphone className="h-5 w-5" aria-hidden="true" />
+                  <span>Central Móvel</span>
+                </Link>
+                <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
+              </>
+            )}
 
             {WAREHOUSE_SECTIONS.map((item) => {
               const Icon = SECTION_ICONS[item.id];

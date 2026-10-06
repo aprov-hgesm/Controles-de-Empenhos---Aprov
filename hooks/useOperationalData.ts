@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   browserLocalPersistence,
+  EmailAuthProvider,
   GoogleAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updatePassword,
   type User,
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -24,7 +28,12 @@ import {
 } from '../lib/workspaceContext';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
-import { normalizePlatformEmail } from '../lib/platformIdentity';
+import { isValidPlatformEmail, normalizePlatformEmail } from '../lib/platformIdentity';
+import { HGESM_SECTOR_EMAIL } from '../lib/hgesmWorkspace';
+import {
+  MAX_SECTOR_PASSWORD_LENGTH,
+  MIN_SECTOR_PASSWORD_LENGTH,
+} from '../lib/sectorProvisioning';
 import { flushWorkspaceUsageTelemetry } from '../lib/workspaceUsageTelemetry';
 import {
   PlatformSessionLeaseError,
@@ -38,6 +47,56 @@ import { useOperationalRealtimeCollections } from './useOperationalRealtimeColle
 import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
 import { getEmpenhoExerciseYear } from '../features/empenhos/domain/empenhoExercise';
 
+const PASSWORD_RESET_CONFIRMATION =
+  'Se o e-mail estiver cadastrado para acesso por senha, você receberá as instruções de redefinição.';
+
+class SectorAccessExperienceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SectorAccessExperienceError';
+  }
+}
+
+function authErrorCode(error: unknown): string {
+  return typeof error === 'object' && error && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+}
+
+function describeSectorAuthorizationFailure(code: string): string {
+  if (
+    code === 'ACCOUNT_NOT_FOUND'
+    || code === 'ACCOUNT_INVALID'
+    || code === 'ACCOUNT_DISABLED_OR_WRONG_TYPE'
+  ) {
+    return 'Esta conta não está autorizada para acessar o EMPROVEX. Se o acesso deveria estar ativo, contate a Administração EMPROVEX.';
+  }
+
+  if (code === 'WORKSPACE_DISABLED') {
+    return 'O acesso deste setor está temporariamente indisponível. Contate a Administração EMPROVEX para verificar a situação do workspace.';
+  }
+
+  if (
+    code === 'ACCOUNT_EMAIL_MISMATCH'
+    || code === 'ACCOUNT_PROVIDER_MISMATCH'
+    || code === 'SESSION_PROVIDER_MISMATCH'
+    || code === 'UID_MISMATCH'
+    || code === 'WORKSPACE_NOT_FOUND'
+    || code === 'WORKSPACE_INVALID'
+    || code === 'WORKSPACE_ID_MISMATCH'
+    || code === 'WORKSPACE_EMAIL_MISMATCH'
+    || code === 'UG_MISMATCH'
+  ) {
+    return 'Não foi possível confirmar a identidade deste setor. Contate a Administração EMPROVEX para revisar o cadastro de acesso.';
+  }
+
+  if (code.startsWith('FIRESTORE_')) {
+    return 'Não foi possível validar o acesso agora. Verifique sua conexão e tente novamente.';
+  }
+
+  return 'Não foi possível concluir a validação do acesso. Tente novamente e, se o problema persistir, contate a Administração EMPROVEX.';
+}
+
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
  *
@@ -46,7 +105,10 @@ import { getEmpenhoExerciseYear } from '../features/empenhos/domain/empenhoExerc
  * plataforma e associada ao workspace autorizado. Contas desconhecidas,
  * desativadas ou com workspace inválido são encerradas em fail-closed.
  */
-export function useOperationalData(activeTab: OperationalActiveTab) {
+export function useOperationalData(
+  activeTab: OperationalActiveTab,
+  acceptedLegalIdentityKey: string | null = null
+) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
@@ -61,11 +123,28 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
 
+  const legalIdentityKey = (
+    user
+    && isOperationalSectorContext(workspaceContext)
+  )
+    ? [
+        user.uid,
+        normalizePlatformEmail(user.email || workspaceContext.email),
+        workspaceContext.workspaceId,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
+  const operationalAccessEnabled = Boolean(
+    legalIdentityKey
+    && acceptedLegalIdentityKey === legalIdentityKey
+  );
+
   const {
     activeOperationalDataReady: operationalCollectionsReady,
     activeRealtimeCollectionCount: operationalCollectionCount,
     readiness,
   } = useOperationalRealtimeCollections({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -80,6 +159,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     snapshot: inicioSnapshot,
     snapshotReady: inicioSnapshotReady,
   } = useInicioOperationalSnapshot({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -100,6 +180,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     operationalCollectionCount
     + (
       activeTab === 'inicio'
+      && operationalAccessEnabled
       && user
       && isOperationalSectorContext(workspaceContext)
         ? 1
@@ -280,10 +361,14 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       }
 
       if (diagnosticCode) {
-        throw new Error(`Falha de autorização do workspace [${diagnosticCode}].`);
+        throw new SectorAccessExperienceError(
+          describeSectorAuthorizationFailure(diagnosticCode)
+        );
       }
 
-      throw new Error('Não foi possível autorizar esta identidade no EMPROVEX.');
+      throw new SectorAccessExperienceError(
+        'Não foi possível autorizar esta conta no EMPROVEX.'
+      );
     }
 
     setUser(authenticatedUser);
@@ -334,6 +419,13 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         password
       );
       firebaseCredentialAccepted = true;
+
+      if (!credential.user.emailVerified) {
+        throw new SectorAccessExperienceError(
+          'O e-mail desta credencial ainda não está verificado. Contate a Administração EMPROVEX para confirmar o cadastro.'
+        );
+      }
+
       return await finalizeSignIn(credential.user);
     } catch (error) {
       clearResolvedWorkspaceContext();
@@ -351,9 +443,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         throw error;
       }
 
-      const authCode = typeof error === 'object' && error && 'code' in error
-        ? String((error as { code?: unknown }).code || '')
-        : '';
+      const authCode = authErrorCode(error);
 
       if (authCode.includes('operation-not-allowed')) {
         throw new Error('O login por e-mail e senha ainda não está habilitado no Firebase Authentication.');
@@ -368,29 +458,147 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       }
 
       if (authCode.includes('user-disabled')) {
-        throw new Error('Esta credencial está desativada no Firebase Authentication.');
+        throw new Error(
+          'Esta conta está temporariamente indisponível. Contate a Administração EMPROVEX para verificar o acesso.'
+        );
       }
 
       if (firebaseCredentialAccepted && error instanceof PlatformSessionLeaseError) {
         throw error;
       }
 
-      if (
-        firebaseCredentialAccepted
-        && error instanceof Error
-        && error.message.startsWith('Falha de autorização do workspace [')
-      ) {
+      if (firebaseCredentialAccepted && error instanceof SectorAccessExperienceError) {
         throw error;
       }
 
       if (firebaseCredentialAccepted) {
-        throw new Error('A credencial foi aceita pelo Firebase, mas o vínculo com o workspace foi recusado.');
+        throw new Error(
+          'A credencial foi aceita, mas não foi possível concluir a autorização do setor. Contate a Administração EMPROVEX.'
+        );
       }
 
-      throw new Error('O Firebase rejeitou o e-mail ou a senha informados.');
+      throw new Error('E-mail ou senha inválidos.');
     } finally {
       explicitSignInRef.current = false;
       setSyncing(false);
+    }
+  };
+
+  const requestSectorPasswordReset = async (email: string) => {
+    const normalizedEmail = normalizePlatformEmail(email);
+
+    if (!isValidPlatformEmail(normalizedEmail)) {
+      throw new Error('Informe um e-mail válido para receber as instruções de redefinição.');
+    }
+
+    // A conta fundadora permanece Google-only. A resposta é deliberadamente
+    // indistinguível para não expor a existência ou o tipo de uma conta.
+    if (normalizedEmail === HGESM_SECTOR_EMAIL) {
+      return PASSWORD_RESET_CONFIRMATION;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      return PASSWORD_RESET_CONFIRMATION;
+    } catch (error) {
+      const code = authErrorCode(error);
+
+      // Com ou sem Email Enumeration Protection, nunca confirmar se a conta existe.
+      if (
+        code.includes('user-not-found')
+        || code.includes('invalid-credential')
+        || code.includes('invalid-login-credentials')
+      ) {
+        return PASSWORD_RESET_CONFIRMATION;
+      }
+
+      if (code.includes('invalid-email')) {
+        throw new Error('Informe um e-mail válido para receber as instruções de redefinição.');
+      }
+
+      if (code.includes('too-many-requests')) {
+        throw new Error('Muitas solicitações de redefinição foram feitas. Tente novamente mais tarde.');
+      }
+
+      if (code.includes('network-request-failed')) {
+        throw new Error('Não foi possível solicitar a redefinição agora. Verifique sua conexão e tente novamente.');
+      }
+
+      throw new Error('Não foi possível solicitar a redefinição agora. Tente novamente mais tarde.');
+    }
+  };
+
+  const changeSectorPassword = async (
+    currentPassword: string,
+    newPassword: string
+  ) => {
+    const currentUser = auth.currentUser;
+    const normalizedEmail = normalizePlatformEmail(currentUser?.email || '');
+
+    if (!currentUser || !isValidPlatformEmail(normalizedEmail)) {
+      throw new Error('Sua sessão de acesso não está disponível. Entre novamente e tente de novo.');
+    }
+
+    if (
+      newPassword.length < MIN_SECTOR_PASSWORD_LENGTH
+      || newPassword.length > MAX_SECTOR_PASSWORD_LENGTH
+    ) {
+      throw new Error(
+        `A nova senha deve possuir entre ${MIN_SECTOR_PASSWORD_LENGTH} e ${MAX_SECTOR_PASSWORD_LENGTH} caracteres.`
+      );
+    }
+
+    if (!currentPassword) {
+      throw new Error('Informe sua senha atual para confirmar a alteração.');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new Error('Escolha uma nova senha diferente da senha atual.');
+    }
+
+    const tokenResult = await currentUser.getIdTokenResult();
+    if (
+      normalizedEmail === HGESM_SECTOR_EMAIL
+      || tokenResult.signInProvider !== 'password'
+    ) {
+      throw new Error('Esta conta utiliza acesso institucional pelo Google e não possui senha do EMPROVEX para alterar.');
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(
+        normalizedEmail,
+        currentPassword
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, newPassword);
+    } catch (error) {
+      const code = authErrorCode(error);
+
+      if (
+        code.includes('wrong-password')
+        || code.includes('invalid-credential')
+        || code.includes('invalid-login-credentials')
+      ) {
+        throw new Error('A senha atual informada não confere.');
+      }
+
+      if (code.includes('weak-password')) {
+        throw new Error('A nova senha não atende aos requisitos de segurança configurados.');
+      }
+
+      if (code.includes('too-many-requests')) {
+        throw new Error('Muitas tentativas foram feitas. Aguarde um pouco antes de tentar novamente.');
+      }
+
+      if (code.includes('network-request-failed')) {
+        throw new Error('Não foi possível alterar a senha agora. Verifique sua conexão e tente novamente.');
+      }
+
+      if (code.includes('requires-recent-login')) {
+        throw new Error('Sua sessão precisa ser renovada. Saia, entre novamente e repita a alteração de senha.');
+      }
+
+      throw new Error('Não foi possível alterar a senha agora. Tente novamente.');
     }
   };
 
@@ -487,6 +695,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
   return {
     user, loadingAuth, syncing, workspaceContext,
+    legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount,
     inicioSnapshot,
     empenhos, setEmpenhos,
@@ -494,7 +703,8 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     invoices, setInvoices,
     comissoes, setComissoes,
     cronogramas, setCronogramas,
-    signInUser, signInSectorUser, signOutUser,
+    signInUser, signInSectorUser, requestSectorPasswordReset,
+    changeSectorPassword, signOutUser,
     getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly,
