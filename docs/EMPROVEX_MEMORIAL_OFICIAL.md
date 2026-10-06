@@ -279,7 +279,7 @@ Regras:
 
 #### Frentes corretivas derivadas da auditoria logística
 
-**INVENTORY-PHYSICAL-FIX-01 — IMPLEMENTADA / CI EM EXECUÇÃO**
+**INVENTORY-PHYSICAL-FIX-01 — PASS / ENCERRADA TECNICAMENTE**
 
 - branch: `inventory-physical-fix-01@5255bbcbc43593bcf66001adf85eb5d6264a121e`;
 - PR #261: OPEN / DRAFT / base `mobile-r1-k-canonical-ops-engine`;
@@ -289,7 +289,8 @@ Regras:
 - novo guard estático confirma que criação de inventário reutiliza `warehouseInventoryScopeIncludesPosition()` e que ajuste não aceita `UNASSIGNED`;
 - compatibilidade de leitura histórica do tipo `UNASSIGNED` foi preservada;
 - Rules, PAL-01, lotes reais, intake, transfer, outbound, billing, sessão e produção não foram alterados;
-- Core Protection e Application CI estão em execução no HEAD `5255bbcb...`; classificação final aguardará esses gates.
+- Core Protection e Application CI do HEAD `5255bbcb...`: **SUCCESS**;
+- classificação final: **PASS — INVENTÁRIO FÍSICO RESTRITO A POSIÇÕES FÍSICAS, SEM UNASSIGNED OPERACIONAL**.
 
 **WAREHOUSE-INTEGRITY-RECONCILE-01 — CONCLUÍDA / BLOCKER RC**
 
