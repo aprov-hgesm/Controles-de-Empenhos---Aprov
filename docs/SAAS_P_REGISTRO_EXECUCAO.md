@@ -155,7 +155,7 @@ Observação de instalação:
 
 ## T0 numérico — estimativa por UG capturada — 2026-10-02
 
-Fonte: **emprovex-workspace-estimate**  
+Fonte: **emprovex-workspace-estimate**
 Ação: uma única atualização manual do painel.
 
 Totais atribuídos exibidos:
