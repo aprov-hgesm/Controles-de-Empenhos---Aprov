@@ -436,11 +436,17 @@ function analyzeMaterial(
       );
 
   const duplicateLotGroups = duplicateLots(activeLots);
-  const codeMechanismProven =
+  const noLotQuantityMatch =
     lotExcess > EPSILON
     && netNoLotOutbound > EPSILON
     && approx(lotExcess, netNoLotOutbound)
     && perPositionNoLotMatch;
+  // Igualdade quantitativa não prova causalidade quando existe uma hipótese
+  // concorrente concreta (duplicidade ativa de lote). Nessa situação a
+  // forensics permanece inconclusiva até distinguir os documentos históricos.
+  const codeMechanismProven =
+    noLotQuantityMatch
+    && duplicateLotGroups.length === 0;
 
   const affectedLots = excessByPosition.flatMap((row) =>
     activeLots.filter((lot) => positionKey(lot.position) === row.positionKey)
@@ -544,6 +550,7 @@ function analyzeMaterial(
     })),
     duplicateLotGroups,
     perPositionNoLotMatch,
+    noLotQuantityMatch,
     causeProven,
     cause,
     repairNecessary: lotExcess > EPSILON,
