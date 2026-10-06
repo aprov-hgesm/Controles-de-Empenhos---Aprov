@@ -1,9 +1,9 @@
 # RC-COMPOSITION-01 — Composição semântica do EMPROVEX R1
 
-Data de composição: 2026-10-05 / 2026-10-06 UTC  
-Branch: `rc-r1-composition-01`  
-Base alvo do PR: `rc-r1-mobile-j-fix-label-readability`  
-HEAD inicial congelado: `bd27da91da92642d5a5fea08f7020c6cea658a62`  
+Data de composição: 2026-10-05 / 2026-10-06 UTC
+Branch: `rc-r1-composition-01`
+Base alvo do PR: `rc-r1-mobile-j-fix-label-readability`
+HEAD inicial congelado: `bd27da91da92642d5a5fea08f7020c6cea658a62`
 HEAD final: **PENDENTE DE FECHAMENTO APÓS GATES DO PR**
 
 ## 1. Identidade e proveniência
