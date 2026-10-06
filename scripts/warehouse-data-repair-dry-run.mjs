@@ -386,6 +386,13 @@ function analyzeMaterial(
   const lotAwareOutbounds = outbounds.filter((row) =>
     row.source?.kind === 'EXPRESS_OUTBOUND' && Boolean(row.source.lotId)
   );
+  const unclassifiedOutbounds = outbounds.filter(
+    (row) => row.source?.kind !== 'EXPRESS_OUTBOUND'
+  );
+  const competingQuantitativeMovements = movements.filter((row) =>
+    ['INVENTORY_ADJUSTMENT', 'INVOICE_CORRECTION', 'REVERSAL', 'OUTBOUND_RETURN']
+      .includes(row.type)
+  );
 
   const noLotReturnQuantityByMovement = new Map();
   for (const summary of returns) {
@@ -445,7 +452,9 @@ function analyzeMaterial(
   // forensics permanece inconclusiva até distinguir os documentos históricos.
   const codeMechanismProven =
     noLotQuantityMatch
-    && duplicateLotGroups.length === 0;
+    && duplicateLotGroups.length === 0
+    && unclassifiedOutbounds.length === 0
+    && competingQuantitativeMovements.length === 0;
 
   const affectedLots = excessByPosition.flatMap((row) =>
     activeLots.filter((lot) => positionKey(lot.position) === row.positionKey)
@@ -537,6 +546,8 @@ function analyzeMaterial(
     ),
     noLotOutbounds: noLotOutbounds.map(summarizeMovement),
     lotAwareOutbounds: lotAwareOutbounds.map(summarizeMovement),
+    unclassifiedOutbounds: unclassifiedOutbounds.map(summarizeMovement),
+    competingQuantitativeMovements: competingQuantitativeMovements.map(summarizeMovement),
     lots: lots.map(summarizeLot),
     intakes: intakes.map(summarizeIntake),
     consumptions: consumptions.map(summarizeConsumption),
