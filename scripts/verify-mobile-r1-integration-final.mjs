@@ -68,6 +68,16 @@ assert.match(shell, /href="\/adm-deposito"/);
 
 const mobileLayout = read('features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx');
 assert.match(mobileLayout, /WarehouseAccessBoundary/);
+assert.match(
+  mobileLayout,
+  /HGESM_SECTOR_EMAIL/,
+  'Central Mobile publicada deve permanecer restrita à conta fundadora'
+);
+assert.match(
+  mobileLayout,
+  /normalizePlatformEmail\(workspaceContext\.email\) === HGESM_SECTOR_EMAIL/,
+  'Guard fundador deve comparar a identidade operacional normalizada'
+);
 
 const warehouseBoundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 for (const contract of [
