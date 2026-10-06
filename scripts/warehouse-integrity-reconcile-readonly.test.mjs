@@ -207,6 +207,30 @@ test('PAL-01 440 físico vs 540 em lotes é detectado genericamente', () => {
   );
 });
 
+test('ausência do antigo PAL-01 não cria reconciliação sintética pós-repair', () => {
+  const report = auditDataset(
+    {
+      collections: emptyCollections(),
+      inventoryItems: [],
+      cappedCollections: [],
+      inventoryItemsCapped: false,
+    },
+    {
+      projectId: 'p',
+      databaseId: 'd',
+      workspaceId: 'w',
+      readCount: 0,
+      cap: 5000,
+    }
+  );
+
+  assert.equal(report.pal01.detected, false);
+  assert.equal(
+    report.issues.some((issue) => issue.code === 'PAL01_KNOWN_CASE_NOT_IDENTIFIED'),
+    false
+  );
+});
+
 test('intake v2 divergente e inventário UNASSIGNED viram inconsistências', () => {
   const collections = emptyCollections();
   collections.materials.push({ _documentId: 'mat_x' });

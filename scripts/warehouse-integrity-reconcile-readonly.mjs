@@ -400,7 +400,6 @@ function auditDataset(dataset, meta) {
 
   const palCandidates = materials.filter((row) => approx(row.physicalActive, 440) && approx(row.activeLotQuantity, 540));
   const palDetected = palCandidates.length > 0 || issues.some((x) => x.code === 'LOT_ATTRIBUTION_EXCEEDS_STOCK' && String(x.detail).includes('diff=100'));
-  if (!palDetected) issue(issues, 'RECONCILIATION_REQUIRED', 'PAL01_KNOWN_CASE_NOT_IDENTIFIED', null, null, 'Caso conhecido 440/540 não identificado inequivocamente.');
 
   if (dataset.cappedCollections.length || dataset.inventoryItemsCapped) {
     issue(
