@@ -279,17 +279,17 @@ Regras:
 
 #### Frentes corretivas derivadas da auditoria logística
 
-**INVENTORY-PHYSICAL-FIX-01 — ATIVADA**
+**INVENTORY-PHYSICAL-FIX-01 — IMPLEMENTADA / CI EM EXECUÇÃO**
 
-- branch: `inventory-physical-fix-01`;
-- base exata: `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`;
-- escopo exclusivo: Inventário TOTAL deve considerar somente `LOCATION`/`SUBPOSITION` físicas e excluir `UNASSIGNED`;
-- atualizar o teste histórico que hoje exige TOTAL + UNASSIGNED = true;
-- auditar criação de itens do inventário para garantir que nenhuma UI Desktop/Mobile ofereça projeção técnica para contagem física;
-- preservar compatibilidade de leitura do tipo `UNASSIGNED` fora do inventário;
-- preservar Rules exatamente nos hashes auditados;
-- não tocar em PAL-01, lotes reais, intake, transfer, outbound, billing, sessão ou produção;
-- repetir testes de inventário Desktop/Mobile, MOBILE-K guard, TypeScript, build, diff hygiene e gates afetados.
+- branch: `inventory-physical-fix-01@5255bbcbc43593bcf66001adf85eb5d6264a121e`;
+- PR #261: OPEN / DRAFT / base `mobile-r1-k-canonical-ops-engine`;
+- escopo implementado: Inventário TOTAL considera somente `LOCATION`/`SUBPOSITION` físicas e exclui `UNASSIGNED` antes da avaliação do escopo;
+- `applyWarehouseInventoryAdjustment()` agora falha fechado para item histórico `UNASSIGNED` com `WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED`;
+- testes atualizados para TOTAL+LOCATION=true, TOTAL+SUBPOSITION=true, TOTAL+UNASSIGNED=false e exclusão de `UNASSIGNED` nos escopos DEPOT/LOCATION/SUBPOSITION;
+- novo guard estático confirma que criação de inventário reutiliza `warehouseInventoryScopeIncludesPosition()` e que ajuste não aceita `UNASSIGNED`;
+- compatibilidade de leitura histórica do tipo `UNASSIGNED` foi preservada;
+- Rules, PAL-01, lotes reais, intake, transfer, outbound, billing, sessão e produção não foram alterados;
+- Core Protection e Application CI estão em execução no HEAD `5255bbcb...`; classificação final aguardará esses gates.
 
 **WAREHOUSE-INTEGRITY-RECONCILE-01 — CONCLUÍDA / BLOCKER RC**
 
