@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05/06 — a certificação final foi formalmente aberta em `rc-r1-physical-cert-01@9c76e3475744c1a7ac2fd349d64276a4a8d9c76c`, PR #264 DRAFT contra `rc-r1-refreeze-01`. A parte automatizável está fechada: o RC re-frozen `fae9ce6...` mantém Application CI, Legal, Core e Recovery SUCCESS, Rules preservadas e 0 inconsistências quantitativas Warehouse. Foi comprovada equivalência de runtime entre o Preview verde `5255bbcb...` e o RC re-frozen: do Preview até `fae9ce6...` entraram apenas workflows, documentação, script npm/guard e tooling read-only; não houve mudança em `app/`, `features/` ou `lib/`. Assim, o Preview verde existente pode ser usado para a validação física sem esperar a quota Vercel voltar. O único bloqueio externo atual é `build-rate-limit` da Vercel para novos previews. Restam somente evidências físicas F01–F16 em dispositivos reais; nenhum GO/Production foi autorizado.**
+Última sincronização global: **2026-10-05/06 — a certificação física do RC re-frozen encontrou blockers reais. F01–F04, F07–F08 e F10–F13 passaram; F05 falhou com `WAREHOUSE_FAST_PATH_UNAVAILABLE`; F06 não confirmou transferência; F09 ficou em resultado incerto com replay idempotente pendente; F14 confirmou double scan de códigos de localização; F15 e F16 permanecem pendentes. Portanto o RC re-frozen `fae9ce6...` deixa de estar apto a GO/Production neste checkpoint, embora permaneça preservado como evidência histórica. Program Control abriu `rc-r1-physical-fix-01`, PR #265 DRAFT, para uma única onda corretiva. A correção F14 já foi aplicada tornando o scanner single-shot após leitura válida; Core Protection está SUCCESS e Application CI está em execução. F05 foi classificado inicialmente como fast-path server/runtime; a rota depende de `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`, mas a causa única ainda não foi afirmada sem log/ambiente. F06 e F09 exigem isolamento causal antes de qualquer mudança de domínio/Rules. Production continua não autorizada.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -120,7 +120,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PASS / REPAIR EXECUTADO E REVALIDADO** | `warehouse-data-repair-execution-01@e3f3aae...`; commit Firestore `2026-10-06T01:14:32.083411Z`; 2 writes allowlisted; pós-repair com 0 inconsistências e lotExcess=0 nos dois materiais; Core Protection e Application CI SUCCESS |
 | RC-COMPOSITION-01 | **PASS / APTA PARA RE-FREEZE** | `rc-r1-composition-01@fae9ce6...`; PR #262 DRAFT; Application CI + Legal + Core + Recovery SUCCESS; Rules preservadas; nenhum blocker funcional/quantitativo conhecido |
 | RC R1 re-freeze | **CRIADO / CANDIDATA CONGELADA** | `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`; snapshot exato do RC composto; nenhuma alteração após freeze permitida sem reabrir certificação |
-| RC-R1-PHYSICAL-CERT-01 | **ATIVA / EVIDÊNCIA AUTOMATIZADA FECHADA** | `rc-r1-physical-cert-01@9c76e347...`; PR #264 DRAFT; matriz F01–F16 criada; Preview `5255bbcb...` comprovado runtime-equivalente ao RC re-frozen; faltam apenas testes físicos reais |
+| RC-R1-PHYSICAL-CERT-01 | **BLOCKER / RE-FREEZE REABERTO** | F05 fast-path falhou; F06 transferência não confirmou; F09 replay pendente; F14 double scan de localização confirmado; F01–F04/F07–F08/F10–F13 PASS |
+| RC-R1-PHYSICAL-FIX-01 | **ATIVA / OWNER EXCLUSIVO DOS BLOCKERS FÍSICOS** | `rc-r1-physical-fix-01@b69fc103...`; PR #265 DRAFT; F14 scanner single-shot implementado; F05/F06/F09 em diagnóstico; sem Rules/Production/repair |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -173,82 +174,51 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **RC-R1-PHYSICAL-CERT-01 — certificação física final**.
+O gate vigente é **RC-R1-PHYSICAL-FIX-01 — correção única dos blockers encontrados na certificação física**.
 
-Branch de certificação:
+Branch:
 
-`rc-r1-physical-cert-01@9c76e3475744c1a7ac2fd349d64276a4a8d9c76c`
+`rc-r1-physical-fix-01@b69fc103467d428511756b2567980a4514ad17d4`
 
 PR:
 
-`#264 — DRAFT`
+`#265 — DRAFT`
 
-Base:
+Base preservada:
 
 `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
 
-A parte automatizável já está concluída e não deve ser repetida sem necessidade:
+Resultado físico recebido:
 
-- Application CI: SUCCESS;
-- Legal Validation: SUCCESS;
-- Core Protection: SUCCESS;
-- Recovery: SUCCESS;
-- Production build: SUCCESS;
-- TypeScript: SUCCESS;
-- Diff hygiene: SUCCESS;
-- MOBILE-K, Inventory, Transfer, Outbound, multi-tenant e Sessions: SUCCESS;
-- Rules preservadas;
-- Warehouse repair revalidado;
-- 0 inconsistências quantitativas pós-repair.
+- F01 PASS;
+- F02 PASS;
+- F03 PASS;
+- F04 PASS;
+- F05 **BLOCKER** — `WAREHOUSE_FAST_PATH_UNAVAILABLE`;
+- F06 **BLOCKER / causa a isolar** — transferência não confirmada;
+- F07 PASS;
+- F08 PASS;
+- F09 **PENDENTE DE REPLAY / blocker se recorrente**;
+- F10 PASS;
+- F11 PASS;
+- F12 PASS;
+- F13 PASS — som OK, vibração não suportada pelo navegador;
+- F14 **BLOCKER** — double scan em códigos de localização;
+- F15 PENDENTE;
+- F16 PENDENTE — iOS indisponível.
 
-### Ponte de Preview aprovada
+Decisões vigentes:
 
-O Preview verde conhecido corresponde a:
-
-`5255bbcbc43593bcf66001adf85eb5d6264a121e`
-
-URL conhecida:
-
-`https://controles-de-empenhos-aprov-git-rc-b384cb-aprov-hgesms-projects.vercel.app`
-
-A comparação até o RC re-frozen `fae9ce6...` contém somente:
-
-- workflows;
-- documentação;
-- `package.json` com script de verificação;
-- guard/script SaaS final audit;
-- tooling Warehouse read-only.
-
-Não existem mudanças em `app/`, `features/` ou `lib/`.
-
-Portanto o Preview de `5255bbcb...` é aceito como **runtime-equivalente** para a certificação física do RC re-frozen. Isso evita depender de novo build Vercel, atualmente bloqueado por quota `build-rate-limit`.
-
-### Evidências físicas restantes
-
-Executar no Preview runtime-equivalente:
-
-- F01 Android/Chrome;
-- F02 câmera permitida;
-- F03 câmera negada/indisponível + fallback manual;
-- F04 Code128 físico;
-- F05 entrada/alocação;
-- F06 transferência física→física;
-- F07 consulta item/local;
-- F08 inventário físico sem UNASSIGNED operacional;
-- F09 saída;
-- F10 conferência;
-- F11 coerência Desktop↔Mobile;
-- F12 COMPACT/MEDIUM/LARGE;
-- F13 som/vibração;
-- F14 double scan/cooldown;
-- F15 perda/retorno de rede;
-- F16 iPhone/Safari quando disponível.
-
-Documento de controle:
-
-`docs/RC_R1_PHYSICAL_CERT_01.md`
-
-Qualquer defeito que exija alteração de runtime invalida o re-freeze. Se as evidências físicas passarem, o próximo passo é GO/NO-GO explícito do Fundador antes de qualquer Production.
+1. não declarar GO/Production;
+2. preservar o re-freeze antigo apenas como evidência da candidata que falhou fisicamente;
+3. corrigir somente F05/F06/F09/F14 em uma única branch;
+4. F14 já corrigido: scanner passa a encerrar o decoder imediatamente após leitura válida, antes de entregar o evento ao fluxo pai;
+5. F05: não ampliar fallback legado para `WAREHOUSE_FAST_PATH_UNAVAILABLE`, pois isso reduziria a revalidação canônica server-side; confirmar ambiente/log do fast path;
+6. F06: obter/reproduzir o erro técnico real antes de alterar domínio ou Rules;
+7. F09: executar replay com a mesma chave de idempotência; sucesso sem segunda baixa pode reclassificar o caso como recuperação prevista;
+8. F15 será executado apenas depois dos blockers operacionais;
+9. F16 pode permanecer pendente por indisponibilidade de iPhone, desde que explicitamente aceito no GO/NO-GO;
+10. qualquer novo runtime exige CI/Legal/Core/Recovery aplicáveis e novo re-freeze antes de Production.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
