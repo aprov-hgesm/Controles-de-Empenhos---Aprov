@@ -95,6 +95,9 @@ jobs:
       - name: SAAS R1 integrated contract guard
         run: npm run verify:saas-r1-integration
 
+      - name: SAAS R1 final audit contract guard
+        run: npm run verify:saas-r1-final-audit
+
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
 
