@@ -1,7 +1,9 @@
 import {
   collection,
+  Timestamp,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   limit,
   query,
@@ -981,8 +983,12 @@ function parseTransferLot(
   id: string,
   data: Record<string, unknown>
 ): WarehouseLot {
+  const { createdAt, updatedAt, ...domainData } = data;
+  if (!(createdAt instanceof Timestamp) || !(updatedAt instanceof Timestamp)) {
+    throw new Error('WAREHOUSE_TRANSFER_LOT_INVALID: invalid Firestore timestamps');
+  }
   const result = validateWarehouseLot(
-    { ...data, id },
+    { ...domainData, id },
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
@@ -1117,14 +1123,90 @@ export async function transferWarehouseStock(
   // Physical transfers never trust caller-specific lot hints. The canonical
   // repository derives lot allocations from the current physical source
   // balance and canonical lot documents.
-  const lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    materialId: input.materialId,
-    from,
-    quantity: normalizedQuantity,
-    fromBalanceId,
-  });
+  let lotAllocations: TransferWarehouseLotAllocation[];
+  try {
+    lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
+      workspaceId: scope.workspaceId,
+      ug: scope.ug,
+      materialId: input.materialId,
+      from,
+      quantity: normalizedQuantity,
+      fromBalanceId,
+    });
+  } catch (planningError) {
+    // Only deterministic stock/lot-plan rejections qualify for replay lookup.
+    // Infrastructure, authentication and malformed legacy data errors must
+    // retain their original failure, never be presented as success.
+    const planningCode = planningError instanceof Error ? planningError.message : '';
+    if (![
+      'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK',
+      'WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK',
+      'WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS',
+      'WAREHOUSE_TRANSFER_INVALID_LOT_PLAN',
+    ].includes(planningCode)) throw planningError;
+    // A completed transfer can make the source balance insufficient for the
+    // same request. Consult the canonical movement before reporting failure.
+    // No replay can write balances or bypass the full payload comparison.
+    const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
+    const balancePath = warehouseDocumentPath(scope.workspaceId, 'balances', input.materialId);
+    const fromPath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', fromBalanceId);
+    const toPath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', toBalanceId);
+    const replay = await runTransaction(db, async (transaction) => {
+      const movementSnapshot = await transaction.get(doc(db, movementPath));
+      if (!movementSnapshot.exists()) return null;
+
+      const existing = parseMovement(
+        scope.workspaceId,
+        movementSnapshot.id,
+        movementSnapshot.data() as Record<string, unknown>
+      );
+      const candidateResult = validateWarehouseMovement({
+        schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+        id: movementId,
+        workspaceId: scope.workspaceId,
+        ug: scope.ug,
+        materialId: input.materialId,
+        type: 'TRANSFER',
+        quantityDelta: 0,
+        idempotencyKeyHash,
+        reversesMovementId: null,
+        note: input.note ?? null,
+        source: {
+          kind: 'LOCATION_TRANSFER',
+          actorUid: scope.uid,
+          quantity: normalizedQuantity,
+          from,
+          to,
+          fromBalanceId,
+          toBalanceId,
+        },
+      }, {
+        expectedWorkspaceId: scope.workspaceId,
+        expectedUg: scope.ug,
+        expectedMaterialId: input.materialId,
+      });
+      if (!candidateResult.ok || !warehouseMovementMatchesReplay(existing, candidateResult.data)) {
+        throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+      }
+      const [balanceSnapshot, sourceSnapshot, destinationSnapshot] = await Promise.all([
+        transaction.get(doc(db, balancePath)),
+        transaction.get(doc(db, fromPath)),
+        transaction.get(doc(db, toPath)),
+      ]);
+      if (!balanceSnapshot.exists() || !sourceSnapshot.exists() || !destinationSnapshot.exists()) {
+        throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
+      }
+      return {
+        applied: false,
+        movement: existing,
+        balance: parseBalance(scope.workspaceId, input.materialId, balanceSnapshot.data() as Record<string, unknown>),
+        fromBalance: parseLocationBalance(scope.workspaceId, sourceSnapshot.id, sourceSnapshot.data() as Record<string, unknown>),
+        toBalance: parseLocationBalance(scope.workspaceId, destinationSnapshot.id, destinationSnapshot.data() as Record<string, unknown>),
+      };
+    });
+    if (replay) return replay;
+    throw planningError;
+  }
   const relocateLotIds: string[] = [];
 
   if (
@@ -1171,6 +1253,10 @@ export async function transferWarehouseStock(
     warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
   );
 
+  const observed = { attempted: null as {
+    fromQty:number; fromRev:number; toQty:number; toRev:number;
+    aggregateQty:number; aggregateRev:number;
+  } | null };
   try {
     return await runTransaction(db, async (transaction) => {
       const materialRef = doc(db, materialPath);
@@ -1256,6 +1342,13 @@ export async function transferWarehouseStock(
 
       const available = existingFrom?.quantity ?? 0;
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+      // The transaction snapshot is authoritative. A failed commit can only
+      // be reconciled against this baseline and a newer server snapshot.
+      observed.attempted = {
+        fromQty: available, fromRev: existingFrom!.revision,
+        toQty: existingTo?.quantity ?? 0, toRev: existingTo?.revision ?? 0,
+        aggregateQty: currentBalance.quantity, aggregateRev: currentBalance.revision,
+      };
 
       const nextFrom = applyWarehouseLocationDelta(existingFrom, {
         id: fromBalanceId,
@@ -1396,6 +1489,174 @@ export async function transferWarehouseStock(
       };
     });
   } catch (error) {
+    // F06/SAME-KEY: a losing concurrent transaction can be refused when the
+    // Firestore Rules evaluation budget is exceeded. A failure is NOT a replay.
+    // Only a fully matching, readable committed movement is authoritative.
+    const code = (error as { code?: unknown } | null)?.code;
+    // Do not reinterpret generic permission-denied, revoked access or ABORTED.
+    // The explicit Rules budget diagnostic is necessary but not sufficient.
+    const budgetDenied = code === 'permission-denied'
+      && /maximum of 1000 expressions/i.test(String(error));
+    if (budgetDenied) {
+      try {
+        const committedSnapshot = await getDocFromServer(doc(db, movementPath));
+        if (committedSnapshot.exists()) {
+          const committedMovement = parseMovement(
+            scope.workspaceId,
+            committedSnapshot.id,
+            committedSnapshot.data() as Record<string, unknown>
+          );
+          const candidate = validateWarehouseMovement({
+            schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+            id: movementId,
+            workspaceId: scope.workspaceId,
+            ug: scope.ug,
+            materialId: input.materialId,
+            type: 'TRANSFER',
+            quantityDelta: 0,
+            idempotencyKeyHash,
+            reversesMovementId: null,
+            note: input.note ?? null,
+            source: {
+              kind: 'LOCATION_TRANSFER',
+              actorUid: scope.uid,
+              quantity: normalizedQuantity,
+              from,
+              to,
+              fromBalanceId,
+              toBalanceId,
+            },
+          }, {
+            expectedWorkspaceId: scope.workspaceId,
+            expectedUg: scope.ug,
+            expectedMaterialId: input.materialId,
+          });
+          if (!candidate.ok || !warehouseMovementMatchesReplay(committedMovement, candidate.data)) {
+            throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+          }
+
+          // Read-only, bounded proof (one movement + three balance documents).
+          // Fresh canonical balances are validated, never written or synthesized.
+          const [aggregateSnapshot, sourceSnapshot, destinationSnapshot] = await Promise.all([
+            getDocFromServer(doc(db, balancePath)),
+            getDocFromServer(doc(db, fromBalancePath)),
+            getDocFromServer(doc(db, toBalancePath)),
+          ]);
+          if (!aggregateSnapshot.exists() || !sourceSnapshot.exists() || !destinationSnapshot.exists()) {
+            throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
+          }
+          const aggregate = parseBalance(
+            scope.workspaceId, input.materialId, aggregateSnapshot.data() as Record<string, unknown>
+          );
+          const source = parseLocationBalance(
+            scope.workspaceId, sourceSnapshot.id, sourceSnapshot.data() as Record<string, unknown>
+          );
+          const destination = parseLocationBalance(
+            scope.workspaceId, destinationSnapshot.id, destinationSnapshot.data() as Record<string, unknown>
+          );
+          if (
+            aggregate.ug !== scope.ug
+            || source.ug !== scope.ug
+            || destination.ug !== scope.ug
+            || source.materialId !== input.materialId
+            || destination.materialId !== input.materialId
+            || !warehouseStockPositionsEqual(source.position, from)
+            || !warehouseStockPositionsEqual(destination.position, to)
+          ) {
+            throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
+          }
+          return {
+            applied: false,
+            movement: committedMovement,
+            balance: aggregate,
+            fromBalance: source,
+            toBalance: destination,
+          };
+
+        } else if (observed.attempted) {
+          // Bounded follow-up only after a budget-denied write; never scan
+          // arbitrary ledger history or depend on fixture revisions/amounts.
+          const prior = observed.attempted;
+          // One consistent, read-only Firestore transaction is required:
+          // independent getDocFromServer calls could mix different revisions
+          // if a third transfer commits between the reads. No extra writes.
+          const classified = await runTransaction(db, async (proof) => {
+          const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([
+            proof.get(doc(db, fromBalancePath)),
+            proof.get(doc(db, toBalancePath)),
+            proof.get(doc(db, balancePath)),
+            proof.get(doc(db, materialPath)),
+          ]);
+          if (fromNow.exists() && toNow.exists() && aggregateNow.exists() && materialNow.exists()) {
+            const source = parseLocationBalance(scope.workspaceId, fromNow.id, fromNow.data() as Record<string, unknown>);
+            const destination = parseLocationBalance(scope.workspaceId, toNow.id, toNow.data() as Record<string, unknown>);
+            const aggregate = parseBalance(scope.workspaceId, input.materialId, aggregateNow.data() as Record<string, unknown>);
+            const material = parseMaterial(scope.workspaceId, materialNow.id, materialNow.data() as Record<string, unknown>);
+            const winnerId = source.lastMovementId;
+            if (
+              winnerId !== movementId
+              && winnerId === destination.lastMovementId
+              && /^mov_[a-f0-9]{64}$/.test(winnerId)
+              && material.status === 'active' && material.ug === scope.ug
+              && source.ug === scope.ug && destination.ug === scope.ug && aggregate.ug === scope.ug
+              && source.workspaceId === scope.workspaceId && destination.workspaceId === scope.workspaceId
+              && source.materialId === input.materialId && destination.materialId === input.materialId
+              && warehouseStockPositionsEqual(source.position, from)
+              && warehouseStockPositionsEqual(destination.position, to)
+              && aggregate.quantity === prior.aggregateQty && aggregate.revision === prior.aggregateRev
+              && source.revision === prior.fromRev + 1 && destination.revision === prior.toRev + 1
+              && source.quantity >= 0 && source.quantity < normalizedQuantity
+            ) {
+              const winnerSnapshot = await proof.get(doc(db,
+                warehouseDocumentPath(scope.workspaceId, 'movements', winnerId)));
+              if (winnerSnapshot.exists()) {
+                const winner = parseMovement(scope.workspaceId, winnerSnapshot.id,
+                  winnerSnapshot.data() as Record<string, unknown>);
+                const win = winner.source as {
+                  kind?:string; actorUid?:string; quantity?:number;
+                  fromBalanceId?:string; toBalanceId?:string;
+                  from?:typeof from; to?:typeof to;
+                } | null;
+                if (
+                  winner.id === winnerId && winner.type === 'TRANSFER'
+                  && winner.workspaceId === scope.workspaceId && winner.ug === scope.ug
+                  && winner.materialId === input.materialId && winner.quantityDelta === 0
+                  && winner.idempotencyKeyHash === winnerId.slice(4)
+                  && win?.kind === 'LOCATION_TRANSFER'
+                  // The winner may be a different authorized operator. Its
+                  // committed movement was already checked by Rules at write.
+                  && typeof win.actorUid === 'string' && win.actorUid.length > 0
+                  && win.fromBalanceId === fromBalanceId && win.toBalanceId === toBalanceId
+                  && win.from != null && win.to != null
+                  && warehouseStockPositionsEqual(win.from, from)
+                  && warehouseStockPositionsEqual(win.to, to)
+                  && typeof win.quantity === 'number' && win.quantity > 0
+                  && source.quantity === prior.fromQty - win.quantity
+                  && destination.quantity === prior.toQty + win.quantity
+                ) {
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
+          });
+          if (classified) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+        }
+      } catch (proofError) {
+        // Only explicit canonical mismatches may supersede the original error.
+        // Denied reads, missing proofs and transient failures retain the
+        // original PERMISSION_DENIED/ABORTED status.
+        if (
+          proofError instanceof Error
+          && (
+            proofError.message === 'WAREHOUSE_IDEMPOTENCY_CONFLICT'
+            || proofError.message === 'WAREHOUSE_LOCATION_BALANCE_INCONSISTENT'
+              || proofError.message === 'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK'
+          )
+        ) throw proofError;
+      }
+    }
     handleFirestoreError(error, OperationType.WRITE, movementPath);
     throw error;
   }
