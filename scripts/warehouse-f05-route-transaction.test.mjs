@@ -161,3 +161,18 @@ test('read permission refusal is classified before committing', async () => {
   assert.equal(response.payload.error, 'WAREHOUSE_FAST_PATH_UPSTREAM_PERMISSION');
   assert.equal(fx.commits, 0);
 });
+
+test('historical lot retains timestamp encoding on allocation update', async () => {
+  const fx = fixture(), post = makeRoute(fx);
+  const lotId = 'lot_' + hash([workspaceId, intakeId, 'LOT1', JSON.stringify(position)].join('\\n')).slice(0, 32);
+  const legacyLot = {
+    schemaVersion: 'warehouse_lot_v1', id: lotId, workspaceId, ug, materialId,
+    code: 'LOT1', expiresOn: '2027-01-01', position, quantity: 2,
+    status: 'active', origin: { kind: 'INVOICE' }, createdBy: uid, updatedBy: uid,
+    createdAt: now,
+  };
+  fx.put('emprovex-warehouse', root + '/lots/' + lotId, legacyLot);
+  const response = await post();
+  assert.equal(response.status, 200, JSON.stringify(response));
+  assert.equal(fx.get('emprovex-warehouse', root + '/lots/' + lotId).quantity, 6);
+});
