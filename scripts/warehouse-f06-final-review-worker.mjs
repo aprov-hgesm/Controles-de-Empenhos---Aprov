@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Emulator-only process: independent Firebase Auth session + Firestore client.
-// Each process has a different verified UID with the same founder permission.
+// Sector canaries use independent verified password accounts; founder canaries use the existing founder fixture.
 // The canary hooks are inserted only by this loader, never committed to the engine.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -68,10 +68,11 @@ require.extensions['.ts']=(module,filename)=>{
   }}).outputText;
   module._compile(output,filename);
 };
-const {auth}=require(resolve(ROOT,'lib/firebase.ts'));
+const {auth,warehouseDb}=require(resolve(ROOT,'lib/firebase.ts'));
 const {transferWarehouseStock}=require(resolve(ROOT,'lib/warehouse/locationRepository.ts'));
 const {GoogleAuthProvider,signInWithCredential,signInWithEmailAndPassword}=require('firebase/auth');
 const {deleteApp,getApp}=require('firebase/app');
+const {doc,getDocFromServer}=require('firebase/firestore');
 if(mode==='sector'){
   await signInWithEmailAndPassword(auth,subject,'F06-Sector-Testing-123!');
   const {resolveWorkspaceContext,rememberResolvedWorkspaceContext}=require(resolve(ROOT,'lib/workspaceContext.ts'));
@@ -80,26 +81,61 @@ if(mode==='sector'){
   rememberResolvedWorkspaceContext(auth.currentUser.uid,{
     ...founderCtx,email:subject,resolutionSource:'platform-directory'
   });
-  const claims=await auth.currentUser.getIdTokenResult(true);
-  if(claims.signInProvider!=='password'||claims.claims.emprovexWarehouse!==true
-    ||claims.claims.email_verified!==true)throw new Error('F06_SECTOR_CLAIMS_INVALID');
+  // Authoritative identity, token and Rules proof; the in-memory context
+  // provides app routing only and is NEVER accepted as authorization evidence.
+  const token=await auth.currentUser.getIdTokenResult(true);
+  const c=token.claims;
+  if(token.signInProvider!=='password'||c.emprovexWarehouse!==true
+    ||c.email_verified!==true||c.emprovexWarehouseVersion!=='v1'
+    ||c.emprovexRole!=='sector'||c.emprovexWorkspaceId!==workspaceId
+    ||c.emprovexUg!==ug)throw new Error('F06_SECTOR_CLAIMS_INVALID');
+  const proof=await getDocFromServer(doc(warehouseDb,'warehouse',workspaceId,'materials',materialId));
+  if(!proof.exists()||proof.data().ug!==ug||proof.data().workspaceId!==workspaceId)
+    throw new Error('F06_SECTOR_RULES_READ_NOT_AUTHORIZED');
 }else{
   await signInWithCredential(auth,GoogleAuthProvider.credential(JSON.stringify({
     sub:subject,email:'aprov1hgesm@gmail.com',email_verified:true
   })));
 }
-process.send({type:'ready',uid:auth.currentUser.uid,subject,ug});
+process.send({type:'ready',uid:auth.currentUser.uid,subject,
+  email:auth.currentUser.email,ug,workspaceId,
+  authVerified:mode==='sector',rulesReadVerified:mode==='sector'});
+// IPC protocol: parent acknowledges terminal result before the child exits.
+// A normal exit must not race the parent's terminal-result handler.
+const terminalAck = new Promise(resolve => {
+  process.on('message',msg=>{ if(msg?.type==='ack-result')resolve(); });
+});
+async function sendTerminal(message) {
+  await new Promise((resolve,reject) => {
+    if(!process.connected)return reject(new Error('F06_IPC_DISCONNECTED'));
+    process.send(message,err=>err?reject(err):resolve());
+  });
+  await Promise.race([
+    terminalAck,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('F06_IPC_ACK_TIMEOUT')),10000))
+  ]);
+}
 process.on('message',async m=>{
   if(m?.type!=='go')return;
+  let message;
   try{
     const result=await transferWarehouseStock(workspaceId,{
       materialId,idempotencyKey:'F06:'+key,from,to,quantity:Number(amount),note:'F06 emulator'
     });
-    process.send({type:'result',status:'fulfilled',applied:result.applied,uid:subject,movementId:result.movement?.id});
+    message={type:'result',status:'fulfilled',applied:result.applied,
+      uid:auth.currentUser?.uid??null,movementId:result.movement?.id};
   }catch(e){
-    process.send({type:'result',status:'rejected',code:e?.code||null,error:String(e),uid:subject});
-  }finally{
+    message={type:'result',status:'rejected',code:e?.code||null,
+      error:String(e),uid:auth.currentUser?.uid??null};
+  }
+  try {
+    await sendTerminal(message);
     await deleteApp(getApp());
     process.exit(0);
+  } catch(e) {
+    console.error('F06_IPC_DELIVERY_FAILED',e);
+    process.exitCode=2;
+    await deleteApp(getApp()).catch(()=>{});
+    process.exit(2);
   }
 });
