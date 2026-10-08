@@ -564,7 +564,7 @@ service cloud.firestore {
         && previous.workspaceId == workspaceId
         && warehouseUgMatchesAccess(workspaceId, previous.ug)
         && next is map
-        && next.keys().size() == 14
+        && next.keys().size() == 15
         && next.keys().hasOnly([
           'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'code',
           'expiresOn', 'quantity', 'position', 'origin', 'status',
