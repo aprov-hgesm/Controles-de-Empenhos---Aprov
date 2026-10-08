@@ -1128,6 +1128,16 @@ export async function transferWarehouseStock(
       fromBalanceId,
     });
   } catch (planningError) {
+    // Only deterministic stock/lot-plan rejections qualify for replay lookup.
+    // Infrastructure, authentication and malformed legacy data errors must
+    // retain their original failure, never be presented as success.
+    const planningCode = planningError instanceof Error ? planningError.message : '';
+    if (![
+      'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK',
+      'WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK',
+      'WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS',
+      'WAREHOUSE_TRANSFER_INVALID_LOT_PLAN',
+    ].includes(planningCode)) throw planningError;
     // A completed transfer can make the source balance insufficient for the
     // same request. Consult the canonical movement before reporting failure.
     // No replay can write balances or bypass the full payload comparison.
