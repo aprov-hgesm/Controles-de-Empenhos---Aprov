@@ -164,7 +164,7 @@ test('read permission refusal is classified before committing', async () => {
 
 test('historical lot retains timestamp encoding on allocation update', async () => {
   const fx = fixture(), post = makeRoute(fx);
-  const lotId = 'lot_' + hash([workspaceId, intakeId, 'LOT1', JSON.stringify(position)].join('\\n')).slice(0, 32);
+  const lotId = 'lot_' + hash([workspaceId, intakeId, 'LOT1', JSON.stringify(position)].join(String.fromCharCode(10))).slice(0, 32);
   const legacyLot = {
     schemaVersion: 'warehouse_lot_v1', id: lotId, workspaceId, ug, materialId,
     code: 'LOT1', expiresOn: '2027-01-01', position, quantity: 2,
