@@ -1,0 +1,91 @@
+name: Warehouse F06 Same-Key Concurrency — Emulator Only
+
+on:
+  pull_request:
+    branches:
+      - warehouse-rules-eval-budget-fix
+    paths:
+      - lib/warehouse/locationRepository.ts
+      - .github/workflows/warehouse-f06-same-key-emulator.yml
+
+permissions:
+  contents: read
+
+jobs:
+  same-key-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin Worker 6 fixture; keep Worker 7 candidate engine
+        shell: bash
+        run: |
+          git fetch --no-tags origin warehouse-f06-fixture-fix-01
+          test "$(git rev-parse FETCH_HEAD)" = "7b499254f5d10487be2622e92c78fae18d7c76d1"
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
+          grep -Fq 'F06/SAME-KEY:' lib/warehouse/locationRepository.ts
+          git diff --exit-code "origin/warehouse-rules-eval-budget-fix" -- firestore.warehouse.rules
+          echo "TEST ENGINE: Worker 7 checked-out PR candidate"
+          echo "TEST FIXTURE: Worker 6 pinned at 7b499254f5d10487be2622e92c78fae18d7c76d1"
+          echo "TEST RULES: unchanged from Worker 5"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Run all nine F06 assertions (case 4 is owned by Worker 8)
+        shell: bash
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: |
+          set +e
+          npx --yes firebase-tools emulators:exec \
+            --config firebase.warehouse-security-test.json \
+            --project demo-emprovex-f06 \
+            --only auth,firestore \
+            "node --test scripts/warehouse-f06-transaction-emulator.test.mjs" \
+            > /tmp/f06-same-key.log 2>&1
+          emulator_exit=$?
+          set -e
+          cat /tmp/f06-same-key.log
+          echo "F06_FULL_SUITE_EXIT=${emulator_exit}"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const log = fs.readFileSync('/tmp/f06-same-key.log', 'utf8').replace(/\x1b\[[0-9;]*m/g, '');
+          const outcomes = [...log.matchAll(/^ {4}(ok|not ok) ([1-9]) - (.+)$/gm)];
+          if (outcomes.length !== 9) {
+            console.error('INVALID F06 RUN: expected nine independently reported subtests; got', outcomes.length);
+            process.exit(1);
+          }
+          for (const [, status, number, name] of outcomes) {
+            console.log('F06 CASE', number, status.toUpperCase(), name);
+            if (number !== '4' && status !== 'ok') {
+              console.error('WORKER 7 BLOCKED: case', number, 'failed');
+              process.exitCode = 1;
+            }
+          }
+          if (outcomes[2][1] !== 'ok' || outcomes[2][2] !== '3') {
+            console.error('WORKER 7 BLOCKED: same-key replay was not proven');
+            process.exitCode = 1;
+          }
+          if (outcomes[3][1] === 'not ok') {
+            console.log('F06 FULL CERTIFICATION REMAINS BLOCKED: case 4 belongs to Worker 8');
+          } else {
+            console.log('F06 ALL NINE PASS (verify complete suite exit code separately)');
+          }
+          NODE
+      - name: Save Firestore diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: f06-same-key-worker7-debug
+          path: |
+            firestore-debug.log
+            /tmp/f06-same-key.log
+          if-no-files-found: warn
