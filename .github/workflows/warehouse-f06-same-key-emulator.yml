@@ -20,11 +20,14 @@ jobs:
       - name: Pin Worker 6 fixture; keep Worker 7 candidate engine
         shell: bash
         run: |
+          git fetch --no-tags origin warehouse-rules-eval-budget-fix
+          base=$(git rev-parse FETCH_HEAD)
+          test "$base" = "4973fa876a08bb7329a9c9b83565d876c379404c"
           git fetch --no-tags origin warehouse-f06-fixture-fix-01
           test "$(git rev-parse FETCH_HEAD)" = "7b499254f5d10487be2622e92c78fae18d7c76d1"
           git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
           grep -Fq 'F06/SAME-KEY:' lib/warehouse/locationRepository.ts
-          git diff --exit-code "origin/warehouse-rules-eval-budget-fix" -- firestore.warehouse.rules
+          git diff --exit-code "$base" -- firestore.warehouse.rules
           echo "TEST ENGINE: Worker 7 checked-out PR candidate"
           echo "TEST FIXTURE: Worker 6 pinned at 7b499254f5d10487be2622e92c78fae18d7c76d1"
           echo "TEST RULES: unchanged from Worker 5"
