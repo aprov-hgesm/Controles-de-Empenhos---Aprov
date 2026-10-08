@@ -254,3 +254,24 @@ test('barcode lookup source invalidates after each successful association mutati
   assert.match(source, /scope\.uid.*scope\.ug.*id/);
   assert.equal((source.match(/barcodeLookupCache\.invalidate\(scope\.workspaceId\)/g) ?? []).length, 3);
 });
+
+
+test('barcode inexistente é reutilizado no TTL e reconsultado após invalidação', async () => {
+  let documentRequests = 0;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+  const read = () => cache.read('workspace-a', 'uid-a:UG-1:missing-barcode', async () => {
+    documentRequests += 1;
+    return null;
+  });
+  assert.equal(await read(), null);
+  assert.equal(await read(), null);
+  assert.equal(documentRequests, 1);
+  cache.invalidate('workspace-a');
+  assert.equal(await read(), null);
+  assert.equal(documentRequests, 2);
+});
+
+test('retorno reativado preserva literal de status para o contrato da associação', () => {
+  const source = readFileSync(resolve(ROOT, 'lib/warehouse/barcodeRepository.ts'), 'utf8');
+  assert.match(source, /status: 'active' as const, updatedBy: scope.uid/);
+});
