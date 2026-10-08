@@ -1,0 +1,24 @@
+name: Warehouse F05 intake regression
+on:
+  push:
+    branches: [warehouse-fix-f05]
+  pull_request:
+    paths:
+      - 'app/api/adm-deposito/intake-action/route.ts'
+      - 'scripts/warehouse-fast-intake-errors.test.mjs'
+      - '.github/workflows/warehouse-f05-intake.yml'
+permissions:
+  contents: read
+jobs:
+  intake-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test scripts/warehouse-fast-intake-errors.test.mjs
+      - run: npm run typecheck
