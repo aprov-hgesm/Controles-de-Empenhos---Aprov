@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-08 — `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01` iniciou corretamente em `warehouse-mobile-write-evidence-01@3369d614a425728104eea6170188672de9d6875b` e encerrou o primeiro ciclo em `12ac447973dca8d7b2c4a94bf57db827a7f8639f`, PR #268 OPEN/DRAFT/mergeable=true. Classificação: `BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO`. O worker não possuía credencial Firestore Production nem acesso ao projeto Vercel EMPROVEX, portanto executou 0 reads/0 writes Firestore e não inventou causa. F05 continua sem Runtime Log/secret state; F06 continua sem identidade completa do teste; F09 continua sem RAW real/fixture Emulator 1:1. O documento `docs/WAREHOUSE_MOBILE_WRITE_EVIDENCE_01.md` contém procedimento PowerShell GET-only para coleta local autenticada usando gcloud sem imprimir token. Vercel do HEAD está SUCCESS, Core Protection #37821122538 SUCCESS e Application CI #37821122508 ainda IN_PROGRESS no último checkpoint. Production permanece `main@97556bb8...`, Central Mobile founder-only, sem novos writes, Rules, repair ou deploy corretivo. Próximo passo obrigatório: o Fundador/Coordenador executar apenas a coleta GET-only local e retornar a saída sanitizada; nenhuma repetição F05/F06/F09 em Production antes disso.**
+Última sincronização global: **2026-10-08 — handoff preparado para novo Chat Coordenador. Production permanece `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`, Vercel Production SUCCESS e Central Mobile continua founder-only. A frente `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01` está em `warehouse-mobile-write-evidence-01@2fe19299beff5c1eef268d647b05904fd98ee1cb`, PR #268 OPEN/DRAFT/mergeable=true; o último commit apenas reparou o coletor GET-only corrompido. No HEAD atual, Vercel SUCCESS, Core Protection #37823482334 SUCCESS e Application CI #37823482320 SUCCESS. F05/F06/F09 continuam sem causa provada porque ainda faltam evidência real RAW/log; nenhuma nova tentativa Production foi autorizada. A coleta local ainda não ocorreu: o `git fetch` do operador falhou por DNS (`Could not resolve host: github.com`), deixando o repositório local em `ed209e791dabb4d1c584cfdd12a8504329340e2b`, sem a branch/script novos. Diagnóstico de rede: o DNS configurado do Windows falha para `github.com`, mas consultas diretas a `1.1.1.1` e `8.8.8.8` resolvem `github.com` para `4.228.31.150`; tentativa de alterar DNS da interface `Wi-Fi` para `1.1.1.1/1.0.0.1` falhou com `PermissionDenied / CIM` por falta de elevação. `Clear-DnsClientCache` foi executado. Próximo passo do novo Coordenador: restaurar DNS local com PowerShell elevado, refazer fetch/switch para a branch de evidência, confirmar HEAD/script e só então executar a coleta GET-only autenticada via gcloud.**
 
 Produção vigente: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Central Mobile founder-only. F14 está resolvido. `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` encerrou como `PARCIAL — CAUSA NÃO ISOLADA`: arquitetura e mecanismos candidatos foram provados, mas falta evidência raw/log para causalidade de F05/F06/F09. `RC-R1-PHYSICAL-FIX-01` permanece congelada. O próximo owner deve ser uma frente exclusivamente de coleta dirigida read-only + Emulator, sem runtime/Rules/repair/Production write.**
+Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Central Mobile founder-only. F14 está resolvido. F05/F06/F09 permanecem blockers sem causa isolada. `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01` é o owner ativo da aquisição de evidência; o worker já preparou e reparou o coletor GET-only, mas a coleta viva está bloqueada temporariamente pelo DNS do Windows do operador. `RC-R1-PHYSICAL-FIX-01` continua congelada até causa provada. Nenhuma mudança de runtime, Rules, dados ou Production está autorizada enquanto a evidência RAW/log não for obtida.**
 
 ---
 
@@ -123,7 +123,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RC-R1-PHYSICAL-CERT-01 | **BLOCKER / EVIDÊNCIA FÍSICA PARCIAL** | F01–F04/F07–F08/F10–F14 PASS; F05 `WAREHOUSE_FAST_PATH_UNAVAILABLE`; F06 escrita de transferência falhou; F09 `FIRESTORE_PERMISSION_DENIED` e leitura independente confirmou **sem write**; F15/F16 pendentes |
 | RC-R1-PHYSICAL-FIX-01 | **CONGELADA / AGUARDA FORENSICS** | `rc-r1-physical-fix-01@20337dd4...`; PR #265 DRAFT; F14 single-shot + diagnóstico seguro de erro já implementados; Application CI/Core SUCCESS; nenhuma nova correção F05/F06/F09 até causa provada |
 | WAREHOUSE-MOBILE-WRITE-FORENSICS-01 | **PARCIAL / ENCERRADA SEM CAUSA ISOLADA** | `warehouse-mobile-write-forensics-01@3369d614a...`; PR #267 DRAFT; Core + Application CI SUCCESS; 0 runtime/Rules; mecanismos candidatos de shape legado provados, mas F05/F06/F09 permanecem `CAUSE_PROVEN=false`; próximo passo = coleta raw + Runtime Log + Emulator |
-| WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 | **BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO** | `warehouse-mobile-write-evidence-01@12ac4479...`; PR #268 DRAFT; 0 Firestore reads/writes por falta de credencial no worker; falta RAW F09/F06 e Runtime Log F05; procedimento PowerShell GET-only pronto; Core SUCCESS, Vercel SUCCESS, App CI em andamento |
+| WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 | **ATIVA / COLETA BLOQUEADA POR DNS LOCAL** | `warehouse-mobile-write-evidence-01@2fe19299...`; PR #268 DRAFT; coletor GET-only reparado; Vercel + Core + Application CI SUCCESS; 0 Firestore reads/writes até aqui; próximo passo = corrigir DNS local, fetch/switch e executar coleta F09 |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -176,47 +176,69 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **EXECUÇÃO LOCAL DA COLETA GET-ONLY — desbloquear WAREHOUSE-MOBILE-WRITE-EVIDENCE-01**.
+O gate vigente é **DESBLOQUEAR A COLETA LOCAL GET-ONLY E RETOMAR WAREHOUSE-MOBILE-WRITE-EVIDENCE-01**.
 
-Branch:
+Branch remota atual:
 
-`warehouse-mobile-write-evidence-01@12ac447973dca8d7b2c4a94bf57db827a7f8639f`
+`warehouse-mobile-write-evidence-01@2fe19299beff5c1eef268d647b05904fd98ee1cb`
 
 PR:
 
 `#268 — OPEN / DRAFT / mergeable=true / not merged`
 
-Estado:
+Último commit da branch:
 
-- classificação: `BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO`;
-- Firestore Production nesta execução: 0 reads / 0 writes;
-- F05 causa: não provada;
-- F06 causa: não provada;
-- F09 causa: não provada;
-- Vercel do HEAD: SUCCESS;
-- EMPROVEX Core Protection #37821122538: SUCCESS;
-- Application CI #37821122508: IN_PROGRESS no último checkpoint.
+`2fe19299beff5c1eef268d647b05904fd98ee1cb — fix(audit): reparar coletor GET-only corrompido`
 
-### Próxima ação obrigatória
+Gates do HEAD atual:
 
-O Coordenador/Fundador deve executar localmente o coletor GET-only com o gcloud já autenticado, sem imprimir token:
+- Vercel: **SUCCESS**;
+- EMPROVEX Core Protection #37823482334: **SUCCESS**;
+- Application CI #37823482320: **SUCCESS**.
 
-`scripts/warehouse-mobile-write-forensics-readonly.mjs`
+Estado causal:
 
-Material âncora F09:
+- F05: `CAUSE_PROVEN=false`;
+- F06: `CAUSE_PROVEN=false`;
+- F09: `CAUSE_PROVEN=false`;
+- Firestore Production lido por esta frente até agora: **0 reads / 0 writes**;
+- `RC-R1-PHYSICAL-FIX-01` permanece congelada.
 
-`mat_272f2d996ee65ed3530ad2d7e27b66d7`
+### Bloqueio operacional local atual
 
-A saída deve ser revisada e sanitizada antes de ser compartilhada.
+No computador do Fundador, em `C:\Users\marco\Projetos\emprovex`:
 
-Após a coleta:
+- `git fetch origin` falhou com `Could not resolve host: github.com`;
+- `git switch warehouse-mobile-write-evidence-01` falhou porque a branch ainda não havia sido recebida;
+- HEAD local permaneceu em `ed209e791dabb4d1c584cfdd12a8504329340e2b`;
+- o script `scripts/warehouse-mobile-write-forensics-readonly.mjs` não existia nesse HEAD local, por isso Node retornou `MODULE_NOT_FOUND`;
+- `Resolve-DnsName github.com` e `curl https://github.com` falham usando o DNS configurado;
+- `Resolve-DnsName github.com -Server 1.1.1.1` e `-Server 8.8.8.8` funcionam e retornaram `4.228.31.150`;
+- interface ativa: `Wi-Fi`;
+- tentativa de `Set-DnsClientServerAddress` para `1.1.1.1/1.0.0.1` falhou com acesso CIM negado, indicando necessidade de PowerShell elevado;
+- `Clear-DnsClientCache` já foi executado;
+- gcloud está instalado no caminho esperado;
+- nenhum token foi exposto;
+- nenhum read Firestore foi executado.
 
-1. verificar contagens e `capped`;
-2. extrair RAW de material/balance/locationBalances/lots/barcodes;
-3. comparar RAW vs canonical;
-4. construir fixture Emulator 1:1;
-5. identificar primeira Rule DENY;
-6. somente então escolher owner de correção.
+Arquivos locais não rastreados a preservar, sem apagar:
+
+- `warehouse-data-repair-forensics-live-v2.txt`;
+- `warehouse-data-repair-forensics-live.txt`;
+- `warehouse-integrity-reconcile-live.txt`.
+
+### Próxima ação do Coordenador
+
+1. orientar o Fundador a abrir **PowerShell como Administrador**;
+2. alterar temporariamente o DNS da interface `Wi-Fi` para `1.1.1.1` e `1.0.0.1`;
+3. limpar cache DNS e confirmar `Resolve-DnsName github.com` + `curl.exe -I https://github.com`;
+4. executar `git fetch origin warehouse-mobile-write-evidence-01`;
+5. fazer switch para a branch e confirmar HEAD `2fe19299beff5c1eef268d647b05904fd98ee1cb`;
+6. confirmar que `Test-Path .\scripts\warehouse-mobile-write-forensics-readonly.mjs` retorna `True`;
+7. somente então executar o coletor GET-only para o material F09 `mat_272f2d996ee65ed3530ad2d7e27b66d7`;
+8. preservar a saída em arquivo local, revisar/sanitizar e entregar ao worker/coordenador;
+9. reproduzir RAW → Emulator → primeira Rule DENY;
+10. só depois definir owner de correção.
 
 ### Proibições mantidas
 
@@ -224,9 +246,26 @@ Após a coleta:
 - não escrever Firestore;
 - não alterar Rules;
 - não fazer repair;
-- não alterar main;
+- não alterar `main`;
 - não reativar `rc-r1-physical-fix-01` antes da causa;
-- não inferir ausência de secret F05 sem Runtime Log/ambiente.
+- não inferir ausência de secret F05 sem Runtime Log/ambiente;
+- não apagar os três arquivos locais não rastreados citados acima.
+
+### Handoff imediato para novo Chat Coordenador
+
+O novo Coordenador deve assumir que:
+
+- **o sistema R1 já está em Production**;
+- **a Central Mobile está publicada, porém founder-only**;
+- **o desenvolvimento funcional está praticamente encerrado**;
+- **o trabalho atual não é criar feature nova**, e sim provar a causa de F05/F06/F09;
+- **F14 já foi corrigido e retestado PASS**;
+- a auditoria `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` encerrou como `PARCIAL — CAUSA NÃO ISOLADA`;
+- a frente ativa é `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01`;
+- o bloqueio imediato é **DNS local do Windows**, não GitHub, gcloud, Firestore ou código da aplicação;
+- após restaurar conectividade, a prioridade é uma única coleta GET-only F09, não um novo teste de escrita.
+
+Ao iniciar o novo chat, reler este Memorial antes de qualquer ação e conferir o estado vivo do GitHub novamente.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
