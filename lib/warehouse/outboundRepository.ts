@@ -273,17 +273,6 @@ export async function applyWarehouseExpressOutbound(
             barcodeSnapshot.data() as Record<string, unknown>
           )
         : null;
-      if (input.barcodeAssociation && !liveBarcode) {
-        throw new Error('WAREHOUSE_BARCODE_NOT_FOUND');
-      }
-      if (
-        input.barcodeAssociation
-        && liveBarcode
-        && JSON.stringify(liveBarcode) !== JSON.stringify(input.barcodeAssociation)
-      ) {
-        throw new Error('WAREHOUSE_BARCODE_CHANGED');
-      }
-
       const lot = lotSnapshot && lotSnapshot.exists()
         ? parseLot(
             scope.workspaceId,
@@ -291,8 +280,6 @@ export async function applyWarehouseExpressOutbound(
             lotSnapshot.data() as Record<string, unknown>
           )
         : null;
-      if (input.lotId && !lot) throw new Error('WAREHOUSE_OUTBOUND_LOT_NOT_FOUND');
-
       if (movementSnapshot.exists()) {
         const existingMovement = parseMovement(
           scope.workspaceId,
@@ -344,6 +331,19 @@ export async function applyWarehouseExpressOutbound(
           lot,
         };
       }
+
+      if (input.barcodeAssociation && !liveBarcode) {
+        throw new Error('WAREHOUSE_BARCODE_NOT_FOUND');
+      }
+      if (
+        input.barcodeAssociation
+        && liveBarcode
+        && JSON.stringify(liveBarcode) !== JSON.stringify(input.barcodeAssociation)
+      ) {
+        throw new Error('WAREHOUSE_BARCODE_CHANGED');
+      }
+
+      if (input.lotId && !lot) throw new Error('WAREHOUSE_OUTBOUND_LOT_NOT_FOUND');
 
       const plan = prepareWarehouseExpressOutbound({
         material,
