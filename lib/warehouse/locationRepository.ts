@@ -1577,11 +1577,15 @@ export async function transferWarehouseStock(
           // Bounded follow-up only after a budget-denied write; never scan
           // arbitrary ledger history or depend on fixture revisions/amounts.
           const prior = observed.attempted;
+          // One consistent, read-only Firestore transaction is required:
+          // independent getDocFromServer calls could mix different revisions
+          // if a third transfer commits between the reads. No extra writes.
+          const classified = await runTransaction(db, async (proof) => {
           const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([
-            getDocFromServer(doc(db, fromBalancePath)),
-            getDocFromServer(doc(db, toBalancePath)),
-            getDocFromServer(doc(db, balancePath)),
-            getDocFromServer(doc(db, materialPath)),
+            proof.get(doc(db, fromBalancePath)),
+            proof.get(doc(db, toBalancePath)),
+            proof.get(doc(db, balancePath)),
+            proof.get(doc(db, materialPath)),
           ]);
           if (fromNow.exists() && toNow.exists() && aggregateNow.exists() && materialNow.exists()) {
             const source = parseLocationBalance(scope.workspaceId, fromNow.id, fromNow.data() as Record<string, unknown>);
@@ -1603,7 +1607,7 @@ export async function transferWarehouseStock(
               && source.revision === prior.fromRev + 1 && destination.revision === prior.toRev + 1
               && source.quantity >= 0 && source.quantity < normalizedQuantity
             ) {
-              const winnerSnapshot = await getDocFromServer(doc(db,
+              const winnerSnapshot = await proof.get(doc(db,
                 warehouseDocumentPath(scope.workspaceId, 'movements', winnerId)));
               if (winnerSnapshot.exists()) {
                 const winner = parseMovement(scope.workspaceId, winnerSnapshot.id,
@@ -1618,7 +1622,10 @@ export async function transferWarehouseStock(
                   && winner.workspaceId === scope.workspaceId && winner.ug === scope.ug
                   && winner.materialId === input.materialId && winner.quantityDelta === 0
                   && winner.idempotencyKeyHash === winnerId.slice(4)
-                  && win?.kind === 'LOCATION_TRANSFER' && win.actorUid === scope.uid
+                  && win?.kind === 'LOCATION_TRANSFER'
+                  // The winner may be a different authorized operator. Its
+                  // committed movement was already checked by Rules at write.
+                  && typeof win.actorUid === 'string' && win.actorUid.length > 0
                   && win.fromBalanceId === fromBalanceId && win.toBalanceId === toBalanceId
                   && win.from != null && win.to != null
                   && warehouseStockPositionsEqual(win.from, from)
@@ -1627,11 +1634,14 @@ export async function transferWarehouseStock(
                   && source.quantity === prior.fromQty - win.quantity
                   && destination.quantity === prior.toQty + win.quantity
                 ) {
-                  throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+                  return true;
                 }
               }
             }
           }
+          return false;
+          });
+          if (classified) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
         }
       } catch (proofError) {
         // Only explicit canonical mismatches may supersede the original error.
