@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-06 — o R1 permanece publicado em Production em `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`, com Central Mobile isolada em piloto técnico founder-only por botão condicional + guard de rota. A certificação física já confirmou F01–F04, F07–F08, F10–F14 como PASS; F14 foi corrigido e retestado com sucesso. F05 permanece blocker de fast-path (`WAREHOUSE_FAST_PATH_UNAVAILABLE`), F06 permanece blocker de transferência em escrita real e F09 permanece blocker de saída com `FIRESTORE_PERMISSION_DENIED`; leitura independente confirmou que F09 não alterou o estoque (440 L físicos + 5 L legado, sem nova baixa). Como os testes reais já provaram que os blockers chegam à camada de escrita, Program Control abriu `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` em `warehouse-mobile-write-forensics-01@97556bb8eb04af070016f9e58ddc2d9cca36bb35`, exatamente sobre a Production atual, para auditoria causal read-only de F06/F09 e diagnóstico server-side de F05. Nenhuma nova tentativa de escrita, alteração de Rules, repair ou deploy corretivo está autorizada nesta frente; a branch `rc-r1-physical-fix-01` fica congelada até causa provada.**
+Última sincronização global: **2026-10-08 — `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` foi concluída e ratificada como `PARCIAL — CAUSA NÃO ISOLADA`. Branch `warehouse-mobile-write-forensics-01@3369d614a425728104eea6170188672de9d6875b`, PR #267 OPEN/DRAFT/mergeable=true/clean/not merged, delta de 1 commit e 3 arquivos somente docs/scripts read-only/tests; EMPROVEX Core Protection #37464461379 SUCCESS e Application CI #37464461426 SUCCESS. A frente provou a arquitetura de escrita e mecanismos concretos de incompatibilidade de shape legado, mas não preserva raw documents suficientes nem Runtime Log Production para apontar honestamente a primeira expressão DENY de F06/F09 ou a causa server-side de F05. Flags ratificados: `F05_CAUSE_PROVEN=false`, `F06_CAUSE_PROVEN=false`, `F09_CAUSE_PROVEN=false`; `repairRequired=false`, `rulesChangeRequired=false`, `runtimeChangeRequired=false`, `environmentChangeRequired=false` significam somente 'ainda não provado como necessário'. Próximo passo: coleta dirigida read-only dos raw documents reais e Runtime Log F05, seguida de reprodução Emulator; nenhuma nova operação F05/F06/F09 em Production antes dessa prova.**
 
 Produção vigente: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Central Mobile founder-only. O runtime geral segue disponível aos usuários externos; a superfície Mobile continua isolada até certificação. F14 está resolvido. F05/F06/F09 seguem como blockers Mobile e não devem ser tratados por tentativa e erro. O owner ativo passa temporariamente a ser `WAREHOUSE-MOBILE-WRITE-FORENSICS-01`, exclusivamente read-only, para provar a causa de F06/F09 e diagnosticar F05. `RC-R1-PHYSICAL-FIX-01` permanece congelada, sem novos commits de correção até o handoff causal. Rules RC continuam publicadas/congeladas nos hashes auditados e nenhum repair novo está autorizado.**
+Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Central Mobile founder-only. F14 está resolvido. `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` encerrou como `PARCIAL — CAUSA NÃO ISOLADA`: arquitetura e mecanismos candidatos foram provados, mas falta evidência raw/log para causalidade de F05/F06/F09. `RC-R1-PHYSICAL-FIX-01` permanece congelada. O próximo owner deve ser uma frente exclusivamente de coleta dirigida read-only + Emulator, sem runtime/Rules/repair/Production write.**
 
 ---
 
@@ -122,7 +122,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RC R1 re-freeze | **CRIADO / CANDIDATA CONGELADA** | `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`; snapshot exato do RC composto; nenhuma alteração após freeze permitida sem reabrir certificação |
 | RC-R1-PHYSICAL-CERT-01 | **BLOCKER / EVIDÊNCIA FÍSICA PARCIAL** | F01–F04/F07–F08/F10–F14 PASS; F05 `WAREHOUSE_FAST_PATH_UNAVAILABLE`; F06 escrita de transferência falhou; F09 `FIRESTORE_PERMISSION_DENIED` e leitura independente confirmou **sem write**; F15/F16 pendentes |
 | RC-R1-PHYSICAL-FIX-01 | **CONGELADA / AGUARDA FORENSICS** | `rc-r1-physical-fix-01@20337dd4...`; PR #265 DRAFT; F14 single-shot + diagnóstico seguro de erro já implementados; Application CI/Core SUCCESS; nenhuma nova correção F05/F06/F09 até causa provada |
-| WAREHOUSE-MOBILE-WRITE-FORENSICS-01 | **ATIVA / READ-ONLY / OWNER DO DIAGNÓSTICO** | `warehouse-mobile-write-forensics-01@97556bb8eb04af070016f9e58ddc2d9cca36bb35`; base = Production atual; provar condição exata de Rules/dados/código que bloqueia F06/F09 e diagnosticar F05; sem writes, Rules, repair ou deploy |
+| WAREHOUSE-MOBILE-WRITE-FORENSICS-01 | **PARCIAL / ENCERRADA SEM CAUSA ISOLADA** | `warehouse-mobile-write-forensics-01@3369d614a...`; PR #267 DRAFT; Core + Application CI SUCCESS; 0 runtime/Rules; mecanismos candidatos de shape legado provados, mas F05/F06/F09 permanecem `CAUSE_PROVEN=false`; próximo passo = coleta raw + Runtime Log + Emulator |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -175,84 +175,50 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **WAREHOUSE-MOBILE-WRITE-FORENSICS-01 — auditoria causal read-only das escritas da Central Mobile**.
+O gate vigente é **WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 — coleta dirigida read-only e reprodução causal Emulator**.
 
-Branch exclusiva já criada:
+Estado herdado da forensics:
 
-`warehouse-mobile-write-forensics-01@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
+- `warehouse-mobile-write-forensics-01@3369d614a425728104eea6170188672de9d6875b`;
+- PR #267: OPEN / DRAFT / mergeable=true / clean / not merged;
+- Core Protection #37464461379: SUCCESS;
+- Application CI #37464461426: SUCCESS;
+- classificação: `PARCIAL — CAUSA NÃO ISOLADA`;
+- Production Firestore nesta frente: 0 reads / 0 writes;
+- runtime/Rules: 0 alterações.
 
-Base:
+Causas ainda não provadas:
 
-`main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
+- `F05_CAUSE_PROVEN=false`;
+- `F06_CAUSE_PROVEN=false`;
+- `F09_CAUSE_PROVEN=false`.
 
-Essa base é a **Production atual** e deve permanecer imutável como referência forense.
+Mudanças ainda **não provadas como necessárias**:
 
-### Evidência física que motivou a auditoria
+- `repairRequired=false`;
+- `rulesChangeRequired=false`;
+- `runtimeChangeRequired=false`;
+- `environmentChangeRequired=false`.
 
-- F01 PASS — Android/Chrome;
-- F02 PASS — câmera permitida;
-- F03 PASS — câmera negada + fallback manual;
-- F04 PASS — Code128 físico;
-- F05 **BLOCKER** — `WAREHOUSE_FAST_PATH_UNAVAILABLE`;
-- F06 **BLOCKER** — transferência não confirmada em escrita real;
-- F07 PASS;
-- F08 PASS;
-- F09 **BLOCKER** — `FIRESTORE_PERMISSION_DENIED`; replay também falhou;
-- F09 leitura independente pós-falha: estoque físico permanece **440 L**, lotes **340 + 100 = 440 L**, legado UNASSIGNED **5 L**; portanto **nenhuma baixa foi aplicada**;
-- F10 PASS;
-- F11 PASS;
-- F12 PASS;
-- F13 PASS — som OK / vibração não suportada no navegador;
-- F14 **RETESTE PASS** após correção single-shot;
-- F15 pendente;
-- F16 pendente por indisponibilidade iOS.
+### Objetivo do próximo gate
 
-### Rules vigentes a auditar
+1. coletar os documentos raw reais estritamente necessários para F06/F09;
+2. preservar IDs/revisions/lastMovementId/position/presentation/origin/barcode/lot shape bruto;
+3. obter o Runtime Log server-side correspondente ao F05 sem expor secrets;
+4. reproduzir o estado real no Firebase Emulator;
+5. localizar a **primeira condição DENY** por fluxo;
+6. somente depois disso propor owner e correção mínima.
 
-- principal: `firestore.rules@bc91185f34bcdcb4437a4de1078d1089a09292ba`;
-- Warehouse: `firestore.warehouse.rules@6e1f1050005314db4e17cb3136409abbddb0ee91`.
+### Governança
 
-As Rules já estão publicadas. Esta frente **não pode editá-las nem republicá-las**.
-
-### Objetivo da forensics
-
-Provar, com evidência reproduzível, a causa exata de cada blocker:
-
-1. **F06 Transferência** — reconstruir a transação canônica real: movement, source/destination locationBalances, aggregate balance, lotes e metadados; mapear cada write contra a função específica de `firestore.warehouse.rules`; identificar a primeira condição que retorna DENY;
-2. **F09 Saída** — reconstruir a tentativa EXPRESS_OUTBOUND/withdrawal/consumption correspondente, comparar before/after previstos com as Rules e provar qual invariante rejeita a operação;
-3. **F05 Alocação** — auditar `/api/adm-deposito/intake-action`, disponibilidade de credencial server-side, chamadas REST/Admin e classificação de `WAREHOUSE_FAST_PATH_UNAVAILABLE`; separar problema de ambiente/credencial de problema de contrato Firestore;
-4. comparar dados reais legados do material/posição/lotes com os fixtures que hoje passam no Emulator;
-5. reproduzir no Firebase Emulator o menor caso possível que demonstre o DENY;
-6. propor **correção mínima**, mas não implementá-la nesta frente.
-
-### Governança obrigatória
-
-- auditoria read-only em dados reais é permitida;
-- nenhuma escrita real;
-- não executar transferência/saída/alocação real;
-- não executar repair;
-- não alterar ou publicar Rules;
-- não alterar `main`;
-- não alterar `rc-r1-physical-fix-01`;
-- não mascarar o erro com fallback legado;
-- não afrouxar Rules para fazer teste passar;
-- não declarar causa sem prova;
-- se a evidência apontar para mais de uma causa possível, classificar **PARCIAL — CAUSA NÃO ISOLADA** e listar o dado que falta.
-
-### Saída esperada
-
-Documento:
-
-`docs/WAREHOUSE_MOBILE_WRITE_FORENSICS_01.md`
-
-A classificação final deve ser uma destas:
-
-- `PASS — CAUSA PROVADA / FIX PLAN DETERMINÍSTICO`;
-- `PASS PARCIAL — F05/F06/F09 COM CAUSAS DISTINTAS PROVADAS`;
-- `PARCIAL — CAUSA NÃO ISOLADA`;
-- `BLOCKER — EVIDÊNCIA INSUFICIENTE`.
-
-Somente depois do handoff causal o Coordenador decide reativar `RC-R1-PHYSICAL-FIX-01`.
+- nenhuma nova tentativa F05/F06/F09 em Production;
+- nenhuma escrita Firestore;
+- nenhuma alteração de Rules;
+- nenhum repair;
+- nenhuma alteração de `main`;
+- nenhuma alteração em `rc-r1-physical-fix-01`;
+- leitura Production apenas dirigida e registrada;
+- se o acesso ao Runtime Log/secret state de F05 continuar indisponível, declarar explicitamente a limitação e não inferir ausência de secret.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
