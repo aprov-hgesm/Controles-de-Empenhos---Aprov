@@ -185,6 +185,11 @@ jobs:
       - name: ADM Depósito Phase 8 permanent guard
         run: npm run verify:adm-deposito-phase-8
 
+      - name: WAREHOUSE-PERFORMANCE isolated cache and repository tests
+        run: |
+          npm run test:performance-r3-memory-cache
+          node --test scripts/warehouse-performance-repository.test.mjs
+
       - name: Central Móvel R1 scanner contract tests
         run: npm run test:mobile-r1-scanner
 
