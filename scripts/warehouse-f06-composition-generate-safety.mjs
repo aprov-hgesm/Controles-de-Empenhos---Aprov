@@ -4,7 +4,27 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const original = readFileSync('scripts/warehouse-f06-transaction-emulator.test.mjs','utf8');
 const marker = "  const final = await snapshot('materials', fixtureId(1));";
-const extraHelpers = "\nconst {fork}=require('node:child_process');\nfunction launchActor(f,key,subject,amount,mode='normal'){\n  const cp=fork(resolve(ROOT,'scripts/warehouse-f06-final-review-worker.mjs'),\n    [f.materialId,key,subject,String(amount),mode],{\n      stdio:['ignore','pipe','pipe','ipc'],env:{...process.env}\n    });\n  let stderr='';\n  cp.stderr.on('data',b=>{stderr+=b.toString();});\n  const seen=[],waiters=[];\n  cp.on('message',m=>{\n    const index=waiters.findIndex(x=>x.type===m.type);\n    if(index>=0){waiters.splice(index,1)[0].resolve(m);}\n    else seen.push(m);\n  });\n  cp.on('exit',(code)=>{\n    for(const w of waiters.splice(0))w.reject(new Error('worker exited '+code+' '+stderr.slice(-600)));\n  });\n  return{\n    send:msg=>cp.send(msg),\n    wait:type=>new Promise((resolve,reject)=>{\n      const i=seen.findIndex(x=>x.type===type);\n      if(i>=0) return resolve(seen.splice(i,1)[0]);\n      waiters.push({type,resolve,reject});\n      setTimeout(()=>reject(new Error('timeout '+type+' '+stderr.slice(-600))),12000).unref();\n    }),\n    stop:()=>cp.kill(),\n  };\n}\n";
+const extraHelpers = "\nconst {fork}=require('node:child_process');
+async function registerSectorUser(email){
+  const base='http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/';
+  const api='?key=fake-api-key';
+  const signup=await fetch(base+'accounts:signUp'+api,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({email,password:'F06-Sector-Testing-123!',returnSecureToken:true})
+  });
+  const data=await signup.json();
+  if(!signup.ok)throw new Error('AUTH_EMULATOR_SIGNUP_FAILED '+JSON.stringify(data));
+  const claims={emprovexWarehouse:true,emprovexWarehouseVersion:'v1',emprovexRole:'sector',
+    emprovexWorkspaceId:WORKSPACE_ID,emprovexUg:UG};
+  const patch=await fetch(base+'accounts:update'+api,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({localId:data.localId,emailVerified:true,customAttributes:JSON.stringify(claims)})
+  });
+  const updated=await patch.json();
+  if(!patch.ok)throw new Error('AUTH_EMULATOR_CLAIMS_FAILED '+JSON.stringify(updated));
+  return data.localId;
+}
+\nfunction launchActor(f,key,subject,amount,mode='normal'){\n  const cp=fork(resolve(ROOT,'scripts/warehouse-f06-final-review-worker.mjs'),\n    [f.materialId,key,subject,String(amount),mode],{\n      stdio:['ignore','pipe','pipe','ipc'],env:{...process.env}\n    });\n  let stderr='';\n  cp.stderr.on('data',b=>{stderr+=b.toString();});\n  const seen=[],waiters=[];\n  cp.on('message',m=>{\n    const index=waiters.findIndex(x=>x.type===m.type);\n    if(index>=0){waiters.splice(index,1)[0].resolve(m);}\n    else seen.push(m);\n  });\n  cp.on('exit',(code)=>{\n    for(const w of waiters.splice(0))w.reject(new Error('worker exited '+code+' '+stderr.slice(-600)));\n  });\n  return{\n    send:msg=>cp.send(msg),\n    wait:type=>new Promise((resolve,reject)=>{\n      const i=seen.findIndex(x=>x.type===type);\n      if(i>=0) return resolve(seen.splice(i,1)[0]);\n      waiters.push({type,resolve,reject});\n      setTimeout(()=>reject(new Error('timeout '+type+' '+stderr.slice(-600))),12000).unref();\n    }),\n    stop:()=>cp.kill(),\n  };\n}\n";
 if (original.split(marker).length !== 2
     || !original.includes("await t.test('same-key concurrent calls commit once'")
     || !original.includes("await t.test('different-key concurrency cannot overdraw")) {
@@ -72,8 +92,10 @@ const extra = `
 
   await t.test('two independent authenticated UIDs contend with distinct keys', async () => {
     const f=await fixture(15,10);
-    const a=launchActor(f,'actor-A','f06-operator-A',7);
-    const b=launchActor(f,'actor-B','f06-operator-B',7);
+    const [emailA,emailB]=['f06-operator-a@example.test','f06-operator-b@example.test'];
+    await Promise.all([registerSectorUser(emailA),registerSectorUser(emailB)]);
+    const a=launchActor(f,'actor-A',emailA,7,'sector');
+    const b=launchActor(f,'actor-B',emailB,7,'sector');
     try {
       const [ar,br]=await Promise.all([a.wait('ready'),b.wait('ready')]);
       assert.notEqual(ar.uid,br.uid,'clients must have distinct authorized UIDs');
