@@ -1283,14 +1283,7 @@ service cloud.firestore {
       let toAfter = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
       ).data;
-      // Fail closed when a contended/aborted batch has no after-image.
-      return existsAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
-        )
-        && existsAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
-        )
-        && fromAfter.lastMovementId == movementId
+      return fromAfter.lastMovementId == movementId
         && toAfter.lastMovementId == movementId;
     }
 
@@ -1441,28 +1434,25 @@ service cloud.firestore {
       let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
         && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
-        && existsAfter(movementPath)
         && movement.id == movementId
         && movement.schemaVersion == 'warehouse_movement_v1'
         && (
-          movement.type == 'TRANSFER'
-          ? (
-            // Early check of revision/delta on contended transactions.
-            warehouseLocationBalanceMatchesTransfer(
-              workspaceId,
-              locationBalanceId,
-              movement
-            )
+          (
+            movement.type == 'TRANSFER'
             && validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement)
             && warehousePositionActive(
               workspaceId,
               request.resource.data.position,
               request.resource.data.ug
             )
+            && warehouseLocationBalanceMatchesTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
           )
-          : (
-            (
-              isOutbound
+          || (
+            isOutbound
             && validWarehouseExpressOutboundLocationBalanceDocument(
               workspaceId,
               locationBalanceId,
@@ -1502,7 +1492,6 @@ service cloud.firestore {
               locationBalanceId,
               movement
             )
-          )
           )
         );
     }
@@ -1686,10 +1675,11 @@ service cloud.firestore {
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
-      return movement.type == 'TRANSFER'
-        ? validWarehouseTransferMovementCreate(workspaceId, movementId)
-        : (
-          (
+      return (
+          movement.type == 'TRANSFER'
+          && validWarehouseTransferMovementCreate(workspaceId, movementId)
+        )
+        || (
           warehouseMovementIsExpressOutbound(movement)
           && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
         )
@@ -1703,7 +1693,7 @@ service cloud.firestore {
           && !warehouseMovementIsInventoryAdjustment(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
           && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
-        ));
+        );
     }
 
     function validWarehouseMovementDocument(workspaceId, movementId) {
