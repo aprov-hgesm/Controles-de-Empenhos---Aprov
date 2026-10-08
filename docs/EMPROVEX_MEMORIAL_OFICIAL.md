@@ -12,6 +12,29 @@ Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Cen
 
 ---
 
+## 0-A. WAREHOUSE-RECOVERY — correção paralela autorizada em 2026-10-08
+
+**Decisão do Fundador:** priorizar correção efetiva das regressões de movimentação no ADM Depósito/Central Mobile e simplificação do fluxo, sem ciclos adicionais de auditoria genérica. Quatro workers independentes e paralelos foram autorizados. Corrigir causas demonstráveis com testes direcionados e entregar código funcional, mantendo isolamento workspace/UG, idempotência, ledger canônico, integridade de saldos, atomicidade, permissões e rastreabilidade. **Não interpretar esta autorização como permissão para executar writes exploratórios em Production, publicar Rules, promover deploy ou fazer merge em main sem gates e decisão de integração.**
+
+**Base comum verificada via GitHub em 2026-10-08:** `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` (identical); `warehouse-mobile-write-evidence-01@2fe19299beff5c1eef268d647b05904fd98ee1cb` (identical). PR #268 permanece frente de coleta GET-only/evidência, sem bloquear trabalho de correção que possa ser validado localmente. F05/F06/F09 têm falhas operacionais registradas; o mecanismo causal individual ainda não está provado. Nenhuma mudança em Production foi realizada por esta decisão.
+
+**Branches criadas no GitHub, cada uma partindo exclusivamente de main@97556bb8...:**
+
+| Worker | Branch | Escopo proprietário | Restrições |
+| --- | --- | --- | --- |
+| W1 F05 | `warehouse-fix-f05` | `app/api/adm-deposito/intake-action/route.ts`, caminhos de alocação/consumo imediato, testes exclusivos | não modificar serviços de transferência/saída nem Rules por conta própria |
+| W2 F06 | `warehouse-fix-f06` | `lib/warehouse/locationRepository.ts`, `lib/warehouse/transfer.ts`, transferência Mobile/Desktop, testes exclusivos | não modificar OUTBOUND/intake nem Rules por conta própria |
+| W3 F09 | `warehouse-fix-f09` | `lib/warehouse/outboundRepository.ts`, `lib/warehouse/withdrawalRepository.ts`, saída Mobile/Desktop, testes exclusivos | não modificar transferência/intake nem Rules por conta própria |
+| W4 Perf | `warehouse-performance-fix` | cache/leitura/consultas/UI e medição de requests, sem alterar caminhos transacionais de W1–W3 | não modificar Rules, saldos, ledger ou schemas de escrita |
+
+**Coordenação de arquivos compartilhados:** `firestore.warehouse.rules`, `lib/warehouse/readCompatibility.ts`, `lib/warehouse/mobileOutboundRepository.ts`, `lib/warehouse/mobileTransferLotRepository.ts` e `docs/EMPROVEX_MEMORIAL_OFICIAL.md` não têm edição simultânea automática: workers devem propor alteração justificada no PR/handoff, com owner definido pelo Coordenador; alterações compartilhadas exigem reconciliação explícita. Branches não integram outras branches worker durante execução. PRs draft, sem merge direto em main.
+
+**Fluxo de entrega enxuto:** reproduzir com teste local/Emulator sempre que possível → correção mínima eficaz → teste de falha anterior + sucesso + replay/idempotência + saldo/ledger → CI/Core Protection → PR draft + handoff objetivo (SHA, arquivos, testes, evidência, riscos) → integração sequencial dos deltas → repetição dos gates afetados → validação humana controlada. Evitar retestes de escrita em dados reais antes de validação em ambiente isolado. Diagnóstico F05 deve preservar classificação server-side sem revelar credenciais.
+
+**Critério de saída:** F05 alocação, F06 transferência e F09 saída funcionais e sem duplicação; Desktop e Mobile compartilham autoridade canônica; redução mensurável de leituras/custo/latência sem prometer zero writes Firestore para movimentos confirmados. `RC-R1-PHYSICAL-FIX-01` e produção não são alterados automaticamente. Bloqueio DNS do Windows permanece independente; atividades GitHub dos workers podem progredir remotamente.
+
+---
+
 ## 0. Finalidade e regra de leitura
 
 Este é o **documento de entrada canônico do EMPROVEX**.
