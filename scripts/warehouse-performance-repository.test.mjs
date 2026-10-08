@@ -103,6 +103,19 @@ function createHarness() {
       validateWarehouseMaterial: (data) => ({ ok: true, data }),
     },
     './locationBarcode': { isWarehouseLocationBarcode: () => false },
+    './location': {
+      validateWarehouseStockPosition: (position) => position,
+      createWarehouseLocationBalanceId: async () => 'locbal_test',
+      validateWarehouseLocationBalance: (value) => ({ ok: true, data: value }),
+    },
+    './lot': { validateWarehouseLot: (value) => ({ ok: true, data: value }) },
+    './movement': {
+      createWarehouseMovementId: async () => 'mov_test',
+      validateWarehouseBalance: (value) => ({ ok: true, data: value }),
+      validateWarehouseMovement: (value) => ({ ok: true, data: value }),
+    },
+    './outbound': {},
+
     './namespace': {
       warehouseDomainPath: (ws, domain) => pathFor(ws, domain, ''),
       warehouseDocumentPath: pathFor,
@@ -110,6 +123,8 @@ function createHarness() {
     './readCompatibility': {
       warehouseCanonicalBarcodeReadInput: (id, data) => ({ ...data, id }),
       warehouseCanonicalMaterialReadInput: (id, data) => ({ ...data, id }),
+      warehouseCanonicalLocationBalanceReadInput: (id, data) => ({ ...data, id }),
+      warehouseCanonicalLotReadInput: (id, data) => ({ ...data, id }),
     },
     './memoryReadCache': {
       createWorkspaceMemoryReadCache: (options) => memory.createWorkspaceMemoryReadCache({
@@ -119,13 +134,14 @@ function createHarness() {
     },
   };
   const repository = loadTypeScript('lib/warehouse/barcodeRepository.ts', imports);
+  const outbound = loadTypeScript('lib/warehouse/outboundRepository.ts', imports);
   function seed(workspaceId = 'ws-a', barcode = '7891234567890', status = 'active') {
     docs.set(pathFor(workspaceId, 'barcodes', 'bar_' + barcode), {
       barcode, workspaceId, ug: 'UG-1', status, materialId: 'material-1',
     });
   }
   return {
-    repository, user, seed, docs, pathFor,
+    repository, outbound, user, seed, docs, pathFor,
     get requests() { return requests; },
     get observedDocuments() { return observedDocuments; },
     get writes() { return writes; },
@@ -236,4 +252,36 @@ test('repository real: leitura cacheada não autoriza mutação contra material 
     /WAREHOUSE_MATERIAL_INACTIVE/
   );
   assert.equal(h.writes, 0);
+});
+
+test('outbound real: barcode stale não supera reread transacional do Firestore', async () => {
+  const h = createHarness();
+  h.seed();
+  const barcode = await h.repository.getWarehouseBarcodeByCode('ws-a', '7891234567890');
+  assert.equal(barcode.status, 'active');
+  h.docs.set(h.pathFor('ws-a', 'materials', 'material-1'), {
+    workspaceId: 'ws-a', ug: 'UG-1', status: 'active', id: 'material-1',
+  });
+  h.docs.set(h.pathFor('ws-a', 'balances', 'material-1'), {
+    schemaVersion: 'warehouse_balance_v1', workspaceId: 'ws-a',
+    ug: 'UG-1', materialId: 'material-1', quantity: 15,
+    revision: 1, lastMovementId: 'mov_previous',
+  });
+  // Another operator changed the association while our short read cache is still warm.
+  h.docs.set(h.pathFor('ws-a', 'barcodes', 'bar_7891234567890'), {
+    ...barcode, status: 'inactive',
+  });
+  assert.equal((await h.repository.getWarehouseBarcodeByCode('ws-a', '7891234567890')).status, 'active');
+  await assert.rejects(
+    h.outbound.applyWarehouseExpressOutbound('ws-a', {
+      materialId: 'material-1',
+      requestedQuantity: 1,
+      presentation: { code: 'unit', label: 'Unidade' },
+      position: { kind: 'LOCATION', depotId: 'depot-1', locationId: 'location-1' },
+      barcodeAssociation: barcode,
+      idempotencyKey: 'test-idempotency',
+    }),
+    /WAREHOUSE_BARCODE_CHANGED/
+  );
+  assert.equal(h.writes, 0, 'no movement or stock writes may follow a changed barcode');
 });
