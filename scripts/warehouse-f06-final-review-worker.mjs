@@ -48,11 +48,16 @@ require.extensions['.ts']=(module,filename)=>{
       code=code.replace(target,inject);
       target='          const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([';
       inject=`          await proof.get(doc(db,fromBalancePath));
-          process.send?.({type:'proof-half'});
-          await new Promise(resolve => {
-            const listener=msg=>{if(msg?.type==='resume'){process.off('message',listener);resolve();}};
-            process.on('message',listener);
-          });
+          // A concurrent write can restart the read transaction. Pause only
+          // the first callback; subsequent retries must finish, not deadlock.
+          if (!process.__f06ProofPausedOnce) {
+            process.__f06ProofPausedOnce = true;
+            process.send?.({type:'proof-half'});
+            await new Promise(resolve => {
+              const listener=msg=>{if(msg?.type==='resume'){process.off('message',listener);resolve();}};
+              process.on('message',listener);
+            });
+          }
 `+target;
     } else throw new Error('UNKNOWN_CANARY_MODE');
     if(code.split(target).length !== 2)throw new Error('CANARY_INJECTION_NOT_UNIQUE '+mode);
