@@ -86,3 +86,37 @@ jobs:
       - run: npm ci
       - name: Run complete F09 security suite
         run: npm run test:adm-deposito-modular-r1-security
+
+  f05-persistence-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load frozen F05 persistence tests and route from Worker 1 (no branch mutation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin warehouse-fix-f05
+          test "$(git rev-parse FETCH_HEAD)" = '77312f69200f1ef75902e48a267d3ae9ba0389cb'
+          for file in app/api/adm-deposito/intake-action/route.ts scripts/warehouse-f05-route-transaction.test.mjs scripts/warehouse-fast-intake-errors.test.mjs scripts/warehouse-f05-firestore-emulator.mjs; do
+            git show "FETCH_HEAD:$file" > "$file"
+          done
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: F05 pure transaction and error regressions
+        run: node --test scripts/warehouse-fast-intake-errors.test.mjs scripts/warehouse-f05-route-transaction.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: F05 Firestore REST Emulator real persistence
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-f05
+          --only firestore
+          "node scripts/warehouse-f05-firestore-emulator.mjs"
