@@ -235,7 +235,11 @@ test('F06 real transaction on named Firestore Emulator', { timeout: 180000 }, as
       transferWarehouseStock(WORKSPACE_ID, request),
       transferWarehouseStock(WORKSPACE_ID, request),
     ]);
-    assert.equal(attempts.filter((item) => item.status === 'rejected').length, 0, JSON.stringify(attempts));
+    assert.equal(
+      attempts.filter((item) => item.status === 'rejected').length,
+      0,
+      attempts.filter((item) => item.status === 'rejected').map((item) => String(item.reason)).join('; ')
+    );
     assert.deepEqual(attempts.map((item) => item.value.applied).sort(), [false, true]);
     await assertState(f, 5, 7, 1);
   });
@@ -247,7 +251,13 @@ test('F06 real transaction on named Firestore Emulator', { timeout: 180000 }, as
       transferWarehouseStock(WORKSPACE_ID, input(f, 'race-B', 7)),
     ]);
     assert.equal(attempts.filter((item) => item.status === 'fulfilled').length, 1, JSON.stringify(attempts));
-    assert.equal(attempts.filter((item) => item.status === 'rejected').length, 1);
+    const failures = attempts.filter((item) => item.status === 'rejected');
+    assert.equal(failures.length, 1);
+    assert.match(
+      String(failures[0].reason),
+      /WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/,
+      'Concurrent overdraft must fail by stock invariant, not a Rules evaluation error'
+    );
     await assertState(f, 3, 7, 1);
   });
 
