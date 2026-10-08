@@ -130,6 +130,36 @@ const extra = `
     }
   });
 
+  await t.test('third concurrent movement during reconciler read window is fail-closed',async()=>{
+    const f=await fixture(18,10);
+    const loser=launchActor(f,'interleaved-denied','f06-interleaved',7,'force-budget-third');
+    try{
+      await loser.wait('ready'); loser.send({type:'go'});
+      await loser.wait('proof-half');
+      // The production code is running a read-only Firestore transaction;
+      // inject two valid other operations during its read window. The budget
+      // error itself is injected by the TEST LOADER only, not production.
+      let started=0,finishedBeforeResume=0;
+      const writes=(async()=>{
+        started++;
+        const first=await transferWarehouseStock(WORKSPACE_ID,input(f,'interleaved-winner',7));
+        assert.equal(first.applied,true);
+        started++;
+        const third=await transferWarehouseStock(WORKSPACE_ID,input(f,'interleaved-third',1));
+        assert.equal(third.applied,true);
+        return [first,third];
+      })();
+      await new Promise(r=>setTimeout(r,120));
+      finishedBeforeResume=(await Promise.race([writes.then(()=>1),new Promise(r=>setTimeout(()=>r(0),10))]));
+      loser.send({type:'resume'});
+      const [reconciled,committed]=await Promise.all([loser.wait('result'),writes]);
+      assert.equal(reconciled.status,'rejected',JSON.stringify(reconciled));
+      assert.equal(committed.length,2);
+      await assertState(f,2,8,2);
+      console.log('F06_THIRD_WRITER_WINDOW: transactionsStarted='+started+' commitsBeforeResume='+finishedBeforeResume);
+    }finally{loser.stop();}
+  });
+
 `;
 writeFileSync('scripts/warehouse-f06-composition-security.test.mjs',original.replace(marker,extra+marker).replace('test.after(async () => {',extraHelpers+'test.after(async () => {'));
-console.log('COMPOSITION_SAFETY_ORIGINAL_9_ASSERTIONS_UNMODIFIED; +7 adversarial tests generated');
+console.log('COMPOSITION_SAFETY_ORIGINAL_9_ASSERTIONS_UNMODIFIED; +8 adversarial tests generated');
