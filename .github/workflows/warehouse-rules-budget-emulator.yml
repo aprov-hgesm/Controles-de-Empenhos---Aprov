@@ -1,0 +1,88 @@
+name: Warehouse Rules Budget F06 F09 Emulator
+
+on:
+  push:
+    branches:
+      - warehouse-rules-eval-budget-fix
+  pull_request:
+    paths:
+      - firestore.warehouse.rules
+      - .github/workflows/warehouse-rules-budget-emulator.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  f06-transfer-with-candidate-rules:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Overlay only F06 canonical engine and its test (pinned)
+        shell: bash
+        run: |
+          git fetch --no-tags origin warehouse-fix-f06
+          test "$(git rev-parse FETCH_HEAD)" = "b04f2bf0405fef2e948a00e00700fadb412cfb58"
+          git show FETCH_HEAD:lib/warehouse/locationRepository.ts > lib/warehouse/locationRepository.ts
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
+          test -z "$(git diff --name-only -- firestore.warehouse.rules)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: F06 real transferWarehouseStock on isolated Firestore Emulator
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
+      - name: Save Emulator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rules-budget-f06-debug
+          path: firestore-debug.log
+          if-no-files-found: warn
+
+  f09-outbound-with-candidate-rules:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin F09 security test revision and overlay its outbound engine
+        shell: bash
+        run: |
+          git fetch --no-tags origin warehouse-fix-f09
+          test "$(git rev-parse FETCH_HEAD)" = "de0285c656e92fc8743007863bd344acc0917e61"
+          git show FETCH_HEAD:lib/warehouse/outboundRepository.ts > lib/warehouse/outboundRepository.ts
+          git show FETCH_HEAD:scripts/warehouse-modular-r1-security.test.mjs > scripts/warehouse-modular-r1-security.test.mjs
+          test -z "$(git diff --name-only -- firestore.warehouse.rules)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: F09 ALLOW and DENY warehouse security scenarios in isolated Emulator
+        run: npm run test:adm-deposito-modular-r1-security
+      - name: Save Emulator diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rules-budget-f09-debug
+          path: firestore-debug.log
+          if-no-files-found: warn
