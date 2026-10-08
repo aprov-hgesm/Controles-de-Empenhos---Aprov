@@ -972,7 +972,7 @@ async function performAllocation(
     write(
       WAREHOUSE_DATABASE_ID,
       paths.lot,
-      { ...nextLot, createdAt: lotDocument?.data.createdAt || now, updatedAt: now },
+      { ...nextLot, createdAt: new Date(timestamp(lotDocument?.data.createdAt) || now), updatedAt: now },
       lotDocument
     ),
   ];
