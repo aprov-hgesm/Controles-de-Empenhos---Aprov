@@ -31,3 +31,11 @@ jobs:
       - run: npm ci
       - name: Exercise Warehouse Firestore rules in emulator
         run: npm run test:adm-deposito-modular-r1-security
+      - name: Preserve Emulator diagnostic logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: f09-firestore-emulator-debug
+          path: firestore-debug.log
+          if-no-files-found: warn
+          retention-days: 7
