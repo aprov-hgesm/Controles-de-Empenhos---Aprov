@@ -1283,7 +1283,14 @@ service cloud.firestore {
       let toAfter = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
       ).data;
-      return fromAfter.lastMovementId == movementId
+      // Fail closed when a contended/aborted batch has no after-image.
+      return existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
+        )
+        && existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
+        )
+        && fromAfter.lastMovementId == movementId
         && toAfter.lastMovementId == movementId;
     }
 
@@ -1434,6 +1441,7 @@ service cloud.firestore {
       let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
         && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
+        && existsAfter(movementPath)
         && movement.id == movementId
         && movement.schemaVersion == 'warehouse_movement_v1'
         && (
