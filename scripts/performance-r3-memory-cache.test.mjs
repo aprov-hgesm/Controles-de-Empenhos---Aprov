@@ -228,3 +228,29 @@ test('cenário sintético da Central reduz 8 carregamentos estruturais para 2', 
     'synthetic controlled: 8 -> 2 loaders; 64 -> 16 document-equivalents (75% reduction)'
   );
 });
+
+
+test('barcode lookup is isolated by operator UID and UG even within a workspace', async () => {
+  let reads = 0;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+  const lookup = (uid, ug) => cache.read(
+    'workspace-a',
+    `${uid}:${ug}:barcode-hash`,
+    async () => ++reads
+  );
+
+  assert.equal(await lookup('operator-a', 'UG-1'), 1);
+  assert.equal(await lookup('operator-a', 'UG-1'), 1);
+  assert.equal(await lookup('operator-b', 'UG-1'), 2);
+  assert.equal(await lookup('operator-a', 'UG-2'), 3);
+  cache.invalidate('workspace-a');
+  assert.equal(await lookup('operator-a', 'UG-1'), 4);
+  assert.equal(reads, 4);
+});
+
+test('barcode lookup source invalidates after each successful association mutation', () => {
+  const source = readFileSync(resolve(ROOT, 'lib/warehouse/barcodeRepository.ts'), 'utf8');
+  assert.match(source, /barcodeLookupCache\.read\(/);
+  assert.match(source, /scope\.uid.*scope\.ug.*id/);
+  assert.equal((source.match(/barcodeLookupCache\.invalidate\(scope\.workspaceId\)/g) ?? []).length, 3);
+});
