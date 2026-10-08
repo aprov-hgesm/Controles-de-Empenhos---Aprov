@@ -22,8 +22,8 @@ jobs:
       - name: Overlay only F06 canonical engine and its test (pinned)
         shell: bash
         run: |
-          git fetch --no-tags origin warehouse-fix-f06
-          test "$(git rev-parse FETCH_HEAD)" = "b04f2bf0405fef2e948a00e00700fadb412cfb58"
+          git fetch --no-tags origin warehouse-f06-fixture-fix-01
+          test "$(git rev-parse FETCH_HEAD)" = "7b499254f5d10487be2622e92c78fae18d7c76d1"
           git show FETCH_HEAD:lib/warehouse/locationRepository.ts > lib/warehouse/locationRepository.ts
           git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
           test -z "$(git diff --name-only -- firestore.warehouse.rules)"
