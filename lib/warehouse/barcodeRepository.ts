@@ -230,7 +230,7 @@ export async function saveWarehouseBarcodeAssociation(
           updatedBy: scope.uid,
           updatedAt: serverTimestamp(),
         });
-        return { ...existing, status: 'active', updatedBy: scope.uid };
+        return { ...existing, status: 'active' as const, updatedBy: scope.uid };
       }
 
       const candidate = validateWarehouseBarcodeAssociation(
