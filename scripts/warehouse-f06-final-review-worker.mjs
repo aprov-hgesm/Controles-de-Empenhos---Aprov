@@ -15,7 +15,7 @@ const from={kind:'LOCATION',depotId,locationId:locA,subpositionId:null};
 const to={kind:'LOCATION',depotId,locationId:locB,subpositionId:null};
 require.extensions['.ts']=(module,filename)=>{
   let code=readFileSync(filename,'utf8');
-  if(filename.endsWith('/lib/warehouse/locationRepository.ts') && mode !== 'normal'){
+  if(filename.endsWith('/lib/warehouse/locationRepository.ts') && mode !== 'normal' && mode !== 'sector'){
     let target,inject;
     if(mode === 'pause-proof') {
       target='const classified = await runTransaction(db, async (proof) => {';
@@ -49,11 +49,24 @@ require.extensions['.ts']=(module,filename)=>{
 };
 const {auth}=require(resolve(ROOT,'lib/firebase.ts'));
 const {transferWarehouseStock}=require(resolve(ROOT,'lib/warehouse/locationRepository.ts'));
-const {GoogleAuthProvider,signInWithCredential}=require('firebase/auth');
+const {GoogleAuthProvider,signInWithCredential,signInWithEmailAndPassword}=require('firebase/auth');
 const {deleteApp,getApp}=require('firebase/app');
-await signInWithCredential(auth,GoogleAuthProvider.credential(JSON.stringify({
-  sub:subject,email:'aprov1hgesm@gmail.com',email_verified:true
-})));
+if(mode==='sector'){
+  await signInWithEmailAndPassword(auth,subject,'F06-Sector-Testing-123!');
+  const {resolveWorkspaceContext,rememberResolvedWorkspaceContext}=require(resolve(ROOT,'lib/workspaceContext.ts'));
+  const founderCtx=resolveWorkspaceContext('aprov1hgesm@gmail.com');
+  if(founderCtx.status!=='sector')throw new Error('F06_SECTOR_SCOPE_UNAVAILABLE');
+  rememberResolvedWorkspaceContext(auth.currentUser.uid,{
+    ...founderCtx,email:subject,resolutionSource:'platform-directory'
+  });
+  const claims=await auth.currentUser.getIdTokenResult(true);
+  if(claims.signInProvider!=='password'||claims.claims.emprovexWarehouse!==true
+    ||claims.claims.email_verified!==true)throw new Error('F06_SECTOR_CLAIMS_INVALID');
+}else{
+  await signInWithCredential(auth,GoogleAuthProvider.credential(JSON.stringify({
+    sub:subject,email:'aprov1hgesm@gmail.com',email_verified:true
+  })));
+}
 process.send({type:'ready',uid:auth.currentUser.uid,subject,ug});
 process.on('message',async m=>{
   if(m?.type!=='go')return;
