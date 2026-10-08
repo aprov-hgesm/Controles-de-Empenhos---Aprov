@@ -41,6 +41,19 @@ jobs:
           --project demo-emprovex-f06
           --only auth,firestore
           "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
+      - name: Generate adversarial companion fixture with original assertions intact
+        run: node scripts/warehouse-f06-composition-generate-safety.mjs
+      - name: Verify access, offline server reads and third contender on Emulator
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-composition-security.test.mjs"
       - name: Save failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
