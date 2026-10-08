@@ -3,6 +3,7 @@ import {
   Timestamp,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   limit,
   query,
@@ -1252,6 +1253,10 @@ export async function transferWarehouseStock(
     warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
   );
 
+  let attempted: {
+    fromQty:number; fromRev:number; toQty:number; toRev:number;
+    aggregateQty:number; aggregateRev:number;
+  } | null = null;
   try {
     return await runTransaction(db, async (transaction) => {
       const materialRef = doc(db, materialPath);
@@ -1337,6 +1342,13 @@ export async function transferWarehouseStock(
 
       const available = existingFrom?.quantity ?? 0;
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+      // The transaction snapshot is authoritative. A failed commit can only
+      // be reconciled against this baseline and a newer server snapshot.
+      attempted = {
+        fromQty: available, fromRev: existingFrom!.revision,
+        toQty: existingTo?.quantity ?? 0, toRev: existingTo?.revision ?? 0,
+        aggregateQty: currentBalance.quantity, aggregateRev: currentBalance.revision,
+      };
 
       const nextFrom = applyWarehouseLocationDelta(existingFrom, {
         id: fromBalanceId,
@@ -1481,9 +1493,13 @@ export async function transferWarehouseStock(
     // Firestore Rules evaluation budget is exceeded. A failure is NOT a replay.
     // Only a fully matching, readable committed movement is authoritative.
     const code = (error as { code?: unknown } | null)?.code;
-    if (code === 'permission-denied' || code === 'aborted') {
+    // Do not reinterpret generic permission-denied, revoked access or ABORTED.
+    // The explicit Rules budget diagnostic is necessary but not sufficient.
+    const budgetDenied = code === 'permission-denied'
+      && /maximum of 1000 expressions/i.test(String(error));
+    if (budgetDenied) {
       try {
-        const committedSnapshot = await getDoc(doc(db, movementPath));
+        const committedSnapshot = await getDocFromServer(doc(db, movementPath));
         if (committedSnapshot.exists()) {
           const committedMovement = parseMovement(
             scope.workspaceId,
@@ -1522,9 +1538,9 @@ export async function transferWarehouseStock(
           // Read-only, bounded proof (one movement + three balance documents).
           // Fresh canonical balances are validated, never written or synthesized.
           const [aggregateSnapshot, sourceSnapshot, destinationSnapshot] = await Promise.all([
-            getDoc(doc(db, balancePath)),
-            getDoc(doc(db, fromBalancePath)),
-            getDoc(doc(db, toBalancePath)),
+            getDocFromServer(doc(db, balancePath)),
+            getDocFromServer(doc(db, fromBalancePath)),
+            getDocFromServer(doc(db, toBalancePath)),
           ]);
           if (!aggregateSnapshot.exists() || !sourceSnapshot.exists() || !destinationSnapshot.exists()) {
             throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
@@ -1556,6 +1572,66 @@ export async function transferWarehouseStock(
             fromBalance: source,
             toBalance: destination,
           };
+
+        } else if (attempted) {
+          // Bounded follow-up only after a budget-denied write; never scan
+          // arbitrary ledger history or depend on fixture revisions/amounts.
+          const prior = attempted;
+          const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([
+            getDocFromServer(doc(db, fromBalancePath)),
+            getDocFromServer(doc(db, toBalancePath)),
+            getDocFromServer(doc(db, balancePath)),
+            getDocFromServer(doc(db, materialPath)),
+          ]);
+          if (fromNow.exists() && toNow.exists() && aggregateNow.exists() && materialNow.exists()) {
+            const source = parseLocationBalance(scope.workspaceId, fromNow.id, fromNow.data() as Record<string, unknown>);
+            const destination = parseLocationBalance(scope.workspaceId, toNow.id, toNow.data() as Record<string, unknown>);
+            const aggregate = parseBalance(scope.workspaceId, input.materialId, aggregateNow.data() as Record<string, unknown>);
+            const material = parseMaterial(scope.workspaceId, materialNow.id, materialNow.data() as Record<string, unknown>);
+            const winnerId = source.lastMovementId;
+            if (
+              winnerId !== movementId
+              && winnerId === destination.lastMovementId
+              && /^mov_[a-f0-9]{64}$/.test(winnerId)
+              && material.status === 'active' && material.ug === scope.ug
+              && source.ug === scope.ug && destination.ug === scope.ug && aggregate.ug === scope.ug
+              && source.workspaceId === scope.workspaceId && destination.workspaceId === scope.workspaceId
+              && source.materialId === input.materialId && destination.materialId === input.materialId
+              && warehouseStockPositionsEqual(source.position, from)
+              && warehouseStockPositionsEqual(destination.position, to)
+              && aggregate.quantity === prior.aggregateQty && aggregate.revision === prior.aggregateRev
+              && source.revision === prior.fromRev + 1 && destination.revision === prior.toRev + 1
+              && source.quantity >= 0 && source.quantity < normalizedQuantity
+            ) {
+              const winnerSnapshot = await getDocFromServer(doc(db,
+                warehouseDocumentPath(scope.workspaceId, 'movements', winnerId)));
+              if (winnerSnapshot.exists()) {
+                const winner = parseMovement(scope.workspaceId, winnerSnapshot.id,
+                  winnerSnapshot.data() as Record<string, unknown>);
+                const win = winner.source as {
+                  kind?:string; actorUid?:string; quantity?:number;
+                  fromBalanceId?:string; toBalanceId?:string;
+                  from?:typeof from; to?:typeof to;
+                } | null;
+                if (
+                  winner.id === winnerId && winner.type === 'TRANSFER'
+                  && winner.workspaceId === scope.workspaceId && winner.ug === scope.ug
+                  && winner.materialId === input.materialId && winner.quantityDelta === 0
+                  && winner.idempotencyKeyHash === winnerId.slice(4)
+                  && win?.kind === 'LOCATION_TRANSFER' && win.actorUid === scope.uid
+                  && win.fromBalanceId === fromBalanceId && win.toBalanceId === toBalanceId
+                  && win.from != null && win.to != null
+                  && warehouseStockPositionsEqual(win.from, from)
+                  && warehouseStockPositionsEqual(win.to, to)
+                  && typeof win.quantity === 'number' && win.quantity > 0
+                  && source.quantity === prior.fromQty - win.quantity
+                  && destination.quantity === prior.toQty + win.quantity
+                ) {
+                  throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+                }
+              }
+            }
+          }
         }
       } catch (proofError) {
         // Only explicit canonical mismatches may supersede the original error.
@@ -1566,6 +1642,7 @@ export async function transferWarehouseStock(
           && (
             proofError.message === 'WAREHOUSE_IDEMPOTENCY_CONFLICT'
             || proofError.message === 'WAREHOUSE_LOCATION_BALANCE_INCONSISTENT'
+              || proofError.message === 'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK'
           )
         ) throw proofError;
       }
