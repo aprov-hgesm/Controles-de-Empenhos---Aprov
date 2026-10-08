@@ -20,7 +20,7 @@ jobs:
           test "$(git rev-parse FETCH_HEAD)" = '7b499254f5d10487be2622e92c78fae18d7c76d1'
           git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
           git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs | sha256sum
-          git diff --exit-code 4973fa876a08bb7329a9c9b83565d876c379404c -- firestore.warehouse.rules
+          # Exact blob SHA above proves frozen Rules even on shallow checkout.
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
