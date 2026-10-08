@@ -546,6 +546,21 @@ async function performAllocation(
     ? await createWarehouseBarcodeId(access.workspaceId, barcode)
     : null;
 
+  // The immutable movement records the full normalized intent. A replay with the
+  // same operationId but different barcode (including null), presentation, lot,
+  // expiry or physical position must never be accepted as an applied operation.
+  const allocationIntentHash = await sha256Hex(JSON.stringify({
+    intakeId: input.intakeId,
+    materialId: context.materialId,
+    quantity,
+    position: warehouseStockPositionKey(position),
+    lotCode,
+    expiresOn,
+    barcode,
+    presentation: warehouseUnitFromOperationalLabel(context.unitLabel),
+  }));
+  const allocationMovementNote = 'Alocação direta da Central de Depósitos | intent:' + allocationIntentHash;
+
   const root = `warehouse/${access.workspaceId}`;
   const paths = {
     intake: `${root}/intakes/${input.intakeId}`,
@@ -639,11 +654,19 @@ async function performAllocation(
       || movementDocument.data.materialId !== context.materialId
       || movementDocument.data.type !== 'INVOICE_ENTRY'
       || Math.abs(numberField(movementDocument.data.quantityDelta) - quantity) > EPSILON
+      || movementDocument.data.note !== allocationMovementNote
       || !lotDocument
       || lotDocument.data.code !== lotCode
       || lotDocument.data.expiresOn !== expiresOn
       || warehouseStockPositionKey(validateWarehouseStockPosition(lotDocument.data.position) || { kind: 'UNASSIGNED' }) !== warehouseStockPositionKey(position)
-      || (barcode !== null && (!barcodeDocument || barcodeDocument.data.materialId !== context.materialId))
+      || (barcode !== null && (
+        !barcodeDocument
+        || barcodeDocument.data.id !== barcodeId
+        || barcodeDocument.data.barcode !== barcode
+        || barcodeDocument.data.materialId !== context.materialId
+        || barcodeDocument.data.status !== 'active'
+        || JSON.stringify(barcodeDocument.data.presentation) !== JSON.stringify(warehouseUnitFromOperationalLabel(context.unitLabel))
+      ))
     ) {
       throw new FastPathError('WAREHOUSE_IDEMPOTENCY_CONFLICT', 409);
     }
@@ -790,7 +813,7 @@ async function performAllocation(
     quantityDelta: quantity,
     idempotencyKeyHash: movementId.slice('mov_'.length),
     reversesMovementId: null,
-    note: 'Alocação direta da Central de Depósitos',
+    note: allocationMovementNote,
     source: {
       kind: 'INVOICE',
       action: 'ENTRY',
