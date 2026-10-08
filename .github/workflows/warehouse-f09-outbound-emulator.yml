@@ -1,0 +1,33 @@
+name: Warehouse F09 Outbound Emulator
+
+on:
+  push:
+    branches:
+      - warehouse-fix-f09
+  pull_request:
+    paths:
+      - 'lib/warehouse/outboundRepository.ts'
+      - 'scripts/warehouse-modular-r1-security.test.mjs'
+      - '.github/workflows/warehouse-f09-outbound-emulator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  outbound-firestore-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Exercise Warehouse Firestore rules in emulator
+        run: npm run test:adm-deposito-modular-r1-security
