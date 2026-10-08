@@ -38,7 +38,23 @@ require.extensions['.ts']=(module,filename)=>{
     process.on('message',listener);
   });
 `+target;
-    }else throw new Error('UNKNOWN_CANARY_MODE');
+    } else if(mode === 'force-budget-third') {
+      // Deliberately injected Rules-budget diagnostic AFTER a real read-only
+      // transaction snapshot. This is a test harness, not production behavior.
+      target='      const nextFrom = applyWarehouseLocationDelta(existingFrom, {';
+      inject=`      throw Object.assign(new Error('Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached.'),{code:'permission-denied'});
+`+target;
+      if(code.split(target).length !== 2)throw new Error('NO_CAPTURE_ANCHOR');
+      code=code.replace(target,inject);
+      target='          const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([';
+      inject=`          await proof.get(doc(db,fromBalancePath));
+          process.send?.({type:'proof-half'});
+          await new Promise(resolve => {
+            const listener=msg=>{if(msg?.type==='resume'){process.off('message',listener);resolve();}};
+            process.on('message',listener);
+          });
+`+target;
+    } else throw new Error('UNKNOWN_CANARY_MODE');
     if(code.split(target).length !== 2)throw new Error('CANARY_INJECTION_NOT_UNIQUE '+mode);
     code=code.replace(target,inject);
   }
