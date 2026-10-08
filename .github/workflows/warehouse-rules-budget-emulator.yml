@@ -46,13 +46,15 @@ jobs:
           --config firebase.warehouse-security-test.json
           --project demo-emprovex-f06
           --only auth,firestore
-          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
+          "node scripts/warehouse-rules-budget-profile.mjs"
       - name: Save Emulator diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: rules-budget-f06-debug
-          path: firestore-debug.log
+          path: |
+            firestore-debug.log
+            rules-budget-f06-coverage.json
           if-no-files-found: warn
 
   f09-outbound-with-candidate-rules:
