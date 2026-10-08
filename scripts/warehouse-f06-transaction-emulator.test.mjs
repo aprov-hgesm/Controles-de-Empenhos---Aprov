@@ -71,6 +71,7 @@ function field(value) {
   if (typeof value === 'number') return Number.isInteger(value)
     ? { integerValue: String(value) } : { doubleValue: value };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(field) } };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
   if (typeof value === 'object') return { mapValue: { fields: fields(value) } };
   throw new Error('Unexpected fixture field: ' + typeof value);
 }
@@ -156,6 +157,7 @@ async function assertState(f, sourceQty, destQty, movements) {
 
 async function seedLot(f, n, quantity) {
   const id = 'lot_' + n.toString(16).padStart(32, '0');
+  const historicalTimestamp = new Date('2024-01-01T00:00:00.000Z');
   await seed(pathFor('lots', id), {
     schemaVersion: 'warehouse_lot_v1', id, workspaceId: WORKSPACE_ID,
     ug: UG, materialId: f.materialId, code: 'LEG-F06-' + n,
@@ -165,6 +167,7 @@ async function seedLot(f, n, quantity) {
       invoiceId: null, supplier: null, supplierCnpj: null,
     },
     status: 'active', createdBy: f.uid, updatedBy: f.uid,
+    createdAt: historicalTimestamp, updatedAt: historicalTimestamp,
   });
   return id;
 }
