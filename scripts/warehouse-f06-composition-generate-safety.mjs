@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const original = readFileSync('scripts/warehouse-f06-transaction-emulator.test.mjs','utf8');
 const marker = "  const final = await snapshot('materials', fixtureId(1));";
+const extraHelpers = "\nconst {fork}=require('node:child_process');\nfunction launchActor(f,key,subject,amount,mode='normal'){\n  const cp=fork(resolve(ROOT,'scripts/warehouse-f06-final-review-worker.mjs'),\n    [f.materialId,key,subject,String(amount),mode],{\n      stdio:['ignore','pipe','pipe','ipc'],env:{...process.env}\n    });\n  let stderr='';\n  cp.stderr.on('data',b=>{stderr+=b.toString();});\n  const seen=[],waiters=[];\n  cp.on('message',m=>{\n    const index=waiters.findIndex(x=>x.type===m.type);\n    if(index>=0){waiters.splice(index,1)[0].resolve(m);}\n    else seen.push(m);\n  });\n  cp.on('exit',(code)=>{\n    for(const w of waiters.splice(0))w.reject(new Error('worker exited '+code+' '+stderr.slice(-600)));\n  });\n  return{\n    send:msg=>cp.send(msg),\n    wait:type=>new Promise((resolve,reject)=>{\n      const i=seen.findIndex(x=>x.type===type);\n      if(i>=0) return resolve(seen.splice(i,1)[0]);\n      waiters.push({type,resolve,reject});\n      setTimeout(()=>reject(new Error('timeout '+type+' '+stderr.slice(-600))),12000).unref();\n    }),\n    stop:()=>cp.kill(),\n  };\n}\n";
 if (original.split(marker).length !== 2
     || !original.includes("await t.test('same-key concurrent calls commit once'")
     || !original.includes("await t.test('different-key concurrency cannot overdraw")) {
@@ -69,6 +70,64 @@ const extra = `
     await assertState(f, 3, 7, 1);
   });
 
+  await t.test('two independent authenticated UIDs contend with distinct keys', async () => {
+    const f=await fixture(15,10);
+    const a=launchActor(f,'actor-A','f06-operator-A',7);
+    const b=launchActor(f,'actor-B','f06-operator-B',7);
+    try {
+      const [ar,br]=await Promise.all([a.wait('ready'),b.wait('ready')]);
+      assert.notEqual(ar.uid,br.uid,'clients must have distinct authorized UIDs');
+      a.send({type:'go'});b.send({type:'go'});
+      const results=await Promise.all([a.wait('result'),b.wait('result')]);
+      assert.equal(results.filter(x=>x.status==='fulfilled' && x.applied).length,1,JSON.stringify(results));
+      assert.equal(results.filter(x=>x.status==='rejected').length,1,JSON.stringify(results));
+      assert.match(results.find(x=>x.status==='rejected').error,/WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
+      const movements=await allMovements(f.materialId);
+      assert.equal(movements.length,1);
+      const winner=results.find(x=>x.status==='fulfilled');
+      assert.equal(movements[0].data().source.actorUid,winner.uid);
+      await assertState(f,3,7,1);
+    } finally{a.stop();b.stop();}
+  });
+  await t.test('revocation after preflight before commit is not a replay',async()=>{
+    const f=await fixture(16,4);
+    const a=launchActor(f,'revoked-inflight','f06-revoked',2,'pause-prewrite');
+    try{
+      await a.wait('ready');a.send({type:'go'});
+      await a.wait('prewrite-pause');
+      a.send({type:'resume',revokeAuth:true});
+      const result=await a.wait('result');
+      assert.equal(result.status,'rejected',JSON.stringify(result));
+      assert.equal(result.applied,undefined);
+      await assertState(f,4,0,0);
+    }finally{a.stop();}
+  });
+  await t.test('valid request loses write permission after preflight',async()=>{
+    const f=await fixture(17,4);
+    const a=launchActor(f,'write-revoked','f06-write-revoked',2,'pause-prewrite');
+    try{
+      await a.wait('ready');a.send({type:'go'});
+      await a.wait('prewrite-pause');
+      await seed(pathFor('locations',locationB),{
+        schemaVersion:'warehouse_location_v1',id:locationB,workspaceId:WORKSPACE_ID,ug:UG,
+        depotId,kind:'LOCAL',parentLocationId:null,code:'LOC-F06-B',name:'Destino F06',
+        description:null,status:'inactive',createdBy:'f06-seed',updatedBy:'f06-seed'
+      });
+      a.send({type:'resume'});
+      const result=await a.wait('result');
+      assert.equal(result.status,'rejected',JSON.stringify(result));
+      assert.doesNotMatch(String(result.error),/WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
+      await assertState(f,4,0,0);
+    }finally{
+      a.stop();
+      await seed(pathFor('locations',locationB),{
+        schemaVersion:'warehouse_location_v1',id:locationB,workspaceId:WORKSPACE_ID,ug:UG,
+        depotId,kind:'LOCAL',parentLocationId:null,code:'LOC-F06-B',name:'Destino F06',
+        description:null,status:'active',createdBy:'f06-seed',updatedBy:'f06-seed'
+      });
+    }
+  });
+
 `;
-writeFileSync('scripts/warehouse-f06-composition-security.test.mjs',original.replace(marker,extra+marker));
-console.log('COMPOSITION_SAFETY_ORIGINAL_9_ASSERTIONS_UNMODIFIED; +4 adversarial tests generated');
+writeFileSync('scripts/warehouse-f06-composition-security.test.mjs',original.replace(marker,extra+marker).replace('test.after(async () => {',extraHelpers+'test.after(async () => {'));
+console.log('COMPOSITION_SAFETY_ORIGINAL_9_ASSERTIONS_UNMODIFIED; +7 adversarial tests generated');
