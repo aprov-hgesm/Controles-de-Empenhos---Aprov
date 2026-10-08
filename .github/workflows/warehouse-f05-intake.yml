@@ -7,6 +7,7 @@ on:
       - 'app/api/adm-deposito/intake-action/route.ts'
       - 'scripts/warehouse-fast-intake-errors.test.mjs'
       - 'scripts/warehouse-f05-route-transaction.test.mjs'
+      - 'scripts/warehouse-f05-firestore-emulator.mjs'
       - '.github/workflows/warehouse-f05-intake.yml'
 permissions:
   contents: read
@@ -23,3 +24,5 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node --test scripts/warehouse-fast-intake-errors.test.mjs scripts/warehouse-f05-route-transaction.test.mjs
       - run: npm run typecheck
+      - name: Firestore REST emulator persistence
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-f05 --only firestore "node scripts/warehouse-f05-firestore-emulator.mjs"
