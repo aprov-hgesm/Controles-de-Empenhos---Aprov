@@ -32,9 +32,9 @@ import {
 import {
   buildWarehousePositionLabel,
   createWarehouseTransferIdempotencyKey,
-  listWarehouseDepots,
+  listWarehouseDepotsCached,
   listWarehouseLocationBalances,
-  listWarehouseLocations,
+  listWarehouseLocationsCached,
   transferWarehouseStock,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
@@ -199,8 +199,8 @@ export function WarehouseStockOperational({
         await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
           listWarehousePositiveBalances(workspaceId, 250),
-          listWarehouseDepots(workspaceId, 250),
-          listWarehouseLocations(workspaceId, 500),
+          listWarehouseDepotsCached(workspaceId, 250),
+          listWarehouseLocationsCached(workspaceId, 500),
           listWarehouseLocationBalances(workspaceId, 500),
           listWarehouseLots(workspaceId, 500),
           listWarehouseBarcodes(workspaceId, 500),
