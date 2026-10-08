@@ -18,6 +18,8 @@ Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Cen
 
 **Base comum verificada via GitHub em 2026-10-08:** `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` (identical); `warehouse-mobile-write-evidence-01@2fe19299beff5c1eef268d647b05904fd98ee1cb` (identical). PR #268 permanece frente de coleta GET-only/evidência, sem bloquear trabalho de correção que possa ser validado localmente. F05/F06/F09 têm falhas operacionais registradas; o mecanismo causal individual ainda não está provado. Nenhuma mudança em Production foi realizada por esta decisão.
 
+**Checkpoint F05 — 2026-10-08 (coordenação):** Worker 1 encerrou implementação e foi liberado para standby; `warehouse-fix-f05@77312f69200f1ef75902e48a267d3ae9ba0389cb`, PR #270 OPEN/DRAFT, 15 commits à frente/0 atrás. Firestore REST Emulator #37830263420 SUCCESS (persistência, precondições, replay e lote histórico), Core Protection #37830263489 SUCCESS; Application CI #37830263382 ainda IN_PROGRESS na verificação do Coordenador. **F05 = PASS de implementação/persistência isolada; certificação global/Production e IAM admin = PENDENTES; merge NÃO AUTORIZADO.** Coordenador assume CI final/composição; reativar W1 apenas para falha comprovada.
+
 **Branches criadas no GitHub, cada uma partindo exclusivamente de main@97556bb8...:**
 
 | Worker | Branch | Escopo proprietário | Restrições |
