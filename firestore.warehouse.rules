@@ -1439,16 +1439,18 @@ service cloud.firestore {
         && (
           (
             movement.type == 'TRANSFER'
+            // Evaluate authoritative revision/delta first. In contended
+            // transactions, a stale write fails before position lookups.
+            && warehouseLocationBalanceMatchesTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
             && validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement)
             && warehousePositionActive(
               workspaceId,
               request.resource.data.position,
               request.resource.data.ug
-            )
-            && warehouseLocationBalanceMatchesTransfer(
-              workspaceId,
-              locationBalanceId,
-              movement
             )
           )
           || (
