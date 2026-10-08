@@ -1,0 +1,50 @@
+name: Warehouse F06 Transaction Emulator
+
+on:
+  pull_request:
+    paths:
+      - "lib/warehouse/**"
+      - "lib/firebase.ts"
+      - "scripts/warehouse-f06-transaction-emulator.test.mjs"
+      - ".github/workflows/warehouse-f06-emulator.yml"
+      - "firebase.warehouse-security-test.json"
+      - "firestore.warehouse.rules"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warehouse-f06-transaction:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout F06 head
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run real transferWarehouseStock against named Firestore Emulator
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
