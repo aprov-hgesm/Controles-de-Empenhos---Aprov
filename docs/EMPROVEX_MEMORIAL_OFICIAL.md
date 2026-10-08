@@ -10,6 +10,8 @@ Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c
 
 Estado global: **R1 está publicado em Production em `main@97556bb8...`, com Central Mobile founder-only. F14 está resolvido. F05/F06/F09 permanecem blockers sem causa isolada. `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01` é o owner ativo da aquisição de evidência; o worker já preparou e reparou o coletor GET-only, mas a coleta viva está bloqueada temporariamente pelo DNS do Windows do operador. `RC-R1-PHYSICAL-FIX-01` continua congelada até causa provada. Nenhuma mudança de runtime, Rules, dados ou Production está autorizada enquanto a evidência RAW/log não for obtida.**
 
+**Diretriz permanente do Fundador (2026-10-08):** experiência do usuário, economia mensurável das cotas do Firestore e leveza do EMPROVEX em computadores modestos/celulares são requisitos prioritários, não ajustes opcionais. Todos os desenvolvimentos, correções e releases devem obedecer à política da **Parte XI — Eficiência, custo do Firestore e experiência do usuário**. Testes simulados não provam cobrança real.
+
 ---
 
 ## 0-A. WAREHOUSE-RECOVERY — correção paralela autorizada em 2026-10-08
@@ -3571,6 +3573,23 @@ O próximo passo é certificação manual dos sete fluxos no Preview, não integ
 - aplicação, Rules e dados possuem rollback/reconciliação distintos;
 - CI verde não autoriza produção;
 - Fundador mantém GO/NO-GO produtivo final.
+
+### Eficiência, custo do Firestore e experiência do usuário — diretriz prioritária (decisão do Fundador, 2026-10-08)
+
+**Princípio inegociável:** o EMPROVEX deve economizar tempo, atenção, processamento local e consumo de cotas do Firestore. A experiência do operador em computador modesto e celular é requisito central, ao lado da integridade e da segurança. O sistema deve ser rápido, simples, previsível e econômico em uso cotidiano, e não apenas funcional.
+
+**Regras permanentes de implementação e aceite:**
+
+- **Firestore:** minimizar leituras e escritas cobradas e acessos dependentes das Security Rules; evitar requisições/preflights redundantes, reconsultas após ações sem necessidade, listeners supérfluos, consultas globais amplas e padrão N+1. Priorizar filtros por material/posição, consultas limitadas, índices, paginação e carregamento sob demanda, conforme medição.
+- **Warehouse F05/F06/F09 e Mobile:** preservar motor canônico compartilhado, atomicidade, idempotência, isolamento workspace/UG, autoria, saldo/lote/posição, segurança e auditoria. O caminho habitual de scanner/transferência/saída não deve adicionar leituras nem etapas de interface desnecessárias. Cache curto pode acelerar referências não autoritativas (depósito, localização, código de barras), mas nunca decidir ou confirmar estoque sem validação transacional.
+- **Computadores modestos e celulares:** priorizar resposta visual imediata, UX intuitiva, poucos cliques, cálculos/renderizações proporcionais à tela, listas paginadas ou virtualizadas quando justificadas, e ausência de polling/re-renderizações/processamento repetidos sem benefício. Considerar redes lentas/intermitentes e múltiplas sessões simultâneas. Economia marginal não pode piorar a experiência.
+- **Rules:** otimizar avaliação sem relaxar autenticação, UG, workspace ou invariantes. O limite de 1.000 expressões é orçamento da avaliação de autorização, não 1.000 leituras faturadas; examinar separadamente get()/exists()/getAfter(), writes e custo de consultas.
+- **Prova quantitativa:** comparar baseline x candidato, no mesmo cenário, de requisições, leituras/escritas, Rules, latência de abertura e de cada ação, retries, CPU/memória/travamentos e tempo até a tela ficar utilizável, onde aplicável. Distinguir teste mockado, Emulator, telemetria estimada e faturamento real; jamais declarar economia de cotas, redução de CPU ou de custo sem medição correspondente.
+- **Regressão obrigatória antes de liberar:** exercitar F05/F06/F09, scanner, consulta de estoque e telas principais com lote, replay/concorrência e mais de um operador em ambiente controlado, incluindo dispositivo modesto. Regressão material de consumo, lentidão ou travamento bloqueia PASS/GO até correção ou decisão explícita do Fundador. Não usar Production para testes destrutivos.
+- **Governança enxuta:** Coordenador e workers devem registrar este requisito em escopos, revisões, handoffs e critérios de aceite; apresentar resultados medidos, custo de leituras/escritas e impactos percebidos pelo usuário. Sem medição, declarar **NÃO MEDIDO / PENDENTE DE CERTIFICAÇÃO**, nunca PASS presumido. Preferir soluções simples e mensuráveis, sem novas camadas/infraestrutura apenas para contornar gargalos.
+
+**Regra de escolha:** integridade e segurança jamais são negociadas. Entre soluções corretas e seguras, preferir a mais simples, rápida, econômica em cotas e leve para o operador. Esta diretriz só pode ser alterada por decisão explícita do Fundador.
+
 
 ### Desenvolvimento
 
