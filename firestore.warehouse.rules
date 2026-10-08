@@ -1239,17 +1239,16 @@ service cloud.firestore {
     // cannot change. New rows must supply the complete canonical schema.
     function validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement) {
       let next = request.resource.data;
-      let current = resource.data;
       return next is map
         && (
           (
             resource != null
-            && current.schemaVersion == 'warehouse_location_balance_v1'
-            && current.id == locationBalanceId
-            && current.workspaceId == workspaceId
-            && current.ug == movement.ug
-            && current.materialId == movement.materialId
-            && next.diff(current).affectedKeys().hasOnly([
+            && resource.data.schemaVersion == 'warehouse_location_balance_v1'
+            && resource.data.id == locationBalanceId
+            && resource.data.workspaceId == workspaceId
+            && resource.data.ug == movement.ug
+            && resource.data.materialId == movement.materialId
+            && next.diff(resource.data).affectedKeys().hasOnly([
               'quantity', 'revision', 'lastMovementId', 'updatedAt'
             ])
           )
