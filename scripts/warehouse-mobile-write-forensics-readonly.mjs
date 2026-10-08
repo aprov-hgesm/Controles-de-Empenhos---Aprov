@@ -57,9 +57,44 @@ const [materialDoc, balanceDoc, locationBalances, lots, barcodes] = await Promis
   listForMaterial('barcodes'),
 ]);
 
+
 console.log(JSON.stringify({
-  identity: { project: PROJECT, database: DATABASE, workspace: WORKSPACE, material },
-  guard: { mode: 'GET_ONLYIËØ\\“\İYÛÛXİ[ÛˆĞTKˆÛİ[ÎˆÈ™\]Y\İËØİ[Y[™XYÈKˆØ\YÛÛXİ[ÛœÎˆÉÛØØ][Û˜[[˜Ù\ÉË	ÛİÉË	Ø˜\˜ÛÙ\É×K™š[\Š
-˜[YJHOˆ
-ÈØØ][Û˜[[˜Ù\ËİË˜\˜ÛÙ\ÈJVÛ˜[YWK˜Ø\Y
-KˆX]\šX[ˆX]\šX[ØËˆ˜[[˜ÙNˆ˜[[˜ÙQØËˆØØ][Û˜[[˜Ù\ÎˆØØ][Û˜[[˜Ù\Ë›X]Ú\ËˆİÎˆİË›X]Ú\Ëˆ˜\˜ÛÙ\Îˆ˜\˜ÛÙ\Ë›X]Ú\ËŸK[ŠJNÂ
+  identity: {
+    project: PROJECT,
+    database: DATABASE,
+    workspace: WORKSPACE,
+    material,
+  },
+  guard: {
+    mode: 'GET_ONLY',
+    httpRequests,
+    documentReads,
+    collectionCap: CAP,
+  },
+  material: {
+    exists: Boolean(materialDoc),
+    document: materialDoc,
+  },
+  balance: {
+    exists: Boolean(balanceDoc),
+    document: balanceDoc,
+  },
+  locationBalances: {
+    capped: locationBalances.capped,
+    observed: locationBalances.observed,
+    matched: locationBalances.matches.length,
+    documents: locationBalances.matches,
+  },
+  lots: {
+    capped: lots.capped,
+    observed: lots.observed,
+    matched: lots.matches.length,
+    documents: lots.matches,
+  },
+  barcodes: {
+    capped: barcodes.capped,
+    observed: barcodes.observed,
+    matched: barcodes.matches.length,
+    documents: barcodes.matches,
+  },
+}, null, 2));
