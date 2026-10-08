@@ -1,0 +1,96 @@
+name: Warehouse F06 Worker 8 Different-Key Probe (Emulator Only)
+
+on:
+  push:
+    branches:
+      - warehouse-f06-concurrency-different-key-01
+  pull_request:
+    branches:
+      - warehouse-rules-eval-budget-fix
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  f06-concurrency-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify exact Rules candidate, original assertions, and Worker 6 motor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          git fetch --no-tags origin warehouse-f06-fixture-fix-01
+          test "$(git rev-parse FETCH_HEAD)" = '7b499254f5d10487be2622e92c78fae18d7c76d1'
+          git show FETCH_HEAD:lib/warehouse/locationRepository.ts > lib/warehouse/locationRepository.ts
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > /tmp/worker6-f06-original.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const original = readFileSync('/tmp/worker6-f06-original.mjs', 'utf8');
+          const candidate = readFileSync('scripts/warehouse-f06-different-key-candidate.test.mjs', 'utf8');
+          const asserts = s => (s.match(/(?:assert\.[^\n]+|await assert\.rejects\(|await assertState\([^\n]+)/g) || []).join('\n');
+          assert.equal(asserts(candidate), asserts(original), 'All Worker 6 assertions MUST be byte-identical');
+          const headings = s => (s.match(/await t\.test\('[^']+'/g) || []).join('\n');
+          assert.equal(headings(candidate), headings(original), 'All nine F06 subtests MUST be identical');
+          assert.ok(candidate.includes('reconcileDifferentKeyConcurrency('), 'Prototype MUST actually run');
+          console.log('WORKER8_OVERLAY_OK: engine=7b499254, rules=e4037e, assertions=unchanged, prototype=ACTIVE');
+          NODE
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Standalone proof gate (fail closed)
+        run: node --test scripts/warehouse-f06-different-key-reconcile.test.mjs
+      - name: Real F06 9 assertions with Worker 8 case-4 diagnostic adapter (NOT certification)
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-different-key-candidate.test.mjs"
+      - name: Capture failed Emulator diagnostic traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker8-f06-different-key-debug
+          path: firestore-debug.log
+          if-no-files-found: warn
+
+  f09-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin F09 to canonical engine and tests, preserve Rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          git fetch --no-tags origin warehouse-fix-f09
+          test "$(git rev-parse FETCH_HEAD)" = 'de0285c656e92fc8743007863bd344acc0917e61'
+          git show FETCH_HEAD:lib/warehouse/outboundRepository.ts > lib/warehouse/outboundRepository.ts
+          git show FETCH_HEAD:scripts/warehouse-modular-r1-security.test.mjs > scripts/warehouse-modular-r1-security.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Full F09 security regression on Emulator
+        run: npm run test:adm-deposito-modular-r1-security
