@@ -19,8 +19,9 @@ const values = (data) => Object.fromEntries(Object.entries(data).map(([k,v]) => 
 async function read(name) {
   const response = await fetch(prefix + '/' + path(name), {headers:{authorization:'Bearer owner'}});
   if (response.status === 404) return null;
-  assert.equal(response.status,200,await response.text());
-  return response.json();
+  const body = await response.text();
+  assert.equal(response.status,200,body);
+  return JSON.parse(body);
 }
 async function commit(writes) {
   const response = await fetch(prefix+':commit', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer owner'},body:JSON.stringify({writes})});
