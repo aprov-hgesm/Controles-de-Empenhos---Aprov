@@ -275,3 +275,12 @@ test('retorno reativado preserva literal de status para o contrato da associaç�
   const source = readFileSync(resolve(ROOT, 'lib/warehouse/barcodeRepository.ts'), 'utf8');
   assert.match(source, /status: 'active' as const, updatedBy: scope.uid/);
 });
+
+
+test('superfície de estoque reutiliza cache estrutural e não transforma saldo em cache autoritativo', () => {
+  const source = readFileSync(resolve(ROOT, 'features/warehouse/components/WarehouseStockOperational.tsx'), 'utf8');
+  assert.match(source, /listWarehouseDepotsCached\(workspaceId, 250\)/);
+  assert.match(source, /listWarehouseLocationsCached\(workspaceId, 500\)/);
+  assert.match(source, /listWarehousePositiveBalances\(workspaceId, 250\)/);
+  assert.match(source, /listWarehouseLocationBalances\(workspaceId, 500\)/);
+});
