@@ -1253,10 +1253,10 @@ export async function transferWarehouseStock(
     warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
   );
 
-  let attempted: {
+  const observed = { attempted: null as {
     fromQty:number; fromRev:number; toQty:number; toRev:number;
     aggregateQty:number; aggregateRev:number;
-  } | null = null;
+  } | null };
   try {
     return await runTransaction(db, async (transaction) => {
       const materialRef = doc(db, materialPath);
@@ -1344,7 +1344,7 @@ export async function transferWarehouseStock(
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
       // The transaction snapshot is authoritative. A failed commit can only
       // be reconciled against this baseline and a newer server snapshot.
-      attempted = {
+      observed.attempted = {
         fromQty: available, fromRev: existingFrom!.revision,
         toQty: existingTo?.quantity ?? 0, toRev: existingTo?.revision ?? 0,
         aggregateQty: currentBalance.quantity, aggregateRev: currentBalance.revision,
@@ -1573,10 +1573,10 @@ export async function transferWarehouseStock(
             toBalance: destination,
           };
 
-        } else if (attempted) {
+        } else if (observed.attempted) {
           // Bounded follow-up only after a budget-denied write; never scan
           // arbitrary ledger history or depend on fixture revisions/amounts.
-          const prior = attempted;
+          const prior = observed.attempted;
           const [fromNow, toNow, aggregateNow, materialNow] = await Promise.all([
             getDocFromServer(doc(db, fromBalancePath)),
             getDocFromServer(doc(db, toBalancePath)),
