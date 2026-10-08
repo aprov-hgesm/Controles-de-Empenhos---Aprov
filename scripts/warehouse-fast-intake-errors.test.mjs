@@ -36,3 +36,46 @@ test('falhas REST permanecem distinguíveis sem revelar payload upstream', () =>
     assert.equal(error.message, code);
   }
 });
+
+const intentBlock = source.match(/const allocationIntentHash = await sha256Hex\(JSON\.stringify\(\{[\s\S]*?\}\)\);/)?.[0];
+assert.ok(intentBlock, 'allocation fingerprint must be bound to persisted movement');
+assert.match(source, /movementDocument\.data\.note !== allocationMovementNote/);
+assert.match(source, /note: allocationMovementNote/);
+assert.match(source, /await commit\(accessToken, WAREHOUSE_DATABASE_ID, writes\)/);
+
+async function fingerprint(input) {
+  const { intakeId, materialId, quantity, position, lotCode, expiresOn, barcode, presentation } = input;
+  const context = { materialId };
+  const warehouseStockPositionKey = (p) => p;
+  const warehouseUnitFromOperationalLabel = (u) => u;
+  const sha256Hex = async (v) => {
+    const { createHash } = await import('node:crypto');
+    return createHash('sha256').update(v).digest('hex');
+  };
+  // Execute the exact fingerprint expression extracted from the production route.
+  const expression = intentBlock.replace('const allocationIntentHash = ', '').replace(/;$/, '');
+  const evaluate = new Function(
+    'input', 'context', 'quantity', 'position', 'lotCode', 'expiresOn', 'barcode',
+    'warehouseStockPositionKey', 'warehouseUnitFromOperationalLabel', 'sha256Hex',
+    'return (async () => ' + expression + ')();'
+  );
+  return evaluate({ intakeId }, { materialId, unitLabel: presentation }, quantity, position, lotCode, expiresOn, barcode, warehouseStockPositionKey, warehouseUnitFromOperationalLabel, sha256Hex);
+}
+
+test('replay: identidade completa estável e divergências produzem conflito', async () => {
+  const original = {
+    intakeId: 'intake-1', materialId: 'mat-1', quantity: 5,
+    position: 'LOCAL:depot1:loc1', lotCode: 'L-1', expiresOn: '2027-01-01',
+    barcode: '7891234567890', presentation: { code: 'UN', label: 'UN' },
+  };
+  const first = await fingerprint(original);
+  assert.equal(await fingerprint({ ...original }), first);
+  for (const [field, changed] of Object.entries({
+    materialId: 'mat-2', quantity: 6, position: 'LOCAL:depot1:loc2',
+    lotCode: 'L-2', expiresOn: '2027-02-01', barcode: null,
+    presentation: { code: 'CX', label: 'CX' },
+  })) {
+    assert.notEqual(await fingerprint({ ...original, [field]: changed }), first, field);
+  }
+  assert.notEqual(await fingerprint({ ...original, barcode: '7891234567891' }), first);
+});
