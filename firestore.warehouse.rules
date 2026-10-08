@@ -1197,6 +1197,36 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // TRANSFER-only physical balance validator. The same atomic movement
+    // must pass validWarehouseTransferMovementCreate: identity, UG, material,
+    // position shape and source IDs are already checked there. The physical
+    // write independently checks immutable schema and its exact delta/revision
+    // via warehouseLocationBalanceMatchesTransfer below.
+    function validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement) {
+      let data = request.resource.data;
+      return data is map
+        && data.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
+          'quantity', 'revision', 'lastMovementId', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
+          'quantity', 'revision', 'lastMovementId', 'updatedAt'
+        ])
+        && data.schemaVersion == 'warehouse_location_balance_v1'
+        && data.id == locationBalanceId
+        && data.workspaceId == workspaceId
+        && data.ug == movement.ug
+        && data.materialId == movement.materialId
+        && data.quantity is number
+        && data.quantity >= 0
+        && data.quantity <= 1000000000
+        && data.revision is int
+        && data.revision >= 1
+        && data.lastMovementId == movement.id
+        && data.updatedAt == request.time;
+    }
+
     function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement) {
       let source = movement.source;
       let fromAfter = getAfter(
@@ -1364,7 +1394,7 @@ service cloud.firestore {
         && (
           (
             movement.type == 'TRANSFER'
-            && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
+            && validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement)
             && warehousePositionActive(
               workspaceId,
               request.resource.data.position,
