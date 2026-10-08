@@ -1,5 +1,6 @@
 import {
   collection,
+  Timestamp,
   doc,
   getDoc,
   getDocs,
@@ -981,8 +982,12 @@ function parseTransferLot(
   id: string,
   data: Record<string, unknown>
 ): WarehouseLot {
+  const { createdAt, updatedAt, ...domainData } = data;
+  if (!(createdAt instanceof Timestamp) || !(updatedAt instanceof Timestamp)) {
+    throw new Error('WAREHOUSE_TRANSFER_LOT_INVALID: invalid Firestore timestamps');
+  }
   const result = validateWarehouseLot(
-    { ...data, id },
+    { ...domainData, id },
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
