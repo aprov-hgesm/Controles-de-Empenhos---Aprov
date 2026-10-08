@@ -1234,26 +1234,46 @@ service cloud.firestore {
     // position shape and source IDs are already checked there. The physical
     // write independently checks immutable schema and its exact delta/revision
     // via warehouseLocationBalanceMatchesTransfer below.
+    // TRANSFER-only schema check. Existing physical rows may update only
+    // quantity, revision, movement pointer and audit time; identity/position
+    // cannot change. New rows must supply the complete canonical schema.
     function validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement) {
-      let data = request.resource.data;
-      return data is map
-        && data.keys().size() == 10
-        && data.keys().hasOnly([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
-          'quantity', 'revision', 'lastMovementId', 'updatedAt'
-        ])
-        && data.schemaVersion == 'warehouse_location_balance_v1'
-        && data.id == locationBalanceId
-        && data.workspaceId == workspaceId
-        && data.ug == movement.ug
-        && data.materialId == movement.materialId
-        && data.quantity is number
-        && data.quantity >= 0
-        && data.quantity <= 1000000000
-        && data.revision is int
-        && data.revision >= 1
-        && data.lastMovementId == movement.id
-        && data.updatedAt == request.time;
+      let next = request.resource.data;
+      let current = resource.data;
+      return next is map
+        && (
+          (
+            resource != null
+            && current.schemaVersion == 'warehouse_location_balance_v1'
+            && current.id == locationBalanceId
+            && current.workspaceId == workspaceId
+            && current.ug == movement.ug
+            && current.materialId == movement.materialId
+            && next.diff(current).affectedKeys().hasOnly([
+              'quantity', 'revision', 'lastMovementId', 'updatedAt'
+            ])
+          )
+          || (
+            resource == null
+            && next.keys().size() == 10
+            && next.keys().hasOnly([
+              'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
+              'quantity', 'revision', 'lastMovementId', 'updatedAt'
+            ])
+            && next.schemaVersion == 'warehouse_location_balance_v1'
+            && next.id == locationBalanceId
+            && next.workspaceId == workspaceId
+            && next.ug == movement.ug
+            && next.materialId == movement.materialId
+          )
+        )
+        && next.quantity is number
+        && next.quantity >= 0
+        && next.quantity <= 1000000000
+        && next.revision is int
+        && next.revision >= 1
+        && next.lastMovementId == movement.id
+        && next.updatedAt == request.time;
     }
 
     function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement) {
