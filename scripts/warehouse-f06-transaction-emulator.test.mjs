@@ -50,7 +50,7 @@ const {
   collection, connectFirestoreEmulator, doc, getDoc, getDocs,
   getFirestore, query, where,
 } = require('firebase/firestore');
-const { initializeApp, deleteApp } = require('firebase/app');
+const { initializeApp, deleteApp, getApp } = require('firebase/app');
 
 const REST_BASE = 'http://127.0.0.1:8080/v1/projects/'
   + PROJECT_ID + '/databases/' + WAREHOUSE_DATABASE + '/documents';
@@ -168,6 +168,11 @@ async function seedLot(f, n, quantity) {
   });
   return id;
 }
+
+test.after(async () => {
+  // Firestore holds open connections in Node; close them even when assertions fail.
+  await deleteApp(getApp());
+});
 
 test('F06 real transaction on named Firestore Emulator', { timeout: 180000 }, async (t) => {
   // The live repository validates physical positions before each transaction.
