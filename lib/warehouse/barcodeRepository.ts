@@ -309,7 +309,7 @@ export async function replaceWarehouseBarcodeAssociation(
   const currentPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const saved = await runTransaction(db, async (transaction) => {
       const currentRef = doc(db, currentPath);
       const currentSnapshot = await transaction.get(currentRef);
       if (!currentSnapshot.exists()) throw new Error('WAREHOUSE_BARCODE_NOT_FOUND');
