@@ -66,7 +66,18 @@ function createHarness() {
     collection: () => { throw new Error('UNEXPECTED_COLLECTION'); },
     getDocs: () => { throw new Error('UNEXPECTED_GET_DOCS'); },
     query: () => { throw new Error('UNEXPECTED_QUERY'); },
-    runTransaction: () => { throw new Error('UNEXPECTED_TRANSACTION'); },
+    runTransaction: async (_db, callback) => callback({
+      get: async (ref) => {
+        const found = docs.get(ref.path);
+        return {
+          id: ref.path.split('/').at(-1),
+          exists: () => found !== undefined,
+          data: () => found,
+        };
+      },
+      set: () => { throw new Error('UNEXPECTED_TRANSACTION_SET'); },
+      update: () => { throw new Error('UNEXPECTED_TRANSACTION_UPDATE'); },
+    }),
     limit: () => { throw new Error('UNEXPECTED_LIMIT'); },
     serverTimestamp: () => 'server-time',
   };
@@ -87,14 +98,18 @@ function createHarness() {
       normalizeWarehouseBarcode: (barcode) => barcode.trim(),
       validateWarehouseBarcodeAssociation: (data) => ({ ok: true, data }),
     },
-    './material': {},
-    './locationBarcode': {},
+    './material': {
+      normalizeWarehouseMaterialUnit: (value) => value,
+      validateWarehouseMaterial: (data) => ({ ok: true, data }),
+    },
+    './locationBarcode': { isWarehouseLocationBarcode: () => false },
     './namespace': {
       warehouseDomainPath: (ws, domain) => pathFor(ws, domain, ''),
       warehouseDocumentPath: pathFor,
     },
     './readCompatibility': {
       warehouseCanonicalBarcodeReadInput: (id, data) => ({ ...data, id }),
+      warehouseCanonicalMaterialReadInput: (id, data) => ({ ...data, id }),
     },
     './memoryReadCache': {
       createWorkspaceMemoryReadCache: (options) => memory.createWorkspaceMemoryReadCache({
@@ -201,4 +216,24 @@ test('repository real: cache de barcode não é autoridade de saldo nem valida e
   h.advance(30_000);
   assert.equal((await h.repository.getWarehouseBarcodeByCode('ws-a', '7891234567890')).status, 'inactive');
   assert.equal(h.requests, 2);
+});
+
+
+test('repository real: leitura cacheada não autoriza mutação contra material inativo', async () => {
+  const h = createHarness();
+  h.seed();
+  const cached = await h.repository.getWarehouseBarcodeByCode('ws-a', '7891234567890');
+  assert.equal(cached.status, 'active');
+  h.docs.set(h.pathFor('ws-a', 'materials', 'material-1'), {
+    workspaceId: 'ws-a', ug: 'UG-1', status: 'inactive', id: 'material-1',
+  });
+  await assert.rejects(
+    h.repository.saveWarehouseBarcodeAssociation('ws-a', {
+      barcode: '7891234567890',
+      materialId: 'material-1',
+      presentation: { code: 'unit', label: 'Unidade' },
+    }),
+    /WAREHOUSE_MATERIAL_INACTIVE/
+  );
+  assert.equal(h.writes, 0);
 });
