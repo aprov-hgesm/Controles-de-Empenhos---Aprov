@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/api/adm-deposito/intake-action/route.ts'
       - 'scripts/warehouse-fast-intake-errors.test.mjs'
+      - 'scripts/warehouse-f05-route-transaction.test.mjs'
       - '.github/workflows/warehouse-f05-intake.yml'
 permissions:
   contents: read
@@ -20,5 +21,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node --test scripts/warehouse-fast-intake-errors.test.mjs
+      - run: node --test scripts/warehouse-fast-intake-errors.test.mjs scripts/warehouse-f05-route-transaction.test.mjs
       - run: npm run typecheck
