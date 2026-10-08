@@ -17,13 +17,13 @@ const full = (name) => `projects/${project}/databases/${database}/documents/${pa
 const encode = (v) => typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v };
 const values = (data) => Object.fromEntries(Object.entries(data).map(([k,v]) => [k,encode(v)]));
 async function read(name) {
-  const response = await fetch(prefix + '/' + path(name));
+  const response = await fetch(prefix + '/' + path(name), {headers:{authorization:'Bearer owner'}});
   if (response.status === 404) return null;
   assert.equal(response.status,200,await response.text());
   return response.json();
 }
 async function commit(writes) {
-  const response = await fetch(prefix+':commit', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({writes})});
+  const response = await fetch(prefix+':commit', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer owner'},body:JSON.stringify({writes})});
   return {status:response.status,body:await response.text()};
 }
 function write(name,data,condition={exists:false}) {
