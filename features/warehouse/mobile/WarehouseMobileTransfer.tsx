@@ -346,44 +346,17 @@ export function WarehouseMobileTransfer() {
     setSuccess(null);
 
     try {
-      const [freshSource, freshDestination] = await Promise.all([
-        resolvePosition(source.code),
-        resolvePosition(destination.code),
-      ]);
-      if (
-        !warehouseStockPositionsEqual(
-          freshSource.position,
-          source.value.position
-        )
-        || !warehouseStockPositionsEqual(
-          freshDestination.position,
-          destination.value.position
-        )
-      ) {
-        throw new Error('POSITION_CHANGED');
-      }
-
-      const freshMaterial = await loadMaterialAtSource(
-        material.barcode,
-        freshSource.position
-      );
-      if (freshMaterial.material.id !== material.material.id) {
-        throw new Error('PRODUCT_CHANGED');
-      }
-      if (review.quantity > freshMaterial.availableQuantity + 0.000001) {
-        throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
-      }
-
+      // The canonical transaction revalidates the physical balances, material,
+      // source lots and concurrent modifications. Avoid duplicate reads here.
       const result = await transferWarehouseStock(workspace.workspaceId, {
-        materialId: freshMaterial.material.id,
+        materialId: material.material.id,
         quantity: review.quantity,
-        from: freshSource.position,
-        to: freshDestination.position,
+        from: source.value.position,
+        to: destination.value.position,
         idempotencyKey: review.idempotencyKey,
         note: 'Transferência confirmada pela Central Móvel R1',
       });
 
-      setMaterial(freshMaterial);
       setSuccess({
         applied: result.applied,
         movementId: result.movement.id,
@@ -408,9 +381,7 @@ export function WarehouseMobileTransfer() {
     }
   }, [
     destination,
-    loadMaterialAtSource,
     material,
-    resolvePosition,
     review,
     source,
     workspace.workspaceId,
@@ -547,7 +518,7 @@ export function WarehouseMobileTransfer() {
               className="mt-5 min-h-12 w-full rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white disabled:opacity-50"
               data-testid="warehouse-mobile-transfer-confirm"
             >
-              {working ? 'REVALIDANDO…' : 'CONFIRMAR TRANSFERÊNCIA'}
+              {working ? 'CONFIRMANDO…' : 'CONFIRMAR TRANSFERÊNCIA'}
             </button>
             <Secondary
               onClick={() => {
