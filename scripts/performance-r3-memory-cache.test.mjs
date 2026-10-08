@@ -228,3 +228,59 @@ test('cenário sintético da Central reduz 8 carregamentos estruturais para 2', 
     'synthetic controlled: 8 -> 2 loaders; 64 -> 16 document-equivalents (75% reduction)'
   );
 });
+
+
+test('barcode lookup is isolated by operator UID and UG even within a workspace', async () => {
+  let reads = 0;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+  const lookup = (uid, ug) => cache.read(
+    'workspace-a',
+    `${uid}:${ug}:barcode-hash`,
+    async () => ++reads
+  );
+
+  assert.equal(await lookup('operator-a', 'UG-1'), 1);
+  assert.equal(await lookup('operator-a', 'UG-1'), 1);
+  assert.equal(await lookup('operator-b', 'UG-1'), 2);
+  assert.equal(await lookup('operator-a', 'UG-2'), 3);
+  cache.invalidate('workspace-a');
+  assert.equal(await lookup('operator-a', 'UG-1'), 4);
+  assert.equal(reads, 4);
+});
+
+test('barcode lookup source invalidates after each successful association mutation', () => {
+  const source = readFileSync(resolve(ROOT, 'lib/warehouse/barcodeRepository.ts'), 'utf8');
+  assert.match(source, /barcodeLookupCache\.read\(/);
+  assert.match(source, /scope\.uid.*scope\.ug.*id/);
+  assert.equal((source.match(/barcodeLookupCache\.invalidate\(scope\.workspaceId\)/g) ?? []).length, 3);
+});
+
+
+test('barcode inexistente é reutilizado no TTL e reconsultado após invalidação', async () => {
+  let documentRequests = 0;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+  const read = () => cache.read('workspace-a', 'uid-a:UG-1:missing-barcode', async () => {
+    documentRequests += 1;
+    return null;
+  });
+  assert.equal(await read(), null);
+  assert.equal(await read(), null);
+  assert.equal(documentRequests, 1);
+  cache.invalidate('workspace-a');
+  assert.equal(await read(), null);
+  assert.equal(documentRequests, 2);
+});
+
+test('retorno reativado preserva literal de status para o contrato da associação', () => {
+  const source = readFileSync(resolve(ROOT, 'lib/warehouse/barcodeRepository.ts'), 'utf8');
+  assert.match(source, /status: 'active' as const, updatedBy: scope.uid/);
+});
+
+
+test('superfície de estoque reutiliza cache estrutural e não transforma saldo em cache autoritativo', () => {
+  const source = readFileSync(resolve(ROOT, 'features/warehouse/components/WarehouseStockOperational.tsx'), 'utf8');
+  assert.match(source, /listWarehouseDepotsCached\(workspaceId, 250\)/);
+  assert.match(source, /listWarehouseLocationsCached\(workspaceId, 500\)/);
+  assert.match(source, /listWarehousePositiveBalances\(workspaceId, 250\)/);
+  assert.match(source, /listWarehouseLocationBalances\(workspaceId, 500\)/);
+});
