@@ -1437,11 +1437,10 @@ service cloud.firestore {
         && movement.id == movementId
         && movement.schemaVersion == 'warehouse_movement_v1'
         && (
-          (
-            movement.type == 'TRANSFER'
-            // Evaluate authoritative revision/delta first. In contended
-            // transactions, a stale write fails before position lookups.
-            && warehouseLocationBalanceMatchesTransfer(
+          movement.type == 'TRANSFER'
+          ? (
+            // Early check of revision/delta on contended transactions.
+            warehouseLocationBalanceMatchesTransfer(
               workspaceId,
               locationBalanceId,
               movement
@@ -1453,8 +1452,9 @@ service cloud.firestore {
               request.resource.data.ug
             )
           )
-          || (
-            isOutbound
+          : (
+            (
+              isOutbound
             && validWarehouseExpressOutboundLocationBalanceDocument(
               workspaceId,
               locationBalanceId,
@@ -1494,6 +1494,7 @@ service cloud.firestore {
               locationBalanceId,
               movement
             )
+          )
           )
         );
     }
@@ -1677,11 +1678,10 @@ service cloud.firestore {
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
-      return (
-          movement.type == 'TRANSFER'
-          && validWarehouseTransferMovementCreate(workspaceId, movementId)
-        )
-        || (
+      return movement.type == 'TRANSFER'
+        ? validWarehouseTransferMovementCreate(workspaceId, movementId)
+        : (
+          (
           warehouseMovementIsExpressOutbound(movement)
           && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
         )
@@ -1695,7 +1695,7 @@ service cloud.firestore {
           && !warehouseMovementIsInventoryAdjustment(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
           && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
-        );
+        ));
     }
 
     function validWarehouseMovementDocument(workspaceId, movementId) {
