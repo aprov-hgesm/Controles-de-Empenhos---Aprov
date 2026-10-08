@@ -1352,13 +1352,31 @@ service cloud.firestore {
       let movementId = request.resource.data.lastMovementId;
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
       let movement = getAfter(movementPath).data;
-      let isOutbound = warehouseMovementIsExpressOutbound(movement);
-      let isInventory = warehouseMovementIsInventoryAdjustment(movement);
+      // A TRANSFER uses only the canonical transfer branch; avoid evaluating
+      // unrelated outbound/inventory guards for both physical balance writes.
+      let isOutbound = movement.type == 'OUTBOUND'
+        && warehouseMovementIsExpressOutbound(movement);
+      let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
+        && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
         && movement.id == movementId
         && movement.schemaVersion == 'warehouse_movement_v1'
         && (
           (
+            movement.type == 'TRANSFER'
+            && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+            && warehouseLocationBalanceMatchesTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
+          )
+          || (
             isOutbound
             && validWarehouseExpressOutboundLocationBalanceDocument(
               workspaceId,
@@ -1385,7 +1403,8 @@ service cloud.firestore {
             )
           )
           || (
-            !isOutbound
+            movement.type != 'TRANSFER'
+            && !isOutbound
             && !isInventory
             && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
             && warehousePositionActive(
@@ -1393,17 +1412,10 @@ service cloud.firestore {
               request.resource.data.position,
               request.resource.data.ug
             )
-            && (
-              warehouseLocationBalanceMatchesTransfer(
-                workspaceId,
-                locationBalanceId,
-                movement
-              )
-              || warehouseLocationBalanceMatchesNonTransfer(
-                workspaceId,
-                locationBalanceId,
-                movement
-              )
+            && warehouseLocationBalanceMatchesNonTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
             )
           )
         );
@@ -1766,8 +1778,10 @@ service cloud.firestore {
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
       let movement = getAfter(movementPath).data;
       let balanceExists = resource != null;
-      let isOutbound = warehouseMovementIsExpressOutbound(movement);
-      let isInventory = warehouseMovementIsInventoryAdjustment(movement);
+      let isOutbound = movement.type == 'OUTBOUND'
+        && warehouseMovementIsExpressOutbound(movement);
+      let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
+        && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
         && existsAfter(movementPath)
         && (
