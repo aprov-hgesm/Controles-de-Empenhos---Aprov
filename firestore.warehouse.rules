@@ -554,8 +554,40 @@ service cloud.firestore {
         );
     }
 
+    // Common transfer update preserves all original lot metadata.
+    // The full validator still applies to all other lot modifications.
+    function validWarehouseLotTransferUpdate(workspaceId, lotId) {
+      let next = request.resource.data;
+      let previous = resource.data;
+      return previous.schemaVersion == 'warehouse_lot_v1'
+        && previous.id == lotId
+        && previous.workspaceId == workspaceId
+        && warehouseUgMatchesAccess(workspaceId, previous.ug)
+        && next is map
+        && next.keys().size() == 14
+        && next.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'code',
+          'expiresOn', 'quantity', 'position', 'origin', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && next.diff(previous).affectedKeys().hasOnly([
+          'quantity', 'position', 'updatedBy', 'updatedAt'
+        ])
+        && next.quantity is number
+        && next.quantity >= 0
+        && next.quantity <= 1000000000
+        && validWarehouseStockPosition(next.position)
+        && next.updatedBy == request.auth.uid
+        && next.updatedAt == request.time
+        && warehousePositionActive(workspaceId, next.position, previous.ug)
+        && warehouseLotInvoiceOriginMatches(
+          workspaceId, previous.materialId, previous.ug, previous.origin
+        );
+    }
+
     function validWarehouseLotUpdate(workspaceId, lotId) {
-      return validWarehouseLotDocument(workspaceId, lotId)
+      return validWarehouseLotTransferUpdate(workspaceId, lotId)
+        || (validWarehouseLotDocument(workspaceId, lotId)
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
@@ -572,7 +604,7 @@ service cloud.firestore {
           request.resource.data.materialId,
           request.resource.data.ug,
           request.resource.data.origin
-        );
+        ));
     }
 
     function validWarehouseBarcodeDocument(workspaceId, barcodeId) {
@@ -1205,11 +1237,8 @@ service cloud.firestore {
     function validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement) {
       let data = request.resource.data;
       return data is map
+        && data.keys().size() == 10
         && data.keys().hasOnly([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
-          'quantity', 'revision', 'lastMovementId', 'updatedAt'
-        ])
-        && data.keys().hasAll([
           'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
           'quantity', 'revision', 'lastMovementId', 'updatedAt'
         ])
@@ -1253,12 +1282,9 @@ service cloud.firestore {
     function warehouseLocationBalanceMatchesTransfer(workspaceId, locationBalanceId, movement) {
       let source = movement.source;
       let currentExists = resource != null;
-      return movement.type == 'TRANSFER'
-        && source.kind == 'LOCATION_TRANSFER'
-        && request.resource.data.materialId == movement.materialId
-        && request.resource.data.workspaceId == movement.workspaceId
-        && request.resource.data.ug == movement.ug
-        && (
+      // Caller proves movement type and shape and already binds
+      // workspace/UG/material via the specialized document guard.
+      return (
           (
             source.fromBalanceId == locationBalanceId
             && request.resource.data.position == source.from
