@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-08 — `WAREHOUSE-MOBILE-WRITE-FORENSICS-01` foi concluída e ratificada como `PARCIAL — CAUSA NÃO ISOLADA`. Branch `warehouse-mobile-write-forensics-01@3369d614a425728104eea6170188672de9d6875b`, PR #267 OPEN/DRAFT/mergeable=true/clean/not merged, delta de 1 commit e 3 arquivos somente docs/scripts read-only/tests; EMPROVEX Core Protection #37464461379 SUCCESS e Application CI #37464461426 SUCCESS. A frente provou a arquitetura de escrita e mecanismos concretos de incompatibilidade de shape legado, mas não preserva raw documents suficientes nem Runtime Log Production para apontar honestamente a primeira expressão DENY de F06/F09 ou a causa server-side de F05. Flags ratificados: `F05_CAUSE_PROVEN=false`, `F06_CAUSE_PROVEN=false`, `F09_CAUSE_PROVEN=false`; `repairRequired=false`, `rulesChangeRequired=false`, `runtimeChangeRequired=false`, `environmentChangeRequired=false` significam somente 'ainda não provado como necessário'. Próximo passo: coleta dirigida read-only dos raw documents reais e Runtime Log F05, seguida de reprodução Emulator; nenhuma nova operação F05/F06/F09 em Production antes dessa prova.**
+Última sincronização global: **2026-10-08 — `WAREHOUSE-MOBILE-WRITE-EVIDENCE-01` iniciou corretamente em `warehouse-mobile-write-evidence-01@3369d614a425728104eea6170188672de9d6875b` e encerrou o primeiro ciclo em `12ac447973dca8d7b2c4a94bf57db827a7f8639f`, PR #268 OPEN/DRAFT/mergeable=true. Classificação: `BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO`. O worker não possuía credencial Firestore Production nem acesso ao projeto Vercel EMPROVEX, portanto executou 0 reads/0 writes Firestore e não inventou causa. F05 continua sem Runtime Log/secret state; F06 continua sem identidade completa do teste; F09 continua sem RAW real/fixture Emulator 1:1. O documento `docs/WAREHOUSE_MOBILE_WRITE_EVIDENCE_01.md` contém procedimento PowerShell GET-only para coleta local autenticada usando gcloud sem imprimir token. Vercel do HEAD está SUCCESS, Core Protection #37821122538 SUCCESS e Application CI #37821122508 ainda IN_PROGRESS no último checkpoint. Production permanece `main@97556bb8...`, Central Mobile founder-only, sem novos writes, Rules, repair ou deploy corretivo. Próximo passo obrigatório: o Fundador/Coordenador executar apenas a coleta GET-only local e retornar a saída sanitizada; nenhuma repetição F05/F06/F09 em Production antes disso.**
 
 Produção vigente: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
 
@@ -123,6 +123,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RC-R1-PHYSICAL-CERT-01 | **BLOCKER / EVIDÊNCIA FÍSICA PARCIAL** | F01–F04/F07–F08/F10–F14 PASS; F05 `WAREHOUSE_FAST_PATH_UNAVAILABLE`; F06 escrita de transferência falhou; F09 `FIRESTORE_PERMISSION_DENIED` e leitura independente confirmou **sem write**; F15/F16 pendentes |
 | RC-R1-PHYSICAL-FIX-01 | **CONGELADA / AGUARDA FORENSICS** | `rc-r1-physical-fix-01@20337dd4...`; PR #265 DRAFT; F14 single-shot + diagnóstico seguro de erro já implementados; Application CI/Core SUCCESS; nenhuma nova correção F05/F06/F09 até causa provada |
 | WAREHOUSE-MOBILE-WRITE-FORENSICS-01 | **PARCIAL / ENCERRADA SEM CAUSA ISOLADA** | `warehouse-mobile-write-forensics-01@3369d614a...`; PR #267 DRAFT; Core + Application CI SUCCESS; 0 runtime/Rules; mecanismos candidatos de shape legado provados, mas F05/F06/F09 permanecem `CAUSE_PROVEN=false`; próximo passo = coleta raw + Runtime Log + Emulator |
+| WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 | **BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO** | `warehouse-mobile-write-evidence-01@12ac4479...`; PR #268 DRAFT; 0 Firestore reads/writes por falta de credencial no worker; falta RAW F09/F06 e Runtime Log F05; procedimento PowerShell GET-only pronto; Core SUCCESS, Vercel SUCCESS, App CI em andamento |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -175,50 +176,57 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 — coleta dirigida read-only e reprodução causal Emulator**.
+O gate vigente é **EXECUÇÃO LOCAL DA COLETA GET-ONLY — desbloquear WAREHOUSE-MOBILE-WRITE-EVIDENCE-01**.
 
-Estado herdado da forensics:
+Branch:
 
-- `warehouse-mobile-write-forensics-01@3369d614a425728104eea6170188672de9d6875b`;
-- PR #267: OPEN / DRAFT / mergeable=true / clean / not merged;
-- Core Protection #37464461379: SUCCESS;
-- Application CI #37464461426: SUCCESS;
-- classificação: `PARCIAL — CAUSA NÃO ISOLADA`;
-- Production Firestore nesta frente: 0 reads / 0 writes;
-- runtime/Rules: 0 alterações.
+`warehouse-mobile-write-evidence-01@12ac447973dca8d7b2c4a94bf57db827a7f8639f`
 
-Causas ainda não provadas:
+PR:
 
-- `F05_CAUSE_PROVEN=false`;
-- `F06_CAUSE_PROVEN=false`;
-- `F09_CAUSE_PROVEN=false`.
+`#268 — OPEN / DRAFT / mergeable=true / not merged`
 
-Mudanças ainda **não provadas como necessárias**:
+Estado:
 
-- `repairRequired=false`;
-- `rulesChangeRequired=false`;
-- `runtimeChangeRequired=false`;
-- `environmentChangeRequired=false`.
+- classificação: `BLOCKER — ACESSO À EVIDÊNCIA IMPEDIDO`;
+- Firestore Production nesta execução: 0 reads / 0 writes;
+- F05 causa: não provada;
+- F06 causa: não provada;
+- F09 causa: não provada;
+- Vercel do HEAD: SUCCESS;
+- EMPROVEX Core Protection #37821122538: SUCCESS;
+- Application CI #37821122508: IN_PROGRESS no último checkpoint.
 
-### Objetivo do próximo gate
+### Próxima ação obrigatória
 
-1. coletar os documentos raw reais estritamente necessários para F06/F09;
-2. preservar IDs/revisions/lastMovementId/position/presentation/origin/barcode/lot shape bruto;
-3. obter o Runtime Log server-side correspondente ao F05 sem expor secrets;
-4. reproduzir o estado real no Firebase Emulator;
-5. localizar a **primeira condição DENY** por fluxo;
-6. somente depois disso propor owner e correção mínima.
+O Coordenador/Fundador deve executar localmente o coletor GET-only com o gcloud já autenticado, sem imprimir token:
 
-### Governança
+`scripts/warehouse-mobile-write-forensics-readonly.mjs`
 
-- nenhuma nova tentativa F05/F06/F09 em Production;
-- nenhuma escrita Firestore;
-- nenhuma alteração de Rules;
-- nenhum repair;
-- nenhuma alteração de `main`;
-- nenhuma alteração em `rc-r1-physical-fix-01`;
-- leitura Production apenas dirigida e registrada;
-- se o acesso ao Runtime Log/secret state de F05 continuar indisponível, declarar explicitamente a limitação e não inferir ausência de secret.
+Material âncora F09:
+
+`mat_272f2d996ee65ed3530ad2d7e27b66d7`
+
+A saída deve ser revisada e sanitizada antes de ser compartilhada.
+
+Após a coleta:
+
+1. verificar contagens e `capped`;
+2. extrair RAW de material/balance/locationBalances/lots/barcodes;
+3. comparar RAW vs canonical;
+4. construir fixture Emulator 1:1;
+5. identificar primeira Rule DENY;
+6. somente então escolher owner de correção.
+
+### Proibições mantidas
+
+- não repetir F05/F06/F09 em Production;
+- não escrever Firestore;
+- não alterar Rules;
+- não fazer repair;
+- não alterar main;
+- não reativar `rc-r1-physical-fix-01` antes da causa;
+- não inferir ausência de secret F05 sem Runtime Log/ambiente.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
