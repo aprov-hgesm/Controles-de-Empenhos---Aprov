@@ -1,5 +1,27 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-09 — MACROAÇÃO 2/4 CONCLUÍDA: FREEZE TÉCNICO DO RC GLOBAL
+
+**Estado vigente desta linha de coordenação:** **RC R1 TECNICAMENTE CONGELADO PARA VALIDAÇÃO NO PREVIEW**. Branch de referência imutável por governança: `rc-r1-global-frozen-2026-10-09`, HEAD exato `61e372225834ed6060cd2b36dbdd55d1e1979c2c`. Branch de certificação `rc-r1-global-certification-01`, PR **#280 OPEN/DRAFT**, contra `rc-r1-warehouse-full-integration-01@dec21b86cbbafbb2d7f3d50bd7b9af3371abc740` (PR #279). O freeze conserva todos os binários/artefatos produtivos do RC #279; os únicos deltas entre #279 e #280 são documento de release, workflows de certificação e canário F05 histórico.
+
+**PROVAS NO MESMO SHA `61e37222` — TODAS SUCCESS:**
+- Global Freeze Gates: [#37980517187](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37980517187): SaaS R1 legal/identidade, Auth/Firestore Emulator, SaaS/Mobile guards, read-only Recovery/backup/health, replay legado F05 fail-closed e higiene.
+- Warehouse RC integrado: [#37980517236](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37980517236): F05 rota real REST, F06 9/9 + 8 adversariais, F09 saída com Rules, performance cache 16/16+8/8.
+- Core Protection: [#37980522557](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37980522557): SUCCESS.
+- Application CI: [#37980522547](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37980522547): validate-application, build, TypeScript, MOBILE-K, SaaS/warehouse guards, Blocks 16–21: TODOS SUCCESS.
+
+**PROVENIÊNCIA E CONTRATOS CONGELADOS:** Rules principal `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Rules Warehouse `e4037e464ddbeed7629076dc7615266f0caafc7c`; F06 `17bf8952e3688841c6d92030fc5689a04c3b55d9`; F05 `77eb8e14ac3fbdbba8d1721d76fc8e908dc251cd`; F09 `256b92ee0d1c0604eee0ef89d30ce329f6d0c9b7`; Barcode cache `042b78076fd37717ff957d5f4ad20eb0c100bf9b`. MOBILE-K é ancestral do RC; SaaS Final Audit foi reconciliado semanticamente no RC #262, não mergeado por inteiro.
+
+**RESSALVA CRÍTICA R-F05-LEGACY-REPLAY:** Movimento de alocação já existente com nota histórica sem hash `intent:` pode ser recusado em replay idêntico com `WAREHOUSE_IDEMPOTENCY_CONFLICT` (HTTP 409). Canário demonstrou nenhuma segunda movimentação/alteração de saldo; segurança fail-closed preservada, porém UX e estratégia de tratamento de operações pré-migração exigem validação operacional no Preview e decisão antes do GO amplo. Não declarar compatibilidade legada total.
+
+**RESSALVAS:** Rules ainda podem atingir limite de expressões em concorrência; F06 permite fallback controlado com leituras extras pontuais. Sem custos faturáveis Firestore nem latência real p50/p95, testes físicos no smartphone/desktop, smoke completo de login/onboarding SaaS, exercícios operacionais de rollback e uptime publicados. Esses gates pertencem às macroações 3 e 4. Aprovação técnica NÃO comprova estabilidade em Production.
+
+**GOVERNANÇA:** PR #280 permanece DRAFT e sem merge; PRs #262/#273/#277/#278/#279 originais preservados. Produção continua `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. Nenhum merge produtivo, publicação de Rules, Vercel Production, alteração de billing ou dados foi executado. Qualquer alteração funcional exige nova branch e novo freeze/sha integralmente certificado. Ref de freeze deve permanecer sem novos commits. O Fundador é autoridade final de publicação.
+
+**PRÓXIMO PASSO / QUEM FARÁ:** **Macroação 3/4** — Coordenador preparar/acompanhar Preview HTTPS autenticado com SHA de freeze e runbook; Fundador executar certificação física real Desktop ↔ Mobile, Code128, câmera permitida/negada, alocação NF, transferência, saída, inventário, consulta, conferência, rede offline/online, usuários setoriais e replay legado F05; registrar PASS/FAIL e evidência, sem Production. Macroação 4/4 — desempenho/custo/recovery/rollback/GO-NO-GO posterior. Workers especializados em standby.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-09 — MACROAÇÃO 1/4 CONCLUÍDA: WAREHOUSE INTEGRADO
 
 **Estado operacional vigente do RC:** integração plena em branch ISOLADA `rc-r1-warehouse-full-integration-01@dec21b86cbbafbb2d7f3d50bd7b9af3371abc740`, PR **#279 OPEN/DRAFT** contra `rc-r1-warehouse-f06-f09-composition-01@84af145bf22872c0a973dd3cd5f4954fcccc2f0d` (PR #278). A nova candidata incorporou produtivamente e SEM overlays os deltas F05 PR #270, F09 PR #271 e Performance PR #272; preservou o motor F06 certificado do PR #277 e as Rules do PR #273. PRs originais preservados e não mergeados. A branch da composição RC original PR #262 não foi modificada. Production permanece `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`, sem deploy, Rules Production ou mutação de dados.
