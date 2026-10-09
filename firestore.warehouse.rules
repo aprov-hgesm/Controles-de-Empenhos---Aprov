@@ -319,33 +319,33 @@ service cloud.firestore {
     }
 
     function validWarehouseStockPosition(position) {
+      // Common fields are checked once for both physical position kinds.
       return position is map
+        && position.keys().hasAll(['kind'])
         && (
           (
-            position.keys().hasOnly(['kind'])
-            && position.keys().hasAll(['kind'])
-            && position.kind == 'UNASSIGNED'
+            position.kind == 'UNASSIGNED'
+            && position.keys().hasOnly(['kind'])
           )
           || (
-            position.keys().hasOnly(['kind', 'depotId', 'locationId', 'subpositionId'])
+            position.kind in ['LOCATION', 'SUBPOSITION']
+            && position.keys().hasOnly(['kind', 'depotId', 'locationId', 'subpositionId'])
             && position.keys().hasAll(['kind', 'depotId', 'locationId', 'subpositionId'])
-            && position.kind == 'LOCATION'
             && position.depotId is string
             && position.depotId.matches('^dep_[a-f0-9]{32}$')
             && position.locationId is string
             && position.locationId.matches('^loc_[a-f0-9]{32}$')
-            && position.subpositionId == null
-          )
-          || (
-            position.keys().hasOnly(['kind', 'depotId', 'locationId', 'subpositionId'])
-            && position.keys().hasAll(['kind', 'depotId', 'locationId', 'subpositionId'])
-            && position.kind == 'SUBPOSITION'
-            && position.depotId is string
-            && position.depotId.matches('^dep_[a-f0-9]{32}$')
-            && position.locationId is string
-            && position.locationId.matches('^loc_[a-f0-9]{32}$')
-            && position.subpositionId is string
-            && position.subpositionId.matches('^sub_[a-f0-9]{32}$')
+            && (
+              (
+                position.kind == 'LOCATION'
+                && position.subpositionId == null
+              )
+              || (
+                position.kind == 'SUBPOSITION'
+                && position.subpositionId is string
+                && position.subpositionId.matches('^sub_[a-f0-9]{32}$')
+              )
+            )
           )
         );
     }
@@ -554,8 +554,40 @@ service cloud.firestore {
         );
     }
 
+    // Common transfer update preserves all original lot metadata.
+    // The full validator still applies to all other lot modifications.
+    function validWarehouseLotTransferUpdate(workspaceId, lotId) {
+      let next = request.resource.data;
+      let previous = resource.data;
+      return previous.schemaVersion == 'warehouse_lot_v1'
+        && previous.id == lotId
+        && previous.workspaceId == workspaceId
+        && warehouseUgMatchesAccess(workspaceId, previous.ug)
+        && next is map
+        && next.keys().size() == 15
+        && next.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'code',
+          'expiresOn', 'quantity', 'position', 'origin', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && next.diff(previous).affectedKeys().hasOnly([
+          'quantity', 'position', 'updatedBy', 'updatedAt'
+        ])
+        && next.quantity is number
+        && next.quantity >= 0
+        && next.quantity <= 1000000000
+        && validWarehouseStockPosition(next.position)
+        && next.updatedBy == request.auth.uid
+        && next.updatedAt == request.time
+        && warehousePositionActive(workspaceId, next.position, previous.ug)
+        && warehouseLotInvoiceOriginMatches(
+          workspaceId, previous.materialId, previous.ug, previous.origin
+        );
+    }
+
     function validWarehouseLotUpdate(workspaceId, lotId) {
-      return validWarehouseLotDocument(workspaceId, lotId)
+      return validWarehouseLotTransferUpdate(workspaceId, lotId)
+        || (validWarehouseLotDocument(workspaceId, lotId)
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
@@ -572,7 +604,7 @@ service cloud.firestore {
           request.resource.data.materialId,
           request.resource.data.ug,
           request.resource.data.origin
-        );
+        ));
     }
 
     function validWarehouseBarcodeDocument(workspaceId, barcodeId) {
@@ -1197,6 +1229,52 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // TRANSFER-only physical balance validator. The same atomic movement
+    // must pass validWarehouseTransferMovementCreate: identity, UG, material,
+    // position shape and source IDs are already checked there. The physical
+    // write independently checks immutable schema and its exact delta/revision
+    // via warehouseLocationBalanceMatchesTransfer below.
+    // TRANSFER-only schema check. Existing physical rows may update only
+    // quantity, revision, movement pointer and audit time; identity/position
+    // cannot change. New rows must supply the complete canonical schema.
+    function validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement) {
+      let next = request.resource.data;
+      return next is map
+        && (
+          (
+            resource != null
+            && resource.data.schemaVersion == 'warehouse_location_balance_v1'
+            && resource.data.id == locationBalanceId
+            && resource.data.workspaceId == workspaceId
+            && resource.data.ug == movement.ug
+            && resource.data.materialId == movement.materialId
+            && next.diff(resource.data).affectedKeys().hasOnly([
+              'quantity', 'revision', 'lastMovementId', 'updatedAt'
+            ])
+          )
+          || (
+            resource == null
+            && next.keys().size() == 10
+            && next.keys().hasOnly([
+              'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
+              'quantity', 'revision', 'lastMovementId', 'updatedAt'
+            ])
+            && next.schemaVersion == 'warehouse_location_balance_v1'
+            && next.id == locationBalanceId
+            && next.workspaceId == workspaceId
+            && next.ug == movement.ug
+            && next.materialId == movement.materialId
+          )
+        )
+        && next.quantity is number
+        && next.quantity >= 0
+        && next.quantity <= 1000000000
+        && next.revision is int
+        && next.revision >= 1
+        && next.lastMovementId == movement.id
+        && next.updatedAt == request.time;
+    }
+
     function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement) {
       let source = movement.source;
       let fromAfter = getAfter(
@@ -1222,23 +1300,21 @@ service cloud.firestore {
 
     function warehouseLocationBalanceMatchesTransfer(workspaceId, locationBalanceId, movement) {
       let source = movement.source;
-      return movement.type == 'TRANSFER'
-        && source.kind == 'LOCATION_TRANSFER'
-        && request.resource.data.materialId == movement.materialId
-        && request.resource.data.workspaceId == movement.workspaceId
-        && request.resource.data.ug == movement.ug
-        && (
+      let currentExists = resource != null;
+      // Caller proves movement type and shape and already binds
+      // workspace/UG/material via the specialized document guard.
+      return (
           (
             source.fromBalanceId == locationBalanceId
             && request.resource.data.position == source.from
             && (
               (
-                exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                currentExists
                 && request.resource.data.revision == resource.data.revision + 1
                 && request.resource.data.quantity == resource.data.quantity - source.quantity
               )
               || (
-                !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                !currentExists
                 && source.from.kind == 'UNASSIGNED'
                 && request.resource.data.revision == 1
                 && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId))
@@ -1253,12 +1329,12 @@ service cloud.firestore {
             && request.resource.data.position == source.to
             && (
               (
-                exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                currentExists
                 && request.resource.data.revision == resource.data.revision + 1
                 && request.resource.data.quantity == resource.data.quantity + source.quantity
               )
               || (
-                !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                !currentExists
                 && request.resource.data.revision == 1
                 && request.resource.data.quantity == source.quantity
               )
@@ -1285,6 +1361,7 @@ service cloud.firestore {
 
     function warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId, movement) {
       let materialId = request.resource.data.materialId;
+      let currentExists = resource != null;
       return movement.type != 'TRANSFER'
         && (
           !('source' in movement)
@@ -1297,12 +1374,12 @@ service cloud.firestore {
         && request.resource.data.position.kind == 'UNASSIGNED'
         && (
           (
-            exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+            currentExists
             && request.resource.data.revision == resource.data.revision + 1
             && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
           )
           || (
-            !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+            !currentExists
             && request.resource.data.revision == 1
             && (
               (
@@ -1350,12 +1427,32 @@ service cloud.firestore {
       let movementId = request.resource.data.lastMovementId;
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
       let movement = getAfter(movementPath).data;
+      // A TRANSFER uses only the canonical transfer branch; avoid evaluating
+      // unrelated outbound/inventory guards for both physical balance writes.
+      let isOutbound = movement.type == 'OUTBOUND'
+        && warehouseMovementIsExpressOutbound(movement);
+      let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
+        && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
         && movement.id == movementId
         && movement.schemaVersion == 'warehouse_movement_v1'
         && (
           (
-            warehouseMovementIsExpressOutbound(movement)
+            movement.type == 'TRANSFER'
+            && validWarehouseTransferLocationBalanceDocument(workspaceId, locationBalanceId, movement)
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+            && warehouseLocationBalanceMatchesTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
+          )
+          || (
+            isOutbound
             && validWarehouseExpressOutboundLocationBalanceDocument(
               workspaceId,
               locationBalanceId,
@@ -1368,7 +1465,7 @@ service cloud.firestore {
             )
           )
           || (
-            warehouseMovementIsInventoryAdjustment(movement)
+            isInventory
             && validWarehouseInventoryLocationBalanceUpdate(
               workspaceId,
               locationBalanceId,
@@ -1381,25 +1478,19 @@ service cloud.firestore {
             )
           )
           || (
-            !warehouseMovementIsExpressOutbound(movement)
-            && !warehouseMovementIsInventoryAdjustment(movement)
+            movement.type != 'TRANSFER'
+            && !isOutbound
+            && !isInventory
             && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
             && warehousePositionActive(
               workspaceId,
               request.resource.data.position,
               request.resource.data.ug
             )
-            && (
-              warehouseLocationBalanceMatchesTransfer(
-                workspaceId,
-                locationBalanceId,
-                movement
-              )
-              || warehouseLocationBalanceMatchesNonTransfer(
-                workspaceId,
-                locationBalanceId,
-                movement
-              )
+            && warehouseLocationBalanceMatchesNonTransfer(
+              workspaceId,
+              locationBalanceId,
+              movement
             )
           )
         );
@@ -1760,14 +1851,17 @@ service cloud.firestore {
     function warehouseBalanceWriteAllowed(workspaceId, materialId) {
       let movementId = request.resource.data.lastMovementId;
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
-      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId);
       let movement = getAfter(movementPath).data;
-      let balanceExists = exists(balancePath);
+      let balanceExists = resource != null;
+      let isOutbound = movement.type == 'OUTBOUND'
+        && warehouseMovementIsExpressOutbound(movement);
+      let isInventory = movement.type == 'INVENTORY_ADJUSTMENT'
+        && warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
         && existsAfter(movementPath)
         && (
           (
-            warehouseMovementIsExpressOutbound(movement)
+            isOutbound
             && balanceExists
             && validWarehouseExpressOutboundBalanceUpdate(
               workspaceId,
@@ -1776,7 +1870,7 @@ service cloud.firestore {
             )
           )
           || (
-            warehouseMovementIsInventoryAdjustment(movement)
+            isInventory
             && balanceExists
             && validWarehouseInventoryBalanceUpdate(
               workspaceId,
@@ -1785,8 +1879,8 @@ service cloud.firestore {
             )
           )
           || (
-            !warehouseMovementIsExpressOutbound(movement)
-            && !warehouseMovementIsInventoryAdjustment(movement)
+            !isOutbound
+            && !isInventory
             && validWarehouseBalanceDocument(workspaceId, materialId)
             && movement.schemaVersion == 'warehouse_movement_v1'
             && movement.workspaceId == workspaceId
