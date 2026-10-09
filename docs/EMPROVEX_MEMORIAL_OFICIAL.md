@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## SINCRONIZAÇÃO DE COMPOSIÇÃO — 2026-10-09 (RC WAREHOUSE)
+
+**RC controlado:** PR #278, branch `rc-r1-warehouse-f06-f09-composition-01` baseada exatamente no `rc-r1-composition-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`. A composição incorporou o blob `firestore.warehouse.rules@e4037e464ddbeed7629076dc7615266f0caafc7c` do Worker 5, PR #273 e o motor `lib/warehouse/locationRepository.ts@17bf8952e3688841c6d92030fc5689a04c3b55d9` do PR #277, além de test harness e workflow da certificação. Workflows inseguros de diagnóstico foram descartados. Handoff: `docs/WAREHOUSE_F06_RC_COMPOSITION_HANDOFF.md`.
+
+**Certificação em origem:** PR #277@147b00f5b30fab407951035cb85e655cd16be339, F06 original 9/9 PASS + 8 adversariais PASS; F05/F09 PASS; Core Protection e Application CI SUCCESS. Autenticação multioperador validada com duas contas password setoriais no Auth Emulator e claims válidas, verificação de e-mail, UG/workspace e Rules. Esses resultados **não substituem os novos gates do RC**.
+
+**Estado neste registro:** PR #278 OPEN/DRAFT sem merge. CI do RC em execução/pendente de certificação final no HEAD composto. O workflow F05/F09 pode sobrepor fixtures/código pinado de outros PRs, portanto não demonstra integração efetiva de todos os motores de F05/F09. Necessário reconciliar explicitamente PRs #270/#271 em etapa posterior; não tratá-los como automaticamente integrados.
+
+**Riscos residuais:** Rules continuam sujeitas a orçamento de expressões; reconciliação de transferência em erro específico depende de prova autoritativa e pode adicionar até 6 leituras pontuais no caminho excepcional; medição real de faturamento, latência e UX pendente. Preserve MOBILE-K, SaaS, Rules e contrato de estoque físico.
+
+**Quem executa:** Coordenador compõe/audita PR #278 e emite GO/NO-GO de integração; workers 5–8 standby. Somente Fundador autoriza merge, Rules ou deploy produtivo. Production inalterada, sem GO global.
+
+---
+
 Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
