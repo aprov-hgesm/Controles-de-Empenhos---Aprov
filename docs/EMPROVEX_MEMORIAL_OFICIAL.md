@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-09 — MACROAÇÃO 1/4 CONCLUÍDA: WAREHOUSE INTEGRADO
+
+**Estado operacional vigente do RC:** integração plena em branch ISOLADA `rc-r1-warehouse-full-integration-01@dec21b86cbbafbb2d7f3d50bd7b9af3371abc740`, PR **#279 OPEN/DRAFT** contra `rc-r1-warehouse-f06-f09-composition-01@84af145bf22872c0a973dd3cd5f4954fcccc2f0d` (PR #278). A nova candidata incorporou produtivamente e SEM overlays os deltas F05 PR #270, F09 PR #271 e Performance PR #272; preservou o motor F06 certificado do PR #277 e as Rules do PR #273. PRs originais preservados e não mergeados. A branch da composição RC original PR #262 não foi modificada. Production permanece `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`, sem deploy, Rules Production ou mutação de dados.
+
+**GATES TODOS NO MESMO HEAD:** workflow `Warehouse RC Integrated F05 F06 F09 Real Repositories` [#37969698455](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37969698455) SUCCESS (F05: 6/6 e persistência REST Emulator PASS; F09: Security PASS; F06 original 9/9 PASS + adversariais 8/8 PASS, inclusive dois UIDs setoriais; Performance: cache sintético 16/16 + repositórios reais sob mock 8/8 PASS). Core Protection [#37969742171](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37969742171) SUCCESS. Application CI [#37969740703](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/37969740703) SUCCESS incluindo build, TypeScript, teste Mobile-K e Blocks 16–21 (seis gates). Verificação adicional Vercel GitHub status SUCCESS; acesso direto à conta Vercel na sessão do Coordenador retornou 403, logo o Preview NÃO foi certificado humanamente.
+
+**IMPORTANTE — DIFERENÇA DE EVIDÊNCIA:** os testes F05 e F09 **agora executaram os arquivos produtivos presentes no próprio HEAD do PR #279**, sem substituir esses arquivos por versões de PRs trabalhadores durante o workflow. O F06 manteve apenas a fixture original W6 fixada (sem alterar o motor real). A cache de barcode e metadados de depósitos/locais é limitada, não é autoridade de saldo/lote/transferência. A reconciliação F06 permanece fail-closed após orçamento de Rules; até 6 leituras pontuais excepcionais sujeitas a retries, sem benchmark de cobrança real. F05/F09 não têm ainda reprodução forense RAW do incidente produtivo histórico, e a compatibilidade de replay com movimentações legadas precisa continuar sob observação no piloto.
+
+**DECISÃO DO COORDENADOR:** MACROAÇÃO 1/4 = **PASS TÉCNICO EM EMULATOR/CI / ENCERRADA PARA A CANDIDATA**, sem GO produtivo. MACROAÇÃO 2/4 = PENDENTE: reconciliação global do RC final, contratos SaaS/Mobile, re-freeze e certificação no SHA único de lançamento. MACROAÇÃO 3/4 = PENDENTE: testes manuais Preview/HTTPS desktop/celular/Code128/NF/inventário/saída, jornadas SaaS com usuários reais. MACROAÇÃO 4/4 = PENDENTE: medir latência p50/p95, leituras faturáveis Firestore, falhas/retries e recovery/rollback; decisão GO/NO-GO de piloto pelo Fundador.
+
+**RESPONSABILIDADES:** Coordenador lidera a próxima macroação de revisão/freeze controlado sem merge. Workers especializados concluídos/em espera. Fundador decide separadamente sobre merges produtivos, publicação de Rules, deploy Vercel Production, piloto real e comercialização. NÃO presumir que PR #279 DRAFT libera esses atos.
+
+---
+
 ## SINCRONIZAÇÃO PRIORITÁRIA — 2026-10-09 — WAREHOUSE F06/F09 + COMPOSIÇÃO RC
 
 **Estado global verificado:** produção ainda `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`; **nenhuma alteração de Production, publicação de Rules, merge ou GO comercial** por esta frente. Estado anterior do Memorial abaixo preservado como histórico, sem promovê-lo automaticamente a estado vigente.
