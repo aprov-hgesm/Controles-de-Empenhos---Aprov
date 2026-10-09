@@ -1,0 +1,81 @@
+name: EMPROVEX R1 Global RC Freeze Gates
+on:
+  push:
+    branches: [rc-r1-global-certification-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  legal:
+    name: SaaS R1 legal and identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Legal acceptance and public OAuth
+        run: |
+          npm run verify:public-oauth-legal-pages
+          npm run verify:saas-r1-legal-acceptance
+          npm run test:saas-r1-legal-acceptance
+      - name: Check SaaS R1 contracts and canonical Mobile-K
+        run: |
+          npm run verify:saas-r1-final-audit
+          npm run verify:saas-r1-integration
+          npm run verify:mobile-k-canonical-ops
+          npm run verify:mobile-r1-integration-final
+      - name: Enforce immutable Rules and productive repository hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.rules)" = 'bc91185f34bcdcb4437a4de1078d1089a09292ba'
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          test "$(git hash-object lib/warehouse/locationRepository.ts)" = '17bf8952e3688841c6d92030fc5689a04c3b55d9'
+          test "$(git hash-object app/api/adm-deposito/intake-action/route.ts)" = '77eb8e14ac3fbdbba8d1721d76fc8e908dc251cd'
+          test "$(git hash-object lib/warehouse/outboundRepository.ts)" = '256b92ee0d1c0604eee0ef89d30ce329f6d0c9b7'
+          test "$(git hash-object lib/warehouse/barcodeRepository.ts)" = '042b78076fd37717ff957d5f4ad20eb0c100bf9b'
+  recovery:
+    name: Recovery read-only and health
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Recovery guardrails (no apply/restore)
+        run: |
+          npm run test:recovery
+          npm run recovery:plan
+          npm run verify:backup-recovery
+          npm run test:health
+          npm run verify:saas-r1-ops-recovery
+  legacy-replay:
+    name: Legacy F05 fail-closed canary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: F05 replay regression including historical note
+        run: node --test scripts/warehouse-f05-route-transaction.test.mjs
+      - name: Whitespace and diff hygiene
+        shell: bash
+        run: |
+          git diff --check HEAD^ HEAD

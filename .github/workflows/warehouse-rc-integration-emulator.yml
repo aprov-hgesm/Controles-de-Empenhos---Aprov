@@ -1,7 +1,7 @@
 name: Warehouse RC Integrated F05 F06 F09 Real Repositories
 on:
   push:
-    branches: [rc-r1-warehouse-full-integration-01]
+    branches: [rc-r1-warehouse-full-integration-01, rc-r1-global-certification-01]
   workflow_dispatch:
 permissions:
   contents: read

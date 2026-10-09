@@ -176,3 +176,20 @@ test('historical lot retains timestamp encoding on allocation update', async () 
   assert.equal(response.status, 200, JSON.stringify(response));
   assert.equal(fx.get('emprovex-warehouse', root + '/lots/' + lotId).quantity, 6);
 });
+
+
+test('legacy allocation without intent hash fails closed on replay, never double-commits', async () => {
+  const fx = fixture(), post = makeRoute(fx);
+  const initial = await post();
+  assert.equal(initial.status, 200);
+  assert.equal(initial.payload.result.applied, true);
+  assert.equal(fx.commits, 1);
+  const movementKey = [...fx.docs.keys()].find((key) => key.includes('/movements/'));
+  assert.ok(movementKey, 'fixture must contain committed movement');
+  fx.docs.get(movementKey).data.note = 'Alocação direta da Central de Depósitos';
+  const retry = await post();
+  assert.equal(retry.status, 409, JSON.stringify(retry));
+  assert.equal(retry.payload.error, 'WAREHOUSE_IDEMPOTENCY_CONFLICT');
+  assert.equal(fx.commits, 1, 'replay may not commit another movement');
+  assert.equal(fx.get('emprovex-warehouse', root + '/balances/' + materialId).quantity, 4);
+});
