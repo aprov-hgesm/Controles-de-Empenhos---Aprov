@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import firebaseConfig from '../../../../firebase-applet-config.json';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
-import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
+import { getGoogleAccessToken, SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import {
   verifyWarehouseRequest,
   WarehouseAccessError,
@@ -197,6 +197,18 @@ function fromFields(
   );
 }
 
+// Preserve actionable failure classes without leaking OAuth or Firestore payloads.
+function firestoreFailure(status: number, payload: string): FastPathError {
+  if (status === 401) return new FastPathError('WAREHOUSE_FAST_PATH_UPSTREAM_AUTH', 503);
+  if (status === 403) return new FastPathError('WAREHOUSE_FAST_PATH_UPSTREAM_PERMISSION', 503);
+  if (status === 429) return new FastPathError('WAREHOUSE_FAST_PATH_RATE_LIMITED', 503);
+  if (status === 409 || status === 412 || payload.includes('FAILED_PRECONDITION') || payload.includes('ABORTED')) {
+    return new FastPathError('WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION', 409);
+  }
+  if (status >= 500) return new FastPathError('WAREHOUSE_FAST_PATH_UPSTREAM_UNAVAILABLE', 503);
+  return new FastPathError('WAREHOUSE_FAST_PATH_UPSTREAM_REJECTED', 503);
+}
+
 async function getDocument(
   accessToken: string,
   databaseId: string,
@@ -208,14 +220,14 @@ async function getDocument(
   });
   if (response.status === 404) return null;
   if (!response.ok) {
-    throw new FastPathError('WAREHOUSE_FAST_PATH_UNAVAILABLE', 503);
+    throw firestoreFailure(response.status, '');
   }
   const payload = await response.json() as {
     fields?: Record<string, FirestoreValue>;
     updateTime?: string;
   };
   if (!payload.updateTime) {
-    throw new FastPathError('WAREHOUSE_FAST_PATH_UNAVAILABLE', 503);
+    throw new FastPathError('WAREHOUSE_FAST_PATH_INVALID_UPSTREAM_RESPONSE', 503);
   }
   return {
     path,
@@ -260,14 +272,7 @@ async function commit(
   );
   if (response.ok) return;
   const text = await response.text();
-  if (
-    response.status === 409
-    || response.status === 412
-    || text.includes('FAILED_PRECONDITION')
-  ) {
-    throw new FastPathError('WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION', 409);
-  }
-  throw new FastPathError('WAREHOUSE_FAST_PATH_UNAVAILABLE', 503);
+  throw firestoreFailure(response.status, text);
 }
 
 function requiredText(value: unknown, max: number): string {
@@ -541,6 +546,21 @@ async function performAllocation(
     ? await createWarehouseBarcodeId(access.workspaceId, barcode)
     : null;
 
+  // The immutable movement records the full normalized intent. A replay with the
+  // same operationId but different barcode (including null), presentation, lot,
+  // expiry or physical position must never be accepted as an applied operation.
+  const allocationIntentHash = await sha256Hex(JSON.stringify({
+    intakeId: input.intakeId,
+    materialId: context.materialId,
+    quantity,
+    position: warehouseStockPositionKey(position),
+    lotCode,
+    expiresOn,
+    barcode,
+    presentation: warehouseUnitFromOperationalLabel(context.unitLabel),
+  }));
+  const allocationMovementNote = 'Alocação direta da Central de Depósitos | intent:' + allocationIntentHash;
+
   const root = `warehouse/${access.workspaceId}`;
   const paths = {
     intake: `${root}/intakes/${input.intakeId}`,
@@ -634,6 +654,19 @@ async function performAllocation(
       || movementDocument.data.materialId !== context.materialId
       || movementDocument.data.type !== 'INVOICE_ENTRY'
       || Math.abs(numberField(movementDocument.data.quantityDelta) - quantity) > EPSILON
+      || movementDocument.data.note !== allocationMovementNote
+      || !lotDocument
+      || lotDocument.data.code !== lotCode
+      || lotDocument.data.expiresOn !== expiresOn
+      || warehouseStockPositionKey(validateWarehouseStockPosition(lotDocument.data.position) || { kind: 'UNASSIGNED' }) !== warehouseStockPositionKey(position)
+      || (barcode !== null && (
+        !barcodeDocument
+        || barcodeDocument.data.id !== barcodeId
+        || barcodeDocument.data.barcode !== barcode
+        || barcodeDocument.data.materialId !== context.materialId
+        || barcodeDocument.data.status !== 'active'
+        || JSON.stringify(barcodeDocument.data.presentation) !== JSON.stringify(warehouseUnitFromOperationalLabel(context.unitLabel))
+      ))
     ) {
       throw new FastPathError('WAREHOUSE_IDEMPOTENCY_CONFLICT', 409);
     }
@@ -780,7 +813,7 @@ async function performAllocation(
     quantityDelta: quantity,
     idempotencyKeyHash: movementId.slice('mov_'.length),
     reversesMovementId: null,
-    note: 'Alocação direta da Central de Depósitos',
+    note: allocationMovementNote,
     source: {
       kind: 'INVOICE',
       action: 'ENTRY',
@@ -939,7 +972,7 @@ async function performAllocation(
     write(
       WAREHOUSE_DATABASE_ID,
       paths.lot,
-      { ...nextLot, createdAt: lotDocument?.data.createdAt || now, updatedAt: now },
+      { ...nextLot, createdAt: new Date(timestamp(lotDocument?.data.createdAt) || now), updatedAt: now },
       lotDocument
     ),
   ];
@@ -1185,6 +1218,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'WAREHOUSE_ACCESS_DENIED' },
         { status: error.status }
+      );
+    }
+    if (error instanceof SectorProvisioningFailure) {
+      return NextResponse.json(
+        { error: error.code === 'SERVER_CONFIGURATION'
+          ? 'WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION'
+          : 'WAREHOUSE_FAST_PATH_UPSTREAM_AUTH' },
+        { status: 503 }
       );
     }
     if (error instanceof FastPathError) {

@@ -1,0 +1,134 @@
+name: Warehouse RC Integrated F05 F06 F09 Real Repositories
+on:
+  push:
+    branches: [rc-r1-warehouse-full-integration-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  f06-original:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin original Worker 6 F06 assertions and verify unchanged Rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          git fetch --no-tags origin warehouse-f06-fixture-fix-01
+          test "$(git rev-parse FETCH_HEAD)" = '7b499254f5d10487be2622e92c78fae18d7c76d1'
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs | sha256sum
+          # Exact blob SHA above proves frozen Rules even on shallow checkout.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Run all 9 unmodified F06 tests against REAL composed engine
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
+      - name: Generate adversarial companion fixture with original assertions intact
+        run: node scripts/warehouse-f06-composition-generate-safety.mjs
+      - name: Verify access, offline server reads and third contender on Emulator
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-composition-security.test.mjs"
+      - name: Save failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: composition-f06-emulator-debug
+          path: firestore-debug.log
+          if-no-files-found: warn
+  f09-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert composed F09 repository and Rules are unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          test "$(git hash-object lib/warehouse/outboundRepository.ts)" = '256b92ee0d1c0604eee0ef89d30ce329f6d0c9b7'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Run complete F09 security suite
+        run: npm run test:adm-deposito-modular-r1-security
+
+  f05-persistence-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert composed F05 route and Rules are unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object app/api/adm-deposito/intake-action/route.ts)" = '77eb8e14ac3fbdbba8d1721d76fc8e908dc251cd'
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: F05 pure transaction and error regressions
+        run: node --test scripts/warehouse-fast-intake-errors.test.mjs scripts/warehouse-f05-route-transaction.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: F05 Firestore REST Emulator real persistence
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-f05
+          --only firestore
+          "node scripts/warehouse-f05-firestore-emulator.mjs"
+
+  warehouse-performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Performance repository and cache contract tests on integrated sources
+        run: |
+          npm run test:performance-r3-memory-cache
+          node --test scripts/warehouse-performance-repository.test.mjs
+      - name: Verify cached barcode code has unchanged baseline semantics
+        run: |
+          test "$(git hash-object lib/warehouse/barcodeRepository.ts)" = '042b78076fd37717ff957d5f4ad20eb0c100bf9b'
+          test "$(git hash-object features/warehouse/components/WarehouseStockOperational.tsx)" = 'd5ccc6ce88ed4c1b9f479e965a02808c657bbc85'
