@@ -1,0 +1,32 @@
+name: RC R1 Preview HTTPS Read-only Smoke
+on:
+  push:
+    branches: [rc-r1-preview-acceptance-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Ensure freeze source untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin rc-r1-global-frozen-2026-10-09
+          test "$(git rev-parse FETCH_HEAD)" = '61e372225834ed6060cd2b36dbdd55d1e1979c2c'
+          git diff --name-only '61e372225834ed6060cd2b36dbdd55d1e1979c2c' HEAD > /tmp/rc-preview-diff.txt
+          if grep -vE '^(docs/RC_R1_PREVIEW_ACCEPTANCE_MATRIX.md|scripts/rc-r1-preview-smoke-readonly.mjs|.github/workflows/rc-r1-preview-readonly.yml)$' /tmp/rc-preview-diff.txt; then
+            echo 'Unexpected delta outside preview-only assets'; exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only HTTPS checks (no credentials, no post, no redirect-following)
+        env:
+          RC_PREVIEW_URL: 'https://controles-de-empenhos-aprov-git-rc-886227-aprov-hgesms-projects.vercel.app'
+        run: node scripts/rc-r1-preview-smoke-readonly.mjs
