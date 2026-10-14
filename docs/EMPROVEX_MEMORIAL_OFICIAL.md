@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / RESULTADO QA AUTOMATIZADO W4 NO HEAD 5d3d6dbc
+
+**EVIDÊNCIA DIRETA GITHUB ACTIONS:** [Run 38632525337](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38632525337), job `visual-w4-node-browser` **SUCCESS** no commit `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398` do PR #305. Logs: **6/6 testes Node PASS, 0 fail** (`scripts/visual-r1-w4-navigation-beam.test.mjs` + `scripts/visual-r1-w4-sidebar-border-beam.test.mjs`); **5/5 Playwright Chromium PASS**, cenário real de navegador no `/dev/visual-r1` compilado pelo Next dev server, incluindo desktop, mobile reduzido, tablet 768px, forced-colors e teclado. Instalação de dependências, runtime de teste e Chromium SUCCESS. Não é um teste autenticado em todos os módulos operacionais, nem aceite visual humano. Sem dados reais ou deploy.
+
+**GATES COMPLEMENTARES:** Core Protection SUCCESS em `5d3d6dbc`; Application CI amplo em andamento na última consulta. PR #305 permanece OPEN/DRAFT e `mergeable=true`. Declarar certificação técnica integral somente após resultado final dos demais checks neste SHA, mais homologação funcional/estética real.
+
+---
+
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EXECUÇÃO DE RECONCILIAÇÃO W4 E QA ISOLADO
 
 **DECISÃO AUTORIZADA:** solicitação `/goal execute` do Fundador para executar a reconciliação W4 prevista no checkpoint anterior. Escrita restrita ao PR #305 DRAFT, PR #290 documental e comentário explicativo ao PR #304; sem merge `main`, RC, Production, Firestore Rules, auth, cobrança ou dados.
