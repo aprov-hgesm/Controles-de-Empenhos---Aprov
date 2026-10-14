@@ -254,35 +254,35 @@ export default function Home() {
         }
       />
 
+      <AppSidebar
+        activeTab={activeTab}
+        open={sidebarOpen}
+        userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+        noticeCount={pendingNoticeCount}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
+          setSidebarOpen(false);
+        }}
+        onLogout={async () => {
+          try {
+            setShowLoginSuccessTransition(false);
+            await signOutUser();
+            showToast('Você saiu do sistema.', 'info');
+          } catch (err: any) {
+            console.error(err);
+            showToast('Erro ao sair do sistema', 'error');
+          }
+        }}
+        warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
+        onOpenWarehouse={() => {
+          window.location.assign('/adm-deposito');
+        }}
+      />
+
       {/* Main Framework Wrapper */}
       <div className="flex flex-1 pt-16 min-h-screen z-10 relative lg:pl-72">
-
-        <AppSidebar
-          activeTab={activeTab}
-          open={sidebarOpen}
-          userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
-          noticeCount={pendingNoticeCount}
-          onClose={() => setSidebarOpen(false)}
-          onNavigate={(tab) => {
-            setActiveTab(tab);
-            if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
-            setSidebarOpen(false);
-          }}
-          onLogout={async () => {
-            try {
-              setShowLoginSuccessTransition(false);
-              await signOutUser();
-              showToast('Você saiu do sistema.', 'info');
-            } catch (err: any) {
-              console.error(err);
-              showToast('Erro ao sair do sistema', 'error');
-            }
-          }}
-          warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
-          onOpenWarehouse={() => {
-            window.location.assign('/adm-deposito');
-          }}
-        />
 
         {/* Content Container Area */}
         <main
