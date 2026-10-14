@@ -5,6 +5,7 @@ import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Edit, E
 import { AnimatePresence, motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { CronogramaEmailDialog } from './CronogramaEmailDialog';
+import { CronogramaEnviosView } from './CronogramaEnviosView';
 import type { CronogramaEmailConfirmation } from '../hooks/useCronogramaActions';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
@@ -74,6 +75,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
   const [savingItemDetails, setSavingItemDetails] = React.useState(false);
+  const [cronogramaSubTab, setCronogramaSubTab] = React.useState<'planejar' | 'enviados'>('planejar');
 
   React.useEffect(() => {
     setEditingItemId(null);
@@ -82,7 +84,29 @@ export function CronogramasView({ context }: CronogramasViewProps) {
 
   return (
             <div id="view-cronogramas" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
-              
+              <nav aria-label="Subabas de Cronogramas" className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/85 p-2 shadow-sm">
+                <button type="button" onClick={() => setCronogramaSubTab('planejar')}
+                  aria-current={cronogramaSubTab === 'planejar' ? 'page' : undefined}
+                  disabled={isSendingCronogramaEmail}
+                  className={cronogramaSubTab === 'planejar'
+                    ? 'rounded-xl bg-[#00288e] px-4 py-2.5 text-xs font-extrabold text-white'
+                    : 'rounded-xl px-4 py-2.5 text-xs font-extrabold text-slate-600 hover:bg-blue-50'}>
+                  <CalendarDays className="mr-2 inline-block h-4 w-4" /> Planejar cronogramas
+                </button>
+                <button type="button" onClick={() => setCronogramaSubTab('enviados')}
+                  aria-current={cronogramaSubTab === 'enviados' ? 'page' : undefined}
+                  disabled={isSendingCronogramaEmail}
+                  className={cronogramaSubTab === 'enviados'
+                    ? 'rounded-xl bg-[#00288e] px-4 py-2.5 text-xs font-extrabold text-white'
+                    : 'rounded-xl px-4 py-2.5 text-xs font-extrabold text-slate-600 hover:bg-blue-50'}>
+                  <Mail className="mr-2 inline-block h-4 w-4" /> Cronogramas enviados
+                </button>
+              </nav>
+
+              {cronogramaSubTab === 'enviados' ? (
+                <CronogramaEnviosView cronogramas={cronogramas} empenhos={empenhos} />
+              ) : (
+                <>
               {/* CASE 1: LIST OF EMPENHOS FOR CRONOGRAMAS */}
               {selectedCronogramaEmpenhoId === null ? (
                 <div className="space-y-6">
@@ -1197,6 +1221,8 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                 onCancel={cancelCronogramaEmail}
                 onConfirm={() => void confirmCronogramaEmail()}
               />
+                </>
+              )}
 
             </div>
           );
