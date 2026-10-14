@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## DECISÃO DO FUNDADOR — 2026-10-14 — PALETA COLORIDA EXCLUSIVA DO NÚCLEO INÍCIO
+
+**DIRETRIZ MAIS RECENTE — prevalece sobre descrições anteriores nesta documentação:** o Thinking Orbs **colorido é exclusivo do núcleo central da aba Início**. Todos os demais indicadores Thinking Orbs (carregamentos, autenticação, áreas secundárias, formatos `hero/large/medium/small/mini` fora do núcleo central) devem permanecer **monocromáticos, com contraste adaptado ao fundo de cada superfície**: claros sobre fundos escuros; escuros sobre fundos claros. Não utilizar placa de fundo grafite artificial em cartões claros; a própria tinta troca para escura.
+
+**IMPLEMENTAÇÃO NO CÓDIGO:** [PR #292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) passou a usar `EmprovexThinkingOrb` com `palette?: 'monochrome'|'colored'`, padrão seguro **monochrome**, e `surface?: 'light'|'dark'`; usa `paintColorWorkingFrame` **somente quando `animation==='working' && palette==='colored'`**; caso contrário usa pintura monocromática nativa `paintFrame(..., surface==='dark')`. O laboratório W1 demonstra um orb colorido da futura Home e exemplos monocromáticos em claro/escuro. A paleta colorida aprovada para a Home permanece branco `#FFFFFF` nas lentas e, nas rápidas, 70% `#FFD25A` e 30% `#FF5A46`, esfericidade 72% e cintilação 68%.
+
+**CONSUMIDO NO W5:** [PR #295](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) sincronizou a API W1; o adaptador de carregamentos `EmprovexThinkingOrbRenderer` força **`palette='monochrome'`** e transmite `surface='light'|'dark'`, evitando cor em todos os cinco presets. A vitrine `/dev/visual-r1` ganhou prévia exclusiva do Início colorido e comparação de carregamentos monocromáticos em fundos claro e escuro; o novo spec Playwright rejeita pixels coloridos fora da amostra do Início. Handoff W5 atualizado. As mudanças permanecem em branches isoladas e PRs DRAFT; **não** há montagem do novo núcleo na Home operacional, nem uso dos loaders em produção.
+
+**TESTES E GATES:** novos SHAs foram gerados após os últimos checks verdes, portanto a certificação anterior não abrange automaticamente a política cromática atual. Core Protection e Application CI dos novos SHAs estão em andamento no momento do registro; Playwright real, screenshot, FPS/CPU/GPU, aceite de W3/W4 e deliberação do Block 19.14 seguem pendentes. Verificar o HEAD de cada PR no GitHub antes de citar resultados. Não modificar `main`, RC, Rules, autenticação, backend, Vercel Production ou dados.
+
+**CLASSIFICAÇÃO:** **DECISÃO DO FUNDADOR REGISTRADA; PALETA ISOLADA IMPLEMENTADA NAS BRANCHES W1/W5; NOVA CERTIFICAÇÃO PENDENTE; SEM GO DE MERGE.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W1-W5: CORES REACT IMPLEMENTADAS; CONTRASTE CLARO/ESCURO ADAPTADO
 
 **ONDE ESTAMOS:** Fundador autorizou concluir o núcleo colorido e corrigir contraste em superfícies mistas do EMPROVEX. Foram efetivamente atualizadas **duas branches DRAFT**, sem modificar `main`, o RC ou a Home operacional: [PR #292 (W1)](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) `visual-w1-orb-core-01@8cec9253e4c137450c2f64bb2eed53ae881afdd8`; [PR #295 (W5)](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) `visual-r1-integration-01@ada575fb23772697ca9dc5cd7afe7fee9b12a1b9`. HEADs verificados em consulta GitHub. Os SHA podem mudar se os respectivos workers seguirem desenvolvendo: reler antes de compor.
@@ -506,7 +520,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
-| VISUAL-R1 (paralelo) | W1 E W5 COM CORES REACT / CONTRASTE CLARO-ESCURO IMPLEMENTADOS; CI NOVO PENDENTE | W1 #292@8cec9253 e W5 #295@ada575fb: branco #FFF e rápidas 70% amarelo / 30% vermelho, estáveis; matte grafite em fundo claro, transparente no escuro; Core PASS, Application em execução; Home/Block 19.14/E2E/aceites pendentes |
+| VISUAL-R1 (paralelo) | FUNDADOR RESTRINGIU CORES À HOME; W1/W5 IMPLEMENTARAM PALETA POR CONTEXTO | Colorido apenas `palette=colored` para núcleo central do Início (ainda não montado); loaders monocromáticos por `surface=light/dark` em PR #295; novos gates/E2E e Block19.14 pendentes; sem merge/Production |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
@@ -531,11 +545,11 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 | Worker | Responsabilidade exclusiva | Arquivos / superfícies sob ownership | Entrada / condição |
 | --- | --- | --- | --- |
-| W1 — VISUAL-ORB-CORE | REACT COLORIDO IMPLEMENTADO #292@8cec9253; CORE PASS/CI PENDENTE | Nova paint layer com identidade de partículas por velocidade, escala/roundness/sparkle preservados, surface matte/transparente; vendor MIT inalterado | Application CI novo e Playwright/CPU-GPU pendentes; decisão Block 19.14 antes da Home |
+| W1 — VISUAL-ORB-CORE | CORES SOMENTE NO INÍCIO (DESIGN APROVADO); NOVA CERTIFICAÇÃO PENDENTE | API `palette=colored/monochrome` com padrão mono e `surface=light/dark`, geom./licença MIT preservadas; demo Home colorida | Home ainda não montada; validar cores e Block 19.14 antes de integrar |
 | W2 — VISUAL-LOADERS | Wrapper/variantes hero/large/medium/small/mini e estados reais de espera; especificar integrações | Novos `components/visual/*Loader*` e, após aceite, `OperationalSurfaceLoading.tsx` / `EmprovexAuthLoading.tsx`; não editar arquivos W1 | Branch separada baseada na main; alinhar contrato de import com W1, evitar dependência divergente |
 | W3 — VISUAL-MOTION | PASS técnico isolado — PR #293@fc260332; 3 refinamentos de Relatórios/SAG | `RelatoriosView.tsx`, `SagSupplierStep.tsx`, `SagImportProgress.tsx` e handoff documental; sem shell ou loading | Core + Application 7/7 SUCCESS; browser, acessibilidade real, aceite estético e integração pendentes |
 | W4 — VISUAL-BORDER | PASS técnico isolado — PR #294@8237e52b; Border Beam low/24s | Wrapper/showcase/CSS, licença, rota de laboratório dev e spec E2E novos, sem alterar cards críticos ou shell | Core + Application SUCCESS; E2E real, performance e aprovação estética pendentes; não integrar antes do aceite |
-| W5 — VISUAL-INTEGRATION-QA | COMPOSIÇÃO COLORIDA #295@ada575fb; CORE PASS/CI PENDENTE | Adaptador W1/W2 e contrastSurface light/dark, laboratório integrado, novo spec E2E visual colorido; sem Home operacional | Verificar Application CI e executar navegador/perf real, compatibilidade 19.14 e aceites de Motion/Beam antes de candidata final |
+| W5 — VISUAL-INTEGRATION-QA | DEMO SEPARA HOME COLORIDA E LOADERS MONOCROMÁTICOS; NOVO CI PENDENTE | PR #295: adaptador força monocromático e tinta por fundo; vitrine de Home colorida separada; spec Playwright atualizado | Testar navegador/contraste/FPS/CPU, certificar HEAD composto e obter autorização arquitetural; sem merge |
 
 **Gate de fidelidade:** `thinking-orbs` do autor é um desenho de partículas claras/escuras em Canvas 2D, não um agrupamento de esferas azuis com gradientes ou filamentos. O trabalho W1 deverá descartar a estética divergente do protótipo Nebula existente, fixar versão/licença e testar a escala ampliada (a biblioteca só declara presets nativos 20/64). Manter as informações de avisos, recebimentos, execução e classes do núcleo original acessíveis.
 
