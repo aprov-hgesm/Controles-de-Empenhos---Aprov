@@ -26,8 +26,10 @@ export interface EmprovexThinkingOrbProps {
   roundness?: number;
   /** White particle twinkles; 0 reproduces the upstream matte ink. */
   sparkle?: number;
-  /** Dark sections need no backdrop; light cards require a flat graphite contrast tile. */
-  contrastSurface?: 'transparent' | 'matte';
+  /** Colored orbital particles are reserved for the central Início feature. */
+  palette?: 'monochrome' | 'colored';
+  /** Monochrome ink adapts to the host background without extra backdrops. */
+  surface?: 'light' | 'dark';
   label?: string;
   className?: string;
 }
@@ -59,7 +61,8 @@ export function EmprovexThinkingOrb({
   speed = 1,
   roundness = 0.72,
   sparkle = 0.68,
-  contrastSurface = 'transparent',
+  palette = 'monochrome',
+  surface = 'dark',
   label = 'Carregando',
   className,
 }: EmprovexThinkingOrbProps) {
@@ -119,10 +122,10 @@ export function EmprovexThinkingOrb({
       const enhanced = animation === 'working'
         ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle)
         : source;
-      if (animation === 'working') {
+      if (animation === 'working' && palette === 'colored') {
         paintColorWorkingFrame(context, enhanced, presetSize, clockSeconds, opts);
       } else {
-        paintFrame(context, enhanced, true);
+        paintFrame(context, enhanced, surface === 'dark');
       }
     };
 
@@ -195,7 +198,7 @@ export function EmprovexThinkingOrb({
       reducedMotion.removeEventListener('change', sync);
       finePointer.removeEventListener('change', sync);
     };
-  }, [animation, interactive, paused, performanceMode, size, speed, roundness, sparkle]);
+  }, [animation, interactive, paused, performanceMode, size, speed, roundness, sparkle, palette, surface]);
 
   const isLoading = state === 'loading';
   const orbStyle = { '--orb-size': `${SIZE_PIXELS[size]}px` } as CSSProperties;
@@ -210,7 +213,8 @@ export function EmprovexThinkingOrb({
       data-paused={paused ? 'true' : 'false'}
       data-interactive={interactive ? 'true' : 'false'}
       data-animation={animation}
-      data-contrast-surface={contrastSurface}
+      data-orb-palette={palette}
+      data-orb-surface={surface}
       data-testid="emprovex-thinking-orb"
       aria-hidden={isLoading ? undefined : true}
       role={isLoading ? 'status' : undefined}
