@@ -1,11 +1,11 @@
 # EMPROVEX R1 — QA Acceptance Automation 01
 
-**Data:** 14/10/2026  
-**Worker:** RC-R1-QA-ACCEPTANCE-AUTOMATION-01  
-**Branch:** `rc-r1-qa-acceptance-automation-01`  
-**Base congelada, jamais modificada:** `61e372225834ed6060cd2b36dbdd55d1e1979c2c`  
-**SHA funcional efetivamente certificado:** `72537ef8c37549cf42d7b0b5895d9faf9bde500d`  
-**PR:** [#285 — DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/285)  
+**Data:** 14/10/2026
+**Worker:** RC-R1-QA-ACCEPTANCE-AUTOMATION-01
+**Branch:** `rc-r1-qa-acceptance-automation-01`
+**Base congelada, jamais modificada:** `61e372225834ed6060cd2b36dbdd55d1e1979c2c`
+**SHA funcional efetivamente certificado:** `72537ef8c37549cf42d7b0b5895d9faf9bde500d`
+**PR:** [#285 — DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/285)
 **Classificação:** **PASS COM PENDÊNCIAS** para a bateria local; **Macroação 3/4 ainda NÃO concluída**.
 
 ## 1. Resultado executado, não presumido
