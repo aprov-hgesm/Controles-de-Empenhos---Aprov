@@ -4,6 +4,8 @@ import React from 'react';
 import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Edit, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
+import { CronogramaEmailDialog } from './CronogramaEmailDialog';
+import type { CronogramaEmailConfirmation } from '../hooks/useCronogramaActions';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
@@ -30,6 +32,13 @@ interface CronogramasViewContext {
   handleAddRemessa: (...args: any[]) => any;
   handleGenerateCronogramaPDF: (...args: any[]) => any;
   handleSendCronogramaEmail: (...args: any[]) => any;
+  confirmCronogramaEmail: () => Promise<void>;
+  cancelCronogramaEmail: () => void;
+  updateCronogramaEmailRecipient: (email: string) => void;
+  cronogramaEmailConfirmation: CronogramaEmailConfirmation | null;
+  saveEmailInSupplierRecord: boolean;
+  setSaveEmailInSupplierRecord: React.Dispatch<React.SetStateAction<boolean>>;
+  isPreparingCronogramaEmail: boolean;
   handleRemoveRemessa: (...args: any[]) => any;
   handleSaveCronograma: (...args: any[]) => any;
   handleSelectEmpenhoForCronograma: (...args: any[]) => any;
@@ -61,7 +70,7 @@ interface CronogramasViewProps {
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function CronogramasView({ context }: CronogramasViewProps) {
-  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, confirmCronogramaEmail, cancelCronogramaEmail, updateCronogramaEmailRecipient, cronogramaEmailConfirmation, saveEmailInSupplierRecord, setSaveEmailInSupplierRecord, isPreparingCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
   const [savingItemDetails, setSavingItemDetails] = React.useState(false);
@@ -434,17 +443,17 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           </button>
                           <button
                             onClick={() => void handleSendCronogramaEmail(targetEmp)}
-                            disabled={isSendingCronogramaEmail}
-                            aria-busy={isSendingCronogramaEmail}
+                            disabled={isSendingCronogramaEmail || isPreparingCronogramaEmail}
+                            aria-busy={isSendingCronogramaEmail || isPreparingCronogramaEmail}
                             className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 disabled:cursor-wait disabled:opacity-60"
                             title="Enviar o PDF do cronograma pelo Gmail configurado para o setor"
                           >
-                            {isSendingCronogramaEmail ? (
+                            {isSendingCronogramaEmail || isPreparingCronogramaEmail ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Mail className="w-4 h-4" />
                             )}
-                            {isSendingCronogramaEmail ? 'Enviando...' : 'Enviar por e-mail'}
+                            {isSendingCronogramaEmail ? 'Enviando...' : isPreparingCronogramaEmail ? 'Preparando...' : 'Enviar por e-mail'}
                           </button>
                           <button
                             onClick={handleSaveCronograma}
@@ -1178,6 +1187,16 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                   );
                 })()
               )}
+
+              <CronogramaEmailDialog
+                draft={cronogramaEmailConfirmation}
+                isSending={isSendingCronogramaEmail}
+                saveSupplierEmail={saveEmailInSupplierRecord}
+                onRecipientChange={updateCronogramaEmailRecipient}
+                onSaveSupplierEmailChange={setSaveEmailInSupplierRecord}
+                onCancel={cancelCronogramaEmail}
+                onConfirm={() => void confirmCronogramaEmail()}
+              />
 
             </div>
           );
