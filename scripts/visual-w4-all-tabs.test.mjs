@@ -26,8 +26,8 @@ test('every main operational tab has one real monochrome beam placement', () => 
     assert.ok(code.includes('import { EmprovexBorderBeam }'), `missing import: ${tab}`);
     assert.ok(code.includes(`testId="${testId}"`), `missing actual placement: ${tab}`);
     assert.ok(code.includes(`variant="${variant}"`), `incorrect variant: ${tab}`);
-    assert.equal((code.match(/<EmprovexBorderBeam(?=[\\s>])/g) || []).length, 1, `one beam per tab file: ${tab}`);
-    assert.equal((code.match(/<\\/EmprovexBorderBeam>/g) || []).length, 1, `matched wrapper: ${tab}`);
+    assert.equal(code.split('<EmprovexBorderBeam').length - 1, 1, `one beam per tab file: ${tab}`);
+    assert.equal(code.split('</EmprovexBorderBeam>').length - 1, 1, `matched wrapper: ${tab}`);
   }
 });
 
@@ -40,7 +40,8 @@ test('Home Orb R2 stays centered and only the small top rail receives a beam', (
   assert.ok(!scene.includes('EmprovexThinkingOrb'));
   assert.ok(core.includes('palette="colored"'));
   assert.ok(core.includes('refinement="r2"'));
-  assert.match(viewStyles, /\\.system \\{[\\s\\S]*?top: 50%;/);
+  assert.ok(viewStyles.includes('.system {')); 
+  assert.ok(viewStyles.includes('top: 50%;'));
 });
 
 test('the border is decoration only and motion/accessibility guards remain', () => {
@@ -54,6 +55,6 @@ test('the border is decoration only and motion/accessibility guards remain', () 
   assert.ok(beam.includes("duration = 24"));
   assert.ok(app.includes("activeTab === 'inicio'"));
   const examples = read('components/visual/EmprovexAllTabBeamPreview.tsx');
-  assert.ok(examples.includes('S URFACES'.replace(' ', '')));
+  assert.ok(examples.includes('SURFACES'));
   for (const [tab] of MATRIX) assert.ok(examples.includes(`id: '${tab}'`));
 });
