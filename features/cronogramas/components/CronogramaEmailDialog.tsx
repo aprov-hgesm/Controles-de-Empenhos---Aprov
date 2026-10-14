@@ -160,7 +160,12 @@ export function CronogramaEmailDialog({
               <ShieldCheck className="h-4 w-4" /> Envio por Gmail
             </p>
             <p className="mt-1">Assunto: {draft.assunto}</p>
-            <p className="mt-1">O PDF do cronograma será anexado. O envio ficará na pasta Enviados da Conta Google.</p>
+            <p className="mt-2 font-extrabold">Anexos obrigatórios (2 PDFs):</p>
+            <ul className="mt-1.5 list-inside list-disc space-y-1">
+              <li>Cronograma de Entrega (gerado pelo EMPROVEX)</li>
+              <li className="break-all">{draft.notaEmpenhoFilename} (Nota de Empenho cadastrada)</li>
+            </ul>
+            <p className="mt-2">Os dois documentos serão enviados juntos e o e-mail ficará na pasta Enviados da Conta Google.</p>
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
