@@ -4643,3 +4643,76 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     border-color: #94a3b8 !important;
   }
 }
+
+
+/* VISUAL-R1 / W4 — Shared active navigation Border Beam. */
+/* A 1px masked ring only on the active sidebar tab. No extra layout wrappers:
+ * original <button>, hit areas, aria-current, focus and click behavior remain.
+ * Like EmprovexBorderBeam, decoration never intercepts pointer events.
+ */
+@property --emprovex-nav-beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.emprovex-app-sidebar .emprovex-sidebar-nav-item > .emprovex-sidebar-nav-item__beam {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  box-sizing: border-box;
+  background: conic-gradient(
+    from var(--emprovex-nav-beam-angle) at 50% 50%,
+    transparent 0deg,
+    transparent 291deg,
+    rgb(231 237 246 / 0.15) 307deg,
+    rgb(231 237 246 / 0.95) 328deg,
+    rgb(231 237 246 / 0.12) 351deg,
+    transparent 360deg
+  ) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  animation: emprovex-active-tab-beam 24s linear infinite paused;
+}
+
+/* Exactly one active navigation button in the shared menu, never every card. */
+.emprovex-app-sidebar .emprovex-sidebar-nav-item[data-active='true'] > .emprovex-sidebar-nav-item__beam {
+  opacity: 0.28;
+}
+
+/* The separate Central de Depósitos route has no activeTab value here.
+ * Its item receives a nonmoving highlight only while keyboard-focused. */
+.emprovex-app-sidebar .emprovex-sidebar-nav-item:focus-visible > .emprovex-sidebar-nav-item__beam {
+  opacity: 0.28;
+}
+
+@keyframes emprovex-active-tab-beam {
+  from { --emprovex-nav-beam-angle: 0deg; }
+  to { --emprovex-nav-beam-angle: 360deg; }
+}
+
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item[data-active='true'] > .emprovex-sidebar-nav-item__beam {
+    animation-play-state: running;
+  }
+}
+
+@media (max-width: 640px), (prefers-reduced-motion: reduce) {
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item > .emprovex-sidebar-nav-item__beam {
+    animation: none !important;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item > .emprovex-sidebar-nav-item__beam {
+    display: none;
+  }
+}
