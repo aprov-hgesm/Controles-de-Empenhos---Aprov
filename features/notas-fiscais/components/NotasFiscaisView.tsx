@@ -12,6 +12,7 @@ import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
 import { motion } from 'motion/react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { loadAllInvoicesHistory, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
@@ -340,6 +341,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
               </div>
 
               {/* Sub-Tabs Toggle */}
+              <EmprovexBorderBeam theme="light" variant="focus" intensity="low" borderRadius={12} testId="invoices-tabs-border-beam">
               <div className="flex border-b border-gray-200 gap-6 flex-wrap">
                 <button
                   onClick={() => setNfSubTab('acompanhar')}
@@ -381,6 +383,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   )}
                 </button>
               </div>
+              </EmprovexBorderBeam>
 
               {/* Sub-Tab 1: Acompanhar Notas Cadastradas */}
               {nfSubTab === 'acompanhar' && (
