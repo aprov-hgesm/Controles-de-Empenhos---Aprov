@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Dispatch, SetStateAction } from 'react';
 import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, FileUp, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -409,6 +410,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                       <p className="text-sm font-medium text-gray-500">Controle de faturamento, saldos orçamentários e contratos</p>
                     </div>
 
+                    <EmprovexBorderBeam variant="focus" theme="light" intensity="low" borderRadius={16} testId="tab-beam-empenhos">
                     <div
                       role="tablist"
                       aria-label="Navegação da área de Empenhos"
@@ -468,6 +470,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         Configurar Classes
                       </button>
                     </div>
+                    </EmprovexBorderBeam>
                   </div>
 
                   {empenhosSubTab === 'overview' && (
