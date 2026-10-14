@@ -355,7 +355,10 @@ export async function saveCronograma(userId: string, cronograma: CronogramaEmpen
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'cronogramas', cronograma.id);
   try {
-    await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...cronograma, userId });
+    // Salvar o planejamento não pode sobrescrever o histórico de envios.
+    // Último envio e histórico são registrados exclusivamente pela transação pós-Gmail.
+    const { ultimoEnvioEmail: _lastEmail, historicoEnviosEmail: _sentHistory, ...planning } = cronograma;
+    await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...planning, userId }, { merge: true });
     recordWorkspaceDocumentWrites(scope);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
