@@ -107,3 +107,29 @@ test('falha ao atualizar contato não exige um segundo envio de e-mail', () => {
   assert.match(hook, /Confira a pasta Enviados antes de tentar novamente/);
   assert.match(hook, /destinatario: recipient/);
 });
+
+test('Gmail monta um MIME multipart com os dois anexos PDF independentes', () => {
+  assert.match(gmail, /additionalAttachments\?: Array/);
+  assert.match(gmail, /\.\.\.\(input\.additionalAttachments \|\| \[\]\)/);
+  assert.match(gmail, /for \(const item of attachments\)/);
+  assert.match(gmail, /Content-Disposition: attachment; filename=/);
+  assert.match(gmail, /bytesToBase64\(attachmentBytes\)/);
+  assert.match(gmail, /MAX_GMAIL_PDF_TOTAL_BYTES/);
+  assert.match(gmail, /String\.fromCharCode\(\.\.\.prefix\) !== '%PDF-'/);
+});
+
+test('cronograma envia o PDF da NE atual a partir do Drive junto ao PDF gerado', () => {
+  assert.match(hook, /fetchEmpenhoPdfBlob/);
+  assert.match(hook, /emp\.notaEmpenhoPdf\.storage\?\.status !== 'active'/);
+  assert.match(hook, /notaEmpenhoPdf = await fetchEmpenhoPdfBlob\(user, emp\.id, emp\.notaEmpenhoPdf\)/);
+  assert.match(hook, /additionalAttachments: \[/);
+  assert.match(hook, /\{ blob: notaEmpenhoPdf, name: draft\.notaEmpenhoFilename \}/);
+  assert.ok(
+    hook.indexOf('await fetchEmpenhoPdfBlob(') < hook.indexOf('const sent = await sendWorkspaceGmailMessage('),
+    'O PDF da NE deve estar disponível antes de chamar o Gmail.'
+  );
+  assert.match(hook, /Nenhum e-mail foi enviado/);
+  assert.match(hook, /Cronograma de Entrega e a Nota de Empenho/);
+  assert.match(dialog, /Anexos obrigatórios \(2 PDFs\)/);
+  assert.match(dialog, /draft\.notaEmpenhoFilename/);
+});
