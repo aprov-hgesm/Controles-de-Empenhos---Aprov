@@ -261,7 +261,7 @@ async function buildRawMimeMessage(input: WorkspaceGmailSendInput, senderEmail: 
 
   for (const item of attachments) {
     const filename = assertHeaderSafe(item.name, 'Nome do anexo');
-    if (/[\\"\\]/.test(filename)) {
+    if (filename.includes(String.fromCharCode(34)) || filename.includes(String.fromCharCode(92))) {
       throw new Error('O nome do anexo contém caracteres inválidos para envio.');
     }
     const prefix = new Uint8Array(await item.blob.slice(0, 5).arrayBuffer());
