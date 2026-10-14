@@ -1,5 +1,37 @@
 # EMPROVEX — Memorial Oficial
 
+## Procedimento preferencial de deploy — decisão do Fundador em 14/10/2026
+
+Esta diretriz específica substitui orientações anteriores sobre o método de deploy. Os demais estados históricos deste memorial não são atualizados por este registro.
+
+Após aprovação da publicação e validação dos checks do commit exato, executar no PowerShell:
+
+```powershell
+cd "$HOME\emprovex-visual-r1-test"
+git fetch origin main
+git switch --detach FETCH_HEAD
+
+# Conferir o SHA completo contra o commit aprovado antes de publicar.
+git rev-parse HEAD
+git status --short
+# Prosseguir somente se o SHA corresponder ao aprovado e não houver alterações locais.
+
+vercel.cmd deploy --prod --scope aprov-hgesms-projects
+```
+
+- Método preferencial: deploy direto pela Vercel CLI no PowerShell, com compilação nos servidores da Vercel.
+- Sem WSL, Ubuntu ou build local obrigatório; não utilizar `--prebuilt`.
+- Confirmar que o projeto Vercel vinculado é `aprov-hgesms-projects/controles-de-empenhos-aprov`; interromper se o CLI apontar outro projeto ou time.
+- Publicar alterações consolidadas e aprovadas, preservando trabalho local e os gates existentes.
+- Após o comando, conferir o resultado da implantação, URL, ambiente Production e commit de origem quando disponível. Abrir o site publicado e verificar a alteração aprovada.
+- Registrar SHA, URL, estado final e resultado da verificação. Comando iniciado ou deployment READY, isoladamente, não comprova validação funcional.
+- Em caso de bloqueio de quota ou falha de build, registrar o resultado e não declarar publicação concluída.
+- O método foi declarado aprovado pelo Fundador após confirmação de funcionamento no site. Este registro não comprova uma nova publicação e não concede autorização geral de produção.
+- Nunca incluir tokens, credenciais ou conteúdo de arquivos de ambiente no memorial ou nos logs compartilhados.
+
+---
+
+
 Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
