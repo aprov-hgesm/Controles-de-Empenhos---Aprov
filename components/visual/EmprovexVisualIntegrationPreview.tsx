@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { EmprovexBorderBeam } from './EmprovexBorderBeam';
+import { EmprovexMotionReviewPreview } from './EmprovexMotionReviewPreview';
 import { EmprovexLoaderShowcase } from './EmprovexLoaderShowcase';
 import { EmprovexOrbLoader } from './EmprovexOrbLoader';
 import { EmprovexOrbVisual } from './EmprovexOrbVisual';
@@ -144,6 +145,8 @@ export function EmprovexVisualIntegrationPreview() {
         </div>
       </section>
 
+      <EmprovexMotionReviewPreview />
+
       <section className="space-y-3" aria-label="Border Beam sujeito a aprovação">
         <h2 className="text-xl font-semibold">Border Beam — comparação isolada</h2>
         <p className="text-sm text-slate-600">Intensidade baixa, duração 24 segundos, sem aceite para produção.</p>
@@ -151,8 +154,8 @@ export function EmprovexVisualIntegrationPreview() {
           <div className="rounded-2xl bg-white p-6 text-sm">Cartão demonstrativo, sem ações ou dados reais.</div>
         </EmprovexBorderBeam>
         <p className="text-xs">
-          As transições W3 estão montadas nas telas de Relatórios/SAG da branch DRAFT,
-          sem aprovação para merge.
+          As transições W3 estão nas telas reais de Relatórios/SAG e podem ser exploradas
+          acima em uma demonstração isolada; homologação funcional e merge ainda pendentes.
         </p>
       </section>
     </main>
