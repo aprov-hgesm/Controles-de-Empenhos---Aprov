@@ -38,6 +38,8 @@ test('beam stays monochrome, noninteractive, static on mobile and reduced motion
   assert.match(css, /\[data-active='true'\]/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width: 640px\)/);
+  assert.match(css, /@media \(min-width: 641px\) and \(max-width: 1023px\)/);
+  assert.match(css, /@media \(forced-colors: active\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.doesNotMatch(css, /#FFD25A|#FF5A46|rgba?\(255,\s*210,\s*90/);
   const lab = read('components/visual/EmprovexNavigationBeamPreview.tsx');

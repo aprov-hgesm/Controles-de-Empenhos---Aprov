@@ -33,4 +33,18 @@ test.describe('VISUAL-R1 W4 — navigation Border Beam expansion', () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
   });
+
+  test('tablet 768px and forced-colors keep the navigation beam static and accessible', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await page.goto('/dev/visual-r1');
+    const preview = page.getByRole('region', { name: 'Worker 4 — Border Beam nas demais abas' });
+    const active = preview.locator('button[data-active="true"]');
+    await expect(active).toHaveCount(1);
+    const beam = active.locator('[data-emprovex-nav-beam="true"]');
+    await expect.poll(() => beam.evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+    await page.emulateMedia({ forcedColors: 'active' });
+    await expect.poll(() => beam.evaluate(el => getComputedStyle(el).display)).toBe('none');
+    await active.focus();
+    await expect(active).toBeFocused();
+  });
 });

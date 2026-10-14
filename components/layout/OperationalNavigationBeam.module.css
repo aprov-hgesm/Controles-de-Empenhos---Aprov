@@ -99,3 +99,18 @@
     transition: none;
   }
 }
+
+/* Bottom navigation is visible below Tailwind lg (1024px): never animate it. */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .beam,
+  .mobileItem .beam {
+    animation: none !important;
+  }
+}
+
+/* High-contrast users retain the browser's native keyboard focus outline. */
+@media (forced-colors: active) {
+  .beam {
+    display: none !important;
+  }
+}
