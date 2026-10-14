@@ -15,15 +15,30 @@ export function EmprovexVisualIntegrationPreview() {
   const [performance, setPerformance] = useState<OrbLoaderPerformance>('balanced');
   const [demoState, setDemoState] = useState<DemoState>('loading');
   return (
-    <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 text-slate-900">
+    <main className="mx-auto flex max-w-6xl flex-col gap-8 bg-slate-50 px-4 py-8 text-slate-900">
       <header className="space-y-2">
         <p className="text-xs font-bold uppercase tracking-widest">EMPROVEX / VISUAL-R1 / Worker 5</p>
         <h1 className="text-3xl font-bold">Laboratório de integração visual</h1>
         <p className="text-sm text-slate-600">
           Prévia isolada em desenvolvimento ou Vercel Preview, sem autenticação, dados ou consultas operacionais.
-          W1 ainda é monocromático neste commit; a versão colorida depende de novo HEAD certificado.
+          Motor colorido integrado nesta candidata para testes: partículas lentas brancas e rápidas amarelas/vermelhas. Ainda depende da homologação final dos gates, do navegador e do desempenho.
         </p>
       </header>
+
+      <section className="space-y-4" aria-label="Contraste real em superfícies escuras e claras">
+        <h2 className="text-xl font-semibold">Contraste EMPROVEX · Claro e escuro</h2>
+        <p className="text-sm text-slate-600">O mesmo orb preserva branco, amarelo e vermelho. Nas áreas claras ele recebe uma base grafite fosca; nas áreas escuras permanece transparente, sem bolhas ou gradientes decorativos.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">Cartão claro · fundo de contraste</span>
+            <EmprovexOrbVisual size="large" performance={performance} surface="light" renderer={EmprovexThinkingOrbRenderer} />
+          </div>
+          <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-700 bg-slate-900 p-6">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-100">Painel escuro · orb transparente</span>
+            <EmprovexOrbVisual size="large" performance={performance} surface="dark" renderer={EmprovexThinkingOrbRenderer} />
+          </div>
+        </div>
+      </section>
 
       <section className="space-y-4" aria-label="Cinco tamanhos de Thinking Orbs integrados">
         <h2 className="text-xl font-semibold">Thinking Orbs + cinco presets W2</h2>
@@ -43,7 +58,7 @@ export function EmprovexVisualIntegrationPreview() {
             <option value="static">Estático</option>
           </select>
           <div className="flex min-h-32 items-center justify-center">
-            <EmprovexOrbVisual size="medium" performance={performance} renderer={EmprovexThinkingOrbRenderer} />
+            <EmprovexOrbVisual size="medium" performance={performance} surface="light" renderer={EmprovexThinkingOrbRenderer} />
           </div>
         </div>
         <div className="space-y-4 rounded-2xl border border-slate-200 p-5">
@@ -59,7 +74,7 @@ export function EmprovexVisualIntegrationPreview() {
             {demoState === 'loading' ? (
               <EmprovexOrbLoader loading label="Amostra de indicador"
                 description="Nenhuma operação em andamento."
-                renderer={EmprovexThinkingOrbRenderer} size="small" performance={performance} />
+                renderer={EmprovexThinkingOrbRenderer} size="small" performance={performance} surface="light" />
             ) : demoState === 'ready' ? (
               <p role="status">Amostra de conteúdo pronto.</p>
             ) : (
