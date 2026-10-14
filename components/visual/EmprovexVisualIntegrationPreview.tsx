@@ -7,6 +7,7 @@ import { EmprovexOrbLoader } from './EmprovexOrbLoader';
 import { EmprovexOrbVisual } from './EmprovexOrbVisual';
 import { EmprovexThinkingOrbRenderer } from './EmprovexThinkingOrbRenderer';
 import { EmprovexThinkingOrb } from '@/features/visual-orbs/components/EmprovexThinkingOrb';
+import { OperationalSurfaceLoading } from '@/components/layout/OperationalSurfaceLoading';
 import type { OrbLoaderPerformance } from './orbLoaderContract';
 
 type DemoState = 'loading' | 'ready' | 'error';
@@ -56,6 +57,31 @@ export function EmprovexVisualIntegrationPreview() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-label="Implementação W2 nos carregamentos reais">
+        <h2 className="text-xl font-semibold">Worker 2 · Carregamentos operacionais e autenticação</h2>
+        <p className="text-sm text-slate-600">
+          Amostras visuais de desenvolvimento, sem consulta, autenticação ou espera artificial.
+          A superfície operacional abaixo usa o mesmo componente exibido durante os carregamentos reais.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="min-w-0">
+            <OperationalSurfaceLoading />
+          </div>
+          <div className="flex min-h-[320px] min-w-0 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-700 bg-[#071225] p-8 text-center text-white">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-200/70">
+              Amostra visual do indicador de autenticação
+            </span>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-300/[0.11] bg-blue-400/[0.055]">
+              <EmprovexOrbVisual size="small" performance="balanced" surface="dark"
+                renderer={EmprovexThinkingOrbRenderer} />
+            </div>
+            <p className="text-xs text-slate-300">
+              LoginStatusRail e verificação real de identidade permanecem na tela de autenticação.
+            </p>
+          </div>
         </div>
       </section>
 
