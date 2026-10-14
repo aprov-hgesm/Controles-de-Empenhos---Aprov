@@ -14,7 +14,7 @@ const W1_DIAMETERS: Record<ThinkingOrbSize, number> = {
 };
 
 export function EmprovexThinkingOrbRenderer({
-  size, pixelSize, speed, paused, performance,
+  size, pixelSize, speed, paused, performance, surface = 'light',
 }: OrbRendererProps) {
   const nativePixels = W1_DIAMETERS[size];
   const scale = Math.max(0.1, Math.min(4, pixelSize / nativePixels));
@@ -44,6 +44,7 @@ export function EmprovexThinkingOrbRenderer({
           speed={speed}
           roundness={0.72}
           sparkle={0.68}
+          contrastSurface={surface === 'light' ? 'matte' : 'transparent'}
         />
       </span>
     </span>
