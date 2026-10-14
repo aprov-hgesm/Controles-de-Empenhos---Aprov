@@ -27,7 +27,7 @@ export function EmprovexThinkingOrbPreview() {
       <header className={styles.heading}>
         <p>EMPROVEX / VISUAL-R1 / WORKER 1</p>
         <h1>Thinking Orbs — partículas originais</h1>
-        <span>Canvas 2D · Monocromático · MIT © Jakub Antalik · Sem integração à Home</span>
+        <span>Canvas 2D · Branco / amarelo / vermelho · MIT © Jakub Antalik · Sem integração à Home</span>
       </header>
       <section className={styles.layout} aria-label="Área de comparação visual">
         <div className={styles.stage}>
@@ -96,9 +96,21 @@ export function EmprovexThinkingOrbPreview() {
           </div>
         ))}
       </section>
+      <section className={styles.contrastGrid} aria-label="Verificação de contraste em superfícies claras e escuras">
+        <div className={styles.contrastDark}>
+          <span>SUPERFÍCIE ESCURA · orb transparente</span>
+          <EmprovexThinkingOrb size="large" animation="working" performance={performance}
+            paused={paused} roundness={roundness} sparkle={sparkle} />
+        </div>
+        <div className={styles.contrastLight}>
+          <span>SUPERFÍCIE CLARA · orb sobre grafite fosco</span>
+          <EmprovexThinkingOrb size="large" animation="working" performance={performance}
+            paused={paused} roundness={roundness} sparkle={sparkle} contrastSurface="matte" />
+        </div>
+      </section>
       <p className={styles.note}>
         Protótipo de desenvolvimento: nenhum empenho, aviso, tooltip ou comando foi alterado.
-        Use os controles de esfericidade e cintilação para comparar o refinamento com o original (ambos em 0%), sem afetar os demais estados nativos.
+        Partículas rápidas recebem cores determinísticas em proporção 70/30 aproximada pela contagem inteira; partículas lentas brancas. Nos controles 0% o desenho estrutural volta à geometria original, mantendo a paleta colorida aprovada.
       </p>
     </main>
   );
