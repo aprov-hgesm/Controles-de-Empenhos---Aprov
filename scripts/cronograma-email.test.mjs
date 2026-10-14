@@ -188,7 +188,7 @@ test('MIME real gera dois anexos independentes e não envia MIME inválido', asy
   assert.match(mime, /filename="Nota_Empenho_NE_123.pdf"/);
   assert.match(mime, /Content-Type: multipart\/mixed/);
   const encodedBodies = Array.from(
-    mime.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=]+)/g),
+    mime.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([^\r\n]+)/g),
     (match) => Buffer.from(match[1], 'base64').toString('utf8')
   );
   assert.equal(encodedBodies.length, 3); // corpo do e-mail + dois PDFs
