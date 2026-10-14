@@ -11,6 +11,7 @@ const gmail = read('lib/googleWorkspaceMail.ts');
 const supplier = read('lib/supplierEmailResolver.ts');
 const hook = read('features/cronogramas/hooks/useCronogramaActions.ts');
 const view = read('features/cronogramas/components/CronogramasView.tsx');
+const dialog = read('features/cronogramas/components/CronogramaEmailDialog.tsx');
 const types = read('lib/types.ts');
 const drive = read('lib/googleDriveWorkspace.ts');
 
@@ -68,5 +69,41 @@ test('interface oferece envio e mostra último envio', () => {
   assert.match(view, /isSendingCronogramaEmail/);
   assert.match(view, /Último envio/);
   assert.match(types, /export interface CronogramaEmailEnvio/);
-  assert.match(types, /fonteEmailFornecedor: 'local' \| 'global'/);
+  assert.match(types, /fonteEmailFornecedor: 'local' \| 'global' \| 'manual'/);
+});
+
+test('envio usa modal do EMPROVEX com destinatário editável, confirmação e cancelamento', () => {
+  assert.doesNotMatch(hook, /window\.confirm\(/);
+  assert.match(hook, /setCronogramaEmailConfirmation\(/);
+  assert.match(hook, /confirmCronogramaEmail/);
+  assert.match(hook, /cancelCronogramaEmail/);
+  assert.match(view, /<CronogramaEmailDialog/);
+  assert.match(dialog, /role="dialog"/);
+  assert.match(dialog, /aria-modal="true"/);
+  assert.match(dialog, /type="email"/);
+  assert.match(dialog, /Confirmar e enviar/);
+  assert.match(dialog, /Cancelar/);
+});
+
+test('opção de atualizar Fornecedores é voluntária e somente após envio confirmado', () => {
+  assert.match(dialog, /changedRecipient &&/);
+  assert.match(dialog, /checked={saveSupplierEmail}/);
+  assert.match(dialog, /Salvar este e-mail no cadastro do fornecedor/);
+  assert.match(hook, /setSaveEmailInSupplierRecord\(false\)/);
+  assert.match(hook, /changedEmail && saveEmailInSupplierRecord/);
+  assert.match(hook, /shouldSaveContact && !draft\.podeSalvarContato/);
+  assert.match(hook, /contactSaved \? 'local' : 'manual'/);
+  assert.ok(
+    hook.indexOf('await saveSupplierEmailForEmpenho(') > hook.indexOf('const sent = await sendWorkspaceGmailMessage('),
+    'Cadastro somente pode ser atualizado após envio confirmado pelo Gmail.'
+  );
+  assert.match(supplier, /if \(!cnpj \|\| !isValidSupplierCnpj\(cnpj\)\)/);
+  assert.match(supplier, /\{ \.\.\.existing, email, updatedAt: now, updatedBy: userId \}/);
+  assert.match(supplier, /await saveSupplierContact\(userId, updated\)/);
+});
+
+test('falha ao atualizar contato não exige um segundo envio de e-mail', () => {
+  assert.match(hook, /contactSaveFailed = true/);
+  assert.match(hook, /Confira a pasta Enviados antes de tentar novamente/);
+  assert.match(hook, /destinatario: recipient/);
 });
