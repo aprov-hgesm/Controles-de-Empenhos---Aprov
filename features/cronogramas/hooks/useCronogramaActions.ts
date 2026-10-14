@@ -3,17 +3,32 @@
 import { useState } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
-import { saveCronograma } from '../../../lib/firebaseSync';
+import type { CronogramaEmpenho, CronogramaEmailEnvio, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
+import { recordCronogramaEmailSend, saveCronograma } from '../../../lib/firebaseSync';
+import { snapshotCronogramaRemessas } from '../domain/cronogramaDeliveryTracking';
+import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
 import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
-import { resolveSupplierEmailForEmpenho } from '../../../lib/supplierEmailResolver';
+import { resolveSupplierEmailForEmpenho, saveSupplierEmailForEmpenho } from '../../../lib/supplierEmailResolver';
+import { isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { authorizeWorkspaceGmail, sendWorkspaceGmailMessage } from '../../../lib/googleWorkspaceMail';
 import { loadWorkspaceDriveSettings } from '../../../lib/workspaceDriveSettings';
 import { isOperationalSectorContext, type ResolvedWorkspaceContext } from '../../../lib/workspaceContext';
 
 type Distribution=Record<string,Record<string,number>>;
+
+export interface CronogramaEmailConfirmation {
+  empenhoId: string;
+  fornecedor: string;
+  remetente: string;
+  destinatarioOriginal: string;
+  destinatario: string;
+  fonteOriginal: 'local' | 'global' | null;
+  assunto: string;
+  notaEmpenhoFilename: string;
+  podeSalvarContato: boolean;
+}
 interface CronogramaActionsContext {
   user: User|null;
   empenhos: Empenho[];
@@ -43,6 +58,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
   const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
   const [isSendingCronogramaEmail, setIsSendingCronogramaEmail] = useState(false);
+  const [isPreparingCronogramaEmail, setIsPreparingCronogramaEmail] = useState(false);
+  const [cronogramaEmailConfirmation, setCronogramaEmailConfirmation] = useState<CronogramaEmailConfirmation | null>(null);
+  const [saveEmailInSupplierRecord, setSaveEmailInSupplierRecord] = useState(false);
 
   // Helper date calculator for schedule simulation
   const getFutureDate = (daysAhead: number): string => {
@@ -185,6 +203,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     colunasEntregas: cronogramaColunas,
     distribuicao: cronogramaDistribuicao,
     ...(previous?.ultimoEnvioEmail ? { ultimoEnvioEmail: previous.ultimoEnvioEmail } : {}),
+    ...(previous?.historicoEnviosEmail ? { historicoEnviosEmail: previous.historicoEnviosEmail } : {}),
   });
 
   const handleSaveCronograma = async () => {
@@ -510,7 +529,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     return null;
   };
 
+  // Primeiro prepara o envio e abre uma confirmação nativa da interface do EMPROVEX.
   const handleSendCronogramaEmail = async (emp: Empenho) => {
+    if (isPreparingCronogramaEmail || isSendingCronogramaEmail) return;
     if (!user) {
       showToast('Usuário não autenticado para enviar o cronograma.', 'error');
       return;
@@ -520,57 +541,126 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       return;
     }
 
-    setIsSendingCronogramaEmail(true);
+    if (!emp.notaEmpenhoPdf || emp.notaEmpenhoPdf.storage?.status !== 'active') {
+      showToast(
+        'A Nota de Empenho em PDF não está anexada ou disponível. Anexe a NE em Empenhos antes de enviar o cronograma.',
+        'error'
+      );
+      return;
+    }
+
+    setIsPreparingCronogramaEmail(true);
     try {
       const [supplierEmail, driveSettings] = await Promise.all([
         resolveSupplierEmailForEmpenho(user.uid, emp),
         loadWorkspaceDriveSettings(workspaceContext),
       ]);
-
-      if (!supplierEmail) {
-        throw new Error(
-          'Este fornecedor não possui e-mail cadastrado nem pré-cadastrado para o CNPJ do empenho.'
-        );
-      }
       if (!driveSettings?.accountEmail) {
         throw new Error(
           'O Google Drive deste setor ainda não está configurado. Configure a Conta Google antes de enviar cronogramas.'
         );
       }
 
-      const subject = `Cronograma de Entrega - NE ${emp.id}`;
-      const sourceLabel = supplierEmail.source === 'local'
-        ? 'cadastro do setor'
-        : 'pré-cadastro global';
-
-      const confirmed = window.confirm(
-        'Enviar o cronograma por e-mail?\n\n'
-        + 'De: ' + driveSettings.accountEmail + '\n'
-        + 'Para: ' + supplierEmail.email + '\n'
-        + 'Fonte do destinatário: ' + sourceLabel + '\n'
-        + 'Assunto: ' + subject + '\n\n'
-        + 'O PDF oficial será anexado e a mensagem ficará registrada em Enviados da Conta Google.'
+      setSaveEmailInSupplierRecord(false);
+      setCronogramaEmailConfirmation({
+        empenhoId: emp.id,
+        fornecedor: emp.supplier,
+        remetente: driveSettings.accountEmail,
+        destinatarioOriginal: supplierEmail?.email || '',
+        destinatario: supplierEmail?.email || '',
+        fonteOriginal: supplierEmail?.source || null,
+        assunto: `Cronograma de Entrega - NE ${emp.id}`,
+        notaEmpenhoFilename: `Nota_Empenho_NE_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+        podeSalvarContato: isValidSupplierCnpj(normalizeSupplierCnpj(emp.supplierCnpj)),
+      });
+    } catch (error) {
+      console.error('Erro ao preparar envio do cronograma:', error);
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível preparar o envio por e-mail.',
+        'error'
       );
-      if (!confirmed) return;
+    } finally {
+      setIsPreparingCronogramaEmail(false);
+    }
+  };
 
-      // A autorização é iniciada imediatamente após a confirmação do usuário,
-      // antes de gerar o PDF, para preservar o gesto necessário ao popup OAuth.
-      await authorizeWorkspaceGmail(
-        workspaceContext.workspaceId,
-        driveSettings.accountEmail
+  const updateCronogramaEmailRecipient = (email: string) => {
+    if (isSendingCronogramaEmail) return;
+    setCronogramaEmailConfirmation((draft) => draft ? { ...draft, destinatario: email } : null);
+    // Opt-in nunca é herdado automaticamente após outra edição do endereço.
+    setSaveEmailInSupplierRecord(false);
+  };
+
+  const cancelCronogramaEmail = () => {
+    if (isSendingCronogramaEmail) return;
+    setCronogramaEmailConfirmation(null);
+    setSaveEmailInSupplierRecord(false);
+  };
+
+  // A autorização OAuth começa no clique de confirmação (gesto do usuário).
+  const confirmCronogramaEmail = async () => {
+    const draft = cronogramaEmailConfirmation;
+    if (!draft || isSendingCronogramaEmail || isPreparingCronogramaEmail) return;
+    if (!user || !isOperationalSectorContext(workspaceContext)) {
+      showToast('Sessão operacional indisponível. Abra o envio novamente.', 'error');
+      return;
+    }
+    const emp = empenhos.find((item) => item.id === draft.empenhoId);
+    if (!emp || selectedCronogramaEmpenhoId !== draft.empenhoId) {
+      showToast('O empenho selecionado mudou. Abra novamente a confirmação de envio.', 'error');
+      cancelCronogramaEmail();
+      return;
+    }
+
+    if (!emp.notaEmpenhoPdf || emp.notaEmpenhoPdf.storage?.status !== 'active') {
+      showToast(
+        'A Nota de Empenho não está mais disponível para anexar. Verifique o cadastro antes do envio.',
+        'error'
       );
+      return;
+    }
+
+    const recipient = draft.destinatario.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      showToast('Informe um endereço de e-mail válido para o fornecedor.', 'error');
+      return;
+    }
+    const changedEmail = recipient !== draft.destinatarioOriginal;
+    const shouldSaveContact = changedEmail && saveEmailInSupplierRecord;
+    if (shouldSaveContact && !draft.podeSalvarContato) {
+      showToast('O fornecedor precisa ter um CNPJ válido para atualizar seu cadastro.', 'error');
+      return;
+    }
+
+    setIsSendingCronogramaEmail(true);
+    let gmailSent = false;
+    try {
+      await authorizeWorkspaceGmail(workspaceContext.workspaceId, draft.remetente);
+
+      // Os dois PDFs precisam estar disponíveis ANTES de chamar a API de envio.
+      // Recupera a versão atual da NE do Google Drive autorizado para este workspace.
+      let notaEmpenhoPdf: Blob;
+      try {
+        notaEmpenhoPdf = await fetchEmpenhoPdfBlob(user, emp.id, emp.notaEmpenhoPdf);
+      } catch (error) {
+        console.error('Falha ao recuperar a Nota de Empenho para o envio:', error);
+        throw new Error(
+          'Não foi possível recuperar a Nota de Empenho no Google Drive do setor. '
+          + 'Confira a conexão com o Drive e o PDF cadastrado. Nenhum e-mail foi enviado.'
+        );
+      }
+
+      const pdf = await handleGenerateCronogramaPDF(emp, 'blob');
+      if (!pdf) throw new Error('Não foi possível gerar o PDF do cronograma para anexar ao e-mail.');
 
       const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
       const cronogramaBeforeSend = buildCronogramaObject(emp, previous);
       await saveCronograma(user.uid, cronogramaBeforeSend);
 
-      const pdf = await handleGenerateCronogramaPDF(emp, 'blob');
-      if (!pdf) throw new Error('Não foi possível gerar o PDF do cronograma para anexar ao e-mail.');
-
       const bodyLines = [
         'Prezados,',
         '',
-        'Encaminhamos, em anexo, o Cronograma de Entrega referente à Nota de Empenho ' + emp.id + '.',
+        'Encaminhamos, em anexo, o Cronograma de Entrega e a Nota de Empenho ' + emp.id + '.',
         'Solicitamos a ciência e a observância das datas, quantidades e condições de entrega previstas no documento.',
         '',
         'Fornecedor: ' + emp.supplier,
@@ -586,52 +676,92 @@ export function useCronogramaActions(context:CronogramaActionsContext){
 
       const sent = await sendWorkspaceGmailMessage({
         workspaceId: workspaceContext.workspaceId,
-        expectedSenderEmail: driveSettings.accountEmail,
-        to: supplierEmail.email,
-        subject,
+        expectedSenderEmail: draft.remetente,
+        to: recipient,
+        subject: draft.assunto,
         bodyText: bodyLines.join('\n'),
         attachment: pdf.blob,
         attachmentName: pdf.filename,
+        additionalAttachments: [
+          { blob: notaEmpenhoPdf, name: draft.notaEmpenhoFilename },
+        ],
       });
+      gmailSent = true;
 
-      const sentAt = new Date().toISOString();
-      const cronogramaAfterSend: CronogramaEmpenho = {
-        ...cronogramaBeforeSend,
-        ultimoEnvioEmail: {
-          enviadoEm: sentAt,
-          remetente: sent.senderEmail,
-          destinatario: supplierEmail.email,
-          assunto: subject,
-          messageId: sent.messageId,
-          fonteEmailFornecedor: supplierEmail.source,
-        },
+      // A alteração cadastral só acontece com opt-in e depois de um envio confirmado.
+      let contactSaved = false;
+      let contactSaveFailed = false;
+      if (shouldSaveContact) {
+        try {
+          await saveSupplierEmailForEmpenho(user.uid, emp, recipient);
+          contactSaved = true;
+        } catch (contactError) {
+          contactSaveFailed = true;
+          console.error('E-mail enviado, mas a atualização do fornecedor falhou:', contactError);
+        }
+      }
+
+      const emailSendRecord: CronogramaEmailEnvio = {
+        enviadoEm: new Date().toISOString(),
+        remetente: sent.senderEmail,
+        destinatario: recipient,
+        assunto: draft.assunto,
+        messageId: sent.messageId,
+        fonteEmailFornecedor: changedEmail
+          ? (contactSaved ? 'local' : 'manual')
+          : (draft.fonteOriginal || 'manual'),
+        fornecedor: emp.supplier,
+        remessas: snapshotCronogramaRemessas(emp, cronogramaColunas, cronogramaDistribuicao),
       };
 
       let auditPersisted = true;
+      let history = [...(cronogramaBeforeSend.historicoEnviosEmail || [])];
       try {
-        await saveCronograma(user.uid, cronogramaAfterSend);
+        history = await recordCronogramaEmailSend(user.uid, emp.id, emailSendRecord);
       } catch (auditError) {
         auditPersisted = false;
         console.error('Cronograma enviado, mas o registro de auditoria falhou:', auditError);
+        if (!history.some((entry) => entry.messageId === emailSendRecord.messageId)) {
+          history.push(emailSendRecord);
+        }
       }
+
+      const cronogramaAfterSend: CronogramaEmpenho = {
+        ...cronogramaBeforeSend,
+        ultimoEnvioEmail: emailSendRecord,
+        historicoEnviosEmail: history,
+      };
 
       setCronogramas((previousItems) => [
         ...previousItems.filter((item) => item.empenhoId !== emp.id),
         cronogramaAfterSend,
       ]);
+      setCronogramaEmailConfirmation(null);
+      setSaveEmailInSupplierRecord(false);
 
-      showToast(
-        auditPersisted
-          ? `Cronograma enviado para ${supplierEmail.email} pela conta ${sent.senderEmail}.`
-          : `Cronograma enviado para ${supplierEmail.email}, mas o registro do último envio não pôde ser salvo. Não reenvie sem conferir a pasta Enviados.`,
-        auditPersisted ? 'success' : 'info'
-      );
+      if (!auditPersisted || contactSaveFailed) {
+        const warning = [
+          `Cronograma e Nota de Empenho enviados para ${recipient}.`,
+          !auditPersisted ? 'O histórico do envio não pôde ser gravado.' : '',
+          contactSaveFailed ? 'O novo e-mail não pôde ser salvo em Fornecedores.' : '',
+          'Confira a pasta Enviados antes de tentar novamente.',
+        ].filter(Boolean).join(' ');
+        showToast(warning, 'info');
+      } else {
+        showToast(
+          `Cronograma e Nota de Empenho enviados para ${recipient} pela conta ${sent.senderEmail}.`
+          + (contactSaved ? ' E-mail atualizado na Central de Fornecedores.' : ''),
+          'success'
+        );
+      }
     } catch (error) {
       console.error('Erro ao enviar cronograma por e-mail:', error);
       showToast(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível enviar o cronograma por e-mail.',
+        gmailSent
+          ? 'O Gmail confirmou o envio, mas houve falha ao concluir o processamento. Confira a pasta Enviados antes de reenviar.'
+          : error instanceof Error
+            ? error.message
+            : 'Não foi possível enviar o cronograma por e-mail.',
         'error'
       );
     } finally {
@@ -649,6 +779,13 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     handleSaveCronograma,
     handleGenerateCronogramaPDF,
     handleSendCronogramaEmail,
+    confirmCronogramaEmail,
+    cancelCronogramaEmail,
+    updateCronogramaEmailRecipient,
+    cronogramaEmailConfirmation,
+    isPreparingCronogramaEmail,
+    saveEmailInSupplierRecord,
+    setSaveEmailInSupplierRecord,
     isSendingCronogramaEmail
   };
 }

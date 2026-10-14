@@ -1,7 +1,7 @@
-import type { Empenho } from './types';
-import { getSupplierContacts } from './firebaseSync';
+import type { Empenho, SupplierContact } from './types';
+import { getSupplierContacts, saveSupplierContact } from './firebaseSync';
 import { getGlobalSupplierDirectory } from './supplierDirectory';
-import { normalizeSupplierCnpj } from './invoiceIdentity';
+import { isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 
 export type SupplierEmailSource = 'local' | 'global';
 
@@ -52,4 +52,42 @@ export async function resolveSupplierEmailForEmpenho(
   return globalEmail
     ? { email: globalEmail, source: 'global', cnpj }
     : null;
+}
+
+
+/**
+ * Atualiza somente o contato local do setor, nunca o diretório global.
+ * A ação deve ser chamada exclusivamente após a escolha explícita do usuário.
+ */
+export async function saveSupplierEmailForEmpenho(
+  userId: string,
+  empenho: Empenho,
+  emailAddress: string
+): Promise<void> {
+  const email = normalizeEmail(emailAddress);
+  if (!email) throw new Error('Informe um e-mail válido para o fornecedor.');
+
+  const cnpj = normalizeSupplierCnpj(empenho.supplierCnpj);
+  if (!cnpj || !isValidSupplierCnpj(cnpj)) {
+    throw new Error('É necessário um CNPJ válido no empenho para atualizar o cadastro do fornecedor.');
+  }
+
+  const contacts = await getSupplierContacts(userId);
+  const existing = contacts.find((contact) => contact.cnpj === cnpj);
+  const now = new Date().toISOString();
+  const updated: SupplierContact = existing
+    ? { ...existing, email, updatedAt: now, updatedBy: userId }
+    : {
+        id: 'supplier_' + cnpj,
+        legalName: empenho.supplier.trim() || 'Fornecedor',
+        cnpj,
+        email,
+        phone: '',
+        whatsapp: '',
+        createdAt: now,
+        updatedAt: now,
+        updatedBy: userId,
+      };
+
+  await saveSupplierContact(userId, updated);
 }

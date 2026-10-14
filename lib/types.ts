@@ -191,13 +191,31 @@ export interface CronogramaEntregaColuna {
   observacao?: string;
 }
 
+/** Materiais e quantidades congelados no momento do envio confirmado pelo Gmail. */
+export interface CronogramaEmailMaterialSolicitado {
+  itemId: string;
+  nome: string;
+  unidade: string;
+  quantidade: number;
+}
+
+export interface CronogramaEmailRemessaEnviada {
+  id: string;
+  titulo: string;
+  dataPrevista: string;
+  materiais: CronogramaEmailMaterialSolicitado[];
+}
+
 export interface CronogramaEmailEnvio {
+  /** Para registros anteriores ao acompanhamento, o retrato pode não existir. */
+  fornecedor?: string;
+  remessas?: CronogramaEmailRemessaEnviada[];
   enviadoEm: string;
   remetente: string;
   destinatario: string;
   assunto: string;
   messageId: string;
-  fonteEmailFornecedor: 'local' | 'global';
+  fonteEmailFornecedor: 'local' | 'global' | 'manual';
 }
 
 export interface CronogramaEmpenho {
@@ -216,4 +234,5 @@ export interface CronogramaEmpenho {
     };
   };
   ultimoEnvioEmail?: CronogramaEmailEnvio;
+  historicoEnviosEmail?: CronogramaEmailEnvio[];
 }

@@ -9,6 +9,8 @@ const GOOGLE_MAIL_SCOPES = GOOGLE_GMAIL_SEND_SCOPE + ' ' + GOOGLE_USERINFO_EMAIL
 const GMAIL_SEND_URL = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const TOKEN_EXPIRY_SAFETY_MS = 60_000;
+// Limite conservador: a conversão MIME/base64 aumenta o tamanho do envio.
+const MAX_GMAIL_PDF_TOTAL_BYTES = 17 * 1024 * 1024;
 
 interface GoogleOAuthTokenResponse {
   access_token?: string;
@@ -61,6 +63,7 @@ export interface WorkspaceGmailSendInput {
   bodyText: string;
   attachment: Blob;
   attachmentName: string;
+  additionalAttachments?: Array<{ blob: Blob; name: string }>;
 }
 
 export interface WorkspaceGmailSendResult {
@@ -227,10 +230,19 @@ function encodedWord(value: string): string {
 async function buildRawMimeMessage(input: WorkspaceGmailSendInput, senderEmail: string): Promise<string> {
   const recipient = normalizeRecipientEmail(input.to);
   const subject = assertHeaderSafe(input.subject, 'Assunto');
-  const attachmentName = assertHeaderSafe(input.attachmentName, 'Nome do anexo');
   const boundary = 'emprovex_' + crypto.randomUUID().replace(/-/g, '');
-  const attachmentBytes = new Uint8Array(await input.attachment.arrayBuffer());
-  const attachmentBase64 = bytesToBase64(attachmentBytes);
+  const attachments = [
+    { blob: input.attachment, name: input.attachmentName },
+    ...(input.additionalAttachments || []),
+  ];
+
+  // Evita envios incompletos e mensagens acima do limite aproximado do Gmail.
+  if (attachments.length < 1 || attachments.some((item) => item.blob.size <= 0)) {
+    throw new Error('Todos os PDFs anexados precisam conter dados válidos.');
+  }
+  if (attachments.reduce((sum, item) => sum + item.blob.size, 0) > MAX_GMAIL_PDF_TOTAL_BYTES) {
+    throw new Error('Os PDFs juntos ultrapassam o limite seguro para envio por Gmail (17 MB).');
+  }
 
   const lines = [
     'From: ' + senderEmail,
@@ -245,17 +257,30 @@ async function buildRawMimeMessage(input: WorkspaceGmailSendInput, senderEmail: 
     '',
     utf8Base64(input.bodyText),
     '',
-    '--' + boundary,
-    'Content-Type: application/pdf; name="' + attachmentName + '"',
-    'Content-Disposition: attachment; filename="' + attachmentName + '"',
-    'Content-Transfer-Encoding: base64',
-    '',
-    attachmentBase64,
-    '',
-    '--' + boundary + '--',
-    '',
   ];
 
+  for (const item of attachments) {
+    const filename = assertHeaderSafe(item.name, 'Nome do anexo');
+    if (filename.includes(String.fromCharCode(34)) || filename.includes(String.fromCharCode(92))) {
+      throw new Error('O nome do anexo contém caracteres inválidos para envio.');
+    }
+    const prefix = new Uint8Array(await item.blob.slice(0, 5).arrayBuffer());
+    if (String.fromCharCode(...prefix) !== '%PDF-') {
+      throw new Error('Um dos anexos não é um PDF válido. O e-mail não foi enviado.');
+    }
+    const attachmentBytes = new Uint8Array(await item.blob.arrayBuffer());
+    lines.push(
+      '--' + boundary,
+      'Content-Type: application/pdf; name="' + filename + '"',
+      'Content-Disposition: attachment; filename="' + filename + '"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      bytesToBase64(attachmentBytes),
+      '',
+    );
+  }
+
+  lines.push('--' + boundary + '--', '');
   return base64UrlFromUtf8(lines.join('\r\n'));
 }
 

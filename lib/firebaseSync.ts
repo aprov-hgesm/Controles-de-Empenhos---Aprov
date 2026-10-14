@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { getInvoiceRecordKey } from './invoiceIdentity';
-import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, SupplierContact } from './types';
+import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, CronogramaEmailEnvio, SupplierContact } from './types';
 import {
   commitAllInvoicesDeletionLifecycle,
   commitInvoiceDeletionLifecycle,
@@ -355,10 +355,58 @@ export async function saveCronograma(userId: string, cronograma: CronogramaEmpen
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'cronogramas', cronograma.id);
   try {
-    await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...cronograma, userId });
+    // Salvar o planejamento não pode sobrescrever o histórico de envios.
+    // Último envio e histórico são registrados exclusivamente pela transação pós-Gmail.
+    const { ultimoEnvioEmail: _lastEmail, historicoEnviosEmail: _sentHistory, ...planning } = cronograma;
+    await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...planning, userId }, { merge: true });
     recordWorkspaceDocumentWrites(scope);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+
+/**
+ * Registra apenas um envio já confirmado pela Gmail API.
+ * A transação preserva envios simultâneos e mantém o histórico anterior.
+ * Não cria uma coleção nova nem altera as Firestore Rules.
+ */
+export async function recordCronogramaEmailSend(
+  userId: string,
+  empenhoId: string,
+  envio: CronogramaEmailEnvio
+): Promise<CronogramaEmailEnvio[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const cronogramaId = 'crono_' + empenhoId;
+  const ref = operationalDocRef(scope, 'cronogramas', cronogramaId);
+  const path = getOperationalDocumentPath(scope, 'cronogramas', cronogramaId);
+  try {
+    const entries = await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists()) {
+        throw new Error('O cronograma precisa estar salvo antes de registrar o envio.');
+      }
+      const saved = snapshot.data() as CronogramaEmpenho;
+      const history = [...(saved.historicoEnviosEmail || [])];
+      const existingIds = new Set(history.map((item) => item.messageId));
+      if (saved.ultimoEnvioEmail?.messageId && !existingIds.has(saved.ultimoEnvioEmail.messageId)) {
+        history.push(saved.ultimoEnvioEmail);
+        existingIds.add(saved.ultimoEnvioEmail.messageId);
+      }
+      if (!existingIds.has(envio.messageId)) history.push(envio);
+
+      transaction.update(ref, {
+        ultimoEnvioEmail: envio,
+        historicoEnviosEmail: history,
+      });
+      return history;
+    });
+    recordWorkspaceDocumentReads(scope, 1);
+    recordWorkspaceDocumentWrites(scope);
+    return entries;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
   }
 }
 
