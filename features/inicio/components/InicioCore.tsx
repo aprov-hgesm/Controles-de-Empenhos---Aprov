@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
+import { EmprovexThinkingOrb } from '@/features/visual-orbs/components/EmprovexThinkingOrb';
 import styles from './InicioCore.module.css';
 
 interface InicioCoreProps {
@@ -12,6 +13,10 @@ interface InicioCoreProps {
   totalValueLabel: string;
   activeAlertCount: number;
   interactiveMotion: boolean;
+  /** Preview-only rollout option; 'legacy' keeps the previous reactor for rollback. */
+  visualMode?: 'legacy' | 'thinking-orbs';
+  performanceMode?: 'full' | 'balanced' | 'static';
+  ambientPaused?: boolean;
 }
 
 export function InicioCore({
@@ -20,6 +25,9 @@ export function InicioCore({
   totalValueLabel,
   activeAlertCount,
   interactiveMotion,
+  visualMode = 'legacy',
+  performanceMode = 'balanced',
+  ambientPaused = false,
 }: InicioCoreProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -140,6 +148,7 @@ export function InicioCore({
       data-alert={activeAlertCount > 0 ? 'true' : 'false'}
       data-static-core="true"
       data-inicio-star-exclusion="core"
+      data-visual-core={visualMode}
       tabIndex={0}
       role="group"
       aria-label={`Núcleo EMPROVEX. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}
@@ -150,6 +159,23 @@ export function InicioCore({
         ['--core-density' as string]: density.toFixed(3),
       }}
     >
+      {visualMode === 'thinking-orbs' ? (
+        <span className={styles.thinkingOrbStage} aria-hidden="true">
+          <EmprovexThinkingOrb
+            size="hero"
+            animation="working"
+            palette="colored"
+            surface="dark"
+            roundness={0.72}
+            sparkle={0.68}
+            performance={performanceMode}
+            paused={ambientPaused}
+            interactive={false}
+            state="decorative"
+          />
+        </span>
+      ) : (
+        <>
       <span className={styles.corona} aria-hidden="true" />
       <span className={styles.commandHalo} aria-hidden="true">
         <i />
@@ -190,6 +216,9 @@ export function InicioCore({
         <i />
         <i />
       </span>
+
+        </>
+      )}
 
       <span className={styles.tooltip}>
         <span className={styles.telemetryHeader}>
