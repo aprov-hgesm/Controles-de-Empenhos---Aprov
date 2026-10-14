@@ -1,0 +1,75 @@
+name: RC R1 QA Acceptance Emulators
+on:
+  push:
+    branches: [rc-r1-qa-acceptance-automation-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rc-r1-qa-acceptance-worker
+  cancel-in-progress: true
+env:
+  NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+  NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+jobs:
+  isolation-and-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Isolated demo-only preflight and negative tests
+        run: |
+          node scripts/rc-r1-qa-isolation.mjs
+          node --test scripts/rc-r1-qa-isolation.test.mjs
+      - name: Assert unchanged productive sources
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.rules)" = 'bc91185f34bcdcb4437a4de1078d1089a09292ba'
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          test "$(git hash-object lib/warehouse/locationRepository.ts)" = '17bf8952e3688841c6d92030fc5689a04c3b55d9'
+          test "$(git hash-object app/api/adm-deposito/intake-action/route.ts)" = '77eb8e14ac3fbdbba8d1721d76fc8e908dc251cd'
+          test "$(git hash-object lib/warehouse/outboundRepository.ts)" = '256b92ee0d1c0604eee0ef89d30ce329f6d0c9b7'
+      - run: npm ci --ignore-scripts
+      - name: F05 replay and MOBILE-K regressions
+        run: |
+          node --test scripts/warehouse-f05-route-transaction.test.mjs
+          npm run test:mobile-k-canonical-ops
+  acceptance-browser:
+    needs: isolation-and-contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Install Playwright
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - run: node scripts/rc-r1-qa-isolation.mjs
+      - name: Chromium browser on local Auth and separate Firestore emulators
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-security
+          --only auth,firestore
+          "node scripts/e2e-browser-emulator.mjs tests/e2e/rc-r1-acceptance.spec.mjs"
+      - name: Keep synthetic failure traces only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-r1-qa-synthetic-failure
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 3

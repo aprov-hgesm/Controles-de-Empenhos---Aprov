@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { assertQaIsolation } from './rc-r1-qa-isolation.mjs';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
@@ -87,6 +88,8 @@ async function stopChild(child) {
     });
   });
 }
+
+assertQaIsolation({ ...process.env, NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1', NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security' });
 
 // Seed do EMPROVEX principal no Firestore padrão (8080).
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
