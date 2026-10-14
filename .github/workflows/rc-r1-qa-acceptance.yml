@@ -74,3 +74,94 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 3
+
+  warehouse-f05-f09-mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: F05 true REST persistence on Firestore Emulator
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-f05
+          --only firestore
+          "node scripts/warehouse-f05-firestore-emulator.mjs"
+      - name: F09 security on Warehouse Emulator
+        run: npm run test:adm-deposito-modular-r1-security
+      - name: Mobile R1 simulated domain journeys (not camera physical)
+        run: >
+          node --test
+          scripts/warehouse-mobile-scanner.test.mjs
+          scripts/mobile-r1-inventory.test.mjs
+          scripts/mobile-r1-outbound.test.mjs
+          scripts/mobile-r1-intake-allocation.test.mjs
+  warehouse-f06:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Obtain pinned original F06 assertions, not production overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object firestore.warehouse.rules)" = 'e4037e464ddbeed7629076dc7615266f0caafc7c'
+          git fetch --no-tags origin warehouse-f06-fixture-fix-01
+          test "$(git rev-parse FETCH_HEAD)" = '7b499254f5d10487be2622e92c78fae18d7c76d1'
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: F06 original concurrent/idempotent assertions
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
+      - name: Prepare additional adversarial F06 fixture
+        run: node scripts/warehouse-f06-composition-generate-safety.mjs
+      - name: F06 adversarial permission and concurrency assertions
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-composition-security.test.mjs"
+  saas-legal-multitenant:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Legal version/consent rules on local Emulator
+        run: npm run test:saas-r1-legal-acceptance
+      - name: Multitenant read/write security on local Emulator
+        run: npm run test:security:multitenant

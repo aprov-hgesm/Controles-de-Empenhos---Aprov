@@ -43,3 +43,6 @@ A matriz de referência P01–P24 encontra-se no PR #281 (branch rc-r1-preview-a
 **O QUE FAZER A SEGUIR:** verificar run deste HEAD e reconciliar matriz; continuar testes não cobertos.
 **QUEM FARÁ:** Worker registra CI e bugs; Coordenador concilia Memorial; Fundador realiza testes físicos e Preview autorizado.
 **Classificação enquanto sem execução:** BLOCKED (nenhum PASS novo).
+
+## Ampliação de execução
+No novo HEAD, o workflow agrega F05 REST Emulator, F09 Rules, F06 original e adversarial, suíte de domínio Mobile e Legal/multitenancy; três novos casos Playwright cobrem acesso direto sem sessão, login inválido e saldos no Warehouse Emulator. Nenhum caso físico é reclassificado sem execução humana.

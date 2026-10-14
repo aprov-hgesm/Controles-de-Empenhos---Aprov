@@ -81,3 +81,32 @@ test('P15/P21: Android-size mobile portal routes without horizontal overflow',as
   const metrics=await page.evaluate(()=>({viewport:window.innerWidth,document:document.documentElement.scrollWidth}));
   expect(metrics.document).toBeLessThanOrEqual(metrics.viewport+1);
 });
+
+
+test('P03: protected warehouse route redirects without session', async ({page}) => {
+  await page.goto('/adm-deposito/estoque');
+  await expect(page.getByTestId('sector-login-email')).toBeVisible({timeout:20000});
+  await expect(page.getByTestId('warehouse-stock-operational')).toHaveCount(0);
+});
+test('P05: invalid synthetic password cannot establish access', async ({page}) => {
+  await page.goto('/');
+  await page.getByTestId('sector-login-email').fill('sector-lifecycle@example.test');
+  await page.getByTestId('sector-login-password').fill('senha-incorreta-ficticia');
+  await page.getByTestId('sector-login-submit').click();
+  await expect(page.getByTestId('sector-login-email')).toBeVisible({timeout:20000});
+  await expect(page.getByRole('navigation',{name:'Navegação principal'})).toHaveCount(0);
+});
+test('P08: authoritative synthetic fixture balances are read from local Warehouse Emulator',async ({request})=>{
+  const root='http://127.0.0.1:8081/v1/projects/demo-emprovex-security/databases/emprovex-warehouse/documents/warehouse/hgesm-aprov/';
+  const id='mat_123e4567e89b12d3a456426614174000';
+  const global=await request.get(root+'balances/'+id,{headers:{Authorization:'Bearer owner'}});
+  expect(global.ok()).toBe(true);
+  const value=await global.json();
+  expect(Number(value.fields.quantity.integerValue)).toBe(8);
+  // Metadata historical UNASSIGNED (5) is NOT accepted as an operational position.
+  const physical=await request.get(root+'locationBalances/locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722',{headers:{Authorization:'Bearer owner'}});
+  expect(physical.ok()).toBe(true);
+  const document=await physical.json();
+  expect(Number(document.fields.quantity.integerValue)).toBe(3);
+  expect(document.fields.position.mapValue.fields.kind.stringValue).toBe('LOCATION');
+});
