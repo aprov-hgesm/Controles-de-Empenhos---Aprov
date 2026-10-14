@@ -63,7 +63,7 @@ test('cronograma gera PDF em memória, confirma envio e registra auditoria', () 
   assert.match(hook, /ultimoEnvioEmail/);
   assert.match(hook, /messageId: sent\.messageId/);
   assert.match(hook, /await saveCronograma\(user\.uid, cronogramaBeforeSend\)/);
-  assert.match(hook, /await saveCronograma\(user\.uid, cronogramaAfterSend\)/);
+  assert.match(hook, /await recordCronogramaEmailSend\(user\.uid, emp\.id, emailSendRecord\)/);
 });
 
 test('interface oferece envio e mostra último envio', () => {
@@ -203,4 +203,30 @@ test('MIME real gera dois anexos independentes e não envia MIME inválido', asy
     () => build({ ...input, additionalAttachments: [{ name: 'NE.pdf', blob: { size: 18 * 1024 * 1024 } }] }, 'setor@example.org'),
     /17 MB/
   );
+});
+
+test('histórico de envios é transacional e preservado ao salvar edições', () => {
+  const sync = read('lib/firebaseSync.ts');
+  const tracking = read('features/cronogramas/domain/cronogramaDeliveryTracking.ts');
+  assert.match(hook, /snapshotCronogramaRemessas\(emp, cronogramaColunas, cronogramaDistribuicao\)/);
+  assert.match(hook, /historicoEnviosEmail: previous\.historicoEnviosEmail/);
+  assert.match(hook, /historicoEnviosEmail: history/);
+  assert.match(sync, /export async function recordCronogramaEmailSend\(/);
+  assert.match(sync, /await runTransaction\(db/);
+  assert.match(sync, /transaction\.update\(ref/);
+  assert.match(sync, /history\.push\(envio\)/);
+  assert.match(tracking, /export function remessaWeekRange\(/);
+  assert.match(tracking, /export function matchInvoicesForRemessaWeek\(/);
+});
+
+test('subaba separa envios anteriores dos enviados com remessas registradas', () => {
+  const tracking = read('features/cronogramas/domain/cronogramaDeliveryTracking.ts');
+  const sentView = read('features/cronogramas/components/CronogramaEnviosView.tsx');
+  assert.match(view, /cronogramaSubTab === 'enviados'/);
+  assert.match(view, /<CronogramaEnviosView/);
+  assert.match(sentView, /listSentCronogramas\(cronogramas\)/);
+  assert.match(sentView, /loadInvoicesForEmpenho\(empenhoId\)/);
+  assert.match(sentView, /matchInvoicesForRemessaWeek/);
+  assert.match(sentView, /não comprova chegada do material/);
+  assert.match(tracking, /ultimoEnvioEmail/);
 });
