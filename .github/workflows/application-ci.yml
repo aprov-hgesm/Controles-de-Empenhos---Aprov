@@ -56,6 +56,9 @@ jobs:
             exit 1
           fi
 
+      - name: Cronograma Gmail attachment contract tests
+        run: npm run test:cronograma-email
+
       - name: EMPROVEX core operational protection
         run: npm run verify:emprovex-core-protection
 
