@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { EmprovexBorderBeam } from './EmprovexBorderBeam';
+import { EmprovexAllTabBeamPreview } from './EmprovexAllTabBeamPreview';
 import { EmprovexMotionReviewPreview } from './EmprovexMotionReviewPreview';
 import { EmprovexLoaderShowcase } from './EmprovexLoaderShowcase';
 import { EmprovexOrbLoader } from './EmprovexOrbLoader';
@@ -189,6 +190,7 @@ export function EmprovexVisualIntegrationPreview() {
           disponível no laboratório independente /visual-lab/border-beam (somente dev).
         </p>
       </section>
+      <EmprovexAllTabBeamPreview />
     </main>
   );
 }
