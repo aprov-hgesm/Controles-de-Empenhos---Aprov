@@ -9,6 +9,7 @@ concurrency:
   group: rc-r1-qa-acceptance-worker
   cancel-in-progress: true
 env:
+  EMPROVEX_RC_R1_QA_GUARD: '1'
   NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
   NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
 jobs:

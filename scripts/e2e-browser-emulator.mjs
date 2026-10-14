@@ -89,7 +89,8 @@ async function stopChild(child) {
   });
 }
 
-assertQaIsolation({ ...process.env, NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1', NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security' });
+// Only opt-in RC QA executions add this safety gate; legacy E2E stays unchanged.
+if (process.env.EMPROVEX_RC_R1_QA_GUARD === '1') assertQaIsolation();
 
 // Seed do EMPROVEX principal no Firestore padrão (8080).
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
