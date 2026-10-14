@@ -44,3 +44,25 @@ test('beam stays monochrome, noninteractive, static on mobile and reduced motion
   assert.match(lab, /Nenhuma navegação nem operação foi executada/);
   assert.match(lab, /setActive\(destination\)/);
 });
+
+test('six additional operational screens receive only a single scoped header or tab beam', () => {
+  const routes = [
+    ['features/fornecedores/components/FornecedoresView.tsx', 'suppliers-header-border-beam', 'travel'],
+    ['features/itens/components/ConsultaItensView.tsx', 'items-header-border-beam', 'travel'],
+    ['features/avisos/components/CentralAvisosView.tsx', 'notices-header-border-beam', 'travel'],
+    ['features/cronogramas/components/CronogramasView.tsx', 'schedules-header-border-beam', 'travel'],
+    ['features/empenhos/components/EmpenhosView.tsx', 'commitments-tabs-border-beam', 'focus'],
+    ['features/notas-fiscais/components/NotasFiscaisView.tsx', 'invoices-tabs-border-beam', 'focus'],
+  ];
+  for (const [path, id, variant] of routes) {
+    const view = read(path);
+    assert.match(view, /EmprovexBorderBeam/);
+    assert.equal(view.split(`testId="${id}"`).length - 1, 1, path);
+    assert.match(view, new RegExp('variant="' + variant + '"'));
+    assert.match(view, /intensity="low"/);
+    assert.match(view, /theme="light"/);
+  }
+  // Existing W4 assignments stay untouched in the parent PR.
+  assert.match(read('features/dashboard/components/DashboardView.tsx'), /dashboard-balance-border-beam/);
+  assert.match(read('features/relatorios/components/RelatoriosView.tsx'), /reports-tabs-border-beam/);
+});
