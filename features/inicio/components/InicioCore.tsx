@@ -167,6 +167,7 @@ export function InicioCore({
               size="hero"
               animation="working"
               palette="colored"
+              refinement="r2"
               surface="dark"
               roundness={0.72}
               sparkle={0.76}
