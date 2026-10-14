@@ -77,14 +77,14 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
               aria-pressed={active}
-              className={`group flex min-h-16 min-w-[210px] flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all sm:min-w-0 ${
+              className={`group flex min-h-16 min-w-[210px] flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-[background-color,border-color,color,box-shadow] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e] focus-visible:ring-offset-2 sm:min-w-0 ${
                 active
                   ? 'border-blue-200 bg-[#00288e] text-white shadow-md'
                   : 'border-transparent bg-white/40 text-gray-600 hover:border-blue-100 hover:bg-blue-50/60'
               }`}
             >
               <span
-                className={`grid h-9 w-9 flex-none place-items-center rounded-lg ${
+                className={`grid h-9 w-9 flex-none place-items-center rounded-lg transition-colors duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                   active ? 'bg-white/12 text-white' : 'bg-blue-50 text-[#00288e]'
                 }`}
               >
@@ -92,7 +92,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
               </span>
               <span className="min-w-0">
                 <span className="block text-xs font-extrabold">{tab.label}</span>
-                <span className={`mt-0.5 block text-[10px] font-semibold ${
+                <span className={`mt-0.5 block text-[10px] font-semibold transition-colors duration-[250ms] motion-reduce:transition-none ${
                   active ? 'text-blue-100' : 'text-gray-400'
                 }`}>
                   {tab.description}
