@@ -1,5 +1,6 @@
 'use client';
 
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import styles from './InicioSceneChrome.module.css';
 
 export function InicioSceneChrome() {
@@ -15,9 +16,20 @@ export function InicioSceneChrome() {
       <span className={`${styles.corner} ${styles.cornerBottomRight}`} />
 
       <div className={styles.topRail}>
-        <span>EMPROVEX</span>
-        <i />
-        <span>OPERATIONAL SPACE</span>
+        <EmprovexBorderBeam
+          variant="travel"
+          theme="dark"
+          intensity="low"
+          duration={24}
+          borderRadius={8}
+          testId="tab-beam-inicio"
+        >
+          <div className={styles.topRailContent}>
+            <span>EMPROVEX</span>
+            <i />
+            <span>OPERATIONAL SPACE</span>
+          </div>
+        </EmprovexBorderBeam>
       </div>
 
       <div className={styles.sideScale}>
