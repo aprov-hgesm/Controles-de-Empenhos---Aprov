@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Building2, FileSearch, Landmark, ReceiptText, ShieldCheck } from 'lucide-react';
 import { RelatorioPorEmpenhoView, type RelatoriosViewContext } from './RelatorioPorEmpenhoView';
 import { RelatorioPorFornecedorView } from './RelatorioPorFornecedorView';
@@ -47,6 +48,7 @@ const tabs: Array<{
 
 export function RelatoriosView({ context }: RelatoriosViewProps) {
   const [activeSubTab, setActiveSubTab] = React.useState<RelatoriosSubTab>('empenho');
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-6">
@@ -103,7 +105,16 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
         })}
       </nav>
 
-      <section aria-live="polite">
+      <motion.section
+        key={activeSubTab}
+        data-testid="relatorios-active-panel"
+        aria-live="polite"
+        initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion
+          ? { duration: 0 }
+          : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      >
         {activeSubTab === 'empenho' && <RelatorioPorEmpenhoView context={context} />}
         {activeSubTab === 'fornecedor' && (
           <RelatorioPorFornecedorView empenhos={context.empenhos} invoices={context.invoices} />
@@ -117,7 +128,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           />
         )}
         {activeSubTab === 'integridade' && <HistoricalConsistencyView />}
-      </section>
+      </motion.section>
     </div>
   );
 }
