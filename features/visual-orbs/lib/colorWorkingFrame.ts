@@ -84,7 +84,7 @@ export function resolveOrbColorDistribution(
       return ha - hb || a.id.localeCompare(b.id);
     }).slice(0, Math.round(fast.length * 0.3)).map((particle) => particle.id)
   );
-  return new Map(particles.map((particle) => [
+  return new Map<string, OrbMovingColor>(particles.map((particle): [string, OrbMovingColor] => [
     particle.position,
     particle.speed < FAST_ORBIT_THRESHOLD
       ? 'slow'
