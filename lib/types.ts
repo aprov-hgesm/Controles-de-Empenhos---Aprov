@@ -197,7 +197,7 @@ export interface CronogramaEmailEnvio {
   destinatario: string;
   assunto: string;
   messageId: string;
-  fonteEmailFornecedor: 'local' | 'global';
+  fonteEmailFornecedor: 'local' | 'global' | 'manual';
 }
 
 export interface CronogramaEmpenho {
