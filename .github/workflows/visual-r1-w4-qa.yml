@@ -1,0 +1,43 @@
+name: VISUAL-R1 W4 QA (isolated)
+
+on:
+  pull_request:
+    paths:
+      - 'components/layout/**'
+      - 'components/visual/**'
+      - 'features/**'
+      - 'scripts/visual-r1-w4-*.test.mjs'
+      - 'tests/e2e/visual-w4-*.spec.mjs'
+      - 'playwright.visual-r1.config.mts'
+      - '.github/workflows/visual-r1-w4-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emprovex-visual-r1-w4-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-w4-node-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install existing application dependencies
+        run: npm ci
+      - name: W4 static/contract Node tests
+        run: node --test scripts/visual-r1-w4-sidebar-border-beam.test.mjs scripts/visual-r1-w4-navigation-beam.test.mjs
+      - name: Install isolated Playwright runner (no committed dependency)
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium for headless visual smoke
+        run: npx playwright install --with-deps chromium
+      - name: Run W4 dev lab browser tests
+        env:
+          CI: 'true'
+        run: npx playwright test --config=playwright.visual-r1.config.mts
