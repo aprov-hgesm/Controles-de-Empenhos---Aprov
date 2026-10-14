@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { assertQaIsolation } from './rc-r1-qa-isolation.mjs';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
@@ -87,6 +88,9 @@ async function stopChild(child) {
     });
   });
 }
+
+// Only opt-in RC QA executions add this safety gate; legacy E2E stays unchanged.
+if (process.env.EMPROVEX_RC_R1_QA_GUARD === '1') assertQaIsolation();
 
 // Seed do EMPROVEX principal no Firestore padrão (8080).
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
