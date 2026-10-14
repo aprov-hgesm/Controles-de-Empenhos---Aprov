@@ -27,7 +27,7 @@ Estado: COMPOSIÇÃO DRAFT / HOMOLOGAÇÃO PENDENTE
 - `npm run dev` → `/dev/visual-r1`: adaptação W1+W2 em 5 dimensões, perfis, estados ilustrativos, Border Beam low.
 - `/dev/visual-orb`: demonstração W1 original.
 - `/visual-lab/border-beam`: demonstração W4.
-- Todas retornam 404 em `NODE_ENV=production`. **Não são Preview público publicado.**
+- A rota integrada `/dev/visual-r1` abre somente com `NODE_ENV=development` ou `VERCEL_ENV=preview`, e retorna 404 em Vercel Production. Os laboratórios individuais W1/W4 continuam restritos a desenvolvimento local. Acessibilidade pública da URL do Preview ainda exige verificação pelo Fundador.
 - O loading ilustrado é identificado como amostra, não representa qualquer operação real.
 
 ## Gates e decisão

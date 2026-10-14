@@ -20,7 +20,7 @@ export function EmprovexVisualIntegrationPreview() {
         <p className="text-xs font-bold uppercase tracking-widest">EMPROVEX / VISUAL-R1 / Worker 5</p>
         <h1 className="text-3xl font-bold">Laboratório de integração visual</h1>
         <p className="text-sm text-slate-600">
-          Prévia somente em desenvolvimento, sem autenticação, dados ou consultas operacionais.
+          Prévia isolada em desenvolvimento ou Vercel Preview, sem autenticação, dados ou consultas operacionais.
           W1 ainda é monocromático neste commit; a versão colorida depende de novo HEAD certificado.
         </p>
       </header>
