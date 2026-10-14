@@ -24,7 +24,7 @@ export function EmprovexVisualIntegrationPreview() {
         <h1 className="text-3xl font-bold">Laboratório de integração visual</h1>
         <p className="text-sm text-slate-600">
           Prévia isolada em desenvolvimento ou Vercel Preview, sem autenticação, dados ou consultas operacionais.
-          Apenas o núcleo central do Início será colorido. Os carregamentos e usos secundários ficam monocromáticos, com tinta clara ou escura conforme a superfície. Nenhuma mudança foi montada na Home operacional.
+          Somente o núcleo central do Início é colorido. Os carregamentos e usos secundários permanecem monocromáticos em superfícies claras ou escuras. A Home R2, os loaders W2 e os refinamentos W3 já estão presentes nas respectivas branches de testes; nada foi promovido à produção.
         </p>
       </header>
 
@@ -147,15 +147,46 @@ export function EmprovexVisualIntegrationPreview() {
 
       <EmprovexMotionReviewPreview />
 
-      <section className="space-y-3" aria-label="Border Beam sujeito a aprovação">
-        <h2 className="text-xl font-semibold">Border Beam — comparação isolada</h2>
-        <p className="text-sm text-slate-600">Intensidade baixa, duração 24 segundos, sem aceite para produção.</p>
-        <EmprovexBorderBeam intensity="low" duration={24} theme="light">
-          <div className="rounded-2xl bg-white p-6 text-sm">Cartão demonstrativo, sem ações ou dados reais.</div>
-        </EmprovexBorderBeam>
-        <p className="text-xs">
-          As transições W3 estão nas telas reais de Relatórios/SAG e podem ser exploradas
-          acima em uma demonstração isolada; homologação funcional e merge ainda pendentes.
+      <section className="space-y-4" aria-label="Worker 4 — Border Beam no Painel e Relatórios">
+        <h2 className="text-xl font-semibold">Worker 4 · Border Beam institucional</h2>
+        <p className="text-sm text-slate-600">
+          Aplicado em somente dois pontos de telas diferentes: contorno luminoso de 1 px
+          e 24 segundos no cartão de Saldo Total Restante do Painel; foco de teclado
+          na navegação de Relatórios. Amostras abaixo sem dados operacionais.
+        </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-2" data-testid="w4-dashboard-sample">
+            <p className="text-xs font-semibold text-slate-700">Painel · saldo total (amostra visual sem valores)</p>
+            <EmprovexBorderBeam variant="travel" intensity="low" duration={24}
+              theme="dark" borderRadius={16} testId="w4-sample-travel">
+              <div className="flex min-h-48 flex-col justify-between rounded-2xl bg-gradient-to-br from-blue-900 to-[#00288e] p-5 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Saldo Total Restante</span>
+                <strong className="text-3xl font-black">R$ —</strong>
+                <p className="text-xs text-blue-100">Valores reais exibidos somente no Painel autenticado</p>
+              </div>
+            </EmprovexBorderBeam>
+          </div>
+          <div className="space-y-2" data-testid="w4-reports-sample">
+            <p className="text-xs font-semibold text-slate-700">Relatórios · somente foco de teclado</p>
+            <EmprovexBorderBeam variant="focus" intensity="low"
+              theme="light" borderRadius={16} testId="w4-sample-focus">
+              <nav aria-label="Navegação ilustrativa dos relatórios"
+                className="flex flex-wrap gap-2 rounded-2xl border border-blue-100 bg-white p-3">
+                <button type="button" className="min-h-12 flex-1 rounded-xl border border-blue-100 bg-blue-50 px-3 text-xs font-semibold text-[#00288e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00288e]">
+                  Por Empenho
+                </button>
+                <button type="button" className="min-h-12 flex-1 rounded-xl border border-blue-100 bg-white px-3 text-xs font-semibold text-[#00288e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00288e]">
+                  Por Fornecedor
+                </button>
+              </nav>
+            </EmprovexBorderBeam>
+            <p className="text-xs text-slate-500">Use Tab para observar o realce; estes botões não mudam relatórios.</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-500">
+          Apenas a iluminação decorativa foi integrada; regras, números, seleção de relatórios
+          e alertas continuam responsáveis pelo estado real. Comparação adicional de intensidades
+          disponível no laboratório independente /visual-lab/border-beam (somente dev).
         </p>
       </section>
     </main>
