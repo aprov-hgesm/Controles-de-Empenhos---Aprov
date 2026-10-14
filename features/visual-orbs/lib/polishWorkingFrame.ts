@@ -11,9 +11,12 @@ export function polishWorkingFrame(
   t: number,
   roundness: number,
   sparkle: number,
+  /** Only the colorful Início hero receives a stronger dotted outer shell. */
+  shellEmphasis = 0,
 ): OrbFrame {
   const sphere = Math.max(0, Math.min(1, roundness));
   const gleam = Math.max(0, Math.min(1, sparkle));
+  const outerLift = Math.max(0, Math.min(1, shellEmphasis));
   if (sphere === 0 && gleam === 0) return source;
 
   const dots: Dot[] = [];
@@ -25,12 +28,17 @@ export function polishWorkingFrame(
       const [dx, dy, dz] = fibDir(i, n);
       const [x, y, z] = project(dx, dy, dz);
       const depth = (z / radius + 1) * 0.5;
-      // Faint spherical envelope: the contour emerges from dots only.
+      // Accentuate the silhouette, not the center: only the additive Fibonacci
+      // dots change. The original 3D orbit geometry and depth remain intact.
+      const projectedRadius = Math.hypot(x - size / 2, y - size / 2) / radius;
+      const silhouette = Math.max(0, Math.min(1, (projectedRadius - 0.42) / 0.58));
+      const shellAlpha = sphere * (0.10 + 0.34 * depth);
       dots.push({
         x, y, z,
-        r: (size === 20 ? 0.24 : 0.28) + 0.19 * depth,
+        r: (size === 20 ? 0.24 : 0.28) + 0.19 * depth
+          + outerLift * (0.035 + 0.085 * silhouette),
         white: 0.79 - 0.37 * depth,
-        a: sphere * (0.10 + 0.34 * depth),
+        a: Math.min(0.58, shellAlpha * (1 + outerLift * (0.30 + 0.62 * silhouette))),
       });
     }
   }
