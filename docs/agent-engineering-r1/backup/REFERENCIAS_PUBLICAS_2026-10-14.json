@@ -1,0 +1,2028 @@
+{
+  "title": "EMPROVEX Agent Engineering R1 — observacoes publicas sobre referencias GitHub",
+  "captured_date": "2026-10-14",
+  "repo": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+  "baseline_main": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+  "method": "GitHub REST: git/refs (pages 1-4, page_size 100), matching-refs/tags, pulls?state=open&per_page=100, captured non-atomically",
+  "scope_note": "Metadados somente; nao contem objetos Git, bundle, codigo, comentarios, checks, configuracoes administrativas, dados operacionais ou segredos. Os PRs podem mudar entre consultas.",
+  "counts": {
+    "branches": 307,
+    "open_prs": 60,
+    "draft_open_prs": 48,
+    "open_nondraft_prs": 12,
+    "tags": 0
+  },
+  "branches": [
+    {
+      "ref": "agent-eng-r1-w1-governance-backup",
+      "sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35"
+    },
+    {
+      "ref": "agent-eng-r1-w2-governance-recovery",
+      "sha": "349de40534f1a8ec7b66d72f03b9090bc368a147"
+    },
+    {
+      "ref": "agent-eng-r1-w3-agent-architecture",
+      "sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35"
+    },
+    {
+      "ref": "agent-eng-r1-w4-quality-automation",
+      "sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35"
+    },
+    {
+      "ref": "archive/adm-deposito-full-2026-09",
+      "sha": "5b7e6cdad09381ac6e0c6c62c4934e18357e6347"
+    },
+    {
+      "ref": "audit/baseline-6009d9d-certification",
+      "sha": "1e2c46a1283478e228fe2776bf71d210dfb1ee06"
+    },
+    {
+      "ref": "audit/block-16-9-final-closure",
+      "sha": "1a22113c917418afffcc4cf3ac97c7b8744020d4"
+    },
+    {
+      "ref": "audit/block-17-0-firestore-consumption-baseline",
+      "sha": "724e95a6d331425b186a16bbc27a76f5433af624"
+    },
+    {
+      "ref": "chore/e2e-on-demand-policy",
+      "sha": "92201cdcfaf6d470f21047f90dbf09f47c7e01ef"
+    },
+    {
+      "ref": "codex/block-15-final-hardening",
+      "sha": "e67e717a949a732a84c279f24ae19d430cdb89b3"
+    },
+    {
+      "ref": "codex/block-2-sector-auth-provisioning",
+      "sha": "4689ece5c07bbd5fce451094a8e5252cf65d21e6"
+    },
+    {
+      "ref": "codex/block3-sector-password-login",
+      "sha": "ea3487229defcdad5e14cf764adfce2d06bbcf20"
+    },
+    {
+      "ref": "codex/bloco-0-recuperacao",
+      "sha": "25947309621ad6c0c68e3fc9def498cda0cfa8eb"
+    },
+    {
+      "ref": "codex/class-tr-requirement",
+      "sha": "3c2b2294015288a336db55d7d66e2308888effd7"
+    },
+    {
+      "ref": "codex/configure-named-firestore-rules",
+      "sha": "edffac8de7b405b3317c85bbfa7ffcf70daf9b74"
+    },
+    {
+      "ref": "codex/empenho-classes-and-ux",
+      "sha": "32d49b5d38c13e807fb82c4b794cf781179d1c17"
+    },
+    {
+      "ref": "codex/firestore-provider-enforcement",
+      "sha": "f9859d45ab3337d91458bd4d7d4b71824fd1b7f9"
+    },
+    {
+      "ref": "codex/fix-delete-confirmation-modal",
+      "sha": "e68b8f9143a7a3a48e121687dcc958a62619c649"
+    },
+    {
+      "ref": "codex/fix-prebound-first-login",
+      "sha": "aa19df1ac440eb6c3e3d3359ef1879276aa737cc"
+    },
+    {
+      "ref": "codex/google-search-console-verification",
+      "sha": "4dd4a5bb1147d9594775d64f4b3bb3457729ae52"
+    },
+    {
+      "ref": "codex/public-legal-pages",
+      "sha": "2df6ee8e133b486e5de24129a46a087ab2468cfd"
+    },
+    {
+      "ref": "codex/sector-login-diagnostics",
+      "sha": "f71506fd9d606e9796a0c9e3802d206a1b639536"
+    },
+    {
+      "ref": "codex/sector-password-reset-diagnostics",
+      "sha": "9e5de33937cfea0cdac7724e2ec3313376f63890"
+    },
+    {
+      "ref": "codex/standardize-aprovisionamento-profile",
+      "sha": "2e902cc471bd0b58abbd0eb94729d43c7c826c64"
+    },
+    {
+      "ref": "codex/vercel-blob-privado",
+      "sha": "31500ee81bf7ac6b662c9ad0115f57a3ee4456a1"
+    },
+    {
+      "ref": "dependabot/github_actions/actions/checkout-7",
+      "sha": "0d78f98f68dd71c41f9ec00ce74ea54c0108ac90"
+    },
+    {
+      "ref": "dependabot/github_actions/actions/setup-java-6",
+      "sha": "0a2e8d7050ebd12d2e6dd3db75b41120d1d175ee"
+    },
+    {
+      "ref": "dependabot/github_actions/actions/setup-node-7",
+      "sha": "8c83b58bd23949272b57d2b3713094c0bae287d4"
+    },
+    {
+      "ref": "dependabot/npm_and_yarn/autoprefixer-10.6.1",
+      "sha": "cbf399b07c419db5ab601713495ad365f2ac4789"
+    },
+    {
+      "ref": "dependabot/npm_and_yarn/lucide-react-1.55.0",
+      "sha": "349dd27444cd7f38ed10599847cbc6b0ebe566de"
+    },
+    {
+      "ref": "dependabot/npm_and_yarn/motion-14.1.0",
+      "sha": "f46e7b59a910ab283c7d416eb3dad94da1e55bee"
+    },
+    {
+      "ref": "dependabot/npm_and_yarn/next-16.4.0",
+      "sha": "e23032ead81dbbc2190cc962a7d3fa9013052d76"
+    },
+    {
+      "ref": "dependabot/npm_and_yarn/tailwind-merge-3.7.0",
+      "sha": "76478b1363f4bf5527e5a19fd6dd0b726abd2a27"
+    },
+    {
+      "ref": "docs/adm-deposito-cloud-shell-policy",
+      "sha": "f96bb5553c0031dded95585dbfc475f5b19c42ee"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-0-final-status",
+      "sha": "eebb27e377ec1279d75bae4e9a0d302e235a9b12"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-1-closure",
+      "sha": "2ce49b063dc8cc69d6b9c99731413f0620477e28"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-11-5-visual-ux",
+      "sha": "801806952325527e82df9d3f1e42590e5a91b564"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-2-closure",
+      "sha": "f77869f8bc3d866558e07051329257246deeef93"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-3-closure",
+      "sha": "87023231afae63814d33bfc4d1a45f4550ed6b15"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-5-closure",
+      "sha": "e9fc046b40ba1095a140006b11b0f9b671a79348"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-7-closure",
+      "sha": "3ddb07c8ff9653b0fc891f746cc70c185cdea5f5"
+    },
+    {
+      "ref": "docs/adm-deposito-phase-8-closeout",
+      "sha": "48a5c6948060b9e2b86f3ed5c4e7541cfc9c6c07"
+    },
+    {
+      "ref": "docs/adm-deposito-project-memory",
+      "sha": "fd1accd61eba473c34196e991d267325155c3d67"
+    },
+    {
+      "ref": "docs/adm-deposito-roadmap-v2",
+      "sha": "cb32bb5b03ec79bcfa76abefb725cf72edfbbe1d"
+    },
+    {
+      "ref": "docs/close-adm-deposito-phase-10",
+      "sha": "d51cd55948beaf7648a94bbde1b8f7f8a91c08f5"
+    },
+    {
+      "ref": "docs/official-ci-cloud-shell-workflow",
+      "sha": "02e713d4c52b49453e4f8be44c4e9a862f2491c7"
+    },
+    {
+      "ref": "docs/rc-r1-vercel-diagnostic-sync-2026-10-14",
+      "sha": "70cfd320c9ab13f668e73d052077f7db0fe43891"
+    },
+    {
+      "ref": "docs/visual-r1-worker-dispatch-2026-10-14",
+      "sha": "12c7e3c068e494fa04ee748ba254a24b2a3c7575"
+    },
+    {
+      "ref": "feat/adm-deposito-modular-release",
+      "sha": "25766dae489677118563bb405862246517bfa912"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-0-foundation",
+      "sha": "4b30420929ac7d7ba03dfc699213098459face79"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-1-material-foundation",
+      "sha": "62d34f1ac0941d0eb16fd671504099f24d51c30c"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-10-physical-inventory",
+      "sha": "d9b0544f315d3c1fe36cebc7f87b568873a9d533"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-11-5-visual-ux",
+      "sha": "c309f6249f4c3feff6f85f20678ce884acaf9dfb"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-11-deliveries-dashboard-alerts",
+      "sha": "17c48957a090760fd19792494104497421680cbf"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-11-protected",
+      "sha": "42d00e14ea72f74f50ac2971d2c7909e8e6ea3c9"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-2-ledger-balances",
+      "sha": "c806820a515bdecf928d19098e1e0d6d9e77c366"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-3-walking-skeleton",
+      "sha": "8f310c94fec62fe8a48f1d5acc337369d1369b57"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-4-nf-stock",
+      "sha": "809aeebef60ced515a1e987c11f0ab3160fee5fd"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-5-siscofis",
+      "sha": "557405913f269f565e19d630260e180a53b9a238"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-6-locations",
+      "sha": "5b78e904178c4c2667d65237e027e19d00882e3d"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-7-stock-lots-fefo",
+      "sha": "f1ccef673d969a1e48163a41da2800e98b984aa4"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-8-barcode-scanner-express-outbound",
+      "sha": "f96fce55903b04dcede08ad5c5e29772d364e684"
+    },
+    {
+      "ref": "feat/adm-deposito-phase-9-depot-view-layout",
+      "sha": "ee67f87f1178a667ff5b3706261891f15d21f069"
+    },
+    {
+      "ref": "feat/admin-information-architecture",
+      "sha": "ffd51963ee0a57f3dd00e6743df55db60d285186"
+    },
+    {
+      "ref": "feat/admin-sidebar-google-usage-ux",
+      "sha": "863e457aa4e461b89517cb79edf03bb67ff9fc90"
+    },
+    {
+      "ref": "feat/admin-usage-intelligence",
+      "sha": "172968c7af7e49e97d4e88164ac57f4b6971d49d"
+    },
+    {
+      "ref": "feat/app-shell-final-homologation",
+      "sha": "922f3a2922ad148f5ddaf2433ed4edc8b0f7aa32"
+    },
+    {
+      "ref": "feat/app-shell-foundation",
+      "sha": "e907cb3213100160bea591dc74fc376505d6133a"
+    },
+    {
+      "ref": "feat/backup-recovery-commercial-readiness",
+      "sha": "4614fa3c3e19c5db9c64ebc784ebfe33c1f0745c"
+    },
+    {
+      "ref": "feat/block-10-historical-consistency-repair",
+      "sha": "2cda52c8e51bab46815a4c7c19e5b2f86ed9f590"
+    },
+    {
+      "ref": "feat/block-16-0-capacity-foundation",
+      "sha": "37f205d2d46be7a16cd3818cab2765d2cacabc22"
+    },
+    {
+      "ref": "feat/block-16-1-session-enforcement",
+      "sha": "6781c45ed1a0c671bf645f3edb0a3bdcaa466f80"
+    },
+    {
+      "ref": "feat/block-16-2-admin-session-panel",
+      "sha": "1faea16d9b61641774cb965f3d3e91c13e7147af"
+    },
+    {
+      "ref": "feat/block-16-3-workspace-telemetry",
+      "sha": "b13b386142707f4394a527ef91ce1a50b6c1a260"
+    },
+    {
+      "ref": "feat/block-16-4-global-cloud-monitoring",
+      "sha": "d32df2c9737703e456942f9d0d164a16ea3f43d4"
+    },
+    {
+      "ref": "feat/block-16-5-consolidated-usage-dashboard",
+      "sha": "15c7eb401acea77274e49c7d1e68158734b0606a"
+    },
+    {
+      "ref": "feat/block-16-6-usage-alerts",
+      "sha": "b47faa65635906bf48a5d43c6000f9598f900a7a"
+    },
+    {
+      "ref": "feat/block-17-1-session-lease-efficiency",
+      "sha": "d36d75864335856e18eb78b0d27140aae3cce410"
+    },
+    {
+      "ref": "feat/block-17-2-multitab-session-coordination",
+      "sha": "03d48dc034c94c030f1307481e15216890717306"
+    },
+    {
+      "ref": "feat/block-17-2-session-tab-coordination",
+      "sha": "8eabf755996a2401440647824eaa850ae727aed8"
+    },
+    {
+      "ref": "feat/block-17-consolidated",
+      "sha": "8b7e745350e82116ec15cf2329ba158398c82c3e"
+    },
+    {
+      "ref": "feat/block-18-security-resilience",
+      "sha": "eccbaec8ff761891a535a020ed7aec983dd59439"
+    },
+    {
+      "ref": "feat/block-19-home-experience-foundation",
+      "sha": "6439b74993e26dc17096b41b107fda00ef461861"
+    },
+    {
+      "ref": "feat/block-20-premium-orbital-redesign",
+      "sha": "aae4e5f1558a098a9de5085b5405a1b09f044cc5"
+    },
+    {
+      "ref": "feat/block-21-operational-stars-shooting-stars",
+      "sha": "5aabfb6a9aae3b27befc79509e975300aacba94b"
+    },
+    {
+      "ref": "feat/block-22-billing-observe",
+      "sha": "952aa4a255735231cd668d195c2281371e0030b7"
+    },
+    {
+      "ref": "feat/block-9-browser-e2e-emulator",
+      "sha": "e554c7fee01c75e1f98c59b46d8740411aa88581"
+    },
+    {
+      "ref": "feat/brand-block-1-notifications",
+      "sha": "8cfa42284a27f696f2a9c7d6cf30de123bb0fb9a"
+    },
+    {
+      "ref": "feat/brand-block-3-admin-command-center",
+      "sha": "c1eff0b19ca49a6fd7eda2feb88245a0c7893ff1"
+    },
+    {
+      "ref": "feat/brand-block-4-logo-lock",
+      "sha": "59787bd163446fa1cf5dcb5f25eacdae345cbe06"
+    },
+    {
+      "ref": "feat/brand-block-5-final-validation",
+      "sha": "13e0ed520b2f587d11e48bf38dd4192992cd50f6"
+    },
+    {
+      "ref": "feat/brand-identity-block-0-contract",
+      "sha": "cb126eaa22148e2fcc6d5f0c2318a94c3c04efd1"
+    },
+    {
+      "ref": "feat/central-de-avisos",
+      "sha": "5562a63f6c732238f453d1b0178c5e55ff250c09"
+    },
+    {
+      "ref": "feat/central-depositos-external-access",
+      "sha": "b4ccb15f621afb9784d7fc567733e87df06e8771"
+    },
+    {
+      "ref": "feat/central-depositos-landing-layout",
+      "sha": "3185bbc4e9d4648ac6a7bae4705918d5b1293754"
+    },
+    {
+      "ref": "feat/central-mobile-r1",
+      "sha": "7b7717b6eebabf911310d2b8ac56ed13c9cb9238"
+    },
+    {
+      "ref": "feat/cnpj-block-6-checksum-alphanumeric",
+      "sha": "fdb016534613c31d9702808dba50f9fa3e4642f4"
+    },
+    {
+      "ref": "feat/edit-item-description-number",
+      "sha": "78f02494c30f4bc855542e925910de0ce59a56f4"
+    },
+    {
+      "ref": "feat/empenho-notice-summary",
+      "sha": "d892ea1e7320a1cac133dd2fec3f4a8cd743a2df"
+    },
+    {
+      "ref": "feat/empenhos-block-2-subtabs",
+      "sha": "d487a4024dda60ab8121e2fed3286d8bf157c6cb"
+    },
+    {
+      "ref": "feat/emprovex-core-operational-protection",
+      "sha": "8d9bec0f47cff0c66f9fc8fec9e41731fc1da770"
+    },
+    {
+      "ref": "feat/emprovex-melhorias-set2026",
+      "sha": "20f34aa5969be40fbde27e888e6ca02807959354"
+    },
+    {
+      "ref": "feat/header-brand-core",
+      "sha": "8d1b0f8eccb51aec5d15ad489fda4e3059e008ca"
+    },
+    {
+      "ref": "feat/header-smart-controls",
+      "sha": "434c4729d9cb7b7cd7ba72a6ffcc5a70e7152e3a"
+    },
+    {
+      "ref": "feat/header-structural-premium",
+      "sha": "705be2fdb7ccbb799459c1aad2dcc1bb6da17b4c"
+    },
+    {
+      "ref": "feat/home-classes-tooltip",
+      "sha": "2446845bec479d0c9129a8a9158f17b1e686e2d1"
+    },
+    {
+      "ref": "feat/home-star-exclusion-zones",
+      "sha": "3f886c81bfa758f0fdddbbb5f91fea63504ffbe6"
+    },
+    {
+      "ref": "feat/inicio-background-texture",
+      "sha": "7b2d9d5f18ce9b09ffb6691ed23d6467157630af"
+    },
+    {
+      "ref": "feat/inicio-invoice-pending-stars",
+      "sha": "0ed491d3e5093277fcf397ee12cfd69b928345ac"
+    },
+    {
+      "ref": "feat/inicio-slow-planet-orbits",
+      "sha": "dca8250b24fc059e01d4d2f16e5b7e3c4389c0d8"
+    },
+    {
+      "ref": "feat/invoice-mirror-document",
+      "sha": "52c3cd65b9654e25beb82ac7eb1e65b619f4eb81"
+    },
+    {
+      "ref": "feat/login-cinematic-redesign",
+      "sha": "5eafd278adeecd9b687379eb0c3e3a5a6b52905d"
+    },
+    {
+      "ref": "feat/mobile-shell-refinement",
+      "sha": "cc27960d1861dbd1b22b293a292c94f28e70d802"
+    },
+    {
+      "ref": "feat/ns-integrity-block-0-contract",
+      "sha": "6c05d754c9d26d2493456e763459c59b45aa6ab0"
+    },
+    {
+      "ref": "feat/ns-integrity-block-1-service",
+      "sha": "be59da1b835287986600ba0f243717c77a21e44a"
+    },
+    {
+      "ref": "feat/ns-integrity-block-2-manual",
+      "sha": "d11933f53787eeb12fb4f22a893782f628a2e9d9"
+    },
+    {
+      "ref": "feat/ns-integrity-block-2-manual-edit",
+      "sha": "a2b64fbafec177b6c92c58ef4704727d580653e0"
+    },
+    {
+      "ref": "feat/ns-integrity-block-3-invoice-lifecycle",
+      "sha": "f8c2e89e6b90fe781d96e0140d1ddd67d01bf393"
+    },
+    {
+      "ref": "feat/ns-integrity-block-4-cnpj-migration",
+      "sha": "a4509706f90548e9eb9b7867f1a18e54eef16ff3"
+    },
+    {
+      "ref": "feat/ns-integrity-block-5-firestore-rules",
+      "sha": "ed99fa5f3d3d41a924b01570f3428421b9741e73"
+    },
+    {
+      "ref": "feat/ns-integrity-block-7-ug-identity",
+      "sha": "a910b2d1e2b12db9bb47d3e30bac6c53b898e3ff"
+    },
+    {
+      "ref": "feat/ns-integrity-block-7-workspace-ug",
+      "sha": "bd3d7e3338f763163f02a9d44041fb531a4d25ae"
+    },
+    {
+      "ref": "feat/ns-integrity-block-8-immutable-audit",
+      "sha": "7b0b09b5b0b63888dd1927f76f0a28c5c308f5fc"
+    },
+    {
+      "ref": "feat/performance-r3-commercializacao",
+      "sha": "63614129ae2b4d930f6d75b7124f9e0fc6a99913"
+    },
+    {
+      "ref": "feat/relatorios-foundation-cnpj-invoice-identity",
+      "sha": "cf683c43db1eccda8606032cdd0891f51a2c4602"
+    },
+    {
+      "ref": "feat/relatorios-subtabs-shell",
+      "sha": "21af5c68b5e3655a61318117750eb0045782ef29"
+    },
+    {
+      "ref": "feat/report-empenho-card-selector",
+      "sha": "6bfb94058ee85760a50dab5c382e020f7138988f"
+    },
+    {
+      "ref": "feat/report-empenho-period-readability",
+      "sha": "75077b2dabed243191f4bdddb04bf672f3ca4843"
+    },
+    {
+      "ref": "feat/report-supplier-consolidation",
+      "sha": "a9a93390a327855a0d3360c7a31bec46f12960c1"
+    },
+    {
+      "ref": "feat/reporting-block-10-sag-application-preview",
+      "sha": "fb4f501431ae573e015fc92d064f447f29dac89f"
+    },
+    {
+      "ref": "feat/reporting-block-11-sag-idempotent-import",
+      "sha": "ea1c99c375b9f29008f329af387bd53484e91dea"
+    },
+    {
+      "ref": "feat/reporting-block-12-sag-hardening",
+      "sha": "98aaa5d8c3c101dfc0f22b48074cdccdd1270d88"
+    },
+    {
+      "ref": "feat/reporting-block-13-sag-ux",
+      "sha": "f2e15d89ed44e16d970e2121532b5fe18eea6e69"
+    },
+    {
+      "ref": "feat/reporting-block-7-sag-contract",
+      "sha": "088526aa7fd23a5d58615c92ef51b4e64e1965be"
+    },
+    {
+      "ref": "feat/reporting-block-8-sag-assistant",
+      "sha": "cffa1fb25fadea75fd46b120e09fa6e7228b77b4"
+    },
+    {
+      "ref": "feat/reporting-block-9-sag-reconciliation",
+      "sha": "9085895c5c828c5ab870f1b1ecb683714aa9ca2b"
+    },
+    {
+      "ref": "feat/rpnp-previous-exercise-visual-priority",
+      "sha": "876ca8c0964da7974aea699f3e66f2f11da97fa5"
+    },
+    {
+      "ref": "feat/saas-r1-commercializacao",
+      "sha": "818c43dc4e85f01ba997717936efd1e749fe89ba"
+    },
+    {
+      "ref": "feat/shell-accessibility-hardening",
+      "sha": "1b75331a195c67f6189629b246253094690606a6"
+    },
+    {
+      "ref": "feat/shell-energy-microinteractions",
+      "sha": "62de6c1f3b02088e609b781c7bcf4e921aea4288"
+    },
+    {
+      "ref": "feat/shell-signature-layer",
+      "sha": "2c50cb0997e67ed0191afb835f0e72b95e613d74"
+    },
+    {
+      "ref": "feat/sidebar-navigation-premium",
+      "sha": "c0fc52a1a6b0fe0f1d7021062d82197615798f46"
+    },
+    {
+      "ref": "feat/sidebar-operator-system",
+      "sha": "6cf850ba14977efb68ebfa30d47434a2755acda1"
+    },
+    {
+      "ref": "feat/sidebar-structural-premium",
+      "sha": "eed2f2b82dfce203d0ce64a9c68d4bb544192383"
+    },
+    {
+      "ref": "feat/sped-nup-invoice-reporting",
+      "sha": "694549d7d96578fe0492fbe6217e8cab487eb92b"
+    },
+    {
+      "ref": "feat/ug-telemetry-v2-reconciliation",
+      "sha": "729bcfcecf7b912829b06d0b4c554b64e7719c8f"
+    },
+    {
+      "ref": "feat/workspace-usage-reconciliation-v2",
+      "sha": "9f38b857ae9a53a25e5274f34c8f06b05cd366cd"
+    },
+    {
+      "ref": "feature/consulta-itens",
+      "sha": "4deedac19b21f4eefba28db01b0091afecdb6840"
+    },
+    {
+      "ref": "feature/invoice-pdf-documents-v16",
+      "sha": "8d1c42cf6c33593ae8bd581cba5c95dd6d9fbfc2"
+    },
+    {
+      "ref": "feature/liquidacao-consolidada-v17",
+      "sha": "6913adece6ab3cbfa93f39fa57b58237cc42d2e5"
+    },
+    {
+      "ref": "fix/adm-deposito-emprovex-visual-consolidation",
+      "sha": "fc8fc19bd8fc807a9590de9c8542e3039934550c"
+    },
+    {
+      "ref": "fix/admin-firestore-billing-quota",
+      "sha": "c7fe5297cad49cb107c62644e29cb2d19da4f77f"
+    },
+    {
+      "ref": "fix/block-12-empenho-deletion-integrity",
+      "sha": "ddd68b5145bf116c2f958689287e9c3a4c3bf90c"
+    },
+    {
+      "ref": "fix/block-13-empenho-concurrency",
+      "sha": "e06338e713ac059d4107aeed4565e5aed0f439f2"
+    },
+    {
+      "ref": "fix/block-19-5-orbit-corridor-guard",
+      "sha": "da543a3d8bf540b153d53ee5bcbd7cef6f794a3e"
+    },
+    {
+      "ref": "fix/central-depositos-move-only",
+      "sha": "623d5dd3d2adfdacb2101fff5844e2a01d5ba331"
+    },
+    {
+      "ref": "fix/cloud-monitoring-service-account-jwt",
+      "sha": "4d64fca40017e1eebb8b6650c2cb6c57eceefdcf"
+    },
+    {
+      "ref": "fix/drive-block1-remove-legacy-poc",
+      "sha": "47415dc1d13ad584633e51f74a5c0157a6eb1489"
+    },
+    {
+      "ref": "fix/drive-oauth-experience",
+      "sha": "2e1cd636c048f1e980042ad28e3ae07133bd5e5c"
+    },
+    {
+      "ref": "fix/drive-token-lifecycle",
+      "sha": "d3e25c0bc12c47b421e025f5c0e286c87d699c10"
+    },
+    {
+      "ref": "fix/external-drive-oauth-isolation",
+      "sha": "2d3ca90952e743ea055a63853451ea5585bfb562"
+    },
+    {
+      "ref": "fix/external-drive-oauth-isolation-main",
+      "sha": "f5e2fca9f58f6208b751103d8739aa5173b8c217"
+    },
+    {
+      "ref": "fix/fixed-desktop-sidebar",
+      "sha": "4645568a9842557f39ee7a7c08415343b2165c2d"
+    },
+    {
+      "ref": "fix/home-star-hitboxes-tooltips-landing",
+      "sha": "c249723e765e6fd2cd32eb2b212f1ab2e753f6c6"
+    },
+    {
+      "ref": "fix/invoice-receipt-permissions",
+      "sha": "1b4b0aba7979b0a33a3e5067d2cd0b1f324d326a"
+    },
+    {
+      "ref": "fix/legacy-ns-ug-cnpj-migration",
+      "sha": "05e24e4b638f90a063da28240ffc6c8ab3fff559"
+    },
+    {
+      "ref": "fix/login-handoff-delay",
+      "sha": "c3b2dee5e75b40737dedf95e07f3e0e2c3b63617"
+    },
+    {
+      "ref": "fix/monthly-price-50",
+      "sha": "c9c29e126f3fcec760dc10f6ac4868f5fc717811"
+    },
+    {
+      "ref": "fix/orbit-tooltips-upright",
+      "sha": "21ecc5edded02f341bd938149d89779fb0bc2e23"
+    },
+    {
+      "ref": "fix/session-authorization-hardening",
+      "sha": "c1df7c9fca736c85ee0f6580a2e994850f036317"
+    },
+    {
+      "ref": "fix/sidebar-mobile-toolbar-visibility",
+      "sha": "0811a1d459e65595884c32f1418f82cca6c62652"
+    },
+    {
+      "ref": "fix/sidebar-mobile-toolbar-visibility-main",
+      "sha": "40960aa5618866dfc1e8dc5b9a988fd058799ddb"
+    },
+    {
+      "ref": "fix/tr-counter-institutional-docs",
+      "sha": "7438ad3eeaf90baea7845dfbff74426d8ef8227d"
+    },
+    {
+      "ref": "fix/typescript-invoice-debt-v19",
+      "sha": "095ae8a84066e2f60c7bb024022098d26f5fe90f"
+    },
+    {
+      "ref": "hardening/block-15-extension",
+      "sha": "70a8fe733088b7caf2e6c65482296b4de2f064e5"
+    },
+    {
+      "ref": "hardening/block-15-final",
+      "sha": "b612bc210e74849140bac394b34558f7a094d3ed"
+    },
+    {
+      "ref": "hardening/block-16-7-security-concurrency",
+      "sha": "6475f5ec8cafb8c069855f4e3e5b3921636b64b8"
+    },
+    {
+      "ref": "hotfix/emprovex-core-independent-from-warehouse",
+      "sha": "26c6c3fa6c2d86a831493b6942c73027d777f158"
+    },
+    {
+      "ref": "integration/perf-r3-d-review",
+      "sha": "2e77af1706a599152dff8ec43a197d68056d5ae2"
+    },
+    {
+      "ref": "integration/perf-r3-g-review",
+      "sha": "238b813795be05ad7142973f1566b8fead9d055d"
+    },
+    {
+      "ref": "inventory-physical-fix-01",
+      "sha": "5255bbcbc43593bcf66001adf85eb5d6264a121e"
+    },
+    {
+      "ref": "main",
+      "sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35"
+    },
+    {
+      "ref": "mobile-r1-a-platform-scanner",
+      "sha": "44c4f013859230b5d490d2049c6b8dbf2cd3baa2"
+    },
+    {
+      "ref": "mobile-r1-b-location-labels",
+      "sha": "948978e9e326ff6468643d44540a2a5337dff425"
+    },
+    {
+      "ref": "mobile-r1-c-intake-allocation",
+      "sha": "6828273ee4c957fa92e42922363d2e1dcf296d89"
+    },
+    {
+      "ref": "mobile-r1-d-certification-base",
+      "sha": "6852963c7aa9a1c83133239f0b929715fd316530"
+    },
+    {
+      "ref": "mobile-r1-d-transfer",
+      "sha": "4549b280b483d935373604a8c2b2a54a140684f0"
+    },
+    {
+      "ref": "mobile-r1-e-physical-query",
+      "sha": "fff6fa3ca7588cec4ecf0c3c76d141dda357c626"
+    },
+    {
+      "ref": "mobile-r1-f-inventory",
+      "sha": "42954adab43694816262720581abad2bc0761d4c"
+    },
+    {
+      "ref": "mobile-r1-g-outbound",
+      "sha": "0b513edf7324e40d7b0a505edfdaf84270301ccf"
+    },
+    {
+      "ref": "mobile-r1-h-position-check",
+      "sha": "f30f4dcbb1d03d15230fa4414a7d1b95e231253e"
+    },
+    {
+      "ref": "mobile-r1-i-integration",
+      "sha": "ea5ad10054e2aea608e270a970fde723cde41d93"
+    },
+    {
+      "ref": "mobile-r1-integration-1-certification",
+      "sha": "4b397d61bf4c8505ddf5b3c8fa14e3e8c2e91461"
+    },
+    {
+      "ref": "mobile-r1-integration-2-c",
+      "sha": "82e9df17c83644acb969a7434e89ea2c6ea686de"
+    },
+    {
+      "ref": "mobile-r1-integration-2-certification",
+      "sha": "12df2f1ab6524e80322866ad8a5af59eeb51d49d"
+    },
+    {
+      "ref": "mobile-r1-integration-2-d",
+      "sha": "2469e08b90251a52431b83e6db07841f849dc69c"
+    },
+    {
+      "ref": "mobile-r1-integration-3",
+      "sha": "e40c80d73cf9c444ec0573503a63af18f141bd11"
+    },
+    {
+      "ref": "mobile-r1-j-final-certification",
+      "sha": "90d646372aae3e92318a78b90d71f72c5eb6b00e"
+    },
+    {
+      "ref": "mobile-r1-k-canonical-ops-engine",
+      "sha": "9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0"
+    },
+    {
+      "ref": "perf-j-diff-hygiene-fix",
+      "sha": "1f3c69ca92d4aefbb3c71258f3293a9d4fb25596"
+    },
+    {
+      "ref": "perf-r3-a-core-bundle",
+      "sha": "3193b84117c6c4936ba774ee41c0d8df11b4e3fe"
+    },
+    {
+      "ref": "perf-r3-a-validation-base",
+      "sha": "076a233cf250c95882e78498e89dd2a44d034f74"
+    },
+    {
+      "ref": "perf-r3-a-validation-gates-3193",
+      "sha": "4848c2379f4f7e99df2e563ebac9d83aa41de36b"
+    },
+    {
+      "ref": "perf-r3-b-central-bundle",
+      "sha": "7b7aee100f21b6a67f8cb8f94cfdfb3508bc0d57"
+    },
+    {
+      "ref": "perf-r3-c-outbound-demand-loading",
+      "sha": "c263ce36407304867d3e92d9f0af6929d61b715c"
+    },
+    {
+      "ref": "perf-r3-d-intake-queue",
+      "sha": "022fae7a48def20f9279ad6223ce42cd4f539b8c"
+    },
+    {
+      "ref": "perf-r3-e-render-cpu",
+      "sha": "149f7c3945eae7cb046175499abe5bf6868eb9bb"
+    },
+    {
+      "ref": "perf-r3-f-memory-cache",
+      "sha": "570661ba498edd37ba4c8f0240044d4ee6613bed"
+    },
+    {
+      "ref": "perf-r3-g-central-shell",
+      "sha": "de870d1cb81f5d0eab2faba2fcabed354f35953b"
+    },
+    {
+      "ref": "perf-r3-h-metrics-budget",
+      "sha": "fb5f45296e28bafcad5489860e143b434c1ebf77"
+    },
+    {
+      "ref": "perf-r3-x-hot-vs-history",
+      "sha": "8aac69a92120ff97f0d4ab84e46a470b5c632843"
+    },
+    {
+      "ref": "perf/block-14-operational-scalability",
+      "sha": "a7c50cf87e660b7d1a726009fab6a167805b31ae"
+    },
+    {
+      "ref": "perf/inicio-static-core",
+      "sha": "7db2eb0749622626d310c76bb1f8b31143671557"
+    },
+    {
+      "ref": "perf/inicio-uniform-twinkle-stars",
+      "sha": "332cb58f53ae32393522be3f6a7645f430506ff7"
+    },
+    {
+      "ref": "prod-central-mobile-founder-01",
+      "sha": "96657c30c2cb4d48a5e56c4b0a5990b9fe8f554f"
+    },
+    {
+      "ref": "rc-r1-a-composition",
+      "sha": "7f449db986da359091c70f6ae27934f0db18a0cb"
+    },
+    {
+      "ref": "rc-r1-b-certification",
+      "sha": "851cbfc1c966847d1b5fc53c47e2708a48336f76"
+    },
+    {
+      "ref": "rc-r1-composition-01",
+      "sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27"
+    },
+    {
+      "ref": "rc-r1-f-freeze",
+      "sha": "bef824946715fe96227a9d3c4edf400e7b8f1304"
+    },
+    {
+      "ref": "rc-r1-global-certification-01",
+      "sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c"
+    },
+    {
+      "ref": "rc-r1-global-frozen-2026-10-09",
+      "sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c"
+    },
+    {
+      "ref": "rc-r1-mobile-j-fix-label-readability",
+      "sha": "bd27da91da92642d5a5fea08f7020c6cea658a62"
+    },
+    {
+      "ref": "rc-r1-p-preview",
+      "sha": "54e60c2264588d8802a67a4cab3d875d64f6bfc1"
+    },
+    {
+      "ref": "rc-r1-physical-cert-01",
+      "sha": "bb160f8a294d87b3f67a2c05de3a4a667e0637c6"
+    },
+    {
+      "ref": "rc-r1-physical-fix-01",
+      "sha": "20337dd4cd9f7b586c7810931e6344b2876a3de0"
+    },
+    {
+      "ref": "rc-r1-preview-acceptance-01",
+      "sha": "a4e03cf9220d8162d325f578dfa083cbf6002ca2"
+    },
+    {
+      "ref": "rc-r1-preview-blockers-fix-01",
+      "sha": "906eddacda7d1b788c3404bb5ccdd744b2409071"
+    },
+    {
+      "ref": "rc-r1-preview-firebase-isolation-01",
+      "sha": "78dc23bb460059a83bd9ab3b18964bbe1a051222"
+    },
+    {
+      "ref": "rc-r1-qa-acceptance-automation-01",
+      "sha": "a873b1645d857be171f0c711c8a5e487e9d0c710"
+    },
+    {
+      "ref": "rc-r1-refreeze-01",
+      "sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27"
+    },
+    {
+      "ref": "rc-r1-warehouse-f06-f09-composition-01",
+      "sha": "84af145bf22872c0a973dd3cd5f4954fcccc2f0d"
+    },
+    {
+      "ref": "rc-r1-warehouse-full-integration-01",
+      "sha": "dec21b86cbbafbb2d7f3d50bd7b9af3371abc740"
+    },
+    {
+      "ref": "rc-readiness-01",
+      "sha": "bd27da91da92642d5a5fea08f7020c6cea658a62"
+    },
+    {
+      "ref": "rc-session-cap-rules-audit",
+      "sha": "a97c1a94799cbbc240994d76fefc6f85925bffe1"
+    },
+    {
+      "ref": "refactor/block-11-sag-import-view",
+      "sha": "ef64f4daf9de3b3aaf4b82e56255f093a9491663"
+    },
+    {
+      "ref": "refactor/central-depositos-r2",
+      "sha": "922946220cf3fb43a5bb68eaef39ed2eb484c2d3"
+    },
+    {
+      "ref": "refactor/cronogramas-view-v9",
+      "sha": "77e2184955d4525559d607c516c12f6ba7149805"
+    },
+    {
+      "ref": "refactor/dashboard-view-v3",
+      "sha": "e586ae55fea4e57deba45f162160a06dc67f28e3"
+    },
+    {
+      "ref": "refactor/documents-cronogramas-actions-v14",
+      "sha": "9a3bafddd5f8cddbf0da16c7b621e95fbb02df07"
+    },
+    {
+      "ref": "refactor/empenho-actions-v12",
+      "sha": "d52063b6f76afabaa245b1be78ccea7b2b20514f"
+    },
+    {
+      "ref": "refactor/empenhos-view-v4",
+      "sha": "43c2e679369e8ed28afbf4014675aac044deb944"
+    },
+    {
+      "ref": "refactor/firestore-rules-structural-size",
+      "sha": "faafc41b3ff65a964c6c21c55f01bf4b7bdc9bed"
+    },
+    {
+      "ref": "refactor/global-ui-shell-v10",
+      "sha": "fbfb6dfb5f93d2956d37177d4af32e6b2460a0d6"
+    },
+    {
+      "ref": "refactor/itens-consulta-view-v7",
+      "sha": "6ab6f94d406a9a411d526615630cd247eda98e51"
+    },
+    {
+      "ref": "refactor/itens-empenho-view-v8",
+      "sha": "f1fd32000689fa33027565c4908fd08a50d674f7"
+    },
+    {
+      "ref": "refactor/notas-actions-v13",
+      "sha": "a93abc64e81e96b5be664c3c1e3dafb688f37aaa"
+    },
+    {
+      "ref": "refactor/notas-fiscais-view-v5",
+      "sha": "0627fe9a933e57b2be7880df3255646121cad4d2"
+    },
+    {
+      "ref": "refactor/operational-data-final-v15",
+      "sha": "6c2c5604f5c03a0a2f2275c95a7c614783715983"
+    },
+    {
+      "ref": "refactor/page-layout-shell-v2",
+      "sha": "a22e402473725ef29125076ba380c8e11d808ece"
+    },
+    {
+      "ref": "refactor/page-modularization-v1",
+      "sha": "05791a860073f5185e9aa0e4e2520ca33de401ce"
+    },
+    {
+      "ref": "refactor/post-audit-hardening-v18",
+      "sha": "fa283f8f9aed070b6e69ab8dd4c51df5d1838ef0"
+    },
+    {
+      "ref": "refactor/relatorios-view-v6",
+      "sha": "7bbb3d37891d09b56e41a24ca923518f569a9335"
+    },
+    {
+      "ref": "refactor/type-safety-hardening-v18",
+      "sha": "742097cf0288db0f758cbb3501989a421bbbf92a"
+    },
+    {
+      "ref": "refactor/view-state-hook-v11",
+      "sha": "574161a7cfb824417758e5d9fc34e476cc1e045a"
+    },
+    {
+      "ref": "rules-compat-01",
+      "sha": "97442b5f11779b7b434cba8d0a9a2c9ab843ac66"
+    },
+    {
+      "ref": "saas-final-audit-01",
+      "sha": "4cc5b3797747d4d49591f4a68196e723700daa74"
+    },
+    {
+      "ref": "saas-harden-a-jspdf-security",
+      "sha": "5ae4984bb9580faf5197737eeeeb0d5cf5aae838"
+    },
+    {
+      "ref": "saas-harden-a-security-dependencies",
+      "sha": "00d6386d212d6c139eec243d00b61c11a13017b8"
+    },
+    {
+      "ref": "saas-harden-a2-firebase-firestore-grpc",
+      "sha": "d647793f256c28eb412950d306d0427549577ee0"
+    },
+    {
+      "ref": "saas-harden-b-recovery-restore",
+      "sha": "c6368d0dd1b89610cb02b9b87f5ef6392810b336"
+    },
+    {
+      "ref": "saas-harden-c-release-health-rules",
+      "sha": "0b2e801a6460c60ecc79885d03e8ce8ffb778369"
+    },
+    {
+      "ref": "saas-harden-d-mobile-reconciliation",
+      "sha": "fb7b5006d13cd09b247d6c5d0cd39d6a0b950f02"
+    },
+    {
+      "ref": "saas-p-a-vip-journeys",
+      "sha": "ae4b676013b03e7ccf7f0e14a014edde86803d6e"
+    },
+    {
+      "ref": "saas-p-b-commercial-nonvip",
+      "sha": "d9ebea5a63aaf5b9571ee9d6a68c10c9d8ca3a28"
+    },
+    {
+      "ref": "saas-p-c-recovery-uptime",
+      "sha": "5e1a1541630e9b7b8d1ff4bb33dc3a5c2dd48322"
+    },
+    {
+      "ref": "saas-p-d-evidence-observability",
+      "sha": "ae8ae4a810da24a273e0231ba5f31c915720d504"
+    },
+    {
+      "ref": "saas-p-fix-ops-windows-gcloud",
+      "sha": "26395a6859740548523f8b176118aba3d0ab585e"
+    },
+    {
+      "ref": "saas-p-ops-health-endpoint",
+      "sha": "08ddbc92a602b3a09bb8728d648a0415b6831de6"
+    },
+    {
+      "ref": "saas-pilot-journey-01",
+      "sha": "f3f699a796566fe03dcc137f22791d2ed8259940"
+    },
+    {
+      "ref": "saas-pilot-ops-01",
+      "sha": "bdf78bc87df1271def239feab715ddb8dd6c295d"
+    },
+    {
+      "ref": "saas-r1-b-billing-payment",
+      "sha": "7e288e79e1514f91c9f0099392302ec7efd5cefe"
+    },
+    {
+      "ref": "saas-r1-c-onboarding",
+      "sha": "8bd5f38ce31073bd01b43e05fb46c103a9fe696d"
+    },
+    {
+      "ref": "saas-r1-dl-legal-acceptance",
+      "sha": "b460d1a41ca63c9e14b0c7004bbedfe4954fb633"
+    },
+    {
+      "ref": "saas-r1-ds-security-enforcement",
+      "sha": "073b96886d54b33e7e188265eb1e53672fbd9b1c"
+    },
+    {
+      "ref": "saas-r1-e-ops-recovery",
+      "sha": "8fb8e3ff3cd61bbc090a6a180528758930fdbd0f"
+    },
+    {
+      "ref": "saas-r1-i-integration",
+      "sha": "78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9"
+    },
+    {
+      "ref": "saas-uptime-readiness-01",
+      "sha": "4cc5b3797747d4d49591f4a68196e723700daa74"
+    },
+    {
+      "ref": "test/block-16-8-integrated-e2e",
+      "sha": "b852e6deacfd8e5caaaa17b9f34e8d719539df4a"
+    },
+    {
+      "ref": "test/external-drive-auth-emulator",
+      "sha": "7639f29fbbfd04c6f0cab0fbc2f19c58e3a40d41"
+    },
+    {
+      "ref": "test/external-drive-oauth-behavior",
+      "sha": "ee8a3f701ca9e3c9939a360fddaac1665fc3cb48"
+    },
+    {
+      "ref": "ux/block1-feedback-interactions",
+      "sha": "aa8f6663a62658a4b117baf74cfdc80845872750"
+    },
+    {
+      "ref": "ux/motion-polish-v1",
+      "sha": "1e05d129bb69a64de8b5c3c4260201b897ce9fd2"
+    },
+    {
+      "ref": "ux/motion-polish-v2",
+      "sha": "d352949e81c465551dbda9731c18dd99a13ccb9f"
+    },
+    {
+      "ref": "validate/perf-x-final-base-2aca0dce",
+      "sha": "2aca0dce1d511d0cc8df329614fac93f4e917144"
+    },
+    {
+      "ref": "validate/perf-x-final-candidate-2b72d43",
+      "sha": "2b72d43ac2a387682fb1c0089d36bef2177d0f17"
+    },
+    {
+      "ref": "validation/perf-r3-d-base-076a233c",
+      "sha": "076a233cf250c95882e78498e89dd2a44d034f74"
+    },
+    {
+      "ref": "visual-r1-integration-01",
+      "sha": "08b494e1a4079d271f9604a7f15e41d39619aa46"
+    },
+    {
+      "ref": "visual-r1-thinking-orbs-01",
+      "sha": "4224a51230b123c6bee7237ea233f66a806401ad"
+    },
+    {
+      "ref": "visual-w1-orb-core-01",
+      "sha": "05bd152f798b3fba4df367b87ed3b0f29b788265"
+    },
+    {
+      "ref": "visual-w2-loaders-01",
+      "sha": "670a77bcffa0d2fcf746d5b0a4bda181380b0d54"
+    },
+    {
+      "ref": "visual-w3-motion-01",
+      "sha": "fc26033297bb8b637a1a8461793fb37eb7d4c603"
+    },
+    {
+      "ref": "visual-w4-border-beam-01",
+      "sha": "8237e52bbd75a642d0208eedd7fb58e24807164f"
+    },
+    {
+      "ref": "warehouse-data-audit-01",
+      "sha": "07265b209d6c27873278139a507aa12d4eb97973"
+    },
+    {
+      "ref": "warehouse-data-repair-execution-01",
+      "sha": "e3f3aae9e8ee2337e387fd652a104f194049cd70"
+    },
+    {
+      "ref": "warehouse-data-repair-forensics-01",
+      "sha": "c1fa1d914990fbe126eaeb81889c6016dd84e7b0"
+    },
+    {
+      "ref": "warehouse-f06-concurrency-composition-01",
+      "sha": "147b00f5b30fab407951035cb85e655cd16be339"
+    },
+    {
+      "ref": "warehouse-f06-concurrency-different-key-01",
+      "sha": "b351b7dc23e92493758d3640a8f9180c1277d991"
+    },
+    {
+      "ref": "warehouse-f06-concurrency-same-key-01",
+      "sha": "6bbe93de0d3d7ce4b58ea68dcc64b52a4058a06d"
+    },
+    {
+      "ref": "warehouse-f06-fixture-fix-01",
+      "sha": "7b499254f5d10487be2622e92c78fae18d7c76d1"
+    },
+    {
+      "ref": "warehouse-fix-f05",
+      "sha": "77312f69200f1ef75902e48a267d3ae9ba0389cb"
+    },
+    {
+      "ref": "warehouse-fix-f06",
+      "sha": "b04f2bf0405fef2e948a00e00700fadb412cfb58"
+    },
+    {
+      "ref": "warehouse-fix-f09",
+      "sha": "de0285c656e92fc8743007863bd344acc0917e61"
+    },
+    {
+      "ref": "warehouse-integrity-reconcile-01",
+      "sha": "b8dbc33ce6f3bed949dc8d4000316a9cc501998f"
+    },
+    {
+      "ref": "warehouse-mobile-write-evidence-01",
+      "sha": "2fe19299beff5c1eef268d647b05904fd98ee1cb"
+    },
+    {
+      "ref": "warehouse-mobile-write-forensics-01",
+      "sha": "3369d614a425728104eea6170188672de9d6875b"
+    },
+    {
+      "ref": "warehouse-performance-fix",
+      "sha": "16688e26cecbd3ecb6b1710c45b3dbbff463d56c"
+    },
+    {
+      "ref": "warehouse-rules-eval-budget-fix",
+      "sha": "4973fa876a08bb7329a9c9b83565d876c379404c"
+    }
+  ],
+  "tags": [],
+  "open_prs": [
+    {
+      "number": 295,
+      "title": "[DRAFT][VISUAL-R1/W5] Integração isolada W1–W4, adaptador e QA visual",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-r1-integration-01",
+      "head_sha": "08b494e1a4079d271f9604a7f15e41d39619aa46",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T07:35:48Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295"
+    },
+    {
+      "number": 294,
+      "title": "[DRAFT][VISUAL-R1][W4] Border Beam monocromático — wrapper e laboratório isolados",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-w4-border-beam-01",
+      "head_sha": "8237e52bbd75a642d0208eedd7fb58e24807164f",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:34:33Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/294"
+    },
+    {
+      "number": 293,
+      "title": "[DRAFT][VISUAL-R1/W3] Motion polish — Relatórios e fluxo SAG",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-w3-motion-01",
+      "head_sha": "fc26033297bb8b637a1a8461793fb37eb7d4c603",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:37:27Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293"
+    },
+    {
+      "number": 292,
+      "title": "[DRAFT][VISUAL-W1] Thinking Orbs original — motor Canvas 2D e protótipo isolado",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-w1-orb-core-01",
+      "head_sha": "05bd152f798b3fba4df367b87ed3b0f29b788265",
+      "base_ref": "visual-r1-thinking-orbs-01",
+      "base_sha": "4224a51230b123c6bee7237ea233f66a806401ad",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T07:35:22Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292"
+    },
+    {
+      "number": 291,
+      "title": "[DRAFT][VISUAL-R1][W2] Loaders reutilizáveis e contrato do Thinking Orbs",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-w2-loaders-01",
+      "head_sha": "670a77bcffa0d2fcf746d5b0a4bda181380b0d54",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:31:44Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/291"
+    },
+    {
+      "number": 290,
+      "title": "[DRAFT][VISUAL-R1] Memorial — plano de 5 workers e gates de integração visual",
+      "state": "open",
+      "draft": true,
+      "head_ref": "docs/visual-r1-worker-dispatch-2026-10-14",
+      "head_sha": "12c7e3c068e494fa04ee748ba254a24b2a3c7575",
+      "base_ref": "docs/rc-r1-vercel-diagnostic-sync-2026-10-14",
+      "base_sha": "70cfd320c9ab13f668e73d052077f7db0fe43891",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T07:28:20Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/290"
+    },
+    {
+      "number": 289,
+      "title": "[DRAFT] RC R1: Firebase isolado no Preview com configuração compartilhada",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-preview-firebase-isolation-01",
+      "head_sha": "78dc23bb460059a83bd9ab3b18964bbe1a051222",
+      "base_ref": "rc-r1-preview-blockers-fix-01",
+      "base_sha": "906eddacda7d1b788c3404bb5ccdd744b2409071",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:10:04Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289"
+    },
+    {
+      "number": 288,
+      "title": "[DRAFT][VISUAL-R1] Protótipo isolado — Thinking Orbs (Nebula Core)",
+      "state": "open",
+      "draft": true,
+      "head_ref": "visual-r1-thinking-orbs-01",
+      "head_sha": "4224a51230b123c6bee7237ea233f66a806401ad",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:32:34Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/288"
+    },
+    {
+      "number": 287,
+      "title": "[DRAFT] Sincronizar snapshot RC e diagnóstico administrativo Preview",
+      "state": "open",
+      "draft": true,
+      "head_ref": "docs/rc-r1-vercel-diagnostic-sync-2026-10-14",
+      "head_sha": "70cfd320c9ab13f668e73d052077f7db0fe43891",
+      "base_ref": "feat/saas-r1-commercializacao",
+      "base_sha": "818c43dc4e85f01ba997717936efd1e749fe89ba",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T06:11:05Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/287"
+    },
+    {
+      "number": 286,
+      "title": "[DRAFT] RC R1: corrigir logout sobreposto e diagnosticar configuração da alocação",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-preview-blockers-fix-01",
+      "head_sha": "906eddacda7d1b788c3404bb5ccdd744b2409071",
+      "base_ref": "rc-r1-global-frozen-2026-10-09",
+      "base_sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T05:23:41Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/286"
+    },
+    {
+      "number": 285,
+      "title": "[DRAFT] RC R1 QA — aceitação automatizada local e guard de isolamento",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-qa-acceptance-automation-01",
+      "head_sha": "a873b1645d857be171f0c711c8a5e487e9d0c710",
+      "base_ref": "rc-r1-global-frozen-2026-10-09",
+      "base_sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-14T04:57:30Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/285"
+    },
+    {
+      "number": 284,
+      "title": "chore(deps): bump lucide-react from 0.468.0 to 1.55.0",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/npm_and_yarn/lucide-react-1.55.0",
+      "head_sha": "349dd27444cd7f38ed10599847cbc6b0ebe566de",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-13T11:43:56Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/284"
+    },
+    {
+      "number": 283,
+      "title": "chore(deps): bump motion from 11.18.2 to 14.1.0",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/npm_and_yarn/motion-14.1.0",
+      "head_sha": "f46e7b59a910ab283c7d416eb3dad94da1e55bee",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-13T11:42:43Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/283"
+    },
+    {
+      "number": 282,
+      "title": "chore(deps): bump next from 15.5.24 to 16.4.0",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/npm_and_yarn/next-16.4.0",
+      "head_sha": "e23032ead81dbbc2190cc962a7d3fa9013052d76",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-13T11:40:56Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/282"
+    },
+    {
+      "number": 281,
+      "title": "[DRAFT] RC-R1-PREVIEW-ACCEPTANCE — HTTPS GET probe + aceitação física",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-preview-acceptance-01",
+      "head_sha": "a4e03cf9220d8162d325f578dfa083cbf6002ca2",
+      "base_ref": "rc-r1-global-frozen-2026-10-09",
+      "base_sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-10T02:45:58Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/281"
+    },
+    {
+      "number": 280,
+      "title": "[DRAFT] RC R1 GLOBAL — Freeze técnico SaaS/Mobile/Warehouse + gates legal/recovery",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-global-certification-01",
+      "head_sha": "61e372225834ed6060cd2b36dbdd55d1e1979c2c",
+      "base_ref": "rc-r1-warehouse-full-integration-01",
+      "base_sha": "dec21b86cbbafbb2d7f3d50bd7b9af3371abc740",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-09T19:35:14Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/280"
+    },
+    {
+      "number": 279,
+      "title": "[DRAFT] RC-WAREHOUSE-FULL-INTEGRATION — F05/F06/F09 + performance sem overlays",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-warehouse-full-integration-01",
+      "head_sha": "dec21b86cbbafbb2d7f3d50bd7b9af3371abc740",
+      "base_ref": "rc-r1-warehouse-f06-f09-composition-01",
+      "base_sha": "84af145bf22872c0a973dd3cd5f4954fcccc2f0d",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-09T18:02:44Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/279"
+    },
+    {
+      "number": 278,
+      "title": "[DRAFT] RC-WAREHOUSE-F06-F09-COMPOSITION — Rules W5 + F06 certificado sem merge",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-warehouse-f06-f09-composition-01",
+      "head_sha": "84af145bf22872c0a973dd3cd5f4954fcccc2f0d",
+      "base_ref": "rc-r1-composition-01",
+      "base_sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-09T03:50:07Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/278"
+    },
+    {
+      "number": 277,
+      "title": "[DRAFT] WAREHOUSE-F06-CONCURRENCY-COMPOSITION — W7/W8 live engine, bounded proof, unchanged Rules",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-f06-concurrency-composition-01",
+      "head_sha": "147b00f5b30fab407951035cb85e655cd16be339",
+      "base_ref": "warehouse-rules-eval-budget-fix",
+      "base_sha": "4973fa876a08bb7329a9c9b83565d876c379404c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-09T03:30:09Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/277"
+    },
+    {
+      "number": 276,
+      "title": "[Worker 8][F06] Proof-only different-key concurrency reconciliation (DRAFT)",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-f06-concurrency-different-key-01",
+      "head_sha": "b351b7dc23e92493758d3640a8f9180c1277d991",
+      "base_ref": "warehouse-rules-eval-budget-fix",
+      "base_sha": "4973fa876a08bb7329a9c9b83565d876c379404c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T21:34:54Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/276"
+    },
+    {
+      "number": 275,
+      "title": "test/fix(warehouse F06): replay autoritativo em concorrência da mesma chave (Worker 7)",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-f06-concurrency-same-key-01",
+      "head_sha": "6bbe93de0d3d7ce4b58ea68dcc64b52a4058a06d",
+      "base_ref": "warehouse-rules-eval-budget-fix",
+      "base_sha": "4973fa876a08bb7329a9c9b83565d876c379404c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T21:32:00Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/275"
+    },
+    {
+      "number": 274,
+      "title": "test(warehouse F06): corrigir timestamps de lotes históricos na fixture",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-f06-fixture-fix-01",
+      "head_sha": "7b499254f5d10487be2622e92c78fae18d7c76d1",
+      "base_ref": "warehouse-fix-f06",
+      "base_sha": "b04f2bf0405fef2e948a00e00700fadb412cfb58",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T20:44:42Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/274"
+    },
+    {
+      "number": 273,
+      "title": "fix(warehouse): reduzir custo de avaliação das Rules em F06 e F09",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-rules-eval-budget-fix",
+      "head_sha": "4973fa876a08bb7329a9c9b83565d876c379404c",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T23:16:36Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/273"
+    },
+    {
+      "number": 272,
+      "title": "perf(warehouse): cache de leitura de barcode isolado e invalidado",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-performance-fix",
+      "head_sha": "16688e26cecbd3ecb6b1710c45b3dbbff463d56c",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T19:30:46Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/272"
+    },
+    {
+      "number": 271,
+      "title": "fix(warehouse): robustez de replay em saídas F09",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-fix-f09",
+      "head_sha": "de0285c656e92fc8743007863bd344acc0917e61",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T19:33:10Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/271"
+    },
+    {
+      "number": 270,
+      "title": "fix(warehouse): F05 intake fast-path error classification and replay safety",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-fix-f05",
+      "head_sha": "77312f69200f1ef75902e48a267d3ae9ba0389cb",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T19:18:00Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/270"
+    },
+    {
+      "number": 269,
+      "title": "fix(warehouse F06): replay verificado e confirmação Mobile sem leituras duplicadas",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-fix-f06",
+      "head_sha": "b04f2bf0405fef2e948a00e00700fadb412cfb58",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T20:44:47Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/269"
+    },
+    {
+      "number": 268,
+      "title": "WAREHOUSE-MOBILE-WRITE-EVIDENCE-01 — evidência causal F05/F06/F09",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-mobile-write-evidence-01",
+      "head_sha": "2fe19299beff5c1eef268d647b05904fd98ee1cb",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T18:21:23Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/268"
+    },
+    {
+      "number": 267,
+      "title": "WAREHOUSE-MOBILE-WRITE-FORENSICS-01 — causa de F05/F06/F09",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-mobile-write-forensics-01",
+      "head_sha": "3369d614a425728104eea6170188672de9d6875b",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-08T17:56:33Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/267"
+    },
+    {
+      "number": 265,
+      "title": "RC-R1-PHYSICAL-FIX-01 — blockers da certificação física",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-physical-fix-01",
+      "head_sha": "20337dd4cd9f7b586c7810931e6344b2876a3de0",
+      "base_ref": "rc-r1-refreeze-01",
+      "base_sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:03:14Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/265"
+    },
+    {
+      "number": 264,
+      "title": "RC-R1-PHYSICAL-CERT-01 — certificação física final",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-physical-cert-01",
+      "head_sha": "bb160f8a294d87b3f67a2c05de3a4a667e0637c6",
+      "base_ref": "rc-r1-refreeze-01",
+      "base_sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:00:00Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/264"
+    },
+    {
+      "number": 263,
+      "title": "SAAS-PILOT-OPS-01 — runbook operacional do piloto controlado",
+      "state": "open",
+      "draft": true,
+      "head_ref": "saas-pilot-ops-01",
+      "head_sha": "bdf78bc87df1271def239feab715ddb8dd6c295d",
+      "base_ref": "saas-final-audit-01",
+      "base_sha": "4cc5b3797747d4d49591f4a68196e723700daa74",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T02:07:10Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/263"
+    },
+    {
+      "number": 262,
+      "title": "RC-COMPOSITION-01 — nova candidata R1 após MOBILE-K e Warehouse repair",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-composition-01",
+      "head_sha": "fae9ce6aed7242e85d53fc8e6470fba4425a8c27",
+      "base_ref": "rc-r1-mobile-j-fix-label-readability",
+      "base_sha": "bd27da91da92642d5a5fea08f7020c6cea658a62",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T02:19:31Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/262"
+    },
+    {
+      "number": 261,
+      "title": "INVENTORY-PHYSICAL-FIX-01 — excluir UNASSIGNED do inventário físico",
+      "state": "open",
+      "draft": true,
+      "head_ref": "inventory-physical-fix-01",
+      "head_sha": "5255bbcbc43593bcf66001adf85eb5d6264a121e",
+      "base_ref": "mobile-r1-k-canonical-ops-engine",
+      "base_sha": "9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T01:34:59Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/261"
+    },
+    {
+      "number": 260,
+      "title": "WAREHOUSE-DATA-REPAIR-EXECUTION-01 — executor controlado",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-data-repair-execution-01",
+      "head_sha": "e3f3aae9e8ee2337e387fd652a104f194049cd70",
+      "base_ref": "warehouse-data-repair-forensics-01",
+      "base_sha": "c1fa1d914990fbe126eaeb81889c6016dd84e7b0",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T01:18:38Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/260"
+    },
+    {
+      "number": 259,
+      "title": "SAAS-PILOT-JOURNEY-01 — jornada E2E pré-piloto",
+      "state": "open",
+      "draft": true,
+      "head_ref": "saas-pilot-journey-01",
+      "head_sha": "f3f699a796566fe03dcc137f22791d2ed8259940",
+      "base_ref": "saas-final-audit-01",
+      "base_sha": "4cc5b3797747d4d49591f4a68196e723700daa74",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T01:54:19Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/259"
+    },
+    {
+      "number": 258,
+      "title": "WAREHOUSE-DATA-REPAIR-FORENSICS-01: causal dry-run and safe repair plan",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-data-repair-forensics-01",
+      "head_sha": "c1fa1d914990fbe126eaeb81889c6016dd84e7b0",
+      "base_ref": "warehouse-integrity-reconcile-01",
+      "base_sha": "b8dbc33ce6f3bed949dc8d4000316a9cc501998f",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T00:53:26Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/258"
+    },
+    {
+      "number": 257,
+      "title": "WAREHOUSE-INTEGRITY-RECONCILE-01 — auditoria sistêmica read-only",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-integrity-reconcile-01",
+      "head_sha": "b8dbc33ce6f3bed949dc8d4000316a9cc501998f",
+      "base_ref": "mobile-r1-k-canonical-ops-engine",
+      "base_sha": "9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T23:58:30Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/257"
+    },
+    {
+      "number": 256,
+      "title": "SAAS-FINAL-AUDIT-01: auditoria final do SaaS R1",
+      "state": "open",
+      "draft": true,
+      "head_ref": "saas-final-audit-01",
+      "head_sha": "4cc5b3797747d4d49591f4a68196e723700daa74",
+      "base_ref": "feat/saas-r1-commercializacao",
+      "base_sha": "556481fea36622b54382c059d58d89bc8065849b",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T22:33:46Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/256"
+    },
+    {
+      "number": 255,
+      "title": "WAREHOUSE-DATA-AUDIT-01 — auditoria de integridade logística e legado",
+      "state": "open",
+      "draft": true,
+      "head_ref": "warehouse-data-audit-01",
+      "head_sha": "07265b209d6c27873278139a507aa12d4eb97973",
+      "base_ref": "rc-r1-mobile-j-fix-label-readability",
+      "base_sha": "bd27da91da92642d5a5fea08f7020c6cea658a62",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T21:57:32Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/255"
+    },
+    {
+      "number": 254,
+      "title": "RULES-COMPAT-01: audit Firestore Rules RC compatibility",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rules-compat-01",
+      "head_sha": "97442b5f11779b7b434cba8d0a9a2c9ab843ac66",
+      "base_ref": "rc-r1-mobile-j-fix-label-readability",
+      "base_sha": "bd27da91da92642d5a5fea08f7020c6cea658a62",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T21:51:48Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/254"
+    },
+    {
+      "number": 253,
+      "title": "MOBILE-K: unify canonical ops engine and isolate UNASSIGNED legacy",
+      "state": "open",
+      "draft": true,
+      "head_ref": "mobile-r1-k-canonical-ops-engine",
+      "head_sha": "9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0",
+      "base_ref": "rc-r1-mobile-j-fix-label-readability",
+      "base_sha": "bd27da91da92642d5a5fea08f7020c6cea658a62",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T21:49:58Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/253"
+    },
+    {
+      "number": 252,
+      "title": "MOBILE-J-FIX: barcode curto e etiqueta de prateleira <= 35 mm",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-mobile-j-fix-label-readability",
+      "head_sha": "bd27da91da92642d5a5fea08f7020c6cea658a62",
+      "base_ref": "rc-r1-p-preview",
+      "base_sha": "54e60c2264588d8802a67a4cab3d875d64f6bfc1",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T20:24:52Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/252"
+    },
+    {
+      "number": 251,
+      "title": "RC-F — Freeze manifest for joint SaaS + Mobile RC",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-f-freeze",
+      "head_sha": "bef824946715fe96227a9d3c4edf400e7b8f1304",
+      "base_ref": "rc-r1-b-certification",
+      "base_sha": "851cbfc1c966847d1b5fc53c47e2708a48336f76",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T13:28:44Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/251"
+    },
+    {
+      "number": 250,
+      "title": "RC-B — Independent certification of joint SaaS + Mobile RC",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-b-certification",
+      "head_sha": "851cbfc1c966847d1b5fc53c47e2708a48336f76",
+      "base_ref": "rc-r1-a-composition",
+      "base_sha": "7f449db986da359091c70f6ae27934f0db18a0cb",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-04T04:41:13Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/250"
+    },
+    {
+      "number": 249,
+      "title": "RC-A — Compose joint SaaS R1 + Mobile R1 release candidate",
+      "state": "open",
+      "draft": true,
+      "head_ref": "rc-r1-a-composition",
+      "head_sha": "7f449db986da359091c70f6ae27934f0db18a0cb",
+      "base_ref": "feat/saas-r1-commercializacao",
+      "base_sha": "2c1eee759ea8024c296b4c6968ed935b9a59e880",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-04T04:41:10Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/249"
+    },
+    {
+      "number": 246,
+      "title": "MOBILE-J: certificação final da Central Móvel R1",
+      "state": "open",
+      "draft": true,
+      "head_ref": "mobile-r1-j-final-certification",
+      "head_sha": "90d646372aae3e92318a78b90d71f72c5eb6b00e",
+      "base_ref": "feat/central-mobile-r1",
+      "base_sha": "2108a21208765e0d4155399667cf571b0fa127ff",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-04T00:04:28Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/246"
+    },
+    {
+      "number": 237,
+      "title": "HARDEN-B: recovery and isolated restore readiness",
+      "state": "open",
+      "draft": true,
+      "head_ref": "saas-harden-b-recovery-restore",
+      "head_sha": "c6368d0dd1b89610cb02b9b87f5ef6392810b336",
+      "base_ref": "feat/saas-r1-commercializacao",
+      "base_sha": "5d272a466daf5ebdfc18ab12efaa30a19b5bdb0c",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-05T11:31:07Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/237"
+    },
+    {
+      "number": 223,
+      "title": "SAAS-P: publicar endpoint mínimo de health",
+      "state": "open",
+      "draft": true,
+      "head_ref": "saas-p-ops-health-endpoint",
+      "head_sha": "08ddbc92a602b3a09bb8728d648a0415b6831de6",
+      "base_ref": "main",
+      "base_sha": "e90f92acae1514ee5cbc6ce95fed354bc1454330",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-03T00:11:55Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/223"
+    },
+    {
+      "number": 193,
+      "title": "feat: editar NR item e descrição em empenhos e cronogramas",
+      "state": "open",
+      "draft": true,
+      "head_ref": "feat/edit-item-description-number",
+      "head_sha": "78f02494c30f4bc855542e925910de0ce59a56f4",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/193"
+    },
+    {
+      "number": 189,
+      "title": "refactor: reduzir tamanho e complexidade das Firestore Rules",
+      "state": "open",
+      "draft": false,
+      "head_ref": "refactor/firestore-rules-structural-size",
+      "head_sha": "faafc41b3ff65a964c6c21c55f01bf4b7bdc9bed",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/189"
+    },
+    {
+      "number": 172,
+      "title": "docs: close ADM Depósito Phase 5 baseline",
+      "state": "open",
+      "draft": false,
+      "head_ref": "docs/adm-deposito-phase-5-closure",
+      "head_sha": "e9fc046b40ba1095a140006b11b0f9b671a79348",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/172"
+    },
+    {
+      "number": 165,
+      "title": "docs: close ADM Depósito phase 3",
+      "state": "open",
+      "draft": false,
+      "head_ref": "docs/adm-deposito-phase-3-closure",
+      "head_sha": "87023231afae63814d33bfc4d1a45f4550ed6b15",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/165"
+    },
+    {
+      "number": 160,
+      "title": "security: bind Firestore authorization to operational sessions",
+      "state": "open",
+      "draft": true,
+      "head_ref": "fix/session-authorization-hardening",
+      "head_sha": "c1df7c9fca736c85ee0f6580a2e994850f036317",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/160"
+    },
+    {
+      "number": 132,
+      "title": "chore(deps): bump tailwind-merge from 2.6.1 to 3.7.0",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/npm_and_yarn/tailwind-merge-3.7.0",
+      "head_sha": "76478b1363f4bf5527e5a19fd6dd0b726abd2a27",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:58:09Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/132"
+    },
+    {
+      "number": 131,
+      "title": "chore(deps): bump autoprefixer from 10.5.2 to 10.6.1",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/npm_and_yarn/autoprefixer-10.6.1",
+      "head_sha": "cbf399b07c419db5ab601713495ad365f2ac4789",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:56:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/131"
+    },
+    {
+      "number": 130,
+      "title": "chore(ci): bump actions/checkout from 4 to 7",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/github_actions/actions/checkout-7",
+      "head_sha": "0d78f98f68dd71c41f9ec00ce74ea54c0108ac90",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:55:19Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/130"
+    },
+    {
+      "number": 129,
+      "title": "chore(ci): bump actions/setup-java from 4 to 6",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/github_actions/actions/setup-java-6",
+      "head_sha": "0a2e8d7050ebd12d2e6dd3db75b41120d1d175ee",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T11:53:41Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/129"
+    },
+    {
+      "number": 128,
+      "title": "chore(ci): bump actions/setup-node from 4 to 7",
+      "state": "open",
+      "draft": false,
+      "head_ref": "dependabot/github_actions/actions/setup-node-7",
+      "head_sha": "8c83b58bd23949272b57d2b3713094c0bae287d4",
+      "base_ref": "main",
+      "base_sha": "97556bb8eb04af070016f9e58ddc2d9cca36bb35",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-10-06T12:00:58Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/128"
+    },
+    {
+      "number": 117,
+      "title": "fix: hide mobile sidebar toolbar on desktop",
+      "state": "open",
+      "draft": false,
+      "head_ref": "fix/sidebar-mobile-toolbar-visibility",
+      "head_sha": "0811a1d459e65595884c32f1418f82cca6c62652",
+      "base_ref": "main",
+      "base_sha": "f2801b72789b26bf9934a6a5cf8e3e139b939868",
+      "head_repository": "aprov-hgesm/Controles-de-Empenhos---Aprov",
+      "updated_at": "2026-09-30T23:05:45Z",
+      "url": "https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/117"
+    }
+  ]
+}
