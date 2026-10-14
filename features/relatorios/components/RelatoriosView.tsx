@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { Building2, FileSearch, Landmark, ReceiptText, ShieldCheck } from 'lucide-react';
 import { RelatorioPorEmpenhoView, type RelatoriosViewContext } from './RelatorioPorEmpenhoView';
 import { RelatorioPorFornecedorView } from './RelatorioPorFornecedorView';
@@ -65,6 +66,13 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
         </p>
       </header>
 
+      <EmprovexBorderBeam
+        variant="focus"
+        theme="light"
+        intensity="low"
+        borderRadius={16}
+        testId="reports-tabs-border-beam"
+      >
       <nav
         className="flex gap-2 overflow-x-auto rounded-2xl border border-blue-100/80 bg-white/75 p-2 shadow-sm"
         aria-label="Modos de relatório"
@@ -104,6 +112,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           );
         })}
       </nav>
+      </EmprovexBorderBeam>
 
       <motion.section
         key={activeSubTab}
