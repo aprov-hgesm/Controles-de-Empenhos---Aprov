@@ -37,7 +37,7 @@ export function polishWorkingFrame(
         x, y, z,
         r: (size === 20 ? 0.24 : 0.28) + 0.19 * depth
           + outerLift * (0.035 + 0.085 * silhouette),
-        white: 0.79 - 0.37 * depth,
+        white: 0.79 - 0.37 * depth - outerLift * (0.025 + 0.085 * silhouette),
         a: Math.min(0.58, shellAlpha * (1 + outerLift * (0.30 + 0.62 * silhouette))),
       });
     }
