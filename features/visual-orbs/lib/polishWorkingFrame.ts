@@ -43,9 +43,11 @@ export function polishWorkingFrame(
         const rimLighting = 0.72 + 0.75 * silhouette;
         dots.push({
           x, y, z,
+          // The structural R2 dots use white ink, with depth carried only by
+          // opacity. Keep each dot distinct, not a solid luminous surface.
           r: ((size === 20 ? 0.24 : 0.28) + 0.19 * depth)
-            * (0.84 + 0.12 * depth + 0.18 * silhouette),
-          white: 0.79 - 0.37 * depth + 0.04 * (1 - depth) - 0.045 * silhouette,
+            * (0.84 + 0.12 * depth + 0.18 * silhouette) * 0.88,
+          white: 0,
           a: Math.min(0.52, shellAlpha * frontLighting * rimLighting),
         });
       } else {
@@ -76,7 +78,8 @@ export function polishWorkingFrame(
       dots.push({
         ...dot,
         z: dot.z - 0.0001,
-        r: dot.r * (institutional ? 1.38 + 0.18 * gleaming : 1.7 + 0.3 * gleaming),
+        // R2 halo follows the smaller points; classic retains its original glow.
+        r: dot.r * (institutional ? 1.10 + 0.14 * gleaming : 1.7 + 0.3 * gleaming),
         white: 0.23,
         a: (institutional ? 0.11 : 0.19) * gleaming,
       });
@@ -85,7 +88,7 @@ export function polishWorkingFrame(
       ...dot,
       white: Math.max(0.008, dot.white - (institutional ? 0.14 : 0.30) * gleaming),
       r: dot.r * (institutional
-        ? 0.82 + 0.09 * gleaming
+        ? 0.65 + 0.07 * gleaming
         : 1 + 0.33 * gleaming),
     });
   }
