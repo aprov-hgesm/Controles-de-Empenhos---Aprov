@@ -1,5 +1,25 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — PREVIEW ISOLADO: CANDIDATA TÉCNICA CERTIFICADA, PROVISIONAMENTO EXTERNO PENDENTE
+
+**ONDE ESTAMOS:** [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289) OPEN/DRAFT, branch `rc-r1-preview-firebase-isolation-01@78dc23bb460059a83bd9ab3b18964bbe1a051222`, baseado em #286@906eddac. Main conferida em 97556bb8eb04af070016f9e58ddc2d9cca36bb35 e freeze 61e372225834ed6060cd2b36dbdd55d1e1979c2c inalterados.
+
+**O QUE ESTAMOS FAZENDO:** Fundador solicitou executar preparação do Preview isolado após capturas da Vercel. Capturas mostram FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON apenas Production na lista Project e filtro Preview sem variáveis; não inspecionam Shared variables/valores efetivos de deployment antigo. Implantação #286 6bekYkqKwV7mAYFt13J5YcHAsH2u, branch/commit 906edda, Environment Preview/Ready, sem logs na última hora. Não confirma qual deployment recebeu a alocação anterior.
+
+Configuração pública centralizada para UI, Firebase Auth/JWT, workspace validation, alocação, lifecycle, backups, métricas e billing. Preview exige projeto diferente do produtivo, domínios/bucket/app compatíveis, bancos distintos e credencial administrativa do projeto isolado. Build recusa configuração ausente/misturada; Production/local sem override conservam baseline. Pré-verificador local valida chave RSA e estrutura sem rede e imprime apenas destinos. Nunca transportar chave Firebase ao GitHub.
+
+**GATES NO HEAD EXATO:** [#38519901006](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38519901006) SUCCESS: 33/33 config/preflight/F05/erros, recusa antecipada de Preview sem config e **4/4 Playwright, 55,2 s**. [Core #38519905292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38519905292) SUCCESS; [Application #38519905066](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38519905066) **7/7 jobs SUCCESS**, validate e Blocks 16–21. TypeScript/build local PASS, integração domínio Block16 6/6. Primeira execução do workflow falhou porque runner não tinha rg; corrigido apenas para grep, recertificado no HEAD indicado. Guard ADM-R1 antigo tem nove falhas idênticas no freeze, provadas em checkout separado, sem nova regressão. Rules preservadas com hashes bc91185f34bcdcb4437a4de1078d1089a09292ba e e4037e464ddbeed7629076dc7615266f0caafc7c.
+
+**BLOQUEIO REAL:** projeto/bancos/Auth/conta/configuração privados de teste **não provisionados nesta sessão**, sem ferramentas GCP/Firebase administrativas e sem acesso Vercel ao time profissional. Status Vercel FAILURE da candidata é esperado até configuração isolada; não declarar Preview funcional nem teste remoto F05 aprovado. Nenhum dado real copiado, Rules publicadas, billing ativado ou credencial modificada.
+
+**QUEM ESTÁ FAZENDO:** Coordenador implementou/revisou/validou; GitHub Actions certificou; Fundador/administrador retém provisionamento na conta profissional.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador/administrador cria projeto de teste exclusivo e fornece apenas identificadores/configuração pública para auditoria; configura bancos distintos/Auth/identidades/IAM/Rules de teste conforme autorização administrativa específica. Depois inserir NEXT_PUBLIC_EMPROVEX_FIREBASE_CONFIG_JSON (Config público) e FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON (Secret privado) só no Preview/branch candidata; chave não deve ser enviada. Coordenador audita destinos/regras/IAM e nova implantação autorizada/SHA, antes de fixtures e alocação F05. Runbook completo no [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/rc-r1-preview-firebase-isolation-01/docs/RC_R1_PREVIEW_FIREBASE_ISOLATION.md). Config válida não prova recursos, IAM, Rules ou isolamento operacional.
+
+**CLASSIFICAÇÃO:** implementação técnica **PASS COM PENDÊNCIAS ADMINISTRATIVAS**. Macroação 3 PARCIAL, Macroação 4 PENDENTE, novo RC Production NO-GO. Reconciliação documental nesta branch própria/#287, não mergeada na integradora.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — CORREÇÕES AUTORIZADAS: DEF-01 PASS; CONFIGURAÇÃO DE ALOCAÇÃO BLOCKED
 
 **ONDE ESTAMOS:** Fundador autorizou executar correções via /goal. Criada candidata separada `rc-r1-preview-blockers-fix-01@906eddacda7d1b788c3404bb5ccdd744b2409071`, [PR #286](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/286) OPEN/DRAFT contra freeze. Referência `61e372225834ed6060cd2b36dbdd55d1e1979c2c` e main não alteradas.
@@ -321,6 +341,45 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 ## 1. Snapshot Global
 
+**Estado reconciliado em 14/10/2026.** Este quadro prevalece sobre os snapshots históricos preservados abaixo. Evidência de código/CI obtida no GitHub; configuração efetiva dos bancos e Rules ativas não foi inspecionada nesta sessão.
+
+| Domínio | Estado vigente | Evidência / limite |
+| --- | --- | --- |
+| Branch produtiva | main@97556bb8eb04af070016f9e58ddc2d9cca36bb35 | HEAD conferido por API; sem alteração nesta missão; deployment Production não reinspecionado |
+| Integração Warehouse | Macroação 1 concluída tecnicamente | PR #279, dec21b86cbbafbb2d7f3d50bd7b9af3371abc740; evidência preservada nos controles executivos |
+| Freeze global | Macroação 2 concluída tecnicamente | rc-r1-global-frozen-2026-10-09@61e372225834ed6060cd2b36dbdd55d1e1979c2c; ref conferida e preservada |
+| QA local | PASS COM PENDÊNCIAS EXTERNAS | PR #285 DRAFT; a873b1645d857be171f0c711c8a5e487e9d0c710; gates certificados no controle executivo |
+| Candidata de correções | PR #286 OPEN/DRAFT, sem merge | rc-r1-preview-blockers-fix-01@906eddacda7d1b788c3404bb5ccdd744b2409071; distinta do freeze |
+| DEF-01 logout | PASS em Chromium/Emulators; reteste remoto pendente | 4/4 Playwright; Core SUCCESS; Application 7/7 SUCCESS |
+| GitHub → Vercel | Integração funcionando para #286 | status Vercel SUCCESS no SHA; bot aponta deployment 6bekYkqKwV7mAYFt13J5YcHAsH2u READY |
+| Preview da correção | Publicado; não certificado funcionalmente | controles-de-empenhos-aprov-git-rc-8f7c85-aprov-hgesms-projects.vercel.app |
+| Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
+| Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
+| Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
+| MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
+| Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
+| Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
+| Rules ativas remotas | Sem nova inspeção | hashes fonte RC principal bc91185f34bcdcb4437a4de1078d1089a09292ba, Warehouse e4037e464ddbeed7629076dc7615266f0caafc7c; fonte não equivale a ruleset publicado |
+| Promoção do novo RC | NO-GO | sem merge/main/deploy Production/Rules, alterações administrativas sensíveis só com autorização explícita |
+
+## 2. Próxima barreira global
+
+**ONDE ESTAMOS:** certificação Macroação 3 parcial, candidata #286 tecnicamente verde e freeze intacto.
+
+**O QUE ESTAMOS FAZENDO:** diagnóstico read-only da administração Preview e reconciliação documental; [runbook administrativo](RC_R1_VERCEL_PREVIEW_DIAGNOSTIC_2026-10-14.md).
+
+**QUEM ESTÁ FAZENDO:** Coordenador audita pelo GitHub; Fundador usa a conta profissional para a leitura administrativa indispensável.
+
+**O QUE FAZER A SEGUIR:** confirmar presença/escopo da variável administrativa e logs existentes; identificar deployment/commit da tentativa; comprovar bancos/permissões/segregação antes de propor alteração ou reteste F05. Não reproduzir uma escrita para obter logs antes do isolamento.
+
+**QUEM FARÁ:** Fundador devolve apenas presença/escopo e diagnóstico sanitizado; Coordenador determina a correção e prepara eventual autorização administrativa específica. Work/Fundador retestam a candidata liberada; Coordenador confere movimento/saldo/ledger, compõe novo candidato e prepara re-freeze/decisão.
+
+### Registros históricos da Parte I
+
+Os registros a seguir são preservados integralmente. Não substituem o quadro vigente acima nem autorizam alterações de produção.
+
+### Snapshot histórico anterior — preservado para rastreabilidade
+
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
 | Produção — app | **R1 PUBLICADO / CENTRAL MOBILE FOUNDER-ONLY** | `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`; PR #266 mergeado; Vercel Production SUCCESS; usuários externos usam R1 normal e `/central-mobile` fica bloqueada para não fundadores |
@@ -376,7 +435,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 A aplicação produtiva só muda por autorização explícita e posterior do Fundador. As Rules RC já foram publicadas por autorização específica em 2026-10-05; essa autorização **não** autorizou o app RC em produção.
 
-## 2. Próxima barreira global
+### Próxima barreira histórica anterior — não rege a certificação atual
 
 A fase atual continua sendo **Release Engineering / Certificação Física**, porém o freeze original foi reaberto de modo controlado por defeitos reais encontrados na MOBILE-J.
 
