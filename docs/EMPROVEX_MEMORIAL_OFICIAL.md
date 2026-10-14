@@ -1,5 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 BORDER BEAM EM DOIS PONTOS OPERACIONAIS
+
+**ONDE ESTAMOS:** Fundador aprovou visualmente o Orb R2 da Home e autorizou prosseguir, após integrar carregamentos W2 e transições W3. Implementação pontual do Worker 4 em [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303), OPEN/DRAFT, branch `visual-r1-w4-border-beam-operational-01@23e73df23bda4019f845d57b72bee691587e101a`, **base `visual-r1-w3-motion-homologation-01` / PR #302**. PRs empilhados: #295 composição → #300 Home R2 → #301 W2 loaders → #302 W3 motion → #303 W4 Border Beam; não mesclar em ordem errada.
+
+**ESCOLHA DE LOCAIS:** após auditar componente W4 já existente em `components/visual/EmprovexBorderBeam.*` (PR #294/W5) e as superfícies operacionais, selecionar **apenas dois pontos em telas distintas**:
+- `features/dashboard/components/DashboardView.tsx`: cartão principal **Saldo Total Restante**, gradiente azul, preservando todos os valores e cálculos. Wrapper `EmprovexBorderBeam` `theme='dark' variant='travel' intensity='low' duration={24} borderRadius={16}`; linhas monocromáticas de 1px com percurso de 24 segundos, controle de pausas/offscreen/aba oculta, desativação de movimento em <=640px e `prefers-reduced-motion`. Wrapper/child de altura integral para respeitar grade. Único cartão do Painel com efeito.
+- `features/relatorios/components/RelatoriosView.tsx`: wrapper em torno da navegação existente de Relatórios, `variant='focus' theme='light' intensity='low'`, borda acentuada exclusivamente sob `:focus-within`, **sem animação permanente**; manter `nav aria-label='Modos de relatório'`, botões nativos, rolagem mobile, `aria-pressed`, conteúdo e animação de painel W3 intactos.
+
+**LABORATÓRIO:** `components/visual/EmprovexVisualIntegrationPreview.tsx` apresenta amostra no endereço `/dev/visual-r1` (somente dev/Preview), cartão fictício `R$ —` e navegação com botões ilustrativos que não modificam dados. `tests/e2e/visual-w4-operational-border-beam.spec.mjs` testa travel/focus, teclado, estado de foco e reduced-motion em mobile; execução real Playwright não comprovada. Ajustado teste para esperar transição CSS de 180ms em vez de medir frame inicial (commit no HEAD de #303).
+
+**PROTEÇÃO E GATES:** CSS W4 já licenciado MIT/documentado; nenhum pacote adicionado e nenhuma mudança em motor do Orb, Home, W2, SAG/Relatórios de domínio, auth, Firebase, Rules, estoque ou dados de produção. A borda decorativa não comunica severidade, falha ou êxito. `pointer-events:none`; baixo custo CSS, nenhum loop JS por frame. `main`, RC, Production intactos. Application CI e Core Protection iniciados no novo HEAD (pendentes nesta consulta); aguardar gates verdes, teste Playwright real, smoke responsivo/foco/reduced-motion e aceite humano antes de GO/merge.
+
+**PRÓXIMOS PASSOS:** Fundador atualiza clone após conferir `git status` limpo: `git fetch origin visual-r1-w4-border-beam-operational-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir `http://localhost:3000/dev/visual-r1` e seção Worker 4, ou acessar Painel e Relatórios reais após login normal. Verificar uma linha bem sutil de 1px no cartão azul (ciclo 24s) e foco de teclado no conjunto de abas de Relatórios. Manter PR DRAFT sem merge.
+
+**CLASSIFICAÇÃO:** **W4 BORDER BEAM IMPLEMENTADO EM DOIS LOCAIS REAIS COM LABORATÓRIO PR #303, CERTIFICAÇÃO CI/BROWSER E ACEITE VISUAL AINDA PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W3 MOTION RELATÓRIOS E SAG PARA HOMOLOGAÇÃO
 
 **ONDE ESTAMOS:** Fundador aprovou refinamento final do centro orbital branco-quente da Home R2 e autorizou prosseguir. Avançamos para Worker 3 Motion, criando [PR #302](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/302) OPEN/DRAFT, branch `visual-r1-w3-motion-homologation-01@525b86cba6445273de52be7a37e18f4cc1ba94f6`, baseada no [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) W2, que incorpora a Home R2 via [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300). `main`, RC e produção intactos.
