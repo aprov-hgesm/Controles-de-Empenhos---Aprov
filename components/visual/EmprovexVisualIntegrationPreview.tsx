@@ -6,6 +6,7 @@ import { EmprovexLoaderShowcase } from './EmprovexLoaderShowcase';
 import { EmprovexOrbLoader } from './EmprovexOrbLoader';
 import { EmprovexOrbVisual } from './EmprovexOrbVisual';
 import { EmprovexThinkingOrbRenderer } from './EmprovexThinkingOrbRenderer';
+import { EmprovexThinkingOrb } from '@/features/visual-orbs/components/EmprovexThinkingOrb';
 import type { OrbLoaderPerformance } from './orbLoaderContract';
 
 type DemoState = 'loading' | 'ready' | 'error';
@@ -21,27 +22,36 @@ export function EmprovexVisualIntegrationPreview() {
         <h1 className="text-3xl font-bold">Laboratório de integração visual</h1>
         <p className="text-sm text-slate-600">
           Prévia isolada em desenvolvimento ou Vercel Preview, sem autenticação, dados ou consultas operacionais.
-          Motor colorido integrado nesta candidata para testes: partículas lentas brancas e rápidas amarelas/vermelhas. Ainda depende da homologação final dos gates, do navegador e do desempenho.
+          Apenas o núcleo central do Início será colorido. Os carregamentos e usos secundários ficam monocromáticos, com tinta clara ou escura conforme a superfície. Nenhuma mudança foi montada na Home operacional.
         </p>
       </header>
 
-      <section className="space-y-4" aria-label="Contraste real em superfícies escuras e claras">
-        <h2 className="text-xl font-semibold">Contraste EMPROVEX · Claro e escuro</h2>
-        <p className="text-sm text-slate-600">O mesmo orb preserva branco, amarelo e vermelho. Nas áreas claras ele recebe uma base grafite fosca; nas áreas escuras permanece transparente, sem bolhas ou gradientes decorativos.</p>
+      <section className="space-y-4" aria-label="Prévia exclusiva do núcleo colorido do Início">
+        <h2 className="text-xl font-semibold">Início · núcleo colorido exclusivo</h2>
+        <p className="text-sm text-slate-600">Apenas esta prévia utiliza branco, amarelo e vermelho. O núcleo está em laboratório e ainda não substitui o centro da Home.</p>
+        <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-700 bg-[#080f1f] p-8">
+          <EmprovexThinkingOrb size="hero" animation="working" performance={performance}
+            roundness={0.72} sparkle={0.68} palette="colored" surface="dark" />
+        </div>
+      </section>
+
+      <section className="space-y-4" aria-label="Contraste monocromático em superfícies claras e escuras">
+        <h2 className="text-xl font-semibold">Carregamentos monocromáticos · Claro e escuro</h2>
+        <p className="text-sm text-slate-600">O indicador é sempre monocromático: pontos escuros diretamente no fundo claro e pontos claros diretamente no fundo escuro, sem base grafite artificial.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white p-6">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">Cartão claro · fundo de contraste</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-700">Cartão claro · tinta monocromática escura</span>
             <EmprovexOrbVisual size="large" performance={performance} surface="light" renderer={EmprovexThinkingOrbRenderer} />
           </div>
           <div className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-2xl border border-slate-700 bg-slate-900 p-6">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-100">Painel escuro · orb transparente</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-100">Painel escuro · tinta monocromática clara</span>
             <EmprovexOrbVisual size="large" performance={performance} surface="dark" renderer={EmprovexThinkingOrbRenderer} />
           </div>
         </div>
       </section>
 
       <section className="space-y-4" aria-label="Cinco tamanhos de Thinking Orbs integrados">
-        <h2 className="text-xl font-semibold">Thinking Orbs + cinco presets W2</h2>
+        <h2 className="text-xl font-semibold">Thinking Orbs monocromáticos + cinco tamanhos W2</h2>
         <EmprovexLoaderShowcase renderer={EmprovexThinkingOrbRenderer} />
       </section>
 
