@@ -5,6 +5,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import { saveCronograma } from '../../../lib/firebaseSync';
+import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
 import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
@@ -24,6 +25,7 @@ export interface CronogramaEmailConfirmation {
   destinatario: string;
   fonteOriginal: 'local' | 'global' | null;
   assunto: string;
+  notaEmpenhoFilename: string;
   podeSalvarContato: boolean;
 }
 interface CronogramaActionsContext {
@@ -537,6 +539,14 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       return;
     }
 
+    if (!emp.notaEmpenhoPdf || emp.notaEmpenhoPdf.storage?.status !== 'active') {
+      showToast(
+        'A Nota de Empenho em PDF não está anexada ou disponível. Anexe a NE em Empenhos antes de enviar o cronograma.',
+        'error'
+      );
+      return;
+    }
+
     setIsPreparingCronogramaEmail(true);
     try {
       const [supplierEmail, driveSettings] = await Promise.all([
@@ -558,6 +568,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         destinatario: supplierEmail?.email || '',
         fonteOriginal: supplierEmail?.source || null,
         assunto: `Cronograma de Entrega - NE ${emp.id}`,
+        notaEmpenhoFilename: `Nota_Empenho_NE_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
         podeSalvarContato: isValidSupplierCnpj(normalizeSupplierCnpj(emp.supplierCnpj)),
       });
     } catch (error) {
@@ -599,6 +610,14 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       return;
     }
 
+    if (!emp.notaEmpenhoPdf || emp.notaEmpenhoPdf.storage?.status !== 'active') {
+      showToast(
+        'A Nota de Empenho não está mais disponível para anexar. Verifique o cadastro antes do envio.',
+        'error'
+      );
+      return;
+    }
+
     const recipient = draft.destinatario.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
       showToast('Informe um endereço de e-mail válido para o fornecedor.', 'error');
@@ -616,17 +635,30 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     try {
       await authorizeWorkspaceGmail(workspaceContext.workspaceId, draft.remetente);
 
-      const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
-      const cronogramaBeforeSend = buildCronogramaObject(emp, previous);
-      await saveCronograma(user.uid, cronogramaBeforeSend);
+      // Os dois PDFs precisam estar disponíveis ANTES de chamar a API de envio.
+      // Recupera a versão atual da NE do Google Drive autorizado para este workspace.
+      let notaEmpenhoPdf: Blob;
+      try {
+        notaEmpenhoPdf = await fetchEmpenhoPdfBlob(user, emp.id, emp.notaEmpenhoPdf);
+      } catch (error) {
+        console.error('Falha ao recuperar a Nota de Empenho para o envio:', error);
+        throw new Error(
+          'Não foi possível recuperar a Nota de Empenho no Google Drive do setor. '
+          + 'Confira a conexão com o Drive e o PDF cadastrado. Nenhum e-mail foi enviado.'
+        );
+      }
 
       const pdf = await handleGenerateCronogramaPDF(emp, 'blob');
       if (!pdf) throw new Error('Não foi possível gerar o PDF do cronograma para anexar ao e-mail.');
 
+      const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
+      const cronogramaBeforeSend = buildCronogramaObject(emp, previous);
+      await saveCronograma(user.uid, cronogramaBeforeSend);
+
       const bodyLines = [
         'Prezados,',
         '',
-        'Encaminhamos, em anexo, o Cronograma de Entrega referente à Nota de Empenho ' + emp.id + '.',
+        'Encaminhamos, em anexo, o Cronograma de Entrega e a Nota de Empenho ' + emp.id + '.',
         'Solicitamos a ciência e a observância das datas, quantidades e condições de entrega previstas no documento.',
         '',
         'Fornecedor: ' + emp.supplier,
@@ -648,6 +680,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         bodyText: bodyLines.join('\n'),
         attachment: pdf.blob,
         attachmentName: pdf.filename,
+        additionalAttachments: [
+          { blob: notaEmpenhoPdf, name: draft.notaEmpenhoFilename },
+        ],
       });
       gmailSent = true;
 
@@ -695,7 +730,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
 
       if (!auditPersisted || contactSaveFailed) {
         const warning = [
-          `Cronograma enviado para ${recipient}.`,
+          `Cronograma e Nota de Empenho enviados para ${recipient}.`,
           !auditPersisted ? 'O histórico do envio não pôde ser gravado.' : '',
           contactSaveFailed ? 'O novo e-mail não pôde ser salvo em Fornecedores.' : '',
           'Confira a pasta Enviados antes de tentar novamente.',
@@ -703,7 +738,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         showToast(warning, 'info');
       } else {
         showToast(
-          `Cronograma enviado para ${recipient} pela conta ${sent.senderEmail}.`
+          `Cronograma e Nota de Empenho enviados para ${recipient} pela conta ${sent.senderEmail}.`
           + (contactSaved ? ' E-mail atualizado na Central de Fornecedores.' : ''),
           'success'
         );
