@@ -27,7 +27,7 @@ export function EmprovexThinkingOrbPreview() {
       <header className={styles.heading}>
         <p>EMPROVEX / VISUAL-R1 / WORKER 1</p>
         <h1>Thinking Orbs — partículas originais</h1>
-        <span>Canvas 2D · Branco / amarelo / vermelho · MIT © Jakub Antalik · Sem integração à Home</span>
+        <span>Somente o núcleo central do Início será colorido; carregamentos usam tinta monocromática conforme o fundo. MIT © Jakub Antalik.</span>
       </header>
       <section className={styles.layout} aria-label="Área de comparação visual">
         <div className={styles.stage}>
@@ -40,10 +40,12 @@ export function EmprovexThinkingOrbPreview() {
               paused={paused}
               roundness={roundness}
               sparkle={sparkle}
+              palette="colored"
+              surface="dark"
             />
           </div>
           <p>{animation} / {size} / {performance}</p>
-          <small>Passe o ponteiro sobre as partículas (modo full) para reação sutil.</small>
+          <small>Prévia da futura Home: apenas o estado orbital working usa a paleta branca, amarela e vermelha. Outras animações são monocromáticas.</small>
         </div>
         <form className={styles.controls} onSubmit={(event) => event.preventDefault()}>
           <label>
@@ -91,26 +93,26 @@ export function EmprovexThinkingOrbPreview() {
       <section className={styles.samples} aria-label="Amostras nas dimensões de interface">
         {(['large', 'medium', 'small', 'mini'] as const).map((preset) => (
           <div className={styles.sample} key={preset}>
-            <EmprovexThinkingOrb size={preset} animation={animation} performance={performance} paused={paused} roundness={roundness} sparkle={sparkle} />
+            <EmprovexThinkingOrb size={preset} animation={animation} performance={performance} paused={paused} roundness={roundness} sparkle={sparkle} palette="monochrome" surface="dark" />
             <span>{preset}</span>
           </div>
         ))}
       </section>
-      <section className={styles.contrastGrid} aria-label="Verificação de contraste em superfícies claras e escuras">
+      <section className={styles.contrastGrid} aria-label="Contraste monocromático para os carregamentos">
         <div className={styles.contrastDark}>
-          <span>SUPERFÍCIE ESCURA · orb transparente</span>
+          <span>FUNDO ESCURO · partículas monocromáticas claras</span>
           <EmprovexThinkingOrb size="large" animation="working" performance={performance}
-            paused={paused} roundness={roundness} sparkle={sparkle} />
+            paused={paused} roundness={roundness} sparkle={sparkle} palette="monochrome" surface="dark" />
         </div>
         <div className={styles.contrastLight}>
-          <span>SUPERFÍCIE CLARA · orb sobre grafite fosco</span>
+          <span>FUNDO CLARO · partículas monocromáticas escuras</span>
           <EmprovexThinkingOrb size="large" animation="working" performance={performance}
-            paused={paused} roundness={roundness} sparkle={sparkle} contrastSurface="matte" />
+            paused={paused} roundness={roundness} sparkle={sparkle} palette="monochrome" surface="light" />
         </div>
       </section>
       <p className={styles.note}>
         Protótipo de desenvolvimento: nenhum empenho, aviso, tooltip ou comando foi alterado.
-        Partículas rápidas recebem cores determinísticas em proporção 70/30 aproximada pela contagem inteira; partículas lentas brancas. Nos controles 0% o desenho estrutural volta à geometria original, mantendo a paleta colorida aprovada.
+        Apenas a prévia do núcleo do Início utiliza cores por velocidade: lentas brancas, rápidas 70% amarelas e 30% vermelhas (arredondamento por partículas inteiras). Os exemplos de carregamento permanecem monocromáticos e contrastam com o fundo.
       </p>
     </main>
   );
