@@ -1,5 +1,503 @@
 # EMPROVEX — Memorial Oficial
 
+
+## CONTROLE EXECUTIVO — 2026-10-14 — DEPLOY VERCEL / PROCEDIMENTO POWERSHELL HOMOLOGADO PELO FUNDADOR
+
+**DECISÃO VIGENTE:** o Fundador confirmou em 14/10/2026 que o **deploy direto por Vercel CLI no PowerShell, sem `--prebuilt`**, foi concluído e testado com sucesso no site do EMPROVEX. Esse método passa a ser o **padrão preferencial para futuras publicações**, mediante aprovação específica do release. O registro de sucesso é a homologação manual informada pelo Fundador; não há nesta decisão um novo deployment ID/log oficial de sucesso para anexar. Não reutilizar como evidência de sucesso o deployment anterior `dpl_5vMUMd8JXVkxucBdaSPVmLBami5o`, que terminou em ERROR.
+
+**Projeto:** `aprov-hgesms-projects/controles-de-empenhos-aprov`. **Ambiente de execução do operador:** Windows / PowerShell; usar `vercel.cmd` quando `vercel.ps1` for bloqueado pela Execution Policy. A Vercel CLI já foi instalada (v64.0.2 na sessão) e o projeto foi vinculado via `vercel.cmd link --scope aprov-hgesms-projects`.
+
+**RUNBOOK CANÔNICO (publicar somente quando houver autorização e gates do SHA-alvo):**
+
+```powershell
+cd "$HOME\emprovex-visual-r1-test"
+git status
+git fetch origin main
+git switch --detach FETCH_HEAD
+git rev-parse --short HEAD
+vercel.cmd whoami
+vercel.cmd deploy --prod --scope aprov-hgesms-projects
+```
+
+- Exigir árvore local limpa antes de trocar o HEAD e confirmar que o SHA corresponde **à versão explicitamente aprovada para aquele release**. No release VISUAL-R1 de 14/10/2026, o commit consolidado na `main` foi `d23c7aaa3e57de8f9679be48c636a698e5ad8f3d`. **Não fixar esse SHA em deploys futuros**.
+- `vercel.cmd deploy --prod` é o caminho **sem `--prebuilt`**: a Vercel recebe as fontes e constrói na infraestrutura Linux dela, evitando problemas de links simbólicos da compilação Windows. Após o comando, validar status `READY` por `vercel.cmd inspect <ID-ou-URL> --scope aprov-hgesms-projects` e conferir manualmente a URL/domínio produtivo; uma URL exibida no terminal, sozinha, não prova sucesso.
+- **EVITAR neste projeto:** `vercel.cmd build --prod` no Windows seguido de `vercel.cmd deploy --prebuilt --prod`, pois o pacote Windows teve falha de symlinks `.func` (`ENOENT`) em produção, apesar de build local PASS.
+- GitHub Actions/localhost continuam sendo os ambientes adequados para QA sem novos deployments. Consolidar mudanças e fazer apenas **uma publicação por release autorizado**. Pushes em branches ligadas à integração Git podem disparar **Preview Builds automáticos**, mesmo se o PR for DRAFT; isso é uma configuração separada e **NÃO foi comprovado como desativado**. A publicação direta pela CLI também está sujeita a quotas do plano Vercel; não tentar contorná-las por tentativas repetidas.
+- Nenhuma autorização genérica permanente é dada para produção, migração de dados, Rules, operações destrutivas ou alteração de faturamento. Este registro aprova o **método técnico de deploy**, não dispensa GO/NO-GO nem revisão de riscos por release.
+
+**ESTADO FINAL INFORMADO PELO FUNDADOR:** deploy via PowerShell realizado com êxito e site verificado manualmente. A cadeia documental deste Memorial permanece independente da `main`, em PR #290 DRAFT; integrar documentação na linha canônica somente de forma coordenada e sem gerar releases adicionais por acidente.
+
+---
+
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CERTIFICAÇÃO AUTOMATIZADA W4 9/9 SUCCESS
+
+**GATES FECHADOS NO SHA EXATO:** [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), branch `visual-r1-w4-navigation-expansion-01`, HEAD `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`, OPEN/DRAFT, `mergeable=true`. Consulta ao GitHub de `commits/{sha}/check-runs` retornou **9/9 COMPLETED SUCCESS**: `validate-application`, `core-protection`, `Block 16 Final Release Gate`, `Block 17 Final Release Gate`, `Block 18 Final Release Gate`, `Block 19 Final Closure Gate`, `Block 20 Final Release Gate`, `Block 21 Final Release Gate` e `visual-w4-node-browser`.
+
+**QA W4 EFETIVO:** [Workflow #38632525337](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38632525337) SUCCESS; logs comprovam **Node 6/6 PASS** e **Playwright Chromium 5/5 PASS** no laboratório dev sem autenticação ou dados operacionais. Build de produção e TypeScript do Application CI SUCCESS; `git diff --check` e demais guardas SUCCESS. Estética Home Orb R2 preservada integralmente. O HEAD #305 é descendente integral do #303 por reconciliação de dois pais; branch #304 não foi mesclada.
+
+**SEMAFORIZAÇÃO:** **RECONCILIAÇÃO CÓDIGO PASS; QA AUTOMATIZADO PASS 9/9; HOMOLOGAÇÃO REAL AUTENTICADA E ACEITE ESTÉTICO DO FUNDADOR PENDENTES; PR DRAFT; SEM MERGE `main` / RC / PRODUCTION / FIRESTORE RULES.** CI verde é condição técnica, não autorização de deploy.
+
+---
+
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / RESULTADO QA AUTOMATIZADO W4 NO HEAD 5d3d6dbc
+
+**EVIDÊNCIA DIRETA GITHUB ACTIONS:** [Run 38632525337](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38632525337), job `visual-w4-node-browser` **SUCCESS** no commit `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398` do PR #305. Logs: **6/6 testes Node PASS, 0 fail** (`scripts/visual-r1-w4-navigation-beam.test.mjs` + `scripts/visual-r1-w4-sidebar-border-beam.test.mjs`); **5/5 Playwright Chromium PASS**, cenário real de navegador no `/dev/visual-r1` compilado pelo Next dev server, incluindo desktop, mobile reduzido, tablet 768px, forced-colors e teclado. Instalação de dependências, runtime de teste e Chromium SUCCESS. Não é um teste autenticado em todos os módulos operacionais, nem aceite visual humano. Sem dados reais ou deploy.
+
+**GATES COMPLEMENTARES:** Core Protection SUCCESS em `5d3d6dbc`; Application CI amplo em andamento na última consulta. PR #305 permanece OPEN/DRAFT e `mergeable=true`. Declarar certificação técnica integral somente após resultado final dos demais checks neste SHA, mais homologação funcional/estética real.
+
+---
+
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EXECUÇÃO DE RECONCILIAÇÃO W4 E QA ISOLADO
+
+**DECISÃO AUTORIZADA:** solicitação `/goal execute` do Fundador para executar a reconciliação W4 prevista no checkpoint anterior. Escrita restrita ao PR #305 DRAFT, PR #290 documental e comentário explicativo ao PR #304; sem merge `main`, RC, Production, Firestore Rules, auth, cobrança ou dados.
+
+**RECONCILIAÇÃO GIT EFETIVAMENTE CONCLUÍDA:** #305 `visual-r1-w4-navigation-expansion-01` recebeu um commit de **dois pais**, `934b313b8664951701020f5dac103801ede10469`, incluindo seu HEAD antigo `38bde518` e o HEAD atual do #303 `11f1f5a0`. GitHub confirmou comparação #303 → #305 `ahead:15, behind:0`, PR `mergeable=true`; sem force-push. O arquivo `AppSidebar.tsx` conserva uma camada única por botão da implementação modular #305, e a CSS global concorrente do #303 não entrou na árvore reconciliada. Guard #303 adaptado ao contrato modular.
+
+**REFINAMENTOS IMPLEMENTADOS:** `OperationalNavigationBeam.module.css` interrompe movimento de navegação na faixa 641–1023px, complementando <=640px e reduced-motion; oculta camada decorativa em `forced-colors:active`, mantendo foco nativo. Selecionado apenas `ItensEmpenhoView` do PR #304, com beam `focus/light/low` no formulário Adicionar Novo Item. Demais inclusões concorrentes do #304 não foram copiadas, sobretudo `InicioSceneChrome`/Home R2. Mantidos os demais focos W4 de Painel, Relatórios, Fornecedores, Consulta, Notas, Cronogramas, Avisos e navegação mobile sem alteração da lógica de negócio.
+
+**QA/DESENVOLVIMENTO:** ampliação dos guards Node e spec Playwright (viewport 768px/forced-colors) no commit `934b313b`; acrescentados workflow estritamente isolado `.github/workflows/visual-r1-w4-qa.yml` e config `playwright.visual-r1.config.mts` em `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`. Esse workflow instala runner temporário no GitHub Actions, executa `node --test` para os 2 guards e Playwright Chromium com webServer local no laboratório `/dev/visual-r1`, sem dados reais, tokens, deploy ou acesso a Production. **Ainda não declarar Node/Playwright PASS antes da conclusão real dos jobs.** Auditoria estática independente de fontes: 17/17 inspeções satisfatórias (cobertura 10 desktop/5 mobile, callbacks, depósito, antiduplo CSS, 24s, responsividade, focus/forced-colors, dois efeitos herdados, Itens Empenho, arquivos de testes).
+
+**NOVO HEAD CANÔNICO W4:** PR #305 `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`, OPEN/DRAFT, `mergeable=true` na checagem após escrita. No início da execução de QA, Core Protection SUCCESS, Application CI e workflow W4 Node/Chromium ainda em execução; verificar novamente os checks por SHA e registrar os resultados finais. Diff da origem #305 antiga até novo HEAD: apenas 7 arquivos (módulo CSS, ItensEmpenho, dois guards, spec E2E, config de Playwright, workflow de QA); **zero alterações de Rules/Home/auth/RC/dados**. PR #304 recebeu comentário explicando a convergência, sem ser fechado.
+
+**PENDÊNCIAS:** aguardar evidência GitHub dos checks reais; corrigir blockers, se surgirem, somente no PR #305; homologação visual em navegação autenticada, teclado, contraste, mobile e desktop; aceite do Fundador; nenhum merge em main nem deploy sem autorização explícita.
+
+**CLASSIFICAÇÃO:** **RECONCILIAÇÃO DE ANCESTRALIDADE CONCLUÍDA / W4 NOVO QA E2E INSTALADO / PR #305 DRAFT / HOMOLOGAÇÃO HUMANA PENDENTE.**
+
+---
+
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / AUDITORIA DE CONTINUIDADE W4 (#303, #304, #305)
+
+**BASE DE EVIDÊNCIA:** consulta direta ao GitHub em 14/10/2026. Branch documental PR #290; nenhuma escrita em código, `main`, RC, Rules, contas, dados ou Production nesta auditoria. `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`.
+
+**GATES NO HEAD EXATO:**
+- PR #303 `11f1f5a03c87851d56f7a1936a7467560acff4eb`: OPEN/DRAFT; **8/8 SUCCESS** (Application CI, Core Protection e Blocks 16–21), atualizando o registro anterior que mencionava Application CI pendente.
+- PR #305 `38bde5186519489728ab5da5bc2d14b405532a30`: OPEN/DRAFT; **8/8 SUCCESS**, mas GitHub informa `mergeable=false` em relação à base dinâmica #303; não equivale a homologação browser.
+- **PR #304 também existe:** `visual-r1-w4-border-beam-all-tabs-01@3618bee7630addfbe5b16b4d70c622144a53f61d`, OPEN/DRAFT, `mergeable=false`; 1/8 checks SUCCESS (Core Protection), 7/8 FAILURE. O log do `validate-application` mostra **Production build PASS e TypeScript PASS**; falha final em `git diff --check` devido a espaço em branco final em `scripts/visual-w4-all-tabs.test.mjs:43`. Não atribuir falha funcional sem evidência; demais checks reportam FAILURE e requerem rechecagem após eventual correção.
+
+**DIVERGÊNCIAS VERIFICADAS:**
+- #303 vs #305: `diverged`, #305 **14 ahead / 3 behind**, merge-base `23e73df23bda4019f845d57b72bee691587e101a`. Ambos inserem dez spans na sidebar: #303 usa classe global `.emprovex-sidebar-nav-item__beam` e regras em `app/globals.css`; #305 usa `OperationalNavigationBeam.module.css` e `data-emprovex-nav-beam`. Não acumular as duas implementações. PR #303 preserva efeitos internos já certificados tecnicamente em Painel/Relatórios.
+- #304 vs #305: `diverged`, #305 **14 ahead / 16 behind**, mesmo merge-base; ambos editam cabeçalhos e subabas de vários módulos. #304 inclui ainda rail institucional de Início e formulário de Itens do Empenho, que #305 não cobre diretamente; essas mudanças **não devem ser aplicadas automaticamente**. Para Avisos, #304 usa foco estático; #305 usa animação travel, decisão visual a homologar, sem codificar severidade.
+- **Lacunas de estilo observadas no #305:** CSS modular não declara `@media (forced-colors: active)`, ao contrário da implementação do #303. O menu inferior `MobileNavigation` usa `lg:hidden` (até 1023px), mas o CSS desliga animação só em `max-width:640px`; em 641–1023px a aba ativa pode animar apesar da política de navegação mobile sem movimento. Corrigir na reconciliação e testar com navegador.
+- Guards Node e specs Playwright estão presentes, mas execução real, teste em abas autenticadas, foco/teclado, responsividade 390×844 / 1366×768 / 1440×900, `prefers-reduced-motion`, forced-colors, desempenho e aceite estético W4 permanecem **PENDENTES**.
+
+**ESTRATÉGIA PROPOSTA (SEM IMPLEMENTAÇÃO NESTE CHECKPOINT):** manter #303 como base de efeitos Painel/Relatórios e tomar #305 como **candidato funcional da navegação** e seis módulos; criar uma única implementação canônica do beam na sidebar, eliminar seletores/spans redundantes, preservar callbacks, `aria-current`, rota separada de Depósitos e bloqueios de animação; avaliar seletivamente #304, especialmente Itens do Empenho, sem modificar Home Orb R2 sem novo pedido. Reconciliar somente após revisão de diff, testar gates no novo SHA e homologar visualmente antes de integração. Nenhum merge, force-push ou deploy autorizado.
+
+**CLASSIFICAÇÃO:** **W4 NÃO CERTIFICADO PARA MERGE / 303 e 305 CI VERDES EM SHAs DISTINTOS / 304 CI VERMELHO POR HIGIENE DE DIFF CONSTATADA / CONVERGÊNCIA E BROWSER PENDENTES.**
+
+---
+
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / TRANSFERÊNCIA DE COORDENAÇÃO E RECONCILIAÇÃO W4 PR303 X PR305
+
+**MOTIVO:** Fundador aprovou o Orb R2 e solicitou continuidade da expansão W4, depois pediu atualizar o Memorial Oficial e preparar um prompt para novo chat coordenador, preservando integralmente o contexto. Este bloco registra o estado vivo verificado pelo GitHub na transferência, prevalecendo sobre status pontuais antigos sem apagá-los. **Não há autorização de merge em main nem deploy Production.**
+
+**ESTADO DOS TRABALHOS:** PRs de implementação abertos/DRAFT: [#295](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) composição inicial `2c6ba394`; [#300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) Home R2 `814fa840`; [#301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) loaders W2 `fd607cc2`; [#302](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/302) Motion W3 `525b86cb`; [#303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) Border Beam Painel/Relatórios + sidebar `11f1f5a03c87851d56f7a1936a7467560acff4eb`; e [#305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305) navegação e seis módulos `38bde5186519489728ab5da5bc2d14b405532a30`. PR #290 conserva este Memorial, ramo documental separado. Checar novamente SHAs antes de próxima escrita.
+
+**ACEITES ESTÉTICOS VIGENTES:** núcleo **Thinking Orbs R2 da Home foi expressamente aprovado pelo Fundador**, esférico de partículas e não uma esfera azul sólida, sem filamentos; casca estrutural branca; móveis lentas brancas `#FFFFFF`, rápidas `#FFD25A` amarelo-douradas 70% / `#FF5A46` vermelho-coral 30% do conjunto rápido; pontos menores, brilho do centro branco-quente reforçado, posição `top/left:50%` também no mobile. Não remodelar/recolorir. Loaders W2 são monocromáticos claro/escuro e W3 possui transições discretas de Relatórios/SAG, respeitando reduced-motion. W4 usa traçado monocromático baixo de 1px e ciclo de 24 segundos apenas onde aprovado.
+
+**EXPANSÃO W4:** #303 aplica em `DashboardView` somente no cartão **Saldo Total Restante** (travel low/24s), em `RelatoriosView` somente ao foco da navegação e depois adicionou beam no **menu compartilhado de dez destinos** diretamente em `AppSidebar.tsx` e `app/globals.css` (active only; depósito foco sem falso estado ativo), com guard `scripts/visual-r1-w4-sidebar-border-beam.test.mjs`. #305, usando base histórica do #303, criou **outra variante** do menu lateral, mais navegação inferior mobile de 5 destinos, CSS isolado `components/layout/OperationalNavigationBeam.module.css`, e cabeçalhos de Fornecedores/Consulta de Itens/Avisos/Cronogramas (travel low) + grupos de subabas Empenhos/Notas Fiscais (focus only). Inclui demo e Node/E2E `scripts/visual-r1-w4-navigation-beam.test.mjs`, `tests/e2e/visual-w4-navigation-expansion.spec.mjs`. Total não representa luz ao redor de cada cartão: deliberadamente 1 ponto focal por módulo, sem interferir no Orb central.
+
+**BLOCKER DE ANCESTRALIDADE — NÃO IGNORAR:** verificado com comparação real entre `#303@11f1f5a0` e `#305@38bde518`: resultado GitHub **`diverged`; PR #305 14 commits à frente e 3 atrás** em relação ao HEAD atual do #303; **merge-base `23e73df23bda4019f845d57b72bee691587e101a`**. O PR #303 recebeu posteriormente 3 commits da sidebar enquanto #305 evoluiu em paralelo. `components/layout/AppSidebar.tsx` é arquivo sobreposto e as soluções CSS do menu são diferentes (globals vs módulo). **ANTES DE QUALQUER INTEGRAÇÃO**, auditar diff/ancestralidade, escolher solução canônica, planejar reconciliação sem perda de funções, evitar merge automático e nunca fazer force-push indiscriminado. Esta coordenação de transferência **não fez conciliação, merge nem alteração do código operacional**.
+
+**GATES NO HEAD OBSERVADO:** no `#305@38bde518` os 8 checks disponíveis **SUCCESS** (Application CI, Core Protection, Blocks 16–21); **não equivalem a Playwright nem aceite visual real**. No `#303@11f1f5a0`, Core Protection SUCCESS e Application CI IN_PROGRESS na última consulta, conferir atualização posteriormente. Node guards e E2E/browser de W4 não foram executados nesta transferência. Todos seguem DRAFT.
+
+**CONTINUIDADE:** novo Coordenador deve ler este checkpoint, os blocos VISUAL-R1 recentes e analisar **#303 × #305** antes de avançar. Recomenda-se seguir com a abrangência de #305 após reconciliação controlada, mantendo foco mobile, acessibilidade/teclado, pause offscreen, CSS de reduced-motion/forced-colors, sem tocar Firestore/Rules, billing, auth, dados ou RC. Testar no PowerShell no clone local (verificar `git status` limpo): `git fetch origin visual-r1-w4-navigation-expansion-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Laboratório: `http://localhost:3000/dev/visual-r1`; navegação operacional após login próprio. O novo prompt de ativação foi preparado em Markdown nesta transferência, para ser colado integralmente no novo chat. 
+
+**CLASSIFICAÇÃO:** **VISUAL-R1 W1–W4 IMPLEMENTADOS EM DRAFT; HOME R2 ESTETICAMENTE APROVADA; #305 CI 8/8 SUCCESS; HOMOLOGAÇÃO BROWSER W4 E RECONCILIAÇÃO #303 × #305 PENDENTES. MAIN/RC/PRODUCTION INTOCADOS POR ESTA TRANSFERÊNCIA.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EXPANSÃO W4 BORDER BEAM AO MENU DE TODAS AS ABAS
+
+**ONDE ESTAMOS:** após o PR #303 integrar Border Beam em dois pontos internos (Saldo Total Restante do Painel e foco nas subabas de Relatórios), Fundador solicitou estender o efeito às demais abas principais do EMPROVEX. Implementado na **mesma branch de testes** `visual-r1-w4-border-beam-operational-01@11f1f5a03c87851d56f7a1936a7467560acff4eb`, [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) OPEN/DRAFT, encadeado aos PRs #302 W3, #301 W2, #300 Home R2 e #295 W5.
+
+**AMPLIAÇÃO:** `components/layout/AppSidebar.tsx` adiciona marcação visual não-interativa (span `aria-hidden`) **dentro de cada um dos 10 botões de navegação** existentes, sem substituí-los: Início, Painel, Empenhos (+ subview itens do empenho), Fornecedores, Consulta de Itens, Notas Fiscais, Central de Avisos, Relatórios, Cronogramas e atalho Central de Depósitos. Em `app/globals.css` entrou borda fina conic-gradient mascarada de 1 px (estética W4, monocromática, opacidade baixa 0.28), **animada 24s exclusivamente no botão da aba ativa**, pausada nas demais. O atalho Central de Depósitos abre rota independente e só tem realce sob foco de teclado no menu compartilhado, não um estado ativo artificial. Desativa movimento em telas <=640px e sob prefers-reduced-motion, respeita forced-colors e pointer-events:none. Botões, onNavigate, aria-current, tabIndex nativo, classes de interação, hitbox, notificações, logout e controles reais intactos. `scripts/visual-r1-w4-sidebar-border-beam.test.mjs` acrescentado com guardas Node para cobertura dos 10 itens, semântica e movimento reduzido. Confirmação estática por leitura direta: 10/10 spans presentes, classes e seletores CSS presentes; **teste Node e Playwright browser não executados nesta sessão**.
+
+**LIMITAÇÃO INTENCIONAL:** a expansão abrange o **menu principal** que acompanha a troca entre as abas e não instala o beam em cada cartão de cada módulo. Os dois efeitos internos do PR #303 continuam no Painel e em Relatórios. Home R2, loaders, SAG/Reports W3, Firestore, segurança, Rules, RC, main e Production preservados.
+
+**GATES:** Core Protection SUCCESS no HEAD `11f1f5a0`; Application CI [run #38629335235](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38629335235) PENDING na última consulta. Sem certificação de browser até validação. Necessária revisão funcional das dez entradas de menu e efeito em desktop/tablet/mobile, foco teclado, reduced-motion, semântica de depósito separada e contraste. Não mesclar ou publicar sem novo aceite.
+
+**PRÓXIMO PASSO PARA FUNDADOR:** com árvore local limpa, atualizar via PowerShell: `cd "$HOME\\emprovex-visual-r1-test"`; `git fetch origin visual-r1-w4-border-beam-operational-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir Home e navegar pelas abas do menu; a borda fina deverá acompanhar apenas a opção ativa. Ver também o laboratório `/dev/visual-r1` para os dois exemplos internos. Enviar screenshot/feedback para homologação.
+
+**CLASSIFICAÇÃO:** **BORDER BEAM EXPANDIDO A TODAS AS ABAS VIA NAVEGAÇÃO COMPARTILHADA — CÓDIGO NO GITHUB, CORE PASS, APPLICATION CI E ACEITE RUNTIME PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W4 BORDER BEAM EXPANDIDO PARA TODOS OS DESTINOS DA NAVEGAÇÃO
+
+**ONDE ESTAMOS:** o Fundador questionou a limitação da aplicação do Border Beam em apenas dois locais (Painel e Relatórios) e solicitou a expansão para as abas restantes. Foi realizado o novo [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), OPEN/DRAFT, branch `visual-r1-w4-navigation-expansion-01@e911b2445451e8b26e7a3c592451d9170e777bb5`, baseado no [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303). PRs anteriores #295 → #300 Home R2 → #301 loaders W2 → #302 motion W3 → #303 W4 dois pontos são preservados sem merge. `main`, RC e Production não alterados.
+
+**IMPLEMENTAÇÃO:** os **10 botões da barra lateral compartilhada** em `components/layout/AppSidebar.tsx` agora têm elemento `span` decorativo com `aria-hidden`, `data-emprovex-nav-beam='true'`. Isso cobre Início, Painel, Empenhos (também seu detalhe Itens do Empenho), Fornecedores, Consulta de Itens, Notas Fiscais, Central de Avisos, Relatórios, Cronogramas e link condicional de Central de Depósitos. Apenas um item com `data-active='true'` exibe beam animado (0,28 opacidade, borda monocromática 1px, ciclo 24s); itens restantes mostram contraste no foco visível. Central de Depósitos é acesso externo à aba corrente: tem contorno de foco sem atribuir estado ativo inexistente. Nenhuma lógica `onNavigate`, `onOpenWarehouse`, logout, badging, `aria-current` ou dados modificados.
+
+**MOBILE:** `components/layout/MobileNavigation.tsx` recebeu o mesmo indicador nos 5 atalhos inferiores (Painel, Empenhos, Notas Fiscais, Relatórios, Cronogramas), mantendo callbacks originais e seleção; o efeito é **estático <=640px** e também sob `prefers-reduced-motion: reduce`. Os demais destinos permanecem disponíveis no menu lateral mobile. Novos estilos encapsulados em `components/layout/OperationalNavigationBeam.module.css` reutilizam técnica W4 de conic-gradient mascarado de 1px, sem WebGL, timers ou ciclo de JavaScript; camadas possuem `pointer-events:none`.
+
+**DESTAQUES INTERNOS DOS DEMAIS MÓDULOS (PR #305 ATUALIZADO):** além do menu, o Fundador pediu cobertura das outras áreas operacionais. Após auditoria pontual das estruturas JSX, seis arquivos foram alterados **somente para envolver um cabeçalho ou grupo de abas com o Border Beam existente**, com baixa intensidade e preservação de todos os filhos/callbacks:
+- `features/fornecedores/components/FornecedoresView.tsx` — cabeçalho da Central de Fornecedores (`suppliers-header-border-beam`, travel/24s).
+- `features/itens/components/ConsultaItensView.tsx` — cabeçalho Consulta de Itens (`items-header-border-beam`, travel/24s).
+- `features/avisos/components/CentralAvisosView.tsx` — cabeçalho Central de Avisos (`notices-header-border-beam`, travel/24s); **contorno semântico neutro**, não significa severidade, crítica nem prioridade.
+- `features/cronogramas/components/CronogramasView.tsx` — cabeçalho dos Cronogramas de Entrega no modo lista (`schedules-header-border-beam`, travel/24s).
+- `features/empenhos/components/EmpenhosView.tsx` — navegação entre subabas com `variant='focus'` (`commitments-tabs-border-beam`), mantendo tablist e roving tabindex.
+- `features/notas-fiscais/components/NotasFiscaisView.tsx` — barra das subabas de Notas com `variant='focus'` (`invoices-tabs-border-beam`), mantendo underline original e ações.
+Painel e Relatórios já possuem os dois pontos W4 do PR #303; a Home continua com orb sem borda em volta do núcleo, apenas indicação na navegação global; Central de Depósitos interna permanece fora do escopo. O arquivo `scripts/visual-r1-w4-navigation-beam.test.mjs` foi ampliado para cobrir os seis wrappers, cada qual presente uma única vez e com CSS `low`. Os arquivos JSX possuem tags `EmprovexBorderBeam` pareadas em inspeção estática. **Ainda não são evidência de renderização/Playwright/browser real**.
+
+**LABORATÓRIO:** `components/visual/EmprovexNavigationBeamPreview.tsx` apresenta dez destinos fictícios alternáveis apenas por estado local e foi montado em `/dev/visual-r1`; nenhuma navegação real, Firestore ou escrita executada por esta amostra. Criados `scripts/visual-r1-w4-navigation-beam.test.mjs` (Node read-only) e `tests/e2e/visual-w4-navigation-expansion.spec.mjs` (Playwright), que cobrem presença de botões, callbacks, condição de ativo, redução de movimento/foco e responsividade. Código e asserts essenciais inspecionados, **Node test e browser ainda não executados nesta coordenação**.
+
+**LIMITES:** extensão cobre **toda a navegação principal e mais uma área focal em cada uma das seis telas listadas**; não abrange todos os cards, formulários, alertas ou submenus internos da Central de Depósitos. O cartão de Saldo Total Restante e o foco de Relatórios continuam sob PR #303. Em uma tela comum, há no máximo um beam lento no menu ativo e um beam lento no cabeçalho; em Empenhos/Notas o cabeçalho só reage ao foco. Em mobile/reduced-motion a animação decorativa é desativada. Essa limitação evita saturação visual e preserva a Home R2. Nenhuma alteração em domínio, saldo, NF, Rules, SAG, auth ou produção.
+
+**GATES:** no HEAD do PR #305, Core Protection [#38627566610](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566610) **SUCCESS**; Application CI [#38627566852](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566852) **IN_PROGRESS** na última consulta. Executar teste Node + Playwright e QA real mobile/desktop com foco e reduced-motion antes do aceite e de qualquer merge. Não declarar RC GO enquanto gates pendentes.
+
+**TESTE LOCAL:** parar servidor, `git status` limpo no clone; `git fetch origin visual-r1-w4-navigation-expansion-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`; abrir `http://localhost:3000/dev/visual-r1`, seção "Worker 4 · Expansão para todas as abas". O menu principal real aparece após autenticação usual. Sem publicar Preview/Production automaticamente.
+
+**CLASSIFICAÇÃO:** **BORDER BEAM W4 EXPANDIDO À NAVEGAÇÃO E A SEIS MÓDULOS OPERACIONAIS EM PR #305 DRAFT; CORE SUCCESS NO HEAD VERIFICADO, APPLICATION CI, NODE/E2E E HOMOLOGAÇÃO VISUAL PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 — BORDER BEAM DISTRIBUÍDO NAS DEZ ABAS PRINCIPAIS
+
+**ONDE ESTAMOS:** após o [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) ter conectado o efeito de borda apenas ao cartão de saldo principal do Painel e à navegação de Relatórios, o Fundador solicitou ampliação para as **demais abas**. Executada em nova branch isolada `visual-r1-w4-border-beam-all-tabs-01`, [PR #304](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/304) OPEN/DRAFT, baseada exclusivamente no ramo do PR #303. Governança de branches empilhadas mantida: #295→#300→#301→#302→#303→#304, sem merge em `main`, RC ou Production.
+
+**MATRIZ DE COBERTURA DO MENU PRINCIPAL (10/10 verificadas no código):**
+- **Início:** faixa institucional superior `InicioSceneChrome`, Border Beam monocromático claro `travel/low/24s`; não circunda, redimensiona nem modifica o orb R2, geometria, centro branco-quente, telemetria ou CSS de alinhamento.
+- **Painel:** cartão "Saldo Total Restante" com `travel/dark/low/24s`, herdado do PR #303.
+- **Empenhos:** navegação interna das subabas com `focus/light/low`, sem alterar `role=tablist`, seleção por teclado ou funcionalidades.
+- **Fornecedores:** cabeçalho principal (área externa clara) com `travel/light/low/24s`, contraste da borda escura em fundo claro.
+- **Itens:** cartão de cabeçalho da consulta com `travel/light/low/24s`.
+- **Notas Fiscais:** alternância Acompanhar/Cadastrar/Comissão com `focus/light/low`, preservando `layoutId` e subabas reais.
+- **Relatórios:** navegação com `focus/light/low`, herdada do PR #303; conteúdo W3 intacto.
+- **Itens do Empenho:** formulário de inclusão de item com `focus/light/low`; a borda aparece ao trabalhar com seus campos, sem alterar validações/escrita.
+- **Cronogramas:** cabeçalho da listagem com `travel/light/low/24s`; não altera editor, planejamento, PDF ou entregas.
+- **Avisos:** cabeçalho da Central com `focus/light/low`; preserva a identificação cromática de criticidade de alertas.
+
+**QUALIDADE VISUAL/EFICIÊNCIA:** `EmprovexBorderBeam` MIT existente, contorno 1px, intensidade baixa, ciclo de 24s onde itinerante. Somente **um elemento por aba/contexto**, sem replicar nas dezenas de cards/listas. `focus` não gira continuamente, efeito puramente decorativo com `pointer-events:none`, pausas quando fora da viewport/aba oculta, desativação de animações em mobile <=640px e `prefers-reduced-motion`. Em aparelhos pequenos a faixa superior ornamental do Início permanece oculta conforme layout original para preservar legibilidade do núcleo. Nenhuma cor de gravidade é substituída por animação.
+
+**DEMONSTRAÇÃO E GATES:** criado `components/visual/EmprovexAllTabBeamPreview.tsx` com 10 amostras fictícias (sem dados ou autenticação) na rota dev/Preview `/dev/visual-r1`, junto à demonstração W4 já existente. Adicionados `scripts/visual-w4-all-tabs.test.mjs` (`node --test`) e `tests/e2e/visual-w4-all-tabs.spec.mjs` com matriz dos dez IDs, variantes, reduced-motion, teclado e overflow. Inspeção estática em conector confirmou todos os dez locais e wrappers balanceados; **adição de specs e inspeção estática não são execução dos testes Node/Playwright nem aprovação de navegador**. Aguardar Application CI/Core Protection do HEAD #304, e homologar desktop/mobile, autenticando somente por via autorizada se necessário. Sem alterações em `app/page.tsx`, `OperationalWorkspace.tsx`, login, Firebase, Rules, armazenamento, billing, escrita SAG, dados operacionais ou motor do Orbe.
+
+**PRÓXIMO PASSO:** Fundador testa após `git status` limpo: `git fetch origin visual-r1-w4-border-beam-all-tabs-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir `http://localhost:3000/dev/visual-r1` e procurar "Worker 4 · Um Border Beam por aba", ou navegar pelas dez abas reais; usar Tab para apreciar variantes de foco. Antes de GO conferir regressões do Empenhos, Notas Fiscais, Itens do Empenho e Avisos, fluxo de navegação e dimensões em 390px/desktop. Nenhum merge/deploy autorizado.
+
+**CLASSIFICAÇÃO:** **AMPLIAÇÃO W4 IMPLEMENTADA NAS DEZ ABAS PRINCIPAIS VIA PR #304 DRAFT; CI/QA BROWSER/ACEITE VISUAL PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 BORDER BEAM EM DOIS PONTOS OPERACIONAIS
+
+**ONDE ESTAMOS:** Fundador aprovou visualmente o Orb R2 da Home e autorizou prosseguir, após integrar carregamentos W2 e transições W3. Implementação pontual do Worker 4 em [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303), OPEN/DRAFT, branch `visual-r1-w4-border-beam-operational-01@23e73df23bda4019f845d57b72bee691587e101a`, **base `visual-r1-w3-motion-homologation-01` / PR #302**. PRs empilhados: #295 composição → #300 Home R2 → #301 W2 loaders → #302 W3 motion → #303 W4 Border Beam; não mesclar em ordem errada.
+
+**ESCOLHA DE LOCAIS:** após auditar componente W4 já existente em `components/visual/EmprovexBorderBeam.*` (PR #294/W5) e as superfícies operacionais, selecionar **apenas dois pontos em telas distintas**:
+- `features/dashboard/components/DashboardView.tsx`: cartão principal **Saldo Total Restante**, gradiente azul, preservando todos os valores e cálculos. Wrapper `EmprovexBorderBeam` `theme='dark' variant='travel' intensity='low' duration={24} borderRadius={16}`; linhas monocromáticas de 1px com percurso de 24 segundos, controle de pausas/offscreen/aba oculta, desativação de movimento em <=640px e `prefers-reduced-motion`. Wrapper/child de altura integral para respeitar grade. Único cartão do Painel com efeito.
+- `features/relatorios/components/RelatoriosView.tsx`: wrapper em torno da navegação existente de Relatórios, `variant='focus' theme='light' intensity='low'`, borda acentuada exclusivamente sob `:focus-within`, **sem animação permanente**; manter `nav aria-label='Modos de relatório'`, botões nativos, rolagem mobile, `aria-pressed`, conteúdo e animação de painel W3 intactos.
+
+**LABORATÓRIO:** `components/visual/EmprovexVisualIntegrationPreview.tsx` apresenta amostra no endereço `/dev/visual-r1` (somente dev/Preview), cartão fictício `R$ —` e navegação com botões ilustrativos que não modificam dados. `tests/e2e/visual-w4-operational-border-beam.spec.mjs` testa travel/focus, teclado, estado de foco e reduced-motion em mobile; execução real Playwright não comprovada. Ajustado teste para esperar transição CSS de 180ms em vez de medir frame inicial (commit no HEAD de #303).
+
+**PROTEÇÃO E GATES:** CSS W4 já licenciado MIT/documentado; nenhum pacote adicionado e nenhuma mudança em motor do Orb, Home, W2, SAG/Relatórios de domínio, auth, Firebase, Rules, estoque ou dados de produção. A borda decorativa não comunica severidade, falha ou êxito. `pointer-events:none`; baixo custo CSS, nenhum loop JS por frame. `main`, RC, Production intactos. Application CI e Core Protection iniciados no novo HEAD (pendentes nesta consulta); aguardar gates verdes, teste Playwright real, smoke responsivo/foco/reduced-motion e aceite humano antes de GO/merge.
+
+**PRÓXIMOS PASSOS:** Fundador atualiza clone após conferir `git status` limpo: `git fetch origin visual-r1-w4-border-beam-operational-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir `http://localhost:3000/dev/visual-r1` e seção Worker 4, ou acessar Painel e Relatórios reais após login normal. Verificar uma linha bem sutil de 1px no cartão azul (ciclo 24s) e foco de teclado no conjunto de abas de Relatórios. Manter PR DRAFT sem merge.
+
+**CLASSIFICAÇÃO:** **W4 BORDER BEAM IMPLEMENTADO EM DOIS LOCAIS REAIS COM LABORATÓRIO PR #303, CERTIFICAÇÃO CI/BROWSER E ACEITE VISUAL AINDA PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W3 MOTION RELATÓRIOS E SAG PARA HOMOLOGAÇÃO
+
+**ONDE ESTAMOS:** Fundador aprovou refinamento final do centro orbital branco-quente da Home R2 e autorizou prosseguir. Avançamos para Worker 3 Motion, criando [PR #302](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/302) OPEN/DRAFT, branch `visual-r1-w3-motion-homologation-01@525b86cba6445273de52be7a37e18f4cc1ba94f6`, baseada no [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) W2, que incorpora a Home R2 via [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300). `main`, RC e produção intactos.
+
+**AUDITORIA W3:** artefatos anteriores do Worker 3 ([PR #293](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293), na composição W5 PR #295) já introduziram tokens 150–250ms, transições de cor/borda/sombra, foco visível, acesso reduzido movimento e entradas discretas em `RelatoriosView`, `SagSupplierStep`, `SagImportProgress`. A homologação foi separada da escrita real SAG e da lógica de dados.
+
+**ENTREGA DO PR #302:** `features/relatorios/components/RelatoriosView.tsx` ganhou entrada de painel de 200ms/6px por `motion.section` ao alternar subaba, sem `AnimatePresence` de saída, esperas, overlays ou alteração de contratos. Continua `aria-live=polite` e suporta `prefers-reduced-motion`. `components/visual/EmprovexMotionReviewPreview.tsx` criado com demonstração interativa dos **componentes reais** `SagImportProgress` e `SagSupplierStep`, controlados localmente por estados visuais e **dois fornecedores totalmente fictícios**; não usa Firebase, dados do cliente, banco, autenticação nem importação de NS. Integrado ao laboratório existente `components/visual/EmprovexVisualIntegrationPreview.tsx` acessível em `/dev/visual-r1` exclusivamente em dev/Preview. Acrescentado `tests/e2e/visual-motion-review.spec.mjs` com cenários de progresso, seleção, reduced-motion e responsividade; criação do spec **não comprova browser executado**.
+
+**CHECKS E REGRESSÕES:** Core Protection [#38622112195](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38622112195) SUCCESS; Application CI [#38622112199](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38622112199) em execução na última consulta. Anchors de `verify:reports-shell` e `verify:sag-ux` inspecionados e preservados; os próprios scripts e guards não foram modificados. Tests/QA real de Relatórios, alternância SAG e teclado/reduced-motion ainda pendentes. PR DRAFT sem merge.
+
+**PRÓXIMOS PASSOS:** no clone do Fundador (árvore limpa): `git fetch origin visual-r1-w3-motion-homologation-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Ver laboratório Motion W3 e tela real de Relatórios com credenciais próprias. Para Worker 4 Border Beam, exigir seleção prévia de um ou dois locais de destaque e aceite antes de introduzir animações contínuas na Home. Manter todos PRs encadeados em governança, sem publicar em `main` ou Production.
+
+**CLASSIFICAÇÃO:** **W3 MOTION ENTREGUE EM PR #302 DRAFT, CORE PROTECTION SUCCESS; APPLICATION CI/PLAYWRIGHT/HOMOLOGAÇÃO ESTÉTICA PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SEGUNDO REFORÇO LUMINOSO DO CENTRO ORB R2
+
+**SOLICITAÇÃO:** após aprovar centralização da Home e o primeiro ganho de brilho, Fundador solicitou reforço adicional exclusivamente do núcleo energético.
+
+**ENTREGA GITHUB:** commits isolados no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) `visual-r1-home-orb-01@814fa8406bb1794a5a99de15af5a5d6d5d972ca3` e no [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) `visual-r1-w2-operational-loaders-01@fd607cc2115a812ca8095b8a615a3b6334c5f0da`, DRAFT, CSS final idêntico (blob `533f908a06406c06c677845f9ed323bce3b81ed9`). Arquivo único: `features/inicio/components/InicioCore.module.css`. Gradiente branco-quente do centro `0.66→0.82`, faixa intermediária `0.23→0.30`, faixa externa `0.06→0.08`; sombra luminosa branca `9px/0.98→11px/1.00` e dourada `21px/0.52→28px/0.68`. **Nada alterado** no tamanho do halo 74px, ponto 5px, centralização vertical/horizontal 50%, esfera, distribuição 70/30, partículas, core R2, renderização W1, loaders monocromáticos W2, telemetria, performance e domínio.
+
+**GOVERNANÇA:** `main`, RC, Rules, auth, Firestore e produção preservados. PR #301 continua encadeado sobre branch do #300, com mudança aplicada também nele para preview imediato; comparar histórico antes de eventual merge. Checks Core Protection/Application CI reiniciados no novo HEAD de cada PR; ver resultado por SHA e validar aparência em localhost antes do aceite final. Não considerar publicação/merge autorizados.
+
+**CLASSIFICAÇÃO:** **AUMENTO CENTRAL DE BRILHO EXECUTADO EM AMBAS AS BRANCHES DRAFT; CI/HOMOLOGAÇÃO RUNTIME PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / BRILHO DO NÚCLEO ORB R2 REFORÇADO APÓS HOMOLOGAÇÃO GEOMÉTRICA
+
+**ONDE ESTAMOS:** Após aceitar a centralização geométrica da Home R2, o Fundador pediu um único último refinamento: aumentar o brilho do centro do orbe. Executado por commits reais e separados nos PRs empilhados [#300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) `visual-r1-home-orb-01@7f3e4f3281ad9c6096a405da34101e178613373e` e [#301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) `visual-r1-w2-operational-loaders-01@c8db9508603b54c96807f2c5237b9d975f23704c`, ambos OPEN/DRAFT.
+
+**AJUSTE EXCLUSIVO:** `features/inicio/components/InicioCore.module.css`: no halo `.homeOrbCoreGlow`, intensidade do gradiente branco-quente no centro aumentada de `0.45` para `0.66`, anel de 11% `0.17→0.23`, faixa externa de 32% `0.047→0.06`; sombra do ponto `::after` com brilho branco `0.90→0.98` e dourado `0.36→0.52`. **Mantidos exatamente** halo 74×74px, centro 5×5px, blur/radius 9px/21px, contorno pontilhado, partículas brancas/amarelas/vermelhas, shell branco, posição `top/left:50%`, loaders monocromáticos W2, performance e gerência de loading. Não reintroduzir esfera azul, filamentos, contornos sólidos ou tamanho maior.
+
+**COERÊNCIA:** blobs CSS idênticos nos PRs #300/#301: `e46c6e623bca40d376660ef20928155d8e972868`. Como commits paralelos em PRs encadeados, comparar ancestrais no merge futuro para não duplicar mudanças. `main`, RC, Production, Firestore, Auth, Rules e domínio logístico não modificados.
+
+**CERTIFICAÇÃO:** Core Protection PR #300 SUCCESS no commit novo. Application CI #300 em progresso; Core Protection #301 e Application CI #301 em progresso na última consulta. Não declarar release GO sem checks verdes no SHA exato e confirmação visual desktop/mobile. Handoff registrado nos respectivos PRs. Atualização de ambiente local com `git status` limpo, `git fetch origin visual-r1-w2-operational-loaders-01`, `git switch --detach FETCH_HEAD`, `npm run dev -- -p 3000`.
+
+**CLASSIFICAÇÃO:** **BRILHO CENTRAL R2 AJUSTADO NO GITHUB NOS DOIS RAMOS DRAFT; CI/HOMOLOGAÇÃO DA ÚLTIMA ESTÉTICA PENDENTES; MAIN E PRODUÇÃO PRESERVADAS.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CENTRALIZAÇÃO GEOMÉTRICA HOME R2 NOS PRS #300 E #301
+
+**ONDE ESTAMOS:** Fundador observou em screenshot da Home do `localhost:3000` orbe central visualmente deslocado para baixo. Confirmado no CSS: container `.system` possuía `top: 54%` no desktop e overrides `58% / 57% / 56% / 56%` nos breakpoints. Solicitada e executada centralização geométrica do núcleo Thinking Orbs R2.
+
+**EXECUÇÃO GitHub:** Correção aplicada em `features/inicio/components/InicioView.module.css` no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), branch `visual-r1-home-orb-01@853e10fcda1f0b30c0ce61036b1816f7074f52e5`, e na branch filha de carregamentos do [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301), `visual-r1-w2-operational-loaders-01@bb0bf8a1b91e4ed71e6e85c45f7ec3f922c53eaf`. **Exatamente o mesmo conteúdo CSS** nos dois ramos, blob `d99cc9278835a3a898723da1c715634c87595f85`. Alteração pontual: `.system {top:50%}` em 5 lugares (desktop, ≤900px, ≤640px, ≤420px, altura ≤560px); `left:50%` e `translate3d(-50%,-50%,0)` preservados. `InicioCore` já usa `left:50%;top:50%` dentro do sistema. Nenhuma alteração em cor/tamanho/formato/animação/física do Orb R2, loaders W2, dados, autenticação, Rules ou efeitos da Home.
+
+**GOVERNANÇA DOS PRS EMPILHADOS:** #301 depende de #300; CSS recebeu commits independentes com **blob final idêntico**. Antes de merge futuro conferir ancestry/diff, pois GitHub pode listar CSS no diff encadeado embora conteúdo igual. Nenhum PR foi mesclado, nenhuma publicação produtiva foi feita, `main` e RC inalterados.
+
+**CERTIFICAÇÃO:** Core Protection e Application CI reiniciados no HEAD exato de cada PR; aguardando resultado, screenshot do Fundador na Home desktop e checagem responsiva. Não classificar PASS de browser ou release sem essas evidências. Testar localmente branch #301 com `git fetch origin visual-r1-w2-operational-loaders-01`, `git switch --detach FETCH_HEAD` e `npm run dev -- -p 3000` depois de confirmar tree limpa.
+
+**CLASSIFICAÇÃO:** **ALINHAMENTO VERTICAL IMPLEMENTADO NOS PRS #300 E #301; CI/HOMOLOGAÇÃO VISUAL PENDENTES; MAIN/RC/PRODUÇÃO INTACTOS.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2 LOADERS MONOCROMÁTICOS OPERACIONAIS
+
+**ONDE ESTAMOS:** autorização do Fundador para prosseguir com o Worker 2 após aceite do núcleo R2 da Home. Integração real de indicadores de carregamento implementada na branch exclusiva `visual-r1-w2-operational-loaders-01@ab753a694fc15124ab059ed56c05cee760c2df38`, [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) OPEN/DRAFT, **baseada na Home R2 PR #300** (`visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`). PR encadeado não deve ser integrado fora de ordem. A `main` e o RC continuam preservados.
+
+**O QUE MUDOU:** `components/layout/OperationalSurfaceLoading.tsx` troca o spinner genérico por `EmprovexOrbVisual` + `EmprovexThinkingOrbRenderer` monocromático `size='medium'`, `surface='light'` para os carregamentos reais das superfícies operacionais. Mantém `data-testid='operational-section-loading'`, texto original, painel claro, `role=status`, `aria-live=polite`; a prontidão `activeOperationalDataReady` e o `Suspense fallback` continuam controlados **sem alterações em `app/page.tsx`** e sem delay. `components/auth/EmprovexAuthLoading.tsx` troca somente o ícone `Loader2` por `EmprovexOrbVisual` monocromático `size='small'`, `surface='dark'` durante autenticação real, mantendo `LoginAtmosphere`, `LoginStatusRail`, fases `session/workspace`, mensagens e contratos de sessão intactos. Adaptador W5 continua forçando `palette='monochrome'`; branco/amarelo/vermelho permanecem **exclusivos** do núcleo do Início.
+
+**DEMONSTRAÇÃO REAL/AMOSTRA:** laboratório `/dev/visual-r1` atualizado no PR #301 para exibir o componente `OperationalSurfaceLoading` real e amostra visual declarada do loader de autenticação sobre fundo escuro, sem login, banco, timers ou simulação de operação. Executar no localhost do Fundador para validar aparência claro/escuro.
+
+**EVIDÊNCIA DE REGRESSÃO ADICIONADA:** `scripts/visual-r1-w2-operational-loaders.test.mjs` contém asserts Node para status copy/ARIA, condições originais de loading e `Suspense`, fases de autenticação e separação entre Home colorida e loaders monocromáticos. Executar explicitamente `node --test scripts/visual-r1-w2-operational-loaders.test.mjs`. Adicionar o arquivo **não comprova execução**, e não altera `package.json` ou pipelines existentes.
+
+**PROTEÇÕES:** nenhuma alteração operacional em `app/page.tsx`, `OperationalSurfaceTransition.tsx`, hooks de sessão, Firestore, Rules, auth provider, billing, dados de estoque ou movimentações. Nenhuma mudança em `features/inicio` além da Home R2 da branch base; motor vendor MIT intocado. Spinner substituído **apenas onde há espera real**, reduzido movimento/aba oculta preservados pelo renderer W2/W1. Nada foi mesclado na main, publicado em Production ou no RC.
+
+**GATES E PENDÊNCIAS:** [Core Protection #38618627786](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38618627786) **SUCCESS** no HEAD `6f746988`; [Application CI #38618627847](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38618627847) **IN_PROGRESS** na última consulta, sem declaração de 7/7 PASS ainda. Falta QA real no navegador: alternância entre superfícies, saída/erro de loading, estados session/workspace do login, reduced-motion, toque, desligamento em aba oculta, FPS/CPU e logout #286; sem alegar certificação funcional completa. Testar no clone local do Fundador e obter aceite visual antes de qualquer GO.
+
+**O QUE FAZER A SEGUIR:** aguardar gates verdes do PR #301, executar teste node + smoke visual no `localhost:3000` e registrar comportamento de loading real sem autenticar indevidamente; avaliar Motion W3 e Border Beam W4 em etapas independentes posteriores. Coordenadores VISUAL-R1 e Geral R1 devem manter controle dos riscos arquiteturais do Block 19.14 antes da promoção da Home/composta.
+
+**CLASSIFICAÇÃO:** **W2 CARREGAMENTOS MONOCROMÁTICOS REALMENTE CONECTADOS EM PR #301 DRAFT; CERTIFICAÇÃO INTEGRADA/E2E/ACEITE PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CASCA BRANCA E PARTÍCULAS MENORES NO ORB R2
+
+**ONDE ESTAMOS:** Fundador corrigiu a diretriz de aparência do núcleo do Início: substituir o tom estrutural cinza-prateado por **branco** e reduzir o tamanho aparente das partículas móveis brancas, amarelo-douradas e vermelho-coral. Mudança concluída em [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), branch `visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`, OPEN/DRAFT. **Main/RC/Production não alterados.**
+
+**O QUE FOI MODIFICADO:** `features/visual-orbs/lib/polishWorkingFrame.ts`: somente R2 converte cor estrutural Fibonacci para tinta branca no painter escuro (valor `white=0`), com raio de cada ponto da casca reduzido em 12% e profundidade ainda determinada pela opacidade; partículas móveis R2 passam de fator `0.82 + 0.09*gleam` para `0.65 + 0.07*gleam` (aprox. -21% de raio), com redução proporcional dos halos de cintilação. `features/visual-orbs/lib/colorWorkingFrame.ts`: a casca e trilhas não coloridas usam tinta branca, com a trilha orbital atenuada (fator 0.58) para não criar anéis; permanece a paleta móvel `#FFFFFF`, `#FFD25A` e `#FF5A46` e o contrato 70/30 nas rápidas. O comparador Classic × R2 de `components/visual/EmprovexVisualIntegrationPreview.tsx` recebeu legenda atualizada. **Refinamento exclusivo R2 colorido na Home; Classic intacto, loaders monocromáticos inalterados, motor MIT não modificado**.
+
+**GATES E PRÓXIMAS ETAPAS:** novos checks Core Protection/Application CI disparados para o HEAD do PR #300, pendentes no instante do registro; não declarar PASS antes de concluidos no SHA exato. Fundador poderá atualizar o localhost, testar em `/dev/visual-r1` e enviar screenshots desktop/mobile. Revalidar performance/reduced motion e deliberação arquitetural Block 19.14 antes de qualquer pedido de merge. Nenhum dado, autenticação, Firestore Rules, Vercel Production ou RC modificado.
+
+**CLASSIFICAÇÃO:** **COR BRANCA DA CASCA E REDUÇÃO DAS PARTÍCULAS R2 IMPLEMENTADAS NO GITHUB; CI E ACEITE VISUAL PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EMPROVEX ORB R2 IMPLEMENTADO PARA A HOME
+
+**ONDE ESTAMOS:** Fundador solicitou compatibilidade estética maior do núcleo Thinking Orbs após testar o orb pontilhado no localhost. R2 efetivamente implementado em branch isolada [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@f88fd126aee2734732a919396bb91a472b00b642`, DRAFT, encadeado ao PR #295. `main`, RC congelado, Firestore, Rules, Auth e produção não alterados.
+
+**DIRETRIZ VISUAL APROVADA / IMPLEMENTAÇÃO EM TESTE:** apenas o Thinking Orbs central na Home usa cores branco `#FFFFFF` (lentas), amarelo `#FFD25A` e vermelho `#FF5A46` (rápidas 70/30 estáveis). Orbes de loading seguem monocromáticos conforme fundo. A estética R2 é **opt-in e isolada** por `refinement='r2'`; padrão `classic` preserva o desenho anterior. O EMPROVEX Orb R2 enfatiza a forma tridimensional através de luz por profundidade, preserva pontilhado orbital sem esfera sólida, reduz uniformidade granular da casca Fibonacci interna (~2/7 dos pontos de regiões internas), preserva silhueta pontilhada, reduz raio aparente de partículas móveis, torna a cintilação mais orgânica e controla highlights saturados. Luz central branco-quente permanece pequena com halo ajustado ao fundo azul-marinho do EMPROVEX; tamanho/posicionamento permanecem como na versão aprovada do PR #300.
+
+**ARQUIVOS:** `features/visual-orbs/lib/polishWorkingFrame.ts` (R2 depth/rim, twinkle), `features/visual-orbs/lib/colorWorkingFrame.ts` (tinta e ghosts refinados), `features/visual-orbs/components/EmprovexThinkingOrb.tsx` (prop `refinement`), `features/inicio/components/InicioCore.tsx` (ativação R2 somente Home), `features/inicio/components/InicioCore.module.css` (hierarquia luminosa), `components/visual/EmprovexVisualIntegrationPreview.tsx` (comparador Classic × R2), `tests/e2e/visual-orb-color-contrast.spec.mjs` (teste atualizado). Motor MIT de origem, `InicioView`, regras e hooks operacionais não foram modificados neste refinamento. **Não adicionar partículas à estrela/ambiente ou aumentar área ocupada além do núcleo**.
+
+**GATES E LIMITES:** Core Protection e Application CI disparados no novo SHA; verificar HEAD exato para conclusões. Spec Playwright foi atualizado, **não há evidência de execução real do browser**. O laboratório `/dev/visual-r1` disponibiliza Classic e R2 para comparação, enquanto `localhost:3000` usa R2 na Home real da branch. Responsividade, FPS/CPU/GPU, interação por teclado, reduzido movimento, telemetria e arquitetura Block 19.14 ainda demandam revisão. Não confundir a aprovação da estética colorida anterior com homologação humana da nova aparência R2. Sem GO merge/Production.
+
+**PRÓXIMOS RESPONSÁVEIS:** Fundador confirma em localhost; W5 valida navegador/performance/contraste e regressões, Coordenadores VISUAL-R1 e Geral R1 revisam guard Block 19.14 e eventual plano de release. Antes disso, `main`, PR #295, RC e produção permanecem intactos.
+
+**CLASSIFICAÇÃO:** **R2 IMPLEMENTADO EM PR #300 DRAFT; CI/QA/HOMOLOGAÇÃO VISUAL R2 PENDENTES; SEM PUBLICAÇÃO PRODUTIVA.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SILHUETA FIBONACCI EXTERNA REALÇADA NO PR #300
+
+**ONDE ESTAMOS:** Após visualizar a Home colorida em `localhost:3000`, o Fundador solicitou realce maior da região externa do orb e equilíbrio dos highlights. Implementado no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@87f375b11476be9943d7fb144d6bc57fa714cd81`, PR OPEN/DRAFT. É uma versão local/Preview, **sem merge na main ou Production**.
+
+**REFINO DA ESFERA:** `polishWorkingFrame.ts` ganhou parâmetro opcional `shellEmphasis=0`, que atua **só sobre pontos Fibonacci da casca esférica**, proporcionalmente ao raio projetado, elevando discretamente opacidade, raio e legibilidade da tinta na silhueta; não adiciona bolhas sólidas, filamentos, linhas orbitais ou WebGL. `EmprovexThinkingOrb.tsx` só ativa `shellEmphasis=1` na paleta `colored` do estado `working`. Os loaders monocromáticos preservam a casca sem reforço e contraste adaptativo por fundo. `colorWorkingFrame.ts` reduz ~6% a opacidade dos pontos rápidos amarelos/vermelhos para equilíbrio, mantendo branco e alocação 70/30. `InicioCore.module.css` diminui levemente o bloom global; **escala aprovada 2,12x, ponto central luminoso branco-quente, cinemática de partículas, tooltip, telemetria, constelação, indicadores e layout permanecem**.
+
+**GOVERNANÇA:** engine MIT vendorizada intocada, `app/page.tsx`, Rules, auth, banco e RC congelado preservados. Guard Block 19.14 inalterado; deliberação semântica sobre Canvas 2D na Home ainda pendente para decisão de merge. Core Protection/Application CI do novo HEAD devem ser conferidos antes de declarar PASS; teste visual real da nova silhueta e medições de performance desktop/mobile permanecem pendentes. Fundador pode conferir com `git fetch origin visual-r1-home-orb-01`, checkout detached do FETCH_HEAD e `npm run dev -- -p 3000` no clone local limpo.
+
+**CLASSIFICAÇÃO:** **CÓDIGO DO REFINO EXTERNO ENTREGUE EM BRANCH DRAFT; NOVA CERTIFICAÇÃO E HOMOLOGAÇÃO HUMANA PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / HOME REAL COM THINKING ORBS COLORIDO EM TESTE ISOLADO
+
+**ONDE ESTAMOS:** por solicitação explícita do Fundador, a Home principal passou a renderizar o Thinking Orbs aprovado em uma **branch de teste isolada** `visual-r1-home-orb-01`, [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) DRAFT, **encadeado ao PR #295 W5**, no HEAD inicial `bcc2ab8be312390cebb2efce32d3dd06e8ba21fc`. Branch base `visual-r1-integration-01@2c6ba3943e712d54887a762b9fdd171ae23f46d5`. A `main`, o RC congelado, Vercel Production, Firestore Rules, autenticação e dados não foram tocados.
+
+**O QUE MUDOU:** `features/inicio/components/InicioView.tsx` agora envia `visualMode='thinking-orbs'`, `performanceMode` e `ambientPaused` ao núcleo. `InicioCore.tsx` mantém o wrapper interativo, snapshot agregado, telemetria, tooltip, foco, zona de exclusão de estrelas, densidade e alertas; o modo selecionado troca **apenas o conjunto visual do reator azul** por `EmprovexThinkingOrb` importado de `features/visual-orbs`, com `animation='working'`, `palette='colored'`, `surface='dark'`, `roundness=0.72`, `sparkle=0.68`, `performance` adaptativa e pausa de animação ao ocultar a aba. O conjunto visual anterior continua disponível através de `visualMode='legacy'` para rollback reversível, sem apagar o contrato de telemetria/foco. `InicioCore.module.css` desativa a moldura azul de borda do novo modo e apresenta apenas pontos orbitais transparentes, mantendo cenário de estrelas, cabeçalho e sidebar.
+
+**REGRA ESTÉTICA VIGENTE:** somente o núcleo **do Início** é colorido (lentas `#FFFFFF`, rápidas 70% `#FFD25A` e 30% `#FF5A46`); carregamentos e indicadores secundários seguem monocromáticos adaptados a fundo claro/escuro pelo adaptador do PR #295. Sem bolhas azuis, gradientes de esfera, filamentos ou uso de dados falsos no núcleo.
+
+**GOVERNANÇA E BLOCK 19.14:** a modificação não inseriu literal `<canvas` no código de `features/inicio`; o desenho Canvas 2D permanece implementado em `features/visual-orbs`. Guard 19.14 e demais scripts não foram alterados ou enfraquecidos. **Isso não substitui a deliberação arquitetural semântica:** a Home passa a montar um componente Canvas externo, logo não se considera a política histórica de ausência de Canvas automaticamente homologada mesmo que o guard textual permaneça verde. Coordenador Geral R1 deve revisar esta mudança antes de qualquer proposta de merge. Não houve GO de release.
+
+**GATES E TESTES:** [Application CI](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions) e [Core Protection](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions) disparados para o HEAD do PR #300. **Não classificar PASS até resultado do HEAD exato.** Fundador testará em `localhost:3000` obtendo a branch `visual-r1-home-orb-01`, incluindo o foco/tooltip, celular, movimento reduzido, FPS/CPU e não interferência na constelação operacional. W5 mantém PR #295 isolado de eventuais correções da Home; a nova PR só integra a partir de novo aceite e certificação.
+
+**PRÓXIMOS RESPONSÁVEIS:** Fundador confirma fidelidade no Home real; Coordenador VISUAL-R1 audita CI e registra o resultado; Coordenador Geral R1 delibera o contrato Block 19.14; Worker 5 realiza QA integrado e adapta o merge caso aprovado.
+
+**CLASSIFICAÇÃO:** **HOME COLORIDA IMPLEMENTADA EM BRANCH DE TESTE, COMPATIBILIDADE SEMÂNTICA/ACEITE/QA FINAL PENDENTES; SEM MERGE OU DEPLOY EM PRODUÇÃO.**
+
+---
+
+## DECISÃO DO FUNDADOR — 2026-10-14 — PALETA COLORIDA EXCLUSIVA DO NÚCLEO INÍCIO
+
+**DIRETRIZ MAIS RECENTE — prevalece sobre descrições anteriores nesta documentação:** o Thinking Orbs **colorido é exclusivo do núcleo central da aba Início**. Todos os demais indicadores Thinking Orbs (carregamentos, autenticação, áreas secundárias, formatos `hero/large/medium/small/mini` fora do núcleo central) devem permanecer **monocromáticos, com contraste adaptado ao fundo de cada superfície**: claros sobre fundos escuros; escuros sobre fundos claros. Não utilizar placa de fundo grafite artificial em cartões claros; a própria tinta troca para escura.
+
+**IMPLEMENTAÇÃO NO CÓDIGO:** [PR #292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) passou a usar `EmprovexThinkingOrb` com `palette?: 'monochrome'|'colored'`, padrão seguro **monochrome**, e `surface?: 'light'|'dark'`; usa `paintColorWorkingFrame` **somente quando `animation==='working' && palette==='colored'`**; caso contrário usa pintura monocromática nativa `paintFrame(..., surface==='dark')`. O laboratório W1 demonstra um orb colorido da futura Home e exemplos monocromáticos em claro/escuro. A paleta colorida aprovada para a Home permanece branco `#FFFFFF` nas lentas e, nas rápidas, 70% `#FFD25A` e 30% `#FF5A46`, esfericidade 72% e cintilação 68%.
+
+**CONSUMIDO NO W5:** [PR #295](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) sincronizou a API W1; o adaptador de carregamentos `EmprovexThinkingOrbRenderer` força **`palette='monochrome'`** e transmite `surface='light'|'dark'`, evitando cor em todos os cinco presets. A vitrine `/dev/visual-r1` ganhou prévia exclusiva do Início colorido e comparação de carregamentos monocromáticos em fundos claro e escuro; o novo spec Playwright rejeita pixels coloridos fora da amostra do Início. Handoff W5 atualizado. As mudanças permanecem em branches isoladas e PRs DRAFT; **não** há montagem do novo núcleo na Home operacional, nem uso dos loaders em produção.
+
+**TESTES E GATES:** novos SHAs foram gerados após os últimos checks verdes, portanto a certificação anterior não abrange automaticamente a política cromática atual. Core Protection e Application CI dos novos SHAs estão em andamento no momento do registro; Playwright real, screenshot, FPS/CPU/GPU, aceite de W3/W4 e deliberação do Block 19.14 seguem pendentes. Verificar o HEAD de cada PR no GitHub antes de citar resultados. Não modificar `main`, RC, Rules, autenticação, backend, Vercel Production ou dados.
+
+**CLASSIFICAÇÃO:** **DECISÃO DO FUNDADOR REGISTRADA; PALETA ISOLADA IMPLEMENTADA NAS BRANCHES W1/W5; NOVA CERTIFICAÇÃO PENDENTE; SEM GO DE MERGE.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W1-W5: CORES REACT IMPLEMENTADAS; CONTRASTE CLARO/ESCURO ADAPTADO
+
+**ONDE ESTAMOS:** Fundador autorizou concluir o núcleo colorido e corrigir contraste em superfícies mistas do EMPROVEX. Foram efetivamente atualizadas **duas branches DRAFT**, sem modificar `main`, o RC ou a Home operacional: [PR #292 (W1)](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) `visual-w1-orb-core-01@8cec9253e4c137450c2f64bb2eed53ae881afdd8`; [PR #295 (W5)](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) `visual-r1-integration-01@ada575fb23772697ca9dc5cd7afe7fee9b12a1b9`. HEADs verificados em consulta GitHub. Os SHA podem mudar se os respectivos workers seguirem desenvolvendo: reler antes de compor.
+
+**IMPLEMENTAÇÃO W1 — COR:** novo módulo `features/visual-orbs/lib/colorWorkingFrame.ts` reproduz **somente as identidades cinemáticas dos pontos móveis** a partir da matemática original de órbitas por `orbit:particle`, usando `hashD` e `makeProj`; **não modifica** nenhum arquivo em `vendor/thinking-orbs` ou a geometria original. Velocidade absoluta com limiar inicial `0.54`: partículas lentas `#FFFFFF`; entre as rápidas, **70% `#FFD25A` e 30% `#FF5A46` com arredondamento para contagem inteira**, seleção por hash estável para evitar troca de cor durante movimento. Apenas estado `working` usa a pintura colorida; demais oito mantêm o painter MIT original. Trails fantasmas e a camada Fibonacci ficam monocromáticos, cintilação acompanha a partícula colorida. Esfericidade `roundness=0.72` e cintilação `sparkle=0.68` preservadas.
+
+**CONTRASTE REAL CLARO/ESCURO — APLICADO AO CÓDIGO:** W1 acrescentou `contrastSurface='transparent' | 'matte'`. Em fundos escuros, Canvas transparente preserva o aspecto de partículas puras. Em cartões claros, `matte` coloca uma **base grafite plana #111923**, de bordas discretas, por trás do Canvas sem gradientes, bolhas azuis, novos filamentos ou tentativa de escurecer os pontos brancos aprovados. Protótipo W1 `/dev/visual-orb` mostra lado a lado contextos claro e escuro. Na branch W5, `OrbRendererProps.surface?:'light'|'dark'` e wrappers propagam a escolha, com `light` resultando em `matte` e `dark` em `transparent`; showcase light agora legível; laboratório `/dev/visual-r1` exibe ambos os contextos com cinco tamanhos. A integração final ainda deve identificar explicitamente a superfície real de cada módulo do EMPROVEX.
+
+**QA ADICIONADO:** novo `tests/e2e/visual-orb-color-contrast.spec.mjs` na branch W5. Verifica em navegador, **quando executado**, pixels Canvas das três cores, reduced-motion, surface matte/transparente, overflow mobile e estados demonstrativos `ready/error`. A simples presença do teste **não** comprova execução. A rota Vercel Preview pode continuar protegida por autenticação; não reivindicar teste humano nem screenshot sem evidência.
+
+**GATES NO INSTANTE DESTA ATUALIZAÇÃO:** nos novos SHAs W1/W5 **Core Protection SUCCESS**, mas **Application CI EM EXECUÇÃO**, sem PASS final nesta anotação. Esperar `validate-application` + Blocks 16–21 em cada novo HEAD; se necessário, corrigir erros sem tocar nos guards. A antiga certificação monocromática e a antiga composição CI verde **não certificam o novo código colorido**. Os PRs devem permanecer DRAFT. Não declarar GO Production nem Home integrada.
+
+**GUARD 19.14:** proíbe `<canvas` sob `features/inicio`, preservado. A correção mantém a renderização em `features/visual-orbs` e a Home atual sem alterações. Montagem na Home ainda exige decisão documentada do Coordenador VISUAL-R1 e do Coordenador Geral R1, orçamento CPU/GPU/SSR/teclado/touch/reduced-motion/contraste e aprovação operacional. O Fundador **aprovou a estética do núcleo colorido**, mas não autorizou merge produtivo nem aceitou individualmente Motion W3 e Border Beam W4.
+
+**QUEM ESTÁ FAZENDO:** nesta sessão, Coordenador VISUAL-R1 aplicou código de W1 e W5 usando o GitHub, assincronamente aos chats-workers; Worker 1 e Worker 5 devem validar e não sobrescrever mudanças concorrentes, pois os arquivos foram realmente gravados em suas branches.
+
+**O QUE FAZER A SEGUIR:** confirmar Application CI completo nos novos SHAs, executar Playwright em navegador real no lab isolado e medir recursos, revisar renderização/contraste com o Fundador, deliberar Block 19.14; só então considerar integração operacional na Home e loaders e autorização separada de merge. `main`, `rc-r1-global-frozen-2026-10-09`, dados, Firestore Rules, Preview produtivo e segurança intocados nesta tarefa.
+
+**CLASSIFICAÇÃO:** **REACT COLORIDO E CONTRASTE ADAPTATIVO IMPLEMENTADOS NAS BRANCHES W1/W5; CORE PASS; CI INTEGRAL/TESTES DE NAVEGADOR/INTEGRAÇÃO HOME PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W5 PR #295: COMPOSIÇÃO ISOLADA; CI VERDE; HOMOLOGAÇÃO PENDENTE
+
+**ONDE ESTAMOS:** [PR #295](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) OPEN/DRAFT, `visual-r1-integration-01@433dad77dcc91ce15a4b2f3a674acb14b91743ae` (HEAD verificado pelo GitHub), base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. **Nota de atualização:** handoff W5 descrevia `caee9b5823065cdff7acf23d210040c27f7f10b9`, mas houve avanço para `433dad77`. O `caee9b58` anterior teve `validate-application` CANCELLED e jobs Blocks 16–21 marcados FAILURE em consequência; **não confundir esses estados com os checks do HEAD novo**, atualmente em andamento.
+
+**COMPOSIÇÃO VERIFICADA:** diff de **41 arquivos**, contendo (W1) motor/presets MIT Canvas 2D e `polishWorkingFrame` em `features/visual-orbs`, ainda monocromático; (W2) cinco loaders e estados reais isolados; (W3) motion discreto dos relatórios/SAG, sem aceite estético específico; (W4) Border Beam monocromático `low`/24s com laboratório e spec E2E, sem aceite específico; (W5) adaptador `components/visual/EmprovexThinkingOrbRenderer.tsx`, vitrine `EmprovexVisualIntegrationPreview.tsx`, laboratório `app/dev/visual-r1/page.tsx` e `docs/VISUAL_R1_W5_INTEGRATION_HANDOFF.md`. Nenhum `features/inicio/**`, `app/page.tsx`, Rules, credenciais, backend, autenticação ou `package*.json` no diff. A montagem é **laboratorial, não é integração real no Início, login ou módulos operacionais**.
+
+**PREVIEW:** link informado no handoff: `https://controles-de-empenhos-aprov-git-vi-a6cd31-aprov-hgesms-projects.vercel.app/dev/visual-r1`. Rota permitida pelo código quando `NODE_ENV=development` **ou** `VERCEL_ENV=preview`, e 404 em ambiente Production sem essas condições. O deployment foi relatado pelo W5 como sucesso, porém a URL e o render efetivo **não foram inspecionados em navegador nesta coordenação**; não tratar como homologação visual real. As rotas individuais `/dev/visual-orb` e `/visual-lab/border-beam` têm guarda `NODE_ENV=development` e não são previews Vercel de produção.
+
+**PONTO DE ATENÇÃO DE CONTRASTE:** `EmprovexLoaderShowcase.tsx` usa cards `bg-white`; o adaptador injeta W1 cujo `EmprovexThinkingOrb.tsx` chama `paintFrame(context, enhanced, true)` (paleta para fundos escuros, tinta clara). A composição pode deixar partículas pouco visíveis sobre branco; testar em navegador real e corrigir por stage escuro isolado ou suporte de tema corretamente validado, sem alterar o vendor MIT ou introduzir bolhas/filamentos. O adaptador reconciliou os tamanhos com CSS scale e passa `size/performance/speed/paused`; os hints `density/intensity` não têm suporte real no motor W1, e não devem ser apresentados como parâmetros funcionais.
+
+**GATES NO HEAD ATUAL DA COMPOSIÇÃO:** [Core Protection #38527715448](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715448) **SUCCESS**; [Application CI #38527715057](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715057) **SUCCESS**, `validate-application` e Blocks 16–21 concluídos com SUCCESS (7/7). Não declarar PASS técnico final antes do CI inteiro e dos demais testes. Screenshot/browser, Playwright de integração, responsividade, teclado/touch, reduced-motion, FPS/CPU/GPU, flow real de login/logout e efeitos combinados **PENDENTES**.
+
+**CRITÉRIOS DE ACEITE:** o Fundador **aprovou a estética do núcleo colorido**, não o código React colorido nem as mudanças W3/W4. [PR #292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) continua `1802e1b4` com cor monocromática; W1 precisa implementar as partículas lentas brancas, rápidas 70% amarelo `#FFD25A` / 30% vermelho `#FF5A46`, esfericidade 72%, cintilação 68%, cor estável, e recertificar com CI verde. Só após novo HEAD colorido e decisão conjunta VISUAL-R1/Geral R1 sobre **Block 19.14** poderá W5 propor a montagem do núcleo na Home; **não enfraquecer guard, não colocar Canvas em `features/inicio` sem deliberação**. W3/W4 podem permanecer em ensaio isolado enquanto aguardam aceite visual específico.
+
+**QUEM ESTÁ FAZENDO:** W5 mantém PR #295 DRAFT e realiza adaptadores, composição/QA; W1 finaliza cor; Coordenador VISUAL-R1 coordena aceites e revisa resultados; Coordenador Geral R1 define compatibilidade de guard/release; Fundador valida efeitos e autoriza eventual GO posterior.
+
+**O QUE FAZER A SEGUIR:** W5 corrigir/validar contraste real dos orbes e coletar evidências de navegação, terminar CI #38527715057, executar E2E e relatórios; W1 publicar React colorido e CI novo; W5 compor o HEAD colorido e obter aprovação arquitetural para integrar Home; apresentar ao Fundador previews demonstráveis em desktop/mobile e motion/beam isolados, sem confundir Vercel READY com testes humanos. **Sem merge na main, nenhum re-freeze, nenhum deploy em Production.**
+
+**CLASSIFICAÇÃO:** **COMPOSIÇÃO ISOLADA CONFIRMADA; CORE + APPLICATION CI 7/7 PASS; REACT COLORIDO / HOMOLOGAÇÃO ARQUITETURAL / TESTE REAL PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 5 — ATIVAÇÃO AUTORIZADA E ACEITE ESTÉTICO DO NÚCLEO COLORIDO
+
+**ONDE ESTAMOS:** Fundador **aprovou expressamente a estética do núcleo Thinking Orbs colorido** descrita no handoff do Worker 1, e solicitou **ativação do Worker 5 — VISUAL-INTEGRATION-QA-01**. Este é um aceite **de conceito visual**, não de integração do código, nem autorização de merge, re-freeze ou implantação em produção. PRs visuais OPEN/DRAFT: W1 [#292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) `1802e1b47191f3758f346deca6f89c25627ae722` (encadeado ao #288), W2 [#291](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/291) `670a77bcffa0d2fcf746d5b0a4bda181380b0d54`, W3 [#293](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293) `fc26033297bb8b637a1a8461793fb37eb7d4c603`, W4 [#294](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/294) `8237e52bbd75a642d0208eedd7fb58e24807164f`. `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` preservada na verificação anterior; W5 reconfirma antes de compor.
+
+**DIRETRIZ APROVADA DO NÚCLEO:** partículas móveis lentas `#FFFFFF`; móveis rápidas com distribuição-alvo 70% `#FFD25A` e 30% `#FF5A46` por identidade estável, velocidade orbital com limiar inicial 0.54 a calibrar; partículas estruturais Fibonacci neutras; esfericidade 72%, cintilação 68%; aparência pontilhada baseada no original MIT, sem bolhas azuis nem filamentos. **Não foi aprovado qualquer desvio estético.** A implementação React no SHA atual do W1 é **monocromática**; o colorido consta apenas do HTML externo relatado pelo W1 (não auditado aqui). O W1 recebeu autorização via comentário no PR #292 para converter o refinamento ao código versionado, preservar upstream e executar novos gates. Somente um novo SHA verde da alteração colorida pode ser considerado tecnicamente certificado.
+
+**O QUE ESTAMOS FAZENDO:** W5 está **AUTORIZADO A INICIAR A PREPARAÇÃO DE INTEGRAÇÃO/QA EM BRANCH PRÓPRIA**, lendo PRs/handoffs, verificando estado atualizado, matriz de diferenças e gerando adaptador W1/W2. W2, W3 e W4 obtiveram Core Protection e Application CI SUCCESS em seus HEADs isolados, mas os efeitos de W3 e W4 **não receberam aceite estético individual do Fundador**; podem ser testados em composição reversível/isolada, porém não promovidos como versão visual definitiva sem revisão. O núcleo colorido do W1 só pode ser conectado à Home depois do código React colorido e de gates verdes, prova de orçamento CPU/GPU/SSR/reduced motion, compatibilidade com Block 19.14 e aprovação conjunta Coordenador VISUAL-R1 + Coordenador Geral R1. O guard histórico proíbe o literal `<canvas` em `features/inicio`; **não alterá-lo nem contorná-lo**. Se a montagem não for compatível com o contrato de proteção, parar aquela integração e registrar BLOCKED, mantendo demais testes possíveis.
+
+**CONTRATO DE INTEGRAÇÃO:** W1 `{size, performance, animation, speed, paused, roundness, sparkle}` vs W2 `OrbRendererProps={size, pixelSize, density, speed, intensity, paused}`. Implementar adaptador explícito sem alegar suporte inexistente a `density`/`intensity`; reconciliar os diâmetros W1 `136/116/72/42/20` e W2 `160/104/64/40/20` mantendo presets originais 20/64, sem modificar motor vendorizado. Preservar lógica original de `OperationalSurfaceLoading`, `EmprovexAuthLoading`, `Suspense`, estados `loading/ready/error`, sem loops artificiais, sem falsos carregamentos. W3 só Relatórios/SAG; W4 Border Beam monocromático `low`/24s em até 1–2 cards quando aprovado. Respeitar licenças e atribuições.
+
+**QUEM ESTÁ FAZENDO:** Fundador homologou a **estética do núcleo colorido**. W1 finaliza o código e seu PR; W5 entra em atividade no chat separado do Fundador e é responsável por branch `visual-r1-integration-01`, PR DRAFT, composição, testes e handoff. Coordenadores VISUAL-R1 e Geral R1 analisam guard, conflitos/compatibilidade com #286/#289 e decisão de release.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** W5 verifica HEADs e gates, cria branch da `main` atual e inventário/planejamento, compõe W2/W3/W4 condicionalmente em testes isolados e aguarda o W1 colorido; usa histórico/PR encadeado corretamente para não ressuscitar Nebula. W1 entrega novo HEAD com teste da regra de cor; W5 integra núcleo e loaders quando liberados, valida prévia real desktop/mobile, teclado/touch, semântica e reduced motion, compatibilidade do guard 19.14, regressão do logout #286, build/typecheck/Core/Application 7/7 e Playwright no SHA **composto**, mede CPU/GPU/bundle e fornece demonstração visual. Coordenador Geral confirma destino separado do RC; Fundador decide eventual PR final para `main` **em autorização posterior específica**.
+
+**CLASSIFICAÇÃO:** **ACEITE ESTÉTICO DO COLORIDO CONCEDIDO; W5 LIBERADO PARA PREPARAÇÃO/QA; IMPLEMENTAÇÃO COLORIDA REACT E HOMOLOGAÇÃO ARQUITETURAL PENDENTES; MERGE/PRODUCTION NÃO AUTORIZADOS.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 1 — NÚCLEO PONTILHADO CERTIFICADO; CORES EM PROTÓTIPO EXTERNO
+
+**ONDE ESTAMOS:** [PR #292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) OPEN/DRAFT, branch `visual-w1-orb-core-01@1802e1b47191f3758f346deca6f89c25627ae722` contra `visual-r1-thinking-orbs-01` (PR #288). `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` e RC global congelado `61e372225834ed6060cd2b36dbdd55d1e1979c2c` seguem fora do escopo. Código gráfico em `features/visual-orbs`; nenhuma integração com `InicioCore` ou operações reais.
+
+**O QUE ESTAMOS FAZENDO:** o Worker 1 preservou, em `features/visual-orbs/vendor/thinking-orbs`, o motor e nove animações originais Canvas 2D com licença MIT. O componente React de protótipo remove a estética Nebula CSS, usa partículas orbitais sem bolhas azuis/filamentos, presets de origem 20/64 e tamanhos de apresentação adaptados; respeita `full/balanced/static`, reduced motion, offscreen/tab hidden e gerenciamento de RAF/observers. `features/visual-orbs/lib/polishWorkingFrame.ts` adiciona **esfericidade pontilhada por distribuição Fibonacci (roundness 0.72)** e **cintilação das partículas móveis (sparkle 0.68)**, sem alterar engine original. `/dev/visual-orb` é a rota local de demonstração em desenvolvimento. `InicioCore.tsx`, `InicioView.tsx`, `app/page.tsx`, autenticação, Firestore, Rules e Vercel não foram alterados.
+
+**ÚLTIMA DIRETRIZ ESTÉTICA DO FUNDADOR — AINDA NÃO CERTIFICADA NO REACT:** pontos de movimento mais lento **brancos #FFFFFF**; os mais rápidos, distribuição-alvo **70% amarelo #FFD25A e 30% vermelho #FF5A46**, com atribuição determinística por identidade de partícula, limiar inicial de velocidade `0.54`; camada estrutural da esfericidade permanece neutra. Segundo o handoff do W1, há protótipo externo `visual_orb_colorido_preview.html` com essa lógica, ainda **não incorporada ao PR #292**. O arquivo HTML não foi anexado nesta coordenação, portanto nenhum teste independente do protótipo colorido foi feito aqui. 70/30 é proporção-alvo por hash, não contagem necessariamente exata. Código React examinado confirma apenas implementação **monocromática** da camada `polishWorkingFrame` atual.
+
+**GATES CERTIFICADOS NO HEAD #292:** [Application CI #38523676297](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38523676297) **7/7 SUCCESS** e [Core Protection #38523676197](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38523676197) **SUCCESS**, ambos no SHA `1802e1b47191f3758f346deca6f89c25627ae722`. Esses checks cobrem esfericidade+cintilação monocromáticas; **NÃO** certificam a política colorida do HTML externo. Sem aceite estético definitivo e sem E2E integrado na Home. Build/guards do PR não autorizam automaticamente deploy/merge.
+
+**GUARD BLOCK 19.14:** `scripts/verify-block-19-14-final-closure.mjs` proíbe texto `<canvas` em `features/inicio` e dependências Three/WebGL; além disso, preserva contratos de snapshot, perfis e E2E. Guard permanece inalterado. Manter o motor em `features/visual-orbs` satisfaz a inspeção estática atual, **mas não é aprovação arquitetural para incorporá-lo à Home**. Coordenadores VISUAL-R1 e Geral R1 devem deliberar sobre composição/montagem sem ampliar GPU/CPU ou afrouxar o guard.
+
+**INTEGRAÇÃO W1/W2:** [PR #291](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/291) fornece contrato `OrbRendererProps` com `{size,pixelSize,density,speed,intensity,paused}`; API React W1 usa `{size,performance,animation,speed,paused,roundness,sparkle,...}`. W5 deverá utilizar adaptador explícito e validar diferenças de tamanhos (W1: 136/116/72/42/20; W2: 160/104/64/40/20) e capacidade real do motor, **não repassar atributos não suportados como se fossem implementados**.
+
+**QUEM ESTÁ FAZENDO:** Worker 1 é proprietário exclusivo do motor gráfico e da implementação de cor; Coordenador VISUAL-R1 mantém aprovação e ownership; Fundador decide a estética; Coordenador Geral R1 valida compatibilidade do guard; Worker 5 integra apenas após aceite e CI novo.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador avalia o HTML colorido como proposta de aparência; W1, após aceite, transporta a política de cor para um módulo próprio de pintura/classificação que preserve a engine original e IDs estáveis (o `working` calcula velocidade por órbita, mas o frame final tem posições e intensidade de tinta, não identidade persistente de cada partícula). Não tornar trilhas fantasmas ou camada esférica amarelas/vermelhas; confirmar regra por velocidade absoluta, 70/30 determinístico, 0.54 calibrado, inversão de cores em temas, controle de brilho e limites de desempenho. Reexecutar gates no HEAD com cores e atualizar PR #292. W5/Coordenadores só depois avaliam Home/Block19.14, acessibilidade, teclado/touch, responsividade, CPU/GPU e composição de loaders. Nenhuma escrita em `main`, freeze, RC ou Production.
+
+**CLASSIFICAÇÃO:** **PASS TÉCNICO NO HEAD MONOCROMÁTICO; CORES COLORIDAS EM PREVIEW EXTERNO NÃO CERTIFICADO; ACEITE ESTÉTICO E INTEGRAÇÃO PENDENTES.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 3 — MOTION POLISH CERTIFICADO TECNICAMENTE
+
+**ONDE ESTAMOS:** [PR #293](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293) OPEN/DRAFT, branch `visual-w3-motion-01@fc26033297bb8b637a1a8461793fb37eb7d4c603`, base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` conferida. Alterou exatamente quatro arquivos: `features/relatorios/components/RelatoriosView.tsx`, `features/relatorios/components/SagSupplierStep.tsx`, `features/relatorios/components/SagImportProgress.tsx` e `docs/VISUAL_W3_MOTION_AUDIT.md`. Sem alterações no shell, Home, carregamentos, motor W1, Border Beam W4, dependências, Firestore, regras de negócio, backend ou produção.
+
+**O QUE ESTAMOS FAZENDO:** três refinamentos discretos inspirados no `Jakubantalik/transitions.dev` e nas recomendações `transitions-polish`, sem código Pro ou instalação externa. Abas Relatórios: transição de cores/bordas/sombra de 250 ms com `focus-visible`, preservando troca imediata e `aria-pressed`. Seletor SAG: abertura por deslocamento vertical 8px e opacidade em 250 ms, sem timer e sem animação de saída bloqueante; seleção/foco preservados. Progresso SAG: feedback de etapa e ícone em 150 ms, transição cromática 250 ms, `aria-current` preservado. `motion/react` reutilizado; `useReducedMotion` e classes `motion-reduce` aplicadas. Nenhuma evidência de mudança de lógica de negócio nos patches revisados.
+
+**GATES CERTIFICADOS NO HEAD EXATO:** [Application CI #38522291557](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522291557) **SUCCESS**, `validate-application` + Blocks 16–21 (7/7); [Core Protection #38522291559](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522291559) **SUCCESS**. O job `validate-application` executou `Production build`, `Final TypeScript validation`, `Diff hygiene`, `Reports subtabs shell guard`, `SAG import assistant guard`, `SAG UX guard` e `EMPROVEX final experience guard`, todos SUCCESS. Testes visuais de navegador, teclado/touch/reduced-motion com screenshots desktop/mobile e aferição integrada ainda **PENDENTES**; CI estático não é aceite visual.
+
+**QUEM ESTÁ FAZENDO:** Worker 3 entregou PR e handoff; GitHub Actions certificou os checks; Coordenador VISUAL-R1 audita escopo e acompanha aprovação; Worker 5 integrará somente mudanças esteticamente aceitas.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador e Coordenador VISUAL-R1 revisam efeito no contexto real de Relatórios e SAG; W5 executa screenshots antes/depois, interação por teclado/foco, touch, reduced motion e regressão em 1440×900, 1366×768, 390×844, 545×374, comparando com baseline. Após aceite, W5 compõe PR visual isolado, roda gates novamente no HEAD composto e solicita compatibilidade com Coordenador Geral R1. Não realizar merge na `main`, publicar produção ou tocar no RC congelado.
+
+**CLASSIFICAÇÃO:** **PASS TÉCNICO (CORE + APPLICATION CI); ACEITE ESTÉTICO/E2E E INTEGRAÇÃO PENDENTES; SEM GO DE MERGE OU PRODUÇÃO.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 — BORDER BEAM CERTIFICADO ISOLADAMENTE
+
+**ONDE ESTAMOS:** [PR #294](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/294) OPEN/DRAFT, branch `visual-w4-border-beam-01@8237e52bbd75a642d0208eedd7fb58e24807164f`, base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` conferida. O PR altera **exclusivamente 8 arquivos novos**: wrapper TSX/CSS `EmprovexBorderBeam`, demo TSX/CSS, licença MIT de atribuição, rota dev `app/visual-lab/border-beam/page.tsx`, teste Playwright focado e handoff documental. Nenhum componente operacional, `app/page.tsx`, dependência, autenticação, Rules, Vercel ou dados foi modificado. Laboratório responde `notFound()` em execução Next.js `NODE_ENV !== 'development'`; esta condição foi revisada em código, mas não se declara prova E2E sem navegador.
+
+**O QUE ESTAMOS FAZENDO:** entregou wrapper monocromático de contorno 1px, variantes `travel/focus/static`, intensidades `low/medium/high`, temas `dark/light`, duração limitada a 10–60s e recomendação **LOW / 24 segundos**. CSS uses `conic-gradient` com máscara de 1px e `pointer-events:none` em ambas camadas decorativas; alterna execução via visibilidade de aba, IntersectionObserver e `prefers-reduced-motion`; em telas até 640px a animação desliga. É adaptação independente da técnica de `Jakubantalik/Libraries.dev/packages/border-beam` (MIT preservada), e **não** instalação do pacote oficial ou cópia pixel-a-pixel. Aplicar no máximo em 1–2 cards prioritários após aceite, sem servir como único indicador de foco/erro/criticidade.
+
+**GATES CERTIFICADOS NO HEAD #294:** [Core Protection #38522536760](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522536760) **SUCCESS**; [Application CI #38522536765](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522536765) **SUCCESS**, `validate-application` + Blocks 16–21 (7/7). Local sintaxe TSX/CSS, `git diff --check` e `node --check` do spec relatados pelo W4 como PASS; o conjunto TypeScript/build do projeto está coberto pelo workflow Application CI. O arquivo `tests/e2e/visual-border-beam-lab.spec.mjs` está **escrito, não demonstrado executado**; teste real de navegador, performance CPU/GPU, avaliação estética e integração operacional permanecem **PENDENTES**.
+
+**QUEM ESTÁ FAZENDO:** Worker 4 implementou e entregou; GitHub Actions executou gates; Coordenador VISUAL-R1 realiza triagem e prepara decisão estética; Worker 5 fará integração e QA posterior se houver aprovação.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador analisa o laboratório pela aplicação local `npm run dev` em `/visual-lab/border-beam` ou recebe demonstração gravada da execução real; priorizar `intensity='low'`, `duration={24}`, sem aprovar `medium/high` por inferência. Worker 4 ou W5 executa Playwright focado e mede impacto ao montar em contexto real; W5 só integra após aceite visual, em branch composta, com App CI/Playwright e revisão de sobreposições. Não tocar em `main`, RC congelado, Preview R1 ou produção.
+
+**CLASSIFICAÇÃO:** **PASS TÉCNICO ISOLADO; ACEITE ESTÉTICO / E2E / INTEGRAÇÃO PENDENTES; SEM AUTORIZAÇÃO DE MERGE.**
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2: PR #291 RECEBIDO, CI VERDE
+
+**ONDE ESTAMOS:** [PR #291](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/291) OPEN/DRAFT, `visual-w2-loaders-01@670a77bcffa0d2fcf746d5b0a4bda181380b0d54`, criado sobre `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. Foram conferidos seis arquivos novos: `orbLoaderContract.ts`, `EmprovexOrbVisual.tsx`, `EmprovexOrbLoader.tsx`, `EmprovexLoadingBoundary.tsx`, `EmprovexLoaderShowcase.tsx` e `docs/VISUAL_R1_W2_LOADERS_HANDOFF.md`. Nenhum arquivo existente foi alterado, e nenhum componente novo foi montado em tela produtiva.
+
+**O QUE ESTAMOS FAZENDO:** infraestrutura de cinco variantes (`hero=160`, `large=104`, `medium=64`, `small=40`, `mini=20`) com `full/balanced/static`, injeção de `OrbRenderer = React.ComponentType<OrbRendererProps>`, props `size, pixelSize, density, speed, intensity, paused`; slot decorativo, fallback neutro, status de loading condicionado a `loading=true`, estados `loading/ready/error`, vitrine sem simular operação e pausa da animação em aba oculta/reduced-motion. Inventário: `OperationalSurfaceLoading` prioridade 1, `EmprovexAuthLoading` prioridade 2, `OperationalSurfaceTransition` preservada. O renderizador pontilhado autêntico pertence exclusivamente ao W1; nenhuma estética Nebula é permitida.
+
+**GATES NO HEAD #291:** [Core Protection #38522191249](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191249) SUCCESS; [Application CI #38522191216](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191216) **SUCCESS**, com `validate-application` e Blocks 16–21 SUCCESS (7/7). A entrega não possui execução de E2E, benchmark CPU/GPU ou revisão visual do renderer final porque W1/integração ainda não concluídos. Build/TypeScript/validações executaram sob Application CI verde; testes E2E e medição real de CPU/GPU ainda não executados.
+
+**QUEM ESTÁ FAZENDO:** Worker 2 entregou a infraestrutura e publicou o handoff também como comentário no PR #290; Coordenador VISUAL-R1 valida contrato e preserva ownership; W1 responde pelo renderer real; W5 integra após aceite.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** W1 + Coordenador pactuam a API do renderer, em especial o mapeamento entre perfis solicitados e presets 20/64 nativos da biblioteca; não adicionar dependência gráfica nem alterar arquivos do núcleo pelo W2. Após aceite estético explícito do Fundador e CI verde, W5 incorpora o loader nas superfícies autorizadas, sem trocar condições operacionais, e executa Playwright, acessibilidade, responsividade e medição de desempenho. Não realizar merge na `main`, alterar RC, Firestore, Vercel ou dados.
+
+**CLASSIFICAÇÃO:** **PASS TÉCNICO DE INFRAESTRUTURA ISOLADA (CORE + APPLICATION CI); INTEGRAÇÃO PENDENTE DO ACEITE W1.** Não é GO produtivo.
+
+---
+
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1: CINCO WORKERS INDEPENDENTES, SEM ALTERAÇÃO PRODUTIVA
+
+**ONDE ESTAMOS:** frente visual paralela ao RC R1, com [PR #288](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/288) OPEN/DRAFT, `visual-r1-thinking-orbs-01@4224a51230b123c6bee7237ea233f66a806401ad`, baseado em `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. O PR introduz apenas `EmprovexThinkingOrb.tsx`, CSS próprio e `docs/VISUAL_R1_AUDIT_AND_PROTOTYPE.md`; não integra a Home, não recebeu aceite estético e não equivale a teste real integrado.
+
+**O QUE ESTAMOS FAZENDO:** preparar divisão coordenada em **quatro workers de desenvolvimento simultâneos + um worker de integração/QA posterior**, todos subordinados ao Coordenador VISUAL-R1, independentes da Macroação 3/4. Catálogo de referência: `Jakubantalik/thinking-orbs` (MIT; partículas pontilhadas em Canvas 2D, estados e tamanhos 20/64), `Jakubantalik/Libraries.dev` (Border Beam, entre outros, com licença própria por pacote) e `Jakubantalik/transitions.dev` (licença específica para uso comercial; conferir restrições e eventual recurso pago). O Fundador escolheu a **estética do orb original feito de pontos/partículas**, sem bolhas azuis, mistura com o conceito Nebula ou filamentos; o protótipo CSS azul do #288 não foi aprovado. O núcleo deve preservar telemetria, acessibilidade, exclusão de estrelas, comportamento touch e modos de performance já existentes.
+
+**SITUAÇÃO DOS GATES #288:** [Application CI #38518640200](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38518640200) FAILURE. Logs confirmam `npm run build` e `npm run typecheck` PASS (TypeScript com 0 erros), mas `git diff --check` falhou por espaços finais no memorial visual (linhas 3–6 e 63–67); os seis jobs de Blocks 16–21 falharam em cascata por `validate-application=failure`. [Core Protection #38518640211](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38518640211) SUCCESS. Corrigir higiene e executar novamente, sem relativizar os gates.
+
+**QUEM ESTÁ FAZENDO:** Coordenador VISUAL-R1 mantém a matriz de arquivos e aceita entregas; Workers 1–4 executarão em branches/PRs próprios após ativação do Fundador; Worker 5 recebe as entregas aprovadas para integração e testes. Nenhum desses workers foi iniciado automaticamente por este registro.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador ativa os chats separadamente. W1 corrige fidelidade do núcleo e prepara protótipo interativo sem perder dados (trabalhar a partir do #288, em branch própria); W2 monta variantes reutilizáveis de loading sem tocar no núcleo do W1; W3 refina microinterações com receitas gratuitas/licenciadas de Transitions.dev sem alterar loading e sem aplicar no shell partilhado; W4 experimenta Border Beam monocromático, somente em componentes novos e isolados; W5, depois de aceite do Fundador e dos PRs técnicos, integra em branch própria, elimina conflitos, mede desempenho e executa CI/Playwright. Nenhum worker altera `app/page.tsx`, `main`, RC congelado, Rules, autenticação, alocação, Vercel, billing ou dados; mudanças no shell compartilhado exigem coordenação prévia.
+
+**GATES VISUAL-R1:** aprovação estética **explícita** do Fundador; fidelidade às partículas de referência; textos/telemetria preservados; React/Next/SSR e teclado/touch corretos; loading verdadeiro sem ciclos artificiais; `prefers-reduced-motion`, visibilidade e perfis full/balanced/static; responsividade 1440×900, 1366×768, 844×390, 390×844 e 545×374; build, typecheck, diffs, Core Protection, Application CI e E2E pertinentes verdes **no HEAD composto**. Nenhum efeito visual deve tornar operação crítica inacessível. Merge em `main` é ato produtivo separado, depende da aprovação do Fundador e da compatibilidade atestada pelo Coordenador Geral R1. O RC #280/`61e372...` permanece fora do escopo; o isolamento Preview do [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289) segue pendente administrativamente.
+
+**CLASSIFICAÇÃO:** plano de paralelismo **PREPARADO**; VISUAL-A PASS documental; VISUAL-B PARTIAL; Workers 1–5 **AGUARDAM ATIVAÇÃO**; CI #288 **FAIL hygiene**; nenhum merge ou GO Production.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — PREVIEW ISOLADO: CANDIDATA TÉCNICA CERTIFICADA, PROVISIONAMENTO EXTERNO PENDENTE
 
 **ONDE ESTAMOS:** [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289) OPEN/DRAFT, branch `rc-r1-preview-firebase-isolation-01@78dc23bb460059a83bd9ab3b18964bbe1a051222`, baseado em #286@906eddac. Main conferida em 97556bb8eb04af070016f9e58ddc2d9cca36bb35 e freeze 61e372225834ed6060cd2b36dbdd55d1e1979c2c inalterados.
@@ -356,6 +854,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
+| VISUAL-R1 (paralelo) | PR #300 HOME REAL COM ORB COLORIDO EM TESTE; SEM MERGE/PRODUCTION | Branch `visual-r1-home-orb-01` baseada no W5 #295: InicioCore alterna reator legado e orb colorido, tooltip/telemetria mantidos, loaders permanecem monocromáticos; CI e teste humano Home/Block19.14 pendentes |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
@@ -373,6 +872,26 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 **O QUE FAZER A SEGUIR:** confirmar presença/escopo da variável administrativa e logs existentes; identificar deployment/commit da tentativa; comprovar bancos/permissões/segregação antes de propor alteração ou reteste F05. Não reproduzir uma escrita para obter logs antes do isolamento.
 
 **QUEM FARÁ:** Fundador devolve apenas presença/escopo e diagnóstico sanitizado; Coordenador determina a correção e prepara eventual autorização administrativa específica. Work/Fundador retestam a candidata liberada; Coordenador confere movimento/saldo/ledger, compõe novo candidato e prepara re-freeze/decisão.
+
+## 3. Programa VISUAL-R1 — frente visual paralela (14/10/2026)
+
+**Contrato de isolamento:** o Coordenador VISUAL-R1 coordena a estética exclusivamente sobre branches próprias; o Coordenador Geral R1 preserva a certificação e decide compatibilidade do release. Nenhuma entrega visual está automaticamente incluída no RC global congelado. `main` continua sendo branch de produção e não é bancada de testes.
+
+| Worker | Responsabilidade exclusiva | Arquivos / superfícies sob ownership | Entrada / condição |
+| --- | --- | --- | --- |
+| W1 — VISUAL-ORB-CORE | CORES SOMENTE NO INÍCIO (DESIGN APROVADO); NOVA CERTIFICAÇÃO PENDENTE | API `palette=colored/monochrome` com padrão mono e `surface=light/dark`, geom./licença MIT preservadas; demo Home colorida | Home ainda não montada; validar cores e Block 19.14 antes de integrar |
+| W2 — VISUAL-LOADERS | Wrapper/variantes hero/large/medium/small/mini e estados reais de espera; especificar integrações | Novos `components/visual/*Loader*` e, após aceite, `OperationalSurfaceLoading.tsx` / `EmprovexAuthLoading.tsx`; não editar arquivos W1 | Branch separada baseada na main; alinhar contrato de import com W1, evitar dependência divergente |
+| W3 — VISUAL-MOTION | PASS técnico isolado — PR #293@fc260332; 3 refinamentos de Relatórios/SAG | `RelatoriosView.tsx`, `SagSupplierStep.tsx`, `SagImportProgress.tsx` e handoff documental; sem shell ou loading | Core + Application 7/7 SUCCESS; browser, acessibilidade real, aceite estético e integração pendentes |
+| W4 — VISUAL-BORDER | PASS técnico isolado — PR #294@8237e52b; Border Beam low/24s | Wrapper/showcase/CSS, licença, rota de laboratório dev e spec E2E novos, sem alterar cards críticos ou shell | Core + Application SUCCESS; E2E real, performance e aprovação estética pendentes; não integrar antes do aceite |
+| W5 — VISUAL-INTEGRATION-QA | DEMO SEPARA HOME COLORIDA E LOADERS MONOCROMÁTICOS; NOVO CI PENDENTE | PR #295: adaptador força monocromático e tinta por fundo; vitrine de Home colorida separada; spec Playwright atualizado | Testar navegador/contraste/FPS/CPU, certificar HEAD composto e obter autorização arquitetural; sem merge |
+
+**Gate de fidelidade:** `thinking-orbs` do autor é um desenho de partículas claras/escuras em Canvas 2D, não um agrupamento de esferas azuis com gradientes ou filamentos. O trabalho W1 deverá descartar a estética divergente do protótipo Nebula existente, fixar versão/licença e testar a escala ampliada (a biblioteca só declara presets nativos 20/64). Manter as informações de avisos, recebimentos, execução e classes do núcleo original acessíveis.
+
+**Gate de documentação/CI:** W1 deve eliminar os espaços finais detectados no `docs/VISUAL_R1_AUDIT_AND_PROTOTYPE.md` antes de afirmar PASS. Os demais workers não devem transferir CI vermelho para a branch composta.
+
+**Gate de Release:** W5 exige prova de navegação em resoluções desktop/mobile, sem regressão no logout corrigido pelo PR #286; riscos de performance (GPU/CPU e visibilidade), acessibilidade, SSR e integridade operacional. A integração visual na `main` é separada da aprovação de código: demanda GO explícito do Fundador e revisão do Coordenador Geral R1. Sem publicação de Rules, Firebase ou credenciais.
+
+---
 
 ### Registros históricos da Parte I
 
