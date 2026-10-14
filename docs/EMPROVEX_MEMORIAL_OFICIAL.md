@@ -1,5 +1,35 @@
 # EMPROVEX — Memorial Oficial
 
+
+## CONTROLE EXECUTIVO — 2026-10-14 — DEPLOY VERCEL / PROCEDIMENTO POWERSHELL HOMOLOGADO PELO FUNDADOR
+
+**DECISÃO VIGENTE:** o Fundador confirmou em 14/10/2026 que o **deploy direto por Vercel CLI no PowerShell, sem `--prebuilt`**, foi concluído e testado com sucesso no site do EMPROVEX. Esse método passa a ser o **padrão preferencial para futuras publicações**, mediante aprovação específica do release. O registro de sucesso é a homologação manual informada pelo Fundador; não há nesta decisão um novo deployment ID/log oficial de sucesso para anexar. Não reutilizar como evidência de sucesso o deployment anterior `dpl_5vMUMd8JXVkxucBdaSPVmLBami5o`, que terminou em ERROR.
+
+**Projeto:** `aprov-hgesms-projects/controles-de-empenhos-aprov`. **Ambiente de execução do operador:** Windows / PowerShell; usar `vercel.cmd` quando `vercel.ps1` for bloqueado pela Execution Policy. A Vercel CLI já foi instalada (v64.0.2 na sessão) e o projeto foi vinculado via `vercel.cmd link --scope aprov-hgesms-projects`.
+
+**RUNBOOK CANÔNICO (publicar somente quando houver autorização e gates do SHA-alvo):**
+
+```powershell
+cd "$HOME\emprovex-visual-r1-test"
+git status
+git fetch origin main
+git switch --detach FETCH_HEAD
+git rev-parse --short HEAD
+vercel.cmd whoami
+vercel.cmd deploy --prod --scope aprov-hgesms-projects
+```
+
+- Exigir árvore local limpa antes de trocar o HEAD e confirmar que o SHA corresponde **à versão explicitamente aprovada para aquele release**. No release VISUAL-R1 de 14/10/2026, o commit consolidado na `main` foi `d23c7aaa3e57de8f9679be48c636a698e5ad8f3d`. **Não fixar esse SHA em deploys futuros**.
+- `vercel.cmd deploy --prod` é o caminho **sem `--prebuilt`**: a Vercel recebe as fontes e constrói na infraestrutura Linux dela, evitando problemas de links simbólicos da compilação Windows. Após o comando, validar status `READY` por `vercel.cmd inspect <ID-ou-URL> --scope aprov-hgesms-projects` e conferir manualmente a URL/domínio produtivo; uma URL exibida no terminal, sozinha, não prova sucesso.
+- **EVITAR neste projeto:** `vercel.cmd build --prod` no Windows seguido de `vercel.cmd deploy --prebuilt --prod`, pois o pacote Windows teve falha de symlinks `.func` (`ENOENT`) em produção, apesar de build local PASS.
+- GitHub Actions/localhost continuam sendo os ambientes adequados para QA sem novos deployments. Consolidar mudanças e fazer apenas **uma publicação por release autorizado**. Pushes em branches ligadas à integração Git podem disparar **Preview Builds automáticos**, mesmo se o PR for DRAFT; isso é uma configuração separada e **NÃO foi comprovado como desativado**. A publicação direta pela CLI também está sujeita a quotas do plano Vercel; não tentar contorná-las por tentativas repetidas.
+- Nenhuma autorização genérica permanente é dada para produção, migração de dados, Rules, operações destrutivas ou alteração de faturamento. Este registro aprova o **método técnico de deploy**, não dispensa GO/NO-GO nem revisão de riscos por release.
+
+**ESTADO FINAL INFORMADO PELO FUNDADOR:** deploy via PowerShell realizado com êxito e site verificado manualmente. A cadeia documental deste Memorial permanece independente da `main`, em PR #290 DRAFT; integrar documentação na linha canônica somente de forma coordenada e sem gerar releases adicionais por acidente.
+
+---
+
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CERTIFICAÇÃO AUTOMATIZADA W4 9/9 SUCCESS
 
 **GATES FECHADOS NO SHA EXATO:** [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), branch `visual-r1-w4-navigation-expansion-01`, HEAD `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`, OPEN/DRAFT, `mergeable=true`. Consulta ao GitHub de `commits/{sha}/check-runs` retornou **9/9 COMPLETED SUCCESS**: `validate-application`, `core-protection`, `Block 16 Final Release Gate`, `Block 17 Final Release Gate`, `Block 18 Final Release Gate`, `Block 19 Final Closure Gate`, `Block 20 Final Release Gate`, `Block 21 Final Release Gate` e `visual-w4-node-browser`.
