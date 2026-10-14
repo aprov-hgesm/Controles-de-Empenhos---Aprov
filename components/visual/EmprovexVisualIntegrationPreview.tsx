@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { EmprovexBorderBeam } from './EmprovexBorderBeam';
 import { EmprovexMotionReviewPreview } from './EmprovexMotionReviewPreview';
+import { EmprovexNavigationBeamPreview } from './EmprovexNavigationBeamPreview';
 import { EmprovexLoaderShowcase } from './EmprovexLoaderShowcase';
 import { EmprovexOrbLoader } from './EmprovexOrbLoader';
 import { EmprovexOrbVisual } from './EmprovexOrbVisual';
@@ -146,6 +147,8 @@ export function EmprovexVisualIntegrationPreview() {
       </section>
 
       <EmprovexMotionReviewPreview />
+
+      <EmprovexNavigationBeamPreview />
 
       <section className="space-y-4" aria-label="Worker 4 — Border Beam no Painel e Relatórios">
         <h2 className="text-xl font-semibold">Worker 4 · Border Beam institucional</h2>
