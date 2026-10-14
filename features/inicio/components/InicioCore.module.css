@@ -1027,15 +1027,16 @@
 .homeOrbCoreGlow {
   position: absolute;
   z-index: 0;
-  width: 84px;
-  height: 84px;
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
+  /* Soft atmospheric coupling with EMPROVEX navy; no opaque blue sphere. */
   background: radial-gradient(
     circle,
-    rgba(255, 251, 235, 0.54) 0%,
-    rgba(255, 225, 164, 0.18) 12%,
-    rgba(255, 210, 90, 0.055) 36%,
-    transparent 62%
+    rgba(255, 249, 228, 0.45) 0%,
+    rgba(226, 236, 255, 0.17) 11%,
+    rgba(166, 190, 244, 0.047) 32%,
+    transparent 57%
   );
   pointer-events: none;
 }
@@ -1064,15 +1065,16 @@
   transform: scale(2.12);
   transform-origin: center;
   /* Strong shell clarity now comes from individual dots, not a broad blur. */
-  filter: brightness(1.18) saturate(1.06)
-    drop-shadow(0 0 4px rgba(255, 255, 255, 0.34))
-    drop-shadow(0 0 11px rgba(255, 210, 90, 0.10));
+  /* Crisp institutional points rather than large diffuse light blooms. */
+  filter: brightness(1.10) saturate(1.02)
+    drop-shadow(0 0 3px rgba(239, 246, 255, 0.22))
+    drop-shadow(0 0 7px rgba(255, 210, 90, 0.07));
 }
 
 /* Balanced/mobile scenes keep the color and shape without costly blur layers. */
 [data-performance='balanced'] .homeOrbBoost,
 [data-performance='static'] .homeOrbBoost {
-  filter: brightness(1.15) saturate(1.04);
+  filter: brightness(1.08) saturate(1.01);
 }
 
 @media (max-width: 1100px) {
@@ -1081,12 +1083,12 @@
 
 @media (max-width: 640px) {
   .homeOrbBoost { transform: scale(1.54); }
-  .homeOrbCoreGlow { width: 66px; height: 66px; }
+  .homeOrbCoreGlow { width: 62px; height: 62px; }
 }
 
 @media (max-width: 420px) {
   .homeOrbBoost { transform: scale(1.36); }
-  .homeOrbCoreGlow { width: 60px; height: 60px; }
+  .homeOrbCoreGlow { width: 56px; height: 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
