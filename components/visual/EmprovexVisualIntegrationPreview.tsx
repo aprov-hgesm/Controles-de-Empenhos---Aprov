@@ -26,12 +26,36 @@ export function EmprovexVisualIntegrationPreview() {
         </p>
       </header>
 
-      <section className="space-y-4" aria-label="Prévia exclusiva do núcleo colorido do Início">
-        <h2 className="text-xl font-semibold">Início · núcleo colorido exclusivo</h2>
-        <p className="text-sm text-slate-600">Apenas esta prévia utiliza branco, amarelo e vermelho. O núcleo está em laboratório e ainda não substitui o centro da Home.</p>
-        <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-700 bg-[#080f1f] p-8">
-          <EmprovexThinkingOrb size="hero" animation="working" performance={performance}
-            roundness={0.72} sparkle={0.68} palette="colored" surface="dark" />
+      <section className="space-y-4" aria-label="Comparação do núcleo colorido Classic e R2">
+        <h2 className="text-xl font-semibold">Início · comparação Classic × Orb R2</h2>
+        <p className="text-sm text-slate-600">
+          O núcleo real da Home agora utiliza o R2; ambas as variantes abaixo são exclusivamente demonstrativas.
+          A paleta branca, amarela e vermelha continua reservada ao Início. Observe a casca e a cintilação.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {(['classic', 'r2'] as const).map((refinement) => (
+            <div key={refinement}
+              className="flex min-h-80 flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-slate-700 bg-[#080f1f] p-6">
+              <span className="text-xs font-semibold uppercase tracking-widest text-slate-200">
+                {refinement === 'classic' ? 'Referência anterior · Classic' : 'Nova versão · EMPROVEX Orb R2'}
+              </span>
+              <div className="relative flex min-h-56 items-center justify-center">
+                <span className="pointer-events-none absolute h-[5px] w-[5px] rounded-full bg-[#fffaf0]"
+                  style={{ boxShadow: '0 0 9px rgba(255,252,240,.7), 0 0 17px rgba(255,210,90,.2)' }} />
+                <span className="pointer-events-none flex items-center justify-center"
+                  style={{ transform: 'scale(1.8)', transformOrigin: 'center' }}>
+                  <EmprovexThinkingOrb size="hero" animation="working"
+                    performance={performance} roundness={0.72} sparkle={0.76}
+                    refinement={refinement} palette="colored" surface="dark" />
+                </span>
+              </div>
+              <p className="text-center text-xs text-slate-300">
+                {refinement === 'classic'
+                  ? 'Casca mais homogênea e brilho original.'
+                  : 'Menos granulação, profundidade por face e pontos de luz mais precisos.'}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
