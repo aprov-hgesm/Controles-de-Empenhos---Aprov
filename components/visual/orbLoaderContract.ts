@@ -11,6 +11,8 @@ export interface OrbRendererProps {
   intensity: number;
   paused: boolean;
   performance: OrbLoaderPerformance;
+  /** Surface is chosen by the host; color accents stay constant. */
+  surface?: 'light' | 'dark';
 }
 
 export type OrbRenderer = ComponentType<OrbRendererProps>;
