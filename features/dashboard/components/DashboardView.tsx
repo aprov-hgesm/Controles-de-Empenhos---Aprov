@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import { CheckCircle2, Clock3, Coins, Filter, Layers, Search, X } from 'lucide-react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import {
@@ -259,8 +260,17 @@ export function DashboardView({
 
                 {/* Resumo Macro Geral (Consolidado em Dinheiro) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                  {/* Saldo Restante Geral */}
-                  <div className="bg-gradient-to-br from-blue-900 to-[#00288e] text-white p-5 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between">
+                  {/* Saldo Restante Geral: a single subtle operational beam, not an alert */}
+                  <EmprovexBorderBeam
+                    theme="dark"
+                    variant="travel"
+                    intensity="low"
+                    duration={24}
+                    borderRadius={16}
+                    className="h-full [&>div]:h-full"
+                    testId="dashboard-balance-border-beam"
+                  >
+                    <div className="h-full bg-gradient-to-br from-blue-900 to-[#00288e] text-white p-5 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between">
                     <div className="absolute right-[-10px] bottom-[-15px] opacity-10 text-white select-none pointer-events-none">
                       <Coins className="w-32 h-32" />
                     </div>
@@ -280,7 +290,8 @@ export function DashboardView({
                       <span>Total de Empenhos: <strong>{empenhos.length}</strong></span>
                       <span>Ativos: <strong>{empenhos.filter(e => e.status === 'Ativo').length}</strong></span>
                     </div>
-                  </div>
+                    </div>
+                  </EmprovexBorderBeam>
 
                   {/* Total Empenhado Geral */}
                   <div className="bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-white/40 shadow-xs flex flex-col justify-between">

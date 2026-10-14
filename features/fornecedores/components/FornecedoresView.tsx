@@ -26,6 +26,7 @@ import {
 } from 'react';
 
 import type { Empenho, SupplierContact, SupplierDirectoryEntry } from '../../../lib/types';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import {
   getEmpenhos,
   getSupplierContacts,
@@ -358,6 +359,7 @@ export function FornecedoresView({
 
   return (
     <section className="w-full space-y-6 pb-24">
+      <EmprovexBorderBeam theme="light" variant="travel" intensity="low" duration={24} borderRadius={28} testId="suppliers-header-border-beam">
       <header className="overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
         <div className="bg-gradient-to-r from-[#001f6b] via-[#00288e] to-[#0f4cba] px-6 py-7 text-white md:px-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
@@ -431,6 +433,7 @@ export function FornecedoresView({
           </div>
         </div>
       </header>
+      </EmprovexBorderBeam>
 
       <div className="rounded-3xl border border-white/70 bg-white/85 p-4 shadow-sm backdrop-blur md:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

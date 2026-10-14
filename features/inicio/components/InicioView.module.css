@@ -155,7 +155,8 @@
 .system {
   position: absolute;
   left: 50%;
-  top: 54%;
+  /* Center the R2 hero on the scene's geometric midpoint. */
+  top: 50%;
   z-index: 5;
   width: min(610px, 68vw);
   aspect-ratio: 1;
@@ -263,7 +264,7 @@
   }
 
   .system {
-    top: 58%;
+    top: 50%;
     width: min(570px, 84vw);
   }
 
@@ -283,7 +284,7 @@
   }
 
   .system {
-    top: 57%;
+    top: 50%;
     width: min(520px, 94vw);
   }
 
@@ -305,7 +306,7 @@
   }
 
   .system {
-    top: 56%;
+    top: 50%;
     width: min(500px, 98vw);
   }
 
@@ -320,7 +321,7 @@
   }
 
   .system {
-    top: 56%;
+    top: 50%;
     width: min(560px, 70vw);
   }
 

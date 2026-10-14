@@ -1,0 +1,116 @@
+/*
+ * VISUAL-R1 / W4: the existing Border Beam's 1px monochrome masked-conic
+ * technique applied to the shared navigation WITHOUT wrapping native buttons.
+ * One ACTIVE nav item animates at a time; others highlight only on keyboard
+ * focus. Its 24s CSS cycle creates no JavaScript animation loop.
+ * Related implementation/provenance: components/visual/EmprovexBorderBeam.*
+ */
+@property --emprovex-nav-border-phase {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.beam {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--emprovex-nav-border-phase) at 50% 50%,
+    transparent 0deg,
+    transparent 291deg,
+    rgb(231 237 246 / 0.15) 307deg,
+    rgb(231 237 246 / 0.95) 328deg,
+    rgb(231 237 246 / 0.12) 351deg,
+    transparent 360deg
+  ) border-box;
+  background-clip: border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  animation: emprovexNavigationBeam 24s linear infinite;
+  animation-play-state: paused;
+  transition: opacity 180ms ease;
+}
+
+/* Override the pre-existing global nav rule that positions each button child. */
+:global(.emprovex-app-sidebar .emprovex-sidebar-nav-item) .beam {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+:global(.emprovex-app-sidebar .emprovex-sidebar-nav-item[data-active='true']) .beam {
+  opacity: 0.28;
+  animation-play-state: running;
+}
+
+:global(.emprovex-app-sidebar .emprovex-sidebar-nav-item:focus-visible) .beam {
+  opacity: 0.42;
+  animation-play-state: paused;
+}
+
+/* Mobile bottom navigation: mark the active destination without chasing light. */
+.mobileItem {
+  position: relative;
+  isolation: isolate;
+}
+
+.mobileItem .beam {
+  opacity: 0;
+  border-radius: 12px;
+  inset: 2px;
+}
+
+.mobileItem[data-active='true'] .beam {
+  opacity: 0.22;
+  animation-play-state: running;
+}
+
+.mobileItem:focus-visible .beam {
+  opacity: 0.38;
+  animation-play-state: paused;
+}
+
+@keyframes emprovexNavigationBeam {
+  from { --emprovex-nav-border-phase: 0deg; }
+  to { --emprovex-nav-border-phase: 360deg; }
+}
+
+@media (max-width: 640px) {
+  .beam,
+  .mobileItem .beam {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .mobileItem .beam {
+    animation: none !important;
+    transition: none;
+  }
+}
+
+/* Bottom navigation is visible below Tailwind lg (1024px): never animate it. */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .beam,
+  .mobileItem .beam {
+    animation: none !important;
+  }
+}
+
+/* High-contrast users retain the browser's native keyboard focus outline. */
+@media (forced-colors: active) {
+  .beam {
+    display: none !important;
+  }
+}

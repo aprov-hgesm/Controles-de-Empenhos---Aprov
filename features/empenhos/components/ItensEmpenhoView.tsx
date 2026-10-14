@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { ArrowLeft, Info, Package, Plus, Save, Trash2 } from 'lucide-react';
 import type { Empenho } from '../../../lib/types';
 
@@ -62,6 +63,7 @@ export function ItensEmpenhoView({ context }: ItensEmpenhoViewProps) {
                 
                 {/* Left Side: Add Item Form (lg:col-span-5) */}
                 <section className="lg:col-span-5 flex flex-col gap-4">
+                  <EmprovexBorderBeam variant="focus" theme="light" intensity="low" borderRadius={16} testId="tab-beam-itens-empenho">
                   <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                     <h3 className="font-bold text-sm text-gray-700 uppercase tracking-wider">Adicionar Novo Item</h3>
                     
@@ -148,6 +150,7 @@ export function ItensEmpenhoView({ context }: ItensEmpenhoViewProps) {
                       <Plus className="w-4 h-4" /> Adicionar Item
                     </button>
                   </div>
+                  </EmprovexBorderBeam>
 
                   {/* Operational Insight Card banner (as in screenshot 3) */}
                   <div className="bg-[#dde1ff] text-[#001453] p-4 rounded-2xl flex items-start gap-3 shadow-sm border border-blue-100">

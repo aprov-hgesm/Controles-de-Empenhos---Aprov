@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { CheckCircle2 } from 'lucide-react';
 
 interface SagImportProgressProps {
@@ -16,6 +17,8 @@ const STEPS = [
 ] as const;
 
 export function SagImportProgress({ activeFlowStep, complete }: SagImportProgressProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <nav
       className="rounded-2xl border border-blue-100 bg-white p-3 shadow-sm"
@@ -31,7 +34,7 @@ export function SagImportProgress({ activeFlowStep, complete }: SagImportProgres
             <div
               key={title}
               aria-current={active ? 'step' : undefined}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition ${
+              className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition-[background-color,border-color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                 active
                   ? 'border-blue-200 bg-blue-50/80'
                   : stepComplete
@@ -40,7 +43,7 @@ export function SagImportProgress({ activeFlowStep, complete }: SagImportProgres
               }`}
             >
               <span
-                className={`grid h-8 w-8 flex-none place-items-center rounded-lg text-[10px] font-black ${
+                className={`grid h-8 w-8 flex-none place-items-center rounded-lg text-[10px] font-black transition-colors duration-[250ms] motion-reduce:transition-none ${
                   stepComplete
                     ? 'bg-emerald-600 text-white'
                     : active
@@ -48,11 +51,19 @@ export function SagImportProgress({ activeFlowStep, complete }: SagImportProgres
                       : 'bg-gray-200 text-gray-500'
                 }`}
               >
-                {stepComplete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                <motion.span
+                  key={stepComplete ? 'completed' : 'number'}
+                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  className="inline-flex items-center justify-center"
+                >
+                  {stepComplete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                </motion.span>
               </span>
               <span className="min-w-0">
                 <span
-                  className={`block text-[11px] font-extrabold ${
+                  className={`block text-[11px] font-extrabold transition-colors duration-[250ms] motion-reduce:transition-none ${
                     active ? 'text-[#00288e]' : stepComplete ? 'text-emerald-800' : 'text-gray-500'
                   }`}
                 >

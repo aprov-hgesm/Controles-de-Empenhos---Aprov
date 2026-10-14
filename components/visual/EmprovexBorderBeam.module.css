@@ -1,0 +1,115 @@
+/*
+ * Monochrome adaptation of the Border Beam CSS technique (Jakub Antalik, MIT).
+ * See docs/VISUAL_R1_W4_BORDER_BEAM_HANDOFF.md for provenance and license.
+ * The static hairline is always painted; motion is always decorative.
+ */
+@property --emprovex-border-phase {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.root {
+  --emprovex-beam-ink: 231 237 246;
+  --emprovex-beam-line: 231 237 246;
+  position: relative;
+  display: block;
+  min-width: 0;
+  border-radius: var(--emprovex-beam-radius);
+}
+
+.root[data-beam-theme='light'] {
+  --emprovex-beam-ink: 16 36 60;
+  --emprovex-beam-line: 16 36 60;
+}
+
+.content {
+  border-radius: inherit;
+  position: relative;
+  min-width: 0;
+}
+
+.root::before,
+.root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Permanent, understated edge: remains visible when motion is disabled. */
+.root::before {
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px rgb(var(--emprovex-beam-line) / 0.16);
+}
+
+/* Paint *only* a 1px ring. No bloom, blur, layout reflow, or stacking portal. */
+.root::after {
+  z-index: 1;
+  border: 1px solid transparent;
+  background: conic-gradient(
+    from var(--emprovex-border-phase) at 50% 50%,
+    transparent 0deg,
+    transparent 291deg,
+    rgb(var(--emprovex-beam-ink) / 0.15) 307deg,
+    rgb(var(--emprovex-beam-ink) / 0.95) 328deg,
+    rgb(var(--emprovex-beam-ink) / 0.12) 351deg,
+    transparent 360deg
+  ) border-box;
+  background-clip: border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: var(--emprovex-beam-opacity);
+  transition: opacity 180ms ease;
+  animation: emprovex-border-beam-travel var(--emprovex-beam-duration) linear infinite;
+  animation-play-state: paused;
+}
+
+.root[data-beam-playing='true']::after {
+  animation-play-state: running;
+}
+
+.root[data-beam-active='false']::after,
+.root[data-beam-visible='false']::after {
+  opacity: 0;
+}
+
+.root[data-beam-variant='focus']::after {
+  opacity: 0;
+  animation: none;
+}
+
+.root[data-beam-variant='focus'][data-beam-active='true']:focus-within::after {
+  opacity: var(--emprovex-beam-opacity);
+}
+
+.root[data-beam-variant='static']::after {
+  animation: none;
+}
+
+.root[data-beam-reduced='true']::after {
+  animation: none;
+}
+
+@keyframes emprovex-border-beam-travel {
+  from { --emprovex-border-phase: 0deg; }
+  to { --emprovex-border-phase: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root::after {
+    animation: none !important;
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Decorative animation need not run on small/touch devices. */
+  .root::after {
+    animation: none;
+  }
+}

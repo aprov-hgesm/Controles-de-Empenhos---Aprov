@@ -1,0 +1,60 @@
+.lab {
+  min-height: 100vh;
+  background: #060f20;
+  color: #eff3f8;
+  padding: clamp(20px, 5vw, 76px) 20px;
+  transition: color 240ms ease, background-color 240ms ease;
+}
+
+.lab[data-theme='light'] {
+  background: #f5f7fa;
+  color: #15263b;
+}
+
+.shell {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.header { margin-bottom: 42px; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.19em; opacity: 0.65; }
+.header h1 { font-size: clamp(26px, 3.6vw, 44px); font-weight: 650; line-height: 1.12; letter-spacing: -0.035em; margin: 14px 0; }
+.header > p:not(.eyebrow) { font-size: 14px; opacity: 0.7; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.controls button, .utility button {
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  padding: 10px 15px;
+  color: inherit;
+  background: transparent;
+}
+.controls button[aria-pressed='true'] { background: rgb(127 138 156 / 0.19); }
+.controls button:focus-visible, .utility button:focus-visible { outline: 2px solid #577ec6; outline-offset: 4px; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.gridTwo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.card, .utility {
+  min-height: 236px;
+  background: #101b2d;
+  border: 1px solid rgb(231 237 246 / 0.06);
+  border-radius: inherit;
+  padding: 26px;
+}
+.utility { min-height: 190px; display: flex; flex-direction: column; gap: 14px; }
+.lab[data-theme='light'] .card, .lab[data-theme='light'] .utility {
+  background: #ffffff;
+  border-color: rgb(16 36 60 / 0.06);
+}
+.cardOverline { opacity: 0.56; font-size: 10px; letter-spacing: 0.1em; }
+.card h2 { margin-top: 20px; font-size: 15px; font-weight: 550; }
+.metric { font-size: 46px; line-height: 1.3; font-weight: 550; letter-spacing: -0.04em; }
+.metric span { font-size: 23px; opacity: 0.6; }
+.cardNote, .utility small { font-size: 12px; line-height: 1.6; opacity: 0.64; }
+.utility p { font-size: 15px; font-weight: 550; }
+.utility button { align-self: start; }
+.utility strong { font-size: 15px; font-weight: 550; }
+.footer { margin-top: 28px; font-size: 12px; opacity: 0.58; }
+@media (max-width: 780px) { .grid { grid-template-columns: 1fr; } .gridTwo { grid-template-columns: 1fr; } .card { min-height: 190px; } }
+@media (prefers-reduced-motion: reduce) { .lab { transition: none; } }

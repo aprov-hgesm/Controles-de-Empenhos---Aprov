@@ -998,3 +998,101 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* VISUAL-R1 / Home only. The old blue reactor remains available through
+ * visualMode='legacy'; its gradients/filaments are not mounted in the new mode.
+ * The luminous center is a tiny warm-white point, not a solid glowing sphere.
+ * Loading indicators continue monochromatic and are not affected by this CSS. */
+.root[data-visual-core='thinking-orbs']::after {
+  display: none;
+}
+
+.root[data-visual-core='thinking-orbs'],
+.root[data-visual-core='thinking-orbs']:hover,
+.root[data-visual-core='thinking-orbs']:focus-visible {
+  filter: none;
+}
+
+.thinkingOrbStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.homeOrbCoreGlow {
+  position: absolute;
+  z-index: 0;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  /* Soft atmospheric coupling with EMPROVEX navy; no opaque blue sphere. */
+  background: radial-gradient(
+    circle,
+    rgba(255, 249, 228, 0.82) 0%,
+    rgba(226, 236, 255, 0.30) 11%,
+    rgba(166, 190, 244, 0.08) 32%,
+    transparent 57%
+  );
+  pointer-events: none;
+}
+
+.homeOrbCoreGlow::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fffaf0;
+  box-shadow: 0 0 11px rgba(255, 252, 240, 1),
+    0 0 28px rgba(255, 210, 90, 0.68);
+  transform: translate(-50%, -50%);
+}
+
+.homeOrbBoost {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  transform: scale(2.12);
+  transform-origin: center;
+  /* Strong shell clarity now comes from individual dots, not a broad blur. */
+  /* Crisp institutional points rather than large diffuse light blooms. */
+  filter: brightness(1.10) saturate(1.02)
+    drop-shadow(0 0 3px rgba(239, 246, 255, 0.22))
+    drop-shadow(0 0 7px rgba(255, 210, 90, 0.07));
+}
+
+/* Balanced/mobile scenes keep the color and shape without costly blur layers. */
+[data-performance='balanced'] .homeOrbBoost,
+[data-performance='static'] .homeOrbBoost {
+  filter: brightness(1.08) saturate(1.01);
+}
+
+@media (max-width: 1100px) {
+  .homeOrbBoost { transform: scale(1.86); }
+}
+
+@media (max-width: 640px) {
+  .homeOrbBoost { transform: scale(1.54); }
+  .homeOrbCoreGlow { width: 62px; height: 62px; }
+}
+
+@media (max-width: 420px) {
+  .homeOrbBoost { transform: scale(1.36); }
+  .homeOrbCoreGlow { width: 56px; height: 56px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homeOrbBoost {
+    filter: brightness(1.12);
+  }
+}

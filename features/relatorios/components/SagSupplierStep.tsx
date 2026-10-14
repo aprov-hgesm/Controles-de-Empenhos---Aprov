@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Building2, CheckCircle2, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
@@ -29,6 +30,8 @@ export function SagSupplierStep({
   onTogglePicker,
   onSelectSupplier,
 }: SagSupplierStepProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -46,7 +49,7 @@ export function SagSupplierStep({
             type="button"
             onClick={onTogglePicker}
             aria-expanded={supplierPickerOpen}
-            className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 text-[10px] font-extrabold text-[#00288e] transition hover:bg-blue-100"
+            className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 text-[10px] font-extrabold text-[#00288e] transition-colors duration-[150ms] ease-out motion-reduce:transition-none hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e] focus-visible:ring-offset-2"
           >
             {supplierPickerOpen ? 'Ocultar fornecedores' : 'Trocar fornecedor'}
             {supplierPickerOpen ? (
@@ -63,7 +66,12 @@ export function SagSupplierStep({
       </div>
 
       {selectedSupplier && !supplierPickerOpen ? (
-        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#00288e] text-white">
               <Building2 className="h-4 w-4" aria-hidden="true" />
@@ -86,11 +94,15 @@ export function SagSupplierStep({
               {selectedSupplier.invoicesWithoutNs} sem NS
             </span>
           </div>
-        </div>
+        </motion.div>
       ) : null}
 
       {supplierPickerOpen || !selectedSupplier ? (
-        <>
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        >
           <label className="relative mt-4 block">
             <span className="sr-only">Buscar fornecedor por razão social ou CNPJ</span>
             <Search
@@ -116,7 +128,7 @@ export function SagSupplierStep({
                     type="button"
                     onClick={() => onSelectSupplier(supplier.cnpj)}
                     aria-pressed={selected}
-                    className={`rounded-2xl border p-4 text-left transition-all ${
+                    className={`rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e] focus-visible:ring-offset-2 ${
                       selected
                         ? 'border-[#00288e] bg-blue-50/70 shadow-md ring-1 ring-[#00288e]/10'
                         : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
@@ -124,7 +136,7 @@ export function SagSupplierStep({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span
-                        className={`grid h-9 w-9 flex-none place-items-center rounded-xl ${
+                        className={`grid h-9 w-9 flex-none place-items-center rounded-xl transition-colors duration-[250ms] motion-reduce:transition-none ${
                           selected ? 'bg-[#00288e] text-white' : 'bg-blue-50 text-[#00288e]'
                         }`}
                       >
@@ -169,7 +181,7 @@ export function SagSupplierStep({
               </p>
             </div>
           )}
-        </>
+        </motion.div>
       ) : null}
     </section>
   );
