@@ -1,0 +1,42 @@
+/*
+ * VISUAL-ORB-CORE-01. Exact dotted monochrome source frames on Canvas 2D.
+ * No backgrounds, gradient spheres, filters, colored halos or filaments.
+ */
+.root {
+  display: inline-block;
+  position: relative;
+  width: var(--orb-size);
+  max-width: 100%;
+  aspect-ratio: 1;
+  flex: none;
+  line-height: 0;
+  vertical-align: middle;
+  isolation: isolate;
+  user-select: none;
+  touch-action: pan-y;
+  pointer-events: none;
+}
+
+.root[data-size='hero'] {
+  width: min(var(--orb-size), 28vw);
+}
+
+.root[data-size='hero'][data-performance='full'][data-interactive='true'] {
+  pointer-events: auto;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .root[data-size='hero'] {
+    width: min(98px, 26vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root { transition: none; }
+}
