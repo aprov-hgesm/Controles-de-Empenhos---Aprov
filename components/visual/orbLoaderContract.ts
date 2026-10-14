@@ -11,7 +11,7 @@ export interface OrbRendererProps {
   intensity: number;
   paused: boolean;
   performance: OrbLoaderPerformance;
-  /** Surface is chosen by the host; color accents stay constant. */
+  /** Loader ink is monochrome and matches the brightness of its host surface. */
   surface?: 'light' | 'dark';
 }
 
