@@ -28,15 +28,20 @@ test.describe('VISUAL-R1 — color restricted to Início', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/dev/visual-r1');
 
-    const inicio = page.getByRole('region', { name: 'Prévia exclusiva do núcleo colorido do Início' });
-    const hero = inicio.locator('[data-testid="emprovex-thinking-orb"]');
-    await expect(hero).toHaveAttribute('data-orb-palette', 'colored');
-    await expect(hero).toHaveAttribute('data-orb-surface', 'dark');
-    const colored = await canvasInk(hero.locator('canvas'));
-    expect(colored.visible).toBeGreaterThan(0);
-    expect(colored.yellow).toBeGreaterThan(0);
-    expect(colored.red).toBeGreaterThan(0);
-    expect(colored.pale).toBeGreaterThan(0);
+    const inicio = page.getByRole('region', { name: 'Comparação do núcleo colorido Classic e R2' });
+    const heroes = inicio.locator('[data-testid="emprovex-thinking-orb"]');
+    await expect(heroes).toHaveCount(2);
+    for (const [index, refinement] of ['classic', 'r2'].entries()) {
+      const hero = heroes.nth(index);
+      await expect(hero).toHaveAttribute('data-orb-palette', 'colored');
+      await expect(hero).toHaveAttribute('data-orb-refinement', refinement);
+      await expect(hero).toHaveAttribute('data-orb-surface', 'dark');
+      const colored = await canvasInk(hero.locator('canvas'));
+      expect(colored.visible).toBeGreaterThan(0);
+      expect(colored.yellow).toBeGreaterThan(0);
+      expect(colored.red).toBeGreaterThan(0);
+      expect(colored.pale).toBeGreaterThan(0);
+    }
 
     const contrast = page.getByRole('region', { name: 'Contraste monocromático em superfícies claras e escuras' });
     const orbs = contrast.locator('[data-testid="emprovex-thinking-orb"]');
