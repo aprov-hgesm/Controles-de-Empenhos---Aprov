@@ -359,7 +359,7 @@ export function FornecedoresView({
 
   return (
     <section className="w-full space-y-6 pb-24">
-      <EmprovexBorderBeam variant="travel" theme="dark" intensity="low" duration={24} borderRadius={28} testId="tab-beam-fornecedores">
+      <EmprovexBorderBeam variant="travel" theme="light" intensity="low" duration={24} borderRadius={28} testId="tab-beam-fornecedores">
       <header className="overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
         <div className="bg-gradient-to-r from-[#001f6b] via-[#00288e] to-[#0f4cba] px-6 py-7 text-white md:px-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
