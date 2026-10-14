@@ -1,5 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / HOME REAL COM THINKING ORBS COLORIDO EM TESTE ISOLADO
+
+**ONDE ESTAMOS:** por solicitação explícita do Fundador, a Home principal passou a renderizar o Thinking Orbs aprovado em uma **branch de teste isolada** `visual-r1-home-orb-01`, [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) DRAFT, **encadeado ao PR #295 W5**, no HEAD inicial `bcc2ab8be312390cebb2efce32d3dd06e8ba21fc`. Branch base `visual-r1-integration-01@2c6ba3943e712d54887a762b9fdd171ae23f46d5`. A `main`, o RC congelado, Vercel Production, Firestore Rules, autenticação e dados não foram tocados.
+
+**O QUE MUDOU:** `features/inicio/components/InicioView.tsx` agora envia `visualMode='thinking-orbs'`, `performanceMode` e `ambientPaused` ao núcleo. `InicioCore.tsx` mantém o wrapper interativo, snapshot agregado, telemetria, tooltip, foco, zona de exclusão de estrelas, densidade e alertas; o modo selecionado troca **apenas o conjunto visual do reator azul** por `EmprovexThinkingOrb` importado de `features/visual-orbs`, com `animation='working'`, `palette='colored'`, `surface='dark'`, `roundness=0.72`, `sparkle=0.68`, `performance` adaptativa e pausa de animação ao ocultar a aba. O conjunto visual anterior continua disponível através de `visualMode='legacy'` para rollback reversível, sem apagar o contrato de telemetria/foco. `InicioCore.module.css` desativa a moldura azul de borda do novo modo e apresenta apenas pontos orbitais transparentes, mantendo cenário de estrelas, cabeçalho e sidebar.
+
+**REGRA ESTÉTICA VIGENTE:** somente o núcleo **do Início** é colorido (lentas `#FFFFFF`, rápidas 70% `#FFD25A` e 30% `#FF5A46`); carregamentos e indicadores secundários seguem monocromáticos adaptados a fundo claro/escuro pelo adaptador do PR #295. Sem bolhas azuis, gradientes de esfera, filamentos ou uso de dados falsos no núcleo.
+
+**GOVERNANÇA E BLOCK 19.14:** a modificação não inseriu literal `<canvas` no código de `features/inicio`; o desenho Canvas 2D permanece implementado em `features/visual-orbs`. Guard 19.14 e demais scripts não foram alterados ou enfraquecidos. **Isso não substitui a deliberação arquitetural semântica:** a Home passa a montar um componente Canvas externo, logo não se considera a política histórica de ausência de Canvas automaticamente homologada mesmo que o guard textual permaneça verde. Coordenador Geral R1 deve revisar esta mudança antes de qualquer proposta de merge. Não houve GO de release.
+
+**GATES E TESTES:** [Application CI](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions) e [Core Protection](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions) disparados para o HEAD do PR #300. **Não classificar PASS até resultado do HEAD exato.** Fundador testará em `localhost:3000` obtendo a branch `visual-r1-home-orb-01`, incluindo o foco/tooltip, celular, movimento reduzido, FPS/CPU e não interferência na constelação operacional. W5 mantém PR #295 isolado de eventuais correções da Home; a nova PR só integra a partir de novo aceite e certificação.
+
+**PRÓXIMOS RESPONSÁVEIS:** Fundador confirma fidelidade no Home real; Coordenador VISUAL-R1 audita CI e registra o resultado; Coordenador Geral R1 delibera o contrato Block 19.14; Worker 5 realiza QA integrado e adapta o merge caso aprovado.
+
+**CLASSIFICAÇÃO:** **HOME COLORIDA IMPLEMENTADA EM BRANCH DE TESTE, COMPATIBILIDADE SEMÂNTICA/ACEITE/QA FINAL PENDENTES; SEM MERGE OU DEPLOY EM PRODUÇÃO.**
+
+---
+
 ## DECISÃO DO FUNDADOR — 2026-10-14 — PALETA COLORIDA EXCLUSIVA DO NÚCLEO INÍCIO
 
 **DIRETRIZ MAIS RECENTE — prevalece sobre descrições anteriores nesta documentação:** o Thinking Orbs **colorido é exclusivo do núcleo central da aba Início**. Todos os demais indicadores Thinking Orbs (carregamentos, autenticação, áreas secundárias, formatos `hero/large/medium/small/mini` fora do núcleo central) devem permanecer **monocromáticos, com contraste adaptado ao fundo de cada superfície**: claros sobre fundos escuros; escuros sobre fundos claros. Não utilizar placa de fundo grafite artificial em cartões claros; a própria tinta troca para escura.
@@ -520,7 +538,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
-| VISUAL-R1 (paralelo) | FUNDADOR RESTRINGIU CORES À HOME; W1/W5 IMPLEMENTARAM PALETA POR CONTEXTO | Colorido apenas `palette=colored` para núcleo central do Início (ainda não montado); loaders monocromáticos por `surface=light/dark` em PR #295; novos gates/E2E e Block19.14 pendentes; sem merge/Production |
+| VISUAL-R1 (paralelo) | PR #300 HOME REAL COM ORB COLORIDO EM TESTE; SEM MERGE/PRODUCTION | Branch `visual-r1-home-orb-01` baseada no W5 #295: InicioCore alterna reator legado e orb colorido, tooltip/telemetria mantidos, loaders permanecem monocromáticos; CI e teste humano Home/Block19.14 pendentes |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
