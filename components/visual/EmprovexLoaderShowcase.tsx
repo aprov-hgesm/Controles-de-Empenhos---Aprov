@@ -19,9 +19,9 @@ export function EmprovexLoaderShowcase({
   return (
     <section aria-label="Prévia visual das cinco dimensões do indicador">
       <p className="mb-4 text-sm">
-        Prévia isolada. O indicador real só aparece durante operações pendentes.
+        Prévia isolada das dimensões. Sem renderizador W1, apenas os espaços reservados são exibidos.
       </p>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
         {SIZES.map((size) => (
           <div
             key={size}
@@ -32,6 +32,7 @@ export function EmprovexLoaderShowcase({
               size={size}
               performance="balanced"
               renderer={renderer}
+              fallback={renderer ? undefined : <span className="text-xs opacity-60">W1</span>}
             />
             <span className="text-xs font-medium uppercase tracking-wider">
               {size}
