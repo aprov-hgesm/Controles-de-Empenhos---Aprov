@@ -23,7 +23,7 @@ jobs:
           if VERCEL_ENV=preview node node_modules/next/dist/bin/next build > /tmp/preview-preflight.txt 2>&1; then
             echo 'Expected Preview build refusal'; exit 1
           fi
-          rg -q 'FIREBASE_PREVIEW_ISOLATION_REQUIRED' /tmp/preview-preflight.txt
+          grep -q 'FIREBASE_PREVIEW_ISOLATION_REQUIRED' /tmp/preview-preflight.txt
   sidebar-logout:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
