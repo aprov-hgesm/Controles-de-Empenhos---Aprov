@@ -1,5 +1,28 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — PREVIEW: EVIDÊNCIA HUMANA PARCIAL + WORKER DE TESTES EM PREPARAÇÃO
+
+**Onde estamos:** RC R1 permanece congelado na referência `rc-r1-global-frozen-2026-10-09@61e372225834ed6060cd2b36dbdd55d1e1979c2c`, PR #280 OPEN/DRAFT; a macroação 2 foi concluída no CI/Emulator. PR #279 (Warehouse integrado) e PR #281 (matriz/sondagem GET-only) seguem OPEN/DRAFT e não mergeados. Production permanece `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. Não houve nesta atualização alterações de runtime, Firestore Rules, credenciais, deploy, billing ou dados operacionais.
+
+**Reclassificação da Macroação 3/4:** **PARCIAL EM ANDAMENTO**. O bloqueio 401/302 do workflow remoto [#38018032528](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38018032528) segue válido **apenas para aquela sondagem não autenticada e sem redirecionamento**; não é mais correto caracterizar todo o Preview como inacessível ao operador humano. O Fundador acessou no navegador Edge a URL do Preview `https://controles-de-empenhos-aprov-git-rc-886227-aprov-hgesms-projects.vercel.app`, autenticou-se com a conta fundadora `aprov hgesm` e forneceu capturas de tela das telas operacionais. Isso prova navegação humana naquela sessão, **não** comprova autenticação automatizada nem isolamento das bases.
+
+**EVIDÊNCIA VISUAL E RELATO DO OPERADOR — TESTES GUIADOS 01–07 (escopo restrito):**
+- T01 acesso Preview/autenticação fundadora: **PASS visual / relato do operador**; `Acesso autorizado` visível. Logout/revogação **não testados** (P04 apenas PARCIAL).
+- T02 Central de Depósitos / ambiente logístico: **PASS visual**; cenário isométrico renderizado, menu normal, 3 depósitos e 71 NFs aguardando alocação exibidos. Não validar ainda a procedência do banco.
+- T03 `Meus Depósitos`: **PASS visual**; tela de busca e desenho 3D de `DEP-001` aberto; sem prova do saldo autoritativo.
+- T04 seletor de depósitos: **PASS visual**; `CNT-001 — Contêiner Frigorífico`, `DEP-001 — Depósito de Gêneros Secos` e `DEP-2 — Área de Pré-Alocação`; layout de paletes CNT-001 renderizado.
+- T05 material em DEP-001: **PASS visual da consulta**; pesquisa de iogurte natural localizou `GEL-01`, 200 unidades totais e 200 neste depósito, uma posição e aviso de validade para 07/11/2026. Não houve consulta independente ao Firestore.
+- T06 vistas 3D `Frente/Direita/Trás/Esquerda`: **PASS por relato do operador**; não houve captura separada de cada ângulo, não alterar saldos.
+- T07 outro depósito: **PASS visual parcial**; `CNT-001`, produto cebola congelada, 300 kg total/neste depósito em `PAL-02`, validade não informada. Pesquisa do iogurte neste depósito não encontrou resultado **por relato**. Isso sugere separação de exibição entre depósitos, mas **não certifica isolamento multi-tenant, saldo autoritativo nem invariantes transacionais**.
+
+**CORRESPONDÊNCIA COM MATRIZ FORMAL P01–P24:** P04 (login fundador, sem logout), P08 (depósitos/consulta visual, sem confronto de ledger) e visualização 3D receberam **evidência PARCIAL positiva**. P01/P02 continuam BLOQUEADOS apenas na sondagem remota GET anônima (não repetidos em navegador autenticado); P03 e P05–P07, P09–P24 não possuem comprovação operacional completa. A coluna P08 da matriz original fala em saldos/histórico coerentes: **não atribuir PASS integral**. As capturas foram fornecidas na conversa com o Fundador e não são anexos permanentes ao GitHub; não inventar links de evidência.
+
+**BLOQUEADOR ANTES DE QUALQUER ESCRITA:** o Preview apresentou dados operacionais pré-existentes (inclusive 71 NFs pendentes). **NÃO ESTÁ COMPROVADO que o Firestore do Preview esteja isolado do Production.** Antes de teste de NF, alocação F05, transferência F06, saída F09, inventário, concorrência, replay ou conta setorial, provar projeto Firebase, database IDs, Rules, workspace/UG e separação das identidades. Não usar o workspace fundador ativo nem os workspaces externos `aprovisionamento-3-gac-ap` e `aprovisionamento-2-b-fv` para testes disruptivos. `aprovisionamento-teste` somente após confirmação real de isolamento e autorização do operador. Não executar novas gravações remotas apenas porque o deploy é Preview.
+
+**PRÓXIMA MISSÃO / QUEM FARÁ:** Coordenador emitir worker exclusivo de **QA de aceitação automatizada R1**, com branch própria baseada no SHA congelado, execução de testes Playwright em app local + Firebase Auth/Firestore Emulator, fixtures sintéticas, cenários positivos/negativos, relatórios com cobertura real por P01–P24, captura de screenshots/trace sem segredo, CI e handoff. O worker não pode alterar runtime/Rules nem o freeze, não pode fazer deploy, merge ou tocar em Production. Reaproveitar suíte existente e evitar testes já comprovados por CI, priorizando lacunas de interface e fluxos integrados. Na ausência de credenciais autorizadas da Vercel, testes Preview reais ficam BLOCKED e não podem ser contabilizados como PASS. Fundador permanecerá responsável por testes físicos de câmera, etiquetas Code128 e ergonomia e por autorizar qualquer escrita de dados. Macroação 3 segue **PARCIAL**, macroação 4 pendente; **PRODUCTION NO-GO**.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-09 — MACROAÇÃO 3/4: PREVIEW READY, SMOKE BLOCKED (NÃO CERTIFICADO)
 
 **Estado atual:** RC R1 mantém freeze técnico `rc-r1-global-frozen-2026-10-09@61e372225834ed6060cd2b36dbdd55d1e1979c2c`, PR #280 OPEN/DRAFT; nenhum delta do runtime, Rules ou Production. Macroação 2 concluída anteriormente (Global #37980517187, Warehouse #37980517236, Core #37980522557, App CI #37980522547 todos SUCCESS). **Macroação 3/4 = PARCIAL/BLOQUEADA por acesso ao Preview e testes humanos pendentes; não converter deploy READY em teste funcional.**
