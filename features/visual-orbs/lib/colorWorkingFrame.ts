@@ -131,11 +131,15 @@ export function paintColorWorkingFrame(
         : color === 'slow' ? alpha : alpha * 0.94;
       ctx.fillStyle = `rgba(${RGB[color]},${balancedAlpha})`;
     } else {
-      const gray = Math.round((1 - Math.max(0, Math.min(1, dot.white))) * 255);
-      // In R2 the far ghost rings recede behind the 3D shell; no extra dots.
-      const inkAlpha = refinement === 'r2' && Math.abs(dot.white - 0.72) < 0.00001
-        ? alpha * 0.84
-        : alpha;
+      // On the colored Início R2, structural marks and orbital ghost paths
+      // use the same WHITE pigment. Depth is expressed through opacity, not
+      // silver/grey ink. The classic painter is unchanged for comparison.
+      const whiteStructure = refinement === 'r2' && dot.a !== undefined && !isGlow;
+      const gray = whiteStructure
+        ? 255
+        : Math.round((1 - Math.max(0, Math.min(1, dot.white))) * 255);
+      const ghostTrail = whiteStructure && Math.abs(dot.white - 0.72) < 0.00001;
+      const inkAlpha = ghostTrail ? alpha * 0.58 : alpha;
       ctx.fillStyle = `rgba(${gray},${gray},${gray},${inkAlpha})`;
     }
     ctx.beginPath();
