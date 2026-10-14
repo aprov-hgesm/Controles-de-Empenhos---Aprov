@@ -71,3 +71,10 @@ Ao receber a entrega W1, registrar sem sobrescrever evidências anteriores:
 Foi observada apenas leitura de repositório e criação documental **na branch exclusiva W2**, sem chamada para merge, atualização de refs compartilhadas, publicação, force-push, deleção, Rules, Firebase, Vercel ou dados reais.
 
 O W5 pode inspecionar esta branch e integrar **somente após** registrar esta classificação `NÃO DEMONSTRADO`; não converter `PASS COM PENDÊNCIAS` da elaboração documental em `CERTIFICADO` do backup. Solicitar novo parecer W2 após W1 entregar manifesto + artefato material e o drill local ser executado.
+
+
+## 6. Reinspeção após surgimento da branch W1 — ainda sem drill
+
+Posteriormente à busca inicial, a branch W1 foi identificada em `25c02d2316c9984b9534c50f53857c91aabf6485`, contendo `INVENTARIO.md`, `MANIFESTO_PUBLICO.md`, `PROCEDIMENTO_BACKUP.md` e `REFERENCIAS_PUBLICAS_2026-10-14.json`. Na leitura do manifesto W1, consta explicitamente: **nenhum `git clone --mirror`, bundle, `git bundle verify`, arquivo externo, checksum SHA-256 de backup ou restore de prova foi produzido**. W1 classifica a parte documental `PASS COM PENDÊNCIAS` e o backup recuperável externo `BLOCKED`. A falha de DNS para GitHub no ambiente W1 é apontada por ele, **não reproduzida** nesta auditoria independente.
+
+Como consequência, a dependência agora é mais específica: **documentação W1 entregue; artefato real + hash confiável + cópia externa ainda não entregues**. Continua **NÃO EXECUTADO** o teste material W2 de restauração, integridade e refs.
