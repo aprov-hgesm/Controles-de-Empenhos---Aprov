@@ -1,5 +1,25 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W4 BORDER BEAM EXPANDIDO PARA TODOS OS DESTINOS DA NAVEGAÇÃO
+
+**ONDE ESTAMOS:** o Fundador questionou a limitação da aplicação do Border Beam em apenas dois locais (Painel e Relatórios) e solicitou a expansão para as abas restantes. Foi realizado o novo [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), OPEN/DRAFT, branch `visual-r1-w4-navigation-expansion-01@e911b2445451e8b26e7a3c592451d9170e777bb5`, baseado no [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303). PRs anteriores #295 → #300 Home R2 → #301 loaders W2 → #302 motion W3 → #303 W4 dois pontos são preservados sem merge. `main`, RC e Production não alterados.
+
+**IMPLEMENTAÇÃO:** os **10 botões da barra lateral compartilhada** em `components/layout/AppSidebar.tsx` agora têm elemento `span` decorativo com `aria-hidden`, `data-emprovex-nav-beam='true'`. Isso cobre Início, Painel, Empenhos (também seu detalhe Itens do Empenho), Fornecedores, Consulta de Itens, Notas Fiscais, Central de Avisos, Relatórios, Cronogramas e link condicional de Central de Depósitos. Apenas um item com `data-active='true'` exibe beam animado (0,28 opacidade, borda monocromática 1px, ciclo 24s); itens restantes mostram contraste no foco visível. Central de Depósitos é acesso externo à aba corrente: tem contorno de foco sem atribuir estado ativo inexistente. Nenhuma lógica `onNavigate`, `onOpenWarehouse`, logout, badging, `aria-current` ou dados modificados.
+
+**MOBILE:** `components/layout/MobileNavigation.tsx` recebeu o mesmo indicador nos 5 atalhos inferiores (Painel, Empenhos, Notas Fiscais, Relatórios, Cronogramas), mantendo callbacks originais e seleção; o efeito é **estático <=640px** e também sob `prefers-reduced-motion: reduce`. Os demais destinos permanecem disponíveis no menu lateral mobile. Novos estilos encapsulados em `components/layout/OperationalNavigationBeam.module.css` reutilizam técnica W4 de conic-gradient mascarado de 1px, sem WebGL, timers ou ciclo de JavaScript; camadas possuem `pointer-events:none`.
+
+**LABORATÓRIO:** `components/visual/EmprovexNavigationBeamPreview.tsx` apresenta dez destinos fictícios alternáveis apenas por estado local e foi montado em `/dev/visual-r1`; nenhuma navegação real, Firestore ou escrita executada por esta amostra. Criados `scripts/visual-r1-w4-navigation-beam.test.mjs` (Node read-only) e `tests/e2e/visual-w4-navigation-expansion.spec.mjs` (Playwright), que cobrem presença de botões, callbacks, condição de ativo, redução de movimento/foco e responsividade. Código e asserts essenciais inspecionados, **Node test e browser ainda não executados nesta coordenação**.
+
+**LIMITES:** extensão cobre **a navegação de todos os módulos principais**, não todos os cards/formulários/alerts e nem submenus internos da Central de Depósitos. O cartão de Saldo Total Restante e o foco de Relatórios continuam sob PR #303. Foi priorizada a regra de um único contorno em movimento por vez para evitar saturação visual/consumo GPU. Nenhuma alteração em domínio, saldo, NF, Rules, SAG, auth ou produção.
+
+**GATES:** no HEAD do PR #305, Core Protection [#38627566610](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566610) **SUCCESS**; Application CI [#38627566852](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566852) **IN_PROGRESS** na última consulta. Executar teste Node + Playwright e QA real mobile/desktop com foco e reduced-motion antes do aceite e de qualquer merge. Não declarar RC GO enquanto gates pendentes.
+
+**TESTE LOCAL:** parar servidor, `git status` limpo no clone; `git fetch origin visual-r1-w4-navigation-expansion-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`; abrir `http://localhost:3000/dev/visual-r1`, seção "Worker 4 · Expansão para todas as abas". O menu principal real aparece após autenticação usual. Sem publicar Preview/Production automaticamente.
+
+**CLASSIFICAÇÃO:** **BORDER BEAM W4 EXPANDIDO A TODAS AS ABAS PRINCIPAIS EM PR #305 DRAFT; CORE SUCCESS; APPLICATION CI, NODE/E2E E HOMOLOGAÇÃO VISUAL PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 — BORDER BEAM DISTRIBUÍDO NAS DEZ ABAS PRINCIPAIS
 
 **ONDE ESTAMOS:** após o [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) ter conectado o efeito de borda apenas ao cartão de saldo principal do Painel e à navegação de Relatórios, o Fundador solicitou ampliação para as **demais abas**. Executada em nova branch isolada `visual-r1-w4-border-beam-all-tabs-01`, [PR #304](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/304) OPEN/DRAFT, baseada exclusivamente no ramo do PR #303. Governança de branches empilhadas mantida: #295→#300→#301→#302→#303→#304, sem merge em `main`, RC ou Production.
