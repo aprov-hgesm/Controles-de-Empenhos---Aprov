@@ -1,5 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — CORREÇÕES AUTORIZADAS: DEF-01 PASS; CONFIGURAÇÃO DE ALOCAÇÃO BLOCKED
+
+**ONDE ESTAMOS:** Fundador autorizou executar correções via /goal. Criada candidata separada `rc-r1-preview-blockers-fix-01@906eddacda7d1b788c3404bb5ccdd744b2409071`, [PR #286](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/286) OPEN/DRAFT contra freeze. Referência `61e372225834ed6060cd2b36dbdd55d1e1979c2c` e main não alteradas.
+
+**O QUE ESTAMOS FAZENDO:** DEF-01 corrigido: AppSidebar estava dentro do contêiner relativo z-10 de Home; MobileNavigation externa z-30 sobrepunha o drawer apesar do z-40 interno. Menu movido para irmão do contêiner, sem mudar logout, claims ou contratos. Regressão de navegador sintética certifica clique normal e hit-test central do botão, logout, reload e rota protegida em quatro viewports. Alocação: mensagem de configuração/autorização traduzida para orientação compreensível em alocação/consumo imediato; rota registra apenas code e mensagens sanitizadas próprias da exceção administrativa. **Não corrigida credencial da implantação** e não ampliado fallback para erro de configuração.
+
+**GATES NO HEAD EXATO:** [Regressão #38515853238](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38515853238) SUCCESS, **4/4 Playwright, 38,9 s**, 545×374, 390×844, 844×390, 1440×1000; logs do job 115694361633 lidos. [Core #38515855239](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38515855239) SUCCESS; [Application #38515855242](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38515855242) **7/7 jobs SUCCESS**, validate-application e Blocks 16–21. Local: TypeScript e production build PASS; app-shell/provisionamento READY; F05 route transaction + fast-intake errors **7/7 PASS**; diff hygiene PASS. Rules mantidas com hashes principal bc91185f34bcdcb4437a4de1078d1089a09292ba e Warehouse e4037e464ddbeed7629076dc7615266f0caafc7c.
+
+**BLOQUEIO EXTERNO:** consulta Vercel de metadados de env, decrypt=false, projeto prj_DZ2y10DUaXrcHoRMaZ58FkTCvOHB e team_HYvilprcT8s972DFBVQoeZa3, retornou **403 — conexão sem acesso ao escopo aprov-hgesms-projects**. CLI Vercel indisponível; nenhum segredo lido/copiado/alterado. A causa específica de SERVER_CONFIGURATION permanece entre ausência/invalidez/incompatibilidade de credencial ou emissão OAuth rejeitada. Não declarar alocação funcional corrigida pela melhora da mensagem.
+
+**QUEM ESTÁ FAZENDO:** Coordenador implementou/revisou e certificou a candidata; GitHub Actions executou regressão/CI. Sem subworkers, gravações remotas, publicação de Rules ou promoção de Production.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** administrador com acesso ao escopo correto e Coordenador identificam URL/deploy SHA/workspace da tentativa, verificam configuração administrativa e logs sanitizados e comprovam destino dos bancos/segregação. Só então corrigir configuração do ambiente e retestar alocação autorizada com ledger/saldo antes/depois. Work retesta DEF-01 no Preview da candidata; Coordenador compõe novo candidato/re-freeze após aceite. Fundador retém autorização produtiva.
+
+**CLASSIFICAÇÃO:** DEF-01 **PASS em regressão local/Emulator**, reteste remoto pendente. Diagnóstico/UX de alocação implementados; **correção operacional SERVER_CONFIGURATION BLOCKED por acesso externo**. Macroação 3 PARCIAL, novo RC Production NO-GO. PR #285 não foi reaberto ou alterado; #286 sem merge.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — ALOCAÇÃO REAL BLOQUEADA POR CONFIGURAÇÃO ADMINISTRATIVA
 
 **ONDE ESTAMOS:** Fundador relatou tentativa de alocação com erro `WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION`. Captura mostra NF 21300, recebido/pendente 140 lt, alocado 0, destino DEP-001/PAL-03. URL, deployment SHA e workspace da tentativa não aparecem na captura; não atribuir automaticamente ao freeze. **P09 FAIL na tentativa relatada / bloqueado para certificação**, sem invalidação da bateria Emulator #285.
