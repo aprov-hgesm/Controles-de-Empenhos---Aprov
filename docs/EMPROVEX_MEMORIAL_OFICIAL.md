@@ -1,5 +1,24 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EXECUÇÃO DE RECONCILIAÇÃO W4 E QA ISOLADO
+
+**DECISÃO AUTORIZADA:** solicitação `/goal execute` do Fundador para executar a reconciliação W4 prevista no checkpoint anterior. Escrita restrita ao PR #305 DRAFT, PR #290 documental e comentário explicativo ao PR #304; sem merge `main`, RC, Production, Firestore Rules, auth, cobrança ou dados.
+
+**RECONCILIAÇÃO GIT EFETIVAMENTE CONCLUÍDA:** #305 `visual-r1-w4-navigation-expansion-01` recebeu um commit de **dois pais**, `934b313b8664951701020f5dac103801ede10469`, incluindo seu HEAD antigo `38bde518` e o HEAD atual do #303 `11f1f5a0`. GitHub confirmou comparação #303 → #305 `ahead:15, behind:0`, PR `mergeable=true`; sem force-push. O arquivo `AppSidebar.tsx` conserva uma camada única por botão da implementação modular #305, e a CSS global concorrente do #303 não entrou na árvore reconciliada. Guard #303 adaptado ao contrato modular.
+
+**REFINAMENTOS IMPLEMENTADOS:** `OperationalNavigationBeam.module.css` interrompe movimento de navegação na faixa 641–1023px, complementando <=640px e reduced-motion; oculta camada decorativa em `forced-colors:active`, mantendo foco nativo. Selecionado apenas `ItensEmpenhoView` do PR #304, com beam `focus/light/low` no formulário Adicionar Novo Item. Demais inclusões concorrentes do #304 não foram copiadas, sobretudo `InicioSceneChrome`/Home R2. Mantidos os demais focos W4 de Painel, Relatórios, Fornecedores, Consulta, Notas, Cronogramas, Avisos e navegação mobile sem alteração da lógica de negócio.
+
+**QA/DESENVOLVIMENTO:** ampliação dos guards Node e spec Playwright (viewport 768px/forced-colors) no commit `934b313b`; acrescentados workflow estritamente isolado `.github/workflows/visual-r1-w4-qa.yml` e config `playwright.visual-r1.config.mts` em `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`. Esse workflow instala runner temporário no GitHub Actions, executa `node --test` para os 2 guards e Playwright Chromium com webServer local no laboratório `/dev/visual-r1`, sem dados reais, tokens, deploy ou acesso a Production. **Ainda não declarar Node/Playwright PASS antes da conclusão real dos jobs.** Auditoria estática independente de fontes: 17/17 inspeções satisfatórias (cobertura 10 desktop/5 mobile, callbacks, depósito, antiduplo CSS, 24s, responsividade, focus/forced-colors, dois efeitos herdados, Itens Empenho, arquivos de testes).
+
+**NOVO HEAD CANÔNICO W4:** PR #305 `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`, OPEN/DRAFT, `mergeable=true` na checagem após escrita. No início da execução de QA, Core Protection SUCCESS, Application CI e workflow W4 Node/Chromium ainda em execução; verificar novamente os checks por SHA e registrar os resultados finais. Diff da origem #305 antiga até novo HEAD: apenas 7 arquivos (módulo CSS, ItensEmpenho, dois guards, spec E2E, config de Playwright, workflow de QA); **zero alterações de Rules/Home/auth/RC/dados**. PR #304 recebeu comentário explicando a convergência, sem ser fechado.
+
+**PENDÊNCIAS:** aguardar evidência GitHub dos checks reais; corrigir blockers, se surgirem, somente no PR #305; homologação visual em navegação autenticada, teclado, contraste, mobile e desktop; aceite do Fundador; nenhum merge em main nem deploy sem autorização explícita.
+
+**CLASSIFICAÇÃO:** **RECONCILIAÇÃO DE ANCESTRALIDADE CONCLUÍDA / W4 NOVO QA E2E INSTALADO / PR #305 DRAFT / HOMOLOGAÇÃO HUMANA PENDENTE.**
+
+---
+
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / AUDITORIA DE CONTINUIDADE W4 (#303, #304, #305)
 
 **BASE DE EVIDÊNCIA:** consulta direta ao GitHub em 14/10/2026. Branch documental PR #290; nenhuma escrita em código, `main`, RC, Rules, contas, dados ou Production nesta auditoria. `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`.
