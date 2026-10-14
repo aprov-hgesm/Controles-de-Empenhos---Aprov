@@ -46,8 +46,20 @@ export function warehouseIntakeReconciliationMessage(
   }
 }
 
+function warehouseServerErrorMessage(code: string): string | null {
+  if (code.includes('WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION')) {
+    return 'O serviço de recebimentos está indisponível por uma configuração do servidor. Solicite a verificação ao administrador antes de tentar novamente.';
+  }
+  if (code.includes('WAREHOUSE_FAST_PATH_UPSTREAM_AUTH') || code.includes('WAREHOUSE_FAST_PATH_UPSTREAM_PERMISSION')) {
+    return 'O servidor não conseguiu autorizar o acesso ao estoque. Solicite a verificação ao administrador.';
+  }
+  return null;
+}
+
 export function warehouseImmediateConsumptionErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error || '');
+  const serverMessage = warehouseServerErrorMessage(raw);
+  if (serverMessage) return serverMessage;
   const mappings: Array<[string, string]> = [
     ['WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION', 'A pendência foi alterada em outra tela. Atualize a fila antes de repetir.'],
     ['WAREHOUSE_IMMEDIATE_CONSUMPTION_EXCEEDS_PENDING', 'A quantidade supera o pendente atual.'],
@@ -66,6 +78,8 @@ export function warehouseImmediateConsumptionErrorMessage(error: unknown): strin
 
 export function warehouseAllocationErrorMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : String(error || '');
+  const serverMessage = warehouseServerErrorMessage(code);
+  if (serverMessage) return serverMessage;
   if (code.includes('WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION')) {
     return 'A pendência foi alterada em outra tela. A operação não foi executada; atualize a fila antes de continuar.';
   }

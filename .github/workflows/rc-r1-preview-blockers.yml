@@ -1,0 +1,32 @@
+name: RC R1 Preview Blockers Regression
+on:
+  push:
+    branches: [rc-r1-preview-blockers-fix-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sidebar-logout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - name: Four viewports with isolated synthetic sessions
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+        run: >
+          npx --yes firebase-tools emulators:exec --config firebase.security-test.json
+          --project demo-emprovex-security --only auth,firestore
+          "node scripts/e2e-browser-emulator.mjs tests/e2e/rc-r1-sidebar-logout.spec.mjs"

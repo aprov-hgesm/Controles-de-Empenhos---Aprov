@@ -1221,6 +1221,11 @@ export async function POST(request: Request) {
       );
     }
     if (error instanceof SectorProvisioningFailure) {
+      // This exception contains our own sanitized messages, never credentials or OAuth payloads.
+      console.error('Warehouse intake service authorization failed', {
+        code: error.code,
+        reason: error.message,
+      });
       return NextResponse.json(
         { error: error.code === 'SERVER_CONFIGURATION'
           ? 'WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION'
