@@ -120,7 +120,7 @@ export function EmprovexThinkingOrb({
 
       const source = nativeFrame(presetSize, clockSeconds, opts);
       const enhanced = animation === 'working'
-        ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle)
+        ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle, palette === 'colored' ? 1 : 0)
         : source;
       if (animation === 'working' && palette === 'colored') {
         paintColorWorkingFrame(context, enhanced, presetSize, clockSeconds, opts);
