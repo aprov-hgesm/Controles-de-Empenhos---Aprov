@@ -81,6 +81,15 @@
   top: 17px;
 }
 
+/* The Home gets a small institutional rail accent, never a beam around
+   the Orb R2 or its orbital particle cloud. */
+.topRailContent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+}
+
 .bottomRail {
   left: 56px;
   bottom: 17px;
