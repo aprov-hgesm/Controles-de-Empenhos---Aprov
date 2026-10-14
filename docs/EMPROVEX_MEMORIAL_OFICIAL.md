@@ -1,5 +1,27 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / AUDITORIA DE CONTINUIDADE W4 (#303, #304, #305)
+
+**BASE DE EVIDÊNCIA:** consulta direta ao GitHub em 14/10/2026. Branch documental PR #290; nenhuma escrita em código, `main`, RC, Rules, contas, dados ou Production nesta auditoria. `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`.
+
+**GATES NO HEAD EXATO:**
+- PR #303 `11f1f5a03c87851d56f7a1936a7467560acff4eb`: OPEN/DRAFT; **8/8 SUCCESS** (Application CI, Core Protection e Blocks 16–21), atualizando o registro anterior que mencionava Application CI pendente.
+- PR #305 `38bde5186519489728ab5da5bc2d14b405532a30`: OPEN/DRAFT; **8/8 SUCCESS**, mas GitHub informa `mergeable=false` em relação à base dinâmica #303; não equivale a homologação browser.
+- **PR #304 também existe:** `visual-r1-w4-border-beam-all-tabs-01@3618bee7630addfbe5b16b4d70c622144a53f61d`, OPEN/DRAFT, `mergeable=false`; 1/8 checks SUCCESS (Core Protection), 7/8 FAILURE. O log do `validate-application` mostra **Production build PASS e TypeScript PASS**; falha final em `git diff --check` devido a espaço em branco final em `scripts/visual-w4-all-tabs.test.mjs:43`. Não atribuir falha funcional sem evidência; demais checks reportam FAILURE e requerem rechecagem após eventual correção.
+
+**DIVERGÊNCIAS VERIFICADAS:**
+- #303 vs #305: `diverged`, #305 **14 ahead / 3 behind**, merge-base `23e73df23bda4019f845d57b72bee691587e101a`. Ambos inserem dez spans na sidebar: #303 usa classe global `.emprovex-sidebar-nav-item__beam` e regras em `app/globals.css`; #305 usa `OperationalNavigationBeam.module.css` e `data-emprovex-nav-beam`. Não acumular as duas implementações. PR #303 preserva efeitos internos já certificados tecnicamente em Painel/Relatórios.
+- #304 vs #305: `diverged`, #305 **14 ahead / 16 behind**, mesmo merge-base; ambos editam cabeçalhos e subabas de vários módulos. #304 inclui ainda rail institucional de Início e formulário de Itens do Empenho, que #305 não cobre diretamente; essas mudanças **não devem ser aplicadas automaticamente**. Para Avisos, #304 usa foco estático; #305 usa animação travel, decisão visual a homologar, sem codificar severidade.
+- **Lacunas de estilo observadas no #305:** CSS modular não declara `@media (forced-colors: active)`, ao contrário da implementação do #303. O menu inferior `MobileNavigation` usa `lg:hidden` (até 1023px), mas o CSS desliga animação só em `max-width:640px`; em 641–1023px a aba ativa pode animar apesar da política de navegação mobile sem movimento. Corrigir na reconciliação e testar com navegador.
+- Guards Node e specs Playwright estão presentes, mas execução real, teste em abas autenticadas, foco/teclado, responsividade 390×844 / 1366×768 / 1440×900, `prefers-reduced-motion`, forced-colors, desempenho e aceite estético W4 permanecem **PENDENTES**.
+
+**ESTRATÉGIA PROPOSTA (SEM IMPLEMENTAÇÃO NESTE CHECKPOINT):** manter #303 como base de efeitos Painel/Relatórios e tomar #305 como **candidato funcional da navegação** e seis módulos; criar uma única implementação canônica do beam na sidebar, eliminar seletores/spans redundantes, preservar callbacks, `aria-current`, rota separada de Depósitos e bloqueios de animação; avaliar seletivamente #304, especialmente Itens do Empenho, sem modificar Home Orb R2 sem novo pedido. Reconciliar somente após revisão de diff, testar gates no novo SHA e homologar visualmente antes de integração. Nenhum merge, force-push ou deploy autorizado.
+
+**CLASSIFICAÇÃO:** **W4 NÃO CERTIFICADO PARA MERGE / 303 e 305 CI VERDES EM SHAs DISTINTOS / 304 CI VERMELHO POR HIGIENE DE DIFF CONSTATADA / CONVERGÊNCIA E BROWSER PENDENTES.**
+
+---
+
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / TRANSFERÊNCIA DE COORDENAÇÃO E RECONCILIAÇÃO W4 PR303 X PR305
 
 **MOTIVO:** Fundador aprovou o Orb R2 e solicitou continuidade da expansão W4, depois pediu atualizar o Memorial Oficial e preparar um prompt para novo chat coordenador, preservando integralmente o contexto. Este bloco registra o estado vivo verificado pelo GitHub na transferência, prevalecendo sobre status pontuais antigos sem apagá-los. **Não há autorização de merge em main nem deploy Production.**
