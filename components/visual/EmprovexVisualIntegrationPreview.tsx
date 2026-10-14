@@ -52,7 +52,7 @@ export function EmprovexVisualIntegrationPreview() {
               <p className="text-center text-xs text-slate-300">
                 {refinement === 'classic'
                   ? 'Casca mais homogênea e brilho original.'
-                  : 'Menos granulação, profundidade por face e pontos de luz mais precisos.'}
+                  : 'Casca branca com profundidade por transparência e partículas menores, sem pontos prateados.'}
               </p>
             </div>
           ))}
