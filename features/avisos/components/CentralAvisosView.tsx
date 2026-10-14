@@ -14,6 +14,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Alert, AlertStatus, Empenho } from '../../../lib/types';
 import {
   getNoticeSeverity,
@@ -152,6 +153,7 @@ export function CentralAvisosView({
 
   return (
     <section className="space-y-6" data-testid="central-avisos-view">
+      <EmprovexBorderBeam variant="focus" theme="light" intensity="low" borderRadius={24} testId="tab-beam-avisos">
       <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
@@ -179,6 +181,7 @@ export function CentralAvisosView({
           </button>
         </div>
       </header>
+      </EmprovexBorderBeam>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
