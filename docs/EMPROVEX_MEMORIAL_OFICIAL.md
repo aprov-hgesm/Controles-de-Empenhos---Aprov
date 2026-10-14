@@ -1,5 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1: CINCO WORKERS INDEPENDENTES, SEM ALTERAÇÃO PRODUTIVA
+
+**ONDE ESTAMOS:** frente visual paralela ao RC R1, com [PR #288](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/288) OPEN/DRAFT, `visual-r1-thinking-orbs-01@4224a51230b123c6bee7237ea233f66a806401ad`, baseado em `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. O PR introduz apenas `EmprovexThinkingOrb.tsx`, CSS próprio e `docs/VISUAL_R1_AUDIT_AND_PROTOTYPE.md`; não integra a Home, não recebeu aceite estético e não equivale a teste real integrado.
+
+**O QUE ESTAMOS FAZENDO:** preparar divisão coordenada em **quatro workers de desenvolvimento simultâneos + um worker de integração/QA posterior**, todos subordinados ao Coordenador VISUAL-R1, independentes da Macroação 3/4. Catálogo de referência: `Jakubantalik/thinking-orbs` (MIT; partículas pontilhadas em Canvas 2D, estados e tamanhos 20/64), `Jakubantalik/Libraries.dev` (Border Beam, entre outros, com licença própria por pacote) e `Jakubantalik/transitions.dev` (licença específica para uso comercial; conferir restrições e eventual recurso pago). O Fundador escolheu a **estética do orb original feito de pontos/partículas**, sem bolhas azuis, mistura com o conceito Nebula ou filamentos; o protótipo CSS azul do #288 não foi aprovado. O núcleo deve preservar telemetria, acessibilidade, exclusão de estrelas, comportamento touch e modos de performance já existentes.
+
+**SITUAÇÃO DOS GATES #288:** [Application CI #38518640200](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38518640200) FAILURE. Logs confirmam `npm run build` e `npm run typecheck` PASS (TypeScript com 0 erros), mas `git diff --check` falhou por espaços finais no memorial visual (linhas 3–6 e 63–67); os seis jobs de Blocks 16–21 falharam em cascata por `validate-application=failure`. [Core Protection #38518640211](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38518640211) SUCCESS. Corrigir higiene e executar novamente, sem relativizar os gates.
+
+**QUEM ESTÁ FAZENDO:** Coordenador VISUAL-R1 mantém a matriz de arquivos e aceita entregas; Workers 1–4 executarão em branches/PRs próprios após ativação do Fundador; Worker 5 recebe as entregas aprovadas para integração e testes. Nenhum desses workers foi iniciado automaticamente por este registro.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador ativa os chats separadamente. W1 corrige fidelidade do núcleo e prepara protótipo interativo sem perder dados (trabalhar a partir do #288, em branch própria); W2 monta variantes reutilizáveis de loading sem tocar no núcleo do W1; W3 refina microinterações com receitas gratuitas/licenciadas de Transitions.dev sem alterar loading e sem aplicar no shell partilhado; W4 experimenta Border Beam monocromático, somente em componentes novos e isolados; W5, depois de aceite do Fundador e dos PRs técnicos, integra em branch própria, elimina conflitos, mede desempenho e executa CI/Playwright. Nenhum worker altera `app/page.tsx`, `main`, RC congelado, Rules, autenticação, alocação, Vercel, billing ou dados; mudanças no shell compartilhado exigem coordenação prévia.
+
+**GATES VISUAL-R1:** aprovação estética **explícita** do Fundador; fidelidade às partículas de referência; textos/telemetria preservados; React/Next/SSR e teclado/touch corretos; loading verdadeiro sem ciclos artificiais; `prefers-reduced-motion`, visibilidade e perfis full/balanced/static; responsividade 1440×900, 1366×768, 844×390, 390×844 e 545×374; build, typecheck, diffs, Core Protection, Application CI e E2E pertinentes verdes **no HEAD composto**. Nenhum efeito visual deve tornar operação crítica inacessível. Merge em `main` é ato produtivo separado, depende da aprovação do Fundador e da compatibilidade atestada pelo Coordenador Geral R1. O RC #280/`61e372...` permanece fora do escopo; o isolamento Preview do [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289) segue pendente administrativamente.
+
+**CLASSIFICAÇÃO:** plano de paralelismo **PREPARADO**; VISUAL-A PASS documental; VISUAL-B PARTIAL; Workers 1–5 **AGUARDAM ATIVAÇÃO**; CI #288 **FAIL hygiene**; nenhum merge ou GO Production.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — PREVIEW ISOLADO: CANDIDATA TÉCNICA CERTIFICADA, PROVISIONAMENTO EXTERNO PENDENTE
 
 **ONDE ESTAMOS:** [PR #289](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/289) OPEN/DRAFT, branch `rc-r1-preview-firebase-isolation-01@78dc23bb460059a83bd9ab3b18964bbe1a051222`, baseado em #286@906eddac. Main conferida em 97556bb8eb04af070016f9e58ddc2d9cca36bb35 e freeze 61e372225834ed6060cd2b36dbdd55d1e1979c2c inalterados.
@@ -356,6 +374,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
+| VISUAL-R1 (paralelo) | PLANO 5 WORKERS PREPARADO; VISUAL-B PARTIAL | PR #288@4224a51230b123c6bee7237ea233f66a806401ad DRAFT; estética do orb pontilhado ainda não aprovada; CI #38518640200 vermelho por diff hygiene, Core verde; sem integração na Home ou merge |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
@@ -373,6 +392,26 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 **O QUE FAZER A SEGUIR:** confirmar presença/escopo da variável administrativa e logs existentes; identificar deployment/commit da tentativa; comprovar bancos/permissões/segregação antes de propor alteração ou reteste F05. Não reproduzir uma escrita para obter logs antes do isolamento.
 
 **QUEM FARÁ:** Fundador devolve apenas presença/escopo e diagnóstico sanitizado; Coordenador determina a correção e prepara eventual autorização administrativa específica. Work/Fundador retestam a candidata liberada; Coordenador confere movimento/saldo/ledger, compõe novo candidato e prepara re-freeze/decisão.
+
+## 3. Programa VISUAL-R1 — frente visual paralela (14/10/2026)
+
+**Contrato de isolamento:** o Coordenador VISUAL-R1 coordena a estética exclusivamente sobre branches próprias; o Coordenador Geral R1 preserva a certificação e decide compatibilidade do release. Nenhuma entrega visual está automaticamente incluída no RC global congelado. `main` continua sendo branch de produção e não é bancada de testes.
+
+| Worker | Responsabilidade exclusiva | Arquivos / superfícies sob ownership | Entrada / condição |
+| --- | --- | --- | --- |
+| W1 — VISUAL-ORB-CORE | Protótipo fiel ao thinking-orbs pontilhado; interação sob demanda; preservar telemetria | Derivação isolada do PR #288; `features/inicio/components/EmprovexThinkingOrb.*` e adapter gráfico próprio; não integrar no `InicioCore` antes do aceite | Criar nova branch a partir de #288@4224a512, PR encadeado contra branch #288; coordenador original congela edições concorrentes nesses arquivos |
+| W2 — VISUAL-LOADERS | Wrapper/variantes hero/large/medium/small/mini e estados reais de espera; especificar integrações | Novos `components/visual/*Loader*` e, após aceite, `OperationalSurfaceLoading.tsx` / `EmprovexAuthLoading.tsx`; não editar arquivos W1 | Branch separada baseada na main; alinhar contrato de import com W1, evitar dependência divergente |
+| W3 — VISUAL-MOTION | Motion tokens e transições de modal, abas, notificações, feedback, sem efeitos dispensáveis | Componentes operacionais de UI selecionados após inventário, **excluindo** loaders, núcleo e `app/page.tsx` | Branch separada de main; só receitas gratuitas/licenciadas; manter condições de abertura/fechamento e ARIA |
+| W4 — VISUAL-BORDER | Border Beam monocromático discreto em amostras de cards/botões | Novo componente de showcase/wrapper e CSS próprio, sem alterar cards críticos ou shell | Branch separada de main; medir custo e reduced motion; aprovação estética antes de integração |
+| W5 — VISUAL-INTEGRATION-QA | Composição seletiva, conflitos, E2E, performance, checklist e candidato a merge | Branch de integração visual criada **depois** dos W1–W4, nenhuma escrita no PR #286/RC | Aguardar aceites estéticos, PRs e CI individual; merge produtivo somente com autorização explícita |
+
+**Gate de fidelidade:** `thinking-orbs` do autor é um desenho de partículas claras/escuras em Canvas 2D, não um agrupamento de esferas azuis com gradientes ou filamentos. O trabalho W1 deverá descartar a estética divergente do protótipo Nebula existente, fixar versão/licença e testar a escala ampliada (a biblioteca só declara presets nativos 20/64). Manter as informações de avisos, recebimentos, execução e classes do núcleo original acessíveis.
+
+**Gate de documentação/CI:** W1 deve eliminar os espaços finais detectados no `docs/VISUAL_R1_AUDIT_AND_PROTOTYPE.md` antes de afirmar PASS. Os demais workers não devem transferir CI vermelho para a branch composta.
+
+**Gate de Release:** W5 exige prova de navegação em resoluções desktop/mobile, sem regressão no logout corrigido pelo PR #286; riscos de performance (GPU/CPU e visibilidade), acessibilidade, SSR e integridade operacional. A integração visual na `main` é separada da aprovação de código: demanda GO explícito do Fundador e revisão do Coordenador Geral R1. Sem publicação de Rules, Firebase ou credenciais.
+
+---
 
 ### Registros históricos da Parte I
 
