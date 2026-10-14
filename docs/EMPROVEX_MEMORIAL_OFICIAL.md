@@ -1,5 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2 LOADERS MONOCROMÁTICOS OPERACIONAIS
+
+**ONDE ESTAMOS:** autorização do Fundador para prosseguir com o Worker 2 após aceite do núcleo R2 da Home. Integração real de indicadores de carregamento implementada na branch exclusiva `visual-r1-w2-operational-loaders-01@ab753a694fc15124ab059ed56c05cee760c2df38`, [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) OPEN/DRAFT, **baseada na Home R2 PR #300** (`visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`). PR encadeado não deve ser integrado fora de ordem. A `main` e o RC continuam preservados.
+
+**O QUE MUDOU:** `components/layout/OperationalSurfaceLoading.tsx` troca o spinner genérico por `EmprovexOrbVisual` + `EmprovexThinkingOrbRenderer` monocromático `size='medium'`, `surface='light'` para os carregamentos reais das superfícies operacionais. Mantém `data-testid='operational-section-loading'`, texto original, painel claro, `role=status`, `aria-live=polite`; a prontidão `activeOperationalDataReady` e o `Suspense fallback` continuam controlados **sem alterações em `app/page.tsx`** e sem delay. `components/auth/EmprovexAuthLoading.tsx` troca somente o ícone `Loader2` por `EmprovexOrbVisual` monocromático `size='small'`, `surface='dark'` durante autenticação real, mantendo `LoginAtmosphere`, `LoginStatusRail`, fases `session/workspace`, mensagens e contratos de sessão intactos. Adaptador W5 continua forçando `palette='monochrome'`; branco/amarelo/vermelho permanecem **exclusivos** do núcleo do Início.
+
+**EVIDÊNCIA DE REGRESSÃO ADICIONADA:** `scripts/visual-r1-w2-operational-loaders.test.mjs` contém asserts Node para status copy/ARIA, condições originais de loading e `Suspense`, fases de autenticação e separação entre Home colorida e loaders monocromáticos. Executar explicitamente `node --test scripts/visual-r1-w2-operational-loaders.test.mjs`. Adicionar o arquivo **não comprova execução**, e não altera `package.json` ou pipelines existentes.
+
+**PROTEÇÕES:** nenhuma alteração operacional em `app/page.tsx`, `OperationalSurfaceTransition.tsx`, hooks de sessão, Firestore, Rules, auth provider, billing, dados de estoque ou movimentações. Nenhuma mudança em `features/inicio` além da Home R2 da branch base; motor vendor MIT intocado. Spinner substituído **apenas onde há espera real**, reduzido movimento/aba oculta preservados pelo renderer W2/W1. Nada foi mesclado na main, publicado em Production ou no RC.
+
+**GATES E PENDÊNCIAS:** Application CI e Core Protection acionados no novo SHA (resultados em andamento na primeira consulta). Falta QA real no navegador: alternância entre superfícies, saída/erro de loading, estados session/workspace do login, reduced-motion, toque, desligamento em aba oculta, FPS/CPU e logout #286; sem alegar certificação funcional completa. Testar no clone local do Fundador e obter aceite visual antes de qualquer GO.
+
+**O QUE FAZER A SEGUIR:** aguardar gates verdes do PR #301, executar teste node + smoke visual no `localhost:3000` e registrar comportamento de loading real sem autenticar indevidamente; avaliar Motion W3 e Border Beam W4 em etapas independentes posteriores. Coordenadores VISUAL-R1 e Geral R1 devem manter controle dos riscos arquiteturais do Block 19.14 antes da promoção da Home/composta.
+
+**CLASSIFICAÇÃO:** **W2 CARREGAMENTOS MONOCROMÁTICOS REALMENTE CONECTADOS EM PR #301 DRAFT; CERTIFICAÇÃO INTEGRADA/E2E/ACEITE PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CASCA BRANCA E PARTÍCULAS MENORES NO ORB R2
 
 **ONDE ESTAMOS:** Fundador corrigiu a diretriz de aparência do núcleo do Início: substituir o tom estrutural cinza-prateado por **branco** e reduzir o tamanho aparente das partículas móveis brancas, amarelo-douradas e vermelho-coral. Mudança concluída em [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), branch `visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`, OPEN/DRAFT. **Main/RC/Production não alterados.**
