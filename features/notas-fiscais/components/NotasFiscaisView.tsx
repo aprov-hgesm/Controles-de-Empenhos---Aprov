@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
 import { InvoiceMirrorDocumentActions } from '../../../components/InvoiceMirrorDocumentActions';
@@ -339,7 +340,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                 <p className="text-sm text-gray-500 font-medium font-semibold">Cadastre novas Notas Fiscais ou acompanhe a tramitação das notas já cadastradas</p>
               </div>
 
-              {/* Sub-Tabs Toggle */}
+              {/* Sub-Tabs Toggle: focus-only beam preserves the existing layout indicator */}
+              <EmprovexBorderBeam variant="focus" theme="light" intensity="low" borderRadius={12} testId="tab-beam-nova-nf">
               <div className="flex border-b border-gray-200 gap-6 flex-wrap">
                 <button
                   onClick={() => setNfSubTab('acompanhar')}
@@ -381,6 +383,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   )}
                 </button>
               </div>
+              </EmprovexBorderBeam>
 
               {/* Sub-Tab 1: Acompanhar Notas Cadastradas */}
               {nfSubTab === 'acompanhar' && (
