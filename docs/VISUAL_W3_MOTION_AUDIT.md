@@ -1,9 +1,9 @@
 # EMPROVEX VISUAL-R1 — Worker 3 / VISUAL-MOTION-01
 
-Data: 2026-10-14  
-Responsável: Worker 3  
-Base de trabalho: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`  
-Branch: `visual-w3-motion-01`  
+Data: 2026-10-14
+Responsável: Worker 3
+Base de trabalho: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
+Branch: `visual-w3-motion-01`
 Escopo: motion e microinterações, sem mudança de regras ou dados. Integração apenas pelo Coordenador VISUAL-R1 e Worker 5.
 
 ## Auditoria estática inicial
@@ -49,8 +49,8 @@ Verificações estáticas: caminhos proibidos não tocados; fluxo de relatórios
 
 **Ainda necessário certificar no HEAD do PR:** `npm run typecheck`, `npm run build`, `npm run verify:reports-shell`, `npm run verify:sag-ux`, `npm run verify:sag-import-assistant`, `git diff --check` e os gates de Application CI/Core Protection. Qualquer CI pendente/falho impede PASS. Capturas antes/depois em navegador ainda não produzidas: exigir validação em desktop (1440×900, 1366×768) e mobile (390×844, 545×374), com `prefers-reduced-motion`, teclado e foco.
 
-**ONDE ESTAMOS:** Worker 3 em branch isolada derivada de `main`; PR Draft próprio previsto.  
-**O QUE ESTAMOS FAZENDO:** três refinamentos localizados, com matriz acima e CI após abertura do PR.  
-**QUEM ESTÁ FAZENDO:** Worker 3.  
-**O QUE FAZER A SEGUIR:** validar build/testes, coletar screenshots A/B reais e solicitar aceite estético.  
+**ONDE ESTAMOS:** Worker 3 em branch isolada derivada de `main`; PR Draft próprio previsto.
+**O QUE ESTAMOS FAZENDO:** três refinamentos localizados, com matriz acima e CI após abertura do PR.
+**QUEM ESTÁ FAZENDO:** Worker 3.
+**O QUE FAZER A SEGUIR:** validar build/testes, coletar screenshots A/B reais e solicitar aceite estético.
 **QUEM FARÁ:** Coordenador VISUAL-R1 e Worker 5. Sem merge, deploy ou atualização do RC.
