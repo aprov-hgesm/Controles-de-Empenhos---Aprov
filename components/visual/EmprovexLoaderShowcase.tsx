@@ -31,6 +31,7 @@ export function EmprovexLoaderShowcase({
             <EmprovexOrbVisual
               size={size}
               performance="balanced"
+              surface="light"
               renderer={renderer}
               fallback={renderer ? undefined : <span className="text-xs opacity-60">W1</span>}
             />
