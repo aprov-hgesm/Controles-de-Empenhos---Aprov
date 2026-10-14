@@ -41,3 +41,8 @@ Data: **2026-10-14**. Decisão de recoverability: **NÃO DEMONSTRADO**. Document
 - **PENDÊNCIA:** manifesto/artefato W1, critérios materiais de checksum/fsck, acesso administrativo para configuração e decisão de custódia.
 - **NÃO EXECUTADO:** restore real ou local de backup W1, rollback, configuração, force-push, merge, deploy, Rules, operações em dados.
 - **Condição final:** `PASS COM PENDÊNCIAS` apenas para a fase preparatória documental; `NÃO DEMONSTRADO` para recuperabilidade.
+
+
+## 5. Reinspeção da entrega W1
+
+A branch `agent-eng-r1-w1-governance-backup@25c02d2316c9984b9534c50f53857c91aabf6485` existe e seu manifesto declara inventário e procedimento, mas **nenhum artefato de backup Git, SHA-256 de bundle ou cópia externa**. O risco crítico prioritário deixa de ser ausência de documentação W1 e passa a ser ausência **material** de backup testável. A classificação de recuperabilidade mantém-se **NÃO DEMONSTRADO**. Os arquivos W1 não foram modificados pelo W2.
