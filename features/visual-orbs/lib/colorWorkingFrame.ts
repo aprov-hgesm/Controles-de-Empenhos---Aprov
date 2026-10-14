@@ -114,9 +114,13 @@ export function paintColorWorkingFrame(
   const colors = resolveOrbColorDistribution(size, t, opts);
 
   for (const dot of frame.dots) {
-    const isMovingOrGlow = dot.a === undefined ||
-      (dot.a !== undefined && Math.abs(dot.white - 0.23) < 0.00001);
-    const color = isMovingOrGlow ? colors.get(keyOf(dot.x, dot.y, dot.z)) : undefined;
+    // Polish places each sparkle halo 0.0001 behind its source particle.
+    // Match the parent's stable identity rather than leaving halos untinted.
+    const isGlow = dot.a !== undefined && Math.abs(dot.white - 0.23) < 0.00001;
+    const isMoving = dot.a === undefined;
+    const color = isMoving || isGlow
+      ? colors.get(keyOf(dot.x, dot.y, isGlow ? dot.z + 0.0001 : dot.z))
+      : undefined;
     const alpha = dot.a ?? 1;
     if (color) {
       ctx.fillStyle = `rgba(${RGB[color]},${alpha})`;
