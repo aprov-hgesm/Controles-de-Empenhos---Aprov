@@ -8,15 +8,24 @@
 
 **MOBILE:** `components/layout/MobileNavigation.tsx` recebeu o mesmo indicador nos 5 atalhos inferiores (Painel, Empenhos, Notas Fiscais, Relatórios, Cronogramas), mantendo callbacks originais e seleção; o efeito é **estático <=640px** e também sob `prefers-reduced-motion: reduce`. Os demais destinos permanecem disponíveis no menu lateral mobile. Novos estilos encapsulados em `components/layout/OperationalNavigationBeam.module.css` reutilizam técnica W4 de conic-gradient mascarado de 1px, sem WebGL, timers ou ciclo de JavaScript; camadas possuem `pointer-events:none`.
 
+**DESTAQUES INTERNOS DOS DEMAIS MÓDULOS (PR #305 ATUALIZADO):** além do menu, o Fundador pediu cobertura das outras áreas operacionais. Após auditoria pontual das estruturas JSX, seis arquivos foram alterados **somente para envolver um cabeçalho ou grupo de abas com o Border Beam existente**, com baixa intensidade e preservação de todos os filhos/callbacks:
+- `features/fornecedores/components/FornecedoresView.tsx` — cabeçalho da Central de Fornecedores (`suppliers-header-border-beam`, travel/24s).
+- `features/itens/components/ConsultaItensView.tsx` — cabeçalho Consulta de Itens (`items-header-border-beam`, travel/24s).
+- `features/avisos/components/CentralAvisosView.tsx` — cabeçalho Central de Avisos (`notices-header-border-beam`, travel/24s); **contorno semântico neutro**, não significa severidade, crítica nem prioridade.
+- `features/cronogramas/components/CronogramasView.tsx` — cabeçalho dos Cronogramas de Entrega no modo lista (`schedules-header-border-beam`, travel/24s).
+- `features/empenhos/components/EmpenhosView.tsx` — navegação entre subabas com `variant='focus'` (`commitments-tabs-border-beam`), mantendo tablist e roving tabindex.
+- `features/notas-fiscais/components/NotasFiscaisView.tsx` — barra das subabas de Notas com `variant='focus'` (`invoices-tabs-border-beam`), mantendo underline original e ações.
+Painel e Relatórios já possuem os dois pontos W4 do PR #303; a Home continua com orb sem borda em volta do núcleo, apenas indicação na navegação global; Central de Depósitos interna permanece fora do escopo. O arquivo `scripts/visual-r1-w4-navigation-beam.test.mjs` foi ampliado para cobrir os seis wrappers, cada qual presente uma única vez e com CSS `low`. Os arquivos JSX possuem tags `EmprovexBorderBeam` pareadas em inspeção estática. **Ainda não são evidência de renderização/Playwright/browser real**.
+
 **LABORATÓRIO:** `components/visual/EmprovexNavigationBeamPreview.tsx` apresenta dez destinos fictícios alternáveis apenas por estado local e foi montado em `/dev/visual-r1`; nenhuma navegação real, Firestore ou escrita executada por esta amostra. Criados `scripts/visual-r1-w4-navigation-beam.test.mjs` (Node read-only) e `tests/e2e/visual-w4-navigation-expansion.spec.mjs` (Playwright), que cobrem presença de botões, callbacks, condição de ativo, redução de movimento/foco e responsividade. Código e asserts essenciais inspecionados, **Node test e browser ainda não executados nesta coordenação**.
 
-**LIMITES:** extensão cobre **a navegação de todos os módulos principais**, não todos os cards/formulários/alerts e nem submenus internos da Central de Depósitos. O cartão de Saldo Total Restante e o foco de Relatórios continuam sob PR #303. Foi priorizada a regra de um único contorno em movimento por vez para evitar saturação visual/consumo GPU. Nenhuma alteração em domínio, saldo, NF, Rules, SAG, auth ou produção.
+**LIMITES:** extensão cobre **toda a navegação principal e mais uma área focal em cada uma das seis telas listadas**; não abrange todos os cards, formulários, alertas ou submenus internos da Central de Depósitos. O cartão de Saldo Total Restante e o foco de Relatórios continuam sob PR #303. Em uma tela comum, há no máximo um beam lento no menu ativo e um beam lento no cabeçalho; em Empenhos/Notas o cabeçalho só reage ao foco. Em mobile/reduced-motion a animação decorativa é desativada. Essa limitação evita saturação visual e preserva a Home R2. Nenhuma alteração em domínio, saldo, NF, Rules, SAG, auth ou produção.
 
 **GATES:** no HEAD do PR #305, Core Protection [#38627566610](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566610) **SUCCESS**; Application CI [#38627566852](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38627566852) **IN_PROGRESS** na última consulta. Executar teste Node + Playwright e QA real mobile/desktop com foco e reduced-motion antes do aceite e de qualquer merge. Não declarar RC GO enquanto gates pendentes.
 
 **TESTE LOCAL:** parar servidor, `git status` limpo no clone; `git fetch origin visual-r1-w4-navigation-expansion-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`; abrir `http://localhost:3000/dev/visual-r1`, seção "Worker 4 · Expansão para todas as abas". O menu principal real aparece após autenticação usual. Sem publicar Preview/Production automaticamente.
 
-**CLASSIFICAÇÃO:** **BORDER BEAM W4 EXPANDIDO A TODAS AS ABAS PRINCIPAIS EM PR #305 DRAFT; CORE SUCCESS; APPLICATION CI, NODE/E2E E HOMOLOGAÇÃO VISUAL PENDENTES.**
+**CLASSIFICAÇÃO:** **BORDER BEAM W4 EXPANDIDO À NAVEGAÇÃO E A SEIS MÓDULOS OPERACIONAIS EM PR #305 DRAFT; CORE SUCCESS NO HEAD VERIFICADO, APPLICATION CI, NODE/E2E E HOMOLOGAÇÃO VISUAL PENDENTES.**
 
 ---
 
