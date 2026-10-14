@@ -26,6 +26,8 @@ export interface EmprovexThinkingOrbProps {
   roundness?: number;
   /** White particle twinkles; 0 reproduces the upstream matte ink. */
   sparkle?: number;
+  /** R2 is opt-in for the Home only; classic remains available for visual comparison. */
+  refinement?: 'classic' | 'r2';
   /** Colored orbital particles are reserved for the central Início feature. */
   palette?: 'monochrome' | 'colored';
   /** Monochrome ink adapts to the host background without extra backdrops. */
@@ -61,6 +63,7 @@ export function EmprovexThinkingOrb({
   speed = 1,
   roundness = 0.72,
   sparkle = 0.68,
+  refinement = 'classic',
   palette = 'monochrome',
   surface = 'dark',
   label = 'Carregando',
@@ -120,10 +123,14 @@ export function EmprovexThinkingOrb({
 
       const source = nativeFrame(presetSize, clockSeconds, opts);
       const enhanced = animation === 'working'
-        ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle, palette === 'colored' ? 1 : 0)
+        ? polishWorkingFrame(
+            source, presetSize, clockSeconds, roundness, sparkle,
+            palette === 'colored' && refinement === 'classic' ? 1 : 0,
+            palette === 'colored' ? refinement : 'classic',
+          )
         : source;
       if (animation === 'working' && palette === 'colored') {
-        paintColorWorkingFrame(context, enhanced, presetSize, clockSeconds, opts);
+        paintColorWorkingFrame(context, enhanced, presetSize, clockSeconds, opts, refinement);
       } else {
         paintFrame(context, enhanced, surface === 'dark');
       }
@@ -198,7 +205,7 @@ export function EmprovexThinkingOrb({
       reducedMotion.removeEventListener('change', sync);
       finePointer.removeEventListener('change', sync);
     };
-  }, [animation, interactive, paused, performanceMode, size, speed, roundness, sparkle, palette, surface]);
+  }, [animation, interactive, paused, performanceMode, size, speed, roundness, sparkle, refinement, palette, surface]);
 
   const isLoading = state === 'loading';
   const orbStyle = { '--orb-size': `${SIZE_PIXELS[size]}px` } as CSSProperties;
@@ -214,6 +221,7 @@ export function EmprovexThinkingOrb({
       data-interactive={interactive ? 'true' : 'false'}
       data-animation={animation}
       data-orb-palette={palette}
+      data-orb-refinement={refinement}
       data-orb-surface={surface}
       data-testid="emprovex-thinking-orb"
       aria-hidden={isLoading ? undefined : true}
