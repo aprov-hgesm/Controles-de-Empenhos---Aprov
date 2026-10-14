@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W3 MOTION RELATÓRIOS E SAG PARA HOMOLOGAÇÃO
+
+**ONDE ESTAMOS:** Fundador aprovou refinamento final do centro orbital branco-quente da Home R2 e autorizou prosseguir. Avançamos para Worker 3 Motion, criando [PR #302](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/302) OPEN/DRAFT, branch `visual-r1-w3-motion-homologation-01@525b86cba6445273de52be7a37e18f4cc1ba94f6`, baseada no [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) W2, que incorpora a Home R2 via [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300). `main`, RC e produção intactos.
+
+**AUDITORIA W3:** artefatos anteriores do Worker 3 ([PR #293](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293), na composição W5 PR #295) já introduziram tokens 150–250ms, transições de cor/borda/sombra, foco visível, acesso reduzido movimento e entradas discretas em `RelatoriosView`, `SagSupplierStep`, `SagImportProgress`. A homologação foi separada da escrita real SAG e da lógica de dados.
+
+**ENTREGA DO PR #302:** `features/relatorios/components/RelatoriosView.tsx` ganhou entrada de painel de 200ms/6px por `motion.section` ao alternar subaba, sem `AnimatePresence` de saída, esperas, overlays ou alteração de contratos. Continua `aria-live=polite` e suporta `prefers-reduced-motion`. `components/visual/EmprovexMotionReviewPreview.tsx` criado com demonstração interativa dos **componentes reais** `SagImportProgress` e `SagSupplierStep`, controlados localmente por estados visuais e **dois fornecedores totalmente fictícios**; não usa Firebase, dados do cliente, banco, autenticação nem importação de NS. Integrado ao laboratório existente `components/visual/EmprovexVisualIntegrationPreview.tsx` acessível em `/dev/visual-r1` exclusivamente em dev/Preview. Acrescentado `tests/e2e/visual-motion-review.spec.mjs` com cenários de progresso, seleção, reduced-motion e responsividade; criação do spec **não comprova browser executado**.
+
+**CHECKS E REGRESSÕES:** Core Protection [#38622112195](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38622112195) SUCCESS; Application CI [#38622112199](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38622112199) em execução na última consulta. Anchors de `verify:reports-shell` e `verify:sag-ux` inspecionados e preservados; os próprios scripts e guards não foram modificados. Tests/QA real de Relatórios, alternância SAG e teclado/reduced-motion ainda pendentes. PR DRAFT sem merge.
+
+**PRÓXIMOS PASSOS:** no clone do Fundador (árvore limpa): `git fetch origin visual-r1-w3-motion-homologation-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Ver laboratório Motion W3 e tela real de Relatórios com credenciais próprias. Para Worker 4 Border Beam, exigir seleção prévia de um ou dois locais de destaque e aceite antes de introduzir animações contínuas na Home. Manter todos PRs encadeados em governança, sem publicar em `main` ou Production.
+
+**CLASSIFICAÇÃO:** **W3 MOTION ENTREGUE EM PR #302 DRAFT, CORE PROTECTION SUCCESS; APPLICATION CI/PLAYWRIGHT/HOMOLOGAÇÃO ESTÉTICA PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SEGUNDO REFORÇO LUMINOSO DO CENTRO ORB R2
 
 **SOLICITAÇÃO:** após aprovar centralização da Home e o primeiro ganho de brilho, Fundador solicitou reforço adicional exclusivamente do núcleo energético.
