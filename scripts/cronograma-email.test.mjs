@@ -165,7 +165,7 @@ test('MIME real gera dois anexos independentes e não envia MIME inválido', asy
   assert.equal(typeof build, 'function');
 
   const sample = (name, content) => ({
-    blob: new Blob(['%PDF-1.4\\n', content], { type: 'application/pdf' }),
+    blob: new Blob(['%PDF-1.4\n', content], { type: 'application/pdf' }),
     name,
   });
   const cronograma = sample('Cronograma_NE_123.pdf', 'CRONOGRAMA_TESTE');
@@ -186,9 +186,14 @@ test('MIME real gera dois anexos independentes e não envia MIME inválido', asy
   assert.equal((mime.match(/Content-Disposition: attachment; filename=/g) || []).length, 2);
   assert.match(mime, /filename="Cronograma_NE_123.pdf"/);
   assert.match(mime, /filename="Nota_Empenho_NE_123.pdf"/);
-  assert.match(mime, /Content-Type: multipart\\/mixed/);
-  assert.match(mime, /Q1JPTk9HUkFNQV9URVNURQ==/); // CRONOGRAMA_TESTE em base64
-  assert.match(mime, /RU1QRU5IT19URVNURQ==/); // EMPENHO_TESTE em base64
+  assert.match(mime, /Content-Type: multipart\/mixed/);
+  const encodedBodies = Array.from(
+    mime.matchAll(/Content-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=]+)/g),
+    (match) => Buffer.from(match[1], 'base64').toString('utf8')
+  );
+  assert.equal(encodedBodies.length, 3); // corpo do e-mail + dois PDFs
+  assert.match(encodedBodies[1], /CRONOGRAMA_TESTE/);
+  assert.match(encodedBodies[2], /EMPENHO_TESTE/);
 
   await assert.rejects(
     () => build({ ...input, additionalAttachments: [{ name: 'NE.pdf', blob: new Blob(['inválido']) }] }, 'setor@example.org'),
