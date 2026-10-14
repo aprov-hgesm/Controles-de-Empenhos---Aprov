@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseConfig from './firebaseRuntimeConfig';
 
 const useE2eEmulators = process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1';
 const e2eProjectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim();
@@ -45,8 +45,7 @@ export const db = useE2eEmulators
   : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: production uses the named Firestore database */
 
 export const WAREHOUSE_FIRESTORE_DATABASE_ID =
-  process.env.NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID?.trim()
-  || 'emprovex-warehouse';
+  firebaseConfig.warehouseDatabaseId;
 
 export const warehouseDb = getFirestore(app, WAREHOUSE_FIRESTORE_DATABASE_ID);
 export const auth = getAuth();

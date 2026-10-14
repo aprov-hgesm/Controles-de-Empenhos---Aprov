@@ -148,7 +148,7 @@ const monitoringModule = compiled(
 );
 await monitoringModule.link(async (specifier) => {
   if (specifier === 'jose') return jose;
-  if (specifier === '../../firebase-applet-config.json') return firebaseConfig;
+  if (specifier === '../firebaseRuntimeConfig') return firebaseConfig;
   if (specifier === '../firestoreBillingDay') return billingDayModule;
   if (specifier === '../platformCapacity') return capacityModule;
   throw new Error(`Import inesperado em googleCloudMonitoring: ${specifier}`);

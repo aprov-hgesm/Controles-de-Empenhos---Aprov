@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,

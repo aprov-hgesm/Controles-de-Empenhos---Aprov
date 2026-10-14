@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import firebaseConfig from '../../../../firebase-applet-config.json';
+import firebaseConfig from '../../../../lib/firebaseRuntimeConfig';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { getGoogleAccessToken, SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import {
@@ -63,7 +63,7 @@ import {
 
 const PROJECT_ID = firebaseConfig.projectId;
 const CORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId;
-const WAREHOUSE_DATABASE_ID = 'emprovex-warehouse';
+const WAREHOUSE_DATABASE_ID = firebaseConfig.warehouseDatabaseId;
 const EPSILON = 0.000001;
 
 type FirestoreValue =

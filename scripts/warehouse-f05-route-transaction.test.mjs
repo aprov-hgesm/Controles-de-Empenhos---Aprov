@@ -46,21 +46,22 @@ const decode = (v) => 'stringValue' in v ? v.stringValue
   : 'arrayValue' in v ? (v.arrayValue.values || []).map(decode)
   : Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k,x]) => [k, decode(x)]));
 const fields = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, encode(v)]));
-function fixture() {
+function fixture(coreDatabase = 'core', warehouseDatabase = 'emprovex-warehouse') {
   const docs = new Map();
   let revision = 0, commits = 0, failure = null;
   const put = (database, path, data) => docs.set(database + '/' + path, { data, version: String(++revision) });
-  put('core', 'workspaces/' + workspaceId + '/invoices/nf-1', invoice);
-  put('core', 'workspaces/' + workspaceId + '/empenhos/emp-1', empenho);
-  put('emprovex-warehouse', root + '/depots/dep_1', { workspaceId, ug, status: 'active' });
-  put('emprovex-warehouse', root + '/locations/loc_1', { workspaceId, ug, status: 'active', depotId: 'dep_1', kind: 'LOCAL' });
+  put(coreDatabase, 'workspaces/' + workspaceId + '/invoices/nf-1', invoice);
+  put(coreDatabase, 'workspaces/' + workspaceId + '/empenhos/emp-1', empenho);
+  put(warehouseDatabase, root + '/depots/dep_1', { workspaceId, ug, status: 'active' });
+  put(warehouseDatabase, root + '/locations/loc_1', { workspaceId, ug, status: 'active', depotId: 'dep_1', kind: 'LOCAL' });
   return {
     docs, put, get: (database,path) => docs.get(database + '/' + path)?.data,
     get commits() { return commits; }, setFailure: (value) => failure = value,
     async fetch(url, options = {}) {
       const match = url.match(/\/databases\/([^/]+)\/documents(?::commit|\/([^?]*))$/);
       assert.ok(match, url);
-      const database = decodeURIComponent(match[1]) === 'emprovex-warehouse' ? 'emprovex-warehouse' : 'core';
+      const database = decodeURIComponent(match[1]);
+      assert.ok([coreDatabase, warehouseDatabase].includes(database), 'unexpected database destination');
       const path = match[2]?.split('/').map(decodeURIComponent).join('/');
       const respond = (body, status = 200) => ({
         ok: status >= 200 && status < 300, status,
@@ -91,10 +92,10 @@ function fixture() {
   };
 }
 const val = (obj) => ({ ok: true, data: obj });
-function makeRoute(fx) {
+function makeRoute(fx, target = { projectId: 'demo-test', firestoreDatabaseId: 'core', warehouseDatabaseId: 'emprovex-warehouse' }) {
   const helpers = {
     'next/server': { NextResponse: { json: (payload, init) => ({ status: init?.status || 200, payload }) } },
-    'firebase-applet-config.json': { projectId: 'demo-test', firestoreDatabaseId: 'core' },
+    'firebaseRuntimeConfig': target,
     'firebaseFounderAuth': { FounderAuthError: class FounderAuthError extends Error {} },
     'sectorProvisioningAdmin': { getGoogleAccessToken: async () => 'mock-admin', SectorProvisioningFailure: class SectorProvisioningFailure extends Error {} },
     'warehouseAccess': { verifyWarehouseRequest: async () => ({ workspaceId, ug, uid }), WarehouseAccessError: class WarehouseAccessError extends Error {} },
@@ -192,4 +193,27 @@ test('legacy allocation without intent hash fails closed on replay, never double
   assert.equal(retry.payload.error, 'WAREHOUSE_IDEMPOTENCY_CONFLICT');
   assert.equal(fx.commits, 1, 'replay may not commit another movement');
   assert.equal(fx.get('emprovex-warehouse', root + '/balances/' + materialId).quantity, 4);
+});
+
+
+test('isolated F05 route reads and commits only its configured project and databases', async () => {
+  const target = { projectId: 'demo-isolated', firestoreDatabaseId: 'preview-core', warehouseDatabaseId: 'preview-stock' };
+  const fx = fixture(target.firestoreDatabaseId, target.warehouseDatabaseId);
+  const requests = [];
+  const fetchFixture = fx.fetch.bind(fx);
+  fx.fetch = async (url, options) => {
+    assert.ok(url.includes('/projects/' + target.projectId + '/'));
+    requests.push(url);
+    return fetchFixture(url, options);
+  };
+  const post = makeRoute(fx, target);
+  const first = await post();
+  assert.equal(first.status, 200);
+  assert.equal(fx.commits, 1);
+  assert.equal(fx.get('preview-stock',root+'/balances/'+materialId).quantity, 4);
+  assert.ok(requests.some(url=>url.includes('/databases/preview-core/')));
+  assert.ok(requests.some(url=>url.endsWith('/databases/preview-stock/documents:commit')));
+  assert.equal((await post()).payload.result.applied,false);
+  assert.equal(fx.commits,1);
+  assert.equal([...fx.docs.keys()].some(key=>key.startsWith('emprovex-warehouse/')),false);
 });

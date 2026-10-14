@@ -1,6 +1,6 @@
 import { importPKCS8, SignJWT } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import type { FirebaseGlobalUsageObservation } from './googleCloudMonitoring';
 
 const FIREBASE_ADMIN_SERVICE_ACCOUNT_ENV = 'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON';

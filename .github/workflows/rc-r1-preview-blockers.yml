@@ -1,11 +1,29 @@
 name: RC R1 Preview Blockers Regression
 on:
   push:
-    branches: [rc-r1-preview-blockers-fix-01]
+    branches: [rc-r1-preview-blockers-fix-01, rc-r1-preview-firebase-isolation-01]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  firebase-isolation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test scripts/firebase-preview-isolation.test.mjs scripts/warehouse-f05-route-transaction.test.mjs scripts/warehouse-fast-intake-errors.test.mjs
+      - name: Preview without environment must fail before compilation
+        shell: bash
+        run: |
+          if VERCEL_ENV=preview node node_modules/next/dist/bin/next build > /tmp/preview-preflight.txt 2>&1; then
+            echo 'Expected Preview build refusal'; exit 1
+          fi
+          rg -q 'FIREBASE_PREVIEW_ISOLATION_REQUIRED' /tmp/preview-preflight.txt
   sidebar-logout:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

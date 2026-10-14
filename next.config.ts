@@ -1,7 +1,22 @@
 import type {NextConfig} from 'next';
+import firebaseBaseline from './firebase-applet-config.json';
+import { assertPreviewServiceAccount, resolveFirebaseEnvironment } from './lib/firebaseEnvironment.mjs';
+
+const deploymentEnvironment = process.env.VERCEL_ENV || 'local';
+// Stop Preview builds before any route/client can inherit production targets.
+const firebaseTarget = resolveFirebaseEnvironment(firebaseBaseline, {
+  environment: deploymentEnvironment,
+  publicConfigJson: process.env.NEXT_PUBLIC_EMPROVEX_FIREBASE_CONFIG_JSON,
+  legacyWarehouseDatabaseId: process.env.NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID,
+});
+
+if (deploymentEnvironment === 'preview') {
+  assertPreviewServiceAccount(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON, firebaseTarget.projectId);
+}
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_EMPROVEX_DEPLOYMENT_ENVIRONMENT: deploymentEnvironment },
   poweredByHeader: false,
   async headers() {
     return [
