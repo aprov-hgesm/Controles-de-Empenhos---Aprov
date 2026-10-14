@@ -1,18 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
-## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2: PR #291 RECEBIDO, CI AINDA PENDENTE
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2: PR #291 RECEBIDO, CI VERDE
 
 **ONDE ESTAMOS:** [PR #291](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/291) OPEN/DRAFT, `visual-w2-loaders-01@670a77bcffa0d2fcf746d5b0a4bda181380b0d54`, criado sobre `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. Foram conferidos seis arquivos novos: `orbLoaderContract.ts`, `EmprovexOrbVisual.tsx`, `EmprovexOrbLoader.tsx`, `EmprovexLoadingBoundary.tsx`, `EmprovexLoaderShowcase.tsx` e `docs/VISUAL_R1_W2_LOADERS_HANDOFF.md`. Nenhum arquivo existente foi alterado, e nenhum componente novo foi montado em tela produtiva.
 
 **O QUE ESTAMOS FAZENDO:** infraestrutura de cinco variantes (`hero=160`, `large=104`, `medium=64`, `small=40`, `mini=20`) com `full/balanced/static`, injeção de `OrbRenderer = React.ComponentType<OrbRendererProps>`, props `size, pixelSize, density, speed, intensity, paused`; slot decorativo, fallback neutro, status de loading condicionado a `loading=true`, estados `loading/ready/error`, vitrine sem simular operação e pausa da animação em aba oculta/reduced-motion. Inventário: `OperationalSurfaceLoading` prioridade 1, `EmprovexAuthLoading` prioridade 2, `OperationalSurfaceTransition` preservada. O renderizador pontilhado autêntico pertence exclusivamente ao W1; nenhuma estética Nebula é permitida.
 
-**GATES NO HEAD #291:** [Core Protection #38522191249](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191249) SUCCESS; [Application CI #38522191216](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191216) **IN_PROGRESS** na consulta desta sincronização. A entrega não possui execução de E2E, benchmark CPU/GPU ou revisão visual do renderer final porque W1/integração ainda não concluídos. Não marcar CI completo como PASS antecipadamente.
+**GATES NO HEAD #291:** [Core Protection #38522191249](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191249) SUCCESS; [Application CI #38522191216](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522191216) **SUCCESS**, com `validate-application` e Blocks 16–21 SUCCESS (7/7). A entrega não possui execução de E2E, benchmark CPU/GPU ou revisão visual do renderer final porque W1/integração ainda não concluídos. Build/TypeScript/validações executaram sob Application CI verde; testes E2E e medição real de CPU/GPU ainda não executados.
 
 **QUEM ESTÁ FAZENDO:** Worker 2 entregou a infraestrutura e publicou o handoff também como comentário no PR #290; Coordenador VISUAL-R1 valida contrato e preserva ownership; W1 responde pelo renderer real; W5 integra após aceite.
 
 **O QUE FAZER A SEGUIR / QUEM FARÁ:** W1 + Coordenador pactuam a API do renderer, em especial o mapeamento entre perfis solicitados e presets 20/64 nativos da biblioteca; não adicionar dependência gráfica nem alterar arquivos do núcleo pelo W2. Após aceite estético explícito do Fundador e CI verde, W5 incorpora o loader nas superfícies autorizadas, sem trocar condições operacionais, e executa Playwright, acessibilidade, responsividade e medição de desempenho. Não realizar merge na `main`, alterar RC, Firestore, Vercel ou dados.
 
-**CLASSIFICAÇÃO:** **PASS DE ISOLAMENTO / INFRAESTRUTURA PREPARADA; CI PENDENTE; INTEGRAÇÃO BLOCKED POR ACEITE W1.** Não é GO produtivo.
+**CLASSIFICAÇÃO:** **PASS TÉCNICO DE INFRAESTRUTURA ISOLADA (CORE + APPLICATION CI); INTEGRAÇÃO PENDENTE DO ACEITE W1.** Não é GO produtivo.
 
 ---
 
@@ -390,7 +390,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
-| VISUAL-R1 (paralelo) | W2 ENTREGOU INFRAESTRUTURA ISOLADA; W1/ACEITE PENDENTES | PR #291@670a77bcffa0d2fcf746d5b0a4bda181380b0d54 DRAFT com seis arquivos novos; Core PASS, Application em execução; PR #288 mantém estética não aprovada e CI vermelho; sem integração/merge |
+| VISUAL-R1 (paralelo) | W2 ENTREGOU INFRAESTRUTURA ISOLADA; W1/ACEITE PENDENTES | PR #291@670a77bcffa0d2fcf746d5b0a4bda181380b0d54 DRAFT com seis arquivos novos; Core PASS, Application 7/7 SUCCESS; PR #288 mantém estética não aprovada e CI vermelho; sem integração/merge |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
