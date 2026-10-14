@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CENTRALIZAÇÃO GEOMÉTRICA HOME R2 NOS PRS #300 E #301
+
+**ONDE ESTAMOS:** Fundador observou em screenshot da Home do `localhost:3000` orbe central visualmente deslocado para baixo. Confirmado no CSS: container `.system` possuía `top: 54%` no desktop e overrides `58% / 57% / 56% / 56%` nos breakpoints. Solicitada e executada centralização geométrica do núcleo Thinking Orbs R2.
+
+**EXECUÇÃO GitHub:** Correção aplicada em `features/inicio/components/InicioView.module.css` no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), branch `visual-r1-home-orb-01@853e10fcda1f0b30c0ce61036b1816f7074f52e5`, e na branch filha de carregamentos do [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301), `visual-r1-w2-operational-loaders-01@bb0bf8a1b91e4ed71e6e85c45f7ec3f922c53eaf`. **Exatamente o mesmo conteúdo CSS** nos dois ramos, blob `d99cc9278835a3a898723da1c715634c87595f85`. Alteração pontual: `.system {top:50%}` em 5 lugares (desktop, ≤900px, ≤640px, ≤420px, altura ≤560px); `left:50%` e `translate3d(-50%,-50%,0)` preservados. `InicioCore` já usa `left:50%;top:50%` dentro do sistema. Nenhuma alteração em cor/tamanho/formato/animação/física do Orb R2, loaders W2, dados, autenticação, Rules ou efeitos da Home.
+
+**GOVERNANÇA DOS PRS EMPILHADOS:** #301 depende de #300; CSS recebeu commits independentes com **blob final idêntico**. Antes de merge futuro conferir ancestry/diff, pois GitHub pode listar CSS no diff encadeado embora conteúdo igual. Nenhum PR foi mesclado, nenhuma publicação produtiva foi feita, `main` e RC inalterados.
+
+**CERTIFICAÇÃO:** Core Protection e Application CI reiniciados no HEAD exato de cada PR; aguardando resultado, screenshot do Fundador na Home desktop e checagem responsiva. Não classificar PASS de browser ou release sem essas evidências. Testar localmente branch #301 com `git fetch origin visual-r1-w2-operational-loaders-01`, `git switch --detach FETCH_HEAD` e `npm run dev -- -p 3000` depois de confirmar tree limpa.
+
+**CLASSIFICAÇÃO:** **ALINHAMENTO VERTICAL IMPLEMENTADO NOS PRS #300 E #301; CI/HOMOLOGAÇÃO VISUAL PENDENTES; MAIN/RC/PRODUÇÃO INTACTOS.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 2 LOADERS MONOCROMÁTICOS OPERACIONAIS
 
 **ONDE ESTAMOS:** autorização do Fundador para prosseguir com o Worker 2 após aceite do núcleo R2 da Home. Integração real de indicadores de carregamento implementada na branch exclusiva `visual-r1-w2-operational-loaders-01@ab753a694fc15124ab059ed56c05cee760c2df38`, [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) OPEN/DRAFT, **baseada na Home R2 PR #300** (`visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`). PR encadeado não deve ser integrado fora de ordem. A `main` e o RC continuam preservados.
