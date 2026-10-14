@@ -161,18 +161,21 @@ export function InicioCore({
     >
       {visualMode === 'thinking-orbs' ? (
         <span className={styles.thinkingOrbStage} aria-hidden="true">
-          <EmprovexThinkingOrb
-            size="hero"
-            animation="working"
-            palette="colored"
-            surface="dark"
-            roundness={0.72}
-            sparkle={0.68}
-            performance={performanceMode}
-            paused={ambientPaused}
-            interactive={false}
-            state="decorative"
-          />
+          <span className={styles.homeOrbCoreGlow} />
+          <span className={styles.homeOrbBoost}>
+            <EmprovexThinkingOrb
+              size="hero"
+              animation="working"
+              palette="colored"
+              surface="dark"
+              roundness={0.72}
+              sparkle={0.76}
+              performance={performanceMode}
+              paused={ambientPaused}
+              interactive={false}
+              state="decorative"
+            />
+          </span>
         </span>
       ) : (
         <>
