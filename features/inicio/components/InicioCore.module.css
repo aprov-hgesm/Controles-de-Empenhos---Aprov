@@ -1033,9 +1033,9 @@
   /* Soft atmospheric coupling with EMPROVEX navy; no opaque blue sphere. */
   background: radial-gradient(
     circle,
-    rgba(255, 249, 228, 0.45) 0%,
-    rgba(226, 236, 255, 0.17) 11%,
-    rgba(166, 190, 244, 0.047) 32%,
+    rgba(255, 249, 228, 0.66) 0%,
+    rgba(226, 236, 255, 0.23) 11%,
+    rgba(166, 190, 244, 0.06) 32%,
     transparent 57%
   );
   pointer-events: none;
@@ -1050,8 +1050,8 @@
   height: 5px;
   border-radius: 50%;
   background: #fffaf0;
-  box-shadow: 0 0 9px rgba(255, 252, 240, 0.9),
-    0 0 21px rgba(255, 210, 90, 0.36);
+  box-shadow: 0 0 9px rgba(255, 252, 240, 0.98),
+    0 0 21px rgba(255, 210, 90, 0.52);
   transform: translate(-50%, -50%);
 }
 
