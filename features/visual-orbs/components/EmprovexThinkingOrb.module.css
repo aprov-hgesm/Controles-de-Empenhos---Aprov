@@ -25,6 +25,14 @@
   pointer-events: auto;
 }
 
+/* Contrast policy: transparent over the dark EMPROVEX shell; flat
+ * graphite stage on white/light cards, never a fake orb or gradient sphere. */
+.root[data-contrast-surface='matte'] {
+  background: #111923;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
 .canvas {
   width: 100%;
   height: 100%;
