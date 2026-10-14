@@ -349,8 +349,8 @@ requireText(
 
 requireText(
   firebaseSource,
-  "|| 'emprovex-warehouse';",
-  'warehouseDb perdeu o databaseId padrão emprovex-warehouse.'
+  "firebaseConfig.warehouseDatabaseId;",
+  'warehouseDb perdeu o destino Warehouse da configuração compartilhada.'
 );
 requireText(
   firebaseSource,

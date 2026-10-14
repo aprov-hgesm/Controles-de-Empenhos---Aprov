@@ -1,6 +1,7 @@
 import { SignJWT, importPKCS8 } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig, { firebaseDeploymentEnvironment } from '../firebaseRuntimeConfig';
+import { assertPreviewServiceAccount } from '../firebaseEnvironment.mjs';
 
 const PROJECT_ID = firebaseConfig.projectId;
 const DATABASE_ID = firebaseConfig.firestoreDatabaseId;
@@ -69,6 +70,8 @@ function parseServiceAccount(): Required<Pick<ServiceAccountCredentials, 'client
   if (!raw) {
     throw new Error('A credencial administrativa do Firebase não está configurada no servidor.');
   }
+
+  if (firebaseDeploymentEnvironment === 'preview') assertPreviewServiceAccount(raw, PROJECT_ID);
 
   let parsed: ServiceAccountCredentials;
   try {

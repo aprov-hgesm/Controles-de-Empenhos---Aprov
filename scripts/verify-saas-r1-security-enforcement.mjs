@@ -34,7 +34,7 @@ requireText(lifecycle, "workspaceId === HGESM_WORKSPACE_ID", 'Lifecycle deixou d
 requireText(lifecycle, 'SESSION_REVOCATION_VERSION', 'Suspensão deixou de materializar tombstones de sessão.');
 requireText(lifecycle, 'sessionRevocations', 'Suspensão deixou de gravar revogação de sessão.');
 requireText(lifecycle, 'sessionSlots', 'Suspensão deixou de remover leases ativos.');
-requireText(lifecycle, "WAREHOUSE_DATABASE_ID = 'emprovex-warehouse'", 'Lifecycle deixou de sincronizar autorização da Central.');
+requireText(lifecycle, "WAREHOUSE_DATABASE_ID = firebaseConfig.warehouseDatabaseId", 'Lifecycle deixou de sincronizar autorização da Central.');
 requireText(lifecycle, "WAREHOUSE_ACCESS_COLLECTION = 'warehouseAccess'", 'Lifecycle perdeu o espelho mínimo de autorização da Central.');
 requireText(lifecycle, "currentDocument: { updateTime:", 'Lifecycle deixou de usar precondições contra concorrência.');
 requireText(lifecycle, "operation: 'sector.status_change'", 'Lifecycle perdeu auditoria de mudança de status.');

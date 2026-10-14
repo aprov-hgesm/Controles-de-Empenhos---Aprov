@@ -2,7 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig, { firebaseDeploymentEnvironment } from '../firebaseRuntimeConfig';
+import { assertPreviewServiceAccount } from '../firebaseEnvironment.mjs';
 import { buildInitialBillingAccount } from '../billing';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
@@ -126,6 +127,16 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
       'SERVER_CONFIGURATION',
       503
     );
+  }
+
+  if (firebaseDeploymentEnvironment === 'preview') {
+    try { assertPreviewServiceAccount(raw, PROJECT_ID); } catch {
+      throw new SectorProvisioningFailure(
+        'A credencial administrativa isolada do Preview está ausente ou incompatível.',
+        'SERVER_CONFIGURATION',
+        503
+      );
+    }
   }
 
   let parsed: Partial<ServiceAccountCredentials>;
