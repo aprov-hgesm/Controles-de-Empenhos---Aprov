@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { EmprovexThinkingOrbPreview } from '@/features/inicio/components/EmprovexThinkingOrbPreview';
+import { EmprovexThinkingOrbPreview } from '@/features/visual-orbs/components/EmprovexThinkingOrbPreview';
 
 /** Deliberately unavailable in production builds; no auth or data involved. */
 export default function VisualOrbDevelopmentPage() {

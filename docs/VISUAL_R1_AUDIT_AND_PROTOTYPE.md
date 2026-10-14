@@ -72,7 +72,7 @@
 
 - Base GitHub verificada: PR #288 HEAD `4224a51230b123c6bee7237ea233f66a806401ad`; branch de execução `visual-w1-orb-core-01` (PR próprio encadeado).
 - A hipótese estética anterior de `Nebula Core` foi rejeitada. Substituídos o TSX/CSS do candidato isolado por Canvas 2D, geometrias e presets originais do MIT `Jakubantalik/thinking-orbs` (versão upstream 0.3.1).
-- Fonte preservada integralmente em `features/inicio/vendor/thinking-orbs/`, incluindo `LICENSE`; sem dependência NPM nova e sem WebGL, gradients, bolhas azuis, filamentos ou serviços de rede.
+- Fonte preservada integralmente em `features/visual-orbs/vendor/thinking-orbs/`, incluindo `LICENSE`; sem dependência NPM nova e sem WebGL, gradients, bolhas azuis, filamentos ou serviços de rede.
 - Presets `20` e `64` continuam distintos. As variantes `hero=136`, `large=116`, `medium=72`, `small=42`, `mini=20` usam escala de transformação de Canvas, sem editar geometria, distribuição, contraste ou velocidades nativas. `hero` cabe em até 98 px no mobile.
 - 9 estados nativos são configuráveis. A opção de referência é `working`, com pontos girando nas órbitas; o modo `searching` usa meridiano pontilhado. Interação translacional máxima de 1,8 px só no perfil `full` com ponteiro fino.
 - `full` até 45 FPS, `balanced` até 20 FPS e `static` sem loop; reduced-motion captura quadro estático, hidden-tab e IntersectionObserver suspendem frames, ResizeObserver calibra DPR de no máximo 2. Cleanup cancela RAF e observers/listeners.
@@ -81,3 +81,11 @@
 - `InicioCore.tsx`, `InicioCore.module.css`, `InicioView.tsx`, `useInicioPerformanceProfile.ts` e `app/page.tsx` permanecem intactos. Nenhuma substituição do núcleo operacional antes da aprovação estética explícita.
 - Higiene: espaços finais removidos deste documento na branch do Worker 1, corrigindo a causa conhecida do `git diff --check` vermelho em #288. Novo CI e testes reais ainda precisam ser verificados no HEAD próprio.
 - Responsabilidade compartilhada: congelar mudanças simultâneas no mesmo TSX/CSS do W1 antes da integração pelo Coordenador. Nenhum merge, deploy de produção, alteração em Rules/Firestore/autenticação/RC.
+
+## Decisão de isolamento — guard Bloco 19.14
+
+O CI do HEAD `3ee65283` (`Application CI #38522074356`) falhou no `Block 19.14 final closure guard` com a mensagem `[BLOCK] Início adicionou Canvas.` O script `scripts/verify-block-19-14-final-closure.mjs` proíbe literalmente `<canvas` em qualquer arquivo TS/TSX/CSS sob `features/inicio`. Esse guard é parte do contrato econômico da Home e não pode ser afrouxado silenciosamente por este worker.
+
+**Solução nesta branch:** remoção do candidato originalmente adicionado a `features/inicio/components/EmprovexThinkingOrb.*` (sem tocar em `InicioCore`, `InicioView` ou nas rotinas operacionais) e relocação dos arquivos novos para `features/visual-orbs/components` e `features/visual-orbs/vendor/thinking-orbs`. O protótipo continua isolado em `app/dev/visual-orb/page.tsx`, apenas na execução local development. **O Canvas não faz parte da Home.** Nenhum guard, teste, Rules ou configuração de deploy foi alterado.
+
+A integração futura do Canvas na Home exigirá revisão explícita pelos Coordenadores VISUAL-R1 e Geral R1 sobre a compatibilidade entre a nova demanda e o guard 19.14, seguida de autorização do Fundador, orçamento de FPS/desempenho e E2E. Simplesmente esconder o Canvas atrás de imports para satisfazer um grep não seria certificação funcional.
