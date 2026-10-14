@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CASCA BRANCA E PARTÍCULAS MENORES NO ORB R2
+
+**ONDE ESTAMOS:** Fundador corrigiu a diretriz de aparência do núcleo do Início: substituir o tom estrutural cinza-prateado por **branco** e reduzir o tamanho aparente das partículas móveis brancas, amarelo-douradas e vermelho-coral. Mudança concluída em [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), branch `visual-r1-home-orb-01@a3581612a295e06473199733d223353920d62048`, OPEN/DRAFT. **Main/RC/Production não alterados.**
+
+**O QUE FOI MODIFICADO:** `features/visual-orbs/lib/polishWorkingFrame.ts`: somente R2 converte cor estrutural Fibonacci para tinta branca no painter escuro (valor `white=0`), com raio de cada ponto da casca reduzido em 12% e profundidade ainda determinada pela opacidade; partículas móveis R2 passam de fator `0.82 + 0.09*gleam` para `0.65 + 0.07*gleam` (aprox. -21% de raio), com redução proporcional dos halos de cintilação. `features/visual-orbs/lib/colorWorkingFrame.ts`: a casca e trilhas não coloridas usam tinta branca, com a trilha orbital atenuada (fator 0.58) para não criar anéis; permanece a paleta móvel `#FFFFFF`, `#FFD25A` e `#FF5A46` e o contrato 70/30 nas rápidas. O comparador Classic × R2 de `components/visual/EmprovexVisualIntegrationPreview.tsx` recebeu legenda atualizada. **Refinamento exclusivo R2 colorido na Home; Classic intacto, loaders monocromáticos inalterados, motor MIT não modificado**.
+
+**GATES E PRÓXIMAS ETAPAS:** novos checks Core Protection/Application CI disparados para o HEAD do PR #300, pendentes no instante do registro; não declarar PASS antes de concluidos no SHA exato. Fundador poderá atualizar o localhost, testar em `/dev/visual-r1` e enviar screenshots desktop/mobile. Revalidar performance/reduced motion e deliberação arquitetural Block 19.14 antes de qualquer pedido de merge. Nenhum dado, autenticação, Firestore Rules, Vercel Production ou RC modificado.
+
+**CLASSIFICAÇÃO:** **COR BRANCA DA CASCA E REDUÇÃO DAS PARTÍCULAS R2 IMPLEMENTADAS NO GITHUB; CI E ACEITE VISUAL PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EMPROVEX ORB R2 IMPLEMENTADO PARA A HOME
 
 **ONDE ESTAMOS:** Fundador solicitou compatibilidade estética maior do núcleo Thinking Orbs após testar o orb pontilhado no localhost. R2 efetivamente implementado em branch isolada [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@f88fd126aee2734732a919396bb91a472b00b642`, DRAFT, encadeado ao PR #295. `main`, RC congelado, Firestore, Rules, Auth e produção não alterados.
