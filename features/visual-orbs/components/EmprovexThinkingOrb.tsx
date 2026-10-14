@@ -3,6 +3,7 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { paintFrame } from '../vendor/thinking-orbs/engine/core';
 import { MODE_FRAMES } from '../vendor/thinking-orbs/engine/registry';
+import { polishWorkingFrame } from '../lib/polishWorkingFrame';
 import { resolvePreset } from '../vendor/thinking-orbs/presets';
 import type { OrbState } from '../vendor/thinking-orbs/types';
 import styles from './EmprovexThinkingOrb.module.css';
@@ -20,6 +21,10 @@ export interface EmprovexThinkingOrbProps {
   animation?: OrbState;
   /** Multiplier applied to the upstream state preset; default preserves original timing. */
   speed?: number;
+  /** Subtle dotted spherical envelope; 0 preserves upstream working geometry. */
+  roundness?: number;
+  /** White particle twinkles; 0 reproduces the upstream matte ink. */
+  sparkle?: number;
   label?: string;
   className?: string;
 }
@@ -49,6 +54,8 @@ export function EmprovexThinkingOrb({
   state = 'decorative',
   animation = 'working',
   speed = 1,
+  roundness = 0.72,
+  sparkle = 0.68,
   label = 'Carregando',
   className,
 }: EmprovexThinkingOrbProps) {
@@ -104,7 +111,11 @@ export function EmprovexThinkingOrb({
         ? pointerY * 1.8 / cssSize * presetSize : 0;
       context.translate(dx, dy);
 
-      paintFrame(context, nativeFrame(presetSize, clockSeconds, opts), true);
+      const source = nativeFrame(presetSize, clockSeconds, opts);
+      const enhanced = animation === 'working'
+        ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle)
+        : source;
+      paintFrame(context, enhanced, true);
     };
 
     const stop = () => {
@@ -176,7 +187,7 @@ export function EmprovexThinkingOrb({
       reducedMotion.removeEventListener('change', sync);
       finePointer.removeEventListener('change', sync);
     };
-  }, [animation, interactive, paused, performanceMode, size, speed]);
+  }, [animation, interactive, paused, performanceMode, size, speed, roundness, sparkle]);
 
   const isLoading = state === 'loading';
   const orbStyle = { '--orb-size': `${SIZE_PIXELS[size]}px` } as CSSProperties;

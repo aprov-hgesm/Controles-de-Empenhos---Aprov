@@ -20,6 +20,8 @@ export function EmprovexThinkingOrbPreview() {
   const [performance, setPerformance] = useState<ThinkingOrbPerformance>('full');
   const [interactive, setInteractive] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [roundness, setRoundness] = useState(0.72);
+  const [sparkle, setSparkle] = useState(0.68);
   return (
     <main className={styles.page}>
       <header className={styles.heading}>
@@ -36,6 +38,8 @@ export function EmprovexThinkingOrbPreview() {
               animation={animation}
               interactive={interactive}
               paused={paused}
+              roundness={roundness}
+              sparkle={sparkle}
             />
           </div>
           <p>{animation} / {size} / {performance}</p>
@@ -62,6 +66,18 @@ export function EmprovexThinkingOrbPreview() {
                 <option key={name} value={name}>{name}</option>)}
             </select>
           </label>
+          <label>
+            Esfericidade · {Math.round(roundness * 100)}%
+            <input type="range" min="0" max="1" step="0.05" value={roundness}
+              disabled={animation !== 'working'}
+              onChange={(event) => setRoundness(Number(event.target.value))} />
+          </label>
+          <label>
+            Cintilação · {Math.round(sparkle * 100)}%
+            <input type="range" min="0" max="1" step="0.05" value={sparkle}
+              disabled={animation !== 'working'}
+              onChange={(event) => setSparkle(Number(event.target.value))} />
+          </label>
           <label className={styles.check}>
             <input type="checkbox" checked={interactive} onChange={(event) => setInteractive(event.target.checked)} />
             Reação sutil ao ponteiro
@@ -75,14 +91,14 @@ export function EmprovexThinkingOrbPreview() {
       <section className={styles.samples} aria-label="Amostras nas dimensões de interface">
         {(['large', 'medium', 'small', 'mini'] as const).map((preset) => (
           <div className={styles.sample} key={preset}>
-            <EmprovexThinkingOrb size={preset} animation={animation} performance={performance} paused={paused} />
+            <EmprovexThinkingOrb size={preset} animation={animation} performance={performance} paused={paused} roundness={roundness} sparkle={sparkle} />
             <span>{preset}</span>
           </div>
         ))}
       </section>
       <p className={styles.note}>
         Protótipo de desenvolvimento: nenhum empenho, aviso, tooltip ou comando foi alterado.
-        Use o seletor para comparar os nove estados originais e o desempenho nas diferentes escalas.
+        Use os controles de esfericidade e cintilação para comparar o refinamento com o original (ambos em 0%), sem afetar os demais estados nativos.
       </p>
     </main>
   );
