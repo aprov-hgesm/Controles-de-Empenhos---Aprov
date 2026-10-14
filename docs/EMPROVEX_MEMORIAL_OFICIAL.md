@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W5 PR #295: COMPOSIÇÃO ISOLADA; CI E HOMOLOGAÇÃO PENDENTES
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W5 PR #295: COMPOSIÇÃO ISOLADA; CI VERDE; HOMOLOGAÇÃO PENDENTE
 
 **ONDE ESTAMOS:** [PR #295](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/295) OPEN/DRAFT, `visual-r1-integration-01@433dad77dcc91ce15a4b2f3a674acb14b91743ae` (HEAD verificado pelo GitHub), base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`. **Nota de atualização:** handoff W5 descrevia `caee9b5823065cdff7acf23d210040c27f7f10b9`, mas houve avanço para `433dad77`. O `caee9b58` anterior teve `validate-application` CANCELLED e jobs Blocks 16–21 marcados FAILURE em consequência; **não confundir esses estados com os checks do HEAD novo**, atualmente em andamento.
 
@@ -10,7 +10,7 @@
 
 **PONTO DE ATENÇÃO DE CONTRASTE:** `EmprovexLoaderShowcase.tsx` usa cards `bg-white`; o adaptador injeta W1 cujo `EmprovexThinkingOrb.tsx` chama `paintFrame(context, enhanced, true)` (paleta para fundos escuros, tinta clara). A composição pode deixar partículas pouco visíveis sobre branco; testar em navegador real e corrigir por stage escuro isolado ou suporte de tema corretamente validado, sem alterar o vendor MIT ou introduzir bolhas/filamentos. O adaptador reconciliou os tamanhos com CSS scale e passa `size/performance/speed/paused`; os hints `density/intensity` não têm suporte real no motor W1, e não devem ser apresentados como parâmetros funcionais.
 
-**GATES NO HEAD ATUAL DA COMPOSIÇÃO:** [Core Protection #38527715448](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715448) **SUCCESS**; [Application CI #38527715057](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715057) **IN_PROGRESS** na verificação; Blocks dependentes ainda sem veredito. Não declarar PASS técnico final antes do CI inteiro e dos demais testes. Screenshot/browser, Playwright de integração, responsividade, teclado/touch, reduced-motion, FPS/CPU/GPU, flow real de login/logout e efeitos combinados **PENDENTES**.
+**GATES NO HEAD ATUAL DA COMPOSIÇÃO:** [Core Protection #38527715448](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715448) **SUCCESS**; [Application CI #38527715057](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38527715057) **SUCCESS**, `validate-application` e Blocks 16–21 concluídos com SUCCESS (7/7). Não declarar PASS técnico final antes do CI inteiro e dos demais testes. Screenshot/browser, Playwright de integração, responsividade, teclado/touch, reduced-motion, FPS/CPU/GPU, flow real de login/logout e efeitos combinados **PENDENTES**.
 
 **CRITÉRIOS DE ACEITE:** o Fundador **aprovou a estética do núcleo colorido**, não o código React colorido nem as mudanças W3/W4. [PR #292](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/292) continua `1802e1b4` com cor monocromática; W1 precisa implementar as partículas lentas brancas, rápidas 70% amarelo `#FFD25A` / 30% vermelho `#FF5A46`, esfericidade 72%, cintilação 68%, cor estável, e recertificar com CI verde. Só após novo HEAD colorido e decisão conjunta VISUAL-R1/Geral R1 sobre **Block 19.14** poderá W5 propor a montagem do núcleo na Home; **não enfraquecer guard, não colocar Canvas em `features/inicio` sem deliberação**. W3/W4 podem permanecer em ensaio isolado enquanto aguardam aceite visual específico.
 
@@ -18,7 +18,7 @@
 
 **O QUE FAZER A SEGUIR:** W5 corrigir/validar contraste real dos orbes e coletar evidências de navegação, terminar CI #38527715057, executar E2E e relatórios; W1 publicar React colorido e CI novo; W5 compor o HEAD colorido e obter aprovação arquitetural para integrar Home; apresentar ao Fundador previews demonstráveis em desktop/mobile e motion/beam isolados, sem confundir Vercel READY com testes humanos. **Sem merge na main, nenhum re-freeze, nenhum deploy em Production.**
 
-**CLASSIFICAÇÃO:** **COMPOSIÇÃO ISOLADA CONFIRMADA; CORE PASS; APPLICATION CI IN PROGRESS; REACT COLORIDO / HOMOLOGAÇÃO ARQUITETURAL / TESTE REAL PENDENTES.**
+**CLASSIFICAÇÃO:** **COMPOSIÇÃO ISOLADA CONFIRMADA; CORE + APPLICATION CI 7/7 PASS; REACT COLORIDO / HOMOLOGAÇÃO ARQUITETURAL / TESTE REAL PENDENTES.**
 
 ---
 
@@ -484,7 +484,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
-| VISUAL-R1 (paralelo) | W5 #295 COMPOSIÇÃO INICIAL DRAFT; CORE PASS, APPLICATION CI EM EXECUÇÃO | #295@433dad77 compõe W1–W4 com 41 arquivos e laboratório Preview; W1 colorido segue só em HTML (PR #292 React mono); Home e loading operacional intocados; verificar contraste, CI, navegador, Block 19.14 e aceites W3/W4; sem merge/Production |
+| VISUAL-R1 (paralelo) | W5 #295 COMPOSIÇÃO INICIAL DRAFT; CORE E APPLICATION 7/7 PASS | #295@433dad77 compõe W1–W4 com 41 arquivos e laboratório Preview; W1 colorido segue só em HTML (PR #292 React mono); Home e loading operacional intocados; verificar contraste, CI, navegador, Block 19.14 e aceites W3/W4; sem merge/Production |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
@@ -513,7 +513,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | W2 — VISUAL-LOADERS | Wrapper/variantes hero/large/medium/small/mini e estados reais de espera; especificar integrações | Novos `components/visual/*Loader*` e, após aceite, `OperationalSurfaceLoading.tsx` / `EmprovexAuthLoading.tsx`; não editar arquivos W1 | Branch separada baseada na main; alinhar contrato de import com W1, evitar dependência divergente |
 | W3 — VISUAL-MOTION | PASS técnico isolado — PR #293@fc260332; 3 refinamentos de Relatórios/SAG | `RelatoriosView.tsx`, `SagSupplierStep.tsx`, `SagImportProgress.tsx` e handoff documental; sem shell ou loading | Core + Application 7/7 SUCCESS; browser, acessibilidade real, aceite estético e integração pendentes |
 | W4 — VISUAL-BORDER | PASS técnico isolado — PR #294@8237e52b; Border Beam low/24s | Wrapper/showcase/CSS, licença, rota de laboratório dev e spec E2E novos, sem alterar cards críticos ou shell | Core + Application SUCCESS; E2E real, performance e aprovação estética pendentes; não integrar antes do aceite |
-| W5 — VISUAL-INTEGRATION-QA | COMPOSIÇÃO INICIAL #295@433dad77 DRAFT, CI PARCIAL | Branch `visual-r1-integration-01` desde main@97556bb8; 41 arquivos, lab Preview, adaptador W1↔W2, W3/W4 isolados | Core PASS; Application IN_PROGRESS, browser e FPS pendentes; novo React W1 colorido/Block 19.14 e aceites necessários antes de candidata final |
+| W5 — VISUAL-INTEGRATION-QA | COMPOSIÇÃO INICIAL #295@433dad77 DRAFT, CI PARCIAL | Branch `visual-r1-integration-01` desde main@97556bb8; 41 arquivos, lab Preview, adaptador W1↔W2, W3/W4 isolados | Core e Application 7/7 SUCCESS; browser e FPS pendentes; novo React W1 colorido/Block 19.14 e aceites necessários antes de candidata final |
 
 **Gate de fidelidade:** `thinking-orbs` do autor é um desenho de partículas claras/escuras em Canvas 2D, não um agrupamento de esferas azuis com gradientes ou filamentos. O trabalho W1 deverá descartar a estética divergente do protótipo Nebula existente, fixar versão/licença e testar a escala ampliada (a biblioteca só declara presets nativos 20/64). Manter as informações de avisos, recebimentos, execução e classes do núcleo original acessíveis.
 
