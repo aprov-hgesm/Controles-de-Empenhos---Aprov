@@ -999,10 +999,10 @@
   }
 }
 
-/* VISUAL-R1: the Home's single color accent is the original dotted orbital
- * painter. No blue reactor gradients, opaque bubble, filament or duplicated
- * scene halo are drawn in this mode. Existing telemetry tooltip stays intact.
- * The legacy reactor rules above remain solely for explicit rollback. */
+/* VISUAL-R1 / Home only. The old blue reactor remains available through
+ * visualMode='legacy'; its gradients/filaments are not mounted in the new mode.
+ * The luminous center is a tiny warm-white point, not a solid glowing sphere.
+ * Loading indicators continue monochromatic and are not affected by this CSS. */
 .root[data-visual-core='thinking-orbs']::after {
   display: none;
 }
@@ -1019,16 +1019,77 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
   pointer-events: none;
   isolation: isolate;
 }
 
-.thinkingOrbStage > * {
-  flex-shrink: 0;
+.homeOrbCoreGlow {
+  position: absolute;
+  z-index: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 251, 235, 0.54) 0%,
+    rgba(255, 225, 164, 0.18) 12%,
+    rgba(255, 210, 90, 0.055) 36%,
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
+.homeOrbCoreGlow::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fffaf0;
+  box-shadow: 0 0 9px rgba(255, 252, 240, 0.9),
+    0 0 21px rgba(255, 210, 90, 0.36);
+  transform: translate(-50%, -50%);
+}
+
+.homeOrbBoost {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  transform: scale(2.12);
+  transform-origin: center;
+  filter: brightness(1.22) saturate(1.08)
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.48))
+    drop-shadow(0 0 12px rgba(255, 210, 90, 0.12));
+}
+
+/* Balanced/mobile scenes keep the color and shape without costly blur layers. */
+[data-performance='balanced'] .homeOrbBoost,
+[data-performance='static'] .homeOrbBoost {
+  filter: brightness(1.15) saturate(1.04);
+}
+
+@media (max-width: 1100px) {
+  .homeOrbBoost { transform: scale(1.86); }
 }
 
 @media (max-width: 640px) {
-  .thinkingOrbStage {
-    max-width: 100%;
+  .homeOrbBoost { transform: scale(1.54); }
+  .homeOrbCoreGlow { width: 66px; height: 66px; }
+}
+
+@media (max-width: 420px) {
+  .homeOrbBoost { transform: scale(1.36); }
+  .homeOrbCoreGlow { width: 60px; height: 60px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homeOrbBoost {
+    filter: brightness(1.12);
   }
 }
