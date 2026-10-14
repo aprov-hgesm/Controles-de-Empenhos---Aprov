@@ -25,6 +25,7 @@ export function EmprovexOrbLoader({
   renderer,
   fallback,
   className = '',
+  surface = 'light',
   testId,
 }: EmprovexOrbLoaderProps) {
   if (!loading) return null;
@@ -50,6 +51,7 @@ export function EmprovexOrbLoader({
       <EmprovexOrbVisual
         size={size}
         performance={performance}
+        surface={surface}
         renderer={renderer}
         fallback={fallback}
       />
