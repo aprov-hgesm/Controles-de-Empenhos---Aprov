@@ -22,6 +22,7 @@ import { LegalAcceptanceGate } from '../components/legal/LegalAcceptanceGate';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
+import { HGESM_WORKSPACE_ID } from '../lib/hgesmWorkspace';
 
 const OperationalWorkspace = lazy(() =>
   import('../features/operational/components/OperationalWorkspace').then((module) => ({
@@ -278,7 +279,11 @@ export default function Home() {
               showToast('Erro ao sair do sistema', 'error');
             }
           }}
-          warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
+          warehouseModuleEnabled={
+            canAccessWarehouseModule(workspaceContext)
+            && workspaceContext.status === 'sector'
+            && workspaceContext.workspaceId === HGESM_WORKSPACE_ID
+          }
           onOpenWarehouse={() => {
             window.location.assign('/adm-deposito');
           }}
