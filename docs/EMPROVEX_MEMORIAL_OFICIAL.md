@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SILHUETA FIBONACCI EXTERNA REALÇADA NO PR #300
+
+**ONDE ESTAMOS:** Após visualizar a Home colorida em `localhost:3000`, o Fundador solicitou realce maior da região externa do orb e equilíbrio dos highlights. Implementado no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@87f375b11476be9943d7fb144d6bc57fa714cd81`, PR OPEN/DRAFT. É uma versão local/Preview, **sem merge na main ou Production**.
+
+**REFINO DA ESFERA:** `polishWorkingFrame.ts` ganhou parâmetro opcional `shellEmphasis=0`, que atua **só sobre pontos Fibonacci da casca esférica**, proporcionalmente ao raio projetado, elevando discretamente opacidade, raio e legibilidade da tinta na silhueta; não adiciona bolhas sólidas, filamentos, linhas orbitais ou WebGL. `EmprovexThinkingOrb.tsx` só ativa `shellEmphasis=1` na paleta `colored` do estado `working`. Os loaders monocromáticos preservam a casca sem reforço e contraste adaptativo por fundo. `colorWorkingFrame.ts` reduz ~6% a opacidade dos pontos rápidos amarelos/vermelhos para equilíbrio, mantendo branco e alocação 70/30. `InicioCore.module.css` diminui levemente o bloom global; **escala aprovada 2,12x, ponto central luminoso branco-quente, cinemática de partículas, tooltip, telemetria, constelação, indicadores e layout permanecem**.
+
+**GOVERNANÇA:** engine MIT vendorizada intocada, `app/page.tsx`, Rules, auth, banco e RC congelado preservados. Guard Block 19.14 inalterado; deliberação semântica sobre Canvas 2D na Home ainda pendente para decisão de merge. Core Protection/Application CI do novo HEAD devem ser conferidos antes de declarar PASS; teste visual real da nova silhueta e medições de performance desktop/mobile permanecem pendentes. Fundador pode conferir com `git fetch origin visual-r1-home-orb-01`, checkout detached do FETCH_HEAD e `npm run dev -- -p 3000` no clone local limpo.
+
+**CLASSIFICAÇÃO:** **CÓDIGO DO REFINO EXTERNO ENTREGUE EM BRANCH DRAFT; NOVA CERTIFICAÇÃO E HOMOLOGAÇÃO HUMANA PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / HOME REAL COM THINKING ORBS COLORIDO EM TESTE ISOLADO
 
 **ONDE ESTAMOS:** por solicitação explícita do Fundador, a Home principal passou a renderizar o Thinking Orbs aprovado em uma **branch de teste isolada** `visual-r1-home-orb-01`, [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) DRAFT, **encadeado ao PR #295 W5**, no HEAD inicial `bcc2ab8be312390cebb2efce32d3dd06e8ba21fc`. Branch base `visual-r1-integration-01@2c6ba3943e712d54887a762b9fdd171ae23f46d5`. A `main`, o RC congelado, Vercel Production, Firestore Rules, autenticação e dados não foram tocados.
