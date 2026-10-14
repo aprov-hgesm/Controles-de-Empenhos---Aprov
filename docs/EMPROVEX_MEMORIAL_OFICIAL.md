@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 3 — MOTION POLISH CERTIFICADO TECNICAMENTE
+
+**ONDE ESTAMOS:** [PR #293](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/293) OPEN/DRAFT, branch `visual-w3-motion-01@fc26033297bb8b637a1a8461793fb37eb7d4c603`, base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` conferida. Alterou exatamente quatro arquivos: `features/relatorios/components/RelatoriosView.tsx`, `features/relatorios/components/SagSupplierStep.tsx`, `features/relatorios/components/SagImportProgress.tsx` e `docs/VISUAL_W3_MOTION_AUDIT.md`. Sem alterações no shell, Home, carregamentos, motor W1, Border Beam W4, dependências, Firestore, regras de negócio, backend ou produção.
+
+**O QUE ESTAMOS FAZENDO:** três refinamentos discretos inspirados no `Jakubantalik/transitions.dev` e nas recomendações `transitions-polish`, sem código Pro ou instalação externa. Abas Relatórios: transição de cores/bordas/sombra de 250 ms com `focus-visible`, preservando troca imediata e `aria-pressed`. Seletor SAG: abertura por deslocamento vertical 8px e opacidade em 250 ms, sem timer e sem animação de saída bloqueante; seleção/foco preservados. Progresso SAG: feedback de etapa e ícone em 150 ms, transição cromática 250 ms, `aria-current` preservado. `motion/react` reutilizado; `useReducedMotion` e classes `motion-reduce` aplicadas. Nenhuma evidência de mudança de lógica de negócio nos patches revisados.
+
+**GATES CERTIFICADOS NO HEAD EXATO:** [Application CI #38522291557](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522291557) **SUCCESS**, `validate-application` + Blocks 16–21 (7/7); [Core Protection #38522291559](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38522291559) **SUCCESS**. O job `validate-application` executou `Production build`, `Final TypeScript validation`, `Diff hygiene`, `Reports subtabs shell guard`, `SAG import assistant guard`, `SAG UX guard` e `EMPROVEX final experience guard`, todos SUCCESS. Testes visuais de navegador, teclado/touch/reduced-motion com screenshots desktop/mobile e aferição integrada ainda **PENDENTES**; CI estático não é aceite visual.
+
+**QUEM ESTÁ FAZENDO:** Worker 3 entregou PR e handoff; GitHub Actions certificou os checks; Coordenador VISUAL-R1 audita escopo e acompanha aprovação; Worker 5 integrará somente mudanças esteticamente aceitas.
+
+**O QUE FAZER A SEGUIR / QUEM FARÁ:** Fundador e Coordenador VISUAL-R1 revisam efeito no contexto real de Relatórios e SAG; W5 executa screenshots antes/depois, interação por teclado/foco, touch, reduced motion e regressão em 1440×900, 1366×768, 390×844, 545×374, comparando com baseline. Após aceite, W5 compõe PR visual isolado, roda gates novamente no HEAD composto e solicita compatibilidade com Coordenador Geral R1. Não realizar merge na `main`, publicar produção ou tocar no RC congelado.
+
+**CLASSIFICAÇÃO:** **PASS TÉCNICO (CORE + APPLICATION CI); ACEITE ESTÉTICO/E2E E INTEGRAÇÃO PENDENTES; SEM GO DE MERGE OU PRODUÇÃO.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 — BORDER BEAM CERTIFICADO ISOLADAMENTE
 
 **ONDE ESTAMOS:** [PR #294](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/294) OPEN/DRAFT, branch `visual-w4-border-beam-01@8237e52bbd75a642d0208eedd7fb58e24807164f`, base `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` conferida. O PR altera **exclusivamente 8 arquivos novos**: wrapper TSX/CSS `EmprovexBorderBeam`, demo TSX/CSS, licença MIT de atribuição, rota dev `app/visual-lab/border-beam/page.tsx`, teste Playwright focado e handoff documental. Nenhum componente operacional, `app/page.tsx`, dependência, autenticação, Rules, Vercel ou dados foi modificado. Laboratório responde `notFound()` em execução Next.js `NODE_ENV !== 'development'`; esta condição foi revisada em código, mas não se declara prova E2E sem navegador.
@@ -406,7 +422,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
 | Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
 | Isolamento Preview/Production | CANDIDATA TÉCNICA PASS; RECURSOS REMOTOS PENDENTES | PR #289@78dc23bb460059a83bd9ab3b18964bbe1a051222; config compartilhada fail-closed e gates verdes; projeto privado/Rules/IAM ainda não provisionados/auditados |
-| VISUAL-R1 (paralelo) | W2 E W4 PASS TÉCNICO ISOLADO; W1/ACEITES/INTEGRAÇÃO PENDENTES | W2 PR #291@670a77bc: Core + Application SUCCESS; W4 PR #294@8237e52b: Core + Application 7/7 SUCCESS, Border Beam low/24s; PR #288 não aprovado esteticamente; W4 E2E e aceite visual pendentes; sem integração ou merge |
+| VISUAL-R1 (paralelo) | W2/W3/W4 PASS TÉCNICO ISOLADO; W1/ACEITES/INTEGRAÇÃO PENDENTES | W2 #291@670a77bc, W3 #293@fc260332, W4 #294@8237e52b: Core + Application 7/7 SUCCESS em seus HEADs; W1 #292 ainda em homologação; visual E2E/aceite e integração faltam; sem merge |
 | MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
 | Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
 | Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
@@ -433,7 +449,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | --- | --- | --- | --- |
 | W1 — VISUAL-ORB-CORE | Protótipo fiel ao thinking-orbs pontilhado; interação sob demanda; preservar telemetria | Derivação isolada do PR #288; `features/inicio/components/EmprovexThinkingOrb.*` e adapter gráfico próprio; não integrar no `InicioCore` antes do aceite | Criar nova branch a partir de #288@4224a512, PR encadeado contra branch #288; coordenador original congela edições concorrentes nesses arquivos |
 | W2 — VISUAL-LOADERS | Wrapper/variantes hero/large/medium/small/mini e estados reais de espera; especificar integrações | Novos `components/visual/*Loader*` e, após aceite, `OperationalSurfaceLoading.tsx` / `EmprovexAuthLoading.tsx`; não editar arquivos W1 | Branch separada baseada na main; alinhar contrato de import com W1, evitar dependência divergente |
-| W3 — VISUAL-MOTION | Motion tokens e transições de modal, abas, notificações, feedback, sem efeitos dispensáveis | Componentes operacionais de UI selecionados após inventário, **excluindo** loaders, núcleo e `app/page.tsx` | Branch separada de main; só receitas gratuitas/licenciadas; manter condições de abertura/fechamento e ARIA |
+| W3 — VISUAL-MOTION | PASS técnico isolado — PR #293@fc260332; 3 refinamentos de Relatórios/SAG | `RelatoriosView.tsx`, `SagSupplierStep.tsx`, `SagImportProgress.tsx` e handoff documental; sem shell ou loading | Core + Application 7/7 SUCCESS; browser, acessibilidade real, aceite estético e integração pendentes |
 | W4 — VISUAL-BORDER | PASS técnico isolado — PR #294@8237e52b; Border Beam low/24s | Wrapper/showcase/CSS, licença, rota de laboratório dev e spec E2E novos, sem alterar cards críticos ou shell | Core + Application SUCCESS; E2E real, performance e aprovação estética pendentes; não integrar antes do aceite |
 | W5 — VISUAL-INTEGRATION-QA | Composição seletiva, conflitos, E2E, performance, checklist e candidato a merge | Branch de integração visual criada **depois** dos W1–W4, nenhuma escrita no PR #286/RC | Aguardar aceites estéticos, PRs e CI individual; merge produtivo somente com autorização explícita |
 
