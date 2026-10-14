@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EMPROVEX ORB R2 IMPLEMENTADO PARA A HOME
+
+**ONDE ESTAMOS:** Fundador solicitou compatibilidade estética maior do núcleo Thinking Orbs após testar o orb pontilhado no localhost. R2 efetivamente implementado em branch isolada [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@f88fd126aee2734732a919396bb91a472b00b642`, DRAFT, encadeado ao PR #295. `main`, RC congelado, Firestore, Rules, Auth e produção não alterados.
+
+**DIRETRIZ VISUAL APROVADA / IMPLEMENTAÇÃO EM TESTE:** apenas o Thinking Orbs central na Home usa cores branco `#FFFFFF` (lentas), amarelo `#FFD25A` e vermelho `#FF5A46` (rápidas 70/30 estáveis). Orbes de loading seguem monocromáticos conforme fundo. A estética R2 é **opt-in e isolada** por `refinement='r2'`; padrão `classic` preserva o desenho anterior. O EMPROVEX Orb R2 enfatiza a forma tridimensional através de luz por profundidade, preserva pontilhado orbital sem esfera sólida, reduz uniformidade granular da casca Fibonacci interna (~2/7 dos pontos de regiões internas), preserva silhueta pontilhada, reduz raio aparente de partículas móveis, torna a cintilação mais orgânica e controla highlights saturados. Luz central branco-quente permanece pequena com halo ajustado ao fundo azul-marinho do EMPROVEX; tamanho/posicionamento permanecem como na versão aprovada do PR #300.
+
+**ARQUIVOS:** `features/visual-orbs/lib/polishWorkingFrame.ts` (R2 depth/rim, twinkle), `features/visual-orbs/lib/colorWorkingFrame.ts` (tinta e ghosts refinados), `features/visual-orbs/components/EmprovexThinkingOrb.tsx` (prop `refinement`), `features/inicio/components/InicioCore.tsx` (ativação R2 somente Home), `features/inicio/components/InicioCore.module.css` (hierarquia luminosa), `components/visual/EmprovexVisualIntegrationPreview.tsx` (comparador Classic × R2), `tests/e2e/visual-orb-color-contrast.spec.mjs` (teste atualizado). Motor MIT de origem, `InicioView`, regras e hooks operacionais não foram modificados neste refinamento. **Não adicionar partículas à estrela/ambiente ou aumentar área ocupada além do núcleo**.
+
+**GATES E LIMITES:** Core Protection e Application CI disparados no novo SHA; verificar HEAD exato para conclusões. Spec Playwright foi atualizado, **não há evidência de execução real do browser**. O laboratório `/dev/visual-r1` disponibiliza Classic e R2 para comparação, enquanto `localhost:3000` usa R2 na Home real da branch. Responsividade, FPS/CPU/GPU, interação por teclado, reduzido movimento, telemetria e arquitetura Block 19.14 ainda demandam revisão. Não confundir a aprovação da estética colorida anterior com homologação humana da nova aparência R2. Sem GO merge/Production.
+
+**PRÓXIMOS RESPONSÁVEIS:** Fundador confirma em localhost; W5 valida navegador/performance/contraste e regressões, Coordenadores VISUAL-R1 e Geral R1 revisam guard Block 19.14 e eventual plano de release. Antes disso, `main`, PR #295, RC e produção permanecem intactos.
+
+**CLASSIFICAÇÃO:** **R2 IMPLEMENTADO EM PR #300 DRAFT; CI/QA/HOMOLOGAÇÃO VISUAL R2 PENDENTES; SEM PUBLICAÇÃO PRODUTIVA.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SILHUETA FIBONACCI EXTERNA REALÇADA NO PR #300
 
 **ONDE ESTAMOS:** Após visualizar a Home colorida em `localhost:3000`, o Fundador solicitou realce maior da região externa do orb e equilíbrio dos highlights. Implementado no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300), `visual-r1-home-orb-01@87f375b11476be9943d7fb144d6bc57fa714cd81`, PR OPEN/DRAFT. É uma versão local/Preview, **sem merge na main ou Production**.
