@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / BRILHO DO NÚCLEO ORB R2 REFORÇADO APÓS HOMOLOGAÇÃO GEOMÉTRICA
+
+**ONDE ESTAMOS:** Após aceitar a centralização geométrica da Home R2, o Fundador pediu um único último refinamento: aumentar o brilho do centro do orbe. Executado por commits reais e separados nos PRs empilhados [#300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) `visual-r1-home-orb-01@7f3e4f3281ad9c6096a405da34101e178613373e` e [#301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) `visual-r1-w2-operational-loaders-01@c8db9508603b54c96807f2c5237b9d975f23704c`, ambos OPEN/DRAFT.
+
+**AJUSTE EXCLUSIVO:** `features/inicio/components/InicioCore.module.css`: no halo `.homeOrbCoreGlow`, intensidade do gradiente branco-quente no centro aumentada de `0.45` para `0.66`, anel de 11% `0.17→0.23`, faixa externa de 32% `0.047→0.06`; sombra do ponto `::after` com brilho branco `0.90→0.98` e dourado `0.36→0.52`. **Mantidos exatamente** halo 74×74px, centro 5×5px, blur/radius 9px/21px, contorno pontilhado, partículas brancas/amarelas/vermelhas, shell branco, posição `top/left:50%`, loaders monocromáticos W2, performance e gerência de loading. Não reintroduzir esfera azul, filamentos, contornos sólidos ou tamanho maior.
+
+**COERÊNCIA:** blobs CSS idênticos nos PRs #300/#301: `e46c6e623bca40d376660ef20928155d8e972868`. Como commits paralelos em PRs encadeados, comparar ancestrais no merge futuro para não duplicar mudanças. `main`, RC, Production, Firestore, Auth, Rules e domínio logístico não modificados.
+
+**CERTIFICAÇÃO:** Core Protection PR #300 SUCCESS no commit novo. Application CI #300 em progresso; Core Protection #301 e Application CI #301 em progresso na última consulta. Não declarar release GO sem checks verdes no SHA exato e confirmação visual desktop/mobile. Handoff registrado nos respectivos PRs. Atualização de ambiente local com `git status` limpo, `git fetch origin visual-r1-w2-operational-loaders-01`, `git switch --detach FETCH_HEAD`, `npm run dev -- -p 3000`.
+
+**CLASSIFICAÇÃO:** **BRILHO CENTRAL R2 AJUSTADO NO GITHUB NOS DOIS RAMOS DRAFT; CI/HOMOLOGAÇÃO DA ÚLTIMA ESTÉTICA PENDENTES; MAIN E PRODUÇÃO PRESERVADAS.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CENTRALIZAÇÃO GEOMÉTRICA HOME R2 NOS PRS #300 E #301
 
 **ONDE ESTAMOS:** Fundador observou em screenshot da Home do `localhost:3000` orbe central visualmente deslocado para baixo. Confirmado no CSS: container `.system` possuía `top: 54%` no desktop e overrides `58% / 57% / 56% / 56%` nos breakpoints. Solicitada e executada centralização geométrica do núcleo Thinking Orbs R2.
