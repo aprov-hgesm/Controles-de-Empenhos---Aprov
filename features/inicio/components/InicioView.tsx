@@ -154,6 +154,9 @@ export function InicioView({
           totalValueLabel={formatCurrency(totalValue)}
           activeAlertCount={activeAlertCount}
           interactiveMotion={false}
+          visualMode="thinking-orbs"
+          performanceMode={performanceMode}
+          ambientPaused={ambientPaused}
         />
       </div>
 
