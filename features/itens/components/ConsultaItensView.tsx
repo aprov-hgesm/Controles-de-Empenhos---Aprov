@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { ChevronDown, ChevronUp, Info, Package, Search } from 'lucide-react';
 import type { Empenho } from '../../../lib/types';
 
@@ -150,6 +151,7 @@ export function ConsultaItensView({ context }: ConsultaItensViewProps) {
 
   return (
               <div id="view-itens" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
+                <EmprovexBorderBeam theme="light" variant="travel" intensity="low" duration={24} borderRadius={16} testId="items-header-border-beam">
                 <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/30 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-xl bg-[#00288e]/10 flex items-center justify-center text-[#00288e]">
@@ -163,6 +165,7 @@ export function ConsultaItensView({ context }: ConsultaItensViewProps) {
                     </div>
                   </div>
                 </div>
+                </EmprovexBorderBeam>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-white/40 shadow-sm">
