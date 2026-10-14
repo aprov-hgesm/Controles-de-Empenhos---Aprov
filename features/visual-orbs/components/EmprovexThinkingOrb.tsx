@@ -189,6 +189,7 @@ export function EmprovexThinkingOrb({
       data-size={size}
       data-performance={performanceMode}
       data-paused={paused ? 'true' : 'false'}
+      data-interactive={interactive ? 'true' : 'false'}
       data-animation={animation}
       data-testid="emprovex-thinking-orb"
       aria-hidden={isLoading ? undefined : true}

@@ -21,7 +21,7 @@
   width: min(var(--orb-size), 28vw);
 }
 
-.root[data-size='hero'][data-performance='full'] {
+.root[data-size='hero'][data-performance='full'][data-interactive='true'] {
   pointer-events: auto;
 }
 
