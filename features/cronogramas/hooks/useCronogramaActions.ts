@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
-import { saveCronograma } from '../../../lib/firebaseSync';
+import type { CronogramaEmpenho, CronogramaEmailEnvio, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
+import { recordCronogramaEmailSend, saveCronograma } from '../../../lib/firebaseSync';
+import { snapshotCronogramaRemessas } from '../domain/cronogramaDeliveryTracking';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
@@ -202,6 +203,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     colunasEntregas: cronogramaColunas,
     distribuicao: cronogramaDistribuicao,
     ...(previous?.ultimoEnvioEmail ? { ultimoEnvioEmail: previous.ultimoEnvioEmail } : {}),
+    ...(previous?.historicoEnviosEmail ? { historicoEnviosEmail: previous.historicoEnviosEmail } : {}),
   });
 
   const handleSaveCronograma = async () => {
@@ -699,27 +701,36 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         }
       }
 
-      const cronogramaAfterSend: CronogramaEmpenho = {
-        ...cronogramaBeforeSend,
-        ultimoEnvioEmail: {
-          enviadoEm: new Date().toISOString(),
-          remetente: sent.senderEmail,
-          destinatario: recipient,
-          assunto: draft.assunto,
-          messageId: sent.messageId,
-          fonteEmailFornecedor: changedEmail
-            ? (contactSaved ? 'local' : 'manual')
-            : (draft.fonteOriginal || 'manual'),
-        },
+      const emailSendRecord: CronogramaEmailEnvio = {
+        enviadoEm: new Date().toISOString(),
+        remetente: sent.senderEmail,
+        destinatario: recipient,
+        assunto: draft.assunto,
+        messageId: sent.messageId,
+        fonteEmailFornecedor: changedEmail
+          ? (contactSaved ? 'local' : 'manual')
+          : (draft.fonteOriginal || 'manual'),
+        fornecedor: emp.supplier,
+        remessas: snapshotCronogramaRemessas(emp, cronogramaColunas, cronogramaDistribuicao),
       };
 
       let auditPersisted = true;
+      let history = [...(cronogramaBeforeSend.historicoEnviosEmail || [])];
       try {
-        await saveCronograma(user.uid, cronogramaAfterSend);
+        history = await recordCronogramaEmailSend(user.uid, emp.id, emailSendRecord);
       } catch (auditError) {
         auditPersisted = false;
         console.error('Cronograma enviado, mas o registro de auditoria falhou:', auditError);
+        if (!history.some((entry) => entry.messageId === emailSendRecord.messageId)) {
+          history.push(emailSendRecord);
+        }
       }
+
+      const cronogramaAfterSend: CronogramaEmpenho = {
+        ...cronogramaBeforeSend,
+        ultimoEnvioEmail: emailSendRecord,
+        historicoEnviosEmail: history,
+      };
 
       setCronogramas((previousItems) => [
         ...previousItems.filter((item) => item.empenhoId !== emp.id),
