@@ -1,7 +1,9 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
+
+import { EmprovexOrbVisual } from '../visual/EmprovexOrbVisual';
+import { EmprovexThinkingOrbRenderer } from '../visual/EmprovexThinkingOrbRenderer';
 
 import { LoginAtmosphere } from './LoginAtmosphere';
 import { LoginStatusRail } from './LoginStatusRail';
@@ -44,7 +46,12 @@ export function EmprovexAuthLoading({
               </div>
 
               <div className="emprovex-auth-loading-spinner flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-300/[0.11] bg-blue-400/[0.055]">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-200" />
+                <EmprovexOrbVisual
+                  size="small"
+                  performance="balanced"
+                  surface="dark"
+                  renderer={EmprovexThinkingOrbRenderer}
+                />
               </div>
             </div>
 
