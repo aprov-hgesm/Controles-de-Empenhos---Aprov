@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { paintFrame } from '../vendor/thinking-orbs/engine/core';
+import { paintColorWorkingFrame } from '../lib/colorWorkingFrame';
 import { MODE_FRAMES } from '../vendor/thinking-orbs/engine/registry';
 import { polishWorkingFrame } from '../lib/polishWorkingFrame';
 import { resolvePreset } from '../vendor/thinking-orbs/presets';
@@ -25,6 +26,8 @@ export interface EmprovexThinkingOrbProps {
   roundness?: number;
   /** White particle twinkles; 0 reproduces the upstream matte ink. */
   sparkle?: number;
+  /** Dark sections need no backdrop; light cards require a flat graphite contrast tile. */
+  contrastSurface?: 'transparent' | 'matte';
   label?: string;
   className?: string;
 }
@@ -56,6 +59,7 @@ export function EmprovexThinkingOrb({
   speed = 1,
   roundness = 0.72,
   sparkle = 0.68,
+  contrastSurface = 'transparent',
   label = 'Carregando',
   className,
 }: EmprovexThinkingOrbProps) {
@@ -115,7 +119,11 @@ export function EmprovexThinkingOrb({
       const enhanced = animation === 'working'
         ? polishWorkingFrame(source, presetSize, clockSeconds, roundness, sparkle)
         : source;
-      paintFrame(context, enhanced, true);
+      if (animation === 'working') {
+        paintColorWorkingFrame(context, enhanced, presetSize, clockSeconds, opts);
+      } else {
+        paintFrame(context, enhanced, true);
+      }
     };
 
     const stop = () => {
@@ -202,6 +210,7 @@ export function EmprovexThinkingOrb({
       data-paused={paused ? 'true' : 'false'}
       data-interactive={interactive ? 'true' : 'false'}
       data-animation={animation}
+      data-contrast-surface={contrastSurface}
       data-testid="emprovex-thinking-orb"
       aria-hidden={isLoading ? undefined : true}
       role={isLoading ? 'status' : undefined}
