@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / EXPANSÃO W4 BORDER BEAM AO MENU DE TODAS AS ABAS
+
+**ONDE ESTAMOS:** após o PR #303 integrar Border Beam em dois pontos internos (Saldo Total Restante do Painel e foco nas subabas de Relatórios), Fundador solicitou estender o efeito às demais abas principais do EMPROVEX. Implementado na **mesma branch de testes** `visual-r1-w4-border-beam-operational-01@11f1f5a03c87851d56f7a1936a7467560acff4eb`, [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) OPEN/DRAFT, encadeado aos PRs #302 W3, #301 W2, #300 Home R2 e #295 W5.
+
+**AMPLIAÇÃO:** `components/layout/AppSidebar.tsx` adiciona marcação visual não-interativa (span `aria-hidden`) **dentro de cada um dos 10 botões de navegação** existentes, sem substituí-los: Início, Painel, Empenhos (+ subview itens do empenho), Fornecedores, Consulta de Itens, Notas Fiscais, Central de Avisos, Relatórios, Cronogramas e atalho Central de Depósitos. Em `app/globals.css` entrou borda fina conic-gradient mascarada de 1 px (estética W4, monocromática, opacidade baixa 0.28), **animada 24s exclusivamente no botão da aba ativa**, pausada nas demais. O atalho Central de Depósitos abre rota independente e só tem realce sob foco de teclado no menu compartilhado, não um estado ativo artificial. Desativa movimento em telas <=640px e sob prefers-reduced-motion, respeita forced-colors e pointer-events:none. Botões, onNavigate, aria-current, tabIndex nativo, classes de interação, hitbox, notificações, logout e controles reais intactos. `scripts/visual-r1-w4-sidebar-border-beam.test.mjs` acrescentado com guardas Node para cobertura dos 10 itens, semântica e movimento reduzido. Confirmação estática por leitura direta: 10/10 spans presentes, classes e seletores CSS presentes; **teste Node e Playwright browser não executados nesta sessão**.
+
+**LIMITAÇÃO INTENCIONAL:** a expansão abrange o **menu principal** que acompanha a troca entre as abas e não instala o beam em cada cartão de cada módulo. Os dois efeitos internos do PR #303 continuam no Painel e em Relatórios. Home R2, loaders, SAG/Reports W3, Firestore, segurança, Rules, RC, main e Production preservados.
+
+**GATES:** Core Protection SUCCESS no HEAD `11f1f5a0`; Application CI [run #38629335235](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38629335235) PENDING na última consulta. Sem certificação de browser até validação. Necessária revisão funcional das dez entradas de menu e efeito em desktop/tablet/mobile, foco teclado, reduced-motion, semântica de depósito separada e contraste. Não mesclar ou publicar sem novo aceite.
+
+**PRÓXIMO PASSO PARA FUNDADOR:** com árvore local limpa, atualizar via PowerShell: `cd "$HOME\\emprovex-visual-r1-test"`; `git fetch origin visual-r1-w4-border-beam-operational-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir Home e navegar pelas abas do menu; a borda fina deverá acompanhar apenas a opção ativa. Ver também o laboratório `/dev/visual-r1` para os dois exemplos internos. Enviar screenshot/feedback para homologação.
+
+**CLASSIFICAÇÃO:** **BORDER BEAM EXPANDIDO A TODAS AS ABAS VIA NAVEGAÇÃO COMPARTILHADA — CÓDIGO NO GITHUB, CORE PASS, APPLICATION CI E ACEITE RUNTIME PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / W4 BORDER BEAM EXPANDIDO PARA TODOS OS DESTINOS DA NAVEGAÇÃO
 
 **ONDE ESTAMOS:** o Fundador questionou a limitação da aplicação do Border Beam em apenas dois locais (Painel e Relatórios) e solicitou a expansão para as abas restantes. Foi realizado o novo [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), OPEN/DRAFT, branch `visual-r1-w4-navigation-expansion-01@e911b2445451e8b26e7a3c592451d9170e777bb5`, baseado no [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303). PRs anteriores #295 → #300 Home R2 → #301 loaders W2 → #302 motion W3 → #303 W4 dois pontos são preservados sem merge. `main`, RC e Production não alterados.
