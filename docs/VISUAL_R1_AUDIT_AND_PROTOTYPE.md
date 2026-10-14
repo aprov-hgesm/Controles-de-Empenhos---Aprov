@@ -1,9 +1,9 @@
 # VISUAL-R1 — Auditoria A + protótipo B (conceito A: Nebula Core)
 
-**Data:** 2026-10-14  
-**Branch isolada:** `visual-r1-thinking-orbs-01`  
-**Base confirmada da main:** `97556bb8eb04af070016f9e58ddc2d9cca36bb35`  
-**Release Candidate protegido:** `61e372225834ed6060cd2b36dbdd55d1e1979c2c`  
+**Data:** 2026-10-14
+**Branch isolada:** `visual-r1-thinking-orbs-01`
+**Base confirmada da main:** `97556bb8eb04af070016f9e58ddc2d9cca36bb35`
+**Release Candidate protegido:** `61e372225834ed6060cd2b36dbdd55d1e1979c2c`
 **Situação:** VISUAL-A PASS documental; VISUAL-B PARTIAL — conceito implementado isoladamente, aguardando aprovação estética, testes reais e integração.
 
 ## Escopo entregue
@@ -60,10 +60,24 @@
 
 ## Governança e gates
 
-**ONDE ESTAMOS:** protótipo novo em branch isolada; `main` e RC preservados.  
-**O QUE ESTAMOS FAZENDO:** consolidar proposta estética e manter rastreabilidade.  
-**QUEM ESTÁ FAZENDO:** Coordenador VISUAL-R1.  
-**O QUE FAZER A SEGUIR:** revisão estética do Fundador, depois testes e integração controlada.  
-**QUEM FARÁ:** Fundador aprova visual; Coordenador executa VISUAL-C/D/E; Coordenador Geral revê compatibilidade de release.  
+**ONDE ESTAMOS:** protótipo novo em branch isolada; `main` e RC preservados.
+**O QUE ESTAMOS FAZENDO:** consolidar proposta estética e manter rastreabilidade.
+**QUEM ESTÁ FAZENDO:** Coordenador VISUAL-R1.
+**O QUE FAZER A SEGUIR:** revisão estética do Fundador, depois testes e integração controlada.
+**QUEM FARÁ:** Fundador aprova visual; Coordenador executa VISUAL-C/D/E; Coordenador Geral revê compatibilidade de release.
 
 **Classificação:** VISUAL-A PASS (auditoria estática); VISUAL-B PARTIAL (código/protótipo sem testes de aplicação). Não é aprovação de produção.
+
+## VISUAL-ORB-CORE-01 — Worker 1 (candidato isolado, aguardando aceite)
+
+- Base GitHub verificada: PR #288 HEAD `4224a51230b123c6bee7237ea233f66a806401ad`; branch de execução `visual-w1-orb-core-01` (PR próprio encadeado).
+- A hipótese estética anterior de `Nebula Core` foi rejeitada. Substituídos o TSX/CSS do candidato isolado por Canvas 2D, geometrias e presets originais do MIT `Jakubantalik/thinking-orbs` (versão upstream 0.3.1).
+- Fonte preservada integralmente em `features/inicio/vendor/thinking-orbs/`, incluindo `LICENSE`; sem dependência NPM nova e sem WebGL, gradients, bolhas azuis, filamentos ou serviços de rede.
+- Presets `20` e `64` continuam distintos. As variantes `hero=136`, `large=116`, `medium=72`, `small=42`, `mini=20` usam escala de transformação de Canvas, sem editar geometria, distribuição, contraste ou velocidades nativas. `hero` cabe em até 98 px no mobile.
+- 9 estados nativos são configuráveis. A opção de referência é `working`, com pontos girando nas órbitas; o modo `searching` usa meridiano pontilhado. Interação translacional máxima de 1,8 px só no perfil `full` com ponteiro fino.
+- `full` até 45 FPS, `balanced` até 20 FPS e `static` sem loop; reduced-motion captura quadro estático, hidden-tab e IntersectionObserver suspendem frames, ResizeObserver calibra DPR de no máximo 2. Cleanup cancela RAF e observers/listeners.
+- Acessibilidade: variante `decorative` é oculta de leitor de tela; a variante `loading` apresenta status apenas se realmente usada para carregamento (o W2 decide loaders). O Canvas nunca intercepta ações da Home.
+- Demonstração executável em `npm run dev` no endereço `http://localhost:3000/dev/visual-orb`, com seletores para nove estados, tamanhos, perfis, pausa e interação. A rota retorna 404 fora de desenvolvimento.
+- `InicioCore.tsx`, `InicioCore.module.css`, `InicioView.tsx`, `useInicioPerformanceProfile.ts` e `app/page.tsx` permanecem intactos. Nenhuma substituição do núcleo operacional antes da aprovação estética explícita.
+- Higiene: espaços finais removidos deste documento na branch do Worker 1, corrigindo a causa conhecida do `git diff --check` vermelho em #288. Novo CI e testes reais ainda precisam ser verificados no HEAD próprio.
+- Responsabilidade compartilhada: congelar mudanças simultâneas no mesmo TSX/CSS do W1 antes da integração pelo Coordenador. Nenhum merge, deploy de produção, alteração em Rules/Firestore/autenticação/RC.

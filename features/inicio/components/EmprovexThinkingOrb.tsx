@@ -1,6 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
+import { paintFrame } from '../vendor/thinking-orbs/engine/core';
+import { MODE_FRAMES } from '../vendor/thinking-orbs/engine/registry';
+import { resolvePreset } from '../vendor/thinking-orbs/presets';
+import type { OrbState } from '../vendor/thinking-orbs/types';
 import styles from './EmprovexThinkingOrb.module.css';
 
 export type ThinkingOrbSize = 'hero' | 'large' | 'medium' | 'small' | 'mini';
@@ -12,148 +16,187 @@ export interface EmprovexThinkingOrbProps {
   interactive?: boolean;
   paused?: boolean;
   state?: 'decorative' | 'loading';
+  /** Native Thinking Orbs animation. 'working' is the original dotted orbital effect. */
+  animation?: OrbState;
+  /** Multiplier applied to the upstream state preset; default preserves original timing. */
+  speed?: number;
   label?: string;
   className?: string;
 }
 
+const SIZE_PIXELS: Record<ThinkingOrbSize, number> = {
+  hero: 136,
+  large: 116,
+  medium: 72,
+  small: 42,
+  mini: 20,
+};
+
 /**
- * Prototipo VISUAL-R1. Sem requisicoes, sem estado de dados e sem WebGL/Canvas.
- * A variante decorativa e silenciosa para leitores de tela; loading tem status.
- * A interacao reage apenas ao ponteiro fino, com rAF sob demanda.
+ * VISUAL-ORB-CORE-01: original MIT-licensed Thinking Orbs geometry/presets.
+ * Source preserved at ../vendor/thinking-orbs/, with attribution and license.
+ *
+ * The upstream 64px/20px tunings remain unchanged. We scale the Canvas 2D
+ * coordinate system to the host's actual CSS size, preserving dot count,
+ * geometry, depth and ink (rather than drawing gradient spheres).
+ * This is an isolated candidate: it is NOT mounted in InicioCore yet.
  */
 export function EmprovexThinkingOrb({
   size = 'hero',
-  performance = 'full',
+  performance: performanceMode = 'full',
   interactive = false,
   paused = false,
   state = 'decorative',
+  animation = 'working',
+  speed = 1,
   label = 'Carregando',
   className,
 }: EmprovexThinkingOrbProps) {
-  const orbRef = useRef<HTMLSpanElement>(null);
+  const hostRef = useRef<HTMLSpanElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const root = orbRef.current;
-    if (!root) return;
+    const host = hostRef.current;
+    const canvas = canvasRef.current;
+    if (!host || !canvas) return;
 
-    const finePointer = window.matchMedia('(pointer: fine)');
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    const presetSize: 20 | 64 = size === 'mini' || size === 'small' ? 20 : 64;
+    const { mode, speed: nativeSpeed, opts } = resolvePreset(animation, presetSize);
+    const nativeFrame = MODE_FRAMES[mode];
+    const effectiveSpeed = nativeSpeed * Math.max(0, Math.min(3, speed));
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let currentX = 0;
-    let currentY = 0;
+    const finePointer = window.matchMedia('(pointer: fine)');
+
+    let raf = 0;
+    let visible = true;
+    let lastPaint = -Infinity;
+    let clockSeconds = 0.6;
+    let pointerX = 0;
+    let pointerY = 0;
 
     const motionAllowed = () =>
-      interactive
-      && performance === 'full'
-      && !paused
-      && document.visibilityState === 'visible'
-      && finePointer.matches
-      && !reducedMotion.matches;
+      !paused &&
+      performanceMode !== 'static' &&
+      !reducedMotion.matches &&
+      visible &&
+      document.visibilityState === 'visible';
 
-    const apply = () => {
-      root.style.setProperty('--orb-pointer-x', `${(currentX * 4.5).toFixed(2)}px`);
-      root.style.setProperty('--orb-pointer-y', `${(currentY * 4.5).toFixed(2)}px`);
-    };
-
-    const reset = () => {
-      targetX = 0;
-      targetY = 0;
-      currentX = 0;
-      currentY = 0;
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = 0;
-      apply();
-    };
-
-    const step = () => {
-      frame = 0;
-      if (!motionAllowed()) {
-        reset();
-        return;
+    const draw = () => {
+      const cssSize = canvas.getBoundingClientRect().width || SIZE_PIXELS[size];
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const pixels = Math.max(1, Math.round(cssSize * dpr));
+      if (canvas.width !== pixels || canvas.height !== pixels) {
+        canvas.width = pixels;
+        canvas.height = pixels;
       }
-      currentX += (targetX - currentX) * 0.16;
-      currentY += (targetY - currentY) * 0.16;
-      if (
-        Math.abs(currentX - targetX) < 0.002
-        && Math.abs(currentY - targetY) < 0.002
-      ) {
-        currentX = targetX;
-        currentY = targetY;
-      }
-      apply();
-      if (currentX !== targetX || currentY !== targetY) {
-        frame = window.requestAnimationFrame(step);
-      }
+
+      const factor = pixels / presetSize;
+      context.setTransform(factor, 0, 0, factor, 0, 0);
+      context.clearRect(0, 0, presetSize, presetSize);
+
+      // A translation of <=1.8 physical pixels only; no new topology.
+      const dx = interactive && finePointer.matches && !reducedMotion.matches
+        ? pointerX * 1.8 / cssSize * presetSize : 0;
+      const dy = interactive && finePointer.matches && !reducedMotion.matches
+        ? pointerY * 1.8 / cssSize * presetSize : 0;
+      context.translate(dx, dy);
+
+      paintFrame(context, nativeFrame(presetSize, clockSeconds, opts), true);
     };
 
-    const schedule = () => {
-      if (!frame && motionAllowed()) frame = window.requestAnimationFrame(step);
+    const stop = () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = 0;
     };
 
-    const onPointerMove = (event: PointerEvent) => {
+    const loop = (now: number) => {
+      raf = 0;
       if (!motionAllowed()) return;
-      const rect = root.getBoundingClientRect();
-      targetX = Math.max(-1, Math.min(1, ((event.clientX - rect.left) / Math.max(rect.width, 1) - 0.5) * 2));
-      targetY = Math.max(-1, Math.min(1, ((event.clientY - rect.top) / Math.max(rect.height, 1) - 0.5) * 2));
-      schedule();
+      const interval = performanceMode === 'balanced' ? 50 : 1000 / 45;
+      if (now - lastPaint >= interval) {
+        clockSeconds = now / 1000 * effectiveSpeed;
+        draw();
+        lastPaint = now;
+      }
+      raf = window.requestAnimationFrame(loop);
     };
 
-    const onVisibilityChange = () => {
-      root.dataset.hidden = document.visibilityState === 'visible' ? 'false' : 'true';
-      if (!motionAllowed()) reset();
-    };
-    const onMotionChange = () => {
-      if (!motionAllowed()) reset();
+    const sync = () => {
+      stop();
+      if (reducedMotion.matches || performanceMode === 'static') clockSeconds = 0.6;
+      if (document.visibilityState === 'visible') draw();
+      if (motionAllowed()) raf = window.requestAnimationFrame(loop);
     };
 
-    root.addEventListener('pointermove', onPointerMove, { passive: true });
-    root.addEventListener('pointerleave', reset);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    reducedMotion.addEventListener('change', onMotionChange);
-    finePointer.addEventListener('change', onMotionChange);
-    onVisibilityChange();
+    const pointerMove = (event: PointerEvent) => {
+      if (!interactive || performanceMode !== 'full' ||
+          !finePointer.matches || reducedMotion.matches) return;
+      const bounds = host.getBoundingClientRect();
+      pointerX = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / Math.max(1, bounds.width) * 2 - 1));
+      pointerY = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / Math.max(1, bounds.height) * 2 - 1));
+      if (!motionAllowed()) draw();
+    };
+
+    const pointerLeave = () => {
+      pointerX = 0;
+      pointerY = 0;
+      if (!motionAllowed()) draw();
+    };
+
+    const observer = typeof IntersectionObserver !== 'undefined'
+      ? new IntersectionObserver(([entry]) => {
+          visible = entry.isIntersecting;
+          sync();
+        })
+      : null;
+    observer?.observe(host);
+
+    const resize = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => draw())
+      : null;
+    resize?.observe(host);
+
+    host.addEventListener('pointermove', pointerMove, { passive: true });
+    host.addEventListener('pointerleave', pointerLeave);
+    document.addEventListener('visibilitychange', sync);
+    reducedMotion.addEventListener('change', sync);
+    finePointer.addEventListener('change', sync);
+    sync();
 
     return () => {
-      root.removeEventListener('pointermove', onPointerMove);
-      root.removeEventListener('pointerleave', reset);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      reducedMotion.removeEventListener('change', onMotionChange);
-      finePointer.removeEventListener('change', onMotionChange);
-      if (frame) window.cancelAnimationFrame(frame);
+      stop();
+      observer?.disconnect();
+      resize?.disconnect();
+      host.removeEventListener('pointermove', pointerMove);
+      host.removeEventListener('pointerleave', pointerLeave);
+      document.removeEventListener('visibilitychange', sync);
+      reducedMotion.removeEventListener('change', sync);
+      finePointer.removeEventListener('change', sync);
     };
-  }, [interactive, paused, performance]);
+  }, [animation, interactive, paused, performanceMode, size, speed]);
 
-  const loading = state === 'loading';
+  const isLoading = state === 'loading';
+  const orbStyle = { '--orb-size': `${SIZE_PIXELS[size]}px` } as CSSProperties;
 
   return (
     <span
-      ref={orbRef}
+      ref={hostRef}
       className={[styles.root, className].filter(Boolean).join(' ')}
+      style={orbStyle}
       data-size={size}
-      data-performance={performance}
+      data-performance={performanceMode}
       data-paused={paused ? 'true' : 'false'}
-      data-interactive={interactive ? 'true' : 'false'}
-      data-state={state}
-      data-hidden="false"
-      aria-hidden={loading ? undefined : true}
-      role={loading ? 'status' : undefined}
-      aria-live={loading ? 'polite' : undefined}
-      aria-label={loading ? label : undefined}
+      data-animation={animation}
+      data-testid="emprovex-thinking-orb"
+      aria-hidden={isLoading ? undefined : true}
+      role={isLoading ? 'status' : undefined}
+      aria-live={isLoading ? 'polite' : undefined}
+      aria-label={isLoading ? label : undefined}
     >
-      <span className={styles.aura} aria-hidden="true" />
-      <span className={styles.outerRing} aria-hidden="true" />
-      <span className={styles.satelliteA} aria-hidden="true" />
-      <span className={styles.satelliteB} aria-hidden="true" />
-      <span className={styles.satelliteC} aria-hidden="true" />
-      <span className={styles.shell} aria-hidden="true">
-        <span className={styles.fluidA} />
-        <span className={styles.fluidB} />
-        <span className={styles.fluidC} />
-        <span className={styles.specular} />
-      </span>
-      <span className={styles.spark} aria-hidden="true" />
+      <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
     </span>
   );
 }
