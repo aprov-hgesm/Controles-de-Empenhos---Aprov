@@ -1063,9 +1063,10 @@
   justify-content: center;
   transform: scale(2.12);
   transform-origin: center;
-  filter: brightness(1.22) saturate(1.08)
-    drop-shadow(0 0 5px rgba(255, 255, 255, 0.48))
-    drop-shadow(0 0 12px rgba(255, 210, 90, 0.12));
+  /* Strong shell clarity now comes from individual dots, not a broad blur. */
+  filter: brightness(1.18) saturate(1.06)
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.34))
+    drop-shadow(0 0 11px rgba(255, 210, 90, 0.10));
 }
 
 /* Balanced/mobile scenes keep the color and shape without costly blur layers. */
