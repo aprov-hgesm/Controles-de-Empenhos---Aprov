@@ -16,7 +16,7 @@ export interface EmprovexOrbVisualProps {
   renderer?: OrbRenderer;
   fallback?: ReactNode;
   className?: string;
-  /** Light surfaces use a matte graphite tile; dark surfaces remain transparent. */
+  /** Controls monochrome ink contrast: dark ink on light surfaces, light ink on dark. */
   surface?: 'light' | 'dark';
 }
 
