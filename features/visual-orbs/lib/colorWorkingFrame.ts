@@ -108,7 +108,8 @@ export function paintColorWorkingFrame(
   frame: OrbFrame,
   size: 20 | 64,
   t: number,
-  opts: ModeOpts
+  opts: ModeOpts,
+  refinement: 'classic' | 'r2' = 'classic',
 ): void {
   if (frame.lines.length) paintLines(ctx, frame.lines, true);
   const colors = resolveOrbColorDistribution(size, t, opts);
@@ -125,11 +126,17 @@ export function paintColorWorkingFrame(
     if (color) {
       // Keep the 70/30 palette but tame saturated peak highlights a little.
       // Slow white particles and neutral shell stay untouched.
-      const balancedAlpha = color === 'slow' ? alpha : alpha * 0.94;
+      const balancedAlpha = refinement === 'r2'
+        ? alpha * (color === 'slow' ? 0.94 : 0.89)
+        : color === 'slow' ? alpha : alpha * 0.94;
       ctx.fillStyle = `rgba(${RGB[color]},${balancedAlpha})`;
     } else {
       const gray = Math.round((1 - Math.max(0, Math.min(1, dot.white))) * 255);
-      ctx.fillStyle = `rgba(${gray},${gray},${gray},${alpha})`;
+      // In R2 the far ghost rings recede behind the 3D shell; no extra dots.
+      const inkAlpha = refinement === 'r2' && Math.abs(dot.white - 0.72) < 0.00001
+        ? alpha * 0.84
+        : alpha;
+      ctx.fillStyle = `rgba(${gray},${gray},${gray},${inkAlpha})`;
     }
     ctx.beginPath();
     ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2);
