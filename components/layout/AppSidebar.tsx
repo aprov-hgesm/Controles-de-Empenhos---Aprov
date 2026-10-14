@@ -130,6 +130,7 @@ export function AppSidebar({
               data-active={activeTab === 'inicio' ? 'true' : 'false'}
               aria-current={activeTab === 'inicio' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <Home className="w-5 h-5" aria-hidden="true" />
               <span>Início</span>
             </button>
@@ -140,6 +141,7 @@ export function AppSidebar({
               data-active={activeTab === 'painel' ? 'true' : 'false'}
               aria-current={activeTab === 'painel' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <Layers className="w-5 h-5" aria-hidden="true" />
               <span>Painel</span>
             </button>
@@ -150,6 +152,7 @@ export function AppSidebar({
               data-active={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'true' : 'false'}
               aria-current={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <FileSpreadsheet className="w-5 h-5" aria-hidden="true" />
               <span>Empenhos</span>
             </button>
@@ -161,6 +164,7 @@ export function AppSidebar({
               data-active={activeTab === 'fornecedores' ? 'true' : 'false'}
               aria-current={activeTab === 'fornecedores' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <Building2 className="w-5 h-5" aria-hidden="true" />
               <span>Fornecedores</span>
             </button>
@@ -171,6 +175,7 @@ export function AppSidebar({
               data-active={activeTab === 'itens' ? 'true' : 'false'}
               aria-current={activeTab === 'itens' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <Package className="w-5 h-5" aria-hidden="true" />
               <span>Consulta de Itens</span>
             </button>
@@ -181,6 +186,7 @@ export function AppSidebar({
               data-active={activeTab === 'nova_nf' ? 'true' : 'false'}
               aria-current={activeTab === 'nova_nf' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <FileText className="w-5 h-5" aria-hidden="true" />
               <span>Notas Fiscais</span>
             </button>
@@ -192,6 +198,7 @@ export function AppSidebar({
               data-active={activeTab === 'avisos' ? 'true' : 'false'}
               aria-current={activeTab === 'avisos' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <BellRing className="w-5 h-5" aria-hidden="true" />
               <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
                 <span>Central de Avisos</span>
@@ -213,6 +220,7 @@ export function AppSidebar({
               data-active={activeTab === 'relatorios' ? 'true' : 'false'}
               aria-current={activeTab === 'relatorios' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <TrendingUp className="w-5 h-5" aria-hidden="true" />
               <span>Relatórios</span>
             </button>
@@ -223,6 +231,7 @@ export function AppSidebar({
               data-active={activeTab === 'cronogramas' ? 'true' : 'false'}
               aria-current={activeTab === 'cronogramas' ? 'page' : undefined}
             >
+              <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
               <CalendarDays className="w-5 h-5" aria-hidden="true" />
               <span>Cronogramas</span>
             </button>
@@ -233,7 +242,8 @@ export function AppSidebar({
                 onClick={onOpenWarehouse}
                 className="emprovex-sidebar-nav-item"
               >
-                <Boxes className="w-5 h-5" aria-hidden="true" />
+                <span className="emprovex-sidebar-nav-item__beam" aria-hidden="true" />
+              <Boxes className="w-5 h-5" aria-hidden="true" />
                 <span>Central de Depósitos</span>
               </button>
             )}
