@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / SEGUNDO REFORÇO LUMINOSO DO CENTRO ORB R2
+
+**SOLICITAÇÃO:** após aprovar centralização da Home e o primeiro ganho de brilho, Fundador solicitou reforço adicional exclusivamente do núcleo energético.
+
+**ENTREGA GITHUB:** commits isolados no [PR #300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) `visual-r1-home-orb-01@814fa8406bb1794a5a99de15af5a5d6d5d972ca3` e no [PR #301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) `visual-r1-w2-operational-loaders-01@fd607cc2115a812ca8095b8a615a3b6334c5f0da`, DRAFT, CSS final idêntico (blob `533f908a06406c06c677845f9ed323bce3b81ed9`). Arquivo único: `features/inicio/components/InicioCore.module.css`. Gradiente branco-quente do centro `0.66→0.82`, faixa intermediária `0.23→0.30`, faixa externa `0.06→0.08`; sombra luminosa branca `9px/0.98→11px/1.00` e dourada `21px/0.52→28px/0.68`. **Nada alterado** no tamanho do halo 74px, ponto 5px, centralização vertical/horizontal 50%, esfera, distribuição 70/30, partículas, core R2, renderização W1, loaders monocromáticos W2, telemetria, performance e domínio.
+
+**GOVERNANÇA:** `main`, RC, Rules, auth, Firestore e produção preservados. PR #301 continua encadeado sobre branch do #300, com mudança aplicada também nele para preview imediato; comparar histórico antes de eventual merge. Checks Core Protection/Application CI reiniciados no novo HEAD de cada PR; ver resultado por SHA e validar aparência em localhost antes do aceite final. Não considerar publicação/merge autorizados.
+
+**CLASSIFICAÇÃO:** **AUMENTO CENTRAL DE BRILHO EXECUTADO EM AMBAS AS BRANCHES DRAFT; CI/HOMOLOGAÇÃO RUNTIME PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / BRILHO DO NÚCLEO ORB R2 REFORÇADO APÓS HOMOLOGAÇÃO GEOMÉTRICA
 
 **ONDE ESTAMOS:** Após aceitar a centralização geométrica da Home R2, o Fundador pediu um único último refinamento: aumentar o brilho do centro do orbe. Executado por commits reais e separados nos PRs empilhados [#300](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/300) `visual-r1-home-orb-01@7f3e4f3281ad9c6096a405da34101e178613373e` e [#301](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/301) `visual-r1-w2-operational-loaders-01@c8db9508603b54c96807f2c5237b9d975f23704c`, ambos OPEN/DRAFT.
