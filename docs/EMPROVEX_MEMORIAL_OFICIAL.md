@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — ALOCAÇÃO REAL BLOQUEADA POR CONFIGURAÇÃO ADMINISTRATIVA
+
+**ONDE ESTAMOS:** Fundador relatou tentativa de alocação com erro `WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION`. Captura mostra NF 21300, recebido/pendente 140 lt, alocado 0, destino DEP-001/PAL-03. URL, deployment SHA e workspace da tentativa não aparecem na captura; não atribuir automaticamente ao freeze. **P09 FAIL na tentativa relatada / bloqueado para certificação**, sem invalidação da bateria Emulator #285.
+
+**O QUE ESTAMOS FAZENDO:** diagnóstico estático no RC `61e372225834ed6060cd2b36dbdd55d1e1979c2c`: POST intake-action verifica acesso/workspace e chama `getGoogleAccessToken()` ANTES de performAllocation/commit. SectorProvisioningFailure SERVER_CONFIGURATION é convertido em HTTP 503 com o código mostrado. Em `lib/server/sectorProvisioningAdmin.ts`, esse código cobre ausência de `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`, JSON inválido/incompleto, project_id divergente e falha de emissão OAuth (resposta sem access_token/não OK). **Causa específica não determinada sem metadados/logs autorizados da implantação.** Não afirmar simplesmente variável ausente. Validade e barcode opcionais não explicam esse código. Pelo caminho auditado, essa resposta precede o commit de alocação dessa requisição; saldos/ledger remotos não foram conferidos e a captura não prova ausência de outros writes.
+
+**QUEM ESTÁ FAZENDO:** Fundador forneceu evidência; Coordenador leu captura e código, sem executar operação ou alterar credenciais/Rules.
+
+**O QUE FAZER A SEGUIR:** identificar URL/SHA/contexto da tentativa; administrador com acesso ao projeto Vercel deve conferir presença/estrutura/projeto da configuração administrativa no ambiente efetivo e diagnosticar emissão OAuth sem expor valores ou tokens. Não copiar credencial produtiva para Preview sem resolver o isolamento. Antes do reteste, verificar pendência/saldo/ledger somente leitura; retestar com fixtures autorizadas após isolamento e correção. Não repetir confirmação sobre dados operacionais para diagnosticar.
+
+**QUEM FARÁ:** Coordenador audita ambiente e plano; responsável autorizado da implantação diagnostica configuração; Fundador/Work retesta somente após liberação. **NO-GO novo RC permanece**, sem publicação, merge, Rules ou credencial alterada nesta análise.
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — HANDOFF WORK RECEBIDO: PREVIEW PARCIAL; DEF-01 LOGOUT EM TELA BAIXA
 
 **ONDE ESTAMOS:** Macroação 3 continua **PARTIAL**. Relatório recebido do Fundador: `EMPROVEX_R1_WORK_Relatorio_2026-10-14(1).md`, execução em 14/10/2026, horário de Fortaleza. Work acessou o domínio Preview `controles-de-empenhos-aprov-git-rc-886227-aprov-hgesms-projects.vercel.app`, porém **não verificou a associação da implantação ao SHA** informado `61e372225834ed6060cd2b36dbdd55d1e1979c2c`. Evidência aceita como relato técnico de navegador, sem capturas anexadas, sem reprodução independente pelo Coordenador. Não atribuir certificação de SHA, saldos ou Rules.
