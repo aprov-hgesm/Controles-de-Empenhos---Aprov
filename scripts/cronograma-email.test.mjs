@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
+import { webcrypto } from 'node:crypto';
+import ts from 'typescript';
 
 const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
@@ -132,4 +135,67 @@ test('cronograma envia o PDF da NE atual a partir do Drive junto ao PDF gerado',
   assert.match(hook, /Cronograma de Entrega e a Nota de Empenho/);
   assert.match(dialog, /Anexos obrigatórios \(2 PDFs\)/);
   assert.match(dialog, /draft\.notaEmpenhoFilename/);
+});
+
+test('MIME real gera dois anexos independentes e não envia MIME inválido', async () => {
+  const exported = gmail.replace(
+    'async function buildRawMimeMessage(',
+    'export async function buildRawMimeMessage('
+  );
+  assert.notEqual(exported, gmail, 'O construtor MIME esperado não foi localizado.');
+  const transpiled = ts.transpileModule(exported, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const compiled = { exports: {} };
+  runInNewContext(transpiled, {
+    module: compiled,
+    exports: compiled.exports,
+    TextEncoder,
+    Uint8Array,
+    Blob,
+    btoa,
+    crypto: webcrypto,
+    require(specifier) {
+      if (specifier === './googleDriveWorkspace') return { getGoogleOAuthClientId: () => 'test' };
+      if (specifier === './platformIdentity') return { normalizePlatformEmail: (value) => value };
+      throw new Error('Importação não autorizada no teste MIME: ' + specifier);
+    },
+  });
+  const build = compiled.exports.buildRawMimeMessage;
+  assert.equal(typeof build, 'function');
+
+  const sample = (name, content) => ({
+    blob: new Blob(['%PDF-1.4\\n', content], { type: 'application/pdf' }),
+    name,
+  });
+  const cronograma = sample('Cronograma_NE_123.pdf', 'CRONOGRAMA_TESTE');
+  const nota = sample('Nota_Empenho_NE_123.pdf', 'EMPENHO_TESTE');
+  const input = {
+    workspaceId: 'teste',
+    expectedSenderEmail: 'setor@example.org',
+    to: 'fornecedor@example.org',
+    subject: 'Cronograma de Entrega - NE 123',
+    bodyText: 'Encaminhamos o cronograma e a nota de empenho.',
+    attachment: cronograma.blob,
+    attachmentName: cronograma.name,
+    additionalAttachments: [nota],
+  };
+  const raw = await build(input, 'setor@example.org');
+  const mime = Buffer.from(raw, 'base64url').toString('utf8');
+
+  assert.equal((mime.match(/Content-Disposition: attachment; filename=/g) || []).length, 2);
+  assert.match(mime, /filename="Cronograma_NE_123.pdf"/);
+  assert.match(mime, /filename="Nota_Empenho_NE_123.pdf"/);
+  assert.match(mime, /Content-Type: multipart\\/mixed/);
+  assert.match(mime, /Q1JPTk9HUkFNQV9URVNURQ==/); // CRONOGRAMA_TESTE em base64
+  assert.match(mime, /RU1QRU5IT19URVNURQ==/); // EMPENHO_TESTE em base64
+
+  await assert.rejects(
+    () => build({ ...input, additionalAttachments: [{ name: 'NE.pdf', blob: new Blob(['inválido']) }] }, 'setor@example.org'),
+    /não é um PDF válido/
+  );
+  await assert.rejects(
+    () => build({ ...input, additionalAttachments: [{ name: 'NE.pdf', blob: { size: 18 * 1024 * 1024 } }] }, 'setor@example.org'),
+    /17 MB/
+  );
 });
