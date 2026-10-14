@@ -6,7 +6,7 @@ const SURFACES = [
   { id: 'inicio', label: 'Início', slot: 'Barra institucional superior', theme: 'dark', variant: 'travel' },
   { id: 'painel', label: 'Painel', slot: 'Saldo Total Restante', theme: 'dark', variant: 'travel' },
   { id: 'empenhos', label: 'Empenhos', slot: 'Navegação interna', theme: 'light', variant: 'focus' },
-  { id: 'fornecedores', label: 'Fornecedores', slot: 'Cabeçalho principal', theme: 'dark', variant: 'travel' },
+  { id: 'fornecedores', label: 'Fornecedores', slot: 'Cabeçalho principal', theme: 'light', variant: 'travel' },
   { id: 'itens', label: 'Itens', slot: 'Cabeçalho da consulta', theme: 'light', variant: 'travel' },
   { id: 'nova_nf', label: 'Notas Fiscais', slot: 'Abas de acompanhamento', theme: 'light', variant: 'focus' },
   { id: 'relatorios', label: 'Relatórios', slot: 'Navegação interna', theme: 'light', variant: 'focus' },
