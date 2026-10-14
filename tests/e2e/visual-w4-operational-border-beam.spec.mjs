@@ -18,10 +18,10 @@ test.describe('VISUAL-R1/W4 — restrained operational Border Beam', () => {
     const button = section.getByRole('button', { name: 'Por Empenho' });
     await button.focus();
     await expect(button).toBeFocused();
-    const opacity = await focus.evaluate((element) =>
+    // The CSS fade is 180ms: poll rather than reading its initial 0-opacity frame.
+    await expect.poll(async () => focus.evaluate((element) =>
       Number.parseFloat(window.getComputedStyle(element, '::after').opacity)
-    );
-    expect(opacity).toBeGreaterThan(0);
+    )).toBeGreaterThan(0.1);
     await button.press('Tab');
     await expect(section.getByRole('button', { name: 'Por Fornecedor' })).toBeFocused();
   });
