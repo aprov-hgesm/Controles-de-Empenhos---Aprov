@@ -16,6 +16,8 @@ export interface EmprovexOrbVisualProps {
   renderer?: OrbRenderer;
   fallback?: ReactNode;
   className?: string;
+  /** Light surfaces use a matte graphite tile; dark surfaces remain transparent. */
+  surface?: 'light' | 'dark';
 }
 
 /**
@@ -28,6 +30,7 @@ export function EmprovexOrbVisual({
   renderer: Renderer,
   fallback,
   className = '',
+  surface = 'light',
 }: EmprovexOrbVisualProps) {
   const reduceMotion = useReducedMotion();
   const [pageHidden, setPageHidden] = useState(false);
@@ -56,7 +59,7 @@ export function EmprovexOrbVisual({
       style={{ width: profile.pixelSize, height: profile.pixelSize, maxWidth: '100%' }}
     >
       {Renderer ? (
-        <Renderer {...profile} />
+        <Renderer {...profile} surface={surface} />
       ) : fallback !== undefined ? (
         fallback
       ) : (
