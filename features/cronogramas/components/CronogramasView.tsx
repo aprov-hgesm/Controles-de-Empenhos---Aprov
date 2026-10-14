@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Edit, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
@@ -78,6 +79,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                 <div className="space-y-6">
                   
                   {/* Header Title & Subtitle */}
+                  <EmprovexBorderBeam variant="travel" theme="light" intensity="low" duration={24} borderRadius={16} testId="tab-beam-cronogramas">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/30 shadow-sm">
                     <div>
                       <div className="flex items-center gap-3">
@@ -95,6 +97,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                       </div>
                     </div>
                   </div>
+                  </EmprovexBorderBeam>
 
                   {/* Search and Filters Bar */}
                   <div className="bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm space-y-4">
