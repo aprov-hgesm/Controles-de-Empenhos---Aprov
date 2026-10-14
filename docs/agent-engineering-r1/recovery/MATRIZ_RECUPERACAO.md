@@ -52,3 +52,10 @@ Data da inspeção: **2026-10-14**. Executor: Worker 2 (auditoria independente).
 - W1: manifesto, artefato com localização acessível e autorização para leitura/restore **local**; nenhuma chave/credencial enviada ao chat/PR.
 - Coordenador: arbitrar escopo mínimo das refs, versões do Memorial e tratamento de PRs DRAFT, antes de integrar qualquer procedimento.
 - Fundador: autorização explícita futura para mudanças remotas, proteções, credenciais, secrets, infraestrutura ou recuperação produtiva. Nenhuma destas ações foi solicitada/executada neste worker.
+
+
+## 6. Reinspeção independente do Worker 1 (mesma data)
+
+Após a inspeção inicial, foi localizada a branch `agent-eng-r1-w1-governance-backup@25c02d2316c9984b9534c50f53857c91aabf6485`, com **quatro arquivos exclusivamente documentais** em `docs/agent-engineering-r1/backup/`. O próprio `MANIFESTO_PUBLICO.md` do W1 declara explicitamente que **não existe bundle Git material**, `git clone --mirror`/`git bundle verify`/restore não foram executados e **não há SHA-256 de bundle**. O `INVENTARIO.md` registra, conforme observação própria do W1, 307 branches, 60 PRs abertos (48 DRAFT), 0 tags retornadas e falta de rede Git para clone. O procedimento PowerShell foi **proposto**, não executado. Estes números vêm do inventário W1 e não são uma segunda enumeração independente pelo W2.
+
+**Atualização de dependência:** W1 entregou inventário/manifesto **documental**, mas **não** o artefato material exigido pelo critério de recuperabilidade. Portanto, o resultado permanece **NÃO DEMONSTRADO / PENDENTE DE DRILL** e não pode evoluir para `CERTIFICADO`.
