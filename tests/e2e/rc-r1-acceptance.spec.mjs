@@ -15,6 +15,21 @@ async function signIn(page,email) {
   }
   await expect(navigation).toBeVisible({timeout:20000});
 }
+
+// Founder identity exists only inside the synthetic Auth Emulator fixture.
+async function signInFounder(page) {
+  await page.goto('/');
+  await page.getByRole('button',{name:'Entrar com Google — HGeSM'}).click();
+  const nav=page.getByRole('navigation',{name:'Navegação principal'});
+  const legal=page.getByRole('heading',{name:'Termos e Privacidade'});
+  await expect(nav.or(legal)).toBeVisible({timeout:25000});
+  if (await legal.isVisible().catch(()=>false)) {
+    await page.getByRole('checkbox',{name:'Li e aceito os Termos de Serviço e a Política de Privacidade.'}).check();
+    await page.getByRole('button',{name:'Aceitar e continuar'}).click();
+  }
+  await expect(nav).toBeVisible({timeout:25000});
+}
+
 test('P01: local health without cache and operational data',async ({request})=>{
   const response=await request.get('/api/health');
   expect(response.status()).toBe(200);
@@ -44,22 +59,28 @@ test('P05/P07: sector login, legal gate when required, logout remains logged out
   await page.reload();
   await expect(page.getByRole('navigation',{name:'Navegação principal'})).toHaveCount(0);
 });
-test('P06: two synthetic workspaces show segregated report suppliers',async ({page})=>{
-  await signIn(page,'sector-lifecycle@example.test');
-  await page.getByTestId('nav-relatorios').click();
-  await page.getByTestId('report-empenho-sample').click();
-  await expect(page.getByText('Fornecedor E2E Lifecycle').first()).toBeVisible();
-  await page.getByTestId('logout').click();
-  await signIn(page,'sector-b@example.test');
-  await page.getByTestId('nav-relatorios').click();
-  await page.getByTestId('report-empenho-sample').click();
-  await expect(page.getByText('Fornecedor E2E Isolado B').first()).toBeVisible();
-  await expect(page.getByText('Fornecedor E2E Lifecycle')).toHaveCount(0);
+test('P06: two synthetic workspaces show segregated report suppliers',async ({browser})=>{
+  // Distinct browser contexts prove real session isolation, not a logout/relogin race.
+  const contextA=await browser.newContext(), contextB=await browser.newContext();
+  try {
+    const pageA=await contextA.newPage(), pageB=await contextB.newPage();
+    await signIn(pageA,'sector-lifecycle@example.test');
+    await pageA.getByTestId('nav-relatorios').click();
+    await pageA.getByTestId('report-empenho-sample').click();
+    await expect(pageA.getByText('Fornecedor E2E Lifecycle').first()).toBeVisible();
+    await signIn(pageB,'sector-b@example.test');
+    await pageB.getByTestId('nav-relatorios').click();
+    await pageB.getByTestId('report-empenho-sample').click();
+    await expect(pageB.getByText('Fornecedor E2E Isolado B').first()).toBeVisible();
+    await expect(pageB.getByText('Fornecedor E2E Lifecycle')).toHaveCount(0);
+    await expect(pageA.getByText('Fornecedor E2E Isolado B')).toHaveCount(0);
+  } finally {
+    await contextB.close();
+    await contextA.close();
+  }
 });
 test('P08: synthetic warehouse search and physical location highlight',async ({page})=>{
-  await page.goto('/');
-  await page.getByRole('button',{name:'Entrar com Google — HGeSM'}).click();
-  await expect(page.getByRole('navigation',{name:'Navegação principal'})).toBeVisible({timeout:20000});
+  await signInFounder(page);
   await page.goto('/adm-deposito/estoque');
   await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({timeout:20000});
   await page.getByTestId('warehouse-stock-search').fill('Arroz parboilizado');
@@ -72,6 +93,7 @@ test('P08: synthetic warehouse search and physical location highlight',async ({p
   await expect(page.getByTestId('warehouse-location-highlight')).toContainText('LOC-06');
 });
 test('P15/P21: Android-size mobile portal routes without horizontal overflow',async ({page})=>{
+  await signInFounder(page);
   await page.setViewportSize({width:390,height:844});
   await page.goto('/central-mobile');
   await expect(page.getByRole('heading',{name:'Central Móvel',exact:true})).toBeVisible();
