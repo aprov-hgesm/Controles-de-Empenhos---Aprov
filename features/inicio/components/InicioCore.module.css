@@ -998,3 +998,37 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* VISUAL-R1: the Home's single color accent is the original dotted orbital
+ * painter. No blue reactor gradients, opaque bubble, filament or duplicated
+ * scene halo are drawn in this mode. Existing telemetry tooltip stays intact.
+ * The legacy reactor rules above remain solely for explicit rollback. */
+.root[data-visual-core='thinking-orbs']::after {
+  display: none;
+}
+
+.root[data-visual-core='thinking-orbs'],
+.root[data-visual-core='thinking-orbs']:hover,
+.root[data-visual-core='thinking-orbs']:focus-visible {
+  filter: none;
+}
+
+.thinkingOrbStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.thinkingOrbStage > * {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .thinkingOrbStage {
+    max-width: 100%;
+  }
+}
