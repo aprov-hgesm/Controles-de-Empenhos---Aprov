@@ -321,6 +321,45 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 ## 1. Snapshot Global
 
+**Estado reconciliado em 14/10/2026.** Este quadro prevalece sobre os snapshots históricos preservados abaixo. Evidência de código/CI obtida no GitHub; configuração efetiva dos bancos e Rules ativas não foi inspecionada nesta sessão.
+
+| Domínio | Estado vigente | Evidência / limite |
+| --- | --- | --- |
+| Branch produtiva | main@97556bb8eb04af070016f9e58ddc2d9cca36bb35 | HEAD conferido por API; sem alteração nesta missão; deployment Production não reinspecionado |
+| Integração Warehouse | Macroação 1 concluída tecnicamente | PR #279, dec21b86cbbafbb2d7f3d50bd7b9af3371abc740; evidência preservada nos controles executivos |
+| Freeze global | Macroação 2 concluída tecnicamente | rc-r1-global-frozen-2026-10-09@61e372225834ed6060cd2b36dbdd55d1e1979c2c; ref conferida e preservada |
+| QA local | PASS COM PENDÊNCIAS EXTERNAS | PR #285 DRAFT; a873b1645d857be171f0c711c8a5e487e9d0c710; gates certificados no controle executivo |
+| Candidata de correções | PR #286 OPEN/DRAFT, sem merge | rc-r1-preview-blockers-fix-01@906eddacda7d1b788c3404bb5ccdd744b2409071; distinta do freeze |
+| DEF-01 logout | PASS em Chromium/Emulators; reteste remoto pendente | 4/4 Playwright; Core SUCCESS; Application 7/7 SUCCESS |
+| GitHub → Vercel | Integração funcionando para #286 | status Vercel SUCCESS no SHA; bot aponta deployment 6bekYkqKwV7mAYFt13J5YcHAsH2u READY |
+| Preview da correção | Publicado; não certificado funcionalmente | controles-de-empenhos-aprov-git-rc-8f7c85-aprov-hgesms-projects.vercel.app |
+| Administração Vercel | Dependência externa da conexão | Fundador informa conta profissional aprov1hgesm@gmail.com; projeto aprov-hgesms-projects/controles-de-empenhos-aprov; 403 da conexão não prova defeito do app |
+| Alocação F05 remota | BLOCKED / erro real relatado | WAREHOUSE_FAST_PATH_SERVER_CONFIGURATION; credencial ausente/inválida/incompatível ou emissão OAuth rejeitada; causa específica não determinada |
+| Isolamento Preview/Production | NÃO COMPROVADO | código RC/main compartilha alvos padrão Firebase; workspace vazio não prova isolamento |
+| MOBILE-K | Incorporada ao RC conforme controles de freeze | evidência técnica preservada; não reabrir unificação do motor sem regressão |
+| Macroação 3 | PARCIAL | Work: navegação/consultas negativas em conta vazia; sem saldos/ledger/SHA de implantação certificados |
+| Macroação 4 | PENDENTE | performance/custos/recovery/rollback e aceite final por evidência |
+| Rules ativas remotas | Sem nova inspeção | hashes fonte RC principal bc91185f34bcdcb4437a4de1078d1089a09292ba, Warehouse e4037e464ddbeed7629076dc7615266f0caafc7c; fonte não equivale a ruleset publicado |
+| Promoção do novo RC | NO-GO | sem merge/main/deploy Production/Rules, alterações administrativas sensíveis só com autorização explícita |
+
+## 2. Próxima barreira global
+
+**ONDE ESTAMOS:** certificação Macroação 3 parcial, candidata #286 tecnicamente verde e freeze intacto.
+
+**O QUE ESTAMOS FAZENDO:** diagnóstico read-only da administração Preview e reconciliação documental; [runbook administrativo](RC_R1_VERCEL_PREVIEW_DIAGNOSTIC_2026-10-14.md).
+
+**QUEM ESTÁ FAZENDO:** Coordenador audita pelo GitHub; Fundador usa a conta profissional para a leitura administrativa indispensável.
+
+**O QUE FAZER A SEGUIR:** confirmar presença/escopo da variável administrativa e logs existentes; identificar deployment/commit da tentativa; comprovar bancos/permissões/segregação antes de propor alteração ou reteste F05. Não reproduzir uma escrita para obter logs antes do isolamento.
+
+**QUEM FARÁ:** Fundador devolve apenas presença/escopo e diagnóstico sanitizado; Coordenador determina a correção e prepara eventual autorização administrativa específica. Work/Fundador retestam a candidata liberada; Coordenador confere movimento/saldo/ledger, compõe novo candidato e prepara re-freeze/decisão.
+
+### Registros históricos da Parte I
+
+Os registros a seguir são preservados integralmente. Não substituem o quadro vigente acima nem autorizam alterações de produção.
+
+### Snapshot histórico anterior — preservado para rastreabilidade
+
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
 | Produção — app | **R1 PUBLICADO / CENTRAL MOBILE FOUNDER-ONLY** | `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`; PR #266 mergeado; Vercel Production SUCCESS; usuários externos usam R1 normal e `/central-mobile` fica bloqueada para não fundadores |
@@ -376,7 +415,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 A aplicação produtiva só muda por autorização explícita e posterior do Fundador. As Rules RC já foram publicadas por autorização específica em 2026-10-05; essa autorização **não** autorizou o app RC em produção.
 
-## 2. Próxima barreira global
+### Próxima barreira histórica anterior — não rege a certificação atual
 
 A fase atual continua sendo **Release Engineering / Certificação Física**, porém o freeze original foi reaberto de modo controlado por defeitos reais encontrados na MOBILE-J.
 
