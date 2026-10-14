@@ -1,5 +1,31 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 — BORDER BEAM DISTRIBUÍDO NAS DEZ ABAS PRINCIPAIS
+
+**ONDE ESTAMOS:** após o [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303) ter conectado o efeito de borda apenas ao cartão de saldo principal do Painel e à navegação de Relatórios, o Fundador solicitou ampliação para as **demais abas**. Executada em nova branch isolada `visual-r1-w4-border-beam-all-tabs-01`, [PR #304](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/304) OPEN/DRAFT, baseada exclusivamente no ramo do PR #303. Governança de branches empilhadas mantida: #295→#300→#301→#302→#303→#304, sem merge em `main`, RC ou Production.
+
+**MATRIZ DE COBERTURA DO MENU PRINCIPAL (10/10 verificadas no código):**
+- **Início:** faixa institucional superior `InicioSceneChrome`, Border Beam monocromático claro `travel/low/24s`; não circunda, redimensiona nem modifica o orb R2, geometria, centro branco-quente, telemetria ou CSS de alinhamento.
+- **Painel:** cartão "Saldo Total Restante" com `travel/dark/low/24s`, herdado do PR #303.
+- **Empenhos:** navegação interna das subabas com `focus/light/low`, sem alterar `role=tablist`, seleção por teclado ou funcionalidades.
+- **Fornecedores:** cabeçalho principal (área externa clara) com `travel/light/low/24s`, contraste da borda escura em fundo claro.
+- **Itens:** cartão de cabeçalho da consulta com `travel/light/low/24s`.
+- **Notas Fiscais:** alternância Acompanhar/Cadastrar/Comissão com `focus/light/low`, preservando `layoutId` e subabas reais.
+- **Relatórios:** navegação com `focus/light/low`, herdada do PR #303; conteúdo W3 intacto.
+- **Itens do Empenho:** formulário de inclusão de item com `focus/light/low`; a borda aparece ao trabalhar com seus campos, sem alterar validações/escrita.
+- **Cronogramas:** cabeçalho da listagem com `travel/light/low/24s`; não altera editor, planejamento, PDF ou entregas.
+- **Avisos:** cabeçalho da Central com `focus/light/low`; preserva a identificação cromática de criticidade de alertas.
+
+**QUALIDADE VISUAL/EFICIÊNCIA:** `EmprovexBorderBeam` MIT existente, contorno 1px, intensidade baixa, ciclo de 24s onde itinerante. Somente **um elemento por aba/contexto**, sem replicar nas dezenas de cards/listas. `focus` não gira continuamente, efeito puramente decorativo com `pointer-events:none`, pausas quando fora da viewport/aba oculta, desativação de animações em mobile <=640px e `prefers-reduced-motion`. Em aparelhos pequenos a faixa superior ornamental do Início permanece oculta conforme layout original para preservar legibilidade do núcleo. Nenhuma cor de gravidade é substituída por animação.
+
+**DEMONSTRAÇÃO E GATES:** criado `components/visual/EmprovexAllTabBeamPreview.tsx` com 10 amostras fictícias (sem dados ou autenticação) na rota dev/Preview `/dev/visual-r1`, junto à demonstração W4 já existente. Adicionados `scripts/visual-w4-all-tabs.test.mjs` (`node --test`) e `tests/e2e/visual-w4-all-tabs.spec.mjs` com matriz dos dez IDs, variantes, reduced-motion, teclado e overflow. Inspeção estática em conector confirmou todos os dez locais e wrappers balanceados; **adição de specs e inspeção estática não são execução dos testes Node/Playwright nem aprovação de navegador**. Aguardar Application CI/Core Protection do HEAD #304, e homologar desktop/mobile, autenticando somente por via autorizada se necessário. Sem alterações em `app/page.tsx`, `OperationalWorkspace.tsx`, login, Firebase, Rules, armazenamento, billing, escrita SAG, dados operacionais ou motor do Orbe.
+
+**PRÓXIMO PASSO:** Fundador testa após `git status` limpo: `git fetch origin visual-r1-w4-border-beam-all-tabs-01`; `git switch --detach FETCH_HEAD`; `npm run dev -- -p 3000`. Abrir `http://localhost:3000/dev/visual-r1` e procurar "Worker 4 · Um Border Beam por aba", ou navegar pelas dez abas reais; usar Tab para apreciar variantes de foco. Antes de GO conferir regressões do Empenhos, Notas Fiscais, Itens do Empenho e Avisos, fluxo de navegação e dimensões em 390px/desktop. Nenhum merge/deploy autorizado.
+
+**CLASSIFICAÇÃO:** **AMPLIAÇÃO W4 IMPLEMENTADA NAS DEZ ABAS PRINCIPAIS VIA PR #304 DRAFT; CI/QA BROWSER/ACEITE VISUAL PENDENTES.**
+
+---
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / WORKER 4 BORDER BEAM EM DOIS PONTOS OPERACIONAIS
 
 **ONDE ESTAMOS:** Fundador aprovou visualmente o Orb R2 da Home e autorizou prosseguir, após integrar carregamentos W2 e transições W3. Implementação pontual do Worker 4 em [PR #303](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/303), OPEN/DRAFT, branch `visual-r1-w4-border-beam-operational-01@23e73df23bda4019f845d57b72bee691587e101a`, **base `visual-r1-w3-motion-homologation-01` / PR #302**. PRs empilhados: #295 composição → #300 Home R2 → #301 W2 loaders → #302 W3 motion → #303 W4 Border Beam; não mesclar em ordem errada.
