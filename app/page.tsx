@@ -281,6 +281,7 @@ export default function Home() {
           }}
           warehouseModuleEnabled={
             canAccessWarehouseModule(workspaceContext)
+            && workspaceContext.status === 'sector'
             && workspaceContext.workspaceId === HGESM_WORKSPACE_ID
           }
           onOpenWarehouse={() => {
