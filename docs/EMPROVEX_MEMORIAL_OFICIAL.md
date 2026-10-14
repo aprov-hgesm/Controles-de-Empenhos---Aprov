@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / CERTIFICAÇÃO AUTOMATIZADA W4 9/9 SUCCESS
+
+**GATES FECHADOS NO SHA EXATO:** [PR #305](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/305), branch `visual-r1-w4-navigation-expansion-01`, HEAD `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398`, OPEN/DRAFT, `mergeable=true`. Consulta ao GitHub de `commits/{sha}/check-runs` retornou **9/9 COMPLETED SUCCESS**: `validate-application`, `core-protection`, `Block 16 Final Release Gate`, `Block 17 Final Release Gate`, `Block 18 Final Release Gate`, `Block 19 Final Closure Gate`, `Block 20 Final Release Gate`, `Block 21 Final Release Gate` e `visual-w4-node-browser`.
+
+**QA W4 EFETIVO:** [Workflow #38632525337](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38632525337) SUCCESS; logs comprovam **Node 6/6 PASS** e **Playwright Chromium 5/5 PASS** no laboratório dev sem autenticação ou dados operacionais. Build de produção e TypeScript do Application CI SUCCESS; `git diff --check` e demais guardas SUCCESS. Estética Home Orb R2 preservada integralmente. O HEAD #305 é descendente integral do #303 por reconciliação de dois pais; branch #304 não foi mesclada.
+
+**SEMAFORIZAÇÃO:** **RECONCILIAÇÃO CÓDIGO PASS; QA AUTOMATIZADO PASS 9/9; HOMOLOGAÇÃO REAL AUTENTICADA E ACEITE ESTÉTICO DO FUNDADOR PENDENTES; PR DRAFT; SEM MERGE `main` / RC / PRODUCTION / FIRESTORE RULES.** CI verde é condição técnica, não autorização de deploy.
+
+---
+
+
 ## CONTROLE EXECUTIVO — 2026-10-14 — VISUAL-R1 / RESULTADO QA AUTOMATIZADO W4 NO HEAD 5d3d6dbc
 
 **EVIDÊNCIA DIRETA GITHUB ACTIONS:** [Run 38632525337](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38632525337), job `visual-w4-node-browser` **SUCCESS** no commit `5d3d6dbcaf3054abaf89cfc42d3cad9acce8a398` do PR #305. Logs: **6/6 testes Node PASS, 0 fail** (`scripts/visual-r1-w4-navigation-beam.test.mjs` + `scripts/visual-r1-w4-sidebar-border-beam.test.mjs`); **5/5 Playwright Chromium PASS**, cenário real de navegador no `/dev/visual-r1` compilado pelo Next dev server, incluindo desktop, mobile reduzido, tablet 768px, forced-colors e teclado. Instalação de dependências, runtime de teste e Chromium SUCCESS. Não é um teste autenticado em todos os módulos operacionais, nem aceite visual humano. Sem dados reais ou deploy.
