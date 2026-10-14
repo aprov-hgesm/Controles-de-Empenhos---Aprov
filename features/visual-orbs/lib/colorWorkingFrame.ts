@@ -123,7 +123,10 @@ export function paintColorWorkingFrame(
       : undefined;
     const alpha = dot.a ?? 1;
     if (color) {
-      ctx.fillStyle = `rgba(${RGB[color]},${alpha})`;
+      // Keep the 70/30 palette but tame saturated peak highlights a little.
+      // Slow white particles and neutral shell stay untouched.
+      const balancedAlpha = color === 'slow' ? alpha : alpha * 0.94;
+      ctx.fillStyle = `rgba(${RGB[color]},${balancedAlpha})`;
     } else {
       const gray = Math.round((1 - Math.max(0, Math.min(1, dot.white))) * 255);
       ctx.fillStyle = `rgba(${gray},${gray},${gray},${alpha})`;
