@@ -11,6 +11,7 @@ import {
 import {
   buildWarehouseLabelsForScope,
   warehouseLabelKindLabel,
+  warehouseLabelReadablePath,
   WAREHOUSE_LABEL_PRESETS,
   type WarehouseLabelSheetPreset,
 } from '../../../lib/warehouse/labels';
@@ -57,7 +58,7 @@ const scopeOptions: Array<{
   {
     id: 'DEPOT_FULL',
     title: 'Estrutura completa do depósito',
-    description: 'Depósito + todos os Locais + todas as Subposições ativas.',
+    description: 'Em ordem de colagem: depósito, cada Local e suas Subposições numeradas.',
   },
   {
     id: 'LOCATION_ONLY',
@@ -68,7 +69,7 @@ const scopeOptions: Array<{
   {
     id: 'LOCATION_SUBPOSITIONS',
     title: 'Subposições do Local',
-    description: 'Prateleiras, níveis e nichos do Local selecionado.',
+    description: 'Prateleiras, níveis e nichos em ordem numérica para colar em sequência.',
     requiresLocation: true,
   },
 ];
@@ -114,7 +115,9 @@ export function WarehouseLabelsR1({
   const pages = labels.length === 0
     ? 0
     : Math.ceil(labels.length / selectedPreset.perPage);
-  const previewLabel = labels[0] ?? null;
+  // Exibe uma prateleira quando possível, para conferir a hierarquia antes de imprimir.
+  // A ordem efetiva do PDF permanece a mesma de `labels`.
+  const previewLabel = labels.find((item) => item.kind === 'SUBPOSITION') ?? labels[0] ?? null;
 
   function buildPdf() {
     if (!selectedDepot) {
@@ -248,7 +251,7 @@ export function WarehouseLabelsR1({
                     onChange={(event) => setIncludeHierarchy(event.target.checked)}
                     className="h-4 w-4 accent-[#00288e]"
                   />
-                  <span className="text-xs font-bold text-gray-700">Mostrar hierarquia física</span>
+                  <span className="text-xs font-bold text-gray-700">Mostrar hierarquia extra (nas subposições, o caminho completo é obrigatório)</span>
                 </label>
                 <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3">
                   <input
@@ -277,6 +280,14 @@ export function WarehouseLabelsR1({
                 </p>
               )}
 
+              {labels.length > 1 && (
+                <p className="mt-3 text-[11px] leading-5 text-gray-600" data-testid="warehouse-label-print-order">
+                  <span className="font-black text-gray-800">Ordem para colar: </span>
+                  {labels.slice(0, 5).map((item) => warehouseLabelReadablePath(item)).join('  →  ')}
+                  {labels.length > 5 ? '  →  …' : ''}
+                </p>
+              )}
+
               <div className="mt-5 grid grid-cols-3 gap-2">
                 <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-center">
                   <p className="text-xl font-black text-[#00288e]">{labels.length}</p>
@@ -301,9 +312,12 @@ export function WarehouseLabelsR1({
                       <p className="mt-2 truncate font-mono text-2xl font-black tracking-tight text-black">
                         {previewLabel?.code ?? 'PAL-01'}
                       </p>
-                      <p className="truncate text-[11px] font-black text-black">
-                        {previewLabel?.name ?? 'Palete 01'}
+                      <p className="break-words text-[10px] font-black leading-tight text-black" data-testid="warehouse-label-readable-path">
+                        {previewLabel ? warehouseLabelReadablePath(previewLabel) : 'PAL-01 - EST-01 - DEP-01'}
                       </p>
+                      {previewLabel?.kind === 'SUBPOSITION' && (
+                        <p className="truncate text-[8px] font-medium text-black">{previewLabel.name}</p>
+                      )}
                       <p className="mt-1 text-[8px] font-black text-black">
                         {previewLabel ? warehouseLabelKindLabel(previewLabel.kind) : 'LOCAL'}
                       </p>
@@ -348,10 +362,12 @@ export function WarehouseLabelsR1({
                   <p className="mt-1 text-sm font-black text-black">
                     {previewLabel?.name ?? 'Estante 01'}
                   </p>
-                  <p className="mt-3 min-h-4 text-[9px] text-gray-700">
-                    {includeHierarchy && previewLabel
-                      ? previewLabel.hierarchy.join(' › ')
-                      : ' '}
+                  <p className="mt-3 min-h-4 text-[10px] font-black text-black" data-testid="warehouse-label-readable-path">
+                    {previewLabel?.kind === 'SUBPOSITION'
+                      ? warehouseLabelReadablePath(previewLabel)
+                      : includeHierarchy && previewLabel
+                        ? previewLabel.hierarchy.join(' › ')
+                        : ' '}
                   </p>
                   <div className="mt-3 rounded border border-gray-400 px-2 py-1.5 text-center">
                     <p className="text-[7px] font-black uppercase tracking-[0.14em] text-gray-500">
@@ -371,8 +387,11 @@ export function WarehouseLabelsR1({
                 </div>
               )}
 
-              <p className="mt-3 text-[10px] leading-4 text-gray-400">
-                A amostra mostra também a identidade física estável. O PDF final renderiza o código em Code 128 e adapta tipografia, barras e margens ao tamanho escolhido.
+              <p className="mt-3 text-[10px] leading-4 text-gray-500">
+                {previewLabel?.kind === 'SUBPOSITION'
+                  ? 'Prévia de uma subposição; a impressão completa começa pelo depósito e segue a ordem dos Locais. '
+                  : ''}
+                O texto da subposição identifica prateleira, estante e depósito sem scanner. O Code 128 e as dimensões das etiquetas são preservados.
               </p>
             </section>
 
