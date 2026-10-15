@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/alocar/page.tsx',
+  'app/operador-movel/alocar/page.tsx',
   'features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx',
   'lib/warehouse/mobileIntakeAllocation.ts',
   'scripts/mobile-r1-intake-allocation.test.mjs',
@@ -90,11 +90,11 @@ for (const contract of [
   );
 }
 
-const route = read('app/central-mobile/alocar/page.tsx');
+const route = read('app/operador-movel/alocar/page.tsx');
 assert.match(route, /WarehouseMobileIntakeAllocation/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /\/central-mobile\/alocar/);
+assert.match(home, /\/operador-movel\/alocar/);
 assert.match(home, /Alocar recebimento/);
 
 const pkg = JSON.parse(read('package.json'));

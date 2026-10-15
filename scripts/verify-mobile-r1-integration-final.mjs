@@ -8,15 +8,15 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const requiredPaths = [
-  'app/central-mobile/layout.tsx',
-  'app/central-mobile/page.tsx',
-  'app/central-mobile/alocar/page.tsx',
-  'app/central-mobile/transferir/page.tsx',
-  'app/central-mobile/consultar-localizacao/page.tsx',
-  'app/central-mobile/consultar-item/page.tsx',
-  'app/central-mobile/inventario/page.tsx',
-  'app/central-mobile/saida/page.tsx',
-  'app/central-mobile/conferir/page.tsx',
+  'app/operador-movel/layout.tsx',
+  'app/operador-movel/page.tsx',
+  'app/operador-movel/alocar/page.tsx',
+  'app/operador-movel/transferir/page.tsx',
+  'app/operador-movel/consultar-localizacao/page.tsx',
+  'app/operador-movel/consultar-item/page.tsx',
+  'app/operador-movel/inventario/page.tsx',
+  'app/operador-movel/saida/page.tsx',
+  'app/operador-movel/conferir/page.tsx',
   'features/warehouse/mobile/WarehouseMobileHome.tsx',
   'features/warehouse/mobile/WarehouseMobileShell.tsx',
   'features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx',
@@ -46,13 +46,13 @@ for (const path of requiredPaths) {
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
 for (const target of [
-  '/central-mobile/alocar',
-  '/central-mobile/transferir',
-  '/central-mobile/consultar-localizacao',
-  '/central-mobile/consultar-item',
-  '/central-mobile/inventario',
-  '/central-mobile/saida',
-  '/central-mobile/conferir',
+  '/operador-movel/alocar',
+  '/operador-movel/transferir',
+  '/operador-movel/consultar-localizacao',
+  '/operador-movel/consultar-item',
+  '/operador-movel/inventario',
+  '/operador-movel/saida',
+  '/operador-movel/conferir',
 ]) {
   assert.equal(
     home.includes(target),
@@ -63,7 +63,7 @@ for (const target of [
 assert.doesNotMatch(home, /href:\s*null/);
 
 const shell = read('features/warehouse/mobile/WarehouseMobileShell.tsx');
-assert.match(shell, /href="\/central-mobile"/);
+assert.match(shell, /href="\/operador-movel"/);
 assert.match(shell, /href="\/central-depositos"/);
 
 const mobileLayout = read('features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx');
@@ -93,8 +93,8 @@ assert.match(
 
 const warehouseSidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
 assert.match(warehouseSidebar, /showMobileAccess &&/);
-assert.match(warehouseSidebar, /href="\/central-mobile"/);
-assert.match(warehouseSidebar, /warehouse-nav-central-mobile/);
+assert.match(warehouseSidebar, /href="\/operador-movel"/);
+assert.match(warehouseSidebar, /warehouse-nav-operador-movel/);
 
 const warehouseBoundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 for (const contract of [

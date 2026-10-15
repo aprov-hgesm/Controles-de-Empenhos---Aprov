@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/consultar-localizacao/page.tsx',
+  'app/operador-movel/consultar-localizacao/page.tsx',
   'features/warehouse/mobile/WarehouseMobileLocationFoundationCheck.tsx',
   'lib/warehouse/mobileLocationScan.ts',
   'lib/warehouse/locationBarcode.ts',
@@ -59,14 +59,14 @@ assert.match(resolver, /resolveWarehouseStockPositionCode/);
 assert.doesNotMatch(resolver, /Cached/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /\/central-mobile\/consultar-localizacao/);
+assert.match(home, /\/operador-movel\/consultar-localizacao/);
 assert.doesNotMatch(
   home,
   /WarehouseMobileLocationFoundationCheck/,
   'Consulta de Localização deve ser operação própria, não componente embutido na Home'
 );
 
-const route = read('app/central-mobile/consultar-localizacao/page.tsx');
+const route = read('app/operador-movel/consultar-localizacao/page.tsx');
 assert.match(route, /WarehouseMobileLocationFoundationCheck/);
 
 const pkg = JSON.parse(read('package.json'));

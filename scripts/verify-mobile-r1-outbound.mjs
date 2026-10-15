@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/saida/page.tsx',
+  'app/operador-movel/saida/page.tsx',
   'features/warehouse/mobile/WarehouseMobileOutbound.tsx',
   'lib/warehouse/mobileOutbound.ts',
   'lib/warehouse/mobileOutboundRepository.ts',
@@ -84,11 +84,11 @@ assert.match(withdrawal, /recordStockConsumption/);
 assert.match(withdrawal, /destinationId/);
 assert.match(withdrawal, /withdrawnBy/);
 
-const routeSource = read('app/central-mobile/saida/page.tsx');
+const routeSource = read('app/operador-movel/saida/page.tsx');
 assert.match(routeSource, /WarehouseMobileOutbound/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /href: '\/central-mobile\/saida'/);
+assert.match(home, /href: '\/operador-movel\/saida'/);
 
 const packageJson = JSON.parse(read('package.json'));
 assert.equal(

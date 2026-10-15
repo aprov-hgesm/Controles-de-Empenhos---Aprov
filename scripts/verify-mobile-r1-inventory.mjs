@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/inventario/page.tsx',
+  'app/operador-movel/inventario/page.tsx',
   'features/warehouse/mobile/WarehouseMobileInventory.tsx',
   'lib/warehouse/mobileInventory.ts',
   'lib/warehouse/inventoryRepository.ts',
@@ -61,7 +61,7 @@ assert.match(helper, /warehouseInventoryScopeIncludesPosition/);
 assert.match(helper, /warehouseStockPositionsEqual/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /href: '\/central-mobile\/inventario'/);
+assert.match(home, /href: '\/operador-movel\/inventario'/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(

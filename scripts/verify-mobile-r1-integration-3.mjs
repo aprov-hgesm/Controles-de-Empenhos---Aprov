@@ -8,9 +8,9 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/inventario/page.tsx',
-  'app/central-mobile/saida/page.tsx',
-  'app/central-mobile/conferir/page.tsx',
+  'app/operador-movel/inventario/page.tsx',
+  'app/operador-movel/saida/page.tsx',
+  'app/operador-movel/conferir/page.tsx',
   'features/warehouse/mobile/WarehouseMobileInventory.tsx',
   'features/warehouse/mobile/WarehouseMobileOutbound.tsx',
   'features/warehouse/mobile/WarehouseMobilePositionCheck.tsx',
@@ -25,9 +25,9 @@ for (const path of [
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
 for (const route of [
-  '/central-mobile/inventario',
-  '/central-mobile/saida',
-  '/central-mobile/conferir',
+  '/operador-movel/inventario',
+  '/operador-movel/saida',
+  '/operador-movel/conferir',
 ]) {
   assert.match(home, new RegExp(route.replaceAll('/', '\\/')));
 }

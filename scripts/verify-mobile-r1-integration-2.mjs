@@ -8,9 +8,9 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/alocar/page.tsx',
-  'app/central-mobile/transferir/page.tsx',
-  'app/central-mobile/consultar-localizacao/page.tsx',
+  'app/operador-movel/alocar/page.tsx',
+  'app/operador-movel/transferir/page.tsx',
+  'app/operador-movel/consultar-localizacao/page.tsx',
   'features/warehouse/mobile/WarehouseMobilePhysicalQueryResult.tsx',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'lib/warehouse/mobileIntakeAllocation.ts',
@@ -58,9 +58,9 @@ for (const forbidden of ['setDoc(', 'updateDoc(', 'runTransaction(']) {
 }
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /href: '\/central-mobile\/alocar'/);
-assert.match(home, /href: '\/central-mobile\/transferir'/);
-assert.match(home, /href: '\/central-mobile\/consultar-localizacao'/);
+assert.match(home, /href: '\/operador-movel\/alocar'/);
+assert.match(home, /href: '\/operador-movel\/transferir'/);
+assert.match(home, /href: '\/operador-movel\/consultar-localizacao'/);
 assert.doesNotMatch(home, /WarehouseMobileLocationFoundationCheck/);
 
 const allocationPage = read('features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx');

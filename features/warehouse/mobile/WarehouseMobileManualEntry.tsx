@@ -171,7 +171,7 @@ export function WarehouseMobileManualEntry() {
     renewOperation();
     setLocation({ status: 'resolving' });
     if (!workspace.ug) {
-      setLocation({ status: 'error', message: 'UG não resolvida. Reabra a Operador Móvel.' });
+      setLocation({ status: 'error', message: 'UG não resolvida. Reabra o Operador Móvel.' });
       return;
     }
     void resolveWarehouseStockPositionBarcode({
