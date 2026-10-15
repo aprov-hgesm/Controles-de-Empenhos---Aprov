@@ -77,6 +77,28 @@ export function warehouseLabelKindLabel(kind: WarehouseLabelKind): string {
   return 'SUBPOSIÇÃO';
 }
 
+// Texto físico de identificação: não depende de leitor de código de barras.
+ // Na subposição, códigos repetidos em estantes distintas precisam explicitar o caminho.
+export function warehouseLabelReadablePath(item: WarehouseLabelItem): string {
+  if (item.kind === 'SUBPOSITION') {
+    return [item.code, item.parentCode ?? 'LOCAL NÃO IDENTIFICADO', item.depotCode].join(' - ');
+  }
+  if (item.kind === 'LOCAL') return [item.code, item.depotCode].join(' - ');
+  return item.code;
+}
+
+// Ordem natural e estável: EST-2 antes de EST-10, PRAT-2 antes de PRAT-10.
+const warehouseLabelCodeCollator = new Intl.Collator('pt-BR', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function compareWarehouseLabelLocations(left: WarehouseLocation, right: WarehouseLocation): number {
+  return warehouseLabelCodeCollator.compare(left.code, right.code)
+    || warehouseLabelCodeCollator.compare(left.name, right.name)
+    || left.id.localeCompare(right.id);
+}
+
 export function buildDepotLabel(depot: WarehouseDepot): WarehouseLabelItem {
   return {
     id: depot.id,
@@ -188,7 +210,12 @@ export function buildWarehouseLabelsForScope(input: {
       location.status === 'active'
       && location.depotId === input.depot.id
   );
-  const locals = active.filter((location) => location.kind === 'LOCAL');
+  const locals = active
+    .filter((location) => location.kind === 'LOCAL')
+    .sort(compareWarehouseLabelLocations);
+  const subpositions = active
+    .filter((location) => location.kind === 'SUBPOSITION')
+    .sort(compareWarehouseLabelLocations);
   const selected = input.selectedLocationId
     ? active.find((location) => location.id === input.selectedLocationId) ?? null
     : null;
@@ -202,9 +229,20 @@ export function buildWarehouseLabelsForScope(input: {
   }
 
   if (input.scope === 'DEPOT_FULL') {
+    // Etiquetas prontas para colagem em sequência: depósito, primeira estante,
+    // suas prateleiras numeradas, próxima estante e assim por diante.
+    const ordered: WarehouseLocation[] = [];
+    const activeLocalIds = new Set(locals.map((location) => location.id));
+    for (const local of locals) {
+      ordered.push(local);
+      ordered.push(...subpositions.filter((child) => child.parentLocationId === local.id));
+    }
+    // Preserva visibilidade de eventuais registros legados sem pai ativo.
+    ordered.push(...subpositions.filter((child) => !child.parentLocationId
+      || !activeLocalIds.has(child.parentLocationId)));
     return [
       buildDepotLabel(input.depot),
-      ...active.map((location) => buildLocationLabel(location, input.depot, active)),
+      ...ordered.map((location) => buildLocationLabel(location, input.depot, active)),
     ];
   }
 
@@ -215,12 +253,8 @@ export function buildWarehouseLabelsForScope(input: {
   }
 
   if (selected.kind !== 'LOCAL') return [];
-  return active
-    .filter(
-      (location) =>
-        location.kind === 'SUBPOSITION'
-        && location.parentLocationId === selected.id
-    )
+  return subpositions
+    .filter((location) => location.parentLocationId === selected.id)
     .map((location) => buildLocationLabel(location, input.depot, active));
 }
 
