@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## Checkpoint operacional vigente — 2026-10-15 · Release Premium + proteção da cota Vercel
+
+- **Produção:** https://emprovex.com.br — Fundador confirmou a publicação consolidada e a **validação visual das melhorias** após release em `main@63aad90bf80a50cf1cf875024cde21d5e792a3cf` (`chore(release): EMPROVEX Central de Depositos Premium`). Build de produção e prebuild pelo PowerShell aprovados; a confirmação de uso no site foi humana, não uma nova inspeção remota por este agente.
+- **PR #314:** integrado em `303ffb7389d0ab5d3559767b7e9c2e3dd735b603` (D-123 a D-126). Central de Depósitos `/central-depositos`, Operador Móvel `/operador-movel`, visual premium e croqui 3D com autoenquadramento/rotação física das vistas Frente, Direita, Trás e Esquerda. Rotas antigas mantidas por redirects/aliases. Cinco gates automatizados PASS no PR. Validação visual humana declarada pelo Fundador como concluída após publicação.
+- **Política operacional de custo de deploy (D-127):** `vercel.json → git.deploymentEnabled = false` desativa gatilhos automáticos GitHub → Vercel em **todas** as branches, inclusive `main`; validação por `scripts/vercel-manual-deploy.test.mjs` no Application CI. Cron diário de uso às 09:15 UTC (`/api/cron/usage-snapshot`) preservado. Repositório GitHub e integração continuam utilizáveis para código/CI; a publicação na Vercel é **manual e consolidada**, via `vercel pull --environment=production`, `vercel build --prod`, `vercel deploy --prebuilt --archive=tgz --prod --scope aprov-hgesms-projects` em worktree limpa e com identidade de autoria autorizada. A política não desliga os gates nem impede deploy manual de preview sob demanda.
+- **Limite de verificação:** a configuração versionada é fonte de verdade após integração na `main`; não houve confirmação administrativa pelo conector da equipe Vercel (permissão 403). Verificar no painel Vercel se algum outro gatilho externo/deploy hook continua ativo; não assumir que os 100 deployments anteriores vieram exclusivamente do GitHub.
+- **Segurança e dados:** não altera Firestore, Rules, estoque, autenticação, cron nem domínio público da versão já publicada. Este checkpoint substitui as notas antigas abaixo que ainda descrevem PR #314 como DRAFT/Preview pendente; essas notas permanecem apenas como rastreabilidade histórica.
+
+---
+
+**Notas históricas do desenvolvimento anterior à publicação de 2026-10-15 (superadas quando conflitarem com o checkpoint acima):**
+
 > **Auditoria adicional de vistas — 2026-10-15 (D-126, PR #314):** corrigida deformação de pallets/locais ao mudar para Direita/Esquerda em depósitos retangulares. A rotação agora preserva medidas reais, troca as dimensões projetadas do cômodo e mantém vínculo das subposições e materiais. Incluídos testes de regressão em quatro vistas e geometrias alongadas; aguarda gates e smoke visual humano.
 > **Visão 3D de Meus Depósitos — 2026-10-15 (D-126, PR #314 em validação):** substituição do viewBox fixo por auto-fit centralizado com base na geometria isométrica de piso, paredes, estruturas e etiquetas, recalculado em cada perspectiva. Proporções, estoque e persistência preservados; sem leituras extras no Firestore. CI e smoke visual pendentes, produção não alterada.
 
@@ -12,9 +24,9 @@
 > **Atualização pontual — 2026-10-15 (Central de Depósitos):** saldo legado de testes do Suco, 5 unidades em `UNASSIGNED`, **regularizado com PASS no Firestore real**. A alteração foi exclusivamente de dados, sem deploy, merge, Rules ou atualização da aplicação. Evidências: [PR #310](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/310), `docs/WAREHOUSE_INTEGRITY_RECONCILE_01.md` e `docs/WAREHOUSE_DATA_REPAIR_EXECUTION_01.md`. **A sincronização global e os demais estados abaixo permanecem no recorte histórico indicado (2026-10-04); esta nota não certifica outros programas nem todos os saldos dos depósitos.**
 
 
-Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
+Sincronização global histórica de referência: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC** (estado superado para release e navegação pelo checkpoint de 2026-10-15).
 
-Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
+Produção na baseline histórica de 2026-10-04: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` (não é a release vigente; ver checkpoint de 2026-10-15).
 
 Integradora SaaS R1: `feat/saas-r1-commercializacao@54aba792cb9e7bb195e21401fb50a21ed50add19` — SESSION-CAP-01 integrada; commits posteriores podem ser documentais de Program Control
 
@@ -102,9 +114,11 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 ## 1. Snapshot Global
 
+> **Critério temporal:** a linha Produção está reconciliada com o checkpoint 2026-10-15 acima; as demais linhas SaaS/Rules/RC sem atualização datada nesta rodada conservam o recorte histórico do programa e **não** são consideradas re-certificadas por este ajuste de deploy.
+
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
-| Produção | **Performance R3** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
+| Produção | **EMPROVEX Premium — PUBLICADO / VALIDAÇÃO HUMANA CONFIRMADA (15/10)** | `main@63aad90bf80a50cf1cf875024cde21d5e792a3cf`; PR #314 integrado, prebuild Vercel aplicado |
 | SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRONTO PARA RC** | A1/A2/C/D PASS; B parcial/temporal |
 | Mobile R1 | **FUNCIONALMENTE CONCLUÍDO** | A–I integradas; MOBILE-J em certificação final |
 | MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |

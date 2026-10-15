@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Vercel manual deployment policy
+        run: npm run test:vercel-manual-deploy
+
       - name: TypeScript error budget
         shell: bash
         run: |
