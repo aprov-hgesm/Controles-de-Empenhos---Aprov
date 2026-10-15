@@ -51,7 +51,7 @@ export function WarehouseMobileShell({
             Esta interface é dedicada à operação física no depósito. A Central completa continua disponível no desktop.
           </p>
           <Link
-            href="/adm-deposito"
+            href="/central-depositos"
             className="mt-6 inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#00288e] px-5 text-sm font-black text-white"
           >
             Ir para a Central de Depósitos
@@ -77,7 +77,7 @@ export function WarehouseMobileShell({
             Início
           </Link>
           <Link
-            href="/adm-deposito"
+            href="/central-depositos"
             className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-black text-slate-600"
             data-testid="warehouse-mobile-nav-desktop"
           >

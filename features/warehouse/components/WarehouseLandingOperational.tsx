@@ -1477,7 +1477,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   ];
 
   const openDepot = (depotId: string) => {
-    router.push('/adm-deposito/meus-depositos?deposito=' + encodeURIComponent(depotId));
+    router.push('/central-depositos/meus-depositos?deposito=' + encodeURIComponent(depotId));
   };
 
   if (data.loading && !data.depots.length) {

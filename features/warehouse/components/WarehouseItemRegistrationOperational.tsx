@@ -2354,7 +2354,7 @@ function ImmediateConsumptionReport({ workspaceId }: { workspaceId: string }) {
 
   const copyReport = async () => {
     const lines = [
-      'EMPROVEX · ADM Depósito · Consumo imediato para lançamento no SISCOFIS',
+      'EMPROVEX · Central de Depósitos · Consumo imediato para lançamento no SISCOFIS',
       '',
       ...pending.map(({ intake }) =>
         [

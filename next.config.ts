@@ -3,6 +3,13 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
+  async redirects() {
+    return [
+      { source: '/adm-deposito', destination: '/central-depositos', permanent: true },
+      { source: '/adm-deposito/:path*', destination: '/central-depositos/:path*', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
