@@ -249,7 +249,11 @@ export function WarehouseMobileManualEntry() {
       if (barcode) {
         const current = await getWarehouseBarcodeByCode(workspace.workspaceId, barcode);
         if (current) {
-          if (current.status !== 'active'
+          // Código desconhecido no scan pode ter sido vinculado por outra pessoa.
+          // Neste caso falhar fechado ANTES de aumentar o estoque, mesmo que o
+          // usuário tenha escolhido um material coincidente no catálogo.
+          if (product.status !== 'known'
+            || current.status !== 'active'
             || current.ug !== workspace.ug
             || current.materialId !== selectedMaterial?.id
             || current.factorToBaseUnit !== 1) {
@@ -374,7 +378,7 @@ export function WarehouseMobileManualEntry() {
             <h2 className="text-base font-black text-slate-950">2 · Descrição e unidade</h2>
             {!knownMaterial && (
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" disabled={working} onClick={() => { setMode('new'); renewOperation(); }}
+                <button type="button" disabled={working} onClick={() => { setMode('new'); setSelectedId(''); renewOperation(); }}
                   className={'min-h-11 rounded-2xl text-xs font-black ' + (mode === 'new' ? 'bg-[#00288e] text-white' : 'border border-slate-300 text-slate-700')}>
                   Novo material
                 </button>
