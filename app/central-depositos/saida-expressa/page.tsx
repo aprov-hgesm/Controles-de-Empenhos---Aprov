@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function LegacyWarehouseRoute() {
-  redirect('/adm-deposito/controle-de-itens?aba=deliveries');
+  redirect('/central-depositos/saida-de-material');
 }
