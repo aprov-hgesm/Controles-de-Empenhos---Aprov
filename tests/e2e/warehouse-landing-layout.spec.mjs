@@ -9,7 +9,7 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito');
+    await page.goto('/central-depositos');
     await expect(page.getByTestId('warehouse-landing-operational')).toBeVisible({
       timeout: 20_000,
     });

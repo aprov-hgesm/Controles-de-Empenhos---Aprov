@@ -34,7 +34,7 @@ for (const marker of [
 for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
   'canAccessWarehouseModule(context)',
-  "fetch('/api/adm-deposito/status'",
+  "fetch('/api/central-depositos/status'",
 ]) requireText(protectedSurface, marker, `Proteção da superfície ADM incompleta: ${marker}`);
 
 const materialsBlock = sliceBetween(

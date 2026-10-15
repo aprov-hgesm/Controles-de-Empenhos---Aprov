@@ -64,7 +64,7 @@ assert.doesNotMatch(home, /href:\s*null/);
 
 const shell = read('features/warehouse/mobile/WarehouseMobileShell.tsx');
 assert.match(shell, /href="\/central-mobile"/);
-assert.match(shell, /href="\/adm-deposito"/);
+assert.match(shell, /href="\/central-depositos"/);
 
 const mobileLayout = read('features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx');
 assert.match(mobileLayout, /WarehouseAccessBoundary/);

@@ -99,7 +99,7 @@ assert.match(decoder, /controls\.stop\(\)/);
 for (const desktopPath of [
   'features/warehouse/components/WarehouseModuleShell.tsx',
   'features/warehouse/components/WarehouseSectionContent.tsx',
-  'app/adm-deposito/layout.tsx',
+  'app/central-depositos/layout.tsx',
 ]) {
   const content = read(desktopPath);
   assert.equal(content.includes('@zxing/'), false, 'Decoder vazou para shell desktop: ' + desktopPath);

@@ -152,7 +152,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await page.goto('/');
     await loginSector(page, OPERATOR_A);
 
-    const warehouseEntry = page.getByTestId('nav-adm-deposito');
+    const warehouseEntry = page.getByTestId('nav-central-depositos');
     await expect(warehouseEntry).toHaveCount(1);
     await expect(warehouseEntry).toContainText('Central de Depósitos');
   });

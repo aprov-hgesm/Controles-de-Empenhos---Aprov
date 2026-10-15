@@ -9,7 +9,7 @@ test.describe.serial('Central de Depósitos — estrutura física R1', () => {
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/localizacoes');
+    await page.goto('/central-depositos/localizacoes');
 
     await expect(
       page.getByTestId('warehouse-locations-r1-operational')
@@ -32,7 +32,7 @@ test.describe.serial('Central de Depósitos — estrutura física R1', () => {
     });
     await expect(page.getByText('E2E-01', { exact: true }).first()).toBeVisible();
 
-    await page.goto('/adm-deposito/controle-de-depositos?aba=croquis');
+    await page.goto('/central-depositos/controle-de-depositos?aba=croquis');
     await expect(page.getByTestId('warehouse-r1-croquis')).toBeVisible({
       timeout: 20_000,
     });

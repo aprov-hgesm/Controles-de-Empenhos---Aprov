@@ -113,7 +113,8 @@ if (saveStart < 0 || coreCommit < 0 || saveEnd <= coreCommit) {
 const optionalModuleRoots = [
   'lib/warehouse',
   'features/warehouse',
-  'app/adm-deposito',
+  'app/central-depositos',
+  'app/api/central-depositos',
   'app/api/adm-deposito',
 ];
 const optionalModuleFiles = optionalModuleRoots.flatMap(walkFiles);

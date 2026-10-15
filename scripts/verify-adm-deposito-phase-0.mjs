@@ -9,7 +9,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const moduleAccess = read('lib/platformModuleAccess.ts');
 const serverAccess = read('lib/server/warehouseAccess.ts');
 const route = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
-const api = read('app/api/adm-deposito/status/route.ts');
+const api = read('app/api/central-depositos/status/route.ts');
 const sidebar = read('components/layout/AppSidebar.tsx');
 const warehouseSidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
 const rules = read('firestore.warehouse.rules');

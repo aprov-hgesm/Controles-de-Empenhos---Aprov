@@ -159,19 +159,19 @@ const navigation = readFileSync(
 );
 const normalizedNavigation = navigation.replaceAll('\r\n', '\n');
 const warehouseRootRoute = readFileSync(
-  resolve(root, 'app/adm-deposito/page.tsx'),
+  resolve(root, 'app/central-depositos/page.tsx'),
   'utf8'
 );
 const warehouseOverviewRoute = readFileSync(
-  resolve(root, 'app/adm-deposito/meus-depositos/page.tsx'),
+  resolve(root, 'app/central-depositos/meus-depositos/page.tsx'),
   'utf8'
 );
 const warehouseDepotsRoute = readFileSync(
-  resolve(root, 'app/adm-deposito/controle-de-depositos/page.tsx'),
+  resolve(root, 'app/central-depositos/controle-de-depositos/page.tsx'),
   'utf8'
 );
 const outboundRoute = readFileSync(
-  resolve(root, 'app/adm-deposito/saida-de-material/page.tsx'),
+  resolve(root, 'app/central-depositos/saida-de-material/page.tsx'),
   'utf8'
 );
 const plan = readFileSync(
@@ -611,7 +611,7 @@ requireText(
 );
 requireText(
   navigation,
-  "href: '/adm-deposito/saida-de-material'",
+  "href: '/central-depositos/saida-de-material'",
   'Navegação perdeu a rota dedicada de Saída de Material.'
 );
 requireText(
@@ -919,12 +919,12 @@ requireText(
 );
 requireText(
   normalizedNavigation,
-  "id: 'overview',\n    label: 'Meus Depósitos',\n    href: '/adm-deposito/meus-depositos'",
+  "id: 'overview',\n    label: 'Meus Depósitos',\n    href: '/central-depositos/meus-depositos'",
   'Meus Depósitos perdeu sua rota dedicada.'
 );
 requireText(
   normalizedNavigation,
-  "id: 'depots',\n    label: 'Controle de Depósitos',\n    href: '/adm-deposito/controle-de-depositos'",
+  "id: 'depots',\n    label: 'Controle de Depósitos',\n    href: '/central-depositos/controle-de-depositos'",
   'Controle de Depósitos perdeu sua rota dedicada.'
 );
 requireText(
@@ -1037,7 +1037,7 @@ requireText(
 );
 requireText(
   warehouseLanding,
-  '/adm-deposito/meus-depositos?deposito=',
+  '/central-depositos/meus-depositos?deposito=',
   'Clique em depósito no Início deixou de direcionar para Meus Depósitos.'
 );
 requireText(
@@ -1195,7 +1195,7 @@ requireText(
   'transferWarehouseStock(scope.workspaceId, {',
   'Motor de Entrada Avulsa deixou de reutilizar TRANSFER para posicionamento físico.'
 );
-if (withdrawalRepository.includes('/api/adm-deposito/outbound-return')) {
+if (withdrawalRepository.includes('/api/central-depositos/outbound-return')) {
   fail('Devolução voltou a depender de API server-only desnecessária.');
 }
 if (withdrawalRepository.includes("type: 'OUTBOUND_RETURN'")) {
