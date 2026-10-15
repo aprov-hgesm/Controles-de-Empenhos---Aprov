@@ -66,3 +66,61 @@ export function fitWarehouseIsometricScene(
     height,
   };
 }
+
+/**
+ * As vistas laterais trocam o comprimento e a profundidade do cômodo.
+ * O mesmo eixo de escala física (max(W,H)) segue na projeção isométrica,
+ * evitando que depósitos retangulares deformem pallets, locais e etiquetas.
+ */
+export type WarehouseIsoView = 'front' | 'right' | 'back' | 'left';
+
+export interface WarehouseIsoRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function warehouseIsoRoomDimensions(
+  logicalWidth: number,
+  logicalHeight: number,
+  view: WarehouseIsoView
+): { width: number; height: number } {
+  return view === 'right' || view === 'left'
+    ? { width: logicalHeight, height: logicalWidth }
+    : { width: logicalWidth, height: logicalHeight };
+}
+
+/**
+ * Rotação geométrica de 0°, 90°, 180° ou 270°, sem normalização
+ * independente dos eixos nem alteração dos vínculos persistidos.
+ */
+export function transformWarehouseIsoRectForView<T extends WarehouseIsoRect>(
+  rect: T,
+  logicalWidth: number,
+  logicalHeight: number,
+  view: WarehouseIsoView
+): T {
+  switch (view) {
+    case 'front':
+      return rect;
+    case 'back':
+      return { ...rect, x: logicalWidth - rect.x - rect.width, y: logicalHeight - rect.y - rect.height };
+    case 'right':
+      return {
+        ...rect,
+        x: rect.y,
+        y: logicalWidth - rect.x - rect.width,
+        width: rect.height,
+        height: rect.width,
+      };
+    case 'left':
+      return {
+        ...rect,
+        x: logicalHeight - rect.y - rect.height,
+        y: rect.x,
+        width: rect.height,
+        height: rect.width,
+      };
+  }
+}
