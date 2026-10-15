@@ -4,6 +4,7 @@ import {
   WAREHOUSE_LABEL_PRESETS,
   paginateWarehouseLabels,
   warehouseLabelKindLabel,
+  warehouseLabelReadablePath,
   type WarehouseLabelItem,
   type WarehouseLabelSheetPreset,
 } from '../../../lib/warehouse/labels';
@@ -115,23 +116,33 @@ function drawCompactShelfLabel(
   doc.setFontSize(codeSize);
   doc.text(item.code, leftX, y + 14.7);
 
-  const nameSize = fitText(
-    doc,
-    item.name,
-    leftWidth,
-    7.5,
-    4.4,
-    'bold'
-  );
-  doc.setFontSize(nameSize);
-  doc.text(item.name, leftX, y + 19.5);
+  if (item.kind === 'SUBPOSITION') {
+    // A etiqueta precisa ser reconhecida sem scanner, mesmo com PRAT-01 repetida.
+    // Preservar a faixa de barras à direita e a altura compacta de 35 mm.
+    const readablePath = warehouseLabelReadablePath(item);
+    const pathSize = fitText(doc, readablePath, leftWidth, 8, 4.2, 'bold');
+    doc.setFontSize(pathSize);
+    doc.text(readablePath, leftX, y + 20.3);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(4.3);
-  doc.text(warehouseLabelKindLabel(item.kind), leftX, y + 23.1);
+    const nameSize = fitText(doc, item.name, leftWidth, 5.7, 4.2, 'normal');
+    doc.setFontSize(nameSize);
+    doc.text(item.name, leftX, y + 24.0);
 
-  doc.setFontSize(4.1);
-  doc.text('ESTRUTURA FÍSICA', leftX, y + 26.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(4.3);
+    doc.text('SUBPOSIÇÃO', leftX, y + 27);
+  } else {
+    const nameSize = fitText(doc, item.name, leftWidth, 7.5, 4.4, 'bold');
+    doc.setFontSize(nameSize);
+    doc.text(item.name, leftX, y + 19.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(4.3);
+    doc.text(warehouseLabelKindLabel(item.kind), leftX, y + 23.1);
+
+    doc.setFontSize(4.1);
+    doc.text('ESTRUTURA FÍSICA', leftX, y + 26.5);
+  }
 
   const footerSeparatorY = y + 28.5;
   doc.setDrawColor(80, 80, 80);
@@ -244,15 +255,22 @@ function drawLabel(
 
   let cursorY = nameY + (compact ? 3 : large ? 5.5 : 4.2);
 
-  if (!compact && options.includeHierarchy && item.hierarchy.length > 1) {
+  if (item.kind === 'SUBPOSITION') {
+    // Sempre visível, mesmo quando "Mostrar hierarquia física" está desmarcado:
+    // código da prateleira - código da estante - código do depósito.
+    const readablePath = warehouseLabelReadablePath(item);
+    const pathSize = fitText(doc, readablePath, innerWidth, large ? 9 : 6.4, 4.2, 'bold');
+    doc.setFontSize(pathSize);
+    doc.text(readablePath, innerX, cursorY);
+  } else if (options.includeHierarchy && item.hierarchy.length > 1) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(compact ? 4.7 : 5.8);
+    doc.setFontSize(5.8);
     const hierarchy = item.hierarchy.slice(0, -1).join('  ›  ');
     const lines = doc.splitTextToSize(hierarchy, innerWidth);
-    const maxLines = compact ? 1 : large ? 2 : 1;
+    const maxLines = large ? 2 : 1;
     for (const line of lines.slice(0, maxLines)) {
       doc.text(line, innerX, cursorY);
-      cursorY += compact ? 2.7 : 3.5;
+      cursorY += 3.5;
     }
   }
 
