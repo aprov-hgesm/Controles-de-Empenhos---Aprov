@@ -544,11 +544,11 @@ export function WarehouseMobileInventory() {
     <div className="space-y-5" data-testid="warehouse-mobile-inventory">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
         <Link
-          href="/central-mobile"
+          href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Central Móvel
+          Operador Móvel
         </Link>
         <h1 className="mt-4 text-2xl font-black">Inventário móvel</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-blue-100">

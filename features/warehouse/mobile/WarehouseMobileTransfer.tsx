@@ -380,7 +380,7 @@ export function WarehouseMobileTransfer() {
         from: freshSource.position,
         to: freshDestination.position,
         idempotencyKey: review.idempotencyKey,
-        note: 'Transferência confirmada pela Central Móvel R1',
+        note: 'Transferência confirmada pela Operador Móvel R1',
       });
 
       setMaterial(freshMaterial);
@@ -420,10 +420,10 @@ export function WarehouseMobileTransfer() {
     <div className="space-y-5" data-testid="warehouse-mobile-transfer">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
         <Link
-          href="/central-mobile"
+          href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
-          <ArrowLeft className="h-4 w-4" /> Central Móvel
+          <ArrowLeft className="h-4 w-4" /> Operador Móvel
         </Link>
         <h1 className="mt-4 text-2xl font-black">Transferir material</h1>
         <p className="mt-2 text-sm font-semibold text-blue-100">

@@ -285,7 +285,7 @@ export default function Home() {
             && workspaceContext.workspaceId === HGESM_WORKSPACE_ID
           }
           onOpenWarehouse={() => {
-            window.location.assign('/adm-deposito');
+            window.location.assign('/central-depositos');
           }}
         />
 

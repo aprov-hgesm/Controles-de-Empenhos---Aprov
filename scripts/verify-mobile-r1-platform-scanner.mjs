@@ -8,8 +8,8 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/layout.tsx',
-  'app/central-mobile/page.tsx',
+  'app/operador-movel/layout.tsx',
+  'app/operador-movel/page.tsx',
   'features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx',
   'features/warehouse/mobile/WarehouseMobileShell.tsx',
   'features/warehouse/mobile/WarehouseMobileHome.tsx',
@@ -99,7 +99,7 @@ assert.match(decoder, /controls\.stop\(\)/);
 for (const desktopPath of [
   'features/warehouse/components/WarehouseModuleShell.tsx',
   'features/warehouse/components/WarehouseSectionContent.tsx',
-  'app/adm-deposito/layout.tsx',
+  'app/central-depositos/layout.tsx',
 ]) {
   const content = read(desktopPath);
   assert.equal(content.includes('@zxing/'), false, 'Decoder vazou para shell desktop: ' + desktopPath);
@@ -138,7 +138,7 @@ assert.equal(pkg.scripts['test:mobile-r1-scanner'], 'node --test scripts/warehou
 assert.equal(pkg.scripts['verify:mobile-r1-platform-scanner'], 'node scripts/verify-mobile-r1-platform-scanner.mjs');
 
 console.log('MOBILE-A PLATFORM/SCANNER: PASS');
-console.log('- rota /central-mobile usa o gate existente de Auth/workspace/UG/sessão/legal');
+console.log('- rota /operador-movel usa o gate existente de Auth/workspace/UG/sessão/legal');
 console.log('- shell móvel é independente do shell desktop');
 console.log('- decoder ZXing fica atrás de import() e só carrega ao ativar câmera');
 console.log('- scanner não importa repositories mutáveis de estoque');

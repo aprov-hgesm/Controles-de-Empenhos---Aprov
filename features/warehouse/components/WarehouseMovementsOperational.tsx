@@ -47,7 +47,7 @@ export function WarehouseMovementsOperational({ workspaceId }: { workspaceId: st
             <ArrowLeftRight className="h-4 w-4" />
             <p className="text-xs font-black uppercase tracking-[0.12em]">Histórico de movimentações</p>
           </div>
-          <p className="mt-2 text-xs leading-5 text-slate-500">Ledger auditável do ADM Depósito. Consulta bounded dos movimentos mais recentes.</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Ledger auditável da Central de Depósitos. Consulta bounded dos movimentos mais recentes.</p>
         </div>
         <button type="button" onClick={() => void refresh()} disabled={loading} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-500">
           <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />

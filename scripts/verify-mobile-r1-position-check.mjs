@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
-  'app/central-mobile/conferir/page.tsx',
+  'app/operador-movel/conferir/page.tsx',
   'features/warehouse/mobile/WarehouseMobilePositionCheck.tsx',
   'lib/warehouse/mobilePositionCheck.ts',
   'lib/warehouse/mobilePositionCheckModel.ts',
@@ -75,7 +75,7 @@ assert.match(component, />CORRETO</);
 assert.match(component, /Material registrado nesta posição\./);
 assert.match(component, />INCORRETO</);
 assert.match(component, /Material não registrado nesta posição\./);
-assert.match(component, /pathname: '\/central-mobile\/transferir'/);
+assert.match(component, /pathname: '\/operador-movel\/transferir'/);
 assert.match(component, /Transferir material/);
 assert.match(component, /Conferência detecta; Transferência corrige/);
 assert.match(component, /data-check-writes="0"/);
@@ -86,7 +86,7 @@ assert.doesNotMatch(component, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(component, /\brunTransaction\s*\(/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /href: '\/central-mobile\/conferir'/);
+assert.match(home, /href: '\/operador-movel\/conferir'/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(

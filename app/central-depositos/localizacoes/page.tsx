@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function LegacyWarehouseRoute() {
-  redirect('/adm-deposito/cadastro-de-itens?aba=siscofis');
+  redirect('/central-depositos/controle-de-depositos?aba=estrutura');
 }

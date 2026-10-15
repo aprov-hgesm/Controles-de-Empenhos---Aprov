@@ -45,7 +45,7 @@ function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) 
         {labels[section]} preservado para a próxima integração
       </h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-        Esta superfície permanece no código completo do ADM Depósito, mas está
+        Esta superfície permanece no código completo do Central de Depósitos, mas está
         temporariamente sem operações de estoque enquanto a fundação independente
         é publicada e validada. Nesta release, use Controle de Depósitos para testar
         depósitos, localizações e croquis.

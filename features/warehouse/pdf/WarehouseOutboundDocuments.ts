@@ -155,7 +155,7 @@ function drawDocumentHeader(
   doc.text('EMPROVEX', MARGIN_X, y);
 
   doc.setFontSize(7.2);
-  doc.text('ADM DEPÓSITO · ÁREA LOGÍSTICA', PAGE_WIDTH - MARGIN_X, y, {
+  doc.text('CENTRAL DE DEPÓSITOS · ÁREA LOGÍSTICA', PAGE_WIDTH - MARGIN_X, y, {
     align: 'right',
   });
 
@@ -517,7 +517,7 @@ function addFooters(
     doc.setTextColor(90);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(5.8);
-    doc.text('EMPROVEX · ADM Depósito · Controle ' + identity.controlNumber, MARGIN_X, FOOTER_Y);
+    doc.text('EMPROVEX · Central de Depósitos · Controle ' + identity.controlNumber, MARGIN_X, FOOTER_Y);
     doc.text('Código ' + identity.controlCode, PAGE_WIDTH / 2, FOOTER_Y, { align: 'center' });
     doc.text('Página ' + page + ' de ' + pageCount, PAGE_WIDTH - MARGIN_X, FOOTER_Y, { align: 'right' });
   }

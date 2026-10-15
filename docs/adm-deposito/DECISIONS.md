@@ -1,4 +1,4 @@
-# ADM Depósito — Decisões Arquiteturais Oficiais
+# Central de Depósitos — Decisões Arquiteturais Oficiais
 
 Este documento registra decisões que devem ser tratadas como **congeladas** até que haja decisão explícita em contrário.
 
@@ -2478,3 +2478,57 @@ Data: 2026-10-01.
 - Especificação completa: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
 Esta decisão prevalece sobre qualquer interpretação anterior de R3.0–R3.9 como ordem obrigatoriamente sequencial.
+
+
+## D-123 — Central de Depósitos como nome e rota pública canônicos
+
+Data: 2026-10-15.
+
+- O módulo logístico antes acessado em `/adm-deposito` recebe a rota oficial `/central-depositos`, com as subrotas equivalentes e título de produto **Central de Depósitos**.
+- URLs históricas `/adm-deposito` redirecionam permanentemente para as rotas canônicas, preservando caminhos e parâmetros de consulta.
+- As APIs canônicas passam a `/api/central-depositos/status` e `/api/central-depositos/intake-action`; as URLs antigas de API preservam os mesmos handlers, sem redirect de requisições autenticadas ou escritas.
+- UI, links internos, Central Móvel, documentos operacionais e testes futuros devem usar a nomenclatura canônica. Testes e scripts históricos podem conservar nomes de arquivo anteriores quando isso preservar contratos permanentes de CI.
+- Permanecem intocados namespace `warehouse`, Firestore databases/rules, coleções, entidades, IDs, idempotência, ledger e integrações; a alteração **não é migração de dados**.
+- Diretório histórico `docs/adm-deposito/` é mantido para preservar referências e rastreabilidade; o README do módulo explica o nome vigente.
+- O trabalho se realiza em branch/PR próprio, com testes de roteamento/compatibilidade e gates oficiais, sem merge/deploy de produção automático.
+
+
+## D-124 — Operador Móvel é uma superfície subordinada à Central de Depósitos
+
+Data: 2026-10-15.
+
+- A experiência anteriormente intitulada **Central Móvel** passa a chamar-se **Operador Móvel**.
+- Operador Móvel é **parte da Central de Depósitos**, e aparece **abaixo das operações existentes** em sua barra lateral, com identificação visual subordinada, não como módulo autônomo.
+- Rota pública canônica: `/operador-movel` e subrotas. Endereços antigos `/central-mobile` redirecionam permanentemente para os equivalentes novos; parâmetros de consulta devem ser preservados.
+- Permissões atuais são preservadas: a superfície móvel continua limitada à identidade operacional autorizada pela proteção existente (acesso founder-only na implantação atual). Renomear não libera outros usuários.
+- Os fluxos de leitura, entrada avulsa, alocação, transferência, consulta, inventário e saída mantêm implementações e contratos logísticos existentes.
+- Nomes internos de componentes e testes históricos `WarehouseMobile*` e `mobile-r1-*` não são alterados desnecessariamente. O nome público é **Operador Móvel**; IDs de movimento, namespace Firestore `warehouse`, Rules e dados persistidos permanecem idênticos.
+- A navegação fixa inferior do Operador Móvel é **contextual**: na lista principal não há barra redundante; nas jornadas internas, há somente ação explícita **Voltar às operações** (menu do Operador Móvel). O botão genérico **Central** foi removido do rodapé do celular para evitar mudança inesperada de contexto; a Central de Depósitos permanece identificada no cabeçalho.
+- Adaptação em PR #314, com testes e guards obrigatórios; sem merge/publicação produtiva implícitos.
+
+
+## D-125 — Operador Móvel tem apresentação operacional premium e econômica
+
+Data: 2026-10-15.
+
+- O Operador Móvel mantém o nome e a vinculação à Central de Depósitos. O cabeçalho institucional exibe a UG real da sessão autenticada, sem consultas adicionais.
+- A tela inicial adota painel compacto de orientação, status de **acesso autorizado** sustentado pelo gate existente e indicação **leitor sob demanda**, sem alegar permissão da câmera ou scanner ativo antes da abertura da ferramenta.
+- As oito jornadas preservadas são divididas em **Movimentações** (alocação, entrada avulsa, transferência e saída) e **Consulta e conferência** (consulta de localização, consulta de item, inventário e conferência de posição).
+- Os cartões oferecem ações explícitas, contraste legível, foco por teclado, feedback ao toque e respeito à preferência de movimento reduzido. Sem novas dependências, animações contínuas, buscas ao Firestore ou carregamento antecipado de scanner.
+- Mantém-se o rodapé contextual já definido pela D-124. São preservados autenticação, founder-only, ledger, Rules e namespace `warehouse`.
+- Execução e certificação no PR #314, sem merge ou deploy automático.
+
+
+## D-126 — Visão 3D centralizada por geometria real
+
+Data: 2026-10-15.
+
+- Em **Central de Depósitos → Meus Depósitos → Visão 3D**, o enquadramento deixa de usar `viewBox` estático e passa a usar a caixa envolvente dos elementos efetivamente projetados: piso, paredes, volumes e margens para etiquetas destacadas.
+- As quatro vistas (Frente, Direita, Trás, Esquerda) recalculam automaticamente centro e escala; margem mínima protegida, proporção física original preservada e zoom máximo limitado a 1,28.
+- O fit atua somente na câmera SVG: não movimenta estrutura, paletes, endereços, etiquetas de identificação nem muda o layout persistido.
+- Renderização read-only, sem novo custo Firestore, sem alteração do estado de estoque, Rules ou contratos de domínio.
+- Guard `test:warehouse-isometric-camera` incluído no Application CI, com cenários para contêineres longos, quadrados, seleção e quatro vistas.
+- Auditoria das quatro perspectivas (2026-10-15): identificada distorção dos Locais nas vistas Direita/Esquerda em depósitos retangulares. A normalização anterior escalava cada eixo em proporção diferente (ex.: palete 120×100 cm passava a 500×24 cm em contêiner 12000×2400 cm).
+- Correção: transformação de 90° física, com troca efetiva de comprimento/profundidade da sala (`warehouseIsoRoomDimensions`) e rotação dos retângulos sem escalonamento (`transformWarehouseIsoRectForView`).
+- Identidade dos Locais, vínculos e ordem de Subposições, associação de materiais, vistas Frente/Trás, piso e paredes preservados. Fixtures verificam geometria, não sobreposição, limites e seleção nas quatro vistas, inclusive formatos extremos.
+- Integração ao PR #314 ainda em DRAFT; requer CI PASS e validação visual humana antes da publicação consolidada.

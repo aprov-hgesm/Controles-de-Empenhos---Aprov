@@ -11,7 +11,7 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/estoque');
+    await page.goto('/central-depositos/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({
       timeout: 20_000,
     });
@@ -61,7 +61,7 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
     await page.getByTestId('warehouse-stock-row-' + MATERIAL_ID).click();
     await expect(page.getByTestId('warehouse-lot-list')).toContainText('30/10/2026');
 
-    await page.goto('/adm-deposito/movimentacoes');
+    await page.goto('/central-depositos/movimentacoes');
     await expect(page.getByText('Histórico de movimentações', { exact: true })).toBeVisible();
   });
 });

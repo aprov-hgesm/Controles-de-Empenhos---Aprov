@@ -20,7 +20,7 @@ async function postFastAction<T>(
   const user = auth.currentUser;
   if (!user) throw new Error('WAREHOUSE_INTAKE_ACTION_AUTH_REQUIRED');
   const token = await user.getIdToken();
-  const response = await fetch('/api/adm-deposito/intake-action', {
+  const response = await fetch('/api/central-depositos/intake-action', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${token}`,

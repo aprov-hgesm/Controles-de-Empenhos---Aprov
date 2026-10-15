@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
-const layoutPath = 'app/adm-deposito/layout.tsx';
+const layoutPath = 'app/central-depositos/layout.tsx';
 assert.equal(existsSync(resolve(root, layoutPath)), true, 'Layout compartilhado da Central ausente.');
 
 const layout = read(layoutPath);
@@ -65,12 +65,12 @@ assert.equal(routeContent.includes('WarehouseProtectedSurface'), false);
 assert.equal(routeContent.includes('WarehouseModuleShell'), false);
 
 const primaryRoutes = new Map([
-  ['app/adm-deposito/page.tsx', 'home'],
-  ['app/adm-deposito/meus-depositos/page.tsx', 'overview'],
-  ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
-  ['app/adm-deposito/saida-de-material/page.tsx', 'outbound'],
-  ['app/adm-deposito/controle-de-depositos/page.tsx', 'depots'],
-  ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
+  ['app/central-depositos/page.tsx', 'home'],
+  ['app/central-depositos/meus-depositos/page.tsx', 'overview'],
+  ['app/central-depositos/cadastro-de-itens/page.tsx', 'registration'],
+  ['app/central-depositos/saida-de-material/page.tsx', 'outbound'],
+  ['app/central-depositos/controle-de-depositos/page.tsx', 'depots'],
+  ['app/central-depositos/controle-de-itens/page.tsx', 'control'],
 ]);
 
 for (const [path, section] of primaryRoutes) {

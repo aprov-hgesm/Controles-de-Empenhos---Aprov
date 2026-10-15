@@ -248,6 +248,12 @@ jobs:
       - name: Central Móvel R1 MOBILE-I integrated product guard
         run: npm run verify:mobile-r1-integration-final
 
+      - name: Central de Depósitos canonical route and API compatibility guard
+        run: npm run verify:central-depositos-routes
+
+      - name: Operador Móvel premium interface and navigation guard
+        run: npm run test:operador-movel-premium
+
       - name: Central Móvel entrada avulsa mobile tests
         run: npm run test:mobile-r1-manual-entry
 
@@ -259,6 +265,9 @@ jobs:
 
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout
+
+      - name: Central de Depósitos isometric scene auto-fit tests
+        run: npm run test:warehouse-isometric-camera
 
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9

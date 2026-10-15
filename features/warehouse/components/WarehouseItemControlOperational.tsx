@@ -105,7 +105,7 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[#00288e]/65">
-              ADM Depósito · ciclo do item armazenado
+              Central de Depósitos · ciclo do item armazenado
             </p>
             <h2 className="mt-2 text-xl font-black text-slate-900">
               Controle de Materiais

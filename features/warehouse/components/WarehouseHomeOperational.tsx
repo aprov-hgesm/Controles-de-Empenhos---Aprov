@@ -157,7 +157,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         loading: false,
         error: error instanceof Error
           ? error.message
-          : 'Falha ao carregar a central visual do ADM Depósito.',
+          : 'Falha ao carregar a central visual do Central de Depósitos.',
       }));
     }
   }, [workspaceId]);
@@ -414,7 +414,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     <section
       className={styles.scene}
       data-testid="warehouse-home-operational"
-      aria-label="Meus Depósitos ADM Depósito"
+      aria-label="Meus Depósitos Central de Depósitos"
     >
       <div className={styles.glow} aria-hidden="true" />
       <div className={styles.texture} aria-hidden="true" />
@@ -428,7 +428,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         <div>
           <p className={styles.eyebrow}>
             <Sparkles className="h-3.5 w-3.5" />
-            EMPROVEX · ADM DEPÓSITO · LOCALIZAÇÃO VISUAL
+            EMPROVEX · CENTRAL DE DEPÓSITOS · LOCALIZAÇÃO VISUAL
           </p>
           <h1 className={styles.title}>Encontre o material dentro do depósito.</h1>
           <p className={styles.subtitle}>
@@ -647,7 +647,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                       para transformar esta área no localizador visual do estoque.
                     </p>
                     <Link
-                      href="/adm-deposito/controle-de-depositos?aba=croquis"
+                      href="/central-depositos/controle-de-depositos?aba=croquis"
                       className={styles.configureLink}
                     >
                       <LocateFixed className="h-4 w-4" />
@@ -669,7 +669,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                 : 'Selecione um material para acender sua localização na Visão 3D'}
             </div>
             <Link
-              href="/adm-deposito/controle-de-depositos?aba=croquis"
+              href="/central-depositos/controle-de-depositos?aba=croquis"
               className={styles.editLink}
             >
               Editar estrutura em Controle de Depósitos

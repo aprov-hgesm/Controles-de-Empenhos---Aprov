@@ -7,28 +7,28 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const primaryRoutes = {
-  home: ['app/adm-deposito/page.tsx', 'home'],
-  overview: ['app/adm-deposito/meus-depositos/page.tsx', 'overview'],
-  registration: ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
-  outbound: ['app/adm-deposito/saida-de-material/page.tsx', 'outbound'],
-  depots: ['app/adm-deposito/controle-de-depositos/page.tsx', 'depots'],
-  control: ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
+  home: ['app/central-depositos/page.tsx', 'home'],
+  overview: ['app/central-depositos/meus-depositos/page.tsx', 'overview'],
+  registration: ['app/central-depositos/cadastro-de-itens/page.tsx', 'registration'],
+  outbound: ['app/central-depositos/saida-de-material/page.tsx', 'outbound'],
+  depots: ['app/central-depositos/controle-de-depositos/page.tsx', 'depots'],
+  control: ['app/central-depositos/controle-de-itens/page.tsx', 'control'],
 };
 
 const legacyRoutes = {
-  stock: ['app/adm-deposito/estoque/page.tsx', '/adm-deposito/controle-de-itens?aba=stock'],
-  movements: ['app/adm-deposito/movimentacoes/page.tsx', '/adm-deposito/controle-de-itens?aba=movements'],
-  locations: ['app/adm-deposito/localizacoes/page.tsx', '/adm-deposito/controle-de-depositos?aba=estrutura'],
-  warehouseView: ['app/adm-deposito/visao-do-deposito/page.tsx', '/adm-deposito/controle-de-depositos?aba=croquis'],
-  inventory: ['app/adm-deposito/inventario/page.tsx', '/adm-deposito/controle-de-itens?aba=inventory'],
-  siscofis: ['app/adm-deposito/siscofis-conciliacao/page.tsx', '/adm-deposito/cadastro-de-itens?aba=siscofis'],
-  deliveries: ['app/adm-deposito/entregas/page.tsx', '/adm-deposito/controle-de-itens?aba=deliveries'],
-  settings: ['app/adm-deposito/configuracoes/page.tsx', '/adm-deposito/controle-de-itens?aba=settings'],
-  expressOutbound: ['app/adm-deposito/saida-expressa/page.tsx', '/adm-deposito/saida-de-material'],
+  stock: ['app/central-depositos/estoque/page.tsx', '/central-depositos/controle-de-itens?aba=stock'],
+  movements: ['app/central-depositos/movimentacoes/page.tsx', '/central-depositos/controle-de-itens?aba=movements'],
+  locations: ['app/central-depositos/localizacoes/page.tsx', '/central-depositos/controle-de-depositos?aba=estrutura'],
+  warehouseView: ['app/central-depositos/visao-do-deposito/page.tsx', '/central-depositos/controle-de-depositos?aba=croquis'],
+  inventory: ['app/central-depositos/inventario/page.tsx', '/central-depositos/controle-de-itens?aba=inventory'],
+  siscofis: ['app/central-depositos/siscofis-conciliacao/page.tsx', '/central-depositos/cadastro-de-itens?aba=siscofis'],
+  deliveries: ['app/central-depositos/entregas/page.tsx', '/central-depositos/controle-de-itens?aba=deliveries'],
+  settings: ['app/central-depositos/configuracoes/page.tsx', '/central-depositos/controle-de-itens?aba=settings'],
+  expressOutbound: ['app/central-depositos/saida-expressa/page.tsx', '/central-depositos/saida-de-material'],
 };
 
 test('walking skeleton possui layout protegido, seis superfícies atuais e redirects legados', () => {
-  const layout = read('app/adm-deposito/layout.tsx');
+  const layout = read('app/central-depositos/layout.tsx');
   assert.match(layout, /WarehouseProtectedLayout/);
 
   for (const [id, [path, section]] of Object.entries(primaryRoutes)) {
@@ -75,7 +75,7 @@ test('layout compartilhado preserva gate multi-tenant em todas as rotas principa
   const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
   assert.ok(gate.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
   assert.ok(gate.includes('canAccessWarehouseModule(context)'));
-  assert.ok(gate.includes("fetch('/api/adm-deposito/status'"));
+  assert.ok(gate.includes("fetch('/api/central-depositos/status'"));
   assert.ok(gate.includes("window.location.replace('/')"));
 });
 

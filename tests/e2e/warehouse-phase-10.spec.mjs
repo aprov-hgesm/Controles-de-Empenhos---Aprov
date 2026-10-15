@@ -13,7 +13,7 @@ test.describe.serial('ADM Depósito FASE 10 — Inventário Físico', () => {
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/inventario');
+    await page.goto('/central-depositos/inventario');
     await expect(page.getByTestId('warehouse-inventory-operational')).toBeVisible({
       timeout: 20_000,
     });
@@ -66,7 +66,7 @@ test.describe.serial('ADM Depósito FASE 10 — Inventário Físico', () => {
       'Finalizado'
     );
 
-    await page.goto('/adm-deposito/estoque');
+    await page.goto('/central-depositos/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({
       timeout: 20_000,
     });
@@ -85,7 +85,7 @@ test.describe.serial('ADM Depósito FASE 10 — Inventário Físico', () => {
       'Central de Depósitos'
     );
 
-    await page.goto('/adm-deposito/inventario');
+    await page.goto('/central-depositos/inventario');
     await expect(page.getByTestId('warehouse-inventory-operational')).toBeVisible({
       timeout: 20_000,
     });

@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
+import {
+  fitWarehouseIsometricScene,
+  transformWarehouseIsoRectForView,
+  warehouseIsoRoomDimensions,
+  type WarehouseIsoPoint,
+  type WarehouseIsoView,
+} from '../../../lib/warehouse/isometricCamera';
 import type {
   WarehouseLocation,
   WarehouseLocationBalance,
@@ -31,7 +38,7 @@ type Props = {
 
 type IsoPoint = { x: number; y: number };
 type CanonicalVisualKind = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH';
-type PreviewView = 'front' | 'right' | 'back' | 'left';
+type PreviewView = WarehouseIsoView;
 
 const PREVIEW_VIEWS: ReadonlyArray<{ id: PreviewView; label: string }> = [
   { id: 'front', label: 'Frente' },
@@ -72,48 +79,6 @@ function isoPoint(
 
 function polygonPoints(pointsList: IsoPoint[]): string {
   return pointsList.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
-}
-
-function transformObjectForView(
-  object: WarehouseDepotLayoutObject,
-  logicalWidth: number,
-  logicalHeight: number,
-  view: PreviewView
-): WarehouseDepotLayoutObject {
-  if (view === 'front') return object;
-
-  const widthBase = Math.max(1, logicalWidth);
-  const heightBase = Math.max(1, logicalHeight);
-  const nx = object.x / widthBase;
-  const ny = object.y / heightBase;
-  const nw = object.width / widthBase;
-  const nh = object.height / heightBase;
-
-  if (view === 'back') {
-    return {
-      ...object,
-      x: (1 - nx - nw) * widthBase,
-      y: (1 - ny - nh) * heightBase,
-    };
-  }
-
-  if (view === 'right') {
-    return {
-      ...object,
-      x: ny * widthBase,
-      y: (1 - nx - nw) * heightBase,
-      width: nh * widthBase,
-      height: nw * heightBase,
-    };
-  }
-
-  return {
-    ...object,
-    x: (1 - ny - nh) * widthBase,
-    y: nx * heightBase,
-    width: nh * widthBase,
-    height: nw * heightBase,
-  };
 }
 
 function canonicalKind(kind: WarehouseDepotLayoutObject['kind']): CanonicalVisualKind {
@@ -1126,7 +1091,7 @@ export function WarehouseIsometricPreview({
     () =>
       objects
         .filter((object) => object.kind !== 'WALL' && object.kind !== 'CORRIDOR')
-        .map((object) => transformObjectForView(
+        .map((object) => transformWarehouseIsoRectForView(
           object,
           logicalWidth,
           logicalHeight,
@@ -1140,22 +1105,94 @@ export function WarehouseIsometricPreview({
     [logicalHeight, logicalWidth, objects, previewView]
   );
 
+  const { width: viewLogicalWidth, height: viewLogicalHeight } = warehouseIsoRoomDimensions(
+    logicalWidth,
+    logicalHeight,
+    previewView
+  );
+
   const floor = [
-    isoPoint(0, 0, 0, logicalWidth, logicalHeight),
-    isoPoint(logicalWidth, 0, 0, logicalWidth, logicalHeight),
-    isoPoint(logicalWidth, logicalHeight, 0, logicalWidth, logicalHeight),
-    isoPoint(0, logicalHeight, 0, logicalWidth, logicalHeight),
+    isoPoint(0, 0, 0, viewLogicalWidth, viewLogicalHeight),
+    isoPoint(viewLogicalWidth, 0, 0, viewLogicalWidth, viewLogicalHeight),
+    isoPoint(viewLogicalWidth, viewLogicalHeight, 0, viewLogicalWidth, viewLogicalHeight),
+    isoPoint(0, viewLogicalHeight, 0, viewLogicalWidth, viewLogicalHeight),
   ];
 
   const wallHeight = 154;
   const backWallTop = [
-    isoPoint(0, 0, wallHeight, logicalWidth, logicalHeight),
-    isoPoint(logicalWidth, 0, wallHeight, logicalWidth, logicalHeight),
+    isoPoint(0, 0, wallHeight, viewLogicalWidth, viewLogicalHeight),
+    isoPoint(viewLogicalWidth, 0, wallHeight, viewLogicalWidth, viewLogicalHeight),
   ];
   const leftWallTop = [
-    isoPoint(0, 0, wallHeight, logicalWidth, logicalHeight),
-    isoPoint(0, logicalHeight, wallHeight, logicalWidth, logicalHeight),
+    isoPoint(0, 0, wallHeight, viewLogicalWidth, viewLogicalHeight),
+    isoPoint(0, viewLogicalHeight, wallHeight, viewLogicalWidth, viewLogicalHeight),
   ];
+
+  // A câmera SVG deriva da geometria projetada, nunca de offsets fixos.
+  // Inclui piso, paredes, volumes e espaço reservado para etiquetas e caixas.
+  // A vista altera visibleObjects: o enquadramento se recalcula automaticamente.
+  const cameraViewBox = useMemo(() => {
+    const roomPoints: WarehouseIsoPoint[] = [
+      isoPoint(0, 0, 0, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(viewLogicalWidth, 0, 0, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(viewLogicalWidth, viewLogicalHeight, 0, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(0, viewLogicalHeight, 0, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(0, 0, wallHeight, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(viewLogicalWidth, 0, wallHeight, viewLogicalWidth, viewLogicalHeight),
+      isoPoint(0, viewLogicalHeight, wallHeight, viewLogicalWidth, viewLogicalHeight),
+    ];
+
+    for (const object of visibleObjects) {
+      const kind = canonicalKind(object.kind);
+      const location = object.warehouseLocationId
+        ? locationById.get(object.warehouseLocationId)
+        : null;
+      const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
+      const height = object.kind === 'OTHER' && !object.warehouseLocationId
+        ? 54
+        : objectHeight(kind, subpositions.length);
+
+      for (const x of [object.x, object.x + object.width]) {
+        for (const y of [object.y, object.y + object.height]) {
+          roomPoints.push(isoPoint(x, y, 0, viewLogicalWidth, viewLogicalHeight));
+          roomPoints.push(isoPoint(x, y, height, viewLogicalWidth, viewLogicalHeight));
+        }
+      }
+
+      // A etiqueta selecionada pode ser maior; reservar o espaço no fit
+      // evita cortes durante a pesquisa, sem alterar a projeção da estrutura.
+      if (object.kind !== 'OTHER' || object.warehouseLocationId) {
+        const label = isoPoint(
+          object.x + object.width / 2,
+          object.y + object.height / 2,
+          height,
+          viewLogicalWidth,
+          viewLogicalHeight
+        );
+        const highlighted = object.warehouseLocationId
+          ? highlightedLocalIds.has(object.warehouseLocationId)
+          : false;
+        const labelHalfWidth = highlighted ? 82 : 47;
+        const labelTop = highlighted ? 108 : 80;
+        roomPoints.push(
+          { x: label.x - labelHalfWidth, y: label.y - labelTop },
+          { x: label.x + labelHalfWidth, y: label.y + 36 }
+        );
+      }
+    }
+
+    const viewWidth = embedded ? VIEW_WIDTH - 110 : VIEW_WIDTH;
+    const viewHeight = embedded ? VIEW_HEIGHT - 95 : VIEW_HEIGHT;
+    return fitWarehouseIsometricScene(roomPoints, {
+      width: viewWidth,
+      height: viewHeight,
+      padding: embedded ? 62 : 72,
+      maxZoom: 1.28,
+    });
+  }, [
+    embedded, viewLogicalWidth, viewLogicalHeight, visibleObjects,
+    locationById, subpositionsByParent, highlightedLocalIds,
+  ]);
 
   return (
     <section
@@ -1285,11 +1322,9 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
-            viewBox={
-              embedded
-                ? '55 35 ' + (VIEW_WIDTH - 110) + ' ' + (VIEW_HEIGHT - 95)
-                : '0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT
-            }
+            viewBox={[cameraViewBox.x, cameraViewBox.y, cameraViewBox.width, cameraViewBox.height].join(' ')}
+            preserveAspectRatio="xMidYMid meet"
+            data-camera-fit="bounds"
             className={
               'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
               + (viewTransitioning
@@ -1417,7 +1452,7 @@ export function WarehouseIsometricPreview({
               <line x1={leftWallTop[0].x} y1={leftWallTop[0].y} x2={leftWallTop[1].x} y2={leftWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.78" />
 
               {[0.16, 0.5, 0.84].map((ratio) => {
-                const p = isoPoint(logicalWidth * ratio, 0, wallHeight * 0.62, logicalWidth, logicalHeight);
+                const p = isoPoint(viewLogicalWidth * ratio, 0, wallHeight * 0.62, viewLogicalWidth, viewLogicalHeight);
                 return (
                   <g key={'lamp-back-' + ratio}>
                     <rect x={p.x - 14} y={p.y - 6} width="28" height="8" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
@@ -1427,7 +1462,7 @@ export function WarehouseIsometricPreview({
               })}
 
               {[0.22, 0.64].map((ratio) => {
-                const p = isoPoint(0, logicalHeight * ratio, wallHeight * 0.58, logicalWidth, logicalHeight);
+                const p = isoPoint(0, viewLogicalHeight * ratio, wallHeight * 0.58, viewLogicalWidth, viewLogicalHeight);
                 return (
                   <g key={'lamp-left-' + ratio}>
                     <rect x={p.x - 12} y={p.y - 5} width="24" height="7" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
@@ -1444,9 +1479,9 @@ export function WarehouseIsometricPreview({
 
               <polyline
                 points={polygonPoints([
-                  isoPoint(logicalWidth * 0.05, logicalHeight * 0.86, 0.8, logicalWidth, logicalHeight),
-                  isoPoint(logicalWidth * 0.38, logicalHeight * 0.86, 0.8, logicalWidth, logicalHeight),
-                  isoPoint(logicalWidth * 0.38, logicalHeight * 0.68, 0.8, logicalWidth, logicalHeight),
+                  isoPoint(viewLogicalWidth * 0.05, viewLogicalHeight * 0.86, 0.8, viewLogicalWidth, viewLogicalHeight),
+                  isoPoint(viewLogicalWidth * 0.38, viewLogicalHeight * 0.86, 0.8, viewLogicalWidth, viewLogicalHeight),
+                  isoPoint(viewLogicalWidth * 0.38, viewLogicalHeight * 0.68, 0.8, viewLogicalWidth, viewLogicalHeight),
                 ])}
                 fill="none"
                 stroke="#f3c24b"
@@ -1471,8 +1506,8 @@ export function WarehouseIsometricPreview({
                   <WarehouseStructure
                     key={object.id}
                     object={object}
-                    logicalWidth={logicalWidth}
-                    logicalHeight={logicalHeight}
+                    logicalWidth={viewLogicalWidth}
+                    logicalHeight={viewLogicalHeight}
                     location={location}
                     subpositions={subpositions}
                     occupiedQuantity={occupiedQuantity}

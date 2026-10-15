@@ -447,9 +447,9 @@ export function WarehouseMobileIntakeAllocation() {
             </p>
           </div>
           <Link
-            href="/central-mobile"
+            href="/operador-movel"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10"
-            aria-label="Voltar ao início da Central Móvel"
+            aria-label="Voltar ao início da Operador Móvel"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>

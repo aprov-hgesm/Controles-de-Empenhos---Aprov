@@ -35,7 +35,7 @@ async function requestWarehouseStatus(
   forceTokenRefresh = false
 ): Promise<{ ok: boolean; status: WarehouseStatusPayload }> {
   const idToken = await currentUser.getIdToken(forceTokenRefresh);
-  const response = await fetch('/api/adm-deposito/status', {
+  const response = await fetch('/api/central-depositos/status', {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${idToken}`,

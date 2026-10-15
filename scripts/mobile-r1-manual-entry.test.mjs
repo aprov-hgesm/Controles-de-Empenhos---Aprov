@@ -40,11 +40,11 @@ const screen = read('features/warehouse/mobile/WarehouseMobileManualEntry.tsx');
 const manual = read('lib/warehouse/manualEntryRepository.ts');
 
 test('Central Móvel tem rota e cartão exclusivos para entrada avulsa, sem remover alocação por NF', () => {
-  assert.match(read('app/central-mobile/avulso/page.tsx'), /WarehouseMobileManualEntry/);
+  assert.match(read('app/operador-movel/avulso/page.tsx'), /WarehouseMobileManualEntry/);
   const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-  assert.match(home, /href: '\/central-mobile\/avulso'/);
-  assert.match(home, /href: '\/central-mobile\/alocar'/);
-  const mobileLayout = read('app/central-mobile/layout.tsx');
+  assert.match(home, /href: '\/operador-movel\/avulso'/);
+  assert.match(home, /href: '\/operador-movel\/alocar'/);
+  const mobileLayout = read('app/operador-movel/layout.tsx');
   assert.match(mobileLayout, /WarehouseMobileProtectedLayout/);
   assert.match(read('features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx'), /HGESM_SECTOR_EMAIL/);
 });

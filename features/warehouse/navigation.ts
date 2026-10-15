@@ -18,42 +18,42 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   {
     id: 'home',
     label: 'Início',
-    href: '/adm-deposito',
+    href: '/central-depositos',
     eyebrow: 'Visão geral',
     description: 'Visão visual consolidada dos depósitos e das pendências de alocação.'
   },
   {
     id: 'overview',
     label: 'Meus Depósitos',
-    href: '/adm-deposito/meus-depositos',
+    href: '/central-depositos/meus-depositos',
     eyebrow: 'Central visual do depósito',
     description: 'Central visual com Visão 3D do depósito, consulta de materiais, saldo, localização e validade.'
   },
   {
     id: 'registration',
     label: 'Alocação de Material',
-    href: '/adm-deposito/cadastro-de-itens',
+    href: '/central-depositos/cadastro-de-itens',
     eyebrow: 'Alocação e migração',
     description: 'Notas fiscais pendentes de tratamento logístico, alocação física de materiais e migração do inventário SISCOFIS.',
   },
   {
     id: 'outbound',
     label: 'Saída de Material',
-    href: '/adm-deposito/saida-de-material',
+    href: '/central-depositos/saida-de-material',
     eyebrow: 'Retirada e SISCOFIS',
     description: 'Separação física, baixa de estoque, destino, responsável e documentos auxiliares para retirada e Pedido de Material no SISCOFIS.',
   },
   {
     id: 'depots',
     label: 'Controle de Depósitos',
-    href: '/adm-deposito/controle-de-depositos',
+    href: '/central-depositos/controle-de-depositos',
     eyebrow: 'Estrutura física',
     description: 'Cadastro de depósitos, localizações e croquis com estruturas físicas personalizadas.',
   },
   {
     id: 'control',
     label: 'Controle de Materiais',
-    href: '/adm-deposito/controle-de-itens',
+    href: '/central-depositos/controle-de-itens',
     eyebrow: 'Estoque e rastreabilidade',
     description: 'Consulta permanente de estoque, posições físicas, validade, movimentações, inventários e relatórios.'
   },

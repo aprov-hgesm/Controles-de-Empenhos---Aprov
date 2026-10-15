@@ -239,7 +239,7 @@ export function AppSidebar({
 
             {warehouseModuleEnabled && onOpenWarehouse && (
               <button
-                data-testid="nav-adm-deposito"
+                data-testid="nav-central-depositos"
                 onClick={onOpenWarehouse}
                 className="emprovex-sidebar-nav-item"
               >
