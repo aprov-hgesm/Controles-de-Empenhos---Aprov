@@ -1,7 +1,7 @@
 import { isValidWorkspaceId, normalizeWorkspaceId } from '../platformIdentity';
 
 /**
- * Namespace Firestore dedicado ao ADM Depósito.
+ * Namespace Firestore dedicado ao Central de Depósitos.
  *
  * Estrutura:
  * warehouse/{workspaceId}/{domain}/{documentId}
