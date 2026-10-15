@@ -1,4 +1,4 @@
-# ADM Depósito — Decisões Arquiteturais Oficiais
+# Central de Depósitos — Decisões Arquiteturais Oficiais
 
 Este documento registra decisões que devem ser tratadas como **congeladas** até que haja decisão explícita em contrário.
 

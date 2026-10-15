@@ -1,5 +1,7 @@
 # Central de Depósitos — Estado Atual
 
+> **Atualização complementar — 2026-10-15:** padronização de nome, rotas e APIs preparada na branch CENTRAL-ROUTES-01, ainda não certificada/publicada; a linha histórica de produção de 2026-10-01 abaixo não deve ser confundida com o novo PR.
+
 Atualização canônica: **2026-10-01**
 Baseline de produção: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
@@ -7,7 +9,7 @@ Baseline de produção: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 ## Situação vigente
 
-- nome de produto: **Central de Depósitos**; caminhos técnicos `adm-deposito` preservados por compatibilidade;
+- nome de produto: **Central de Depósitos**; rota canônica `/central-depositos` e APIs `/api/central-depositos/*`, com URLs legadas `/adm-deposito` e `/api/adm-deposito/*` mantidas somente como compatibilidade (D-123);
 - acesso founder-only: **SUPERADO**;
 - acesso externo multi-tenant: **LIBERADO** para contexto operacional de setor autenticado/validado, com isolamento por workspace/UG;
 - ciclo histórico até Módulo 14: **CONCLUÍDO**;
