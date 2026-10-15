@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, ClipboardPlus, LoaderCircle, PackagePlus, RefreshCw, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, LoaderCircle, PackagePlus, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -117,16 +117,13 @@ export function WarehouseMobileManualEntry() {
 
   useEffect(() => {
     if (!productReady || activeMode !== 'existing' || knownMaterial || catalogStatus !== 'idle') return;
-    let cancelled = false;
     setCatalogStatus('loading');
     void listWarehouseMaterials(workspace.workspaceId, 150).then((items) => {
-      if (cancelled) return;
       setCatalog(items.filter((item) => item.status === 'active' && item.ug === workspace.ug));
       setCatalogStatus('loaded');
     }).catch(() => {
-      if (!cancelled) setCatalogStatus('error');
+      setCatalogStatus('error');
     });
-    return () => { cancelled = true; };
   }, [activeMode, catalogStatus, knownMaterial, productReady, workspace.workspaceId, workspace.ug]);
 
   const resolveProduct = useCallback((event: WarehouseMobileScanEvent) => {
