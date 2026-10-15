@@ -25,7 +25,7 @@ export function WarehouseMobileShell({
               EMPROVEX
             </p>
             <p className="truncate text-base font-black tracking-tight text-slate-950">
-              Central Móvel
+              Operador Móvel
             </p>
           </div>
           <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-right">
@@ -42,10 +42,10 @@ export function WarehouseMobileShell({
       <div className="hidden min-h-dvh items-center justify-center px-8 lg:flex">
         <div className="max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
           <p className="font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#00288e]/70">
-            Superfície móvel
+            Central de Depósitos · versão móvel
           </p>
           <h1 className="mt-3 text-2xl font-black text-slate-950">
-            Abra a Central Móvel em um celular
+            Abra o Operador Móvel em um celular
           </h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
             Esta interface é dedicada à operação física no depósito. A Central completa continua disponível no desktop.
@@ -65,11 +65,11 @@ export function WarehouseMobileShell({
 
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden"
-        aria-label="Navegação da Central Móvel"
+        aria-label="Navegação da Operador Móvel"
       >
         <div className="mx-auto grid max-w-xl grid-cols-2 gap-2">
           <Link
-            href="/central-mobile"
+            href="/operador-movel"
             className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-blue-50 text-sm font-black text-[#00288e]"
             data-testid="warehouse-mobile-nav-home"
           >

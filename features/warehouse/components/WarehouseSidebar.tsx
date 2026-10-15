@@ -127,21 +127,6 @@ export function WarehouseSidebar({
 
             <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
 
-            {showMobileAccess && (
-              <>
-                <Link
-                  href="/central-mobile"
-                  className="emprovex-sidebar-nav-item"
-                  onClick={onClose}
-                  data-testid="warehouse-nav-central-mobile"
-                >
-                  <Smartphone className="h-5 w-5" aria-hidden="true" />
-                  <span>Central Móvel</span>
-                </Link>
-                <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
-              </>
-            )}
-
             {WAREHOUSE_SECTIONS.map((item) => {
               const Icon = SECTION_ICONS[item.id];
               const active = item.id === activeSection;
@@ -160,6 +145,25 @@ export function WarehouseSidebar({
                 </Link>
               );
             })}
+
+            {showMobileAccess && (
+              <div className="mt-3 border-t border-white/[0.08] pt-3">
+                <p className="px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                  Operações no depósito
+                </p>
+                <div className="ml-3 border-l border-white/[0.12] pl-2">
+                  <Link
+                    href="/operador-movel"
+                    className="emprovex-sidebar-nav-item"
+                    onClick={onClose}
+                    data-testid="warehouse-nav-operador-movel"
+                  >
+                    <Smartphone className="h-5 w-5" aria-hidden="true" />
+                    <span>Operador Móvel</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 

@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     return [
       { source: '/adm-deposito', destination: '/central-depositos', permanent: true },
       { source: '/adm-deposito/:path*', destination: '/central-depositos/:path*', permanent: true },
+      { source: '/central-mobile', destination: '/operador-movel', permanent: true },
+      { source: '/central-mobile/:path*', destination: '/operador-movel/:path*', permanent: true },
     ];
   },
   async headers() {

@@ -229,11 +229,11 @@ export function WarehouseMobilePositionCheck() {
     >
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
         <Link
-          href="/central-mobile"
+          href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Central Móvel
+          Operador Móvel
         </Link>
         <p className="mt-4 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-blue-200">
           MOBILE-H · CONFERÊNCIA FÍSICA/DIGITAL
@@ -436,7 +436,7 @@ export function WarehouseMobilePositionCheck() {
           {transferQuery && (
             <Link
               href={{
-                pathname: '/central-mobile/transferir',
+                pathname: '/operador-movel/transferir',
                 query: transferQuery,
               }}
               className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-[#00288e] px-4 text-sm font-black text-white"

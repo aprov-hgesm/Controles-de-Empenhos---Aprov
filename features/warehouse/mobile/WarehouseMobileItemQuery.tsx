@@ -191,11 +191,11 @@ export function WarehouseMobileItemQuery() {
     >
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
         <Link
-          href="/central-mobile"
+          href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Central Móvel
+          Operador Móvel
         </Link>
         <p className="mt-4 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-blue-200">
           CONSULTA · SOMENTE LEITURA

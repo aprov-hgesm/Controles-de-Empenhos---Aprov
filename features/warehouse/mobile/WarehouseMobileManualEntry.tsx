@@ -171,7 +171,7 @@ export function WarehouseMobileManualEntry() {
     renewOperation();
     setLocation({ status: 'resolving' });
     if (!workspace.ug) {
-      setLocation({ status: 'error', message: 'UG não resolvida. Reabra a Central Móvel.' });
+      setLocation({ status: 'error', message: 'UG não resolvida. Reabra a Operador Móvel.' });
       return;
     }
     void resolveWarehouseStockPositionBarcode({
@@ -298,8 +298,8 @@ export function WarehouseMobileManualEntry() {
   return (
     <div className="space-y-4" data-testid="warehouse-mobile-manual-entry">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
-        <Link href="/central-mobile" className="inline-flex min-h-10 items-center gap-2 text-xs font-black text-blue-100">
-          <ArrowLeft className="h-4 w-4" /> Central Móvel
+        <Link href="/operador-movel" className="inline-flex min-h-10 items-center gap-2 text-xs font-black text-blue-100">
+          <ArrowLeft className="h-4 w-4" /> Operador Móvel
         </Link>
         <p className="mt-3 font-mono text-[10px] font-black uppercase tracking-widest text-blue-200">Entrada avulsa · Sem NF</p>
         <h1 className="mt-1 text-2xl font-black">Cadastrar material</h1>

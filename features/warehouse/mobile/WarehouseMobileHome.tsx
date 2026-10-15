@@ -14,49 +14,49 @@ const MOBILE_CAPABILITIES = [
     label: 'Alocar recebimento',
     description: 'NF → item → produto → posição.',
     Icon: ClipboardPlus,
-    href: '/central-mobile/alocar',
+    href: '/operador-movel/alocar',
   },
   {
     label: 'Cadastrar avulso',
     description: 'Leia material e prateleira; informe quantidade, unidade e validade.',
     Icon: PackagePlus,
-    href: '/central-mobile/avulso',
+    href: '/operador-movel/avulso',
   },
   {
     label: 'Transferir material',
     description: 'Origem → produto → destino.',
     Icon: Warehouse,
-    href: '/central-mobile/transferir',
+    href: '/operador-movel/transferir',
   },
   {
     label: 'Consultar localização',
     description: 'Leia um local e veja o que existe nele.',
     Icon: MapPin,
-    href: '/central-mobile/consultar-localizacao',
+    href: '/operador-movel/consultar-localizacao',
   },
   {
     label: 'Consultar item',
     description: 'Leia o item e veja locais e quantidades.',
     Icon: PackageSearch,
-    href: '/central-mobile/consultar-item',
+    href: '/operador-movel/consultar-item',
   },
   {
     label: 'Inventário',
     description: 'Contagem orientada por posição e material.',
     Icon: Boxes,
-    href: '/central-mobile/inventario',
+    href: '/operador-movel/inventario',
   },
   {
     label: 'Saída de material',
     description: 'Separação e retirada com posição e lote.',
     Icon: ScanLine,
-    href: '/central-mobile/saida',
+    href: '/operador-movel/saida',
   },
   {
     label: 'Conferir posição',
     description: 'Compare o físico com o registro oficial.',
     Icon: Warehouse,
-    href: '/central-mobile/conferir',
+    href: '/operador-movel/conferir',
   },
 ] as const;
 
@@ -65,13 +65,13 @@ export function WarehouseMobileHome() {
     <div className="space-y-5">
       <section className="rounded-3xl bg-[linear-gradient(135deg,#03102a_0%,#00288e_100%)] px-5 py-6 text-white shadow-[0_24px_70px_-38px_rgba(0,40,142,0.65)]">
         <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-blue-200">
-          Operação no ponto físico
+          Central de Depósitos · Acesso no celular
         </p>
         <h1 className="mt-2 text-2xl font-black tracking-tight">
-          Central Móvel
+          Operador Móvel
         </h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-blue-100/90">
-          Fundação móvel da Central de Depósitos com câmera e scanner carregados somente quando necessários.
+          Operações da Central de Depósitos no celular, com leitura de etiquetas e movimentações no local de armazenamento.
         </p>
       </section>
 
