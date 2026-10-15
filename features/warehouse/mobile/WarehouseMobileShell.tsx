@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, ShieldCheck, Warehouse } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -19,24 +19,29 @@ export function WarehouseMobileShell({
 
   return (
     <div
-      className="min-h-dvh bg-slate-100 text-slate-950"
+      className="min-h-dvh bg-[linear-gradient(180deg,#f5f8fc_0%,#eef3f9_100%)] text-slate-950"
       data-testid="warehouse-mobile-shell"
     >
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/94 px-4 py-3 backdrop-blur-xl lg:hidden">
-        <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[#00288e]/70">
-              EMPROVEX · CENTRAL DE DEPÓSITOS
-            </p>
-            <p className="truncate text-base font-black tracking-tight text-slate-950">
-              Operador Móvel
-            </p>
+      <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 px-4 py-3 shadow-[0_8px_25px_-24px_rgba(0,28,75,0.35)] backdrop-blur-xl lg:hidden">
+        <div className="mx-auto flex max-w-xl items-center justify-between gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-[#071f48] text-white shadow-[0_9px_24px_-16px_rgba(0,30,86,0.8)]" aria-hidden="true">
+              <Warehouse className="h-5 w-5" strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-[8px] font-bold uppercase tracking-[0.12em] text-[#365783]">
+                EMPROVEX · Central de Depósitos
+              </p>
+              <p className="mt-0.5 truncate text-[17px] font-extrabold leading-5 tracking-[-0.025em] text-[#112541]">
+                Operador Móvel
+              </p>
+            </div>
           </div>
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-right">
-            <p className="font-mono text-[8px] font-black uppercase tracking-[0.16em] text-blue-700/70">
+          <div className="shrink-0 rounded-xl border border-[#d9e5f3] bg-[#f4f8fd] px-2.5 py-1.5 text-right" aria-label={'Unidade gestora ' + (workspaceContext.ug || 'não identificada')}>
+            <p className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-[#55739c]">
               UG
             </p>
-            <p className="text-xs font-black text-[#00288e]">
+            <p className="text-[12px] font-extrabold tracking-[-0.01em] text-[#00288e]">
               {workspaceContext.ug || '—'}
             </p>
           </div>
