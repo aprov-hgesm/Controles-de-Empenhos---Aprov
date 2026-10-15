@@ -1,5 +1,8 @@
 # EMPROVEX — Memorial Oficial
 
+> **Atualização pontual — 2026-10-15 (Central de Depósitos):** saldo legado de testes do Suco, 5 unidades em `UNASSIGNED`, **regularizado com PASS no Firestore real**. A alteração foi exclusivamente de dados, sem deploy, merge, Rules ou atualização da aplicação. Evidências: [PR #310](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/310), `docs/WAREHOUSE_INTEGRITY_RECONCILE_01.md` e `docs/WAREHOUSE_DATA_REPAIR_EXECUTION_01.md`. **A sincronização global e os demais estados abaixo permanecem no recorte histórico indicado (2026-10-04); esta nota não certifica outros programas nem todos os saldos dos depósitos.**
+
+
 Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
@@ -102,6 +105,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | CT-01 | **PENDENTE NO RC** | `camera=(self), microphone=(), geolocation=()` |
 | Rules candidatas | **AUDITADAS / APTAS PARA RC** | produção R3 sem drift; principal RC `bc91185...`; Warehouse RC `6e1f105...`; rollout Rules RC → app RC |
 | HARDEN-B | **PARCIAL / ESPERA CONTROLADA** | PITR/delete protection/schedule/retention ativos; backup READY/verify/restore pendentes |
+| Warehouse — saldo legado Suco (2026-10-15) | **PASS — REPARO DE DADOS CONFIRMADO** | 5 `UNASSIGNED` → 0, saldo agregado 5 → 0; ledger de ajuste preserva a trilha; PR #310 DRAFT; demais materiais não foram auditados neste evento |
 | Billing R1 | **IMPLEMENTADO EM MODO OBSERVE** | R$ 70; trial; cobrança externa; confirmação manual; sem suspensão automática |
 | Piloto real | **NÃO INICIADO** | vem depois do RC tecnicamente fechado/publicação controlada |
 | Abertura comercial ampla | **NÃO AUTORIZADA** | exige piloto, correções, SAAS-J e GO explícito do Fundador |
@@ -606,6 +610,22 @@ Contratos centrais reutilizados pelo Desktop e pela Mobile:
 - intake;
 - transferência;
 - outbound.
+
+### 11.1 Saneamento pontual do saldo legado de testes — Suco (2026-10-15)
+
+**Estado: PASS — dados reais regularizados; não houve alteração de runtime.**
+
+- **Contexto anterior:** `docs/WAREHOUSE_INTEGRITY_RECONCILE_01.md` comprovou um saldo positivo de 5 unidades em `UNASSIGNED`; `docs/WAREHOUSE_DATA_REPAIR_EXECUTION_01.md` corrigiu excessos de lotes, mas deixou expressamente essa pendência fora do reparo anterior.
+- **Alvo único:** projeto `gen-lang-client-0982077967`, banco `emprovex-warehouse`, workspace `hgesm-aprov`, material Suco `mat_272f2d996ee65ed3530ad2d7e27b66d7`.
+- **Autorização:** Fundador confirmou que as 5 unidades não existem fisicamente e eram apenas saldo antigo de testes; autorizou a regularização para deixar os depósitos limpos.
+- **Pré-condições verificadas no Firestore vivo:** saldo agregado 5; soma dos `movements.quantityDelta` = 5; nenhuma posição física positiva; uma posição `UNASSIGNED` positiva de 5; nenhum lote ativo com quantidade positiva. Dry-run **PASS**.
+- **Segurança:** backup JSON local pré-commit no PowerShell do Fundador; commit atômico com precondições de versão para exatamente dois saldos (agregado e `UNASSIGNED`) e um movimento novo; sem exclusão de registros.
+- **Resultado pós-commit:** executor retornou `PASS — Suco zerado; histórico preservado` após reler saldo agregado = 0, `UNASSIGNED` = 0 e novo movimento persistido; `INVENTORY_ADJUSTMENT` de -5, com nota de regularização de testes. Movimento `mov_d5f92bf0378af1f7c259f258188fac7a5bf39355c0c509f9fcd23af669127834`.
+- **Escopo preservado:** nenhuma NF, intake, outros materiais/workspaces, `firestore.rules`, `firestore.warehouse.rules`, aplicação, deploy ou branch `main` foi alterada pela execução de dados.
+- **Limite da conclusão:** esta evidência confirma o Suco zerado, **não** comprova que todos os demais saldos do banco estão zerados. A confirmação visual da lista vazia e/ou auditoria read-only global permanece uma verificação distinta, se requerida.
+- **Rastreabilidade:** [PR #310 — executor pontual e memorial de execução](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/310), mantido em DRAFT, sem merge. Não promover o script de manutenção pontual ao runtime permanente.
+
+**Contrato permanente:** `UNASSIGNED` é legado/projeção não física, não origem de `TRANSFER` nem `OUTBOUND`; reconciliações requerem causa comprovada, backup e operação auditável sem apagar o ledger.
 
 ## 12. Operações canônicas
 
@@ -2442,6 +2462,14 @@ Por decisão do Fundador:
 - nenhuma nova wave funcional autorizada;
 - próximo produto a ser construído é um único SHA de RC SaaS+Mobile.
 
+### 2026-10-15 — Regularização controlada do Suco (Warehouse)
+
+Após retirada dos estoques de teste e remoção das NFs da fila pelo Fundador, permaneceu um saldo legado de 5 unidades do Suco sem localização. A ocorrência `POSITIVE_UNASSIGNED=5` já constava do memorial de integridade e fora excluída expressamente do reparo anterior dos lotes.
+
+A manutenção pontual foi preparada no [PR #310](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/310) e executada pelo Fundador no PowerShell com autenticação gcloud. Dry-run PASS, backup local pré-write e correção atômica PASS: `balances` 5→0, `locationBalances.UNASSIGNED` 5→0, movimento `INVENTORY_ADJUSTMENT` -5 preservando ledger/histórico. Nenhum deploy, merge, alteração de Rules ou exclusão de NFs. Outros materiais não foram abrangidos por essa conferência.
+
+---
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -2582,6 +2610,9 @@ O runbook físico é procedural. Este Memorial registra os critérios canônicos
 - `docs/adm-deposito/STATUS.md`;
 - `docs/adm-deposito/DECISIONS.md`;
 - `docs/adm-deposito/ROADMAP.md`.
+- `docs/WAREHOUSE_INTEGRITY_RECONCILE_01.md` — auditoria que identificou `POSITIVE_UNASSIGNED=5`.
+- `docs/WAREHOUSE_DATA_REPAIR_EXECUTION_01.md` — reparo anterior dos lotes, sem baixa das cinco unidades.
+- [PR #310](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/310) — executor de correção pontual e evidência pós-commit do Suco (2026-10-15).
 
 ## 40. Performance R3
 
