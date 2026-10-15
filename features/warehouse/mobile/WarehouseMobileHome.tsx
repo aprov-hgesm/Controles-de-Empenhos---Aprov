@@ -1,6 +1,7 @@
 import {
   Boxes,
   ClipboardPlus,
+  PackagePlus,
   MapPin,
   PackageSearch,
   ScanLine,
@@ -14,6 +15,12 @@ const MOBILE_CAPABILITIES = [
     description: 'NF → item → produto → posição.',
     Icon: ClipboardPlus,
     href: '/central-mobile/alocar',
+  },
+  {
+    label: 'Cadastrar avulso',
+    description: 'Leia material e prateleira; informe quantidade, unidade e validade.',
+    Icon: PackagePlus,
+    href: '/central-mobile/avulso',
   },
   {
     label: 'Transferir material',
@@ -126,7 +133,7 @@ export function WarehouseMobileHome() {
       </section>
 
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
-        Cada operação tem uma única responsabilidade. Consultas e conferência são somente leitura; alocação, transferência, inventário e saída só movimentam dados em suas confirmações próprias.
+        Cada operação tem uma única responsabilidade. Consultas e conferência são somente leitura; alocação, entrada avulsa, transferência, inventário e saída só movimentam dados em suas confirmações próprias.
       </p>
     </div>
   );
