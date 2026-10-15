@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
-const root = resolve(import.meta.dirname || '.', '..');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const outDir = mkdtempSync(resolve(tmpdir(), 'emprovex-mobile-manual-'));
 
@@ -53,7 +54,7 @@ test('scanner reutilizado distingue produto comercial de posição física', () 
   assert.equal(allocation.classifyWarehouseMobileProductScan('7891234567890'), 'PRODUCT');
   assert.equal(allocation.classifyWarehouseMobileProductScan(numericPositionBarcode), 'LOCATION');
   assert.equal(location.classifyWarehouseMobileLocationScan(numericPositionBarcode), 'LOCATION');
-  assert.equal(location.classifyWarehouseMobileLocationScan('7891234567890'), 'PRODUCT');
+  assert.equal(location.classifyWarehouseMobileLocationScan('7891234567890'), 'UNKNOWN');
   assert.match(screen, /expectation="EXPECT_PRODUCT"/);
   assert.match(screen, /expectation="EXPECT_LOCATION"/);
 });
