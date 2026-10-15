@@ -111,6 +111,86 @@ test('builder preserva hierarquia Depósito → Local → Subposição', () => {
   assert.equal(result[2].kind, 'SUBPOSITION');
 });
 
+test('etiqueta legível diferencia prateleiras com mesmo código em estantes diferentes', () => {
+  const estante02 = {
+    ...local,
+    id: 'loc_' + 'c'.repeat(32),
+    code: 'EST-02',
+    name: 'Estante 02',
+  };
+  const prateleiraEst01 = { ...subposition(11), code: 'PRAT-01', parentLocationId: local.id };
+  const prateleiraEst02 = { ...subposition(12), code: 'PRAT-01', parentLocationId: estante02.id };
+  const items = labels.buildWarehouseLabelsForScope({
+    depot,
+    locations: [prateleiraEst02, estante02, prateleiraEst01, local],
+    scope: 'DEPOT_FULL',
+  });
+  assert.deepEqual(items.map((item) => item.kind), [
+    'DEPOT', 'LOCAL', 'SUBPOSITION', 'LOCAL', 'SUBPOSITION',
+  ]);
+  assert.deepEqual(items.map((item) => labels.warehouseLabelReadablePath(item)), [
+    'DEP-01',
+    'EST-01 - DEP-01',
+    'PRAT-01 - EST-01 - DEP-01',
+    'EST-02 - DEP-01',
+    'PRAT-01 - EST-02 - DEP-01',
+  ]);
+  assert.notEqual(items[2].physicalBarcode, items[4].physicalBarcode,
+    'Leitura Code 128 permanece específica da estante');
+});
+
+test('impressão completa segue ordem natural dentro de cada estante sem depender da ordem do banco', () => {
+  const estante02 = {
+    ...local,
+    id: 'loc_' + 'd'.repeat(32),
+    code: 'EST-02',
+    name: 'Estante 02',
+  };
+  const estante10 = {
+    ...local,
+    id: 'loc_' + 'e'.repeat(32),
+    code: 'EST-10',
+    name: 'Estante 10',
+  };
+  const prat01Est02 = { ...subposition(21), parentLocationId: estante02.id, code: 'PRAT-01' };
+  const prat01Est01 = { ...subposition(22), parentLocationId: local.id, code: 'PRAT-01' };
+  const prat02Est01 = { ...subposition(23), parentLocationId: local.id, code: 'PRAT-02' };
+  const prat10Est01 = { ...subposition(24), parentLocationId: local.id, code: 'PRAT-10' };
+  const input = [prat10Est01, estante10, prat01Est02, prat02Est01, estante02, prat01Est01, local];
+  const full = labels.buildWarehouseLabelsForScope({
+    depot, locations: input, scope: 'DEPOT_FULL',
+  });
+  assert.deepEqual(full.map((item) => labels.warehouseLabelReadablePath(item)), [
+    'DEP-01',
+    'EST-01 - DEP-01',
+    'PRAT-01 - EST-01 - DEP-01',
+    'PRAT-02 - EST-01 - DEP-01',
+    'PRAT-10 - EST-01 - DEP-01',
+    'EST-02 - DEP-01',
+    'PRAT-01 - EST-02 - DEP-01',
+    'EST-10 - DEP-01',
+  ]);
+  const onlyLocals = labels.buildWarehouseLabelsForScope({
+    depot, locations: input, scope: 'DEPOT_LOCALS',
+  });
+  assert.deepEqual(onlyLocals.map((item) => item.code), ['EST-01', 'EST-02', 'EST-10']);
+  const onlyPrateleiras = labels.buildWarehouseLabelsForScope({
+    depot, locations: input, selectedLocationId: local.id, scope: 'LOCATION_SUBPOSITIONS',
+  });
+  assert.deepEqual(onlyPrateleiras.map((item) => item.code), ['PRAT-01', 'PRAT-02', 'PRAT-10']);
+  assert.deepEqual(labels.paginateWarehouseLabels(full, 'COMPACT').map((page) => page.length), [8]);
+});
+
+test('hierarquia de subposição sem pai é identificada como pendente, não com estante inventada', () => {
+  const orphan = { ...subposition(41), parentLocationId: 'loc_' + 'f'.repeat(32) };
+  const result = labels.buildWarehouseLabelsForScope({
+    depot, locations: [orphan, local], scope: 'DEPOT_FULL',
+  });
+  assert.equal(result.at(-1).kind, 'SUBPOSITION');
+  assert.equal(labels.warehouseLabelReadablePath(result.at(-1)),
+    'PRAT-41 - LOCAL NÃO IDENTIFICADO - DEP-01');
+});
+
 test('escopo de subposições retorna somente as filhas ativas do Local', () => {
   const active = subposition(1);
   const inactive = { ...subposition(2), status: 'inactive' };
@@ -160,6 +240,18 @@ test('layout compacto preserva identificação à esquerda e Code 128 dominante 
   assert.match(source, /item\.workspaceId\.toUpperCase\(\)/);
   assert.match(source, /22\.5,/);
   assert.match(source, /5\.6,/);
+});
+
+test('PDF e prévia exibem caminho completo obrigatório das subposições em todos os formatos', () => {
+  const pdfSource = readFileSync(resolve(root, 'features/warehouse/pdf/warehouseLabelsPdf.ts'), 'utf8');
+  const uiSource = readFileSync(resolve(root, 'features/warehouse/components/WarehouseLabelsR1.tsx'), 'utf8');
+  assert.match(pdfSource, /if \(item\.kind === 'SUBPOSITION'\)/);
+  assert.match(pdfSource, /warehouseLabelReadablePath\(item\)/);
+  assert.match(pdfSource, /const pathSize = fitText\(doc, readablePath, leftWidth/);
+  assert.match(pdfSource, /const pathSize = fitText\(doc, readablePath, innerWidth/);
+  assert.match(uiSource, /warehouseLabelReadablePath\(previewLabel\)/);
+  assert.match(uiSource, /warehouse-label-print-order/);
+  assert.match(uiSource, /labels\.find\(\(item\) => item\.kind === 'SUBPOSITION'\)/);
 });
 
 test('preset compacto é padrão da UI e a prévia representa o layout lateral', () => {
