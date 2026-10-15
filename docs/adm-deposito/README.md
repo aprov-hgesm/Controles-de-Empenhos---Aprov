@@ -6,6 +6,8 @@
 
 **Apresentação premium do Operador Móvel (D-125):** cabeçalho com identidade institucional e UG da sessão, painel compacto sem prometer câmera ativa, cartões responsivos agrupados em Movimentações e Consulta e conferência. UI sem novas leituras de Firestore e sem animações de uso contínuo.
 
+**Visão 3D em Meus Depósitos (D-126):** enquadramento automático por limites projetados do depósito e etiquetas, recalculado nas quatro vistas sem modificar o croqui físico nem ler o Firestore novamente.
+
 **Operador Móvel:** extensão de operação no celular vinculada à Central de Depósitos, exibida em sua barra lateral abaixo das operações existentes. Rota `/operador-movel`; antigos links `/central-mobile` recebem redirect permanente. As permissões anteriores permanecem inalteradas (D-124).
 
 **Endereço oficial da aplicação:** `/central-depositos` (subrotas preservadas). Links antigos `/adm-deposito` redirecionam de forma permanente para a rota oficial. APIs operacionais usam `/api/central-depositos/status` e `/api/central-depositos/intake-action`, mantendo os dois endpoints antigos como aliases compatíveis. O namespace Firestore `warehouse`, IDs, contrato do domínio e documentação histórica `docs/adm-deposito` **não são renomeados**. Mudança de rota não realiza migração de dados. Ver D-123.

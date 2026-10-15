@@ -266,6 +266,9 @@ jobs:
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout
 
+      - name: Central de Depósitos isometric scene auto-fit tests
+        run: npm run test:warehouse-isometric-camera
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 

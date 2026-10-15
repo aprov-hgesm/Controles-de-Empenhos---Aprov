@@ -1,5 +1,7 @@
 # EMPROVEX — Memorial Oficial
 
+> **Visão 3D de Meus Depósitos — 2026-10-15 (D-126, PR #314 em validação):** substituição do viewBox fixo por auto-fit centralizado com base na geometria isométrica de piso, paredes, estruturas e etiquetas, recalculado em cada perspectiva. Proporções, estoque e persistência preservados; sem leituras extras no Firestore. CI e smoke visual pendentes, produção não alterada.
+
 > **Visual Operador Móvel — 2026-10-15 (D-125, PR #314 em validação):** redesenho da home do Operador Móvel para superfície institucional premium, com cabeçalho contextual/UG real, painel de acesso autorizado e leitura por etiqueta sob demanda, oito cartões em grupos **Movimentações** e **Consulta e conferência**, estados de foco/toque e movimento reduzido. Sem novas leituras ao Firestore, sem efeito orbital pesado ou alteração da operação. Navegação inferior contextual segue D-124. Aguardando CI e validação humana; produção não alterada.
 
 > **Operador Móvel — 2026-10-15 (PR #314 em validação):** a antiga identificação pública **Central Móvel** passa a ser **Operador Móvel**, integrado visualmente à barra lateral da Central de Depósitos (abaixo dos demais recursos). Endereço canônico `/operador-movel`, redirects dos links antigos `/central-mobile`, mesmo acesso founder-only e contratos de estoque preservados. Referência: D-124. Sem merge/deploy de produção nesta etapa.

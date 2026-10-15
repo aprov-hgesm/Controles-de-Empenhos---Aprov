@@ -2517,3 +2517,15 @@ Data: 2026-10-15.
 - Os cartões oferecem ações explícitas, contraste legível, foco por teclado, feedback ao toque e respeito à preferência de movimento reduzido. Sem novas dependências, animações contínuas, buscas ao Firestore ou carregamento antecipado de scanner.
 - Mantém-se o rodapé contextual já definido pela D-124. São preservados autenticação, founder-only, ledger, Rules e namespace `warehouse`.
 - Execução e certificação no PR #314, sem merge ou deploy automático.
+
+
+## D-126 — Visão 3D centralizada por geometria real
+
+Data: 2026-10-15.
+
+- Em **Central de Depósitos → Meus Depósitos → Visão 3D**, o enquadramento deixa de usar `viewBox` estático e passa a usar a caixa envolvente dos elementos efetivamente projetados: piso, paredes, volumes e margens para etiquetas destacadas.
+- As quatro vistas (Frente, Direita, Trás, Esquerda) recalculam automaticamente centro e escala; margem mínima protegida, proporção física original preservada e zoom máximo limitado a 1,28.
+- O fit atua somente na câmera SVG: não movimenta estrutura, paletes, endereços, etiquetas de identificação nem muda o layout persistido.
+- Renderização read-only, sem novo custo Firestore, sem alteração do estado de estoque, Rules ou contratos de domínio.
+- Guard `test:warehouse-isometric-camera` incluído no Application CI, com cenários para contêineres longos, quadrados, seleção e quatro vistas.
+- Integração ao PR #314 ainda em DRAFT; requer CI PASS e validação visual humana antes da publicação consolidada.
