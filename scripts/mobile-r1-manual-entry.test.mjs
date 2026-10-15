@@ -80,7 +80,7 @@ test('entrada usa motor canônico MANUAL_ENTRY: ledger, saldo geral e posição 
   assert.match(screen, /registerWarehouseManualEntry\(workspace\.workspaceId/);
   assert.match(screen, /provenance: provenance\.trim\(\)/);
   assert.match(screen, /expiresOn: expiresOn \|\| null/);
-  assert.match(screen, /barcode,/);
+  assert.match(screen, /barcode: product\.status === 'unknown' \? barcode : null/);
   assert.match(manual, /type: 'MANUAL_ENTRY'/);
   assert.match(manual, /transaction\.set\(movementRef/);
   assert.match(manual, /transaction\.set\(balanceRef/);
