@@ -2532,3 +2532,22 @@ Data: 2026-10-15.
 - Correção: transformação de 90° física, com troca efetiva de comprimento/profundidade da sala (`warehouseIsoRoomDimensions`) e rotação dos retângulos sem escalonamento (`transformWarehouseIsoRectForView`).
 - Identidade dos Locais, vínculos e ordem de Subposições, associação de materiais, vistas Frente/Trás, piso e paredes preservados. Fixtures verificam geometria, não sobreposição, limites e seleção nas quatro vistas, inclusive formatos extremos.
 - Integração ao PR #314 ainda em DRAFT; requer CI PASS e validação visual humana antes da publicação consolidada.
+
+
+## D-127 — Deployments Vercel somente sob publicação manual consolidada
+
+Data: 2026-10-15. Confirmação do Fundador: release Premium no domínio `https://emprovex.com.br` publicada e melhorias validadas visualmente.
+
+**Motivo:** limite do plano Hobby `api-deployments-free-per-day` (100 deployments por janela de 24h) foi atingido repetidamente durante desenvolvimento. A diretriz D-072 de consolidação já existia, mas faltava o bloqueio técnico dos gatilhos automáticos.
+
+**Contrato de configuração:**
+
+1. `vercel.json` registra `"git": { "deploymentEnabled": false }`, desativando deployments por commits e PRs em **todas as branches**, inclusive `main`.
+2. O cron existente `/api/cron/usage-snapshot` com expressão `15 9 * * *` permanece inalterado; não desativar rotinas programadas nem armazenamento.
+3. GitHub Actions (Application CI, Core Protection e demais gates) continua disparando normalmente; apenas o ciclo de criação de deployments Git → Vercel é desativado. Não substituir por `Ignored Build Step`, pois builds cancelados ainda podem consumir cota de deployments.
+4. Publicação de produção exclusivamente quando autorizada: consolidar branch/PR com gates PASS, confirmar `main`, garantir autoria aceita pela Vercel Hobby (`aprov-hgesm`), usar worktree limpa, executar `vercel pull --yes --environment=production --scope aprov-hgesms-projects`, `vercel build --prod --scope aprov-hgesms-projects`, `vercel deploy --prebuilt --archive=tgz --prod --scope aprov-hgesms-projects` e validar o alias `https://emprovex.com.br`.
+5. Preview sob demanda continua possível por comando manual/autorizado; não gera deployment automaticamente a cada PR. Recuperação e rollback preservam seus procedimentos específicos.
+6. Guard obrigatório `npm run test:vercel-manual-deploy` verifica a opção booleana, cron e gatilhos de CI. Não modificar a política sem decisão formal do Fundador.
+7. O acesso administrativo ao time Vercel por este conector retorna `403`; a confirmação de que outros mecanismos (deploy hooks, integrações duplicadas, projetos extras) não geram deployments deve ser feita no painel ou mediante autorização adequada. Configuração no GitHub não equivale à auditoria dos 100 deployments anteriores.
+
+**Evidências:** `docs/EMPROVEX_MEMORIAL_OFICIAL.md` (checkpoint 2026-10-15), `docs/DEVELOPMENT_CI_WORKFLOW.md` (seção 14), `vercel.json`, Application CI. D-127 complementa D-072 sem alterar Firestore, Rules ou código logístico.

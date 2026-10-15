@@ -275,3 +275,20 @@ Política oficial:
 O objetivo é reduzir deployments desnecessários e preservar a cota operacional da Vercel sem reduzir cobertura de testes, segurança ou rastreabilidade.
 
 Para o fechamento atual do ADM Depósito, esta política está formalizada também como D-072 em `docs/adm-deposito/DECISIONS.md`.
+
+
+## 14. Bloqueio de deployments automáticos GitHub → Vercel (D-127)
+
+**Decisão vigente em 2026-10-15:** além de consolidar releases conforme D-072, `vercel.json` mantém `git.deploymentEnabled = false`. A Vercel não deverá criar Preview/Production automaticamente para pushes em branches, PRs ou merges em `main`. Essa propriedade, documentada pela Vercel, é diferente de um **Ignored Build Step**: uma tentativa cancelada na etapa de build pode continuar consumindo a cota Hobby.
+
+O fluxo de trabalho fica separado:
+
+- **Desenvolvimento e qualidade:** branches e PRs no GitHub, Application CI, Core Protection e demais testes continuam normalmente, sem gerar deployments Vercel por Git.
+- **Preview humano quando necessário:** criar Preview por CLI somente sob demanda e com autorização/cota disponível, ou validar conforme gate proporcional ao risco já definido.
+- **Produção autorizada:** após CI e merge consolidado, conferir `main`, usar commit de release com autoria `aprov-hgesm` (limitação observada na equipe Hobby), trabalhar em worktree limpa, vincular o projeto correto, `vercel pull --yes --environment=production --scope aprov-hgesms-projects`, `vercel build --prod --scope aprov-hgesms-projects` e `vercel deploy --prebuilt --archive=tgz --prod --scope aprov-hgesms-projects`. Confirmar `Ready`, alias oficial e smoke humano. Não confundir `Build Completed` com publicação.
+- **Cron existente:** `/api/cron/usage-snapshot`, `15 9 * * *`, preservado no `vercel.json`.
+- **Proteção permanente:** `npm run test:vercel-manual-deploy`, integrado ao Application CI, impede remoção não intencional da configuração e perda do cron.
+
+O bloqueio aplica-se aos gatilhos Git do projeto que lê esse `vercel.json`, não a deployments feitos manualmente por CLI, API, hooks independentes ou outros projetos. A conexão administrativa Vercel ainda requer acesso ao escopo `aprov-hgesms-projects` para auditoria de consumo; a alteração versionada não é uma prova retroativa da causa da cota estourada.
+
+**Estado de origem:** PR #314 integrado à `main` e deploy Premium confirmado pelo Fundador em `https://emprovex.com.br`, release `63aad90bf80a50cf1cf875024cde21d5e792a3cf` com validação humana da Central de Depósitos, Operador Móvel e visualização 3D.
