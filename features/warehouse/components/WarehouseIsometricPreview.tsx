@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
+import { fitWarehouseIsometricScene, type WarehouseIsoPoint } from '../../../lib/warehouse/isometricCamera';
 import type {
   WarehouseLocation,
   WarehouseLocationBalance,
@@ -1157,6 +1158,70 @@ export function WarehouseIsometricPreview({
     isoPoint(0, logicalHeight, wallHeight, logicalWidth, logicalHeight),
   ];
 
+  // A câmera SVG deriva da geometria projetada, nunca de offsets fixos.
+  // Inclui piso, paredes, volumes e espaço reservado para etiquetas e caixas.
+  // A vista altera visibleObjects: o enquadramento se recalcula automaticamente.
+  const cameraViewBox = useMemo(() => {
+    const roomPoints: WarehouseIsoPoint[] = [
+      isoPoint(0, 0, 0, logicalWidth, logicalHeight),
+      isoPoint(logicalWidth, 0, 0, logicalWidth, logicalHeight),
+      isoPoint(logicalWidth, logicalHeight, 0, logicalWidth, logicalHeight),
+      isoPoint(0, logicalHeight, 0, logicalWidth, logicalHeight),
+      isoPoint(0, 0, wallHeight, logicalWidth, logicalHeight),
+      isoPoint(logicalWidth, 0, wallHeight, logicalWidth, logicalHeight),
+      isoPoint(0, logicalHeight, wallHeight, logicalWidth, logicalHeight),
+    ];
+
+    for (const object of visibleObjects) {
+      const kind = canonicalKind(object.kind);
+      const location = object.warehouseLocationId
+        ? locationById.get(object.warehouseLocationId)
+        : null;
+      const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
+      const height = object.kind === 'OTHER' && !object.warehouseLocationId
+        ? 54
+        : objectHeight(kind, subpositions.length);
+
+      for (const x of [object.x, object.x + object.width]) {
+        for (const y of [object.y, object.y + object.height]) {
+          roomPoints.push(isoPoint(x, y, 0, logicalWidth, logicalHeight));
+          roomPoints.push(isoPoint(x, y, height, logicalWidth, logicalHeight));
+        }
+      }
+
+      // A etiqueta selecionada pode ser maior; reservar o espaço no fit
+      // evita cortes durante a pesquisa, sem alterar a projeção da estrutura.
+      if (object.warehouseLocationId) {
+        const label = isoPoint(
+          object.x + object.width / 2,
+          object.y + object.height / 2,
+          height,
+          logicalWidth,
+          logicalHeight
+        );
+        const highlighted = highlightedLocalIds.has(object.warehouseLocationId);
+        const labelHalfWidth = highlighted ? 82 : 47;
+        const labelTop = highlighted ? 108 : 80;
+        roomPoints.push(
+          { x: label.x - labelHalfWidth, y: label.y - labelTop },
+          { x: label.x + labelHalfWidth, y: label.y + 36 }
+        );
+      }
+    }
+
+    const viewWidth = embedded ? VIEW_WIDTH - 110 : VIEW_WIDTH;
+    const viewHeight = embedded ? VIEW_HEIGHT - 95 : VIEW_HEIGHT;
+    return fitWarehouseIsometricScene(roomPoints, {
+      width: viewWidth,
+      height: viewHeight,
+      padding: embedded ? 62 : 72,
+      maxZoom: 1.28,
+    });
+  }, [
+    embedded, logicalWidth, logicalHeight, visibleObjects,
+    locationById, subpositionsByParent, highlightedLocalIds,
+  ]);
+
   return (
     <section
       className={
@@ -1285,11 +1350,9 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
-            viewBox={
-              embedded
-                ? '55 35 ' + (VIEW_WIDTH - 110) + ' ' + (VIEW_HEIGHT - 95)
-                : '0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT
-            }
+            viewBox={[cameraViewBox.x, cameraViewBox.y, cameraViewBox.width, cameraViewBox.height].join(' ')}
+            preserveAspectRatio="xMidYMid meet"
+            data-camera-fit="bounds"
             className={
               'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
               + (viewTransitioning
