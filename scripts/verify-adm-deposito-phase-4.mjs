@@ -98,7 +98,7 @@ for (const marker of [
 }
 for (const marker of [
   'listWarehouseMovements',
-  'Ledger auditável do ADM Depósito',
+  'Ledger auditável da Central de Depósitos',
 ]) {
   requireText(movements, marker, 'Superfície atual de movimentações incompleta: ' + marker);
 }
