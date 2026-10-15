@@ -27,7 +27,11 @@ try {
 
 test.after(() => rmSync(out, { recursive: true, force: true }));
 const require = createRequire(import.meta.url);
-const { fitWarehouseIsometricScene } = require(resolve(out, 'isometricCamera.js'));
+const {
+  fitWarehouseIsometricScene,
+  warehouseIsoRoomDimensions,
+  transformWarehouseIsoRectForView,
+} = require(resolve(out, 'isometricCamera.js'));
 
 const EPS = 0.00001;
 
@@ -126,4 +130,107 @@ test('renderer refaz fit por vista e não muda geometria, domínio nem Firestore
   assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
   assert.doesNotMatch(preview, /viewBox=\{\s*embedded\s*\?/);
   assert.doesNotMatch(preview, /setDoc\(|updateDoc\(|runTransaction\(/);
+});
+
+
+const VIEWS = ['front', 'right', 'back', 'left'];
+
+function assertBoundsRect(rect, size) {
+  assert.ok(rect.x >= -EPS && rect.y >= -EPS, 'local vazou do piso');
+  assert.ok(rect.x + rect.width <= size.width + EPS, 'local vazou da largura');
+  assert.ok(rect.y + rect.height <= size.height + EPS, 'local vazou da profundidade');
+}
+
+test('quatro vistas preservam medidas físicas e localização em depósitos retangulares, longos e quadrados', () => {
+  const dimensions = [
+    [12000, 2400], [2400, 12000], [15000, 1800],
+    [1000, 620], [620, 1000], [500, 500], [50000, 240],
+  ];
+  for (const [width, height] of dimensions) {
+    const local = {
+      id: 'obj_PAL_A', warehouseLocationId: 'loc_5001',
+      subpositionIds: ['sub_01','sub_02','sub_03'],
+      kind: 'PALLET', rotation: 0, layer: 1,
+      x: width * 0.21, y: height * 0.36,
+      width: Math.min(120, width * 0.1), height: Math.min(100, height * 0.1),
+    };
+    const frozenBefore = { ...local, subpositionIds: [...local.subpositionIds] };
+    for (const view of VIEWS) {
+      const dimensionsInView = warehouseIsoRoomDimensions(width, height, view);
+      const physical = transformWarehouseIsoRectForView(local, width, height, view);
+      const side = view === 'right' || view === 'left';
+      assert.deepEqual(dimensionsInView, side
+        ? { width: height, height: width }
+        : { width, height });
+      assert.equal(physical.width, side ? local.height : local.width, 'palete foi esticado');
+      assert.equal(physical.height, side ? local.width : local.height, 'palete foi achatado');
+      assert.ok(Math.abs(physical.width * physical.height - local.width * local.height) < EPS);
+      assert.equal(physical.id, local.id);
+      assert.equal(physical.warehouseLocationId, 'loc_5001');
+      assert.deepEqual(physical.subpositionIds, local.subpositionIds);
+      assert.equal(physical.rotation, 0);
+      assertBoundsRect(physical, dimensionsInView);
+      assertCenteredAndFitted([
+        ...room(dimensionsInView.width, dimensionsInView.height),
+        projected(physical.x, physical.y, 0, dimensionsInView.width, dimensionsInView.height),
+        projected(physical.x + physical.width, physical.y + physical.height,
+          154, dimensionsInView.width, dimensionsInView.height),
+      ], { width: 1090, height: 665, padding: 62, maxZoom: 1.28 });
+    }
+    assert.deepEqual(local, frozenBefore, 'a cena alterou o croqui físico em memória');
+  }
+});
+
+test('vistas Direita/Esquerda giram 90 graus sem escalar independentemente os eixos', () => {
+  const W = 12000, H = 2400;
+  const rect = { id: 'pal_A', warehouseLocationId: 'loc_A', x: 3000, y: 850, width: 120, height: 100 };
+  const right = transformWarehouseIsoRectForView(rect, W, H, 'right');
+  const left = transformWarehouseIsoRectForView(rect, W, H, 'left');
+  const back = transformWarehouseIsoRectForView(rect, W, H, 'back');
+  assert.deepEqual(right, { ...rect, x: 850, y: 8880, width: 100, height: 120 });
+  assert.deepEqual(left, { ...rect, x: 1450, y: 3000, width: 100, height: 120 });
+  assert.deepEqual(back, { ...rect, x: 8880, y: 1450 });
+  assert.deepEqual(transformWarehouseIsoRectForView(right, H, W, 'left'), rect);
+  assert.deepEqual(transformWarehouseIsoRectForView(left, H, W, 'right'), rect);
+  assert.deepEqual(transformWarehouseIsoRectForView(back, W, H, 'back'), rect);
+  const twiceRight = transformWarehouseIsoRectForView(right, H, W, 'right');
+  assert.deepEqual(twiceRight, back);
+});
+
+test('dois locais distintos e subposições não trocam de identidade nem se sobrepõem após rotação', () => {
+  const W = 12000, H = 2400;
+  const locals = [
+    { warehouseLocationId: 'loc_01', subpositions: ['SUB-A', 'SUB-B'], x: 550, y: 340, width: 120, height: 100 },
+    { warehouseLocationId: 'loc_02', subpositions: ['SUB-C'], x: 3000, y: 340, width: 120, height: 100 },
+    { warehouseLocationId: 'loc_03', subpositions: [], x: 9400, y: 1240, width: 180, height: 70 },
+  ];
+  for (const view of VIEWS) {
+    const rotated = locals.map((rect) => transformWarehouseIsoRectForView(rect, W, H, view));
+    const dimensions = warehouseIsoRoomDimensions(W, H, view);
+    for (let i = 0; i < rotated.length; i++) {
+      assert.equal(rotated[i].warehouseLocationId, locals[i].warehouseLocationId);
+      assert.deepEqual(rotated[i].subpositions, locals[i].subpositions);
+      assertBoundsRect(rotated[i], dimensions);
+      for (let j = i + 1; j < rotated.length; j++) {
+        const a = rotated[i], b = rotated[j];
+        const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+        const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+        assert.ok(overlapX <= EPS || overlapY <= EPS,
+          'a vista ' + view + ' sobrepôs locais originalmente separados');
+      }
+    }
+  }
+});
+
+test('renderer usa largura e profundidade rotacionadas em piso, paredes, iluminação e estruturas', () => {
+  const preview = readFileSync(resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8');
+  assert.match(preview, /transformWarehouseIsoRectForView\(/);
+  assert.match(preview, /warehouseIsoRoomDimensions\(/);
+  assert.match(preview, /width: viewLogicalWidth, height: viewLogicalHeight/);
+  assert.match(preview, /isoPoint\(viewLogicalWidth, viewLogicalHeight, 0, viewLogicalWidth, viewLogicalHeight\)/);
+  assert.match(preview, /logicalWidth=\{viewLogicalWidth\}/);
+  assert.match(preview, /logicalHeight=\{viewLogicalHeight\}/);
+  assert.doesNotMatch(preview, /function transformObjectForView\(/);
+  assert.match(preview, /subpositionsByParent\.get\(location\.id\)/);
+  assert.match(preview, /highlightedSubpositionIds\.has\(candidate\.id\)/);
 });

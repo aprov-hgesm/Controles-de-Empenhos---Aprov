@@ -1,5 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
+> **Auditoria adicional de vistas — 2026-10-15 (D-126, PR #314):** corrigida deformação de pallets/locais ao mudar para Direita/Esquerda em depósitos retangulares. A rotação agora preserva medidas reais, troca as dimensões projetadas do cômodo e mantém vínculo das subposições e materiais. Incluídos testes de regressão em quatro vistas e geometrias alongadas; aguarda gates e smoke visual humano.
 > **Visão 3D de Meus Depósitos — 2026-10-15 (D-126, PR #314 em validação):** substituição do viewBox fixo por auto-fit centralizado com base na geometria isométrica de piso, paredes, estruturas e etiquetas, recalculado em cada perspectiva. Proporções, estoque e persistência preservados; sem leituras extras no Firestore. CI e smoke visual pendentes, produção não alterada.
 
 > **Visual Operador Móvel — 2026-10-15 (D-125, PR #314 em validação):** redesenho da home do Operador Móvel para superfície institucional premium, com cabeçalho contextual/UG real, painel de acesso autorizado e leitura por etiqueta sob demanda, oito cartões em grupos **Movimentações** e **Consulta e conferência**, estados de foco/toque e movimento reduzido. Sem novas leituras ao Firestore, sem efeito orbital pesado ou alteração da operação. Navegação inferior contextual segue D-124. Aguardando CI e validação humana; produção não alterada.

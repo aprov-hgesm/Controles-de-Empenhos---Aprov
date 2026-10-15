@@ -2528,4 +2528,7 @@ Data: 2026-10-15.
 - O fit atua somente na câmera SVG: não movimenta estrutura, paletes, endereços, etiquetas de identificação nem muda o layout persistido.
 - Renderização read-only, sem novo custo Firestore, sem alteração do estado de estoque, Rules ou contratos de domínio.
 - Guard `test:warehouse-isometric-camera` incluído no Application CI, com cenários para contêineres longos, quadrados, seleção e quatro vistas.
+- Auditoria das quatro perspectivas (2026-10-15): identificada distorção dos Locais nas vistas Direita/Esquerda em depósitos retangulares. A normalização anterior escalava cada eixo em proporção diferente (ex.: palete 120×100 cm passava a 500×24 cm em contêiner 12000×2400 cm).
+- Correção: transformação de 90° física, com troca efetiva de comprimento/profundidade da sala (`warehouseIsoRoomDimensions`) e rotação dos retângulos sem escalonamento (`transformWarehouseIsoRectForView`).
+- Identidade dos Locais, vínculos e ordem de Subposições, associação de materiais, vistas Frente/Trás, piso e paredes preservados. Fixtures verificam geometria, não sobreposição, limites e seleção nas quatro vistas, inclusive formatos extremos.
 - Integração ao PR #314 ainda em DRAFT; requer CI PASS e validação visual humana antes da publicação consolidada.
