@@ -65,7 +65,7 @@ export function WarehouseMobileShell({
 
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden"
-        aria-label="Navegação da Operador Móvel"
+        aria-label="Navegação do Operador Móvel"
       >
         <div className="mx-auto grid max-w-xl grid-cols-2 gap-2">
           <Link
