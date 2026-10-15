@@ -66,6 +66,7 @@ test('escaneamento consulta barcode autoritativo antes de buscar material e bloq
   assert.match(screen, /association\.status !== 'active'/);
   assert.match(screen, /current\.materialId !== selectedMaterial\?\.id/);
   assert.match(screen, /current\.status !== 'active'/);
+  assert.match(screen, /product\.status !== 'known'/);
   assert.match(screen, /product\.confirmed/);
 });
 
