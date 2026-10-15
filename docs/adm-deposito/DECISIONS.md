@@ -2503,4 +2503,5 @@ Data: 2026-10-15.
 - Permissões atuais são preservadas: a superfície móvel continua limitada à identidade operacional autorizada pela proteção existente (acesso founder-only na implantação atual). Renomear não libera outros usuários.
 - Os fluxos de leitura, entrada avulsa, alocação, transferência, consulta, inventário e saída mantêm implementações e contratos logísticos existentes.
 - Nomes internos de componentes e testes históricos `WarehouseMobile*` e `mobile-r1-*` não são alterados desnecessariamente. O nome público é **Operador Móvel**; IDs de movimento, namespace Firestore `warehouse`, Rules e dados persistidos permanecem idênticos.
+- A navegação fixa inferior do Operador Móvel é **contextual**: na lista principal não há barra redundante; nas jornadas internas, há somente ação explícita **Voltar às operações** (menu do Operador Móvel). O botão genérico **Central** foi removido do rodapé do celular para evitar mudança inesperada de contexto; a Central de Depósitos permanece identificada no cabeçalho.
 - Adaptação em PR #314, com testes e guards obrigatórios; sem merge/publicação produtiva implícitos.

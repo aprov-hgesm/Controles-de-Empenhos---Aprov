@@ -63,6 +63,9 @@ for (const target of [
 assert.doesNotMatch(home, /href:\s*null/);
 
 const shell = read('features/warehouse/mobile/WarehouseMobileShell.tsx');
+assert.match(shell, /Voltar às operações/);
+assert.match(shell, /!isOperatorHome &&/);
+assert.doesNotMatch(shell, /warehouse-mobile-nav-desktop/);
 assert.match(shell, /href="\/operador-movel"/);
 assert.match(shell, /href="\/central-depositos"/);
 
@@ -332,8 +335,8 @@ for (const marker of [
 }
 
 console.log('MOBILE-R1 MOBILE-I INTEGRATED PRODUCT: PASS');
-console.log('- Home expõe 7 operações com Consulta de Localização e Consulta de Item separadas');
-console.log('- navegação Home/Central permanece única e compartilhada');
+console.log('- Home expõe operações incluindo consulta física, entrada avulsa e alocação separadas');
+console.log('- navegação móvel retorna explicitamente às operações nas subtelas, sem destino Central ambíguo');
 console.log('- Auth/workspace/sessão/legal/warehouseAccess continuam no boundary canônico');
 console.log('- scanner e resolver físico compartilhados preservam EPX1/EPX2/numerico nas jornadas');
 console.log('- ALLOCATE/TRANSFER/INVENTORY/OUTBOUND reutilizam autoridades canônicas');
