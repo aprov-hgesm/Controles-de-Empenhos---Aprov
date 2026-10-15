@@ -248,6 +248,9 @@ jobs:
       - name: Central Móvel R1 MOBILE-I integrated product guard
         run: npm run verify:mobile-r1-integration-final
 
+      - name: Central Móvel entrada avulsa mobile tests
+        run: npm run test:mobile-r1-manual-entry
+
       - name: MOBILE-K canonical ops domain tests
         run: npm run test:mobile-k-canonical-ops
 
