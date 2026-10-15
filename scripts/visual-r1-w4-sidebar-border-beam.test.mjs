@@ -14,7 +14,7 @@ test('all ten primary destinations preserve accessible native controls and share
     assert.ok(nav.includes("onNavigate('" + tab + "')"), 'navigation callback changed: ' + tab);
   }
   assert.match(nav, /aria-current=/);
-  const warehouseStart = nav.indexOf('data-testid="nav-adm-deposito"');
+  const warehouseStart = nav.indexOf('data-testid="nav-central-depositos"');
   const warehouse = nav.slice(warehouseStart, nav.indexOf('</button>', warehouseStart));
   assert.ok(warehouseStart > 0);
   assert.match(warehouse, /onClick=\{onOpenWarehouse\}/);
