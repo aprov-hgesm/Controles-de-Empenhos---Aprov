@@ -1,5 +1,7 @@
 # EMPROVEX — Memorial Oficial
 
+> **Visual Operador Móvel — 2026-10-15 (D-125, PR #314 em validação):** redesenho da home do Operador Móvel para superfície institucional premium, com cabeçalho contextual/UG real, painel de acesso autorizado e leitura por etiqueta sob demanda, oito cartões em grupos **Movimentações** e **Consulta e conferência**, estados de foco/toque e movimento reduzido. Sem novas leituras ao Firestore, sem efeito orbital pesado ou alteração da operação. Navegação inferior contextual segue D-124. Aguardando CI e validação humana; produção não alterada.
+
 > **Operador Móvel — 2026-10-15 (PR #314 em validação):** a antiga identificação pública **Central Móvel** passa a ser **Operador Móvel**, integrado visualmente à barra lateral da Central de Depósitos (abaixo dos demais recursos). Endereço canônico `/operador-movel`, redirects dos links antigos `/central-mobile`, mesmo acesso founder-only e contratos de estoque preservados. Referência: D-124. Sem merge/deploy de produção nesta etapa.
 
 > **Roteamento oficial da Central de Depósitos — 2026-10-15 (refatoração em branch):** nome de produto **Central de Depósitos**, rota pública canônica `/central-depositos` e APIs `/api/central-depositos/{status,intake-action}`. A rota `/adm-deposito` recebe redirect permanente, enquanto as APIs legadas preservam aliases diretos sem mudar o método HTTP. Firestore, namespace `warehouse`, regras e IDs persistidos permanecem intactos. Decisão D-123 em `docs/adm-deposito/DECISIONS.md`; aguardando os gates do PR e eventual autorização de merge/deploy.

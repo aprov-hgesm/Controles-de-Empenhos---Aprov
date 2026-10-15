@@ -2505,3 +2505,15 @@ Data: 2026-10-15.
 - Nomes internos de componentes e testes históricos `WarehouseMobile*` e `mobile-r1-*` não são alterados desnecessariamente. O nome público é **Operador Móvel**; IDs de movimento, namespace Firestore `warehouse`, Rules e dados persistidos permanecem idênticos.
 - A navegação fixa inferior do Operador Móvel é **contextual**: na lista principal não há barra redundante; nas jornadas internas, há somente ação explícita **Voltar às operações** (menu do Operador Móvel). O botão genérico **Central** foi removido do rodapé do celular para evitar mudança inesperada de contexto; a Central de Depósitos permanece identificada no cabeçalho.
 - Adaptação em PR #314, com testes e guards obrigatórios; sem merge/publicação produtiva implícitos.
+
+
+## D-125 — Operador Móvel tem apresentação operacional premium e econômica
+
+Data: 2026-10-15.
+
+- O Operador Móvel mantém o nome e a vinculação à Central de Depósitos. O cabeçalho institucional exibe a UG real da sessão autenticada, sem consultas adicionais.
+- A tela inicial adota painel compacto de orientação, status de **acesso autorizado** sustentado pelo gate existente e indicação **leitor sob demanda**, sem alegar permissão da câmera ou scanner ativo antes da abertura da ferramenta.
+- As oito jornadas preservadas são divididas em **Movimentações** (alocação, entrada avulsa, transferência e saída) e **Consulta e conferência** (consulta de localização, consulta de item, inventário e conferência de posição).
+- Os cartões oferecem ações explícitas, contraste legível, foco por teclado, feedback ao toque e respeito à preferência de movimento reduzido. Sem novas dependências, animações contínuas, buscas ao Firestore ou carregamento antecipado de scanner.
+- Mantém-se o rodapé contextual já definido pela D-124. São preservados autenticação, founder-only, ledger, Rules e namespace `warehouse`.
+- Execução e certificação no PR #314, sem merge ou deploy automático.

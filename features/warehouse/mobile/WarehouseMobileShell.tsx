@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, LayoutGrid, ShieldCheck, Warehouse } from 'lucide-react';
+import { ArrowLeft, LayoutGrid, Warehouse } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
