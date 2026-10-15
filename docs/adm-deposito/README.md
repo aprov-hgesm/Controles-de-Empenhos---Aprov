@@ -2,6 +2,8 @@
 
 > Caminho/documentação legada: `adm-deposito`. Nome de produto vigente: **Central de Depósitos**.
 
+**Operador Móvel:** extensão de operação no celular vinculada à Central de Depósitos, exibida em sua barra lateral abaixo das operações existentes. Rota `/operador-movel`; antigos links `/central-mobile` recebem redirect permanente. As permissões anteriores permanecem inalteradas (D-124).
+
 **Endereço oficial da aplicação:** `/central-depositos` (subrotas preservadas). Links antigos `/adm-deposito` redirecionam de forma permanente para a rota oficial. APIs operacionais usam `/api/central-depositos/status` e `/api/central-depositos/intake-action`, mantendo os dois endpoints antigos como aliases compatíveis. O namespace Firestore `warehouse`, IDs, contrato do domínio e documentação histórica `docs/adm-deposito` **não são renomeados**. Mudança de rota não realiza migração de dados. Ver D-123.
 
 Esta pasta preserva a **memória oficial especializada** do módulo logístico do EMPROVEX. Para o estado consolidado do produto inteiro, começar por `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.

@@ -2491,3 +2491,16 @@ Data: 2026-10-15.
 - Permanecem intocados namespace `warehouse`, Firestore databases/rules, coleções, entidades, IDs, idempotência, ledger e integrações; a alteração **não é migração de dados**.
 - Diretório histórico `docs/adm-deposito/` é mantido para preservar referências e rastreabilidade; o README do módulo explica o nome vigente.
 - O trabalho se realiza em branch/PR próprio, com testes de roteamento/compatibilidade e gates oficiais, sem merge/deploy de produção automático.
+
+
+## D-124 — Operador Móvel é uma superfície subordinada à Central de Depósitos
+
+Data: 2026-10-15.
+
+- A experiência anteriormente intitulada **Central Móvel** passa a chamar-se **Operador Móvel**.
+- Operador Móvel é **parte da Central de Depósitos**, e aparece **abaixo das operações existentes** em sua barra lateral, com identificação visual subordinada, não como módulo autônomo.
+- Rota pública canônica: `/operador-movel` e subrotas. Endereços antigos `/central-mobile` redirecionam permanentemente para os equivalentes novos; parâmetros de consulta devem ser preservados.
+- Permissões atuais são preservadas: a superfície móvel continua limitada à identidade operacional autorizada pela proteção existente (acesso founder-only na implantação atual). Renomear não libera outros usuários.
+- Os fluxos de leitura, entrada avulsa, alocação, transferência, consulta, inventário e saída mantêm implementações e contratos logísticos existentes.
+- Nomes internos de componentes e testes históricos `WarehouseMobile*` e `mobile-r1-*` não são alterados desnecessariamente. O nome público é **Operador Móvel**; IDs de movimento, namespace Firestore `warehouse`, Rules e dados persistidos permanecem idênticos.
+- Adaptação em PR #314, com testes e guards obrigatórios; sem merge/publicação produtiva implícitos.

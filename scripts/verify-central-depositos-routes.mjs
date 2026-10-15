@@ -30,6 +30,36 @@ assert.equal(existsSync(resolve(root, 'app/central-depositos/layout.tsx')), true
 assert.equal(existsSync(resolve(root, 'app/adm-deposito')), false,
   'Páginas antigas precisam usar redirect Next.js, sem duplicar código.');
 
+// Operador Móvel é extensão operacional protegida, não módulo independente.
+const operatorRoutes = ['',
+  '/alocar', '/avulso', '/transferir', '/consultar-localizacao',
+  '/consultar-item', '/inventario', '/saida', '/conferir',
+];
+for (const suffix of operatorRoutes) {
+  assert.equal(existsSync(resolve(root, 'app/operador-movel' + suffix + '/page.tsx')), true,
+    'Rota canônica do Operador Móvel ausente: /operador-movel' + suffix);
+}
+assert.equal(existsSync(resolve(root, 'app/operador-movel/layout.tsx')), true);
+assert.equal(existsSync(resolve(root, 'app/central-mobile')), false);
+assert.match(next, /source: '\/central-mobile', destination: '\/operador-movel', permanent: true/);
+assert.match(next, /source: '\/central-mobile\/:path\*', destination: '\/operador-movel\/:path\*', permanent: true/);
+const operatorLayout = read('app/operador-movel/layout.tsx');
+assert.match(operatorLayout, /Operador Móvel · Central de Depósitos/);
+assert.match(operatorLayout, /WarehouseMobileProtectedLayout/);
+assert.match(read('features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx'), /HGESM_SECTOR_EMAIL/);
+const operatorHome = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
+assert.match(operatorHome, /Operador Móvel/);
+assert.match(operatorHome, /href: '\/operador-movel\/avulso'/);
+assert.match(operatorHome, /href: '\/operador-movel\/alocar'/);
+const operatorSidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
+assert.match(operatorSidebar, /href="\/operador-movel"/);
+assert.match(operatorSidebar, /warehouse-nav-operador-movel/);
+assert.match(operatorSidebar, /showMobileAccess &&/);
+assert.ok(operatorSidebar.indexOf('{WAREHOUSE_SECTIONS.map(')
+  < operatorSidebar.indexOf('{showMobileAccess && ('),
+  'Operador Móvel deve aparecer depois das operações da Central de Depósitos');
+assert.doesNotMatch(operatorSidebar, /Central Móvel/);
+
 const metadata = read('app/central-depositos/layout.tsx');
 assert.match(metadata, /Central de Depósitos · EMPROVEX/);
 assert.match(metadata, /WarehouseProtectedLayout/);

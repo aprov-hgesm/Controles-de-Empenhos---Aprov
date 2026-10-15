@@ -1,5 +1,7 @@
 # Central de Depósitos — Estado Atual
 
+> **Nomenclatura móvel — 2026-10-15:** **Operador Móvel** substitui a marca **Central Móvel** como ferramenta subordinada à Central de Depósitos, acessível em `/operador-movel`, com `/central-mobile` legado redirecionado e acesso founder-only preservado; alteração em validação no PR #314 (D-124).
+
 > **Atualização complementar — 2026-10-15:** padronização de nome, rotas e APIs preparada na branch CENTRAL-ROUTES-01, ainda não certificada/publicada; a linha histórica de produção de 2026-10-01 abaixo não deve ser confundida com o novo PR.
 
 Atualização canônica: **2026-10-01**
