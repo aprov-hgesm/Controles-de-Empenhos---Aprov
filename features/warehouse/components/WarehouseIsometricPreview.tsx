@@ -1506,8 +1506,8 @@ export function WarehouseIsometricPreview({
                   <WarehouseStructure
                     key={object.id}
                     object={object}
-                    viewLogicalWidth={viewLogicalWidth}
-                    viewLogicalHeight={viewLogicalHeight}
+                    logicalWidth={viewLogicalWidth}
+                    logicalHeight={viewLogicalHeight}
                     location={location}
                     subpositions={subpositions}
                     occupiedQuantity={occupiedQuantity}
