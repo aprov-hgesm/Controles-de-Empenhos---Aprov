@@ -270,7 +270,9 @@ export function WarehouseMobileManualEntry() {
         reference: reference.trim() || null,
         position: location.position,
         expiresOn: expiresOn || null,
-        barcode,
+        // Associação já conhecida não precisa ser recriada (economiza escrita
+        // e preserva apresentações específicas previamente configuradas).
+        barcode: product.status === 'unknown' ? barcode : null,
       });
 
       const registered = result.entry.applied ? 'Entrada avulsa registrada' : 'Entrada já registrada anteriormente';
