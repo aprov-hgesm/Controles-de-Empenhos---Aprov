@@ -1,0 +1,29 @@
+# Matriz de riscos e bloqueadores — CLOUD-RUN-R1
+Data 2026-10-15; baseline main@2b1241fe. Riscos são condições comprovadas em código ou incertezas não verificadas. Probabilidade qualitativa baseada na exposição e no estado de verificação, não em porcentagens. Estados: todos PENDENTE/BLOQUEADO, nenhum resolvido. Evitar falsos PASS.
+
+| ID | Severidade | Componente / condição e evidência | Impacto | Probabilidade / fundamento | Mitigação e validação | Estado |
+|---|---|---|---|---|---|---|
+| R01 | BLOCKER | lib/server/sectorProvisioningAdmin.ts:120–217 exige FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON; app/api/central-depositos/intake-action/route.ts:1158–1174 obtém token desse módulo | Alocação/consumo e admins indisponíveis sob ADC sem adaptação | Alta se migrar sem ajuste: falha determinística 503 | Adaptar aquisição de token por ADC; Emulator integração F05/F09+IAM | BLOQUEADO |
+| R02 | BLOCKER | IAM projetos/identidades Google Cloud não acessíveis; firebase.json dois bancos nomeados | Erro 403 ou privilégio excessivo/cross-tenant | Indeterminada, superfície não inspecionada | Inventariar IAM por projeto/banco, separar runtime/deploy, negar acessos indevidos | BLOQUEADO |
+| R03 | BLOCKER | docs/SAAS_R1_OPERACAO_RECUPERACAO.md backup lógico exclui warehouse; estado nativo externo não verificado | Recuperação insuficiente após incidente | Indeterminada: não há verificação de console | Recovery verify e restore isolado de ambos os bancos, reconciliação logística | BLOQUEADO |
+| R04 | BLOCKER | lib/firebase.ts:7–18,43–57 inclui switches NEXT_PUBLIC_ e projeto fixo; segregação build/ambiente não comprovada | Homologação atingir produção e alterar dados | Indeterminada até inspecionar deploy/env | Projeto isolado e credenciais desprivilegiadas; teste negativo contra produção | BLOQUEADO |
+| R05 | CRÍTICO | vercel.json:3–7; app/api/cron/usage-snapshot/route.ts:12–43 usa Bearer CRON_SECRET | Job duplicado ou perdido; snapshots imprecisos | Alta no cutover sem sequenciamento | Testar única execução, pausa sincronizada, replay idempotente; Scheduler OIDC/segredo | PENDENTE |
+| R06 | CRÍTICO | firebase-applet-config.json authDomain Firebase, lib/googleDriveWorkspace.ts OAuth Drive independente | Login/Drive quebrar com novo domínio/origem | Condicional a OAuth/Hosting escolhidos | Verificar domínios e redirect URIs; E2E desktop/mobile | PENDENTE |
+| R07 | ALTO | lib/server/requestSecurity.ts:68–87 prioriza x-vercel-forwarded-for; buckets locais:123–140 | Chave IP incorreta/spoofing/rate limit divergente por instância | Alta a necessidade de ajuste; fraude depende do proxy | Forwarded IP trusted chain + tests multi-instância | PENDENTE |
+| R08 | ALTO | Firebase Hosting rewrite Cloud Run limita timeout a 60 s (fonte Google) | 504 em operações longas | Depende da duração real não medida | Bench p95/max; async jobs para longos ou borda alternativa | PENDENTE |
+| R09 | ALTO | lib/warehouse/memoryReadCache.ts e Next standalone sem backend cache compartilhado identificado | Cache obsoleto/ordenação sob múltiplas instâncias | Indeterminada sem testes | E2E ≥2 instâncias e reset/revision; monitorar leitura Firestore | PENDENTE |
+| R10 | ALTO | next.config.ts:33–38 ignora erros TypeScript e ESLint em build | Build verde com erro real | Evidência direta; risco funcional não quantificado | Gate TS/lint com orçamento justificado e suites críticas antes deploy | PENDENTE |
+| R11 | ALTO | domínio emprovex.com.br na Vercel; DNS/TLS/alias administrativos não lidos | Downtime/login/links falhando no cutover e rollback | Indeterminada sem zona DNS | DNS plan, TTL, TLS, OAuth e rollback validados; Vercel mantida | PENDENTE |
+| R12 | MÉDIO | Cloud Run + registry, logging, egress e backup precificação por uso | Custo acima do planejado | Incerta sem métricas | Cenários e alerts + medição real; limites de instâncias | PENDENTE |
+| R13 | MÉDIO | Workflow Cloud Run/WIF ausente na árvore Git; CI atual Node 20/GitHub actions | Credenciais estáticas ou deploy sem aprovação | Incerta; implementação futura | Workflow dispatch manual, OIDC/WIF restrito, environments/gates e auditoria | PENDENTE |
+| R14 | MÉDIO | Runtime standalone, cold start e concurrency não ensaiados | Latência, timeouts, consumo de recursos | Incerta sem teste container | Testar startup, SIGTERM, escala, CPU/RAM, latência Brasil/região | PENDENTE |
+| R15 | MÉDIO | app/api/health/route.ts retorna apenas status e timestamp | Health ok apesar de falha banco/credencial | Alta para falsa interpretação de readiness | Separar liveness e dependência observada; health sintético sem mutação | PENDENTE |
+| R16 | MÉDIO | next.config.ts:7–31 mantém redirect e Permissions-Policy câmera | Mobile scanner/links legados regressam no proxy | Condicional a rewrite/headers | HTTP contract e browser scanner em HTTPS | PENDENTE |
+| R17 | INFORMATIVO | vercel.json:9–11 disable auto deploy; docs/EMPROVEX_MEMORIAL_OFICIAL.md checkpoint D-127 | Processo de publicação manual atual | Comprovado no código, painel não consultado | Preservar Vercel operante/sem duplo deploy; verificar hooks externos | PENDENTE |
+| R18 | ALTO | consulta GitHub branches/main: protected:false em 2026-10-15; CI ignora docs/** | Release/governança não reforçados | Fato do estado de proteção consultado, rulesets não exaustivos | Branch protection/rulesets e aprovações revisados pelo proprietário | PENDENTE |
+
+## Contagem
+18 itens: **4 BLOCKER, 2 CRÍTICO, 6 ALTO, 5 MÉDIO, 1 INFORMATIVO**. NÃO há riscos declarados resolvidos. Limite: risco desconhecido pode existir; revisão de superfície e acesso de leitura do ambiente é obrigatória.
+
+## Política
+Não declarar GO enquanto qualquer BLOCKER ou CRÍTICO permanecer. Problema de validação sem evidência deve entrar como lacuna. Cada risco precisa de responsável e prova em 10_GATES_DE_ACEITE_CLOUD_RUN_R1.md e 11_LACUNAS_E_VERIFICACOES_EXTERNAS.md. Nenhuma mitigação foi implantada neste PR.
