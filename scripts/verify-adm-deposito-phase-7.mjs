@@ -119,7 +119,7 @@ for (const marker of [
 }
 
 for (const marker of [
-  "page.getByTestId('nav-adm-deposito')",
+  "page.getByTestId('nav-central-depositos')",
   "Central de Depósitos",
 ]) {
   requireText(externalE2e, marker, 'Browser E2E não cobre acesso externo seguro à Central: ' + marker);

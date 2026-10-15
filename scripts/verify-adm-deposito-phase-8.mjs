@@ -116,7 +116,7 @@ assert.match(e2e, /warehouse-outbound-cart-line/);
 assert.match(e2e, /page\.reload\(\)/);
 assert.match(e2e, /UNKNOWN_BARCODE/);
 assert.match(e2e, /warehouse-movements-operational/);
-assert.match(externalE2e, /nav-adm-deposito/);
+assert.match(externalE2e, /nav-central-depositos/);
 assert.match(externalE2e, /Central de Depósitos/);
 
 assert.match(decisions, /D-042 — Barcode é identificador auxiliar/);
