@@ -5,5 +5,8 @@
       "path": "/api/cron/usage-snapshot",
       "schedule": "15 9 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
