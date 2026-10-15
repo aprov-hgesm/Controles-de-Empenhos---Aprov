@@ -8,7 +8,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/visao-do-deposito');
+    await page.goto('/central-depositos/visao-do-deposito');
     await expect(page.getByTestId('warehouse-r1-croquis')).toBeVisible({
       timeout: 20_000,
     });
@@ -34,7 +34,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
     });
     await expect(page.getByLabel('Nome do croqui')).toHaveValue('Croqui E2E atualizado');
 
-    await page.goto('/adm-deposito/estoque');
+    await page.goto('/central-depositos/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({
       timeout: 20_000,
     });
@@ -52,7 +52,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/controle-de-depositos?aba=croquis');
+    await page.goto('/central-depositos/controle-de-depositos?aba=croquis');
     const croqui = page.getByTestId('warehouse-r1-croquis');
     await expect(croqui).toBeVisible({ timeout: 20_000 });
 

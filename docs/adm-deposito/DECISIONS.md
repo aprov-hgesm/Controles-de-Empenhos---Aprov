@@ -2478,3 +2478,16 @@ Data: 2026-10-01.
 - Especificação completa: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
 Esta decisão prevalece sobre qualquer interpretação anterior de R3.0–R3.9 como ordem obrigatoriamente sequencial.
+
+
+## D-123 — Central de Depósitos como nome e rota pública canônicos
+
+Data: 2026-10-15.
+
+- O módulo logístico antes acessado em `/adm-deposito` recebe a rota oficial `/central-depositos`, com as subrotas equivalentes e título de produto **Central de Depósitos**.
+- URLs históricas `/adm-deposito` redirecionam permanentemente para as rotas canônicas, preservando caminhos e parâmetros de consulta.
+- As APIs canônicas passam a `/api/central-depositos/status` e `/api/central-depositos/intake-action`; as URLs antigas de API preservam os mesmos handlers, sem redirect de requisições autenticadas ou escritas.
+- UI, links internos, Central Móvel, documentos operacionais e testes futuros devem usar a nomenclatura canônica. Testes e scripts históricos podem conservar nomes de arquivo anteriores quando isso preservar contratos permanentes de CI.
+- Permanecem intocados namespace `warehouse`, Firestore databases/rules, coleções, entidades, IDs, idempotência, ledger e integrações; a alteração **não é migração de dados**.
+- Diretório histórico `docs/adm-deposito/` é mantido para preservar referências e rastreabilidade; o README do módulo explica o nome vigente.
+- O trabalho se realiza em branch/PR próprio, com testes de roteamento/compatibilidade e gates oficiais, sem merge/deploy de produção automático.

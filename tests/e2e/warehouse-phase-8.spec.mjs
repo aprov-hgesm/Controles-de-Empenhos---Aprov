@@ -13,7 +13,7 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.goto('/adm-deposito/saida-expressa');
+    await page.goto('/central-depositos/saida-expressa');
     await expect(page.getByTestId('warehouse-material-withdrawal')).toBeVisible({
       timeout: 20_000,
     });
@@ -65,7 +65,7 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
       page.getByText('Código não cadastrado: ' + UNKNOWN_BARCODE, { exact: true })
     ).toBeVisible();
 
-    await page.goto('/adm-deposito/movimentacoes');
+    await page.goto('/central-depositos/movimentacoes');
     await expect(page.getByTestId('warehouse-movements-operational')).toBeVisible({
       timeout: 20_000,
     });
