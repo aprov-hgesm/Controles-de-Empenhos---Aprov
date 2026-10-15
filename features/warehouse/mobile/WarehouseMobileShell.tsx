@@ -1,7 +1,8 @@
 'use client';
 
-import { ArrowLeft, House } from 'lucide-react';
+import { ArrowLeft, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import type { SectorWorkspaceContext } from '../../../lib/workspaceContext';
@@ -13,6 +14,9 @@ export function WarehouseMobileShell({
   children: ReactNode;
   workspaceContext: SectorWorkspaceContext;
 }) {
+  const pathname = usePathname();
+  const isOperatorHome = pathname === '/operador-movel' || pathname === '/operador-movel/';
+
   return (
     <div
       className="min-h-dvh bg-slate-100 text-slate-950"
@@ -22,7 +26,7 @@ export function WarehouseMobileShell({
         <div className="mx-auto flex max-w-xl items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-[#00288e]/70">
-              EMPROVEX
+              EMPROVEX · CENTRAL DE DEPÓSITOS
             </p>
             <p className="truncate text-base font-black tracking-tight text-slate-950">
               Operador Móvel
@@ -59,33 +63,32 @@ export function WarehouseMobileShell({
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-xl px-4 pb-28 pt-5 lg:hidden">
+      <main className={`mx-auto w-full max-w-xl px-4 pt-5 lg:hidden ${isOperatorHome ? 'pb-8' : 'pb-28'}`}>
         {children}
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden"
-        aria-label="Navegação do Operador Móvel"
-      >
-        <div className="mx-auto grid max-w-xl grid-cols-2 gap-2">
-          <Link
-            href="/operador-movel"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-blue-50 text-sm font-black text-[#00288e]"
-            data-testid="warehouse-mobile-nav-home"
-          >
-            <House className="h-5 w-5" aria-hidden="true" />
-            Início
-          </Link>
-          <Link
-            href="/central-depositos"
-            className="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-black text-slate-600"
-            data-testid="warehouse-mobile-nav-desktop"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-            Central
-          </Link>
-        </div>
-      </nav>
+      {!isOperatorHome && (
+        <nav
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/90 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_-24px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:hidden"
+          aria-label="Retorno ao menu do Operador Móvel"
+        >
+          <div className="mx-auto max-w-xl">
+            <Link
+              href="/operador-movel"
+              className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#00288e] px-4 py-3 text-white shadow-[0_10px_24px_-14px_rgba(0,40,142,0.7)] transition-colors active:bg-[#001b62] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00288e]"
+              data-testid="warehouse-mobile-nav-home"
+              aria-label="Voltar à lista de operações do Operador Móvel"
+            >
+              <ArrowLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="flex flex-col items-start">
+                <span className="text-sm font-black leading-5">Voltar às operações</span>
+                <span className="text-[10px] font-semibold leading-4 text-blue-100">Menu do Operador Móvel</span>
+              </span>
+              <LayoutGrid className="ml-auto h-5 w-5 shrink-0 text-blue-100" aria-hidden="true" />
+            </Link>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
