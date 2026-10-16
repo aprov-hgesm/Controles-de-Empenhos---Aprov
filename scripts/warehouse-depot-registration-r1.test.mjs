@@ -76,3 +76,14 @@ test('rotina de inativação é protegida e códigos cadastrados não podem ser 
   assert.match(source, /WAREHOUSE_DEPOT_CODE_IMMUTABLE/);
   assert.match(source, /WAREHOUSE_LOCATION_CODE_IMMUTABLE/);
 });
+
+test('rota de demonstração localhost é restrita a desenvolvimento e não executa gravações', () => {
+  const route = readFileSync(resolve(root, 'app/visual-lab/cadastro-deposito/page.tsx'), 'utf8');
+  const preview = readFileSync(resolve(root, 'features/warehouse/components/WarehouseDepotRegistrationPreviewLocal.tsx'), 'utf8');
+  const form = readFileSync(resolve(root, 'features/warehouse/components/WarehouseDepotRegistrationR1.tsx'), 'utf8');
+  assert.match(route, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(route, /notFound\(\)/);
+  assert.match(preview, /previewOnly/);
+  assert.match(form, /if \(previewOnly\) \{/);
+  assert.match(form, /Nenhuma informação foi enviada ao Firestore/);
+});
