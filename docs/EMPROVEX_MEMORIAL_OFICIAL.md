@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W8 isolamento real de bundle, redução 8 → 1 (2026-10-16)
+
+- **Evidência concreta GitHub Actions [W8 run #38854051361](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854051361):** Next.js 15.5.24 compilou com sucesso e gerou **42 páginas estáticas**, mas o scanner bloqueou o artefato: `QA_ARTIFACT_NOT_ISOLATED: 8 paths` em server chunks, routes, JSON legado e client chunk. **Não classificar como pronto para deploy.**
+- **Correção isolada no PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT:** `NormalModuleReplacementPlugin` substitui import do baseline Firebase legado por stub sem referências produtivas **somente no Webpack `cloud-run-staging`**; Next config continua validando baseline real fora do bundle. Com isso, [W8 run #38854546136](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854546136) compilou novamente 42 páginas e o scanner passou de **8 para 1** referência: cópia `.next/standalone/firebase-applet-config.json` incluída pelo tracing. Nenhum arquivo client/server JS apareceu no segundo relatório de violação.
+- **Correção complementar W8:** script que remove exclusivamente a cópia do pacote QA (source original preservado), scanner após remoção e smoke de inicialização no localhost sem `K_SERVICE`, sem credenciais. Workflow W8 alterado para gate estrito — erro de build/scan/smoke = CI falha, sem falso PASS. **Resultado final desta rodada ainda pendente**, logo nenhum READY.
+- **Importante:** Web App Firebase QA real ainda não configurado, Auth/Rules por banco, teste IAM negativo e R01/R02/R04 pendentes. Cloud Run continua sem deploy, startup interlock ativo. Produção Vercel, Firestore, `main` e DNS preservados. **Etapa 3: 68,75% | Migração geral 53,75%**, sem pontuar o build sintético como liberação de QA.
+- **Handoff:** `docs/audits/cloud-run-r1/worker-8/HANDOFF.md` no PR #324. Aguardar PASS completo do W8 e então iniciar configuração do app web QA e Auth/Rules, antes de autorizar deploy privado.
+
+---
+
 ## CLOUD-RUN-R1 — W8 build-first QA em PR DRAFT (2026-10-16)
 
 - **Diretriz do Fundador:** abreviar a fase administrativa e executar caminho **build-first**, concentrando testes relevantes do EMPROVEX no Cloud Run QA sem usar produção como bancada. Preservar proteções R01/R02/R04 e não trocar domínio/Firestore.
