@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W6 revisão independente, Emulator e plano de homologação (2026-10-15)
+
+- **PR #322 DRAFT** (`test/cloud-run-r1-w6-fastpath-independent`) contra W5 PR #321, W5 depende de W4 PR #320. Código certificado no `0bf71b5ec136685fdd56c2629b75d03f75655de4`; alteração documental posterior `d3b55acf06a6110de9549f2dd6245c03903fae6c`. **Não fazer merge automático** nem publicar.
+- **W6 Firebase Emulator — 9/9 PASS** (GitHub workflow `#38837933261`): testes executaram `POST /api/central-depositos/intake-action` **real** para F05 ALLOCATE e F09 IMMEDIATE_CONSUMPTION; F06 executou `transferWarehouseStock()` **real** com Firebase SDK `runTransaction`, saldo e lote persistidos, idempotência/replay, rejeição de conflito, negação de chamadas a produção. Projeto simulado `demo-emprovex-fastpath`, bancos nomeados sintéticos `qa-core` e `qa-warehouse`, apenas localhost. Auth e token de serviço simulados; Emulator emitiu aviso de multi-database/Rules permissivas: **não alegar IAM/Rules remoto**.
+- **Defeito funcional real identificado:** lote persistido pelo F05 continha `createdAt/updatedAt`, `parseTransferLot()` no F06 antes usava `{ ...data, id }` com validador que proíbe campos adicionais e rejeitava transferência (`WAREHOUSE_TRANSFER_LOT_INVALID`). **Correção mínima:** `lib/warehouse/locationRepository.ts` aplica `warehouseCanonicalLotReadInput(id,data)`, já existente no domínio, antes de `validateWarehouseLot`. FAIL reproduzido no Emulator antes e PASS depois, sem flexibilizar validador ou alterar rules.
+- **CI final confirmado:** `Application CI #38837933621` = PASS (validate-application e gates 16–21 PASS); `Core Protection #38837933233` = PASS, no commit do código acima. Sem deployment, nenhum recurso Google Cloud e nenhum dado real.
+- **Revisão independente:** `docs/audits/cloud-run-r1/worker-6/REVISAO_INDEPENDENTE.md`; plano futuro **não executado** `docs/audits/cloud-run-r1/worker-6/PLANO_HOMOLOGACAO_ADC_IAM.md` ambos no PR #322.
+- **NO-GO preservado:** R01/R02/R04 ainda carecem de projeto Firebase/GCP QA segregado e IAM deny efetivo sobre bancos produtivos; R03 restore testado isoladamente ainda não concluído. O interlock `instrumentation.ts` continua impedindo startup Cloud Run. F09 saída física multi-linha (W3-R20), concorrência F06 completa e prova de bundle Next sem referências produtivas não encerradas.
+- **Próximo passo:** após decisão explícita de novo escopo pelo Fundador, preparar projeto GCP/Firebase QA exclusivamente isolado, service identity Cloud Run sem chaves, IAM mínimo, GitHub WIF e quotas/orçamento, em ações separadas auditáveis. Até lá, **não habilitar API Cloud Run, não criar recursos, não modificar Vercel/DNS/Firestore/IAM.**
+
+---
+
 ## CLOUD-RUN-R1 — W5 Firebase unificado + F05/F06/F09 (2026-10-15)
 
 - **PR #321 DRAFT** (`feat/cloud-run-r1-w5-firebase-unification`) contra branch W4 do PR #320, HEAD final `dd305184f482ab26e9ea89c030043fbc164dd5c9` — **não fazer merge diretamente na main**. 19 arquivos alterados na comparação incremental W5; nenhuma alteração de Vercel/Firebase/Cloud Run real.
