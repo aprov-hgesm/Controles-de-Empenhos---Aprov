@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Diretriz do Fundador: Artifact Registry e primeiro Cloud Run QA privado (2026-10-16)
+
+- **Pedido novo e explícito do Fundador:** preparar Artifact Registry QA, omitir testes de isolamento e executar primeiro deploy privado Cloud Run. **Autorização de intenção de deploy privado recebida**, mas nenhum deploy ou publicação foi executado no checkpoint.
+- **Constatação de código no PR #324 HEAD `a7776de812d67ae11ab5cf9d330077bd7b705406`:** `instrumentation.ts` interrompe startup quando `K_SERVICE` está presente com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. Omitir todos os gates e implantar essa imagem geraria falha de startup. Remover o interlock sem certificar isolamento de dados/autorização expõe riscos indevidos; manter o bloqueio até validações mínimas R01/R02/R04 e prova negativa de acesso produtivo. Não repetir auditorias gerais já concluídas.
+- **Plano de menor burocracia:** criar primeiro o registro Docker padrão **`emprovex-qa-docker`** na região **`us-east1`**, projeto EXCLUSIVAMENTE `emprovex-qa-r1-261015-6275` (número `953294034210`), habilitar `artifactregistry.googleapis.com` apenas no QA se necessário, confirmar tipo Docker, sem IAM público, sem push automático. A API GCP administrativa não está conectada ao coordenador; Fundador fará o comando de criação com `gcloud.cmd` Windows PowerShell. Não confundir comando emitido com criação confirmada.
+- **Após confirmação:** configurar identidade mínima para push remoto GitHub Actions/Cloud Build, imagem QA com tag imutável por SHA e Artifact Registry; automatizar verificações de identidade/negação estritamente necessárias; só após certificação liberar interlock em alteração revisada, e invocar `gcloud run deploy` com `--no-allow-unauthenticated`, `--service-account` QA, `--project` QA e `--region=us-east1`. Manter DNS/Vercel/Firestore produtivos inalterados. Nenhum deploy de produção autorizado.
+- **Estado/progresso oficial:** primeiro Docker build QA com config real PASS no GitHub Actions, imagem não publicada e Cloud Run não criado. E3 **68,75%**, E4 **20%**, geral **57,75%** até nova evidência. Não aumentar só por planejamento.
+
+---
+
 ## CLOUD-RUN-R1 — Docker build QA REAL concluído em GitHub Actions (2026-10-16)
 
 - **Nova evidência visual do Fundador:** GitHub Actions > Settings > Variables apresenta `EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON` cadastrada como variável de repositório com prefixo JSON do projeto `emprovex-qa-r1-261015-6275`. Valor integral não foi copiado ao memorial nem exibido pelo coordenador.
