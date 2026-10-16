@@ -46,6 +46,12 @@ O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação
 - **Próximo gate read-only:** consultar a política da conta de serviço `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` por `gcloud.cmd iam service-accounts get-iam-policy ... --project=emprovex-qa-r1-261015-6275` antes de qualquer concessão `roles/iam.serviceAccountTokenCreator`, sempre restrita à própria identidade e não ao projeto inteiro. Não exibir tokens no chat. Depois testar ADC positivo e 403 negativo em QA/produção mediante plano de teste seguro.
 - **Progresso constante:** etapa 3 — 50%; migração geral — 50%. Cloud Run continua NO-GO, produção Vercel e dados produtivos preservados.
 
+## Checkpoint W7 — auditoria integrada e CI (16/10/2026)
+
+- Saída PowerShell do fundador: `EMPROVEX_QA_W7_AUDITORIA.ps1` executou consultas no projeto `emprovex-qa-r1-261015-6275` com **PASS PARCIAL** nos itens: projeto ativo, faturamento, APIs essenciais, dois bancos QA Standard Native us-east1, delete-protection e freeTier conforme contrato, runtime SA, dois IAM condicionais e ausência de bindings públicos explícitos. A mensagem `OrÃ§amento` é falha cosmética de codificação, não resultado técnico.
+- GitHub Actions PR #323 SHA `330149897751627f760fe18aedf555bb964a6395`: W7 offline [#38847873118](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873118) **success**, Core Protection [#38847873008](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873008) **success**, Application CI [#38847872902](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847872902) **success**.
+- **Não inferir** acesso real por service account, IAM deny efetivo ou Rules publicadas. Testes operacionais IAM com credencial temporária e Firebase Auth/Rules continuam pendentes. Sem teste de negação contra produção sem autorização adicional expressa. **Etapa 3 50%; geral 50%**, ambas por marcos.
+
 ## 4. Pendências obrigatórias — não declarar PASS antecipado
 
 1. **IAM Core e Warehouse condicional registrado.** Auditar política de forma independente e executar testes **reais** de leitura autorizada nos dois bancos QA e negação **HTTP 403** no projeto produtivo usando a identidade runtime QA.
