@@ -10,6 +10,15 @@ if (process.env.K_SERVICE || process.env.EMPROVEX_RUNTIME_TARGET) {
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  // Build-time marker injected consistently into server and browser bundles.
+  // In Cloud Run staging the server-side build gate still independently checks
+  // project, app, banks and key absence. Never derive staging from VERCEL_ENV.
+  env: {
+    NEXT_PUBLIC_EMPROVEX_DEPLOYMENT_ENVIRONMENT:
+      process.env.EMPROVEX_RUNTIME_TARGET === 'cloud-run-staging'
+        ? 'cloud-run-staging'
+        : 'legacy',
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
