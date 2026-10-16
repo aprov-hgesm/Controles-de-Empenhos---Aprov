@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 projeto QA labels consultadas, FirebaseProject pendente (2026-10-16)
+
+- Evidência Windows do Fundador: reexecução da sonda IAM W7 corrigida repetiu token temporário **PASS**, `qa-core HTTP 200`, `qa-warehouse HTTP 200` — **sem novo gate adicional**. Consulta read-only `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(labels)"` retornou `app: emprovex` e `env: qa`. Labels são metadados definidos no GCP e **não comprovam** registro do `FirebaseProject` nem Firebase Authentication ativado.
+- Próximo gate sem mutação: usar `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token OAuth do usuário proprietário obtido localmente (sem exibi-lo). Um HTTP 200 com `projectId` correto comprova registro FirebaseProject; HTTP 404 indicaria ausência/indisponibilidade do recurso sob a identidade da chamada; HTTP 403 é inconclusivo sobre o registro (pode refletir API não habilitada ou permissão). **Não executar** `projects:addfirebase` nem habilitar serviços adicionais sem conferir resultado e pedir autorização específica.
+- Evidência documental: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/get ; https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project .
+- Segurança/Isolamento QA **62,5%**; migração geral **52,5%**. Nenhuma mudança em produção, `main`, DNS, Vercel, Rules ou deploy; NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 acesso real à dupla Firestore QA comprovado (2026-10-16)
 
 - **Evidência direta de homologação real:** o Fundador executou `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` no Windows, fixado ao projeto `emprovex-qa-r1-261015-6275`. A sonda retornou sucessivamente: `PASS: Token temporario obtido (conteudo nao exibido).`, `PASS: qa-core HTTP 200 para identidade runtime QA.`, `PASS: qa-warehouse HTTP 200 para identidade runtime QA.` e `PASS PARCIAL: Duas leituras reais QA autorizadas, sem gravacoes.`. O script realiza GET REST somente na coleção QA `emprovexQaSecurityProbe`, máximo `pageSize=1`, sem imprimir corpo ou token. **PASS funcional IAM positivo em ambos os bancos do QA**.
