@@ -1,6 +1,6 @@
 # CLOUD-RUN-R1 — W8: primeiro build e pacote Cloud Run QA
 
-**Data:** 2026-10-16  
+**Data:** 2026-10-16
 **Estado:** preparação e auditoria automatizada, **NÃO há deploy**, **NÃO há liberação de startup**, **produção intocada**.
 
 ## Objetivo
