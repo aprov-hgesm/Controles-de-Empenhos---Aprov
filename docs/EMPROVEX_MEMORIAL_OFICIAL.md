@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — FirebaseProject QA registrado e certificado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** após POST `projects/emprovex-qa-r1-261015-6275:addFirebase`, a verificação read-only da operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`, com projeto consumidor `x-goog-user-project` fixado no QA, retornou `FIREBASE=SUCCESS; PROJECT=emprovex-qa-r1-261015-6275`. **PASS: FirebaseProject QA registrado efetivamente**. Não repetir POST `addFirebase`; a associação é persistente.
+- **Escopo do resultado:** projeto QA GCP já existente agora possui registro Firebase, sem criar novo projeto GCP nem alterar Firestores. A operação pode habilitar APIs e criar contas Firebase auxiliares conforme documentação oficial; ainda não foi inventariado o estado final. **Não confundir** com Firebase Authentication configurado, provedores Google/senha ativados, Rules por banco publicadas, projeto web QA criado, ou Cloud Run homologado.
+- **Próximo gate de leitura:** consultar `GET https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` com token do proprietário e `x-goog-user-project` QA, exibindo apenas `name`, `subtype`, booleans `signIn.email.enabled`/`signIn.anonymous.enabled` e domínios autorizados, nunca `client.apiKey` nem corpo integral. Verificar provedor Google em consulta independente caso necessário. Nenhum usuário criado nem gravações.
+- **Avanço por subgate:** segurança etapa 3 `62,5% → 68,75%` (registro do Firebase, um dos subgates de Auth/Rules); geral em cinco etapas igualmente ponderadas `52,5% → 53,75%`. Ainda exigem certificação de Auth/Rules e IAM negativo; percentuais são rastreamento por marcos, não prazo.
+- **Segurança e custo:** budget QA R$20/mês é alerta, não teto. PRs DRAFT, GCP produção, Vercel, DNS e `main` intocados. **CLOUD-RUN-R1 NO-GO**.
+- Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project ; https://docs.cloud.google.com/identity-platform/docs/reference/rest/v2/projects/getConfig .
+
+---
+
 ## CLOUD-RUN-R1 — Firebase addFirebase iniciou operação no QA (2026-10-16)
 
 - **Execução real PowerShell do Fundador, QA somente:** `POST https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275:addFirebase` com `x-goog-user-project` fixado no QA e body `{}` retornou a operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`; campo `DONE=` vazio/ausente. **PASS solicitação aceita**, mas **NÃO comprova conclusão da associação FirebaseProject**. A operação pode ter sucesso, falhar ou continuar em curso; não realizar outro `addFirebase` sem conferir operação.
