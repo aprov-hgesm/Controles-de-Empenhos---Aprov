@@ -19,6 +19,11 @@
 
 **Próximo gate:** auditar de forma independente os dois bindings IAM condicionais já registrados; validar acessos reais permitidos no QA e 403 negado no projeto produtivo; configurar Rules/Auth do QA e testes de bundle antes de liberar qualquer deploy. **Vercel/`emprovex.com.br` e projeto produtivo permanecem como estão.**
 
+### IAM QA — verificação independente dos dois bindings (2026-10-16)
+
+- Saída CLI somente leitura do fundador: `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --format="yaml(bindings)"` confirmou **dois bindings condicionais `roles/datastore.user`** para `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com`, com `resource.name` estritamente igual a `projects/emprovex-qa-r1-261015-6275/databases/qa-core` e `projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse`. Service agents e Owner preservados; sem bindings públicos ou produtivos na policy QA apresentada.
+- **PASS de configuração IAM verificada de forma independente; NÃO é certificação de acesso efetivo.** Faltam teste real com identidade QA em ambos bancos, negação 403 em produção e Firebase Security Rules/Auth QA. Sem tokens privados expostos. Percentuais permanecem **Etapa 3: 50% | Geral: 50%** até novo marco funcional. Docs: https://cloud.google.com/firestore/docs/manage-databases ; https://firebase.google.com/docs/rules/manage-deploy .
+
 ---
 
 ## CLOUD-RUN-R1 — W7 identidade runtime QA criada (2026-10-15)
