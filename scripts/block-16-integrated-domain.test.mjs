@@ -156,7 +156,9 @@ const monitoringModule = compiled(
 );
 await monitoringModule.link(async (specifier) => {
   if (specifier === 'jose') return jose;
-  if (specifier === '../../firebase-applet-config.json') return firebaseConfig;
+  // The canonical Firebase runtime configuration is mocked with a strictly
+  // synthetic legacy fixture; real credentials are never loaded in VM tests.
+  if (specifier === '../firebaseRuntimeConfig') return firebaseConfig;
   if (specifier === '../firestoreBillingDay') return billingDayModule;
   if (specifier === '../platformCapacity') return capacityModule;
   if (specifier === './cloudRunManagedToken.mjs') return cloudRunManagedToken;
