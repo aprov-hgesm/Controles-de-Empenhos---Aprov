@@ -67,6 +67,7 @@ import {
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 import {
   warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLotReadInput,
   warehouseCanonicalMaterialReadInput,
 } from './readCompatibility';
 import {
@@ -982,7 +983,7 @@ function parseTransferLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    { ...data, id },
+    warehouseCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
