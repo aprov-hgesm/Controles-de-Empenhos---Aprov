@@ -1,5 +1,582 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Pausa solicitada pelo Fundador; Cloud Build QA ACEITO, conclusão pendente (2026-10-16)
+
+**DIRETRIZ OPERACIONAL:** Fundador solicitou encerrar temporariamente a migração para priorizar outros ajustes no EMPROVEX. Não iniciar novos builds, publicar/deployar por iniciativa própria, alterar IAM/Rules, desligar interlock, alterar DNS ou promover à produção até nova solicitação explícita. O build já submetido ao Cloud Build é **assíncrono** e pode concluir mesmo durante a pausa; não houve pedido de cancelamento.
+
+**ONDE ESTAMOS — resumo fiel da última prova real:**
+- Projeto **exclusivamente QA** `emprovex-qa-r1-261015-6275` (número `953294034210`), dois bancos QA nomeados `qa-core` e `qa-warehouse`, Firebase Web App QA cadastrado e config pública local validada. Auth QA Google + Email/Senha configurados. Vercel `emprovex.com.br` e dados de produção **não migrados**.
+- **W8 SHA** `a7776de812d67ae11ab5cf9d330077bd7b705406`, PR #324 DRAFT. GitHub Actions run [#38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511), job `117191291837`, **success** para build Docker com config Firebase QA real, scanner **2.349** arquivos textuais (`QA_ARTIFACT_PASS`), teste standalone sintético HTTP 200. Imagem deste job somente no runner efêmero; **não era publicação em Registry**.
+- **Artifact Registry QA real** `emprovex-qa-docker` criado em `us-east1` formato Docker, privado, criptografia gerenciada Google; API `artifactregistry.googleapis.com` habilitada; criação e consulta `ARTIFACT_REGISTRY_QA_PRONTO` comprovaram registro inicialmente vazio.
+- Cloud Build API `cloudbuild.googleapis.com` habilitada; primeiro `gcloud builds submit` criou upload de **923 arquivos/9,1 MiB** para `gs://emprovex-qa-r1-261015-6275_cloudbuild/source/1792184855.401925-aeff20deb7ba4205bd0997f11ae70c4f.tgz`, mas **recebeu `PERMISSION_DENIED`** ao submeter.
+- Diagnóstico IAM QA **somente leitura**: usuário operador tinha `cloudbuild.builds.create=PASS`, `cloudbuild.builds.get=PASS`, `serviceusage.services.use=PASS`; `iam.serviceAccounts.actAs=PASS` na conta de execução padrão **`953294034210-compute@developer.gserviceaccount.com`**. Política explícita do projeto QA: `service-953294034210@gcp-sa-cloudbuild.iam.gserviceaccount.com` com `roles/cloudbuild.serviceAgent` **sem condição**; conta Compute executora com **`roles/editor` sem condição** — grant existente, não foi concedido nesta investigação; registrar para revisão de menor privilégio após retomada. A causa exata do primeiro 403 NÃO foi comprovada.
+- **ÚLTIMO RESULTADO, via Fundador:** submissão direta `POST https://cloudbuild.googleapis.com/v1/projects/emprovex-qa-r1-261015-6275/locations/us-east1/builds`, usando source já enviado, mesmo W8, configuração Firebase QA pública real e SA de build Compute. Console: `SOURCE_QA=PASS`, `PROJETO_QA=PASS`, `SERVICE_ACCOUNT=CONFIRMADA`, `SUBMETENDO_BUILD_API`, `RESULTADO=BUILD_ACEITO`, `DEPLOY_CLOUD_RUN=NAO_EXECUTADO`. **Operation**: `operations/build/emprovex-qa-r1-261015-6275/ZGYwZmFjMTgtMjIxMy00NzdiLWExMDgtNWZjOWJmOGY2MTIz`; destino **`us-east1-docker.pkg.dev/emprovex-qa-r1-261015-6275/emprovex-qa-docker/emprovex:w8-a7776de8-20261016211858`**.
+- **CLASSIFICAÇÃO:** `BUILD_ACEITO` comprova **criação/aceite da operação assíncrona**, não conclusão `SUCCESS`, imagem publicada nem digest validado. **Status final do build e imagem no Artifact Registry: PENDENTE DE CONSULTA NA RETOMADA.** Build pode continuar por conta própria. **Cloud Run QA: NENHUM DEPLOY EXECUTADO/COMPROVADO.**
+- **INTERLOCK PERMANECE:** `instrumentation.ts` rejeita inicialização sob `K_SERVICE` com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. R01/R02/R04 e isolamento efetivo entre projetos/identidades/Rules ainda não certificados sob runtime real; não remover interlock apenas para forçar deploy. O Fundador deseja menos burocracia, então restringir futuros testes ao mínimo necessário de isolamento e operações, sem repetir gates PASS.
+- **Produção:** nenhum cutover, deploy produtivo, migração de Firestore, modificação DNS, merge em `main`, nem substituição da Vercel foi executado neste programa.
+
+**O QUE FAZER A SEGUIR (SOMENTE QUANDO O FUNDADOR RETOMAR):**
+1. Coordenador + Fundador: conferir de modo somente leitura o status final da operation de Cloud Build e confirmar existência/digest da imagem no Artifact Registry. Se falhou, ler erro específico e corrigir o mínimo; se sucesso, não repetir build.
+2. Coordenador: retomar PRs DRAFT (#317 coordenação / #324 W8), reconfirmar SHA exato e preparar identidade de execução do Cloud Run QA com acesso estritamente QA; registrar grants reais e revisar `roles/editor` da conta de build quando conveniente.
+3. Coordenador/QA: concluir exclusivamente os testes negativos mínimos necessários de IAM/Rules/autorização de conta gerenciada, R01/R02/R04; somente depois liberar interlock por mudança revisada e obter confirmação do Fundador para a execução privada.
+4. Fundador/Coordenador: deploy **somente privado** em QA (`--no-allow-unauthenticated`, conta de runtime QA, projeto e região QA), validar inicialização/HTTP; não alterar DNS, produção ou bancos reais. Cutover separado e não autorizado.
+
+**QUEM ESTÁ FAZENDO:** migração em **PAUSA por decisão do Fundador**; nenhuma execução técnica adicional delegada nesta etapa. O coordenador apenas atualiza memorial. Ajustes funcionais do EMPROVEX têm prioridade.
+
+**PROGRESSO OFICIAL CONGELADO na pausa:** Etapa 1 100%, Etapa 2 100%, Etapa 3 segurança QA **68,75%**, Etapa 4 build/Cloud Run QA **25%**, Etapa 5 cutover **0%**, geral **58,75%**. Não elevar por aceite da operation sem build publicado nem deploy.
+
+---
+
+## CLOUD-RUN-R1 — Diagnóstico de IAM Cloud Build: permissões do solicitante PASS (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `projects.testIamPermissions` no projeto QA `emprovex-qa-r1-261015-6275` (sem alteração IAM) retornou `cloudbuild.builds.create=PASS`, `cloudbuild.builds.get=PASS` e `serviceusage.services.use=PASS`, resultado `VERIFICAR_SERVICE_ACCOUNT_BUILD`. O `PERMISSION_DENIED` anterior do `gcloud builds submit` não é explicado pela ausência dessas três permissões, embora outras verificações/condições do IAM ainda possam causar erro.
+- **Investigação focalizada seguinte (somente leitura):** `GET cloudbuild.googleapis.com/v1/projects/emprovex-qa-r1-261015-6275/locations/us-east1/defaultServiceAccount`, analisar `serviceAccountEmail` (que pode ser Compute SA, legacy Cloud Build SA ou vazio) e, quando aplicável, `POST iam.googleapis.com/v1/projects/-/serviceAccounts/{email}:testIamPermissions` com `iam.serviceAccounts.actAs`. Não assumir que SA Compute existe/tem grants. Legacy SA é Google-managed e não recebe IAM policy própria.
+- **Plano:** se `actAs` for ausente, considerar role `roles/iam.serviceAccountUser` restrita à SA de build QA e ao solicitante (sem concessão ampla). Depois conferir permissão da SA de build para escrita no repositório privado `emprovex-qa-docker`. Só executar correções após identificar titular e escopo. NÃO adicionar papéis ao projeto produtivo, não reenviar tarball nem repetir Build cegamente.
+- **Segurança:** build Docker QA GitHub Actions já PASS; Cloud Build não iniciado com sucesso, Artifact Registry existe mas está vazio, Cloud Run não implantado e W4 R01/R02/R04 interlock ativo. Produção preservada.
+- **Progresso:** etapa 3 68,75%, etapa 4 25%, geral 58,75%, sem aumento por diagnóstico.
+
+---
+
+## CLOUD-RUN-R1 — Cloud Build submit bloqueado por PERMISSION_DENIED após upload QA (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** W8 `SOURCE_W8=PASS`, config Firebase pública `FIREBASE_QA=PASS`, número de projeto QA `PROJETO_GCP=PASS`; habilitação `cloudbuild.googleapis.com` concluída com sucesso (operation `operations/acf.p2-953294034210-715a8e78-4e4e-4331-9d7c-43aae7cf6a3f`); `CLOUD_BUILD_API=PASS`.
+- **Primeiro submit Cloud Build real, NÃO aprovado:** `gcloud builds submit` preparou tarball 923 arquivos / 9.1 MiB e enviou fonte ao bucket QA `gs://emprovex-qa-r1-261015-6275_cloudbuild/source/1792184855.401925-aeff20deb7ba4205bd0997f11ae70c4f.tgz`. O endpoint de submissão respondeu `PERMISSION_DENIED: The caller does not have permission` para identidade gcloud ativa (conta do operador). **Nenhum build Cloud Build real, push ao Artifact Registry ou Cloud Run deploy foi comprovado**. Erro ocorreu **depois** do upload do source, **antes** do retorno de uma operação de build.
+- **Investigação mínima antes de mutação IAM:** consultar `projects.testIamPermissions` no projeto QA para `cloudbuild.builds.create` e `serviceusage.services.use`, sem tokens/logs brutos/segredos. Se ambas PASS, identificar service account default Cloud Build e autorização `iam.serviceAccounts.actAs`; investigar agente gerenciado `service-PROJECT_NUMBER@gcp-sa-cloudbuild.iam.gserviceaccount.com` caso necessário. Não conceder `roles/editor`, `roles/owner` nem IAM produtivo como atalho. Referência Google Cloud Build: get-default-service-account, configure-access-to-resources e troubleshooting.
+- **Observação do processo anterior:** o config do build temporário incluiu JSON Firebase Web público no argumento Docker e foi removido localmente pelo `finally`; o source upload ao bucket QA pode conter configuração pública. Não havia chave de conta de serviço; evitar transcrição de apiKey em saída futura e restringir o contexto a QA.
+- **Bloqueios preservados:** interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece; IAM negado, Rules e isolamento antes do deploy privado não certificados. Produção Vercel/DNS/`main`/Firestore não modificados.
+- **Progresso conservador sem alteração:** E3 68,75%; E4 25%; geral 58,75%. API habilitada e upload de source não substituem publicação de imagem nem build concluído.
+
+---
+
+## CLOUD-RUN-R1 — Artifact Registry QA criado e confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `PROJETO_QA=PASS` para `emprovex-qa-r1-261015-6275` (número `953294034210`); `gcloud services enable artifactregistry.googleapis.com --project=...` retornou operation `operations/acat.p2-953294034210-e87c96cc-8e1e-491c-8534-4d1295977fc5` terminada com sucesso e `ARTIFACT_REGISTRY_API=PASS`. `gcloud artifacts repositories create emprovex-qa-docker --location=us-east1 --repository-format=docker --immutable-tags --disable-vulnerability-scanning` confirmou `Created repository [emprovex-qa-docker]`, operation `projects/emprovex-qa-r1-261015-6275/locations/us-east1/operations/ecaa0bad-9dfe-4da7-9db1-0feb757e1a93`. Consulta final: `ARTIFACT_REGISTRY=PASS`, `FORMATO=DOCKER`, `REGIAO=us-east1`, `PUBLIC_ACCESS=NAO_CONCEDIDO`, `RESULTADO=ARTIFACT_REGISTRY_QA_PRONTO`; criptografia Google-managed e 0.000MB.
+- **Estado do artefato:** o build QA real W8 passou em GitHub Actions, mas sua imagem era efêmera. **Ainda não foi feito push** para `us-east1-docker.pkg.dev/emprovex-qa-r1-261015-6275/emprovex-qa-docker/`. Sem Cloud Run service/revision.
+- **Próximo passo de menor atrito:** Cloud Build remoto no mesmo projeto QA a partir do worktree W8 commit `a7776de812d67ae11ab5cf9d330077bd7b705406`; build config JSON gerada localmente no Windows usando somente a configuração Web Firebase QA **pública** já validada, Dockerfile.cloud-run.qa, verificação de projeto e tag única e publicação no Artifact Registry privado; nenhuma imagem em produção, nenhuma credencial JSON de service account. Dependências reais: Cloud Build API, conta de build com permissão de escrita no repositório e eventual bucket de staging/custo, a confirmar pela primeira execução. Não declarar push PASS sem saída `SUCCESS` e listagem de digest.
+- **Gate de Cloud Run:** `instrumentation.ts` do W8 impede `K_SERVICE` com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. Pedido do Fundador de dispensar testes extensivos não equivale a certificação desses controles; não remover interlock para simular PASS. Preparar invocação privada (`--no-allow-unauthenticated`, conta de runtime QA), certificar isolamento mínimo necessário e liberar em alteração revisada antes do deploy funcional. Produção Vercel/DNS/Firestore/`main` preservados.
+- **Progresso por infraestrutura confirmada:** E1 100%, E2 100%, E3 68,75%, E4 **25%** (antes 20%; +5 pela criação certificada do registro de imagens QA), E5 0%; **migração geral 58,75%**. Preparação do registro não significa publicação de imagem nem deploy.
+
+---
+
+## CLOUD-RUN-R1 — Diretriz do Fundador: Artifact Registry e primeiro Cloud Run QA privado (2026-10-16)
+
+- **Pedido novo e explícito do Fundador:** preparar Artifact Registry QA, omitir testes de isolamento e executar primeiro deploy privado Cloud Run. **Autorização de intenção de deploy privado recebida**, mas nenhum deploy ou publicação foi executado no checkpoint.
+- **Constatação de código no PR #324 HEAD `a7776de812d67ae11ab5cf9d330077bd7b705406`:** `instrumentation.ts` interrompe startup quando `K_SERVICE` está presente com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. Omitir todos os gates e implantar essa imagem geraria falha de startup. Remover o interlock sem certificar isolamento de dados/autorização expõe riscos indevidos; manter o bloqueio até validações mínimas R01/R02/R04 e prova negativa de acesso produtivo. Não repetir auditorias gerais já concluídas.
+- **Plano de menor burocracia:** criar primeiro o registro Docker padrão **`emprovex-qa-docker`** na região **`us-east1`**, projeto EXCLUSIVAMENTE `emprovex-qa-r1-261015-6275` (número `953294034210`), habilitar `artifactregistry.googleapis.com` apenas no QA se necessário, confirmar tipo Docker, sem IAM público, sem push automático. A API GCP administrativa não está conectada ao coordenador; Fundador fará o comando de criação com `gcloud.cmd` Windows PowerShell. Não confundir comando emitido com criação confirmada.
+- **Após confirmação:** configurar identidade mínima para push remoto GitHub Actions/Cloud Build, imagem QA com tag imutável por SHA e Artifact Registry; automatizar verificações de identidade/negação estritamente necessárias; só após certificação liberar interlock em alteração revisada, e invocar `gcloud run deploy` com `--no-allow-unauthenticated`, `--service-account` QA, `--project` QA e `--region=us-east1`. Manter DNS/Vercel/Firestore produtivos inalterados. Nenhum deploy de produção autorizado.
+- **Estado/progresso oficial:** primeiro Docker build QA com config real PASS no GitHub Actions, imagem não publicada e Cloud Run não criado. E3 **68,75%**, E4 **20%**, geral **57,75%** até nova evidência. Não aumentar só por planejamento.
+
+---
+
+## CLOUD-RUN-R1 — Docker build QA REAL concluído em GitHub Actions (2026-10-16)
+
+- **Nova evidência visual do Fundador:** GitHub Actions > Settings > Variables apresenta `EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON` cadastrada como variável de repositório com prefixo JSON do projeto `emprovex-qa-r1-261015-6275`. Valor integral não foi copiado ao memorial nem exibido pelo coordenador.
+- **Reexecução do job W8 #116826315720 solicitada pelo conector GitHub:** aceite `success=true`, referente ao run [#38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511), PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT, head W8 `a7776de812d67ae11ab5cf9d330077bd7b705406`. Nova tentativa/job `117191291837` **conclusion=success**. Os steps `Audit Cloud Run QA source isolation`, build sintético/scan/boot e `Build Docker image ONLY if source is isolated and QA web config explicitly exists` todos **success**. O step `State why no Docker build was done` **skipped**, comprovando execução efetiva do Docker build real.
+- **Logs do job:** `W8 QA PREFLIGHT: SOURCE_GATE_PASS`; `QA_ARTIFACT_PASS: 2349 text artifacts inspected` tanto no build sintético quanto no Docker build REAL; smoke sintético `QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=200`; Docker `#17 exporting to image`, `writing image sha256:6432586009f944100d91a3fad989d23caf3c78a185a555d6b66947e560c1d333`, tag efêmera `docker.io/library/emprovex-qa-build:e4ad82ac34da285d3aced351d48b89c8b04ee0bf` (GitHub Actions usa PR synthetic merge SHA como GITHUB_SHA). A imagem foi construída **no runner efêmero**, **NÃO** enviada a Artifact Registry, **NÃO** persistida para Cloud Run.
+- **Escopo e interlocks:** W4 startup interlock `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece sem alteração; execução runtime sob K_SERVICE, deploy privado, IAM/Rules negações e testes de identidades QA ainda não certificados. Nenhuma alteração no projeto GCP produtivo, Firebase/Firestore produtivos, DNS, `main`, Vercel ou clientes; nenhuma publicação Cloud Run. Docker Desktop local pode permanecer quebrado sem bloquear builds CI.
+- **Medição por novo marco verificável:** etapa 4 (Build/Cloud Run QA) avança **10% → 20%** pela conclusão real do Docker build remoto + scanner; etapas 1=100%, 2=100%, 3=68,75%, 5=0%. **Migração geral = (100+100+68,75+20+0)/5 = 57,75%**. Índice operacional estimado, **não** certificação de deploy/cutover.
+- **Próximo procedimento:** planejar persistência controlada em Artifact Registry QA sem publicação antes de confirmar gates; executar testes de isolamento negativos (IAM, Rules, R01/R02/R04), preparar invocação restrita e só então pedir autorização explícita para primeiro deploy Cloud Run QA privado. Reduzir duplicação de build sintético/real apenas após review de risco.
+
+---
+
+## CLOUD-RUN-R1 — Primeira tentativa Docker QA real interrompida por EOF do Engine (2026-10-16)
+
+- **Evidência local do Fundador:** configuração Firebase Web **real** validada (`FIREBASE_QA_REAL=PASS`); Docker Desktop Linux Engine inicialmente acessível (`DOCKER_ENGINE=PASS`); branch W8 obtida e worktree detached no SHA certificado `a7776de812d67ae11ab5cf9d330077bd7b705406` (`W8_COMMIT=PASS`).
+- **Docker build iniciado, NÃO aprovado:** `docker build --file Dockerfile.cloud-run.qa --build-arg QA_FIREBASE_WEB_CONFIG_JSON --tag emprovex-qa-r1:w8-real-a7776de8` começou localmente, baixou/extraiu camadas da imagem base `node:22-bookworm-slim`, mas falhou imediatamente ao iniciar `WORKDIR /app`: `rpc error: code = Unavailable desc = error reading from server: EOF`. **Não alcançou `npm ci`, `npm run build` ou os scanners de isolamento**, portanto não existe imagem QA real certificada. Falha observada é de comunicação com o Docker Engine; causa raiz (reinício/desconexão/recursos) não provada.
+- **Retomada mínima:** verificar saúde do Docker Engine e, se estiver pronto, reexecutar **uma única tentativa** de build no worktree existente após conferir o SHA W8 e o JSON QA local, sem refazer fetch/auditorias. Se o engine continuar indisponível ou houver novo EOF, inspecionar estado do Docker Desktop/WSL/disk sem `prune` indiscriminado, sem tocar em produção.
+- **Segurança e escopo:** nenhuma imagem enviada a registry e nenhum deploy Cloud Run; Auth QA Google e password configurados, mas Rules, IAM negativos e R01/R02/R04 pendentes. Interlock W4 não foi modificado. Produção, DNS, Vercel, Firestore produtivo e `main` intocados no processo relatado.
+- **Progresso inalterado:** etapa 3 Segurança/Isolamento QA **68,75%**, etapa 4 Docker/Cloud Run QA **10%**, total **55,75%**; falha não é PASS nem justifica avanço.
+
+---
+
+## CLOUD-RUN-R1 — Auth QA Google + password habilitados e revalidados (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou recurso canônico `CONFIG_NAME=projects/953294034210/config` (número do mesmo projeto QA, e não ID textual). Primeiro PATCH foi bloqueado **antes de escrever**, porque o guard anterior aceitava apenas `projects/{projectId}/config`. Segunda execução aceitou expressamente ID textual ou número conhecido com validação de domínio QA e provedor Google.
+- **Alteração QA certificada:** PATCH com updateMask estrito `signIn.email.enabled,signIn.email.passwordRequired`, sem modificar outros campos. Resposta `EMAIL_PASSWORD=ATUALIZADO` e GETs independentes pós-operação: `EMAIL_ENABLED=True`, `PASSWORD_REQUIRED=True`, `GOOGLE_ENABLED=True`, `ANONYMOUS_ENABLED=False`, `RESULTADO=AUTH_QA_PROVEDORES_CONFIGURADOS`.
+- **Correspondência com contratos de código:** `lib/platformIdentity.ts` declara fundador `google.com`, setor `password`. O gate de configuração dos provedores QA **PASS**. **Não confundir** com login E2E/identidade de teste realmente autenticada, Rules QA publicadas, negações de IAM ou runtime certificado.
+- **Próximo passo estritamente local, sem deploy:** build Docker QA com `Dockerfile.cloud-run.qa` a partir do commit certificado W8 `a7776de812d67ae11ab5cf9d330077bd7b705406`, recebendo configuração pública REAL do arquivo local do Fundador `C:\Users\marco\emprovex-qa-r1-firebase-web-config.json` via variável de ambiente/argumento de build. Antes, verificar IDs de projeto/app/bancos e Docker Engine; usar worktree separado sem mudar branch de trabalho, sem publicar imagem, sem enviar apiKey/config ao GitHub. W8 scanner e isolamento de fonte continuam obrigatórios dentro do build.
+- **Segurança:** `main`, Vercel, DNS, Firebase/Firestore produtivos intactos pelos comandos QA. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece; publicação de imagem, Cloud Run privado, Rules e migração produtiva continuam **NO-GO** sem gates e aprovação específica.
+- **Progresso preservado por falta de revisão da matriz granular de pontuação:** etapa 3 **68,75%**, etapa 4 **10%**, geral **55,75%**. Este checkpoint fornece uma evidência positiva de Auth administrativa para futura reavaliação; não presumir autenticação real.
+
+---
+
+## CLOUD-RUN-R1 — Authentication QA inspecionado e contrato de provedores confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador (somente leitura):** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou `AUTH_CONFIG_HTTP=200`, `AUTH_CONFIG=EXISTENTE`, `EMAIL_ENABLED=False`, `ANONYMOUS_ENABLED=False`, `QA_DOMAIN_AUTHORIZED=True`; `GET .../defaultSupportedIdpConfigs/google.com` retornou `GOOGLE_PROVIDER_HTTP=200` e `GOOGLE_ENABLED=True`; `RESULTADO=AUTH_INSPECIONADO`.
+- **Contrato real verificado no código W8 #324:** `lib/platformIdentity.ts` declara `FOUNDER_AUTH_PROVIDER='google.com'` e `SECTOR_AUTH_PROVIDER='password'`. `lib/server/firebaseFounderAuth.ts` exige provedor Google no perfil fundador; `lib/firebase.ts` inicializa Firebase Auth com `GoogleAuthProvider`. Portanto o provedor **Email/senha é necessário para a jornada dos setores**, enquanto o Google já está administrativamente habilitado; login real, usuários e Rules ainda não testados. **Não habilitar anônimo, telefone nem email link.**
+- **Próxima ação autorizada no QA:** aplicar PATCH limitado pelo `updateMask=signIn.email.enabled,signIn.email.passwordRequired` ao recurso `projects/emprovex-qa-r1-261015-6275/config`, com `enabled=true` e `passwordRequired=true`; reler os flags e certificar que `google.com` permanece ativo e `anonymous` desabilitado. Método do Google: `projects.updateConfig` (patch mascarado, campos não listados preservados). Nenhum deploy, inclusão de usuários ou alteração em projetos produtivos.
+- **Estado deste checkpoint:** Google configurado administrativamente **PASS**, Email/senha **PENDENTE**, login E2E **PENDENTE**. Sem publicação de Rules e sem Docker build real, interlock W4 e NO-GO permanecem.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**; etapa 4 Cloud Run QA **10%**; migração geral **55,75%**. Não pontuar Auth completo antes de sucesso da atualização e validações de identidade.
+
+---
+
+## CLOUD-RUN-R1 — Config pública REAL de Web App Firebase QA validada (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b/config` com OAuth e `x-goog-user-project=emprovex-qa-r1-261015-6275` retornou configuração válida. Controles `PROJECT_OK=True`, `APP_ID_OK=True`, `API_KEY_PRESENT=True`, `AUTH_DOMAIN_OK=True`, `SENDER_ID_OK=True`, `STORAGE_BUCKET_OK=True`; saída `RESULTADO=CONFIG_QA_REAL_VALIDADA` e `PRONTO_PARA_PROXIMO_GATE=SIM`. Identificador QA Web `1:953294034210:web:0a4c91daa63d025ff4417b`. **Nenhum valor de apiKey foi impresso, copiado para o GitHub ou anotado neste memorial**.
+- **Arquivo local privado do Fundador (não hospedado no Git):** `C:\Users\marco\emprovex-qa-r1-firebase-web-config.json` (JSON com campos públicos Firebase e `firestoreDatabaseId=qa-core` / `warehouseDatabaseId=qa-warehouse`). Presença do arquivo provada pela execução, conteúdo não obtido pelo coordenador; nunca tratar como variável de Actions configurada.
+- **Limites:** Web App REAL e seu `getConfig` estão **PASS**, mas o Firebase Authentication QA ainda não tem prova de configuração operacional; provedores Google/senha não certificados; Rules QA, IAM negações/R01/R02/R04, build Docker **real**, publicação de imagem e Cloud Run deployment continuam pendentes. W8 #324 PASS anteriores envolveram configuração sintética. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` continua ativo.
+- **Próximo comando único / somente leitura:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` e GET `.../defaultSupportedIdpConfigs/google.com` no QA; exibir somente status HTTP, flags `signIn.email.enabled`/`anonymous.enabled`, Google enabled e autorização de domínio, sem client secrets, tokens ou resposta integral. Se o Auth GET retornar 404, tratar como não comprovado e indicar caminho de inicialização no Console QA; nenhum PATCH/POST automático.
+- **Produção:** nenhuma modificação no GCP produtivo, Firestore produtivo, DNS, `main` ou Vercel por essa validação. Cloud Run QA e cutover seguem **NO-GO**.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**, etapa 4 Build/Cloud Run QA **10%**, total **55,75%**; preservar ponderação até validação adicional de Auth/isolamento ou build real.
+
+---
+
+## CLOUD-RUN-R1 — Web App Firebase QA REAL cadastrado e confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** listagem completa `GET /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com quota QA: `PAGINAS_CONSULTADAS=1`, `WEB_APPS_VALIDOS=0`, `ENTRADAS_INCOMPLETAS=0`, `RESULTADO=NENHUM_WEB_APP_EXISTENTE`. Isso resolveu a contagem ambígua anterior e autorizou somente um cadastro, já consentido.
+- **Criação certificada:** `POST /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com `displayName=EMPROVEX QA R1 Web`; resposta `CREATE_REQUEST=ACCEPTED`, operação `operations/workflows/ZDg3MzczNjMtN2M1Ni00MjA4LTliMWMtOWI4ODM5ZjhhNzc0`, consulta concluída `RESULTADO=WEB_APP_QA_CRIADO`. `APP_NAME=projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b`; `APP_ID=1:953294034210:web:0a4c91daa63d025ff4417b`; `PROJECT_ID=emprovex-qa-r1-261015-6275`; nome exibido `EMPROVEX QA R1 Web`. **Não realizar novo POST.**
+- **Limites:** existência do Web App **PASS**, mas `projects.webApps.getConfig` ainda **não consultado/certificado**, Firebase Authentication/provedores e Rules QA **não certificados**; nenhum build Docker usando config real, nenhum push ou deploy Cloud Run. W8 #324 três CIs PASS somente com configuração sintética. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece.
+- **Próximo único passo:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b/config` com `x-goog-user-project` do QA; conferir `projectId`, `appId`, `authDomain`, `apiKey` (sem imprimir chave), `messagingSenderId` e `storageBucket`. Se o bucket não vier provisionado, **não presumir criação ou disponibilidade**; tratar como dependência de build. Após GET, montar somente configuração W8 allowlist + bancos `qa-core`/`qa-warehouse`; inspecionar contratos Auth existentes antes de habilitar provedores.
+- **Produção intocada** conforme escopo declarado pelo Fundador: `emprovex.com.br`/Vercel/DNS/`main`/Firestore produtivo inalterados por estas operações. **NO-GO** de Cloud Run e cutover.
+- **Progresso conservador sem novo critério de ponderação:** etapa 3 **68,75%**, etapa 4 **10%**, migração geral **55,75%** até certificação dos gates seguintes.
+
+---
+
+## CLOUD-RUN-R1 — HANDOFF OFICIAL DE CONVERSA (2026-10-16)
+
+**Pedido do Fundador:** continuar CLOUD-RUN-R1 em novo chat devido ao limite de duração. Objetivo imediato: identificar/criar um Web App Firebase QA real, configurar Auth QA e preparar Docker build QA com configuração real. O último input PowerShell foi apenas um comando INCOMPLETO; não há prova de criação de Web App ou alteração de Authentication.
+
+**Estado certificado:** Projeto QA emprovex-qa-r1-261015-6275 (953294034210), FirebaseProject registrado (FIREBASE=SUCCESS), bancos qa-core e qa-warehouse em us-east1, com exclusão protegida. Sem dados produtivos importados. Runtime SA emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com, IAM datastore.user condicionado aos dois DBs, token temporário com HTTP 200 em ambos; teste negativo pendente. Binding TokenCreator temporário na SA ainda requer revisão/revogação ao fim dos testes. Billing QA e budget R$20/mês apenas de alerta, não teto.
+
+**Web App QA não comprovado:** GET /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps anterior mostrou WEB_APPS_EXISTENTES=1 mas APP=; ID=. PowerShell pode contar um elemento nulo como 1. Antes de qualquer POST, repetir listagem GET filtrando objetos nulos, exigindo name e appId reais, respeitando nextPageToken. Se houver Web App verdadeiro, reutilizar e consultar config. Caso não haja, criar EXCLUSIVAMENTE um Web App QA, aguardar operação e obter configuração pública real. A conta de origem prod nunca deve ser usada para QA.
+
+**Auth e Rules:** Console Firebase QA mostrou nenhum método de login habilitado; config REST dera 404. Validar provedores exigidos pelo produto (Google, e-mail/senha somente se necessário). W7 contém regras fail-closed apenas em DRAFT, sem publicação; IAM e Rules negativos e identidade Auth ainda não certificados.
+
+**W8 PASS offline:** PR #324 DRAFT HEAD a7776de812d67ae11ab5cf9d330077bd7b705406; GitHub Actions W8 #38855626511, Application CI #38855626450 e Core Protection #38855626520 todos SUCCESS. Next.js gerou 42 páginas, artefato QA teve 2349 arquivos textuais inspecionados sem referências produtivas proibidas, standalone localhost respondeu 200. Config do Web App era SINTÉTICA, não app real. Dockerfile QA existe, mas Docker build real, registry e Cloud Run remoto não executados. W4 interlock CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04 continua ativo. PRs #320/#321/#322/#323/#324 DRAFT, coordenação PR #317 DRAFT, main sem merge.
+
+**Produção preservada:** emprovex.com.br continua Vercel e Firestore original, sem alteração de DNS, banco, login, IAM produtivo, merge ou deploy Cloud Run. CLOUD-RUN-R1 permanece NO-GO para deploy, interlock e cutover; autorização separada após gates.
+
+**Progresso de cinco etapas:** E1 100%, E2 100%, E3 Segurança/Isolamento QA 68,75%, E4 build/deploy QA 10% (somente build local sintético), E5 produção 0%. Total 55,75%. Não aumentar sem prova de marco.
+
+**Handoff obrigatório:** onde estamos = QA infra e W8 offline PASS, Web App real desconhecido. O que estamos fazendo = habilitar Web App Firebase QA + Auth e viabilizar Docker QA. Quem = coordenador novo chat via GitHub e Fundador via Windows PowerShell gcloud.cmd/Console QA. Próximo = listar Web Apps robustamente, reutilizar ou cadastrar um, buscar config real, ativar Auth mínimo, validar Rules/negativos, Docker build QA. Quem fará = coordenador fornecer um bloco por vez, Fundador executará e devolverá saídas sem segredos; coordenação atualizará PR #317. Nada de produção/Cloud Run deploy sem autorização específica.
+
+---
+
+## CLOUD-RUN-R1 — Consulta Web Apps QA com contagem PowerShell ambígua (2026-10-16)
+
+- **Evidência fornecida pelo Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com OAuth usuário e `x-goog-user-project` do QA respondeu sem erro e o script exibiu `WEB_APPS_EXISTENTES=1` mas `APP=; ID=`. **Essa contagem NÃO prova a existência de Web App:** no PowerShell, `@($null).Count` pode produzir 1 sem objeto real quando o campo `apps` está ausente/nulo.
+- **Próximo gate único do Fundador:** refazer a leitura filtrando elementos nulos; se a lista retornar qualquer aplicativo válido, reutilizar sem criar; se não houver nenhum e nenhuma paginação, realizar somente um `POST projects/{qa}/webApps` com `displayName=EMPROVEX QA R1 Web`, sem `appUrls`. Capturar o nome da `Operation`; após êxito consultar `getConfig`, sem exportar secrets ou IDs do projeto de produção. [Documentação oficial](https://firebase.google.com/docs/projects/api/workflow_set-up-and-manage-project?hl=pt-BR).
+- **Auth QA** continua sem provedores habilitados no checkpoint anterior. Não modificar Authentication nem publicar Rules antes da prova de Web App real. **Nenhum aplicativo Web real está certificado ainda, nenhuma operação CREATE confirmada nesta etapa**.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**; etapa 4 Preparação/Publicação QA **10%**; geral **55,75%**. Cloud Run remoto **NO-GO**. Produção/Vercel/DNS/Firestores produtivos intactos.
+
+---
+
+## CLOUD-RUN-R1 — W8 build QA offline certificado, três gates CI PASS (2026-10-16)
+
+- **Commit W8 final:** `a7776de812d67ae11ab5cf9d330077bd7b705406` do [PR #324 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324), base incremental W7 #323. [W8 Build Preflight #38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511) **SUCCESS**, [Application CI #38855626450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626450) **SUCCESS** e [Core Protection #38855626520](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626520) **SUCCESS**.
+- **Provas concretas locais do W8:** gate W4 `SOURCE_GATE_PASS` com config pública sintética de Web App QA, Next 15.5.24 compilou **42 páginas**, bundle QA **não contém referências permitidas ao Firebase produtivo** no scanner de **2.349 artefatos textuais**, removida apenas cópia `.next/standalone/firebase-applet-config.json` preservando o arquivo de origem, `QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=200` em localhost. Separação Webpack de baseline legado ativa **somente quando `EMPROVEX_RUNTIME_TARGET=cloud-run-staging`**; Vercel/legacy preservados e Application CI com produção build PASS.
+- **Limites absolutos:** configuração pública de Web App foi **sintética/não registrada**. O **Dockerfile foi criado, mas nenhum Docker build com Firebase QA real foi executado**, imagem não foi publicada, Cloud Run não recebeu deploy, e interlock `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` continua intocável sem certificação e autorização específicas. Autenticação, Security Rules QA e IAM negativo ainda pendentes. Não dar falso PASS de Cloud Run remoto.
+- **Atualização de progresso por marcos verificáveis e etapas paralelas:** etapa 1 Auditorias/Preparação **100%**; etapa 2 Infra GCP QA **100%**; etapa 3 Segurança/Isolamento QA **68,75%** (não mudou); etapa 4 Publicação/Testes Cloud Run QA **10%** pelo primeiro build + scanner + startup local **offline**; etapa 5 migração produtiva **0%**. **Migração geral = (100+100+68,75+10+0)/5 = 55,75%**, antes 53,75%; avanço de +2 pontos percentuais sustentado pelos gates. Percentuais de acompanhamento, não aptidão para go-live.
+- **Próximo gate com valor:** obter Firebase Web App **real do projeto QA**, ativar e certificar provedor Google/E-mail senha e Rules de dois bancos QA, testar negações e isolamento R01/R02/R04, executar Docker build QA com config real, revisar rede/IAM do Cloud Run privado; somente então solicitar autorização específica para deploy privado. Banco Firestore produtivo, DNS, Vercel, usuários reais e `main` preservados. **CLOUD-RUN-R1 NO-GO de deploy/cutover**.
+
+---
+
+## CLOUD-RUN-R1 — W8 QA build 42 páginas, scan 2349 e boot local 200 (2026-10-16)
+
+- **Evidência W8 [#38854977947](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854977947) PASS:** `SOURCE_GATE_PASS`, Next.js compilado, **42 páginas estáticas**, `QA_TRIM_OK` da cópia legada no diretório `.next/standalone` (sem alterar fonte), `QA_ARTIFACT_PASS: 2349 text artifacts inspected`, `QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=200` em localhost com config QA Web **sintética**. Nenhuma credencial, IAM ou Cloud Run real utilizado.
+- **Evidência W8 posterior [#38855256681](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855256681):** mesmos gates PASSED após ajuste de tipagem. `Application CI` anterior passou por TSC e controles operacionais, mas detectou 1 espaço final no documento de handoff; corrigido no commit `a7776de812d67ae11ab5cf9d330077bd7b705406`. A execução final do Application CI [#38855626450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626450) **estava em andamento** no momento deste checkpoint; NÃO afirmar PASS final antes de concluir.
+- **Próximo gate real:** cadastro Web App Firebase no projeto `emprovex-qa-r1-261015-6275` para configuração pública válida; habilitar/validar Auth Google/E-mail e Rules QA por banco, testar negação IAM efetiva, build Docker com config real e validar isolamento R01/R02/R04. `Dockerfile.cloud-run.qa` criado mas ainda **não executado para imagem real nem publicado**; interlock W4 Cloud Run continua ativo. Não confundir boot localhost sem `K_SERVICE` com certificação no Cloud Run.
+- **Progresso conservador mantido:** Etapa 3/5 Segurança QA **68,75%**, geral **53,75%** até revisão da medição final. A aprovação do build sintético pode ser considerada subgate da **preparação da etapa 4**, mas não certifica implantação. Cloud Run **NO-GO**; Vercel, `main`, GCP produtivo, DNS, dados e usuários reais preservados.
+
+---
+
+## CLOUD-RUN-R1 — W8 isolamento real de bundle, redução 8 → 1 (2026-10-16)
+
+- **Evidência concreta GitHub Actions [W8 run #38854051361](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854051361):** Next.js 15.5.24 compilou com sucesso e gerou **42 páginas estáticas**, mas o scanner bloqueou o artefato: `QA_ARTIFACT_NOT_ISOLATED: 8 paths` em server chunks, routes, JSON legado e client chunk. **Não classificar como pronto para deploy.**
+- **Correção isolada no PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT:** `NormalModuleReplacementPlugin` substitui import do baseline Firebase legado por stub sem referências produtivas **somente no Webpack `cloud-run-staging`**; Next config continua validando baseline real fora do bundle. Com isso, [W8 run #38854546136](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854546136) compilou novamente 42 páginas e o scanner passou de **8 para 1** referência: cópia `.next/standalone/firebase-applet-config.json` incluída pelo tracing. Nenhum arquivo client/server JS apareceu no segundo relatório de violação.
+- **Correção complementar W8:** script que remove exclusivamente a cópia do pacote QA (source original preservado), scanner após remoção e smoke de inicialização no localhost sem `K_SERVICE`, sem credenciais. Workflow W8 alterado para gate estrito — erro de build/scan/smoke = CI falha, sem falso PASS. **Resultado final desta rodada ainda pendente**, logo nenhum READY.
+- **Importante:** Web App Firebase QA real ainda não configurado, Auth/Rules por banco, teste IAM negativo e R01/R02/R04 pendentes. Cloud Run continua sem deploy, startup interlock ativo. Produção Vercel, Firestore, `main` e DNS preservados. **Etapa 3: 68,75% | Migração geral 53,75%**, sem pontuar o build sintético como liberação de QA.
+- **Handoff:** `docs/audits/cloud-run-r1/worker-8/HANDOFF.md` no PR #324. Aguardar PASS completo do W8 e então iniciar configuração do app web QA e Auth/Rules, antes de autorizar deploy privado.
+
+---
+
+## CLOUD-RUN-R1 — W8 build-first QA em PR DRAFT (2026-10-16)
+
+- **Diretriz do Fundador:** abreviar a fase administrativa e executar caminho **build-first**, concentrando testes relevantes do EMPROVEX no Cloud Run QA sem usar produção como bancada. Preservar proteções R01/R02/R04 e não trocar domínio/Firestore.
+- **PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT** — branch `feat/cloud-run-r1-w8-first-qa-build-20261016`, **base incremental** no W7 [#323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323). Adicionados `Dockerfile.cloud-run.qa` (Node 22/Next standalone), `scripts/cloud-run-qa-build-preflight.mjs` (audita isolamento de fonte e aponta bloqueios), `scripts/cloud-run-qa-artifact-audit.mjs` (bloqueia referências prod em artefato), `.github/workflows/cloud-run-qa-build-preflight.yml` (CI auditoria leve, teste de build sintético e Docker build condicionado à configuração **real do Web App QA**), `docs/audits/cloud-run-r1/worker-8/HANDOFF.md`.
+- **Primeiro resultado GitHub Actions** [W8 #38853921436](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38853921436): `SOURCE_GATE_PASS` com configuração Firebase Web **sintética** e IDs reais **QA** de projeto/bancos; **nenhum blocker de fonte na varredura W4**, mas **Docker build adiado** porque Web App real QA ainda não configurado. [Core Protection #38853921488](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38853921488) PASS. A avaliação de build sintético/artefato foi acrescentada no commit posterior `b4bc69643c31c9837c5f1905d25dc86dbd607550`; seu resultado ainda exige observação.
+- **Contrato seguro:** Nenhum deploy Cloud Run ou GCP, nenhuma publicação de imagem ou Rule QA, nenhuma concessão IAM nova, nenhuma alteração de DNS, Vercel, `main` ou projeto GCP produtivo. **Interlock W4 de startup `K_SERVICE` continua bloqueando inicialização em Cloud Run**; Dockerfile por si só não libera deploy. Valor do build sintético é aferir componentes, não a configuração real de autenticação/QA.
+- **Gates que faltam:** registrar Web App Firebase QA para obter configuração pública real, configurar login Google/E-mail senha e Rules QA, testar IAM negativo e isolamento R01/R02/R04, executar build real+scanner, criar rollout privado com novo gate/autorização do Fundador. **Progresso mantido:** etapa 3 **68,75%**; geral **53,75%**, por marcos certificados, não por commits.
+- **Governança:** Cloud Run **NO-GO para deploy ou corte de produção**, Vercel/usuários produtivos continuam intactos.
+
+---
+
+## CLOUD-RUN-R1 — Firebase Auth QA em tela inicial de provedores (2026-10-16)
+
+- **Evidência visual enviada pelo Fundador:** Console Firebase no projeto **EMPROVEX QA R1**, seção Authentication > Método de login, exibe `Comece a usar o Firebase Auth ao adicionar seu primeiro método de login`, com opções **E-mail/senha**, **Google**, Smartphone, Anônimo etc. Portanto o fluxo de Authentication está acessível no console, mas **nenhum provedor de login foi habilitado ainda**. A consulta REST anterior à configuração retornara HTTP 404; não afirmar Auth funcional completo.
+- **Próxima ação sequencial guiada:** abrir configurações do provedor **Google** no projeto QA e inspecionar campos (suporte e botão de ativação) antes de salvar; posteriormente configurar **E-mail/senha** para setores mediante validação de contratos de autenticação do EMPROVEX e testes QA. **Não ativar** login anônimo, telefone ou outros provedores desnecessários. Não publicar Security Rules automaticamente; versões fail-closed no PR #323 ainda são rascunhos.
+- **Progresso mantido:** etapa 3 Segurança/Isolamento QA **68,75%**; total **53,75%**. Sem gates reais Auth/Rules ainda; produção Vercel, projeto GCP produtivo, DNS e `main` intocados. Cloud Run permanece **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 Authentication GET config 404 no QA (2026-10-16)
+
+- **Saída Windows do Fundador:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` utilizando header de quota QA retornou `AUTH_CONFIG=NAO_CONFIRMADO; HTTP=404`. Essa evidência é compatível com `Firebase Auth` ainda **não inicializado** após `addFirebase`, mas a consulta **não exibiu** `error.message`, portanto não certifica que seja `CONFIGURATION_NOT_FOUND`. Não afirmar que Identity Toolkit API está desabilitada ou que IAM Owner esteja errado sem nova evidência.
+- **Próximo passo desburocratizado:** abrir somente o projeto **QA** em `https://console.firebase.google.com/project/emprovex-qa-r1-261015-6275/authentication`; se a interface mostrar `Get started / Primeiros passos`, concluir **somente a inicialização** de Authentication, sem habilitar provedores automaticamente. Depois fazer uma única consulta GET de configuração por REST com quota header para confirmar HTTP 200, e discutir provedores Google/password coerentes com login EMPROVEX. Caso o console mostre Auth já inicializado ou erro, não modificar e obter a indicação do erro.
+- **Referências:** https://firebase.google.com/codelabs/firebase-terraform (console: Authentication > Get started); https://firebase.google.com/docs/auth/web/start ; https://docs.cloud.google.com/identity-platform/docs/reference/rest/v2/projects/getConfig (endereço e `firebaseauth.configs.get`). `initializeAuth` da Identity Platform é uma alternativa de produto com impacto potencial em cobrança; não executá-lo automaticamente no programa QA.
+- **Andamento:** etapa 3 Segurança QA **68,75%**, migração geral **53,75%**. Cloud Run NO-GO; não houve alteração de Auth, Rules, IAM nem projeto produtivo por este checkpoint. `main` e Vercel preservados.
+
+---
+
+## CLOUD-RUN-R1 — FirebaseProject QA registrado e certificado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** após POST `projects/emprovex-qa-r1-261015-6275:addFirebase`, a verificação read-only da operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`, com projeto consumidor `x-goog-user-project` fixado no QA, retornou `FIREBASE=SUCCESS; PROJECT=emprovex-qa-r1-261015-6275`. **PASS: FirebaseProject QA registrado efetivamente**. Não repetir POST `addFirebase`; a associação é persistente.
+- **Escopo do resultado:** projeto QA GCP já existente agora possui registro Firebase, sem criar novo projeto GCP nem alterar Firestores. A operação pode habilitar APIs e criar contas Firebase auxiliares conforme documentação oficial; ainda não foi inventariado o estado final. **Não confundir** com Firebase Authentication configurado, provedores Google/senha ativados, Rules por banco publicadas, projeto web QA criado, ou Cloud Run homologado.
+- **Próximo gate de leitura:** consultar `GET https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` com token do proprietário e `x-goog-user-project` QA, exibindo apenas `name`, `subtype`, booleans `signIn.email.enabled`/`signIn.anonymous.enabled` e domínios autorizados, nunca `client.apiKey` nem corpo integral. Verificar provedor Google em consulta independente caso necessário. Nenhum usuário criado nem gravações.
+- **Avanço por subgate:** segurança etapa 3 `62,5% → 68,75%` (registro do Firebase, um dos subgates de Auth/Rules); geral em cinco etapas igualmente ponderadas `52,5% → 53,75%`. Ainda exigem certificação de Auth/Rules e IAM negativo; percentuais são rastreamento por marcos, não prazo.
+- **Segurança e custo:** budget QA R$20/mês é alerta, não teto. PRs DRAFT, GCP produção, Vercel, DNS e `main` intocados. **CLOUD-RUN-R1 NO-GO**.
+- Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project ; https://docs.cloud.google.com/identity-platform/docs/reference/rest/v2/projects/getConfig .
+
+---
+
+## CLOUD-RUN-R1 — Firebase addFirebase iniciou operação no QA (2026-10-16)
+
+- **Execução real PowerShell do Fundador, QA somente:** `POST https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275:addFirebase` com `x-goog-user-project` fixado no QA e body `{}` retornou a operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`; campo `DONE=` vazio/ausente. **PASS solicitação aceita**, mas **NÃO comprova conclusão da associação FirebaseProject**. A operação pode ter sucesso, falhar ou continuar em curso; não realizar outro `addFirebase` sem conferir operação.
+- **Próximo gate read-only:** GET `https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3` com token de usuário local e `x-goog-user-project` do QA. `done=true` + `response.projectId=emprovex-qa-r1-261015-6275` comprova sucesso; `done=true` + `error` comprova falha; sem `done` indica espera. Como a API pode excluir operações após conclusão, GET 404 na operação deve ser seguido de GET no próprio FirebaseProject, sem repetir POST. Não exibir token/respostas integrais. Fonte: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/addFirebase .
+- **Progresso estável:** etapa 3 Segurança QA **62,5%**, migração geral **52,5%**. Cloud Run NO-GO; nenhuma mudança em Vercel, GCP produção, DNS, dados reais ou `main`.
+
+---
+
+## CLOUD-RUN-R1 — Firebase GET passou de 403 a 404 após fixar consumidor QA (2026-10-16)
+
+- **Evidência local PowerShell:** usando token OAuth da conta `gcloud`, GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com cabeçalho `x-goog-user-project: emprovex-qa-r1-261015-6275` retornou `HTTP=404; STATUS=NOT_FOUND; REASON=NAO_DISPONIVEL; CONSUMER=NAO_DISPONIVEL`. Antes desse header o mesmo GET retornara `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A mudança comprova que o cabeçalho **resolveu o bloqueio de projeto consumidor**; 404 é consistente com `FirebaseProject` não adicionado, dado que projeto GCP QA, sua API e ambos Firestores existem. Não registrar Firebase como criado.
+- **Decisão de próximo gate:** a documentação oficial do Firebase informa que `projects.addFirebase` (POST no projeto QA existente) adiciona a configuração Firebase e habilita várias APIs, provisiona contas de serviço Firebase e chave pública Browser, e **não pode ser integralmente desfeita**. Exige aceite prévio dos Termos na interface da conta Google quando aplicável; role `owner` inclui permissões necessárias. Escolher execução *explicitamente consentida pelo Fundador e limitada ao QA*, via Firebase Console ou REST com `x-goog-user-project`. Capturar somente ID de `Operation` (não token) e verificar conclusão antes de afirmar PASS. Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project ; https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/addFirebase .
+- **Observação de custos:** orçamento mensal QA R$20 é somente alerta, não teto de cobrança; não iniciar outros serviços e não criar Web App/Cloud Run automaticamente. Nenhuma mudança executada por coordenador em GCP. Migração **NO-GO**, PRs DRAFT, `main`, Vercel e GCP produtivo intactos.
+- **Progresso:** etapa 3 Segurança e Isolamento QA **62,5%**, migração geral **52,5%**. Aferição do registro Firebase ainda pendente de `addFirebase`.
+
+---
+
+## CLOUD-RUN-R1 — Firebase SERVICE_DISABLED identificado, hipótese quota consumer (2026-10-16)
+
+- **Evidência PowerShell:** após `gcloud services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` responder sucesso, `GET /v1beta1/projects/emprovex-qa-r1-261015-6275` com token usuário sem quota header retornou `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A categorização exata revela **serviço desabilitado para o consumidor da requisição**; **não prova** que `firebase.googleapis.com` esteja desativada no QA de destino nem ausência do FirebaseProject. A ativação já foi executada, não repetir cegamente.
+- **Hipótese técnica relevante apoiada pela documentação:** `gcloud auth print-access-token` com usuário pode ser atribuído a um projeto consumidor de quota diferente daquele na URL. O header por requisição `x-goog-user-project: emprovex-qa-r1-261015-6275` instrui o servidor a cobrar quotas do projeto QA, no qual a API foi habilitada, desde que haja `serviceusage.services.use`. Não alterar `gcloud config` global nem credenciais. Fontes: https://docs.cloud.google.com/docs/authentication/rest e https://docs.cloud.google.com/docs/authentication/troubleshoot-adc .
+- **Próxima prova read-only:** repetir GET Firebase Management com header `x-goog-user-project` fixado no QA; capturar somente `HTTP`, `error.status`, `ErrorInfo.reason` e `ErrorInfo.metadata.consumer` (ID de projeto, não token), sem imprimir resposta integral/erro bruto. Se 200, `FirebaseProject` existe; se 404, investigar registro; 403 de novo exige inspeção de quota consumer, sem conceder novos IAM por suposição.
+- **Progresso conservador:** etapa 3 **62,5%**, geral **52,5%**. Nenhum deploy, Rules, Firebase addProject, merge, IAM nem intervenção em produção; **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — Firebase Management GET 403 persistente após enable (2026-10-16)
+
+- **Evidência Windows do Fundador:** a habilitação `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou operação concluída com sucesso, e o `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token OAuth local voltou a retornar `FIREBASE_PROJECT_STATUS=403`. **Não inferir** que `FirebaseProject` inexiste ou que o usuário não tem `roles/owner`; no IAM do projeto QA o fundador figurou previamente como Owner, papel que contém `firebase.projects.get` conforme documentação de IAM.
+- **Gate diagnóstico apenas read-only:** extrair `error.status` e o `google.rpc.ErrorInfo.reason` (sem `error.message`, tokens ou corpo integral) do erro HTTP 403 para distinguir `SERVICE_DISABLED`, `CONSUMER_INVALID`, `ACCESS_TOKEN_SCOPE_INSUFFICIENT`, `PERMISSION_DENIED` e casos correlatos. Confirmar também a identidade gcloud ativa se necessário; testar novamente somente após causa identificada. Não conceder papéis cegamente; não adicionar Firebase nem tocar produção sem decisão do Fundador.
+- Fontes: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/get ; https://docs.cloud.google.com/iam/docs/roles-permissions/firebase ; https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project .
+- **Progresso sem novo gate:** Etapa 3 **62,5%**; total **52,5%**. As duas leituras Firestore QA HTTP 200 permanecem válidas, mas Rules/Auth e negativos não concluídos. Vercel e produção preservadas; **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 Firebase Management API habilitada no QA (2026-10-16)
+
+- **Evidência real PowerShell do Fundador:** `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation "operations/acat.p2-953294034210-0e1530db-43f7-4541-bb0b-7a14fc313804" finished successfully.`. **PASS: Firebase Management API ativada somente no projeto QA**.
+- **Não concluir prematuramente:** habilitar a API não registra `FirebaseProject`, não configura Firebase Authentication, não cria app web, não publica Security Rules nem autentica usuários. O GET anterior havia retornado 403 antes da API ser ativada; após ativação repetir `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` usando token local, sem exibir credenciais. HTTP 200 com `projectId` correto comprovaria recurso; 404/403 devem ser tratados segundo o contexto sem `addFirebase` automático.
+- **Progresso inalterado:** etapa 3 Segurança/Isolamento QA **62,5%**; migração geral **52,5%**. Vercel, GCP produtivo, Rules e `main` preservados. **CLOUD-RUN-R1 NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 Firebase Management GET 403 (2026-10-16)
+
+- **Execução read-only do Fundador:** consulta `Invoke-RestMethod -Method Get https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token de usuário via `gcloud.cmd auth print-access-token` retornou `FIREBASE_PROJECT_STATUS=403`, sem corpo detalhado. Não foi feito `projects.addFirebase`, nem ativado Firebase Auth/Rules.
+- **Interpretação correta:** resposta 403 **não prova ausência de FirebaseProject**; pode significar `firebase.googleapis.com` desabilitada ou permissões insuficientes, entre outras causas. A lista previamente obtida de APIs QA habilitadas não continha `firebase.googleapis.com`. A documentação oficial do Firebase determina habilitar **Firebase Management API** antes da consulta REST: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project e https://firebase.google.com/docs/projects/api/workflow_set-up-and-manage-project .
+- **Próxima ação delimitada:** habilitar somente `firebase.googleapis.com` no projeto `emprovex-qa-r1-261015-6275` via `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275`, após confirmação por execução do Fundador. Isso **não equivale a adicionar Firebase ao projeto** nem autoriza chamada POST `projects.addFirebase`. Repetir GET para distinguir registrado/não registrado/permissão após propagação. Manter credenciais privadas fora do chat.
+- **Percentuais inalterados:** etapa 3 Segurança QA **62,5%**, migração geral **52,5%**. GCP produção, Vercel, `main` e dados reais preservados. CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 projeto QA labels consultadas, FirebaseProject pendente (2026-10-16)
+
+- Evidência Windows do Fundador: reexecução da sonda IAM W7 corrigida repetiu token temporário **PASS**, `qa-core HTTP 200`, `qa-warehouse HTTP 200` — **sem novo gate adicional**. Consulta read-only `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(labels)"` retornou `app: emprovex` e `env: qa`. Labels são metadados definidos no GCP e **não comprovam** registro do `FirebaseProject` nem Firebase Authentication ativado.
+- Próximo gate sem mutação: usar `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token OAuth do usuário proprietário obtido localmente (sem exibi-lo). Um HTTP 200 com `projectId` correto comprova registro FirebaseProject; HTTP 404 indicaria ausência/indisponibilidade do recurso sob a identidade da chamada; HTTP 403 é inconclusivo sobre o registro (pode refletir API não habilitada ou permissão). **Não executar** `projects:addfirebase` nem habilitar serviços adicionais sem conferir resultado e pedir autorização específica.
+- Evidência documental: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/get ; https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project .
+- Segurança/Isolamento QA **62,5%**; migração geral **52,5%**. Nenhuma mudança em produção, `main`, DNS, Vercel, Rules ou deploy; NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 acesso real à dupla Firestore QA comprovado (2026-10-16)
+
+- **Evidência direta de homologação real:** o Fundador executou `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` no Windows, fixado ao projeto `emprovex-qa-r1-261015-6275`. A sonda retornou sucessivamente: `PASS: Token temporario obtido (conteudo nao exibido).`, `PASS: qa-core HTTP 200 para identidade runtime QA.`, `PASS: qa-warehouse HTTP 200 para identidade runtime QA.` e `PASS PARCIAL: Duas leituras reais QA autorizadas, sem gravacoes.`. O script realiza GET REST somente na coleção QA `emprovexQaSecurityProbe`, máximo `pageSize=1`, sem imprimir corpo ou token. **PASS funcional IAM positivo em ambos os bancos do QA**.
+- **Não comprovados:** negação HTTP 403 no terceiro banco/projeto alheio; acesso indevido fora do QA; Firebase Auth do QA e Firestore Security Rules publicadas; client web/mobile; bundle Next staging; Cloud Run deploy. **HTTP 200 não implica isolamento negativo** e Security Rules cliente não substituem IAM server. A sonda não consultou produção. Revisão independente da fonte: https://cloud.google.com/firestore/docs/manage-databases confirma restrição por IAM Conditions em cada database via REST.
+- **Progressão por subgate real:** Etapa 3/5 **50% → 62,5%** (autorização IAM positiva correspondente à metade da prova operacional ainda aberta). Total **50% → 52,5%**: duas etapas anteriores concluídas e 62,5% da terceira, pesos iguais. Percentuais por marcos, sem inferir aptidão para deploy.
+- **Próximo gate:** programar negativa controlada **sem manipulação de produção** e revisar Auth/Rules dos dois bancos QA; caso teste negativo precise atingir projeto produtivo, obter autorização expressa e restrita do Fundador antes de qualquer chamada. Revogar `roles/iam.serviceAccountTokenCreator` temporário na policy da service account QA ao encerrar homologação, após verificações.
+- **Governança:** PRs continuam DRAFT, W4 interlock preservado; produção Vercel, Firestore produtivo e `main` preservados. **CLOUD-RUN-R1 NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 autorização de impersonação QA concedida (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd iam service-accounts add-iam-policy-binding emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com --member="user:aprov1hgesm@gmail.com" --role="roles/iam.serviceAccountTokenCreator" --project=emprovex-qa-r1-261015-6275` retornou `Updated IAM policy for serviceAccount`, com binding exato `user:aprov1hgesm@gmail.com → roles/iam.serviceAccountTokenCreator` na **policy da própria service account QA**, `version: 1` e `etag: BwZd7WrLEKM=`. **PASS de configuração**; não houve concessão do papel TokenCreator no IAM do projeto e não há comprovação ainda de token ou leitura do Firestore.
+- **Próximo teste:** executar novamente `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` usando `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\\Downloads\\EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1"`. Script obtém token temporário sem mostrá-lo e executa somente consultas GET em `qa-core` e `qa-warehouse`, projeto QA; não realiza operações de produção. Se falhar, classificar sem conceder permissões adicionais por suposição.
+- **Revogação planejada:** após testes reais, retirar o binding TokenCreator na **service account QA**; evitar deixar direito de impersonação persistente desnecessário.
+- **Progresso mantido:** Etapa 3 50%; Migração geral 50%. Sem prova funcional IAM, Firebase Auth/Rules, Cloud Run QA ou qualquer deploy. Produção Vercel, GCP produtivo e `main` preservados. **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 bloqueio Token Creator diagnosticado (2026-10-16)
+
+- **Evidência real PowerShell do fundador:** a sonda antiga `EMPROVEX_QA_W7_TESTE_IAM.ps1` encerrou com erro genérico e a versão `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` informou `PENDENTE: TOKEN_CREATOR_NAO_AUTORIZADO. Verificar permissao na conta de servico QA.`, após tentar emissão de token temporário. **Não houve HTTP GET Firestore nem prova de acesso aos DBs** nesta execução; nenhuma alteração GCP foi feita pelo script.
+- **Diagnóstico:** provável ausência da autorização `iam.serviceAccounts.getAccessToken` para o usuário `aprov1hgesm@gmail.com` na service account QA (role `roles/iam.serviceAccountTokenCreator`). A sonda categoriza erros, não publica stderr bruto; o resultado não certifica, isoladamente, o IAM efetivo sem inspeção da policy. Documentação: https://cloud.google.com/iam/docs/service-account-permissions e https://cloud.google.com/sdk/gcloud/reference/iam/service-accounts/add-iam-policy-binding .
+- **Correção planejada sob controle do fundador:** usar `gcloud.cmd iam service-accounts add-iam-policy-binding emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com --member=user:aprov1hgesm@gmail.com --role=roles/iam.serviceAccountTokenCreator --project=emprovex-qa-r1-261015-6275` **somente na policy da conta QA**, nunca como `projects add-iam-policy-binding`. Aguardar comprovação PowerShell antes de marcar PASS; posteriormente remover role temporária se não for mais necessária.
+- **Sem mudança de progresso:** Segurança QA 50%, migração geral 50%; PR #323 DRAFT, sem deploy, Rules QA não publicadas, Vercel e projeto GCP produtivo preservados. CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 sonda IAM diagnostico PowerShell (2026-10-16)
+
+- **Saída real do Fundador:** `EMPROVEX_QA_W7_TESTE_IAM.ps1` iniciou corretamente, indicou solicitação de token temporário e encerrou com `FAIL: erro na operacao de teste temporario; nenhuma alteracao efetuada.`. Isso **não** comprova se há falta de `roles/iam.serviceAccountTokenCreator`, sessão `gcloud` inválida ou falha de shell; o script anterior suprimia mensagens e seu `catch` mascarava a origem do erro.
+- **Correção isolada W7:** PR [#323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323) atualizou `scripts/cloud-run-qa-iam-probe.ps1`, agora capturando `stderr` do `gcloud.cmd` de modo compatível com Windows PowerShell 5.1, categorizando falhas sem revelar o token nem o erro bruto potencialmente sensível. Commit do script corrigido `585a39d183ae62337f46d5a4736944de39006f1f`, Git blob `c0c1e20c7083b405cf418188c18f37a4e6d43acc` comparado à cópia distribuível.
+- **Segurança:** somente consulta HTTP GET nos dois bancos do projeto QA caso a impersonação funcione; sem criação/gravação/alteração IAM e **sem acessar produção**. Se token não for permitido, parar e revisar concessão **somente na conta de serviço QA** antes de autorizar qualquer alteração. O primeiro teste **não passou**; não promover o percentual.
+- **Progresso:** etapa 3/5 segurança **50%**; geral **50%**, sem novo gate certificado. CLOUD-RUN-R1 NO-GO; Vercel/projeto produtivo intactos.
+
+---
+
+## CLOUD-RUN-R1 — W7 sonda real IAM QA preparada (2026-10-16)
+
+- Confirmada saída local `EMPROVEX_QA_W7_AUDITORIA.ps1`: **PASS PARCIAL** para projeto, billing, APIs, ambos Firestore QA, runtime SA e duas condições IAM, sem principals públicos explícitos. Sonda de autorização **ainda não executada**.
+- Preparado o arquivo `scripts/cloud-run-qa-iam-probe.ps1` no [PR #323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323) (branch W7 isolada): obtém token temporário por impersonação sem imprimi-lo; tenta **apenas duas consultas GET**, uma por banco QA, na coleção fictícia `emprovexQaSecurityProbe`, com `pageSize=1`; não grava dados, não acessa nenhum projeto produtivo, não concede IAM. Se TokenCreator ainda faltar, mostra **PENDENTE** e exige concessão restrita somente à identidade QA após revisão, sem mutação automática.
+- W7 CI offline novo SHA `e016887df3d359049451df61284d89710fd77659`, run [#38848749580](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749580) **PASS**; Core Protection [#38848749587](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749587) **PASS**; Application CI [#38848749562](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749562) **em progresso na verificação**, não declarar PASS antes da conclusão.
+- **Limites:** um HTTP 200 positivo comprova leitura no QA com token da service account, mas não prova 403 fora do escopo, Firebase Rules/Auth nem compatibilidade Cloud Run; nenhum token deve ser enviado ao chat. Progresso **Etapa 3 50%; geral 50%**, sem certificação funcional nova. CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 auditoria QA real PASS parcial (2026-10-16)
+
+- **Execução Windows reportada pelo Fundador:** `EMPROVEX_QA_W7_AUDITORIA.ps1` concluiu **PASS PARCIAL** sem falhas: projeto QA separado identificado; faturamento ativo; APIs Firestore/IAM/IAMCredentials/FirebaseRules habilitadas; `qa-core` e `qa-warehouse` em região/edição/tipo/proteção esperados; runtime SA presente; dois IAM bindings condicionais confirmados; sem principals públicos nos bindings explícitos QA. Não foi executada autenticação como a service account, logo IAM efetivo ainda não comprovado. Mensagem `OrÃ§amento` é só codificação de texto, não erro funcional.
+- **Gates W7 PR #323 no SHA `330149897751627f760fe18aedf555bb964a6395` confirmados:** [W7 Security Batch #38847873118](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873118) **SUCCESS**, [Core Protection #38847873008](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873008) **SUCCESS**, [Application CI #38847872902](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847872902) **SUCCESS**. A suíte W7 é offline e não certifica GCP Rules/ADC.
+- **Próxima sequência:** (1) auditar diretamente a política IAM da conta de serviço (binding TokenCreator na conta, se preciso), (2) script único de teste de autenticação temporária com operações apenas sintéticas no QA e saída sem tokens, (3) Rules/Auth QA e inspeção do bundle staging. **Não acessar dados/bancos produtivos por teste sem autorização específica.**
+- **Progressos mantidos:** Segurança/isolamento QA etapa 3/5 **50%**; migração geral **50%**. Cloud Run e produção NO-GO, PRs DRAFT sem merge.
+
+---
+
+### W7 — IAM APIs habilitadas no QA (2026-10-16)
+
+- **Evidência da execução local do Fundador:** `gcloud.cmd services enable iam.googleapis.com iamcredentials.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation ... finished successfully`. As APIs **IAM** e **IAM Service Account Credentials** foram habilitadas somente no projeto QA; a operação não criou chaves JSON nem concedeu papéis IAM.
+- **Próximo gate read-only:** consultar a política da conta de serviço `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` por `gcloud.cmd iam service-accounts get-iam-policy ... --project=emprovex-qa-r1-261015-6275` antes de qualquer concessão `roles/iam.serviceAccountTokenCreator`, sempre restrita à própria identidade e não ao projeto inteiro. Não exibir tokens no chat. Depois testar ADC positivo e 403 negativo em QA/produção mediante plano de teste seguro.
+- **Progresso constante:** etapa 3 — 50%; migração geral — 50%. Cloud Run continua NO-GO, produção Vercel e dados produtivos preservados.
+
+## CLOUD-RUN-R1 — W7 inventário APIs QA (2026-10-16)
+
+- Comando **read-only** do Fundador `gcloud.cmd services list --enabled --project=emprovex-qa-r1-261015-6275 --format="value(config.name)"` retornou somente `billingbudgets.googleapis.com`, `firebaserules.googleapis.com`, `firestore.googleapis.com`. **Não há Cloud Run ou IAM Credentials API habilitada** no inventário dessa consulta.
+- `firebaserules.googleapis.com` habilitada **não comprova publicação de Rules** nos bancos; Rules e autorização operacional ainda pendentes. Próxima operação estritamente QA é habilitar `iam.googleapis.com` e `iamcredentials.googleapis.com` para permitir testes de impersonação com token temporário; nenhum segredo JSON deve ser criado ou compartilhado. Antes de conceder `roles/iam.serviceAccountTokenCreator`, inspecionar IAM na **conta de serviço apenas** e usar privilégio mínimo (não no projeto inteiro).
+- Etapa 3: **50%**; migração geral: **50%** (marcos de peso igual). Não houve novo marco de autorização remota; não elevar percentuais. Produção e `main` preservadas. CLOUD-RUN-R1 NO-GO.
+
+## CLOUD-RUN-R1 — W7 lote de auditoria e Rules QA preparado (2026-10-16)
+
+- **Gate W7 offline:** GitHub Actions run [#38847873118](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873118) **completed/success**; Core Protection run [#38847873008](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873008) **completed/success**. Application CI [#38847872902](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847872902) **em execução na verificação inicial**; seu PASS ainda não pode ser afirmado. O gate W7 apenas valida Rules proposta e auditor read-only, sem Firebase/GCP real.
+- Autorização do Fundador: acelerar próximas atividades e agrupar verificações, evitando sequência de comandos administrativos redundantes.
+- **PR #323 DRAFT aberto** [W7 QA Security Batch](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323), branch `test/cloud-run-r1-w7-security-automation-20261016`, **base incremental W6 PR #322**, não `main`.
+- Entregas em branch isolada: `firestore.qa-core.rules` e `firestore.qa-warehouse.rules` em **deny-all**; `firebase.cloud-run-qa-rules.json` com IDs explicitamente `qa-core`/`qa-warehouse`; `scripts/cloud-run-qa-security-batch.test.mjs` estático; `.github/workflows/cloud-run-qa-security-batch.yml` CI leve sem secrets/serviços; `scripts/cloud-run-qa-readonly-audit.ps1` consolida checagens read-only de projeto, billing, APIs, Firestore e IAM no Windows. Handoff em `docs/audits/cloud-run-r1/worker-7/HANDOFF.md`.
+- **Não publicar Rules deny-all automaticamente**: apenas proposta segura de configuração inicial, sem Firebase Auth QA/Rules ativadas em cloud real; nenhuma garantia sobre proteção das Rules **atualmente ativas** nos bancos criados. O PowerShell não faz impersonação, não usa tokens nem acessa produção; não prova autorização real. Testes reais ADC/403 e build Cloud Run staging ainda faltam.
+- **CLOUD-RUN-R1 segue NO-GO**. PRs DRAFT sem merge, Vercel, DNS, GCP produção e dados reais preservados. **Progresso mantido: etapa 3 50%; total 50%**, só subir após prova funcional aprovada.
+
+---
+
+## CHECKPOINT VIGENTE — CLOUD-RUN-R1 QA — 2026-10-16
+
+**Classificação:** QA INFRA PARCIALMENTE CRIADO / HOMOLOGAÇÃO INCOMPLETA / MIGRAÇÃO **NO-GO**.
+
+**Fonte principal atualizada:** [Relatório consolidado QA de 16/10/2026](audits/cloud-run-r1/RELATORIO_CONSOLIDADO_QA_2026-10-16.md) (branch documental do PR #317). Histórico das fases W1–W6 preservado nos PRs #316/#318/#319/#320/#321/#322 e nos blocos anteriores do Memorial.
+
+### Evidência real (saída PowerShell do Fundador)
+
+- **Projeto novo:** `emprovex-qa-r1-261015-6275` (número `953294034210`, ACTIVE), distinto do produtivo `gen-lang-client-0982077967`. Consulta `projects describe` mostrou apenas `projectId`, sem `parent` (compatível com No organization).
+- **Faturamento:** conta `Pagamento do Firebase` aberta, moeda **BRL**; projeto QA com `billingEnabled: true`. Budget exclusivo ao QA `EMPROVEX QA R1 - Mensal` **R$20/mês**; `CURRENT_SPEND` 25/50/75/100%, créditos incluídos. **É somente alerta, não bloqueio de cobrança.**
+- **Firestore:** API ativada somente no QA. Dois bancos Firestore Native Standard `us-east1` criados, com proteção de exclusão habilitada e PITR desativado: `qa-core` (`freeTier: true`, primeiro banco do projeto) e `qa-warehouse` (`freeTier: false`, faturável por uso). Corrigida a premissa histórica de que todo banco nomeado perderia o free tier: o primeiro banco do projeto o recebeu.
+- **IAM:** conta `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` criada sem chave JSON no processo. Policy explícita inicial: fundador `roles/owner`, Firebase Rules service agent e Firestore service agent. **`roles/datastore.user` condicional a `qa-core` e `qa-warehouse` confirmado** em dois bindings separados, IAM policy versão 3 (títulos `EmprovexQaCoreOnly` e `EmprovexQaWarehouseOnly`). **PASS de configuração, mas sem teste operacional ADC/HTTP 403**.
+- **Não realizados:** testes reais de allowed/403 IAM por banco e contra produção, Rules por DB, Firebase Auth/AppCheck QA, inspeção de bundle Next staging, deploy Cloud Run QA, WIF, teste R03 restore, F09 saída física multi-linha. O interlock W4 de startup em Cloud Run permanece intencionalmente bloqueado.
+- **Testes técnicos anteriores:** W6 9/9 Emulator (F05 alocação, F06 transferência real via transação SDK e F09 consumo imediato) e Application CI/Core Protection PASS; **não certificam** IAM/Rules/Auth no GCP. Correção de leitura de lote F05→F06 existe apenas na branch DRAFT W6. PRs #317/#320/#321/#322 abertos DRAFT, não merged. Nenhum deploy ou mudança na `main` autorizados por esse programa.
+
+**Progresso por marcos:** etapa 3/5 — Segurança e Isolamento QA **50%** (antes 25%); progresso geral da migração **50%**, por cinco etapas de peso igual; estimativas, não prazos nem homologação.
+
+**Próximo gate:** auditar de forma independente os dois bindings IAM condicionais já registrados; validar acessos reais permitidos no QA e 403 negado no projeto produtivo; configurar Rules/Auth do QA e testes de bundle antes de liberar qualquer deploy. **Vercel/`emprovex.com.br` e projeto produtivo permanecem como estão.**
+
+### IAM QA — verificação independente dos dois bindings (2026-10-16)
+
+- Saída CLI somente leitura do fundador: `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --format="yaml(bindings)"` confirmou **dois bindings condicionais `roles/datastore.user`** para `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com`, com `resource.name` estritamente igual a `projects/emprovex-qa-r1-261015-6275/databases/qa-core` e `projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse`. Service agents e Owner preservados; sem bindings públicos ou produtivos na policy QA apresentada.
+- **PASS de configuração IAM verificada de forma independente; NÃO é certificação de acesso efetivo.** Faltam teste real com identidade QA em ambos bancos, negação 403 em produção e Firebase Security Rules/Auth QA. Sem tokens privados expostos. Percentuais permanecem **Etapa 3: 50% | Geral: 50%** até novo marco funcional. Docs: https://cloud.google.com/firestore/docs/manage-databases ; https://firebase.google.com/docs/rules/manage-deploy .
+
+---
+
+## CLOUD-RUN-R1 — W7 identidade runtime QA criada (2026-10-15)
+
+- **Evidência enviada pelo Fundador:** `gcloud.cmd iam service-accounts create emprovex-qa-runtime --display-name="EMPROVEX QA Cloud Run Runtime" --description="Keyless QA runtime identity; no production access" --project=emprovex-qa-r1-261015-6275` retornou `Created service account [emprovex-qa-runtime]` e e-mail `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com`.
+- **PASS criação de identidade apenas.** Nenhum IAM Firestore concedido, nenhuma chave JSON criada pelo comando, nenhum Cloud Run publicado. Cloud Run ADC automático requer futuramente associar explicitamente essa conta ao serviço QA, sem chave baixada.
+- **Próximo gate:** conceder somente `roles/datastore.user` por IAM **condicional ao nome exato do banco** `projects/emprovex-qa-r1-261015-6275/databases/qa-core` e, em segunda operação validada, `qa-warehouse`. Não conceder o papel de forma irrestrita; o escopo da IAM policy é projeto, com `resource.name` condition conforme documentação oficial (https://firebase.google.com/docs/firestore/enterprise/create-databases). Verificar política resultante e testes negativos para `(default)` e outros bancos; cuidado: console Google Cloud pode não refletir condições como cliente server API. Ainda faltam Firestore Security Rules individuais e autenticação Firebase QA; não presumir teste end-to-end.
+- Produção, Vercel e `main` intocadas. CLOUD-RUN-R1 **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 sem parent explícito no QA (2026-10-15)
+
+- **Evidência do Fundador:** `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(projectId,parent)"` exibiu apenas `projectId: emprovex-qa-r1-261015-6275`, sem `parent`. Compatível com projeto em **No organization**, sem organização/pasta ancestral reportada pela API no momento. A consulta não faz auditoria abrangente de outras camadas de autorização; as concessões diretas IAM do projeto foram verificadas separadamente.
+- Próximo passo, **somente QA:** criar a conta de serviço sem chaves `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` usando `gcloud iam service-accounts create emprovex-qa-runtime --display-name="EMPROVEX QA Cloud Run Runtime" --description="Keyless QA runtime identity; no production access" --project=emprovex-qa-r1-261015-6275`. Criação não equivale a conceder papel IAM ou ligar Cloud Run, e nenhuma permissão Firestore deve ser concedida por ora. Aguardar saída efetiva do PowerShell para classificar o passo PASS.
+- **Status:** Core/Warehouse QA criados e protegidos de exclusão, orçamento de alertas BRL20, sem conexão aplicativo, IAM runtime, migração, dados reais ou deploy. Produção protegida; CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 auditoria IAM QA inicial (2026-10-15)
+
+- **Evidência CLI somente leitura fornecida pelo Fundador:** `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"` retornou exatamente 3 bindings explícitos de projeto: `roles/owner` em `user:aprov1hgesm@gmail.com`; `roles/firebaserules.system` em `service-953294034210@firebase-rules.iam.gserviceaccount.com`; `roles/firestore.serviceAgent` em `service-953294034210@gcp-sa-firestore.iam.gserviceaccount.com`.
+- **Veredito preliminar:** PASS escopo da **allow policy explícita do projeto**: sem `allUsers`, `allAuthenticatedUsers` ou contas da produção listadas, e as duas identidades service agents do Google exibem número do projeto QA correto. `roles/owner` é amplo, mas pertence ao administrador fundador; não estender a runtimes.
+- **Limites da evidência:** `projects get-iam-policy` **não mostra concessões herdadas de folder/organization**, não certifica roles condicionais em outros recursos, nem Firebase Security Rules por banco. Ainda não existe conta de serviço runtime QA própria nem validação de isolamento Firestore/Auth/Cloud Run. Próximo passo de somente leitura: `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(projectId,parent)"` para entender ancestralidade, antes de IAM mínimo/keyless e Rules deny-by-default individuais.
+- **Não alterar os Google service agents**, IAM produção, `main` ou Vercel; CLOUD-RUN-R1 continua NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 qa-warehouse criado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-warehouse --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, `projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse`, edição `STANDARD`, tipo `FIRESTORE_NATIVE`, `locationId=us-east1`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED` e `freeTier: false`.
+- **Estado da infraestrutura de dados QA:** `qa-core` **criado** (`freeTier: true`), `qa-warehouse` **criado** (`freeTier: false`), ambos na região `us-east1` e no mesmo projeto QA exclusivo. Faturamento QA e alerta de orçamento R$20/mês ativados. Bancos nomeados não equivalem a isolamento IAM automático; regras Firestore são separadas por banco e **não foram publicadas/auditadas**. Nem Firebase Auth QA nem integração end-to-end configurados ou certificados.
+- **Próxima auditoria de baixo risco:** `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"` (somente leitura). Detectar roles amplos, identidades de produção e principais `allUsers`/`allAuthenticatedUsers`, antes de contas de serviço/regras. Depois verificar associação do projeto ao Firebase e planejar Rules fechadas em **cada** banco, com testes controlados; não assumir que regras de SDK de servidor (ADC/Admin SDK) aplicam-se automaticamente, porque dependem de IAM.
+- **Proteção:** não criar banco `(default)`, não importar dados, não conceder IAM à produção, não modificar Vercel/DNS/`main`. CLOUD-RUN-R1 segue **NO-GO**. Fontes: https://firebase.google.com/docs/firestore/manage-databases e https://firebase.google.com/docs/rules/manage-deploy .
+
+---
+
+## CLOUD-RUN-R1 — W7 banco qa-core criado e free tier confirmado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-core --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, identificador `projects/emprovex-qa-r1-261015-6275/databases/qa-core`, `STANDARD`, `FIRESTORE_NATIVE`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED`, `locationId: us-east1`, `freeTier: true`.
+- **Correção da premissa anterior de custo:** fonte atual Firebase `https://firebase.google.com/docs/firestore/pricing` (e Firestore REST field `freeTier`) confirma que **o primeiro banco de um projeto recebe franquia gratuita independentemente do ID**. O `qa-core` é o único beneficiado pela franquia de 1 GiB storage, 50 mil reads/dia, 20 mil writes/dia, 20 mil deletes/dia, 10 GiB saída/mês na edição Standard. Acima disso, cobra-se por uso; TTL/PITR/backups/restore/clones não incluídos. **`qa-warehouse` será o segundo banco e será cobrado pelo consumo, sem franquia própria**.
+- **Gate seguinte:** criar `qa-warehouse` no mesmo projeto/região/edição/modo, `--delete-protection`, sem PITR; aguardar confirmação do Fundador. Depois auditar Rules inicial e IAM; **não conectar o aplicativo a bancos sem regras/identidades e testes de isolamento**. Orçamento R$20 é de alertas, sem teto garantido. Nenhum dado real ou migração.
+
+---
+
+## CLOUD-RUN-R1 — W7 API Firestore QA habilitada (2026-10-15)
+
+- O Fundador executou `gcloud.cmd services enable firestore.googleapis.com --project=emprovex-qa-r1-261015-6275` e recebeu `Operation ... finished successfully`; Firestore API habilitada **somente no QA**.
+- **Ainda não foram criados bancos Firestore QA** na evidência recebida. Próximo passo: criar separadamente `qa-core` e `qa-warehouse` com `--project` explícito, região `us-east1`, edição `standard`, tipo `firestore-native`, sem PITR ou backups, e avaliar proteção contra exclusão.
+- Bancos nomeados geram cobrança por uso sem cota gratuita. Orçamento R$ 20/mês é alerta, não teto. Configurar/validar Security Rules de cada banco (deny-by-default) e IAM isolado antes de qualquer conexão do aplicativo ou ingestão de dados. **Não criar default DB, nem acessar o projeto produtivo**. CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 orçamento QA confirmado (2026-10-15)
+
+- **Saída do PowerShell enviada pelo Fundador:** habilitada a API `billingbudgets.googleapis.com` **somente** no projeto QA `emprovex-qa-r1-261015-6275`; Google Cloud retornou `Created [3f76c6ac-09dc-4105-92f9-58ec1a4b933a]`.
+- Orçamento mensal `EMPROVEX QA R1 - Mensal`, moeda `BRL`, valor **R$ 20**, filtro `projects/953294034210` (número **do projeto QA**), thresholds `CURRENT_SPEND` 25%, 50%, 75% e 100%. CreditTypesTreatment `INCLUDE_ALL_CREDITS`.
+- **Controle financeiro:** orçamento apenas de alerta, **não** é teto de cobrança nem confirma recebimento de e-mails. Conta de faturamento compartilhada com outros recursos e produção não foi alterada; script de vinculação foi destinado apenas ao QA. Não registrar identificador da conta no memorial.
+- Próxima etapa controlada: habilitar Firestore API apenas no QA (`--project=emprovex-qa-r1-261015-6275`) e criar posteriormente dois bancos Firestore Standard, modo nativo, IDs `qa-core`/`qa-warehouse`, `us-east1`; nenhuma senha/token/chave JSON. Regras restritivas no início; **os bancos nomeados não recebem free tier**, o uso será faturável. Nunca executar `gcloud config set project` para produção.
+- **Estado no momento:** API de orçamento ligada; bancos e Cloud Run QA ainda **não criados**; CLOUD-RUN-R1 NO-GO; sem deploy/DNS/produção.
+
+---
+
+## CLOUD-RUN-R1 — W7 billing QA vinculado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd billing projects link emprovex-qa-r1-261015-6275 --billing-account=...` retornou `billingEnabled: true` e `projectId: emprovex-qa-r1-261015-6275`. Faturamento QA agora vinculado à conta aberta **Pagamento do Firebase**, moeda **BRL** (verificada em consulta anterior); conta de faturamento existente compartilhada — sem afirmar que a produção mudou. Não repetir identificador financeiro no memorial.
+- **Próximo gate obrigatório:** criar orçamento de ALERTA para **R$ 20 BRL por mês**, escopo exclusivo `projects/emprovex-qa-r1-261015-6275`, thresholds 25%, 50%, 75% e 100%, sem desativar destinatários IAM. **Orçamento não é limite duro de gastos**. Verificar saída da CLI (nome/id, amount, filtro e regras) antes de habilitar Firestore/Cloud Run. Projeto principal do gcloud não deve ser alterado; usar `--project=emprovex-qa-r1-261015-6275` explicitamente.
+- **Estado efetivo:** projeto QA criado e billing habilitado; **nenhum orçamento comprovado criado ainda**, nenhum Firestore QA, Cloud Run QA, IAM ou deploy certificado. Produção Vercel/Firestore inalterada, CLOUD-RUN-R1 NO-GO.
+
+---
+
+## CLOUD-RUN-R1 — W7 — Conta de faturamento aberta identificada (2026-10-15)
+
+- O Fundador confirmou por consulta somente leitura `gcloud.cmd billing accounts list --filter="open=true"` uma conta ativa, nome de exibição **Pagamento do Firebase**, `OPEN=True`. Não registrar o identificador financeiro completo no memorial. Isso **não** indica faturamento já habilitado no projeto QA: a consulta anterior indicou `billingEnabled: false` em `emprovex-qa-r1-261015-6275`.
+- **Próxima consulta sem mutação:** `gcloud.cmd billing accounts describe <ID DA CONTA> --format="yaml(displayName,currencyCode,open)"` para moeda da conta, antes de criar orçamento exclusivo QA com thresholds 25/50/75/100. Orçamento envia alertas, não limita gasto efetivo; sem autorização de recursos ou produção.
+
+---
+
+## CLOUD-RUN-R1 — Projeto QA criado pelo Fundador (2026-10-15)
+
+- **Consulta adicional de faturamento do Fundador (read-only):** `gcloud.cmd billing projects describe emprovex-qa-r1-261015-6275` retornou `billingEnabled: false (consulta do Fundador)` e `billingAccountName: ''`. **QA sem conta de faturamento associada no momento da consulta**. Nenhum recurso pago deve ser criado antes de identificar conta ativa e preparar orçamento/alertas scoped ao QA. Fonte: saída local do PowerShell reportada pelo Fundador.
+
+
+- **Evidência enviada pelo Fundador:** execução do script PowerShell da etapa 1 usando conta Google `aprov1hgesm@gmail.com` exibiu `Create ... done`, projeto GCP **`emprovex-qa-r1-261015-6275`** número **`953294034210`**, `LIFECYCLE_STATE=ACTIVE`. Esta é evidência textual da execução local; o coordenador ainda não possui acesso autenticado ao Console/API do GCP para conferência independente.
+- **Escopo realizado:** apenas criação de projeto QA segregado do projeto produtivo **`gen-lang-client-0982077967`**. O script reportou **sem vinculação de billing feita por ele**; estado efetivo de faturamento a ser confirmado via `gcloud billing projects describe emprovex-qa-r1-261015-6275`. Nenhum Firestore QA, conta de serviço, Cloud Run, Artifact Registry, serviço de deploy ou DNS foi criado nessa etapa.
+- **Próximo gate:** consultar faturamento do projeto explicitamente pelo ID QA, confirmar conta de faturamento e capacidade de budget/alertas antes de autorizar vinculação. Budget **não** é teto de gastos automático. Após isso, IAM de menor privilégio e bancos QA nomeados, sem acesso à produção; cada mutação deverá ser auditada.
+- **Produção protegida:** não executar mudanças no projeto produtivo, Vercel ou domínio. CLOUD-RUN-R1 segue **NO-GO**.
+
+---
+
+## CLOUD-RUN-R1 — W7 custo QA e autorizacao inicial (2026-10-15)
+
+- Fundador autorizou confirmar custos/limites e criar infraestrutura isolada. Precos oficiais: Cloud Run request-based free tier 2M requests / 180k vCPU-s / 360k GiB-s mensais por billing account; Firebase Auth convencional 50k MAU mensais Blaze; Cloud Build 2500 build-min elegiveis; Artifact Registry 0,5 GiB-mes por conta. **Firestore named databases (necessarios para Core e Warehouse separados) nao recebem free tier; operacoes/storage sao pagas por uso.** Valores variam por regiao e moeda. Billing Budget/alerts **nao sao hard spending cap**.
+- Desenho economico recomendado: novo projeto GCP QA independente de `gen-lang-client-0982077967`, em `us-east1`, Firestore Standard `qa-core` / `qa-warehouse` *somente apos* vinculacao de billing/orcamento validada; serviço Cloud Run privado, instancia minima 0, maxima 1, sem Scheduler/backup/PITR/DOMINIO produtivo no inicio; service account gerenciada **sem chaves**, sem nenhum binding de IAM em producao.
+- **Nao realizado no Google Cloud:** esta sessao nao possui conexao administrativa Google Cloud/Firebase nem as credenciais `gcloud` do PowerShell do Fundador. Nenhum projeto QA, faturamento, API, Firestore ou Cloud Run foi criado de fato. Foi gerado bootstrap PowerShell local de etapa 1 (somente `gcloud projects create` com labels e projeto unico; sem billing/API); validado estaticamente. Proximo passo: Fundador executa no proprio PC e envia somente `QA_PROJECT_ID`; entao configuracao auditada de orçamento/billing e demais recursos. **Nao fingir que projeto ja foi criado.**
+- PR #322 recebeu handoff de custos/limites. CLOUD-RUN-R1 segue **NO-GO**, Vercel/Firestore prod/DNS intactos.
+
+---
+
+## CLOUD-RUN-R1 — W6 revisão independente, Emulator e plano de homologação (2026-10-15)
+
+- **PR #322 DRAFT** (`test/cloud-run-r1-w6-fastpath-independent`) contra W5 PR #321, W5 depende de W4 PR #320. Código certificado no `0bf71b5ec136685fdd56c2629b75d03f75655de4`; alteração documental posterior `d3b55acf06a6110de9549f2dd6245c03903fae6c`. **Não fazer merge automático** nem publicar.
+- **W6 Firebase Emulator — 9/9 PASS** (GitHub workflow `#38837933261`): testes executaram `POST /api/central-depositos/intake-action` **real** para F05 ALLOCATE e F09 IMMEDIATE_CONSUMPTION; F06 executou `transferWarehouseStock()` **real** com Firebase SDK `runTransaction`, saldo e lote persistidos, idempotência/replay, rejeição de conflito, negação de chamadas a produção. Projeto simulado `demo-emprovex-fastpath`, bancos nomeados sintéticos `qa-core` e `qa-warehouse`, apenas localhost. Auth e token de serviço simulados; Emulator emitiu aviso de multi-database/Rules permissivas: **não alegar IAM/Rules remoto**.
+- **Defeito funcional real identificado:** lote persistido pelo F05 continha `createdAt/updatedAt`, `parseTransferLot()` no F06 antes usava `{ ...data, id }` com validador que proíbe campos adicionais e rejeitava transferência (`WAREHOUSE_TRANSFER_LOT_INVALID`). **Correção mínima:** `lib/warehouse/locationRepository.ts` aplica `warehouseCanonicalLotReadInput(id,data)`, já existente no domínio, antes de `validateWarehouseLot`. FAIL reproduzido no Emulator antes e PASS depois, sem flexibilizar validador ou alterar rules.
+- **CI final confirmado:** `Application CI #38837933621` = PASS (validate-application e gates 16–21 PASS); `Core Protection #38837933233` = PASS, no commit do código acima. Sem deployment, nenhum recurso Google Cloud e nenhum dado real.
+- **Revisão independente:** `docs/audits/cloud-run-r1/worker-6/REVISAO_INDEPENDENTE.md`; plano futuro **não executado** `docs/audits/cloud-run-r1/worker-6/PLANO_HOMOLOGACAO_ADC_IAM.md` ambos no PR #322.
+- **NO-GO preservado:** R01/R02/R04 ainda carecem de projeto Firebase/GCP QA segregado e IAM deny efetivo sobre bancos produtivos; R03 restore testado isoladamente ainda não concluído. O interlock `instrumentation.ts` continua impedindo startup Cloud Run. F09 saída física multi-linha (W3-R20), concorrência F06 completa e prova de bundle Next sem referências produtivas não encerradas.
+- **Próximo passo:** após decisão explícita de novo escopo pelo Fundador, preparar projeto GCP/Firebase QA exclusivamente isolado, service identity Cloud Run sem chaves, IAM mínimo, GitHub WIF e quotas/orçamento, em ações separadas auditáveis. Até lá, **não habilitar API Cloud Run, não criar recursos, não modificar Vercel/DNS/Firestore/IAM.**
+
+---
+
+## CLOUD-RUN-R1 — W5 Firebase unificado + F05/F06/F09 (2026-10-15)
+
+- **PR #321 DRAFT** (`feat/cloud-run-r1-w5-firebase-unification`) contra branch W4 do PR #320, HEAD final `dd305184f482ab26e9ea89c030043fbc164dd5c9` — **não fazer merge diretamente na main**. 19 arquivos alterados na comparação incremental W5; nenhuma alteração de Vercel/Firebase/Cloud Run real.
+- **Configuração Firebase canônica:** `lib/firebaseEnvironment.mjs` + `lib/firebaseRuntimeConfig.ts`, conectadas a SDK client, JWT Auth, Admin REST, Core e Warehouse, lifecycle, provisionamento, backup, monitoramento e histórico. Em estágio Cloud Run, exige identidade/projeto/app/bancos de homologação distintos, sem chaves admin privadas nem fallback silencioso a produção. Next injeta marcação de ambiente no build e preserva a produção legada Vercel. O scanner W4 só permite import baseline em resolvedor canônico explicitamente auditado; todos os demais imports estáticos de produção identificados no CI foram removidos.
+- **GitHub CI final, conferido diretamente:** `Application CI` run **#38836001393 = PASS**, validate-application e seis release gates 16/17/18/19/20/21 SUCCESS; `Core Protection` run **#38836001337 = PASS**. Testes negativos de configuração/ADC, TypeScript budget 0, build standalone de validação Next (sem deploy), segurança multi-tenant e recuperação via Emulator PASS.
+- **F05/F06/F09 suites de domínio:** F05 NF→estoque e MOBILE-C PASS; F06 localização/transferências, Integration 2 e MOBILE-K PASS; F09 código de barras/saída, MOBILE-G, logística e MOBILE-K PASS no HEAD final do CI. Esses PASS **não** comprovam fast-path REST em Cloud Run nem negação IAM real; são gates locais/Emulator do pipeline.
+- **Correções de gates:** guard de ciclo de vida SaaS atualizado para exigir Warehouse canônico; Browser E2E guard exige marcador demo e projeto E2E no novo resolvedor; mock de Monitoramento Block 16.8 ligado à configuração simulada. Nenhum bypass.
+- **NO-GO mantido:** R01/R02/R04 dependem de verificação remota com projeto Firebase/GCP de homologação isolado e identidade ADC de menor privilégio; o interlock `instrumentation.ts` continua impedindo startup Cloud Run. R03 restore isolado não certificado. Nenhuma criação de recursos, IAM/Rules, deploy, DNS, cron, billing ou acesso a dados reais autorizado/executado.
+- **Handoff W5** registrado como comentário no PR #321. Próximo: revisão independente do patch, smoke de fast-path F05/F06/F09 estritamente em Emulator, e pedido explícito de autorização para futura infraestrutura isolada quando técnico apto. A Vercel e `emprovex.com.br` permanecem intocados.
+
+---
+
+## CLOUD-RUN-R1 — CI FINAL W4 — PASS 2026-10-15
+
+- **GitHub PR #320** DRAFT, HEAD `144a0f440acfa241d1bdc3f9ccb1fb86bc014f2c`: **Application CI PASS** (workflow run #38834070699, job validate-application + seis gates finais, todos SUCCESS) e **Core Protection PASS** (run #38834070694). Confirmados: build de produção **no CI, sem deploy**; orçamento/final TypeScript; Bloco 16.8 integrado; release gates 16/17/18/19/20/21. Correções seguras foram `2d58c7d` (tipo monitoring credential) e `144a0f4` (mock ADC em VM, falha fechada se invocado); sem relaxamento de gates.
+- **Escopo do PASS:** integridade automatizada do PR na branch W4, **NÃO** aceitação de Cloud Run ou ADC real. Testes Cloud Run com IAM efetivo, projeto de testes isolado, bancos separados, unificação de config Firebase/REST/Client e smoke Warehouse F05/F06/F09 ainda necessários. `instrumentation.ts` bloqueia startup Cloud Run; scanner de imports produtivos impede build nesse alvo.
+- **Decisão:** W4 preparação local aceita quanto ao CI; **CLOUD-RUN-R1 segue NO-GO**. `main`, `emprovex.com.br`, Vercel, Firebase, Firestore, IAM, DNS, Cloud Scheduler e custos **intocados**. PR #320 sem merge.
+
+---
+
+## CLOUD-RUN-R1 — Recebimento técnico W4 — PR #320 (2026-10-15)
+
+- **W4:** PR #320 DRAFT, branch `feat/cloud-run-r1-w4-local-preparation`; primeiro HEAD `9e8ce77d6e324203034483c01ea89556ab3a40c6`. Entrega inicial de 12 arquivos: guarda fail-closed de build, interlock no runtime Cloud Run, transporte OAuth por identidade gerenciada via metadados, mudanças pontuais em 4 consumidores administrativos, .dockerignore e 26 testes mock-only relatados como PASS. Sem Dockerfile, deploy, merge ou acesso a dados reais. **PREPARAÇÃO PARCIAL — NO-GO.**
+- **CI verificado pelo Coordenador:** Core Protection **PASS** no HEAD inicial; Application CI **FAIL** no passo TypeScript error budget (1 erro / budget 0): `lib/server/googleCloudMonitoring.ts:479`, `'cloud-run-managed'` não contemplado por `GoogleMonitoringCredentialSource`. Gates subsequentes ficaram SKIPPED: não declarar validação integrada.
+- **Correção localizada:** atualizada união em `lib/platformCapacity.ts` apenas na branch W4, commit `2d58c7d4419aa716cfd410df75abbc619bee2632`, sem desabilitar verificação TS, alteração em IAM ou infra; dois workflows começaram para esse HEAD, **resultado ainda pendente na última consulta**. Revalidar resultados antes de qualquer aceite.
+- **Segundo CI verificado no W4:** HEAD `2d58c7d...`: Core Protection PASS; Application CI passou pelo gate TS, mas FAIL no teste Bloco 16.8 (harness VM não reconheceu `./cloudRunManagedToken.mjs`); failures dos release gates são consequência. Patch de teste estritamente mock/fail-closed no HEAD `144a0f440acfa241d1bdc3f9ccb1fb86bc014f2c`; workflows do novo commit enfileirados no último check. Sem alterar mocks para fazer chamada real, sem bypass dos guards. Comentário da coordenação registrado no PR #320.
+- **Riscos ainda abertos:** R01/R02/R04 (credencial ADC e IAM reais não testados; imports de Firebase produtivo impedem build Cloud Run e `instrumentation.ts` bloqueia sua inicialização). A proteção de código é preliminar, não prova isolamento de rede/IAM; F05/F06/F09 e Firestore Emulator integrados ainda pendentes. Sem publicação nem autorização de homologação remota.
+- **Próximo passo:** concluir workflow no HEAD corrigido, registrar resultado; depois atribuir reconciliação de configuração client/server/REST/bancos com testes isolados e testes Warehouse. Não mover Main nem executar Cloud Run.
+
+---
+
+## CLOUD-RUN-R1 — Preparação técnica W4 autorizada pelo Fundador (2026-10-15)
+
+**Autorização expressa:** começar a **preparação técnica local**, restrita ao GitHub (branch/PR DRAFT) e a testes **offline/Firebase Emulator com dados fictícios**. Abrange avaliar #286/#289, desenvolver proteções fail-closed de homologação, adaptar aquisição de token para ADC preservando a Vercel, preparar container standalone somente local e executar gates proporcionais ao risco. **Não é autorização** para criar projeto Firebase, Cloud Run, IAM/WIF, contas de serviço, modificar bancos/Rules/OAuth/DNS/Vercel, publicar, efetuar merge, testar em produção nem incorrer em custos.
+
+- **PR #286:** DRAFT, base release antiga; **PR #289:** DRAFT, construído sobre #286, contém hipótese de Preview Firebase isolado. Worker 4 deve avaliar semanticamente contra HEAD vivo de main, sem cherry-pick automático, para evitar regressão ou duplicação.
+- **Prompt de ativação W4:** `docs/audits/cloud-run-r1/prompts/WORKER_4_PREPARACAO_TECNICA_ADC_ISOLAMENTO.md` nesta branch de coordenação.
+- **Riscos-alvo:** R04 isolamento de ambiente, R01 token/ADC e R02 IAM/bancos (apenas preparação local; IAM real permanece pendente); R03 recuperação isolada **não** autorizada nesta etapa. F05/F06/F09 e segurança são gates de regressão com fixtures; não realizar operações reais.
+- **Produção:** mantém `emprovex.com.br` na Vercel, Firestore atual, Auth, cron e variável de ambiente intocados. A consulta administrativa indicou backups programados em Core/Warehouse com PITR 7 dias e retenção 98 dias; isso **não** comprova restore. Três variáveis privadas Vercel foram observadas em Production; `CRON_SECRET` não foi encontrada entre as variáveis exibidas e execução automática não foi certificada; coleta de histórico Firestore pode decorrer também de consulta administrativa. Não converter investigação de cron em mutação de produção.
+- **Status de release:** CLOUD-RUN-R1 **NO-GO**. O Worker 4 deverá abrir PR DRAFT próprio e solicitar aprovação para qualquer provisão/homologação remota futura.
+
+---
+
+## CLOUD-RUN-R1 — recebimento W2/W3 e reconciliação inicial (2026-10-15)
+
+- **W2 — auditoria administrativa:** [PR #318](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/318), DRAFT, `audit/cloud-run-r1-w2-administrative-evidence@20fcc49068226028111555ef522788bd7c5f70d5`, **6 documentos**. Das verificações X01–X16: **0 integralmente verificadas; 2 inconclusivas (X11/X16); 14 bloqueadas por acesso**. GitHub consultado via integração sem admin: `main protected:false`, rulesets do repositório `[]`, branch-protection detalhada 403; isso **não prova** inexistência de proteções globais ou de Environments. Conta Vercel conectada não pertence ao escopo proprietário e as consultas a `aprov-hgesms-projects` retornaram **403**; não equivale a inexistência de projeto, cron, envs ou backups. Nenhuma console GCP/Firebase/DNS/OAuth/billing foi certificada.
+- **W3 — auditoria independente de código:** [PR #319](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/319), DRAFT, `audit/cloud-run-r1-w3-independent-technical@143e91d3d6caf4a4bf252bbe312a58437a0d5460`, **8 documentos**. Foram recuperados e varridos textualmente **65 dos 893 arquivos** da baseline (7,28% da contagem; **não representa cobertura funcional completa**), acrescidos de 12 relatórios W1. Achou **seis riscos adicionais W3-R19 a W3-R24**, exigindo qualificação das conclusões de W1: (R19) GET status pode atualizar claims Auth; (R20) retirada multi-linha realiza commits sequenciais e exige retomada; (R21) erro fast-path 503 não aciona fallback legado; (R22) cron pode responder `ok:true` mesmo com `persisted:false`; (R23) cache HTTP/servidor de regularização pode envelhecer; (R24) planejamento F06 fora da transação exige teste de concorrência, **sem bug demonstrado**. Discrepâncias D01–D03 reconciliadas inicialmente: D01 cache Warehouse entre réplicas ainda não comprovado (mapear importadores), cache do servidor Billing comprovado; D02 PATCH do cron com documento determinístico não cria duplicata simples, mas execução dupla/custos e `persisted:false` continuam riscos; D03 consumo imediato com commit conjunto difere de retirada multi-linha sequencial, exigindo teste de recuperação. Detalhes: `docs/audits/cloud-run-r1/00_CONSOLIDACAO_COORDENADOR_W1_W2_W3.md` (PR #317).
+- **Painel consolidado provisório:** W1 18 riscos + W3 6 novos = **24 riscos inventariados, não 24 incidentes comprovados**; R01–R04 seguem BLOCKER, R05/R06 CRÍTICO, nenhum G01–G16 aprovado. W1 #316, coordenação #317, W2 #318 e W3 #319 **abertos em DRAFT, sem merge**. Não presumir que os documentos desses PRs integrem a `main`.
+- **Orientação imediata, sem alteração produtiva:** obter do titular **cinco pacotes sanitizados de metadados** descritos em [W2/F1–F5](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/audit/cloud-run-r1-w2-administrative-evidence/docs/audits/cloud-run-r1/worker-2/05_PENDENCIAS_PARA_FUNDADOR_E_COORDENADOR.md): (F1) projetos/Firestores/IAM/backups; (F2) Vercel environments/deploy/cron; (F3) Auth/OAuth/App Check; (F4) DNS/TLS/billing; (F5) proteções do GitHub. **Nunca enviar valores de segredos, JSON, senhas ou tokens.** Reconciliar PRs #286/#289 antes de fixar runtime/alvo de release. Para testes somente leitura, evitar `GET /api/central-depositos/status` com contas reais sem antes certificar ausência de mutação de claims. Não executar backup/restore/deploy/cron ou consultas que escrevam dados.
+- **Decisão de coordenação:** **NO-GO permanece**. Nenhuma migração, provisionamento, alteração de produção, DNS, Auth, IAM, Firestore, Rules, billing ou cron; demais fases exigem autorização do Fundador, homologação isolada, gates e recuperação provada. Estes achados são **registrados no PR #317** para revisão e não representam atualização integrada à `main`.
+
+**Handoff:** ONDE — Vercel preservada, auditorias W1/W2/W3 documentadas; O QUE — reconciliar 24 riscos, discrepâncias e evidências; QUEM — Coordenador com apoio dos titulares das contas; PRÓXIMO — F1–F5 e bloqueadores R01–R04; RESPONSÁVEIS — proprietários pelas consultas de console, Coordenador pelos gates, Fundador pelo GO/NO-GO.
+
+---
+
+## Checkpoint vigente — 2026-10-15 · CLOUD-RUN-R1 — auditoria e coordenação de continuidade
+
+**Decisão do Fundador / coordenação:** estudar a substituição definitiva da Vercel pelo Google Cloud Run sem perder funcionalidade, dado, histórico, integração, segurança, disponibilidade ou previsibilidade de custo. **MIGRAÇÃO NÃO AUTORIZADA — NO-GO.** O site `https://emprovex.com.br` permanece na Vercel, com configuração atual de publicação manual (D-127) e cron existentes; não alterar DNS, OAuth, Firebase, IAM, dados, Rules, cron, deploy ou faturamento por esta frente documental.
+
+- **Worker 1 / auditoria inicial:** [PR #316](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/316), **DRAFT, aberto e não integrado**, branch `audit/cloud-run-r1-full-compatibility`, HEAD `1a2551ac09ef1f155b27002a18119940fecb63f9`; baseline `main@2b1241fe3abd96c67766caf065d24a4b2a223b98`. Entregou **12 documentos** em `docs/audits/cloud-run-r1/`, **14 categorias de dependências**, **18 riscos** (4 BLOCKER, 2 CRÍTICO, 6 ALTO, 5 MÉDIO, 1 INFORMATIVO), **16 verificações externas** e **16 gates** futuros. **Parecer: AUDITORIA DOCUMENTAL PARCIAL — EVIDÊNCIAS EXTERNAS PENDENTES**. A árvore de 893 arquivos foi inventariada, mas **não** houve análise semântica exaustiva dos 893 arquivos, testes reais, recuperação isolada nem leitura dos painéis administrativos; não atribuir PASS indevido.
+- **Bloqueadores ativos:** R01 — código de token/admin/fast-path depende de `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` e não suporta ADC puro; R02 — IAM dos **dois bancos Firestore nomeados** ainda não verificado; R03 — restauração efetiva dos dados, especialmente Warehouse, não comprovada em ambiente isolado; R04 — separação técnica entre homologação e produção não demonstrada, inclusive variáveis `NEXT_PUBLIC_*` incorporadas ao build. **Nenhum desses bloqueadores foi resolvido pela auditoria documental.**
+- **Outros riscos prioritários:** R05 cron `/api/cron/usage-snapshot` às 09:15 UTC (Vercel) exige execução exclusiva, autenticação e prevenção de duplicidade; R06 OAuth/Firebase/Drive; R07 proxy `x-vercel-forwarded-for` e rate-limit em memória; R08 limite de 60 s do rewrite Firebase Hosting → Cloud Run; R09 cache entre instâncias; R10 build que ignora erros de TypeScript/ESLint; R11 domínio, DNS, TLS e rollback; R18 governança de proteção da `main`. Não implementar solução antes de obter provas e aprovação.
+- **Worker 2 — Auditoria administrativa e infraestrutura:** verificar **por leitura**, com autorização de acesso, contas e configurações reais de Vercel, Firebase, GCP, IAM, OAuth, DNS, backups, billing e governança. Priorizar X01–X08 e X11 e continuar X09–X16 conforme acesso; registrar evidências sanitizadas e pendências. Prompt: [WORKER_2_AUDITORIA_ADMINISTRATIVA_INFRAESTRUTURA.md](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/docs/cloud-run-r1-coordination-workers-20261015/docs/audits/cloud-run-r1/prompts/WORKER_2_AUDITORIA_ADMINISTRATIVA_INFRAESTRUTURA.md).
+- **Worker 3 — Auditoria técnica independente:** realizar inspeção aprofundada de código, runtime, variáveis, acessos ao Firestore, ADC, fluxos F05/F06/F09, isolamento, auth/Drive, cron, segurança do proxy, cache, qualidade e testes necessários. Produzir análise independente, plano de adaptação e matriz de evidências, **sem modificar código operacional**. Prompt: [WORKER_3_AUDITORIA_TECNICA_INDEPENDENTE.md](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/docs/cloud-run-r1-coordination-workers-20261015/docs/audits/cloud-run-r1/prompts/WORKER_3_AUDITORIA_TECNICA_INDEPENDENTE.md).
+- **Execução paralela:** ambos consultam os 12 documentos do PR #316 como referência **ainda não integrada**; HEAD da `main` e estado dos PRs devem ser verificados novamente ao iniciar. Cada worker opera em branch própria e abre PR documental em **DRAFT**, sem merge nem alteração de produção. Divergências com o Worker 1 devem ser registradas, não encobertas.
+- **Critério para avanço:** Coordenador reconcilia provas dos Workers 2/3 e revisa riscos/gates. Homologação, Docker, ADC operacional, recuperação real, criação de Cloud Run, custo, DNS, cron e cutover dependem de fases posteriores e autorizações específicas. **Rollback de aplicação não reverte transações Firestore**; exigir proteção de dados e recovery demonstrado, de forma independente. Fundador mantém decisão final GO/NO-GO.
+
+**Handoff:** ONDE — Vercel operante, CLOUD-RUN-R1 em auditoria; O QUE — lacunas externas e revisão independente; QUEM — Workers 2/3, administração das plataformas e Coordenador; PRÓXIMO — obter evidências e consolidar mitigação dos quatro blockers; RESPONSÁVEIS — workers em PRs separados, titular das contas para consultas administrativas, Coordenador para gates e Fundador para autorizações.
+
+> Este checkpoint atual é a referência para CLOUD-RUN-R1; preserva a cronologia e o checkpoint anterior de Release Premium/Vercel. Os detalhes devem permanecer nos relatórios e PRs especializados, sem inflar o memorial com logs ou prompts integrais.
+
+---
+
+
 ## Checkpoint operacional vigente — 2026-10-15 · Release Premium + proteção da cota Vercel
 
 - **Produção:** https://emprovex.com.br — Fundador confirmou a publicação consolidada e a **validação visual das melhorias** após release em `main@63aad90bf80a50cf1cf875024cde21d5e792a3cf` (`chore(release): EMPROVEX Central de Depositos Premium`). Build de produção e prebuild pelo PowerShell aprovados; a confirmação de uso no site foi humana, não uma nova inspeção remota por este agente.
