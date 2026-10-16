@@ -1,5 +1,11 @@
 # EMPROVEX — Memorial Oficial
 
+### W7 — IAM APIs habilitadas no QA (2026-10-16)
+
+- **Evidência da execução local do Fundador:** `gcloud.cmd services enable iam.googleapis.com iamcredentials.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation ... finished successfully`. As APIs **IAM** e **IAM Service Account Credentials** foram habilitadas somente no projeto QA; a operação não criou chaves JSON nem concedeu papéis IAM.
+- **Próximo gate read-only:** consultar a política da conta de serviço `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` por `gcloud.cmd iam service-accounts get-iam-policy ... --project=emprovex-qa-r1-261015-6275` antes de qualquer concessão `roles/iam.serviceAccountTokenCreator`, sempre restrita à própria identidade e não ao projeto inteiro. Não exibir tokens no chat. Depois testar ADC positivo e 403 negativo em QA/produção mediante plano de teste seguro.
+- **Progresso constante:** etapa 3 — 50%; migração geral — 50%. Cloud Run continua NO-GO, produção Vercel e dados produtivos preservados.
+
 ## CLOUD-RUN-R1 — W7 inventário APIs QA (2026-10-16)
 
 - Comando **read-only** do Fundador `gcloud.cmd services list --enabled --project=emprovex-qa-r1-261015-6275 --format="value(config.name)"` retornou somente `billingbudgets.googleapis.com`, `firebaserules.googleapis.com`, `firestore.googleapis.com`. **Não há Cloud Run ou IAM Credentials API habilitada** no inventário dessa consulta.
