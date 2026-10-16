@@ -21,8 +21,8 @@ try {
 
   $uriPrefix = 'https://firestore.googleapis.com/v1/projects/' + $qa + '/databases/'
   foreach ($db in @('qa-core', 'qa-warehouse')) {
-    # Explicitly limited to 1 document. Never echo the body: even synthetic data stays local.
-    $uri = $uriPrefix + $db + '/documents?pageSize=1'
+    # Explicitly limited to 1 document from a dedicated QA-only collection. Never echo the body.
+    $uri = $uriPrefix + $db + '/documents/emprovexQaSecurityProbe?pageSize=1'
     $headers = @{ Authorization = 'Bearer ' + $token }
     try {
       $response = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $uri -Headers $headers -TimeoutSec 25 -ErrorAction Stop
