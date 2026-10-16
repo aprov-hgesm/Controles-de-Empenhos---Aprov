@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Firebase addFirebase iniciou operação no QA (2026-10-16)
+
+- **Execução real PowerShell do Fundador, QA somente:** `POST https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275:addFirebase` com `x-goog-user-project` fixado no QA e body `{}` retornou a operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`; campo `DONE=` vazio/ausente. **PASS solicitação aceita**, mas **NÃO comprova conclusão da associação FirebaseProject**. A operação pode ter sucesso, falhar ou continuar em curso; não realizar outro `addFirebase` sem conferir operação.
+- **Próximo gate read-only:** GET `https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3` com token de usuário local e `x-goog-user-project` do QA. `done=true` + `response.projectId=emprovex-qa-r1-261015-6275` comprova sucesso; `done=true` + `error` comprova falha; sem `done` indica espera. Como a API pode excluir operações após conclusão, GET 404 na operação deve ser seguido de GET no próprio FirebaseProject, sem repetir POST. Não exibir token/respostas integrais. Fonte: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/addFirebase .
+- **Progresso estável:** etapa 3 Segurança QA **62,5%**, migração geral **52,5%**. Cloud Run NO-GO; nenhuma mudança em Vercel, GCP produção, DNS, dados reais ou `main`.
+
+---
+
 ## CLOUD-RUN-R1 — Firebase GET passou de 403 a 404 após fixar consumidor QA (2026-10-16)
 
 - **Evidência local PowerShell:** usando token OAuth da conta `gcloud`, GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com cabeçalho `x-goog-user-project: emprovex-qa-r1-261015-6275` retornou `HTTP=404; STATUS=NOT_FOUND; REASON=NAO_DISPONIVEL; CONSUMER=NAO_DISPONIVEL`. Antes desse header o mesmo GET retornara `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A mudança comprova que o cabeçalho **resolveu o bloqueio de projeto consumidor**; 404 é consistente com `FirebaseProject` não adicionado, dado que projeto GCP QA, sua API e ambos Firestores existem. Não registrar Firebase como criado.
