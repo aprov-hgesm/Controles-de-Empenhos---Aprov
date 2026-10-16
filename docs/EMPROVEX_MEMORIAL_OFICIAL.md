@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Web App Firebase QA REAL cadastrado e confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** listagem completa `GET /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com quota QA: `PAGINAS_CONSULTADAS=1`, `WEB_APPS_VALIDOS=0`, `ENTRADAS_INCOMPLETAS=0`, `RESULTADO=NENHUM_WEB_APP_EXISTENTE`. Isso resolveu a contagem ambígua anterior e autorizou somente um cadastro, já consentido.
+- **Criação certificada:** `POST /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com `displayName=EMPROVEX QA R1 Web`; resposta `CREATE_REQUEST=ACCEPTED`, operação `operations/workflows/ZDg3MzczNjMtN2M1Ni00MjA4LTliMWMtOWI4ODM5ZjhhNzc0`, consulta concluída `RESULTADO=WEB_APP_QA_CRIADO`. `APP_NAME=projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b`; `APP_ID=1:953294034210:web:0a4c91daa63d025ff4417b`; `PROJECT_ID=emprovex-qa-r1-261015-6275`; nome exibido `EMPROVEX QA R1 Web`. **Não realizar novo POST.**
+- **Limites:** existência do Web App **PASS**, mas `projects.webApps.getConfig` ainda **não consultado/certificado**, Firebase Authentication/provedores e Rules QA **não certificados**; nenhum build Docker usando config real, nenhum push ou deploy Cloud Run. W8 #324 três CIs PASS somente com configuração sintética. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece.
+- **Próximo único passo:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b/config` com `x-goog-user-project` do QA; conferir `projectId`, `appId`, `authDomain`, `apiKey` (sem imprimir chave), `messagingSenderId` e `storageBucket`. Se o bucket não vier provisionado, **não presumir criação ou disponibilidade**; tratar como dependência de build. Após GET, montar somente configuração W8 allowlist + bancos `qa-core`/`qa-warehouse`; inspecionar contratos Auth existentes antes de habilitar provedores.
+- **Produção intocada** conforme escopo declarado pelo Fundador: `emprovex.com.br`/Vercel/DNS/`main`/Firestore produtivo inalterados por estas operações. **NO-GO** de Cloud Run e cutover.
+- **Progresso conservador sem novo critério de ponderação:** etapa 3 **68,75%**, etapa 4 **10%**, migração geral **55,75%** até certificação dos gates seguintes.
+
+---
+
 ## CLOUD-RUN-R1 — HANDOFF OFICIAL DE CONVERSA (2026-10-16)
 
 **Pedido do Fundador:** continuar CLOUD-RUN-R1 em novo chat devido ao limite de duração. Objetivo imediato: identificar/criar um Web App Firebase QA real, configurar Auth QA e preparar Docker build QA com configuração real. O último input PowerShell foi apenas um comando INCOMPLETO; não há prova de criação de Web App ou alteração de Authentication.
