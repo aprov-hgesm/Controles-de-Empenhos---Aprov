@@ -1,5 +1,32 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Pausa solicitada pelo Fundador; Cloud Build QA ACEITO, conclusão pendente (2026-10-16)
+
+**DIRETRIZ OPERACIONAL:** Fundador solicitou encerrar temporariamente a migração para priorizar outros ajustes no EMPROVEX. Não iniciar novos builds, publicar/deployar por iniciativa própria, alterar IAM/Rules, desligar interlock, alterar DNS ou promover à produção até nova solicitação explícita. O build já submetido ao Cloud Build é **assíncrono** e pode concluir mesmo durante a pausa; não houve pedido de cancelamento.
+
+**ONDE ESTAMOS — resumo fiel da última prova real:**
+- Projeto **exclusivamente QA** `emprovex-qa-r1-261015-6275` (número `953294034210`), dois bancos QA nomeados `qa-core` e `qa-warehouse`, Firebase Web App QA cadastrado e config pública local validada. Auth QA Google + Email/Senha configurados. Vercel `emprovex.com.br` e dados de produção **não migrados**.
+- **W8 SHA** `a7776de812d67ae11ab5cf9d330077bd7b705406`, PR #324 DRAFT. GitHub Actions run [#38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511), job `117191291837`, **success** para build Docker com config Firebase QA real, scanner **2.349** arquivos textuais (`QA_ARTIFACT_PASS`), teste standalone sintético HTTP 200. Imagem deste job somente no runner efêmero; **não era publicação em Registry**.
+- **Artifact Registry QA real** `emprovex-qa-docker` criado em `us-east1` formato Docker, privado, criptografia gerenciada Google; API `artifactregistry.googleapis.com` habilitada; criação e consulta `ARTIFACT_REGISTRY_QA_PRONTO` comprovaram registro inicialmente vazio.
+- Cloud Build API `cloudbuild.googleapis.com` habilitada; primeiro `gcloud builds submit` criou upload de **923 arquivos/9,1 MiB** para `gs://emprovex-qa-r1-261015-6275_cloudbuild/source/1792184855.401925-aeff20deb7ba4205bd0997f11ae70c4f.tgz`, mas **recebeu `PERMISSION_DENIED`** ao submeter.
+- Diagnóstico IAM QA **somente leitura**: usuário operador tinha `cloudbuild.builds.create=PASS`, `cloudbuild.builds.get=PASS`, `serviceusage.services.use=PASS`; `iam.serviceAccounts.actAs=PASS` na conta de execução padrão **`953294034210-compute@developer.gserviceaccount.com`**. Política explícita do projeto QA: `service-953294034210@gcp-sa-cloudbuild.iam.gserviceaccount.com` com `roles/cloudbuild.serviceAgent` **sem condição**; conta Compute executora com **`roles/editor` sem condição** — grant existente, não foi concedido nesta investigação; registrar para revisão de menor privilégio após retomada. A causa exata do primeiro 403 NÃO foi comprovada.
+- **ÚLTIMO RESULTADO, via Fundador:** submissão direta `POST https://cloudbuild.googleapis.com/v1/projects/emprovex-qa-r1-261015-6275/locations/us-east1/builds`, usando source já enviado, mesmo W8, configuração Firebase QA pública real e SA de build Compute. Console: `SOURCE_QA=PASS`, `PROJETO_QA=PASS`, `SERVICE_ACCOUNT=CONFIRMADA`, `SUBMETENDO_BUILD_API`, `RESULTADO=BUILD_ACEITO`, `DEPLOY_CLOUD_RUN=NAO_EXECUTADO`. **Operation**: `operations/build/emprovex-qa-r1-261015-6275/ZGYwZmFjMTgtMjIxMy00NzdiLWExMDgtNWZjOWJmOGY2MTIz`; destino **`us-east1-docker.pkg.dev/emprovex-qa-r1-261015-6275/emprovex-qa-docker/emprovex:w8-a7776de8-20261016211858`**.
+- **CLASSIFICAÇÃO:** `BUILD_ACEITO` comprova **criação/aceite da operação assíncrona**, não conclusão `SUCCESS`, imagem publicada nem digest validado. **Status final do build e imagem no Artifact Registry: PENDENTE DE CONSULTA NA RETOMADA.** Build pode continuar por conta própria. **Cloud Run QA: NENHUM DEPLOY EXECUTADO/COMPROVADO.**
+- **INTERLOCK PERMANECE:** `instrumentation.ts` rejeita inicialização sob `K_SERVICE` com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. R01/R02/R04 e isolamento efetivo entre projetos/identidades/Rules ainda não certificados sob runtime real; não remover interlock apenas para forçar deploy. O Fundador deseja menos burocracia, então restringir futuros testes ao mínimo necessário de isolamento e operações, sem repetir gates PASS.
+- **Produção:** nenhum cutover, deploy produtivo, migração de Firestore, modificação DNS, merge em `main`, nem substituição da Vercel foi executado neste programa.
+
+**O QUE FAZER A SEGUIR (SOMENTE QUANDO O FUNDADOR RETOMAR):**
+1. Coordenador + Fundador: conferir de modo somente leitura o status final da operation de Cloud Build e confirmar existência/digest da imagem no Artifact Registry. Se falhou, ler erro específico e corrigir o mínimo; se sucesso, não repetir build.
+2. Coordenador: retomar PRs DRAFT (#317 coordenação / #324 W8), reconfirmar SHA exato e preparar identidade de execução do Cloud Run QA com acesso estritamente QA; registrar grants reais e revisar `roles/editor` da conta de build quando conveniente.
+3. Coordenador/QA: concluir exclusivamente os testes negativos mínimos necessários de IAM/Rules/autorização de conta gerenciada, R01/R02/R04; somente depois liberar interlock por mudança revisada e obter confirmação do Fundador para a execução privada.
+4. Fundador/Coordenador: deploy **somente privado** em QA (`--no-allow-unauthenticated`, conta de runtime QA, projeto e região QA), validar inicialização/HTTP; não alterar DNS, produção ou bancos reais. Cutover separado e não autorizado.
+
+**QUEM ESTÁ FAZENDO:** migração em **PAUSA por decisão do Fundador**; nenhuma execução técnica adicional delegada nesta etapa. O coordenador apenas atualiza memorial. Ajustes funcionais do EMPROVEX têm prioridade.
+
+**PROGRESSO OFICIAL CONGELADO na pausa:** Etapa 1 100%, Etapa 2 100%, Etapa 3 segurança QA **68,75%**, Etapa 4 build/Cloud Run QA **25%**, Etapa 5 cutover **0%**, geral **58,75%**. Não elevar por aceite da operation sem build publicado nem deploy.
+
+---
+
 ## CLOUD-RUN-R1 — Diagnóstico de IAM Cloud Build: permissões do solicitante PASS (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** `projects.testIamPermissions` no projeto QA `emprovex-qa-r1-261015-6275` (sem alteração IAM) retornou `cloudbuild.builds.create=PASS`, `cloudbuild.builds.get=PASS` e `serviceusage.services.use=PASS`, resultado `VERIFICAR_SERVICE_ACCOUNT_BUILD`. O `PERMISSION_DENIED` anterior do `gcloud builds submit` não é explicado pela ausência dessas três permissões, embora outras verificações/condições do IAM ainda possam causar erro.
