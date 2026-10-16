@@ -1,6 +1,7 @@
 import { importPKCS8, SignJWT } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunManagedAccessToken } from './cloudRunManagedToken.mjs';
 import type { FirebaseGlobalUsageObservation } from './googleCloudMonitoring';
 
 const FIREBASE_ADMIN_SERVICE_ACCOUNT_ENV = 'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON';
@@ -60,6 +61,9 @@ function credentials(): FirebaseAdminCredentials | null {
 }
 
 async function accessToken(): Promise<string | null> {
+  if (process.env.K_SERVICE || process.env.EMPROVEX_RUNTIME_TARGET) {
+    return getCloudRunManagedAccessToken();
+  }
   const serviceAccount = credentials();
   if (!serviceAccount) return null;
 
