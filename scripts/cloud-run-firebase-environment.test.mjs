@@ -92,6 +92,13 @@ test('staging refuses absent/incomplete configuration and emulator mixing', () =
     /FIREBASE_ENV_STAGING_EMULATOR_FORBIDDEN/);
 });
 
+test('staging accepts explicit Warehouse override only when exactly matching', () => {
+  const out = resolveFirebaseEnvironment(baseline, staging({
+    legacyWarehouseDatabaseId: 'qa-warehouse',
+  }));
+  assert.equal(out.warehouseDatabaseId, 'qa-warehouse');
+});
+
 test('staging refuses legacy database override disagreement', () => {
   assert.throws(() => resolveFirebaseEnvironment(baseline, staging({
     legacyWarehouseDatabaseId: 'foreign-warehouse',
