@@ -83,7 +83,7 @@ const nextConfig: NextConfig = {
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(
           /firebase-applet-config[.]json$/,
-          resource => {
+          (resource: {request: string}) => {
             resource.request = resolve(process.cwd(), 'lib/firebaseCloudRunRedactedBaseline.json');
           }
         )
