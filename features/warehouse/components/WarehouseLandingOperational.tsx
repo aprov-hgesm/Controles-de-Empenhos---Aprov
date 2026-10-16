@@ -1077,7 +1077,7 @@ function PendingPalletTooltip({
   const tooltipWidth = 250;
   const tooltipHeight = 68 + previewRows.length * 17 + (group.rows.length > 3 ? 16 : 0);
   const tooltipX = Math.min(SVG_WIDTH - tooltipWidth - 18, anchor.x + 14);
-  const tooltipY = Math.max(20, anchor.y - 18);
+  const tooltipY = Math.min(SVG_HEIGHT - tooltipHeight - 16, Math.max(20, anchor.y - 18));
 
   return (
     <g
@@ -1328,6 +1328,15 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     { length: palletSlotCount },
     (_, index) => visiblePendingGroups[index] || null
   );
+
+  // SVG painter's order controls occlusion: render the active NF tooltip once,
+  // in the final overlay layer, after all pallets, depot meshes and labels.
+  const hoveredPendingIndex = !editMode
+    ? palletGroups.findIndex((group) => group?.key === hoveredPendingKey)
+    : -1;
+  const hoveredPendingGroup = hoveredPendingIndex >= 0
+    ? palletGroups[hoveredPendingIndex]
+    : null;
 
   const selectedPendingGroup = useMemo(
     () => selectedPendingKey
@@ -1711,13 +1720,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
                     setSelectedPendingKey(pendingGroup.key);
                   }}
                 />
-                {group && hoveredPendingKey === group.key && !editMode && (
-                  <PendingPalletTooltip
-                    x={px}
-                    y={py}
-                    group={group}
-                  />
-                )}
               </g>
             );
           })}
@@ -1784,6 +1786,17 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               : 'Clique em um depósito para entrar · passe sobre um palete de NF e clique para alocar'}
           </text>
         </g>
+
+        {/* Render last: labels and other pallet objects must never cover NF details. */}
+        {hoveredPendingGroup && hoveredPendingIndex >= 0 && (
+          <g data-visual-role="invoice-tooltip-overlay" pointerEvents="none">
+            <PendingPalletTooltip
+              x={PALLET_YARD_X + 18 + (hoveredPendingIndex % 2) * 94}
+              y={PALLET_YARD_Y + 40 + Math.floor(hoveredPendingIndex / 2) * 92}
+              group={hoveredPendingGroup}
+            />
+          </g>
+        )}
       </svg>
 
       {selectedPendingGroup && (
