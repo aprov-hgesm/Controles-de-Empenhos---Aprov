@@ -40,6 +40,12 @@ O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação
 - Cobertura W6: F05 alocação real/persistência/replay; F06 transferência real via SDK `runTransaction`, saldo total preservado e replay; F09 **consumo imediato** persistido, replay; negações sintéticas e bloqueio de tráfego para origem/projeto produtivo.
 - Defeito F05→F06 reproduzido e corrigido **na branch W6**, sem promover a produção: normalização de lote na leitura do `lib/warehouse/locationRepository.ts`, preservando validação estrita.
 
+### W7 — IAM APIs habilitadas no QA (2026-10-16)
+
+- **Evidência da execução local do Fundador:** `gcloud.cmd services enable iam.googleapis.com iamcredentials.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation ... finished successfully`. As APIs **IAM** e **IAM Service Account Credentials** foram habilitadas somente no projeto QA; a operação não criou chaves JSON nem concedeu papéis IAM.
+- **Próximo gate read-only:** consultar a política da conta de serviço `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` por `gcloud.cmd iam service-accounts get-iam-policy ... --project=emprovex-qa-r1-261015-6275` antes de qualquer concessão `roles/iam.serviceAccountTokenCreator`, sempre restrita à própria identidade e não ao projeto inteiro. Não exibir tokens no chat. Depois testar ADC positivo e 403 negativo em QA/produção mediante plano de teste seguro.
+- **Progresso constante:** etapa 3 — 50%; migração geral — 50%. Cloud Run continua NO-GO, produção Vercel e dados produtivos preservados.
+
 ## 4. Pendências obrigatórias — não declarar PASS antecipado
 
 1. **IAM Core e Warehouse condicional registrado.** Auditar política de forma independente e executar testes **reais** de leitura autorizada nos dois bancos QA e negação **HTTP 403** no projeto produtivo usando a identidade runtime QA.
