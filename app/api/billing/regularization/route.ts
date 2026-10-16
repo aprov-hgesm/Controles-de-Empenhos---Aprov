@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import firebaseConfig from '../../../../firebase-applet-config.json';
+import firebaseConfig from '../../../../lib/firebaseRuntimeConfig';
 import { EMPROVEX_FULL_PLAN_PRICE_CENTS } from '../../../../lib/billing';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
 
