@@ -4,6 +4,16 @@
 **Estado:** QA INFRA PARCIALMENTE IMPLEMENTADO / SEM DEPLOY / MIGRAÇÃO NO-GO  
 **Fonte operacional:** saídas do PowerShell enviadas pelo Fundador; evidências e PRs GitHub listados abaixo.
 
+## Atualização W7 — acesso IAM positivo certificado (16/10/2026)
+
+O teste real executado pelo Fundador via `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` retornou **PASS token temporário** e **HTTP 200** com a service account `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` tanto no banco `qa-core` quanto no `qa-warehouse`, projeto `emprovex-qa-r1-261015-6275`. Foram executadas somente leituras de 1 item máximo em `emprovexQaSecurityProbe` por banco, sem exibição do token e sem gravações. **Autorização IAM positiva: PASS funcional nos dois bancos.**
+
+O teste **não incluiu acesso negativo** contra outro banco/projeto, Firebase Auth, cliente sob Security Rules ou inspeção Next bundle. As Rules `deny-all` W7 existem somente em PR DRAFT, não foram publicadas. Para teste negativo HTTP 403 em produção, será necessária autorização expressa e restrita; `404` de banco inexistente não comprova IAM negado. Revisar viabilidade de teste QA com política simulada sem criar terceiro banco e registrar limites; priorizar configuração Firebase Auth/Rules QA e CI staging. Revogar binding temporário Token Creator na própria conta de serviço após terminar testes de impersonação.
+
+**Andamento recalculado por marcos iguais:** etapa 3 Segurança/Isolamento `62,5%` (antes `50%`); migração geral `52,5%` (antes `50%`). Sem deploy, sem merge, sem alteração no GCP produtivo. Estado **NO-GO**.
+
+**Nota de arquitetura:** a documentação oficial exige **adicionar Firebase ao projeto GCP existente** antes do uso pleno de Firebase Authentication; habilitar `firebaserules.googleapis.com` não equivale a registrar um FirebaseProject. A operação `addFirebase` é persistente e habilita múltiplas APIs: pesquisar/inspecionar presença antes de solicitar execução no projeto QA, e obter confirmação do Fundador para essa ativação. Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project e https://firebase.google.com/docs/rules/manage-deploy .
+
 ## 1. Resultado executivo
 
 O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação efetiva de infraestrutura GCP de homologação separada. A produção Vercel de `emprovex.com.br` não foi migrada nem alterada pelos comandos desta etapa. **Não houve deploy Cloud Run e o interlock `K_SERVICE` no código W4 continua bloqueando inicialização em Cloud Run.** Testes sintéticos PASS não equivalem à certificação de acesso IAM/Firebase/Rules em QA real.
