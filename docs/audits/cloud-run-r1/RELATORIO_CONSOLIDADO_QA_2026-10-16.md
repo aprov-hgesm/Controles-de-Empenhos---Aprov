@@ -14,6 +14,14 @@ O teste **não incluiu acesso negativo** contra outro banco/projeto, Firebase Au
 
 **Nota de arquitetura:** a documentação oficial exige **adicionar Firebase ao projeto GCP existente** antes do uso pleno de Firebase Authentication; habilitar `firebaserules.googleapis.com` não equivale a registrar um FirebaseProject. A operação `addFirebase` é persistente e habilita múltiplas APIs: pesquisar/inspecionar presença antes de solicitar execução no projeto QA, e obter confirmação do Fundador para essa ativação. Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project e https://firebase.google.com/docs/rules/manage-deploy .
 
+## Checkpoint W7 — FirebaseProject QA registrado (16/10/2026)
+
+- **Registro Firebase concluído, com prova real:** a resposta à verificação read-only do resultado da operação `projects.addFirebase` foi `FIREBASE=SUCCESS; PROJECT=emprovex-qa-r1-261015-6275`. O projeto QA GCP existente foi registrado como **FirebaseProject**. Não repetir o POST.
+- **Leituras Firestore IAM:** QA `qa-core` e `qa-warehouse` retornaram HTTP 200 sob impersonação real da runtime SA, sem gravação. Segurança negativa ainda pendente.
+- **Ainda pendentes:** Identity Toolkit/Auth config e provedores, cadastro de app web QA, Rules por database e testes negativos, build isolation bundle staging, deploy Cloud Run QA (W4 interlock mantido), produção NO-GO.
+- **Próximo gate read-only:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` com header de quota `x-goog-user-project` fixado no QA; emitir apenas campos de autenticação não sensíveis, não imprimir `client.apiKey` e nunca compartilhar token.
+- **Percentuais por marcos:** etapa 3 **68,75%** (antes 62,5%); migração total **53,75%** (antes 52,5%) considerando 5 etapas com peso igual. Sem alegação de Auth/Rules homologados.
+
 ## 1. Resultado executivo
 
 O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação efetiva de infraestrutura GCP de homologação separada. A produção Vercel de `emprovex.com.br` não foi migrada nem alterada pelos comandos desta etapa. **Não houve deploy Cloud Run e o interlock `K_SERVICE` no código W4 continua bloqueando inicialização em Cloud Run.** Testes sintéticos PASS não equivalem à certificação de acesso IAM/Firebase/Rules em QA real.
