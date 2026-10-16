@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Auth QA Google + password habilitados e revalidados (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou recurso canônico `CONFIG_NAME=projects/953294034210/config` (número do mesmo projeto QA, e não ID textual). Primeiro PATCH foi bloqueado **antes de escrever**, porque o guard anterior aceitava apenas `projects/{projectId}/config`. Segunda execução aceitou expressamente ID textual ou número conhecido com validação de domínio QA e provedor Google.
+- **Alteração QA certificada:** PATCH com updateMask estrito `signIn.email.enabled,signIn.email.passwordRequired`, sem modificar outros campos. Resposta `EMAIL_PASSWORD=ATUALIZADO` e GETs independentes pós-operação: `EMAIL_ENABLED=True`, `PASSWORD_REQUIRED=True`, `GOOGLE_ENABLED=True`, `ANONYMOUS_ENABLED=False`, `RESULTADO=AUTH_QA_PROVEDORES_CONFIGURADOS`.
+- **Correspondência com contratos de código:** `lib/platformIdentity.ts` declara fundador `google.com`, setor `password`. O gate de configuração dos provedores QA **PASS**. **Não confundir** com login E2E/identidade de teste realmente autenticada, Rules QA publicadas, negações de IAM ou runtime certificado.
+- **Próximo passo estritamente local, sem deploy:** build Docker QA com `Dockerfile.cloud-run.qa` a partir do commit certificado W8 `a7776de812d67ae11ab5cf9d330077bd7b705406`, recebendo configuração pública REAL do arquivo local do Fundador `C:\Users\marco\emprovex-qa-r1-firebase-web-config.json` via variável de ambiente/argumento de build. Antes, verificar IDs de projeto/app/bancos e Docker Engine; usar worktree separado sem mudar branch de trabalho, sem publicar imagem, sem enviar apiKey/config ao GitHub. W8 scanner e isolamento de fonte continuam obrigatórios dentro do build.
+- **Segurança:** `main`, Vercel, DNS, Firebase/Firestore produtivos intactos pelos comandos QA. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece; publicação de imagem, Cloud Run privado, Rules e migração produtiva continuam **NO-GO** sem gates e aprovação específica.
+- **Progresso preservado por falta de revisão da matriz granular de pontuação:** etapa 3 **68,75%**, etapa 4 **10%**, geral **55,75%**. Este checkpoint fornece uma evidência positiva de Auth administrativa para futura reavaliação; não presumir autenticação real.
+
+---
+
 ## CLOUD-RUN-R1 — Authentication QA inspecionado e contrato de provedores confirmado (2026-10-16)
 
 - **Evidência PowerShell do Fundador (somente leitura):** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou `AUTH_CONFIG_HTTP=200`, `AUTH_CONFIG=EXISTENTE`, `EMAIL_ENABLED=False`, `ANONYMOUS_ENABLED=False`, `QA_DOMAIN_AUTHORIZED=True`; `GET .../defaultSupportedIdpConfigs/google.com` retornou `GOOGLE_PROVIDER_HTTP=200` e `GOOGLE_ENABLED=True`; `RESULTADO=AUTH_INSPECIONADO`.
