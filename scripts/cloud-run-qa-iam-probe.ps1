@@ -33,41 +33,7 @@ try {
     exit 2
   }
   $token = (@($raw) | ForEach-Object { ([string]$_).Trim() } |
-    Where-Object { $_ -match '^[A-Za-z0-9._~+/-]{40,}={0,2}
-  Write-Output 'PASS: Token temporario obtido (conteudo nao exibido).'
-
-  $uriPrefix = 'https://firestore.googleapis.com/v1/projects/' + $qa + '/databases/'
-  foreach ($db in @('qa-core', 'qa-warehouse')) {
-    # Explicitly limited to 1 document from a dedicated QA-only collection. Never echo the body.
-    $uri = $uriPrefix + $db + '/documents/emprovexQaSecurityProbe?pageSize=1'
-    $headers = @{ Authorization = 'Bearer ' + $token }
-    try {
-      $response = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $uri -Headers $headers -TimeoutSec 25 -ErrorAction Stop
-      if ([int]$response.StatusCode -ne 200) { throw ('HTTP inesperado: ' + [int]$response.StatusCode) }
-      Write-Output ('PASS: ' + $db + ' HTTP 200 para identidade runtime QA.')
-    } catch {
-      $status = 0
-      if ($_.Exception.Response) {
-        try { $status = [int]$_.Exception.Response.StatusCode } catch {}
-      }
-      if ($status -eq 403) {
-        Write-Output ('FAIL: ' + $db + ' retornou HTTP 403; IAM condicional pode nao estar autorizado efetivamente.')
-      } else {
-        Write-Output ('FAIL: ' + $db + ' acesso nao certificado; HTTP=' + $status)
-      }
-      exit 1
-    }
-  }
-  Write-Output 'PASS PARCIAL: Duas leituras reais QA autorizadas, sem gravacoes.'
-  Write-Output 'PENDENTE: Testes negativos independentes, Rules/Auth QA e verificacao do bundle.'
-} catch {
-  Write-Output 'FAIL: falha controlada da sonda IAM, sem divulgacao de credenciais ou alteracoes.'
-  exit 1
-} finally {
-  $token = $null
-  $raw = $null
-}
- } |
+    Where-Object { $_ -match '^[A-Za-z0-9._~+/-]{40,}={0,2}$' } |
     Select-Object -Last 1)
   if (-not $token) {
     Write-Output 'PENDENTE: TOKEN_AUSENTE_OU_FORMATO_INESPERADO. Nenhum token sera exibido.'
@@ -100,7 +66,7 @@ try {
   Write-Output 'PASS PARCIAL: Duas leituras reais QA autorizadas, sem gravacoes.'
   Write-Output 'PENDENTE: Testes negativos independentes, Rules/Auth QA e verificacao do bundle.'
 } catch {
-  Write-Output 'FAIL: erro na operacao de teste temporario; nenhuma alteracao efetuada.'
+  Write-Output 'FAIL: falha controlada da sonda IAM, sem divulgacao de credenciais ou alteracoes.'
   exit 1
 } finally {
   $token = $null
