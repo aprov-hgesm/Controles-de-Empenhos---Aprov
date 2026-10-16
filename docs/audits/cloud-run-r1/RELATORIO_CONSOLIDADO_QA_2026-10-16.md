@@ -1,0 +1,67 @@
+# EMPROVEX — CLOUD-RUN-R1 — Relatório consolidado da implantação de QA
+
+**Data do checkpoint:** 2026-10-16 (Brasil)  
+**Estado:** QA INFRA PARCIALMENTE IMPLEMENTADO / SEM DEPLOY / MIGRAÇÃO NO-GO  
+**Fonte operacional:** saídas do PowerShell enviadas pelo Fundador; evidências e PRs GitHub listados abaixo.
+
+## 1. Resultado executivo
+
+O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação efetiva de infraestrutura GCP de homologação separada. A produção Vercel de `emprovex.com.br` não foi migrada nem alterada pelos comandos desta etapa. **Não houve deploy Cloud Run e o interlock `K_SERVICE` no código W4 continua bloqueando inicialização em Cloud Run.** Testes sintéticos PASS não equivalem à certificação de acesso IAM/Firebase/Rules em QA real.
+
+## 2. Infraestrutura QA — evidências reais
+
+| Item | Resultado verificado | Observações |
+|---|---|---|
+| GCP Project | `emprovex-qa-r1-261015-6275` (`953294034210`), ACTIVE | projeto independente do produtivo `gen-lang-client-0982077967` |
+| Parent | consulta `projects describe --format=yaml(projectId,parent)` retornou só projectId | compatível com No organization; não prova ausência de todos os outros controles |
+| Billing | `billingEnabled: true` | conta existente de exibição `Pagamento do Firebase`, moeda BRL; a vinculação foi feita somente no QA |
+| Budget QA | `EMPROVEX QA R1 - Mensal`, BRL 20, MONTH, projeto `953294034210` | thresholds CURRENT_SPEND 25/50/75/100%; INCLUDE_ALL_CREDITS; é alerta, **não teto de cobrança** |
+| APIs | `billingbudgets.googleapis.com` e `firestore.googleapis.com` habilitadas no QA | não há evidência de Cloud Run/Artifact Registry habilitados |
+| Core | `qa-core`, us-east1, Firestore Native Standard | `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED`, `freeTier: true` |
+| Warehouse | `qa-warehouse`, us-east1, Firestore Native Standard | `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED`, `freeTier: false` |
+| Runtime identity | `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` | conta própria criada, sem chave JSON emitida por esse comando; não vinculada a serviço Cloud Run |
+| IAM QA inicial | founder `roles/owner` + Firebase rules system agent + Firestore service agent | sem principals públicos ou produtivos na policy explícita apresentada |
+| IAM `qa-core` | `roles/datastore.user` **condicional** a `resource.name=='projects/emprovex-qa-r1-261015-6275/databases/qa-core'` | update policy v3 confirmado; **acesso positivo/negativo ainda não testado** |
+| IAM `qa-warehouse` | **PENDENTE DE CONFIRMAÇÃO** | comando preparado, mas nenhuma saída PowerShell recebida até este checkpoint |
+
+**Correção da estimativa de custo:** a resposta GCP para `qa-core` comprova `freeTier: true` — o **primeiro banco criado** recebeu a franquia gratuita do projeto, embora tenha ID nomeado. `qa-warehouse` mostra `freeTier: false` e gera cobranças conforme uso. O orçamento BRL 20 não desativa recursos automaticamente. Evitar gerar leituras ou testes volumosos não autorizados.
+
+## 3. Desenvolvimento técnico e CI
+
+- Auditorias independentes W1 (PR #316), W2 (PR #318), W3 (PR #319) produziram riscos e gates de migração.
+- Coordenação e memorial: PR #317 DRAFT, branch `docs/cloud-run-r1-coordination-workers-20261015`. Produção e `main` não devem ser alteradas.
+- W4 PR #320 DRAFT: validação fail-closed de isolamento; preparação de token gerenciado/ADC; interlock de startup `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`; sem Dockerfile/deploy.
+- W5 PR #321 DRAFT, base W4: seleção de configuração Firebase cliente/servidor e nomes de bancos QA, build marker e verificações de ambiente. Application CI #38836001393 PASS, Core Protection #38836001337 PASS.
+- W6 PR #322 DRAFT, base W5: revisão independente, workflow Firebase Emulator #38837933261 com **9/9 PASS**, Application CI #38837933621 PASS e Core Protection #38837933233 PASS, código certificado em `0bf71b5ec136685fdd56c2629b75d03f75655de4`.
+- Cobertura W6: F05 alocação real/persistência/replay; F06 transferência real via SDK `runTransaction`, saldo total preservado e replay; F09 **consumo imediato** persistido, replay; negações sintéticas e bloqueio de tráfego para origem/projeto produtivo.
+- Defeito F05→F06 reproduzido e corrigido **na branch W6**, sem promover a produção: normalização de lote na leitura do `lib/warehouse/locationRepository.ts`, preservando validação estrita.
+
+## 4. Pendências obrigatórias — não declarar PASS antecipado
+
+1. Verificar IAM do Warehouse: registrar concessão `roles/datastore.user` com condição exclusiva de `qa-warehouse`; auditar bindings resultantes e testes **reais** de leitura autorizada em QA e retorno HTTP 403 no projeto produtivo usando identidade runtime QA.
+2. Configurar/inspecionar Firebase Security Rules por banco; regras IAM de servidor/Admin SDK **não** são substituídas pelas Rules de cliente. Auditoria Auth/App Check, Google login/OAuth e usuários sintéticos **sem reutilizar Auth de produção**.
+3. Provar build/staging Next e inspecionar bundle para imports/referências do Firebase produtivo; corrigir antes de liberar interlock de startup W4.
+4. Cobrir F09 **saída física multi-linha e falha intermediária** (distinta de consumo imediato), concorrência F06 e validação funcional via identidade remota.
+5. Preparar WIF de deploy no GitHub com identidade separada, permissões restritas ao QA, sem service account JSON e sem acessos de produção.
+6. Somente após autorização e gates: Artifact Registry/Cloud Run QA privado, min instances 0, restrições de escala, logs e controle de custos; nunca `emprovex.com.br` durante QA.
+7. Plano de restore isolado R03, ensaio e rollback. Nenhum restore real executado até esta data.
+8. Revisar custos reais periódicos; billing budget é mecanismo de **notificação**, não gasto máximo garantido.
+
+## 5. Governança e próximas ações
+
+**ONDE ESTAMOS:** projeto QA, faturamento, orçamento, dois bancos e runtime SA criados; IAM Core condicional atualizado, Warehouse IAM e certificação pendentes.  
+**O QUE ESTAMOS FAZENDO:** completar autorização mínima e isolamento QA, ainda sem serviço Cloud Run.  
+**QUEM ESTÁ FAZENDO:** fundador executa comandos administrativos no PowerShell; coordenação audita saídas/estado e atualiza memorial/PRs.  
+**O QUE FAZER A SEGUIR:** receber o resultado do comando de concessão condicional do `qa-warehouse`; verificar os dois bindings com política IAM read-only; executar provas negativas e positivas; só então seguir para Firebase/Auth e build.  
+**QUEM O FARÁ:** fundador no projeto QA e coordenador/worker de QA independente; alterações adicionais em serviços devem ser claramente delimitadas antes de executar.
+
+**Decisão:** CLOUD-RUN-R1 **NO-GO** para migração/deploy; nenhum merge automático; projeto produtivo `gen-lang-client-0982077967`, Vercel, DNS, dados reais e `main` preservados.
+
+## 6. Links oficiais
+
+- [PR #317 — Memorial/coordenação](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/317)
+- [PR #320 — W4 isolamento e ADC](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/320)
+- [PR #321 — W5 Firebase](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/321)
+- [PR #322 — W6 QA independente](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/322)
+- [W6 revisão independente](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/test/cloud-run-r1-w6-fastpath-independent/docs/audits/cloud-run-r1/worker-6/REVISAO_INDEPENDENTE.md)
+- [W6 plano IAM/ADC](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/test/cloud-run-r1-w6-fastpath-independent/docs/audits/cloud-run-r1/worker-6/PLANO_HOMOLOGACAO_ADC_IAM.md)
