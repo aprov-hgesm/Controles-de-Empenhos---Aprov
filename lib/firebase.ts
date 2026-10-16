@@ -2,22 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseConfig from './firebaseRuntimeConfig';
 
 const useE2eEmulators = process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1';
-const e2eProjectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim();
 const e2eWarehouseFirestorePort = Number(
   process.env.NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT || '8080'
 );
-const effectiveFirebaseConfig = useE2eEmulators && e2eProjectId
-  ? {
-      ...firebaseConfig,
-      projectId: e2eProjectId,
-      authDomain: `${e2eProjectId}.firebaseapp.com`,
-    }
-  : firebaseConfig;
-
-const app = initializeApp(effectiveFirebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 const appCheckSiteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY?.trim() || '';
 export const firebaseAppCheckConfigured = Boolean(appCheckSiteKey);
@@ -42,11 +33,9 @@ if (
 
 export const db = useE2eEmulators
   ? getFirestore(app)
-  : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: production uses the named Firestore database */
+  : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* Production/staging use their named Core database. */
 
-export const WAREHOUSE_FIRESTORE_DATABASE_ID =
-  process.env.NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID?.trim()
-  || 'emprovex-warehouse';
+export const WAREHOUSE_FIRESTORE_DATABASE_ID = firebaseConfig.warehouseDatabaseId;
 
 export const warehouseDb = getFirestore(app, WAREHOUSE_FIRESTORE_DATABASE_ID);
 export const auth = getAuth();
