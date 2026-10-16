@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 Firebase Management API habilitada no QA (2026-10-16)
+
+- **Evidência real PowerShell do Fundador:** `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation "operations/acat.p2-953294034210-0e1530db-43f7-4541-bb0b-7a14fc313804" finished successfully.`. **PASS: Firebase Management API ativada somente no projeto QA**.
+- **Não concluir prematuramente:** habilitar a API não registra `FirebaseProject`, não configura Firebase Authentication, não cria app web, não publica Security Rules nem autentica usuários. O GET anterior havia retornado 403 antes da API ser ativada; após ativação repetir `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` usando token local, sem exibir credenciais. HTTP 200 com `projectId` correto comprovaria recurso; 404/403 devem ser tratados segundo o contexto sem `addFirebase` automático.
+- **Progresso inalterado:** etapa 3 Segurança/Isolamento QA **62,5%**; migração geral **52,5%**. Vercel, GCP produtivo, Rules e `main` preservados. **CLOUD-RUN-R1 NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 Firebase Management GET 403 (2026-10-16)
 
 - **Execução read-only do Fundador:** consulta `Invoke-RestMethod -Method Get https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token de usuário via `gcloud.cmd auth print-access-token` retornou `FIREBASE_PROJECT_STATUS=403`, sem corpo detalhado. Não foi feito `projects.addFirebase`, nem ativado Firebase Auth/Rules.
