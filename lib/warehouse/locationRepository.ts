@@ -459,6 +459,16 @@ async function assertLocationCodeAvailable(
   }
 }
 
+export async function listWarehouseDepotsStrict(workspaceId: string, maxResults = 250): Promise<WarehouseDepotListItem[]> {
+  const scope = currentScope(workspaceId);
+  return loadWarehouseDepotsFromFirestore(scope.workspaceId, boundedDepotLimit(maxResults));
+}
+
+export async function listWarehouseLocationsStrict(workspaceId: string, maxResults = 500): Promise<WarehouseLocationListItem[]> {
+  const scope = currentScope(workspaceId);
+  return loadWarehouseLocationsFromFirestore(scope.workspaceId, boundedLocationLimit(maxResults));
+}
+
 export async function listWarehouseDepots(
   workspaceId: string,
   maxResults = 250
