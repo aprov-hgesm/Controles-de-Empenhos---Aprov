@@ -22,7 +22,9 @@ O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação
 | Runtime identity | `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` | conta própria criada, sem chave JSON emitida por esse comando; não vinculada a serviço Cloud Run |
 | IAM QA inicial | founder `roles/owner` + Firebase rules system agent + Firestore service agent | sem principals públicos ou produtivos na policy explícita apresentada |
 | IAM `qa-core` | `roles/datastore.user` **condicional** a `resource.name=='projects/emprovex-qa-r1-261015-6275/databases/qa-core'` | update policy v3 confirmado; **acesso positivo/negativo ainda não testado** |
-| IAM `qa-warehouse` | **PENDENTE DE CONFIRMAÇÃO** | comando preparado, mas nenhuma saída PowerShell recebida até este checkpoint |
+| IAM `qa-warehouse` | `roles/datastore.user` **condicional** a `resource.name=='projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse'` | política v3 atualizada; **acesso positivo/negativo ainda não testado** |
+
+**Evidência adicional recebida:** `gcloud projects add-iam-policy-binding` retornou `Updated IAM policy` com **dois bindings separados**, títulos `EmprovexQaCoreOnly` e `EmprovexQaWarehouseOnly`, cada um vinculado exclusivamente ao nome exato do seu banco; `etag` e `version: 3` presentes. **PASS configuração**; não confundir com PASS de acesso autenticado efetivo. O próximo marco é a prova do comportamento real da identidade. Progresso estimado da etapa de segurança: **25% → 50%**; geral por cinco etapas equivalentes: **50%**.
 
 **Correção da estimativa de custo:** a resposta GCP para `qa-core` comprova `freeTier: true` — o **primeiro banco criado** recebeu a franquia gratuita do projeto, embora tenha ID nomeado. `qa-warehouse` mostra `freeTier: false` e gera cobranças conforme uso. O orçamento BRL 20 não desativa recursos automaticamente. Evitar gerar leituras ou testes volumosos não autorizados.
 
@@ -38,7 +40,7 @@ O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação
 
 ## 4. Pendências obrigatórias — não declarar PASS antecipado
 
-1. Verificar IAM do Warehouse: registrar concessão `roles/datastore.user` com condição exclusiva de `qa-warehouse`; auditar bindings resultantes e testes **reais** de leitura autorizada em QA e retorno HTTP 403 no projeto produtivo usando identidade runtime QA.
+1. **IAM Core e Warehouse condicional registrado.** Auditar política de forma independente e executar testes **reais** de leitura autorizada nos dois bancos QA e negação **HTTP 403** no projeto produtivo usando a identidade runtime QA.
 2. Configurar/inspecionar Firebase Security Rules por banco; regras IAM de servidor/Admin SDK **não** são substituídas pelas Rules de cliente. Auditoria Auth/App Check, Google login/OAuth e usuários sintéticos **sem reutilizar Auth de produção**.
 3. Provar build/staging Next e inspecionar bundle para imports/referências do Firebase produtivo; corrigir antes de liberar interlock de startup W4.
 4. Cobrir F09 **saída física multi-linha e falha intermediária** (distinta de consumo imediato), concorrência F06 e validação funcional via identidade remota.
@@ -49,10 +51,10 @@ O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação
 
 ## 5. Governança e próximas ações
 
-**ONDE ESTAMOS:** projeto QA, faturamento, orçamento, dois bancos e runtime SA criados; IAM Core condicional atualizado, Warehouse IAM e certificação pendentes.  
-**O QUE ESTAMOS FAZENDO:** completar autorização mínima e isolamento QA, ainda sem serviço Cloud Run.  
+**ONDE ESTAMOS:** projeto QA, faturamento, orçamento, dois bancos e runtime SA criados; **IAM condicional Core e Warehouse atualizado**, certificação operacional ainda pendente. **Etapa 3: 50%; progresso geral 50%**, ambos indicadores por marcos com pesos iguais, sem estimativa de tempo.  
+**O QUE ESTAMOS FAZENDO:** certificar autorização IAM realmente efetiva e isolamento QA, ainda sem serviço Cloud Run.  
 **QUEM ESTÁ FAZENDO:** fundador executa comandos administrativos no PowerShell; coordenação audita saídas/estado e atualiza memorial/PRs.  
-**O QUE FAZER A SEGUIR:** receber o resultado do comando de concessão condicional do `qa-warehouse`; verificar os dois bindings com política IAM read-only; executar provas negativas e positivas; só então seguir para Firebase/Auth e build.  
+**O QUE FAZER A SEGUIR:** consultar/read-only os dois bindings condicionais já gravados, planejar testes efetivos positivos/negativos sem expor credenciais, avaliar Firebase/Auth Rules e build.  
 **QUEM O FARÁ:** fundador no projeto QA e coordenador/worker de QA independente; alterações adicionais em serviços devem ser claramente delimitadas antes de executar.
 
 **Decisão:** CLOUD-RUN-R1 **NO-GO** para migração/deploy; nenhum merge automático; projeto produtivo `gen-lang-client-0982077967`, Vercel, DNS, dados reais e `main` preservados.
