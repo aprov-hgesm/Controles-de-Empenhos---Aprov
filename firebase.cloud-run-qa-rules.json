@@ -1,0 +1,12 @@
+{
+  "firestore": [
+    {
+      "database": "qa-core",
+      "rules": "firestore.qa-core.rules"
+    },
+    {
+      "database": "qa-warehouse",
+      "rules": "firestore.qa-warehouse.rules"
+    }
+  ]
+}
