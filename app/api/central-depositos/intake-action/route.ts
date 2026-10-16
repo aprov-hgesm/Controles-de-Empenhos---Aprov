@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import firebaseConfig from '../../../../firebase-applet-config.json';
+import firebaseConfig from '../../../../lib/firebaseRuntimeConfig';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
 import {
