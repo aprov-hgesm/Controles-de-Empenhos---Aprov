@@ -14,6 +14,7 @@
 
 ## CLOUD-RUN-R1 — W7 lote de auditoria e Rules QA preparado (2026-10-16)
 
+- **Gate W7 offline:** GitHub Actions run [#38847873118](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873118) **completed/success**; Core Protection run [#38847873008](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873008) **completed/success**. Application CI [#38847872902](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847872902) **em execução na verificação inicial**; seu PASS ainda não pode ser afirmado. O gate W7 apenas valida Rules proposta e auditor read-only, sem Firebase/GCP real.
 - Autorização do Fundador: acelerar próximas atividades e agrupar verificações, evitando sequência de comandos administrativos redundantes.
 - **PR #323 DRAFT aberto** [W7 QA Security Batch](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323), branch `test/cloud-run-r1-w7-security-automation-20261016`, **base incremental W6 PR #322**, não `main`.
 - Entregas em branch isolada: `firestore.qa-core.rules` e `firestore.qa-warehouse.rules` em **deny-all**; `firebase.cloud-run-qa-rules.json` com IDs explicitamente `qa-core`/`qa-warehouse`; `scripts/cloud-run-qa-security-batch.test.mjs` estático; `.github/workflows/cloud-run-qa-security-batch.yml` CI leve sem secrets/serviços; `scripts/cloud-run-qa-readonly-audit.ps1` consolida checagens read-only de projeto, billing, APIs, Firestore e IAM no Windows. Handoff em `docs/audits/cloud-run-r1/worker-7/HANDOFF.md`.
