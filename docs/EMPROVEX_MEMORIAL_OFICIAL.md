@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 orçamento QA confirmado (2026-10-15)
+
+- **Saída do PowerShell enviada pelo Fundador:** habilitada a API `billingbudgets.googleapis.com` **somente** no projeto QA `emprovex-qa-r1-261015-6275`; Google Cloud retornou `Created [3f76c6ac-09dc-4105-92f9-58ec1a4b933a]`.
+- Orçamento mensal `EMPROVEX QA R1 - Mensal`, moeda `BRL`, valor **R$ 20**, filtro `projects/953294034210` (número **do projeto QA**), thresholds `CURRENT_SPEND` 25%, 50%, 75% e 100%. CreditTypesTreatment `INCLUDE_ALL_CREDITS`.
+- **Controle financeiro:** orçamento apenas de alerta, **não** é teto de cobrança nem confirma recebimento de e-mails. Conta de faturamento compartilhada com outros recursos e produção não foi alterada; script de vinculação foi destinado apenas ao QA. Não registrar identificador da conta no memorial.
+- Próxima etapa controlada: habilitar Firestore API apenas no QA (`--project=emprovex-qa-r1-261015-6275`) e criar posteriormente dois bancos Firestore Standard, modo nativo, IDs `qa-core`/`qa-warehouse`, `us-east1`; nenhuma senha/token/chave JSON. Regras restritivas no início; **os bancos nomeados não recebem free tier**, o uso será faturável. Nunca executar `gcloud config set project` para produção.
+- **Estado no momento:** API de orçamento ligada; bancos e Cloud Run QA ainda **não criados**; CLOUD-RUN-R1 NO-GO; sem deploy/DNS/produção.
+
+---
+
 ## CLOUD-RUN-R1 — W7 billing QA vinculado (2026-10-15)
 
 - **Evidência PowerShell do Fundador:** `gcloud.cmd billing projects link emprovex-qa-r1-261015-6275 --billing-account=...` retornou `billingEnabled: true` e `projectId: emprovex-qa-r1-261015-6275`. Faturamento QA agora vinculado à conta aberta **Pagamento do Firebase**, moeda **BRL** (verificada em consulta anterior); conta de faturamento existente compartilhada — sem afirmar que a produção mudou. Não repetir identificador financeiro no memorial.
