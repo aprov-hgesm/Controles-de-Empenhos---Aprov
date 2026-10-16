@@ -21,6 +21,7 @@ ENV EMPROVEX_RUNTIME_TARGET=cloud-run-staging \
 # finished output for production Firebase references. Never disable either gate.
 RUN test -n "$QA_FIREBASE_WEB_CONFIG_JSON" \
  && npm run build \
+ && node scripts/cloud-run-qa-trim-legacy-build-file.mjs \
  && node scripts/cloud-run-qa-artifact-audit.mjs
 
 FROM node:22-bookworm-slim AS runner
