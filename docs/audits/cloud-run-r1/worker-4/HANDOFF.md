@@ -38,12 +38,19 @@ Implementamos guardas locais opt-in para build Cloud Run, bloqueio de runtime Cl
 |---|---|---|
 | Consulta GitHub main e PRs | VERIFICADO | Main SHA confirmado; #286/#289 lidos sem merge |
 | Escrita somente branch isolada | VERIFICADO | Não houve merge/deploy |
-| Testes Node mock-only | NÃO EXECUTADOS | Scripts preparados, sem checkout completo acessível nesta sessão |
+| Testes Node mock-only | **PASS 26/26** | 14/14 isolamento e 12/12 ADC, Node 22.16.0, em cópias locais com Git blob SHA idêntico aos quatro arquivos da branch |
 | TypeScript, lint, Application CI, Core Protection | NÃO EXECUTADOS / A AFERIR | Não alegar PASS com build Next ignorando erros |
 | F05/F06/F09, regras e Firestore Emulator | NÃO EXECUTADOS | Testes devem usar somente identidades e fixtures sintéticas |
 | Docker build/smoke | NÃO EXECUTADO | Bloqueado até isolamento de todos os destinos |
 | GCP/Firebase/IAM/Rules/DNS/Vercel produção | NÃO TOCADOS | Nenhuma credencial real acessada |
 | Firestore de produção | ZERO chamadas pelo W4 | Apenas GitHub e preparação de arquivos |
+
+### Evidência de identidade dos quatro arquivos testados (hash de blob Git)
+- lib/cloudRunIsolation.mjs: 489ca20fc1d80ad4cd2b616d491587cb96b36db9
+- scripts/cloud-run-isolation.test.mjs: b38e319dfdce02118dc668ddf79b59462a000b54
+- lib/server/cloudRunManagedToken.mjs: b95b1b75d42e162f98e3de5f25b35f72b3324071
+- scripts/cloud-run-managed-token.test.mjs: 4a701f17b26a1c94cbbdff3a54a9986f43123103
+- Comando: node --test scripts/cloud-run-isolation.test.mjs scripts/cloud-run-managed-token.test.mjs; apenas fixtures/mock, nenhuma chamada real.
 
 ## BLOQUEADORES AINDA ABERTOS
 - R04: referências ao projeto produtivo e hardcodes de bancos ainda existem em outros módulos da main. O build guard bloqueia Cloud Run nesta condição, e instrumentation.ts impede startup mesmo por erro operacional. Não declarar isolamento certificado até unificar client SDK, Admin/REST, Auth e os dois bancos, com teste negativo e proibição IAM de acesso a produção.
@@ -52,7 +59,7 @@ Implementamos guardas locais opt-in para build Cloud Run, bloqueio de runtime Cl
 - Manter W3-R19: GET status Warehouse pode atualizar claims; não usar como smoke remoto sem análise. W3-R20: F09 multi-linha não é commit único. Cron ok:true/persisted:false não justifica alterar cron agora.
 
 ## O QUE FAZER A SEGUIR / QUEM O FARÁ
-1. Worker 4 ou Coordenador: revisar patch, rodar em checkout local isolado os testes node --test scripts/cloud-run-isolation.test.mjs scripts/cloud-run-managed-token.test.mjs, npm run typecheck e gates pertinentes; registrar saídas reais e corrigir regressões.
+1. Coordenador: revisar patch e repetir os 26 testes no checkout integral, rodar npm run typecheck e gates pertinentes; registrar saídas e corrigir regressões. Os testes unitários isolados executados pelo W4 já passaram, mas não substituem validação integrada.
 2. Coordenador técnico: em fase futura aprovada, reconciliar config e referências de todos os módulos, F05/F06/F09, autorização workspace/UID/UG e testes Emulator. Não fazer cherry-pick automático de #286/#289.
 3. Fundador/administrador: somente após nova autorização criar projeto GCP/Firebase exclusivamente de teste, dois bancos isolados, identidade gerenciada e IAM mínimo; comprovar ausência de acesso ao projeto produtivo com evidências sanitizadas, sem compartilhar segredos.
 4. Coordenador/QA: somente depois validar Docker local, CI, homologação remota isolada, Scheduler/OIDC, domínio e rollback, cada etapa com autorização específica. Não promover a produção agora.
