@@ -22,6 +22,14 @@ O teste **não incluiu acesso negativo** contra outro banco/projeto, Firebase Au
 - **Próximo gate read-only:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` com header de quota `x-goog-user-project` fixado no QA; emitir apenas campos de autenticação não sensíveis, não imprimir `client.apiKey` e nunca compartilhar token.
 - **Percentuais por marcos:** etapa 3 **68,75%** (antes 62,5%); migração total **53,75%** (antes 52,5%) considerando 5 etapas com peso igual. Sem alegação de Auth/Rules homologados.
 
+## Atualização W8 — build-first offline QA triple CI PASS
+
+- **PR [#324 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324)**, HEAD `a7776de812d67ae11ab5cf9d330077bd7b705406`, dependente do W7 #323: W8 [#38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511) **SUCCESS**, Application CI [#38855626450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626450) **SUCCESS**, Core Protection [#38855626520](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626520) **SUCCESS**.
+- Next staging com Web App **sintético** compilou 42 páginas; scanner de 2.349 artefatos textuais não encontrou baseline produtivo; Node standalone QA subiu localmente HTTP 200 após o pacote remover uma cópia rastreada do JSON legado, sem alterar fonte Vercel. A alteração no webpack só existe no alvo QA; build legado/produção verificou PASS via Application CI.
+- Não foi emitida imagem Docker com Web App QA real nem publicado Cloud Run. Interlock R01/R02/R04 intacto; nenhum merge, WIF, mudança IAM, DNS, Vercel ou dados produtivos. Auth/Rules do QA e isolamento negativo pendentes. **CLOUD-RUN-R1 NO-GO de deploy e cutover**.
+- Indicadores por 5 etapas igualmente ponderadas: **Etapa 3 (Segurança/Isolamento QA) 68,75%**; **Etapa 4 (Preparação + deploy/testes QA) 10%**, somente no subgate build/artifact/startup local; **geral 55,75%**, +2 p.p. frente ao total anterior 53,75%. Esse avanço **não** implica Cloud Run já acessível, nem Firebase Web App real cadastrado.
+- Próximo gate: criar Web App exclusivo no Firebase QA para configuração pública real, certificar Auth Google/E-mail e Rules dos dois bancos, prova de isolamento negativo e container build. Deploy privado do EMPROVEX QA requer autorização específica após o startup lock ser certificado, sem tocar os usuários de produção.
+
 ## 1. Resultado executivo
 
 O programa passou das auditorias W1–W3 e preparação W4–W6 para a criação efetiva de infraestrutura GCP de homologação separada. A produção Vercel de `emprovex.com.br` não foi migrada nem alterada pelos comandos desta etapa. **Não houve deploy Cloud Run e o interlock `K_SERVICE` no código W4 continua bloqueando inicialização em Cloud Run.** Testes sintéticos PASS não equivalem à certificação de acesso IAM/Firebase/Rules em QA real.
