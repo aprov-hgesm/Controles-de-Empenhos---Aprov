@@ -1,5 +1,25 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — HANDOFF OFICIAL DE CONVERSA (2026-10-16)
+
+**Pedido do Fundador:** continuar CLOUD-RUN-R1 em novo chat devido ao limite de duração. Objetivo imediato: identificar/criar um Web App Firebase QA real, configurar Auth QA e preparar Docker build QA com configuração real. O último input PowerShell foi apenas um comando INCOMPLETO; não há prova de criação de Web App ou alteração de Authentication.
+
+**Estado certificado:** Projeto QA emprovex-qa-r1-261015-6275 (953294034210), FirebaseProject registrado (FIREBASE=SUCCESS), bancos qa-core e qa-warehouse em us-east1, com exclusão protegida. Sem dados produtivos importados. Runtime SA emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com, IAM datastore.user condicionado aos dois DBs, token temporário com HTTP 200 em ambos; teste negativo pendente. Binding TokenCreator temporário na SA ainda requer revisão/revogação ao fim dos testes. Billing QA e budget R$20/mês apenas de alerta, não teto.
+
+**Web App QA não comprovado:** GET /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps anterior mostrou WEB_APPS_EXISTENTES=1 mas APP=; ID=. PowerShell pode contar um elemento nulo como 1. Antes de qualquer POST, repetir listagem GET filtrando objetos nulos, exigindo name e appId reais, respeitando nextPageToken. Se houver Web App verdadeiro, reutilizar e consultar config. Caso não haja, criar EXCLUSIVAMENTE um Web App QA, aguardar operação e obter configuração pública real. A conta de origem prod nunca deve ser usada para QA.
+
+**Auth e Rules:** Console Firebase QA mostrou nenhum método de login habilitado; config REST dera 404. Validar provedores exigidos pelo produto (Google, e-mail/senha somente se necessário). W7 contém regras fail-closed apenas em DRAFT, sem publicação; IAM e Rules negativos e identidade Auth ainda não certificados.
+
+**W8 PASS offline:** PR #324 DRAFT HEAD a7776de812d67ae11ab5cf9d330077bd7b705406; GitHub Actions W8 #38855626511, Application CI #38855626450 e Core Protection #38855626520 todos SUCCESS. Next.js gerou 42 páginas, artefato QA teve 2349 arquivos textuais inspecionados sem referências produtivas proibidas, standalone localhost respondeu 200. Config do Web App era SINTÉTICA, não app real. Dockerfile QA existe, mas Docker build real, registry e Cloud Run remoto não executados. W4 interlock CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04 continua ativo. PRs #320/#321/#322/#323/#324 DRAFT, coordenação PR #317 DRAFT, main sem merge.
+
+**Produção preservada:** emprovex.com.br continua Vercel e Firestore original, sem alteração de DNS, banco, login, IAM produtivo, merge ou deploy Cloud Run. CLOUD-RUN-R1 permanece NO-GO para deploy, interlock e cutover; autorização separada após gates.
+
+**Progresso de cinco etapas:** E1 100%, E2 100%, E3 Segurança/Isolamento QA 68,75%, E4 build/deploy QA 10% (somente build local sintético), E5 produção 0%. Total 55,75%. Não aumentar sem prova de marco.
+
+**Handoff obrigatório:** onde estamos = QA infra e W8 offline PASS, Web App real desconhecido. O que estamos fazendo = habilitar Web App Firebase QA + Auth e viabilizar Docker QA. Quem = coordenador novo chat via GitHub e Fundador via Windows PowerShell gcloud.cmd/Console QA. Próximo = listar Web Apps robustamente, reutilizar ou cadastrar um, buscar config real, ativar Auth mínimo, validar Rules/negativos, Docker build QA. Quem fará = coordenador fornecer um bloco por vez, Fundador executará e devolverá saídas sem segredos; coordenação atualizará PR #317. Nada de produção/Cloud Run deploy sem autorização específica.
+
+---
+
 ## CLOUD-RUN-R1 — Consulta Web Apps QA com contagem PowerShell ambígua (2026-10-16)
 
 - **Evidência fornecida pelo Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com OAuth usuário e `x-goog-user-project` do QA respondeu sem erro e o script exibiu `WEB_APPS_EXISTENTES=1` mas `APP=; ID=`. **Essa contagem NÃO prova a existência de Web App:** no PowerShell, `@($null).Count` pode produzir 1 sem objeto real quando o campo `apps` está ausente/nulo.
