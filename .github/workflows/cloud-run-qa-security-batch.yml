@@ -9,6 +9,7 @@ on:
       - 'firestore.qa-warehouse.rules'
       - 'scripts/cloud-run-qa-security-batch.test.mjs'
       - 'scripts/cloud-run-qa-readonly-audit.ps1'
+      - 'scripts/cloud-run-qa-iam-probe.ps1'
   workflow_dispatch:
 
 permissions:
