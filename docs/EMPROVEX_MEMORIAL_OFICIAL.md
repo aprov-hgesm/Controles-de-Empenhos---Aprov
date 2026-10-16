@@ -1,5 +1,12 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 — Conta de faturamento aberta identificada (2026-10-15)
+
+- O Fundador confirmou por consulta somente leitura `gcloud.cmd billing accounts list --filter="open=true"` uma conta ativa, nome de exibição **Pagamento do Firebase**, `OPEN=True`. Não registrar o identificador financeiro completo no memorial. Isso **não** indica faturamento já habilitado no projeto QA: a consulta anterior indicou `billingEnabled: false` em `emprovex-qa-r1-261015-6275`.
+- **Próxima consulta sem mutação:** `gcloud.cmd billing accounts describe <ID DA CONTA> --format="yaml(displayName,currencyCode,open)"` para moeda da conta, antes de criar orçamento exclusivo QA com thresholds 25/50/75/100. Orçamento envia alertas, não limita gasto efetivo; sem autorização de recursos ou produção.
+
+---
+
 ## CLOUD-RUN-R1 — Projeto QA criado pelo Fundador (2026-10-15)
 
 - **Consulta adicional de faturamento do Fundador (read-only):** `gcloud.cmd billing projects describe emprovex-qa-r1-261015-6275` retornou `billingEnabled: false (consulta do Fundador)` e `billingAccountName: ''`. **QA sem conta de faturamento associada no momento da consulta**. Nenhum recurso pago deve ser criado antes de identificar conta ativa e preparar orçamento/alertas scoped ao QA. Fonte: saída local do PowerShell reportada pelo Fundador.
