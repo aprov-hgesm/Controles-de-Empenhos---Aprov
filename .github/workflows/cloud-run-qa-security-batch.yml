@@ -1,0 +1,40 @@
+name: CLOUD-RUN-R1 W7 QA Security Batch (offline)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cloud-run-qa-security-batch.yml'
+      - 'firebase.cloud-run-qa-rules.json'
+      - 'firestore.qa-core.rules'
+      - 'firestore.qa-warehouse.rules'
+      - 'scripts/cloud-run-qa-security-batch.test.mjs'
+      - 'scripts/cloud-run-qa-readonly-audit.ps1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-run-r1-w7-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-rules-safety:
+    name: QA Rules fail-closed / local read-only auditor
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout only
+        uses: actions/checkout@v4
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify no Google credentials are present
+        shell: bash
+        run: |
+          test -z "${GOOGLE_APPLICATION_CREDENTIALS:-}"
+          test -z "${FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON:-}"
+          test -z "${K_SERVICE:-}"
+      - name: Validate two named banks and fail-closed Rules without GCP
+        run: node --test scripts/cloud-run-qa-security-batch.test.mjs
