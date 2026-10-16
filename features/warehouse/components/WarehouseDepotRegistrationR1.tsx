@@ -26,6 +26,7 @@ interface Props {
   workspaceId: string;
   depots: WarehouseDepotListItem[];
   onRegistered: (depotId: string) => Promise<void>;
+  previewOnly?: boolean;
 }
 const field = 'h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100';
 function suggestCode(rows: WarehouseDepotListItem[]): string {
@@ -39,8 +40,21 @@ function suggestCode(rows: WarehouseDepotListItem[]): string {
 function emptyDraft(depots: WarehouseDepotListItem[]): DepotDraft {
   return { code: suggestCode(depots), name: '', description: '', lengthCm: 1000, widthCm: 620, units: [] };
 }
-export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered }: Props) {
-  const [draft, setDraft] = useState<DepotDraft>(() => emptyDraft(depots));
+export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered, previewOnly = false }: Props) {
+  const [draft, setDraft] = useState<DepotDraft>(() => previewOnly
+    ? {
+        code: 'DEP-001',
+        name: 'Depósito de demonstração',
+        description: 'Exemplo local — não será gravado',
+        lengthCm: 1000,
+        widthCm: 620,
+        units: [
+          { kind: 'SHELF', widthCm: 180, depthCm: 50, heightCm: 210, shelfCount: 3, shelfStyle: 'METAL' },
+          { kind: 'SHELF', widthCm: 240, depthCm: 60, heightCm: 250, shelfCount: 5, shelfStyle: 'INOX' },
+          { kind: 'FREEZER', widthCm: 140, depthCm: 75, heightCm: 90, shelfCount: 0, shelfStyle: 'METAL' },
+        ],
+      }
+    : emptyDraft(depots));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [progress, setProgress] = useState('');
@@ -66,6 +80,12 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
     if (busy) return;
     setStatus('');
     if (preview.error) { setStatus(preview.error); return; }
+    if (previewOnly) {
+      setStatus('Simulação concluída: ' + preview.units.length
+        + ' locais e ' + draft.units.reduce((n, unit) => n + unit.shelfCount, 0)
+        + ' prateleiras planejadas. Nenhuma informação foi enviada ao Firestore.');
+      return;
+    }
     setBusy(true);
     let confirmed = 0;
     try {
@@ -164,6 +184,9 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
   }
   const shelves = draft.units.reduce((n, unit) => n + unit.shelfCount, 0);
   return <section className="space-y-5 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm" data-testid="warehouse-depot-registration-r1">
+    {previewOnly && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+      Modo de demonstração local: edite os campos à vontade. O botão final apenas simula o cadastro, sem autenticação ou gravações.
+    </p>}
     <header className="flex items-center gap-3">
       <div className="rounded-xl bg-blue-50 p-2 text-[#00288e]"><ClipboardList className="h-5 w-5"/></div>
       <div><h2 className="text-lg font-black text-[#00288e]">Cadastramento de Depósito</h2>
@@ -234,7 +257,7 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
     <button type="button" onClick={() => void registerDepot()} data-testid="warehouse-register-full-depot"
       disabled={busy || Boolean(preview.error)}
       className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white disabled:opacity-40">
-      <CheckCircle2 className="h-4 w-4"/>{busy ? 'Cadastrando…' : 'Cadastrar depósito e preparar croqui'}
+      <CheckCircle2 className="h-4 w-4"/>{busy ? 'Cadastrando…' : previewOnly ? 'Simular cadastro (sem gravar)' : 'Cadastrar depósito e preparar croqui'}
     </button>
     <p className="text-[11px] text-slate-500">A nova operação não altera quantidades de estoque. Em caso de interrupção, use o mesmo formulário para tentar concluir os registros faltantes.</p>
   </section>;
