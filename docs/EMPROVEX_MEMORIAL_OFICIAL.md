@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 acesso real à dupla Firestore QA comprovado (2026-10-16)
+
+- **Evidência direta de homologação real:** o Fundador executou `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` no Windows, fixado ao projeto `emprovex-qa-r1-261015-6275`. A sonda retornou sucessivamente: `PASS: Token temporario obtido (conteudo nao exibido).`, `PASS: qa-core HTTP 200 para identidade runtime QA.`, `PASS: qa-warehouse HTTP 200 para identidade runtime QA.` e `PASS PARCIAL: Duas leituras reais QA autorizadas, sem gravacoes.`. O script realiza GET REST somente na coleção QA `emprovexQaSecurityProbe`, máximo `pageSize=1`, sem imprimir corpo ou token. **PASS funcional IAM positivo em ambos os bancos do QA**.
+- **Não comprovados:** negação HTTP 403 no terceiro banco/projeto alheio; acesso indevido fora do QA; Firebase Auth do QA e Firestore Security Rules publicadas; client web/mobile; bundle Next staging; Cloud Run deploy. **HTTP 200 não implica isolamento negativo** e Security Rules cliente não substituem IAM server. A sonda não consultou produção. Revisão independente da fonte: https://cloud.google.com/firestore/docs/manage-databases confirma restrição por IAM Conditions em cada database via REST.
+- **Progressão por subgate real:** Etapa 3/5 **50% → 62,5%** (autorização IAM positiva correspondente à metade da prova operacional ainda aberta). Total **50% → 52,5%**: duas etapas anteriores concluídas e 62,5% da terceira, pesos iguais. Percentuais por marcos, sem inferir aptidão para deploy.
+- **Próximo gate:** programar negativa controlada **sem manipulação de produção** e revisar Auth/Rules dos dois bancos QA; caso teste negativo precise atingir projeto produtivo, obter autorização expressa e restrita do Fundador antes de qualquer chamada. Revogar `roles/iam.serviceAccountTokenCreator` temporário na policy da service account QA ao encerrar homologação, após verificações.
+- **Governança:** PRs continuam DRAFT, W4 interlock preservado; produção Vercel, Firestore produtivo e `main` preservados. **CLOUD-RUN-R1 NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 autorização de impersonação QA concedida (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** `gcloud.cmd iam service-accounts add-iam-policy-binding emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com --member="user:aprov1hgesm@gmail.com" --role="roles/iam.serviceAccountTokenCreator" --project=emprovex-qa-r1-261015-6275` retornou `Updated IAM policy for serviceAccount`, com binding exato `user:aprov1hgesm@gmail.com → roles/iam.serviceAccountTokenCreator` na **policy da própria service account QA**, `version: 1` e `etag: BwZd7WrLEKM=`. **PASS de configuração**; não houve concessão do papel TokenCreator no IAM do projeto e não há comprovação ainda de token ou leitura do Firestore.
