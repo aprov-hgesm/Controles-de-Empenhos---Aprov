@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 auditoria QA real PASS parcial (2026-10-16)
+
+- **Execução Windows reportada pelo Fundador:** `EMPROVEX_QA_W7_AUDITORIA.ps1` concluiu **PASS PARCIAL** sem falhas: projeto QA separado identificado; faturamento ativo; APIs Firestore/IAM/IAMCredentials/FirebaseRules habilitadas; `qa-core` e `qa-warehouse` em região/edição/tipo/proteção esperados; runtime SA presente; dois IAM bindings condicionais confirmados; sem principals públicos nos bindings explícitos QA. Não foi executada autenticação como a service account, logo IAM efetivo ainda não comprovado. Mensagem `OrÃ§amento` é só codificação de texto, não erro funcional.
+- **Gates W7 PR #323 no SHA `330149897751627f760fe18aedf555bb964a6395` confirmados:** [W7 Security Batch #38847873118](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873118) **SUCCESS**, [Core Protection #38847873008](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847873008) **SUCCESS**, [Application CI #38847872902](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38847872902) **SUCCESS**. A suíte W7 é offline e não certifica GCP Rules/ADC.
+- **Próxima sequência:** (1) auditar diretamente a política IAM da conta de serviço (binding TokenCreator na conta, se preciso), (2) script único de teste de autenticação temporária com operações apenas sintéticas no QA e saída sem tokens, (3) Rules/Auth QA e inspeção do bundle staging. **Não acessar dados/bancos produtivos por teste sem autorização específica.**
+- **Progressos mantidos:** Segurança/isolamento QA etapa 3/5 **50%**; migração geral **50%**. Cloud Run e produção NO-GO, PRs DRAFT sem merge.
+
+---
+
 ### W7 — IAM APIs habilitadas no QA (2026-10-16)
 
 - **Evidência da execução local do Fundador:** `gcloud.cmd services enable iam.googleapis.com iamcredentials.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation ... finished successfully`. As APIs **IAM** e **IAM Service Account Credentials** foram habilitadas somente no projeto QA; a operação não criou chaves JSON nem concedeu papéis IAM.
