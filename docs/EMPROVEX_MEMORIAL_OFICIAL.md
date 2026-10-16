@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Authentication QA inspecionado e contrato de provedores confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador (somente leitura):** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou `AUTH_CONFIG_HTTP=200`, `AUTH_CONFIG=EXISTENTE`, `EMAIL_ENABLED=False`, `ANONYMOUS_ENABLED=False`, `QA_DOMAIN_AUTHORIZED=True`; `GET .../defaultSupportedIdpConfigs/google.com` retornou `GOOGLE_PROVIDER_HTTP=200` e `GOOGLE_ENABLED=True`; `RESULTADO=AUTH_INSPECIONADO`.
+- **Contrato real verificado no código W8 #324:** `lib/platformIdentity.ts` declara `FOUNDER_AUTH_PROVIDER='google.com'` e `SECTOR_AUTH_PROVIDER='password'`. `lib/server/firebaseFounderAuth.ts` exige provedor Google no perfil fundador; `lib/firebase.ts` inicializa Firebase Auth com `GoogleAuthProvider`. Portanto o provedor **Email/senha é necessário para a jornada dos setores**, enquanto o Google já está administrativamente habilitado; login real, usuários e Rules ainda não testados. **Não habilitar anônimo, telefone nem email link.**
+- **Próxima ação autorizada no QA:** aplicar PATCH limitado pelo `updateMask=signIn.email.enabled,signIn.email.passwordRequired` ao recurso `projects/emprovex-qa-r1-261015-6275/config`, com `enabled=true` e `passwordRequired=true`; reler os flags e certificar que `google.com` permanece ativo e `anonymous` desabilitado. Método do Google: `projects.updateConfig` (patch mascarado, campos não listados preservados). Nenhum deploy, inclusão de usuários ou alteração em projetos produtivos.
+- **Estado deste checkpoint:** Google configurado administrativamente **PASS**, Email/senha **PENDENTE**, login E2E **PENDENTE**. Sem publicação de Rules e sem Docker build real, interlock W4 e NO-GO permanecem.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**; etapa 4 Cloud Run QA **10%**; migração geral **55,75%**. Não pontuar Auth completo antes de sucesso da atualização e validações de identidade.
+
+---
+
 ## CLOUD-RUN-R1 — Config pública REAL de Web App Firebase QA validada (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b/config` com OAuth e `x-goog-user-project=emprovex-qa-r1-261015-6275` retornou configuração válida. Controles `PROJECT_OK=True`, `APP_ID_OK=True`, `API_KEY_PRESENT=True`, `AUTH_DOMAIN_OK=True`, `SENDER_ID_OK=True`, `STORAGE_BUCKET_OK=True`; saída `RESULTADO=CONFIG_QA_REAL_VALIDADA` e `PRONTO_PARA_PROXIMO_GATE=SIM`. Identificador QA Web `1:953294034210:web:0a4c91daa63d025ff4417b`. **Nenhum valor de apiKey foi impresso, copiado para o GitHub ou anotado neste memorial**.
