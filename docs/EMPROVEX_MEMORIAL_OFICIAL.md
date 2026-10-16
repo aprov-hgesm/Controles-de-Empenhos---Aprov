@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — CI FINAL W4 — PASS 2026-10-15
+
+- **GitHub PR #320** DRAFT, HEAD `144a0f440acfa241d1bdc3f9ccb1fb86bc014f2c`: **Application CI PASS** (workflow run #38834070699, job validate-application + seis gates finais, todos SUCCESS) e **Core Protection PASS** (run #38834070694). Confirmados: build de produção **no CI, sem deploy**; orçamento/final TypeScript; Bloco 16.8 integrado; release gates 16/17/18/19/20/21. Correções seguras foram `2d58c7d` (tipo monitoring credential) e `144a0f4` (mock ADC em VM, falha fechada se invocado); sem relaxamento de gates.
+- **Escopo do PASS:** integridade automatizada do PR na branch W4, **NÃO** aceitação de Cloud Run ou ADC real. Testes Cloud Run com IAM efetivo, projeto de testes isolado, bancos separados, unificação de config Firebase/REST/Client e smoke Warehouse F05/F06/F09 ainda necessários. `instrumentation.ts` bloqueia startup Cloud Run; scanner de imports produtivos impede build nesse alvo.
+- **Decisão:** W4 preparação local aceita quanto ao CI; **CLOUD-RUN-R1 segue NO-GO**. `main`, `emprovex.com.br`, Vercel, Firebase, Firestore, IAM, DNS, Cloud Scheduler e custos **intocados**. PR #320 sem merge.
+
+---
+
 ## CLOUD-RUN-R1 — Recebimento técnico W4 — PR #320 (2026-10-15)
 
 - **W4:** PR #320 DRAFT, branch `feat/cloud-run-r1-w4-local-preparation`; primeiro HEAD `9e8ce77d6e324203034483c01ea89556ab3a40c6`. Entrega inicial de 12 arquivos: guarda fail-closed de build, interlock no runtime Cloud Run, transporte OAuth por identidade gerenciada via metadados, mudanças pontuais em 4 consumidores administrativos, .dockerignore e 26 testes mock-only relatados como PASS. Sem Dockerfile, deploy, merge ou acesso a dados reais. **PREPARAÇÃO PARCIAL — NO-GO.**
