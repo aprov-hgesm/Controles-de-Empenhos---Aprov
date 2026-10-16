@@ -1,0 +1,89 @@
+name: CLOUD-RUN-R1 W8 Cloud Run QA Build Preflight
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cloud-run-qa-build-preflight.yml'
+      - 'Dockerfile.cloud-run.qa'
+      - 'scripts/cloud-run-qa-build-preflight.mjs'
+      - 'scripts/cloud-run-qa-artifact-audit.mjs'
+      - 'scripts/cloud-run-qa-trim-legacy-build-file.mjs'
+      - 'scripts/cloud-run-qa-standalone-smoke.mjs'
+      - 'lib/cloudRunIsolation.mjs'
+      - 'lib/firebaseRuntimeConfig.ts'
+      - 'next.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-run-qa-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Offline QA source-gate / optional real QA container build
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Strictly forbid cloud credentials in the preflight
+        shell: bash
+        run: |
+          test -z "${GOOGLE_APPLICATION_CREDENTIALS:-}"
+          test -z "${FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON:-}"
+          test -z "${K_SERVICE:-}"
+      - name: Audit Cloud Run QA source isolation (no cloud)
+        id: preflight
+        run: node scripts/cloud-run-qa-build-preflight.mjs
+      - name: Retain the precise blockers without downloading dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-run-qa-build-preflight
+          path: cloud-run-qa-build-preflight-report.json
+          retention-days: 7
+      - name: Synthetic QA Next build and finished-artifact isolation audit (never deployable)
+        id: synthetic_build
+        if: ${{ steps.preflight.outputs.source_ready == 'true' }}
+        # Fail the workflow if build/artifact/local boot is not certified.
+        timeout-minutes: 14
+        env:
+          EMPROVEX_RUNTIME_TARGET: cloud-run-staging
+          EMPROVEX_CLOUD_PROJECT_ID: emprovex-qa-r1-261015-6275
+          EMPROVEX_CLOUD_CORE_DATABASE_ID: qa-core
+          EMPROVEX_CLOUD_WAREHOUSE_DATABASE_ID: qa-warehouse
+          NEXT_PUBLIC_EMPROVEX_FIREBASE_CONFIG_JSON: '{"projectId":"emprovex-qa-r1-261015-6275","appId":"1:953294034210:web:W8SYNTHETIC","apiKey":"w8-synthetic-public-config-do-not-deploy","authDomain":"emprovex-qa-r1-261015-6275.firebaseapp.com","firestoreDatabaseId":"qa-core","warehouseDatabaseId":"qa-warehouse","storageBucket":"emprovex-qa-r1-261015-6275.firebasestorage.app","messagingSenderId":"953294034210"}'
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          node scripts/cloud-run-qa-trim-legacy-build-file.mjs
+          node scripts/cloud-run-qa-artifact-audit.mjs
+          node scripts/cloud-run-qa-standalone-smoke.mjs
+      - name: Record synthetic build outcome (NOT a deployment)
+        if: ${{ always() && steps.preflight.outputs.source_ready == 'true' }}
+        env:
+          SYNTHETIC_OUTCOME: ${{ steps.synthetic_build.outcome }}
+        shell: bash
+        run: |
+          echo "Synthetic QA Next build and artifact scan outcome: $SYNTHETIC_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+          echo "Synthetic Firebase config is NOT a registered QA Web App. No artifact may be deployed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Build Docker image ONLY if source is isolated and QA web config explicitly exists
+        if: ${{ steps.preflight.outputs.source_ready == 'true' && vars.EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON != '' }}
+        env:
+          QA_FIREBASE_WEB_CONFIG_JSON: ${{ vars.EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON }}
+        shell: bash
+        run: |
+          docker build --file Dockerfile.cloud-run.qa \
+            --build-arg QA_FIREBASE_WEB_CONFIG_JSON="$QA_FIREBASE_WEB_CONFIG_JSON" \
+            --tag "emprovex-qa-build:${GITHUB_SHA}" .
+      - name: State why no Docker build was done
+        if: ${{ steps.preflight.outputs.source_ready != 'true' || vars.EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON == '' }}
+        shell: bash
+        run: |
+          echo 'W8: Docker build DEFERRED. Source isolation and/or real QA Firebase Web App config not ready.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This PASS is an audit completion, NOT a build-ready/deploy-ready certification.' >> "$GITHUB_STEP_SUMMARY"

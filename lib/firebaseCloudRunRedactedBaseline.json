@@ -1,0 +1,10 @@
+{
+  "projectId": "unavailable-legacy-project",
+  "appId": "1:1:web:LEGACY_UNAVAILABLE",
+  "apiKey": "NOT-A-REAL-API-KEY",
+  "authDomain": "unavailable-legacy-project.firebaseapp.com",
+  "firestoreDatabaseId": "no-legacy-core",
+  "warehouseDatabaseId": "no-legacy-warehouse",
+  "storageBucket": "unavailable-legacy-project.firebasestorage.app",
+  "messagingSenderId": "1"
+}
