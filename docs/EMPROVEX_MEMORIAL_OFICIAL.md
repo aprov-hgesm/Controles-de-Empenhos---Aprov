@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Firebase GET passou de 403 a 404 após fixar consumidor QA (2026-10-16)
+
+- **Evidência local PowerShell:** usando token OAuth da conta `gcloud`, GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com cabeçalho `x-goog-user-project: emprovex-qa-r1-261015-6275` retornou `HTTP=404; STATUS=NOT_FOUND; REASON=NAO_DISPONIVEL; CONSUMER=NAO_DISPONIVEL`. Antes desse header o mesmo GET retornara `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A mudança comprova que o cabeçalho **resolveu o bloqueio de projeto consumidor**; 404 é consistente com `FirebaseProject` não adicionado, dado que projeto GCP QA, sua API e ambos Firestores existem. Não registrar Firebase como criado.
+- **Decisão de próximo gate:** a documentação oficial do Firebase informa que `projects.addFirebase` (POST no projeto QA existente) adiciona a configuração Firebase e habilita várias APIs, provisiona contas de serviço Firebase e chave pública Browser, e **não pode ser integralmente desfeita**. Exige aceite prévio dos Termos na interface da conta Google quando aplicável; role `owner` inclui permissões necessárias. Escolher execução *explicitamente consentida pelo Fundador e limitada ao QA*, via Firebase Console ou REST com `x-goog-user-project`. Capturar somente ID de `Operation` (não token) e verificar conclusão antes de afirmar PASS. Fontes: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project ; https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/addFirebase .
+- **Observação de custos:** orçamento mensal QA R$20 é somente alerta, não teto de cobrança; não iniciar outros serviços e não criar Web App/Cloud Run automaticamente. Nenhuma mudança executada por coordenador em GCP. Migração **NO-GO**, PRs DRAFT, `main`, Vercel e GCP produtivo intactos.
+- **Progresso:** etapa 3 Segurança e Isolamento QA **62,5%**, migração geral **52,5%**. Aferição do registro Firebase ainda pendente de `addFirebase`.
+
+---
+
 ## CLOUD-RUN-R1 — Firebase SERVICE_DISABLED identificado, hipótese quota consumer (2026-10-16)
 
 - **Evidência PowerShell:** após `gcloud services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` responder sucesso, `GET /v1beta1/projects/emprovex-qa-r1-261015-6275` com token usuário sem quota header retornou `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A categorização exata revela **serviço desabilitado para o consumidor da requisição**; **não prova** que `firebase.googleapis.com` esteja desativada no QA de destino nem ausência do FirebaseProject. A ativação já foi executada, não repetir cegamente.
