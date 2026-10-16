@@ -24,10 +24,8 @@ export function useOperationalViewState() {
   const [empenhosYearFilter, setEmpenhosYearFilter] = useState('Todos');
   const [empenhosClassFilter, setEmpenhosClassFilter] = useState('Todos');
   const [showNewEmpenhoModal, setShowNewEmpenhoModal] = useState(false);
-  const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'pdf' | 'json'>('manual');
-  const [jsonInput, setJsonInput] = useState('');
+  const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'pdf'>('manual');
   const [jsonError, setJsonError] = useState<string | null>(null);
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [reviewEmpenho, setReviewEmpenho] = useState<any | null>(null);
   const [showConfirmSaveModal, setShowConfirmSaveModal] = useState(false);
   const [empenhoToDelete, setEmpenhoToDelete] = useState<string | null>(null);
@@ -126,7 +124,7 @@ export function useOperationalViewState() {
     showAddItemFormInDetail, setShowAddItemFormInDetail, empenhosSearch, setEmpenhosSearch, empenhosFilter, setEmpenhosFilter,
     empenhosPregaoFilter, setEmpenhosPregaoFilter, empenhosYearFilter, setEmpenhosYearFilter, empenhosClassFilter, setEmpenhosClassFilter,
     showNewEmpenhoModal, setShowNewEmpenhoModal, newEmpenhoMode, setNewEmpenhoMode, jsonInput, setJsonInput,
-    jsonError, setJsonError, copiedPrompt, setCopiedPrompt, reviewEmpenho, setReviewEmpenho,
+    jsonError, setJsonError, reviewEmpenho, setReviewEmpenho,
     showConfirmSaveModal, setShowConfirmSaveModal, empenhoToDelete, setEmpenhoToDelete, isDeletingEmpenho, setIsDeletingEmpenho,
     newEmpenhoForm, setNewEmpenhoForm, itensSearch, setItensSearch, itensSaldoFilter, setItensSaldoFilter,
     expandedConsultaItem, setExpandedConsultaItem, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber,
