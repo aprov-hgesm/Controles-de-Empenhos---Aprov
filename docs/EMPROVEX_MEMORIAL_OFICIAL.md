@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 sonda real IAM QA preparada (2026-10-16)
+
+- Confirmada saída local `EMPROVEX_QA_W7_AUDITORIA.ps1`: **PASS PARCIAL** para projeto, billing, APIs, ambos Firestore QA, runtime SA e duas condições IAM, sem principals públicos explícitos. Sonda de autorização **ainda não executada**.
+- Preparado o arquivo `scripts/cloud-run-qa-iam-probe.ps1` no [PR #323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323) (branch W7 isolada): obtém token temporário por impersonação sem imprimi-lo; tenta **apenas duas consultas GET**, uma por banco QA, na coleção fictícia `emprovexQaSecurityProbe`, com `pageSize=1`; não grava dados, não acessa nenhum projeto produtivo, não concede IAM. Se TokenCreator ainda faltar, mostra **PENDENTE** e exige concessão restrita somente à identidade QA após revisão, sem mutação automática.
+- W7 CI offline novo SHA `e016887df3d359049451df61284d89710fd77659`, run [#38848749580](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749580) **PASS**; Core Protection [#38848749587](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749587) **PASS**; Application CI [#38848749562](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38848749562) **em progresso na verificação**, não declarar PASS antes da conclusão.
+- **Limites:** um HTTP 200 positivo comprova leitura no QA com token da service account, mas não prova 403 fora do escopo, Firebase Rules/Auth nem compatibilidade Cloud Run; nenhum token deve ser enviado ao chat. Progresso **Etapa 3 50%; geral 50%**, sem certificação funcional nova. CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 auditoria QA real PASS parcial (2026-10-16)
 
 - **Execução Windows reportada pelo Fundador:** `EMPROVEX_QA_W7_AUDITORIA.ps1` concluiu **PASS PARCIAL** sem falhas: projeto QA separado identificado; faturamento ativo; APIs Firestore/IAM/IAMCredentials/FirebaseRules habilitadas; `qa-core` e `qa-warehouse` em região/edição/tipo/proteção esperados; runtime SA presente; dois IAM bindings condicionais confirmados; sem principals públicos nos bindings explícitos QA. Não foi executada autenticação como a service account, logo IAM efetivo ainda não comprovado. Mensagem `OrÃ§amento` é só codificação de texto, não erro funcional.
