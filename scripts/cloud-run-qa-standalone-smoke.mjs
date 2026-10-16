@@ -31,7 +31,8 @@ const child = spawn(process.execPath, [app], {
 let exited = false;
 child.once('exit', () => { exited = true; });
 try {
-  let status = null;
+  let passed = false;
+  let status = 0;
   for (let attempt = 0; attempt < 50; attempt++) {
     if (exited) throw new Error('QA_STANDALONE_SMOKE_PROCESS_EXITED');
     await sleep(300);
@@ -43,14 +44,14 @@ try {
       status = response.status;
       if (status >= 200 && status < 400) {
         process.stdout.write('QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=' + status + '\n');
-        status = null;
+        passed = true;
         break;
       }
     } catch {
       // Server may still be starting: continue a bounded local-only retry.
     }
   }
-  if (status !== null) throw new Error('QA_STANDALONE_SMOKE_HTTP_' + status);
+  if (!passed) throw new Error('QA_STANDALONE_SMOKE_HTTP_' + (status || 'NO_RESPONSE'));
 } finally {
   if (!exited) child.kill('SIGTERM');
 }
