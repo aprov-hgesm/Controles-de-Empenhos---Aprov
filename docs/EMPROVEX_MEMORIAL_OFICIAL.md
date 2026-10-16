@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Consulta Web Apps QA com contagem PowerShell ambígua (2026-10-16)
+
+- **Evidência fornecida pelo Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com OAuth usuário e `x-goog-user-project` do QA respondeu sem erro e o script exibiu `WEB_APPS_EXISTENTES=1` mas `APP=; ID=`. **Essa contagem NÃO prova a existência de Web App:** no PowerShell, `@($null).Count` pode produzir 1 sem objeto real quando o campo `apps` está ausente/nulo.
+- **Próximo gate único do Fundador:** refazer a leitura filtrando elementos nulos; se a lista retornar qualquer aplicativo válido, reutilizar sem criar; se não houver nenhum e nenhuma paginação, realizar somente um `POST projects/{qa}/webApps` com `displayName=EMPROVEX QA R1 Web`, sem `appUrls`. Capturar o nome da `Operation`; após êxito consultar `getConfig`, sem exportar secrets ou IDs do projeto de produção. [Documentação oficial](https://firebase.google.com/docs/projects/api/workflow_set-up-and-manage-project?hl=pt-BR).
+- **Auth QA** continua sem provedores habilitados no checkpoint anterior. Não modificar Authentication nem publicar Rules antes da prova de Web App real. **Nenhum aplicativo Web real está certificado ainda, nenhuma operação CREATE confirmada nesta etapa**.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**; etapa 4 Preparação/Publicação QA **10%**; geral **55,75%**. Cloud Run remoto **NO-GO**. Produção/Vercel/DNS/Firestores produtivos intactos.
+
+---
+
 ## CLOUD-RUN-R1 — W8 build QA offline certificado, três gates CI PASS (2026-10-16)
 
 - **Commit W8 final:** `a7776de812d67ae11ab5cf9d330077bd7b705406` do [PR #324 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324), base incremental W7 #323. [W8 Build Preflight #38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511) **SUCCESS**, [Application CI #38855626450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626450) **SUCCESS** e [Core Protection #38855626520](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626520) **SUCCESS**.
