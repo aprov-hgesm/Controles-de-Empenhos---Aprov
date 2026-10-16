@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
-import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
+import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 
 import {
   createWarehouseDepot,
@@ -113,7 +113,7 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
-  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'aiImport'>('structure');
+  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'registration'>('structure');
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -543,15 +543,15 @@ export function WarehouseLocationsR1Operational({
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubtab('aiImport')}
+          onClick={() => setActiveSubtab('registration')}
           className={
-            activeSubtab === 'aiImport'
+            activeSubtab === 'registration'
               ? 'inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
               : 'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black text-gray-600 transition hover:bg-blue-50 hover:text-[#00288e]'
           }
         >
           <FileJson className="h-4 w-4" />
-          Importar via IA
+          Cadastramento de Depósito
         </button>
       </nav>
 
@@ -585,32 +585,6 @@ export function WarehouseLocationsR1Operational({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => openPanel('depot')}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-xs font-black text-white shadow-sm transition hover:bg-blue-800"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Novo depósito
-          </button>
-          <button
-            type="button"
-            onClick={() => openPanel('location')}
-            disabled={!selectedDepotId}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Novo local
-          </button>
-          <button
-            type="button"
-            onClick={() => openPanel('subposition')}
-            disabled={!selectedLocationId}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#00288e] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nova subposição
-          </button>
           <button
             type="button"
             onClick={() => setActiveSubtab('labels')}
@@ -671,7 +645,7 @@ export function WarehouseLocationsR1Operational({
 
           {createPanel === 'depot' || createPanel === 'editDepot' ? (
             <form onSubmit={createPanel === 'editDepot' ? saveDepotEdits : submitDepot} className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-              <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} placeholder="Código · DEP-01" className={fieldClass} required />
+              <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} readOnly={createPanel === 'editDepot'} title="Código fixo para preservar etiquetas antigas" placeholder="Código · DEP-01" className={fieldClass} required />
               <input value={depotName} onChange={(event) => setDepotName(event.target.value)} placeholder="Nome do depósito" className={fieldClass} required />
               <input value={depotDescription} onChange={(event) => setDepotDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
               <select value={depotVisualType} onChange={(event) => setDepotVisualType(event.target.value as WarehouseDepotVisualType)} className={fieldClass}>
@@ -733,7 +707,7 @@ export function WarehouseLocationsR1Operational({
                   <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedLocation?.code} · {selectedLocation?.name}</p>
                 </div>
               )}
-              <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} required />
+              <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} readOnly={createPanel === 'editLocation' || createPanel === 'editSubposition'} title="Código fixo para preservar etiquetas antigas" placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} required />
               <input value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder={createPanel === 'location' ? 'Nome do local' : 'Nome da subposição'} className={fieldClass} required />
               <input value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
               {createPanel === 'location' && locationPreset === 'SHELF' && (
@@ -893,9 +867,7 @@ export function WarehouseLocationsR1Operational({
             <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
               <MapPin className="mx-auto h-7 w-7 text-blue-300" />
               <p className="mt-3 text-sm font-black text-gray-700">Este depósito ainda não possui locais</p>
-              <button type="button" onClick={() => openPanel('location')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
-                Criar primeiro local
-              </button>
+              <p className="mt-3 text-xs text-[#00288e]">Cadastre locais em Cadastramento de Depósito.</p>
             </div>
           ) : (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
@@ -984,14 +956,7 @@ export function WarehouseLocationsR1Operational({
                 <Archive className="mx-auto h-7 w-7 text-blue-300" />
                 <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
                 <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
-                <button
-                  type="button"
-                  onClick={() => openPanel('subposition')}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-black text-[#00288e] hover:underline"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Criar subposição
-                </button>
+                <p className="mt-3 text-xs text-[#00288e]">Cadastre as prateleiras no formulário de estantes.</p>
               </div>
             ) : (
               <div className="mt-4 max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-1">
@@ -1033,12 +998,16 @@ export function WarehouseLocationsR1Operational({
         />
       )}
 
-      {activeSubtab === 'aiImport' && (
-        <WarehouseStructureImportR1
+      {activeSubtab === 'registration' && (
+        <WarehouseDepotRegistrationR1
           workspaceId={workspaceId}
           depots={state.depots}
-          locations={state.locations}
-          onImported={refresh}
+          onRegistered={async (depotId) => {
+            setSelectedDepotId(depotId);
+            setSelectedLocationId('');
+            await refresh();
+            setActiveSubtab('structure');
+          }}
         />
       )}
     </div>
