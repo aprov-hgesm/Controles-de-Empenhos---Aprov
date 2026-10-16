@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 autorização de impersonação QA concedida (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd iam service-accounts add-iam-policy-binding emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com --member="user:aprov1hgesm@gmail.com" --role="roles/iam.serviceAccountTokenCreator" --project=emprovex-qa-r1-261015-6275` retornou `Updated IAM policy for serviceAccount`, com binding exato `user:aprov1hgesm@gmail.com → roles/iam.serviceAccountTokenCreator` na **policy da própria service account QA**, `version: 1` e `etag: BwZd7WrLEKM=`. **PASS de configuração**; não houve concessão do papel TokenCreator no IAM do projeto e não há comprovação ainda de token ou leitura do Firestore.
+- **Próximo teste:** executar novamente `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` usando `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\\Downloads\\EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1"`. Script obtém token temporário sem mostrá-lo e executa somente consultas GET em `qa-core` e `qa-warehouse`, projeto QA; não realiza operações de produção. Se falhar, classificar sem conceder permissões adicionais por suposição.
+- **Revogação planejada:** após testes reais, retirar o binding TokenCreator na **service account QA**; evitar deixar direito de impersonação persistente desnecessário.
+- **Progresso mantido:** Etapa 3 50%; Migração geral 50%. Sem prova funcional IAM, Firebase Auth/Rules, Cloud Run QA ou qualquer deploy. Produção Vercel, GCP produtivo e `main` preservados. **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 bloqueio Token Creator diagnosticado (2026-10-16)
 
 - **Evidência real PowerShell do fundador:** a sonda antiga `EMPROVEX_QA_W7_TESTE_IAM.ps1` encerrou com erro genérico e a versão `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` informou `PENDENTE: TOKEN_CREATOR_NAO_AUTORIZADO. Verificar permissao na conta de servico QA.`, após tentar emissão de token temporário. **Não houve HTTP GET Firestore nem prova de acesso aos DBs** nesta execução; nenhuma alteração GCP foi feita pelo script.
