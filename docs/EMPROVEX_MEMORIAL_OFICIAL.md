@@ -12,6 +12,16 @@
 - `firebaserules.googleapis.com` habilitada **não comprova publicação de Rules** nos bancos; Rules e autorização operacional ainda pendentes. Próxima operação estritamente QA é habilitar `iam.googleapis.com` e `iamcredentials.googleapis.com` para permitir testes de impersonação com token temporário; nenhum segredo JSON deve ser criado ou compartilhado. Antes de conceder `roles/iam.serviceAccountTokenCreator`, inspecionar IAM na **conta de serviço apenas** e usar privilégio mínimo (não no projeto inteiro).
 - Etapa 3: **50%**; migração geral: **50%** (marcos de peso igual). Não houve novo marco de autorização remota; não elevar percentuais. Produção e `main` preservadas. CLOUD-RUN-R1 NO-GO.
 
+## CLOUD-RUN-R1 — W7 lote de auditoria e Rules QA preparado (2026-10-16)
+
+- Autorização do Fundador: acelerar próximas atividades e agrupar verificações, evitando sequência de comandos administrativos redundantes.
+- **PR #323 DRAFT aberto** [W7 QA Security Batch](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323), branch `test/cloud-run-r1-w7-security-automation-20261016`, **base incremental W6 PR #322**, não `main`.
+- Entregas em branch isolada: `firestore.qa-core.rules` e `firestore.qa-warehouse.rules` em **deny-all**; `firebase.cloud-run-qa-rules.json` com IDs explicitamente `qa-core`/`qa-warehouse`; `scripts/cloud-run-qa-security-batch.test.mjs` estático; `.github/workflows/cloud-run-qa-security-batch.yml` CI leve sem secrets/serviços; `scripts/cloud-run-qa-readonly-audit.ps1` consolida checagens read-only de projeto, billing, APIs, Firestore e IAM no Windows. Handoff em `docs/audits/cloud-run-r1/worker-7/HANDOFF.md`.
+- **Não publicar Rules deny-all automaticamente**: apenas proposta segura de configuração inicial, sem Firebase Auth QA/Rules ativadas em cloud real; nenhuma garantia sobre proteção das Rules **atualmente ativas** nos bancos criados. O PowerShell não faz impersonação, não usa tokens nem acessa produção; não prova autorização real. Testes reais ADC/403 e build Cloud Run staging ainda faltam.
+- **CLOUD-RUN-R1 segue NO-GO**. PRs DRAFT sem merge, Vercel, DNS, GCP produção e dados reais preservados. **Progresso mantido: etapa 3 50%; total 50%**, só subir após prova funcional aprovada.
+
+---
+
 ## CHECKPOINT VIGENTE — CLOUD-RUN-R1 QA — 2026-10-16
 
 **Classificação:** QA INFRA PARCIALMENTE CRIADO / HOMOLOGAÇÃO INCOMPLETA / MIGRAÇÃO **NO-GO**.
