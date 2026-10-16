@@ -72,7 +72,23 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
-  webpack: (config, {dev}) => {
+  webpack: (config, {dev, webpack}) => {
+    // ONLY a cloud-run-staging build swaps legacy Firebase baseline imports in
+    // compiled server/browser bundles for a structurally compatible redacted
+    // stub. next.config.ts reads the true production baseline BEFORE webpack to
+    // enforce the W4 comparison gate. Existing Vercel builds remain unchanged.
+    if (process.env.EMPROVEX_RUNTIME_TARGET === 'cloud-run-staging') {
+      const { resolve } = require('node:path');
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /firebase-applet-config\\.json$/,
+          resource => {
+            resource.request = resolve(process.cwd(), 'lib/firebaseCloudRunRedactedBaseline.json');
+          }
+        )
+      );
+    }
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
     if (dev && process.env.DISABLE_HMR === 'true') {
