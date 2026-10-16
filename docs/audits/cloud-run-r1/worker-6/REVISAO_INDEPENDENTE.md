@@ -39,3 +39,19 @@ Handoff:
 - **QUEM ESTÁ FAZENDO:** coordenador/revisor independente de W6.
 - **O QUE FAZER A SEGUIR:** concluir CI W6; executar F06 transação e saída física F09 separadamente; depois revisão R01/R02/R04/R03 e autorizações Cloud QA.
 - **QUEM O FARÁ:** QA e coordenador técnicos; fundador autoriza criação de recursos em etapa futura.
+
+## Encerramento da execução W6 — 2026-10-15
+
+**Resultado técnico: PASS COM LIMITES, CLOUD-RUN-R1 NO-GO.**
+
+- **Prova de integração sintética real:** Firebase Emulator workflow `#38837933261` = PASS, **9/9 testes**; código certificado no commit `0bf71b5ec136685fdd56c2629b75d03f75655de4`.
+- **Application CI:** workflow `#38837933621` = **PASS**, `validate-application` + seis release gates 16/17/18/19/20/21 SUCCESS.
+- **Core Protection:** workflow `#38837933233` = **PASS**.
+- **F05:** handler POST real com Core e Warehouse sintéticos, saldo/intake/ledger/lote gravados, rejeição 403 e conflitos 409, replay idempotente.
+- **F09 imediato:** handler POST real gravou consumo sem atualizar o saldo físico já alocado, replay/conflitos 409. **Não testa F09 saída física multi-linha**.
+- **F06:** repositório `transferWarehouseStock()` REAL com Firebase SDK `runTransaction`, reposicionamento de estoque, total físico preservado, replay, divergência de chave; PASS.
+- **Defeito real detectado e corrigido:** resultado antes do patch F06: `WAREHOUSE_TRANSFER_LOT_INVALID: Lote contém campos fora do contrato warehouse_lot_v1` ao receber lote persistido pelo F05 com campos `createdAt`/`updatedAt`. Patch no `lib/warehouse/locationRepository.ts` substituiu `{...data,id}` por `warehouseCanonicalLotReadInput(id,data)`, com validação estrita mantida. Regressão reproduzida FAIL → PASS usando **mesma suíte** de integração e o Emulator.
+- **Limitações explícitas:** credenciais OAuth e sessão autenticada são sintéticas; Emulator avisou suporte incompleto multi-DB / Rules permissivas; logo não há prova de IAM/RBAC ou regras reais por banco. Bundle staging, ADC real, W3-R20, restore e cutover seguem abertos. R01/R02/R04 não encerrados.
+- **Homologação real:** plano somente documental em `PLANO_HOMOLOGACAO_ADC_IAM.md`; requer autorização explícita do Fundador, custo e novos recursos no projeto QA separado. Nenhum deploy/merge/dado real/IAM/Vercel alterado.
+
+**Handoff:** Onde estamos — testes integrados 9/9 PASS e CI PASS. O que estamos fazendo — consolidar QA e plano seguro de homologação. Quem faz — Coordenação W6. Próximo — submissão de aprovação para IAM/infra QA após revisão da etapa financeira e segurança. Quem fará — Fundador autoriza, equipe configura e testa sem acesso à produção. **CLOUD RUN NO-GO até H0–H7 certificados.**
