@@ -7,6 +7,7 @@ on:
       - 'Dockerfile.cloud-run.qa'
       - 'scripts/cloud-run-qa-build-preflight.mjs'
       - 'scripts/cloud-run-qa-artifact-audit.mjs'
+      - 'scripts/cloud-run-qa-trim-legacy-build-file.mjs'
       - 'lib/cloudRunIsolation.mjs'
       - 'lib/firebaseRuntimeConfig.ts'
       - 'next.config.ts'
@@ -59,6 +60,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
+          node scripts/cloud-run-qa-trim-legacy-build-file.mjs
           node scripts/cloud-run-qa-artifact-audit.mjs
       - name: Record synthetic build outcome (NOT a deployment)
         if: ${{ always() && steps.preflight.outputs.source_ready == 'true' }}
