@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 custo QA e autorizacao inicial (2026-10-15)
+
+- Fundador autorizou confirmar custos/limites e criar infraestrutura isolada. Precos oficiais: Cloud Run request-based free tier 2M requests / 180k vCPU-s / 360k GiB-s mensais por billing account; Firebase Auth convencional 50k MAU mensais Blaze; Cloud Build 2500 build-min elegiveis; Artifact Registry 0,5 GiB-mes por conta. **Firestore named databases (necessarios para Core e Warehouse separados) nao recebem free tier; operacoes/storage sao pagas por uso.** Valores variam por regiao e moeda. Billing Budget/alerts **nao sao hard spending cap**.
+- Desenho economico recomendado: novo projeto GCP QA independente de `gen-lang-client-0982077967`, em `us-east1`, Firestore Standard `qa-core` / `qa-warehouse` *somente apos* vinculacao de billing/orcamento validada; serviço Cloud Run privado, instancia minima 0, maxima 1, sem Scheduler/backup/PITR/DOMINIO produtivo no inicio; service account gerenciada **sem chaves**, sem nenhum binding de IAM em producao.
+- **Nao realizado no Google Cloud:** esta sessao nao possui conexao administrativa Google Cloud/Firebase nem as credenciais `gcloud` do PowerShell do Fundador. Nenhum projeto QA, faturamento, API, Firestore ou Cloud Run foi criado de fato. Foi gerado bootstrap PowerShell local de etapa 1 (somente `gcloud projects create` com labels e projeto unico; sem billing/API); validado estaticamente. Proximo passo: Fundador executa no proprio PC e envia somente `QA_PROJECT_ID`; entao configuracao auditada de orçamento/billing e demais recursos. **Nao fingir que projeto ja foi criado.**
+- PR #322 recebeu handoff de custos/limites. CLOUD-RUN-R1 segue **NO-GO**, Vercel/Firestore prod/DNS intactos.
+
+---
+
 ## CLOUD-RUN-R1 — W6 revisão independente, Emulator e plano de homologação (2026-10-15)
 
 - **PR #322 DRAFT** (`test/cloud-run-r1-w6-fastpath-independent`) contra W5 PR #321, W5 depende de W4 PR #320. Código certificado no `0bf71b5ec136685fdd56c2629b75d03f75655de4`; alteração documental posterior `d3b55acf06a6110de9549f2dd6245c03903fae6c`. **Não fazer merge automático** nem publicar.
