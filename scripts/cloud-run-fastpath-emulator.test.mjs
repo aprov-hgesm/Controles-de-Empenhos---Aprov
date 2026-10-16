@@ -78,7 +78,7 @@ Module._load = function safeLoad(request, parent, isMain) {
     }) } };
   }
   if (request.endsWith('/lib/firebaseRuntimeConfig')) {
-    return { default: Object.freeze({
+    return { __esModule: true, default: Object.freeze({
       projectId: PROJECT,
       firestoreDatabaseId: CORE,
       warehouseDatabaseId: WAREHOUSE,
@@ -148,7 +148,7 @@ async function firestoreDocument(database,path) {
   const response = await fetch(PROD_FIRESTORE + 'projects/' + PROJECT + '/databases/' +
     database + '/documents/' + path,{headers:{authorization:'Bearer owner'}});
   if(response.status===404)return null;
-  assert.equal(response.status,200,await response.text());
+  if (response.status !== 200) throw new Error('FAST_PATH_GET_FAILED:' + response.status + ':' + await response.text());
   const data=await response.json();
   return {name:data.name,fields:Object.fromEntries(
     Object.entries(data.fields||{}).map(([k,v])=>[k,from(v)])),
@@ -160,7 +160,7 @@ async function seed(database,path,record) {
       method:'PATCH', headers:{authorization:'Bearer owner','content-type':'application/json'},
       body:JSON.stringify({fields:fields(record)}),
   });
-  assert.equal(resp.status,200, await resp.text());
+  if (resp.status !== 200) throw new Error('FAST_PATH_SEED_FAILED:' + resp.status + ':' + await resp.text());
 }
 function req(action, input, workspaceId=WORKSPACE, auth='Bearer synthetic-owner') {
   return {
@@ -293,6 +293,6 @@ test('F09 — consumption idempotency and stale optimistic state',async()=>{
   assert.equal(balance.fields.quantity,4);
 });
 test('network safety blocks any real URL including production Firestore',async()=>{
-  await assert.rejects(()=>fetch('https://firestore.googleapis.com/v1/projects/prod/databases/(default)/documents/x'),
+  assert.throws(()=>fetch('https://firestore.googleapis.com/v1/projects/prod/databases/(default)/documents/x'),
     /FAST_PATH_NETWORK_BLOCKED/);
 });
