@@ -1,0 +1,11 @@
+{
+  "firestore": [
+    { "database": "qa-core", "rules": "firestore.rules" },
+    { "database": "qa-warehouse", "rules": "firestore.warehouse.rules" }
+  ],
+  "emulators": {
+    "firestore": { "host": "127.0.0.1", "port": 8097 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}
