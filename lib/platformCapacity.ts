@@ -122,7 +122,8 @@ export type FirebaseGlobalMetricDataThrough = Record<
 
 export type GoogleMonitoringCredentialSource =
   | 'firebase-admin'
-  | 'dedicated-monitoring';
+  | 'dedicated-monitoring'
+  | 'cloud-run-managed';
 
 export interface FirebaseGlobalUsageSnapshot {
   telemetryVersion: typeof USAGE_TELEMETRY_VERSION;
