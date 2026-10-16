@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   SESSION_REVOCATION_TTL_MS,
