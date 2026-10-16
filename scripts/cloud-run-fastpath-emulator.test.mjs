@@ -58,6 +58,13 @@ const ts = require('typescript');
 const Module = require('node:module');
 const originalLoad = Module._load;
 const originalTs = require.extensions['.ts'];
+const { initializeApp, deleteApp } = require('firebase/app');
+const { getFirestore, connectFirestoreEmulator, terminate } = require('firebase/firestore');
+const sdkApp = initializeApp({projectId: PROJECT, apiKey:'synthetic-non-secret-key',
+  appId:'1:789:web:SYNTHETIC'}, 'qa-f06-transaction');
+const sdkWarehouse = getFirestore(sdkApp, WAREHOUSE);
+connectFirestoreEmulator(sdkWarehouse, '127.0.0.1', PORT);
+
 let firestoreCalls = 0;
 globalThis.fetch = (url, opts) => {
   firestoreCalls += 1;
@@ -102,6 +109,16 @@ Module._load = function safeLoad(request, parent, isMain) {
   if (request.endsWith('/lib/server/sectorProvisioningAdmin')) {
     return { getGoogleAccessToken: async () => 'owner' };
   }
+  if (request === '../firebase' && parent?.filename.endsWith('/lib/warehouse/locationRepository.ts')) {
+    return { warehouseDb: sdkWarehouse, auth: { currentUser: { uid: ACTOR } },
+      handleFirestoreError: error => { throw error; }, OperationType: { WRITE: 'write' } };
+  }
+  if (request === '../operationalPaths' && parent?.filename.endsWith('/lib/warehouse/locationRepository.ts')) {
+    return { getCurrentOperationalScope: () => ({workspaceId: WORKSPACE, ug: UG, uid: ACTOR}) };
+  }
+  if (request === './telemetry' && parent?.filename.endsWith('/lib/warehouse/locationRepository.ts')) {
+    return {recordWarehouseDocumentReads: () => {}, recordWarehouseDocumentWrites: () => {}};
+  }
   return originalLoad.call(this, request, parent, isMain);
 };
 require.extensions['.ts'] = (module, filename) => {
@@ -119,10 +136,13 @@ require.extensions['.ts'] = (module, filename) => {
 };
 let POST;
 let createWarehouseItemIntakeId;
+let transferWarehouseStock;
 try {
   POST = require(resolve(root, 'app/api/central-depositos/intake-action/route.ts')).POST;
   createWarehouseItemIntakeId =
     require(resolve(root, 'lib/warehouse/intake.ts')).createWarehouseItemIntakeId;
+  transferWarehouseStock =
+    require(resolve(root, 'lib/warehouse/locationRepository.ts')).transferWarehouseStock;
 } finally {
   // Dependencies have already been loaded; don't affect the rest of test runner.
   Module._load = originalLoad;
@@ -173,7 +193,9 @@ let immediate;
 let materialId;
 const depId='dep_'+'a'.repeat(32);
 const locId='loc_'+'b'.repeat(32);
+const locBId='loc_'+'c'.repeat(32);
 const loc={kind:'LOCATION',depotId:depId,locationId:locId,subpositionId:null};
+const locB={kind:'LOCATION',depotId:depId,locationId:locBId,subpositionId:null};
 const invoiceKey='nf_fastpath_qa_001';
 const inv='invoice_fastpath_01';
 const empenho='empenho_fastpath_01';
@@ -192,12 +214,19 @@ test('emulator is reachable and initializes dual named synthetic databases', asy
     items:[{id:item,name:'Synthetic material',unit:'UN'}],
   });
   await seed(WAREHOUSE,warehousePath('depots/'+depId),{
-    id:depId,workspaceId:WORKSPACE,ug:UG,status:'active',
+    schemaVersion:'warehouse_depot_v1', id:depId,workspaceId:WORKSPACE,ug:UG,
+    code:'DEP-01',name:'Synthetic depot',description:null,
+    visualType:'STANDARD',sizeProfile:'MEDIUM',status:'active',
+    createdBy:ACTOR,updatedBy:ACTOR,
   });
-  await seed(WAREHOUSE,warehousePath('locations/'+locId),{
-    id:locId,workspaceId:WORKSPACE,ug:UG,status:'active',
-    depotId:depId,kind:'LOCAL',
-  });
+  for(const [id,code] of [[locId,'LOC-01'],[locBId,'LOC-02']]) {
+    await seed(WAREHOUSE,warehousePath('locations/'+id),{
+      schemaVersion:'warehouse_location_v1',id,workspaceId:WORKSPACE,ug:UG,
+      depotId:depId,kind:'LOCAL',parentLocationId:null,
+      code,name:'Synthetic '+code,description:null,status:'active',
+      createdBy:ACTOR,updatedBy:ACTOR,
+    });
+  }
   await seed(WAREHOUSE,warehousePath('destinations/dest_synthetic'),{
     schemaVersion:'warehouse_destination_v1',
     id:'dest_synthetic',workspaceId:WORKSPACE,ug:UG,
@@ -292,6 +321,40 @@ test('F09 — consumption idempotency and stale optimistic state',async()=>{
   const balance=await firestoreDocument(WAREHOUSE,warehousePath('balances/'+materialId));
   assert.equal(balance.fields.quantity,4);
 });
+test('F06 — actual transferWarehouseStock runs SDK transaction on named emulator warehouse',async()=>{
+  const result=await transferWarehouseStock(WORKSPACE,{
+    materialId,from:loc,to:locB,quantity:2,
+    idempotencyKey:'synthetic-transfer-001',note:'synthetic migration QA',
+  });
+  assert.equal(result.applied,true);
+  assert.equal(result.fromBalance.quantity,2);
+  assert.equal(result.toBalance.quantity,2);
+  const [origin,destination,total]=await Promise.all([
+    firestoreDocument(WAREHOUSE,warehousePath('locationBalances/'+result.fromBalance.id)),
+    firestoreDocument(WAREHOUSE,warehousePath('locationBalances/'+result.toBalance.id)),
+    firestoreDocument(WAREHOUSE,warehousePath('balances/'+materialId)),
+  ]);
+  assert.equal(origin.fields.quantity,2);
+  assert.equal(destination.fields.quantity,2);
+  assert.equal(total.fields.quantity,4);
+});
+
+test('F06 — replay identical is harmless and divergent same key fails closed',async()=>{
+  const input={materialId,from:loc,to:locB,quantity:2,
+    idempotencyKey:'synthetic-transfer-001',note:'synthetic migration QA'};
+  const replay=await transferWarehouseStock(WORKSPACE,input);
+  assert.equal(replay.applied,false);
+  await assert.rejects(()=>transferWarehouseStock(WORKSPACE,{...input,quantity:1}),
+    /WAREHOUSE_IDEMPOTENCY_CONFLICT/);
+  const total=await firestoreDocument(WAREHOUSE,warehousePath('balances/'+materialId));
+  assert.equal(total.fields.quantity,4);
+});
+
+test.after(async()=>{
+  await terminate(sdkWarehouse);
+  await deleteApp(sdkApp);
+});
+
 test('network safety blocks any real URL including production Firestore',async()=>{
   assert.throws(()=>fetch('https://firestore.googleapis.com/v1/projects/prod/databases/(default)/documents/x'),
     /FAST_PATH_NETWORK_BLOCKED/);
