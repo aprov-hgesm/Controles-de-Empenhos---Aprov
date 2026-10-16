@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Cloud Build submit bloqueado por PERMISSION_DENIED após upload QA (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** W8 `SOURCE_W8=PASS`, config Firebase pública `FIREBASE_QA=PASS`, número de projeto QA `PROJETO_GCP=PASS`; habilitação `cloudbuild.googleapis.com` concluída com sucesso (operation `operations/acf.p2-953294034210-715a8e78-4e4e-4331-9d7c-43aae7cf6a3f`); `CLOUD_BUILD_API=PASS`.
+- **Primeiro submit Cloud Build real, NÃO aprovado:** `gcloud builds submit` preparou tarball 923 arquivos / 9.1 MiB e enviou fonte ao bucket QA `gs://emprovex-qa-r1-261015-6275_cloudbuild/source/1792184855.401925-aeff20deb7ba4205bd0997f11ae70c4f.tgz`. O endpoint de submissão respondeu `PERMISSION_DENIED: The caller does not have permission` para identidade gcloud ativa (conta do operador). **Nenhum build Cloud Build real, push ao Artifact Registry ou Cloud Run deploy foi comprovado**. Erro ocorreu **depois** do upload do source, **antes** do retorno de uma operação de build.
+- **Investigação mínima antes de mutação IAM:** consultar `projects.testIamPermissions` no projeto QA para `cloudbuild.builds.create` e `serviceusage.services.use`, sem tokens/logs brutos/segredos. Se ambas PASS, identificar service account default Cloud Build e autorização `iam.serviceAccounts.actAs`; investigar agente gerenciado `service-PROJECT_NUMBER@gcp-sa-cloudbuild.iam.gserviceaccount.com` caso necessário. Não conceder `roles/editor`, `roles/owner` nem IAM produtivo como atalho. Referência Google Cloud Build: get-default-service-account, configure-access-to-resources e troubleshooting.
+- **Observação do processo anterior:** o config do build temporário incluiu JSON Firebase Web público no argumento Docker e foi removido localmente pelo `finally`; o source upload ao bucket QA pode conter configuração pública. Não havia chave de conta de serviço; evitar transcrição de apiKey em saída futura e restringir o contexto a QA.
+- **Bloqueios preservados:** interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece; IAM negado, Rules e isolamento antes do deploy privado não certificados. Produção Vercel/DNS/`main`/Firestore não modificados.
+- **Progresso conservador sem alteração:** E3 68,75%; E4 25%; geral 58,75%. API habilitada e upload de source não substituem publicação de imagem nem build concluído.
+
+---
+
 ## CLOUD-RUN-R1 — Artifact Registry QA criado e confirmado (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** `PROJETO_QA=PASS` para `emprovex-qa-r1-261015-6275` (número `953294034210`); `gcloud services enable artifactregistry.googleapis.com --project=...` retornou operation `operations/acat.p2-953294034210-e87c96cc-8e1e-491c-8534-4d1295977fc5` terminada com sucesso e `ARTIFACT_REGISTRY_API=PASS`. `gcloud artifacts repositories create emprovex-qa-docker --location=us-east1 --repository-format=docker --immutable-tags --disable-vulnerability-scanning` confirmou `Created repository [emprovex-qa-docker]`, operation `projects/emprovex-qa-r1-261015-6275/locations/us-east1/operations/ecaa0bad-9dfe-4da7-9db1-0feb757e1a93`. Consulta final: `ARTIFACT_REGISTRY=PASS`, `FORMATO=DOCKER`, `REGIAO=us-east1`, `PUBLIC_ACCESS=NAO_CONCEDIDO`, `RESULTADO=ARTIFACT_REGISTRY_QA_PRONTO`; criptografia Google-managed e 0.000MB.
