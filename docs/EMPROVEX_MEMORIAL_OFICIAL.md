@@ -1,5 +1,24 @@
 # EMPROVEX — Memorial Oficial
 
+## CHECKPOINT VIGENTE — CLOUD-RUN-R1 QA — 2026-10-16
+
+**Classificação:** QA INFRA PARCIALMENTE CRIADO / HOMOLOGAÇÃO INCOMPLETA / MIGRAÇÃO **NO-GO**.
+
+**Fonte principal atualizada:** [Relatório consolidado QA de 16/10/2026](audits/cloud-run-r1/RELATORIO_CONSOLIDADO_QA_2026-10-16.md) (branch documental do PR #317). Histórico das fases W1–W6 preservado nos PRs #316/#318/#319/#320/#321/#322 e nos blocos anteriores do Memorial.
+
+### Evidência real (saída PowerShell do Fundador)
+
+- **Projeto novo:** `emprovex-qa-r1-261015-6275` (número `953294034210`, ACTIVE), distinto do produtivo `gen-lang-client-0982077967`. Consulta `projects describe` mostrou apenas `projectId`, sem `parent` (compatível com No organization).
+- **Faturamento:** conta `Pagamento do Firebase` aberta, moeda **BRL**; projeto QA com `billingEnabled: true`. Budget exclusivo ao QA `EMPROVEX QA R1 - Mensal` **R$20/mês**; `CURRENT_SPEND` 25/50/75/100%, créditos incluídos. **É somente alerta, não bloqueio de cobrança.**
+- **Firestore:** API ativada somente no QA. Dois bancos Firestore Native Standard `us-east1` criados, com proteção de exclusão habilitada e PITR desativado: `qa-core` (`freeTier: true`, primeiro banco do projeto) e `qa-warehouse` (`freeTier: false`, faturável por uso). Corrigida a premissa histórica de que todo banco nomeado perderia o free tier: o primeiro banco do projeto o recebeu.
+- **IAM:** conta `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` criada sem chave JSON no processo. Policy explícita inicial: fundador `roles/owner`, Firebase Rules service agent e Firestore service agent. **`roles/datastore.user` condicional a `qa-core` confirmado** em policy v3; condição separada para `qa-warehouse` foi instruída, **sem evidência de execução até este checkpoint**.
+- **Não realizados:** testes reais de allowed/403 IAM por banco e contra produção, Rules por DB, Firebase Auth/AppCheck QA, inspeção de bundle Next staging, deploy Cloud Run QA, WIF, teste R03 restore, F09 saída física multi-linha. O interlock W4 de startup em Cloud Run permanece intencionalmente bloqueado.
+- **Testes técnicos anteriores:** W6 9/9 Emulator (F05 alocação, F06 transferência real via transação SDK e F09 consumo imediato) e Application CI/Core Protection PASS; **não certificam** IAM/Rules/Auth no GCP. Correção de leitura de lote F05→F06 existe apenas na branch DRAFT W6. PRs #317/#320/#321/#322 abertos DRAFT, não merged. Nenhum deploy ou mudança na `main` autorizados por esse programa.
+
+**Próximo gate:** receber saída IAM do `qa-warehouse`; auditar policy resultante em read-only; validar acessos reais permitidos no QA e 403 negado no projeto produtivo; configurar Rules/Auth do QA e testes de bundle antes de liberar qualquer deploy. **Vercel/`emprovex.com.br` e projeto produtivo permanecem como estão.**
+
+---
+
 ## CLOUD-RUN-R1 — W7 identidade runtime QA criada (2026-10-15)
 
 - **Evidência enviada pelo Fundador:** `gcloud.cmd iam service-accounts create emprovex-qa-runtime --display-name="EMPROVEX QA Cloud Run Runtime" --description="Keyless QA runtime identity; no production access" --project=emprovex-qa-r1-261015-6275` retornou `Created service account [emprovex-qa-runtime]` e e-mail `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com`.
