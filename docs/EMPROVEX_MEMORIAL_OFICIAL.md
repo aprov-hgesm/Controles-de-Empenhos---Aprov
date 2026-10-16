@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Projeto QA criado pelo Fundador (2026-10-15)
+
+- **Evidência enviada pelo Fundador:** execução do script PowerShell da etapa 1 usando conta Google `aprov1hgesm@gmail.com` exibiu `Create ... done`, projeto GCP **`emprovex-qa-r1-261015-6275`** número **`953294034210`**, `LIFECYCLE_STATE=ACTIVE`. Esta é evidência textual da execução local; o coordenador ainda não possui acesso autenticado ao Console/API do GCP para conferência independente.
+- **Escopo realizado:** apenas criação de projeto QA segregado do projeto produtivo **`gen-lang-client-0982077967`**. O script reportou **sem vinculação de billing feita por ele**; estado efetivo de faturamento a ser confirmado via `gcloud billing projects describe emprovex-qa-r1-261015-6275`. Nenhum Firestore QA, conta de serviço, Cloud Run, Artifact Registry, serviço de deploy ou DNS foi criado nessa etapa.
+- **Próximo gate:** consultar faturamento do projeto explicitamente pelo ID QA, confirmar conta de faturamento e capacidade de budget/alertas antes de autorizar vinculação. Budget **não** é teto de gastos automático. Após isso, IAM de menor privilégio e bancos QA nomeados, sem acesso à produção; cada mutação deverá ser auditada.
+- **Produção protegida:** não executar mudanças no projeto produtivo, Vercel ou domínio. CLOUD-RUN-R1 segue **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 custo QA e autorizacao inicial (2026-10-15)
 
 - Fundador autorizou confirmar custos/limites e criar infraestrutura isolada. Precos oficiais: Cloud Run request-based free tier 2M requests / 180k vCPU-s / 360k GiB-s mensais por billing account; Firebase Auth convencional 50k MAU mensais Blaze; Cloud Build 2500 build-min elegiveis; Artifact Registry 0,5 GiB-mes por conta. **Firestore named databases (necessarios para Core e Warehouse separados) nao recebem free tier; operacoes/storage sao pagas por uso.** Valores variam por regiao e moeda. Billing Budget/alerts **nao sao hard spending cap**.
