@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 identidade runtime QA criada (2026-10-15)
+
+- **Evidência enviada pelo Fundador:** `gcloud.cmd iam service-accounts create emprovex-qa-runtime --display-name="EMPROVEX QA Cloud Run Runtime" --description="Keyless QA runtime identity; no production access" --project=emprovex-qa-r1-261015-6275` retornou `Created service account [emprovex-qa-runtime]` e e-mail `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com`.
+- **PASS criação de identidade apenas.** Nenhum IAM Firestore concedido, nenhuma chave JSON criada pelo comando, nenhum Cloud Run publicado. Cloud Run ADC automático requer futuramente associar explicitamente essa conta ao serviço QA, sem chave baixada.
+- **Próximo gate:** conceder somente `roles/datastore.user` por IAM **condicional ao nome exato do banco** `projects/emprovex-qa-r1-261015-6275/databases/qa-core` e, em segunda operação validada, `qa-warehouse`. Não conceder o papel de forma irrestrita; o escopo da IAM policy é projeto, com `resource.name` condition conforme documentação oficial (https://firebase.google.com/docs/firestore/enterprise/create-databases). Verificar política resultante e testes negativos para `(default)` e outros bancos; cuidado: console Google Cloud pode não refletir condições como cliente server API. Ainda faltam Firestore Security Rules individuais e autenticação Firebase QA; não presumir teste end-to-end.
+- Produção, Vercel e `main` intocadas. CLOUD-RUN-R1 **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 sem parent explícito no QA (2026-10-15)
 
 - **Evidência do Fundador:** `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(projectId,parent)"` exibiu apenas `projectId: emprovex-qa-r1-261015-6275`, sem `parent`. Compatível com projeto em **No organization**, sem organização/pasta ancestral reportada pela API no momento. A consulta não faz auditoria abrangente de outras camadas de autorização; as concessões diretas IAM do projeto foram verificadas separadamente.
