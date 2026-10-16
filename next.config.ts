@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import baseline from './firebase-applet-config.json';
 import { assertCloudRunBuildReady } from './lib/cloudRunIsolation.mjs';
 
@@ -78,11 +79,10 @@ const nextConfig: NextConfig = {
     // stub. next.config.ts reads the true production baseline BEFORE webpack to
     // enforce the W4 comparison gate. Existing Vercel builds remain unchanged.
     if (process.env.EMPROVEX_RUNTIME_TARGET === 'cloud-run-staging') {
-      const { resolve } = require('node:path');
       config.plugins = config.plugins || [];
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(
-          /firebase-applet-config\\.json$/,
+          /firebase-applet-config[.]json$/,
           resource => {
             resource.request = resolve(process.cwd(), 'lib/firebaseCloudRunRedactedBaseline.json');
           }
