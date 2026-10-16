@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Firebase Management GET 403 persistente após enable (2026-10-16)
+
+- **Evidência Windows do Fundador:** a habilitação `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou operação concluída com sucesso, e o `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token OAuth local voltou a retornar `FIREBASE_PROJECT_STATUS=403`. **Não inferir** que `FirebaseProject` inexiste ou que o usuário não tem `roles/owner`; no IAM do projeto QA o fundador figurou previamente como Owner, papel que contém `firebase.projects.get` conforme documentação de IAM.
+- **Gate diagnóstico apenas read-only:** extrair `error.status` e o `google.rpc.ErrorInfo.reason` (sem `error.message`, tokens ou corpo integral) do erro HTTP 403 para distinguir `SERVICE_DISABLED`, `CONSUMER_INVALID`, `ACCESS_TOKEN_SCOPE_INSUFFICIENT`, `PERMISSION_DENIED` e casos correlatos. Confirmar também a identidade gcloud ativa se necessário; testar novamente somente após causa identificada. Não conceder papéis cegamente; não adicionar Firebase nem tocar produção sem decisão do Fundador.
+- Fontes: https://firebase.google.com/docs/reference/firebase-management/rest/v1beta1/projects/get ; https://docs.cloud.google.com/iam/docs/roles-permissions/firebase ; https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project .
+- **Progresso sem novo gate:** Etapa 3 **62,5%**; total **52,5%**. As duas leituras Firestore QA HTTP 200 permanecem válidas, mas Rules/Auth e negativos não concluídos. Vercel e produção preservadas; **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 Firebase Management API habilitada no QA (2026-10-16)
 
 - **Evidência real PowerShell do Fundador:** `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou `Operation "operations/acat.p2-953294034210-0e1530db-43f7-4541-bb0b-7a14fc313804" finished successfully.`. **PASS: Firebase Management API ativada somente no projeto QA**.
