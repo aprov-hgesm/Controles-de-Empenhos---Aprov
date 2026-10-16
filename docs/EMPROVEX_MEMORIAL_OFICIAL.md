@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W8 QA build 42 páginas, scan 2349 e boot local 200 (2026-10-16)
+
+- **Evidência W8 [#38854977947](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854977947) PASS:** `SOURCE_GATE_PASS`, Next.js compilado, **42 páginas estáticas**, `QA_TRIM_OK` da cópia legada no diretório `.next/standalone` (sem alterar fonte), `QA_ARTIFACT_PASS: 2349 text artifacts inspected`, `QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=200` em localhost com config QA Web **sintética**. Nenhuma credencial, IAM ou Cloud Run real utilizado.
+- **Evidência W8 posterior [#38855256681](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855256681):** mesmos gates PASSED após ajuste de tipagem. `Application CI` anterior passou por TSC e controles operacionais, mas detectou 1 espaço final no documento de handoff; corrigido no commit `a7776de812d67ae11ab5cf9d330077bd7b705406`. A execução final do Application CI [#38855626450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626450) **estava em andamento** no momento deste checkpoint; NÃO afirmar PASS final antes de concluir.
+- **Próximo gate real:** cadastro Web App Firebase no projeto `emprovex-qa-r1-261015-6275` para configuração pública válida; habilitar/validar Auth Google/E-mail e Rules QA por banco, testar negação IAM efetiva, build Docker com config real e validar isolamento R01/R02/R04. `Dockerfile.cloud-run.qa` criado mas ainda **não executado para imagem real nem publicado**; interlock W4 Cloud Run continua ativo. Não confundir boot localhost sem `K_SERVICE` com certificação no Cloud Run.
+- **Progresso conservador mantido:** Etapa 3/5 Segurança QA **68,75%**, geral **53,75%** até revisão da medição final. A aprovação do build sintético pode ser considerada subgate da **preparação da etapa 4**, mas não certifica implantação. Cloud Run **NO-GO**; Vercel, `main`, GCP produtivo, DNS, dados e usuários reais preservados.
+
+---
+
 ## CLOUD-RUN-R1 — W8 isolamento real de bundle, redução 8 → 1 (2026-10-16)
 
 - **Evidência concreta GitHub Actions [W8 run #38854051361](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38854051361):** Next.js 15.5.24 compilou com sucesso e gerou **42 páginas estáticas**, mas o scanner bloqueou o artefato: `QA_ARTIFACT_NOT_ISOLATED: 8 paths` em server chunks, routes, JSON legado e client chunk. **Não classificar como pronto para deploy.**
