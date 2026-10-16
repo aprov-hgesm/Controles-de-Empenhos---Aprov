@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Firebase Auth QA em tela inicial de provedores (2026-10-16)
+
+- **Evidência visual enviada pelo Fundador:** Console Firebase no projeto **EMPROVEX QA R1**, seção Authentication > Método de login, exibe `Comece a usar o Firebase Auth ao adicionar seu primeiro método de login`, com opções **E-mail/senha**, **Google**, Smartphone, Anônimo etc. Portanto o fluxo de Authentication está acessível no console, mas **nenhum provedor de login foi habilitado ainda**. A consulta REST anterior à configuração retornara HTTP 404; não afirmar Auth funcional completo.
+- **Próxima ação sequencial guiada:** abrir configurações do provedor **Google** no projeto QA e inspecionar campos (suporte e botão de ativação) antes de salvar; posteriormente configurar **E-mail/senha** para setores mediante validação de contratos de autenticação do EMPROVEX e testes QA. **Não ativar** login anônimo, telefone ou outros provedores desnecessários. Não publicar Security Rules automaticamente; versões fail-closed no PR #323 ainda são rascunhos.
+- **Progresso mantido:** etapa 3 Segurança/Isolamento QA **68,75%**; total **53,75%**. Sem gates reais Auth/Rules ainda; produção Vercel, projeto GCP produtivo, DNS e `main` intocados. Cloud Run permanece **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — W7 Authentication GET config 404 no QA (2026-10-16)
 
 - **Saída Windows do Fundador:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` utilizando header de quota QA retornou `AUTH_CONFIG=NAO_CONFIRMADO; HTTP=404`. Essa evidência é compatível com `Firebase Auth` ainda **não inicializado** após `addFirebase`, mas a consulta **não exibiu** `error.message`, portanto não certifica que seja `CONFIGURATION_NOT_FOUND`. Não afirmar que Identity Toolkit API está desabilitada ou que IAM Owner esteja errado sem nova evidência.
