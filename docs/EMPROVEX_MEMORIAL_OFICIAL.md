@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 Authentication GET config 404 no QA (2026-10-16)
+
+- **Saída Windows do Fundador:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` utilizando header de quota QA retornou `AUTH_CONFIG=NAO_CONFIRMADO; HTTP=404`. Essa evidência é compatível com `Firebase Auth` ainda **não inicializado** após `addFirebase`, mas a consulta **não exibiu** `error.message`, portanto não certifica que seja `CONFIGURATION_NOT_FOUND`. Não afirmar que Identity Toolkit API está desabilitada ou que IAM Owner esteja errado sem nova evidência.
+- **Próximo passo desburocratizado:** abrir somente o projeto **QA** em `https://console.firebase.google.com/project/emprovex-qa-r1-261015-6275/authentication`; se a interface mostrar `Get started / Primeiros passos`, concluir **somente a inicialização** de Authentication, sem habilitar provedores automaticamente. Depois fazer uma única consulta GET de configuração por REST com quota header para confirmar HTTP 200, e discutir provedores Google/password coerentes com login EMPROVEX. Caso o console mostre Auth já inicializado ou erro, não modificar e obter a indicação do erro.
+- **Referências:** https://firebase.google.com/codelabs/firebase-terraform (console: Authentication > Get started); https://firebase.google.com/docs/auth/web/start ; https://docs.cloud.google.com/identity-platform/docs/reference/rest/v2/projects/getConfig (endereço e `firebaseauth.configs.get`). `initializeAuth` da Identity Platform é uma alternativa de produto com impacto potencial em cobrança; não executá-lo automaticamente no programa QA.
+- **Andamento:** etapa 3 Segurança QA **68,75%**, migração geral **53,75%**. Cloud Run NO-GO; não houve alteração de Auth, Rules, IAM nem projeto produtivo por este checkpoint. `main` e Vercel preservados.
+
+---
+
 ## CLOUD-RUN-R1 — FirebaseProject QA registrado e certificado (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** após POST `projects/emprovex-qa-r1-261015-6275:addFirebase`, a verificação read-only da operação `operations/workflows/ZGQxN2UyYmYtYjE5My00YjVkLWIyZGEtODc0ZTU1OTIxOGU3`, com projeto consumidor `x-goog-user-project` fixado no QA, retornou `FIREBASE=SUCCESS; PROJECT=emprovex-qa-r1-261015-6275`. **PASS: FirebaseProject QA registrado efetivamente**. Não repetir POST `addFirebase`; a associação é persistente.
