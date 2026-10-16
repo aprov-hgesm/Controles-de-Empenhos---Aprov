@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 auditoria IAM QA inicial (2026-10-15)
+
+- **Evidência CLI somente leitura fornecida pelo Fundador:** `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"` retornou exatamente 3 bindings explícitos de projeto: `roles/owner` em `user:aprov1hgesm@gmail.com`; `roles/firebaserules.system` em `service-953294034210@firebase-rules.iam.gserviceaccount.com`; `roles/firestore.serviceAgent` em `service-953294034210@gcp-sa-firestore.iam.gserviceaccount.com`.
+- **Veredito preliminar:** PASS escopo da **allow policy explícita do projeto**: sem `allUsers`, `allAuthenticatedUsers` ou contas da produção listadas, e as duas identidades service agents do Google exibem número do projeto QA correto. `roles/owner` é amplo, mas pertence ao administrador fundador; não estender a runtimes.
+- **Limites da evidência:** `projects get-iam-policy` **não mostra concessões herdadas de folder/organization**, não certifica roles condicionais em outros recursos, nem Firebase Security Rules por banco. Ainda não existe conta de serviço runtime QA própria nem validação de isolamento Firestore/Auth/Cloud Run. Próximo passo de somente leitura: `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(projectId,parent)"` para entender ancestralidade, antes de IAM mínimo/keyless e Rules deny-by-default individuais.
+- **Não alterar os Google service agents**, IAM produção, `main` ou Vercel; CLOUD-RUN-R1 continua NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 qa-warehouse criado (2026-10-15)
 
 - **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-warehouse --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, `projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse`, edição `STANDARD`, tipo `FIRESTORE_NATIVE`, `locationId=us-east1`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED` e `freeTier: false`.
