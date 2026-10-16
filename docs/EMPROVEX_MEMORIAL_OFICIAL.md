@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 billing QA vinculado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd billing projects link emprovex-qa-r1-261015-6275 --billing-account=...` retornou `billingEnabled: true` e `projectId: emprovex-qa-r1-261015-6275`. Faturamento QA agora vinculado à conta aberta **Pagamento do Firebase**, moeda **BRL** (verificada em consulta anterior); conta de faturamento existente compartilhada — sem afirmar que a produção mudou. Não repetir identificador financeiro no memorial.
+- **Próximo gate obrigatório:** criar orçamento de ALERTA para **R$ 20 BRL por mês**, escopo exclusivo `projects/emprovex-qa-r1-261015-6275`, thresholds 25%, 50%, 75% e 100%, sem desativar destinatários IAM. **Orçamento não é limite duro de gastos**. Verificar saída da CLI (nome/id, amount, filtro e regras) antes de habilitar Firestore/Cloud Run. Projeto principal do gcloud não deve ser alterado; usar `--project=emprovex-qa-r1-261015-6275` explicitamente.
+- **Estado efetivo:** projeto QA criado e billing habilitado; **nenhum orçamento comprovado criado ainda**, nenhum Firestore QA, Cloud Run QA, IAM ou deploy certificado. Produção Vercel/Firestore inalterada, CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 — Conta de faturamento aberta identificada (2026-10-15)
 
 - O Fundador confirmou por consulta somente leitura `gcloud.cmd billing accounts list --filter="open=true"` uma conta ativa, nome de exibição **Pagamento do Firebase**, `OPEN=True`. Não registrar o identificador financeiro completo no memorial. Isso **não** indica faturamento já habilitado no projeto QA: a consulta anterior indicou `billingEnabled: false` em `emprovex-qa-r1-261015-6275`.
