@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Preparação técnica W4 autorizada pelo Fundador (2026-10-15)
+
+**Autorização expressa:** começar a **preparação técnica local**, restrita ao GitHub (branch/PR DRAFT) e a testes **offline/Firebase Emulator com dados fictícios**. Abrange avaliar #286/#289, desenvolver proteções fail-closed de homologação, adaptar aquisição de token para ADC preservando a Vercel, preparar container standalone somente local e executar gates proporcionais ao risco. **Não é autorização** para criar projeto Firebase, Cloud Run, IAM/WIF, contas de serviço, modificar bancos/Rules/OAuth/DNS/Vercel, publicar, efetuar merge, testar em produção nem incorrer em custos.
+
+- **PR #286:** DRAFT, base release antiga; **PR #289:** DRAFT, construído sobre #286, contém hipótese de Preview Firebase isolado. Worker 4 deve avaliar semanticamente contra HEAD vivo de main, sem cherry-pick automático, para evitar regressão ou duplicação.
+- **Prompt de ativação W4:** `docs/audits/cloud-run-r1/prompts/WORKER_4_PREPARACAO_TECNICA_ADC_ISOLAMENTO.md` nesta branch de coordenação.
+- **Riscos-alvo:** R04 isolamento de ambiente, R01 token/ADC e R02 IAM/bancos (apenas preparação local; IAM real permanece pendente); R03 recuperação isolada **não** autorizada nesta etapa. F05/F06/F09 e segurança são gates de regressão com fixtures; não realizar operações reais.
+- **Produção:** mantém `emprovex.com.br` na Vercel, Firestore atual, Auth, cron e variável de ambiente intocados. A consulta administrativa indicou backups programados em Core/Warehouse com PITR 7 dias e retenção 98 dias; isso **não** comprova restore. Três variáveis privadas Vercel foram observadas em Production; `CRON_SECRET` não foi encontrada entre as variáveis exibidas e execução automática não foi certificada; coleta de histórico Firestore pode decorrer também de consulta administrativa. Não converter investigação de cron em mutação de produção.
+- **Status de release:** CLOUD-RUN-R1 **NO-GO**. O Worker 4 deverá abrir PR DRAFT próprio e solicitar aprovação para qualquer provisão/homologação remota futura.
+
+---
+
 ## CLOUD-RUN-R1 — recebimento W2/W3 e reconciliação inicial (2026-10-15)
 
 - **W2 — auditoria administrativa:** [PR #318](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/318), DRAFT, `audit/cloud-run-r1-w2-administrative-evidence@20fcc49068226028111555ef522788bd7c5f70d5`, **6 documentos**. Das verificações X01–X16: **0 integralmente verificadas; 2 inconclusivas (X11/X16); 14 bloqueadas por acesso**. GitHub consultado via integração sem admin: `main protected:false`, rulesets do repositório `[]`, branch-protection detalhada 403; isso **não prova** inexistência de proteções globais ou de Environments. Conta Vercel conectada não pertence ao escopo proprietário e as consultas a `aprov-hgesms-projects` retornaram **403**; não equivale a inexistência de projeto, cron, envs ou backups. Nenhuma console GCP/Firebase/DNS/OAuth/billing foi certificada.
