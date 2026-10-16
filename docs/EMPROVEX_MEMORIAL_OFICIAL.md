@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 qa-warehouse criado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-warehouse --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, `projects/emprovex-qa-r1-261015-6275/databases/qa-warehouse`, edição `STANDARD`, tipo `FIRESTORE_NATIVE`, `locationId=us-east1`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED` e `freeTier: false`.
+- **Estado da infraestrutura de dados QA:** `qa-core` **criado** (`freeTier: true`), `qa-warehouse` **criado** (`freeTier: false`), ambos na região `us-east1` e no mesmo projeto QA exclusivo. Faturamento QA e alerta de orçamento R$20/mês ativados. Bancos nomeados não equivalem a isolamento IAM automático; regras Firestore são separadas por banco e **não foram publicadas/auditadas**. Nem Firebase Auth QA nem integração end-to-end configurados ou certificados.
+- **Próxima auditoria de baixo risco:** `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"` (somente leitura). Detectar roles amplos, identidades de produção e principais `allUsers`/`allAuthenticatedUsers`, antes de contas de serviço/regras. Depois verificar associação do projeto ao Firebase e planejar Rules fechadas em **cada** banco, com testes controlados; não assumir que regras de SDK de servidor (ADC/Admin SDK) aplicam-se automaticamente, porque dependem de IAM.
+- **Proteção:** não criar banco `(default)`, não importar dados, não conceder IAM à produção, não modificar Vercel/DNS/`main`. CLOUD-RUN-R1 segue **NO-GO**. Fontes: https://firebase.google.com/docs/firestore/manage-databases e https://firebase.google.com/docs/rules/manage-deploy .
+
+---
+
 ## CLOUD-RUN-R1 — W7 banco qa-core criado e free tier confirmado (2026-10-15)
 
 - **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-core --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, identificador `projects/emprovex-qa-r1-261015-6275/databases/qa-core`, `STANDARD`, `FIRESTORE_NATIVE`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED`, `locationId: us-east1`, `freeTier: true`.
