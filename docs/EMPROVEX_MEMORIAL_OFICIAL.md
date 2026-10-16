@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 banco qa-core criado e free tier confirmado (2026-10-15)
+
+- **Evidência PowerShell do Fundador:** `gcloud.cmd firestore databases create --database=qa-core --location=us-east1 --type=firestore-native --edition=standard --delete-protection --project=emprovex-qa-r1-261015-6275` retornou `done: true`, identificador `projects/emprovex-qa-r1-261015-6275/databases/qa-core`, `STANDARD`, `FIRESTORE_NATIVE`, `DELETE_PROTECTION_ENABLED`, `POINT_IN_TIME_RECOVERY_DISABLED`, `locationId: us-east1`, `freeTier: true`.
+- **Correção da premissa anterior de custo:** fonte atual Firebase `https://firebase.google.com/docs/firestore/pricing` (e Firestore REST field `freeTier`) confirma que **o primeiro banco de um projeto recebe franquia gratuita independentemente do ID**. O `qa-core` é o único beneficiado pela franquia de 1 GiB storage, 50 mil reads/dia, 20 mil writes/dia, 20 mil deletes/dia, 10 GiB saída/mês na edição Standard. Acima disso, cobra-se por uso; TTL/PITR/backups/restore/clones não incluídos. **`qa-warehouse` será o segundo banco e será cobrado pelo consumo, sem franquia própria**.
+- **Gate seguinte:** criar `qa-warehouse` no mesmo projeto/região/edição/modo, `--delete-protection`, sem PITR; aguardar confirmação do Fundador. Depois auditar Rules inicial e IAM; **não conectar o aplicativo a bancos sem regras/identidades e testes de isolamento**. Orçamento R$20 é de alertas, sem teto garantido. Nenhum dado real ou migração.
+
+---
+
 ## CLOUD-RUN-R1 — W7 API Firestore QA habilitada (2026-10-15)
 
 - O Fundador executou `gcloud.cmd services enable firestore.googleapis.com --project=emprovex-qa-r1-261015-6275` e recebeu `Operation ... finished successfully`; Firestore API habilitada **somente no QA**.
