@@ -8,6 +8,7 @@ on:
       - 'scripts/cloud-run-qa-build-preflight.mjs'
       - 'scripts/cloud-run-qa-artifact-audit.mjs'
       - 'scripts/cloud-run-qa-trim-legacy-build-file.mjs'
+      - 'scripts/cloud-run-qa-standalone-smoke.mjs'
       - 'lib/cloudRunIsolation.mjs'
       - 'lib/firebaseRuntimeConfig.ts'
       - 'next.config.ts'
@@ -48,7 +49,7 @@ jobs:
       - name: Synthetic QA Next build and finished-artifact isolation audit (never deployable)
         id: synthetic_build
         if: ${{ steps.preflight.outputs.source_ready == 'true' }}
-        continue-on-error: true
+        # Fail the workflow if build/artifact/local boot is not certified.
         timeout-minutes: 14
         env:
           EMPROVEX_RUNTIME_TARGET: cloud-run-staging
@@ -62,6 +63,7 @@ jobs:
           npm run build
           node scripts/cloud-run-qa-trim-legacy-build-file.mjs
           node scripts/cloud-run-qa-artifact-audit.mjs
+          node scripts/cloud-run-qa-standalone-smoke.mjs
       - name: Record synthetic build outcome (NOT a deployment)
         if: ${{ always() && steps.preflight.outputs.source_ready == 'true' }}
         env:
