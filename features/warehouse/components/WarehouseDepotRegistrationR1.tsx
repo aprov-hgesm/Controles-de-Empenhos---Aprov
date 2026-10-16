@@ -5,13 +5,13 @@ import { CheckCircle2, ClipboardList, Ruler } from 'lucide-react';
 import {
   createWarehouseDepot,
   createWarehouseLocation,
-  listWarehouseDepots,
-  listWarehouseLocations,
+  listWarehouseDepotsStrict,
+  listWarehouseLocationsStrict,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { createWarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
-import { getActiveWarehouseDepotLayout, saveWarehouseDepotLayoutVersion } from '../../../lib/warehouse/layoutRepository';
+import { getActiveWarehouseDepotLayoutStrict, saveWarehouseDepotLayoutVersion } from '../../../lib/warehouse/layoutRepository';
 import {
   DEPOT_KINDS,
   planDepotDraft,
@@ -71,7 +71,7 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
     try {
       // Preflight denies near-capacity lists so duplicate checks cannot silently miss entries.
       const [remoteDepots, remoteLocations] = await Promise.all([
-        listWarehouseDepots(workspaceId, 250), listWarehouseLocations(workspaceId, 500),
+        listWarehouseDepotsStrict(workspaceId, 250), listWarehouseLocationsStrict(workspaceId, 500),
       ]);
       if (remoteDepots.length >= 250 || remoteLocations.length + draft.units.length
         + draft.units.reduce((sum, unit) => sum + unit.shelfCount, 0) >= 500) {
@@ -93,7 +93,7 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
               .includes(row.location.code))))) {
         throw new Error('O depósito possui estrutura fora deste formulário. Não é permitido sobrescrever locais antigos.');
       }
-      if (existingDepot && await getActiveWarehouseDepotLayout(workspaceId, existingDepot.id)) {
+      if (existingDepot && await getActiveWarehouseDepotLayoutStrict(workspaceId, existingDepot.id)) {
         throw new Error('Depósito já possui croqui ativo. Abra Croquis para realizar alterações.');
       }
       setProgress('Etapa 1/3 · Identificando depósito');
@@ -143,7 +143,7 @@ export function WarehouseDepotRegistrationR1({ workspaceId, depots, onRegistered
         }));
       }
       setProgress('Etapa 3/3 · Persistindo geometria em centímetros');
-      if (await getActiveWarehouseDepotLayout(workspaceId, depot.id)) {
+      if (await getActiveWarehouseDepotLayoutStrict(workspaceId, depot.id)) {
         throw new Error('Já existe croqui ativo para este depósito. A publicação do croqui não foi repetida.');
       }
       await saveWarehouseDepotLayoutVersion(workspaceId, {
