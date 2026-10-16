@@ -1,0 +1,51 @@
+name: CLOUD-RUN-R1 W6 Emulator Fast-Path QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/cloud-run-fastpath-emulator.test.mjs'
+      - 'firebase.cloud-run-fastpath-test.json'
+      - '.github/workflows/cloud-run-fastpath-emulator.yml'
+      - 'app/api/central-depositos/intake-action/route.ts'
+      - 'lib/warehouse/**'
+      - 'lib/firebaseRuntimeConfig.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warehouse-fastpath-emulator:
+    name: Independent F05/F09 route persistence — isolated Emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    env:
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8097
+      GCLOUD_PROJECT: demo-emprovex-fastpath
+      FIREBASE_CONFIG: '{"projectId":"demo-emprovex-fastpath"}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci
+      - name: Assert synthetic environment
+        run: |
+          test "$GCLOUD_PROJECT" = "demo-emprovex-fastpath"
+          test "$FIRESTORE_EMULATOR_HOST" = "127.0.0.1:8097"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test -z "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON"
+          test -z "$K_SERVICE"
+          test -z "$EMPROVEX_RUNTIME_TARGET"
+      - name: Execute real route against dual named Firestore Emulators
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.cloud-run-fastpath-test.json
+          --project demo-emprovex-fastpath --only firestore
+          "node --test scripts/cloud-run-fastpath-emulator.test.mjs"
