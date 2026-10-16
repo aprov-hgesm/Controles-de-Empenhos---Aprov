@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 sem parent explícito no QA (2026-10-15)
+
+- **Evidência do Fundador:** `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(projectId,parent)"` exibiu apenas `projectId: emprovex-qa-r1-261015-6275`, sem `parent`. Compatível com projeto em **No organization**, sem organização/pasta ancestral reportada pela API no momento. A consulta não faz auditoria abrangente de outras camadas de autorização; as concessões diretas IAM do projeto foram verificadas separadamente.
+- Próximo passo, **somente QA:** criar a conta de serviço sem chaves `emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com` usando `gcloud iam service-accounts create emprovex-qa-runtime --display-name="EMPROVEX QA Cloud Run Runtime" --description="Keyless QA runtime identity; no production access" --project=emprovex-qa-r1-261015-6275`. Criação não equivale a conceder papel IAM ou ligar Cloud Run, e nenhuma permissão Firestore deve ser concedida por ora. Aguardar saída efetiva do PowerShell para classificar o passo PASS.
+- **Status:** Core/Warehouse QA criados e protegidos de exclusão, orçamento de alertas BRL20, sem conexão aplicativo, IAM runtime, migração, dados reais ou deploy. Produção protegida; CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 auditoria IAM QA inicial (2026-10-15)
 
 - **Evidência CLI somente leitura fornecida pelo Fundador:** `gcloud.cmd projects get-iam-policy emprovex-qa-r1-261015-6275 --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"` retornou exatamente 3 bindings explícitos de projeto: `roles/owner` em `user:aprov1hgesm@gmail.com`; `roles/firebaserules.system` em `service-953294034210@firebase-rules.iam.gserviceaccount.com`; `roles/firestore.serviceAgent` em `service-953294034210@gcp-sa-firestore.iam.gserviceaccount.com`.
