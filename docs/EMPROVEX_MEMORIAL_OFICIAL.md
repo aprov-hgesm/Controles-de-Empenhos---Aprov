@@ -1,5 +1,11 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 inventário APIs QA (2026-10-16)
+
+- Comando **read-only** do Fundador `gcloud.cmd services list --enabled --project=emprovex-qa-r1-261015-6275 --format="value(config.name)"` retornou somente `billingbudgets.googleapis.com`, `firebaserules.googleapis.com`, `firestore.googleapis.com`. **Não há Cloud Run ou IAM Credentials API habilitada** no inventário dessa consulta.
+- `firebaserules.googleapis.com` habilitada **não comprova publicação de Rules** nos bancos; Rules e autorização operacional ainda pendentes. Próxima operação estritamente QA é habilitar `iam.googleapis.com` e `iamcredentials.googleapis.com` para permitir testes de impersonação com token temporário; nenhum segredo JSON deve ser criado ou compartilhado. Antes de conceder `roles/iam.serviceAccountTokenCreator`, inspecionar IAM na **conta de serviço apenas** e usar privilégio mínimo (não no projeto inteiro).
+- Etapa 3: **50%**; migração geral: **50%** (marcos de peso igual). Não houve novo marco de autorização remota; não elevar percentuais. Produção e `main` preservadas. CLOUD-RUN-R1 NO-GO.
+
 ## CHECKPOINT VIGENTE — CLOUD-RUN-R1 QA — 2026-10-16
 
 **Classificação:** QA INFRA PARCIALMENTE CRIADO / HOMOLOGAÇÃO INCOMPLETA / MIGRAÇÃO **NO-GO**.
