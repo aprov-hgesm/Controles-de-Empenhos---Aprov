@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Artifact Registry QA criado e confirmado (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `PROJETO_QA=PASS` para `emprovex-qa-r1-261015-6275` (número `953294034210`); `gcloud services enable artifactregistry.googleapis.com --project=...` retornou operation `operations/acat.p2-953294034210-e87c96cc-8e1e-491c-8534-4d1295977fc5` terminada com sucesso e `ARTIFACT_REGISTRY_API=PASS`. `gcloud artifacts repositories create emprovex-qa-docker --location=us-east1 --repository-format=docker --immutable-tags --disable-vulnerability-scanning` confirmou `Created repository [emprovex-qa-docker]`, operation `projects/emprovex-qa-r1-261015-6275/locations/us-east1/operations/ecaa0bad-9dfe-4da7-9db1-0feb757e1a93`. Consulta final: `ARTIFACT_REGISTRY=PASS`, `FORMATO=DOCKER`, `REGIAO=us-east1`, `PUBLIC_ACCESS=NAO_CONCEDIDO`, `RESULTADO=ARTIFACT_REGISTRY_QA_PRONTO`; criptografia Google-managed e 0.000MB.
+- **Estado do artefato:** o build QA real W8 passou em GitHub Actions, mas sua imagem era efêmera. **Ainda não foi feito push** para `us-east1-docker.pkg.dev/emprovex-qa-r1-261015-6275/emprovex-qa-docker/`. Sem Cloud Run service/revision.
+- **Próximo passo de menor atrito:** Cloud Build remoto no mesmo projeto QA a partir do worktree W8 commit `a7776de812d67ae11ab5cf9d330077bd7b705406`; build config JSON gerada localmente no Windows usando somente a configuração Web Firebase QA **pública** já validada, Dockerfile.cloud-run.qa, verificação de projeto e tag única e publicação no Artifact Registry privado; nenhuma imagem em produção, nenhuma credencial JSON de service account. Dependências reais: Cloud Build API, conta de build com permissão de escrita no repositório e eventual bucket de staging/custo, a confirmar pela primeira execução. Não declarar push PASS sem saída `SUCCESS` e listagem de digest.
+- **Gate de Cloud Run:** `instrumentation.ts` do W8 impede `K_SERVICE` com `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04`. Pedido do Fundador de dispensar testes extensivos não equivale a certificação desses controles; não remover interlock para simular PASS. Preparar invocação privada (`--no-allow-unauthenticated`, conta de runtime QA), certificar isolamento mínimo necessário e liberar em alteração revisada antes do deploy funcional. Produção Vercel/DNS/Firestore/`main` preservados.
+- **Progresso por infraestrutura confirmada:** E1 100%, E2 100%, E3 68,75%, E4 **25%** (antes 20%; +5 pela criação certificada do registro de imagens QA), E5 0%; **migração geral 58,75%**. Preparação do registro não significa publicação de imagem nem deploy.
+
+---
+
 ## CLOUD-RUN-R1 — Diretriz do Fundador: Artifact Registry e primeiro Cloud Run QA privado (2026-10-16)
 
 - **Pedido novo e explícito do Fundador:** preparar Artifact Registry QA, omitir testes de isolamento e executar primeiro deploy privado Cloud Run. **Autorização de intenção de deploy privado recebida**, mas nenhum deploy ou publicação foi executado no checkpoint.
