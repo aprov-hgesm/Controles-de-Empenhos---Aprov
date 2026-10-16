@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Diagnóstico de IAM Cloud Build: permissões do solicitante PASS (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** `projects.testIamPermissions` no projeto QA `emprovex-qa-r1-261015-6275` (sem alteração IAM) retornou `cloudbuild.builds.create=PASS`, `cloudbuild.builds.get=PASS` e `serviceusage.services.use=PASS`, resultado `VERIFICAR_SERVICE_ACCOUNT_BUILD`. O `PERMISSION_DENIED` anterior do `gcloud builds submit` não é explicado pela ausência dessas três permissões, embora outras verificações/condições do IAM ainda possam causar erro.
+- **Investigação focalizada seguinte (somente leitura):** `GET cloudbuild.googleapis.com/v1/projects/emprovex-qa-r1-261015-6275/locations/us-east1/defaultServiceAccount`, analisar `serviceAccountEmail` (que pode ser Compute SA, legacy Cloud Build SA ou vazio) e, quando aplicável, `POST iam.googleapis.com/v1/projects/-/serviceAccounts/{email}:testIamPermissions` com `iam.serviceAccounts.actAs`. Não assumir que SA Compute existe/tem grants. Legacy SA é Google-managed e não recebe IAM policy própria.
+- **Plano:** se `actAs` for ausente, considerar role `roles/iam.serviceAccountUser` restrita à SA de build QA e ao solicitante (sem concessão ampla). Depois conferir permissão da SA de build para escrita no repositório privado `emprovex-qa-docker`. Só executar correções após identificar titular e escopo. NÃO adicionar papéis ao projeto produtivo, não reenviar tarball nem repetir Build cegamente.
+- **Segurança:** build Docker QA GitHub Actions já PASS; Cloud Build não iniciado com sucesso, Artifact Registry existe mas está vazio, Cloud Run não implantado e W4 R01/R02/R04 interlock ativo. Produção preservada.
+- **Progresso:** etapa 3 68,75%, etapa 4 25%, geral 58,75%, sem aumento por diagnóstico.
+
+---
+
 ## CLOUD-RUN-R1 — Cloud Build submit bloqueado por PERMISSION_DENIED após upload QA (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** W8 `SOURCE_W8=PASS`, config Firebase pública `FIREBASE_QA=PASS`, número de projeto QA `PROJETO_GCP=PASS`; habilitação `cloudbuild.googleapis.com` concluída com sucesso (operation `operations/acf.p2-953294034210-715a8e78-4e4e-4331-9d7c-43aae7cf6a3f`); `CLOUD_BUILD_API=PASS`.
