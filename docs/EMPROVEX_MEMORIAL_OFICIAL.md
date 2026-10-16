@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Firebase SERVICE_DISABLED identificado, hipótese quota consumer (2026-10-16)
+
+- **Evidência PowerShell:** após `gcloud services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` responder sucesso, `GET /v1beta1/projects/emprovex-qa-r1-261015-6275` com token usuário sem quota header retornou `HTTP=403; STATUS=PERMISSION_DENIED; REASON=SERVICE_DISABLED; SERVICE=firebase.googleapis.com`. A categorização exata revela **serviço desabilitado para o consumidor da requisição**; **não prova** que `firebase.googleapis.com` esteja desativada no QA de destino nem ausência do FirebaseProject. A ativação já foi executada, não repetir cegamente.
+- **Hipótese técnica relevante apoiada pela documentação:** `gcloud auth print-access-token` com usuário pode ser atribuído a um projeto consumidor de quota diferente daquele na URL. O header por requisição `x-goog-user-project: emprovex-qa-r1-261015-6275` instrui o servidor a cobrar quotas do projeto QA, no qual a API foi habilitada, desde que haja `serviceusage.services.use`. Não alterar `gcloud config` global nem credenciais. Fontes: https://docs.cloud.google.com/docs/authentication/rest e https://docs.cloud.google.com/docs/authentication/troubleshoot-adc .
+- **Próxima prova read-only:** repetir GET Firebase Management com header `x-goog-user-project` fixado no QA; capturar somente `HTTP`, `error.status`, `ErrorInfo.reason` e `ErrorInfo.metadata.consumer` (ID de projeto, não token), sem imprimir resposta integral/erro bruto. Se 200, `FirebaseProject` existe; se 404, investigar registro; 403 de novo exige inspeção de quota consumer, sem conceder novos IAM por suposição.
+- **Progresso conservador:** etapa 3 **62,5%**, geral **52,5%**. Nenhum deploy, Rules, Firebase addProject, merge, IAM nem intervenção em produção; **NO-GO**.
+
+---
+
 ## CLOUD-RUN-R1 — Firebase Management GET 403 persistente após enable (2026-10-16)
 
 - **Evidência Windows do Fundador:** a habilitação `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275` retornou operação concluída com sucesso, e o `GET https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token OAuth local voltou a retornar `FIREBASE_PROJECT_STATUS=403`. **Não inferir** que `FirebaseProject` inexiste ou que o usuário não tem `roles/owner`; no IAM do projeto QA o fundador figurou previamente como Owner, papel que contém `firebase.projects.get` conforme documentação de IAM.
