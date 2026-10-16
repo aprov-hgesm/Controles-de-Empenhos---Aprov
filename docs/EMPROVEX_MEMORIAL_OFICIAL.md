@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Recebimento técnico W4 — PR #320 (2026-10-15)
+
+- **W4:** PR #320 DRAFT, branch `feat/cloud-run-r1-w4-local-preparation`; primeiro HEAD `9e8ce77d6e324203034483c01ea89556ab3a40c6`. Entrega inicial de 12 arquivos: guarda fail-closed de build, interlock no runtime Cloud Run, transporte OAuth por identidade gerenciada via metadados, mudanças pontuais em 4 consumidores administrativos, .dockerignore e 26 testes mock-only relatados como PASS. Sem Dockerfile, deploy, merge ou acesso a dados reais. **PREPARAÇÃO PARCIAL — NO-GO.**
+- **CI verificado pelo Coordenador:** Core Protection **PASS** no HEAD inicial; Application CI **FAIL** no passo TypeScript error budget (1 erro / budget 0): `lib/server/googleCloudMonitoring.ts:479`, `'cloud-run-managed'` não contemplado por `GoogleMonitoringCredentialSource`. Gates subsequentes ficaram SKIPPED: não declarar validação integrada.
+- **Correção localizada:** atualizada união em `lib/platformCapacity.ts` apenas na branch W4, commit `2d58c7d4419aa716cfd410df75abbc619bee2632`, sem desabilitar verificação TS, alteração em IAM ou infra; dois workflows começaram para esse HEAD, **resultado ainda pendente na última consulta**. Revalidar resultados antes de qualquer aceite.
+- **Riscos ainda abertos:** R01/R02/R04 (credencial ADC e IAM reais não testados; imports de Firebase produtivo impedem build Cloud Run e `instrumentation.ts` bloqueia sua inicialização). A proteção de código é preliminar, não prova isolamento de rede/IAM; F05/F06/F09 e Firestore Emulator integrados ainda pendentes. Sem publicação nem autorização de homologação remota.
+- **Próximo passo:** concluir workflow no HEAD corrigido, registrar resultado; depois atribuir reconciliação de configuração client/server/REST/bancos com testes isolados e testes Warehouse. Não mover Main nem executar Cloud Run.
+
+---
+
 ## CLOUD-RUN-R1 — Preparação técnica W4 autorizada pelo Fundador (2026-10-15)
 
 **Autorização expressa:** começar a **preparação técnica local**, restrita ao GitHub (branch/PR DRAFT) e a testes **offline/Firebase Emulator com dados fictícios**. Abrange avaliar #286/#289, desenvolver proteções fail-closed de homologação, adaptar aquisição de token para ADC preservando a Vercel, preparar container standalone somente local e executar gates proporcionais ao risco. **Não é autorização** para criar projeto Firebase, Cloud Run, IAM/WIF, contas de serviço, modificar bancos/Rules/OAuth/DNS/Vercel, publicar, efetuar merge, testar em produção nem incorrer em custos.
