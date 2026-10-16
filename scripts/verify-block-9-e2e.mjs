@@ -14,6 +14,8 @@ const forbidText = (source, forbidden, message) => {
 };
 
 const firebase = read('lib/firebase.ts');
+const runtimeConfig = read('lib/firebaseRuntimeConfig.ts');
+const environmentResolver = read('lib/firebaseEnvironment.mjs');
 const harness = read('scripts/e2e-browser-emulator.mjs');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const spec = read('tests/e2e/operator-critical-flow.spec.mjs');
@@ -27,7 +29,10 @@ const applicationWorkflow = read('.github/workflows/application-ci.yml');
 const workflow = read('.github/workflows/browser-e2e-on-demand.yml');
 
 requireText(firebase, "NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'", 'Frontend não possui chave opt-in de Emulator.');
-requireText(firebase, 'NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID', 'Frontend não isola o projectId E2E.');
+requireText(firebase, "import firebaseConfig from './firebaseRuntimeConfig'", 'Frontend não utiliza o resolvedor Firebase canônico.');
+requireText(runtimeConfig, 'NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID', 'Frontend não encaminha projectId E2E para a configuração canônica.');
+requireText(environmentResolver, "emulatorProjectId === 'string' && /^demo-", 'Emulator deixou de exigir projeto fictício demo-.');
+requireText(environmentResolver, "firestoreDatabaseId: '(default)'", 'Emulator deixou de isolar Core Firestore local.');
 requireText(firebase, 'connectAuthEmulator', 'Frontend não conecta Auth Emulator.');
 requireText(firebase, 'connectFirestoreEmulator', 'Frontend não conecta Firestore Emulator.');
 requireText(firebase, 'if (useE2eEmulators) {', 'Conexão dos Emulators não está protegida por opt-in.');
