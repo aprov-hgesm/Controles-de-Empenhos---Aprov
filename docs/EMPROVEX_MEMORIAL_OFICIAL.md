@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 Firebase Management GET 403 (2026-10-16)
+
+- **Execução read-only do Fundador:** consulta `Invoke-RestMethod -Method Get https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275` com token de usuário via `gcloud.cmd auth print-access-token` retornou `FIREBASE_PROJECT_STATUS=403`, sem corpo detalhado. Não foi feito `projects.addFirebase`, nem ativado Firebase Auth/Rules.
+- **Interpretação correta:** resposta 403 **não prova ausência de FirebaseProject**; pode significar `firebase.googleapis.com` desabilitada ou permissões insuficientes, entre outras causas. A lista previamente obtida de APIs QA habilitadas não continha `firebase.googleapis.com`. A documentação oficial do Firebase determina habilitar **Firebase Management API** antes da consulta REST: https://firebase.google.com/docs/projects/use-firebase-with-existing-cloud-project e https://firebase.google.com/docs/projects/api/workflow_set-up-and-manage-project .
+- **Próxima ação delimitada:** habilitar somente `firebase.googleapis.com` no projeto `emprovex-qa-r1-261015-6275` via `gcloud.cmd services enable firebase.googleapis.com --project=emprovex-qa-r1-261015-6275`, após confirmação por execução do Fundador. Isso **não equivale a adicionar Firebase ao projeto** nem autoriza chamada POST `projects.addFirebase`. Repetir GET para distinguir registrado/não registrado/permissão após propagação. Manter credenciais privadas fora do chat.
+- **Percentuais inalterados:** etapa 3 Segurança QA **62,5%**, migração geral **52,5%**. GCP produção, Vercel, `main` e dados reais preservados. CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 projeto QA labels consultadas, FirebaseProject pendente (2026-10-16)
 
 - Evidência Windows do Fundador: reexecução da sonda IAM W7 corrigida repetiu token temporário **PASS**, `qa-core HTTP 200`, `qa-warehouse HTTP 200` — **sem novo gate adicional**. Consulta read-only `gcloud.cmd projects describe emprovex-qa-r1-261015-6275 --format="yaml(labels)"` retornou `app: emprovex` e `env: qa`. Labels são metadados definidos no GCP e **não comprovam** registro do `FirebaseProject` nem Firebase Authentication ativado.
