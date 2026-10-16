@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Docker build QA REAL concluído em GitHub Actions (2026-10-16)
+
+- **Nova evidência visual do Fundador:** GitHub Actions > Settings > Variables apresenta `EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON` cadastrada como variável de repositório com prefixo JSON do projeto `emprovex-qa-r1-261015-6275`. Valor integral não foi copiado ao memorial nem exibido pelo coordenador.
+- **Reexecução do job W8 #116826315720 solicitada pelo conector GitHub:** aceite `success=true`, referente ao run [#38855626511](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38855626511), PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT, head W8 `a7776de812d67ae11ab5cf9d330077bd7b705406`. Nova tentativa/job `117191291837` **conclusion=success**. Os steps `Audit Cloud Run QA source isolation`, build sintético/scan/boot e `Build Docker image ONLY if source is isolated and QA web config explicitly exists` todos **success**. O step `State why no Docker build was done` **skipped**, comprovando execução efetiva do Docker build real.
+- **Logs do job:** `W8 QA PREFLIGHT: SOURCE_GATE_PASS`; `QA_ARTIFACT_PASS: 2349 text artifacts inspected` tanto no build sintético quanto no Docker build REAL; smoke sintético `QA_STANDALONE_LOCAL_BOOT_PASS_HTTP=200`; Docker `#17 exporting to image`, `writing image sha256:6432586009f944100d91a3fad989d23caf3c78a185a555d6b66947e560c1d333`, tag efêmera `docker.io/library/emprovex-qa-build:e4ad82ac34da285d3aced351d48b89c8b04ee0bf` (GitHub Actions usa PR synthetic merge SHA como GITHUB_SHA). A imagem foi construída **no runner efêmero**, **NÃO** enviada a Artifact Registry, **NÃO** persistida para Cloud Run.
+- **Escopo e interlocks:** W4 startup interlock `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` permanece sem alteração; execução runtime sob K_SERVICE, deploy privado, IAM/Rules negações e testes de identidades QA ainda não certificados. Nenhuma alteração no projeto GCP produtivo, Firebase/Firestore produtivos, DNS, `main`, Vercel ou clientes; nenhuma publicação Cloud Run. Docker Desktop local pode permanecer quebrado sem bloquear builds CI.
+- **Medição por novo marco verificável:** etapa 4 (Build/Cloud Run QA) avança **10% → 20%** pela conclusão real do Docker build remoto + scanner; etapas 1=100%, 2=100%, 3=68,75%, 5=0%. **Migração geral = (100+100+68,75+20+0)/5 = 57,75%**. Índice operacional estimado, **não** certificação de deploy/cutover.
+- **Próximo procedimento:** planejar persistência controlada em Artifact Registry QA sem publicação antes de confirmar gates; executar testes de isolamento negativos (IAM, Rules, R01/R02/R04), preparar invocação restrita e só então pedir autorização explícita para primeiro deploy Cloud Run QA privado. Reduzir duplicação de build sintético/real apenas após review de risco.
+
+---
+
 ## CLOUD-RUN-R1 — Primeira tentativa Docker QA real interrompida por EOF do Engine (2026-10-16)
 
 - **Evidência local do Fundador:** configuração Firebase Web **real** validada (`FIREBASE_QA_REAL=PASS`); Docker Desktop Linux Engine inicialmente acessível (`DOCKER_ENGINE=PASS`); branch W8 obtida e worktree detached no SHA certificado `a7776de812d67ae11ab5cf9d330077bd7b705406` (`W8_COMMIT=PASS`).
