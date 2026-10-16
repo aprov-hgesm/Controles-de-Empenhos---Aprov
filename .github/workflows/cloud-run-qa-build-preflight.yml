@@ -44,6 +44,30 @@ jobs:
           name: cloud-run-qa-build-preflight
           path: cloud-run-qa-build-preflight-report.json
           retention-days: 7
+      - name: Synthetic QA Next build and finished-artifact isolation audit (never deployable)
+        id: synthetic_build
+        if: ${{ steps.preflight.outputs.source_ready == 'true' }}
+        continue-on-error: true
+        timeout-minutes: 14
+        env:
+          EMPROVEX_RUNTIME_TARGET: cloud-run-staging
+          EMPROVEX_CLOUD_PROJECT_ID: emprovex-qa-r1-261015-6275
+          EMPROVEX_CLOUD_CORE_DATABASE_ID: qa-core
+          EMPROVEX_CLOUD_WAREHOUSE_DATABASE_ID: qa-warehouse
+          NEXT_PUBLIC_EMPROVEX_FIREBASE_CONFIG_JSON: '{"projectId":"emprovex-qa-r1-261015-6275","appId":"1:953294034210:web:W8SYNTHETIC","apiKey":"w8-synthetic-public-config-do-not-deploy","authDomain":"emprovex-qa-r1-261015-6275.firebaseapp.com","firestoreDatabaseId":"qa-core","warehouseDatabaseId":"qa-warehouse","storageBucket":"emprovex-qa-r1-261015-6275.firebasestorage.app","messagingSenderId":"953294034210"}'
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          node scripts/cloud-run-qa-artifact-audit.mjs
+      - name: Record synthetic build outcome (NOT a deployment)
+        if: ${{ always() && steps.preflight.outputs.source_ready == 'true' }}
+        env:
+          SYNTHETIC_OUTCOME: ${{ steps.synthetic_build.outcome }}
+        shell: bash
+        run: |
+          echo "Synthetic QA Next build and artifact scan outcome: $SYNTHETIC_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+          echo "Synthetic Firebase config is NOT a registered QA Web App. No artifact may be deployed." >> "$GITHUB_STEP_SUMMARY"
       - name: Build Docker image ONLY if source is isolated and QA web config explicitly exists
         if: ${{ steps.preflight.outputs.source_ready == 'true' && vars.EMPROVEX_QA_FIREBASE_WEB_CONFIG_JSON != '' }}
         env:
