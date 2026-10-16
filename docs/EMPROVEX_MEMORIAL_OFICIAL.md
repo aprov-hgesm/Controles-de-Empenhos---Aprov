@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 bloqueio Token Creator diagnosticado (2026-10-16)
+
+- **Evidência real PowerShell do fundador:** a sonda antiga `EMPROVEX_QA_W7_TESTE_IAM.ps1` encerrou com erro genérico e a versão `EMPROVEX_QA_W7_TESTE_IAM_CORRIGIDO.ps1` informou `PENDENTE: TOKEN_CREATOR_NAO_AUTORIZADO. Verificar permissao na conta de servico QA.`, após tentar emissão de token temporário. **Não houve HTTP GET Firestore nem prova de acesso aos DBs** nesta execução; nenhuma alteração GCP foi feita pelo script.
+- **Diagnóstico:** provável ausência da autorização `iam.serviceAccounts.getAccessToken` para o usuário `aprov1hgesm@gmail.com` na service account QA (role `roles/iam.serviceAccountTokenCreator`). A sonda categoriza erros, não publica stderr bruto; o resultado não certifica, isoladamente, o IAM efetivo sem inspeção da policy. Documentação: https://cloud.google.com/iam/docs/service-account-permissions e https://cloud.google.com/sdk/gcloud/reference/iam/service-accounts/add-iam-policy-binding .
+- **Correção planejada sob controle do fundador:** usar `gcloud.cmd iam service-accounts add-iam-policy-binding emprovex-qa-runtime@emprovex-qa-r1-261015-6275.iam.gserviceaccount.com --member=user:aprov1hgesm@gmail.com --role=roles/iam.serviceAccountTokenCreator --project=emprovex-qa-r1-261015-6275` **somente na policy da conta QA**, nunca como `projects add-iam-policy-binding`. Aguardar comprovação PowerShell antes de marcar PASS; posteriormente remover role temporária se não for mais necessária.
+- **Sem mudança de progresso:** Segurança QA 50%, migração geral 50%; PR #323 DRAFT, sem deploy, Rules QA não publicadas, Vercel e projeto GCP produtivo preservados. CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 sonda IAM diagnostico PowerShell (2026-10-16)
 
 - **Saída real do Fundador:** `EMPROVEX_QA_W7_TESTE_IAM.ps1` iniciou corretamente, indicou solicitação de token temporário e encerrou com `FAIL: erro na operacao de teste temporario; nenhuma alteracao efetuada.`. Isso **não** comprova se há falta de `roles/iam.serviceAccountTokenCreator`, sessão `gcloud` inválida ou falha de shell; o script anterior suprimia mensagens e seu `catch` mascarava a origem do erro.
