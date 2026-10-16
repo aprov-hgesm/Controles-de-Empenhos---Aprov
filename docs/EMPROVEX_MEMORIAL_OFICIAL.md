@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 sonda IAM diagnostico PowerShell (2026-10-16)
+
+- **Saída real do Fundador:** `EMPROVEX_QA_W7_TESTE_IAM.ps1` iniciou corretamente, indicou solicitação de token temporário e encerrou com `FAIL: erro na operacao de teste temporario; nenhuma alteracao efetuada.`. Isso **não** comprova se há falta de `roles/iam.serviceAccountTokenCreator`, sessão `gcloud` inválida ou falha de shell; o script anterior suprimia mensagens e seu `catch` mascarava a origem do erro.
+- **Correção isolada W7:** PR [#323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323) atualizou `scripts/cloud-run-qa-iam-probe.ps1`, agora capturando `stderr` do `gcloud.cmd` de modo compatível com Windows PowerShell 5.1, categorizando falhas sem revelar o token nem o erro bruto potencialmente sensível. Commit do script corrigido `585a39d183ae62337f46d5a4736944de39006f1f`, Git blob `c0c1e20c7083b405cf418188c18f37a4e6d43acc` comparado à cópia distribuível.
+- **Segurança:** somente consulta HTTP GET nos dois bancos do projeto QA caso a impersonação funcione; sem criação/gravação/alteração IAM e **sem acessar produção**. Se token não for permitido, parar e revisar concessão **somente na conta de serviço QA** antes de autorizar qualquer alteração. O primeiro teste **não passou**; não promover o percentual.
+- **Progresso:** etapa 3/5 segurança **50%**; geral **50%**, sem novo gate certificado. CLOUD-RUN-R1 NO-GO; Vercel/projeto produtivo intactos.
+
+---
+
 ## CLOUD-RUN-R1 — W7 sonda real IAM QA preparada (2026-10-16)
 
 - Confirmada saída local `EMPROVEX_QA_W7_AUDITORIA.ps1`: **PASS PARCIAL** para projeto, billing, APIs, ambos Firestore QA, runtime SA e duas condições IAM, sem principals públicos explícitos. Sonda de autorização **ainda não executada**.
