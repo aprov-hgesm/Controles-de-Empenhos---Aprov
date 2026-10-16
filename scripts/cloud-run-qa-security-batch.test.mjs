@@ -44,3 +44,15 @@ test('One-shot Windows auditor is read-only, pinned to QA, no token or deploymen
     /gcloud\.cmd\s+auth\s+/i
   ]) assert.doesNotMatch(script, disallowed);
 });
+
+test('temporary impersonation probe stays inside QA and never prints token', () => {
+  const script = read('scripts/cloud-run-qa-iam-probe.ps1');
+  assert.match(script, /emprovex-qa-r1-261015-6275/);
+  assert.match(script, /--impersonate-service-account=/);
+  assert.match(script, /emprovexQaSecurityProbe/);
+  assert.match(script, /Invoke-WebRequest -UseBasicParsing -Method Get/);
+  assert.doesNotMatch(script, /gen-lang-client-0982077967|ai-studio-logsticahospital|emprovex-warehouse/);
+  assert.doesNotMatch(script, /Invoke-(RestMethod|WebRequest).* -Method (Post|Put|Patch|Delete)/i);
+  assert.doesNotMatch(script, /Write-Output\s+.*\$token|Write-Host\s+.*\$token|Set-Content|Out-File/);
+  assert.doesNotMatch(script, /gcloud\.cmd\s+projects\s+add-iam-policy-binding/);
+});
