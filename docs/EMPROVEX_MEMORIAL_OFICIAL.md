@@ -1,5 +1,13 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W7 API Firestore QA habilitada (2026-10-15)
+
+- O Fundador executou `gcloud.cmd services enable firestore.googleapis.com --project=emprovex-qa-r1-261015-6275` e recebeu `Operation ... finished successfully`; Firestore API habilitada **somente no QA**.
+- **Ainda não foram criados bancos Firestore QA** na evidência recebida. Próximo passo: criar separadamente `qa-core` e `qa-warehouse` com `--project` explícito, região `us-east1`, edição `standard`, tipo `firestore-native`, sem PITR ou backups, e avaliar proteção contra exclusão.
+- Bancos nomeados geram cobrança por uso sem cota gratuita. Orçamento R$ 20/mês é alerta, não teto. Configurar/validar Security Rules de cada banco (deny-by-default) e IAM isolado antes de qualquer conexão do aplicativo ou ingestão de dados. **Não criar default DB, nem acessar o projeto produtivo**. CLOUD-RUN-R1 NO-GO.
+
+---
+
 ## CLOUD-RUN-R1 — W7 orçamento QA confirmado (2026-10-15)
 
 - **Saída do PowerShell enviada pelo Fundador:** habilitada a API `billingbudgets.googleapis.com` **somente** no projeto QA `emprovex-qa-r1-261015-6275`; Google Cloud retornou `Created [3f76c6ac-09dc-4105-92f9-58ec1a4b933a]`.
