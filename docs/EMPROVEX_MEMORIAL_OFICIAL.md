@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Config pública REAL de Web App Firebase QA validada (2026-10-16)
+
+- **Evidência PowerShell do Fundador:** GET `https://firebase.googleapis.com/v1beta1/projects/emprovex-qa-r1-261015-6275/webApps/1:953294034210:web:0a4c91daa63d025ff4417b/config` com OAuth e `x-goog-user-project=emprovex-qa-r1-261015-6275` retornou configuração válida. Controles `PROJECT_OK=True`, `APP_ID_OK=True`, `API_KEY_PRESENT=True`, `AUTH_DOMAIN_OK=True`, `SENDER_ID_OK=True`, `STORAGE_BUCKET_OK=True`; saída `RESULTADO=CONFIG_QA_REAL_VALIDADA` e `PRONTO_PARA_PROXIMO_GATE=SIM`. Identificador QA Web `1:953294034210:web:0a4c91daa63d025ff4417b`. **Nenhum valor de apiKey foi impresso, copiado para o GitHub ou anotado neste memorial**.
+- **Arquivo local privado do Fundador (não hospedado no Git):** `C:\Users\marco\emprovex-qa-r1-firebase-web-config.json` (JSON com campos públicos Firebase e `firestoreDatabaseId=qa-core` / `warehouseDatabaseId=qa-warehouse`). Presença do arquivo provada pela execução, conteúdo não obtido pelo coordenador; nunca tratar como variável de Actions configurada.
+- **Limites:** Web App REAL e seu `getConfig` estão **PASS**, mas o Firebase Authentication QA ainda não tem prova de configuração operacional; provedores Google/senha não certificados; Rules QA, IAM negações/R01/R02/R04, build Docker **real**, publicação de imagem e Cloud Run deployment continuam pendentes. W8 #324 PASS anteriores envolveram configuração sintética. Interlock W4 `CLOUD_RUN_RUNTIME_NOT_CERTIFIED_R01_R02_R04` continua ativo.
+- **Próximo comando único / somente leitura:** GET `https://identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` e GET `.../defaultSupportedIdpConfigs/google.com` no QA; exibir somente status HTTP, flags `signIn.email.enabled`/`anonymous.enabled`, Google enabled e autorização de domínio, sem client secrets, tokens ou resposta integral. Se o Auth GET retornar 404, tratar como não comprovado e indicar caminho de inicialização no Console QA; nenhum PATCH/POST automático.
+- **Produção:** nenhuma modificação no GCP produtivo, Firestore produtivo, DNS, `main` ou Vercel por essa validação. Cloud Run QA e cutover seguem **NO-GO**.
+- **Progresso conservador:** etapa 3 Segurança/Isolamento QA **68,75%**, etapa 4 Build/Cloud Run QA **10%**, total **55,75%**; preservar ponderação até validação adicional de Auth/isolamento ou build real.
+
+---
+
 ## CLOUD-RUN-R1 — Web App Firebase QA REAL cadastrado e confirmado (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** listagem completa `GET /v1beta1/projects/emprovex-qa-r1-261015-6275/webApps` com quota QA: `PAGINAS_CONSULTADAS=1`, `WEB_APPS_VALIDOS=0`, `ENTRADAS_INCOMPLETAS=0`, `RESULTADO=NENHUM_WEB_APP_EXISTENTE`. Isso resolveu a contagem ambígua anterior e autorizou somente um cadastro, já consentido.
