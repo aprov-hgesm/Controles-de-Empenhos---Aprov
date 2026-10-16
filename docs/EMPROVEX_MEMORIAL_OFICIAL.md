@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W5 Firebase unificado + F05/F06/F09 (2026-10-15)
+
+- **PR #321 DRAFT** (`feat/cloud-run-r1-w5-firebase-unification`) contra branch W4 do PR #320, HEAD final `dd305184f482ab26e9ea89c030043fbc164dd5c9` — **não fazer merge diretamente na main**. 19 arquivos alterados na comparação incremental W5; nenhuma alteração de Vercel/Firebase/Cloud Run real.
+- **Configuração Firebase canônica:** `lib/firebaseEnvironment.mjs` + `lib/firebaseRuntimeConfig.ts`, conectadas a SDK client, JWT Auth, Admin REST, Core e Warehouse, lifecycle, provisionamento, backup, monitoramento e histórico. Em estágio Cloud Run, exige identidade/projeto/app/bancos de homologação distintos, sem chaves admin privadas nem fallback silencioso a produção. Next injeta marcação de ambiente no build e preserva a produção legada Vercel. O scanner W4 só permite import baseline em resolvedor canônico explicitamente auditado; todos os demais imports estáticos de produção identificados no CI foram removidos.
+- **GitHub CI final, conferido diretamente:** `Application CI` run **#38836001393 = PASS**, validate-application e seis release gates 16/17/18/19/20/21 SUCCESS; `Core Protection` run **#38836001337 = PASS**. Testes negativos de configuração/ADC, TypeScript budget 0, build standalone de validação Next (sem deploy), segurança multi-tenant e recuperação via Emulator PASS.
+- **F05/F06/F09 suites de domínio:** F05 NF→estoque e MOBILE-C PASS; F06 localização/transferências, Integration 2 e MOBILE-K PASS; F09 código de barras/saída, MOBILE-G, logística e MOBILE-K PASS no HEAD final do CI. Esses PASS **não** comprovam fast-path REST em Cloud Run nem negação IAM real; são gates locais/Emulator do pipeline.
+- **Correções de gates:** guard de ciclo de vida SaaS atualizado para exigir Warehouse canônico; Browser E2E guard exige marcador demo e projeto E2E no novo resolvedor; mock de Monitoramento Block 16.8 ligado à configuração simulada. Nenhum bypass.
+- **NO-GO mantido:** R01/R02/R04 dependem de verificação remota com projeto Firebase/GCP de homologação isolado e identidade ADC de menor privilégio; o interlock `instrumentation.ts` continua impedindo startup Cloud Run. R03 restore isolado não certificado. Nenhuma criação de recursos, IAM/Rules, deploy, DNS, cron, billing ou acesso a dados reais autorizado/executado.
+- **Handoff W5** registrado como comentário no PR #321. Próximo: revisão independente do patch, smoke de fast-path F05/F06/F09 estritamente em Emulator, e pedido explícito de autorização para futura infraestrutura isolada quando técnico apto. A Vercel e `emprovex.com.br` permanecem intocados.
+
+---
+
 ## CLOUD-RUN-R1 — CI FINAL W4 — PASS 2026-10-15
 
 - **GitHub PR #320** DRAFT, HEAD `144a0f440acfa241d1bdc3f9ccb1fb86bc014f2c`: **Application CI PASS** (workflow run #38834070699, job validate-application + seis gates finais, todos SUCCESS) e **Core Protection PASS** (run #38834070694). Confirmados: build de produção **no CI, sem deploy**; orçamento/final TypeScript; Bloco 16.8 integrado; release gates 16/17/18/19/20/21. Correções seguras foram `2d58c7d` (tipo monitoring credential) e `144a0f4` (mock ADC em VM, falha fechada se invocado); sem relaxamento de gates.
