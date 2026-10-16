@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — Primeira tentativa Docker QA real interrompida por EOF do Engine (2026-10-16)
+
+- **Evidência local do Fundador:** configuração Firebase Web **real** validada (`FIREBASE_QA_REAL=PASS`); Docker Desktop Linux Engine inicialmente acessível (`DOCKER_ENGINE=PASS`); branch W8 obtida e worktree detached no SHA certificado `a7776de812d67ae11ab5cf9d330077bd7b705406` (`W8_COMMIT=PASS`).
+- **Docker build iniciado, NÃO aprovado:** `docker build --file Dockerfile.cloud-run.qa --build-arg QA_FIREBASE_WEB_CONFIG_JSON --tag emprovex-qa-r1:w8-real-a7776de8` começou localmente, baixou/extraiu camadas da imagem base `node:22-bookworm-slim`, mas falhou imediatamente ao iniciar `WORKDIR /app`: `rpc error: code = Unavailable desc = error reading from server: EOF`. **Não alcançou `npm ci`, `npm run build` ou os scanners de isolamento**, portanto não existe imagem QA real certificada. Falha observada é de comunicação com o Docker Engine; causa raiz (reinício/desconexão/recursos) não provada.
+- **Retomada mínima:** verificar saúde do Docker Engine e, se estiver pronto, reexecutar **uma única tentativa** de build no worktree existente após conferir o SHA W8 e o JSON QA local, sem refazer fetch/auditorias. Se o engine continuar indisponível ou houver novo EOF, inspecionar estado do Docker Desktop/WSL/disk sem `prune` indiscriminado, sem tocar em produção.
+- **Segurança e escopo:** nenhuma imagem enviada a registry e nenhum deploy Cloud Run; Auth QA Google e password configurados, mas Rules, IAM negativos e R01/R02/R04 pendentes. Interlock W4 não foi modificado. Produção, DNS, Vercel, Firestore produtivo e `main` intocados no processo relatado.
+- **Progresso inalterado:** etapa 3 Segurança/Isolamento QA **68,75%**, etapa 4 Docker/Cloud Run QA **10%**, total **55,75%**; falha não é PASS nem justifica avanço.
+
+---
+
 ## CLOUD-RUN-R1 — Auth QA Google + password habilitados e revalidados (2026-10-16)
 
 - **Evidência PowerShell do Fundador:** `GET identitytoolkit.googleapis.com/admin/v2/projects/emprovex-qa-r1-261015-6275/config` retornou recurso canônico `CONFIG_NAME=projects/953294034210/config` (número do mesmo projeto QA, e não ID textual). Primeiro PATCH foi bloqueado **antes de escrever**, porque o guard anterior aceitava apenas `projects/{projectId}/config`. Segunda execução aceitou expressamente ID textual ou número conhecido com validação de domínio QA e provedor Google.
