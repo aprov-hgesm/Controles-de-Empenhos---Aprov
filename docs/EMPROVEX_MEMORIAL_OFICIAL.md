@@ -2,6 +2,9 @@
 
 ## CLOUD-RUN-R1 — Projeto QA criado pelo Fundador (2026-10-15)
 
+- **Consulta adicional de faturamento do Fundador (read-only):** `gcloud.cmd billing projects describe emprovex-qa-r1-261015-6275` retornou `billingEnabled: false (consulta do Fundador)` e `billingAccountName: ''`. **QA sem conta de faturamento associada no momento da consulta**. Nenhum recurso pago deve ser criado antes de identificar conta ativa e preparar orçamento/alertas scoped ao QA. Fonte: saída local do PowerShell reportada pelo Fundador.
+
+
 - **Evidência enviada pelo Fundador:** execução do script PowerShell da etapa 1 usando conta Google `aprov1hgesm@gmail.com` exibiu `Create ... done`, projeto GCP **`emprovex-qa-r1-261015-6275`** número **`953294034210`**, `LIFECYCLE_STATE=ACTIVE`. Esta é evidência textual da execução local; o coordenador ainda não possui acesso autenticado ao Console/API do GCP para conferência independente.
 - **Escopo realizado:** apenas criação de projeto QA segregado do projeto produtivo **`gen-lang-client-0982077967`**. O script reportou **sem vinculação de billing feita por ele**; estado efetivo de faturamento a ser confirmado via `gcloud billing projects describe emprovex-qa-r1-261015-6275`. Nenhum Firestore QA, conta de serviço, Cloud Run, Artifact Registry, serviço de deploy ou DNS foi criado nessa etapa.
 - **Próximo gate:** consultar faturamento do projeto explicitamente pelo ID QA, confirmar conta de faturamento e capacidade de budget/alertas antes de autorizar vinculação. Budget **não** é teto de gastos automático. Após isso, IAM de menor privilégio e bancos QA nomeados, sem acesso à produção; cada mutação deverá ser auditada.
