@@ -163,7 +163,7 @@ export async function listWarehouseDepotLayoutsForDepot(
   }
 }
 
-async function getActiveWarehouseDepotLayoutStrict(
+export async function getActiveWarehouseDepotLayoutStrict(
   workspaceId: string,
   depotId?: string | null
 ): Promise<WarehouseDepotLayoutListItem | null> {
