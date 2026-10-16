@@ -1,6 +1,7 @@
 import { importPKCS8, SignJWT } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunManagedAccessToken } from './cloudRunManagedToken.mjs';
 import {
   FIRESTORE_BILLING_TIME_ZONE,
   getFirestoreBillingDayKey,
@@ -473,6 +474,10 @@ async function loadFirebaseGlobalUsageObservationForInterval(
   startTime: string,
   endTime: string
 ): Promise<FirebaseGlobalUsageObservation> {
+  if (process.env.K_SERVICE || process.env.EMPROVEX_RUNTIME_TARGET) {
+    const accessToken = await getCloudRunManagedAccessToken();
+    return loadObservationWithAccessToken(accessToken, startTime, endTime, 'cloud-run-managed');
+  }
   const candidates = monitoringCredentialCandidates();
   if (!candidates.length) {
     throw new Error('Cloud Monitoring ainda não possui credencial server-side configurada.');
