@@ -1,6 +1,6 @@
 import { SignJWT, importPKCS8 } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import { getCloudRunManagedAccessToken } from './cloudRunManagedToken.mjs';
 
 const PROJECT_ID = firebaseConfig.projectId;

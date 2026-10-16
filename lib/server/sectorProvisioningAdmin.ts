@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import { getCloudRunManagedAccessToken } from './cloudRunManagedToken.mjs';
 import { buildInitialBillingAccount } from '../billing';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';

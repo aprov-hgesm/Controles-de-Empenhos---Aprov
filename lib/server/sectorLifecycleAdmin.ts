@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../firebaseRuntimeConfig';
 import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   SESSION_REVOCATION_TTL_MS,
@@ -110,7 +110,7 @@ interface LifecycleDirectoryState {
 
 const PROJECT_ID = firebaseConfig.projectId;
 const CORE_DATABASE_ID = firebaseConfig.firestoreDatabaseId;
-const WAREHOUSE_DATABASE_ID = 'emprovex-warehouse';
+const WAREHOUSE_DATABASE_ID = firebaseConfig.warehouseDatabaseId;
 const WAREHOUSE_ACCESS_COLLECTION = 'warehouseAccess';
 const WAREHOUSE_ACCESS_SCHEMA = 'warehouse_workspace_access_v1';
 

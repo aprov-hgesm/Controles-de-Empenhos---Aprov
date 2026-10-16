@@ -46,6 +46,9 @@ jobs:
       - name: Vercel manual deployment policy
         run: npm run test:vercel-manual-deploy
 
+      - name: Cloud Run W5 Firebase isolation and managed identity tests (mock only)
+        run: node --test scripts/cloud-run-firebase-environment.test.mjs scripts/cloud-run-isolation.test.mjs scripts/cloud-run-managed-token.test.mjs
+
       - name: TypeScript error budget
         shell: bash
         run: |
