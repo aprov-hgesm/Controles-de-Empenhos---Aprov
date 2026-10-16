@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CLOUD-RUN-R1 — W8 build-first QA em PR DRAFT (2026-10-16)
+
+- **Diretriz do Fundador:** abreviar a fase administrativa e executar caminho **build-first**, concentrando testes relevantes do EMPROVEX no Cloud Run QA sem usar produção como bancada. Preservar proteções R01/R02/R04 e não trocar domínio/Firestore.
+- **PR [#324](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/324) DRAFT** — branch `feat/cloud-run-r1-w8-first-qa-build-20261016`, **base incremental** no W7 [#323](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/323). Adicionados `Dockerfile.cloud-run.qa` (Node 22/Next standalone), `scripts/cloud-run-qa-build-preflight.mjs` (audita isolamento de fonte e aponta bloqueios), `scripts/cloud-run-qa-artifact-audit.mjs` (bloqueia referências prod em artefato), `.github/workflows/cloud-run-qa-build-preflight.yml` (CI auditoria leve, teste de build sintético e Docker build condicionado à configuração **real do Web App QA**), `docs/audits/cloud-run-r1/worker-8/HANDOFF.md`.
+- **Primeiro resultado GitHub Actions** [W8 #38853921436](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38853921436): `SOURCE_GATE_PASS` com configuração Firebase Web **sintética** e IDs reais **QA** de projeto/bancos; **nenhum blocker de fonte na varredura W4**, mas **Docker build adiado** porque Web App real QA ainda não configurado. [Core Protection #38853921488](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/38853921488) PASS. A avaliação de build sintético/artefato foi acrescentada no commit posterior `b4bc69643c31c9837c5f1905d25dc86dbd607550`; seu resultado ainda exige observação.
+- **Contrato seguro:** Nenhum deploy Cloud Run ou GCP, nenhuma publicação de imagem ou Rule QA, nenhuma concessão IAM nova, nenhuma alteração de DNS, Vercel, `main` ou projeto GCP produtivo. **Interlock W4 de startup `K_SERVICE` continua bloqueando inicialização em Cloud Run**; Dockerfile por si só não libera deploy. Valor do build sintético é aferir componentes, não a configuração real de autenticação/QA.
+- **Gates que faltam:** registrar Web App Firebase QA para obter configuração pública real, configurar login Google/E-mail senha e Rules QA, testar IAM negativo e isolamento R01/R02/R04, executar build real+scanner, criar rollout privado com novo gate/autorização do Fundador. **Progresso mantido:** etapa 3 **68,75%**; geral **53,75%**, por marcos certificados, não por commits.
+- **Governança:** Cloud Run **NO-GO para deploy ou corte de produção**, Vercel/usuários produtivos continuam intactos.
+
+---
+
 ## CLOUD-RUN-R1 — Firebase Auth QA em tela inicial de provedores (2026-10-16)
 
 - **Evidência visual enviada pelo Fundador:** Console Firebase no projeto **EMPROVEX QA R1**, seção Authentication > Método de login, exibe `Comece a usar o Firebase Auth ao adicionar seu primeiro método de login`, com opções **E-mail/senha**, **Google**, Smartphone, Anônimo etc. Portanto o fluxo de Authentication está acessível no console, mas **nenhum provedor de login foi habilitado ainda**. A consulta REST anterior à configuração retornara HTTP 404; não afirmar Auth funcional completo.
