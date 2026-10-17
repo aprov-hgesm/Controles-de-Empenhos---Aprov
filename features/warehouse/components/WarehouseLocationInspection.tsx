@@ -51,7 +51,7 @@ export function WarehouseLocationContentsTooltip({
         {contents.location.code} · {contents.location.name}
       </p>
       <p className="mt-1 text-[10px] font-semibold text-slate-500">
-        {contents.materialCount} material(is) · {warehouseLocationQuantity(contents.totalQuantity)} de saldo físico
+        {contents.materialCount} material(is) · {contents.rowCount} registro(s) de saldo físico
       </p>
       <div className="mt-2 max-h-[260px] space-y-2 overflow-hidden">
         {count === 0 && (
@@ -150,7 +150,7 @@ export function WarehouseLocationDetailsDialog({
               {contents.location.code} · {contents.location.name}
             </h2>
             <p className="text-xs text-slate-500">
-              {contents.materialCount} material(is) · {warehouseLocationQuantity(contents.totalQuantity)} de saldo físico
+              {contents.materialCount} material(is) · {contents.rowCount} registro(s) de saldo físico
             </p>
           </div>
           <button autoFocus type="button" aria-label="Fechar detalhes" onClick={onClose}
