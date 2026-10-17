@@ -11,7 +11,7 @@ const SAMPLE_OBJECTS: WarehouseDepotLayoutObject[] = [
   {
     id: 'obj_local_fridge_demo',
     kind: 'REFRIGERATOR',
-    label: 'GEL-01 · Geladeira industrial inox',
+    label: 'GEL-01',
     x: 80,
     y: 175,
     width: 205,
@@ -23,11 +23,25 @@ const SAMPLE_OBJECTS: WarehouseDepotLayoutObject[] = [
     warehouseLocationId: null,
   },
   {
+    id: 'obj_local_fridge_long_depth_demo',
+    kind: 'REFRIGERATOR',
+    label: 'GEL-02',
+    x: 405,
+    y: 55,
+    width: 92,
+    height: 190,
+    rotation: 0,
+    layer: 0,
+    elevation: 0,
+    visualVariant: 'solid',
+    warehouseLocationId: null,
+  },
+  {
     id: 'obj_local_freezer_demo',
     kind: 'FREEZER',
     label: 'FRZ-01 · Freezer horizontal',
-    x: 345,
-    y: 165,
+    x: 335,
+    y: 304,
     width: 258,
     height: 110,
     rotation: 0,
@@ -89,8 +103,10 @@ export function WarehouseColdStorageLocalPreview() {
       <p className="text-xs leading-5 text-slate-500">
         As dimensões exemplificam apenas a geometria do croqui (em centímetros).
         Esta prévia utiliza os componentes reais da visualização 3D, sem carregar
-        dados de usuários ou cadastrar estruturas. A altura exibida ainda segue
-        o padrão visual do motor isométrico.
+        dados de usuários ou cadastrar estruturas. GEL-01 tem o maior lado
+        no eixo horizontal e GEL-02 no eixo de profundidade. As portas
+        acompanham a face mais comprida nas quatro vistas sem girar, mover
+        ou alterar as dimensões dos objetos persistidos.
       </p>
     </div>
   );

@@ -284,6 +284,9 @@ jobs:
       - name: Warehouse expiring 14-day location highlight tests
         run: npm run test:warehouse-expiry-14d-highlight
 
+      - name: Warehouse refrigerator long-side front tests
+        run: npm run test:warehouse-refrigerator-front
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 

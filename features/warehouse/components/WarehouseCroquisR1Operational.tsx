@@ -1122,6 +1122,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                                 />
                               </label>
                             </div>
+                            {localDraft.kind === 'REFRIGERATOR' && (
+                              <p className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-[10px] font-semibold leading-4 text-blue-800">
+                                Frente padronizada: as portas da geladeira serão desenhadas sempre
+                                no lado de maior medida, independentemente da orientação no croqui.
+                                As dimensões cadastradas serão preservadas.
+                              </p>
+                            )}
                             <button
                               type="button"
                               onClick={() => addLocalToCroqui(item)}

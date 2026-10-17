@@ -1,4 +1,5 @@
 import type { WarehouseIsoView } from '../../../lib/warehouse/isometricCamera';
+import { warehouseRefrigeratorFrontOnOriginalSide } from '../../../lib/warehouse/refrigeratorOrientation';
 
 type Point = { x: number; y: number };
 type Face = 'front' | 'side';
@@ -20,9 +21,12 @@ interface Props {
  * Industrial cold-storage cabinets, projected onto the same isometric coordinate
  * system as the room. No bitmap, external 3D dependency or database change.
  *
- * The original equipment front faces +Y in the saved depot layout. Turning the
- * camera must NOT paint doors onto an arbitrary visible face. Four views use
- * physical front / sides / rear roles, and the lid hinges stay on original -Y.
+ * Freezer front remains fixed to original +Y as before. For refrigerators,
+ * the longer footprint face is always the physical front with doors:
+ * original +Y when width >= depth, otherwise original +X. Rotating the
+ * camera only changes which of these real faces is visible, never the
+ * saved footprint, room position, or warehouse location ID.
+ * The freezer lid hinges remain on original -Y.
  */
 export function WarehouseColdStorageVisual({
   kind, view, x, y, width, depth, height, project, compact = false,
@@ -34,7 +38,17 @@ export function WarehouseColdStorageVisual({
     back: { front: 'rear', side: 'side' },
     left: { front: 'side', side: 'rear' },
   };
-  const roles = faceRoles[view];
+  const doorsOnOriginalSide = refrigerator
+    && warehouseRefrigeratorFrontOnOriginalSide(width, depth, view);
+  // If the physical longer side is +X instead of +Y, the doors must
+  // move with that physical face across all four camera viewpoints.
+  const longSideFaceRoles: Record<WarehouseIsoView, { front: FaceRole; side: FaceRole }> = {
+    front: { front: 'side', side: 'doors' },
+    right: { front: 'rear', side: 'side' },
+    back: { front: 'side', side: 'rear' },
+    left: { front: 'doors', side: 'side' },
+  };
+  const roles = doorsOnOriginalSide ? longSideFaceRoles[view] : faceRoles[view];
   const pt = (u: number, v: number, z: number) =>
     project(x + u * width, y + v * depth, z);
   const svgPoints = (points: Point[]) =>
@@ -166,7 +180,8 @@ export function WarehouseColdStorageVisual({
 
   return (
     <g data-visual-role={refrigerator ? 'cold-storage-refrigerator' : 'cold-storage-freezer'}
-      data-cold-view={view}>
+      data-cold-view={view}
+      data-refrigerator-front={refrigerator ? (doorsOnOriginalSide ? 'long-side-x' : 'long-side-y') : undefined}>
       {/* Base, brushed faces and bevel trim are all kept in 3D world coordinates. */}
       {polygon(frontBody, refrigerator ? '#c4d1d7' : '#d6e5ed', '#637b88', outline)}
       {polygon(sideBody, refrigerator ? '#9eafb9' : '#a9c3d1', '#617c8d', outline)}
@@ -179,12 +194,24 @@ export function WarehouseColdStorageVisual({
       {lineBetween(pt(0, 0, height), pt(0, 1, height), '#f9fdff', fine)}
       {refrigerator ? (
         <g data-cold-part="top-vent">
-          {polygon(topPanel(0.12, 0.88, 0.16, 0.37, height + 0.35),
-            '#bacbd3', '#8097a3', fine)}
+          {/* The ventilation grille stays opposite the physical doors. */}
+          {polygon(
+            doorsOnOriginalSide
+              ? topPanel(0.12, 0.33, 0.12, 0.88, height + 0.35)
+              : topPanel(0.12, 0.88, 0.16, 0.37, height + 0.35),
+            '#bacbd3', '#8097a3', fine
+          )}
           {Array.from({ length: compact ? 3 : 7 }, (_, i) => {
-            const xRatio = 0.18 + i * (0.64 / (compact ? 2 : 6));
-            return <g key={i}>{lineBetween(lidPt(xRatio, 0.19, height + 0.65),
-              lidPt(xRatio, 0.34, height + 0.65), '#647e8b', fine * 0.7)}</g>;
+            const ratio = 0.18 + i * (0.64 / (compact ? 2 : 6));
+            return (
+              <g key={i}>
+                {doorsOnOriginalSide
+                  ? lineBetween(lidPt(0.15, ratio, height + 0.65),
+                    lidPt(0.30, ratio, height + 0.65), '#647e8b', fine * 0.7)
+                  : lineBetween(lidPt(ratio, 0.19, height + 0.65),
+                    lidPt(ratio, 0.34, height + 0.65), '#647e8b', fine * 0.7)}
+              </g>
+            );
           })}
         </g>
       ) : (
