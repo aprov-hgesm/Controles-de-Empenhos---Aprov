@@ -20,6 +20,7 @@ import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import { deriveWarehouseLocationContents } from '../../../lib/warehouse/locationContents';
 import { warehouseLocationsExpiringSoon } from '../../../lib/warehouse/expiryLocationHighlight';
+import { layoutWarehousePalletCargo, type WarehousePalletCargoSlot } from '../../../lib/warehouse/palletCargoLayout';
 import {
   WarehouseLocationContentsTooltip,
   WarehouseLocationDetailsDialog,
@@ -165,6 +166,37 @@ function boxGroup(
         stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
+    </g>
+  );
+}
+
+// Each face is projected from the pallet's stored footprint: no floating screen offsets.
+function palletCargoPrism(
+  key: string, object: WarehouseDepotLayoutObject, slot: WarehousePalletCargoSlot,
+  deckZ: number, logicalWidth: number, logicalHeight: number, selected: boolean
+) {
+  const x0 = object.x + object.width * slot.x;
+  const x1 = object.x + object.width * (slot.x + slot.width);
+  const y0 = object.y + object.height * slot.y;
+  const y1 = object.y + object.height * (slot.y + slot.depth);
+  const bottom = deckZ + slot.bottomZ;
+  const top = deckZ + slot.topZ;
+  const d = isoPoint(x0, y1, bottom, logicalWidth, logicalHeight);
+  const c = isoPoint(x1, y1, bottom, logicalWidth, logicalHeight);
+  const b = isoPoint(x1, y0, bottom, logicalWidth, logicalHeight);
+  const at = isoPoint(x0, y0, top, logicalWidth, logicalHeight);
+  const bt = isoPoint(x1, y0, top, logicalWidth, logicalHeight);
+  const ct = isoPoint(x1, y1, top, logicalWidth, logicalHeight);
+  const dt = isoPoint(x0, y1, top, logicalWidth, logicalHeight);
+  return (
+    <g key={key} data-visual-role="warehouse-stock-box"
+       data-pallet-cargo-tier={slot.tier} data-selected={selected ? 'true' : 'false'}>
+      <polygon points={polygonPoints([d, c, ct, dt])}
+        fill={WAREHOUSE_BOX_VISUAL.frontFill} stroke={WAREHOUSE_BOX_VISUAL.frontStroke} strokeWidth="0.8" />
+      <polygon points={polygonPoints([b, c, ct, bt])}
+        fill={WAREHOUSE_BOX_VISUAL.sideFill} stroke={WAREHOUSE_BOX_VISUAL.sideStroke} strokeWidth="0.8" />
+      <polygon points={polygonPoints([at, bt, ct, dt])}
+        fill={WAREHOUSE_BOX_VISUAL.topFill} stroke={WAREHOUSE_BOX_VISUAL.topStroke} strokeWidth="0.9" />
     </g>
   );
 }
@@ -425,6 +457,12 @@ function WarehouseStructure({
   ) : null;
 
   if (kind === 'PALLET') {
+    const slots = layoutWarehousePalletCargo(generalBoxCount);
+    const stackTop = slots.reduce((top, slot) => Math.max(top, slot.topZ), 0);
+    const palletLabelAnchor = isoPoint(
+      object.x + object.width / 2, object.y + object.height / 2,
+      z + stackTop + 8, logicalWidth, logicalHeight
+    );
     const slatCount = 7;
     const runnerRatios = [0.13, 0.5, 0.87];
 
@@ -506,18 +544,13 @@ function WarehouseStructure({
           );
         })}
 
-        {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
-          boxGroup(
-            'pal-box-' + index,
-            centerTop.x + (index - (generalBoxCount - 1) / 2) * 26,
-            centerTop.y - 12 - (index % 2) * 14,
-            0.88,
-            highlighted
-          )
+        {slots.map((slot, index) =>
+          palletCargoPrism('pal-box-' + index, object, slot, z,
+            logicalWidth, logicalHeight, highlighted)
         )}
 
         {renderLabel(
-          centerTop,
+          palletLabelAnchor,
           code,
           'Palete',
           subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
@@ -925,7 +958,7 @@ export function WarehouseIsometricPreview({
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [viewTransitioning, setViewTransitioning] = useState(false);
   const [hoveredObject, setHoveredObject] = useState<{
-    objectId: string; locationId: string; x: number; y: number;
+    objectId: string; locationId: string;
   } | null>(null);
   const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
   const [currentDay, setCurrentDay] = useState(() => new Date());
@@ -1148,7 +1181,7 @@ export function WarehouseIsometricPreview({
       const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
       const height = object.kind === 'OTHER' && !object.warehouseLocationId
         ? 54
-        : objectHeight(kind, subpositions.length);
+        : objectHeight(kind, subpositions.length) + (kind === 'PALLET' ? 48 : 0);
 
       for (const x of [object.x, object.x + object.width]) {
         for (const y of [object.y, object.y + object.height]) {
@@ -1507,17 +1540,9 @@ export function WarehouseIsometricPreview({
                 };
                 const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
                   if (!interactive || !locationId || event.pointerType === 'touch') return;
-                  const svg = event.currentTarget.ownerSVGElement;
-                  if (!svg) return;
-                  const bounds = svg.getBoundingClientRect();
-                  const maxX = Math.max(170, bounds.width - 170);
-                  const maxY = Math.max(12, bounds.height - 385);
-                  setHoveredObject({
-                    objectId: object.id,
-                    locationId,
-                    x: Math.min(maxX, Math.max(170, event.clientX - bounds.left)),
-                    y: Math.min(maxY, Math.max(12, event.clientY - bounds.top + 18)),
-                  });
+                  setHoveredObject((current) =>
+                    current?.objectId === object.id ? current : { objectId: object.id, locationId }
+                  );
                 };
 
                 return (
@@ -1533,17 +1558,13 @@ export function WarehouseIsometricPreview({
                       onInspectLocation?.();
                       handlePointer(event);
                     }}
-                    onPointerMove={handlePointer}
                     onPointerLeave={() => setHoveredObject((current) =>
                       current?.objectId === object.id ? null : current
                     )}
                     onFocus={() => {
                       if (!interactive) return;
                       onInspectLocation?.();
-                      setHoveredObject({
-                        objectId: object.id, locationId,
-                        x: 170, y: 18,
-                      });
+                      setHoveredObject({ objectId: object.id, locationId });
                     }}
                     onBlur={() => setHoveredObject(null)}
                     onKeyDown={(event) => {
@@ -1593,15 +1614,22 @@ export function WarehouseIsometricPreview({
             Consulta parcial: podem existir outros locais com validade próxima.
           </p>
         )}
-        {hoveredContents && !detailLocationId && !viewTransitioning && (
-          <WarehouseLocationContentsTooltip
-            contents={hoveredContents}
-            lotState={inspectionLotState}
-            x={hoveredObject?.x || 170}
-            y={hoveredObject?.y || 18}
-          />
-        )}
       </div>
+      {onInspectLocation && (
+        <div data-testid="warehouse-location-inspection-dock"
+          className="h-[212px] overflow-y-auto border-t border-blue-100 bg-slate-50/95 px-3 py-3 sm:px-4">
+          {hoveredContents && !detailLocationId && !viewTransitioning ? (
+            <WarehouseLocationContentsTooltip
+              contents={hoveredContents}
+              lotState={inspectionLotState}
+            />
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+              Passe o cursor ou use Tab sobre um local para consultar a organização dos materiais aqui, sem encobrir o croqui. Clique no local para detalhes e PDF.
+            </p>
+          )}
+        </div>
+      )}
       {detailContents && onRefreshInspection && (
         <WarehouseLocationDetailsDialog
           contents={detailContents}

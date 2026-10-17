@@ -12,6 +12,7 @@ const depotId = 'dep_' + 'a'.repeat(32);
 const shelfId = 'loc_' + '1'.repeat(32);
 const fridgeId = 'loc_' + '2'.repeat(32);
 const palletId = 'loc_' + '3'.repeat(32);
+const freezerId = 'loc_' + '4'.repeat(32);
 const p1 = 'sub_' + '1'.repeat(32);
 const p2 = 'sub_' + '2'.repeat(32);
 const p3 = 'sub_' + '3'.repeat(32);
@@ -33,6 +34,7 @@ const LOCATIONS: WarehouseLocation[] = [
   loc(shelfId, 'EST-01', 'Estante de gêneros', 'LOCAL', null),
   loc(fridgeId, 'GEL-01', 'Geladeira inox', 'LOCAL', null),
   loc(palletId, 'PLT-01', 'Palete de reserva', 'LOCAL', null),
+  loc(freezerId, 'FRZ-01', 'Freezer de reserva', 'LOCAL', null),
   loc(p1, 'P1', 'Prateleira inferior', 'SUBPOSITION', shelfId),
   loc(p2, 'P2', 'Prateleira central', 'SUBPOSITION', shelfId),
   loc(p3, 'P3', 'Prateleira superior', 'SUBPOSITION', shelfId),
@@ -53,6 +55,11 @@ const objects: WarehouseDepotLayoutObject[] = [
     id: 'obj_' + '3'.repeat(32), kind: 'PALLET', label: 'PLT-01',
     x: 220, y: 280, width: 180, height: 110, rotation: 0, layer: 0,
     elevation: 0, visualVariant: 'solid', warehouseLocationId: palletId,
+  },
+  {
+    id: 'obj_' + '4'.repeat(32), kind: 'FREEZER', label: 'FRZ-01',
+    x: 500, y: 295, width: 135, height: 78, rotation: 0, layer: 0,
+    elevation: 0, visualVariant: 'solid', warehouseLocationId: freezerId,
   },
 ];
 
@@ -89,6 +96,7 @@ const BALANCES: WarehouseLocationBalance[] = [
   balance(matMilk, shelfId, 24, p3),
   balance(matMilk, fridgeId, 12),
   balance(matRice, palletId, 35),
+  balance(matOil, freezerId, 7),
 ];
 
 function lot(
@@ -122,6 +130,7 @@ const LOTS: WarehouseLot[] = [
   lot('lot_' + '4'.repeat(32), matMilk, shelfId, 24, '2026-12-01', p3),
   lot('lot_' + '5'.repeat(32), matMilk, fridgeId, 12, dateAfter(14)),
   lot('lot_' + '6'.repeat(32), matRice, palletId, 20, null),
+  lot('lot_' + '7'.repeat(32), matOil, freezerId, 7, dateAfter(10)),
 ];
 
 export function WarehouseLocationInspectionLocalPreview({ showExpiryWarnings = false }: { showExpiryWarnings?: boolean }) {
@@ -153,8 +162,9 @@ export function WarehouseLocationInspectionLocalPreview({ showExpiryWarnings = f
       />
       <p className="text-xs leading-5 text-slate-600">
         Passe o cursor na estante para consultar itens separados em P1, P2 e P3. Clique para
-        conferir todos os lotes e gerar um PDF demonstrativo. A geladeira e o palete também
-        são consultáveis. Nenhum dado real do EMPROVEX é acessado neste laboratório.
+        conferir todos os lotes e gerar um PDF demonstrativo. Geladeira, freezer e palete
+        exibem os itens abaixo do croqui. As caixas empilhadas no palete são ilustrativas,
+        não a contagem física exata de unidades. Nenhum dado real do EMPROVEX é acessado neste laboratório.
       </p>
     </div>
   );

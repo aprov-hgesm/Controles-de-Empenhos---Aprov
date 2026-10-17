@@ -173,6 +173,7 @@
     "test:warehouse-global-material-search": "node --test scripts/warehouse-global-material-search.test.mjs",
     "test:warehouse-expiry-14d-highlight": "node --test scripts/warehouse-expiry-14d-highlight.test.mjs",
     "test:warehouse-refrigerator-front": "node --test scripts/warehouse-refrigerator-front-orientation.test.mjs",
+    "test:warehouse-visual-organization": "node --test scripts/warehouse-visual-organization.test.mjs",
     "test:warehouse-existing-depot-location-create": "node --test scripts/warehouse-existing-depot-location-create.test.mjs",
     "verify:adm-deposito-phase-9": "node scripts/verify-adm-deposito-phase-9.mjs",
     "test:adm-deposito-inventory": "node --test scripts/warehouse-inventory.test.mjs",
