@@ -281,6 +281,9 @@ jobs:
       - name: Warehouse global material search tests
         run: npm run test:warehouse-global-material-search
 
+      - name: Warehouse expiring 14-day location highlight tests
+        run: npm run test:warehouse-expiry-14d-highlight
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 
