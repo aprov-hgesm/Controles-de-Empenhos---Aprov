@@ -2,6 +2,10 @@
 
 ## CHECKPOINT VIGENTE — 2026-10-17 · Segunda onda R2 / publicação manual consolidada
 
+**Nova evidência de produção (PowerShell do Fundador, 17/10/2026):** `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` recuperou `dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`, `target=production`, `status=Ready`, criado em 16/10/2026 22:25:29 (Brasília). **O domínio ainda está no R1; não existe evidência nesta saída de R2 ativa no domínio.** O terminal estava em `C:\Users\marco\emprovex-release-r2-estrutura-20261017`, o que apenas identifica o diretório local, **não confirma que tenha havido upload nem qual SHA foi exportado**. Antes de repetir `vercel deploy` na Hobby, perguntar/conferir se já existe deployment R2 com `--skip-domain`: se houver URL R2 `Ready` e `/api/health=ok` correspondente à release certificada, promover **esse mesmo** sem novo build.
+
+**Auditoria GitHub anterior à atualização documental:** PR #335 HEAD `b4486e1ffce6dd853f2399ca2fe80795220a05f0`, 5/5 workflows SUCCESS neste SHA (Application CI `38998788750`, Core `38998788686`, Recovery `38998788748`, Legal `38998788737`, Visual `38998788689`). `main@2b1241fe3abd96c67766caf065d24a4b2a223b98` preservada; R1 → PR #335 = 62 commits à frente / 0 atrás, 28 arquivos alterados. **Este registro gera commits documentais posteriores:** conferir HEAD e workflows vivos antes de congelar R2 final. Ver handoff `docs/releases/EMPROVEX_R2_HANDOFF_2026_10_17.md`, seção 0, para retomar. O snapshot `78b550e2...` de quatro melhorias é obsoleto e não deve ser publicado.
+
 > **Este checkpoint prevalece sobre as seções históricas abaixo, inclusive notas que recomendem Vercel `--prebuilt` no plano Hobby.** Handoff detalhado e canônico desta onda: [`docs/releases/EMPROVEX_R2_HANDOFF_2026_10_17.md`](./releases/EMPROVEX_R2_HANDOFF_2026_10_17.md).
 
 - **Produção R1 comprovada pelo Fundador:** `https://emprovex.com.br`, deployment `dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`, promovido com sucesso em 16/10/2026. O Fundador conferiu o site. **R2 ainda NÃO foi publicada**. Este deployment R1 é a referência de rollback; confirmar aliases vivos antes de qualquer promoção.
