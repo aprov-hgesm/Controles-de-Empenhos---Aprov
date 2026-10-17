@@ -16,12 +16,15 @@ function nearestExpiry(
   lotState: WarehouseInspectionLotState
 ): string {
   if (lotState !== 'ready') return 'Validade: consultando…';
-  const dates = row.lots.flatMap((lot) => lot.expiresOn ? [lot.expiresOn] : []).sort();
+  const dates = [...new Set(
+    row.lots.flatMap((lot) => lot.expiresOn ? [lot.expiresOn] : [])
+  )].sort();
   if (!dates.length) return 'Validade: não informada';
-  if (row.quantityWithoutLot > 0.000001 || row.lots.some((lot) => !lot.expiresOn)) {
-    return 'A partir de ' + warehouseLocationExpiry(dates[0]) + ' · pendências';
-  }
-  return 'Validade: ' + warehouseLocationExpiry(dates[0]);
+  const summary = dates.slice(0, 2).map(warehouseLocationExpiry).join(', ')
+    + (dates.length > 2 ? ' +' + (dates.length - 2) + ' outras' : '');
+  const pending = row.quantityWithoutLot > 0.000001
+    || row.lots.some((lot) => !lot.expiresOn);
+  return 'Validades: ' + summary + (pending ? ' · pendências' : '');
 }
 
 export function WarehouseLocationContentsTooltip({
