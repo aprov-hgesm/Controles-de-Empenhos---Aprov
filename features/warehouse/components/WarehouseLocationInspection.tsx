@@ -30,13 +30,9 @@ function nearestExpiry(
 export function WarehouseLocationContentsTooltip({
   contents,
   lotState,
-  x,
-  y,
 }: {
   contents: LocationContents;
   lotState: WarehouseInspectionLotState;
-  x: number;
-  y: number;
 }) {
   const count = contents.groups.reduce((sum, group) => sum + group.rows.length, 0);
   let shown = 0;
@@ -44,8 +40,7 @@ export function WarehouseLocationContentsTooltip({
   return (
     <div
       data-testid="warehouse-location-hover-tooltip"
-      className="pointer-events-none absolute z-50 w-[min(350px,calc(100%-24px))] max-h-[380px] overflow-hidden rounded-2xl border border-blue-200 bg-white/95 p-3 text-slate-800 shadow-[0_18px_55px_rgba(2,22,56,0.24)] backdrop-blur"
-      style={{ left: x, top: y, transform: 'translate(-50%, 0)' }}
+      className="pointer-events-none w-full rounded-2xl border border-blue-100 bg-white p-3 text-slate-800 shadow-sm"
     >
       <p className="text-xs font-black text-[#00288e]">
         {contents.location.code} · {contents.location.name}
@@ -53,7 +48,7 @@ export function WarehouseLocationContentsTooltip({
       <p className="mt-1 text-[10px] font-semibold text-slate-500">
         {contents.materialCount} material(is) · {contents.rowCount} registro(s) de saldo físico
       </p>
-      <div className="mt-2 max-h-[260px] space-y-2 overflow-hidden">
+      <div className="mt-2 space-y-2">
         {count === 0 && (
           <p className="rounded-lg bg-slate-50 p-2 text-[11px] text-slate-500">Local sem itens com saldo positivo.</p>
         )}

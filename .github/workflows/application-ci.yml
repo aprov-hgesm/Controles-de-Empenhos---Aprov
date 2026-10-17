@@ -287,6 +287,9 @@ jobs:
       - name: Warehouse refrigerator long-side front tests
         run: npm run test:warehouse-refrigerator-front
 
+      - name: Warehouse cargo geometry and inspection dock tests
+        run: npm run test:warehouse-visual-organization
+
       - name: Warehouse existing depot new location tests
         run: npm run test:warehouse-existing-depot-location-create
 
