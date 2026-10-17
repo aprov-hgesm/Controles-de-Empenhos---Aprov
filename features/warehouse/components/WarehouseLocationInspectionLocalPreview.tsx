@@ -109,19 +109,25 @@ function lot(
   };
 }
 
+function dateAfter(days: number): string {
+  const now = new Date();
+  const utc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + days));
+  return utc.toISOString().slice(0, 10);
+}
+
 const LOTS: WarehouseLot[] = [
   lot('lot_' + '1'.repeat(32), matRice, shelfId, 20, '2027-03-12', p1),
   lot('lot_' + '2'.repeat(32), matRice, shelfId, 28, '2027-08-22', p1),
-  lot('lot_' + '3'.repeat(32), matOil, shelfId, 15, '2027-01-20', p2),
+  lot('lot_' + '3'.repeat(32), matOil, shelfId, 15, dateAfter(7), p2),
   lot('lot_' + '4'.repeat(32), matMilk, shelfId, 24, '2026-12-01', p3),
-  lot('lot_' + '5'.repeat(32), matMilk, fridgeId, 12, '2026-11-30'),
+  lot('lot_' + '5'.repeat(32), matMilk, fridgeId, 12, dateAfter(14)),
   lot('lot_' + '6'.repeat(32), matRice, palletId, 20, null),
 ];
 
-export function WarehouseLocationInspectionLocalPreview() {
+export function WarehouseLocationInspectionLocalPreview({ showExpiryWarnings = false }: { showExpiryWarnings?: boolean }) {
   const [queryText, setQueryText] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
-  const [inspected, setInspected] = useState(false);
+  const [inspected, setInspected] = useState(showExpiryWarnings);
 
   return (
     <div className="space-y-4" data-testid="warehouse-location-inspection-lab">
