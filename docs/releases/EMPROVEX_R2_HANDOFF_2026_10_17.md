@@ -1,5 +1,9 @@
 # EMPROVEX — Memorial de continuidade / Onda R2 (17/10/2026)
 
+> **UPDATE DE ESTADO (17/10/2026):** a R2 foi publicada e utilizada como versão anterior à R3: imediatamente antes da promoção R3 o domínio `emprovex.com.br` apontava para `dpl_6bRVvT11kLFTs5SN7eDyYgm8NCQ4`, `Ready`. A R3 agora é a versão confirmada no domínio, deployment `dpl_CvyoeS27FRLGruuztCXrB6LhLra4`, `Ready`, após health `ok`, promoção `Success!` e inspeção pós-promoção. **Todos os parágrafos abaixo que afirmam “R2 ainda não publicada” são checkpoints históricos, não o estado atual.** Estado canônico em [Memorial Oficial](../EMPROVEX_MEMORIAL_OFICIAL.md) e [Handoff R3](./EMPROVEX_R3_HANDOFF_2026_10_17.md).
+
+---
+
 > **ESTADO VIGENTE.** Este documento reúne a conversa de implementação, aceitação e preparação da segunda onda. Leia em conjunto com `docs/EMPROVEX_MEMORIAL_OFICIAL.md` e as evidências dos PRs. As informações históricas que sugerem usar prebuild na Vercel Hobby foram superadas pelo deploy remoto por fonte. **O R2 ainda NÃO está publicado.**
 
 ## 1. Onde estamos
