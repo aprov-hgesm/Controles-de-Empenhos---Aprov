@@ -263,3 +263,19 @@ test('geladeira inox e freezer têm faces físicas coerentes nas quatro perspect
   assert.match(landing, /compact/);
   assert.doesNotMatch(visual, /getDocs\(|setDoc\(|updateDoc\(|runTransaction\(/);
 });
+
+test('laboratório visual dos refrigerados é exclusivo do localhost e não grava no Firestore', () => {
+  const route = readFileSync(resolve(root, 'app/visual-lab/frigorificos/page.tsx'), 'utf8');
+  const demo = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseColdStorageLocalPreview.tsx'), 'utf8'
+  );
+  assert.match(route, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(route, /notFound\(\)/);
+  assert.match(route, /WarehouseColdStorageLocalPreview/);
+  assert.match(demo, /<WarehouseIsometricPreview/);
+  assert.match(demo, /kind: 'REFRIGERATOR'/);
+  assert.match(demo, /kind: 'FREEZER'/);
+  assert.match(demo, /locations=\{\[\]\}/);
+  assert.match(demo, /balances=\{\[\]\}/);
+  assert.doesNotMatch(route + demo, /firebase|setDoc\(|addDoc\(|runTransaction\(/i);
+});
