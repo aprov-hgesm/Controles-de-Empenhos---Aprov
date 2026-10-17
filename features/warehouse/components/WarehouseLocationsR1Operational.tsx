@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
   Box,
@@ -118,6 +118,7 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
+  const createPanelRef = useRef<HTMLElement | null>(null);
   const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'registration'>('structure');
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
@@ -136,6 +137,13 @@ export function WarehouseLocationsR1Operational({
   const [locationDescription, setLocationDescription] = useState('');
   const [locationPreset, setLocationPreset] = useState<LocationPreset>('SHELF');
   const [shelfSubpositionCount, setShelfSubpositionCount] = useState(0);
+
+  useEffect(() => {
+    if (activeSubtab === 'structure' && createPanel) {
+      // O botão fica ao lado do depósito, mas o formulário é exibido acima da lista.
+      createPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeSubtab, createPanel]);
 
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true }));
@@ -557,7 +565,11 @@ export function WarehouseLocationsR1Operational({
       )}
 
       {createPanel && (
-        <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-md">
+        <section
+          ref={createPanelRef}
+          data-testid="warehouse-existing-depot-create-panel"
+          className="scroll-mt-24 rounded-2xl border border-blue-200 bg-white p-5 shadow-md"
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#00288e]/60">
