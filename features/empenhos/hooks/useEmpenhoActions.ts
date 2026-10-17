@@ -11,12 +11,10 @@ import type {
   Item,
 } from '../../../lib/types';
 import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
-import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
-import { loadJsPdf } from '../../../lib/pdfToolkit';
 import { loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 
@@ -40,12 +38,9 @@ interface EmpenhoActionsContext {
   setSelectedEmpenhoDetailId: React.Dispatch<React.SetStateAction<string | null>>;
   setActiveTab: React.Dispatch<React.SetStateAction<ActiveTab>>;
   showToast: (message: string, type?: ToastType) => void;
-  setCopiedPrompt: React.Dispatch<React.SetStateAction<boolean>>;
-  jsonInput: string;
   setJsonError: React.Dispatch<React.SetStateAction<string | null>>;
   setReviewEmpenho: React.Dispatch<React.SetStateAction<any | null>>;
   reviewEmpenho: any | null;
-  setJsonInput: React.Dispatch<React.SetStateAction<string>>;
   setShowConfirmSaveModal: React.Dispatch<React.SetStateAction<boolean>>;
   newItemForm: NewItemForm;
   setNewItemForm: React.Dispatch<React.SetStateAction<NewItemForm>>;
@@ -57,7 +52,7 @@ interface EmpenhoActionsContext {
 
 /** Ações do domínio de empenhos; estado e persistência continuam injetados pelo orquestrador. */
 export function useEmpenhoActions(context: EmpenhoActionsContext) {
-  const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, newEmpenhoForm, setNewEmpenhoForm, setShowNewEmpenhoModal, setEditingEmpenhoId, setSelectedEmpenhoDetailId, setActiveTab, showToast, setCopiedPrompt, jsonInput, setJsonError, setReviewEmpenho, reviewEmpenho, setJsonInput, setShowConfirmSaveModal, newItemForm, setNewItemForm, editingEmpenhoId, setIsDeletingEmpenho, setEmpenhoToDelete, activeTab } = context;
+  const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, newEmpenhoForm, setNewEmpenhoForm, setShowNewEmpenhoModal, setEditingEmpenhoId, setSelectedEmpenhoDetailId, setActiveTab, showToast, setJsonError, setReviewEmpenho, reviewEmpenho, setShowConfirmSaveModal, newItemForm, setNewItemForm, editingEmpenhoId, setIsDeletingEmpenho, setEmpenhoToDelete, activeTab } = context;
 
   const handleEmpenhoDocumentUploaded = async (
     empenhoId: string,
@@ -485,69 +480,6 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     setActiveTab('empenhos');
   };
 
-  // Download prompt as TXT
-  const handleDownloadPromptTxt = () => {
-    const blob = new Blob([PROMPT_EXTRACAO_EMPENHO], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'prompt_extracao_empenho.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showToast('Prompt baixado com sucesso em formato .TXT!', 'success');
-  };
-
-  // Download prompt as PDF
-  const handleDownloadPromptPdf = async () => {
-    try {
-      const jsPDF = await loadJsPdf();
-      const doc = new jsPDF();
-
-      // Header banner
-      doc.setFillColor(0, 40, 142); // #00288e
-      doc.rect(0, 0, 210, 22, 'F');
-
-      // Header title
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PROMPT FIXO — EXTRAÇÃO DE NOTA DE EMPENHO', 14, 14);
-
-      // Subtitle
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(8.5);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Copie e utilize este prompt no Claude, ChatGPT ou Gemini anexando o PDF da NE.', 14, 28);
-
-      // Box for prompt content
-      doc.setDrawColor(226, 232, 240);
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(12, 33, 186, 250, 2, 2, 'FD');
-
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(8.5);
-      doc.setFont('courier', 'normal');
-
-      const splitText = doc.splitTextToSize(PROMPT_EXTRACAO_EMPENHO, 176);
-      doc.text(splitText, 16, 41);
-
-      doc.save('prompt_extracao_empenho.pdf');
-      showToast('Prompt baixado com sucesso em formato .PDF!', 'success');
-    } catch (err) {
-      showToast('Erro ao gerar arquivo PDF do prompt.', 'error');
-    }
-  };
-
-  // Copy prompt to clipboard
-  const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(PROMPT_EXTRACAO_EMPENHO);
-    setCopiedPrompt(true);
-    showToast('Prompt copiado para a área de transferência!', 'success');
-    setTimeout(() => setCopiedPrompt(false), 3000);
-  };
-
   const handleProcessEmpenhoPdf = async (file: File): Promise<void> => {
     if (!user) {
       showToast('Sua sessão expirou. Entre novamente antes de importar a Nota de Empenho.', 'error');
@@ -673,95 +605,13 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
   };
 
-  // Process imported JSON data
-  const handleProcessJson = () => {
-    try {
-      let cleanText = jsonInput.trim();
-      // Remove automatically markdown blocks if they exist (```json and ```)
-      cleanText = cleanText.replace(/^```(?:json)?\s*/i, '');
-      cleanText = cleanText.replace(/\s*```$/i, '');
-      cleanText = cleanText.trim();
-       if (!cleanText) {
-        setJsonError('Por favor, cole o conteúdo JSON antes de processar.');
-        return;
-      }
-       const data = JSON.parse(cleanText);
-       // Validate required fields
-      if (!data.numero_empenho || !data.data_emissao || !data.fornecedor || !data.itens) {
-        setJsonError('JSON incompleto. Certifique-se de usar o prompt correto na IA externa. Campos obrigatórios ausentes: numero_empenho, data_emissao, fornecedor, itens.');
-        return;
-      }
-       if (!Array.isArray(data.itens) || data.itens.length === 0) {
-        setJsonError('Nenhum item encontrado no JSON. Verifique o documento original.');
-        return;
-      }
-       let formattedDate = data.data_emissao;
-      // Convert YYYY-MM-DD to DD/MM/YYYY
-      if (formattedDate.includes('-')) {
-        const parts = formattedDate.split('-');
-        if (parts.length === 3) {
-          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-      }
-       // Extract supplier name and CNPJ flexibly
-      let supplierName = '';
-      let supplierCnpj = data.cnpj || '';
-      if (typeof data.fornecedor === 'object' && data.fornecedor !== null) {
-        supplierName = data.fornecedor.razao_social || data.fornecedor.nome || data.fornecedor.name || '';
-        supplierCnpj = data.fornecedor.cnpj || supplierCnpj;
-      } else if (typeof data.fornecedor === 'string') {
-        supplierName = data.fornecedor;
-      }
-       const mappedReviewItems = data.itens.map((item: any, idx: number) => {
-        const itemQty = parseFloat(item.quantidade ?? item.quantity) || 0;
-        const itemPrice = parseFloat(item.valor_unitario ?? item.unit_price ?? item.unitPrice) || 0;
-        const rawCode = item.codigo_item || item.num_item || item.id || `0000${idx + 1}`;
-        return {
-          id: String(rawCode).padStart(5, '0'),
-          itemCompraNumber: item.codigo_item != null
-            ? (/^\d+$/.test(String(item.codigo_item).trim()) ? String(item.codigo_item).trim().padStart(5, '0') : String(item.codigo_item).trim())
-            : undefined,
-          name: item.descricao || item.name || `Item ${idx + 1}`,
-          unit: item.unidade || item.unit || 'un',
-          quantity: itemQty,
-          unitPrice: itemPrice,
-          received: 0,
-        };
-      });
-       const parsedEmpenho = {
-        id: String(data.numero_empenho).toUpperCase().trim(),
-        supplier: supplierName,
-        cnpj: supplierCnpj,
-        description: data.descricao_sumaria || data.descricao || (data.tipo_empenho ? `Empenho ${data.tipo_empenho}` : 'Insumos e Suprimentos'),
-        date: formattedDate,
-        status: 'Ativo',
-        items: mappedReviewItems,
-        pregao: data.pregao_relacionado || data.pregao || '',
-        modalidadeContratacao: (data.pregao_relacionado || data.pregao)
-          ? 'PREGAO'
-          : 'OUTRA',
-        numeroContratacao: data.numero_contratacao
-          || data.numeroContratacao
-          || data.pregao_relacionado
-          || data.pregao
-          || '',
-        notaCredito: String(data.nota_credito || data.notaCredito || '').trim().toUpperCase(),
-        contrato: String(data.contrato || '').trim(),
-        classification: normalizeEmpenhoClassCode(String(data.classificacao || 'QR')) || 'QR',
-        valorTotalDeclarado: parseFloat(data.valor_total || data.valorTotal) || null,
-        importSource: 'json',
-        importWarnings: [],
-      };
-       setReviewEmpenho(parsedEmpenho);
-      setJsonError(null);
-    } catch (error: any) {
-      setJsonError('O texto colado não é um JSON válido. Verifique se copiou o conteúdo completo gerado pela IA. Erro: ' + error.message);
-    }
-  };
-
-  // Save the reviewed empenho from JSON
+  // Save the NE reviewed after direct PDF extraction
   const handleSaveReviewEmpenho = async () => {
     if (!reviewEmpenho) return;
+    if (reviewEmpenho.importSource !== 'pdf') {
+      showToast('Cadastro por JSON desativado. Utilize Cadastro Manual ou Importar PDF da NE.', 'error');
+      return;
+    }
     if (!reviewEmpenho.id || !reviewEmpenho.supplier || !reviewEmpenho.description) {
       showToast('Por favor, preencha número, fornecedor e descrição do empenho.', 'error');
       return;
@@ -844,7 +694,6 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
     // Clean states
     setReviewEmpenho(null);
-    setJsonInput('');
     setJsonError(null);
     setShowConfirmSaveModal(false);
     setShowNewEmpenhoModal(false);
@@ -1038,11 +887,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     handleUpdateEmpenhoClassification,
     handleUpdateEmpenhoItemDetails,
     handleCreateEmpenho,
-    handleDownloadPromptTxt,
-    handleDownloadPromptPdf,
-    handleCopyPrompt,
     handleProcessEmpenhoPdf,
-    handleProcessJson,
     handleSaveReviewEmpenho,
     handleAddItemToEmpenho,
     handleDeleteItemFromEmpenho,

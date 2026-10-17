@@ -50,8 +50,6 @@ for (const marker of [
   'Importar PDF da NE',
   'empenho-pdf-direct-input',
   'Leitura direta da Nota de Empenho',
-  "newEmpenhoMode === 'json'",
-  'Importar via JSON',
   'Nota de Crédito (NC)',
 ]) {
   requireText(view, marker, `Interface de cadastro perdeu requisito: ${marker}`);
@@ -70,8 +68,8 @@ for (const marker of [
 
 requireText(
   state,
-  "'manual' | 'pdf' | 'json'",
-  'Cadastro precisa manter Manual + PDF direto + JSON durante validação do usuário.'
+  "'manual' | 'pdf'",
+  'Cadastro precisa manter apenas Manual + PDF direto.'
 );
 
 for (const marker of [
@@ -83,6 +81,16 @@ for (const marker of [
   requireText(types, marker, `Modelo do empenho perdeu requisito: ${marker}`);
 }
 
+for (const forbidden of ["newEmpenhoMode === 'json'", "setNewEmpenhoMode('json')", 'Importar via JSON', 'Processar JSON', 'handleProcessJson', 'Prompt para IA (Claude']) {
+  forbidText(view, forbidden, 'Entrada JSON de NE ainda ativa na interface: ' + forbidden);
+}
+for (const forbidden of ['const handleProcessJson', 'PROMPT_EXTRACAO_EMPENHO', 'handleDownloadPromptTxt']) {
+  forbidText(actions, forbidden, 'Rotina JSON de NE ainda ativa: ' + forbidden);
+}
+requireText(actions, "reviewEmpenho.importSource !== 'pdf'", 'Salvamento da revisão deve exigir origem PDF.');
+requireText(view, "newEmpenhoMode === 'manual'", 'Cadastro manual ausente.');
+forbidText(state, "'manual' | 'pdf' | 'json'", 'Modo JSON permanece autorizado no estado.');
+
 requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
 requireText(operationalWorkspace, 'handleProcessEmpenhoPdf', 'Host operacional não expõe importação direta por PDF.');
 requireText(operationalWorkspace, 'handleUpdateEmpenhoNotaCredito', 'Host operacional não expõe edição manual da NC.');
@@ -93,7 +101,7 @@ if (findings.length > 0) {
   process.exitCode = 2;
 } else {
   console.log('EMPENHO PDF DIRECT IMPORT: READY');
-  console.log('Fluxos: MANUAL + PDF DIRETO + JSON');
+  console.log('Fluxos: MANUAL + PDF DIRETO; JSON DESATIVADO');
   console.log('Parser: DETERMINÍSTICO / SEM IA EXTERNA');
   console.log('Metadados: NC + MODALIDADE + CONTRATAÇÃO + CONTRATO');
   console.log('Prévia editável: PRESERVADA');

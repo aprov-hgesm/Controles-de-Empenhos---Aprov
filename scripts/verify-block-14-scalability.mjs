@@ -79,7 +79,13 @@ for (const [name, source] of [
   forbidText(source, "from 'jspdf'", `Hook ${name} voltou a importar jsPDF estaticamente.`);
   forbidText(source, "from 'jspdf-autotable'", `Hook ${name} voltou a importar autoTable estaticamente.`);
 }
-requireText(empenhoActions, 'await loadJsPdf()', 'Prompt PDF não usa lazy loading.');
+// Desde a remoção oficial do cadastro de NE por JSON, não existe prompt PDF.
+// O guard de lazy loading só se aplica se a funcionalidade de prompt voltar.
+if (empenhoActions.includes('handleDownloadPromptPdf')) {
+  requireText(empenhoActions, 'await loadJsPdf()', 'Prompt PDF não usa lazy loading.');
+} else {
+  forbidText(empenhoActions, "from 'jspdf'", 'Hook de empenho reintroduziu jsPDF estático.');
+}
 requireText(cronogramaActions, 'await loadJsPdfWithAutoTable()', 'Cronograma PDF não usa lazy loading.');
 requireText(documentActions, 'await loadJsPdfWithAutoTable()', 'Relatórios PDF não usam lazy loading.');
 

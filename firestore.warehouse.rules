@@ -203,6 +203,7 @@ service cloud.firestore {
 
     function validWarehouseDepotUpdate(workspaceId, depotId) {
       return validWarehouseDepotBase(workspaceId, depotId)
+        && request.resource.data.code == resource.data.code
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
@@ -303,6 +304,7 @@ service cloud.firestore {
 
     function validWarehouseLocationUpdate(workspaceId, locationId) {
       return validWarehouseLocationBase(workspaceId, locationId)
+        && request.resource.data.code == resource.data.code
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug

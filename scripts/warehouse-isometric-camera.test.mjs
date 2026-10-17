@@ -234,3 +234,48 @@ test('renderer usa largura e profundidade rotacionadas em piso, paredes, ilumina
   assert.match(preview, /subpositionsByParent\.get\(location\.id\)/);
   assert.match(preview, /highlightedSubpositionIds\.has\(candidate\.id\)/);
 });
+
+
+test('geladeira inox e freezer têm faces físicas coerentes nas quatro perspectivas', () => {
+  const visual = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseColdStorageVisual.tsx'), 'utf8'
+  );
+  const preview = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8'
+  );
+  const landing = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLandingOperational.tsx'), 'utf8'
+  );
+
+  // Só duas vistas podem exibir portas; na traseira/esquerda elas ficam ocultas.
+  assert.match(visual, /front: \{ front: 'doors', side: 'side' \}/);
+  assert.match(visual, /right: \{ front: 'side', side: 'doors' \}/);
+  assert.match(visual, /back: \{ front: 'rear', side: 'side' \}/);
+  assert.match(visual, /left: \{ front: 'side', side: 'rear' \}/);
+  assert.match(visual, /data-cold-face="rear"/);
+  assert.match(visual, /data-cold-face="doors"/);
+  assert.match(visual, /data-cold-part="hinged-lids"/);
+  assert.match(visual, /view === 'right' \? \{ u: originalY, v: 1 - originalX \}/);
+  assert.match(visual, /view === 'back' \? \{ u: 1 - originalX, v: 1 - originalY \}/);
+  assert.match(visual, /\{ u: 1 - originalY, v: originalX \}/);
+  assert.match(preview, /view=\{previewView\}/);
+  assert.match(landing, /<WarehouseColdStorageVisual/);
+  assert.match(landing, /compact/);
+  assert.doesNotMatch(visual, /getDocs\(|setDoc\(|updateDoc\(|runTransaction\(/);
+});
+
+test('laboratório visual dos refrigerados é exclusivo do localhost e não grava no Firestore', () => {
+  const route = readFileSync(resolve(root, 'app/visual-lab/frigorificos/page.tsx'), 'utf8');
+  const demo = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseColdStorageLocalPreview.tsx'), 'utf8'
+  );
+  assert.match(route, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(route, /notFound\(\)/);
+  assert.match(route, /WarehouseColdStorageLocalPreview/);
+  assert.match(demo, /<WarehouseIsometricPreview/);
+  assert.match(demo, /kind: 'REFRIGERATOR'/);
+  assert.match(demo, /kind: 'FREEZER'/);
+  assert.match(demo, /locations=\{\[\]\}/);
+  assert.match(demo, /balances=\{\[\]\}/);
+  assert.doesNotMatch(route + demo, /firebase|setDoc\(|addDoc\(|runTransaction\(/i);
+});

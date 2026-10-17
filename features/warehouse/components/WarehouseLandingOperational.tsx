@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -51,12 +50,7 @@ import {
   WAREHOUSE_RACK_VISUAL,
 } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
-
-const LazyIntakeBulkActionPanel = dynamic(
-  () => import('./WarehouseItemRegistrationOperational')
-    .then((module) => module.IntakeBulkActionPanel),
-  { ssr: false }
-);
+import { WarehouseColdStorageVisual } from './WarehouseColdStorageVisual';
 
 interface LandingData {
   loading: boolean;
@@ -373,7 +367,8 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
   const grouped = new Map<string, PendingInvoiceGroup>();
 
   for (const row of actionable) {
-    const key = row.invoiceRecordKey || row.invoiceId || row.key;
+    const key = row.invoiceRecordKey;
+    if (!key.trim()) continue; // Do not route by an ambiguous displayed NF number.
     const current = grouped.get(key);
     if (current) {
       current.itemCount += 1;
@@ -698,60 +693,24 @@ function renderDepotObject(
     );
   }
 
-  if (object.kind === 'REFRIGERATOR') {
-    const splitBottom = isoPoint(x + width / 2, y + height, 3);
-    const splitTop = isoPoint(x + width / 2, y + height, z - 3);
+  if (object.kind === 'REFRIGERATOR' || object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
     return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#cbd4d8" stroke="#657985" strokeWidth="1" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#9eafb8" stroke="#5b707c" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
-        <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
-        <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-fridge-' + object.id + '-' + index,
-            x + width * (0.26 + index * 0.18),
-            y + height * 0.74,
-            z * (0.24 + (index % 2) * 0.18),
-            8,
-            6,
-            8
-          )
-        )}
-      </g>
-    );
-  }
-
-  if (object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#b8cad5" stroke="#6c8798" strokeWidth="0.9" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#91adbd" stroke="#648193" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f8fa" stroke="#809cac" strokeWidth="0.9" />
-        <polygon
-          points={polygonPoints([
-            isoPoint(x + width * 0.09, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.9, z + 1),
-            isoPoint(x + width * 0.09, y + height * 0.9, z + 1),
-          ])}
-          fill="#d9f2fb"
-          fillOpacity="0.64"
-          stroke="#73a9bf"
-          strokeWidth="0.7"
+      <g
+        key={object.id}
+        data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
+        filter="url(#worldObjectShadow)"
+      >
+        <WarehouseColdStorageVisual
+          kind={object.kind === 'REFRIGERATOR' ? 'REFRIGERATOR' : 'FREEZER'}
+          view="front"
+          x={x}
+          y={y}
+          width={width}
+          depth={height}
+          height={z}
+          project={isoPoint}
+          compact
         />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-freezer-' + object.id + '-' + index,
-            x + width * (index ? 0.56 : 0.28),
-            y + height * 0.42,
-            z + 2,
-            8,
-            6,
-            8
-          )
-        )}
       </g>
     );
   }
@@ -1003,7 +962,7 @@ function PalletWorld({
       role={group ? 'button' : undefined}
       tabIndex={group ? 0 : undefined}
       aria-label={group
-        ? 'NF ' + group.invoiceId + ', ' + group.itemCount + ' item(ns) pendente(s). Abrir alocação.'
+        ? 'NF ' + group.invoiceId + ', ' + group.itemCount + ' item(ns) pendente(s). Abrir alocação detalhada dos itens.'
         : undefined}
       onMouseEnter={() => group && onHover?.(group)}
       onMouseLeave={() => group && onHover?.(null)}
@@ -1077,7 +1036,7 @@ function PendingPalletTooltip({
   const tooltipWidth = 250;
   const tooltipHeight = 68 + previewRows.length * 17 + (group.rows.length > 3 ? 16 : 0);
   const tooltipX = Math.min(SVG_WIDTH - tooltipWidth - 18, anchor.x + 14);
-  const tooltipY = Math.max(20, anchor.y - 18);
+  const tooltipY = Math.min(SVG_HEIGHT - tooltipHeight - 16, Math.max(20, anchor.y - 18));
 
   return (
     <g
@@ -1101,7 +1060,7 @@ function PendingPalletTooltip({
         {group.supplier.slice(0, 42)}
       </text>
       <text x="14" y="51" className={styles.palletTooltipHint}>
-        {group.itemCount} item(ns) pendente(s) · clique para alocar
+        {group.itemCount} item(ns) pendente(s) · clique para detalhar
       </text>
       {previewRows.map((row, index) => (
         <text
@@ -1174,7 +1133,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [savingVisual, setSavingVisual] = useState(false);
   const [visualMessage, setVisualMessage] = useState('');
   const [hoveredPendingKey, setHoveredPendingKey] = useState<string | null>(null);
-  const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
   const dragRef = useRef<{
     depotId: string;
     pointerId: number;
@@ -1329,12 +1287,14 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     (_, index) => visiblePendingGroups[index] || null
   );
 
-  const selectedPendingGroup = useMemo(
-    () => selectedPendingKey
-      ? pendingGroups.find((group) => group.key === selectedPendingKey) || null
-      : null,
-    [pendingGroups, selectedPendingKey]
-  );
+  // SVG painter's order controls occlusion: render the active NF tooltip once,
+  // in the final overlay layer, after all pallets, depot meshes and labels.
+  const hoveredPendingIndex = !editMode
+    ? palletGroups.findIndex((group) => group?.key === hoveredPendingKey)
+    : -1;
+  const hoveredPendingGroup = hoveredPendingIndex >= 0
+    ? palletGroups[hoveredPendingIndex]
+    : null;
 
   const updateVisual = useCallback((
     depotId: string,
@@ -1708,16 +1668,12 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
                   onActivate={(pendingGroup) => {
                     if (editMode) return;
                     setHoveredPendingKey(null);
-                    setSelectedPendingKey(pendingGroup.key);
+                    router.push(
+                      '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
+                        + encodeURIComponent(pendingGroup.key)
+                    );
                   }}
                 />
-                {group && hoveredPendingKey === group.key && !editMode && (
-                  <PendingPalletTooltip
-                    x={px}
-                    y={py}
-                    group={group}
-                  />
-                )}
               </g>
             );
           })}
@@ -1784,22 +1740,19 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               : 'Clique em um depósito para entrar · passe sobre um palete de NF e clique para alocar'}
           </text>
         </g>
+
+        {/* Render last: labels and other pallet objects must never cover NF details. */}
+        {hoveredPendingGroup && hoveredPendingIndex >= 0 && (
+          <g data-visual-role="invoice-tooltip-overlay" pointerEvents="none">
+            <PendingPalletTooltip
+              x={PALLET_YARD_X + 18 + (hoveredPendingIndex % 2) * 94}
+              y={PALLET_YARD_Y + 40 + Math.floor(hoveredPendingIndex / 2) * 92}
+              group={hoveredPendingGroup}
+            />
+          </g>
+        )}
       </svg>
 
-      {selectedPendingGroup && (
-        <LazyIntakeBulkActionPanel
-          workspaceId={workspaceId}
-          subjectKind="invoice"
-          subjectKey={selectedPendingGroup.key}
-          subjectLabel={'NF ' + selectedPendingGroup.invoiceId}
-          rows={selectedPendingGroup.rows}
-          coverageLimited={false}
-          onClose={() => setSelectedPendingKey(null)}
-          onComplete={async () => {
-            await load();
-          }}
-        />
-      )}
     </section>
   );
 }
