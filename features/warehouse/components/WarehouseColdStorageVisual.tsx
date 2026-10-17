@@ -194,12 +194,24 @@ export function WarehouseColdStorageVisual({
       {lineBetween(pt(0, 0, height), pt(0, 1, height), '#f9fdff', fine)}
       {refrigerator ? (
         <g data-cold-part="top-vent">
-          {polygon(topPanel(0.12, 0.88, 0.16, 0.37, height + 0.35),
-            '#bacbd3', '#8097a3', fine)}
+          {/* The ventilation grille stays opposite the physical doors. */}
+          {polygon(
+            doorsOnOriginalSide
+              ? topPanel(0.12, 0.33, 0.12, 0.88, height + 0.35)
+              : topPanel(0.12, 0.88, 0.16, 0.37, height + 0.35),
+            '#bacbd3', '#8097a3', fine
+          )}
           {Array.from({ length: compact ? 3 : 7 }, (_, i) => {
-            const xRatio = 0.18 + i * (0.64 / (compact ? 2 : 6));
-            return <g key={i}>{lineBetween(lidPt(xRatio, 0.19, height + 0.65),
-              lidPt(xRatio, 0.34, height + 0.65), '#647e8b', fine * 0.7)}</g>;
+            const ratio = 0.18 + i * (0.64 / (compact ? 2 : 6));
+            return (
+              <g key={i}>
+                {doorsOnOriginalSide
+                  ? lineBetween(lidPt(0.15, ratio, height + 0.65),
+                    lidPt(0.30, ratio, height + 0.65), '#647e8b', fine * 0.7)
+                  : lineBetween(lidPt(ratio, 0.19, height + 0.65),
+                    lidPt(ratio, 0.34, height + 0.65), '#647e8b', fine * 0.7)}
+              </g>
+            );
           })}
         </g>
       ) : (
