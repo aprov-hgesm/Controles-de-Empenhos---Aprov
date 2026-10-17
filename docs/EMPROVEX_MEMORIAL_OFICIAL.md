@@ -10,6 +10,7 @@
 - **Escalabilidade e custo:** evitar listeners/consultas globais de todas as contas, cobranças, sessões e históricos; introduzir paginação, resumos, consultas sob demanda, índices e separação das migrações do carregamento de interface. Medir cota Firestore e latência em bases sintéticas crescentes.
 - **Contrato comercial preservado:** Plano Completo R$ 70/mês/workspace; VIP legado isento e protegido; trial de 30 dias; billing em modo `observe` por padrão; cobrança externa e sem suspensão operacional automática por inadimplência.
 - **Fonte detalhada canônica para continuidade:** [ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md](./ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md) — benchmarking, arquitetura, fluxos, visão estética, acesso Superadmin, limites técnicos, fases, gates e handoff.
+- **Plano de execução por chats workers (2026-10-17):** [ADMIN_2_0_PLANO_MESTRE_WORKERS.md](./ADMIN_2_0_PLANO_MESTRE_WORKERS.md) — 12 workers especializados + W00 Coordenador; contrato inicial G0, PRs DRAFT, 15 capacidades A01–A15, integração/QA independente e release manual condicionada a GO. **Plano documentado, nenhum worker executado por este registro.**
 - **Próximas ações:** validar estética do protótipo; especificar telas e contratos; desenhar delegação Superadmin; medir baseline; implementar isoladamente e certificar em QA antes de qualquer GO de produção.
 - **Precedência:** este checkpoint registra decisões **futuras de produto**. Não altera retroativamente o estado operacional certificado em 2026-10-15 nem desautoriza a proteção atual de isolamento entre tenants.
 
