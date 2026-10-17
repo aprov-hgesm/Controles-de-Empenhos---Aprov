@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -1432,7 +1432,7 @@ export function WarehouseIsometricPreview({
                   setHoveredObject(null);
                   setDetailLocationId(locationId);
                 };
-                const handlePointer = (event: React.PointerEvent<SVGGElement>) => {
+                const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
                   if (!interactive || !locationId || event.pointerType === 'touch') return;
                   const svg = event.currentTarget.ownerSVGElement;
                   if (!svg) return;
