@@ -1,5 +1,20 @@
 # EMPROVEX — Memorial Oficial
 
+## Programa ADMIN-2.0 — decisão de produto 2026-10-17 · EMPROVEX Command (DESENVOLVIMENTO)
+
+- **Estado:** estudo estratégico e diretrizes funcionais **registrados para desenvolvimento futuro**; estética EMPROVEX Command em refinamento/validação humana; **nenhuma implementação, alteração de Rules/Firestore, migração ou deploy** realizada neste marco.
+- **Objetivo:** transformar a Administração em uma central de gestão SaaS escalável, com **Clientes 360°**, CRM compacto, relação cliente↔OM/UG↔workspace↔identidade↔assinatura, onboarding assistido, financeiro, atendimento, telemetria, indicadores, governança e auditoria.
+- **Navegação proposta:** Central; Gestão de Negócio; Operação da Plataforma; Inteligência; Governança. Ação Cadastrar Setor permanece disponível como fluxo contextual, preservando o provisionamento atual.
+- **Estética:** identidade premium EMPROVEX Command; azul-marinho `#020817`, superfícies `#071225`, iluminação sutil, Montserrat, legibilidade e microinterações consistentes; Border Beam discreto/monocromático; Thinking Orb não espalhado como decoração; acessibilidade, responsividade e redução de movimento. **Aparência final sujeita a aprovação no protótipo.**
+- **Decisão explícita e mais recente do Fundador — Superadministrador:** acesso global a **qualquer workspace** dos clientes com inclusão/edição/correção/exclusão por motores operacionais válidos, **sem aceite individual por entrada e sem limite temporal específico para o recurso**; troca rápida entre workspaces, sem senha do usuário e sem impersonação. Permanecem autenticação, autorização privilegiada no servidor, auditoria atribuída ao verdadeiro ator, transparência e invariantes de segurança/integridade. **Ainda não implementado; Firestore Rules e `workspaceContext` atuais não concedem este acesso.**
+- **Escalabilidade e custo:** evitar listeners/consultas globais de todas as contas, cobranças, sessões e históricos; introduzir paginação, resumos, consultas sob demanda, índices e separação das migrações do carregamento de interface. Medir cota Firestore e latência em bases sintéticas crescentes.
+- **Contrato comercial preservado:** Plano Completo R$ 70/mês/workspace; VIP legado isento e protegido; trial de 30 dias; billing em modo `observe` por padrão; cobrança externa e sem suspensão operacional automática por inadimplência.
+- **Fonte detalhada canônica para continuidade:** [ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md](./ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md) — benchmarking, arquitetura, fluxos, visão estética, acesso Superadmin, limites técnicos, fases, gates e handoff.
+- **Próximas ações:** validar estética do protótipo; especificar telas e contratos; desenhar delegação Superadmin; medir baseline; implementar isoladamente e certificar em QA antes de qualquer GO de produção.
+- **Precedência:** este checkpoint registra decisões **futuras de produto**. Não altera retroativamente o estado operacional certificado em 2026-10-15 nem desautoriza a proteção atual de isolamento entre tenants.
+
+---
+
 ## Checkpoint operacional vigente — 2026-10-15 · Release Premium + proteção da cota Vercel
 
 - **Produção:** https://emprovex.com.br — Fundador confirmou a publicação consolidada e a **validação visual das melhorias** após release em `main@63aad90bf80a50cf1cf875024cde21d5e792a3cf` (`chore(release): EMPROVEX Central de Depositos Premium`). Build de produção e prebuild pelo PowerShell aprovados; a confirmação de uso no site foi humana, não uma nova inspeção remota por este agente.
@@ -59,6 +74,7 @@ Este arquivo: `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.
 
 **Camada 2 — Estado operacional de cada programa**
 
+- **ADMIN-2.0 (estudo/planejamento):** `docs/ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md` — Clientes 360°, EMPROVEX Command, acesso Global Superadmin e escalabilidade (2026-10-17; não implementado).
 - `docs/SAAS_R1_INTEGRATION_STATUS.md`
 - `docs/SAAS_R1_COORDENADOR_HANDOFF.md`
 - `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`
@@ -119,6 +135,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
 | Produção | **EMPROVEX Premium — PUBLICADO / VALIDAÇÃO HUMANA CONFIRMADA (15/10)** | `main@63aad90bf80a50cf1cf875024cde21d5e792a3cf`; PR #314 integrado, prebuild Vercel aplicado |
+| ADMIN-2.0 — Clientes e EMPROVEX Command (2026-10-17) | **ESTUDO E DIRETRIZES DE DESENVOLVIMENTO REGISTRADOS — NÃO IMPLEMENTADO** | Ficha 360°, arquitetura escalável/eficiente em Firestore, design premium, acesso Global Superadmin sem aceite por sessão nem prazo próprio; autorização servidor/auditoria obrigatórias. Ver memorial especializado. |
 | SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRONTO PARA RC** | A1/A2/C/D PASS; B parcial/temporal |
 | Mobile R1 | **FUNCIONALMENTE CONCLUÍDO** | A–I integradas; MOBILE-J em certificação final |
 | MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |
