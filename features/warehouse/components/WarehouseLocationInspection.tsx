@@ -234,7 +234,7 @@ export function WarehouseLocationDetailsDialog({
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onRefresh} disabled={lotState === 'loading'}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-              <RefreshCw className="h-3.5 w-3.5" /> Atualizar validades
+              <RefreshCw className="h-3.5 w-3.5" /> Atualizar consulta
             </button>
             <button type="button" onClick={() => void generate()} disabled={!canExport || generating}
               data-testid="warehouse-location-download-pdf"
