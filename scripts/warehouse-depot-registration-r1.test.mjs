@@ -54,14 +54,19 @@ test('bloqueia dimensões inválidas e prateleiras fora de estantes', () => {
   assert.throws(() => p.planDepotDraft(draft([{ ...p.defaultDepotUnit('PALLET'), shelfCount: 2 }])), /Apenas estantes/);
   assert.throws(() => p.planDepotDraft(draft([{ ...p.defaultDepotUnit('SHELF'), shelfCount: 31 }])), /0 a 30/);
 });
-test('navegação remove atalhos de criação de Estrutura; croqui não altera cadastro', () => {
+test('novos depósitos permanecem no cadastramento; Estrutura adiciona locais sem gravar pelo croqui', () => {
   const ui = readFileSync(resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'), 'utf8');
   const form = readFileSync(resolve(root, 'features/warehouse/components/WarehouseDepotRegistrationR1.tsx'), 'utf8');
   const croqui = readFileSync(resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'), 'utf8');
   assert.match(ui, /Cadastramento de Depósito/);
   assert.doesNotMatch(ui, /onClick=\{\(\) => openPanel\('depot'\)\}/);
-  assert.doesNotMatch(ui, /onClick=\{\(\) => openPanel\('location'\)\}/);
-  assert.doesNotMatch(ui, /onClick=\{\(\) => openPanel\('subposition'\)\}/);
+  // Novo contrato solicitado: permitir ampliar depósitos já existentes em Estrutura.
+  assert.match(ui, /data-testid="warehouse-add-location-existing-depot"/);
+  assert.match(ui, /onClick=\{\(\) => openPanel\('location'\)\}/);
+  assert.match(ui, /data-testid="warehouse-add-subposition-existing-local"/);
+  assert.match(ui, /onClick=\{\(\) => openPanel\('subposition'\)\}/);
+  assert.match(ui, /depotId: selectedDepotId/);
+  assert.match(ui, /parentLocationId: kind === 'SUBPOSITION' \? selectedLocationId : null/);
   assert.match(form, /\['widthCm', 'Largura \(cm\)'\]/);
   assert.match(form, /\['depthCm', 'Profundidade \(cm\)'\]/);
   assert.match(form, /\['heightCm', 'Altura \(cm\)'\]/);
