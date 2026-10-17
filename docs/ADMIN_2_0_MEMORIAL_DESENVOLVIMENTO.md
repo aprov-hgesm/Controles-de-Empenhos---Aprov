@@ -7,6 +7,7 @@
 - **Estado:** **DIRETRIZES E ESCOPO FUNCIONAL DEFINIDOS; PROPOSTA ESTÉTICA EM VALIDAÇÃO; IMPLEMENTAÇÃO NÃO INICIADA NESTE REGISTRO**.
 - **Natureza:** documento de planejamento e continuidade; **não representa feature publicada, alteração de Firestore Rules, deploy ou autorização para modificar dados reais**.
 - **Memorial de entrada:** [EMPROVEX_MEMORIAL_OFICIAL.md](./EMPROVEX_MEMORIAL_OFICIAL.md).
+- **Plano Mestre de workers paralelos:** [ADMIN_2_0_PLANO_MESTRE_WORKERS.md](./ADMIN_2_0_PLANO_MESTRE_WORKERS.md) — W00 a W12, fases de integração, ownership exclusivo, 15 capacidades e QA. O plano não constitui implementação.
 - **Documentos precedentes:** [ADMIN_INFORMATION_ARCHITECTURE.md](./ADMIN_INFORMATION_ARCHITECTURE.md), [BRAND_ADMIN_BLOCK_3.md](./BRAND_ADMIN_BLOCK_3.md).
 - **Referência de código inspecionado:** `app/admin/page.tsx`, `components/admin/PlatformAdminView.tsx`, `components/admin/AdminBillingPanel.tsx`, `lib/platformAdminStore.ts`, `lib/platformBillingStore.ts`, `lib/platformIdentity.ts`, `lib/workspaceContext.ts`, `lib/profileMode.ts`, `lib/auditTrail.ts`, `firestore.rules` (branch `main`, inspeção 2026-10-17).
 
