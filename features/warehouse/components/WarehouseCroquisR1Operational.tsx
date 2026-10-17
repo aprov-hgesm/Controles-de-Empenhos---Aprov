@@ -945,6 +945,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 .map((item) => item.location)}
               balances={previewBalances}
               materials={previewMaterials}
+              depotId={selectedDepotId}
               inspectionLots={previewLots}
               inspectionLotState={previewLotState}
               inspectionError={previewLotError}
