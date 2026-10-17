@@ -51,6 +51,7 @@ import {
   WAREHOUSE_RACK_VISUAL,
 } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
+import { WarehouseColdStorageVisual } from './WarehouseColdStorageVisual';
 
 const LazyIntakeBulkActionPanel = dynamic(
   () => import('./WarehouseItemRegistrationOperational')
@@ -698,60 +699,24 @@ function renderDepotObject(
     );
   }
 
-  if (object.kind === 'REFRIGERATOR') {
-    const splitBottom = isoPoint(x + width / 2, y + height, 3);
-    const splitTop = isoPoint(x + width / 2, y + height, z - 3);
+  if (object.kind === 'REFRIGERATOR' || object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
     return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#cbd4d8" stroke="#657985" strokeWidth="1" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#9eafb8" stroke="#5b707c" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
-        <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
-        <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-fridge-' + object.id + '-' + index,
-            x + width * (0.26 + index * 0.18),
-            y + height * 0.74,
-            z * (0.24 + (index % 2) * 0.18),
-            8,
-            6,
-            8
-          )
-        )}
-      </g>
-    );
-  }
-
-  if (object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#b8cad5" stroke="#6c8798" strokeWidth="0.9" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#91adbd" stroke="#648193" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f8fa" stroke="#809cac" strokeWidth="0.9" />
-        <polygon
-          points={polygonPoints([
-            isoPoint(x + width * 0.09, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.9, z + 1),
-            isoPoint(x + width * 0.09, y + height * 0.9, z + 1),
-          ])}
-          fill="#d9f2fb"
-          fillOpacity="0.64"
-          stroke="#73a9bf"
-          strokeWidth="0.7"
+      <g
+        key={object.id}
+        data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
+        filter="url(#worldObjectShadow)"
+      >
+        <WarehouseColdStorageVisual
+          kind={object.kind === 'REFRIGERATOR' ? 'REFRIGERATOR' : 'FREEZER'}
+          view="front"
+          x={x}
+          y={y}
+          width={width}
+          depth={height}
+          height={z}
+          project={isoPoint}
+          compact
         />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-freezer-' + object.id + '-' + index,
-            x + width * (index ? 0.56 : 0.28),
-            y + height * 0.42,
-            z + 2,
-            8,
-            6,
-            8
-          )
-        )}
       </g>
     );
   }
