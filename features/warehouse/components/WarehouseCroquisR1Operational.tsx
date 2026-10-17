@@ -293,13 +293,21 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     if (croquiMode !== 'preview' || previewLoaded) return;
     let cancelled = false;
 
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    // Compartilha os lotes com a inspeção já aprovada: UMA consulta por abertura
+    // da prévia 3D, em vez de consultar novamente a cada hover.
     void Promise.all([
       listWarehouseMaterials(workspaceId, 500),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-    ]).then(([materials, balances]) => {
+      listWarehouseLots(workspaceId, 500),
+    ]).then(([materials, balances, lotItems]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
       setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
+      setPreviewLots(lotItems.map((item) => item.lot));
+      setPreviewLotsComplete(lotItems.length < 500);
+      setPreviewLotState('ready');
       setPreviewBalances(
         balances.map((item) => item.balance).filter((balance) =>
           balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
@@ -315,6 +323,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         setPreviewMaterials([]);
         setPreviewBalances([]);
         setPreviewInventoryComplete(false);
+        setPreviewLots([]);
+        setPreviewLotsComplete(false);
+        setPreviewLotState('error');
+        setPreviewLotError(messageFrom(error));
         setPreviewLoaded(true);
       }
     });
