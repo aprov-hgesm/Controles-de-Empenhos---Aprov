@@ -366,7 +366,8 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
   const grouped = new Map<string, PendingInvoiceGroup>();
 
   for (const row of actionable) {
-    const key = row.invoiceRecordKey || row.invoiceId || row.key;
+    const key = row.invoiceRecordKey;
+    if (!key.trim()) continue; // Do not route by an ambiguous displayed NF number.
     const current = grouped.get(key);
     if (current) {
       current.itemCount += 1;
