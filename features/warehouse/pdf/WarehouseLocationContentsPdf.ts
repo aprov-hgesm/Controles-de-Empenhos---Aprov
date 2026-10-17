@@ -35,7 +35,7 @@ export async function downloadWarehouseLocationContentsPdf(input: {
   doc.text('Emitido em: ' + input.generatedAt.toLocaleString('pt-BR'), 14, 39);
   doc.text(
     'Materiais distintos: ' + contents.materialCount
-      + ' | Posicoes com saldo: ' + contents.groups.length,
+      + ' | Registros com saldo: ' + contents.rowCount,
     14, 45
   );
 
