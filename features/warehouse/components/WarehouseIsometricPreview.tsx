@@ -19,6 +19,7 @@ import type {
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import { deriveWarehouseLocationContents } from '../../../lib/warehouse/locationContents';
+import { warehouseLocationsExpiringSoon } from '../../../lib/warehouse/expiryLocationHighlight';
 import {
   WarehouseLocationContentsTooltip,
   WarehouseLocationDetailsDialog,
@@ -337,6 +338,7 @@ function WarehouseStructure({
   occupiedSubpositions,
   highlighted,
   highlightedSubpositions,
+  nearExpiry,
   dimmed,
   view,
 }: {
@@ -349,6 +351,7 @@ function WarehouseStructure({
   occupiedSubpositions: Map<string, number>;
   highlighted: boolean;
   highlightedSubpositions: WarehouseLocation[];
+  nearExpiry: boolean;
   dimmed: boolean;
   view: PreviewView;
 }) {
@@ -375,7 +378,12 @@ function WarehouseStructure({
 
   const code = location?.code || object.label;
   const generalBoxCount = visualBoxes(occupiedQuantity);
-  const highlightFilter = highlighted ? 'url(#warehouseGlowStrong)' : 'url(#warehouseObjectShadow)';
+  // A seleção azul e o hover têm prioridade sobre a sinalização amarela.
+  const highlightFilter = highlighted
+    ? 'url(#warehouseGlowStrong)'
+    : nearExpiry
+      ? 'url(#warehouseExpirySoftGlow)'
+      : 'url(#warehouseObjectShadow)';
   const groupOpacity = dimmed ? 0.48 : 1;
 
   if (object.kind === 'OTHER' && !object.warehouseLocationId) {
@@ -406,13 +414,13 @@ function WarehouseStructure({
     );
   }
 
-  const commonHighlight = highlighted ? (
+  const commonHighlight = highlighted || nearExpiry ? (
     <polygon
       points={polygonPoints([a, b, c, d])}
-      fill="#dbeafe"
-      stroke="#2563eb"
-      strokeWidth="4.5"
-      opacity="0.9"
+      fill={highlighted ? '#dbeafe' : '#fef3c7'}
+      stroke={highlighted ? '#2563eb' : '#eab308'}
+      strokeWidth={highlighted ? 4.5 : 2.4}
+      opacity={highlighted ? 0.9 : 0.6}
     />
   ) : null;
 
@@ -425,6 +433,7 @@ function WarehouseStructure({
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
+        data-expiry-soon={nearExpiry ? 'true' : 'false'}
         data-visual-role="warehouse-pallet"
         opacity={groupOpacity}
         filter={highlightFilter}
@@ -540,6 +549,7 @@ function WarehouseStructure({
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
+        data-expiry-soon={nearExpiry ? 'true' : 'false'}
         opacity={groupOpacity}
         filter={highlightFilter}
       >
@@ -770,6 +780,7 @@ function WarehouseStructure({
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
+        data-expiry-soon={nearExpiry ? 'true' : 'false'}
         opacity={groupOpacity}
         filter={highlightFilter}
       >
@@ -812,6 +823,7 @@ function WarehouseStructure({
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
+        data-expiry-soon={nearExpiry ? 'true' : 'false'}
         opacity={groupOpacity}
         filter={highlightFilter}
       >
@@ -916,6 +928,14 @@ export function WarehouseIsometricPreview({
     objectId: string; locationId: string; x: number; y: number;
   } | null>(null);
   const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
+  const [currentDay, setCurrentDay] = useState(() => new Date());
+
+  // Reavalia o calendário quando o usuário volta à aba após uma virada de dia.
+  useEffect(() => {
+    const refreshDay = () => setCurrentDay(new Date());
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => document.removeEventListener('visibilitychange', refreshDay);
+  }, []);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -942,6 +962,13 @@ export function WarehouseIsometricPreview({
   const locationById = useMemo(
     () => new Map(locations.map((location) => [location.id, location])),
     [locations]
+  );
+
+  const expiringLocationIds = useMemo(
+    () => inspectionLotState === 'ready'
+      ? warehouseLocationsExpiringSoon(balances, inspectionLots, currentDay)
+      : new Set<string>(),
+    [balances, inspectionLots, inspectionLotState, currentDay]
   );
 
   const hoveredContents = useMemo(
@@ -1381,6 +1408,10 @@ export function WarehouseIsometricPreview({
               <filter id="warehouseObjectShadow" x="-60%" y="-60%" width="220%" height="220%">
                 <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#10273c" floodOpacity="0.24" />
               </filter>
+              <filter id="warehouseExpirySoftGlow" x="-65%" y="-65%" width="230%" height="230%">
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#eab308" floodOpacity="0.62" />
+                <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#facc15" floodOpacity="0.26" />
+              </filter>
               <filter id="warehouseGlowStrong" x="-80%" y="-80%" width="260%" height="260%">
                 <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#60a5fa" floodOpacity="1" />
                 <feDropShadow dx="0" dy="0" stdDeviation="14" floodColor="#2563eb" floodOpacity="0.72" />
@@ -1461,6 +1492,7 @@ export function WarehouseIsometricPreview({
                 const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
                 const occupiedQuantity = locationId ? occupancyByLocal.get(locationId) || 0 : 0;
                 const highlighted = Boolean(locationId && (highlightedLocalIds.has(locationId) || focusedLocationId === locationId));
+                const nearExpiry = Boolean(locationId && expiringLocationIds.has(locationId) && !highlighted);
                 const highlightedSubpositions = subpositions.filter((candidate) =>
                   highlightedSubpositionIds.has(candidate.id)
                 );
@@ -1537,6 +1569,7 @@ export function WarehouseIsometricPreview({
                     occupiedSubpositions={occupancyBySubposition}
                     highlighted={highlighted}
                     highlightedSubpositions={highlightedSubpositions}
+                    nearExpiry={nearExpiry}
                     dimmed={hasActiveSelection && !highlighted}
                     view={previewView}
                   />
@@ -1545,6 +1578,20 @@ export function WarehouseIsometricPreview({
               })}
             </g>
           </svg>
+        )}
+        {expiringLocationIds.size > 0 && (
+          <div
+            data-testid="warehouse-expiry-14d-legend"
+            className="pointer-events-none absolute bottom-3 left-3 rounded-lg border border-amber-200/80 bg-white/90 px-3 py-2 text-[10px] font-semibold text-amber-900 shadow-sm"
+          >
+            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-amber-500 bg-amber-200 align-middle" />
+            Amarelo: material vencendo nos próximos 14 dias
+          </div>
+        )}
+        {inspectionLotState === 'ready' && !inspectionComplete && onInspectLocation && (
+          <p className="absolute bottom-3 right-3 max-w-[240px] rounded-lg bg-amber-50/95 p-2 text-[10px] font-medium text-amber-900 shadow-sm">
+            Consulta parcial: podem existir outros locais com validade próxima.
+          </p>
         )}
         {hoveredContents && !detailLocationId && !viewTransitioning && (
           <WarehouseLocationContentsTooltip
