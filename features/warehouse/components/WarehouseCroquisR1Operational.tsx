@@ -201,6 +201,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [previewLotError, setPreviewLotError] = useState<string | null>(null);
   const [previewLotsComplete, setPreviewLotsComplete] = useState(true);
   const lotRequestRef = useRef(0);
+  const navigationRef = useRef<string | null>(null);
+  const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -262,16 +264,24 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
-      setCroquiMode('edit');
-      setPreviewQuery('');
-      setPreviewMaterialId('');
-      setPreviewLoaded(false);
-      setPreviewInventoryComplete(false);
-      setPreviewLots([]);
-      setPreviewLotState('idle');
-      setPreviewLotError(null);
-      setPreviewLotsComplete(true);
-      lotRequestRef.current += 1;
+      const globalJump = navigationRef.current === selectedDepotId;
+      navigationRef.current = null;
+      // O salto global conserva o material escolhido e o índice de saldos já lido.
+      if (!globalJump) {
+        setCroquiMode('edit');
+        setPreviewQuery('');
+        setPreviewMaterialId('');
+        setFocusedLocationId(null);
+        setPreviewLoaded(false);
+        setPreviewInventoryComplete(false);
+        setPreviewLots([]);
+        setPreviewLotState('idle');
+        setPreviewLotError(null);
+        setPreviewLotsComplete(true);
+        lotRequestRef.current += 1;
+      } else {
+        setCroquiMode('preview');
+      }
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -284,20 +294,16 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     let cancelled = false;
 
     void Promise.all([
-      listWarehouseMaterials(workspaceId, 250),
+      listWarehouseMaterials(workspaceId, 500),
       listWarehousePositiveLocationBalances(workspaceId, 500),
     ]).then(([materials, balances]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
-      setPreviewInventoryComplete(materials.length < 250 && balances.length < 500);
+      setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
       setPreviewBalances(
-        balances
-          .map((item) => item.balance)
-          .filter((balance) =>
-            balance.quantity > 0
-            && balance.position.kind !== 'UNASSIGNED'
-            && balance.position.depotId === selectedDepotId
-          )
+        balances.map((item) => item.balance).filter((balance) =>
+          balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
+        )
       );
       setPreviewLoaded(true);
     }).catch((error) => {
@@ -342,7 +348,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setPreviewLotError(null);
     try {
       const [materials, balances, items] = await Promise.all([
-        listWarehouseMaterials(workspaceId, 250),
+        listWarehouseMaterials(workspaceId, 500),
         listWarehousePositiveLocationBalances(workspaceId, 500),
         listWarehouseLots(workspaceId, 500),
       ]);
@@ -350,12 +356,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPreviewMaterials(materials);
       setPreviewBalances(
         balances.map((item) => item.balance).filter((balance) =>
-          balance.quantity > 0
-          && balance.position.kind !== 'UNASSIGNED'
-          && balance.position.depotId === selectedDepotId
+          balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
         )
       );
-      setPreviewInventoryComplete(materials.length < 250 && balances.length < 500);
+      setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
       setPreviewLots(items.map((item) => item.lot));
       setPreviewLotsComplete(items.length < 500);
       setPreviewLotState('ready');
@@ -365,6 +369,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPreviewLotState('error');
     }
   }, [selectedDepotId, workspaceId]);
+
+  const navigateToSearchResult = useCallback((depotId: string, locationId: string) => {
+    setFocusedLocationId(locationId);
+    if (depotId === selectedDepotId) return;
+    navigationRef.current = depotId;
+    setSelectedDepotId(depotId);
+  }, [selectedDepotId]);
 
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
@@ -974,8 +985,24 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                     && item.location.status === 'active'
                 )
                 .map((item) => item.location)}
-              balances={previewBalances}
+              balances={previewBalances.filter((balance) =>
+                balance.position.kind !== 'UNASSIGNED'
+                && balance.position.depotId === selectedDepotId
+              )}
               materials={previewMaterials}
+              globalDepots={depots.map((item) => item.depot)}
+              globalLocations={locations.map((item) => item.location)}
+              globalBalances={previewBalances}
+              globalLoaded={previewLoaded}
+              globalComplete={
+                previewInventoryComplete
+                && depots.length < 250
+                && locations.length < 500
+              }
+              focusedLocationId={focusedLocationId}
+              onNavigateToGlobalLocation={(depotId, locationId) =>
+                navigateToSearchResult(depotId, locationId)
+              }
               depotId={selectedDepotId}
               inspectionLots={previewLots}
               inspectionLotState={previewLotState}

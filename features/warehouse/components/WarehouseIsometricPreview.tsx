@@ -12,6 +12,7 @@ import {
   type WarehouseIsoView,
 } from '../../../lib/warehouse/isometricCamera';
 import type {
+  WarehouseDepot,
   WarehouseLocation,
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
@@ -24,6 +25,7 @@ import {
   type WarehouseInspectionLotState,
 } from './WarehouseLocationInspection';
 import { WarehouseColdStorageVisual } from './WarehouseColdStorageVisual';
+import { WarehouseGlobalMaterialSearch } from './WarehouseGlobalMaterialSearch';
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
@@ -51,6 +53,13 @@ type Props = {
   inspectionAvailable?: boolean;
   onInspectLocation?: () => void;
   onRefreshInspection?: () => void;
+  globalDepots?: WarehouseDepot[];
+  globalLocations?: WarehouseLocation[];
+  globalBalances?: WarehouseLocationBalance[];
+  globalLoaded?: boolean;
+  globalComplete?: boolean;
+  focusedLocationId?: string | null;
+  onNavigateToGlobalLocation?: (depotId: string, locationId: string) => void;
 };
 
 type IsoPoint = { x: number; y: number };
@@ -893,6 +902,13 @@ export function WarehouseIsometricPreview({
   inspectionAvailable = true,
   onInspectLocation,
   onRefreshInspection,
+  globalDepots,
+  globalLocations,
+  globalBalances,
+  globalLoaded = true,
+  globalComplete = true,
+  focusedLocationId = null,
+  onNavigateToGlobalLocation,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [viewTransitioning, setViewTransitioning] = useState(false);
@@ -1229,6 +1245,24 @@ export function WarehouseIsometricPreview({
           </div>
 
           {!embedded && (
+            globalDepots && globalLocations && globalBalances && onNavigateToGlobalLocation
+              ? (
+                <WarehouseGlobalMaterialSearch
+                  depots={globalDepots}
+                  locations={globalLocations}
+                  balances={globalBalances}
+                  materials={materials}
+                  loaded={globalLoaded}
+                  complete={globalComplete}
+                  queryText={queryText}
+                  selectedMaterialId={selectedMaterialId}
+                  onQueryTextChange={onQueryTextChange}
+                  onSelectedMaterialIdChange={onSelectedMaterialIdChange}
+                  onNavigateToLocation={(position) =>
+                    onNavigateToGlobalLocation(position.depotId, position.locationId)
+                  }
+                />
+              ) : (
             <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
@@ -1263,6 +1297,7 @@ export function WarehouseIsometricPreview({
                 </div>
               )}
             </div>
+            )
           )}
         </div>
       </div>
@@ -1425,7 +1460,7 @@ export function WarehouseIsometricPreview({
                 const location = locationId ? locationById.get(locationId) || null : null;
                 const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
                 const occupiedQuantity = locationId ? occupancyByLocal.get(locationId) || 0 : 0;
-                const highlighted = Boolean(locationId && highlightedLocalIds.has(locationId));
+                const highlighted = Boolean(locationId && (highlightedLocalIds.has(locationId) || focusedLocationId === locationId));
                 const highlightedSubpositions = subpositions.filter((candidate) =>
                   highlightedSubpositionIds.has(candidate.id)
                 );
