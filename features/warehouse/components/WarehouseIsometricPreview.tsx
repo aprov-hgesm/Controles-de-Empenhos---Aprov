@@ -42,6 +42,7 @@ type Props = {
   onQueryTextChange: (value: string) => void;
   onSelectedMaterialIdChange: (value: string) => void;
   embedded?: boolean;
+  depotId?: string;
   depotName?: string;
   inspectionLots?: WarehouseLot[];
   inspectionLotState?: WarehouseInspectionLotState;
@@ -882,6 +883,7 @@ export function WarehouseIsometricPreview({
   onQueryTextChange,
   onSelectedMaterialIdChange,
   embedded = false,
+  depotId = '',
   depotName = 'Depósito',
   inspectionLots = [],
   inspectionLotState = 'idle',
@@ -944,7 +946,7 @@ export function WarehouseIsometricPreview({
   useEffect(() => {
     setHoveredObject(null);
     setDetailLocationId(null);
-  }, [locations]);
+  }, [depotId]);
 
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
