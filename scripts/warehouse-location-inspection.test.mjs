@@ -48,7 +48,7 @@ test('agrupa por prateleira, preserva saldo oficial e não mistura lotes de outr
     [lot('1', 'mat_a', posA, 4, '2027-01-20'), lot('2', 'mat_a', posB, 2, '2028-01-20')]
   );
   assert.ok(result);
-  assert.equal(result.totalQuantity, 17);
+  assert.equal(result.rowCount, 3);
   assert.equal(result.materialCount, 2);
   assert.deepEqual(Array.from(result.groups, (g) => g.code), ['P1', 'P2', 'LOCAL']);
   assert.equal(result.groups[0].rows[0].quantity, 10);
