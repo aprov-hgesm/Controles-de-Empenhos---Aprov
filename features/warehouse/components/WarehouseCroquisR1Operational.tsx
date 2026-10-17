@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   DoorOpen,
@@ -35,6 +35,9 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
+import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
@@ -192,6 +195,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [previewQuery, setPreviewQuery] = useState('');
   const [previewMaterialId, setPreviewMaterialId] = useState('');
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [previewInventoryComplete, setPreviewInventoryComplete] = useState(false);
+  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
+  const [previewLotState, setPreviewLotState] = useState<WarehouseInspectionLotState>('idle');
+  const [previewLotError, setPreviewLotError] = useState<string | null>(null);
+  const [previewLotsComplete, setPreviewLotsComplete] = useState(true);
+  const lotRequestRef = useRef(0);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -257,6 +266,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPreviewQuery('');
       setPreviewMaterialId('');
       setPreviewLoaded(false);
+      setPreviewInventoryComplete(false);
+      setPreviewLots([]);
+      setPreviewLotState('idle');
+      setPreviewLotError(null);
+      setPreviewLotsComplete(true);
+      lotRequestRef.current += 1;
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -274,6 +289,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     ]).then(([materials, balances]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
+      setPreviewInventoryComplete(materials.length < 250 && balances.length < 500);
       setPreviewBalances(
         balances
           .map((item) => item.balance)
@@ -292,12 +308,32 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         );
         setPreviewMaterials([]);
         setPreviewBalances([]);
+        setPreviewInventoryComplete(false);
         setPreviewLoaded(true);
       }
     });
 
     return () => { cancelled = true; };
   }, [croquiMode, previewLoaded, selectedDepotId, workspaceId]);
+
+  // Validades sob demanda: uma leitura de lotes por sessão de consulta, nunca por movimento do mouse.
+  const loadPreviewLots = useCallback(async (refresh = false) => {
+    if (!selectedDepotId || (!refresh && previewLotState !== 'idle')) return;
+    const request = ++lotRequestRef.current;
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    try {
+      const items = await listWarehouseLots(workspaceId, 500);
+      if (request !== lotRequestRef.current) return;
+      setPreviewLots(items.map((item) => item.lot));
+      setPreviewLotsComplete(items.length < 500);
+      setPreviewLotState('ready');
+    } catch (error) {
+      if (request !== lotRequestRef.current) return;
+      setPreviewLotState('error');
+      setPreviewLotError(messageFrom(error));
+    }
+  }, [previewLotState, selectedDepotId, workspaceId]);
 
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
@@ -909,6 +945,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 .map((item) => item.location)}
               balances={previewBalances}
               materials={previewMaterials}
+              inspectionLots={previewLots}
+              inspectionLotState={previewLotState}
+              inspectionError={previewLotError}
+              inspectionComplete={previewInventoryComplete && previewLotsComplete}
+              depotName={selectedDepot?.name || 'Depósito'}
+              onInspectLocation={() => { void loadPreviewLots(); }}
+              onRefreshInspection={() => { void loadPreviewLots(true); }}
               selectedMaterialId={previewMaterialId}
               queryText={previewQuery}
               onQueryTextChange={setPreviewQuery}
