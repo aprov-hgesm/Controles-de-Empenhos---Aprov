@@ -48,6 +48,7 @@ type Props = {
   inspectionLotState?: WarehouseInspectionLotState;
   inspectionError?: string | null;
   inspectionComplete?: boolean;
+  inspectionAvailable?: boolean;
   onInspectLocation?: () => void;
   onRefreshInspection?: () => void;
 };
@@ -889,6 +890,7 @@ export function WarehouseIsometricPreview({
   inspectionLotState = 'idle',
   inspectionError = null,
   inspectionComplete = false,
+  inspectionAvailable = true,
   onInspectLocation,
   onRefreshInspection,
 }: Props) {
@@ -1183,7 +1185,11 @@ export function WarehouseIsometricPreview({
           >
             {embedded
               ? 'Renderer visual oficial · escolha o ângulo sem alterar o croqui.'
-              : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
+              : onInspectLocation
+                ? inspectionAvailable
+                  ? 'Passe o cursor sobre um local para ver itens e validades; clique para detalhes e relatório.'
+                  : 'Carregando saldos físicos do depósito para habilitar a inspeção…'
+                : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
           </p>
         </div>
 
@@ -1424,7 +1430,7 @@ export function WarehouseIsometricPreview({
                   highlightedSubpositionIds.has(candidate.id)
                 );
 
-                const interactive = Boolean(onInspectLocation && location?.kind === 'LOCAL');
+                const interactive = Boolean(onInspectLocation && inspectionAvailable && location?.kind === 'LOCAL');
                 const hovered = hoveredObject?.objectId === object.id;
                 const handleOpen = () => {
                   if (!interactive || !locationId) return;
