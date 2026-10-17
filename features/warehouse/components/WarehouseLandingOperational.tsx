@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -51,12 +50,6 @@ import {
   WAREHOUSE_RACK_VISUAL,
 } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
-
-const LazyIntakeBulkActionPanel = dynamic(
-  () => import('./WarehouseItemRegistrationOperational')
-    .then((module) => module.IntakeBulkActionPanel),
-  { ssr: false }
-);
 
 interface LandingData {
   loading: boolean;
@@ -1003,7 +996,7 @@ function PalletWorld({
       role={group ? 'button' : undefined}
       tabIndex={group ? 0 : undefined}
       aria-label={group
-        ? 'NF ' + group.invoiceId + ', ' + group.itemCount + ' item(ns) pendente(s). Abrir alocação.'
+        ? 'NF ' + group.invoiceId + ', ' + group.itemCount + ' item(ns) pendente(s). Abrir alocação detalhada dos itens.'
         : undefined}
       onMouseEnter={() => group && onHover?.(group)}
       onMouseLeave={() => group && onHover?.(null)}
@@ -1101,7 +1094,7 @@ function PendingPalletTooltip({
         {group.supplier.slice(0, 42)}
       </text>
       <text x="14" y="51" className={styles.palletTooltipHint}>
-        {group.itemCount} item(ns) pendente(s) · clique para alocar
+        {group.itemCount} item(ns) pendente(s) · clique para detalhar
       </text>
       {previewRows.map((row, index) => (
         <text
@@ -1174,7 +1167,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [savingVisual, setSavingVisual] = useState(false);
   const [visualMessage, setVisualMessage] = useState('');
   const [hoveredPendingKey, setHoveredPendingKey] = useState<string | null>(null);
-  const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
   const dragRef = useRef<{
     depotId: string;
     pointerId: number;
@@ -1337,13 +1329,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const hoveredPendingGroup = hoveredPendingIndex >= 0
     ? palletGroups[hoveredPendingIndex]
     : null;
-
-  const selectedPendingGroup = useMemo(
-    () => selectedPendingKey
-      ? pendingGroups.find((group) => group.key === selectedPendingKey) || null
-      : null,
-    [pendingGroups, selectedPendingKey]
-  );
 
   const updateVisual = useCallback((
     depotId: string,
@@ -1717,7 +1702,10 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
                   onActivate={(pendingGroup) => {
                     if (editMode) return;
                     setHoveredPendingKey(null);
-                    setSelectedPendingKey(pendingGroup.key);
+                    router.push(
+                      '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
+                        + encodeURIComponent(pendingGroup.key)
+                    );
                   }}
                 />
               </g>
@@ -1799,20 +1787,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         )}
       </svg>
 
-      {selectedPendingGroup && (
-        <LazyIntakeBulkActionPanel
-          workspaceId={workspaceId}
-          subjectKind="invoice"
-          subjectKey={selectedPendingGroup.key}
-          subjectLabel={'NF ' + selectedPendingGroup.invoiceId}
-          rows={selectedPendingGroup.rows}
-          coverageLimited={false}
-          onClose={() => setSelectedPendingKey(null)}
-          onComplete={async () => {
-            await load();
-          }}
-        />
-      )}
     </section>
   );
 }
