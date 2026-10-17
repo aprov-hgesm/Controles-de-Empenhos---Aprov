@@ -58,3 +58,50 @@ test('renderização 3D apoiada na base e consulta fora do desenho', () => {
     assert.doesNotMatch(content, /(?:setDoc|updateDoc|runTransaction)\(/);
   }
 });
+
+
+test('a inspeção está conectada na tela real Meus Depósitos, além da Prévia de Croquis', () => {
+  const home = read('features/warehouse/components/WarehouseHomeOperational.tsx');
+  const croquis = read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
+  for (const screen of [home, croquis]) {
+    assert.match(screen, /<WarehouseIsometricPreview/);
+    assert.match(screen, /onInspectLocation=\{/);
+    assert.match(screen, /onRefreshInspection=\{/);
+    assert.match(screen, /inspectionAvailable=\{/);
+    assert.match(screen, /inspectionLots=\{/);
+    assert.match(screen, /depotId=\{/);
+  }
+  assert.match(home, /const loadInspectionLots = useCallback/);
+  assert.match(home, /if \(!workspaceId \|\| \(!refresh && inspectionPhaseRef.current !== 'idle'\)\) return;/);
+  assert.match(home, /inspectionRequestRef.current \+= 1/);
+  assert.match(home, /inspectionAvailable=\{!data.loading && !data.error\}/);
+  assert.doesNotMatch(home, /onMouseMove=.*listWarehouseLots/);
+});
+
+test('um local sem saldo continua inspecionável e mantém o painel aberto', () => {
+  const preview = read('features/warehouse/components/WarehouseIsometricPreview.tsx');
+  const inspection = read('features/warehouse/components/WarehouseLocationInspection.tsx');
+  const contents = read('lib/warehouse/locationContents.ts');
+  assert.match(preview, /location\?\.kind === 'LOCAL'/);
+  assert.doesNotMatch(preview, /const interactive = [^;]*occupiedQuantity/);
+  assert.match(preview, /setInspectedLocationId\(locationId\)/);
+  assert.match(preview, /const \[inspectedLocationId, setInspectedLocationId\]/);
+  assert.match(preview, /Local vazio · saldo físico 0/);
+  assert.match(inspection, /Saldo físico: 0/);
+  assert.match(contents, /materialCount: materialIds.size/);
+  assert.match(contents, /rowCount/);
+  const js = ts.transpileModule(contents, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  runInNewContext(js, { exports, require: () => ({ warehouseStockPositionsEqual: () => true }) });
+  const location = {
+    id: 'local-empty', kind: 'LOCAL', status: 'active', depotId: 'depot-1',
+    name: 'Freezer vazio', code: 'F01',
+  };
+  const result = exports.deriveWarehouseLocationContents(location.id, [location], [], [], []);
+  assert.ok(result);
+  assert.equal(result.materialCount, 0);
+  assert.equal(result.rowCount, 0);
+  assert.equal(result.groups.length, 0);
+});

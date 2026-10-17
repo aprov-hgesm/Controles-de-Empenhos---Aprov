@@ -50,7 +50,7 @@ export function WarehouseLocationContentsTooltip({
       </p>
       <div className="mt-2 space-y-2">
         {count === 0 && (
-          <p className="rounded-lg bg-slate-50 p-2 text-[11px] text-slate-500">Local sem itens com saldo positivo.</p>
+          <p className="rounded-lg bg-slate-50 p-2 text-[11px] text-slate-500">Local sem itens com saldo positivo. Saldo físico: 0.</p>
         )}
         {contents.groups.map((group) => {
           const rows = group.rows.slice(0, Math.max(0, 5 - shown));

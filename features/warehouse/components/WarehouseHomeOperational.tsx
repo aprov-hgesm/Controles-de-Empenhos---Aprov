@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   CalendarClock,
@@ -36,6 +36,7 @@ import {
 } from '../../../lib/warehouse/lot';
 import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import styles from './WarehouseHomeOperational.module.css';
 
 interface WarehouseHomeData {
@@ -114,6 +115,49 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [lotsLoading, setLotsLoading] = useState(false);
   const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
+
+  // A leitura de validades para a inspeção é independente da busca de um
+  // material específico: uma consulta lazy por workspace, nunca por hover.
+  const [inspectionLots, setInspectionLots] = useState<WarehouseLot[]>([]);
+  const [inspectionLotState, setInspectionLotState] = useState<WarehouseInspectionLotState>('idle');
+  const [inspectionLotError, setInspectionLotError] = useState<string | null>(null);
+  const [inspectionLotsComplete, setInspectionLotsComplete] = useState(true);
+  const inspectionRequestRef = useRef(0);
+  const inspectionPhaseRef = useRef<WarehouseInspectionLotState>('idle');
+
+  useEffect(() => {
+    // Ignorar qualquer resposta pendente de um workspace anterior.
+    inspectionRequestRef.current += 1;
+    inspectionPhaseRef.current = 'idle';
+    setInspectionLots([]);
+    setInspectionLotState('idle');
+    setInspectionLotError(null);
+    setInspectionLotsComplete(true);
+    return () => { inspectionRequestRef.current += 1; };
+  }, [workspaceId]);
+
+  const loadInspectionLots = useCallback((refresh = false) => {
+    if (!workspaceId || (!refresh && inspectionPhaseRef.current !== 'idle')) return;
+    inspectionPhaseRef.current = 'loading';
+    setInspectionLotState('loading');
+    setInspectionLotError(null);
+    const request = ++inspectionRequestRef.current;
+
+    void listWarehouseLots(workspaceId, 500)
+      .then((items) => {
+        if (request !== inspectionRequestRef.current) return;
+        setInspectionLots(items.map((item) => item.lot));
+        setInspectionLotsComplete(items.length < 500);
+        inspectionPhaseRef.current = 'ready';
+        setInspectionLotState('ready');
+      })
+      .catch((error) => {
+        if (request !== inspectionRequestRef.current) return;
+        inspectionPhaseRef.current = 'error';
+        setInspectionLotError(error instanceof Error ? error.message : 'Falha ao consultar validades.');
+        setInspectionLotState('error');
+      });
+  }, [workspaceId]);
 
   const reload = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
@@ -631,6 +675,20 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   locations={previewLocations}
                   balances={previewBalances}
                   materials={data.materials}
+                  depotId={selectedDepotId}
+                  depotName={selectedDepot?.name || 'Depósito'}
+                  inspectionLots={inspectionLots}
+                  inspectionLotState={inspectionLotState}
+                  inspectionError={inspectionLotError}
+                  inspectionComplete={
+                    data.materials.length < 250
+                    && data.locations.length < 500
+                    && data.locationBalances.length < 500
+                    && inspectionLotsComplete
+                  }
+                  inspectionAvailable={!data.loading && !data.error}
+                  onInspectLocation={() => loadInspectionLots()}
+                  onRefreshInspection={() => loadInspectionLots(true)}
                   selectedMaterialId={selectedMaterialId}
                   queryText={query}
                   onQueryTextChange={setQuery}
