@@ -303,6 +303,7 @@ export function WarehouseLocationsR1Operational({
 
     setWorking(true);
     setMessage(null);
+    let createdLocalId: string | null = null;
     try {
       const created = await createWarehouseLocation(workspaceId, {
         kind,
@@ -312,6 +313,8 @@ export function WarehouseLocationsR1Operational({
         name: locationName,
         description: locationDescription || null,
       });
+
+      if (kind === 'LOCAL') createdLocalId = created.id;
 
       if (kind === 'LOCAL' && locationPreset === 'SHELF' && shelfSubpositionCount > 0) {
         const normalizedBaseCode = locationCode.trim().toUpperCase();
@@ -343,7 +346,15 @@ export function WarehouseLocationsR1Operational({
       );
       await refresh();
     } catch (error) {
-      setMessage(messageFromError(error));
+      if (createdLocalId) {
+        // O local principal já foi salvo; evitar que o operador recrie o mesmo código.
+        setSelectedLocationId(createdLocalId);
+        setCreatePanel(null);
+        setMessage('Local criado, mas a inclusão de todas as subposições não foi concluída. Confira as prateleiras já cadastradas antes de tentar novamente. ' + messageFromError(error));
+        await refresh();
+      } else {
+        setMessage(messageFromError(error));
+      }
     } finally {
       setWorking(false);
     }
@@ -845,7 +856,10 @@ export function WarehouseLocationsR1Operational({
                   <button
                     type="button"
                     key={item.location.id}
-                    onClick={() => setSelectedLocationId(item.location.id)}
+                    onClick={() => {
+                      setSelectedLocationId(item.location.id);
+                      setCreatePanel(null);
+                    }}
                     className={
                       active
                         ? 'rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm ring-2 ring-[#00288e]/10'
@@ -893,7 +907,7 @@ export function WarehouseLocationsR1Operational({
                     className="inline-flex items-center gap-1 rounded-lg bg-[#00288e] px-2.5 py-1.5 text-[10px] font-black text-white transition hover:bg-blue-800 disabled:opacity-40"
                   >
                     <Plus className="h-3 w-3" />
-                    Adicionar prateleira
+                    Adicionar subposição
                   </button>
                   <button
                     type="button"
@@ -929,7 +943,7 @@ export function WarehouseLocationsR1Operational({
                 <Archive className="mx-auto h-7 w-7 text-blue-300" />
                 <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
                 <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
-                <p className="mt-3 text-xs text-[#00288e]">Use “Adicionar prateleira” para cadastrar uma subposição neste local.</p>
+                <p className="mt-3 text-xs text-[#00288e]">Use “Adicionar subposição” para cadastrar prateleira, nível ou nicho neste local.</p>
               </div>
             ) : (
               <div className="mt-4 max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-1">
