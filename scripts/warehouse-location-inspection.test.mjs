@@ -89,6 +89,12 @@ test('interface possui interação e relatório somente leitura com carregamento
   const croquis = read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
   const dialog = read('features/warehouse/components/WarehouseLocationInspection.tsx');
   const pdf = read('features/warehouse/pdf/WarehouseLocationContentsPdf.ts');
+  const lab = read('app/visual-lab/inspecao-locais/page.tsx');
+  const fixture = read('features/warehouse/components/WarehouseLocationInspectionLocalPreview.tsx');
+  assert.match(lab, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(fixture, /WarehouseIsometricPreview/);
+  assert.match(fixture, /warehouse-location-inspection-lab/);
+  assert.doesNotMatch(lab + fixture, /from ['"][^'"]*firebase|setDoc\(|runTransaction\(/);
   assert.match(preview, /data-testid=\{interactive \? 'warehouse-location-interactive'/);
   assert.match(preview, /onPointerEnter=/);
   assert.match(preview, /onClick=\{handleOpen\}/);
