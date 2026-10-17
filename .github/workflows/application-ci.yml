@@ -275,6 +275,9 @@ jobs:
       - name: Central de Depósitos isometric scene auto-fit tests
         run: npm run test:warehouse-isometric-camera
 
+      - name: Warehouse location hover and report tests
+        run: npm run test:warehouse-location-inspection
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 
