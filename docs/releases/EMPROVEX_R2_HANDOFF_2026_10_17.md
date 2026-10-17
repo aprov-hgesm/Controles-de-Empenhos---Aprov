@@ -2,6 +2,30 @@
 
 > **ESTADO VIGENTE.** Este documento reúne a conversa de implementação, aceitação e preparação da segunda onda. Leia em conjunto com `docs/EMPROVEX_MEMORIAL_OFICIAL.md` e as evidências dos PRs. As informações históricas que sugerem usar prebuild na Vercel Hobby foram superadas pelo deploy remoto por fonte. **O R2 ainda NÃO está publicado.**
 
+## 0. Última evidência recebida / retomada obrigatória
+
+**Inspeção direta do domínio pelo Fundador (17/10/2026):**
+
+```text
+PS C:\Users\marco\emprovex-release-r2-estrutura-20261017>
+vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects
+id       dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd
+target   production
+status   Ready
+url      https://controles-de-empenhos-aprov-6s8k8i3qg-aprov-hgesms-projects.vercel.app
+created  Fri Oct 16 2026 22:25:29 GMT-0300
+```
+
+**Conclusão comprovada:** o domínio público ainda resolve o deployment **R1**, mesmo com a preparação local de R2 em `C:\Users\marco\emprovex-release-r2-estrutura-20261017`. Essa linha do PowerShell **não comprova** que um novo deployment R2 tenha sido criado ou não: não há URL nem ID de R2 no retorno. Antes de um novo `vercel deploy`, confirmar com o Fundador se já houve um upload R2 com `--skip-domain`, para **não consumir a cota Hobby com um deployment duplicado**. Caso já exista R2 `Ready`, conferir SHA/artefato e saúde e **promover o mesmo deployment**; só enviar novamente se necessário e autorizado.
+
+**GitHub verificado imediatamente antes deste registro:** PR #335 DRAFT, HEAD `b4486e1ffce6dd853f2399ca2fe80795220a05f0` (**commit documental**), com **5/5 workflows SUCCESS** nesse SHA: Application CI `38998788750`, Core Protection `38998788686`, Recovery Guardrails `38998788748`, Legal `38998788737`, Visual QA `38998788689`. A `main` permanece `2b1241fe3abd96c67766caf065d24a4b2a223b98`. Comparação `R1@6033905f... → PR #335@b4486e1...`: `ahead=62`, `behind=0`, **28 arquivos alterados**, abrangendo os cinco PRs e os dois memoriais. **Após este novo commit documental**, conferir o HEAD novamente e seus cinco workflows antes do freeze e do deploy.
+
+**Ponto de segurança:** a branch `release/emprovex-r2-consolidada-20261017` ainda tem somente **quatro** melhorias (`78b550e2...`); **NÃO PUBLICAR ESSE SHA ANTIGO**. A quinta melhoria e os documentos estão em `feat/warehouse-add-location-existing-depot-r2` (PR #335). O nome da pasta local de exportação, por si só, não comprova o SHA dos arquivos nela; usar `git rev-parse` e `git archive` a partir do snapshot final certificado.
+
+**Handoff ao novo coordenador:** começar por `docs/EMPROVEX_MEMORIAL_OFICIAL.md` e este documento, verificar PR #335, CI/HEAD e status dos deployments no escopo Vercel correto; se o R2 ainda não tiver sido enviado, congelar nova branch de release contendo **cinco** melhorias e fazer **um único** deploy remoto de fonte, smoke da URL individual e promoção desse mesmo deployment para `emprovex.com.br`; confirmar domínio pelo ID e registrar o deployment final. **Nunca afirmar R2 publicada apenas por status Ready de R1.**
+
+---
+
 ## 1. Onde estamos
 
 - **Produção observada pelo Fundador:** `https://emprovex.com.br`, release R1 de 16/10/2026, promovida com sucesso do deployment **`dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`** (`controles-de-empenhos-aprov-6s8k8i3qg-aprov-hgesms-projects.vercel.app`). O Fundador acessou o site e confirmou a atualização. **Usar este deployment como rollback da R2**; inspecionar aliases atuais antes de promover qualquer outra versão.
