@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { transformWarehouseIsoRectForView } from '../lib/warehouse/isometricCamera.ts';
+
 
 const read = (path) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const source = read('lib/warehouse/refrigeratorOrientation.ts');
@@ -14,6 +14,12 @@ const compiled = ts.transpileModule(source, {
 const exports = {};
 runInNewContext(compiled, { exports });
 const { warehouseRefrigeratorFrontOnOriginalSide } = exports;
+const camera = ts.transpileModule(read('lib/warehouse/isometricCamera.ts'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const cameraExports = {};
+runInNewContext(camera, { exports: cameraExports });
+const { transformWarehouseIsoRectForView } = cameraExports;
 const VIEWS = ['front', 'right', 'back', 'left'];
 
 test('largura original maior: as portas permanecem na face +Y nas quatro vistas', () => {
