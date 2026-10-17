@@ -16,6 +16,13 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
+import { deriveWarehouseLocationContents } from '../../../lib/warehouse/locationContents';
+import {
+  WarehouseLocationContentsTooltip,
+  WarehouseLocationDetailsDialog,
+  type WarehouseInspectionLotState,
+} from './WarehouseLocationInspection';
 import { WarehouseColdStorageVisual } from './WarehouseColdStorageVisual';
 import {
   WAREHOUSE_BOX_VISUAL,
@@ -35,6 +42,13 @@ type Props = {
   onQueryTextChange: (value: string) => void;
   onSelectedMaterialIdChange: (value: string) => void;
   embedded?: boolean;
+  depotName?: string;
+  inspectionLots?: WarehouseLot[];
+  inspectionLotState?: WarehouseInspectionLotState;
+  inspectionError?: string | null;
+  inspectionComplete?: boolean;
+  onInspectLocation?: () => void;
+  onRefreshInspection?: () => void;
 };
 
 type IsoPoint = { x: number; y: number };
@@ -868,9 +882,20 @@ export function WarehouseIsometricPreview({
   onQueryTextChange,
   onSelectedMaterialIdChange,
   embedded = false,
+  depotName = 'Depósito',
+  inspectionLots = [],
+  inspectionLotState = 'idle',
+  inspectionError = null,
+  inspectionComplete = false,
+  onInspectLocation,
+  onRefreshInspection,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [viewTransitioning, setViewTransitioning] = useState(false);
+  const [hoveredObject, setHoveredObject] = useState<{
+    objectId: string; locationId: string; x: number; y: number;
+  } | null>(null);
+  const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -880,6 +905,7 @@ export function WarehouseIsometricPreview({
   }, []);
 
   const changePreviewView = (nextView: PreviewView) => {
+    setHoveredObject(null);
     if (nextView === previewView || viewTransitioning) return;
 
     setViewTransitioning(true);
@@ -897,6 +923,28 @@ export function WarehouseIsometricPreview({
     () => new Map(locations.map((location) => [location.id, location])),
     [locations]
   );
+
+  const hoveredContents = useMemo(
+    () => hoveredObject
+      ? deriveWarehouseLocationContents(
+        hoveredObject.locationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [hoveredObject?.locationId, locations, balances, materials, inspectionLots]
+  );
+  const detailContents = useMemo(
+    () => detailLocationId
+      ? deriveWarehouseLocationContents(
+        detailLocationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [detailLocationId, locations, balances, materials, inspectionLots]
+  );
+
+  useEffect(() => {
+    setHoveredObject(null);
+    setDetailLocationId(null);
+  }, [locations]);
 
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
@@ -1374,9 +1422,69 @@ export function WarehouseIsometricPreview({
                   highlightedSubpositionIds.has(candidate.id)
                 );
 
+                const interactive = Boolean(onInspectLocation && location?.kind === 'LOCAL');
+                const hovered = hoveredObject?.objectId === object.id;
+                const handleOpen = () => {
+                  if (!interactive || !locationId) return;
+                  onInspectLocation?.();
+                  setHoveredObject(null);
+                  setDetailLocationId(locationId);
+                };
+                const handlePointer = (event: React.PointerEvent<SVGGElement>) => {
+                  if (!interactive || !locationId || event.pointerType === 'touch') return;
+                  const svg = event.currentTarget.ownerSVGElement;
+                  if (!svg) return;
+                  const bounds = svg.getBoundingClientRect();
+                  const maxX = Math.max(170, bounds.width - 170);
+                  const maxY = Math.max(12, bounds.height - 385);
+                  setHoveredObject({
+                    objectId: object.id,
+                    locationId,
+                    x: Math.min(maxX, Math.max(170, event.clientX - bounds.left)),
+                    y: Math.min(maxY, Math.max(12, event.clientY - bounds.top + 18)),
+                  });
+                };
+
                 return (
-                  <WarehouseStructure
+                  <g
                     key={object.id}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? 0 : undefined}
+                    aria-label={interactive ? 'Consultar ' + location?.name + ': pressione Enter para detalhes' : undefined}
+                    data-testid={interactive ? 'warehouse-location-interactive' : undefined}
+                    data-hovered={hovered ? 'true' : 'false'}
+                    onPointerEnter={(event) => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      handlePointer(event);
+                    }}
+                    onPointerMove={handlePointer}
+                    onPointerLeave={() => setHoveredObject((current) =>
+                      current?.objectId === object.id ? null : current
+                    )}
+                    onFocus={() => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      setHoveredObject({
+                        objectId: object.id, locationId,
+                        x: 170, y: 18,
+                      });
+                    }}
+                    onBlur={() => setHoveredObject(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpen();
+                      }
+                    }}
+                    onClick={handleOpen}
+                    style={{
+                      cursor: interactive ? 'pointer' : undefined,
+                      transition: 'filter 160ms ease, opacity 160ms ease',
+                      filter: hovered ? 'drop-shadow(0 0 9px rgba(37,99,235,0.85))' : undefined,
+                    }}
+                  >
+                    <WarehouseStructure
                     object={object}
                     logicalWidth={viewLogicalWidth}
                     logicalHeight={viewLogicalHeight}
@@ -1389,12 +1497,32 @@ export function WarehouseIsometricPreview({
                     dimmed={hasActiveSelection && !highlighted}
                     view={previewView}
                   />
+                  </g>
                 );
               })}
             </g>
           </svg>
         )}
+        {hoveredContents && !detailLocationId && !viewTransitioning && (
+          <WarehouseLocationContentsTooltip
+            contents={hoveredContents}
+            lotState={inspectionLotState}
+            x={hoveredObject?.x || 170}
+            y={hoveredObject?.y || 18}
+          />
+        )}
       </div>
+      {detailContents && onRefreshInspection && (
+        <WarehouseLocationDetailsDialog
+          contents={detailContents}
+          depotName={depotName}
+          lotState={inspectionLotState}
+          lotError={inspectionError}
+          complete={inspectionComplete}
+          onRefresh={onRefreshInspection}
+          onClose={() => setDetailLocationId(null)}
+        />
+      )}
     </section>
   );
 }
