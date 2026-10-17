@@ -102,6 +102,12 @@ test('UI permite navegar entre depósitos e preserva destaque após escolha', ()
   const preview = read('features/warehouse/components/WarehouseIsometricPreview.tsx');
   const croquis = read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
   const search = read('features/warehouse/components/WarehouseGlobalMaterialSearch.tsx');
+  const lab = read('app/visual-lab/busca-global/page.tsx');
+  const fixture = read('features/warehouse/components/WarehouseGlobalMaterialSearchLocalPreview.tsx');
+  assert.match(lab, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(fixture, /globalBalances=\{balances\}/);
+  assert.match(fixture, /onNavigateToGlobalLocation=/);
+  assert.doesNotMatch(lab + fixture, /from ['"][^'"]*firebase|setDoc\(|runTransaction\(/);
   assert.match(preview, /WarehouseGlobalMaterialSearch/);
   assert.match(preview, /focusedLocationId === locationId/);
   assert.match(croquis, /navigationRef\.current = depotId/);
