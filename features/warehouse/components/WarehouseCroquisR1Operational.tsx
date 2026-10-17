@@ -335,6 +335,37 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     }
   }, [previewLotState, selectedDepotId, workspaceId]);
 
+  const refreshPreviewInspection = useCallback(async () => {
+    if (!selectedDepotId) return;
+    const request = ++lotRequestRef.current;
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    try {
+      const [materials, balances, items] = await Promise.all([
+        listWarehouseMaterials(workspaceId, 250),
+        listWarehousePositiveLocationBalances(workspaceId, 500),
+        listWarehouseLots(workspaceId, 500),
+      ]);
+      if (request !== lotRequestRef.current) return;
+      setPreviewMaterials(materials);
+      setPreviewBalances(
+        balances.map((item) => item.balance).filter((balance) =>
+          balance.quantity > 0
+          && balance.position.kind !== 'UNASSIGNED'
+          && balance.position.depotId === selectedDepotId
+        )
+      );
+      setPreviewInventoryComplete(materials.length < 250 && balances.length < 500);
+      setPreviewLots(items.map((item) => item.lot));
+      setPreviewLotsComplete(items.length < 500);
+      setPreviewLotState('ready');
+    } catch (error) {
+      if (request !== lotRequestRef.current) return;
+      setPreviewLotError(messageFrom(error));
+      setPreviewLotState('error');
+    }
+  }, [selectedDepotId, workspaceId]);
+
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
     [depots, selectedDepotId]
@@ -953,7 +984,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               inspectionAvailable={previewLoaded}
               depotName={selectedDepot?.name || 'Depósito'}
               onInspectLocation={() => { void loadPreviewLots(); }}
-              onRefreshInspection={() => { void loadPreviewLots(true); }}
+              onRefreshInspection={() => { void refreshPreviewInspection(); }}
               selectedMaterialId={previewMaterialId}
               queryText={previewQuery}
               onQueryTextChange={setPreviewQuery}
