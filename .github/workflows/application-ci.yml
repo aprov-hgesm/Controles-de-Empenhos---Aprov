@@ -278,6 +278,9 @@ jobs:
       - name: Warehouse location hover and report tests
         run: npm run test:warehouse-location-inspection
 
+      - name: Warehouse global material search tests
+        run: npm run test:warehouse-global-material-search
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 
