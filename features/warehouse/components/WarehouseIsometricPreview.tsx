@@ -960,6 +960,9 @@ export function WarehouseIsometricPreview({
   const [hoveredObject, setHoveredObject] = useState<{
     objectId: string; locationId: string;
   } | null>(null);
+  // O painel mantém o último local consultado mesmo quando o cursor sai do SVG.
+  // O highlight continua limitado ao hover ativo para não dar falsa seleção.
+  const [inspectedLocationId, setInspectedLocationId] = useState<string | null>(null);
   const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
   const [currentDay, setCurrentDay] = useState(() => new Date());
 
@@ -1005,12 +1008,12 @@ export function WarehouseIsometricPreview({
   );
 
   const hoveredContents = useMemo(
-    () => hoveredObject
+    () => inspectedLocationId
       ? deriveWarehouseLocationContents(
-        hoveredObject.locationId, locations, balances, materials, inspectionLots
+        inspectedLocationId, locations, balances, materials, inspectionLots
       )
       : null,
-    [hoveredObject?.locationId, locations, balances, materials, inspectionLots]
+    [inspectedLocationId, locations, balances, materials, inspectionLots]
   );
   const detailContents = useMemo(
     () => detailLocationId
@@ -1023,6 +1026,7 @@ export function WarehouseIsometricPreview({
 
   useEffect(() => {
     setHoveredObject(null);
+    setInspectedLocationId(null);
     setDetailLocationId(null);
   }, [depotId]);
 
@@ -1253,17 +1257,22 @@ export function WarehouseIsometricPreview({
             <Sparkles className="h-3.5 w-3.5" /> {embedded ? 'Visão 3D' : 'Prévia 3D'}
           </p>
           <p
+            data-testid={hoveredContents ? 'warehouse-location-hover-status' : undefined}
+            aria-live="polite"
             className={
               embedded
                 ? 'mt-1 text-[10px] font-semibold text-slate-400'
                 : 'mt-1 text-xs font-semibold text-slate-500'
             }
           >
-            {embedded
-              ? 'Renderer visual oficial · escolha o ângulo sem alterar o croqui.'
+            {hoveredContents
+              ? hoveredContents.location.code + ' · '
+                + (hoveredContents.rowCount === 0
+                  ? 'Local vazio · saldo físico 0'
+                  : hoveredContents.materialCount + ' material(is) · consulte os detalhes abaixo')
               : onInspectLocation
                 ? inspectionAvailable
-                  ? 'Passe o cursor sobre um local para ver itens e validades; clique para detalhes e relatório.'
+                  ? 'Passe o cursor em um local para consultar os itens; clique para detalhes e PDF.'
                   : 'Carregando saldos físicos do depósito para habilitar a inspeção…'
                 : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
           </p>
@@ -1536,6 +1545,7 @@ export function WarehouseIsometricPreview({
                   if (!interactive || !locationId) return;
                   onInspectLocation?.();
                   setHoveredObject(null);
+                  setInspectedLocationId(locationId);
                   setDetailLocationId(locationId);
                 };
                 const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
@@ -1543,6 +1553,7 @@ export function WarehouseIsometricPreview({
                   setHoveredObject((current) =>
                     current?.objectId === object.id ? current : { objectId: object.id, locationId }
                   );
+                  setInspectedLocationId(locationId);
                 };
 
                 return (
@@ -1565,6 +1576,7 @@ export function WarehouseIsometricPreview({
                       if (!interactive) return;
                       onInspectLocation?.();
                       setHoveredObject({ objectId: object.id, locationId });
+                      setInspectedLocationId(locationId);
                     }}
                     onBlur={() => setHoveredObject(null)}
                     onKeyDown={(event) => {

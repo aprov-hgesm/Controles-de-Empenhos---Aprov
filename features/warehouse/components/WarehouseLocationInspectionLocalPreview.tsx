@@ -13,6 +13,7 @@ const shelfId = 'loc_' + '1'.repeat(32);
 const fridgeId = 'loc_' + '2'.repeat(32);
 const palletId = 'loc_' + '3'.repeat(32);
 const freezerId = 'loc_' + '4'.repeat(32);
+const emptyFridgeId = 'loc_' + '5'.repeat(32);
 const p1 = 'sub_' + '1'.repeat(32);
 const p2 = 'sub_' + '2'.repeat(32);
 const p3 = 'sub_' + '3'.repeat(32);
@@ -35,6 +36,7 @@ const LOCATIONS: WarehouseLocation[] = [
   loc(fridgeId, 'GEL-01', 'Geladeira inox', 'LOCAL', null),
   loc(palletId, 'PLT-01', 'Palete de reserva', 'LOCAL', null),
   loc(freezerId, 'FRZ-01', 'Freezer de reserva', 'LOCAL', null),
+  loc(emptyFridgeId, 'GEL-02', 'Geladeira vazia', 'LOCAL', null),
   loc(p1, 'P1', 'Prateleira inferior', 'SUBPOSITION', shelfId),
   loc(p2, 'P2', 'Prateleira central', 'SUBPOSITION', shelfId),
   loc(p3, 'P3', 'Prateleira superior', 'SUBPOSITION', shelfId),
@@ -60,6 +62,11 @@ const objects: WarehouseDepotLayoutObject[] = [
     id: 'obj_' + '4'.repeat(32), kind: 'FREEZER', label: 'FRZ-01',
     x: 500, y: 295, width: 135, height: 78, rotation: 0, layer: 0,
     elevation: 0, visualVariant: 'solid', warehouseLocationId: freezerId,
+  },
+  {
+    id: 'obj_' + '5'.repeat(32), kind: 'REFRIGERATOR', label: 'GEL-02',
+    x: 65, y: 300, width: 112, height: 76, rotation: 0, layer: 0,
+    elevation: 0, visualVariant: 'solid', warehouseLocationId: emptyFridgeId,
   },
 ];
 
@@ -163,7 +170,8 @@ export function WarehouseLocationInspectionLocalPreview({ showExpiryWarnings = f
       <p className="text-xs leading-5 text-slate-600">
         Passe o cursor na estante para consultar itens separados em P1, P2 e P3. Clique para
         conferir todos os lotes e gerar um PDF demonstrativo. Geladeira, freezer e palete
-        exibem os itens abaixo do croqui. As caixas empilhadas no palete são ilustrativas,
+        exibem os itens abaixo do croqui; a GEL-02 vazia deve indicar saldo físico 0.
+        As caixas empilhadas no palete são ilustrativas,
         não a contagem física exata de unidades. Nenhum dado real do EMPROVEX é acessado neste laboratório.
       </p>
     </div>

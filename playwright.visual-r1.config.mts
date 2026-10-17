@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: /visual-w4-(operational-border-beam|navigation-expansion)\.spec\.mjs/,
+  testMatch: /visual-w4-(operational-border-beam|navigation-expansion|warehouse-location-inspection)\.spec\.mjs/,
   fullyParallel: false,
   workers: 1,
   retries: 0,
