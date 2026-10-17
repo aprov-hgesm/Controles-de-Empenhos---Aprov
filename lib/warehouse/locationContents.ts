@@ -32,7 +32,7 @@ export interface LocationContents {
   location: WarehouseLocation;
   groups: LocationContentsGroup[];
   materialCount: number;
-  totalQuantity: number;
+  rowCount: number;
   hasLotDiscrepancy: boolean;
 }
 
@@ -61,7 +61,7 @@ export function deriveWarehouseLocationContents(
       .map((candidate) => [candidate.id, candidate])
   );
   const grouped = new Map<string, LocationContentsGroup>();
-  let totalQuantity = 0;
+  let rowCount = 0;
   const materialIds = new Set<string>();
   let hasLotDiscrepancy = false;
 
@@ -115,7 +115,7 @@ export function deriveWarehouseLocationContents(
       quantityWithoutLot: Math.max(0, balance.quantity - lotQuantity),
       lotQuantityExceedsBalance: exceeds,
     });
-    totalQuantity += balance.quantity;
+    rowCount += 1;
     materialIds.add(balance.materialId);
   }
 
@@ -131,7 +131,7 @@ export function deriveWarehouseLocationContents(
     location,
     groups,
     materialCount: materialIds.size,
-    totalQuantity,
+    rowCount,
     hasLotDiscrepancy,
   };
 }
