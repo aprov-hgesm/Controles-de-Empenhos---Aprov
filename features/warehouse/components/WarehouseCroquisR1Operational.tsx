@@ -950,6 +950,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               inspectionLotState={previewLotState}
               inspectionError={previewLotError}
               inspectionComplete={previewInventoryComplete && previewLotsComplete}
+              inspectionAvailable={previewLoaded}
               depotName={selectedDepot?.name || 'Depósito'}
               onInspectLocation={() => { void loadPreviewLots(); }}
               onRefreshInspection={() => { void loadPreviewLots(true); }}
