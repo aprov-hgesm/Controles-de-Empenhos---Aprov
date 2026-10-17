@@ -84,6 +84,13 @@ test('sem saldo positivo, sem lote, vencido ou com posição não atribuída nã
 test('croqui mantém cores de pesquisa e inspeção e busca de lotes somente ao abrir', () => {
   const scene = read('features/warehouse/components/WarehouseIsometricPreview.tsx');
   const croquis = read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
+  const lab = read('app/visual-lab/alerta-vencimento-14d/page.tsx');
+  const fixture = read('features/warehouse/components/WarehouseLocationInspectionLocalPreview.tsx');
+  assert.match(lab, /process\.env\.NODE_ENV !== 'development'/);
+  assert.match(lab, /showExpiryWarnings/);
+  assert.match(fixture, /dateAfter\(7\)/);
+  assert.match(fixture, /dateAfter\(14\)/);
+  assert.doesNotMatch(lab + fixture, /from ['"][^'"]*firebase|setDoc\(|runTransaction\(/);
   assert.match(scene, /warehouseExpirySoftGlow/);
   assert.match(scene, /data-expiry-soon=\{nearExpiry/);
   assert.match(scene, /nearExpiry=\{nearExpiry\}/);
