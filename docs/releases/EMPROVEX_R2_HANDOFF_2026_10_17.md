@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial de continuidade / Onda R2 (17/10/2026)
 
+## CHECKPOINT PÓS-CERTIFICAÇÃO — 17/10/2026
+
+- **Release congelada existente:** `release/emprovex-r2-consolidada-20261017-v2@b4486e1ffce6dd853f2399ca2fe80795220a05f0` — contém PRs #331 a #335; 5/5 workflows GitHub Actions SUCCESS; SHA idêntico ao certificado. **Não é necessário criar outro snapshot nem usar o HEAD documental móvel do PR #335 para a exportação.**
+- **Produção:** última inspeção administrativa do Fundador encontrou `emprovex.com.br` na **R1** `dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`, `Ready`. Isto **não prova ausência de R2 staged**; comprovar se existe deployment R2 isolado antes de executar outro deploy.
+- **Próximo gate:** `vercel.cmd ls controles-de-empenhos-aprov --scope aprov-hgesms-projects` no PowerShell administrativo. Se houver R2 `Ready` correta, checar URL, `/api/health`, smoke #335 e promover o **mesmo deployment**; se não houver, fazer um único deploy remoto do arquivo `git archive` da V2 (`--prod --skip-domain --archive=tgz`, sem `--prebuilt`). Depois verificar novo ID no domínio e registrar confirmação humana no Memorial. Nenhum merge, Firestore/Rules ou dado de terceiros deve ser modificado.
+
+---
+
+
 > **ESTADO VIGENTE.** Este documento reúne a conversa de implementação, aceitação e preparação da segunda onda. Leia em conjunto com `docs/EMPROVEX_MEMORIAL_OFICIAL.md` e as evidências dos PRs. As informações históricas que sugerem usar prebuild na Vercel Hobby foram superadas pelo deploy remoto por fonte. **O R2 ainda NÃO está publicado.**
 
 ## 0. Última evidência recebida / retomada obrigatória

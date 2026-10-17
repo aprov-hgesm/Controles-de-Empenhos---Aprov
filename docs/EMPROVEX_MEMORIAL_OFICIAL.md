@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## CHECKPOINT COMPLEMENTAR — 17/10/2026 · R2 congelada; domínio ainda R1
+
+> Este checkpoint reconcilia a certificação final do código com a última inspeção administrativa do Fundador. O registro é **documental**, não uma publicação.
+
+- **Produção acessada pelos usuários (última inspeção informada pelo Fundador):** `https://emprovex.com.br` → deployment **R1** `dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`, `Ready`. **R2 ainda NÃO confirmada no domínio.** O status `Ready` observado corresponde ao R1.
+- **R2 congelada no GitHub:** `release/emprovex-r2-consolidada-20261017-v2@b4486e1ffce6dd853f2399ca2fe80795220a05f0`, verificada como idêntica ao SHA certificado. **5/5 GitHub Actions SUCCESS nesse SHA:** Application CI #38998788750, Core Protection #38998788686, Recovery Guardrails #38998788748, Legal #38998788737 e Visual QA #38998788689. Último commit funcional: `807a45c280514a812363b7b8ed12631b7d22adde`; dois commits documentais até o SHA congelado.
+- **Cinco melhorias cumulativas:** #331 inspeção por hover, prateleiras, modal e PDF por local; #332 busca global em todos os depósitos; #333 realce amarelo suave para lotes vencendo em até 14 dias; #334 portas das geladeiras na face mais longa; #335 inclusão de locais e subposições em depósitos existentes (aba Estrutura). #331–#334 aprovadas visualmente; #335 com testes automatizados aprovados, **smoke humano operacional pendente**.
+- **Não publicar** o snapshot antigo `release/emprovex-r2-consolidada-20261017@78b550e2...` (somente quatro melhorias). Os commits documentais posteriores no PR #335 **não alteram nem substituem** o snapshot V2 congelado.
+- **Deploy R2 isolado — existência desconhecida:** a inspeção do domínio R1 não comprova inexistência de um deployment R2 `--skip-domain`. **Antes de novo deploy**, consultar a conta administrativa (`vercel.cmd ls controles-de-empenhos-aprov --scope aprov-hgesms-projects`), identificar eventual URL/ID R2 e conferir a origem. Não duplicar build na Vercel Hobby.
+- **Próximas ações:** se já existir R2 `Ready` certificada, validar URL individual, `/api/health` e smoke na Estrutura, e promover **a mesma URL**; se não existir, executar **um único** upload de código-fonte exportado com `git archive` do SHA V2, `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`, **sem `--prebuilt`**; após testes, promover e confirmar `vercel.cmd inspect https://emprovex.com.br` apontando ao novo ID R2. Registrar ID, horário e aceite humano no memorial. Não fazer merge, alterar Firestore/Rules, mexer em dados reais nem mudar produção durante a preparação.
+
+---
+
+
 ## CHECKPOINT VIGENTE — 2026-10-17 · Segunda onda R2 / publicação manual consolidada
 
 **Nova evidência de produção (PowerShell do Fundador, 17/10/2026):** `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` recuperou `dpl_Ctj6MSdG32oARc2uLomEVQmT37Yd`, `target=production`, `status=Ready`, criado em 16/10/2026 22:25:29 (Brasília). **O domínio ainda está no R1; não existe evidência nesta saída de R2 ativa no domínio.** O terminal estava em `C:\Users\marco\emprovex-release-r2-estrutura-20261017`, o que apenas identifica o diretório local, **não confirma que tenha havido upload nem qual SHA foi exportado**. Antes de repetir `vercel deploy` na Hobby, perguntar/conferir se já existe deployment R2 com `--skip-domain`: se houver URL R2 `Ready` e `/api/health=ok` correspondente à release certificada, promover **esse mesmo** sem novo build.
