@@ -11,7 +11,7 @@ const SAMPLE_OBJECTS: WarehouseDepotLayoutObject[] = [
   {
     id: 'obj_local_fridge_demo',
     kind: 'REFRIGERATOR',
-    label: 'GEL-01 · Geladeira industrial inox',
+    label: 'GEL-01',
     x: 80,
     y: 175,
     width: 205,
@@ -25,7 +25,7 @@ const SAMPLE_OBJECTS: WarehouseDepotLayoutObject[] = [
   {
     id: 'obj_local_fridge_long_depth_demo',
     kind: 'REFRIGERATOR',
-    label: 'GEL-02 · Frente no lado maior (profundidade)',
+    label: 'GEL-02',
     x: 405,
     y: 55,
     width: 92,
