@@ -2,7 +2,7 @@
 ## Memorial de continuidade — desenvolvimento SEQUENCIAL no mesmo chat ou em sucessores
 
 **Atualização de método:** 2026-10-18, por decisão expressa do Fundador.
-**Status:** Direção visual V3 aprovada; **primeira fatia funcional Clientes 360° implementada em branch isolada (somente leitura)**, pendente de CI final e smoke humano no localhost. Demais módulos continuam demonstrativos.
+**Status:** Direção visual V3 **aprovada**; **Clientes 360° V1 read-only aprovada pelo Fundador no localhost**, com Application CI e Core Protection PASS no último código inspecionado; próxima etapa Ficha 360° V2 ainda não implementada. Demais módulos continuam demonstrativos.
 **PROCEDIMENTO VIGENTE:** 1 chat executor por vez, trabalho incremental em **uma única branch de desenvolvimento local**, validação humana no localhost, atualização deste memorial a cada marco. **Os prompts antigos de workers paralelos e ondas foram suspensos.**
 **Repo:** \`aprov-hgesm/Controles-de-Empenhos---Aprov\`.
 **Branch ATIVA:** \`feat/admin2-w01-sidebar-local-preview\`; PR **#339 DRAFT** (o nome histórico W01 não limita a missão, que agora é toda Admin CORE V2).
@@ -40,6 +40,27 @@
 **PRÓXIMA AÇÃO:** aguardar CI PASS, corrigir quaisquer falhas da suite; Fundador validar no localhost com login da conta fundadora, pesquisar UG/ID/nome, paginar e abrir ficha; verificar conta externa negada, ausência de writes e custo. Somente após aceite avançar para formalizar Cliente comercial 1:N/CRM e integração das próximas páginas.
 
 **ESTADO DO MARCO:** código de consulta e UI implementados; QA de integração autenticada no navegador ainda PENDENTE; ambiente produtivo intacto.
+
+---
+
+## Marco aprovado pelo Fundador — Clientes 360° V1 · 2026-10-18
+
+**APROVAÇÃO HUMANA:** o Fundador informou que testou o diretório real e a ficha Cliente 360° no localhost e **aprovou** a entrega. A aprovação refere-se à versão **read-only atual**, com Google Auth, diretório paginado, pesquisa nome/UG/ID e ficha administrativa com billing sob demanda. Não constitui aprovação de CRUD, entidade comercial persistida, acessos operacionais externos ou deploy.
+
+**Certificação observada:** o código no HEAD `b52f6ffd721f37e37b3d297354b6c1170fb0548e` do PR DRAFT #339 apresentou **Application CI: success** (run 39167821457) e **EMPROVEX Core Protection: success** (run 39167821442), conforme GitHub Actions. Quaisquer commits documentais posteriores exigem nova consulta ao CI antes de alegar PASS para novo SHA. O teste humano de conta comum negada ou stress 5.000 clientes não foi declarado executado.
+
+**Próximo marco RECOMENDADO (não implementado): Ficha Cliente 360° V2.** Em uma entrega sequencial na **mesma branch**, completar apresentação administrativa por seções:
+1. Identificação institucional, dados de contato e vínculo OM/UG/Workspace a partir de fontes autorizadas;
+2. Painel comercial de assinatura, trial, VIP, ciclos/histórico financeiro existentes, com paginação ou limite explícito (sem trazer `billingCycles` inteiro);
+3. Linha do tempo de eventos administrativos **realmente existentes**, com origem e data, sem inventar ocorrências;
+4. Definir e versionar contrato de `Customer` comercial e `CustomerWorkspaceLink` (1:N), inicialmente sem criar documentos reais, sem alterar Firebase UID, UG nem autorizações. Qualquer persistência nova exigirá validação de Rules/Emulator e autorização separada;
+5. Preservar UI V3 aprovada, leitura sob demanda, isolamento entre tenants, qualidade CI e apresentação em localhost para aceite antes da próxima fase.
+
+**IMPORTANTE:** as listas/linha do tempo só poderão mostrar fatos reais permitidos pelas Rules. A ausência de dados não deve ser mascarada por mocks. Se índices/consultas adicionais forem necessários, preparar primeiro o contrato e testes, sem modificar Firestore de produção.
+
+**Branch:** `feat/admin2-w01-sidebar-local-preview` — PR #339 DRAFT (ativo). PR #340 permanece estacionado. **`main`/produção intactas** e o fluxo continua com **um chat executor**, sem workers paralelos.
+
+**Handoff atualizado:** ONDE ESTAMOS — Clientes 360° V1 aprovada; O QUE ESTAMOS FAZENDO — definir V2 e preparar novo incremento; QUEM ESTÁ FAZENDO — chat executor sequencial; O QUE FAZER A SEGUIR — implementar V2 read-only no mesmo localhost, testar CI e pedir validação; QUEM O FARÁ — ChatGPT desenvolve, Fundador valida.
 
 ---
 
