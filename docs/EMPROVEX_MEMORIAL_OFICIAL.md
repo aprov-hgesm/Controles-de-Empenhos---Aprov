@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## Recorte vigente ADMIN-2.0 — 2026-10-18 · CORE V2 (decisão posterior do Fundador)
+
+- **Diretriz atual e prioritária:** desenvolver a nova Administração premium **sem** os três objetivos anteriormente previstos: **(1)** entrar e modificar registros operacionais nos workspaces externos; **(2)** operar a Central de Depósitos de outros setores; **(3)** acessar arquivos privados Google Drive dos clientes. Os três foram **ADIADOS**, não cancelados definitivamente, e **não bloqueiam o CORE V2**.
+- **Escopo de execução imediato:** Clientes 360° com **metadados administrativos/comerciais** (sem abrir dados operacionais do cliente), dashboard, onboarding/gestão de setores existentes, financeiro/billing, CRM/atendimento, indicadores, sessões, consumo/cotas, backup/segurança e identidade visual EMPROVEX Command, com escalabilidade e economia Firestore.
+- **Plano Mestre de referência:** [ADMIN_2_0_PLANO_MESTRE_WORKERS.md](./ADMIN_2_0_PLANO_MESTRE_WORKERS.md) **V2 / CORE**, 13 capacidades em escopo, W00 + 8 especialistas (W01/W02/W03/W04/W05/W09/W10/W11); W06/W07/W08/W12 e futuro W13 **NÃO são ativados nesta etapa**.
+- **Gates:** contrato G0, backend/UI, compatibilidade, economia Firestore, QA e GO produtivo. **O G-1 de acesso global cross-workspace da auditoria anterior foi retirado como pré-requisito do CORE**, porque os objetivos que ele validaria foram adiados. Permanecem obrigatórios testes negativos de acesso a dados operacionais de outros tenants.
+- **Precedência documental:** este registro de 2026-10-18 **substitui apenas o escopo e a prioridade** das notas de 2026-10-17 e do veredito prévio de G-1. A auditoria histórica conserva seu valor técnico **para o dia em que as funcionalidades adiadas forem retomadas**. Nenhum código/dado/regra/deploy alterado por esta decisão documental.
+
+---
+
 ## Programa ADMIN-2.0 — decisão de produto 2026-10-17 · EMPROVEX Command (DESENVOLVIMENTO)
 
 - **Estado:** estudo estratégico e diretrizes funcionais **registrados para desenvolvimento futuro**; estética EMPROVEX Command em refinamento/validação humana; **nenhuma implementação, alteração de Rules/Firestore, migração ou deploy** realizada neste marco.
