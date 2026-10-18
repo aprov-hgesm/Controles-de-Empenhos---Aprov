@@ -11,6 +11,32 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## CLIENTES 360° — Fase funcional read-only (18/10/2026)
+
+A aba **Clientes** deixou de usar a lista fictícia: ela agora se conecta aos metadados reais de \`workspaces\` via Firebase/Firestore, com autenticação Google fundadora e regras de segurança existentes, **sem alterar qualquer documento**. Dashboard e outros módulos da prévia continuam ilustrativos.
+
+**Para testar:**
+
+1. Atualize a branch pelo PowerShell e inicie o servidor (comandos abaixo). Abra \`http://localhost:3001/admin2-preview?area=customers\`.
+2. Se não houver sessão válida, selecione **Entrar com Google** e use a mesma conta fundadora da área administrativa atual. A conta de setor externo **não** tem permissão de listar os demais workspaces.
+3. Depois da verificação, serão exibidos até **10 registros por página**, ordenados por nome, com **Anterior / Próxima**, botão **Atualizar** e pesquisa por prefixo do nome (sensível a maiúsculas), UG exata ou ID do workspace.
+4. Use **Ver ficha** para abrir o Cliente 360° administrativo: OM/UG, seção, workspace, e-mail operacional e situação; **somente então** ocorre a consulta ao resumo de assinatura \`billingAccounts/{workspaceId}\`. Não são carregados ciclos históricos/Drive/empenhos.
+5. Confira erros, listagem vazia e identificação dos dados reais; os KPIs da Visão Geral continuam **fictícios**.
+6. Se o OAuth bloquear \`localhost\`, verifique o domínio autorizado no Firebase e informe o erro. Não altere credenciais nem políticas do projeto sem revisão.
+
+**Segurança e custo:** o código novo não escreve no Firestore; cada busca/página usa um query limitado a 11 documentos (10 visíveis + 1 lookahead). O Firestore real pode contabilizar leituras; não é necessário nem recomendado clicar repetidamente em Atualizar. A navegação e a mudança de áreas não instalam listeners.
+
+**Testes locais:**
+
+\`\`\`powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs
+npm.cmd run dev -- --port 3001
+\`\`\`
+
+**Escopo:** a ficha atual é uma **projeção read-only de workspaces**, não o cadastro comercial definitivo do cliente. Nenhuma ação de entrar no workspace, operar depósito externo ou ler Google Drive alheio foi implementada.
+
 ## Windows PowerShell — clone isolado (preferencial)
 
 Abra PowerShell no seu computador Windows:
