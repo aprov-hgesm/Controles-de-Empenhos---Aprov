@@ -2,7 +2,7 @@
 ## Memorial de continuidade — desenvolvimento SEQUENCIAL no mesmo chat ou em sucessores
 
 **Atualização de método:** 2026-10-18, por decisão expressa do Fundador.
-**Status:** Visual V3 e Clientes 360° V1 aprovados pelo Fundador; **Ficha Cliente 360° V2 implementada na branch isolada, aguardando QA final e validação no localhost**. Demais módulos continuam demonstrativos.
+**Status:** Visual V3 e Clientes 360° V1 aprovados; **Ficha 360° V2 e Cadastro Comercial Independente V1 implementados na branch isolada**, aguardando aceite humano e certificação CI do HEAD. Rascunhos comerciais apenas na memória do localhost padrão; Firestore persistente somente Emulator. Demais módulos continuam demonstrativos.
 **PROCEDIMENTO VIGENTE:** 1 chat executor por vez, trabalho incremental em **uma única branch de desenvolvimento local**, validação humana no localhost, atualização deste memorial a cada marco. **Os prompts antigos de workers paralelos e ondas foram suspensos.**
 **Repo:** \`aprov-hgesm/Controles-de-Empenhos---Aprov\`.
 **Branch ATIVA:** \`feat/admin2-w01-sidebar-local-preview\`; PR **#339 DRAFT** (o nome histórico W01 não limita a missão, que agora é toda Admin CORE V2).
@@ -90,6 +90,33 @@
 **PRÓXIMO PASSO APÓS ACEITE:** próximo incremento sequencial de cadastro comercial persistente/relacionamento Cliente 1:N com proteção de Rules, backfill dry-run, organização dos contatos e CRM, mediante autorização específica para alterações reais.
 
 **HANDOFF:** ONDE ESTAMOS — V2 implementada na branch isolada, QA/aceite pendentes. O QUE ESTAMOS FAZENDO — aperfeiçoamento do acompanhamento read-only. QUEM ESTÁ FAZENDO — chat executor sequencial. O QUE FAZER A SEGUIR — concluir CI e validar localhost. QUEM O FARÁ — ChatGPT confere CI, Fundador faz smoke e aprova ou pede refinamento.
+
+---
+
+## Marco em execução — Cadastro Comercial Independente V1 (2026-10-18)
+
+**PEDIDO ATUAL DO FUNDADOR:** implementar entidade comercial com contatos, relacionamento e 1:N vínculos de workspaces **sem alterar os workspaces existentes**, na mesma branch isolada, sequencialmente.
+
+**IMPLEMENTADO NO GITHUB:**
+- \`lib/admin2/customers/commercialCustomerContract.ts\`: \`CommercialCustomer\`, \`CommercialCustomerInput\`, status prospecto/negociação/ativo/inativo, pessoa/e-mail/telefone, observações limitadas, \`workspaceIds\` até 8, normalização e validação, vínculo 1:N.
+- \`lib/admin2/customers/commercialCustomerRepository.ts\`: \`platformCustomers/{customerId}\` independente, listagem 10/página, \`runTransaction\` para cadastro/edição + \`platformCustomerWorkspaceLinks/{workspaceId}\` como índice determinístico de vínculo único, verificação de existência dos workspaces, conflito e versão otimista; consulta inversa somente ao abrir vínculo comercial.
+- \`firestore.rules\` **apenas na branch**: \`isPlatformAdmin()\` para dados comerciais, validação de campos, limites, imutabilidade de autor, verificação \`getAfter\`/ \`existsAfter\` no vínculo; clientes operacionais não recebem nenhuma permissão nova.
+- \`components/admin2/customers/AdminCommercialCustomers.tsx\`: aba separada **Cadastro de clientes comerciais**, formulário profissional (nome/contato/email/telefone/status/notas), associação por ID verificado e edição. **No localhost normal:** dados são *rascunhos locais em memória*, não Firestore. Rascunhos desaparecem ao atualizar a página. **Não usar dados pessoais reais no rascunho.**
+- \`components/admin2/customers/AdminCustomersDirectory.tsx\`: alternância entre Workspaces existentes e Cadastro comercial, preservando a V1 e o auth gate existente; rascunhos mantidos apenas no componente durante navegação.
+- \`components/admin2/customers/AdminCustomerDetailV2.tsx\`: aba Vínculos e contato mostra o cliente comercial relacionado ao workspace por rascunho local ou, no Emulator, lookup condicionado à abertura da aba; não altera UG/OM/conta operacional.
+- \`scripts/admin2-commercial-contract.test.mjs\` e \`scripts/admin2-commercial-security.test.mjs\`: testes domínio/estrutura e **Auth + Firestore Emulator** cobrindo conta fundadora, negativas, integridade e unicidade do vínculo; integrados ao \`Application CI\`.
+- \`docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md\` e guia localhost atualizados.
+
+**GATE DE PRODUÇÃO:**
+- O código persistente **existe e é testável no Emulator**, mas o repositório de escrita é *fail closed*: \`NODE_ENV === 'development'\` **e** \`NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'\` são necessários para gravação.
+- Sem \`firebase deploy\`/Rules publish, sem merge em main, sem live write, sem migração/backfill, sem tocar workspaces, Warehouse, Google Drive, Auth nem faturamento.
+- A homologação no localhost normal valida experiência com dados fictícios guardados só em memória. **Isso não é CRUD persistente na produção**. Para publicar cadastro comercial real, haverá gate posterior para Rules, Emulator, segurança, eventual feature flag e GO explícito do Fundador.
+
+**EVIDÊNCIAS:** commits de implementação e testes estão no PR #339; durante o primeiro CI do novo módulo, os testes de contrato/UI comercial e o Firestore Emulator tiveram **SUCCESS**, e o TypeScript também passou em commit anterior ao memorial. **Consultar conclusão do último HEAD** antes de declarar a etapa tecnicamente certificada. Smoke visual do Fundador ainda **PENDENTE**.
+
+**PRÓXIMO PASSO:** concluir CI, testar em localhost (Clientes → Cadastro de clientes comerciais → Novo cliente → Vincular ID de workspace → Salvar rascunho → Editar → Ver ficha 360°/Vínculos e contato). Aguardar aceite do Fundador antes de ativar persistência real ou seguir para CRM.
+
+**HANDOFF:** ONDE ESTAMOS — cadastro independente implementado em branch isolada e protegido contra escrita real. O QUE ESTAMOS FAZENDO — certificando domínio, interface e segurança. QUEM ESTÁ FAZENDO — chat executor único. O QUE FAZER A SEGUIR — CI completo + smoke localhost, sem deploy. QUEM O FARÁ — executor verifica, Fundador valida.
 
 ---
 
