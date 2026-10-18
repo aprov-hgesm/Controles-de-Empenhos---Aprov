@@ -40,11 +40,11 @@ const makeSession = async (name, google) => {
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   return db;
 };
-const customerData = (id, linked) => ({
-  version:'emprovex_commercial_customer_v1', id,
-  displayName:'Cliente Teste', contactName:'Contato QA',
+const customerData = workspaceId => ({
+  version:'emprovex_commercial_customer_v2', id:workspaceId, workspaceId,
+  displayName:'Cliente Teste '+workspaceId, contactName:'Contato QA',
   contactEmail:'qa@example.invalid', contactPhone:'', relationshipStatus:'prospect',
-  relationshipNotes:'Sem dados reais', workspaceIds:linked,
+  relationshipNotes:'Sem dados reais',
   createdAt:'2026-10-18T00:00:00.000Z',updatedAt:'2026-10-18T00:00:00.000Z',
   createdBy:FOUNDER,updatedBy:FOUNDER,
 });
@@ -58,39 +58,31 @@ async function main() {
   await seed('workspaces/commercial-qa-b',{id:'commercial-qa-b',name:'QA B',status:'active',authorizedEmail:'sector@example.invalid',institutionalProfile:{organizationName:'Teste',sectionName:'APROV'},createdAt:'2026-01-01',updatedAt:'2026-01-01',createdBy:FOUNDER});
   const founder = await makeSession('founder',true);
   const anonymous = await makeSession('anonymous',false);
-  const customerRef = doc(founder,'platformCustomers','commercial-test-one');
-  const linkA = doc(founder,'platformCustomerWorkspaceLinks','commercial-qa-a');
-  const linkB = doc(founder,'platformCustomerWorkspaceLinks','commercial-qa-b');
+  const customerA = doc(founder,'platformCustomers','commercial-qa-a');
+  const customerB = doc(founder,'platformCustomers','commercial-qa-b');
   await deny('anonymous cannot list customers',()=>getDocs(collection(anonymous,'platformCustomers')));
-  await deny('anonymous cannot create customer',()=>setDoc(doc(anonymous,'platformCustomers','hostile'),customerData('hostile',[])));
+  await deny('anonymous cannot create customer',()=>setDoc(doc(anonymous,'platformCustomers','hostile'),customerData('hostile')));
+  await deny('cannot register a nonexistent workspace',()=>setDoc(doc(founder,'platformCustomers','not-a-workspace'),customerData('not-a-workspace')));
+  await deny('cannot register customer under wrong workspace ID',()=>setDoc(customerA,customerData('commercial-qa-b')));
 
-  await runTransaction(founder, async transaction => {
-    transaction.set(customerRef,customerData('commercial-test-one',['commercial-qa-a','commercial-qa-b']));
-    transaction.set(linkA,{workspaceId:'commercial-qa-a',customerId:'commercial-test-one'});
-    transaction.set(linkB,{workspaceId:'commercial-qa-b',customerId:'commercial-test-one'});
-  });
-  assert.equal((await getDoc(customerRef)).data()?.workspaceIds.length,2);
-  assert.equal((await getDoc(linkA)).data()?.customerId,'commercial-test-one');
-  const page = await getDocs(query(collection(founder,'platformCustomers'),orderBy('displayName'),limit(10)));
-  assert.equal(page.docs.length,1);
-  await deny('anonymous cannot read contact data',()=>getDoc(doc(anonymous,'platformCustomers','commercial-test-one')));
-  await deny('anonymous cannot change links',()=>deleteDoc(doc(anonymous,'platformCustomerWorkspaceLinks','commercial-qa-a')));
-  await deny('unrelated customer cannot steal linked workspace',()=>setDoc(
-    doc(founder,'platformCustomerWorkspaceLinks','commercial-qa-a'),
-    {workspaceId:'commercial-qa-a',customerId:'other'}
-  ));
-  await deny('cannot link nonexistent workspace',()=>setDoc(
-    doc(founder,'platformCustomerWorkspaceLinks','nonexistent-qa'),
-    {workspaceId:'nonexistent-qa',customerId:'commercial-test-one'}
-  ));
-  await deny('cannot delete commercial customer',()=>deleteDoc(customerRef));
-  await deny('cannot add arbitrary fields to customer',()=>updateDoc(customerRef,{adminBypass:true}));
-  await runTransaction(founder,async tx => {
-    tx.update(customerRef,{workspaceIds:['commercial-qa-a'],updatedAt:'2026-10-18T01:00:00.000Z'});
-    tx.delete(linkB);
-  });
-  assert.equal((await getDoc(customerRef)).data()?.workspaceIds.length,1);
-  assert.equal((await getDoc(linkB)).exists(),false);
-  console.log('PASS — 1:N, unique links, read security, validations, safe unlink');
+  // One deterministic document per workspace; no second link collection.
+  await setDoc(customerA,customerData('commercial-qa-a'));
+  await setDoc(customerB,customerData('commercial-qa-b'));
+  assert.equal((await getDoc(customerA)).data()?.workspaceId,'commercial-qa-a');
+  assert.equal((await getDoc(customerB)).data()?.workspaceId,'commercial-qa-b');
+  const page=await getDocs(query(collection(founder,'platformCustomers'),orderBy('displayName'),limit(10)));
+  assert.equal(page.docs.length,2);
+  await deny('anonymous cannot read contact',()=>getDoc(doc(anonymous,'platformCustomers','commercial-qa-a')));
+  await deny('cannot turn customer A into workspace B',()=>updateDoc(customerA,{workspaceId:'commercial-qa-b'}));
+  await deny('cannot relabel customer ID',()=>updateDoc(customerA,{id:'other-client'}));
+  await deny('cannot add workspaceIds 1:N',()=>updateDoc(customerA,{workspaceIds:['commercial-qa-b']}));
+  await deny('cannot overwrite original author',()=>updateDoc(customerA,{createdBy:'other@example.invalid'}));
+  await deny('cannot delete commercial customer',()=>deleteDoc(customerA));
+  await deny('cannot add unexpected fields',()=>updateDoc(customerA,{adminBypass:true}));
+  await deny('anonymous cannot edit commercial customer',()=>updateDoc(doc(anonymous,'platformCustomers','commercial-qa-b'),{displayName:'Invasor'}));
+  await updateDoc(customerA,{displayName:'Cliente A atualizado',updatedAt:'2026-10-18T01:00:00.000Z'});
+  assert.equal((await getDoc(customerA)).data()?.displayName,'Cliente A atualizado');
+  assert.equal((await getDoc(customerB)).data()?.displayName,'Cliente Teste commercial-qa-b');
+  console.log('PASS — 1 workspace = 1 cliente; integridade imutável, founder-only, sem coleções de vínculos');
 }
 try { await main(); } finally { for(const app of apps) await deleteApp(app); }
