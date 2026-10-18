@@ -243,6 +243,15 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('summary');
+  // Abas financeiras/auditoria continuam montadas após a primeira abertura:
+  // voltar à seção não repete consultas Firestore durante a mesma ficha.
+  const [visited, setVisited] = useState({ finance: false, activity: false });
+  const openTab = (next: Tab) => {
+    setTab(next);
+    if (next === 'finance' || next === 'activity') {
+      setVisited((current) => ({ ...current, [next]: true }));
+    }
+  };
   const [billing, setBilling] = useState<CustomerBillingSnapshot | null>(null);
   const [billingState, setBillingState] = useState<LoadState>('loading');
   const [billingError, setBillingError] = useState('');
@@ -289,7 +298,7 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
         <div role="tablist" aria-label="Seções da ficha Cliente 360°" className="flex gap-1 overflow-x-auto border-b border-[#e5ebf5] bg-white px-3 py-3 sm:px-5">
           {TABS.map(({ id, title, icon: Icon }) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id} aria-controls="admin2-customer-tabpanel"
-              id={'admin2-customer-tab-' + id} onClick={() => setTab(id)}
+              id={'admin2-customer-tab-' + id} onClick={() => openTab(id)}
               className={'inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ' + (tab === id ? 'bg-[#1c579f] text-white shadow-sm' : 'text-[#637994] hover:bg-[#eff5fe] hover:text-[#265a9f]')}>
               <Icon className="h-4 w-4" aria-hidden="true" /> {title}
             </button>
@@ -316,8 +325,8 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
               <ReadNotice>Consulta somente leitura. Esta ficha reúne metadados administrativos; não permite entrar em Empenhos, operar a Central de Depósitos de outro setor ou acessar Drive privado.</ReadNotice>
             </>
           )}
-          {tab === 'finance' && (
-            <>
+          {visited.finance && (
+            <div hidden={tab !== 'finance'} className="space-y-4">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
                 <Surface title="Contrato financeiro existente" icon={WalletCards} hint="Mensalidade do workspace, não consolidado de vários clientes.">
                   <BillingSummary billing={billing} state={billingState} error={billingError} />
@@ -325,15 +334,15 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
                 <BillingCycles workspaceId={customer.workspaceId} />
               </div>
               <ReadNotice>Mensalidades e competências são exibidas sem confirmar pagamentos, alterar status, acionar cobranças ou suspender acesso. VIPs e trials mantêm os valores armazenados, sem recalcular o contrato.</ReadNotice>
-            </>
+            </div>
           )}
-          {tab === 'activity' && (
-            <>
+          {visited.activity && (
+            <div hidden={tab !== 'activity'} className="space-y-4">
               <AuditSample workspaceId={customer.workspaceId} />
               <Surface title="Marcos conhecidos" icon={Clock3} hint="Datas derivadas dos registros existentes, não ações de auditoria adicionais.">
                 <dl><Info label="Atualização do workspace" value={formatCustomerDate(customer.updatedAt)} /></dl>
               </Surface>
-            </>
+            </div>
           )}
           {tab === 'relationship' && (
             <div className="grid gap-4 lg:grid-cols-2">
