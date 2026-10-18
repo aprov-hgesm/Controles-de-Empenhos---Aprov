@@ -1,5 +1,9 @@
 # EMPROVEX — ADMIN 2.0 / EMPROVEX COMMAND
 
+
+> **DECISÃO VIGENTE — 18/10/2026: DESENVOLVIMENTO SEQUENCIAL, SEM WORKERS PARALELOS.** O Fundador aprovou a direção visual V3 e determinou que **um chat executor** programe diretamente na branch `feat/admin2-w01-sidebar-local-preview`, valide cada entrega no localhost e atualize [Memorial de Continuidade Sequencial](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md). A branch `feat/admin2-core-integration` / PR #340 está estacionada. **Este protocolo substitui as instruções de execução por ondas e prompts workers abaixo**, que permanecem apenas como histórico de divisão do escopo. O CORE V2 de 13 capacidades, as salvaguardas e a exclusão dos 3 recursos adiados continuam vigentes.
+
+
 ## Contrato visual V3 — decisão mais recente do Fundador (2026-10-18)
 
 A Administração 2.0 terá **barra lateral escura fixa na borda esquerda, em largura permanente de 288px, SEM recolhimento desktop e SEM botão 'Recolher menu'**. A decisão substitui todas as referências anteriores deste plano a modo compacto, expansão ou armazenamento da compactação. A sidebar usa rolagem interna independente com scrollbar fina/arredondada, trilho transparente, hover elegante, rodapé fixo e menu drawer responsivo no mobile. O cabeçalho permanece azul-marinho; **a área principal adota fundo claro institucional, gradientes suaves e cards brancos**, inspirados no painel operacional do EMPROVEX. KPIs com acentos discretos azul, teal, verde e âmbar, contraste e acessibilidade. W01 implementa na branch isolada PR #339, W11 testa e W00 integra somente após validação. Esta nova definição tem precedência sobre o contrato de sidebar anterior abaixo.
