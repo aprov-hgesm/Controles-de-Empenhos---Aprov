@@ -1,6 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
 
+## MARCO FUNCIONAL CLIENTES 360° — 2026-10-18 · BRANCH ISOLADA
+
+- **Primeira fatia funcional implementada:** o diretório fictício da prévia Admin 2.0 foi substituído por consulta real e autenticada aos metadados administrativos \`workspaces\` no Firestore (até 10 registros por página, busca prefixo/UG/ID, cursores). A ficha 360° consulta \`billingAccounts/{workspaceId}\` somente quando aberta.
+- **Autorização:** login Google da conta fundadora, e-mail validado, \`emailVerified\`, provedor de autenticação e Firestore Rules \`isPlatformAdmin\` existentes; nenhum acesso operacional externo ampliado, nenhum documento criado/modificado. A rota permanece \`next dev\` apenas em \`/admin2-preview?area=customers\`.
+- **Contrato:** \`CustomerWorkspaceRecord\` é PROJEÇÃO em memória de Workspace, não Cliente comercial persistido. Relação comercial Cliente 1:N, edição, CRM e dashboards reais permanecem para próximas fases.
+- **Fontes de continuidade:** [Memorial sequencial](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md) e [Contrato Cliente 360 G0](./admin2/CLIENTES_360_G0_CONTRATO.md). O status detalhado de CI, implementação, limitações e smoke humano está no memorial sequencial; **não presumir aceite funcional antes de testes no localhost**.
+- **Branch ativa/PR:** \`feat/admin2-w01-sidebar-local-preview\` / #339 DRAFT. \`main\`, produção, usuários, Firestore Rules e warehouse preservados. O CI novo contém testes específicos e deve estar PASS antes de integração.
+- **Método vigente:** um chat executor sequencial, validação humana no localhost após cada etapa, memorial atualizado sempre.
+
+---
+
+
 ## ADMIN-2.0 — PROTOCOLO DE DESENVOLVIMENTO SEQUENCIAL (decisão 2026-10-18)
 
 - **Diretriz atual do Fundador:** NÃO usar chats workers paralelos neste ciclo. Um único chat executa diretamente no GitHub, desenvolve **uma etapa por vez**, apresenta a prévia no **localhost** e aguarda a validação do Fundador. Quando o chat atingir limite, o próximo deve recuperar o histórico **pelo GitHub e pelo Memorial de Continuidade**.
