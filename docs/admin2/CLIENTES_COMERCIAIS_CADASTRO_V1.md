@@ -1,84 +1,75 @@
-# EMPROVEX Command — Cadastro Comercial Independente V1
+# EMPROVEX Admin 2.0 — CONTRATO COMERCIAL V2: 1 Workspace = 1 Cliente
 
-**Data:** 2026-10-18 · Branch \`feat/admin2-w01-sidebar-local-preview\`, PR #339 DRAFT.
-**Status:** implementação de contrato persistente + Rules + UI de prévia local. **Nenhum deploy, migração ou cadastro real de clientes foi realizado**. Para aceitar a V1, executar testes Emulator e validação humana; publicação posterior exige GO explícito.
+**Decisão do Fundador (18/10/2026): opção B — cada workspace é um cliente comercial independente.**
 
-## 1. Domínio comercial e isolamento
+**Status:** contrato atualizado na branch isolada `feat/admin2-w01-sidebar-local-preview`, PR #339 DRAFT. Sem migração, deploy ou gravação em produção. Este documento substitui a premissa 1:N originalmente descrita neste mesmo arquivo (nome histórico V1).
 
-A estrutura \`platformCustomers/{customerId}\` é uma **entidade comercial independente**, não representa uma OM, UG, workspace operacional, usuário Firebase ou faturamento. Campos persistidos:
-- \`version\` (\`emprovex_commercial_customer_v1\`), \`id\`, \`displayName\`;
-- \`contactName\`, \`contactEmail\`, \`contactPhone\` (todos opcionais, vazios por padrão);
-- \`relationshipStatus\` (\`prospect\`, \`negotiation\`, \`active\`, \`inactive\`);
-- \`relationshipNotes\` (até 1000 caracteres; não usar para armazenar informações sensíveis ou operacionais);
-- \`workspaceIds\` (até oito por cliente nesta etapa);
-- \`createdAt\`, \`createdBy\`, \`updatedAt\`, \`updatedBy\`.
+## Modelo aprovado
 
-\`platformCustomerWorkspaceLinks/{workspaceId}\` é **índice de unicidade** com \`workspaceId\` e \`customerId\`: uma OM pode ter diferentes setores/workspaces e um Cliente comercial pode cobrir vários workspaces; um mesmo workspace não pode pertencer simultaneamente a dois clientes comerciais, salvo futura política explícita de relacionamentos. Nenhum documento \`workspaces/{id}\` é regravado para criar o vínculo. Conta operacional e billing por workspace permanecem intocados.
+- **Cliente comercial:** unidade de contratação e acompanhamento equivalente a **um workspace**; identificado pelo `workspaceId`.
+- **Workspace:** ambiente operacional preexistente do setor, com sua UG/OM/conta e permissões próprias. O cadastro comercial não modifica nem dá acesso a esse ambiente.
+- **Responsável/contato comercial:** pessoa registrada em `contactName`, `contactEmail`, `contactPhone`; não é o cliente contratante como entidade independente e não adquire permissão Firebase por constar no cadastro.
+- **Assinatura:** continua individual por `billingAccounts/{workspaceId}` e `billingCycles/{workspaceId}__YYYY-MM`; VIP/trial/valor ficam nas fontes existentes e não são sobrescritos.
+- **OM:** dados institucionais do workspace, não entidade comercial proprietária dos vários workspaces.
 
-## 2. Transação e integridade
+### Identificador determinístico e ausência de vínculo auxiliar
 
-\`lib/admin2/customers/commercialCustomerRepository.ts\` implementa:
-- Consulta paginada \`platformCustomers\` com \`limit(11)\` e cursor, 10 clientes por página;
-- \`runTransaction\` atômico para cadastro/edição do Cliente + índices dos vínculos;
-- Validação de formato, campos/limites, existência de cada workspace via \`tx.get\`;
-- Verificação de índice já ocupado (conflito => falha sem write);
-- Atualização otimista por \`updatedAt\`, evitando sobrescrever alterações concorrentes;
-- Índices mantidos em operações de adição e remoção de vínculos; links inalterados não são regravados.
+`platformCustomers/{workspaceId}` é o único documento comercial daquele workspace:
+```text
+workspaces/sector-a                       (metadados operacionais preexistentes)
+platformCustomers/sector-a                 (dados comerciais próprios do sector-a)
+billingAccounts/sector-a                  (contratação já existente)
+workspaces/sector-b
+platformCustomers/sector-b                 (outro cliente comercial independente)
+billingAccounts/sector-b
+```
 
-A V1 **não** migra dados legados, não copia dados de workspaces para a coleção comercial, não altera cobranças, não efetua exclusão de clientes nem faz backfill por leitura de todos os workspaces. Rascunhos em branco são válidos sem vínculo até que o responsável seja identificado.
+**Não existe `platformCustomerWorkspaceLinks` e não existe `workspaceIds[]`** no contrato vigente. O ID do documento comercial deve ser idêntico a `workspaceId`. Não há limite arbitrário de oito; há **exatamente um workspace por cadastro**. Um workspace só tem um cadastro comercial de mesmo ID, e os contatos de dois clientes podem coincidir sem fundir as assinaturas.
 
-## 3. Segurança e publicação controlada
+## Contrato de campos (versão `emprovex_commercial_customer_v2`)
 
-- Firestore Rules da **branch** concedem GET/LIST/CREATE/UPDATE exclusivamente a \`isPlatformAdmin()\` (fundador Google verificado).
-- Campos proibidos pela lista \`hasOnly\`; limites/status validados; \`createdBy\` e \`createdAt\` imutáveis na atualização.
-- Índice do vínculo só pode ser criado pelo fundador se o workspace existir e o Cliente atualizado referenciar seu ID via \`existsAfter\` e \`getAfter\`. Update de índice negado; remoção somente pelo fundador.
-- Nenhuma Rule concede acesso global a empenhos, depósitos ou Google Drive.
-- **IMPORTANTE:** as Rules de produção **NÃO** são modificadas por commits GitHub. Não publicar antes de PASS no Emulator e autorização expressa. Quando os Rules estiverem oficialmente publicados, uma interface produtiva poderá usar o repositório, mediante novo gate/GO.
-- A função de escrita do repositório é bloqueada fora de \`NODE_ENV=development\` **e** \`NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS=1\`. Ela nunca escreve diretamente em Firebase real a partir do laboratório.
+`id` = `workspaceId` (ambos imutáveis), `version`, `displayName`, `contactName`, `contactEmail`, `contactPhone`, `relationshipStatus` (prospect/negotiation/active/inactive), `relationshipNotes`, `createdAt`, `updatedAt`, `createdBy`, `updatedBy`.
 
-## 4. O que o Fundador verá no localhost
+- `workspaceId` obrigatório; é verificado na coleção `workspaces` antes da gravação.
+- `displayName` obrigatório (até 120); contato até 100, e-mail até 160, telefone até 30, notas até 1000 caracteres.
+- Um cadastro comercial pode ser criado para um workspace já existente, **não cria um novo workspace nem o usuário Firebase**.
+- Não se transfere um cadastro para outro workspace: alterações permitidas apenas nos campos de contato/relacionamento.
+- A propriedade de autoria é preservada em atualizações; tentativa de mudar ID, origem ou autor é negada.
 
-Em **Clientes → Cadastro de clientes comerciais**:
-- Lista separada dos workspaces reais existentes; pesquisa por nome comercial ou contato entre os itens carregados;
-- Botão **Novo cliente**; formulário nome comercial, contato, e-mail, telefone, status, observações;
-- Vincular workspaces reais digitando o ID, com validação de existência/Rules (consulta pequena);
-- Editar cadastro e remover/adicionar vínculo;
-- Mensagem explícita **Modo prévia segura**: rascunhos são guardados **somente no estado React desta página**, sem armazenamento permanente; recarregar a página apaga rascunhos; **não usar contatos pessoais reais**;
-- A seção **Workspaces existentes** e a Ficha 360 V2 continuam funcionais e protegidas pelo login fundador.
+## Persistência e Rules (ainda não aplicadas em produção)
 
-O modo de rascunho serve apenas para aprovar visual e comportamento. Em homologação com **Auth + Firestore Emulator** configurados, os mesmos componentes ativam gravação e consulta no banco emulado (sem produção).
+`lib/admin2/customers/commercialCustomerRepository.ts`:
+- ID de gravação é **o workspaceId**, sem gerar ID aleatório.
+- `runTransaction` lê **um workspace e seu único cadastro comercial** e aplica um `tx.set` ao documento comercial, após verificar existência de workspace, ausência de cadastro na criação ou `updatedAt` consistente na edição.
+- Lookup da Ficha 360 usa diretamente `getDoc(platformCustomers/{workspaceId})` — **uma leitura**, sem índice auxiliar.
+- A lista comercial usa no máximo 11 documentos para mostrar 10 por página e cursor; nenhuma assinatura em tempo real.
 
-## 5. Testes
+As Rules versionadas apenas nesta branch exigem administrador Google conforme `isPlatformAdmin()`, ID do documento igual ao workspace, documento workspace existente, campos permitidos e imutabilidade do vínculo/autoria. Exclusão de cadastro continua proibida; **não há exceção de exclusão** nos guards de ciclo de vida.
 
-\`\`\`powershell
-node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs
-\`\`\`
+**Fail-closed:** persistência habilitada somente em `NODE_ENV=development` com `NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS=1` e `NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID` iniciado por `demo-`; `lib/firebase.ts` então conecta Auth/Firestore aos Emulators locais. O localhost comum usa rascunhos em memória React, apagados no refresh. **Nenhum contato pessoal real deve ser inserido durante esta prévia.**
 
-Testes de Rules (exigem Java, Node e Firebase CLI; jamais apontar para projeto real):
+## Fluxo localhost e aceite
 
-\`\`\`powershell
+1. Abrir `http://localhost:3001/admin2-preview?area=customers` após autenticação administrativa.
+2. Selecionar **Cadastro de clientes comerciais** → **Novo cliente**.
+3. Selecionar **um** ID de workspace real existente; a UI consulta somente seu ID. É obrigatório.
+4. Preencher dados fictícios de contato/relacionamento → **Salvar rascunho local**.
+5. Ver o registro separado dos outros workspaces, editar contato e confirmar que não é possível trocar o workspace do cadastro.
+6. Voltar a Workspaces existentes → Ver ficha → Vínculos e contato para ver os dados comerciais do mesmo workspace.
+7. Tentar registrar o mesmo workspace duas vezes: a UI bloqueia e a transação/ID determinístico também bloqueiam no Emulator.
+
+Testes:
+```powershell
+node --test scripts/admin2-commercial-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs
 npx.cmd --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-commercial --only auth,firestore "node scripts/admin2-commercial-security.test.mjs"
-\`\`\`
+```
+Application CI inclui esses testes; aguardar PASS no HEAD vigente e smoke humano do Fundador.
 
-A suite do Emulator prova: fundador Google permitido, anônimo negado, leitura de contatos protegida, workspace inexistente negado, index único, remoção segura de vínculo, exclusão do cadastro negada e campos inesperados negados. Integrada à etapa **Application CI**.
+## Estado e próximo passo
 
-**Custo:** o formulário consulta apenas IDs explicitamente solicitados; listagem comercial até 11 documentos por página; transação pode ler o Cliente, cada workspace e cada índice de vínculo (máximo oito vínculos novos + oito removidos em uma edição). Sem listeners. Não há consultas periódicas em repouso.
+- Nenhuma Rule foi publicada, nenhum cadastro comercial real ou workspace de produção foi alterado.
+- Eventuais documentos antigos do protótipo 1:N em **Emulator** não fazem parte do contrato V2 e devem ser descartados/recriados em ambiente descartável; não aplicar migração automática em produção.
+- A ficha comercial independe do status da cobrança e não pode conceder acesso operacional.
+- **Próxima validação:** Fundador confirma fluxo 1:1 no localhost; só depois será considerada homologação persistente/política de release.
 
-## 6. Critérios de aceite
-
-- [ ] Application CI do HEAD vigente PASS, inclusive testes Rules Emulator.
-- [ ] Core Protection PASS.
-- [ ] Fundador aprova visual e CRUD de rascunhos no localhost, garantindo que fechar/recarregar não grava dados reais.
-- [ ] Negativas de segurança verificadas no Emulator.
-- [ ] Homologação autenticada persistente no Emulator, se requerida, sem dados reais.
-- [ ] GO explícito separado antes de migrar, publicar Rules ou habilitar persistência na infraestrutura real.
-
-**Próximo incremento:** CRM/atendimento e relação comercial 360° persistente após aprovação; não confundir aprovação do preview de rascunhos com autorização de deploy.
-
-## Handoff
-
-**ONDE ESTAMOS:** Admin V3 e Clientes V1/V2 read-only funcionais; contrato e UI de Clientes comerciais disponíveis na branch isolada.
-**O QUE ESTAMOS FAZENDO:** cadastro de relacionamento comercial com vínculos 1:N sem afetar cadastro operacional.
-**QUEM ESTÁ FAZENDO:** chat executor sequencial via GitHub; Fundador valida no localhost.
-**O QUE FAZER A SEGUIR:** corrigir CI/Rules Emulator, validar rascunhos no navegador, então decidir gate de publicação em ambiente de homologação.
-**QUEM O FARÁ:** executor corrige; Fundador aprova.
+**Handoff:** ONDE ESTAMOS — decisão 1:1 codificada, QA pendente; O QUE ESTAMOS FAZENDO — adequar modelo/Rules/UI/testes e memoriais; QUEM — chat executor sequencial; A SEGUIR — concluir CI e validar local; QUEM — executor valida CI, Fundador testa.
