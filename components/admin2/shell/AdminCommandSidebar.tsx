@@ -153,7 +153,7 @@ export function AdminCommandSidebar({
         'flex h-full min-h-0 flex-col overflow-hidden border-r border-[#284568] '
         + styles.sidebarPanel
         + (isMobile ? ' rounded-r-2xl shadow-[14px_0_60px_rgba(0,5,22,0.6)]' : '')
-      }}
+      }
     >
       <div className={'flex shrink-0 items-center justify-between border-b border-white/[0.09] px-4 py-4 ' + styles.sidebarHeader}>
         <div className="flex min-w-0 items-center gap-3">
