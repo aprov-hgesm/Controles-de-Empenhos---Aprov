@@ -1,5 +1,7 @@
 # EMPROVEX — ADMIN 2.0
 ## Auditoria Técnica Independente 01 — Viabilidade e Ajustes Prévios
+
+> **ATUALIZAÇÃO DE RECORTE — 2026-10-18:** o Fundador retirou da **etapa atual** os três recursos que originavam os bloqueios P0: acesso global aos dados operacionais dos workspaces externos, operação na Central de Depósitos externa e acesso a arquivos privados Google Drive dos clientes. **Esta auditoria abaixo permanece como registro histórico da proposta FULL original**, e seus bloqueios continuam verdadeiros **se** esses recursos forem retomados. Entretanto, seu NO-GO/G-1 cross-workspace **não mais bloqueia o CORE V2**. O Plano Mestre [ADMIN_2_0_PLANO_MESTRE_WORKERS.md](./ADMIN_2_0_PLANO_MESTRE_WORKERS.md) foi refeito para 13 capacidades, sem W06/W07/W08/W12/W13 na fase atual. Permanecem pontos a tratar: modelo Cliente separado, paginação/leitura Firestore, integração com billing/CRM, guards acoplados à UI antiga, regressão/segurança administrativa e QA. **GO para iniciar G0 e os workers de escopo CORE; não confundir com GO para produção.**
 **Data:** 2026-10-18
 **Repo:** aprov-hgesm/Controles-de-Empenhos---Aprov
 **Baseline auditada:** main@a0725ad8462f2eec9b3969cd872e2c7b1a7fa428 (leitura de fonte; sem confirmação de estado de produção ou ambiente externo).
