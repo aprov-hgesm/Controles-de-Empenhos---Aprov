@@ -1,5 +1,12 @@
 # EMPROVEX — ADMIN 2.0 / EMPROVEX COMMAND
 
+## DECISÃO VIGENTE — CLIENTE COMERCIAL POR WORKSPACE (18/10/2026)
+
+O Fundador escolheu a **opção B**: **1 workspace = 1 cliente comercial independente**. `platformCustomers/{workspaceId}` é o cadastro administrativo/comercial daquele ambiente, com contato e relacionamento próprios, sem conceder autorização de operação. O documento comercial não pode apontar para vários workspaces, não há vínculo auxiliar, limite de oito ou agrupamento por OM/pessoa. A cobrança continua por workspace. Esse contrato prevalece sobre propostas G0/1:N antigas; consultar `docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md` (conteúdo V2 atualizado) e o Memorial de Continuidade. Apenas branch PR #339, sem deploy/produção.
+
+---
+
+
 ## Decisão visual atualizada — Admin 2.0 V3 (2026-10-18)
 
 A prévia foi refinada após avaliação do Fundador. **Sidebar desktop fixa e não recolhível**, ocupando borda esquerda, com rótulos sempre visíveis, 288px de largura e rolagem interna com scrollbar premium (track discreto, thumb arredondado, hover). Removidos botão Recolher menu e persistência de modo compacto. No mobile permanece drawer com backdrop/teclado. **Conteúdo principal claro** com gradientes azulados suaves, cards de superfície branca, sombras refinadas e KPIs azul/teal/verde/âmbar. Header e sidebar permanecem azul-marinho como EMPROVEX/Central de Depósitos. Este contrato **substitui a descrição anterior de sidebar recolhível e corpo predominantemente escuro**. Código demonstrativo em branch isolada `feat/admin2-w01-sidebar-local-preview` PR #339, sem alterações em produção, sem dados reais. W01 implementa, W11 audita, Fundador valida antes de integração.
