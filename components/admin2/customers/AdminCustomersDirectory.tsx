@@ -201,7 +201,14 @@ export function AdminCustomersDirectory() {
     );
   }
 
-  if (selected) return <AdminCustomerDetailV2 key={selected.workspaceId} customer={selected} onBack={() => setSelected(null)} />;
+  if (selected) return (
+    <AdminCustomerDetailV2
+      key={selected.workspaceId}
+      customer={selected}
+      commercialCustomer={commercialDrafts.find(c => c.workspaceIds.includes(selected.workspaceId)) || null}
+      onBack={() => setSelected(null)}
+    />
+  );
   if (commercialMode) return (
     <div className="space-y-4">
       <button type="button" onClick={() => setCommercialMode(false)} data-testid="admin2-existing-workspaces-tab"
