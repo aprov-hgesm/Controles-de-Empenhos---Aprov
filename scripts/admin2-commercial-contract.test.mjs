@@ -15,55 +15,57 @@ const rules=readFileSync(join(root,'firestore.rules'),'utf8');
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const exports={};
 runInNewContext(compiled,{exports,Set,Array,Date}, {filename:'commercialCustomerContract.js'});
-const { normalizeCommercialCustomerInput,validateCommercialCustomerInput,buildCommercialCustomer,ADMIN2_MAX_LINKED_WORKSPACES }=exports;
+const { normalizeCommercialCustomerInput,validateCommercialCustomerInput,buildCommercialCustomer }=exports;
 
-const demo={displayName:'  Cliente Teste  ',contactName:' Exemplo ',
+const demo={workspaceId:'sector-a',displayName:'  Cliente Teste  ',contactName:' Exemplo ',
   contactEmail:' RESPONSAVEL@EXAMPLE.INVALID ',contactPhone:'  ',
-  relationshipStatus:'prospect',relationshipNotes:'  Acompanhamento inicial ',
-  workspaceIds:['sector-b','sector-a','sector-a']};
+  relationshipStatus:'prospect',relationshipNotes:'  Acompanhamento inicial '};
 
-test('Cliente comercial é entidade independente e múltiplos vínculos normalizados',()=>{
+test('Cliente comercial independente segue 1 workspace = 1 cadastro',()=>{
   const v=normalizeCommercialCustomerInput(demo);
+  assert.equal(v.workspaceId,'sector-a');
   assert.equal(v.displayName,'Cliente Teste');
   assert.equal(v.contactEmail,'responsavel@example.invalid');
-  assert.equal(v.workspaceIds.length,2);
-  assert.equal(v.workspaceIds.join(','),'sector-a,sector-b');
   assert.deepEqual(Array.from(validateCommercialCustomerInput(v)),[]);
-  const saved=buildCommercialCustomer('test-1',demo,'admin@example.invalid','2026-10-18T00:00:00Z');
-  assert.equal(saved.id,'test-1');
-  assert.equal(saved.workspaceIds.length,2);
+  const saved=buildCommercialCustomer('sector-a',demo,'admin@example.invalid','2026-10-18T00:00:00Z');
+  assert.equal(saved.id,saved.workspaceId);
+  assert.equal(saved.version,'emprovex_commercial_customer_v2');
+  assert.ok(!('workspaceIds' in saved));
   assert.ok(!('firebaseUid' in saved));
   assert.ok(!('ug' in saved));
 });
 
-test('atualização mantém autoria original',()=>{
-  const first=buildCommercialCustomer('c1',demo,'admin@example.invalid','2026-10-18T00:00:00Z');
-  const edited=buildCommercialCustomer('c1',{...demo,displayName:'Novo nome'},'other@example.invalid','2026-10-19T00:00:00Z',first);
+test('atualização mantém autoria e workspace imutáveis',()=>{
+  const first=buildCommercialCustomer('sector-a',demo,'admin@example.invalid','2026-10-18T00:00:00Z');
+  const edited=buildCommercialCustomer('sector-a',{...demo,displayName:'Novo nome'},'other@example.invalid','2026-10-19T00:00:00Z',first);
   assert.equal(edited.createdBy,'admin@example.invalid');
   assert.equal(edited.createdAt,first.createdAt);
   assert.equal(edited.updatedBy,'other@example.invalid');
+  assert.throws(()=>buildCommercialCustomer('sector-b',demo,'admin@example.invalid','2026-10-19T00:00:00Z'),/identificador comercial/);
+  assert.throws(()=>buildCommercialCustomer('sector-a',{...demo,workspaceId:'sector-b'},'admin@example.invalid','2026-10-19T00:00:00Z',first),/identificador comercial/);
 });
 
-test('validação impede dados ruins, vínculo repetido e status inesperado',()=>{
-  assert.ok(validateCommercialCustomerInput({...demo,workspaceIds:['sector-a','sector-a']}).length>0);
-  assert.ok(validateCommercialCustomerInput({...demo,workspaceIds:Array.from({length:9},(_,i)=>'sector-'+i)}).length>0);
+test('validação impede falta de workspace e status inesperado',()=>{
+  assert.ok(validateCommercialCustomerInput({...demo,workspaceId:''}).length>0);
+  assert.ok(validateCommercialCustomerInput({...demo,workspaceId:'sector-a,sector-b'}).length>0);
   assert.ok(validateCommercialCustomerInput({...demo,contactEmail:'abc'}).length>0);
   assert.ok(validateCommercialCustomerInput({...demo,relationshipStatus:'superadmin'}).length>0);
-  assert.equal(ADMIN2_MAX_LINKED_WORKSPACES,8);
 });
 
-test('escrita Firestore somente habilitada em modo dev e Emulator e protegida por Rules',()=>{
+test('persistência é determinística, Emulator-only e Rules exigem o workspace real',()=>{
   assert.match(repo,/NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'/);
   assert.match(repo,/process\.env\.NODE_ENV === 'development'/);
   assert.match(repo,/runTransaction/);
-  assert.match(repo,/tx\.get\(ref\)/);
-  assert.match(repo,/tx\.delete\(ref\)/);
-  assert.match(repo,/if \(!currentLinks\[index\]\.exists\(\)\) tx\.set/);
-  assert.match(rules,/match \/platformCustomers\/\{customerId\}/);
-  assert.match(rules,/match \/platformCustomerWorkspaceLinks\/\{workspaceId\}/);
-  assert.match(rules,/allow get, list: if isPlatformAdmin\(\)/);
-  assert.match(rules,/allow update: if false/);
-  assert.match(rules,/existsAfter\(/);
+  assert.match(repo,/doc\(db, CUSTOMERS, workspaceId\)/);
+  assert.match(repo,/tx\.get\(workspaceRef\)/);
+  assert.match(repo,/if \(current\.exists\(\)\)/);
+  assert.doesNotMatch(repo,/platformCustomerWorkspaceLinks/);
+  assert.match(rules,/match \/platformCustomers\/\{workspaceId\}/);
+  assert.match(rules,/data\.id == workspaceId/);
+  assert.match(rules,/data\.workspaceId == workspaceId/);
+  assert.match(rules,/exists\(\/databases\/\$\(database\)\/documents\/workspaces\/\$\(workspaceId\)\)/);
+  assert.doesNotMatch(rules,/platformCustomerWorkspaceLinks/);
+  assert.match(rules,/allow delete: if false/);
 });
 
 test('prévia fornece formulário de contato e vínculo, sem writes ao Firebase real',()=>{
@@ -72,6 +74,8 @@ test('prévia fornece formulário de contato e vínculo, sem writes ao Firebase 
   assert.match(ui,/contactPhone/);
   assert.match(ui,/relationshipNotes/);
   assert.match(ui,/readCustomerWorkspacePage/);
+  assert.match(ui,/Workspace do cliente \(obrigatório e único\)/);
+  assert.doesNotMatch(ui,/workspaceIds|oito workspaces/);
   assert.match(ui,/Modo prévia segura/);
   assert.match(ui,/Rascunho salvo apenas na memória/);
   assert.match(directory,/data-testid="admin2-commercial-tab"/);
