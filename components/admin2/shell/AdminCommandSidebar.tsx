@@ -154,7 +154,12 @@ export function AdminCommandSidebar({
 
   const renderPanel = (compact: boolean, isMobile: boolean) => (
     <div
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-[#243954]/90 bg-[#071225]/95 shadow-[0_22px_75px_rgba(0,5,22,0.45)] backdrop-blur-xl"
+      className={
+        'flex h-full min-h-0 flex-col overflow-hidden bg-[#071225]/98 '
+        + (isMobile
+          ? 'rounded-r-2xl border border-l-0 border-[#284568] shadow-[14px_0_60px_rgba(0,5,22,0.6)]'
+          : 'border-r border-[#294161] shadow-[8px_0_30px_rgba(0,5,22,0.2)]')
+      }
       data-compact={compact && !isMobile ? 'true' : 'false'}
     >
       <div className={'flex shrink-0 items-center border-b border-white/[0.07] ' + (compact && !isMobile ? 'justify-center px-2 py-5' : 'justify-between px-4 py-4')}>
@@ -164,9 +169,9 @@ export function AdminCommandSidebar({
           </div>
           {(!compact || isMobile) && (
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-black tracking-[0.12em] text-white">EMPROVEX</p>
+              <p className="truncate text-[13px] font-black tracking-[0.10em] text-white">ADMINISTRAÇÃO</p>
               <p className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-300/75">
-                Command / Admin 2.0
+                EMPROVEX Command
               </p>
             </div>
           )}
@@ -185,7 +190,7 @@ export function AdminCommandSidebar({
 
       <nav
         aria-label="Navegação administrativa"
-        className={'min-h-0 flex-1 space-y-4 overflow-y-auto py-4 [scrollbar-color:#304966_transparent] [scrollbar-width:thin] ' + (compact && !isMobile ? 'px-2' : 'px-3')}
+        className={'min-h-0 flex-1 space-y-4 overflow-y-auto py-5 [scrollbar-color:#304966_transparent] [scrollbar-width:thin] ' + (compact && !isMobile ? 'px-2' : 'px-3')}
       >
         {ADMIN_COMMAND_NAVIGATION.map((group) => (
           <div key={group.heading} className="space-y-1.5">
@@ -220,9 +225,9 @@ export function AdminCommandSidebar({
                       : ' border-transparent text-slate-400 hover:border-white/[0.09] hover:bg-white/[0.05] hover:text-white')
                   }
                 >
-                  <Icon className={'h-[18px] w-[18px] shrink-0 ' + (selected ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-200')} aria-hidden="true" />
+                  <Icon className={'h-5 w-5 shrink-0 ' + (selected ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-200')} aria-hidden="true" />
                   {(!compact || isMobile) && (
-                    <span className="min-w-0 truncate text-[12px] font-semibold">{item.label}</span>
+                    <span className="min-w-0 truncate text-[13px] font-semibold">{item.label}</span>
                   )}
                   {selected && (!compact || isMobile) && (
                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-blue-300" aria-hidden="true" />
@@ -270,8 +275,8 @@ export function AdminCommandSidebar({
     <>
       <aside
         data-testid="admin2-sidebar-desktop"
-        className={'hidden shrink-0 transition-[width] duration-300 ease-out lg:sticky lg:top-[88px] lg:block lg:h-[calc(100dvh-112px)] motion-reduce:transition-none '
-          + (collapsed ? 'lg:w-[80px]' : 'lg:w-[264px]')}
+        className={'hidden shrink-0 transition-[width] duration-300 ease-out lg:sticky lg:top-[72px] lg:block lg:h-[calc(100dvh-72px)] motion-reduce:transition-none '
+          + (collapsed ? 'lg:w-[80px]' : 'lg:w-[288px]')}
         aria-label="Barra lateral da Administração 2.0"
       >
         {renderPanel(collapsed, false)}
@@ -291,7 +296,7 @@ export function AdminCommandSidebar({
             role="dialog"
             aria-modal="true"
             aria-label="Menu administrativo"
-            className="absolute inset-y-3 left-3 w-[min(296px,calc(100vw-24px))] outline-none"
+            className="absolute inset-y-0 left-0 w-[min(304px,calc(100vw-48px))] outline-none"
           >
             {renderPanel(false, true)}
           </div>
