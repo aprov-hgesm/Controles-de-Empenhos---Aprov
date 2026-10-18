@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+## ADMIN 2.0 — CADASTRO COMERCIAL INDEPENDENTE V1 · 2026-10-18
+
+- **Arquitetura nova em branch isolada / PR #339:** \`platformCustomers/{customerId}\` separado de OM/UG/workspace; contatos, relacionamento, notas e até oito workspaces associados por cliente. Índice determinístico \`platformCustomerWorkspaceLinks/{workspaceId}\` evita duplicidade de vínculos.
+- **Integridade:** transação única cria/edita Cliente e atualiza índices, conferindo workspaces reais sem alterá-los. Nenhuma modificação em Firebase Auth, \`workspaces\`, billing, warehouse ou Drive.
+- **Security Rules preparadas apenas na branch:** leitura/escrita comercial exclusivamente \`isPlatformAdmin()\`, validação de campos e vínculo, testes Firebase Emulator. **Rules não publicadas** nem aplicadas à produção.
+- **Prévia comum localhost:** interface funcional em modo **rascunho apenas na memória React**, para o Fundador simular cadastro/edição/vínculos com contatos fictícios. Nada é gravado no Firestore real. O motor de persistência é restrito a desenvolvimento com Firebase Emulators habilitados, e será ativado em infraestrutura real apenas após autorização e novo QA.
+- **Ficha 360° V2:** associação comercial aparece em \`Vínculos e contato\` sem alterar dados institucionais; as decisões visuais V3 permanecem intactas.
+- **Status:** testes de contrato/Emulator já integrados ao Application CI; considerar PASS final apenas se último HEAD passar. Aceite humano desta fase ainda pendente.
+- **Detalhes e handoff:** [Memorial sequencial](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md) e [Contrato comercial](./admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md). Sem merge ou deploy.
+
+---
+
 ## ADMIN 2.0 — CLIENTES 360° V2 (18/10/2026) · DESENVOLVIMENTO SEQUENCIAL
 
 - **Ficha V2 implementada apenas na branch isolada do PR #339**, com quatro seções: Visão geral, Financeiro, Atividades e Vínculos/Contato. Preservada a V1 já aprovada pelo Fundador e o layout premium V3.
