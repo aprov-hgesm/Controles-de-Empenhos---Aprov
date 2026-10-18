@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+
+## ADMIN-2.0 — PROTOCOLO DE DESENVOLVIMENTO SEQUENCIAL (decisão 2026-10-18)
+
+- **Diretriz atual do Fundador:** NÃO usar chats workers paralelos neste ciclo. Um único chat executa diretamente no GitHub, desenvolve **uma etapa por vez**, apresenta a prévia no **localhost** e aguarda a validação do Fundador. Quando o chat atingir limite, o próximo deve recuperar o histórico **pelo GitHub e pelo Memorial de Continuidade**.
+- **Fonte de verdade ativa:** [ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md), nesta branch de desenvolvimento isolada `feat/admin2-w01-sidebar-local-preview` (PR DRAFT #339). A branch `feat/admin2-core-integration`/PR #340 fica **estacionada**; não desenvolver o mesmo recurso simultaneamente nas duas.
+- **Visual V3 aprovado:** sidebar 288px **fixa sem recolhimento**, cabeçalho azul-marinho, scrollbar premium, **corpo claro com cards** e KPI acentuados por cor. A aprovação é visual, não funcional/produção.
+- **Estado técnico:** commit `be7ea1478019aef045c319ffb865ddd3958a3bee` passou **Application CI + Core Protection** para a prévia local, conforme GitHub Actions; desde então há atualização documental, não implementação funcional certificada. Clientes exibidos na prévia ainda são **fictícios**. Nenhum deploy ou alteração de dados reais.
+- **Próxima etapa:** contrato G0 Cliente/Workspace/UG, seguida de **Diretório de Clientes real e seguro**, econômico em leituras Firestore, com teste de localhost e aceite antes da etapa seguinte. Continuam adiados acesso global aos registros operacionais dos clientes, operação em depósitos externos e arquivos privados Drive.
+- **Preservação da `main`:** atualizar memorial e código na **branch isolada**, não fazer merge nem deploy por documentação. Na release final, reconciliar o memorial oficial em `main` mediante aprovação.
+
+---
+
 ## Recorte vigente ADMIN-2.0 — 2026-10-18 · CORE V2 (decisão posterior do Fundador)
 
 - **Diretriz atual e prioritária:** desenvolver a nova Administração premium **sem** os três objetivos anteriormente previstos: **(1)** entrar e modificar registros operacionais nos workspaces externos; **(2)** operar a Central de Depósitos de outros setores; **(3)** acessar arquivos privados Google Drive dos clientes. Os três foram **ADIADOS**, não cancelados definitivamente, e **não bloqueiam o CORE V2**.
