@@ -77,6 +77,6 @@ test('consultas V2 são paginadas, filtradas, lazy e sem writes', () => {
   assert.match(read, /where\('workspaceId', '==', workspaceId\)/);
   assert.match(read, /limit\(ADMIN2_AUDIT_SAMPLE_LIMIT\)/);
   assert.doesNotMatch(read + detail, /\b(?:onSnapshot|setDoc|updateDoc|deleteDoc|runTransaction|writeBatch)\s*\(/);
-  assert.match(detail, /tab === 'finance'/);
-  assert.match(detail, /tab === 'activity'/);
+  assert.match(detail, /visited\.finance &&/);
+  assert.match(detail, /visited\.activity &&/);
 });
