@@ -1,0 +1,159 @@
+.mainCanvas {
+  min-height: calc(100dvh - 72px);
+  color: #172c4d;
+  background:
+    radial-gradient(ellipse 65% 48% at 9% 0%, rgba(160, 210, 255, 0.56), transparent 74%),
+    radial-gradient(ellipse 68% 45% at 93% 18%, rgba(228, 220, 255, 0.44), transparent 76%),
+    linear-gradient(133deg, #e7f0fc 0%, #f5f7ff 55%, #edf2fb 100%);
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(188, 202, 223, 0.88);
+  background:
+    radial-gradient(ellipse 65% 115% at 3% 5%, rgba(179, 217, 255, .60), transparent 76%),
+    linear-gradient(125deg, rgba(255, 255, 255, .97), rgba(242, 247, 255, .91));
+  box-shadow: 0 14px 42px rgba(36, 71, 125, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #1d4ba7, #76b4ff 45%, transparent 88%);
+  opacity: .85;
+}
+
+.metric {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid #d4deec;
+  border-radius: 20px;
+  padding: 20px;
+  min-height: 158px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 32px rgba(42, 70, 116, .08), inset 0 1px 0 rgba(255, 255, 255, .9);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.metric:hover {
+  transform: translateY(-3px);
+  border-color: #aac4e7;
+  box-shadow: 0 18px 40px rgba(34, 69, 125, .13);
+}
+
+.metric::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4px;
+  background: var(--metric-accent);
+}
+
+.metric::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: -92px;
+  right: -80px;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--metric-glow), transparent 66%);
+}
+
+.metricBlue { --metric-accent: linear-gradient(90deg, #214eb7, #61a3ff); --metric-glow: rgba(96, 165, 250, .19); --metric-ink: #1b4ca7; }
+.metricTeal { --metric-accent: linear-gradient(90deg, #0a7694, #57bed1); --metric-glow: rgba(45, 174, 190, .16); --metric-ink: #0b758a; }
+.metricGreen { --metric-accent: linear-gradient(90deg, #128768, #55c5a0); --metric-glow: rgba(40, 181, 128, .15); --metric-ink: #107c5c; }
+.metricAmber { --metric-accent: linear-gradient(90deg, #c67918, #f7c368); --metric-glow: rgba(237, 176, 61, .17); --metric-ink: #a66512; }
+
+.metricIcon {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  width: 42px;
+  border: 1px solid color-mix(in srgb, var(--metric-ink) 19%, transparent);
+  background: color-mix(in srgb, var(--metric-ink) 8%, white);
+  color: var(--metric-ink);
+  border-radius: 13px;
+}
+
+.sectionCard {
+  overflow: hidden;
+  border: 1px solid #d7e0ef;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .87);
+  box-shadow: 0 13px 36px rgba(45, 79, 126, .085), inset 0 1px 0 white;
+}
+
+.sectionEyebrow {
+  color: #245da9;
+  font-size: 10px;
+  letter-spacing: .16em;
+  font-weight: 800;
+}
+
+.activityRow {
+  border: 1px solid #e0e7f2;
+  border-radius: 14px;
+  background: linear-gradient(115deg, rgba(247, 250, 255, .98), #fff);
+  padding: 13px;
+  transition: border-color .18s ease, background-color .18s ease;
+}
+
+.activityRow:hover { border-color: #b5cbed; background: #f1f7ff; }
+
+.timelineCard {
+  border: 1px solid #dce5f0;
+  border-radius: 15px;
+  background: linear-gradient(125deg, #f7faff, white);
+  padding: 17px;
+  box-shadow: 0 3px 12px rgba(42, 73, 119, .035);
+}
+
+.notice {
+  border: 1px solid #f1d99f;
+  border-radius: 13px;
+  background: linear-gradient(105deg, #fffbef, #fffdf8);
+  color: #8e6018;
+  box-shadow: 0 4px 12px rgba(165, 114, 37, .035);
+}
+
+.tableWrap {
+  border: 1px solid #d8e3f0;
+  border-radius: 15px;
+  overflow-x: auto;
+  background: #fff;
+}
+
+.demoInput {
+  border: 1px solid #cddbed;
+  border-radius: 12px;
+  background: rgba(255,255,255,.97);
+  color: #183052;
+  box-shadow: inset 0 1px 2px rgba(24,55,100,.025);
+}
+
+.demoInput::placeholder { color: #8190a6; }
+.demoInput:focus { border-color: #528ade; outline: 2px solid rgba(55,110,210,.12); outline-offset: 0; }
+
+.genericPanel {
+  border: 1px dashed #b5cbea;
+  background: linear-gradient(135deg, #f1f7ff, #fff);
+  border-radius: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric, .activityRow { transition: none; }
+  .metric:hover { transform: none; }
+}
+
+@media (max-width: 640px) {
+  .metric { min-height: 142px; padding: 17px; }
+}
