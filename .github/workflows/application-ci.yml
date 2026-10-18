@@ -46,6 +46,9 @@ jobs:
       - name: Vercel manual deployment policy
         run: npm run test:vercel-manual-deploy
 
+      - name: Admin 2.0 Customers contract and preview tests
+        run: node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs
+
       - name: TypeScript error budget
         shell: bash
         run: |
