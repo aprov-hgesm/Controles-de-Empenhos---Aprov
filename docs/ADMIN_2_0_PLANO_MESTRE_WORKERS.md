@@ -2,6 +2,9 @@
 ## Plano Mestre de Desenvolvimento por Chats Workers Paralelos — 17/10/2026
 
 **Programa:** ADMIN-2.0-FULL — 100% do escopo funcional/visual/operacional acordado.
+
+> **ADENDO OBRIGATÓRIO — AUDITORIA 2026-10-18:** [ADMIN_2_0_AUDITORIA_TECNICA_01.md](./ADMIN_2_0_AUDITORIA_TECNICA_01.md). **NO-GO para implementar todas as frentes em paralelo na sequência abaixo até G-1 PASS.** Antes do G0, executar spike inter-workspace nos dois Firestores e UI, verificar Google Drive, congelar bridge operacional e instituir **W13 — Bridge Operacional**. W00 deve usar as dependências e o gate revisados pela auditoria; o restante deste Plano permanece como escopo alvo, não como autorização para iniciar W07/W08.
+
 **Estado:** PLANO DE EXECUÇÃO DOCUMENTADO; nenhum worker executado por este registro.
 **Fonte de requisitos:** docs/ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md.
 **Registro canônico:** docs/EMPROVEX_MEMORIAL_OFICIAL.md.
