@@ -72,6 +72,16 @@ A inadimplência NÃO equivale automaticamente a suspensão operacional. Isenç�
 
 ## 4. Navegação administrativa proposta
 
+### Contrato de design aprovado — barra lateral da Administração 2.0 (2026-10-18)
+
+A Administração 2.0 terá uma **sidebar própria fixa à esquerda no desktop**, compartilhando linguagem visual, ícones, marcação de item ativo e o modelo responsivo com o EMPROVEX e a Central de Depósitos, mas com as seções administrativas Central / Negócio / Operação / Inteligência / Governança. Será a navegação principal da administração, em vez de uma grade de abas horizontais.
+
+**Requisitos acordados:** expandida com ícones + nomes por padrão; **modo desktop compacto/recolhível somente ícones**, com tooltips e comando para reexpandir; persistência local da preferência, sem custos Firestore; indicação inequívoca da rota ativa com destaque azul discreto e \`aria-current\`; navegação profunda com histórico; drawer em mobile/tablet com backdrop e fechar; tema escuro/claro, foco/teclado, \`prefers-reduced-motion\`, Montserrat e qualidade premium consistente. A implementação desktop compacta será uma **melhoria nova no Admin 2.0**, não deve ser falsamente atribuída às sidebars atuais se elas ainda não possuírem esse estado.
+
+**Responsáveis:** W01 constrói o componente shell e seu laboratório visual; W00 integra à navegação administrativa legada; W11 testa usabilidade, responsividade, estado ativo, acessibilidade, persistência e economia de leituras. **Aceite exige prova no navegador, não apenas um mockup.**
+
+**Escopo CORE V2:** a sidebar pode apresentar *Workspaces* para gestão de metadados/status, mas **não** um seletor de acesso operacional a workspaces de clientes nem ações adiadas de outros bancos ou Google Drive.
+
 Barra lateral com agrupamentos — evitando crescimento indefinido de abas planas:
 
 1. **Central:** Visão geral; Pendências e alertas.
