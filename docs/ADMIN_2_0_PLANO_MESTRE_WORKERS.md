@@ -1,4 +1,9 @@
 # EMPROVEX — ADMIN 2.0 / EMPROVEX COMMAND
+
+## Contrato visual V3 — decisão mais recente do Fundador (2026-10-18)
+
+A Administração 2.0 terá **barra lateral escura fixa na borda esquerda, em largura permanente de 288px, SEM recolhimento desktop e SEM botão 'Recolher menu'**. A decisão substitui todas as referências anteriores deste plano a modo compacto, expansão ou armazenamento da compactação. A sidebar usa rolagem interna independente com scrollbar fina/arredondada, trilho transparente, hover elegante, rodapé fixo e menu drawer responsivo no mobile. O cabeçalho permanece azul-marinho; **a área principal adota fundo claro institucional, gradientes suaves e cards brancos**, inspirados no painel operacional do EMPROVEX. KPIs com acentos discretos azul, teal, verde e âmbar, contraste e acessibilidade. W01 implementa na branch isolada PR #339, W11 testa e W00 integra somente após validação. Esta nova definição tem precedência sobre o contrato de sidebar anterior abaixo.
+
 ## Plano Mestre de Desenvolvimento — V2 / Escopo Atual CORE
 **Decisão do Fundador:** 2026-10-18. **Este documento V2 prevalece sobre as instruções conflitantes da V1 e da Auditoria Técnica 01 no que se refere à etapa atual.**
 **Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov.
