@@ -6,8 +6,6 @@ import {
   BarChart3,
   Bell,
   Building2,
-  ChevronLeft,
-  ChevronRight,
   DatabaseBackup,
   Headset,
   LayoutDashboard,
@@ -22,6 +20,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import styles from './AdminCommandSidebar.module.css';
 
 export type AdminCommandSectionId =
   | 'overview'
@@ -98,8 +97,6 @@ export const ADMIN_COMMAND_IDS = ADMIN_COMMAND_NAVIGATION.flatMap(
 interface SidebarProps {
   activeId: AdminCommandSectionId;
   onNavigate: (section: AdminCommandSectionId) => void;
-  collapsed: boolean;
-  onToggleCollapsed: () => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -107,8 +104,6 @@ interface SidebarProps {
 export function AdminCommandSidebar({
   activeId,
   onNavigate,
-  collapsed,
-  onToggleCollapsed,
   mobileOpen,
   onCloseMobile,
 }: SidebarProps) {
@@ -152,29 +147,25 @@ export function AdminCommandSidebar({
     };
   }, [mobileOpen, onCloseMobile]);
 
-  const renderPanel = (compact: boolean, isMobile: boolean) => (
+  const renderPanel = (isMobile: boolean) => (
     <div
       className={
-        'flex h-full min-h-0 flex-col overflow-hidden bg-[#071225]/98 '
-        + (isMobile
-          ? 'rounded-r-2xl border border-l-0 border-[#284568] shadow-[14px_0_60px_rgba(0,5,22,0.6)]'
-          : 'border-r border-[#294161] shadow-[8px_0_30px_rgba(0,5,22,0.2)]')
-      }
-      data-compact={compact && !isMobile ? 'true' : 'false'}
+        'flex h-full min-h-0 flex-col overflow-hidden border-r border-[#284568] '
+        + styles.sidebarPanel
+        + (isMobile ? ' rounded-r-2xl shadow-[14px_0_60px_rgba(0,5,22,0.6)]' : '')
+      }}
     >
-      <div className={'flex shrink-0 items-center border-b border-white/[0.07] ' + (compact && !isMobile ? 'justify-center px-2 py-5' : 'justify-between px-4 py-4')}>
-        <div className={'flex min-w-0 items-center ' + (compact && !isMobile ? 'justify-center' : 'gap-3')}>
+      <div className={'flex shrink-0 items-center justify-between border-b border-white/[0.09] px-4 py-4 ' + styles.sidebarHeader}>
+        <div className="flex min-w-0 items-center gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-300/20 bg-blue-400/[0.09] text-blue-200 shadow-[0_0_22px_rgba(37,99,235,0.09)]">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </div>
-          {(!compact || isMobile) && (
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-black tracking-[0.10em] text-white">ADMINISTRAÇÃO</p>
-              <p className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-300/75">
-                EMPROVEX Command
-              </p>
-            </div>
-          )}
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-black tracking-[0.10em] text-white">ADMINISTRAÇÃO</p>
+            <p className="mt-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-300/85">
+              EMPROVEX Command
+            </p>
+          </div>
         </div>
         {isMobile && (
           <button
@@ -190,17 +181,14 @@ export function AdminCommandSidebar({
 
       <nav
         aria-label="Navegação administrativa"
-        className={'min-h-0 flex-1 space-y-4 overflow-y-auto py-5 [scrollbar-color:#304966_transparent] [scrollbar-width:thin] ' + (compact && !isMobile ? 'px-2' : 'px-3')}
+        data-testid="admin2-sidebar-scroll"
+        className={'min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-5 overscroll-contain ' + styles.sidebarScroll}
       >
         {ADMIN_COMMAND_NAVIGATION.map((group) => (
           <div key={group.heading} className="space-y-1.5">
-            {compact && !isMobile ? (
-              <div className="mx-auto h-px w-7 bg-white/10" aria-hidden="true" />
-            ) : (
-              <p className="px-3 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.20em] text-slate-500">
-                {group.heading}
-              </p>
-            )}
+            <p className="px-3 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.20em] text-[#7994ba]">
+              {group.heading}
+            </p>
             {group.items.map((item) => {
               const Icon = item.icon;
               const selected = activeId === item.id;
@@ -212,24 +200,20 @@ export function AdminCommandSidebar({
                   data-active={selected ? 'true' : 'false'}
                   aria-current={selected ? 'page' : undefined}
                   aria-label={item.label}
-                  title={compact && !isMobile ? item.label : undefined}
                   onClick={() => {
                     onNavigate(item.id);
                     if (isMobile) onCloseMobile();
                   }}
                   className={
-                    'group relative flex w-full min-h-11 items-center rounded-xl border text-left transition-[background-color,border-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/80 '
-                    + (compact && !isMobile ? 'justify-center px-2' : 'gap-3 px-3')
+                    'group relative flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left transition-[background-color,border-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/80 '
                     + (selected
-                      ? ' border-blue-300/25 bg-blue-500/15 text-blue-50 shadow-[inset_3px_0_0_rgba(147,197,253,0.85),0_0_22px_rgba(59,130,246,0.07)]'
-                      : ' border-transparent text-slate-400 hover:border-white/[0.09] hover:bg-white/[0.05] hover:text-white')
+                      ? ' border-blue-300/30 bg-[#153765] text-white shadow-[inset_3px_0_0_#60a5fa,0_6px_20px_rgba(16,67,157,0.13)]'
+                      : ' border-transparent text-[#9db1cd] hover:border-white/[0.09] hover:bg-white/[0.07] hover:text-white')
                   }
                 >
                   <Icon className={'h-5 w-5 shrink-0 ' + (selected ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-200')} aria-hidden="true" />
-                  {(!compact || isMobile) && (
-                    <span className="min-w-0 truncate text-[13px] font-semibold">{item.label}</span>
-                  )}
-                  {selected && (!compact || isMobile) && (
+                  <span className="min-w-0 truncate text-[13px] font-semibold">{item.label}</span>
+                  {selected && (
                     <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-blue-300" aria-hidden="true" />
                   )}
                 </button>
@@ -239,35 +223,15 @@ export function AdminCommandSidebar({
         ))}
       </nav>
 
-      <div className={'shrink-0 border-t border-white/[0.07] ' + (compact && !isMobile ? 'px-2 py-3' : 'px-4 py-4')}>
-        {compact && !isMobile ? (
-          <div className="mx-auto grid h-9 w-9 place-items-center rounded-lg border border-emerald-300/15 bg-emerald-400/[0.06]" title="Modo de demonstração">
-            <span className="h-2 w-2 rounded-full bg-emerald-300" />
+      <div className="shrink-0 border-t border-white/[0.09] bg-[#06152c]/85 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#254261] bg-[#0d2341]/75 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-100">Ambiente de prévia</p>
+            <p className="mt-0.5 truncate text-[10px] text-[#91a9c9]">Dados demonstrativos</p>
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold text-slate-200">Ambiente de prévia</p>
-              <p className="mt-1 text-[10px] text-slate-500">Sem dados reais ou operações</p>
-            </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-300" aria-hidden="true" />
-          </div>
-        )}
+          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]" aria-label="Prévia disponível" />
+        </div>
       </div>
-
-      {!isMobile && (
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          data-testid="admin2-sidebar-toggle"
-          aria-label={compact ? 'Expandir barra lateral' : 'Recolher barra lateral'}
-          aria-expanded={!compact}
-          className="flex h-11 shrink-0 items-center justify-center gap-2 border-t border-white/[0.07] text-[11px] font-bold text-slate-400 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300"
-        >
-          {compact ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
-          {!compact && <span>Recolher menu</span>}
-        </button>
-      )}
     </div>
   );
 
@@ -275,11 +239,10 @@ export function AdminCommandSidebar({
     <>
       <aside
         data-testid="admin2-sidebar-desktop"
-        className={'hidden shrink-0 transition-[width] duration-300 ease-out lg:sticky lg:top-[72px] lg:block lg:h-[calc(100dvh-72px)] motion-reduce:transition-none '
-          + (collapsed ? 'lg:w-[80px]' : 'lg:w-[288px]')}
+        className="fixed bottom-0 left-0 top-[72px] z-20 hidden w-[288px] lg:block"
         aria-label="Barra lateral da Administração 2.0"
       >
-        {renderPanel(collapsed, false)}
+        {renderPanel(false)}
       </aside>
 
       {mobileOpen && (
@@ -298,7 +261,7 @@ export function AdminCommandSidebar({
             aria-label="Menu administrativo"
             className="absolute inset-y-0 left-0 w-[min(304px,calc(100vw-48px))] outline-none"
           >
-            {renderPanel(false, true)}
+            {renderPanel(true)}
           </div>
         </div>
       )}
