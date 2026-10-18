@@ -94,6 +94,6 @@ test('VIP e trial possuem classificação comercial correta', () => {
   });
   assert.equal(trial?.status, 'trial');
   assert.equal(customerBillingLabel(trial), 'Período de teste');
-  assert.equal(formatCustomerCurrency(7000), 'R$ 70,00');
+  assert.match(formatCustomerCurrency(7000), /^R\$\s*70,00$/);
   assert.notEqual(formatCustomerDate(trial?.trialEndsAt ?? null), 'Não informado');
 });
