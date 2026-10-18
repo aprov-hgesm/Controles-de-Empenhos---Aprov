@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
   ArrowRight,
@@ -12,7 +12,6 @@ import {
   CircleDollarSign,
   Clock3,
   Headset,
-  Search,
   ShieldCheck,
   Users,
   WalletCards,
@@ -26,13 +25,7 @@ import {
   type AdminCommandSectionId,
 } from './AdminCommandSidebar';
 import styles from './AdminCommandPreview.module.css';
-
-const DEMO_CUSTOMERS = [
-  { id: 'c001', name: 'Aprovisionamento Alfa', unit: 'Unidade Alfa', ug: '000001', status: 'Ativo', billing: 'Trial', activity: 'Hoje' },
-  { id: 'c002', name: 'Aprovisionamento Bravo', unit: 'Unidade Bravo', ug: '000002', status: 'Ativo', billing: 'Em dia', activity: 'Ontem' },
-  { id: 'c003', name: 'Aprovisionamento Charlie', unit: 'Unidade Charlie', ug: '000003', status: 'Ativo', billing: 'VIP', activity: 'Há 3 dias' },
-  { id: 'c004', name: 'Aprovisionamento Delta', unit: 'Unidade Delta', ug: '000004', status: 'Suspenso', billing: 'Pendente', activity: 'Há 6 dias' },
-] as const;
+import { AdminCustomersDirectory } from '../customers/AdminCustomersDirectory';
 
 function readAreaFromUrl(): AdminCommandSectionId {
   const area = new URLSearchParams(window.location.search).get('area');
@@ -167,63 +160,6 @@ function Dashboard({ onNavigate }: { onNavigate: (id: AdminCommandSectionId) => 
   );
 }
 
-function CustomersDemo() {
-  const [query, setQuery] = useState('');
-  const filteredCustomers = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('pt-BR');
-    return DEMO_CUSTOMERS.filter((customer) => (
-      [customer.name, customer.unit, customer.ug, customer.status, customer.billing]
-        .some((field) => field.toLocaleLowerCase('pt-BR').includes(normalized))
-    ));
-  }, [query]);
-
-  return (
-    <div className="space-y-5" data-testid="admin2-preview-customers">
-      <SectionCard eyebrow="CLIENTES 360°" title="Diretório administrativo">
-        <div className="relative mb-5">
-          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[#7089a9]" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Pesquisar clientes de demonstração"
-            placeholder="Pesquisar cliente, OM, UG ou situação..."
-            className={styles.demoInput + ' h-11 w-full pl-10 pr-3 text-xs'}
-          />
-        </div>
-        <div className={styles.tableWrap}>
-          <table className="w-full min-w-[680px] border-collapse text-left text-[12px]">
-            <thead className="bg-[#e9f1fc] text-[10px] uppercase tracking-[0.08em] text-[#526987]">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Cliente / OM</th>
-                <th className="px-4 py-3 font-semibold">UG</th>
-                <th className="px-4 py-3 font-semibold">Workspace</th>
-                <th className="px-4 py-3 font-semibold">Assinatura</th>
-                <th className="px-4 py-3 font-semibold">Atividade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="border-t border-[#e5ecf6] text-[#51637d] transition-colors hover:bg-[#f1f7ff]">
-                  <td className="px-4 py-4"><p className="font-semibold text-[#1c355a]">{customer.name}</p><p className="mt-1 text-[11px] text-[#75869b]">{customer.unit}</p></td>
-                  <td className="px-4 py-4 font-mono text-[11px]">{customer.ug}</td>
-                  <td className="px-4 py-4"><span className={customer.status === 'Ativo' ? 'rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700' : 'rounded-full bg-amber-50 px-2 py-1 font-bold text-amber-700'}>{customer.status}</span></td>
-                  <td className="px-4 py-4">{customer.billing}</td>
-                  <td className="px-4 py-4">{customer.activity}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredCustomers.length === 0 && (
-            <p className="px-4 py-9 text-center text-xs text-[#657b97]">Nenhum cliente demonstrativo corresponde à pesquisa.</p>
-          )}
-        </div>
-        <p className="mt-4 text-[11px] text-[#73839a]">A ficha 360° real será implementada pelo W03. Esta prévia demonstra somente o estilo, a navegação e a pesquisa local com informações fictícias.</p>
-      </SectionCard>
-    </div>
-  );
-}
-
 function GenericArea({ activeId, label, detail }: { activeId: AdminCommandSectionId; label: string; detail: string }) {
   return (
     <div className="space-y-5" data-testid={'admin2-preview-area-' + activeId}>
@@ -290,7 +226,7 @@ export function AdminCommandPreview() {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden rounded-full border border-amber-300/15 bg-amber-300/[0.06] px-3 py-1.5 text-[10px] font-semibold text-amber-100 sm:inline-flex">
-              Preview • dados fictícios
+              {activeId === 'customers' ? 'Clientes • leitura administrativa protegida' : 'Preview • dados fictícios'}
             </span>
             <div className="grid h-9 w-9 place-items-center rounded-full border border-blue-300/20 bg-[#102548] text-[10px] font-bold text-blue-100" aria-label="Conta de demonstração">
               AD
@@ -333,12 +269,14 @@ export function AdminCommandPreview() {
           </div>
           <div className={styles.notice + ' mb-5 flex items-start gap-3 px-4 py-3 text-[11px] leading-6'} role="note">
             <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span><strong className="text-[#875613]">Laboratório local:</strong> navegação e visual interativos. Todos os clientes, valores e eventos são fictícios. Nenhuma operação de Firestore, Firebase Auth, faturamento ou Google Drive é realizada nesta tela.</span>
+            <span><strong className="text-[#875613]">Laboratório local:</strong> {activeId === 'customers'
+              ? 'Diretório e ficha 360° conectados aos metadados administrativos reais somente após login Google do fundador. Consultas Firestore limitadas e somente leitura; sem mudanças em workspaces, faturamento ou Drive.'
+              : 'Visão geral e demais áreas ainda apresentam indicadores ilustrativos. Apenas a seção Clientes está conectada para consulta administrativa, mediante autenticação.'}</span>
           </div>
           {activeId === 'overview' ? (
             <Dashboard onNavigate={navigate} />
           ) : activeId === 'customers' ? (
-            <CustomersDemo />
+            <AdminCustomersDirectory />
           ) : (
             <GenericArea activeId={activeId} label={activeItem.label} detail={activeItem.detail} />
           )}
