@@ -1,5 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
+## DECISÃO COMERCIAL ADMIN 2.0 — OPÇÃO B / CONTRATO 1:1 (18/10/2026)
+
+**Fundador definiu que CADA WORKSPACE É UM CLIENTE COMERCIAL INDEPENDENTE.** Essa decisão **tem precedência** sobre os apontamentos históricos de vários workspaces (1:N) registrados abaixo, que estão formalmente revogados. A pessoa responsável pelo pagamento/contato é um atributo do cadastro daquele workspace, não uma conta comercial compartilhada.
+
+**Arquitetura atualizada na branch de desenvolvimento (PR DRAFT #339):**
+- `platformCustomers/{workspaceId}` (ID do cliente = ID do workspace, imutável), campos `displayName`, `contactName`, `contactEmail`, `contactPhone`, `relationshipStatus` e `relationshipNotes`.
+- **Um único workspace obrigatório por cadastro**; excluídos `workspaceIds[]`, coleção `platformCustomerWorkspaceLinks` e limite de oito. Não se cria entidade comercial sem workspace, nem um cadastro agrupa setores.
+- Persistência em Firestore Emulator por `runTransaction` do cadastro único/checagem do workspace existente, com Rules `isPlatformAdmin`. Nenhuma nova autorização operacional, alteração de UG/OM/conta, billing ou acúmulo de assinaturas. O verificador do ciclo de vida volta a proibir delete administrativo em qualquer coleção.
+- UI comercial, Ficha 360 e testes adequados à decisão. Preview local padrão permanece rascunho em memória; nenhum dado produtivo alterado, sem merge/deploy/Rules publish.
+- **Fonte canônica:** `docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md` (contrato V2 1:1) e `docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md`. O CI do último HEAD e a validação humana desta alteração são **pendentes até confirmação**, não assumir PASS por commits anteriores.
+
+---
+
 ## ADMIN 2.0 — CADASTRO COMERCIAL INDEPENDENTE V1 · 2026-10-18
 
 - **Arquitetura nova em branch isolada / PR #339:** \`platformCustomers/{customerId}\` separado de OM/UG/workspace; contatos, relacionamento, notas e até oito workspaces associados por cliente. Índice determinístico \`platformCustomerWorkspaceLinks/{workspaceId}\` evita duplicidade de vínculos.
