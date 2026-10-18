@@ -63,11 +63,14 @@ test('eventos de auditoria ficam vinculados ao workspace e não expõem before/a
   assert.equal(auditOperationLabel('sector.create'), 'Cadastro de setor');
 });
 
-test('contrato de cliente comercial 1:N apenas prepara vínculos, sem persistir', () => {
-  const rows = planCommercialCustomerLink('customer-1', ['sector-a', 'sector-a', 'sector-b']);
-  assert.equal(rows.length, 2);
-  assert.equal(rows[0].customerId, 'customer-1');
-  assert.equal(rows[1].workspaceId, 'sector-b');
+test('contrato comercial 1:1 usa workspace como identidade independente', () => {
+  const link = planCommercialCustomerLink('sector-a', 'sector-a');
+  assert.equal(link.customerId, 'sector-a');
+  assert.equal(link.workspaceId, 'sector-a');
+  assert.throws(
+    () => planCommercialCustomerLink('sector-a', 'sector-b'),
+    /mesmo identificador/
+  );
 });
 
 test('consultas V2 são paginadas, filtradas, lazy e sem writes', () => {
