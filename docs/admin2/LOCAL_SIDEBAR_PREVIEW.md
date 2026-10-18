@@ -11,6 +11,23 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## CADASTRO COMERCIAL — MODELO 1:1 ATUALIZADO (18/10/2026)
+
+**Novo requisito aprovado:** cada workspace é um cliente comercial independente. Qualquer referência abaixo a "oito workspaces" ou múltiplos vínculos é **histórica e está superada**. O contrato atual exige **um workspace por cadastro**, com ID imutável e assinatura independente.
+
+**Validar no localhost:** abra `http://localhost:3001/admin2-preview?area=customers`, autentique a conta fundadora, escolha **Cadastro de clientes comerciais**, clique **Novo cliente**, selecione **um único workspace existente**, preencha contatos fictícios e salve o rascunho. Tente criar outro cadastro para o mesmo workspace (deve bloquear), depois edite o contato (workspace deve permanecer fixo). Volte ao Diretório de Workspaces e abra a Ficha 360 daquele ID: a aba **Vínculos e contato** deverá mostrar apenas o cadastro daquele workspace.
+
+**Modo seguro:** dados de contato de teste somente **em memória React** no localhost padrão, perdidos ao atualizar. A persistência só é habilitada em Auth/Firestore Emulator com `NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-...`, e as Rules ainda não foram publicadas em produção. Não utilize dados pessoais reais.
+
+```powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs
+npm.cmd run dev -- --port 3001
+```
+
+---
+
 ## CLIENTES COMERCIAIS V1 — cadastro independente e vínculos 1:N (18/10/2026)
 
 **Nova entrega para aprovação no localhost**, preservando o Diretório de Workspaces e a Ficha 360° V2:
