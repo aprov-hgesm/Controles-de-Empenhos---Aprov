@@ -12,6 +12,8 @@ const previewCss = readFileSync(join(root, 'components/admin2/shell/AdminCommand
 const customerUi = readFileSync(join(root, 'components/admin2/customers/AdminCustomersDirectory.tsx'), 'utf8');
 const customerStore = readFileSync(join(root, 'lib/admin2/customers/customerWorkspaceDirectory.ts'), 'utf8');
 const customerContract = readFileSync(join(root, 'lib/admin2/customers/customerWorkspaceContract.ts'), 'utf8');
+const customerV2Ui = readFileSync(join(root, 'components/admin2/customers/AdminCustomerDetailV2.tsx'), 'utf8');
+const customerV2Read = readFileSync(join(root, 'lib/admin2/customers/customer360Read.ts'), 'utf8');
 
 test('rota de preview permanece indisponível em produção', () => {
   assert.match(route, /process\.env\.NODE_ENV\s*!==\s*'development'/);
@@ -96,9 +98,9 @@ test('consultas reais paginadas e sem listeners globais ou writes', () => {
   assert.match(customerStore, /endAt\(term \+ '\\uf8ff'\)/);
   assert.match(customerStore, /getDoc\(doc\(db, BILLING_ACCOUNTS_PATH, workspaceId\)\)/);
   assert.doesNotMatch(customerStore + customerUi, /\b(?:onSnapshot|setDoc|addDoc|updateDoc|deleteDoc|runTransaction|writeBatch)\s*\(/);
-  assert.match(customerUi, /readCustomerBilling\(customer\.workspaceId\)/);
+  assert.match(customerV2Ui, /readCustomerBilling\(customer\.workspaceId\)/);
   assert.match(customerUi, /data-testid="admin2-real-customers"/);
-  assert.match(customerUi, /data-testid="admin2-customer-360"/);
+  assert.match(customerV2Ui, /data-testid="admin2-customer-360"/);
 });
 
 test('projeção preserva IDs e não transforma workspace em conta comercial', () => {
@@ -107,12 +109,34 @@ test('projeção preserva IDs e não transforma workspace em conta comercial', (
   assert.match(customerContract, /workspace\.institutionalProfile/);
   assert.match(customerContract, /billing\.workspaceId !== workspaceId/);
   assert.match(customerUi, /não uma base de clientes comerciais independente/);
-  assert.match(customerUi, /Consulta somente leitura/);
+  assert.match(customerV2Ui, /Consulta somente leitura/);
 });
 
 test('isolamento de produção e área operacional permanecem intactos', () => {
   const previewShell = [route, sidebar, preview].join('\n');
   assert.doesNotMatch(previewShell, /from ['"].*(?:operationalPaths|workspaceContext|warehouseAccess|platformBillingStore)['"]/);
-  assert.doesNotMatch(customerStore + customerUi, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|signOut)\s*\(/);
+  assert.doesNotMatch(customerStore + customerUi + customerV2Read + customerV2Ui, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|signOut)\s*\(/);
   assert.match(preview, /indicadores ilustrativos/);
+});
+
+test('V2 carrega competências e auditoria só nas seções correspondentes', () => {
+  assert.match(customerUi, /<AdminCustomerDetailV2/);
+  assert.match(customerV2Ui, /tab === 'finance'/);
+  assert.match(customerV2Ui, /tab === 'activity'/);
+  assert.match(customerV2Ui, /tab === 'relationship'/);
+  assert.match(customerV2Ui, /readCustomerCyclePage\(workspaceId/);
+  assert.match(customerV2Ui, /readCustomerAuditSample\(workspaceId\)/);
+  assert.match(customerV2Ui, /role="tablist"/);
+  assert.match(customerV2Ui, /não representa necessariamente os eventos mais recentes/);
+  assert.match(customerV2Ui, /Ainda não cadastrado/);
+});
+
+test('V2 não cria consultas globais e limita fetches por workspace', () => {
+  assert.match(customerV2Read, /orderBy\(documentId\(\), 'desc'\)/);
+  assert.match(customerV2Read, /startAt\(prefix \+ '\\uf8ff'\)/);
+  assert.match(customerV2Read, /limit\(ADMIN2_CYCLE_PAGE_SIZE \+ 1\)/);
+  assert.match(customerV2Read, /where\('workspaceId', '==', workspaceId\)/);
+  assert.match(customerV2Read, /limit\(ADMIN2_AUDIT_SAMPLE_LIMIT\)/);
+  assert.doesNotMatch(customerV2Read, /\bonSnapshot\s*\(/);
+  assert.doesNotMatch(customerV2Read, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|writeBatch)\s*\(/);
 });
