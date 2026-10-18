@@ -29,6 +29,26 @@ Administração de plataforma e negócio SaaS: visual premium, dashboard, diret�
 
 **Meta de entrega:** 100% do **CORE V2**, não 100% de funcionalidades antigas deliberadamente retiradas. Uso normal dos workspaces por clientes permanece sem mudança de comportamento.
 
+## Design Premium — contrato explícito da sidebar ADMIN-2.0 (W01 + W00 + W11)
+
+**Decisão do Fundador confirmada em 2026-10-18:** a Administração 2.0 terá **barra lateral própria à esquerda, visual e navegação coerentes com a barra lateral do EMPROVEX operacional e com a da Central de Depósitos**, usando identidade visual unificada, mas agrupamentos administrativos exclusivos. Não substituir a sidebar por abas horizontais como navegação principal.
+
+**Comportamento obrigatório:**
+1. **Desktop:** sidebar vertical à esquerda; padrão expandido com ícones + rótulos; pode ser **recolhida em modo compacto somente ícones** pelo Superadministrador e reexpandida pelo mesmo controle, sem perda de contexto ou navegação. O colapso no desktop é **uma melhoria nova de Admin 2.0**, não assumir que as sidebars atuais já oferecem exatamente esse recurso.
+2. **Preferência visual:** persistir escolha expandida/compacta de maneira local ao navegador, sem leitura ou escrita Firestore; não tratar preferência local como autorização.
+3. **Mobile/tablet:** menu lateral em modo drawer/overlay acionado no cabeçalho, com backdrop, botão fechar, navegação acessível e fechamento após selecionar rota; não ocupar permanentemente toda a largura útil.
+4. **Hierarquia:** CENTRAL (Visão Geral, Pendências), NEGÓCIO (Clientes, Financeiro, Atendimento), OPERAÇÃO (Workspaces, Consumo e Cotas, Sessões, Backups), INTELIGÊNCIA (Indicadores/Relatórios), GOVERNANÇA (Segurança, Auditoria, Configurações). As opções podem ser ajustadas por contratos de permissão; **não mostrar ação de entrada no workspace operacional alheio**, retirada do escopo CORE V2.
+5. **Item ativo:** ícone/rótulo destacados com marcação azul suave e inequívoca, \`aria-current="page"\`, coerente com a rota/URL profunda; manter seleção correta no refresh, histórico do navegador e navegação por teclado. No modo compacto, identificar ações por tooltip e \`aria-label\`.
+6. **Estética:** azul-marinho profundo \`#020817\`, superfícies \`#071225\`, Montserrat, ícones consistentes, linhas e iluminação discretas, contraste adequado; conservar o DNA do shell existente e evitar bolhas esféricas, filamentos ou beams excessivos. Bordas e transições em ~160–300 ms, respeitando \`prefers-reduced-motion\`.
+7. **Área de identificação:** marca EMPROVEX Command, distinção clara do contexto ADMIN, identidade administrativa e ação de retorno/navegação previstas no header/shell; sem sugerir identidade do usuário de outro workspace.
+8. **Resiliência:** carregamento, permissões, abas vazias, rotas inexistentes, modo claro/escuro, textos longos, 320px/mobile e largura desktop sem layout quebrado. Sidebar não dispara consultas/assinaturas Firestore somente por expandir ou recolher.
+
+**Referência de implementação existente (verificar código vivo):** \`components/layout/AppSidebar.tsx\` e \`features/warehouse/components/WarehouseSidebar.tsx\` usam padrões visuais \`emprovex-app-sidebar\`, \`emprovex-sidebar-nav-item\`, status ativo e drawer mobile. Reaproveitar **princípios e tokens**, não acoplar Admin à árvore operacional de setor. O módulo \`features/warehouse/components/WarehouseModuleShell.tsx\` controla abertura mobile. Não presumir que existe persistência do modo desktop compacto nessas sidebars.
+
+**Ownership e testes:** W01 entrega \`components/admin2/shell/**\` e componentes visuais; W00 integra no roteamento e substituição compatível de \`PlatformAdminView\`; W11 prova expansão/compactação, menu mobile, foco/teclado, \`aria-current\`, deep-link, tema, prefers-reduced-motion e ausência de novas reads Firestore por alternância visual. **Critério de aceite de A01/A02 obrigatório**, não opcional.
+
+---
+
 ## 1. Matriz de capacidades e aceitação — 13/13
 
 | ID | Entrega da fase CORE V2 | Evidência de aceite |
