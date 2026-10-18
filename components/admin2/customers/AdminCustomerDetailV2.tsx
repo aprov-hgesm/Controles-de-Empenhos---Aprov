@@ -374,12 +374,12 @@ export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: 
                   <Info label="Organização" value={customer.organizationName || 'Não informada'} />
                 </dl>
               </Surface>
-              <Surface title="Vínculos do cliente" icon={Users} hint="Modelo comercial 1:N preparado, mas ainda não persistido.">
+              <Surface title="Vínculos do cliente" icon={Users} hint="Contrato comercial 1:1: cada workspace possui seu cadastro independente.">
                 <dl>
                   <Info label="Projeção atual" value={'workspace:' + customer.workspaceId} />
                   <Info label="Workspace identificado" value={customer.workspaceId} />
                   <Info label="Conta comercial independente" value={matchedCommercial?.id || 'Não cadastrada'} />
-                  <Info label="Workspaces no vínculo" value={matchedCommercial?.workspaceIds.join(', ') || 'Ainda não vinculados'} />
+                  <Info label="Workspace comercial" value={matchedCommercial?.workspaceId || 'Ainda não cadastrado'} />
                   {commercialError && <Info label="Consulta comercial" value={commercialError} />}
                   <Info label="Origem do vínculo" value={matchedCommercial ? (commercialEmulatorWritesEnabled ? 'Firebase Emulator' : 'Rascunho local da prévia') : 'Pendente de cadastro'} />
                 </dl>
