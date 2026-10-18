@@ -121,9 +121,12 @@ test('isolamento de produção e área operacional permanecem intactos', () => {
 
 test('V2 carrega competências e auditoria só nas seções correspondentes', () => {
   assert.match(customerUi, /<AdminCustomerDetailV2/);
-  assert.match(customerV2Ui, /tab === 'finance'/);
-  assert.match(customerV2Ui, /tab === 'activity'/);
+  assert.match(customerV2Ui, /visited\.finance &&/);
+  assert.match(customerV2Ui, /visited\.activity &&/);
   assert.match(customerV2Ui, /tab === 'relationship'/);
+  assert.match(customerV2Ui, /setVisited/);
+  assert.match(customerV2Ui, /hidden={tab !== 'finance'}/);
+  assert.match(customerV2Ui, /hidden={tab !== 'activity'}/);
   assert.match(customerV2Ui, /readCustomerCyclePage\(workspaceId/);
   assert.match(customerV2Ui, /readCustomerAuditSample\(workspaceId\)/);
   assert.match(customerV2Ui, /role="tablist"/);
