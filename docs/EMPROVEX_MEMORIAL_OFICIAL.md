@@ -1,5 +1,15 @@
 # EMPROVEX — Memorial Oficial
 
+## ADMIN 2.0 — CLIENTES 360° V2 (18/10/2026) · DESENVOLVIMENTO SEQUENCIAL
+
+- **Ficha V2 implementada apenas na branch isolada do PR #339**, com quatro seções: Visão geral, Financeiro, Atividades e Vínculos/Contato. Preservada a V1 já aprovada pelo Fundador e o layout premium V3.
+- **Fontes reais, consultas sob demanda:** metadados `workspaces` e `billingAccounts`; competências por ID canônico de `billingCycles` paginadas (6 por página); amostra de até 12 eventos reais de `platformAuditEvents` filtrados pelo workspace. **A auditoria não representa necessariamente os eventos mais recentes**; a interface informa essa limitação.
+- **Cliente comercial 1:N somente definido em contrato de tipos, SEM PERSISTÊNCIA**. Não foram criados/alterados contatos, assinaturas, regras, índices, dados operacionais, Drive, warehouse ou dados de clientes. A rota continua em localhost/Next dev, sem deploy.
+- **Estado:** implementação entregue em código; testes automatizados associados à branch e **validação humana da V2 ainda pendente**. Não presumir funcionalidade publicada ou aprovação de uma versão não testada.
+- **Fontes:** [Memorial sequencial](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md) e [Contrato V2](./admin2/CLIENTES_360_V2_CONTRATO.md). Próximo passo é certificar Application CI/Core Protection e testar no localhost antes de novo módulo.
+
+---
+
 ## ACEITE ADMIN 2.0 — CLIENTES 360° V1 (2026-10-18)
 
 - **Fundador validou e aprovou no localhost** o Diretório de Clientes V1 e a ficha 360° de consulta real, com autenticação Google e registros administrativos read-only. Este aceite não equivale a autorização para edição, publicação ou acesso a dados operacionais externos.
