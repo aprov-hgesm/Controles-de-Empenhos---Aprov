@@ -18,7 +18,8 @@ const CUSTOMERS = 'platformCustomers';
 /** Somente Emulator em next dev; nunca escreve no Firebase real da prévia. */
 export const commercialEmulatorWritesEnabled =
   process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1' &&
-  process.env.NODE_ENV === 'development';
+  process.env.NODE_ENV === 'development' &&
+  (process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID || '').startsWith('demo-');
 
 export interface CommercialCustomerPage {
   rows: CommercialCustomer[];
