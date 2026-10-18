@@ -11,6 +11,31 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## CLIENTES 360° V2 — ficha com acompanhamento (18/10/2026)
+
+**Nova entrega a validar:** após **Clientes → Ver ficha**, a ficha passa a ter as seções **Visão geral**, **Financeiro**, **Atividades** e **Vínculos e contato**, mantendo a sidebar fixa escura e o corpo claro aprovados.
+
+- **Visão geral:** dados institucionais reais, UG, contato operacional, assinatura e período de teste.
+- **Financeiro:** competências reais e paginadas em grupos de 6; vencimento, status e confirmação (quando existentes). A consulta é iniciada somente ao abrir a aba.
+- **Atividades:** amostra de até 12 eventos administrativos reais filtrados por workspace, consultada somente ao abrir a aba. **Não é histórico completo nem necessariamente os eventos mais recentes**; IDs de auditoria não são cronológicos.
+- **Vínculos e contato:** identidade comercial preparada conceitualmente para um Cliente 1:N, **sem criar coleção ou gravar vínculos**; dados não existentes aparecem como "não cadastrado".
+- Sem operações nos workspaces externos, sem acesso ao Drive dos clientes e **sem writes**.
+
+Atualizar a pasta isolada, interrompendo o servidor antes se estiver aberto:
+
+\`\`\`powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs
+npm.cmd run dev -- --port 3001
+\`\`\`
+
+Acesse **http://localhost:3001/admin2-preview?area=customers** com a conta Google fundadora e valide um cliente que possua histórico financeiro. Depois abra **Atividades** e **Vínculos e contato**, volte ao diretório e abra outro workspace para verificar isolamento. **Se faltar dado, a tela mostrará o estado vazio; não executará migração nem criará cobrança.**
+
+Documentação: [CLIENTES_360_V2_CONTRATO.md](./CLIENTES_360_V2_CONTRATO.md).
+
+---
+
 ## CLIENTES 360° — Fase funcional read-only (18/10/2026)
 
 A aba **Clientes** deixou de usar a lista fictícia: ela agora se conecta aos metadados reais de \`workspaces\` via Firebase/Firestore, com autenticação Google fundadora e regras de segurança existentes, **sem alterar qualquer documento**. Dashboard e outros módulos da prévia continuam ilustrativos.
