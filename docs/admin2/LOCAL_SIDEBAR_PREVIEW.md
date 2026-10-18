@@ -11,6 +11,32 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## CLIENTES COMERCIAIS V1 — cadastro independente e vínculos 1:N (18/10/2026)
+
+**Nova entrega para aprovação no localhost**, preservando o Diretório de Workspaces e a Ficha 360° V2:
+
+1. Em \`http://localhost:3001/admin2-preview?area=customers\`, entre com a conta Google fundadora e clique em **Cadastro de clientes comerciais**.
+2. Clique em **Novo cliente**. Preencha nome, pessoa de contato, e-mail, telefone, situação (prospecto, negociação, ativo, inativo) e observações **somente fictícias**.
+3. Em **Workspaces vinculados**, digite o identificador de um workspace real já existente (copie do Diretório) e clique em **Vincular**. O sistema verifica a existência e a autorização de leitura desse ID, sem modificar o workspace. O limite atual é **oito por cliente**.
+4. Clique em **Salvar rascunho local**. Edite o cadastro e teste adicionar/remover vínculo. O mesmo workspace não pode pertencer a dois rascunhos da sessão.
+5. Volte a **Workspaces existentes**, abra a Ficha 360° do workspace vinculado, acesse **Vínculos e contato**: o contato e a relação comercial do rascunho serão mostrados ali.
+6. **Atenção:** o modo localhost comum mantém rascunhos **exclusivamente na memória da página**. Recarregar/fechar a aba apaga esses rascunhos. **Não use dados pessoais reais** para testes. A produção NÃO recebe nenhuma gravação.
+
+O motor persistente de Firestore já foi implementado, mas só habilita gravação com \`NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS=1\` em desenvolvimento e Auth/Firestore Emulators em execução. A nova Firestore Rules só existe nesta branch; não foi publicada. A suíte CI testa CRUD/bloqueios no Emulator, sem dados reais. Consulte \`docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md\` para contrato, riscos e gates.
+
+**Atualizar a prévia sem deploy:**
+
+\`\`\`powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs
+npm.cmd run dev -- --port 3001
+\`\`\`
+
+Acesse **http://localhost:3001/admin2-preview?area=customers**.
+
+---
+
 ## CLIENTES 360° V2 — ficha com acompanhamento (18/10/2026)
 
 **Nova entrega a validar:** após **Clientes → Ver ficha**, a ficha passa a ter as seções **Visão geral**, **Financeiro**, **Atividades** e **Vínculos e contato**, mantendo a sidebar fixa escura e o corpo claro aprovados.
