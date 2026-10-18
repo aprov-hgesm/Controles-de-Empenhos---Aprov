@@ -273,7 +273,7 @@ export function AdminCommandPreview() {
 
   return (
     <div className="min-h-screen bg-[#eaf1fb] font-montserrat text-[#172c4d] selection:bg-blue-200">
-      
+
       <header className="sticky top-0 z-30 border-b border-[#31517a]/60 bg-[linear-gradient(105deg,#07152d_0%,#10294f_38%,#061023_78%)] shadow-[0_4px_28px_rgba(0,4,20,0.26)] backdrop-blur-xl">
         <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
