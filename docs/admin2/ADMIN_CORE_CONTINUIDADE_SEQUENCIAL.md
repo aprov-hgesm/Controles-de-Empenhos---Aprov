@@ -2,7 +2,7 @@
 ## Memorial de continuidade — desenvolvimento SEQUENCIAL no mesmo chat ou em sucessores
 
 **Atualização de método:** 2026-10-18, por decisão expressa do Fundador.
-**Status:** Direção visual V3 **aprovada**; **Clientes 360° V1 read-only aprovada pelo Fundador no localhost**, com Application CI e Core Protection PASS no último código inspecionado; próxima etapa Ficha 360° V2 ainda não implementada. Demais módulos continuam demonstrativos.
+**Status:** Visual V3 e Clientes 360° V1 aprovados pelo Fundador; **Ficha Cliente 360° V2 implementada na branch isolada, aguardando QA final e validação no localhost**. Demais módulos continuam demonstrativos.
 **PROCEDIMENTO VIGENTE:** 1 chat executor por vez, trabalho incremental em **uma única branch de desenvolvimento local**, validação humana no localhost, atualização deste memorial a cada marco. **Os prompts antigos de workers paralelos e ondas foram suspensos.**
 **Repo:** \`aprov-hgesm/Controles-de-Empenhos---Aprov\`.
 **Branch ATIVA:** \`feat/admin2-w01-sidebar-local-preview\`; PR **#339 DRAFT** (o nome histórico W01 não limita a missão, que agora é toda Admin CORE V2).
@@ -61,6 +61,35 @@
 **Branch:** `feat/admin2-w01-sidebar-local-preview` — PR #339 DRAFT (ativo). PR #340 permanece estacionado. **`main`/produção intactas** e o fluxo continua com **um chat executor**, sem workers paralelos.
 
 **Handoff atualizado:** ONDE ESTAMOS — Clientes 360° V1 aprovada; O QUE ESTAMOS FAZENDO — definir V2 e preparar novo incremento; QUEM ESTÁ FAZENDO — chat executor sequencial; O QUE FAZER A SEGUIR — implementar V2 read-only no mesmo localhost, testar CI e pedir validação; QUEM O FARÁ — ChatGPT desenvolve, Fundador valida.
+
+---
+
+## Marco implementado — Ficha Cliente 360° V2 · 2026-10-18
+
+**Estado: IMPLEMENTADO EM CÓDIGO, AGUARDANDO CI FINAL E SMOKE HUMANO.** A V1 do Diretório foi aprovada pelo Fundador antes deste marco. A V2 não deve ser marcada como aprovada até novo teste no localhost.
+
+**O QUE MUDOU:**
+- \`lib/admin2/customers/customer360Contract.ts\`: tipos \`CommercialCustomerDraft\`, \`CustomerWorkspaceLinkDraft\` (modelo 1:N NÃO PERSISTIDO), ciclo financeiro e auditoria; funções de domínio puras rejeitam documento de outro workspace/ID inconsistente.
+- \`lib/admin2/customers/customer360Read.ts\`: competências \`billingCycles\` via ID prefix \`workspaceId__YYYY-MM\`, \`orderBy(documentId(), 'desc')\`, \`startAt\`/\`endAt\`, limite **7 leituras retornadas para exibir 6** e cursor de paginação; auditoria \`platformAuditEvents\` filtrada por workspace com \`limit(12)\`. **Sem listeners nem writes**.
+- \`components/admin2/customers/AdminCustomerDetailV2.tsx\`: Ficha 360° visual em **Visão geral / Financeiro / Atividades / Vínculos e contato**, aproveitando visual V3 aprovado (sidebar fixa escura, conteúdo claro). Dados institucionais e billing existentes; componentes financeiros/auditoria montam somente ao abrir suas abas, evitando consultas ao abrir diretório.
+- \`components/admin2/customers/AdminCustomersDirectory.tsx\`: substituição da ficha V1 pela V2, sem mudar a autenticação Google fundadora nem a listagem V1.
+- \`scripts/admin2-customer-360-v2.test.mjs\` criado; \`scripts/admin2-sidebar-preview.test.mjs\` atualizado; Application CI inclui suíte V2.
+- \`docs/admin2/CLIENTES_360_V2_CONTRATO.md\` e \`docs/admin2/LOCAL_SIDEBAR_PREVIEW.md\` documentam limites, segurança e testes.
+
+**INTEGRIDADE COMERCIAL E SEGURANÇA:**
+- Os documentos fonte permanecem \`workspaces\`, \`billingAccounts\`, \`billingCycles\` e \`platformAuditEvents\`. A V2 **não criou** entidade comercial real, contato, vínculo no banco, política de acesso ou migração.
+- Valor financeiro exibido é o registrado no documento de competência; **não** se declara caixa total ou receita consolidada.
+- Auditoria por \`workspaceId == ...\` seleciona até **12 eventos não necessariamente recentes**, pois IDs de evento são aleatórios e a consulta não ordena por \`createdAt\`. Apenas registros retornados são ordenados localmente, e a UI deixa a limitação visível. Não há acesso a \`before/after\`, estoque, empenhos ou Drive.
+- Cliente comercial 1:N está previsto **apenas como contrato TypeScript e função pura**, para projeto de persistência futuro com nova validação de Rules/Emulator.
+- Firestore **somente leitura** via Web SDK e Rules atuais, com custos por consulta; nenhum \`firebase deploy\`, \`vercel deploy\`, mutação em workspaces ou alteração de produção foi realizada.
+
+**QA:** código e testes foram enviados à branch ativa do PR #339. **Consultar HEAD e GitHub Actions antes de declarar PASS**; validar também a sessão no localhost. Sem E2E real executado neste registro.
+
+**VALIDAÇÃO DO FUNDADOR PENDENTE:** atualizar \`$HOME\emprovex-admin2-preview\`; executar \`node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs\`; iniciar \`npm.cmd run dev -- --port 3001\`; abrir \`http://localhost:3001/admin2-preview?area=customers\`, clicar **Ver ficha** e testar as quatro seções com conta Google fundadora. Confirmar não regressão da V1 e isolamento ao mudar workspace.
+
+**PRÓXIMO PASSO APÓS ACEITE:** próximo incremento sequencial de cadastro comercial persistente/relacionamento Cliente 1:N com proteção de Rules, backfill dry-run, organização dos contatos e CRM, mediante autorização específica para alterações reais.
+
+**HANDOFF:** ONDE ESTAMOS — V2 implementada na branch isolada, QA/aceite pendentes. O QUE ESTAMOS FAZENDO — aperfeiçoamento do acompanhamento read-only. QUEM ESTÁ FAZENDO — chat executor sequencial. O QUE FAZER A SEGUIR — concluir CI e validar localhost. QUEM O FARÁ — ChatGPT confere CI, Fundador faz smoke e aprova ou pede refinamento.
 
 ---
 
