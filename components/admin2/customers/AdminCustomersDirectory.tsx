@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
-  ExternalLink,
   FileSearch,
   KeyRound,
   Loader2,
@@ -17,8 +12,6 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  Users,
-  WalletCards,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, type User } from 'firebase/auth';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
@@ -27,22 +20,18 @@ import { auth, googleProvider } from '../../../lib/firebase';
 import { HGESM_SECTOR_EMAIL } from '../../../lib/hgesmWorkspace';
 import {
   ADMIN2_CUSTOMER_PAGE_SIZE,
-  customerBillingLabel,
-  formatCustomerCurrency,
   formatCustomerDate,
-  type CustomerBillingSnapshot,
   type CustomerSearchField,
   type CustomerWorkspaceRecord,
 } from '../../../lib/admin2/customers/customerWorkspaceContract';
 import {
-  readCustomerBilling,
   readCustomerWorkspacePage,
   type CustomerWorkspaceQuery,
 } from '../../../lib/admin2/customers/customerWorkspaceDirectory';
 import styles from '../shell/AdminCommandPreview.module.css';
+import { AdminCustomerDetailV2 } from './AdminCustomerDetailV2';
 
 type AuthState = 'checking' | 'signed-out' | 'denied' | 'authorized';
-type BillingState = 'idle' | 'loading' | 'ready' | 'error';
 
 const FIELD_OPTIONS: Array<{ id: CustomerSearchField; label: string }> = [
   { id: 'name', label: 'Nome (prefixo)' },
@@ -71,111 +60,6 @@ function displayLookupError(error: unknown): string {
 
 function statusLabel(value: CustomerWorkspaceRecord['workspaceStatus']): string {
   return value === 'active' ? 'Ativo' : 'Desativado';
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-[#e7edf7] py-3 last:border-0 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-      <dt className="text-[11px] font-semibold text-[#73849d]">{label}</dt>
-      <dd className="break-words text-left text-[12px] font-bold text-[#1d3659] sm:max-w-[66%] sm:text-right">{value}</dd>
-    </div>
-  );
-}
-
-function CustomerDetail({
-  customer,
-  onBack,
-}: {
-  customer: CustomerWorkspaceRecord;
-  onBack: () => void;
-}) {
-  const [billingState, setBillingState] = useState<BillingState>('loading');
-  const [billing, setBilling] = useState<CustomerBillingSnapshot | null>(null);
-  const [billingError, setBillingError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    setBillingState('loading');
-    setBilling(null);
-    setBillingError('');
-    readCustomerBilling(customer.workspaceId).then((result) => {
-      if (!active) return;
-      setBilling(result);
-      setBillingState('ready');
-    }).catch((error: unknown) => {
-      if (!active) return;
-      setBillingError(displayLookupError(error));
-      setBillingState('error');
-    });
-    return () => { active = false; };
-  }, [customer.workspaceId]);
-
-  return (
-    <div className="space-y-5" data-testid="admin2-customer-360">
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#cddbee] bg-white px-4 py-2 text-[12px] font-bold text-[#1d4f96] transition hover:bg-[#f1f7ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Voltar ao diretório
-      </button>
-      <section className={styles.sectionCard + ' p-5 sm:p-6'}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700">
-              <Building2 className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <div>
-              <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#2d66b4]">Cliente 360° · Metadados administrativos</p>
-              <h2 className="mt-2 text-xl font-extrabold text-[#1b3559]">{customer.name}</h2>
-              <p className="mt-1 text-xs text-[#73849d]">{customer.organizationName || 'Organização não informada'}</p>
-            </div>
-          </div>
-          <span className={customer.workspaceStatus === 'active'
-            ? 'rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700'
-            : 'rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800'}>
-            {statusLabel(customer.workspaceStatus)}
-          </span>
-        </div>
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <div className="rounded-2xl border border-[#e0e7f1] bg-[#f7faff] p-5">
-            <p className="mb-3 flex items-center gap-2 text-xs font-extrabold text-[#244b84]"><Building2 className="h-4 w-4" /> Identidade institucional</p>
-            <dl>
-              <InfoRow label="Workspace" value={customer.workspaceId} />
-              <InfoRow label="UG" value={customer.ug || 'Não informada'} />
-              <InfoRow label="OM / Organização" value={customer.organizationName || 'Não informada'} />
-              <InfoRow label="Sigla" value={customer.organizationShortName || 'Não informada'} />
-              <InfoRow label="Setor" value={customer.sectionName || 'Não informado'} />
-              <InfoRow label="Atualização" value={formatCustomerDate(customer.updatedAt)} />
-            </dl>
-          </div>
-          <div className="rounded-2xl border border-[#e0e7f1] bg-white p-5">
-            <p className="mb-3 flex items-center gap-2 text-xs font-extrabold text-[#244b84]"><WalletCards className="h-4 w-4" /> Assinatura e contato</p>
-            <dl>
-              <InfoRow label="E-mail operacional" value={customer.authorizedEmail || 'Não informado'} />
-              <InfoRow label="Situação do billing" value={billingState === 'loading' ? 'Consultando...' : billingState === 'error' ? 'Indisponível' : customerBillingLabel(billing)} />
-              {billingState === 'ready' && billing && (
-                <>
-                  <InfoRow label="Mensalidade cadastrada" value={formatCustomerCurrency(billing.monthlyPriceCents)} />
-                  <InfoRow label="Trial até" value={formatCustomerDate(billing.trialEndsAt)} />
-                  <InfoRow label="Isenção" value={billing.exemptionSource || 'Não informada'} />
-                </>
-              )}
-            </dl>
-            {billingState === 'loading' && (
-              <p className="mt-3 inline-flex items-center gap-2 text-xs text-[#587496]"><Loader2 className="h-4 w-4 animate-spin" /> Carregando assinatura sob demanda...</p>
-            )}
-            {billingState === 'error' && <p role="alert" className="mt-3 text-xs text-red-700">{billingError}</p>}
-          </div>
-        </div>
-        <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[11px] leading-6 text-[#365d92]">
-          <ShieldCheck className="mr-2 inline h-4 w-4 align-middle" aria-hidden="true" />
-          Consulta somente leitura. Esta ficha não dá acesso a registros de Empenhos, Central de Depósitos ou arquivos Google Drive do cliente.
-        </div>
-      </section>
-    </div>
-  );
 }
 
 export function AdminCustomersDirectory() {
@@ -311,7 +195,7 @@ export function AdminCustomersDirectory() {
     );
   }
 
-  if (selected) return <CustomerDetail key={selected.workspaceId} customer={selected} onBack={() => setSelected(null)} />;
+  if (selected) return <AdminCustomerDetailV2 key={selected.workspaceId} customer={selected} onBack={() => setSelected(null)} />;
 
   return (
     <div className="space-y-4" data-testid="admin2-real-customers">
