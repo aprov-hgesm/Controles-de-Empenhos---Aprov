@@ -26,7 +26,7 @@ const EMPTY: CommercialCustomerInput = {
   contactPhone: '',
   relationshipStatus: 'prospect',
   relationshipNotes: '',
-  workspaceIds: [],
+  workspaceId: '',
 };
 
 interface Props {
@@ -73,7 +73,8 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
   );
   const openNew = () => {
     setEditing(null);
-    setForm({ ...EMPTY, workspaceIds: [] });
+    setForm({ ...EMPTY });
+    setLinkInput('');
     setFormOpen(true);
     setError('');
     setNotice('');
@@ -87,25 +88,25 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
       contactPhone: customer.contactPhone,
       relationshipStatus: customer.relationshipStatus,
       relationshipNotes: customer.relationshipNotes,
-      workspaceIds: [...customer.workspaceIds],
+      workspaceId: customer.workspaceId,
     });
     setFormOpen(true);
+    setLinkInput('');
     setError('');
   };
 
   const attachWorkspace = async () => {
+    if (editing) { setError('O workspace de um cliente existente não pode ser alterado.'); return; }
     const id = linkInput.trim().toLowerCase();
     if (!id) return;
-    if (form.workspaceIds.includes(id)) { setError('Esse workspace já está incluído.'); return; }
-    if (form.workspaceIds.length >= 8) { setError('Limite de oito workspaces por cliente nesta etapa.'); return; }
     setCheckingLink(true);
     setError('');
     try {
       const found = await readCustomerWorkspacePage({ field: 'workspaceId', term: id }, null);
       if (!found.rows.some(row => row.workspaceId === id)) throw new Error('Workspace inexistente ou sem acesso.');
-      const other = visible.find(c => c.id !== editing?.id && c.workspaceIds.includes(id));
-      if (other) throw new Error('Workspace já vinculado a outro cadastro comercial.');
-      setForm(current => ({ ...current, workspaceIds: [...current.workspaceIds, id] }));
+      const other = visible.find(c => c.workspaceId === id);
+      if (other) throw new Error('Este workspace já possui cadastro comercial; abra o cadastro existente.');
+      setForm(current => ({ ...current, workspaceId: id }));
       setLinkInput('');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível validar o workspace.');
@@ -123,7 +124,7 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
     if (issues.length) { setError(issues.join(' ')); return; }
     if (!commercialEmulatorWritesEnabled) {
       const conflict = drafts.find(c =>
-        c.id !== editing?.id && c.workspaceIds.some(id => input.workspaceIds.includes(id))
+        c.workspaceId === input.workspaceId && c.id !== editing?.id
       );
       if (conflict) { setError('Um workspace já pertence a outro rascunho desta sessão.'); return; }
     }
@@ -135,7 +136,7 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
         setNotice('Cadastro salvo no Firestore Emulator. Nenhuma escrita em produção.');
       } else {
         const result = buildCommercialCustomer(
-          editing?.id || 'draft-' + crypto.randomUUID(),
+          input.workspaceId,
           input, 'preview-local', new Date().toISOString(), editing || undefined
         );
         onChangeDrafts(editing
@@ -160,7 +161,7 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
             <p className={styles.sectionEyebrow + ' font-mono uppercase'}>CARTEIRA COMERCIAL / CLIENTES</p>
             <h2 className="mt-2 text-[19px] font-black text-[#173558]">Cadastro independente de clientes</h2>
             <p className="mt-2 max-w-2xl text-[12px] leading-6 text-[#627994]">
-              Contatos, situação do relacionamento e associação de um cliente comercial a até oito workspaces existentes.
+              Contatos, situação do relacionamento e um cadastro comercial individual por workspace existente.
               Não cria OM, não altera UG nem substitui os controles de assinatura.
             </p>
           </div>
@@ -197,8 +198,7 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
                   <h3 className="mt-4 text-[15px] font-extrabold text-[#17365f]">{customer.displayName}</h3>
                   <p className="mt-2 text-[11px] text-[#72859e]">{customer.contactName || 'Responsável não cadastrado'} · {customer.contactEmail || 'Sem e-mail comercial'}</p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {customer.workspaceIds.length ? customer.workspaceIds.map(id => <span key={id} className="rounded-lg border border-[#d6e4f4] bg-[#edf5ff] px-2 py-1 font-mono text-[10px] text-[#37608e]">{id}</span>)
-                      : <span className="text-[11px] text-[#7a8ba1]">Nenhum workspace vinculado</span>}
+                    <span className="rounded-lg border border-[#d6e4f4] bg-[#edf5ff] px-2 py-1 font-mono text-[10px] text-[#37608e]">{customer.workspaceId}</span>
                   </div>
                   <button type="button" onClick={() => openEdit(customer)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#cbdcf0] bg-white px-3 text-[11px] font-bold text-[#2c5d9e] hover:bg-[#edf5ff]">
                     <FilePenLine className="h-4 w-4" /> Editar cadastro
@@ -252,27 +252,23 @@ export function AdminCommercialCustomers({ drafts, onChangeDrafts }: Props) {
                 onChange={e => setForm(f => ({ ...f, relationshipNotes: e.target.value }))}/>
             </label>
             <div className="space-y-3 rounded-[16px] border border-[#dae7f6] bg-[#f3f8ff] p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="flex items-center gap-2 text-xs font-extrabold text-[#28558d]"><Users className="h-4 w-4" /> Workspaces vinculados ({form.workspaceIds.length}/8)</h4>
-                <span className="text-[10px] text-[#738aa7]">Somente IDs existentes</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {form.workspaceIds.map(id => (
-                  <span key={id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#cddff4] bg-white px-2 py-1.5 font-mono text-[10px] text-[#2d629d]">{id}
-                    <button type="button" onClick={() => setForm(f => ({ ...f, workspaceIds: f.workspaceIds.filter(v => v !== id) }))}
-                      aria-label={'Desvincular ' + id} className="rounded p-0.5 hover:bg-red-50"><X className="h-3 w-3" /></button>
-                  </span>
-                ))}
-                {!form.workspaceIds.length && <span className="text-[11px] text-[#7b8ca3]">Nenhum vínculo. Você pode salvar sem workspace.</span>}
-              </div>
-              <div className="flex gap-2">
-                <input className={styles.demoInput + ' h-10 min-w-0 flex-1 px-3 text-xs'} value={linkInput} onChange={e => setLinkInput(e.target.value)}
-                  placeholder="ID do workspace existente" aria-label="ID do workspace para vincular" />
-                <button type="button" disabled={checkingLink || working} onClick={attachWorkspace} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-[#bdd4ef] bg-white px-3 text-[11px] font-bold text-[#2864ac] disabled:opacity-50">
-                  {checkingLink ? <Loader2 className="h-4 w-4 animate-spin"/> : <Plus className="h-4 w-4"/>} Vincular
-                </button>
-              </div>
-              <p className="text-[10px] leading-5 text-[#7487a1]">Copie o ID da aba Workspaces existentes. Verificaremos sua existência consultando apenas esse ID. Os documentos de workspace não serão alterados.</p>
+              <h4 className="flex items-center gap-2 text-xs font-extrabold text-[#28558d]"><Users className="h-4 w-4" /> Workspace do cliente (obrigatório e único)</h4>
+              <p className="text-[11px] text-[#6982a0]">Cada workspace constitui um cliente comercial independente, com sua própria assinatura. O responsável de contato não recebe permissões operacionais.</p>
+              {form.workspaceId ? (
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg border border-[#cddff4] bg-white px-3 py-2 font-mono text-[11px] text-[#2d629d]">{form.workspaceId}</span>
+                  {!editing && <button type="button" onClick={() => setForm(c => ({ ...c, workspaceId: '' }))} className="rounded-lg border border-[#cddff4] bg-white px-3 py-2 text-[11px] text-[#2864ac]">Alterar seleção</button>}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <input className={styles.demoInput + ' h-10 min-w-0 flex-1 px-3 text-xs'} value={linkInput} onChange={e => setLinkInput(e.target.value)}
+                    placeholder="ID do workspace existente" aria-label="ID do workspace do cliente" />
+                  <button type="button" disabled={checkingLink || working} onClick={attachWorkspace} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#bdd4ef] bg-white px-3 text-[11px] font-bold text-[#2864ac] disabled:opacity-50">
+                    {checkingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Selecionar workspace
+                  </button>
+                </div>
+              )}
+              <p className="text-[10px] leading-5 text-[#7487a1]">O ID é verificado no diretório administrativo antes da seleção. Após salvar, ele permanece imutável. Nenhum registro operacional do workspace é modificado.</p>
             </div>
             {error && <p role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] text-red-700"><CircleAlert className="h-4 w-4 shrink-0" />{error}</p>}
             <div className="flex flex-wrap items-center justify-end gap-2">
