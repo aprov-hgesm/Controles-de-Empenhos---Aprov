@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  collection, doc, documentId, getDocs, limit, orderBy, query,
+  collection, doc, getDoc, getDocs, limit, orderBy, query,
   runTransaction, startAfter, type DocumentData, type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
@@ -47,6 +47,21 @@ export async function listCommercialCustomers(
     cursor: visible.at(-1) || null,
     hasMore: snapshot.docs.length > ADMIN2_COMMERCIAL_PAGE_SIZE,
   };
+}
+
+/** Carregado apenas ao abrir "Vínculos e contato" em homologação Emulator. */
+export async function readCommercialCustomerForWorkspace(
+  workspaceId: string
+): Promise<CommercialCustomer | null> {
+  if (!commercialEmulatorWritesEnabled) return null;
+  const link = await getDoc(doc(db, LINKS, workspaceId));
+  if (!link.exists()) return null;
+  const customerId = link.data()?.customerId;
+  if (typeof customerId !== 'string' || !customerId) return null;
+  const customer = await getDoc(doc(db, CUSTOMERS, customerId));
+  if (!customer.exists()) return null;
+  const record = customer.data() as CommercialCustomer;
+  return record.workspaceIds.includes(workspaceId) ? record : null;
 }
 
 function founderActor(): string {
