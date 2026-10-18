@@ -9,6 +9,9 @@ const sidebar = readFileSync(join(root, 'components/admin2/shell/AdminCommandSid
 const preview = readFileSync(join(root, 'components/admin2/shell/AdminCommandPreview.tsx'), 'utf8');
 const sidebarCss = readFileSync(join(root, 'components/admin2/shell/AdminCommandSidebar.module.css'), 'utf8');
 const previewCss = readFileSync(join(root, 'components/admin2/shell/AdminCommandPreview.module.css'), 'utf8');
+const customerUi = readFileSync(join(root, 'components/admin2/customers/AdminCustomersDirectory.tsx'), 'utf8');
+const customerStore = readFileSync(join(root, 'lib/admin2/customers/customerWorkspaceDirectory.ts'), 'utf8');
+const customerContract = readFileSync(join(root, 'lib/admin2/customers/customerWorkspaceContract.ts'), 'utf8');
 
 test('rota de preview permanece indisponível em produção', () => {
   assert.match(route, /process\.env\.NODE_ENV\s*!==\s*'development'/);
@@ -71,10 +74,45 @@ test('conteúdo claro inspirado no EMPROVEX e KPI com cores distintas', () => {
   assert.match(previewCss, /prefers-reduced-motion/);
 });
 
-test('prévia não executa Auth, billing, Firestore ou operações de tenants', () => {
-  const combined = [route, sidebar, preview].join('\n');
-  assert.doesNotMatch(combined, /from ['"].*(?:firebase|platformAccess|operationalPaths|workspaceContext|warehouseAccess|platformBillingStore)['"]/);
-  assert.doesNotMatch(combined, /\b(?:onSnapshot|runTransaction|setDoc|updateDoc|deleteDoc|signInWithPopup)\s*\(/);
-  assert.match(preview, /DEMO_CUSTOMERS/);
-  assert.match(preview, /Nenhuma operação de Firestore/);
+test('laboratório continua inacessível em produção, mas Clientes usa login seguro', () => {
+  assert.match(route, /NODE_ENV/);
+  assert.match(preview, /AdminCustomersDirectory/);
+  assert.doesNotMatch(preview, /DEMO_CUSTOMERS/);
+  assert.match(customerUi, /onAuthStateChanged\(auth/);
+  assert.match(customerUi, /candidate\.getIdTokenResult\(\)/);
+  assert.match(customerUi, /HGESM_SECTOR_EMAIL/);
+  assert.match(customerUi, /emailVerified === true/);
+  assert.match(customerUi, /sign_in_provider === 'google\.com'/);
+  assert.match(customerUi, /authState !== 'authorized' \|\| !user/);
+  assert.match(customerUi, /signInWithPopup\(auth, googleProvider\)/);
+  assert.match(customerUi, /Acesso administrativo não autorizado/);
+});
+
+test('consultas reais paginadas e sem listeners globais ou writes', () => {
+  assert.match(customerStore, /getDocs\(query\(collection\(db, WORKSPACES_PATH\)/);
+  assert.match(customerStore, /ADMIN2_CUSTOMER_PAGE_SIZE \+ 1/);
+  assert.match(customerStore, /startAfter\(previousPageLast\)/);
+  assert.match(customerStore, /where\('ug', '==', term\)/);
+  assert.match(customerStore, /endAt\(term \+ '\\uf8ff'\)/);
+  assert.match(customerStore, /getDoc\(doc\(db, BILLING_ACCOUNTS_PATH, workspaceId\)\)/);
+  assert.doesNotMatch(customerStore + customerUi, /\b(?:onSnapshot|setDoc|addDoc|updateDoc|deleteDoc|runTransaction|writeBatch)\s*\(/);
+  assert.match(customerUi, /readCustomerBilling\(customer\.workspaceId\)/);
+  assert.match(customerUi, /data-testid="admin2-real-customers"/);
+  assert.match(customerUi, /data-testid="admin2-customer-360"/);
+});
+
+test('projeção preserva IDs e não transforma workspace em conta comercial', () => {
+  assert.match(customerContract, /customerKey: 'workspace:' \+ workspaceId/);
+  assert.match(customerContract, /ADMIN2_CUSTOMER_PAGE_SIZE = 10/);
+  assert.match(customerContract, /workspace\.institutionalProfile/);
+  assert.match(customerContract, /billing\.workspaceId !== workspaceId/);
+  assert.match(customerUi, /não uma base de clientes comerciais independente/);
+  assert.match(customerUi, /Consulta somente leitura/);
+});
+
+test('isolamento de produção e área operacional permanecem intactos', () => {
+  const previewShell = [route, sidebar, preview].join('\n');
+  assert.doesNotMatch(previewShell, /from ['"].*(?:operationalPaths|workspaceContext|warehouseAccess|platformBillingStore)['"]/);
+  assert.doesNotMatch(customerStore + customerUi, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|signOut)\s*\(/);
+  assert.match(preview, /indicadores ilustrativos/);
 });
