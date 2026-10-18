@@ -106,6 +106,8 @@
 - \`components/admin2/customers/AdminCustomerDetailV2.tsx\`: aba Vínculos e contato mostra o cliente comercial relacionado ao workspace por rascunho local ou, no Emulator, lookup condicionado à abertura da aba; não altera UG/OM/conta operacional.
 - \`scripts/admin2-commercial-contract.test.mjs\` e \`scripts/admin2-commercial-security.test.mjs\`: testes domínio/estrutura e **Auth + Firestore Emulator** cobrindo conta fundadora, negativas, integridade e unicidade do vínculo; integrados ao \`Application CI\`.
 - \`docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md\` e guia localhost atualizados.
+- **Compatibilidade CI:** o guard legado \`scripts/verify-sector-lifecycle.mjs\` foi ajustado de modo cirúrgico: permanece proibido \`allow delete: if isPlatformAdmin()\` em todos os demais namespaces; a única exceção, explicitamente validada no guard, é remover o índice comercial \`platformCustomerWorkspaceLinks\`. A falha original do CI foi resolvida em código, nova execução ainda exige PASS completo.
+
 
 **GATE DE PRODUÇÃO:**
 - O código persistente **existe e é testável no Emulator**, mas o repositório de escrita é *fail closed*: \`NODE_ENV === 'development'\` **e** \`NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'\` são necessários para gravação.
