@@ -5,22 +5,17 @@ import {
   runTransaction, startAfter, type DocumentData, type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
+import { HGESM_SECTOR_EMAIL } from '../../hgesmWorkspace';
 import {
   ADMIN2_COMMERCIAL_PAGE_SIZE,
   buildCommercialCustomer,
   type CommercialCustomer,
   type CommercialCustomerInput,
-  type CommercialWorkspaceIndex,
 } from './commercialCustomerContract';
 
 const CUSTOMERS = 'platformCustomers';
-const LINKS = 'platformCustomerWorkspaceLinks';
 
-/**
- * REAL persistence is always disabled on live Firebase in the localhost lab.
- * To exercise mutations use E2E Auth+Firestore emulators AND published branch Rules
- * in the emulator. There is no remote-provisioning/migration path from this lab.
- */
+/** Somente Emulator em next dev; nunca escreve no Firebase real da prévia. */
 export const commercialEmulatorWritesEnabled =
   process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1' &&
   process.env.NODE_ENV === 'development';
@@ -49,27 +44,26 @@ export async function listCommercialCustomers(
   };
 }
 
-/** Carregado apenas ao abrir "Vínculos e contato" em homologação Emulator. */
+/** Uma consulta direta para a ficha; o documento tem o MESMO ID do workspace. */
 export async function readCommercialCustomerForWorkspace(
   workspaceId: string
 ): Promise<CommercialCustomer | null> {
   if (!commercialEmulatorWritesEnabled) return null;
-  const link = await getDoc(doc(db, LINKS, workspaceId));
-  if (!link.exists()) return null;
-  const customerId = link.data()?.customerId;
-  if (typeof customerId !== 'string' || !customerId) return null;
-  const customer = await getDoc(doc(db, CUSTOMERS, customerId));
+  const customer = await getDoc(doc(db, CUSTOMERS, workspaceId));
   if (!customer.exists()) return null;
   const record = customer.data() as CommercialCustomer;
-  return record.workspaceIds.includes(workspaceId) ? record : null;
+  return record.id === workspaceId && record.workspaceId === workspaceId
+    ? record : null;
 }
 
-function founderActor(): string {
+async function founderActor(): Promise<string> {
   const user = auth.currentUser;
-  if (!user || !user.emailVerified || user.email !== 'aprov1hgesm@gmail.com') {
+  if (!user || !user.emailVerified || user.email?.trim().toLowerCase() !== HGESM_SECTOR_EMAIL) {
     throw new Error('Apenas a conta fundadora verificada pode alterar cadastros comerciais.');
   }
-  return user.email;
+  const token = await user.getIdTokenResult();
+  if (token.signInProvider !== 'google.com') throw new Error('Autenticação Google fundadora obrigatória.');
+  return HGESM_SECTOR_EMAIL;
 }
 
 export async function saveCommercialCustomer(
@@ -79,46 +73,24 @@ export async function saveCommercialCustomer(
   if (!commercialEmulatorWritesEnabled) {
     throw new Error('Gravação desabilitada fora do Firebase Emulator. Nenhum dado real foi alterado.');
   }
-  const actor = founderActor();
-  const customerRef = existing
-    ? doc(db, CUSTOMERS, existing.id)
-    : doc(collection(db, CUSTOMERS));
+  const actor = await founderActor();
+  const workspaceId = value.workspaceId.trim().toLowerCase();
+  const customerRef = doc(db, CUSTOMERS, workspaceId);
+  const workspaceRef = doc(db, 'workspaces', workspaceId);
   const now = new Date().toISOString();
-  const next = buildCommercialCustomer(customerRef.id, value, actor, now, existing || undefined);
-  const former = existing?.workspaceIds || [];
-  const allIds = Array.from(new Set([...former, ...next.workspaceIds]));
-  const workspaceRefs = next.workspaceIds.map(id => doc(db, 'workspaces', id));
-  const linkRefs = allIds.map(id => doc(db, LINKS, id));
-
+  const next = buildCommercialCustomer(workspaceId, value, actor, now, existing || undefined);
   await runTransaction(db, async tx => {
-    // Read all references BEFORE writes; never modify operational workspaces.
-    const old = existing ? await tx.get(customerRef) : null;
-    if (existing && (!old?.exists() || old.data().updatedAt !== existing.updatedAt)) {
-      throw new Error('Cliente atualizado em outra sessão. Recarregue antes de salvar.');
-    }
-    const ws = await Promise.all(workspaceRefs.map(ref => tx.get(ref)));
-    if (ws.some(snapshot => !snapshot.exists())) {
-      throw new Error('Um ou mais workspaces não existem. Revise os vínculos.');
-    }
-    const currentLinks = await Promise.all(linkRefs.map(ref => tx.get(ref)));
-    for (const snapshot of currentLinks) {
-      if (!snapshot.exists()) continue;
-      const linked = snapshot.data() as CommercialWorkspaceIndex;
-      if (linked.customerId !== customerRef.id) {
-        throw new Error('Workspace já vinculado a outro cliente comercial.');
+    // Leitura antes de escrita: apenas UMA ficha comercial e UM workspace.
+    const [current, workspace] = await Promise.all([tx.get(customerRef), tx.get(workspaceRef)]);
+    if (!workspace.exists()) throw new Error('Workspace não encontrado; cadastro não realizado.');
+    if (existing) {
+      if (!current.exists() || current.data().updatedAt !== existing.updatedAt) {
+        throw new Error('Cliente alterado em outra sessão; atualize antes de salvar.');
       }
+    } else if (current.exists()) {
+      throw new Error('Este workspace já possui um cliente comercial. Abra o cadastro existente.');
     }
     tx.set(customerRef, next);
-    for (let index = 0; index < allIds.length; index += 1) {
-      const id = allIds[index];
-      const ref = linkRefs[index];
-      if (next.workspaceIds.includes(id)) {
-        if (!currentLinks[index].exists()) tx.set(ref, { workspaceId: id, customerId: customerRef.id });
-      } else if (currentLinks[index].exists()) {
-        tx.delete(ref);
-      }
-    }
   });
-
   return next;
 }
