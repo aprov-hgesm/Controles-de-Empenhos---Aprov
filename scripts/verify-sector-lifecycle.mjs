@@ -47,10 +47,30 @@ requireText(rules, "'status',\n          'ug',\n          'updatedAt'", 'Conta p
 requireText(rules, "request.resource.data.ug == resource.data.ug", 'UG já vinculada não está protegida contra substituição.');
 requireText(sessionControl, "(data.ug || null) !== context.ug", 'Controle de sessão não observa divergência da UG organizacional.');
 
+// Cadastro Comercial V1 permite remover APENAS o índice de vínculo
+// determinístico, nunca workspace, conta operacional ou registro de cliente.
+// O guard global permanece integral para todos os outros namespaces.
+const commercialLinkMatch = 'match /platformCustomerWorkspaceLinks/{workspaceId} {';
+const commercialStart = rules.indexOf(commercialLinkMatch);
+const commercialEnd = commercialStart >= 0
+  ? rules.indexOf('\n    }', commercialStart)
+  : -1;
+const commercialBlock = commercialEnd > commercialStart
+  ? rules.slice(commercialStart, commercialEnd + 6)
+  : '';
+const protectedRules = commercialBlock
+  ? rules.replace(commercialBlock, '')
+  : rules;
+if (commercialBlock) {
+  requireText(commercialBlock, 'allow update: if false;', 'Índice comercial permite alteração in-place.');
+  requireText(commercialBlock, 'allow delete: if isPlatformAdmin();', 'Remoção de vínculo comercial não está restrita ao fundador.');
+  requireText(commercialBlock, 'existsAfter(', 'Índice comercial não exige existência do workspace.');
+  requireText(commercialBlock, 'getAfter(', 'Índice comercial não verifica o cliente comercial.');
+}
 forbidText(
-  rules,
+  protectedRules,
   'allow delete: if isPlatformAdmin()',
-  'Ciclo de vida introduziu exclusão administrativa destrutiva.'
+  'Ciclo de vida introduziu exclusão administrativa destrutiva fora do índice comercial.'
 );
 
 if (findings.length) {
