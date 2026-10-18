@@ -33,6 +33,18 @@ test('prévia possui compactação local, drawer mobile e acessibilidade mínima
   assert.match(sidebar, /admin2-mobile-menu/);
 });
 
+test('layout desktop ocupa a viewport e sidebar fica junto à borda esquerda', () => {
+  assert.match(preview, /data-testid="admin2-edge-to-edge-shell"/);
+  assert.match(preview, /min-h-\[calc\(100dvh-72px\)\] w-full items-start gap-0/);
+  assert.doesNotMatch(preview, /max-w-\[1750px\]|mx-auto flex max-w/);
+  assert.match(sidebar, /lg:sticky lg:top-\[72px\]/);
+  assert.match(sidebar, /lg:h-\[calc\(100dvh-72px\)\]/);
+  assert.match(sidebar, /lg:w-\[288px\]/);
+  assert.match(sidebar, /border-r border-\[#294161\]/);
+  assert.doesNotMatch(sidebar, /rounded-\[1\.35rem\]/);
+  assert.match(sidebar, /absolute inset-y-0 left-0/);
+});
+
 test('prévia não importa Firebase, sessão de cliente ou mutação operacional', () => {
   const combined = [route, sidebar, preview].join('\n');
   assert.doesNotMatch(combined, /from ['"].*(?:firebase|platformAccess|operationalPaths|workspaceContext|warehouseAccess|platformBillingStore)['"]/);
