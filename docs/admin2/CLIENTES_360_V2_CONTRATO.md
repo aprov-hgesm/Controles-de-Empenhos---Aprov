@@ -6,6 +6,12 @@
 **Ambiente:** \`http://localhost:3001/admin2-preview?area=customers\`, rota bloqueada fora de \`next dev\`.
 **Estado de aceite:** implementado em código para QA; **aguardando CI final e validação do Fundador no localhost**. Não publicado.
 
+## Atualização contratual 1:1 (18/10/2026)
+
+**Decisão mais recente do Fundador:** um workspace corresponde a **um cliente comercial independente**. A referência abaixo ao modelo futuro 1:N é histórica/superada. O modelo comercial agora é `platformCustomers/{workspaceId}` e a Ficha 360 exibe contatos somente do cadastro cujo ID coincide com o workspace atual; não existe vínculo auxiliar, união de workspaces ou conta comercial compartilhada. As consultas read-only de billing e auditoria por workspace permanecem idênticas.
+
+---
+
 ## 1. O que a V2 realmente entrega
 
 Ficha 360° administrativa em quatro seções:
