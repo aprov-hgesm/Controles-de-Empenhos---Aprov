@@ -25,6 +25,7 @@ import {
   AdminCommandSidebar,
   type AdminCommandSectionId,
 } from './AdminCommandSidebar';
+import styles from './AdminCommandPreview.module.css';
 
 const DEMO_CUSTOMERS = [
   { id: 'c001', name: 'Aprovisionamento Alfa', unit: 'Unidade Alfa', ug: '000001', status: 'Ativo', billing: 'Trial', activity: 'Hoje' },
@@ -43,23 +44,24 @@ function DemoMetric({
   value,
   hint,
   icon: Icon,
+  tone = 'blue',
 }: {
   label: string;
   value: string;
   hint: string;
   icon: typeof Users;
+  tone?: 'blue' | 'teal' | 'green' | 'amber';
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-[#243650] bg-[#071225]/90 p-5 shadow-[0_15px_45px_rgba(0,5,20,0.13)] transition-[border-color,transform,background-color] duration-200 hover:-translate-y-0.5 hover:border-blue-300/25 hover:bg-[#0B1A33] motion-reduce:transform-none motion-reduce:transition-none">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-slate-400">{label}</p>
-        <div className="grid h-9 w-9 place-items-center rounded-xl border border-blue-300/15 bg-blue-400/[0.08] text-blue-200">
-          <Icon className="h-4 w-4" aria-hidden="true" />
+    <div className={styles.metric + ' ' + (tone === 'green' ? styles.metricGreen : tone === 'amber' ? styles.metricAmber : tone === 'teal' ? styles.metricTeal : styles.metricBlue)}>
+      <div className="relative z-10 mb-4 flex items-center justify-between gap-2">
+        <p className="text-[12px] font-semibold text-[#64758e]">{label}</p>
+        <div className={styles.metricIcon}>
+          <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-[27px] font-extrabold tracking-tight text-white">{value}</p>
-      <p className="mt-2 text-[11px] text-slate-500">{hint}</p>
-      <span className="pointer-events-none absolute inset-x-7 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/20 to-transparent" aria-hidden="true" />
+      <p className="relative z-10 text-[28px] font-extrabold tracking-tight text-[#112749]">{value}</p>
+      <p className="relative z-10 mt-2 text-[11px] font-medium text-[#7c8ba0]">{hint}</p>
     </div>
   );
 }
@@ -74,9 +76,9 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] border border-[#243650] bg-[#071225]/90 p-5 sm:p-6">
-      <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-blue-300/65">{eyebrow}</p>
-      <h3 className="mt-2 text-base font-bold text-white">{title}</h3>
+    <section className={styles.sectionCard + ' p-5 sm:p-6'}>
+      <p className={styles.sectionEyebrow + ' font-mono uppercase'}>{eyebrow}</p>
+      <h3 className="mt-2 text-[16px] font-extrabold text-[#14294b]">{title}</h3>
       <div className="mt-5">{children}</div>
     </section>
   );
@@ -86,10 +88,10 @@ function Dashboard({ onNavigate }: { onNavigate: (id: AdminCommandSectionId) => 
   return (
     <div className="space-y-5" data-testid="admin2-preview-overview">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <DemoMetric label="Clientes cadastrados" value="04" hint="Cenário de demonstração" icon={Users} />
-        <DemoMetric label="Workspaces ativos" value="03" hint="Sem conexão com dados reais" icon={Building2} />
-        <DemoMetric label="Receita recorrente" value="R$ 140" hint="Valor ilustrativo, VIP excluído" icon={CircleDollarSign} />
-        <DemoMetric label="Atendimentos abertos" value="02" hint="Exemplos de solicitações" icon={Headset} />
+        <DemoMetric label="Clientes cadastrados" value="04" hint="Cenário de demonstração" icon={Users} tone="blue" />
+        <DemoMetric label="Workspaces ativos" value="03" hint="Sem conexão com dados reais" icon={Building2} tone="teal" />
+        <DemoMetric label="Receita recorrente" value="R$ 140" hint="Valor ilustrativo, VIP excluído" icon={CircleDollarSign} tone="green" />
+        <DemoMetric label="Atendimentos abertos" value="02" hint="Exemplos de solicitações" icon={Headset} tone="amber" />
       </div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <SectionCard eyebrow="CENTRAL DE COMANDO" title="O que merece atenção">
@@ -101,14 +103,14 @@ function Dashboard({ onNavigate }: { onNavigate: (id: AdminCommandSectionId) => 
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="flex items-center gap-3 rounded-xl border border-white/[0.065] bg-white/[0.025] p-3">
+                <div key={item.title} className={styles.activityRow + ' flex items-center gap-3'}>
                   <div className={'grid h-9 w-9 shrink-0 place-items-center rounded-lg '
-                    + (item.tone === 'amber' ? 'bg-amber-400/10 text-amber-300' : item.tone === 'green' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-blue-400/10 text-blue-200')}>
+                    + (item.tone === 'amber' ? 'bg-amber-100 text-amber-700' : item.tone === 'green' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700')}>
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] font-semibold text-slate-100">{item.title}</p>
-                    <p className="mt-1 text-[10px] text-slate-500">{item.subtitle}</p>
+                    <p className="text-[12px] font-semibold text-[#213859]">{item.title}</p>
+                    <p className="mt-1 text-[10px] text-[#76869a]">{item.subtitle}</p>
                   </div>
                 </div>
               );
@@ -117,28 +119,28 @@ function Dashboard({ onNavigate }: { onNavigate: (id: AdminCommandSectionId) => 
         </SectionCard>
         <SectionCard eyebrow="VISÃO COMERCIAL" title="Composição da carteira">
           <div className="space-y-5">
-            <div className="flex h-3 overflow-hidden rounded-full bg-slate-800" aria-label="Exemplo de distribuição de assinaturas">
-              <div className="w-1/2 bg-blue-400" />
-              <div className="w-1/4 bg-amber-400" />
-              <div className="w-1/4 bg-[#48735d]" />
+            <div className="flex h-3 overflow-hidden rounded-full bg-[#e2ebf6]" aria-label="Exemplo de distribuição de assinaturas">
+              <div className="w-1/2 bg-[#2359b9]" />
+              <div className="w-1/4 bg-[#edaa3d]" />
+              <div className="w-1/4 bg-[#26977a]" />
             </div>
             <div className="space-y-3 text-xs">
               {[
-                { color: 'bg-blue-400', text: 'Assinaturas regulares', qty: '02' },
-                { color: 'bg-amber-400', text: 'Trial', qty: '01' },
-                { color: 'bg-[#48735d]', text: 'VIP isento', qty: '01' },
+                { color: 'bg-[#2359b9]', text: 'Assinaturas regulares', qty: '02' },
+                { color: 'bg-[#edaa3d]', text: 'Trial', qty: '01' },
+                { color: 'bg-[#26977a]', text: 'VIP isento', qty: '01' },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-2">
                   <span className={'h-2 w-2 rounded-full ' + item.color} />
-                  <span className="flex-1 text-slate-400">{item.text}</span>
-                  <span className="font-bold text-slate-100">{item.qty}</span>
+                  <span className="flex-1 text-[#5f728c]">{item.text}</span>
+                  <span className="font-extrabold text-[#172c4d]">{item.qty}</span>
                 </div>
               ))}
             </div>
             <button
               type="button"
               onClick={() => onNavigate('customers')}
-              className="inline-flex w-full items-center justify-between rounded-xl border border-blue-300/20 bg-blue-400/[0.08] px-4 py-3 text-[11px] font-semibold text-blue-100 transition hover:bg-blue-400/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+              className="inline-flex w-full items-center justify-between rounded-xl border border-[#164f9d] bg-[#123e8c] px-4 py-3 text-[11px] font-semibold text-white shadow-[0_7px_18px_rgba(24,72,159,0.16)] transition hover:bg-[#1d59b1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               Abrir Clientes 360°
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -153,10 +155,10 @@ function Dashboard({ onNavigate }: { onNavigate: (id: AdminCommandSectionId) => 
             { time: '10:15', title: 'Atualização de assinatura', subtitle: 'Exemplo de confirmação' },
             { time: '11:20', title: 'Atendimento concluído', subtitle: 'Exemplo de resolução' },
           ].map((item) => (
-            <div key={item.time} className="rounded-xl border border-white/[0.07] bg-[#0B1930] p-4">
-              <span className="font-mono text-[10px] font-semibold text-blue-300">{item.time}</span>
-              <p className="mt-2 text-[12px] font-bold text-slate-100">{item.title}</p>
-              <p className="mt-1 text-[11px] text-slate-500">{item.subtitle}</p>
+            <div key={item.time} className={styles.timelineCard}>
+              <span className="inline-flex rounded-md bg-[#e7f0ff] px-2 py-1 font-mono text-[10px] font-extrabold text-[#2358a5]">{item.time}</span>
+              <p className="mt-3 text-[12px] font-bold text-[#203656]">{item.title}</p>
+              <p className="mt-1 text-[11px] text-[#73839a]">{item.subtitle}</p>
             </div>
           ))}
         </div>
