@@ -289,16 +289,18 @@ export function AdminCommandPreview() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_84%_0%,rgba(36,84,151,0.11),transparent_40%)]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/25 to-transparent" />
       </div>
-      <header className="sticky top-0 z-30 border-b border-[#243650] bg-[#030B1B]/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-[#31517a]/60 bg-[linear-gradient(105deg,#07152d_0%,#10294f_38%,#061023_78%)] shadow-[0_4px_28px_rgba(0,4,20,0.26)] backdrop-blur-xl">
         <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <AdminCommandMobileMenuButton onClick={() => setMobileOpen(true)} />
-            <div className="hidden h-8 w-px bg-white/10 lg:block" />
+            <div className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-300/25 bg-blue-400/10 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.1)] sm:grid">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+            </div>
             <div className="min-w-0">
-              <p className="truncate font-mono text-[9px] font-bold uppercase tracking-[0.19em] text-blue-300/75">
-                EMPROVEX / COMMAND
+              <p className="truncate text-[16px] font-black tracking-[0.025em] text-white">
+                EMPROVEX <span className="ml-1 font-mono text-[9px] font-semibold tracking-[0.15em] text-blue-300/85">COMMAND</span>
               </p>
-              <p className="mt-1 truncate text-[13px] font-semibold text-slate-100">Administração da plataforma</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">Administração da plataforma</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -312,7 +314,7 @@ export function AdminCommandPreview() {
         </div>
       </header>
 
-      <div className="relative mx-auto flex max-w-[1750px] items-start gap-5 px-3 py-4 sm:px-5 lg:gap-7 lg:px-7 lg:py-5">
+      <div data-testid="admin2-edge-to-edge-shell" className="relative flex min-h-[calc(100dvh-72px)] w-full items-start gap-0">
         <AdminCommandSidebar
           activeId={activeId}
           onNavigate={navigate}
@@ -321,7 +323,7 @@ export function AdminCommandPreview() {
           mobileOpen={mobileOpen}
           onCloseMobile={closeMobile}
         />
-        <main className="min-w-0 flex-1" id="admin2-preview-content">
+        <main className="min-w-0 flex-1 bg-[#020817] px-4 pb-8 pt-5 sm:px-6 lg:px-8 lg:pt-6 2xl:px-10" id="admin2-preview-content">
           <div className="mb-5 rounded-[22px] border border-[#243650] bg-[#071225]/80 px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-500">
               <span>Administração</span>
