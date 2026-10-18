@@ -1,5 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
+## ACEITE ADMIN 2.0 — CLIENTES 360° V1 (2026-10-18)
+
+- **Fundador validou e aprovou no localhost** o Diretório de Clientes V1 e a ficha 360° de consulta real, com autenticação Google e registros administrativos read-only. Este aceite não equivale a autorização para edição, publicação ou acesso a dados operacionais externos.
+- **Evidência de CI do último código:** commit `b52f6ffd721f37e37b3d297354b6c1170fb0548e`, Application CI **PASS** (run 39167821457), Core Protection **PASS** (run 39167821442). Comandos e status posteriores devem ser consultados novamente.
+- **Próximo marco sequencial recomendado:** Ficha Cliente 360° V2, com seções institucional, financeiro/competências paginadas e histórico administrativo real, seguido de contrato Cliente comercial 1:N sem gravar dados reais de produção. Preservar o shell aprovado, Rules e consumo Firestore eficiente.
+- **Fonte ativa:** [Memorial de Continuidade Sequencial](./admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md) na branch do PR #339. `main`/produção permanecem sem alterações por este marco documental.
+
+---
+
 
 ## MARCO FUNCIONAL CLIENTES 360° — 2026-10-18 · BRANCH ISOLADA
 
