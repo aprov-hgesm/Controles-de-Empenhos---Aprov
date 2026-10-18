@@ -9,7 +9,7 @@ export interface CommercialCustomerDraft {
   id: string;
   displayName: string;
   contactEmail: string | null;
-  workspaceIds: string[];
+  workspaceId: string;
   status: 'prospect' | 'active' | 'inactive';
 }
 
@@ -19,17 +19,15 @@ export interface CustomerWorkspaceLinkDraft {
   relationship: 'billing' | 'administrative';
 }
 
-/** Especificação do futuro modelo 1:N, não persistida nesta etapa. */
+/** Modelo 1:1 vigente: um cadastro comercial para um workspace. */
 export function planCommercialCustomerLink(
   customerId: string,
-  workspaceIds: string[]
-): CustomerWorkspaceLinkDraft[] {
-  const unique = Array.from(new Set(workspaceIds.filter(Boolean)));
-  return unique.map((workspaceId) => ({
-    customerId,
-    workspaceId,
-    relationship: 'billing',
-  }));
+  workspaceId: string
+): CustomerWorkspaceLinkDraft {
+  if (!workspaceId || customerId !== workspaceId) {
+    throw new Error('Cliente comercial e workspace devem ter o mesmo identificador.');
+  }
+  return { customerId, workspaceId, relationship: 'billing' };
 }
 
 export const ADMIN2_CYCLE_PAGE_SIZE = 6;
