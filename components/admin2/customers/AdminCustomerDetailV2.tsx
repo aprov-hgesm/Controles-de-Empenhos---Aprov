@@ -39,6 +39,8 @@ import {
 } from '../../../lib/admin2/customers/customer360Contract';
 import { readCustomerAuditSample, readCustomerCyclePage } from '../../../lib/admin2/customers/customer360Read';
 import styles from '../shell/AdminCommandPreview.module.css';
+import type { CommercialCustomer } from '../../../lib/admin2/customers/commercialCustomerContract';
+import { commercialEmulatorWritesEnabled, readCommercialCustomerForWorkspace } from '../../../lib/admin2/customers/commercialCustomerRepository';
 
 type Tab = 'summary' | 'finance' | 'activity' | 'relationship';
 type LoadState = 'loading' | 'ready' | 'error';
@@ -238,8 +240,9 @@ function AuditSample({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export function AdminCustomerDetailV2({ customer, onBack }: {
+export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: {
   customer: CustomerWorkspaceRecord;
+  commercialCustomer?: CommercialCustomer | null;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('summary');
@@ -255,6 +258,9 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
   const [billing, setBilling] = useState<CustomerBillingSnapshot | null>(null);
   const [billingState, setBillingState] = useState<LoadState>('loading');
   const [billingError, setBillingError] = useState('');
+  const [emulatorCustomer, setEmulatorCustomer] = useState<CommercialCustomer | null>(null);
+  const [commercialError, setCommercialError] = useState('');
+  const matchedCommercial = commercialCustomer || emulatorCustomer;
 
   useEffect(() => {
     let current = true;
@@ -271,6 +277,17 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
     });
     return () => { current = false; };
   }, [customer.workspaceId]);
+
+  useEffect(() => {
+    if (tab !== 'relationship' || commercialCustomer || !commercialEmulatorWritesEnabled) return;
+    let live = true;
+    readCommercialCustomerForWorkspace(customer.workspaceId).then(record => {
+      if (live) setEmulatorCustomer(record);
+    }).catch(err => {
+      if (live) setCommercialError(err instanceof Error ? err.message : 'Vínculo comercial indisponível.');
+    });
+    return () => { live = false; };
+  }, [tab, commercialCustomer, customer.workspaceId]);
 
   return (
     <div className="space-y-5" data-testid="admin2-customer-360">
@@ -349,8 +366,11 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
               <Surface title="Contato conhecido" icon={Mail} hint="Fonte: e-mail autorizado do workspace, não uma ficha comercial de contatos.">
                 <dl>
                   <Info label="E-mail operacional" value={customer.authorizedEmail || 'Não informado'} />
-                  <Info label="Contato comercial" value="Ainda não cadastrado" />
-                  <Info label="Telefone" value="Ainda não cadastrado" />
+                  <Info label="Cliente comercial" value={matchedCommercial?.displayName || 'Ainda não cadastrado'} />
+                  <Info label="Contato comercial" value={matchedCommercial?.contactName || 'Ainda não cadastrado'} />
+                  <Info label="E-mail de contato" value={matchedCommercial?.contactEmail || 'Ainda não cadastrado'} />
+                  <Info label="Telefone" value={matchedCommercial?.contactPhone || 'Ainda não cadastrado'} />
+                  <Info label="Situação comercial" value={matchedCommercial?.relationshipStatus || 'Não cadastrada'} />
                   <Info label="Organização" value={customer.organizationName || 'Não informada'} />
                 </dl>
               </Surface>
@@ -358,8 +378,10 @@ export function AdminCustomerDetailV2({ customer, onBack }: {
                 <dl>
                   <Info label="Projeção atual" value={'workspace:' + customer.workspaceId} />
                   <Info label="Workspace identificado" value={customer.workspaceId} />
-                  <Info label="Conta comercial independente" value="Não cadastrada" />
-                  <Info label="Múltiplos workspaces comerciais" value="Pendente de implantação" />
+                  <Info label="Conta comercial independente" value={matchedCommercial?.id || 'Não cadastrada'} />
+                  <Info label="Workspaces no vínculo" value={matchedCommercial?.workspaceIds.join(', ') || 'Ainda não vinculados'} />
+                  {commercialError && <Info label="Consulta comercial" value={commercialError} />}
+                  <Info label="Origem do vínculo" value={matchedCommercial ? (commercialEmulatorWritesEnabled ? 'Firebase Emulator' : 'Rascunho local da prévia') : 'Pendente de cadastro'} />
                 </dl>
               </Surface>
             </div>
