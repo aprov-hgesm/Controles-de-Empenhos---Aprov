@@ -1,5 +1,8 @@
 # EMPROVEX Command — Admin 2.0 / Prévia local da barra lateral
 
+> **ATUALIZAÇÃO V3 — 2026-10-18:** por decisão do Fundador, a sidebar agora é **fixa à esquerda**, largura 288px, **não recolhível** no desktop. Menu móvel preservado. Scrollbar com thumb fino/arredondado, trilho transparente e hover. A área principal agora é **clara**, com gradientes institucionais e cards com acentos azul/teal/verde/âmbar. As descrições de modo compacto das versões anteriores abaixo são históricas e **não mais se aplicam**. Para atualizar localhost: pare o servidor (Ctrl+C), entre em `cd "$HOME\emprovex-admin2-preview"`, execute `git pull --ff-only origin feat/admin2-w01-sidebar-local-preview`, `node --test scripts/admin2-sidebar-preview.test.mjs`, depois `npm.cmd run dev -- --port 3001` e abra `http://localhost:3001/admin2-preview`.
+
+
 **Status:** laboratório de design W01; implementação funcional da navegação DEMONSTRATIVA. Sem login, Firebase, Firestore, cobrança, Google Drive ou acesso a workspace de terceiros. Não é a nova Administração integrada nem prova de todas as capacidades CORE V2.
 
 **Branch isolada:** \`feat/admin2-w01-sidebar-local-preview\`
