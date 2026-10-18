@@ -10,6 +10,7 @@ const source=readFileSync(join(root,'lib/admin2/customers/commercialCustomerCont
 const repo=readFileSync(join(root,'lib/admin2/customers/commercialCustomerRepository.ts'),'utf8');
 const ui=readFileSync(join(root,'components/admin2/customers/AdminCommercialCustomers.tsx'),'utf8');
 const directory=readFileSync(join(root,'components/admin2/customers/AdminCustomersDirectory.tsx'),'utf8');
+const detail=readFileSync(join(root,'components/admin2/customers/AdminCustomerDetailV2.tsx'),'utf8');
 const rules=readFileSync(join(root,'firestore.rules'),'utf8');
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const exports={};
@@ -75,4 +76,7 @@ test('prévia fornece formulário de contato e vínculo, sem writes ao Firebase 
   assert.match(ui,/Rascunho salvo apenas na memória/);
   assert.match(directory,/data-testid="admin2-commercial-tab"/);
   assert.match(directory,/commercialDrafts/);
+  assert.match(directory,/commercialCustomer={commercialDrafts\.find/);
+  assert.match(detail,/matchedCommercial\?\.contactName/);
+  assert.match(detail,/readCommercialCustomerForWorkspace/);
 });
