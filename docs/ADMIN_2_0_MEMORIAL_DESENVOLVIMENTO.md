@@ -1,6 +1,8 @@
 # EMPROVEX — ADMIN 2.0 / EMPROVEX COMMAND
 ## Memorial especializado de desenvolvimento da Área Administrativa
 
+> **ALTERAÇÃO VIGENTE DE ESCOPO — 2026-10-18 / CORE V2:** Por decisão posterior do Fundador, **não desenvolver nesta etapa** (i) acesso global para entrar ou modificar registros operacionais dos workspaces de outros clientes; (ii) operação assistida dos depósitos de setores externos; (iii) acesso administrativo aos arquivos privados Google Drive dos clientes. As descrições anteriores dessas capacidades neste Memorial passam a ser **backlog histórico/futuro**, não requisitos de aceite do CORE V2. **Nova fonte de execução obrigatória:** [ADMIN_2_0_PLANO_MESTRE_WORKERS.md](./ADMIN_2_0_PLANO_MESTRE_WORKERS.md), revisão V2, com **13 capacidades e W00 + 8 especialistas**. A auditoria G-1 cross-workspace permanece tecnicamente válida para futuro projeto de acesso assistido, mas **não bloqueia a atual entrega administrativa/comercial**. Preservar denies de acesso operacional nas Firestore Rules. A aba Clientes 360° mostra somente dados administrativos autorizados e indicadores agregados; sem impersonação/alterações operacionais. Não houve implementação/deploy nesta atualização.
+
 - **Data da decisão:** 2026-10-17.
 - **Programa:** ADMIN-2.0 — arquitetura administrativa, Clientes 360°, experiência visual premium e acesso administrativo global.
 - **Autoridade de produto:** Fundador / Superadministrador EMPROVEX.
