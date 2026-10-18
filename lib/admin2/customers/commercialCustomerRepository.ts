@@ -94,10 +94,14 @@ export async function saveCommercialCustomer(
       }
     }
     tx.set(customerRef, next);
-    for (const id of allIds) {
-      const ref = doc(db, LINKS, id);
-      if (next.workspaceIds.includes(id)) tx.set(ref, { workspaceId: id, customerId: customerRef.id });
-      else tx.delete(ref);
+    for (let index = 0; index < allIds.length; index += 1) {
+      const id = allIds[index];
+      const ref = linkRefs[index];
+      if (next.workspaceIds.includes(id)) {
+        if (!currentLinks[index].exists()) tx.set(ref, { workspaceId: id, customerId: customerRef.id });
+      } else if (currentLinks[index].exists()) {
+        tx.delete(ref);
+      }
     }
   });
 
