@@ -1,0 +1,44 @@
+.sidebarPanel {
+  background:
+    radial-gradient(ellipse 145% 48% at 16% -12%, rgba(48, 99, 165, 0.22), transparent 70%),
+    linear-gradient(180deg, #081a34 0%, #051329 58%, #041023 100%);
+  box-shadow: 8px 0 30px rgba(2, 14, 34, 0.12);
+}
+
+.sidebarHeader {
+  background: linear-gradient(110deg, rgba(41, 87, 151, 0.16), rgba(2, 13, 32, 0.12));
+}
+
+.sidebarScroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(98, 142, 195, 0.34) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebarScroll:hover,
+.sidebarScroll:focus-within {
+  scrollbar-color: rgba(118, 166, 222, 0.62) transparent;
+}
+
+.sidebarScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebarScroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 12px;
+}
+
+.sidebarScroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(91, 137, 191, 0.4);
+  background-clip: padding-box;
+  min-height: 44px;
+}
+
+.sidebarScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 181, 237, 0.76);
+  background-clip: padding-box;
+}
