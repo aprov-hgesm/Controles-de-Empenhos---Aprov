@@ -2,7 +2,7 @@
 ## Memorial de continuidade — desenvolvimento SEQUENCIAL no mesmo chat ou em sucessores
 
 **Atualização de método:** 2026-10-18, por decisão expressa do Fundador.
-**Status:** Direção visual V3 aprovada, protótipo local implementado e certificado no último PR head verificado; **funcionalidades reais ainda não implementadas**.
+**Status:** Direção visual V3 aprovada; **primeira fatia funcional Clientes 360° implementada em branch isolada (somente leitura)**, pendente de CI final e smoke humano no localhost. Demais módulos continuam demonstrativos.
 **PROCEDIMENTO VIGENTE:** 1 chat executor por vez, trabalho incremental em **uma única branch de desenvolvimento local**, validação humana no localhost, atualização deste memorial a cada marco. **Os prompts antigos de workers paralelos e ondas foram suspensos.**
 **Repo:** \`aprov-hgesm/Controles-de-Empenhos---Aprov\`.
 **Branch ATIVA:** \`feat/admin2-w01-sidebar-local-preview\`; PR **#339 DRAFT** (o nome histórico W01 não limita a missão, que agora é toda Admin CORE V2).
@@ -10,6 +10,38 @@
 **BRANCH RESERVADA/PARADA:** \`feat/admin2-core-integration\`; PR #340 DRAFT, só documento de coordenação G0, **não é o local de novas implementações enquanto vigorar o desenvolvimento sequencial**. Não duplicar mudanças nas duas branches.
 **Baseline da \`main\` ao escrever:** \`50fb01bff2718c913e63ac4082c13030d8f8e354\`; verificar antes de rebase/merge, pois pode mudar.
 **Verificação do commit be7ea147...:** Application CI **success**, EMPROVEX Core Protection **success** (GitHub Actions consultado no dia 2026-10-18). A aprovação e o CI referem-se ao código **de prévia**, não a backends Admin 2.0 inexistentes. Não promover esses resultados a futuros commits sem executar novos testes.
+
+
+## Marco de desenvolvimento — Clientes 360° real (2026-10-18)
+
+**Decisão do Fundador:** executar \`/goal\` para desenvolver sequencialmente contrato Cliente/Workspace e substituir os clientes fictícios por dados administrativos reais, sem mudar produção nem outros workspaces.
+
+**O QUE FOI EXECUTADO (na branch ativa):**
+- Criado \`lib/admin2/customers/customerWorkspaceContract.ts\`: \`CustomerWorkspaceRecord\`, chave de projeção \`workspace:{workspaceId}\`, \`CustomerBillingSnapshot\`, formatação/validações, identificadores legados preservados.
+- Criado \`lib/admin2/customers/customerWorkspaceDirectory.ts\`: \`getDocs(query(workspaces,...limit(11)))\`, cursores \`startAfter\`, pesquisa por prefixo de nome, UG exata e ID; \`getDoc(billingAccounts/{workspaceId})\` apenas após clicar na ficha. NÃO usa listeners globais nem writes.
+- Criado \`components/admin2/customers/AdminCustomersDirectory.tsx\`: login Google, validação \`getIdTokenResult\` com e-mail fundador + \`emailVerified\` + provider Google, lista real 10/página, ações pesquisa/atualizar/navegar, ficha 360 read-only com identificação institucional, status e resumo de billing. **Firestore Rules continuam sendo a autoridade efetiva**, além da checagem de interface.
+- Atualizado \`components/admin2/shell/AdminCommandPreview.tsx\`: substituído \`DEMO_CUSTOMERS\`/ClientesDemo pela nova seção real; cabeçalho e banner deixam explícito que só a aba Clientes consulta dados reais e que os demais módulos permanecem ilustrativos.
+- Criado \`docs/admin2/CLIENTES_360_G0_CONTRATO.md\`, adicionado \`scripts/admin2-customer-contract.test.mjs\`, atualizada suite \`scripts/admin2-sidebar-preview.test.mjs\` e inclusão dos dois testes em \`.github/workflows/application-ci.yml\`.
+- Guia localhost \`docs/admin2/LOCAL_SIDEBAR_PREVIEW.md\` atualizado com login, paginação e observação de leituras Firestore.
+
+**ARQUITETURA/SEGURANÇA:**
+- Cliente real **comercial** ainda não é uma nova coleção: o módulo atual apresenta os workspaces existentes como **projeção administrativa de Cliente V0**. NÃO confundir OM/UG e pagante ou criar \`CustomerWorkspaceLink\` sem contrato posterior. Não há cadastro/edição nesta etapa.
+- A fonte de verdade é \`workspaces/{workspaceId}\`, e \`billingAccounts/{workspaceId}\` só é lido sob demanda; não há alteração em Firestore Rules, custom claims, Warehouse, Drive ou server admin credentials.
+- A leitura é executada pelo SDK Firebase Web após login admin e aplica as Security Rules atuais (somente administrador lista workspaces). A rota do laboratório continua indisponível fora de \`NODE_ENV=development\`.
+- **Custo:** uma página até 11 documentos lidos (10 exibidos + lookahead); uma ficha pode ler mais um documento billing; nomes por prefixo, UG/ID exatos. A UI não faz N leituras financeiras ao listar. **Leitura real é faturável**. Sem varredura, \`onSnapshot\` ou gravação.
+- O login via Google em localhost precisa de domínio/OAuth autorizado; caso falhe, relatar sem alterar configuração remota por conta própria.
+
+**TESTES/EVIDÊNCIAS:** Core Protection já PASS em commits intermediários da implementação; Application CI foi acionado com novas suites, **resultado do último HEAD deve ser consultado**. Haverá necessidade de smoke humano com autenticação real; **não declarar concluído em produção nem aceite funcional antes de verificação**.
+
+**PR/BRANCH:** \`feat/admin2-w01-sidebar-local-preview\` / PR DRAFT #339. O HEAD avançou; conferir SHA atual e status da pipeline. PR #340 continua estacionado. A \`main\` foi mantida inalterada.
+
+**LOCALHOST:** \`http://localhost:3001/admin2-preview?area=customers\` após \`git pull --ff-only origin feat/admin2-w01-sidebar-local-preview\` e \`npm.cmd run dev -- --port 3001\`.
+
+**PRÓXIMA AÇÃO:** aguardar CI PASS, corrigir quaisquer falhas da suite; Fundador validar no localhost com login da conta fundadora, pesquisar UG/ID/nome, paginar e abrir ficha; verificar conta externa negada, ausência de writes e custo. Somente após aceite avançar para formalizar Cliente comercial 1:N/CRM e integração das próximas páginas.
+
+**ESTADO DO MARCO:** código de consulta e UI implementados; QA de integração autenticada no navegador ainda PENDENTE; ambiente produtivo intacto.
+
+---
 
 ## 1. Fontes canônicas a reler em toda ativação de chat
 
