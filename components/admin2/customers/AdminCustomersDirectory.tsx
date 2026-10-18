@@ -30,6 +30,8 @@ import {
 } from '../../../lib/admin2/customers/customerWorkspaceDirectory';
 import styles from '../shell/AdminCommandPreview.module.css';
 import { AdminCustomerDetailV2 } from './AdminCustomerDetailV2';
+import { AdminCommercialCustomers } from './AdminCommercialCustomers';
+import type { CommercialCustomer } from '../../../lib/admin2/customers/commercialCustomerContract';
 
 type AuthState = 'checking' | 'signed-out' | 'denied' | 'authorized';
 
@@ -77,6 +79,10 @@ export function AdminCustomersDirectory() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<CustomerWorkspaceRecord | null>(null);
+  const [commercialMode, setCommercialMode] = useState(false);
+  // Apenas memória React. Nunca copia contatos comerciais para Firestore real,
+  // localStorage ou cookies durante a prévia; remonta após refresh.
+  const [commercialDrafts, setCommercialDrafts] = useState<CommercialCustomer[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -196,9 +202,25 @@ export function AdminCustomersDirectory() {
   }
 
   if (selected) return <AdminCustomerDetailV2 key={selected.workspaceId} customer={selected} onBack={() => setSelected(null)} />;
+  if (commercialMode) return (
+    <div className="space-y-4">
+      <button type="button" onClick={() => setCommercialMode(false)} data-testid="admin2-existing-workspaces-tab"
+        className="inline-flex min-h-10 items-center rounded-xl border border-[#ccdbeb] bg-white px-4 text-[11px] font-extrabold text-[#285b9d] hover:bg-[#edf5ff]">
+        Voltar aos workspaces existentes
+      </button>
+      <AdminCommercialCustomers drafts={commercialDrafts} onChangeDrafts={setCommercialDrafts} />
+    </div>
+  );
 
   return (
     <div className="space-y-4" data-testid="admin2-real-customers">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-xl bg-[#174995] px-4 py-2.5 text-[11px] font-bold text-white">Workspaces existentes</span>
+        <button type="button" onClick={() => setCommercialMode(true)} data-testid="admin2-commercial-tab"
+          className="rounded-xl border border-[#c8d9ee] bg-white px-4 py-2.5 text-[11px] font-bold text-[#275996] transition-colors hover:bg-[#edf5ff]">
+          Cadastro de clientes comerciais
+        </button>
+      </div>
       <section className={styles.sectionCard + ' p-5 sm:p-6'}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
