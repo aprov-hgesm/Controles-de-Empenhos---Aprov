@@ -181,19 +181,19 @@ function CustomersDemo() {
     <div className="space-y-5" data-testid="admin2-preview-customers">
       <SectionCard eyebrow="CLIENTES 360°" title="Diretório administrativo">
         <div className="relative mb-5">
-          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-500" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[#7089a9]" aria-hidden="true" />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Pesquisar clientes de demonstração"
             placeholder="Pesquisar cliente, OM, UG ou situação..."
-            className="h-11 w-full rounded-xl border border-white/10 bg-[#020817] pl-10 pr-3 text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue-300/40 focus:ring-2 focus:ring-blue-300/10"
+            className={styles.demoInput + ' h-11 w-full pl-10 pr-3 text-xs'}
           />
         </div>
-        <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
+        <div className={styles.tableWrap}>
           <table className="w-full min-w-[680px] border-collapse text-left text-[12px]">
-            <thead className="bg-[#0E2039] text-[10px] uppercase tracking-[0.08em] text-slate-400">
+            <thead className="bg-[#e9f1fc] text-[10px] uppercase tracking-[0.08em] text-[#526987]">
               <tr>
                 <th className="px-4 py-3 font-semibold">Cliente / OM</th>
                 <th className="px-4 py-3 font-semibold">UG</th>
@@ -204,10 +204,10 @@ function CustomersDemo() {
             </thead>
             <tbody>
               {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="border-t border-white/[0.06] text-slate-300 transition-colors hover:bg-white/[0.03]">
-                  <td className="px-4 py-4"><p className="font-semibold text-slate-100">{customer.name}</p><p className="mt-1 text-[11px] text-slate-500">{customer.unit}</p></td>
+                <tr key={customer.id} className="border-t border-[#e5ecf6] text-[#51637d] transition-colors hover:bg-[#f1f7ff]">
+                  <td className="px-4 py-4"><p className="font-semibold text-[#1c355a]">{customer.name}</p><p className="mt-1 text-[11px] text-[#75869b]">{customer.unit}</p></td>
                   <td className="px-4 py-4 font-mono text-[11px]">{customer.ug}</td>
-                  <td className="px-4 py-4"><span className={customer.status === 'Ativo' ? 'text-emerald-300' : 'text-amber-300'}>{customer.status}</span></td>
+                  <td className="px-4 py-4"><span className={customer.status === 'Ativo' ? 'rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700' : 'rounded-full bg-amber-50 px-2 py-1 font-bold text-amber-700'}>{customer.status}</span></td>
                   <td className="px-4 py-4">{customer.billing}</td>
                   <td className="px-4 py-4">{customer.activity}</td>
                 </tr>
@@ -215,10 +215,10 @@ function CustomersDemo() {
             </tbody>
           </table>
           {filteredCustomers.length === 0 && (
-            <p className="px-4 py-9 text-center text-xs text-slate-400">Nenhum cliente demonstrativo corresponde à pesquisa.</p>
+            <p className="px-4 py-9 text-center text-xs text-[#657b97]">Nenhum cliente demonstrativo corresponde à pesquisa.</p>
           )}
         </div>
-        <p className="mt-4 text-[11px] text-slate-500">A ficha 360° real será implementada pelo W03. Esta prévia demonstra somente o estilo, a navegação e a pesquisa local com informações fictícias.</p>
+        <p className="mt-4 text-[11px] text-[#73839a]">A ficha 360° real será implementada pelo W03. Esta prévia demonstra somente o estilo, a navegação e a pesquisa local com informações fictícias.</p>
       </SectionCard>
     </div>
   );
@@ -233,9 +233,9 @@ function GenericArea({ activeId, label, detail }: { activeId: AdminCommandSectio
         <DemoMetric label="Situação administrativa" value="—" hint="Prévia visual sem operações" icon={ShieldCheck} />
       </div>
       <SectionCard eyebrow="PROTÓTIPO DE NAVEGAÇÃO" title={label}>
-        <div className="rounded-xl border border-dashed border-blue-300/20 bg-blue-400/[0.04] px-5 py-8">
-          <p className="max-w-xl text-sm leading-7 text-slate-300">{detail}</p>
-          <p className="mt-4 text-xs leading-6 text-slate-500">
+        <div className={styles.genericPanel + ' px-5 py-8'}>
+          <p className="max-w-xl text-sm leading-7 text-[#344d70]">{detail}</p>
+          <p className="mt-4 text-xs leading-6 text-[#7186a1]">
             A seção já participa da navegação e do comportamento da barra lateral. Os dados,
             formulários e ações serão implementados pelo worker responsável e certificados
             antes de integrar ao produto.
@@ -248,7 +248,6 @@ function GenericArea({ activeId, label, detail }: { activeId: AdminCommandSectio
 
 export function AdminCommandPreview() {
   const [activeId, setActiveId] = useState<AdminCommandSectionId>('overview');
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -256,11 +255,6 @@ export function AdminCommandPreview() {
     setActiveId(readAreaFromUrl());
     const onPopState = () => setActiveId(readAreaFromUrl());
     window.addEventListener('popstate', onPopState);
-    try {
-      setCollapsed(window.localStorage.getItem('emprovex.admin2.sidebar.collapsed') === 'true');
-    } catch {
-      // Browser storage may be unavailable; navigation still works.
-    }
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
@@ -272,25 +266,14 @@ export function AdminCommandPreview() {
     window.history.pushState(window.history.state, '', nextUrl);
   }, []);
 
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((current) => {
-      const next = !current;
-      try { window.localStorage.setItem('emprovex.admin2.sidebar.collapsed', String(next)); } catch {}
-      return next;
-    });
-  }, []);
-
   const activeItem = ADMIN_COMMAND_NAVIGATION
     .flatMap((group) => group.items)
     .find((item) => item.id === activeId) || ADMIN_COMMAND_NAVIGATION[0].items[0];
   const ActiveIcon = activeItem.icon;
 
   return (
-    <div className="min-h-screen bg-[#020817] font-montserrat text-slate-100 selection:bg-blue-500/40">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_84%_0%,rgba(36,84,151,0.11),transparent_40%)]" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/25 to-transparent" />
-      </div>
+    <div className="min-h-screen bg-[#eaf1fb] font-montserrat text-[#172c4d] selection:bg-blue-200">
+      
       <header className="sticky top-0 z-30 border-b border-[#31517a]/60 bg-[linear-gradient(105deg,#07152d_0%,#10294f_38%,#061023_78%)] shadow-[0_4px_28px_rgba(0,4,20,0.26)] backdrop-blur-xl">
         <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -320,39 +303,37 @@ export function AdminCommandPreview() {
         <AdminCommandSidebar
           activeId={activeId}
           onNavigate={navigate}
-          collapsed={collapsed}
-          onToggleCollapsed={toggleCollapsed}
           mobileOpen={mobileOpen}
           onCloseMobile={closeMobile}
         />
-        <main className="min-w-0 flex-1 bg-[#020817] px-4 pb-8 pt-5 sm:px-6 lg:px-8 lg:pt-6 2xl:px-10" id="admin2-preview-content">
-          <div className="mb-5 rounded-[22px] border border-[#243650] bg-[#071225]/80 px-5 py-6 sm:px-7 sm:py-7">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.11em] text-slate-500">
+        <main className={styles.mainCanvas + ' min-w-0 w-full flex-1 px-4 pb-8 pt-5 sm:px-6 lg:ml-[288px] lg:px-8 lg:pt-6 2xl:px-10'} id="admin2-preview-content" data-testid="admin2-light-content">
+          <div className={styles.hero + ' mb-5 rounded-[22px] px-5 py-6 sm:px-7 sm:py-7'}>
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.11em] text-[#7185a2]">
               <span>Administração</span>
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="text-blue-200">{activeItem.label}</span>
+              <span className="font-extrabold text-[#1a4ca5]">{activeItem.label}</span>
             </div>
             <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-blue-300/20 bg-blue-400/[0.09] text-blue-200">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-[#acc6ee] bg-[#e2efff] text-[#1954af] shadow-[0_6px_16px_rgba(51,107,188,0.1)]">
                   <ActiveIcon className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl" data-testid="admin2-preview-title">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-[#152e56] sm:text-3xl" data-testid="admin2-preview-title">
                     {activeItem.label}
                   </h1>
-                  <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-slate-400">{activeItem.detail}</p>
+                  <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-[#657b99]">{activeItem.detail}</p>
                 </div>
               </div>
-              <div className="hidden items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[11px] text-slate-400 md:flex">
-                <ShieldCheck className="h-4 w-4 text-blue-200" aria-hidden="true" />
+              <div className="hidden items-center gap-2 rounded-xl border border-[#cfdeee] bg-white/65 px-3 py-2 text-[11px] font-semibold text-[#4b6790] md:flex">
+                <ShieldCheck className="h-4 w-4 text-[#2d67b3]" aria-hidden="true" />
                 Área Administrativa
               </div>
             </div>
           </div>
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-300/15 bg-amber-400/[0.055] px-4 py-3 text-[11px] leading-6 text-amber-100/80" role="note">
+          <div className={styles.notice + ' mb-5 flex items-start gap-3 px-4 py-3 text-[11px] leading-6'} role="note">
             <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span><strong className="text-amber-100">Laboratório local:</strong> navegação e visual interativos. Todos os clientes, valores e eventos são fictícios. Nenhuma operação de Firestore, Firebase Auth, faturamento ou Google Drive é realizada nesta tela.</span>
+            <span><strong className="text-[#875613]">Laboratório local:</strong> navegação e visual interativos. Todos os clientes, valores e eventos são fictícios. Nenhuma operação de Firestore, Firebase Auth, faturamento ou Google Drive é realizada nesta tela.</span>
           </div>
           {activeId === 'overview' ? (
             <Dashboard onNavigate={navigate} />
@@ -361,7 +342,7 @@ export function AdminCommandPreview() {
           ) : (
             <GenericArea activeId={activeId} label={activeItem.label} detail={activeItem.detail} />
           )}
-          <footer className="mt-7 border-t border-white/[0.07] py-5 text-center font-mono text-[10px] text-slate-600">
+          <footer className="mt-7 border-t border-[#ccd8e8] py-5 text-center font-mono text-[10px] font-semibold text-[#8191a8]">
             EMPROVEX COMMAND · ADMIN 2.0 · PRÉVIA LOCAL ISOLADA
           </footer>
         </main>
