@@ -205,7 +205,7 @@ export function AdminCustomersDirectory() {
     <AdminCustomerDetailV2
       key={selected.workspaceId}
       customer={selected}
-      commercialCustomer={commercialDrafts.find(c => c.workspaceIds.includes(selected.workspaceId)) || null}
+      commercialCustomer={commercialDrafts.find(c => c.workspaceId === selected.workspaceId) || null}
       onBack={() => setSelected(null)}
     />
   );
