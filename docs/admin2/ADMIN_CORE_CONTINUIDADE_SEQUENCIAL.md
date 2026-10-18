@@ -122,6 +122,24 @@
 
 ---
 
+## DECISÃO MAIS RECENTE DO FUNDADOR — CLIENTE COMERCIAL 1:1 (18/10/2026)
+
+**OPÇÃO B APROVADA: CADA WORKSPACE É UM CLIENTE COMERCIAL INDEPENDENTE.** Esta decisão **SUBSTITUI DEFINITIVAMENTE o antigo modelo 1:N e o limite de oito workspaces por cliente** mencionados em registros históricos abaixo. O contato comercial (militar responsável) é apenas um campo do cadastro, **não uma entidade cliente compartilhada entre workspaces**.
+
+**CONTRATO VIGENTE:**
+- **Um workspace = um cadastro comercial = uma assinatura por workspace**; OM e UG permanecem atributos institucionais, não agrupadores de contratos.
+- `platformCustomers/{workspaceId}` é documento comercial único, com `id === workspaceId`, versão `emprovex_commercial_customer_v2`. Não há `workspaceIds[]`, IDs aleatórios ou `platformCustomerWorkspaceLinks`.
+- Cadastro obrigatório de **um workspace preexistente**, validado na consulta e nas Firestore Rules; esse vínculo é imutável após criação. Não existe cadastro comercial sem workspace ou associação de vários workspaces.
+- Contato responsável, e-mail, telefone, observações e situação são próprios desse workspace; dois workspaces podem compartilhar uma pessoa de contato, mas continuam **clientes/assinaturas independentes** e sem troca de permissão operacional.
+- Contrato, Repository, UI, Ficha 360, Rules e suites Emulator/TypeScript atualizados na **branch isolada PR #339**. Documento canônico detalhado: `docs/admin2/CLIENTES_COMERCIAIS_CADASTRO_V1.md` (nome do arquivo histórico, conteúdo V2 1:1).
+- **A regra 1:N do Plano Mestre, notas G0 anteriores e textos históricos abaixo estão SUPERADOS.** Não ressuscitar esse conceito em outros chats nem criar migrações/cópias de dados legados automaticamente.
+- O frontend no localhost comum continua **em modo rascunho apenas em memória**, sem gravações reais; o repositório só habilita persistência com Auth/Firestore Emulator e `demo-` projectId. Rules versionadas apenas no GitHub, **não publicadas**. Produção/main inalteradas.
+- A decisão de modelo comercial **não** equivale à aprovação visual/funcional da nova UI, à autorização de migração nem ao GO de deploy. Depois dos testes, solicitar aceite do Fundador no localhost.
+
+**ONDE ESTAMOS:** mudança de contrato 1:1 implementada na branch isolada, testes/CI e smoke a confirmar. **O QUE ESTAMOS FAZENDO:** substituindo a arquitetura 1:N por ID determinístico. **QUEM:** chat executor sequencial. **A SEGUIR:** certificar Application CI, Firestore Emulator, TypeScript e testar o fluxo um workspace por cadastro. **QUEM FARÁ:** executor confere o CI; Fundador valida o localhost.
+
+---
+
 ## 1. Fontes canônicas a reler em toda ativação de chat
 
 1. **Este documento** \`docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md\` na **branch ATIVA**, para conhecer o estágio e a última decisão.
