@@ -40,6 +40,30 @@ npm.cmd run dev -- --port 3001
 
 Se você quiser usar uma cópia local já existente, pode empregar \`git worktree add\` a partir de uma pasta que seja realmente um repositório Git, após \`git fetch origin\`. Evite executar \`git switch\` em seu worktree principal quando houver trabalho não commitado.
 
+## Ajuste visual V2 — sidebar fiel à estrutura do EMPROVEX (18/10/2026)
+
+Após comparação das capturas fornecidas pelo Fundador, a arquitetura da prévia foi ajustada:
+
+- **Sidebar realmente à esquerda:** inicia na borda do viewport (sem margens, sem \`max-width\` centralizado, sem aparência de card flutuante no desktop).
+- **Cabeçalho global full-width:** identidade EMPROVEX Command alinhada à esquerda com destaque visual, como no shell operacional.
+- **Sidebar abaixo do cabeçalho:** alinhamento vertical \`top: 72px\`, altura \`100dvh - 72px\`, largura expandida \`288px\` ou compacta \`80px\`; conteúdo ocupa toda a largura restante com padding próprio.
+- **Sem perda de funcionalidade:** navegação, estado ativo, histórico, preferência de compactação e mobile drawer permanecem.
+- No mobile, o drawer agora inicia exatamente na borda esquerda, mantendo máscara e botão de fechar.
+
+### Atualizar a pasta local existente
+
+Se você já está com a versão anterior aberta, **não precisa clonar novamente**. Pare o processo \`next dev\` com Ctrl+C, execute:
+
+\`\`\`powershell
+cd "$HOME\emprovex-admin2-preview"
+git switch feat/admin2-w01-sidebar-local-preview
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs
+npm.cmd run dev -- --port 3001
+\`\`\`
+
+Abra/atualize **http://localhost:3001/admin2-preview**. Recarregue com Ctrl+F5 se estiver vendo a página anterior. Não há mudança de dependências neste ajuste; \`npm ci\` não precisa ser executado de novo.
+
 ## O que testar
 
 1. Desktop expandido: grupos Central, Negócio, Operação, Inteligência e Governança.
