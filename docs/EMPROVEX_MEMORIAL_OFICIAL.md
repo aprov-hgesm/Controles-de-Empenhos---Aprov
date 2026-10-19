@@ -2998,3 +2998,16 @@ PR #342 em DRAFT · \`feat/warehouse-cold-appliances-3d-premium\` · base \`main
 - Documento detalhado: \`docs/adm-deposito/COLD_3D_R1_20261019.md\`. CI e validação gráfica pendentes de conclusão e aceite humano no navegador.
 
 Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar estética multi-perspectiva; quem faz — executor de GitHub e Fundador; o que fazer a seguir — abrir a prévia 3D na branch e comparar as quatro vistas; quem o fará — Fundador confirma e executor aplica ajustes.
+
+
+## NAV-R1 — Barra lateral organizada e Central de Depósitos para setores externos (19/10/2026)
+
+**Situação:** branch \`feat/sidebar-navigation-external-warehouse-r1\`, derivada do PR #342 com geladeira/freezer 3D previamente aprovados. Trabalho isolado de produção, sem merge.
+
+- Barra lateral do EMPROVEX organizada por fluxo de trabalho: Visão geral (Início/Painel), Gestão de empenhos (Empenhos/Notas Fiscais/Consulta de Itens/Fornecedores), Acompanhamento (Cronogramas/Relatórios/Central de Avisos) e módulo destacado Gestão de depósitos.
+- Atalho \`Central de Depósitos\` voltou a ser exibido para **setores externos operacionais autorizados**. Corrigido o bloqueio de interface por workspace \`HGESM_WORKSPACE_ID\` em \`app/page.tsx\`, mantendo \`canAccessWarehouseModule(workspaceContext)\`.
+- **Segurança inalterada:** o gate \`WarehouseAccessBoundary\` e \`/api/central-depositos/status\` validam token, setor, workspace, UG, permissões e, para externos, vínculo de conta ativa; a correção não libera setor não autorizado.
+- Mantidos botões, rotas, animação, acessibilidade, contador de avisos, responsividade e sem novas leituras Firestore; reforço de testes em \`scripts/visual-r1-w4-sidebar-border-beam.test.mjs\`.
+- Memorial técnico e critérios de aceite: \`docs/NAV_R1_SIDEBAR_EXTERNAL_WAREHOUSE_20261019.md\`. CI/smoke humano necessários antes de publicar.
+
+**Handoff:** onde — branch NAV-R1, baseada em 3D R1; fazendo — validar sidebar e botão externo; responsáveis — executor de código/CI, Fundador no navegador; próximo passo — checkout em \`localhost:3001\` e aceite dos dois perfis; executor/coordenação não deve publicar sem confirmação.
