@@ -5,7 +5,7 @@ const panel=readFileSync('components/admin/AdminConsolidatedUsagePanel.tsx','utf
 const telemetry=readFileSync('lib/workspaceUsageTelemetry.ts','utf8');
 const failures=[];
 if (model.billingRule !== 'No workspace estimate is represented as official billing.') failures.push('Regra de billing/estimativa ausente.');
-for (const marker of ['Fonte real · google-cloud-monitoring','Fonte estimada · emprovex-workspace-estimate','nunca são tratadas como equivalentes']) {
+for (const marker of ['Fonte real · google-cloud-monitoring','Fonte estimada · emprovex-workspace-estimate','não devem ser usados como se fossem a mesma medição']) {
  if (!panel.includes(marker)) failures.push('Painel perdeu separação de fontes: '+marker);
 }
 if (!telemetry.includes("WORKSPACE_USAGE_SOURCE = 'emprovex-workspace-estimate'")) failures.push('Fonte estimada perdeu identidade.');
