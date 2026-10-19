@@ -1,5 +1,60 @@
 # EMPROVEX — Memorial Oficial
 
+
+## ESTADO VIGENTE — 2026-10-19 · ADMINISTRAÇÃO ORIGINAL VISUAL + TELEMETRIA POR UG R3 · PR #341
+
+> **Este é o recorte vigente para o trabalho da Administração.** As notas históricas abaixo sobre ADMIN-2.0, EMPROVEX Command, novos módulos/13 abas ou CORE V2 foram **superadas** pela decisão expressa de abandonar aquele desenvolvimento. Permanecem como histórico, não como escopo autorizado.
+
+### Decisões do Fundador e estado efetivo
+
+- **ADMIN-2.0 abandonada:** PR [#339](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/339) fechado **sem merge**; antiga branch `feat/admin2-w01-sidebar-local-preview` excluída remotamente pelo Fundador via PowerShell (comando `git push origin --delete` confirmado). Não reativar o código antigo, as 13 abas propostas nem criar outra Administração paralela.
+- **Novo trabalho autorizado:** melhorar **a Administração original de oito abas**, preservar todas as funções existentes e reaproveitar identidade visual do EMPROVEX operacional. Primeira etapa: fundo claro `#edf3fb`, cartões claros, tipografia contrastante, header escuro fixo e **sidebar escura fixa no desktop** com navegação agrupada e indicador luminoso do App Shell. Rota **`/admin`**, e não `/admin2-preview`.
+- **Ampliação expressa posterior:** por solicitação do Fundador, foi implementada **telemetria por UG R3** dentro do mesmo desenvolvimento, ultrapassando o escopo inicialmente só estético. A alteração inclui código operacional de atribuição de eventos e `firestore.rules` **candidatas na branch**, não publicadas.
+- **Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`.
+- **Branch isolada:** `feat/admin-visual-organizacao-base-emprovex`.
+- **PR:** [#341 — ADMIN-VISUAL + UG R3](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/341), **OPEN/DRAFT, sem merge**.
+- **SHA de código certificado antes desta atualização documental:** `5c61636799c53b7464f387a07d37131ead490808`; o SHA mudará ao gravar este memorial, logo **reverifique os runs do novo HEAD antes de declarar certificação daquele SHA**.
+- **Validações no SHA certificado:** Application CI **SUCCESS**, EMPROVEX Core Protection **SUCCESS**, SAAS-DL Legal Validation **SUCCESS**. Application CI incluiu testes multi-tenant no Firestore Emulator (novas categorias permitidas/rejeitadas), guardas das telemetrias v1/v2/R3, painel global, reconciliação, alertas, build e TypeScript. **CI verde não é autorização de publicação**.
+- **Produção:** `main`, deploys, dados reais, cobrança, Auth, workspaces de usuários e Rules ativas **não alterados por esta iniciativa**.
+
+### Escopo entregue no código da branch
+
+1. **Navegação e estética:** mesma Administração de oito abas: Visão Geral, Setores, Cadastrar Setor, Consumo e Cotas, Sessões, Assinaturas, Backups e Segurança. Fundo claro, sidebar fixa, cabeçalho EMPROVEX, abas agrupadas, acabamento visual; funções originais mantidas.
+2. **Consumo e Cotas compreensível:** resumo da cota; conceitos de leituras, gravações, listeners, atualização e `Read Units` explicados; Google global separado de estimativa por UG; diagnósticos técnicos recolhidos; ausência de amostra não apresentada como consumo zero.
+3. **UG R3 — origem por módulo:** `empenhos`, `notas`, `deposito`, `sessoes`, `outros` nos eventos **que já são instrumentados**. O campo opcional `moduleOperations` fica no documento diário `workspaces/{workspaceId}/usageEstimates/{billingDay}`, usando buffer local e `increment()` no `setDoc(..., {merge:true})` existente, sem consulta/assinatura por evento.
+4. **Compatibilidade e segurança:** registros antigos sem `moduleOperations` mostram ausência de detalhamento. Rules candidatas limitam chaves e proíbem decrementos, preservando a identidade da UG. Testes Emulator ALLOW/DENY incluídos.
+5. **Reconciliação com Google:** leitura das mesmas métricas globais já carregadas, aproximação proporcional de `Read Units` por UG apenas para fração instrumentada. Parcela **não atribuída não é rateada**; módulos representam contagem de operações observadas, **não custo real**.
+6. **Qualidade observacional:** snapshots exclusivamente locais/cache não são classificados como leitura de servidor comprovada; falta de cobertura continua declarada.
+
+**Limitações R3 explícitas:** cobertura incompleta de caminhos não instrumentados (backend, índices, Security Rules, retries/transações etc.), peso real das consultas não calibrado por Query Explain, e buffer com `increment()` ainda sem garantia de entrega exatamente uma vez se houver confirmação de rede ambígua. Não anunciar 100% de precisão nem fatura oficial por UG. Evoluções futuras exigem teste e análise de custo adicional, não improvisar em produção.
+
+### Próxima solicitação exata do Fundador — estimador financeiro Firestore em reais (**PENDENTE, AINDA NÃO IMPLEMENTADO**)
+
+Pergunta formulada antes deste pedido de atualização:
+
+> **“é possível incluir um calculo em cima do consumo do firestore para saber qual vai ser o meu custo (diário, semanal e mensal) em reais considerando os dados que o firebase dispoe?”**
+
+**Primeiro próximo passo do chat sucessor:** responder a viabilidade e **propor um cálculo auditável** antes de alterar código. Se o Fundador solicitar execução, implementar na mesma branch do PR #341, com CI e validação isolada, sem produção.
+
+Critérios para esse cálculo:
+- Separar claramente **(a) uso observado**, **(b) custo parcial estimado**, **(c) projeção diária/semanal/mensal**, **(d) gasto/fatura oficial do Google Cloud Billing**, que não são conceitos equivalentes.
+- Utilizar dados já existentes: `lib/server/googleCloudMonitoring.ts` (métricas globais e referência diária), `lib/platformCapacity.ts`, `lib/platformAdminUsageHistory.ts`, `lib/server/globalUsageHistory.ts`, `lib/usageReconciliation.ts`, `components/admin/AdminConsumptionHub.tsx` e subpainéis. Confirmar SKU/região/banco Firestore Enterprise, free tier elegível, preços atuais do Google Cloud, armazenamento, rede, backups, operações e créditos/impostos antes de afirmar **R$**; cobertura parcial deve ser indicada.
+- Conversão cambial BRL deve ter fonte/data da cotação ou parâmetro configurável explícito. **Não inventar preços, câmbio ou impostos**. Melhor distinguir preços configurados e medidos; se preços/cotação ausentes, mostrar “estimativa indisponível”, não `R$ 0`.
+- Dia deve respeitar a janela de faturamento já adotada (`America/Los_Angeles`); semanal e mensal devem declarar se são soma de dias fechados ou projeção com base no período parcial. Métricas do Cloud Monitoring têm atraso e snapshots não são a fatura.
+- Preferir **computação em memória sobre histórico já disponível**, sem polling/listeners ou leituras adicionais desnecessárias. Não inventar rateio financeiro por UG; se incluído, rotular como proxy experimental e não faturamento.
+- Registrar cenários de exemplo com resultados conhecidos e testes de falta de medição, free tier, excedente, projeção, câmbio, limites e mudança de preços, com testes automatizados.
+
+### Handoff operacional vigente
+
+**Onde estamos:** PR #341 DRAFT com modernização visual da Administração existente + UG R3 tecnicamente implementada e CI aprovado no SHA de código `5c616367`. **O que estamos fazendo:** aguardando aceite humano no navegador/localhost; preparar decisão sobre estimativa do custo global do Firestore em BRL. **Quem está fazendo:** executor GitHub no PR e Fundador como autoridade de aceite/publicação. **O que fazer a seguir:** responder à pergunta financeira, verificar fontes reais de preço/metricas, decidir se deve implementar, validar em branch e certificar novo HEAD. **Quem o fará:** próximo chat como executor sob solicitação do Fundador, sem merge/deploy sem autorização.
+
+**Como abrir localmente se a pasta ainda não existir:** clonar a **nova** branch em `$HOME\emprovex-admin-visual` usando `git clone --single-branch --branch feat/admin-visual-organizacao-base-emprovex https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov.git "$HOME\emprovex-admin-visual"`; depois `npm.cmd ci`, `npm.cmd run dev -- --port 3001`, abrir `http://localhost:3001/admin?tab=consumo`. Se já existir, executar `git pull --ff-only origin feat/admin-visual-organizacao-base-emprovex` **na pasta nova**. Não usar a antiga `emprovex-admin2-preview`, cuja branch remota foi excluída.
+
+**Memorial especializado:** [ADMIN_VISUAL_REORGANIZACAO_BASE_20261018.md](./admin/ADMIN_VISUAL_REORGANIZACAO_BASE_20261018.md). O presente recorte tem precedência, para esta frente, sobre planejamento ADMIN-2.0 histórico abaixo.
+
+---
+
+
 ## Recorte vigente ADMIN-2.0 — 2026-10-18 · CORE V2 (decisão posterior do Fundador)
 
 - **Diretriz atual e prioritária:** desenvolver a nova Administração premium **sem** os três objetivos anteriormente previstos: **(1)** entrar e modificar registros operacionais nos workspaces externos; **(2)** operar a Central de Depósitos de outros setores; **(3)** acessar arquivos privados Google Drive dos clientes. Os três foram **ADIADOS**, não cancelados definitivamente, e **não bloqueiam o CORE V2**.
