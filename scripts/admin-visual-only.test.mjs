@@ -116,7 +116,7 @@ test('Consumo & Cotas: os cinco painéis explicam números reais em linguagem si
 
 test('UG R3: medição por módulo preserva baixo custo, segurança e compatibilidade', () => {
   const telemetry = read('lib/workspaceUsageTelemetry.ts');
-  const read = readFileSync('lib/platformAdminUsage.ts', 'utf8');
+  const usageReader = readFileSync('lib/platformAdminUsage.ts', 'utf8');
   const panel = readFileSync('components/admin/AdminUsagePanel.tsx', 'utf8');
   const hub = readFileSync('components/admin/AdminConsumptionHub.tsx', 'utf8');
   const realtime = readFileSync('hooks/useOperationalRealtimeCollections.ts', 'utf8');
@@ -138,8 +138,8 @@ test('UG R3: medição por módulo preserva baixo custo, segurança e compatibil
     'telemetryFlushes: increment(1)',
   ]) assert.ok(telemetry.includes(marker), 'buffer agregado preservado: '+marker);
 
-  assert.match(read, /moduleBreakdownAvailable/);
-  assert.match(read, /moduleOperations: readModuleOperations/);
+  assert.match(usageReader, /moduleBreakdownAvailable/);
+  assert.match(usageReader, /moduleOperations: readModuleOperations/);
   assert.match(panel, /admin-ug-modules-/);
   assert.match(panel, /Sem detalhamento por módulo/);
   assert.match(panel, /admin-ug-google-proxy-/);
