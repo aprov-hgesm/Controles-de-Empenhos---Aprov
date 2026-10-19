@@ -2969,3 +2969,19 @@ Application CI, TypeScript/build, Core Protection, Firestore Rules/Emulator e ac
 **Aceite pendente:** abrir \`http://localhost:3001/admin\` com a conta fundadora depois de atualizar o checkout do PR #341; validar estética/densidade, leitura das janelas por conta, proporção do reservatório, zoom e navegação. Não anunciar inspeção de navegador realizada sem evidência do Fundador. Evitar merge/deploy até solicitação expressa.
 
 **Handoff:** onde estamos — R1.1 implementada no PR #341 DRAFT; o que fazemos — certificação de CI e validação estética humana; quem faz — executor GitHub (código, checks, memorial), Fundador (navegador); a seguir — revisar screenshot real da nova Início e ajustar a geometria conforme feedback; responsável — executor somente após aceite/correções solicitadas.
+
+
+## ADMIN-WORLD-R1.2 — Lotes vazios, conta fundadora central e legendas nos telhados (19/10/2026)
+
+**Pedido do Fundador:** manter os lotes urbanos visualmente vazios enquanto não houver conta associada; reservar o prédio central exclusivamente à conta fundadora APROV HGeSM; mover as etiquetas das contas para **acima dos edifícios**.
+
+**Alterações implementadas no PR #341, branch \`feat/admin-visual-organizacao-base-emprovex\`, ainda em DRAFT:**
+- Identidade fundadora comprovada no contrato existente: \`HGESM_SECTOR_EMAIL = aprov1hgesm@gmail.com\`, workspace \`hgesm-aprov\`. O cadastro fundador usa \`accountType='sector'\` com privilégio administrativo resolvido em seu contexto, **não cria segunda conta de administrador**. \`partitionNeighborhoodResidents\` usa esse e-mail normalizado, retira a conta dos lotes laterais e a associa exclusivamente à construção central.
+- \`components/admin/AdminWorldHomePanel.tsx\`: a contagem mantém todas as contas reais (incluindo fundadora), mas a paginação de nove casas é restrita às demais contas. O edifício central é selecionável como os demais e usa presença baseada exclusivamente na sessão de identidade real. Se a conta ainda não estiver carregada, o prédio central mantém identificação de lugar reservado, sem acender nem criar sessão fictícia.
+- \`AdminWorldScene.tsx\`: edifícios laterais só são instanciados **quando existe usuário real correspondente**. Lotes sem usuário mostram somente piso e marca de parcela disponível, sem prédio nem caixa de correio. Os slots se preenchem automaticamente quando o diretório existente enviar novas contas, respeitando os quarteirões. Nenhuma conta é representada duas vezes.
+- \`AdminWorldArchitecture.tsx\`: \`CityBuildingLabel\` renderiza as legendas **no último passe SVG, sobre os telhados**, evitando sua ocultação por fachadas, jardins e construções. Prédio fundador rotulado **APROV HGeSM** acima do edifício. Indicadores de status respeitam online, offline, suspenso e desconhecido. A porta/identidade do edifício central continua refletindo a conta fundadora, não apenas um marco cenográfico.
+- UI atualizada para falar em prédios ocupados, prédio selecionado e lotes vazios. Os oito módulos históricos continuam preservados.
+- \`scripts/admin-world-neighborhood.test.mjs\`: acrescentados testes de identidade fundadora, não duplicação, paginação lateral e guards estáticos contra prédios cenográficos, com verificação de etiquetas e slots.
+- **Sem Firestore reads/writes adicionais, sem novos listeners, sem deploy, sem merge e sem modificação em produção.** Tests/CI/Legal/Recovery/Core devem ser certificados **no HEAD final**, e a aparência permanece sujeita a aceite humano.
+
+**Handoff:** Onde estamos — R1.2 com slots vazios, torre fundadora e legendas acima das construções no PR #341 DRAFT. O que estamos fazendo — certificação de CI e atualização da prévia local. Quem faz — executor no GitHub; Fundador na inspeção visual. Próximo passo — usar \`git pull --ff-only\` na branch do PR #341, reiniciar \`npm.cmd run dev -- --port 3001\` e abrir \`http://localhost:3001/admin\`. Quem fará — Fundador valida; executor corrige refinamentos apontados.
