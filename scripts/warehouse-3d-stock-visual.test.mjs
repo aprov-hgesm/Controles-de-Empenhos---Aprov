@@ -112,13 +112,14 @@ test('UI conecta lotes, boxes e brilho branco, sem writes, listeners ou nova reg
   const croquis = readFileSync(resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'), 'utf8');
   const home = readFileSync(resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'), 'utf8');
   const repository = readFileSync(resolve(root, 'lib/warehouse/lotRepository.ts'), 'utf8');
-  assert.match(croquis, /listWarehouseVisualExpiryLots\(workspaceId, 500\)/);
+  assert.match(croquis, /listWarehouseLots\(workspaceId, 500\)/);
   assert.match(croquis, /croquiMode !== 'preview' \|\| previewLoaded/);
   assert.match(croquis, /lots=\{previewLots\}/);
   assert.match(croquis, /previewLotsLimited/);
   assert.match(home, /listWarehouseVisualExpiryLots\(workspaceId, 500\)/);
-  assert.match(home, /lots=\{previewLotsLoadedForDepot === selectedDepotId \? previewLots : \[\]\}/);
+  assert.match(home, /lots=\{visualExpiryDepot === selectedDepotId \? visualExpiryLots : \[\]\}/);
   assert.match(home, /listWarehouseLots\(workspaceId, 500, selectedMaterialId\)/);
+  assert.match(home, /inspectionLots=\{inspectionLots\}/);
   assert.match(render, /warehouseVisualExpiryMap\(balances, lots\)/);
   assert.match(render, /stockBoxesOnSurface\(/);
   assert.match(render, /data-expiry-state=\{expiry\}/);
