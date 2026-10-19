@@ -133,3 +133,25 @@ O Fundador pediu a execução das melhorias de estimativa por UG **na mesma bran
 
 **Handoff padrão:** onde estamos — PR #341 DRAFT, R3 código pronto/CI certificado antes da atualização documental; o que fazemos — decidir próximo estimador financeiro Firestore global; quem faz — sucessor no GitHub; próximo passo — responder viabilidade e preços/contrato para custo diário/semanal/mensal em BRL; quem fará — sucessor após instrução do Fundador e sob restrições de QA/produção.
 
+
+
+## COST-FIRESTORE-R1 — estimativa financeira global do Firestore em BRL (19/10/2026)
+
+Solicitação do Fundador executada **somente na branch feat/admin-visual-organizacao-base-emprovex / PR #341 (DRAFT)**. Não houve merge, deploy, alteração de regras ativas, escrita de dados produtivos ou mudança na cobrança.
+
+### O que foi entregue
+- Aba **Consumo & Cotas → Estimativa de custos · R$** na Administração original, sem substituir as demais abas.
+- Motor puro \`lib/firestoreCostEstimate.mjs\`, com contrato \`.d.mts\`, calcula separadamente **Read Units, Write Units, Realtime Read Units** a partir dos snapshots do Cloud Monitoring e do histórico diário existente; preço em USD por milhão e câmbio USD/BRL fornecidos pelo fundador.
+- Cartões: **Hoje (parcial), últimos 7 dias, mês até agora, projeção do mês**. Períodos sem medição são explicitamente incompletos, não tratados como zero. Projeção requer pelo menos três dias passados observados, cobertura histórica de 80% e informação do dia atual; dia atual não é extrapolado como completo.
+- Preços editáveis e referenciados à tabela pública **Enterprise, Iowa/us-central1, preços padrão em USD**, consulta em 19/10/2026: Read Units USD 0,05/milhão; Write Units USD 0,26/milhão; atualizações em tempo real USD 0,30/milhão. **Valores são referência, não regionais/contratuais confirmados**. Fonte: https://cloud.google.com/firestore/enterprise/pricing.
+- Câmbio é **obrigatoriamente manual** para apresentar números em reais; sem câmbio confirmado a interface mostra “R$ —” e custo parcial em USD. Não há dependência de API de câmbio externa, cotação fictícia ou valor escondido.
+- Franquia grátis **desligada por padrão**; usuário opta manualmente só após confirmar elegibilidade do banco. Quando ligada, descontos por limite diário específico de RU, WU e realtime, **não por mês**. Para dia sem limite confiável, custo fica indisponível.
+- Somente reutiliza \`loadGlobalUsageHistory\` via consulta limitada aos registros diários entre o início do mês e os últimos sete dias. A aba executa a consulta **apenas ao entrar** e ao clicar em Atualizar; **não** cria listeners, polling, gravações, endpoints nem leitura por UG. O snapshot ao vivo reutiliza as props do painel. Campo opcional \`metricsComplete\` marca o histórico legado sem unidade faturável completa como não calculável.
+- **Não é fatura Google Cloud.** Exclusões gerenciadas, eventos, storage, PITR, backup, restauração, rede, impostos, descontos, créditos e serviços externos não entram no valor. Cobrança oficial: https://console.cloud.google.com/billing. Não atribuir valor financeiro a UGs (somente métricas/proxy R3).
+- Testes de unidade: \`scripts/firestore-cost-estimate.test.mjs\` integrado ao Application CI para cobrar cálculo por dia, lacunas, tarifas, franquia e condição de projeção.
+
+### Gates, segurança e estado
+Application CI, TypeScript/build, Core Protection, Firestore Rules/Emulator e aceite humano precisam ser verificados sobre o **HEAD final**. O código de custo **não depende da migração de Firestore Rules**. Não anunciar PASS de checks até constarem concluídos na GitHub Actions. Não publicar sem comando separado do Fundador. Para QA local: \`http://localhost:3001/admin?tab=consumo\`; usar conta fundadora e modo somente leitura.
+
+### Handoff
+**Onde estamos:** PR #341 aberto em DRAFT, módulo de custo R1 implementado no código, sem produção. **O que fazemos:** certificação de testes e conferência visual/financeira. **Quem faz:** executor GitHub/CI. **Próximos passos:** confirmar região, edição, elegibilidade do free tier, taxa cambial aplicada e SKUs efetivos em Cloud Billing; se necessário evoluir integração server-side somente sob autorização adicional. **Quem fará:** Fundador valida parâmetros e aparência; executor corrige problemas apontados e mantém memorial.
