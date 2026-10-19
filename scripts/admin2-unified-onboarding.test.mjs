@@ -40,7 +40,7 @@ test('provisionamento seguro inclui comercial opcional no mesmo commit e no roll
 test('interface permite cadastro unificado sem chamar APIs reais na prévia', () => {
   assert.match(onboarding, /data-testid="admin2-unified-create"/);
   assert.match(onboarding, /createPreviewOnboarding\(input\)/);
-  assert.doesNotMatch(onboarding, /\/api\/admin\/provision-sector|signUp|createUserWithEmailAndPassword/);
+  assert.doesNotMatch(onboarding, /fetch\s*\(|\bsignUp\s*\(|\bcreateUserWithEmailAndPassword\s*\(/);
   assert.match(onboarding, /setInput\(EMPTY\)/);
   assert.match(directory, /data-testid="admin2-unified-create-tab"/);
   assert.match(directory, /data-testid="admin2-management-tab"/);
