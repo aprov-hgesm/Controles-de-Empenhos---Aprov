@@ -420,7 +420,12 @@ function WarehouseStructure({
 
   const code = location?.code || object.label;
   const generalBoxCount = visualBoxes(occupiedQuantity);
-  const highlightFilter = highlighted ? 'url(#warehouseGlowStrong)' : 'url(#warehouseObjectShadow)';
+  // A seleção azul prevalece sobre a sinalização suave de validade.
+  const highlightFilter = highlighted
+    ? 'url(#warehouseGlowStrong)'
+    : expiry === 'near'
+      ? 'url(#warehouseExpirySoftGlow)'
+      : 'url(#warehouseObjectShadow)';
   const groupOpacity = dimmed ? 0.48 : 1;
 
   if (object.kind === 'OTHER' && !object.warehouseLocationId) {
@@ -451,13 +456,13 @@ function WarehouseStructure({
     );
   }
 
-  const commonHighlight = highlighted ? (
+  const commonHighlight = highlighted || expiry === 'near' ? (
     <polygon
       points={polygonPoints([a, b, c, d])}
-      fill="#dbeafe"
-      stroke="#2563eb"
-      strokeWidth="4.5"
-      opacity="0.9"
+      fill={highlighted ? '#dbeafe' : '#fef3c7'}
+      stroke={highlighted ? '#2563eb' : '#eab308'}
+      strokeWidth={highlighted ? 4.5 : 2.4}
+      opacity={highlighted ? 0.9 : 0.6}
     />
   ) : null;
 
@@ -1480,6 +1485,10 @@ export function WarehouseIsometricPreview({
               </filter>
               <filter id="warehouseObjectShadow" x="-60%" y="-60%" width="220%" height="220%">
                 <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#10273c" floodOpacity="0.24" />
+              </filter>
+              <filter id="warehouseExpirySoftGlow" x="-65%" y="-65%" width="230%" height="230%">
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#eab308" floodOpacity="0.62" />
+                <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#facc15" floodOpacity="0.26" />
               </filter>
               <filter id="warehouseGlowStrong" x="-80%" y="-80%" width="260%" height="260%">
                 <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#60a5fa" floodOpacity="1" />
