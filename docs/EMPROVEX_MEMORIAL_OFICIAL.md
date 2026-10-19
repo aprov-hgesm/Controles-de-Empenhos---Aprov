@@ -1,5 +1,35 @@
 # EMPROVEX — Memorial Oficial
 
+## ESTADO VIGENTE GLOBAL — 19/10/2026 · 3D PREMIUM R4 — PR #346 PUBLICADO
+
+> **ESTADO DE PRODUÇÃO MAIS RECENTE.** Este registro prevalece sobre a seção histórica imediatamente abaixo intitulada “EMPROVEX R4 PUBLICADA”, que continua correta como marco anterior, mas não representa mais o deployment atualmente associado ao domínio.
+
+### GitHub — melhoria pós-R4 consolidada
+
+- **PR #346:** [WAREHOUSE R4 — profundidade de paletes e acabamento premium do piso/paredes](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/346), **MERGED / CLOSED**.
+- **Commit funcional integrado por squash único:** `6d3fddae4b7212e745a75b241504f71541148a54`, sobre `main@9075c8e766ecd330210394238bf4cae63e503df0`. Não reexecutar o merge.
+- **Mudança funcional:** apenas `features/warehouse/components/WarehouseIsometricPreview.tsx`. Ordem de pintura dos objetos considera a extensão da planta física, reduzindo sobreposição indevida entre paletes/freezers. Piso com tratamento industrial, juntas e brilho discreto; paredes com painéis e acabamento refinado.
+- **Aceite visual:** Fundador aprovou a prévia em localhost:3001 antes do merge.
+- **Gates no HEAD do PR pré-squash `0edf9a6d...`:** Application CI **SUCCESS**, EMPROVEX Core Protection **SUCCESS**, VISUAL-R1 W4 QA (isolated) **SUCCESS após reexecução**. O primeiro run de QA falhou em teste de hover de local vazio; a reexecução do mesmo run foi aprovada. Não atribuir essas execuções ao SHA pós-squash.
+- **Sem alteração de Firestore, Rules, esquema, autorização, saldos ou migração.** As funcionalidades anteriores R4 permanecem preservadas.
+
+### Vercel — publicação e promoção efetivamente confirmadas
+
+- **Equipe/projeto:** `aprov-hgesms-projects/controles-de-empenhos-aprov`.
+- **Domínio oficial:** https://emprovex.com.br
+- **Deployment atual:** `dpl_FKhz2Jq9d6jpLRF1kvDL3y4QuiTV`, URL individual `https://controles-de-empenhos-aprov-qxnc2nql2-aprov-hgesms-projects.vercel.app`.
+- **Método:** exportação limpa do commit aprovado, `vercel.cmd link`, `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`, teste de `/api/health`, promoção do **mesmo deployment** com `vercel.cmd promote`, seguida por `vercel.cmd inspect https://emprovex.com.br`.
+- **Evidência fornecida pelo Fundador:** deploy `Ready`; `/api/health` do URL individual retornou `{"status":"ok","timestamp":"2026-10-19T22:28:23.273Z"}`; comando de promoção retornou `Success!`; `inspect` do domínio oficial resolveu para o **mesmo ID `dpl_FKhz2Jq9d6jpLRF1kvDL3y4QuiTV`**, com status `Ready`. Assim, **promoção concluída e domínio conferido**.
+- **Custo operacional reportado:** build 1m01s, pós-build 47s, duração faturável 2m / 4 CPU-minutos. Não realizar novo deployment para repetir a publicação.
+- **Referência histórica para eventual rollback:** deployment anterior `dpl_6mQA5J1tuLNvQBnsaqdbVQcV9MUA` (R4 antes do PR #346). Rollback somente com autorização expressa.
+- **Limite da evidência:** não houve confirmação documental de um novo smoke autenticado completo de todos os fluxos no domínio após a promoção. Saúde e inspeção de domínio foram verificadas, e o aceite visual ocorreu no localhost.
+
+### Handoff oficial
+
+**Onde estamos:** `main@6d3fddae` com PR #346 incorporado em squash único; melhoria 3D **publicada no domínio oficial** no deployment `dpl_FKhz2Jq9d6jpLRF1kvDL3y4QuiTV`. **O que estamos fazendo:** encerramento documental e preservação de evidências. **Quem está fazendo:** Fundador realizou publicação/promoção via Vercel CLI; Coordenador registra rastreabilidade. **O que fazer a seguir:** verificar a nova visualização no navegador autenticado em `emprovex.com.br` e acompanhar possíveis regressões; novos ajustes somente por branch isolada e sem redeploy redundante. **Quem fará:** Fundador valida o fluxo real, Coordenador trata eventuais regressões.
+
+---
+
 ## ESTADO VIGENTE GLOBAL — 19/10/2026 · EMPROVEX R4 PUBLICADA
 
 > **REGISTRO DE PRODUÇÃO VERIFICADO.** Esta seção supera os estados históricos que, mais abaixo, ainda mencionam PR #345 DRAFT, R4 aguardando publicação, PR #341 sem merge, ou itens de R2/R3 ausentes da main. As seções históricas continuam úteis como evidência da evolução, **não como o estado atual de publicação**.
