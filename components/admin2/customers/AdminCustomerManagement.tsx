@@ -32,6 +32,8 @@ import styles from '../shell/AdminCommandPreview.module.css';
 interface Props {
   previews: UnifiedPreviewRecord[];
   commercialDrafts: CommercialCustomer[];
+  workspaceEdits: Record<string, CustomerWorkspaceRecord>;
+  onWorkspaceEdit: (record: CustomerWorkspaceRecord) => void;
   onEditContacts: () => void;
   onView360: (workspace: CustomerWorkspaceRecord) => void;
 }
@@ -44,7 +46,7 @@ const MANAGEMENT_OPTIONS: Array<{ status: BillingAccountStatus; title: string; d
   { status: 'canceled', title: 'Cancelar assinatura', description: 'Situação comercial; não apaga o workspace' },
 ];
 
-export function AdminCustomerManagement({ previews, commercialDrafts, onEditContacts, onView360 }: Props) {
+export function AdminCustomerManagement({ previews, commercialDrafts, workspaceEdits, onWorkspaceEdit, onEditContacts, onView360 }: Props) {
   const [workspaceId, setWorkspaceId] = useState('');
   const [selected, setSelected] = useState<CustomerWorkspaceRecord | null>(null);
   const [billing, setBilling] = useState<CustomerBillingSnapshot | null>(null);
@@ -55,7 +57,6 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
   const [confirm, setConfirm] = useState<BillingAccountStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState(false);
-  const [workspaceDrafts, setWorkspaceDrafts] = useState<Record<string, CustomerWorkspaceRecord>>({});
 
   const lookup = async (id: string) => {
     const normalized = id.trim().toLowerCase();
@@ -70,7 +71,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
     try {
       const local = previews.find(entry => entry.workspace.id === normalized);
       if (local) {
-        setSelected(workspaceDrafts[normalized] || buildCustomerWorkspaceRecord(local.workspace.id, local.workspace));
+        setSelected(workspaceEdits[normalized] || buildCustomerWorkspaceRecord(local.workspace.id, local.workspace));
         setBilling({
           status: local.billing.status,
           monthlyPriceCents: local.billing.monthlyPriceCents,
@@ -83,7 +84,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
         const found = page.rows.find(item => item.workspaceId === normalized);
         if (!found) throw new Error('Workspace não encontrado. Confira o ID informado.');
         const summary = await readCustomerBilling(normalized);
-        setSelected(workspaceDrafts[normalized] || found);
+        setSelected(workspaceEdits[normalized] || found);
         setBilling(summary);
       }
       setWorkspaceId(normalized);
@@ -110,7 +111,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
         updated = previewUpdatedWorkspace(selected, input, new Date().toISOString());
       }
       setSelected(updated);
-      setWorkspaceDrafts(current => ({ ...current, [updated.workspaceId]: updated }));
+      onWorkspaceEdit(updated);
       setHistory(current => ['Dados institucionais atualizados ' +
         (commercialEmulatorWritesEnabled && !isLocal ? 'no Emulator' : 'em simulação local'), ...current]);
       setEditingWorkspace(false);
@@ -258,6 +259,10 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
               <span className="mt-1 block leading-4 text-[#7789a0]">{action.description}</span>
             </button>)}
           </div>
+          <a href="/admin?tab=assinaturas"
+            className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-[#cbdbea] bg-white px-4 py-2 text-[11px] font-bold text-[#285e9d] hover:bg-[#edf5ff]">
+            Abrir painel completo de assinaturas existente
+          </a>
           {confirm && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-[#2e5380]" data-testid="admin2-subscription-confirm">
             <p>{commercialEmulatorWritesEnabled && !isPreviewWorkspace ? 'Aplicar no Emulator' : 'Simular'}: <strong>{MANAGEMENT_OPTIONS.find(option=>option.status===confirm)?.title}</strong>?</p>
             <p className="mt-1 text-[11px]">Nunca altera dados produtivos nem o acesso operacional.</p>
