@@ -240,9 +240,10 @@ function AuditSample({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: {
+export function AdminCustomerDetailV2({ customer, commercialCustomer, previewBilling, onBack }: {
   customer: CustomerWorkspaceRecord;
   commercialCustomer?: CommercialCustomer | null;
+  previewBilling?: CustomerBillingSnapshot | null;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('summary');
@@ -263,6 +264,11 @@ export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: 
   const matchedCommercial = commercialCustomer || emulatorCustomer;
 
   useEffect(() => {
+    if (previewBilling) {
+      setBilling(previewBilling);
+      setBillingState('ready');
+      return;
+    }
     let current = true;
     setBillingState('loading');
     setBillingError('');
@@ -276,7 +282,7 @@ export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: 
       setBillingState('error');
     });
     return () => { current = false; };
-  }, [customer.workspaceId]);
+  }, [customer.workspaceId, previewBilling]);
 
   useEffect(() => {
     if (tab !== 'relationship' || commercialCustomer || !commercialEmulatorWritesEnabled) return;
@@ -348,14 +354,18 @@ export function AdminCustomerDetailV2({ customer, commercialCustomer, onBack }: 
                 <Surface title="Contrato financeiro existente" icon={WalletCards} hint="Mensalidade do workspace, não consolidado de vários clientes.">
                   <BillingSummary billing={billing} state={billingState} error={billingError} />
                 </Surface>
-                <BillingCycles workspaceId={customer.workspaceId} />
+                {previewBilling
+                  ? <ReadNotice>Workspace de simulação: não há ciclos financeiros reais a consultar.</ReadNotice>
+                  : <BillingCycles workspaceId={customer.workspaceId} />}
               </div>
               <ReadNotice>Mensalidades e competências são exibidas sem confirmar pagamentos, alterar status, acionar cobranças ou suspender acesso. VIPs e trials mantêm os valores armazenados, sem recalcular o contrato.</ReadNotice>
             </div>
           )}
           {visited.activity && (
             <div hidden={tab !== 'activity'} className="space-y-4">
-              <AuditSample workspaceId={customer.workspaceId} />
+              {previewBilling
+                ? <ReadNotice>Workspace simulado: nenhuma auditoria real foi registrada.</ReadNotice>
+                : <AuditSample workspaceId={customer.workspaceId} />}
               <Surface title="Marcos conhecidos" icon={Clock3} hint="Datas derivadas dos registros existentes, não ações de auditoria adicionais.">
                 <dl><Info label="Atualização do workspace" value={formatCustomerDate(customer.updatedAt)} /></dl>
               </Surface>
