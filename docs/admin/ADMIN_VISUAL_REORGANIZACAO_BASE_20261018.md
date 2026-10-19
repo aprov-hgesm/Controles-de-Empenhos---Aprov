@@ -34,6 +34,24 @@ O aceite deve verificar contraste das abas reais (Visão Geral, Setores, Cadastr
 
 ---
 
+## Incremento de legibilidade — Consumo & Cotas
+
+**Pedido do Fundador:** tornar a aba de consumo mais fácil de entender, com termos simples e indicação clara do que cada número mostra.
+
+**Alterações de interface (nenhum cálculo/consulta alterado):**
+- `AdminConsumptionHub`: resumo em três cartões (percentual da cota diária, interpretação e origem), frases explicativas para as cinco subvisões e limite apresentado como **referência de uso, não como fatura**. Sem medição é mostrado como ausência de dado, não zero.
+- `AdminGlobalUsagePanel`: ajuda ao lado das barras de leituras, tempo real e gravações; glossário de operações e Read/Write Units; quantidade restante para a referência diária; diagnósticos técnicos recolhíveis via `<details>`; aviso de atraso e período diário do Google distinto do brasileiro.
+- `AdminUsagePanel`: nomes legíveis (leituras, gravações, exclusões, atualizações recebidas, pico de observadores e envios de medição), cada qual explicado; unidades sem amostra exibem **Sem medição**, não um zero fictício.
+- `AdminConsolidatedUsagePanel`: sequência de leitura (Google > UG > alertas), referência diária e cobertura explicadas; valores por UG mantidos como estimativas e não rateio financeiro.
+- `AdminUsageReportsPanel`: ajuda sobre seleção de período, diferença entre fontes, datas sem registro e exportação CSV.
+- `scripts/admin-visual-only.test.mjs`: testes estruturais adicionais integrados ao Application CI preexistente.
+
+**Proteções:** Nenhuma edição em `app/api`, `lib`, `hooks`, `firestore.rules`, faturamento, autenticação, credenciais, métricas, fórmulas, agregações ou listeners. Os cinco componentes originais de consumo permanecem em operação, com os mesmos props, handlers e fontes. Nenhum custo novo de leitura induzido por essas explicações.
+
+**Aceite humano:** Em `/admin?tab=consumo`, avaliar resumo superior; alternar entre cinco subvisões; compreender Read Units, consumos por UG, histórico e alertas; testar `Ver diagnósticos técnicos` apenas para inspeção. **Não usar ações reais de atualização de políticas** durante a validação visual.
+
+---
+
 ## Superfícies e arquivos modificados
 
 - `components/admin/PlatformAdminView.tsx`: somente importações visuais, grupos de navegação, marcação e classes de header/sidebar. Não mexer em callbacks/handlers/hook subscriptions.
