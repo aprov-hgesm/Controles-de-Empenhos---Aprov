@@ -1,7 +1,65 @@
 # EMPROVEX — Memorial Oficial
 
+## ESTADO VIGENTE GLOBAL — 19/10/2026 · EMPROVEX R4 PUBLICADA
 
-## ESTADO VIGENTE — 2026-10-19 · ADMINISTRAÇÃO ORIGINAL VISUAL + TELEMETRIA POR UG R3 · PR #341
+> **REGISTRO DE PRODUÇÃO VERIFICADO.** Esta seção supera os estados históricos que, mais abaixo, ainda mencionam PR #345 DRAFT, R4 aguardando publicação, PR #341 sem merge, ou itens de R2/R3 ausentes da main. As seções históricas continuam úteis como evidência da evolução, **não como o estado atual de publicação**.
+
+### GitHub — consolidação definitiva em commit único
+
+- **Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`.
+- **PR integrado:** [#345 — RELEASE R4 Warehouse R2/R3 + 3D premium](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/345), **MERGED / CLOSED**.
+- **Main consolidada:** `e61c2675e97990c6dd78ccdce0fc1a56a98561ca`, título `feat(release): EMPROVEX R4 depósitos 3D e funcionalidades recuperadas`.
+- **Composição:** squash em **um único commit** diretamente sobre `main@2c30a354a466b6c727c90f1f4f83428ac8a54cfb`; o commit R4 tem um único pai, `2c30a354...`. A release anterior da main não foi descartada.
+- **Head funcional aprovado e testado antes do merge:** `1664f805021ddcf7aa4baf913c75a243514f92b1` (`feat/warehouse-r3-restoration-consolidated`). O merge usa o mesmo conteúdo da entrega aprovada.
+- **PR #344:** continua DRAFT como registro de desenvolvimento anterior; **seu conteúdo foi incorporado pela release consolidada #345**. Não fazer um segundo merge do #344 para repetir as mudanças. PRs históricos #331–#338 permanecem referências da origem do código recuperado, não uma fila de merges obrigatórios.
+
+### Vercel — deployment R4 confirmado pelo Fundador
+
+- **Projeto:** `controles-de-empenhos-aprov`; **equipe:** `aprov-hgesms-projects`.
+- **Domínio oficial em produção:** [https://emprovex.com.br](https://emprovex.com.br).
+- **Deployment R4 promovido:** `dpl_6mQA5J1tuLNvQBnsaqdbVQcV9MUA`.
+- **URL individual:** `https://controles-de-empenhos-aprov-bvhzq2yed-aprov-hgesms-projects.vercel.app`.
+- **Logs informados pelo Fundador:** `GITHUB_R4=PASS`, `FONTE_R4=PASS`, `PROJETO_VERCEL=PASS`, `DEPLOY_R4=PASS` (`Ready`), `SAUDE_R4=PASS`, `PROMOCAO_R4=PASS`, `INSPECAO_R4=PASS`.
+- **Confirmação da promoção:** CLI retornou `Success!` para o **mesmo deployment `dpl_6mQA5J1tuLNvQBnsaqdbVQcV9MUA`** e consulta subsequente do domínio `emprovex.com.br` retornou o mesmo ID com `status Ready`.
+- **Duração informada:** build remoto 1m19s, pós-build 56s, consumo de 3 minutos faturáveis (6 CPU-minutos). Não houve necessidade de um segundo build após o `promote`.
+- **Método operacional certificado:** `git archive` do SHA aprovado em pasta isolada **sem `.git`**, `vercel.cmd link` no projeto administrativo correto, `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`; consultar `/api/health`; depois `vercel.cmd promote <URL> --yes --scope aprov-hgesms-projects` e confirmar domínio com `vercel.cmd inspect`. Não utilizar `--prebuilt` nesta infraestrutura Hobby.
+- **Referência histórica de rollback imediato:** deployment anterior confirmado `dpl_73K2tXFi9NQMw4v1YLn6HSuxtR8c` (main `2c30a354`). Qualquer rollback exige decisão expressa e conferência do alvo atual; não executar automaticamente.
+
+### Cinco workflows aprovados — HEAD funcional `1664f805`
+
+1. [Application CI #39310659373](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39310659373): **SUCCESS**.
+2. [EMPROVEX Core Protection #39310659282](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39310659282): **SUCCESS**.
+3. [Recovery Guardrails #39310659261](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39310659261): **SUCCESS**.
+4. [SAAS-DL Legal Validation #39310659257](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39310659257): **SUCCESS**.
+5. [VISUAL-R1 W4 QA (isolated) #39310659259](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39310659259): **SUCCESS**.
+
+**Precisão:** esses cinco resultados se referem ao **HEAD funcional pré-squash `1664f805...`**, não a uma suposta nova execução no SHA do squash. O Fundador informou aprovação da prévia localhost antes de autorizar o merge e o deploy. A publicação foi validada pela saúde e inspeção do domínio; não afirmar que foi realizado um segundo smoke autenticado completo de todas as funções em produção sem nova evidência.
+
+### Funcionalidades efetivamente incluídas na R4
+
+- **R2 recuperada:** inspeção de locais no hover/foco/teclado, painel fixo abaixo da cena que não cobre equipamentos, modal de detalhes por local, relatório PDF com conteúdo/local/prateleira/lote/validade; detecção de locais vazios com saldo zero; pesquisa de material **em todos os depósitos do mesmo workspace**, navegando ao local e à subposição; cadastro de novos locais e subposições **em depósitos existentes**, com validações de integridade.
+- **R3 recuperada:** apresentação sem sobreposição para inspeção e empilhamento de volumes em paletes com projeção isométrica; correções de `Meus Depósitos`; entrada detalhada de alocação de NF preservada em paralelo às ações em lote. Referência histórica da R3: `release/emprovex-r3-hotfix-inspecao-20261017@eb1935a9` e PRs #331–#338.
+- **3D premium atual preservado:** geladeira de portas duplas e freezer baú, frente física coerente com o lado maior e quatro câmeras; **reflexo branco discreto se o equipamento estiver ocupado**; volumes apoiados e empilhados em paletes/mesas; caixas em níveis físicos e subposições de estantes; indicação de validade pela cor da caixa (**amarelo entre hoje e 14 dias inclusive**, **vermelho para vencidos**), com destaque suave do local.
+- **Sem alerta inventado:** vínculo entre lote ativo, quantidade positiva, mesmo material e mesma posição física (depósito/local/subposição), baseado em saldo real; estados agregados para a estrutura sem confundir o saldo de outra posição.
+- **Experiência existente preservada:** sidebar organizada e acesso à Central de Depósitos por setores externos autorizados, sem bypass do servidor, autenticação nem isolamento multi-workspace.
+
+### Limites, banco e economia de cota
+
+- **Sem alteração de Firestore Rules, esquema ou migração no ato da publicação da R4.** A atualização de código não executou movimentações ou alteração de saldos do Firestore; operações futuras da interface continuam sujeitas aos contratos de domínio e autorização.
+- A sinalização visual usa leitura indexada de lotes por `expiresOn` até o 14º dia (inclui já vencidos), sob demanda, com limite de **500** e aviso explícito de cobertura potencialmente incompleta quando saturado. A inspeção detalhada e emissão de PDF consultam lotes completos separadamente somente quando necessárias, evitando listeners e leituras por hover/tecla/câmera.
+- A regra geral de FEFO/alerta de vencimento de **30 dias** no domínio não foi substituída: **14 dias é a convenção visual da cena 3D**.
+- Preservadas cautelas de custo de Firestore, integridade, permissões e isolamento entre UGs/workspaces.
+
+### Handoff oficial — estado após a publicação
+
+**Onde estamos:** `main@e61c2675` consolidada e **R4 promovida, Ready em `emprovex.com.br`**, deployment `dpl_6mQA5J1tuLNvQBnsaqdbVQcV9MUA`. **O que estamos fazendo:** registrar encerramento operacional da release e preservar rastreabilidade. **Quem está fazendo:** Fundador fez aceite local e deploy/promote administrativo via PowerShell; GitHub/assistente fez a reconciliação e integração. **O que fazer a seguir:** apenas conferir no navegador autenticado os fluxos de 3D, inspeção, PDF, busca global, cadastro e validade com dados permitidos; não executar novo deploy apenas para repetir publicação. **Quem fará:** Fundador valida operação, próximo executor corrige qualquer regressão em branch isolada. A migração Cloud Run permanece assunto independente e não foi executada nesta release.
+
+**Documentação de origem:** `docs/releases/EMPROVEX_WAREHOUSE_R4_RECONCILIACAO_20261019.md`, `docs/adm-deposito/STOCK_3D_VISUAL_R1_20261019.md`; os textos desses arquivos descrevem etapas anteriores ao fechamento e devem ser lidos à luz deste estado de produção.
+
+---
+
+
+## HISTÓRICO — 2026-10-19 · ADMINISTRAÇÃO ORIGINAL VISUAL + TELEMETRIA POR UG R3 · PR #341
 
 > **Este é o recorte vigente para o trabalho da Administração.** As notas históricas abaixo sobre ADMIN-2.0, EMPROVEX Command, novos módulos/13 abas ou CORE V2 foram **superadas** pela decisão expressa de abandonar aquele desenvolvimento. Permanecem como histórico, não como escopo autorizado.
 
@@ -3028,7 +3086,7 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 
 ## EMPROVEX R4 — Reconciliação Warehouse R2/R3 com 3D premium (19/10/2026)
 
-**PR #345 DRAFT**, branch `feat/warehouse-r3-restoration-consolidated`, base `main@2c30a354`. Esta onda foi solicitada para **recuperar e publicar, numa única release**, o que foi aprovado na linha R2/R3 mas não foi integrado à `main`, além das melhorias 3D do PR #344.
+**Registro histórico da fase DRAFT (hoje PR #345 MERGED e R4 publicada):** branch `feat/warehouse-r3-restoration-consolidated`, base `main@2c30a354`. Esta onda foi solicitada para **recuperar e publicar, numa única release**, o que foi aprovado na linha R2/R3 mas não foi integrado à `main`, além das melhorias 3D do PR #344.
 
 - Causa: a R3 antiga foi publicada diretamente via CLI Vercel de uma branch `07cab044`/hotfix `eb1935a`, sem merge. A publicação posterior da `main` substituiu esses recursos. Código original preservado nos PRs #331–#338 e suas branches, recuperado seletivamente.
 - Recuperado: inspeção por hover/teclado/clique, local sem saldo, painel ancorado abaixo da cena, modal e PDF por local, pesquisa global entre depósitos, botão para local/subposição em depósito existente, formulário de cadastro dimensional e guardas de inativação.
