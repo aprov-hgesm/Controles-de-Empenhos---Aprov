@@ -18,6 +18,12 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
+import {
+  warehouseVisualExpiryMap,
+  warehouseVisualStackSlots,
+  type WarehouseVisualExpiry,
+} from '../../../lib/warehouse/stockVisual';
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
@@ -31,6 +37,7 @@ type Props = {
   locations: WarehouseLocation[];
   balances: WarehouseLocationBalance[];
   materials: WarehouseMaterial[];
+  lots: WarehouseLot[];
   selectedMaterialId: string;
   queryText: string;
   onQueryTextChange: (value: string) => void;
@@ -112,7 +119,8 @@ function boxGroup(
   x: number,
   y: number,
   scale = 1,
-  selected = false
+  selected = false,
+  expiry: WarehouseVisualExpiry = 'normal'
 ) {
   return (
     <g
@@ -120,28 +128,59 @@ function boxGroup(
       transform={'translate(' + x + ' ' + y + ') scale(' + scale + ')'}
       data-visual-role="warehouse-stock-box"
       data-selected={selected ? 'true' : 'false'}
+      data-expiry-state={expiry}
       opacity={selected ? 1 : 0.98}
     >
       <polygon
         points="-14,0 0,-8 14,0 0,8"
-        fill={WAREHOUSE_BOX_VISUAL.topFill}
-        stroke={WAREHOUSE_BOX_VISUAL.topStroke}
+        fill={expiry === 'near' ? '#fef08a' : expiry === 'expired' ? '#fecaca' : WAREHOUSE_BOX_VISUAL.topFill}
+        stroke={expiry === 'near' ? '#ca8a04' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
       />
       <polygon
         points="-14,0 0,8 0,22 -14,14"
-        fill={WAREHOUSE_BOX_VISUAL.frontFill}
-        stroke={WAREHOUSE_BOX_VISUAL.frontStroke}
+        fill={expiry === 'near' ? '#facc15' : expiry === 'expired' ? '#f87171' : WAREHOUSE_BOX_VISUAL.frontFill}
+        stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.frontStroke}
         strokeWidth="0.65"
       />
       <polygon
         points="14,0 0,8 0,22 14,14"
-        fill={WAREHOUSE_BOX_VISUAL.sideFill}
-        stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
+        fill={expiry === 'near' ? '#eab308' : expiry === 'expired' ? '#dc2626' : WAREHOUSE_BOX_VISUAL.sideFill}
+        stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#991b1b' : WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
     </g>
   );
+}
+
+/**
+ * Render each box on a real support level. Second-tier boxes stay immediately
+ * above the first tier, instead of floating at arbitrary screen offsets.
+ */
+function stockBoxesOnSurface(
+  key: string,
+  object: WarehouseDepotLayoutObject,
+  supportZ: number,
+  quantity: number,
+  logicalWidth: number,
+  logicalHeight: number,
+  scale: number,
+  selected: boolean,
+  expiry: WarehouseVisualExpiry,
+  maximum = 8
+) {
+  const boxHeight = 22 * scale;
+  return warehouseVisualStackSlots(quantity, maximum).map((slot, index) => {
+    const topZ = supportZ + (slot.layer + 1) * boxHeight;
+    const position = isoPoint(
+      object.x + object.width * slot.u,
+      object.y + object.height * slot.v,
+      topZ,
+      logicalWidth,
+      logicalHeight
+    );
+    return boxGroup(key + '-' + index, position.x, position.y, scale, selected, expiry);
+  });
 }
 
 function rackBeamPrism({
@@ -311,6 +350,9 @@ function WarehouseStructure({
   subpositions,
   occupiedQuantity,
   occupiedSubpositions,
+  expiry,
+  expiryBySubposition,
+  expiryByBaseLocation,
   highlighted,
   highlightedSubpositions,
   dimmed,
@@ -323,6 +365,9 @@ function WarehouseStructure({
   subpositions: WarehouseLocation[];
   occupiedQuantity: number;
   occupiedSubpositions: Map<string, number>;
+  expiry: WarehouseVisualExpiry;
+  expiryBySubposition: Map<string, WarehouseVisualExpiry>;
+  expiryByBaseLocation: Map<string, WarehouseVisualExpiry>;
   highlighted: boolean;
   highlightedSubpositions: WarehouseLocation[];
   dimmed: boolean;
@@ -473,14 +518,9 @@ function WarehouseStructure({
           );
         })}
 
-        {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
-          boxGroup(
-            'pal-box-' + index,
-            centerTop.x + (index - (generalBoxCount - 1) / 2) * 26,
-            centerTop.y - 12 - (index % 2) * 14,
-            0.88,
-            highlighted
-          )
+        {stockBoxesOnSurface(
+          'pal-box', object, z, occupiedQuantity,
+          logicalWidth, logicalHeight, 0.88, highlighted, expiry
         )}
 
         {renderLabel(
@@ -567,7 +607,20 @@ function WarehouseStructure({
           const p4 = isoPoint(object.x, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
 
           const linkedSubposition = subpositions[index] || null;
-          const levelQuantity = linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0;
+          const subpositionTotal = subpositions.reduce(
+            (sum, item) => sum + (occupiedSubpositions.get(item.id) || 0), 0
+          );
+          const baseQuantity = Math.max(0, occupiedQuantity - subpositionTotal);
+          const levelQuantity = (linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0)
+            + (index === 0 ? baseQuantity : 0);
+          const baseExpiry = index === 0
+            ? expiryByBaseLocation.get(object.warehouseLocationId || '') || 'normal'
+            : 'normal';
+          const childExpiry = linkedSubposition
+            ? expiryBySubposition.get(linkedSubposition.id) || 'normal'
+            : 'normal';
+          const levelExpiry = baseExpiry === 'expired' || childExpiry === 'expired'
+            ? 'expired' : baseExpiry === 'near' || childExpiry === 'near' ? 'near' : 'normal';
           const levelHighlighted = linkedSubposition
             ? highlightedSubpositions.some((item) => item.id === linkedSubposition.id)
             : false;
@@ -659,22 +712,11 @@ function WarehouseStructure({
                 side: true,
               })}
 
-              {levelQuantity > 0 && Array.from({ length: Math.min(2, visualBoxes(levelQuantity)) }, (_, boxIndex) => {
-                const boxPoint = isoPoint(
-                  object.x + object.width * (boxIndex === 0 ? 0.34 : 0.68),
-                  object.y + object.height * 0.54,
-                  shelfZ + 11,
-                  logicalWidth,
-                  logicalHeight
-                );
-                return boxGroup(
-                  'rack-level-box-' + index + '-' + boxIndex,
-                  boxPoint.x,
-                  boxPoint.y,
-                  0.72,
-                  levelHighlighted || highlighted
-                );
-              })}
+              {stockBoxesOnSurface(
+                'rack-level-box-' + index, object, shelfZ, levelQuantity,
+                logicalWidth, logicalHeight, 0.60, levelHighlighted || highlighted,
+                levelExpiry, 4
+              )}
               {rackBeamPrism({
                 key: 'front-beam-' + index,
                 x: object.x,
@@ -714,18 +756,7 @@ function WarehouseStructure({
           </g>
         ))}
 
-        {generalBoxCount > 0 && subpositions.length === 0 && Array.from({ length: generalBoxCount }, (_, index) => {
-          const row = index % Math.max(1, levels);
-          const shelfZ = z * ((row + 1) / (levels + 0.35)) + 11;
-          const p = isoPoint(
-            object.x + object.width * (0.3 + (index % 2) * 0.38),
-            object.y + object.height * 0.56,
-            shelfZ,
-            logicalWidth,
-            logicalHeight
-          );
-          return boxGroup('rack-box-' + index, p.x, p.y, 0.76, highlighted);
-        })}
+
 
         {renderLabel(
           centerTop,
@@ -758,6 +789,7 @@ function WarehouseStructure({
           front={applianceFront}
           project={(px, py, pz) => isoPoint(px, py, pz, logicalWidth, logicalHeight)}
           occupied={occupiedQuantity > 0}
+          expiry={expiry}
         />
         {renderLabel(
           centerTop,
@@ -836,7 +868,10 @@ function WarehouseStructure({
         <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#4f6878" strokeWidth="2.5" opacity="0.96" />
         <line x1={at.x} y1={at.y} x2={dt.x} y2={dt.y} stroke="#7d929f" strokeWidth="1.8" opacity="0.9" />
 
-        {generalBoxCount > 0 && boxGroup('bench-box', centerTop.x, centerTop.y - 6, 0.68, highlighted)}
+        {stockBoxesOnSurface(
+          'bench-box', object, z, occupiedQuantity,
+          logicalWidth, logicalHeight, 0.68, highlighted, expiry, 6
+        )}
 
         {renderLabel(
           centerTop,
@@ -861,6 +896,7 @@ export function WarehouseIsometricPreview({
   locations,
   balances,
   materials,
+  lots,
   selectedMaterialId,
   queryText,
   onQueryTextChange,
@@ -957,6 +993,11 @@ export function WarehouseIsometricPreview({
     }
     return map;
   }, [balances]);
+
+  const expiryVisual = useMemo(
+    () => warehouseVisualExpiryMap(balances, lots),
+    [balances, lots]
+  );
 
   const selectedMaterialBalances = useMemo(
     () => balances.filter((balance) => {
@@ -1213,6 +1254,16 @@ export function WarehouseIsometricPreview({
         </div>
       </div>
 
+        <div className={embedded
+          ? 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-white/10 bg-[#07101f] px-4 py-2 text-[10px] font-semibold text-slate-300'
+          : 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[10px] font-semibold text-slate-600'
+        } data-testid="warehouse-stock-expiry-legend">
+          <span>Caixas = representação da ocupação física</span>
+          <span><span className="mr-1 text-amber-500" aria-hidden="true">■</span> Vence em até 14 dias</span>
+          <span><span className="mr-1 text-red-500" aria-hidden="true">■</span> Vencido</span>
+          <span><span className="mr-1 text-slate-200" aria-hidden="true">◆</span> Brilho branco = equipamento ocupado</span>
+        </div>
+
       <div className={
         embedded
           ? 'relative min-h-[650px] overflow-hidden bg-[radial-gradient(circle_at_50%_8%,#fbfdff_0%,#eaf2f8_48%,#cfdeea_100%)]'
@@ -1403,6 +1454,7 @@ export function WarehouseIsometricPreview({
                 const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
                 const occupiedQuantity = locationId ? occupancyByLocal.get(locationId) || 0 : 0;
                 const highlighted = Boolean(locationId && highlightedLocalIds.has(locationId));
+                const expiry = expiryVisual.byLocation.get(locationId) || 'normal';
                 const highlightedSubpositions = subpositions.filter((candidate) =>
                   highlightedSubpositionIds.has(candidate.id)
                 );
@@ -1417,6 +1469,9 @@ export function WarehouseIsometricPreview({
                     subpositions={subpositions}
                     occupiedQuantity={occupiedQuantity}
                     occupiedSubpositions={occupancyBySubposition}
+                    expiry={expiry}
+                    expiryBySubposition={expiryVisual.bySubposition}
+                    expiryByBaseLocation={expiryVisual.byBaseLocation}
                     highlighted={highlighted}
                     highlightedSubpositions={highlightedSubpositions}
                     dimmed={hasActiveSelection && !highlighted}
