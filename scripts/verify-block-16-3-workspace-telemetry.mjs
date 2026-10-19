@@ -104,7 +104,7 @@ requireText(adminHook, 'loadPlatformWorkspaceUsage', 'Hook administrativo não c
 for (const marker of [
   'Quais unidades usam mais o EMPROVEX?',
   'Estes valores são estimativas internas, não uma cobrança do Google.',
-  'Cloud Monitoring',
+  'A contagem por UG não corresponde diretamente à fatura do Google.',
   'admin-ug-modules-',
   'Atualizar estimativas',
 ]) requireText(panel, marker, `Painel perdeu aviso/controle: ${marker}`);
