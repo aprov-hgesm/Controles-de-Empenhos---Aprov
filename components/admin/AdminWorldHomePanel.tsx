@@ -89,7 +89,7 @@ export function AdminWorldHomePanel({
       <div className={styles.statGrid} aria-label="Dados da vizinhança">
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Home size={16}/></span>
-          <div><p>Residências digitais</p><strong>{hasDirectory ? count(residents.length) : '—'}</strong>
+          <div><p>Prédios ocupados</p><strong>{hasDirectory ? count(residents.length) : '—'}</strong>
             <small>uma construção por conta cadastrada</small></div>
         </div>
         <div className={styles.statCard}>
@@ -169,8 +169,8 @@ export function AdminWorldHomePanel({
         <div className={styles.legend}>
           <p className={styles.footerLabel}>COMO LER O BAIRRO</p>
           <div className={styles.legendItems}>
-            <span><i className={styles.lit}/> Casa iluminada · sessão válida</span>
-            <span><i className={styles.dark}/> Casa escura · sem sessão</span>
+            <span><i className={styles.lit}/> Prédio iluminado · sessão válida</span>
+            <span><i className={styles.dark}/> Prédio escuro · sem sessão</span>
             <span><i className={styles.unknown}/> Cinza · dados indisponíveis</span>
           </div>
           <p className={styles.finePrint}>O edifício central representa a conta fundadora APROV HGeSM e não é duplicado nos lotes laterais. Lotes vazios aguardam novas contas; legendas ficam acima dos edifícios. “Ativo” indica lease de sessão não expirado, não presença humana em tempo real.
@@ -182,7 +182,7 @@ export function AdminWorldHomePanel({
           {(directoryError || sessionsError) && <p className={styles.errorLine}>{directoryError || sessionsError}</p>}
         </div>
         <div className={styles.selectedCard} aria-live="polite">
-          <p className={styles.footerLabel}>RESIDÊNCIA SELECIONADA</p>
+          <p className={styles.footerLabel}>PRÉDIO SELECIONADO</p>
           {selected ? (
             <>
               <strong>{selected.label}</strong>
@@ -193,11 +193,11 @@ export function AdminWorldHomePanel({
                   : selected.presence === 'unknown' ? 'Presença indisponível'
                     : selected.presence === 'disabled' ? 'Conta suspensa' : 'Sem sessão válida'}
               </div>
-              <small>{selected.kind === 'admin' ? 'Administrador' : 'Usuário de setor'}
+              <small>{selected.email === HGESM_SECTOR_EMAIL ? 'Conta fundadora APROV HGeSM' : selected.kind === 'admin' ? 'Administrador' : 'Usuário de setor'}
                 {selected.ug ? ' · UG ' + selected.ug : ''} · Último registro: {lastSeen}</small>
             </>
           ) : (
-            <span className={styles.selectHint}>Selecione uma casa no mapa para visualizar a conta correspondente.</span>
+            <span className={styles.selectHint}>Selecione um prédio no mapa para visualizar a conta correspondente.</span>
           )}
         </div>
       </div>
