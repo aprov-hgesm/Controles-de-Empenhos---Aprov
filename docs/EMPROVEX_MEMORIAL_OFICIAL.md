@@ -2985,3 +2985,16 @@ Application CI, TypeScript/build, Core Protection, Firestore Rules/Emulator e ac
 - **Sem Firestore reads/writes adicionais, sem novos listeners, sem deploy, sem merge e sem modificação em produção.** Tests/CI/Legal/Recovery/Core devem ser certificados **no HEAD final**, e a aparência permanece sujeita a aceite humano.
 
 **Handoff:** Onde estamos — R1.2 com slots vazios, torre fundadora e legendas acima das construções no PR #341 DRAFT. O que estamos fazendo — certificação de CI e atualização da prévia local. Quem faz — executor no GitHub; Fundador na inspeção visual. Próximo passo — usar \`git pull --ff-only\` na branch do PR #341, reiniciar \`npm.cmd run dev -- --port 3001\` e abrir \`http://localhost:3001/admin\`. Quem fará — Fundador valida; executor corrige refinamentos apontados.
+
+
+## ADM DEPÓSITO — COLD-3D-R1 · Geladeira e freezer em 3D premium (19/10/2026)
+
+PR #342 em DRAFT · \`feat/warehouse-cold-appliances-3d-premium\` · base \`main@30f292c8\`. Alterações exclusivas na prévia isométrica de depósitos:
+- Geladeira industrial com portas duplas inox escovado, profundidade real, juntas térmicas, puxadores, painel técnico, acabamento lateral e painel traseiro do compressor.
+- Frente física da geladeira definida sempre pelo **lado maior horizontal** do equipamento e preservada sob as quatro câmeras: Frente, Direita, Trás e Esquerda. Detalhes frontais só na face fisicamente correta; nas vistas traseira/laterais existem acabamentos próprios.
+- Freezer baú com tampas superiores duplas translúcidas, moldura isolante, puxador real, dobradiças e ventilação; geometria criada em coordenadas físicas antes da projeção, sem desenhar acessórios no ar.
+- Novo \`lib/warehouse/applianceOrientation.ts\`, novo \`features/warehouse/components/WarehouseColdAppliance3D.tsx\`, integração em \`WarehouseIsometricPreview.tsx\`. Testes físicos e guards adicionais em \`scripts/warehouse-isometric-camera.test.mjs\`.
+- Não altera layout persistido, schema, dados, Firestore, Rules, autorização, movimentações, saldo ou interfaces operacionais. Nenhuma dependência 3D nem leitura extra. Sem merge ou deploy.
+- Documento detalhado: \`docs/adm-deposito/COLD_3D_R1_20261019.md\`. CI e validação gráfica pendentes de conclusão e aceite humano no navegador.
+
+Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar estética multi-perspectiva; quem faz — executor de GitHub e Fundador; o que fazer a seguir — abrir a prévia 3D na branch e comparar as quatro vistas; quem o fará — Fundador confirma e executor aplica ajustes.
