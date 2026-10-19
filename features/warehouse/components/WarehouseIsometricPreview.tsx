@@ -45,7 +45,7 @@ type Props = {
   locations: WarehouseLocation[];
   balances: WarehouseLocationBalance[];
   materials: WarehouseMaterial[];
-  lots: WarehouseLot[];
+  lots?: WarehouseLot[];
   selectedMaterialId: string;
   queryText: string;
   onQueryTextChange: (value: string) => void;
@@ -922,7 +922,7 @@ export function WarehouseIsometricPreview({
   locations,
   balances,
   materials,
-  lots,
+  lots = [],
   selectedMaterialId,
   queryText,
   onQueryTextChange,
