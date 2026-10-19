@@ -86,7 +86,7 @@ async function loadHistoricalInvoiceSlice(
     const snapshot: QuerySnapshot<DocumentData> = await getDocs(pageQuery);
     pages += 1;
     documentReads += snapshot.size;
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'notas');
 
     invoices.push(...snapshot.docs.map(mapInvoice));
 
@@ -145,7 +145,7 @@ export async function loadInvoicesByRecordKeys(
     const snapshot = await getDocs(
       query(collectionRef, where(documentId(), 'in', keys))
     );
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'notas');
     invoices.push(...snapshot.docs.map(mapInvoice));
   }
 
@@ -185,7 +185,7 @@ export async function loadInvoiceCollectionSummaryCounts(): Promise<InvoiceColle
     const markerSnapshot = await getDoc(
       operationalSettingsDocRef(scope, INVOICE_HOT_HISTORY_MARKER_ID)
     );
-    recordWorkspaceDocumentReads(scope, markerSnapshot.exists() ? 1 : 0);
+    recordWorkspaceDocumentReads(scope, markerSnapshot.exists() ? 1 : 0, 'notas');
     hotHistoryReady = markerSnapshot.exists()
       && isInvoiceHotHistoryMarker(markerSnapshot.data(), scope.workspaceId);
   } catch (error) {
@@ -224,7 +224,7 @@ export async function loadHighestTermoNumero(): Promise<number> {
       limit(1)
     )
   );
-  recordWorkspaceDocumentReads(scope, snapshot.size);
+  recordWorkspaceDocumentReads(scope, snapshot.size, 'notas');
   if (snapshot.empty) return 0;
   const value = snapshot.docs[0].data()?.termoNumero;
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
