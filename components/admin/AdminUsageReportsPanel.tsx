@@ -308,14 +308,14 @@ export function AdminUsageReportsPanel({
           <div>
             <div className="flex items-center gap-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-violet-200/70">
               <BarChart3 className="h-4 w-4" />
-              Inteligência de consumo
+              Evolução de uso do sistema
             </div>
             <h3 className="mt-2 text-lg font-extrabold text-white">
               Histórico &amp; Relatórios de Cotas
             </h3>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-              A cota global usa métricas faturáveis reais do Cloud Monitoring. A visão por UG usa
-              a telemetria atribuída pelo EMPROVEX e permanece identificada como estimativa.
+              Veja se o uso aumentou ou diminuiu ao longo do tempo.
+              A cota geral vem do Google; a atividade de uma UG vem das estimativas do EMPROVEX.
             </p>
           </div>
 
@@ -341,6 +341,18 @@ export function AdminUsageReportsPanel({
           </div>
         </div>
 
+        <div className="mt-4 rounded-xl border border-[#cddfee] bg-[#eff6ff] px-4 py-3" data-testid="admin-usage-history-simple-guide">
+          <p className="text-xs font-extrabold text-[#225486]">Como ler este histórico</p>
+          <p className="mt-1 text-xs leading-6 text-[#496785]">
+            <strong>Período:</strong> escolha dias, semanas, meses ou anos.
+            <strong> Cota global:</strong> mostra o uso do banco inteiro em relação à referência diária.
+            <strong> UG:</strong> mostra a atividade estimada de uma unidade, não sua conta.
+            Para guardar os números em uma planilha, use <strong>Exportar CSV</strong>.
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-[#69809a]">
+            Um dia sem registro não comprova que o sistema não foi utilizado.
+          </p>
+        </div>
         <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_1.2fr]">
           <div className="flex min-w-0 gap-2 overflow-x-auto">
             {PERIODS.map((item) => (
