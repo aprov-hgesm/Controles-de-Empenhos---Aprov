@@ -554,6 +554,10 @@ export async function updateWarehouseDepot(
   if (!snapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
   const current = parseDepot(scope.workspaceId, depotId, snapshot.data() as Record<string, unknown>);
   const nextCode = input.code ?? current.code;
+  // Stable identifiers for existing labels and layout references.
+  if (normalizeWarehouseLogicalCode(nextCode) !== current.code) {
+    throw new Error('WAREHOUSE_DEPOT_CODE_IMMUTABLE');
+  }
   const nextStatus = input.status ?? current.status;
 
   if (
@@ -697,13 +701,8 @@ export async function updateWarehouseLocation(
   const snapshot = await getDoc(doc(db, path));
   if (!snapshot.exists()) throw new Error('WAREHOUSE_LOCATION_NOT_FOUND');
   const current = parseLocation(scope.workspaceId, locationId, snapshot.data() as Record<string, unknown>);
-  if (input.code !== undefined && input.code !== current.code) {
-    await assertLocationCodeAvailable(scope.workspaceId, {
-      kind: current.kind,
-      depotId: current.depotId,
-      parentLocationId: current.parentLocationId,
-      code: input.code,
-    }, locationId);
+  if (input.code !== undefined && normalizeWarehouseLogicalCode(input.code) !== current.code) {
+    throw new Error('WAREHOUSE_LOCATION_CODE_IMMUTABLE');
   }
   const candidate = validateWarehouseLocation({
     ...current,
