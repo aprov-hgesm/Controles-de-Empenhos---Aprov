@@ -188,6 +188,31 @@
 
 ---
 
+## MARCO — EDIÇÃO INSTITUCIONAL + AUDITORIA DE TODA A ADMIN DA MAIN (18/10/2026)
+
+**Pedido do Fundador:** incorporar a **edição dos dados do workspace** à Gestão do Cliente e analisar **todas as funcionalidades da Administração da `main`**, continuando sua adaptação para a nova experiência visual. Escopo executado neste marco: editor seguro em nova UI, inventário completo e pontes funcionais para módulos existentes; **não reivindicar migração nativa total** de Sessões/Consumo/Backups/Security.
+
+**FUNCIONALIDADE NOVA — EDIÇÃO DO WORKSPACE**
+- `lib/admin2/customers/workspaceProfileEditContract.ts`: formulário e validação de Nome do setor, Nome da OM, Sigla, Nome da Seção e UG **somente se ausente**. ID, e-mail operacional, status e UG já vinculada são imutáveis; founder/legado protegido.
+- `components/admin2/customers/AdminWorkspaceProfileEditor.tsx`: visual V3 claro e formulário preenchido pela consulta administrativa existente. Botão **Editar dados do workspace** em `AdminCustomerManagement`.
+- **Em localhost comum:** alterações de metadados simuladas apenas em memória, mantidas entre navegações pela prévia. **Em Auth+Firestore Emulator demo-***: reutiliza `updateSectorWorkspaceProfile` do código original, cuja transação preserva workspace/conta/UG index e registra `sector.profile_update` ou `sector.ug_backfill`. **Nunca escreve no Firestore real por este laboratório**.
+- Não foram expostos comandos de alteração de e-mail de acesso, UID, senha ou situação operacional pelo formulário.
+
+**AUDITORIA INDEPENDENTE DAS FUNÇÕES DO ADMIN ATUAL (`main`):**
+- Lidos `app/admin/page.tsx`, `PlatformAdminView.tsx` e os painéis reais: `AdminCreateSectorPanel`, `EditSectorModal`, `AdminBillingPanel`, `AdminConsumptionHub` (+ quota Google, consolidado, UG, relatórios/exportação, alertas), `AdminSessionsPanel`, `AdminBackupPanel` (+ backup Auth) e `AdminSecurityPanel`.
+- **Nativo na Admin 2.0:** Diretório real/Cliente 360, Cadastro unificado simulado, Gestão da assinatura em simulação/Emulator, editor institucional da nova etapa.
+- **Acesso preservado por ponte explícita à main:** Consumo/Cotas, Sessões/encerramento remoto, Backups/recuperação, Segurança, relatórios, configurações e painel COMPLETO de Billing. Ao clicar, usuário autenticado acessa a rota legada `/admin?tab=...` com os controles existentes; sem duplicar listeners que custam Firestore na prévia.
+- **Ações reais de ciclo de vida, redefinir senha e deletar setor** seguem no painel `/admin?tab=setores`, protegidas pelo fluxo antigo; **não foram habilitadas na nova UI**. Acesso operacional entre workspaces continua adiado.
+- **Não equivalentes/sem migração:** suporte/CRM, pendências, auditoria global, indicadores comerciais, dashboard real e configuração centralizada ainda necessitam domínios/implementações próprios. A nova UI não deve exibir estados fictícios como reais.
+- **Documento canônico de auditoria detalhada:** `docs/admin2/AUDITORIA_MAIN_COMPATIBILIDADE_ADMIN2.md`. **IMPORTANTE:** ponte de compatibilidade não equivale a migração integral; as capacidades permanecem preservadas enquanto avançamos sequencialmente.
+
+**QA:** `scripts/admin2-workspace-edit.test.mjs` integra Application CI; exige validação final de TypeScript, Core Protection e testes do HEAD mais recente, além de smoke humano.
+**PRODUÇÃO:** `main`, Firestore real, credenciais, workspaces e deploy intocados. Nada foi migrado automaticamente para o banco.
+
+**ONDE ESTAMOS:** editor de workspace e pontes de compatibilidade entregues em branch isolada PR #339. **O QUE ESTAMOS FAZENDO:** certificar a etapa, evitar regressões do legado. **QUEM ESTÁ FAZENDO:** um chat executor. **O QUE FAZER A SEGUIR:** CI, testar no localhost e pedir aceite antes de migrar próximo módulo nativo (Sessões/Segurança). **QUEM O FARÁ:** executor valida CI, Fundador valida preview.
+
+---
+
 ## 1. Fontes canônicas a reler em toda ativação de chat
 
 1. **Este documento** \`docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md\` na **branch ATIVA**, para conhecer o estágio e a última decisão.
