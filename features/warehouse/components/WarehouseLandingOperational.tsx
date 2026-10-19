@@ -1794,6 +1794,13 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
           subjectLabel={'NF ' + selectedPendingGroup.invoiceId}
           rows={selectedPendingGroup.rows}
           coverageLimited={false}
+          onOpenDetailed={() => {
+            router.push(
+              '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
+                + encodeURIComponent(selectedPendingGroup.key)
+            );
+            setSelectedPendingKey(null);
+          }}
           onClose={() => setSelectedPendingKey(null)}
           onComplete={async () => {
             await load();

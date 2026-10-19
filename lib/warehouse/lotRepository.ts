@@ -33,6 +33,7 @@ import {
 import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
 import { validateWarehouseBalance, type WarehouseBalance } from './movement';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import { warehouseVisualExpiryCutoffDate } from './stockVisual';
 
 export interface WarehouseLotListItem {
   lot: WarehouseLot;
@@ -264,6 +265,43 @@ export async function listWarehouseLots(
           ? expiryCompare
           : left.lot.code.localeCompare(right.lot.code, 'pt-BR');
       });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+/**
+ * Smallest read for the 3D visual: only lot documents whose expiry is on or
+ * before the 14-day cutoff. A single-field range index is sufficient.
+ * Includes already expired dates so they can be shown in red.
+ * Returns all queried rows, including inactive ones, to expose the 500-row
+ * cap accurately; the pure visual mapper will ignore inactive/depleted rows.
+ */
+export async function listWarehouseVisualExpiryLots(
+  workspaceId: string,
+  maxResults = 500,
+  today: Date = new Date()
+): Promise<WarehouseLotListItem[]> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'lots');
+  try {
+    const bounded = Math.max(1, Math.min(maxResults, 500));
+    const snapshot = await getDocs(query(
+      collection(db, path),
+      where('expiresOn', '>=', '0000-01-01'),
+      where('expiresOn', '<=', warehouseVisualExpiryCutoffDate(today)),
+      limit(bounded)
+    ));
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs.map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      return {
+        lot: parseLot(scope.workspaceId, item.id, data),
+        createdAt: timestampToIso(data.createdAt),
+        updatedAt: timestampToIso(data.updatedAt),
+      };
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];

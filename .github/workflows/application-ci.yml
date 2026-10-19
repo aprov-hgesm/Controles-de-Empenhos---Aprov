@@ -278,6 +278,21 @@ jobs:
       - name: Central de Depósitos isometric scene auto-fit tests
         run: npm run test:warehouse-isometric-camera
 
+      - name: Central de Depósitos physical stock stack and expiry 14d tests
+        run: npm run test:warehouse-3d-stock
+
+      - name: Recovered warehouse location inspection and PDF tests
+        run: npm run test:warehouse-location-inspection
+
+      - name: Recovered warehouse global material search tests
+        run: npm run test:warehouse-global-material-search
+
+      - name: Recovered warehouse existing depot/location tests
+        run: npm run test:warehouse-existing-depot-location-create
+
+      - name: Recovered warehouse depot registration safety tests
+        run: npm run test:warehouse-depot-registration-r1
+
       - name: ADM Depósito Phase 9 permanent guard
         run: npm run verify:adm-deposito-phase-9
 

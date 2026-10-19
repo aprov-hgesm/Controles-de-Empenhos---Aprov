@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -14,10 +14,24 @@ import {
   type WarehouseIsoView,
 } from '../../../lib/warehouse/isometricCamera';
 import type {
+  WarehouseDepot,
   WarehouseLocation,
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
+import {
+  warehouseVisualExpiryMap,
+  warehouseVisualStackSlots,
+  type WarehouseVisualExpiry,
+} from '../../../lib/warehouse/stockVisual';
+import { deriveWarehouseLocationContents } from '../../../lib/warehouse/locationContents';
+import {
+  WarehouseLocationContentsTooltip,
+  WarehouseLocationDetailsDialog,
+  type WarehouseInspectionLotState,
+} from './WarehouseLocationInspection';
+import { WarehouseGlobalMaterialSearch } from './WarehouseGlobalMaterialSearch';
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
@@ -31,11 +45,28 @@ type Props = {
   locations: WarehouseLocation[];
   balances: WarehouseLocationBalance[];
   materials: WarehouseMaterial[];
+  lots?: WarehouseLot[];
   selectedMaterialId: string;
   queryText: string;
   onQueryTextChange: (value: string) => void;
   onSelectedMaterialIdChange: (value: string) => void;
   embedded?: boolean;
+  depotId?: string;
+  depotName?: string;
+  inspectionLots?: WarehouseLot[];
+  inspectionLotState?: WarehouseInspectionLotState;
+  inspectionError?: string | null;
+  inspectionComplete?: boolean;
+  inspectionAvailable?: boolean;
+  onInspectLocation?: () => void;
+  onRefreshInspection?: () => void;
+  globalDepots?: WarehouseDepot[];
+  globalLocations?: WarehouseLocation[];
+  globalBalances?: WarehouseLocationBalance[];
+  globalLoaded?: boolean;
+  globalComplete?: boolean;
+  focusedLocationId?: string | null;
+  onNavigateToGlobalLocation?: (depotId: string, locationId: string) => void;
 };
 
 type IsoPoint = { x: number; y: number };
@@ -112,7 +143,8 @@ function boxGroup(
   x: number,
   y: number,
   scale = 1,
-  selected = false
+  selected = false,
+  expiry: WarehouseVisualExpiry = 'normal'
 ) {
   return (
     <g
@@ -120,28 +152,59 @@ function boxGroup(
       transform={'translate(' + x + ' ' + y + ') scale(' + scale + ')'}
       data-visual-role="warehouse-stock-box"
       data-selected={selected ? 'true' : 'false'}
+      data-expiry-state={expiry}
       opacity={selected ? 1 : 0.98}
     >
       <polygon
         points="-14,0 0,-8 14,0 0,8"
-        fill={WAREHOUSE_BOX_VISUAL.topFill}
-        stroke={WAREHOUSE_BOX_VISUAL.topStroke}
+        fill={expiry === 'near' ? '#fef08a' : expiry === 'expired' ? '#fecaca' : WAREHOUSE_BOX_VISUAL.topFill}
+        stroke={expiry === 'near' ? '#ca8a04' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
       />
       <polygon
         points="-14,0 0,8 0,22 -14,14"
-        fill={WAREHOUSE_BOX_VISUAL.frontFill}
-        stroke={WAREHOUSE_BOX_VISUAL.frontStroke}
+        fill={expiry === 'near' ? '#facc15' : expiry === 'expired' ? '#f87171' : WAREHOUSE_BOX_VISUAL.frontFill}
+        stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.frontStroke}
         strokeWidth="0.65"
       />
       <polygon
         points="14,0 0,8 0,22 14,14"
-        fill={WAREHOUSE_BOX_VISUAL.sideFill}
-        stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
+        fill={expiry === 'near' ? '#eab308' : expiry === 'expired' ? '#dc2626' : WAREHOUSE_BOX_VISUAL.sideFill}
+        stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#991b1b' : WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
     </g>
   );
+}
+
+/**
+ * Render each box on a real support level. Second-tier boxes stay immediately
+ * above the first tier, instead of floating at arbitrary screen offsets.
+ */
+function stockBoxesOnSurface(
+  key: string,
+  object: WarehouseDepotLayoutObject,
+  supportZ: number,
+  quantity: number,
+  logicalWidth: number,
+  logicalHeight: number,
+  scale: number,
+  selected: boolean,
+  expiry: WarehouseVisualExpiry,
+  maximum = 8
+) {
+  const boxHeight = 22 * scale;
+  return warehouseVisualStackSlots(quantity, maximum).map((slot, index) => {
+    const topZ = supportZ + (slot.layer + 1) * boxHeight;
+    const position = isoPoint(
+      object.x + object.width * slot.u,
+      object.y + object.height * slot.v,
+      topZ,
+      logicalWidth,
+      logicalHeight
+    );
+    return boxGroup(key + '-' + index, position.x, position.y, scale, selected, expiry);
+  });
 }
 
 function rackBeamPrism({
@@ -311,6 +374,9 @@ function WarehouseStructure({
   subpositions,
   occupiedQuantity,
   occupiedSubpositions,
+  expiry,
+  expiryBySubposition,
+  expiryByBaseLocation,
   highlighted,
   highlightedSubpositions,
   dimmed,
@@ -323,6 +389,9 @@ function WarehouseStructure({
   subpositions: WarehouseLocation[];
   occupiedQuantity: number;
   occupiedSubpositions: Map<string, number>;
+  expiry: WarehouseVisualExpiry;
+  expiryBySubposition: Map<string, WarehouseVisualExpiry>;
+  expiryByBaseLocation: Map<string, WarehouseVisualExpiry>;
   highlighted: boolean;
   highlightedSubpositions: WarehouseLocation[];
   dimmed: boolean;
@@ -351,7 +420,12 @@ function WarehouseStructure({
 
   const code = location?.code || object.label;
   const generalBoxCount = visualBoxes(occupiedQuantity);
-  const highlightFilter = highlighted ? 'url(#warehouseGlowStrong)' : 'url(#warehouseObjectShadow)';
+  // A seleção azul prevalece sobre a sinalização suave de validade.
+  const highlightFilter = highlighted
+    ? 'url(#warehouseGlowStrong)'
+    : expiry === 'near'
+      ? 'url(#warehouseExpirySoftGlow)'
+      : 'url(#warehouseObjectShadow)';
   const groupOpacity = dimmed ? 0.48 : 1;
 
   if (object.kind === 'OTHER' && !object.warehouseLocationId) {
@@ -382,13 +456,13 @@ function WarehouseStructure({
     );
   }
 
-  const commonHighlight = highlighted ? (
+  const commonHighlight = highlighted || expiry === 'near' ? (
     <polygon
       points={polygonPoints([a, b, c, d])}
-      fill="#dbeafe"
-      stroke="#2563eb"
-      strokeWidth="4.5"
-      opacity="0.9"
+      fill={highlighted ? '#dbeafe' : '#fef3c7'}
+      stroke={highlighted ? '#2563eb' : '#eab308'}
+      strokeWidth={highlighted ? 4.5 : 2.4}
+      opacity={highlighted ? 0.9 : 0.6}
     />
   ) : null;
 
@@ -473,14 +547,9 @@ function WarehouseStructure({
           );
         })}
 
-        {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
-          boxGroup(
-            'pal-box-' + index,
-            centerTop.x + (index - (generalBoxCount - 1) / 2) * 26,
-            centerTop.y - 12 - (index % 2) * 14,
-            0.88,
-            highlighted
-          )
+        {stockBoxesOnSurface(
+          'pal-box', object, z, occupiedQuantity,
+          logicalWidth, logicalHeight, 0.88, highlighted, expiry
         )}
 
         {renderLabel(
@@ -497,7 +566,13 @@ function WarehouseStructure({
   }
 
   if (kind === 'SHELF') {
-    const levels = clamp(subpositions.length || 4, 2, 6);
+    const levels = clamp(subpositions.length || 4, 2, 8);
+    // Preserve physical clearance between decks even with eight levels.
+    const rackBoxScale = Math.min(0.60, z / ((levels + 0.35) * 48));
+    const subpositionTotal = subpositions.reduce(
+      (sum, item) => sum + (occupiedSubpositions.get(item.id) || 0), 0
+    );
+    const baseQuantity = Math.max(0, occupiedQuantity - subpositionTotal);
     const beamDepth = clamp(object.height * 0.065, 2.6, 7.2);
     const sideBeamWidth = clamp(object.width * 0.022, 1.8, 4.6);
     const beamHeight = 3.35;
@@ -567,7 +642,16 @@ function WarehouseStructure({
           const p4 = isoPoint(object.x, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
 
           const linkedSubposition = subpositions[index] || null;
-          const levelQuantity = linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0;
+          const levelQuantity = (linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0)
+            + (index === 0 ? baseQuantity : 0);
+          const baseExpiry = index === 0
+            ? expiryByBaseLocation.get(object.warehouseLocationId || '') || 'normal'
+            : 'normal';
+          const childExpiry = linkedSubposition
+            ? expiryBySubposition.get(linkedSubposition.id) || 'normal'
+            : 'normal';
+          const levelExpiry = baseExpiry === 'expired' || childExpiry === 'expired'
+            ? 'expired' : baseExpiry === 'near' || childExpiry === 'near' ? 'near' : 'normal';
           const levelHighlighted = linkedSubposition
             ? highlightedSubpositions.some((item) => item.id === linkedSubposition.id)
             : false;
@@ -659,22 +743,11 @@ function WarehouseStructure({
                 side: true,
               })}
 
-              {levelQuantity > 0 && Array.from({ length: Math.min(2, visualBoxes(levelQuantity)) }, (_, boxIndex) => {
-                const boxPoint = isoPoint(
-                  object.x + object.width * (boxIndex === 0 ? 0.34 : 0.68),
-                  object.y + object.height * 0.54,
-                  shelfZ + 11,
-                  logicalWidth,
-                  logicalHeight
-                );
-                return boxGroup(
-                  'rack-level-box-' + index + '-' + boxIndex,
-                  boxPoint.x,
-                  boxPoint.y,
-                  0.72,
-                  levelHighlighted || highlighted
-                );
-              })}
+              {stockBoxesOnSurface(
+                'rack-level-box-' + index, object, shelfZ, levelQuantity,
+                logicalWidth, logicalHeight, rackBoxScale, levelHighlighted || highlighted,
+                levelExpiry, 6
+              )}
               {rackBeamPrism({
                 key: 'front-beam-' + index,
                 x: object.x,
@@ -714,18 +787,7 @@ function WarehouseStructure({
           </g>
         ))}
 
-        {generalBoxCount > 0 && subpositions.length === 0 && Array.from({ length: generalBoxCount }, (_, index) => {
-          const row = index % Math.max(1, levels);
-          const shelfZ = z * ((row + 1) / (levels + 0.35)) + 11;
-          const p = isoPoint(
-            object.x + object.width * (0.3 + (index % 2) * 0.38),
-            object.y + object.height * 0.56,
-            shelfZ,
-            logicalWidth,
-            logicalHeight
-          );
-          return boxGroup('rack-box-' + index, p.x, p.y, 0.76, highlighted);
-        })}
+
 
         {renderLabel(
           centerTop,
@@ -758,6 +820,7 @@ function WarehouseStructure({
           front={applianceFront}
           project={(px, py, pz) => isoPoint(px, py, pz, logicalWidth, logicalHeight)}
           occupied={occupiedQuantity > 0}
+          expiry={expiry}
         />
         {renderLabel(
           centerTop,
@@ -836,7 +899,10 @@ function WarehouseStructure({
         <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#4f6878" strokeWidth="2.5" opacity="0.96" />
         <line x1={at.x} y1={at.y} x2={dt.x} y2={dt.y} stroke="#7d929f" strokeWidth="1.8" opacity="0.9" />
 
-        {generalBoxCount > 0 && boxGroup('bench-box', centerTop.x, centerTop.y - 6, 0.68, highlighted)}
+        {stockBoxesOnSurface(
+          'bench-box', object, z, occupiedQuantity,
+          logicalWidth, logicalHeight, 0.68, highlighted, expiry, 6
+        )}
 
         {renderLabel(
           centerTop,
@@ -861,14 +927,46 @@ export function WarehouseIsometricPreview({
   locations,
   balances,
   materials,
+  lots = [],
   selectedMaterialId,
   queryText,
   onQueryTextChange,
   onSelectedMaterialIdChange,
   embedded = false,
+  depotId = '',
+  depotName = 'Depósito',
+  inspectionLots = [],
+  inspectionLotState = 'idle',
+  inspectionError = null,
+  inspectionComplete = false,
+  inspectionAvailable = true,
+  onInspectLocation,
+  onRefreshInspection,
+  globalDepots,
+  globalLocations,
+  globalBalances,
+  globalLoaded = true,
+  globalComplete = true,
+  focusedLocationId = null,
+  onNavigateToGlobalLocation,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [viewTransitioning, setViewTransitioning] = useState(false);
+  const [hoveredObject, setHoveredObject] = useState<{
+    objectId: string; locationId: string;
+  } | null>(null);
+  // O painel mantém o último local consultado mesmo quando o cursor sai do SVG.
+  // O highlight continua limitado ao hover ativo para não dar falsa seleção.
+  const [inspectedLocationId, setInspectedLocationId] = useState<string | null>(null);
+  const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
+  const [currentDay, setCurrentDay] = useState(() => new Date());
+
+  // Reavalia o calendário quando o usuário volta à aba após uma virada de dia.
+  useEffect(() => {
+    const refreshDay = () => setCurrentDay(new Date());
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => document.removeEventListener('visibilitychange', refreshDay);
+  }, []);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -878,6 +976,7 @@ export function WarehouseIsometricPreview({
   }, []);
 
   const changePreviewView = (nextView: PreviewView) => {
+    setHoveredObject(null);
     if (nextView === previewView || viewTransitioning) return;
 
     setViewTransitioning(true);
@@ -895,6 +994,29 @@ export function WarehouseIsometricPreview({
     () => new Map(locations.map((location) => [location.id, location])),
     [locations]
   );
+
+  const hoveredContents = useMemo(
+    () => inspectedLocationId
+      ? deriveWarehouseLocationContents(
+        inspectedLocationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [inspectedLocationId, locations, balances, materials, inspectionLots]
+  );
+  const detailContents = useMemo(
+    () => detailLocationId
+      ? deriveWarehouseLocationContents(
+        detailLocationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [detailLocationId, locations, balances, materials, inspectionLots]
+  );
+
+  useEffect(() => {
+    setHoveredObject(null);
+    setInspectedLocationId(null);
+    setDetailLocationId(null);
+  }, [depotId]);
 
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
@@ -957,6 +1079,11 @@ export function WarehouseIsometricPreview({
     }
     return map;
   }, [balances]);
+
+  const expiryVisual = useMemo(
+    () => warehouseVisualExpiryMap(balances, lots, currentDay),
+    [balances, lots, currentDay]
+  );
 
   const selectedMaterialBalances = useMemo(
     () => balances.filter((balance) => {
@@ -1127,15 +1254,24 @@ export function WarehouseIsometricPreview({
             <Sparkles className="h-3.5 w-3.5" /> {embedded ? 'Visão 3D' : 'Prévia 3D'}
           </p>
           <p
+            data-testid={hoveredContents ? 'warehouse-location-hover-status' : undefined}
+            aria-live="polite"
             className={
               embedded
                 ? 'mt-1 text-[10px] font-semibold text-slate-400'
                 : 'mt-1 text-xs font-semibold text-slate-500'
             }
           >
-            {embedded
-              ? 'Renderer visual oficial · escolha o ângulo sem alterar o croqui.'
-              : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
+            {hoveredContents
+              ? hoveredContents.location.code + ' · '
+                + (hoveredContents.rowCount === 0
+                  ? 'Local vazio · saldo físico 0'
+                  : hoveredContents.materialCount + ' material(is) · consulte os detalhes abaixo')
+              : onInspectLocation
+                ? inspectionAvailable
+                  ? 'Passe o cursor em um local para consultar os itens; clique para detalhes e PDF.'
+                  : 'Carregando saldos físicos do depósito para habilitar a inspeção…'
+                : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
           </p>
         </div>
 
@@ -1175,6 +1311,24 @@ export function WarehouseIsometricPreview({
           </div>
 
           {!embedded && (
+            globalDepots && globalLocations && globalBalances && onNavigateToGlobalLocation
+              ? (
+                <WarehouseGlobalMaterialSearch
+                  depots={globalDepots}
+                  locations={globalLocations}
+                  balances={globalBalances}
+                  materials={materials}
+                  loaded={globalLoaded}
+                  complete={globalComplete}
+                  queryText={queryText}
+                  selectedMaterialId={selectedMaterialId}
+                  onQueryTextChange={onQueryTextChange}
+                  onSelectedMaterialIdChange={onSelectedMaterialIdChange}
+                  onNavigateToLocation={(position) =>
+                    onNavigateToGlobalLocation(position.depotId, position.locationId)
+                  }
+                />
+              ) : (
             <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
@@ -1209,9 +1363,20 @@ export function WarehouseIsometricPreview({
                 </div>
               )}
             </div>
+            )
           )}
         </div>
       </div>
+
+        <div className={embedded
+          ? 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-white/10 bg-[#07101f] px-4 py-2 text-[10px] font-semibold text-slate-300'
+          : 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[10px] font-semibold text-slate-600'
+        } data-testid="warehouse-stock-expiry-legend">
+          <span>Caixas = representação da ocupação física</span>
+          <span><span className="mr-1 text-amber-500" aria-hidden="true">■</span> Vence em até 14 dias</span>
+          <span><span className="mr-1 text-red-500" aria-hidden="true">■</span> Vencido</span>
+          <span><span className="mr-1 text-slate-200" aria-hidden="true">◆</span> Brilho branco = equipamento ocupado</span>
+        </div>
 
       <div className={
         embedded
@@ -1323,6 +1488,10 @@ export function WarehouseIsometricPreview({
               <filter id="warehouseObjectShadow" x="-60%" y="-60%" width="220%" height="220%">
                 <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#10273c" floodOpacity="0.24" />
               </filter>
+              <filter id="warehouseExpirySoftGlow" x="-65%" y="-65%" width="230%" height="230%">
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#eab308" floodOpacity="0.62" />
+                <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#facc15" floodOpacity="0.26" />
+              </filter>
               <filter id="warehouseGlowStrong" x="-80%" y="-80%" width="260%" height="260%">
                 <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#60a5fa" floodOpacity="1" />
                 <feDropShadow dx="0" dy="0" stdDeviation="14" floodColor="#2563eb" floodOpacity="0.72" />
@@ -1402,14 +1571,66 @@ export function WarehouseIsometricPreview({
                 const location = locationId ? locationById.get(locationId) || null : null;
                 const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
                 const occupiedQuantity = locationId ? occupancyByLocal.get(locationId) || 0 : 0;
-                const highlighted = Boolean(locationId && highlightedLocalIds.has(locationId));
+                const highlighted = Boolean(locationId && (highlightedLocalIds.has(locationId) || focusedLocationId === locationId));
+                const expiry = expiryVisual.byLocation.get(locationId) || 'normal';
                 const highlightedSubpositions = subpositions.filter((candidate) =>
                   highlightedSubpositionIds.has(candidate.id)
                 );
 
+                const interactive = Boolean(onInspectLocation && inspectionAvailable && location?.kind === 'LOCAL');
+                const hovered = hoveredObject?.objectId === object.id;
+                const handleOpen = () => {
+                  if (!interactive || !locationId) return;
+                  onInspectLocation?.();
+                  setHoveredObject(null);
+                  setInspectedLocationId(locationId);
+                  setDetailLocationId(locationId);
+                };
+                const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
+                  if (!interactive || !locationId || event.pointerType === 'touch') return;
+                  setHoveredObject((current) =>
+                    current?.objectId === object.id ? current : { objectId: object.id, locationId }
+                  );
+                  setInspectedLocationId(locationId);
+                };
+
                 return (
-                  <WarehouseStructure
+                  <g
                     key={object.id}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? 0 : undefined}
+                    aria-label={interactive ? 'Consultar ' + location?.name + ': pressione Enter para detalhes' : undefined}
+                    data-testid={interactive ? 'warehouse-location-interactive' : undefined}
+                    data-hovered={hovered ? 'true' : 'false'}
+                    onPointerEnter={(event) => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      handlePointer(event);
+                    }}
+                    onPointerLeave={() => setHoveredObject((current) =>
+                      current?.objectId === object.id ? null : current
+                    )}
+                    onFocus={() => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      setHoveredObject({ objectId: object.id, locationId });
+                      setInspectedLocationId(locationId);
+                    }}
+                    onBlur={() => setHoveredObject(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpen();
+                      }
+                    }}
+                    onClick={handleOpen}
+                    style={{
+                      cursor: interactive ? 'pointer' : undefined,
+                      transition: 'filter 160ms ease, opacity 160ms ease',
+                      filter: hovered ? 'drop-shadow(0 0 9px rgba(37,99,235,0.85))' : undefined,
+                    }}
+                  >
+                    <WarehouseStructure
                     object={object}
                     logicalWidth={viewLogicalWidth}
                     logicalHeight={viewLogicalHeight}
@@ -1417,17 +1638,52 @@ export function WarehouseIsometricPreview({
                     subpositions={subpositions}
                     occupiedQuantity={occupiedQuantity}
                     occupiedSubpositions={occupancyBySubposition}
+                    expiry={expiry}
+                    expiryBySubposition={expiryVisual.bySubposition}
+                    expiryByBaseLocation={expiryVisual.byBaseLocation}
                     highlighted={highlighted}
                     highlightedSubpositions={highlightedSubpositions}
                     dimmed={hasActiveSelection && !highlighted}
                     applianceFront={object.applianceFront}
                   />
+                  </g>
                 );
               })}
             </g>
           </svg>
         )}
+        {inspectionLotState === 'ready' && !inspectionComplete && onInspectLocation && (
+          <p className="absolute bottom-3 right-3 max-w-[240px] rounded-lg bg-amber-50/95 p-2 text-[10px] font-medium text-amber-900 shadow-sm">
+            Consulta parcial: alguns lotes e suas validades podem não estar visíveis.
+          </p>
+        )}
       </div>
+      {onInspectLocation && (
+        <div data-testid="warehouse-location-inspection-dock"
+          className="h-[212px] overflow-y-auto border-t border-blue-100 bg-slate-50/95 px-3 py-3 sm:px-4">
+          {hoveredContents && !detailLocationId && !viewTransitioning ? (
+            <WarehouseLocationContentsTooltip
+              contents={hoveredContents}
+              lotState={inspectionLotState}
+            />
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+              Passe o cursor ou use Tab sobre um local para consultar a organização dos materiais aqui, sem encobrir o croqui. Clique no local para detalhes e PDF.
+            </p>
+          )}
+        </div>
+      )}
+      {detailContents && onRefreshInspection && (
+        <WarehouseLocationDetailsDialog
+          contents={detailContents}
+          depotName={depotName}
+          lotState={inspectionLotState}
+          lotError={inspectionError}
+          complete={inspectionComplete}
+          onRefresh={onRefreshInspection}
+          onClose={() => setDetailLocationId(null)}
+        />
+      )}
     </section>
   );
 }

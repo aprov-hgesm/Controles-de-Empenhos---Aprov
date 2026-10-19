@@ -1,6 +1,6 @@
 'use client';
 
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
   Box,
@@ -19,7 +19,11 @@ import {
 } from 'lucide-react';
 
 import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
-import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
+import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
+import {
+  suggestWarehouseLocalCode,
+  suggestWarehouseSubpositionCode,
+} from '../../../lib/warehouse/structureLocationDraft';
 
 import {
   createWarehouseDepot,
@@ -28,6 +32,7 @@ import {
   listWarehouseLocationsCached,
   updateWarehouseDepot,
   updateWarehouseLocation,
+  archiveWarehouseStructure,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -113,7 +118,8 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
-  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'aiImport'>('structure');
+  const createPanelRef = useRef<HTMLElement | null>(null);
+  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'registration'>('structure');
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -126,10 +132,18 @@ export function WarehouseLocationsR1Operational({
   const [depotSizeProfile, setDepotSizeProfile] = useState<WarehouseDepotSizeProfile>('MEDIUM');
 
   const [locationCode, setLocationCode] = useState('');
+  const [locationCodeEdited, setLocationCodeEdited] = useState(false);
   const [locationName, setLocationName] = useState('');
   const [locationDescription, setLocationDescription] = useState('');
   const [locationPreset, setLocationPreset] = useState<LocationPreset>('SHELF');
   const [shelfSubpositionCount, setShelfSubpositionCount] = useState(0);
+
+  useEffect(() => {
+    if (activeSubtab === 'structure' && createPanel) {
+      // O botão fica ao lado do depósito, mas o formulário é exibido acima da lista.
+      createPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeSubtab, createPanel]);
 
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true }));
@@ -233,7 +247,15 @@ export function WarehouseLocationsR1Operational({
       return;
     }
 
-    setLocationCode('');
+    const locationRecords = state.locations.map((item) => item.location);
+    setLocationCodeEdited(false);
+    setLocationCode(
+      panel === 'location'
+        ? suggestWarehouseLocalCode(locationRecords, selectedDepotId, 'EST')
+        : panel === 'subposition' && selectedLocation
+          ? suggestWarehouseSubpositionCode(locationRecords, selectedLocationId, selectedLocation.code)
+          : ''
+    );
     setLocationName(panel === 'location' ? 'Estante' : '');
     setLocationDescription('');
     setLocationPreset('SHELF');
@@ -278,8 +300,8 @@ export function WarehouseLocationsR1Operational({
 
   async function submitLocation(event: FormEvent, kind: 'LOCAL' | 'SUBPOSITION') {
     event.preventDefault();
-    if (!selectedDepotId) {
-      setMessage('Selecione um depósito primeiro.');
+    if (!selectedDepotId || !selectedDepot || selectedDepot.status !== 'active') {
+      setMessage('Selecione um depósito ativo primeiro.');
       return;
     }
     if (kind === 'SUBPOSITION' && !selectedLocationId) {
@@ -289,6 +311,7 @@ export function WarehouseLocationsR1Operational({
 
     setWorking(true);
     setMessage(null);
+    let createdLocalId: string | null = null;
     try {
       const created = await createWarehouseLocation(workspaceId, {
         kind,
@@ -298,6 +321,8 @@ export function WarehouseLocationsR1Operational({
         name: locationName,
         description: locationDescription || null,
       });
+
+      if (kind === 'LOCAL') createdLocalId = created.id;
 
       if (kind === 'LOCAL' && locationPreset === 'SHELF' && shelfSubpositionCount > 0) {
         const normalizedBaseCode = locationCode.trim().toUpperCase();
@@ -324,12 +349,20 @@ export function WarehouseLocationsR1Operational({
         kind === 'LOCAL'
           ? shelfSubpositionCount > 0 && locationPreset === 'SHELF'
             ? 'Estante criada com ' + shelfSubpositionCount + ' subposição(ões).'
-            : 'Local criado com sucesso.'
+            : 'Local criado com sucesso. Abra Croquis para inseri-lo no desenho do depósito.'
           : 'Subposição criada com sucesso.'
       );
       await refresh();
     } catch (error) {
-      setMessage(messageFromError(error));
+      if (createdLocalId) {
+        // O local principal já foi salvo; evitar que o operador recrie o mesmo código.
+        setSelectedLocationId(createdLocalId);
+        setCreatePanel(null);
+        setMessage('Local criado, mas a inclusão de todas as subposições não foi concluída. Confira as prateleiras já cadastradas antes de tentar novamente. ' + messageFromError(error));
+        await refresh();
+      } else {
+        setMessage(messageFromError(error));
+      }
     } finally {
       setWorking(false);
     }
@@ -361,58 +394,19 @@ export function WarehouseLocationsR1Operational({
 
   async function archiveDepot() {
     if (!selectedDepot) return;
-
-    const activeChildren = state.locations.filter(
-      (item) => item.location.depotId === selectedDepot.id && item.location.status === 'active'
-    );
-    const activeSubpositions = activeChildren.filter(
-      (item) => item.location.kind === 'SUBPOSITION'
-    );
-    const activeLocals = activeChildren.filter(
-      (item) => item.location.kind === 'LOCAL'
-    );
-
-    const structuralSummary = activeChildren.length
-      ? ' Também serão excluídos da operação '
-        + activeLocals.length + ' Local(is) e '
-        + activeSubpositions.length + ' Subposição(ões) vinculados.'
-      : '';
-
-    if (!window.confirm(
-      'Excluir este depósito da operação?'
-      + structuralSummary
-      + ' Os registros históricos serão preservados como inativos.'
-    )) return;
-
+    if (!window.confirm('Inativar este depósito e seus locais? A operação será bloqueada se houver estoque ou lotes ocupando posições.')) return;
     setWorking(true);
     setMessage(null);
     try {
-      // A estrutura filha acompanha a exclusão lógica do depósito.
-      // Subposições são inativadas antes dos Locais para preservar a hierarquia durante a operação.
-      for (const child of activeSubpositions) {
-        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
-      }
-      for (const child of activeLocals) {
-        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
-      }
-      await updateWarehouseDepot(workspaceId, selectedDepot.id, { status: 'inactive' });
-
-      setCreatePanel(null);
+      await archiveWarehouseStructure(workspaceId, { kind: 'DEPOT', id: selectedDepot.id });
       setSelectedDepotId('');
       setSelectedLocationId('');
-      setMessage(
-        'Depósito, Locais e Subposições vinculados foram excluídos da operação e preservados no histórico.'
-      );
+      setCreatePanel(null);
+      setMessage('Depósito e suas estruturas inativados em uma operação atômica.');
       await refresh();
     } catch (error) {
-      setMessage(
-        'A exclusão foi interrompida. Atualize a tela para conferir a estrutura já processada. '
-        + messageFromError(error)
-      );
-      await refresh();
-    } finally {
-      setWorking(false);
-    }
+      setMessage('A inativação foi bloqueada: ' + messageFromError(error));
+    } finally { setWorking(false); }
   }
 
   async function saveLocationEdits(event: FormEvent) {
@@ -439,64 +433,22 @@ export function WarehouseLocationsR1Operational({
 
   async function archiveSelectedLocation() {
     if (!editingLocation) return;
-
-    const label = editingLocation.kind === 'LOCAL' ? 'Local' : 'Subposição';
-    const activeSubpositions = editingLocation.kind === 'LOCAL'
-      ? state.locations.filter(
-          (item) =>
-            item.location.kind === 'SUBPOSITION'
-            && item.location.parentLocationId === editingLocation.id
-            && item.location.status === 'active'
-        )
-      : [];
-
-    const childSummary = activeSubpositions.length > 0
-      ? ' Também serão excluídas da operação '
-        + activeSubpositions.length
-        + ' Subposição(ões) vinculada(s) a este Local.'
-      : '';
-
-    if (!window.confirm(
-      'Excluir este ' + label.toLowerCase() + ' da operação?'
-      + childSummary
-      + ' Os registros históricos serão preservados como inativos.'
-    )) return;
-
+    const label = editingLocation.kind === 'LOCAL' ? 'local e suas prateleiras' : 'subposição';
+    if (!window.confirm('Inativar ' + label + '? A operação será bloqueada se houver material ou lotes associados.')) return;
     setWorking(true);
     setMessage(null);
     try {
-      // Mantém o mesmo comportamento hierárquico da exclusão de depósito:
-      // primeiro inativa as Subposições e só depois o Local pai.
-      for (const child of activeSubpositions) {
-        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
-      }
-
-      await updateWarehouseLocation(workspaceId, editingLocation.id, { status: 'inactive' });
+      await archiveWarehouseStructure(workspaceId, {
+        kind: editingLocation.kind, id: editingLocation.id,
+      });
       setCreatePanel(null);
       setSelectedLocationId('');
       setEditingLocationId('');
-
-      if (editingLocation.kind === 'LOCAL') {
-        setMessage(
-          activeSubpositions.length > 0
-            ? 'Local e ' + activeSubpositions.length
-              + ' Subposição(ões) vinculada(s) foram excluídos da operação e preservados no histórico.'
-            : 'Local excluído da operação e preservado no histórico.'
-        );
-      } else {
-        setMessage('Subposição excluída da operação e preservada no histórico.');
-      }
-
+      setMessage('Estrutura inativada com seus vínculos históricos preservados.');
       await refresh();
     } catch (error) {
-      setMessage(
-        'A exclusão foi interrompida. Atualize a tela para conferir a estrutura já processada. '
-        + messageFromError(error)
-      );
-      await refresh();
-    } finally {
-      setWorking(false);
-    }
+      setMessage('A inativação foi bloqueada: ' + messageFromError(error));
+    } finally { setWorking(false); }
   }
 
   function openSubpositionEdit(locationId: string) {
@@ -543,15 +495,15 @@ export function WarehouseLocationsR1Operational({
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubtab('aiImport')}
+          onClick={() => setActiveSubtab('registration')}
           className={
-            activeSubtab === 'aiImport'
+            activeSubtab === 'registration'
               ? 'inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
               : 'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black text-gray-600 transition hover:bg-blue-50 hover:text-[#00288e]'
           }
         >
           <FileJson className="h-4 w-4" />
-          Importar via IA
+          Cadastramento de Depósito
         </button>
       </nav>
 
@@ -587,32 +539,6 @@ export function WarehouseLocationsR1Operational({
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => openPanel('depot')}
-            className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-xs font-black text-white shadow-sm transition hover:bg-blue-800"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Novo depósito
-          </button>
-          <button
-            type="button"
-            onClick={() => openPanel('location')}
-            disabled={!selectedDepotId}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Novo local
-          </button>
-          <button
-            type="button"
-            onClick={() => openPanel('subposition')}
-            disabled={!selectedLocationId}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#00288e] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nova subposição
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveSubtab('labels')}
             disabled={!selectedDepotId}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -639,7 +565,11 @@ export function WarehouseLocationsR1Operational({
       )}
 
       {createPanel && (
-        <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-md">
+        <section
+          ref={createPanelRef}
+          data-testid="warehouse-existing-depot-create-panel"
+          className="scroll-mt-24 rounded-2xl border border-blue-200 bg-white p-5 shadow-md"
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#00288e]/60">
@@ -671,7 +601,7 @@ export function WarehouseLocationsR1Operational({
 
           {createPanel === 'depot' || createPanel === 'editDepot' ? (
             <form onSubmit={createPanel === 'editDepot' ? saveDepotEdits : submitDepot} className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-              <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} placeholder="Código · DEP-01" className={fieldClass} required />
+              <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} readOnly={createPanel === 'editDepot'} title="Código fixo para preservar etiquetas antigas" placeholder="Código · DEP-01" className={fieldClass} required />
               <input value={depotName} onChange={(event) => setDepotName(event.target.value)} placeholder="Nome do depósito" className={fieldClass} required />
               <input value={depotDescription} onChange={(event) => setDepotDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
               <select value={depotVisualType} onChange={(event) => setDepotVisualType(event.target.value as WarehouseDepotVisualType)} className={fieldClass}>
@@ -703,7 +633,7 @@ export function WarehouseLocationsR1Operational({
               className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3"
             >
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Depósito</p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Depósito existente selecionado</p>
                 <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedDepot?.code} · {selectedDepot?.name}</p>
               </div>
               {createPanel === 'location' && (
@@ -715,7 +645,14 @@ export function WarehouseLocationsR1Operational({
                     const preset = LOCATION_PRESETS.find((item) => item.id === next);
                     if (preset) {
                       setLocationName(preset.suggestedName);
-                      if (!locationCode.trim()) setLocationCode(preset.codePrefix + '-01');
+                      // Não sobrescreve um código que o operador já digitou.
+                      if (!locationCodeEdited) {
+                        setLocationCode(suggestWarehouseLocalCode(
+                          state.locations.map((item) => item.location),
+                          selectedDepotId,
+                          preset.codePrefix
+                        ));
+                      }
                     }
                     if (next !== 'SHELF') setShelfSubpositionCount(0);
                   }}
@@ -733,7 +670,7 @@ export function WarehouseLocationsR1Operational({
                   <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedLocation?.code} · {selectedLocation?.name}</p>
                 </div>
               )}
-              <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} required />
+              <input value={locationCode} onChange={(event) => { setLocationCode(event.target.value); setLocationCodeEdited(true); }} readOnly={createPanel === 'editLocation' || createPanel === 'editSubposition'} title="Código fixo para preservar etiquetas antigas" placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} aria-label="Código do local ou subposição" required />
               <input value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder={createPanel === 'location' ? 'Nome do local' : 'Nome da subposição'} className={fieldClass} required />
               <input value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
               {createPanel === 'location' && locationPreset === 'SHELF' && (
@@ -807,6 +744,8 @@ export function WarehouseLocationsR1Operational({
                   onClick={() => {
                     setSelectedDepotId(item.depot.id);
                     setSelectedLocationId('');
+                    setCreatePanel(null);
+                    setMessage(null);
                   }}
                   className={
                     active
@@ -876,6 +815,16 @@ export function WarehouseLocationsR1Operational({
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
                     {localItems.length} locais
                   </span>
+                  <button
+                    type="button"
+                    data-testid="warehouse-add-location-existing-depot"
+                    onClick={() => openPanel('location')}
+                    disabled={working || state.loading}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#00288e] px-3 py-1.5 text-[11px] font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Adicionar local
+                  </button>
                   <button type="button" onClick={() => openPanel('editDepot')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
                     <Pencil className="h-3 w-3" />
                     Editar depósito
@@ -893,8 +842,15 @@ export function WarehouseLocationsR1Operational({
             <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
               <MapPin className="mx-auto h-7 w-7 text-blue-300" />
               <p className="mt-3 text-sm font-black text-gray-700">Este depósito ainda não possui locais</p>
-              <button type="button" onClick={() => openPanel('location')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
-                Criar primeiro local
+              <p className="mt-2 text-xs text-gray-500">Adicione estantes, paletes, geladeiras ou outros locais neste depósito, sem recriá-lo.</p>
+              <button
+                type="button"
+                onClick={() => openPanel('location')}
+                disabled={working || state.loading}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#00288e] px-4 py-2.5 text-xs font-black text-white hover:bg-blue-800 disabled:opacity-40"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar primeiro local
               </button>
             </div>
           ) : (
@@ -912,7 +868,10 @@ export function WarehouseLocationsR1Operational({
                   <button
                     type="button"
                     key={item.location.id}
-                    onClick={() => setSelectedLocationId(item.location.id)}
+                    onClick={() => {
+                      setSelectedLocationId(item.location.id);
+                      setCreatePanel(null);
+                    }}
                     className={
                       active
                         ? 'rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm ring-2 ring-[#00288e]/10'
@@ -951,14 +910,26 @@ export function WarehouseLocationsR1Operational({
                 )}
               </div>
               {selectedLocation && (
-                <button
-                  type="button"
-                  onClick={() => openPanel('editLocation')}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Editar
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    data-testid="warehouse-add-subposition-existing-local"
+                    onClick={() => openPanel('subposition')}
+                    disabled={working || state.loading}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#00288e] px-2.5 py-1.5 text-[10px] font-black text-white transition hover:bg-blue-800 disabled:opacity-40"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Adicionar subposição
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPanel('editLocation')}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Editar
+                  </button>
+                </div>
               )}
             </div>
 
@@ -984,14 +955,7 @@ export function WarehouseLocationsR1Operational({
                 <Archive className="mx-auto h-7 w-7 text-blue-300" />
                 <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
                 <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
-                <button
-                  type="button"
-                  onClick={() => openPanel('subposition')}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-black text-[#00288e] hover:underline"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Criar subposição
-                </button>
+                <p className="mt-3 text-xs text-[#00288e]">Use “Adicionar subposição” para cadastrar prateleira, nível ou nicho neste local.</p>
               </div>
             ) : (
               <div className="mt-4 max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-1">
@@ -1033,12 +997,16 @@ export function WarehouseLocationsR1Operational({
         />
       )}
 
-      {activeSubtab === 'aiImport' && (
-        <WarehouseStructureImportR1
+      {activeSubtab === 'registration' && (
+        <WarehouseDepotRegistrationR1
           workspaceId={workspaceId}
           depots={state.depots}
-          locations={state.locations}
-          onImported={refresh}
+          onRegistered={async (depotId) => {
+            setSelectedDepotId(depotId);
+            setSelectedLocationId('');
+            await refresh();
+            setActiveSubtab('structure');
+          }}
         />
       )}
     </div>

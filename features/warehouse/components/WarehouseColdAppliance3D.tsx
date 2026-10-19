@@ -2,6 +2,7 @@
 
 import type { WarehouseApplianceFace } from '../../../lib/warehouse/applianceOrientation';
 import { warehouseApplianceVisiblePanel } from '../../../lib/warehouse/applianceOrientation';
+import type { WarehouseVisualExpiry } from '../../../lib/warehouse/stockVisual';
 
 type Point = { x: number; y: number };
 type Appliance = {
@@ -14,6 +15,7 @@ type Props = {
   front: WarehouseApplianceFace;
   project: (x: number, y: number, z: number) => Point;
   occupied: boolean;
+  expiry: WarehouseVisualExpiry;
 };
 type VisibleSide = 'x+' | 'y+';
 
@@ -22,7 +24,7 @@ function points(items: Point[]) {
 }
 
 /** Every decorative part is defined in world coordinates before projection. */
-export function WarehouseColdAppliance3D({ object, z, kind, front, project, occupied }: Props) {
+export function WarehouseColdAppliance3D({ object, z, kind, front, project, occupied, expiry }: Props) {
   const { x, y, width: w, height: d } = object;
   const fridge = kind === 'REFRIGERATOR';
   const top = z;
@@ -64,6 +66,17 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
             ? fridge?'url(#fridgeStainlessDoor)':'url(#freezerFront)'
             : fridge?'url(#fridgeStainlessSide)':'url(#freezerSide)'}
           stroke="#536979" strokeWidth="1.65" />
+
+        {occupied && (
+          <g data-appliance-detail="occupied-white-sheen">
+            <polygon points={patch(side,.022,.978,top*.38,top-8)}
+              fill="#ffffff" opacity=".095" />
+            <polygon points={patch(side,.03,.97,top-7,top-5)}
+              fill="#ffffff" opacity=".82" />
+            <polygon points={patch(side,.04,.052,14,top-10)}
+              fill="#ffffff" opacity=".54" />
+          </g>
+        )}
 
         {/* Enamelled bezel: inset all panels in world space, avoiding screen-space floating rectangles. */}
         <polygon points={patch(side,.035,.965,9,top-5)}
@@ -168,7 +181,8 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
   const baseA=world(x,y,1.9),baseB=world(x+w,y,1.9),baseC=world(x+w,y+d,1.9),baseD=world(x,y+d,1.9);
   return (
     <g data-visual-role={fridge?'premium-refrigerator-3d':'premium-freezer-3d'}
-      data-front-face={front} data-front-axis={front.startsWith('y')?'y':'x'}>
+      data-front-face={front} data-front-axis={front.startsWith('y')?'y':'x'}
+      data-contains-items={occupied ? 'true' : 'false'} data-expiry-state={expiry}>
       {/* Recessed anthracite base anchors mass to the floor. */}
       <polygon points={points([baseD,baseC,world(x+w,y+d,shellBottom),world(x,y+d,shellBottom)])} fill="#455765"/>
       <polygon points={points([baseB,baseC,world(x+w,y+d,shellBottom),world(x+w,y,shellBottom)])} fill="#334451"/>
@@ -177,7 +191,29 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
 
       <polygon points={points([a,b,c,dpt])}
         fill={fridge?'url(#fridgeStainlessTop)':'url(#freezerGlass)'}
-        stroke="#6b8494" strokeWidth="2.4"/>
+        stroke={occupied ? '#f7feff' : '#6b8494'}
+        strokeWidth={occupied ? 3.1 : 2.4}/>
+      {occupied && (
+        <g data-appliance-detail="white-occupancy-reflection">
+          <polygon points={quad([
+            [x+w*.06,y+d*.10,top+1.3],[x+w*.92,y+d*.10,top+1.3],
+            [x+w*.92,y+d*.16,top+1.3],[x+w*.06,y+d*.16,top+1.3],
+          ])} fill="#ffffff" opacity=".34"/>
+          <polyline points={points([dpt,c,b])} fill="none"
+            stroke="#ffffff" strokeWidth="4" opacity=".79"/>
+        </g>
+      )}
+      {expiry !== 'normal' && (
+        <g data-appliance-detail="lot-expiry-signal">
+          <circle cx={world(x+w*.9,y+d*.9,top+5).x}
+            cy={world(x+w*.9,y+d*.9,top+5).y} r="8.2"
+            fill={expiry === 'expired' ? '#f87171' : '#facc15'}
+            stroke="#fffef5" strokeWidth="2.2"/>
+          <circle cx={world(x+w*.9,y+d*.9,top+5).x}
+            cy={world(x+w*.9,y+d*.9,top+5).y} r="2.3"
+            fill={expiry === 'expired' ? '#991b1b' : '#854d0e'}/>
+        </g>
+      )}
 
       {fridge ? (
         <g data-appliance-detail="refrigerator-top">
