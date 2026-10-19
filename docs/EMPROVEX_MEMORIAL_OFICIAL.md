@@ -3025,3 +3025,17 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - Regressões e CI: `scripts/warehouse-3d-stock-visual.test.mjs` integrada ao Application CI. Documento técnico: `docs/adm-deposito/STOCK_3D_VISUAL_R1_20261019.md`.
 
 **Handoff:** onde — PR #344 isolado; fazendo — validação CI e visual; responsáveis — executor de código e Fundador; próximo passo — smoke em localhost:3001 nas 4 câmeras, validar dia+14/+15 e posição; quem fará — Fundador aprova, executor ajusta; não há publicação automática.
+
+## EMPROVEX R4 — Reconciliação Warehouse R2/R3 com 3D premium (19/10/2026)
+
+**PR #345 DRAFT**, branch `feat/warehouse-r3-restoration-consolidated`, base `main@2c30a354`. Esta onda foi solicitada para **recuperar e publicar, numa única release**, o que foi aprovado na linha R2/R3 mas não foi integrado à `main`, além das melhorias 3D do PR #344.
+
+- Causa: a R3 antiga foi publicada diretamente via CLI Vercel de uma branch `07cab044`/hotfix `eb1935a`, sem merge. A publicação posterior da `main` substituiu esses recursos. Código original preservado nos PRs #331–#338 e suas branches, recuperado seletivamente.
+- Recuperado: inspeção por hover/teclado/clique, local sem saldo, painel ancorado abaixo da cena, modal e PDF por local, pesquisa global entre depósitos, botão para local/subposição em depósito existente, formulário de cadastro dimensional e guardas de inativação.
+- Preservado: geladeira/freezer premium atual e sua frente física; caixa sobre palete/mesa/prateleira com empilhamento; branco quando frigorífico ocupado; caixa amarela entre 0–14 dias e vermelha se vencida, halo amarelo suave no local. Acesso externo autorizado e menu da `main` inalterados.
+- Firestore: Regras/coleções/autenticação/dados intactos; leitura por índice de `expiresOn` para alertas, lote integral apenas ao inspecionar, sem listener por hover ou query por tecla. Limite de 500 exibe aviso de incompletude. Política FEFO geral preservada.
+- NF: entrada de alocação detalhada restaurada como escolha dentro do painel de ações de NF, preservando as ações em lote atuais. Não trocar o sistema de empenhos atual por snapshot antigo.
+- Testes históricos de busca, inspeção/PDF, cadastro e segurança reintegrados ao Application CI. Documento detalhado: `docs/releases/EMPROVEX_WAREHOUSE_R4_RECONCILIACAO_20261019.md`.
+- **Release gate:** não mergear/publicar até Application CI, Core Protection, Recovery, Legal, QA Visual e smoke humano. Vercel administrativa requer execução PowerShell autenticada do Fundador; usar `git archive` sem .git, deploy --prod --skip-domain, saúde, promote, inspect. Evitar duas publicações.
+
+**Handoff:** onde — PR #345; fazendo — certificação da união R2/R3 + premium; responsáveis — executor GitHub e Fundador; próximo — CI + smoke, squash único na `main` e publicação; quem fará — executor integra, Fundador promove pelo CLI da Vercel.
