@@ -50,7 +50,7 @@ function StreetLamp({ project, x, z, name }: { project: Project; x: number; z: n
       <ellipse cx={tx - 15} cy={ty - 6} rx="20" ry="11" fill="#ffdda2" opacity=".20" filter="url(#world-halo)" />
       <circle cx={tx - 15} cy={ty - 6} r="4.5" fill="#ffe2a0" className={styles.lampGlow} />
       <circle cx={tx - 15} cy={ty - 6} r="2" fill="#fff6dd" />
-      <text x={tx - 10000} y={ty} aria-label={name} fill="none">{name}</text>
+      <title>{name}</title>
     </g>
   );
 }
@@ -140,7 +140,7 @@ function House({ project, resident, position, selected, onSelect }: {
       <GroundPolygon project={project} vertices={[[x+w/2,z+d+4,ridge],[x+w+8,z+d+4,h-2],[x+w+8,z-5,h-2],[x+w/2,z-5,ridge]]}
         fill={palette.edge} stroke="#98b2c5" />
       <GroundPolygon project={project} vertices={[[x-8,z+d+4,h-2],[x+w/2,z+d+4,ridge],[x+w+8,z+d+4,h-2]]}
-        fill={palette.roof} stroke="#b5c9d3" strokeWidth={1.1} />
+        fill={palette.roof} stroke="#b5c9d3" />
       <GroundPolygon project={project} vertices={[[x+58,z+18,ridge-9],[x+75,z+18,ridge-9],[x+75,z+35,ridge-9],[x+58,z+35,ridge-9]]}
         fill="#516576" />
       <path d={'M ' + project(x+64,z+24,ridge-9).join(' ') + ' L ' + project(x+64,z+24,ridge+8).join(' ')}
