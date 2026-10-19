@@ -32,6 +32,9 @@ import styles from '../shell/AdminCommandPreview.module.css';
 import { AdminCustomerDetailV2 } from './AdminCustomerDetailV2';
 import { AdminCommercialCustomers } from './AdminCommercialCustomers';
 import type { CommercialCustomer } from '../../../lib/admin2/customers/commercialCustomerContract';
+import { AdminUnifiedCustomerCreate } from './AdminUnifiedCustomerCreate';
+import { AdminCustomerManagement } from './AdminCustomerManagement';
+import type { UnifiedPreviewRecord } from '../../../lib/admin2/customers/unifiedCustomerOnboarding';
 
 type AuthState = 'checking' | 'signed-out' | 'denied' | 'authorized';
 
@@ -80,6 +83,9 @@ export function AdminCustomersDirectory() {
   const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<CustomerWorkspaceRecord | null>(null);
   const [commercialMode, setCommercialMode] = useState(false);
+  const [unifiedMode, setUnifiedMode] = useState<'create' | 'manage' | null>(null);
+  const [previewRecords, setPreviewRecords] = useState<UnifiedPreviewRecord[]>([]);
+  const [returnToManage, setReturnToManage] = useState(false);
   // Apenas memória React. Nunca copia contatos comerciais para Firestore real,
   // localStorage ou cookies durante a prévia; remonta após refresh.
   const [commercialDrafts, setCommercialDrafts] = useState<CommercialCustomer[]>([]);
@@ -206,8 +212,38 @@ export function AdminCustomersDirectory() {
       key={selected.workspaceId}
       customer={selected}
       commercialCustomer={commercialDrafts.find(c => c.workspaceId === selected.workspaceId) || null}
-      onBack={() => setSelected(null)}
+      onBack={() => { setSelected(null); if (returnToManage) setUnifiedMode('manage'); }}
     />
+  );
+  if (unifiedMode === 'create') return (
+    <div className="space-y-4">
+      <button type="button" onClick={() => setUnifiedMode(null)}
+        className="rounded-xl border border-[#ccdbeb] bg-white px-4 py-2.5 text-[11px] font-bold text-[#285b9d]">Voltar ao diretório</button>
+      <AdminUnifiedCustomerCreate
+        existingPreviewIds={previewRecords.map(item => item.workspace.id)}
+        onPreviewCreated={record => {
+          setPreviewRecords(current => [...current, record]);
+          setCommercialDrafts(current => [...current, record.commercialCustomer]);
+        }}
+        onManage={() => setUnifiedMode('manage')}
+      />
+    </div>
+  );
+  if (unifiedMode === 'manage') return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setUnifiedMode(null)}
+          className="rounded-xl border border-[#ccdbeb] bg-white px-4 py-2.5 text-[11px] font-bold text-[#285b9d]">Voltar ao diretório</button>
+        <button type="button" onClick={() => setUnifiedMode('create')}
+          className="rounded-xl bg-[#1b579f] px-4 py-2.5 text-[11px] font-bold text-white">Cadastrar novo cliente</button>
+      </div>
+      <AdminCustomerManagement
+        previews={previewRecords}
+        commercialDrafts={commercialDrafts}
+        onEditContacts={() => { setCommercialMode(true); setUnifiedMode(null); }}
+        onView360={record => { setReturnToManage(true); setSelected(record); }}
+      />
+    </div>
   );
   if (commercialMode) return (
     <div className="space-y-4">
@@ -223,9 +259,17 @@ export function AdminCustomersDirectory() {
     <div className="space-y-4" data-testid="admin2-real-customers">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-xl bg-[#174995] px-4 py-2.5 text-[11px] font-bold text-white">Workspaces existentes</span>
+        <button type="button" onClick={() => setUnifiedMode('create')} data-testid="admin2-unified-create-tab"
+          className="rounded-xl border border-[#c8d9ee] bg-white px-4 py-2.5 text-[11px] font-bold text-[#275996] transition-colors hover:bg-[#edf5ff]">
+          Cadastrar cliente + workspace
+        </button>
+        <button type="button" onClick={() => setUnifiedMode('manage')} data-testid="admin2-management-tab"
+          className="rounded-xl border border-[#c8d9ee] bg-white px-4 py-2.5 text-[11px] font-bold text-[#275996] transition-colors hover:bg-[#edf5ff]">
+          Gestão do cliente
+        </button>
         <button type="button" onClick={() => setCommercialMode(true)} data-testid="admin2-commercial-tab"
           className="rounded-xl border border-[#c8d9ee] bg-white px-4 py-2.5 text-[11px] font-bold text-[#275996] transition-colors hover:bg-[#edf5ff]">
-          Cadastro de clientes comerciais
+          Editar cadastro comercial
         </button>
       </div>
       <section className={styles.sectionCard + ' p-5 sm:p-6'}>
