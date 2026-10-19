@@ -44,10 +44,10 @@ function StreetLamp({ project, x, z, name }: { project: Project; x: number; z: n
   const [tx, ty] = project(x, z, 73);
   return (
     <g aria-hidden="true">
-      <ellipse cx={bx} cy={by} rx="14" ry="5" fill="#8febff" opacity=".10" />
+      <ellipse cx={bx} cy={by} rx="14" ry="5" fill="#8febff" opacity={.10} />
       <path d={'M ' + bx + ' ' + by + ' L ' + tx + ' ' + ty} stroke="#a2c5d6" strokeWidth="3" strokeLinecap="round" />
       <path d={'M ' + tx + ' ' + ty + ' l -14 -6'} stroke="#b5d5df" strokeWidth="3" fill="none" />
-      <ellipse cx={tx - 15} cy={ty - 6} rx="20" ry="11" fill="#ffdda2" opacity=".20" filter="url(#world-halo)" />
+      <ellipse cx={tx - 15} cy={ty - 6} rx="20" ry="11" fill="#ffdda2" opacity={.20} filter="url(#world-halo)" />
       <circle cx={tx - 15} cy={ty - 6} r="4.5" fill="#ffe2a0" className={styles.lampGlow} />
       <circle cx={tx - 15} cy={ty - 6} r="2" fill="#fff6dd" />
       <title>{name}</title>
@@ -63,15 +63,15 @@ function Tree({ project, x, z, variety = 0 }: {
   const radius = 18 + (variety % 3) * 2.7;
   return (
     <g aria-hidden="true">
-      <ellipse cx={bx + 8} cy={by + 5} rx="26" ry="8" fill="#010b20" opacity=".28" />
+      <ellipse cx={bx + 8} cy={by + 5} rx="26" ry="8" fill="#010b20" opacity={.28} />
       <path d={'M ' + bx + ' ' + by + ' L ' + tx + ' ' + ty} stroke="#5f5354" strokeWidth="7" strokeLinecap="round" />
       <path d={'M ' + (tx + 1) + ' ' + (ty + 24) + ' l -8 -16 M ' + (tx + 1) + ' ' + (ty + 15) + ' l 9 -18'} stroke="#5f5354" strokeWidth="3" />
-      <ellipse cx={tx + 1} cy={ty + 5} rx={radius + 7} ry={radius + 2} fill="#0c3449" opacity=".75" />
+      <ellipse cx={tx + 1} cy={ty + 5} rx={radius + 7} ry={radius + 2} fill="#0c3449" opacity={.75} />
       <circle cx={tx - radius * .45} cy={ty - radius * .12} r={radius * .79} fill={variety % 2 ? '#226269' : '#185862'} />
       <circle cx={tx + radius * .38} cy={ty - radius * .23} r={radius * .81} fill={variety % 2 ? '#2b7471' : '#27717b'} />
       <circle cx={tx} cy={ty - radius * .64} r={radius * .85} fill={variety % 2 ? '#397f7a' : '#31818b'} />
-      <ellipse cx={tx - 6} cy={ty - radius * .79} rx="8" ry="4" fill="#9ce4bf" opacity=".24" />
-      <circle cx={tx + 8} cy={ty + 3} r="2" fill="#a7e6c2" opacity=".3" />
+      <ellipse cx={tx - 6} cy={ty - radius * .79} rx="8" ry="4" fill="#9ce4bf" opacity={.24} />
+      <circle cx={tx + 8} cy={ty + 3} r="2" fill="#a7e6c2" opacity={.3} />
     </g>
   );
 }
@@ -126,15 +126,15 @@ function House({ project, resident, position, selected, onSelect }: {
       onClick={() => onSelect(resident.id)} onKeyDown={handleKeyboard} className={styles.houseGroup}
       data-presence={resident.presence} data-resident-id={resident.id}>
       <title>{resident.email} — {lit ? 'sessão válida' : resident.presence === 'unknown' ? 'sem dados de presença' : 'sem sessão válida'}</title>
-      {selected && <ellipse cx={cx} cy={cy + 5} rx="94" ry="40" fill="#5de3ff" opacity=".12" filter="url(#world-halo)" />}
+      {selected && <ellipse cx={cx} cy={cy + 5} rx="94" ry="40" fill="#5de3ff" opacity={.12} filter="url(#world-halo)" />}
       <GroundPolygon project={project} vertices={[[x - 11,z - 11],[x + w + 11,z - 11],[x + w + 11,z + d + 15],[x - 11,z + d + 15]]}
         fill={selected ? '#285a68' : '#214b55'} stroke={selected ? '#82f3eb' : '#49737b'} />
       <GroundPolygon project={project} vertices={[[x+33,z+d],[x+57,z+d],[x+57,z+d+29],[x+33,z+d+29]]} fill="#b3ad9b" opacity={.62} />
       <GroundPolygon project={project} vertices={[[x - 7,z + 7],[x + 6,z + 7],[x + 6,z + d - 6],[x - 7,z+d-6]]} fill="#347a6a" opacity={.52} />
-      <ellipse cx={cx+11} cy={cy+30} rx="70" ry="21" fill="#010d25" opacity=".23" />
+      <ellipse cx={cx+11} cy={cy+30} rx="70" ry="21" fill="#010d25" opacity={.23} />
       <GroundPolygon project={project} vertices={[[x,z+d,0],[x+w,z+d,0],[x+w,z+d,h],[x,z+d,h]]} fill={palette.wall} stroke="#bfd3d5" />
       <GroundPolygon project={project} vertices={[[x+w,z,0],[x+w,z+d,0],[x+w,z+d,h],[x+w,z,h]]} fill={palette.shadow} stroke="#90acb8" />
-      <GroundPolygon project={project} vertices={[[x,z,0],[x,z+d,0],[x,z+d,h],[x,z,h]]} fill="#577d91" opacity=".78" />
+      <GroundPolygon project={project} vertices={[[x,z,0],[x,z+d,0],[x,z+d,h],[x,z,h]]} fill="#577d91" opacity={.78} />
       <GroundPolygon project={project} vertices={[[x-8,z+d+4,h-2],[x+w/2,z+d+4,ridge],[x+w/2,z-5,ridge],[x-8,z-5,h-2]]}
         fill={palette.roof} stroke={palette.edge} />
       <GroundPolygon project={project} vertices={[[x+w/2,z+d+4,ridge],[x+w+8,z+d+4,h-2],[x+w+8,z-5,h-2],[x+w/2,z-5,ridge]]}
@@ -152,7 +152,7 @@ function House({ project, resident, position, selected, onSelect }: {
         <g key={wx}>
           <polygon points={windowFront(wx)} fill={lit ? '#ffcf75' : resident.presence === 'unknown' ? '#527085' : '#233a4d'}
             stroke={lit ? '#fff0c2' : '#91a8b6'} strokeWidth="2" className={lit ? styles.litWindow : undefined} />
-          {lit && <polygon points={windowFront(wx)} fill="#ffbf5a" opacity=".36" filter="url(#world-halo)" />}
+          {lit && <polygon points={windowFront(wx)} fill="#ffbf5a" opacity={.36} filter="url(#world-halo)" />}
           <path d={'M ' + project(wx+8.5,z+d+1,28).join(' ') + ' L ' + project(wx+8.5,z+d+1,48).join(' ')}
             stroke="#758b9a" strokeWidth="1.2" />
         </g>
@@ -160,13 +160,13 @@ function House({ project, resident, position, selected, onSelect }: {
       <GroundPolygon project={project} vertices={[[x+w+.8,z+21,32],[x+w+.8,z+41,32],[x+w+.8,z+41,52],[x+w+.8,z+21,52]]}
         fill={lit ? '#ffd18a' : '#25465a'} stroke="#c2ccd5" />
       {lit && <ellipse cx={project(x+w,z+31,36)[0]+7} cy={project(x+w,z+31,36)[1]+5}
-        rx="27" ry="19" fill="#ffd281" opacity=".25" filter="url(#world-halo)" />}
+        rx="27" ry="19" fill="#ffd281" opacity={.25} filter="url(#world-halo)" />}
       {resident.kind === 'admin' && <ellipse cx={project(x+w/2,z+d+3,ridge-20)[0]}
         cy={project(x+w/2,z+d+3,ridge-20)[1]} rx="4.5" ry="4" fill="#8be8ef" />}
-      {lit && <ellipse cx={smokeX} cy={smokeY} rx="9" ry="4" fill="#c2e8de" opacity=".17" />}
+      {lit && <ellipse cx={smokeX} cy={smokeY} rx="9" ry="4" fill="#c2e8de" opacity={.17} />}
       <Mailbox project={project} x={x+75} z={z+d+23} online={lit} />
       <g pointerEvents="none">
-        <rect x={labelX - 47} y={labelY-2} width="94" height="19" rx="8" fill={selected ? '#0d434b' : '#091c30'} opacity=".93"
+        <rect x={labelX - 47} y={labelY-2} width="94" height="19" rx="8" fill={selected ? '#0d434b' : '#091c30'} opacity={.93}
           stroke={selected ? '#7df4e5' : '#568196'} strokeWidth=".8" />
         <circle cx={labelX-35} cy={labelY+8} r="3" fill={lit ? '#ffd276' : resident.presence === 'unknown' ? '#8998a8' : resident.disabled ? '#fb7e89' : '#638292'} />
         <text x={labelX+3} y={labelY+11} fill="#e3f1f6" textAnchor="middle"
@@ -188,7 +188,7 @@ function WaterTower({ project, level, known, exceeded }: {
   const fluidY = bottomY - fluidHeight;
   return (
     <g aria-label="Reservatório de consumo do Firestore" data-testid="admin-world-water-tower">
-      <ellipse cx={cx} cy={groundY + 4} rx="72" ry="20" fill="#092c45" opacity=".7" />
+      <ellipse cx={cx} cy={groundY + 4} rx="72" ry="20" fill="#092c45" opacity={.7} />
       <path d={'M ' + (cx-43) + ' ' + (bottomY+9) + ' L ' + (cx-51) + ' ' + groundY
         + ' M ' + (cx+43) + ' ' + (bottomY+9) + ' L ' + (cx+51) + ' ' + groundY
         + ' M ' + (cx-43) + ' ' + (bottomY+45) + ' L ' + (cx+43) + ' ' + (bottomY+75)
@@ -196,31 +196,31 @@ function WaterTower({ project, level, known, exceeded }: {
         fill="none" stroke="#839daa" strokeWidth="6" strokeLinecap="round" />
       <path d={'M ' + (cx-39) + ' ' + (bottomY+15) + ' H ' + (cx+39)} stroke="#b4c6cc" strokeWidth="4" />
       <rect x={cx-radius} y={topY} width={width} height={bottomY-topY} rx="12"
-        fill="#b2eff2" opacity=".12" stroke="#bafaff" strokeWidth="1.5" />
+        fill="#b2eff2" opacity={.12} stroke="#bafaff" strokeWidth="1.5" />
       {known && level > 0 && (
         <g clipPath="url(#world-tower-clip)" data-testid="admin-world-water-fill">
           <rect x={cx-radius+2} y={fluidY} width={width-4} height={fluidHeight+11}
-            fill={exceeded ? 'url(#world-water-alert)' : 'url(#world-water)'} opacity=".83" />
-          <ellipse cx={cx} cy={fluidY} rx={radius-2} ry="13" fill={exceeded ? '#ffbe95' : '#8af4fb'} opacity=".7" className={styles.waterSurface} />
+            fill={exceeded ? 'url(#world-water-alert)' : 'url(#world-water)'} opacity={.83} />
+          <ellipse cx={cx} cy={fluidY} rx={radius-2} ry="13" fill={exceeded ? '#ffbe95' : '#8af4fb'} opacity={.7} className={styles.waterSurface} />
           <path d={'M ' + (cx-radius+7) + ' ' + (fluidY+13) + ' Q ' + cx + ' ' + (fluidY-4) + ' ' + (cx+radius-7) + ' ' + (fluidY+10)}
-            stroke="#d9ffff" strokeWidth="2" opacity=".48" fill="none" />
+            stroke="#d9ffff" strokeWidth="2" opacity={.48} fill="none" />
         </g>
       )}
-      <ellipse cx={cx} cy={topY} rx={radius} ry="16" fill="#96d5df" opacity=".28"
+      <ellipse cx={cx} cy={topY} rx={radius} ry="16" fill="#96d5df" opacity={.28}
         stroke="#d1feff" strokeWidth="2" />
-      <ellipse cx={cx} cy={bottomY} rx={radius} ry="14" fill="none" stroke="#b4edf2" opacity=".6" strokeWidth="2" />
+      <ellipse cx={cx} cy={bottomY} rx={radius} ry="14" fill="none" stroke="#b4edf2" opacity={.6} strokeWidth="2" />
       {Array.from({length:5},(_,i)=>{
         const y=topY + (bottomY-topY)*i/4;
         return <g key={i}>
-          <path d={'M ' + (cx-radius-9) + ' ' + y + ' h 8'} stroke="#e2f7ff" opacity=".5" strokeWidth="1.6" />
-          <text x={cx-radius-13} y={y+3} textAnchor="end" fill="#d9f3fc" fontSize="9" opacity=".66">{100-i*25}</text>
+          <path d={'M ' + (cx-radius-9) + ' ' + y + ' h 8'} stroke="#e2f7ff" opacity={.5} strokeWidth="1.6" />
+          <text x={cx-radius-13} y={y+3} textAnchor="end" fill="#d9f3fc" fontSize="9" opacity={.66}>{100-i*25}</text>
         </g>;
       })}
-      <rect x={cx-39} y={topY+27} width="78" height="29" rx="7" fill="#05273b" opacity=".83" stroke="#a4e4e9" />
+      <rect x={cx-39} y={topY+27} width="78" height="29" rx="7" fill="#05273b" opacity={.83} stroke="#a4e4e9" />
       <text x={cx} y={topY+40} textAnchor="middle" fill="#b4ebf6" fontSize="10" fontWeight="800" letterSpacing="1.5">FIRESTORE</text>
       <text x={cx} y={topY+51} textAnchor="middle" fill={known ? '#fff4cf' : '#91a8b9'} fontSize="10" fontWeight="700">{known ? 'CONSUMO GLOBAL' : 'SEM MEDIÇÃO'}</text>
       <path d={'M ' + (cx+radius+6) + ' ' + (topY+10) + ' v ' + (bottomY-topY+13)}
-        fill="none" stroke="#88b3c1" strokeWidth="2" opacity=".62" />
+        fill="none" stroke="#88b3c1" strokeWidth="2" opacity={.62} />
       {Array.from({length:7},(_,i)=><path key={i}
         d={'M ' + (cx+radius+1) + ' ' + (topY+20+i*18) + ' h 10'}
         fill="none" stroke="#a9cbd6" strokeWidth="1.7" />)}
@@ -262,23 +262,23 @@ export function AdminWorldScene({
         <linearGradient id="world-water" x1="0" y1="0" x2=".9" y2="1"><stop stopColor="#baf9ff"/><stop offset=".55" stopColor="#48cbdc"/><stop offset="1" stopColor="#0f87bc"/></linearGradient>
         <linearGradient id="world-water-alert"><stop stopColor="#ffe3c3"/><stop offset="1" stopColor="#ed7e78"/></linearGradient>
         <filter id="world-halo" x="-90%" y="-90%" width="280%" height="280%"><feGaussianBlur stdDeviation="8"/></filter>
-        <pattern id="world-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" stroke="#c0f0f7" strokeWidth=".5" opacity=".06" fill="none"/></pattern>
+        <pattern id="world-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" stroke="#c0f0f7" strokeWidth=".5" opacity={.06} fill="none"/></pattern>
         <clipPath id="world-tower-clip"><rect x={project(683,81)[0]-57} y={project(683,81,249)[1]+2} width="114" height={project(683,81,121)[1]-project(683,81,249)[1]-4} rx="10"/></clipPath>
       </defs>
       <rect width="1200" height="675" fill="url(#world-sky)" />
       <ellipse cx="780" cy="245" rx="560" ry="280" fill="url(#world-horizon)" />
-      <g opacity=".42" aria-hidden="true">
+      <g opacity={.42} aria-hidden="true">
         {landmarks.slice(0,30).map((item,i)=><circle key={i} cx={30+(item.x*1.65)%1160} cy={26+(item.z*.32)%175} r={item.size*.38} fill="#c4ecf1" />)}
       </g>
       <g transform={'translate(600 337) scale(' + zoom + ') translate(-600 -337)'}>
         <GroundPolygon project={project} vertices={[[30,30],[742,30],[742,742],[30,742]]} fill="#123849" stroke="#4c8292" />
-        <GroundPolygon project={project} vertices={[[47,47],[725,47],[725,725],[47,725]]} fill="#22545a" opacity=".9"/>
+        <GroundPolygon project={project} vertices={[[47,47],[725,47],[725,725],[47,725]]} fill="#22545a" opacity={.9}/>
         {streets.map((road,i)=>(
           <g key={'r-x-'+i}>
             <GroundPolygon project={project} vertices={[[road,49],[road+29,49],[road+29,720],[road,720]]} fill="#293f4f" stroke="#476477" />
             {Array.from({length:11},(_,j)=><GroundPolygon key={j} project={project}
               vertices={[[road+13,67+j*57],[road+17,67+j*57],[road+17,90+j*57],[road+13,90+j*57]]}
-              fill="#b2bbbc" opacity=".45"/>)}
+              fill="#b2bbbc" opacity={.45}/>)}
           </g>
         ))}
         {streets.map((road,i)=>(
@@ -286,7 +286,7 @@ export function AdminWorldScene({
             <GroundPolygon project={project} vertices={[[49,road],[720,road],[720,road+29],[49,road+29]]} fill="#2a4050" stroke="#486678" />
             {Array.from({length:11},(_,j)=><GroundPolygon key={j} project={project}
               vertices={[[64+j*56,road+12],[88+j*56,road+12],[88+j*56,road+16],[64+j*56,road+16]]}
-              fill="#c6cdc9" opacity=".34"/>)}
+              fill="#c6cdc9" opacity={.34}/>)}
           </g>
         ))}
         {Array.from({length:9},(_,i)=>{
@@ -294,16 +294,16 @@ export function AdminWorldScene({
           const x=137+col*164,z=138+row*164;
           return <g key={'lot-'+i}>
             <GroundPolygon project={project} vertices={[[x,z],[x+116,z],[x+116,z+125],[x,z+125]]} fill={i%2?'#2a6464':'#2b6b65'} stroke="#64928a"/>
-            <GroundPolygon project={project} vertices={[[x+3,z+3],[x+113,z+3],[x+113,z+122],[x+3,z+122]]} fill="#366e69" opacity=".42"/>
+            <GroundPolygon project={project} vertices={[[x+3,z+3],[x+113,z+3],[x+113,z+122],[x+3,z+122]]} fill="#366e69" opacity={.42}/>
             {Array.from({length:5},(_,j)=><GroundPolygon key={j} project={project}
               vertices={[[x+8+j*19,z+111],[x+15+j*19,z+111],[x+15+j*19,z+115],[x+8+j*19,z+115]]}
-              fill={j%2?'#82ad85':'#d5ad84'} opacity=".6"/>)}
+              fill={j%2?'#82ad85':'#d5ad84'} opacity={.6}/>)}
           </g>;
         })}
         <WaterTower project={project} level={waterLevel} known={waterKnown} exceeded={waterExceeded} />
         {landmarks.slice(0,20).map((spot,i)=><GroundPolygon key={'stone-'+i} project={project}
           vertices={[[spot.x,spot.z],[spot.x+4,spot.z],[spot.x+4,spot.z+3],[spot.x,spot.z+3]]}
-          fill={i%2?'#91bd96':'#82a4a3'} opacity=".38"/>)}
+          fill={i%2?'#91bd96':'#82a4a3'} opacity={.38}/>)}
         {decorations.map((tree,i)=><Tree key={'tree-'+i} project={project} {...tree}/>)}
         {[
           [122,122],[286,122],[450,122],[614,122],
@@ -314,7 +314,7 @@ export function AdminWorldScene({
           <House key={resident.id} resident={resident} position={index} project={project}
             selected={selectedId===resident.id} onSelect={onSelect}/>
         ))}
-        <GroundPolygon project={project} vertices={[[40,713],[731,713],[731,726],[40,726]]} fill="#0b283b" opacity=".50" />
+        <GroundPolygon project={project} vertices={[[40,713],[731,713],[731,726],[40,726]]} fill="#0b283b" opacity={.50} />
       </g>
       <rect width="1200" height="675" fill="url(#world-grid)" pointerEvents="none"/>
       <path d="M0 0H1200V675H0Z" fill="none" stroke="#8bd4d9" strokeOpacity=".24" strokeWidth="2" />
