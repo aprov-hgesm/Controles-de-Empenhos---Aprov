@@ -11,6 +11,7 @@ import {
   Database,
   DatabaseBackup,
   LayoutDashboard,
+  House,
   Loader2,
   LockKeyhole,
   LogOut,
@@ -31,18 +32,22 @@ import { useRouter } from 'next/navigation';
 import { EditSectorModal } from './EditSectorModal';
 import { AdminBackupPanel } from './AdminBackupPanel';
 import { AdminConsumptionHub } from './AdminConsumptionHub';
+import { AdminWorldHomePanel } from './AdminWorldHomePanel';
 import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
 import { AdminSecurityPanel } from './AdminSecurityPanel';
 import { AdminBillingPanel } from './AdminBillingPanel';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { ToastNotification } from '../layout/ToastNotification';
+import { AppShellSignature } from '../layout/chrome/AppShellSignature';
+import navigationBeamStyles from '../layout/OperationalNavigationBeam.module.css';
+import adminVisualStyles from './AdminVisualShell.module.css';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
   CreateSectorWorkspaceInput,
   SectorLifecycleStatus,
   UpdateSectorWorkspaceInput,
 } from '../../lib/platformAdminStore';
-import type { Workspace } from '../../lib/platformIdentity';
+import type { PlatformAccount, Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type {
@@ -61,6 +66,7 @@ import type {
 import type { UpdatePlatformBillingConfigInput } from '../../lib/platformBillingStore';
 
 type AdminTabId =
+  | 'inicio'
   | 'overview'
   | 'setores'
   | 'novo-setor'
@@ -71,6 +77,12 @@ type AdminTabId =
   | 'seguranca';
 
 const ADMIN_TABS = [
+  {
+    id: 'inicio',
+    label: 'Início',
+    description: 'Bairro digital 3D com presença por conta e reservatório visual do Firestore.',
+    icon: House,
+  },
   {
     id: 'overview',
     label: 'Visão Geral',
@@ -126,6 +138,17 @@ const ADMIN_TABS = [
   icon: React.ComponentType<{ className?: string }>;
 }>;
 
+/**
+ * Preserva as OITO abas originais e adiciona uma nona aba visual (Início). O contrato, os IDs,
+ * as rotas e seus handlers permanecem iguais aos da main.
+ */
+const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
+  { label: 'Central', tabs: ['inicio', 'overview'] },
+  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'assinaturas'] },
+  { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
+  { label: 'Governança', tabs: ['seguranca'] },
+];
+
 interface AdminBillingViewState {
   config: PlatformBillingConfig | null;
   accounts: BillingAccount[];
@@ -156,6 +179,7 @@ interface PlatformAdminViewProps {
   adminEmail: string;
   customLogo: string | null;
   workspaces: Workspace[];
+  accounts: PlatformAccount[];
   loadingDirectory: boolean;
   directoryError: string | null;
   creatingSector: boolean;
@@ -195,6 +219,7 @@ export function PlatformAdminView({
   adminEmail,
   customLogo,
   workspaces,
+  accounts,
   loadingDirectory,
   directoryError,
   creatingSector,
@@ -230,7 +255,7 @@ export function PlatformAdminView({
 }: PlatformAdminViewProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const [activeTab, setActiveTab] = useState<AdminTabId>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTabId>('inicio');
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -263,7 +288,7 @@ export function PlatformAdminView({
   const changeAdminTab = useCallback((tab: AdminTabId) => {
     setActiveTab(tab);
     const url = new URL(window.location.href);
-    if (tab === 'overview') {
+    if (tab === 'inicio') {
       url.searchParams.delete('tab');
     } else {
       url.searchParams.set('tab', tab);
@@ -386,20 +411,14 @@ export function PlatformAdminView({
   const ActiveTabIcon = activeTabConfig.icon;
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020817] text-white selection:bg-blue-500 selection:text-white">
+    <div className={'relative min-h-screen overflow-x-hidden bg-[#edf3fb] font-montserrat text-[#183456] selection:bg-blue-200 ' + adminVisualStyles.root} data-testid="admin-visual-shell">
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(37,99,235,0.14),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(56,189,248,0.08),transparent_28%),linear-gradient(145deg,#020817_0%,#061126_48%,#071a34_100%)]" />
-        <div className="absolute left-[7%] top-32 h-72 w-72 rounded-full bg-blue-500/[0.06] blur-3xl" />
-        <div className="absolute -right-20 top-[28%] h-96 w-96 rounded-full bg-cyan-400/[0.035] blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/35 to-transparent" />
-        <div className="absolute left-[12%] top-28 hidden h-px w-[28%] bg-gradient-to-r from-blue-300/0 via-blue-300/20 to-blue-300/0 lg:block" />
-        <div className="absolute right-[10%] top-40 hidden h-px w-[22%] bg-gradient-to-r from-cyan-200/0 via-cyan-200/15 to-cyan-200/0 lg:block" />
-      </div>
+      <div className={adminVisualStyles.atmosphere} aria-hidden="true" />
 
-      <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#030b1b]/80 backdrop-blur-2xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
+      <header className="emprovex-app-header fixed inset-x-0 top-0 z-30">
+        <AppShellSignature variant="header" />
+        <div className="relative mx-auto flex h-16 w-full max-w-[1640px] items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
             <div className="relative grid h-11 w-11 shrink-0 place-items-center">
               <span className="absolute inset-0 rounded-2xl border border-blue-300/15 bg-blue-500/[0.06] shadow-[0_0_30px_rgba(37,99,235,0.12)]" />
@@ -413,7 +432,7 @@ export function PlatformAdminView({
               </span>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 lg:hidden">
+              <div className="flex items-center gap-2">
                 <div>
                   <p className="font-mono text-[7px] font-bold uppercase tracking-[0.22em] text-blue-300/55">Central de comando</p>
                   <h1 className="mt-0.5 text-base font-extrabold tracking-[0.16em] text-white sm:text-lg">EMPROVEX</h1>
@@ -422,7 +441,7 @@ export function PlatformAdminView({
                   Administração
                 </span>
               </div>
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-500">Governança da plataforma</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-400">Administração da plataforma</p>
             </div>
           </div>
 
@@ -449,73 +468,79 @@ export function PlatformAdminView({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-[1640px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">
-        <div className="grid min-w-0 gap-5 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[268px_minmax(0,1fr)]">
+      <main className="relative z-10 mx-auto min-h-screen w-full max-w-[1840px] px-4 pb-8 pt-20 sm:px-6 xl:px-8" data-testid="admin-light-main">
+        <div className={'min-w-0 ' + adminVisualStyles.layoutRoot}>
           <aside
             data-testid="admin-tab-navigation"
             data-layout="sidebar"
-            className="min-w-0 lg:sticky lg:top-24 lg:self-start"
+            className="relative mb-5 min-w-0 lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-20 lg:mb-0 lg:w-72"
           >
-            <div className="overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[#030b1b]/88 shadow-[0_24px_70px_rgba(0,8,28,0.24)] backdrop-blur-2xl">
-              <div className="border-b border-white/[0.07] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-300/15 bg-blue-500/[0.08] text-blue-100">
-                    <UserCog className="h-4 w-4" />
+            <div className={'emprovex-app-sidebar relative isolate flex flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.09] bg-[#030b1b] shadow-[0_24px_70px_rgba(0,8,28,0.24)] lg:h-full lg:rounded-none lg:border-x-0 lg:border-b-0 ' + adminVisualStyles.sidebarPanel}>
+              <AppShellSignature variant="sidebar" />
+              <section className="emprovex-sidebar-operator relative z-[1] mx-3 mt-3 shrink-0" aria-label="Administrador conectado">
+                <div className="emprovex-sidebar-operator__head">
+                  <div className="emprovex-sidebar-operator__identity">
+                    <div className="emprovex-sidebar-operator__avatar" aria-hidden="true">
+                      <UserCog className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-mono text-[9px] font-bold uppercase tracking-[0.20em] text-slate-400">Administrador</p>
+                      <p className="mt-1 truncate text-[11px] font-bold text-slate-50" title={adminEmail}>{adminEmail}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
-                      Administração
-                    </p>
-                    <p className="truncate text-xs font-extrabold text-white">{adminEmail}</p>
-                  </div>
+                  <span className="emprovex-sidebar-operator__status-dot" aria-hidden="true" />
                 </div>
-              </div>
+                <div className="emprovex-sidebar-operator__access">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Perfil autorizado</span>
+                </div>
+              </section>
 
-              <nav aria-label="Áreas administrativas" className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 lg:grid-cols-1">
-                {ADMIN_TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  const selected = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => changeAdminTab(tab.id)}
-                      aria-pressed={selected}
-                      data-testid={'admin-tab-' + tab.id}
-                      className={
-                        'group flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3 text-left transition '
-                        + (selected
-                          ? 'border-blue-300/25 bg-blue-500/15 text-blue-50 shadow-[inset_3px_0_0_rgba(96,165,250,0.72)]'
-                          : 'border-transparent bg-transparent text-slate-400 hover:border-white/[0.07] hover:bg-white/[0.035] hover:text-white')
-                      }
-                    >
-                      <span className={
-                        'grid h-8 w-8 shrink-0 place-items-center rounded-lg border '
-                        + (selected
-                          ? 'border-blue-300/20 bg-blue-400/[0.10] text-blue-200'
-                          : 'border-white/[0.06] bg-white/[0.025] text-slate-500 group-hover:text-slate-300')
-                      }>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[11px] font-extrabold">{tab.label}</span>
-                        <span className="mt-0.5 hidden truncate text-[9px] text-slate-600 lg:block">
-                          {tab.id === 'consumo'
-                            ? 'Google + UG'
-                            : tab.id === 'assinaturas'
-                              ? 'Billing OBSERVE'
-                              : tab.id === 'sessoes'
-                                ? 'Tempo real'
-                                : 'Gestão'}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
+              <nav aria-label="Áreas administrativas"
+                className={'emprovex-sidebar-nav relative z-[1] mt-3 grid min-h-0 grid-cols-1 gap-4 overflow-y-auto overscroll-contain px-3 pb-4 sm:grid-cols-2 lg:grid-cols-1 ' + adminVisualStyles.navScroll}>
+                {ADMIN_TAB_GROUPS.map((group) => (
+                  <div key={group.label} className="min-w-0 space-y-1">
+                    <p className="emprovex-sidebar-nav__label px-3 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em]">{group.label}</p>
+                    {group.tabs.map((id) => {
+                      const tab = ADMIN_TABS.find((item) => item.id === id)!;
+                      const Icon = tab.icon;
+                      const selected = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => changeAdminTab(tab.id)}
+                          aria-pressed={selected}
+                          aria-current={selected ? 'page' : undefined}
+                          data-active={selected ? 'true' : 'false'}
+                          data-testid={'admin-tab-' + tab.id}
+                          className="emprovex-sidebar-nav-item group flex min-h-11 min-w-0 items-center gap-3"
+                        >
+                          <span className={navigationBeamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                          <Icon className="relative z-[1] h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                          <span className="relative z-[1] min-w-0 truncate text-[12px] font-semibold">{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </nav>
 
-              <div className="border-t border-white/[0.07] p-3">
-                <div className="grid gap-2">
+              <footer className="emprovex-sidebar-system relative z-[1] mx-3 mb-3 shrink-0">
+                <p className="emprovex-sidebar-system__label font-mono text-[9px] font-bold uppercase tracking-[0.18em]">Sistema</p>
+                <div className="emprovex-sidebar-system__status">
+                  <div className="flex items-center gap-2.5">
+                    <span className="emprovex-sidebar-system__status-icon" aria-hidden="true">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-100">Administração</p>
+                      <p className="mt-0.5 text-[9px] font-medium text-slate-400">Acesso protegido</p>
+                    </div>
+                  </div>
+                  <span className="emprovex-sidebar-system__live-dot" aria-hidden="true" />
+                </div>
+                <div className="mt-3 grid gap-2">
                   <button
                     type="button"
                     onClick={returnToHgesm}
@@ -533,18 +558,18 @@ export function PlatformAdminView({
                     Encerrar sessão
                   </button>
                 </div>
-              </div>
+              </footer>
             </div>
           </aside>
 
-          <div className="min-w-0 space-y-5">
+          <div className={'min-w-0 space-y-5 lg:pl-72 ' + adminVisualStyles.content} data-testid="admin-light-content">
         <motion.section
           initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: shouldReduceMotion ? 0.12 : 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#071225]/72 p-5 shadow-[0_24px_70px_rgba(0,8,28,0.24)] backdrop-blur-2xl sm:p-6"
+          className="relative overflow-hidden rounded-[1.5rem] border border-[#d4e3f4] bg-white/95 p-5 shadow-[0_12px_36px_rgba(28,61,102,0.08)] sm:p-6"
         >
-          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.10] blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.045] blur-3xl" />
           <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/45 to-transparent" />
           <div className="pointer-events-none absolute left-0 top-14 h-32 w-px bg-gradient-to-b from-transparent via-blue-300/25 to-transparent" />
           <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -561,21 +586,21 @@ export function PlatformAdminView({
                   <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
                     Central de Administração EMPROVEX
                   </p>
-                  <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                  <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight text-[#17375e] sm:text-3xl">
                     {activeTabConfig.label}
                   </h2>
                 </div>
               </div>
-              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-400">
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#647c99]">
                 {activeTabConfig.description}
               </p>
             </div>
 
-            <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-slate-950/30 px-4 py-3.5 shadow-inner shadow-black/10 lg:min-w-[310px]">
+            <div className="min-w-0 rounded-2xl border border-[#d4e3f4] bg-[#f2f7fd] px-4 py-3.5 lg:min-w-[310px]">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Setores ativos</p>
-                  <p className="mt-1 text-lg font-black text-white">{activeWorkspaceCount}</p>
+                  <p className="mt-1 text-lg font-black text-[#17375e]">{activeWorkspaceCount}</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Google Cloud</p>
@@ -610,6 +635,20 @@ export function PlatformAdminView({
               </p>
             </div>
           </section>
+        )}
+
+        {activeTab === 'inicio' && (
+          <AdminWorldHomePanel
+            accounts={accounts}
+            sessions={sessions}
+            loadingDirectory={loadingDirectory}
+            directoryError={directoryError}
+            loadingSessions={loadingSessions}
+            sessionsError={sessionsError}
+            globalUsage={globalUsage}
+            globalUsageDataThrough={globalUsageDataThrough}
+            loadingGlobalUsage={loadingGlobalUsage}
+          />
         )}
 
         {activeTab === 'overview' && (

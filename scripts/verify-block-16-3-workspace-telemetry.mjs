@@ -76,7 +76,7 @@ requireText(
 for (const marker of [
   '{ documentReads: 2, documentWrites: 1 }',
   'documentDeletes: deleted ? 1 : 0',
-  'recordWorkspaceRealtimeSnapshot(telemetryScope, 1)',
+  "recordWorkspaceRealtimeSnapshot(telemetryScope, 1, 'sessoes')",
   'trackWorkspaceRealtimeListener',
 ]) requireText(lease, marker, `Lease de sessão perdeu atribuição de consumo: ${marker}`);
 
@@ -88,7 +88,7 @@ for (const marker of [
 
 requireText(
   concurrency,
-  'recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 })',
+  "recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 }, 'empenhos')",
   'Concorrência de empenho não atribui a transação à UG.'
 );
 
@@ -102,10 +102,10 @@ forbidText(adminUsage, 'collectionGroup(', 'Painel de consumo não deve usar col
 
 requireText(adminHook, 'loadPlatformWorkspaceUsage', 'Hook administrativo não carrega telemetria.');
 for (const marker of [
-  'Consumo estimado por UG',
-  'não são a cobrança oficial do Firebase',
-  'Cloud Monitoring',
-  'emprovex-workspace-estimate',
+  'Quais unidades usam mais o EMPROVEX?',
+  'Estes valores são estimativas internas, não uma cobrança do Google.',
+  'A contagem por UG não corresponde diretamente à fatura do Google.',
+  'admin-ug-modules-',
   'Atualizar estimativas',
 ]) requireText(panel, marker, `Painel perdeu aviso/controle: ${marker}`);
 

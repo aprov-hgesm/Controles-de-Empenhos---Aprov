@@ -16,6 +16,26 @@ import { USAGE_TELEMETRY_VERSION } from './platformCapacity';
 import { isValidUnitUg } from './platformIdentity';
 
 export const WORKSPACE_USAGE_SOURCE = 'emprovex-workspace-estimate' as const;
+
+/** R3: agrupamento de operações já observadas, sem leituras ou documentos extras. */
+export const WORKSPACE_USAGE_MODULES = ['empenhos', 'notas', 'deposito', 'sessoes', 'outros'] as const;
+export type WorkspaceUsageModule = (typeof WORKSPACE_USAGE_MODULES)[number];
+export type WorkspaceUsageModuleCounts = Record<WorkspaceUsageModule, number>;
+
+function zeroModuleCounts(): WorkspaceUsageModuleCounts {
+  return { empenhos: 0, notas: 0, deposito: 0, sessoes: 0, outros: 0 };
+}
+function restoreModuleCounts(input: unknown): WorkspaceUsageModuleCounts {
+  const result = zeroModuleCounts();
+  if (!input || typeof input !== 'object') return result;
+  for (const module of WORKSPACE_USAGE_MODULES) {
+    const value = (input as Record<string, unknown>)[module];
+    result[module] = typeof value === 'number' && Number.isFinite(value) && value > 0
+      ? Math.floor(value) : 0;
+  }
+  return result;
+}
+
 export const WORKSPACE_USAGE_INITIAL_FLUSH_MS = 60 * 1000;
 export const WORKSPACE_USAGE_FLUSH_INTERVAL_MS = 15 * 60 * 1000;
 export const WORKSPACE_USAGE_RETRY_MS = 5 * 60 * 1000;
@@ -40,6 +60,7 @@ interface PendingWorkspaceUsage {
   estimatedDocumentWrites: number;
   estimatedDocumentDeletes: number;
   realtimeSnapshots: number;
+  moduleOperations: WorkspaceUsageModuleCounts;
   peakRealtimeListeners: number;
   lastReportedPeakRealtimeListeners: number;
   hasReported: boolean;
@@ -94,6 +115,7 @@ function emptyPending(scope: { workspaceId: string; ug: string }, dayKey: string
     estimatedDocumentWrites: 0,
     estimatedDocumentDeletes: 0,
     realtimeSnapshots: 0,
+    moduleOperations: zeroModuleCounts(),
     peakRealtimeListeners: 0,
     lastReportedPeakRealtimeListeners: 0,
     hasReported: false,
@@ -125,6 +147,7 @@ function loadPending(
             estimatedDocumentWrites: normalizeCount(parsed.estimatedDocumentWrites),
             estimatedDocumentDeletes: normalizeCount(parsed.estimatedDocumentDeletes),
             realtimeSnapshots: normalizeCount(parsed.realtimeSnapshots),
+            moduleOperations: restoreModuleCounts(parsed.moduleOperations),
             peakRealtimeListeners: normalizeCount(parsed.peakRealtimeListeners),
             lastReportedPeakRealtimeListeners: normalizeCount(
               parsed.lastReportedPeakRealtimeListeners
@@ -183,7 +206,8 @@ function scheduleFlush(
 
 export function recordWorkspaceUsage(
   scope: WorkspaceUsageScope,
-  delta: WorkspaceUsageDelta
+  delta: WorkspaceUsageDelta,
+  module: WorkspaceUsageModule = 'outros'
 ): void {
   if (!isValidScope(scope)) return;
 
@@ -195,6 +219,9 @@ export function recordWorkspaceUsage(
   pending.estimatedDocumentWrites += normalizeCount(delta.documentWrites);
   pending.estimatedDocumentDeletes += normalizeCount(delta.documentDeletes);
   pending.realtimeSnapshots += normalizeCount(delta.realtimeSnapshots);
+  pending.moduleOperations[module] += normalizeCount(delta.documentReads)
+    + normalizeCount(delta.documentWrites)
+    + normalizeCount(delta.documentDeletes);
 
   persistPending(key, pending);
 
@@ -211,33 +238,37 @@ export function recordWorkspaceUsage(
 
 export function recordWorkspaceDocumentReads(
   scope: WorkspaceUsageScope,
-  count = 1
+  count = 1,
+  module: WorkspaceUsageModule = 'outros'
 ): void {
-  recordWorkspaceUsage(scope, { documentReads: count });
+  recordWorkspaceUsage(scope, { documentReads: count }, module);
 }
 
 export function recordWorkspaceDocumentWrites(
   scope: WorkspaceUsageScope,
-  count = 1
+  count = 1,
+  module: WorkspaceUsageModule = 'outros'
 ): void {
-  recordWorkspaceUsage(scope, { documentWrites: count });
+  recordWorkspaceUsage(scope, { documentWrites: count }, module);
 }
 
 export function recordWorkspaceDocumentDeletes(
   scope: WorkspaceUsageScope,
-  count = 1
+  count = 1,
+  module: WorkspaceUsageModule = 'outros'
 ): void {
-  recordWorkspaceUsage(scope, { documentDeletes: count });
+  recordWorkspaceUsage(scope, { documentDeletes: count }, module);
 }
 
 export function recordWorkspaceRealtimeSnapshot(
   scope: WorkspaceUsageScope,
-  estimatedDocumentReads: number
+  estimatedDocumentReads: number,
+  module: WorkspaceUsageModule = 'outros'
 ): void {
   recordWorkspaceUsage(scope, {
     documentReads: estimatedDocumentReads,
     realtimeSnapshots: 1,
-  });
+  }, module);
 }
 
 export function trackWorkspaceRealtimeListener(
@@ -294,6 +325,7 @@ export async function flushWorkspaceUsageTelemetry(
     estimatedDocumentWrites: pending.estimatedDocumentWrites,
     estimatedDocumentDeletes: pending.estimatedDocumentDeletes,
     realtimeSnapshots: pending.realtimeSnapshots,
+    moduleOperations: { ...pending.moduleOperations },
     peakRealtimeListeners: pending.peakRealtimeListeners,
     peakDelta: Math.max(
       0,
@@ -325,6 +357,15 @@ export async function flushWorkspaceUsageTelemetry(
         estimatedDocumentWrites: increment(snapshot.estimatedDocumentWrites),
         estimatedDocumentDeletes: increment(snapshot.estimatedDocumentDeletes),
         realtimeSnapshots: increment(snapshot.realtimeSnapshots),
+        // Apenas os módulos com incrementos são enviados. merge:true preserva
+        // os contadores legados e os de outras abas, sem leitura prévia.
+        ...(Object.values(snapshot.moduleOperations).some((value) => value > 0)
+          ? { moduleOperations: Object.fromEntries(
+              WORKSPACE_USAGE_MODULES
+                .filter((module) => snapshot.moduleOperations[module] > 0)
+                .map((module) => [module, increment(snapshot.moduleOperations[module])])
+            ) }
+          : {}),
         peakRealtimeListeners: increment(snapshot.peakDelta),
         telemetryFlushes: increment(1),
         lastReportedAt: serverTimestamp(),
@@ -349,6 +390,10 @@ export async function flushWorkspaceUsageTelemetry(
       0,
       current.realtimeSnapshots - snapshot.realtimeSnapshots
     );
+    for (const module of WORKSPACE_USAGE_MODULES) {
+      current.moduleOperations[module] = Math.max(0,
+        current.moduleOperations[module] - snapshot.moduleOperations[module]);
+    }
     current.lastReportedPeakRealtimeListeners = Math.max(
       current.lastReportedPeakRealtimeListeners,
       snapshot.peakRealtimeListeners

@@ -37,9 +37,10 @@ for (const marker of [
 }
 
 for (const marker of [
-  "type ConsumptionTab = 'quota' | 'reports'",
+  "type ConsumptionTab = 'quota' | 'cost' | 'reports'",
   "useState<ConsumptionTab>('quota')",
   'Cota diária',
+  'Estimativa de custos · R$',
   'Histórico & Relatórios',
   '<AdminUsageReportsPanel',
 ]) {

@@ -1,0 +1,196 @@
+/*
+ * ADMIN VISUAL — adaptacao da area administrativa ORIGINAL.
+ * Superficies e cores alteradas so no conteudo do /admin.
+ * Menu e cabecalho mantem o mesmo App Shell escuro da operacao.
+ * Sem hooks, API, listeners nem alteracoes de dominio.
+ */
+.root {
+  --admin-visual-line: #d8e5f3;
+  --admin-visual-text: #17375c;
+  --admin-visual-muted: #657e9d;
+  color: var(--admin-visual-text);
+  background: #edf3fb;
+}
+
+.atmosphere {
+  position: fixed;
+  inset: 4rem 0 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 77% 5%, rgba(80, 145, 223, 0.065), transparent 38%),
+    linear-gradient(180deg, #edf3fb 0%, #f4f7fc 52%, #eaf1fa 100%);
+}
+
+.atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(80, 125, 186, 0.035) 1px, transparent 1px);
+  background-size: 100% 34px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.34), transparent 72%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.34), transparent 72%);
+}
+
+/* O CSS global anima "main > div" com transform. Um ancestral
+ * transformado faria a barra fixed rolar junto do conteudo. Neutralizar so
+ * este wrapper garante posicionamento relativo ao viewport. */
+.layoutRoot {
+  animation: none !important;
+  transform: none !important;
+}
+
+.sidebarPanel {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    13px 18px 50px rgba(0, 5, 21, 0.18),
+    inset -1px 0 rgba(96, 165, 250, 0.035);
+}
+
+.navScroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147, 197, 253, 0.24) transparent;
+  scrollbar-gutter: stable;
+}
+
+.navScroll::-webkit-scrollbar { width: 5px; }
+.navScroll::-webkit-scrollbar-track { background: transparent; }
+.navScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(147, 197, 253, 0.24);
+}
+.navScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 197, 253, 0.42);
+}
+
+/* Escopo estrito: cabeçalho, barra lateral, toast global e os diálogos de
+   confirmação montados fora da área principal mantêm sua aparência atual. */
+.content {
+  min-width: 0;
+  color: var(--admin-visual-text);
+}
+
+/* As abas existentes usavam containers dark. Converter SOMENTE suas
+   superfícies compartilhadas — não trocar componentes nem seus callbacks. */
+.content :global([class*="bg-[#071225]"]),
+.content :global([class*="bg-[#051024]"]) {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: #d8e5f3 !important;
+  box-shadow: 0 12px 35px rgba(23, 56, 98, 0.065);
+}
+
+.content :global([class*="bg-slate-950/"]),
+.content :global([class*="bg-black/20"]) {
+  background: #f0f5fc !important;
+  border-color: #d8e5f3 !important;
+}
+
+.content :global([class*="border-white/"]) {
+  border-color: rgba(126, 162, 206, 0.20) !important;
+}
+
+.content :global(h1),
+.content :global(h2),
+.content :global(h3),
+.content :global(h4),
+.content :global([class~="text-white"]:not(button):not(a):not([class*="bg-blue-600"])) {
+  color: #17375c;
+}
+
+/* Restaura leitura na paleta clara sem clarear texto dos botoes primarios
+   de fundo azul/vermellho, nem afetar componentes da barra lateral. */
+.content :global([class*="text-slate-200"]),
+.content :global([class*="text-slate-300"]) {
+  color: #3d5879 !important;
+}
+.content :global([class*="text-slate-400"]),
+.content :global([class*="text-slate-500"]),
+.content :global([class*="text-slate-600"]) {
+  color: #627b99 !important;
+}
+.content :global([class*="text-blue-100"]),
+.content :global([class*="text-blue-200"]),
+.content :global([class*="text-blue-300"]) {
+  color: #265b9e !important;
+}
+.content :global([class*="text-emerald-100"]),
+.content :global([class*="text-emerald-200"]),
+.content :global([class*="text-emerald-300"]) {
+  color: #157357 !important;
+}
+.content :global([class*="text-amber-100"]),
+.content :global([class*="text-amber-200"]),
+.content :global([class*="text-amber-300"]) {
+  color: #91601e !important;
+}
+.content :global([class*="text-rose-100"]),
+.content :global([class*="text-rose-200"]),
+.content :global([class*="text-rose-300"]),
+.content :global([class*="text-red-200"]) {
+  color: #a83250 !important;
+}
+.content :global([class*="text-violet-100"]),
+.content :global([class*="text-violet-200"]) {
+  color: #7549aa !important;
+}
+.content :global([class*="text-cyan-100"]),
+.content :global([class*="text-cyan-200"]) {
+  color: #146c8c !important;
+}
+
+/* Preservar contraste dos controles que efetivamente continuam escuros. */
+.content :global(button[class*="bg-blue-600"]),
+.content :global(button[class*="bg-violet-600"]),
+.content :global(button[class*="bg-rose-500"]) {
+  color: #fff !important;
+}
+
+.content :global(input:not([type="checkbox"])),
+.content :global(select),
+.content :global(textarea) {
+  color: #1b365b !important;
+  background: #fff !important;
+  border-color: #c6d9ed !important;
+  caret-color: #1a5db0;
+}
+.content :global(input::placeholder),
+.content :global(textarea::placeholder) {
+  color: #8599b0 !important;
+}
+.content :global(input:focus-visible),
+.content :global(select:focus-visible),
+.content :global(textarea:focus-visible) {
+  outline-color: #2563eb;
+  border-color: #7aa7e9 !important;
+}
+
+/* Atributos visuais nao escondem o foco do teclado. */
+.content :global(button:focus-visible),
+.content :global(a:focus-visible) {
+  outline-offset: 3px;
+}
+
+@media (min-width: 1024px) {
+  .sidebarPanel { height: 100%; border-radius: 0; }
+  .navScroll {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1023px) {
+  .sidebarPanel {
+    max-height: none;
+  }
+  .navScroll {
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after {
+    scroll-behavior: auto;
+  }
+}

@@ -22,6 +22,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   query,
   runTransaction,
   serverTimestamp,
@@ -3035,6 +3036,47 @@ async function main() {
       windowEndedAt: '2026-09-20T07:59:59.999Z',
       estimatedDocumentReads: 32,
       telemetryFlushes: 4,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('UG R3 registra operações por módulo no documento diário existente', () =>
+    updateDoc(usageRefA, {
+      moduleOperations: { empenhos: 12, notas: 4, deposito: 3, sessoes: 2, outros: 5 },
+      telemetryFlushes: 4,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('UG R3 incrementa uma categoria mantendo os demais módulos', () =>
+    updateDoc(usageRefA, {
+      'moduleOperations.notas': increment(1),
+      estimatedDocumentReads: 33,
+      telemetryFlushes: 5,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('UG R3 rejeita contador de módulo negativo', () =>
+    updateDoc(usageRefA, {
+      'moduleOperations.empenhos': -1,
+      telemetryFlushes: 6,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('UG R3 impede reduzir atividade de outro módulo', () =>
+    updateDoc(usageRefA, {
+      'moduleOperations.empenhos': 1,
+      telemetryFlushes: 6,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('UG R3 rejeita módulo inventado', () =>
+    updateDoc(usageRefA, {
+      'moduleOperations.desconhecido': 2,
+      telemetryFlushes: 6,
       lastReportedAt: serverTimestamp(),
     })
   );

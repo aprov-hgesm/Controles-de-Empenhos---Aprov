@@ -221,12 +221,12 @@ export function AdminConsolidatedUsagePanel({
         <div>
           <div className="mb-2 flex items-center gap-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-blue-200/70">
             <Gauge className="h-4 w-4" />
-            Bloco 16.5 · visão consolidada
+            Resumo geral do uso
           </div>
-          <h3 className="text-lg font-extrabold text-white">Painel consolidado de consumo</h3>
+          <h3 className="text-lg font-extrabold text-white">Visão geral: quanto usamos e onde?</h3>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            Visão conjunta das métricas globais reais e da atribuição estimada por UG.
-            As duas fontes permanecem independentes e nunca são tratadas como equivalentes.
+            Veja os números do Google e a atividade captada em cada unidade no mesmo lugar.
+            Eles vêm de fontes diferentes e não devem ser usados como se fossem a mesma medição.
           </p>
         </div>
 
@@ -244,6 +244,18 @@ export function AdminConsolidatedUsagePanel({
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
+        <div className="rounded-xl border border-[#cadff1] bg-[#f0f7ff] p-4" data-testid="admin-consolidated-simple-guide">
+          <p className="text-xs font-extrabold text-[#215388]">Como usar esta visão</p>
+          <p className="mt-2 text-xs leading-6 text-[#486783]">
+            <strong>Primeiro:</strong> veja a barra da referência diária para acompanhar o uso registrado pelo Google.
+            <strong> Depois:</strong> veja quais UGs apresentam mais atividade estimada.
+            <strong> Por último:</strong> consulte os alertas, se houver algum.
+          </p>
+          <p className="mt-2 text-xs leading-6 text-[#486783]">
+            As diferenças entre as fontes são esperadas: a estimativa por UG não cobre necessariamente
+            todas as operações do banco e não indica quanto cada unidade deve pagar.
+          </p>
+        </div>
         <div
           data-testid="admin-primary-billing-quota"
           className="rounded-2xl border border-blue-300/20 bg-blue-500/[0.06] p-4"
@@ -251,12 +263,11 @@ export function AdminConsolidatedUsagePanel({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-200/85">
-                Limite principal de cota · Read Units
+                Principal referência diária · Read Units
               </div>
               <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-300">
-                Referência principal para identificar a aproximação do ponto em que o uso diário
-                de leitura do Firestore Enterprise ultrapassa a franquia configurada e passa para
-                a faixa sujeita a cobrança.
+                Mostra quanto das unidades de leitura já foi usado em relação à referência diária
+                configurada. Chegar a 100% não significa que o sistema será desligado nem confirma o valor da fatura.
               </p>
             </div>
             <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-right">
@@ -285,11 +296,11 @@ export function AdminConsolidatedUsagePanel({
 
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <Metric
-              label="Read Units usadas"
+              label="Unidades de leitura usadas"
               value={primaryBillingUsed === null ? '—' : formatCount(primaryBillingUsed)}
             />
             <Metric
-              label="Limite diário"
+              label="Referência diária"
               value={primaryBillingLimit === null ? '—' : formatCount(primaryBillingLimit)}
             />
             <Metric
@@ -298,7 +309,7 @@ export function AdminConsolidatedUsagePanel({
                 && primaryBillingLimit !== null
                 && primaryBillingUsed > primaryBillingLimit
                   ? 'Acima da franquia'
-                  : 'Restante até cobrança'
+                  : 'Restante até a referência'
               }
               value={
                 primaryBillingUsed === null || primaryBillingLimit === null
@@ -324,7 +335,7 @@ export function AdminConsolidatedUsagePanel({
               Fonte real · google-cloud-monitoring
             </div>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Operações observadas pelo Google Cloud para o banco Firestore configurado.
+              Uso observado pelo Google para todo o banco de dados, não apenas uma UG.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Metric label="Read Units" value={globalUsage ? formatCount(globalUsage.billableReadUnits) : '—'} />
@@ -342,13 +353,13 @@ export function AdminConsolidatedUsagePanel({
               Fonte estimada · emprovex-workspace-estimate
             </div>
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Atribuição interna do EMPROVEX para comparar o peso relativo das UGs.
+              Atividade estimada em cada unidade a partir dos registros internos do EMPROVEX; não é a conta do Google.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Metric label="Reads" value={formatCount(totals.reads)} />
-              <Metric label="Writes" value={formatCount(totals.writes)} />
-              <Metric label="Deletes" value={formatCount(totals.deletes)} />
-              <Metric label="Snapshots" value={formatCount(totals.snapshots)} />
+              <Metric label="Leituras estimadas" value={usage.length ? formatCount(totals.reads) : 'Sem medição'} />
+              <Metric label="Gravações estimadas" value={usage.length ? formatCount(totals.writes) : 'Sem medição'} />
+              <Metric label="Exclusões estimadas" value={usage.length ? formatCount(totals.deletes) : 'Sem medição'} />
+              <Metric label="Atualizações em tempo real" value={usage.length ? formatCount(totals.snapshots) : 'Sem medição'} />
               <Metric label="Sessões ativas" value={formatCount(activeSessions.length)} />
               <Metric label="Operações" value={formatCount(estimatedOperations)} />
             </div>
@@ -367,12 +378,12 @@ export function AdminConsolidatedUsagePanel({
                   Telemetria por UG v2 · reconciliação
                 </div>
                 <h4 className="mt-2 text-sm font-extrabold text-white">
-                  Cobertura entre atividade atribuída e consumo global
+                  Quanto do consumo conseguimos associar às UGs?
                 </h4>
                 <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-400">
-                  Compara documentos observados pelo Google com operações instrumentadas pelo EMPROVEX na mesma
-                  janela diária do Firestore. Read/Write Units por UG são apenas um proxy proporcional da parcela
-                  coberta; a fração sem evidência de atribuição permanece como não atribuída.
+                  Esta comparação ajuda a perceber qual parte das operações do banco foi identificada por UG.
+                  Nem todas as operações podem ser atribuídas a uma unidade. Valores proporcionais são
+                  estimativas de análise e não representam cobrança por setor.
                 </p>
               </div>
               <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.11em] text-slate-300">
@@ -458,11 +469,11 @@ export function AdminConsolidatedUsagePanel({
             <div>
               <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-amber-200/85">
                 <BellRing className="h-4 w-4" />
-                Bloco 16.6 · Alertas de consumo/cotas
+                Avisos sobre consumo
               </div>
               <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-400">
-                Alertas derivados de referências operacionais explícitas. Métrica global real,
-                estimativa interna por UG e cobrança oficial continuam separadas.
+                Estes avisos mostram quando os indicadores se aproximam das referências configuradas.
+                Não suspendem o sistema nem confirmam cobrança.
               </p>
             </div>
             <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-[10px] font-bold text-slate-300">
@@ -537,13 +548,12 @@ export function AdminConsolidatedUsagePanel({
               <Activity className="h-5 w-5" />
             </div>
             <div>
-              <h4 className="text-sm font-extrabold text-white">Referência de cobrança</h4>
+              <h4 className="text-sm font-extrabold text-white">Isso significa que teremos uma cobrança?</h4>
               <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                O EMPROVEX usa as unidades faturáveis do Firestore Enterprise para acompanhar a
-                franquia diária. O limite principal de leitura é parametrizado server-side e tem
-                default de 50.000 Read Units/dia para o banco atualmente elegível ao free tier.
-                O painel não converte esse consumo em valor final de fatura, pois preços, créditos,
-                rede, armazenamento e operações administrativas podem compor a cobrança separadamente.
+                Não necessariamente. O EMPROVEX compara o uso com a referência diária de leitura
+                definida para o banco (valor padrão: 50.000 Read Units por dia, quando elegível).
+                A fatura do Google depende de outros fatores, como armazenamento, rede, preços e créditos.
+                Para saber se há cobrança em reais, consulte o faturamento oficial do Google Cloud.
               </p>
               <p className="mt-2 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 Principal: Read Units até a franquia · cobrança monetária final continua no Google Cloud Billing

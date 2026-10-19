@@ -6,11 +6,13 @@ import {
   BarChart3,
   BellRing,
   Cloud,
+  Calculator,
   Gauge,
 } from 'lucide-react';
 
 import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';
 import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';
+import { AdminFirestoreCostPanel } from './AdminFirestoreCostPanel';
 import { AdminUsagePanel } from './AdminUsagePanel';
 import { AdminUsageReportsPanel } from './AdminUsageReportsPanel';
 import type { Workspace } from '../../lib/platformIdentity';
@@ -22,7 +24,7 @@ import type {
   GoogleMonitoringCredentialSource,
 } from '../../lib/platformCapacity';
 
-type ConsumptionTab = 'quota' | 'reports' | 'consolidated' | 'workspace' | 'alerts';
+type ConsumptionTab = 'quota' | 'cost' | 'reports' | 'consolidated' | 'workspace' | 'alerts';
 
 interface AdminConsumptionHubProps {
   workspaces: Workspace[];
@@ -52,36 +54,43 @@ const tabs: Array<{
   {
     id: 'quota',
     label: 'Google real · Cota diária',
-    shortLabel: 'Google real',
-    description: 'Métricas oficiais do Cloud Monitoring e diagnóstico de atualização.',
+    shortLabel: 'Cota diária',
+    description: 'Veja quanto do limite diário de uso já foi utilizado e o que ainda resta.',
     icon: Cloud,
+  },
+  {
+    id: 'cost',
+    label: 'Estimativa de custos · R$',
+    shortLabel: 'Custos em R$',
+    description: 'Estime o custo das operações observadas, com tarifas e câmbio informados por você.',
+    icon: Calculator,
   },
   {
     id: 'consolidated',
     label: 'Visão consolidada',
     shortLabel: 'Consolidado',
-    description: 'Compara fonte global, estimativas por UG, sessões e limites.',
+    description: 'Compare a cota geral com a atividade estimada de cada unidade, sem confundir os números.',
     icon: Gauge,
   },
   {
     id: 'workspace',
     label: 'Consumo por UG',
     shortLabel: 'Por UG',
-    description: 'Atribuição interna instrumentada pelo EMPROVEX para cada unidade.',
+    description: 'Descubra quais unidades utilizam mais o sistema. São estimativas, não valores cobrados.',
     icon: Activity,
   },
   {
     id: 'reports',
     label: 'Histórico & Relatórios',
     shortLabel: 'Histórico',
-    description: 'Evolução diária, semanal, mensal e anual com exportação.',
+    description: 'Acompanhe como o uso mudou nos últimos dias e meses e exporte os resultados.',
     icon: BarChart3,
   },
   {
     id: 'alerts',
     label: 'Alertas e limites',
     shortLabel: 'Alertas',
-    description: 'Faixas de atenção e referências usadas pela plataforma.',
+    description: 'Entenda quando um consumo merece atenção e onde ajustar os avisos internos.',
     icon: BellRing,
   },
 ];
@@ -93,6 +102,28 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
     [activeTab]
   );
   const ActiveIcon = active.icon;
+  const quota = props.globalUsage;
+  const dailyReference = quota?.billingReference.readUnitsDailyLimit ?? null;
+  const usedReadUnits = quota?.billableReadUnits ?? null;
+  const usedPercent = dailyReference !== null && dailyReference > 0 && usedReadUnits !== null
+    ? (usedReadUnits / dailyReference) * 100
+    : null;
+  const formattedCount = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+  const summary = usedPercent === null
+    ? 'Ainda não há dados suficientes para calcular o uso da cota.'
+    : usedPercent > 100
+      ? 'O uso registrado superou a referência diária. Confira a situação de cobrança no Google Cloud.'
+      : usedPercent >= 85
+        ? 'Atenção: a cota diária está perto da referência configurada.'
+        : 'O uso registrado está abaixo de 85% da referência diária.';
+  const guidance = {
+    cost: 'Preencha o câmbio e confirme a tarifa da sua região. É uma simulação parcial, nunca uma fatura.',
+    quota: 'Comece pelas barras de leitura e gravação. Elas mostram a parte usada de cada referência diária. Não representam um valor em reais.',
+    consolidated: 'Use para ter uma visão geral. Os dados do Google abrangem o banco; os dados das UGs são aproximados e não devem ser somados como se fossem a conta do Google.',
+    workspace: 'UG é o código da unidade. Quanto maiores as contagens estimadas, maior a atividade captada pelo sistema nessa unidade. Falta de medição aparece como “Sem medição”.',
+    reports: 'Escolha um período para perceber tendências. Os valores históricos dependem dos registros efetivamente disponíveis para cada data.',
+    alerts: 'Os alertas usam faixas e referências configuradas, não bloqueiam automaticamente os usuários e não representam uma cobrança confirmada.',
+  } satisfies Record<ConsumptionTab, string>;
 
   return (
     <div data-testid="admin-consumption-hub" className="space-y-4">
@@ -100,12 +131,12 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-blue-300/60">
-              Capacidade e telemetria
+              Uso do sistema · explicação simples
             </p>
             <h3 className="mt-1 text-lg font-extrabold text-white">Consumo &amp; Cotas</h3>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-              A fonte <strong className="text-slate-200">Google real</strong> é global para o banco.
-              A visão por UG continua identificada separadamente como estimativa instrumentada.
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+              Aqui você acompanha <strong>quanto o EMPROVEX usa do banco de dados</strong>, quanto falta para
+              as referências diárias e quais unidades geram mais atividade.
             </p>
           </div>
 
@@ -122,11 +153,40 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
               active={props.globalUsageConfigured === true}
             />
             <SourceBadge
-              label="UG instrumentada"
-              value={props.usage.some((item) => item.hasTelemetry) ? 'Com dados' : 'Sem amostra'}
+              label="Dados por unidade"
+              value={props.usage.some((item) => item.hasTelemetry) ? 'Com medição' : 'Sem medição'}
               active={props.usage.some((item) => item.hasTelemetry)}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3" aria-label="Entenda os números do consumo" data-testid="admin-consumption-simple-summary">
+        <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
+          <p className="text-xs font-extrabold text-[#1b4b87]">1. Uso da cota diária</p>
+          <p className="mt-2 text-2xl font-black text-[#153960]">
+            {usedPercent === null
+              ? 'Sem dados'
+              : usedPercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-[#5f7695]">
+            {dailyReference !== null && usedReadUnits !== null
+              ? formattedCount(usedReadUnits) + ' de ' + formattedCount(dailyReference) + ' unidades de leitura da referência diária'
+              : 'Sem dados do Google não é possível afirmar que o consumo foi zero.'}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
+          <p className="text-xs font-extrabold text-[#1b4b87]">2. O que esse uso significa?</p>
+          <p className="mt-2 text-xs leading-6 text-[#3c5879]">{summary}</p>
+          <p className="mt-2 text-[11px] text-[#697f9b]">A medição pode chegar com atraso e o período diário do Google não coincide necessariamente com o horário do Brasil. Não é uma fatura.</p>
+        </div>
+        <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
+          <p className="text-xs font-extrabold text-[#1b4b87]">3. De onde vêm os números?</p>
+          <p className="mt-2 text-xs leading-6 text-[#3c5879]">
+            <strong>Google:</strong> consumo do banco inteiro.
+            <strong> EMPROVEX por UG:</strong> estimativa de cada unidade.
+          </p>
+          <p className="mt-2 text-[11px] text-[#697f9b]">Não some nem compare as duas fontes como se fossem iguais.</p>
         </div>
       </section>
 
@@ -186,7 +246,8 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-extrabold text-white">{active.label}</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{active.description}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{active.description}</p>
+              <p className="mt-2 text-xs leading-5 text-[#275a91]"><strong>Como interpretar:</strong> {guidance[activeTab]}</p>
             </div>
           </div>
 
@@ -201,6 +262,13 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
               loading={props.loadingGlobalUsage}
               error={props.globalUsageError}
               onRefresh={props.onRefreshGlobalUsage}
+            />
+          )}
+
+          {activeTab === 'cost' && (
+            <AdminFirestoreCostPanel
+              globalUsage={props.globalUsage}
+              globalUsageDataThrough={props.globalUsageDataThrough}
             />
           )}
 
@@ -238,6 +306,7 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
             <AdminUsagePanel
               workspaces={props.workspaces}
               usage={props.usage}
+              globalUsage={props.globalUsage}
               loading={props.loadingUsage}
               error={props.usageError}
               onRefresh={props.onRefreshUsage}
@@ -255,8 +324,9 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
                     Alertas e limites de consumo
                   </h4>
                   <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-                    A política de alertas usa as métricas globais reais e as estimativas por UG
-                    sem misturar as duas fontes. Os limites permanecem editáveis na visão consolidada.
+                    Os alertas avisam quando algum indicador se aproxima da referência escolhida.
+                    Os números do Google mostram o banco inteiro; os números por UG são estimativas do EMPROVEX.
+                    Você pode consultar as referências e os limites internos na visão consolidada.
                   </p>
                 </div>
               </div>

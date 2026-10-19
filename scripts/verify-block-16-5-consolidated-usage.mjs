@@ -22,15 +22,15 @@ function forbidText(source, forbidden, message) {
 
 for (const marker of [
   'data-testid="admin-consolidated-usage-panel"',
-  'Bloco 16.5 · visão consolidada',
-  'Painel consolidado de consumo',
+  'Resumo geral do uso',
+  'Visão geral: quanto usamos e onde?',
   'google-cloud-monitoring',
   'emprovex-workspace-estimate',
   'getDefaultSimultaneousSessionLimit',
   'isAdminWorkspaceSessionActive',
   'Participação calculada somente sobre a soma das estimativas EMPROVEX',
   'data-testid="admin-primary-billing-quota"',
-  'Limite principal de cota · Read Units',
+  'Principal referência diária · Read Units',
   'api/billable_read_units',
   'cobrança monetária final continua no Google Cloud Billing',
 ]) {

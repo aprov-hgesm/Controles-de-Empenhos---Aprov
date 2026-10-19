@@ -39,7 +39,7 @@ requireText(
   "'Cache-Control': 'private, no-store, max-age=0'",
   'Rota deve impedir cache compartilhado via camada central.'
 );
-requireText(panel, 'Alertas de consumo/cotas', 'Painel consolidado deve exibir a seção de alertas.');
+requireText(panel, 'Avisos sobre consumo', 'Painel consolidado deve exibir a seção de alertas.');
 requireText(panel, 'não representam cobrança oficial', 'Painel deve preservar o aviso de cobrança.');
 requireText(docs, 'não gera alerta de orçamento', 'Documentação deve tratar ausência de referência sem falso positivo.');
 requireText(docs, 'não calcula USD, BRL ou fatura estimada', 'Documentação deve separar alertas de cobrança.');

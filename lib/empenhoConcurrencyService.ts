@@ -37,7 +37,7 @@ export async function commitEmpenhoCreate(
       transaction.set(ref, { ...next, userId });
       return next;
     });
-    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 });
+    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 }, 'empenhos');
     return result;
   } catch (error) {
     if (isEmpenhoConcurrencyError(error)) throw error;
@@ -71,7 +71,7 @@ export async function commitEmpenhoUpdate(
       transaction.set(ref, { ...next, userId });
       return next;
     });
-    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 });
+    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 }, 'empenhos');
     return result;
   } catch (error) {
     if (isEmpenhoConcurrencyError(error)) throw error;

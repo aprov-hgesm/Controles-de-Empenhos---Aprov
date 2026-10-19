@@ -1,5 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
+import { buildUsageReconciliation } from '../../lib/usageReconciliation';
+import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import {
   Activity,
   Database,
@@ -15,10 +18,19 @@ import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 interface AdminUsagePanelProps {
   workspaces: Workspace[];
   usage: AdminWorkspaceUsageEstimate[];
+  globalUsage: FirebaseGlobalUsageSnapshot | null;
   loading: boolean;
   error: string | null;
   onRefresh: () => Promise<void>;
 }
+
+const MODULE_LABELS = [
+  { id: 'empenhos', label: 'Empenhos' },
+  { id: 'notas', label: 'Notas Fiscais' },
+  { id: 'deposito', label: 'Depósito' },
+  { id: 'sessoes', label: 'Sessões e acesso' },
+  { id: 'outros', label: 'Outros fluxos' },
+] as const;
 
 function formatCount(value: number): string {
   return new Intl.NumberFormat('pt-BR').format(value);
@@ -39,10 +51,17 @@ function formatDateTime(value: string | null): string {
 export function AdminUsagePanel({
   workspaces,
   usage,
+  globalUsage,
   loading,
   error,
   onRefresh,
 }: AdminUsagePanelProps) {
+  // Reutiliza a fotografia global já carregada no Admin; nenhuma leitura extra.
+  // Proxy proporcional somente sobre a parte documentada, nunca faturamento.
+  const reconciliation = useMemo(
+    () => globalUsage ? buildUsageReconciliation(globalUsage, usage) : null,
+    [globalUsage, usage]
+  );
   const rows = workspaces
     .filter((workspace) => workspace.ug)
     .map((workspace) => ({
@@ -68,12 +87,12 @@ export function AdminUsagePanel({
         <div>
           <div className="mb-2 flex items-center gap-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-cyan-200/65">
             <Gauge className="h-4 w-4" />
-            Bloco 16.3 · telemetria por UG
+            Informações por unidade
           </div>
-          <h3 className="text-lg font-extrabold text-white">Consumo estimado por UG</h3>
+          <h3 className="text-lg font-extrabold text-white">Quais unidades usam mais o EMPROVEX?</h3>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            Atribuição interna do EMPROVEX. Estes números não são a cobrança oficial do Firebase;
-            o consumo global real continuará separado e será integrado via Cloud Monitoring.
+            Acompanhe a atividade registrada pelo EMPROVEX para cada UG (código da unidade).
+            Estes valores são estimativas internas, não uma cobrança do Google.
           </p>
         </div>
 
@@ -91,24 +110,44 @@ export function AdminUsagePanel({
       </div>
 
       <div className="space-y-4 p-5 sm:p-6">
+        <div className="rounded-xl border border-[#ccddf0] bg-[#eff6ff] px-4 py-3" data-testid="admin-ug-simple-guide">
+          <p className="text-xs font-extrabold text-[#215388]">Como entender estes números</p>
+          <p className="mt-1 text-xs leading-6 text-[#496784]">
+            <strong>Leituras</strong> são consultas de informações.
+            <strong> Gravações</strong> são registros ou alterações salvas.
+            <strong> Exclusões</strong> são documentos apagados.
+            Atualizações em tempo real aparecem separadas porque algumas telas acompanham os dados continuamente.
+          </p>
+          <p className="mt-1 text-xs leading-6 text-[#496784]">
+            <strong>Importante:</strong> números sem medição não significam ausência de uso.
+            A contagem por UG não corresponde diretamente à fatura do Google.
+            A divisão por módulo identifica apenas as operações que o EMPROVEX conseguiu acompanhar.
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Reads atribuídos hoje</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Leituras estimadas hoje</p>
             <p data-testid="admin-usage-total-reads" className="mt-1 text-xl font-black text-white">
               {formatCount(totalReads)}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Writes atribuídos hoje</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Gravações estimadas hoje</p>
             <p className="mt-1 text-xl font-black text-white">{formatCount(totalWrites)}</p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Fonte</p>
-            <p className="mt-1 font-mono text-[10px] font-extrabold text-cyan-100">
-              emprovex-workspace-estimate
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Origem dos dados</p>
+            <p className="mt-1 text-xs font-bold text-cyan-100">
+              Medições internas do EMPROVEX
             </p>
           </div>
         </div>
+
+        {usage.length === 0 && !loading && !error && (
+          <p className="text-xs leading-6 text-[#627b98]">
+            Ainda não há medições por UG nesta consulta. Os totais acima não comprovam consumo zero.
+          </p>
+        )}
 
         {error && (
           <div className="rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-4 py-3 text-xs text-rose-100">
@@ -146,27 +185,88 @@ export function AdminUsagePanel({
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-500">
-                    Última consolidação: {formatDateTime(estimate?.lastReportedAt || null)}
+                    {estimate
+                      ? 'Última atualização da medição: ' + formatDateTime(estimate.lastReportedAt)
+                      : 'Ainda não há medição disponível para esta UG.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
-                  <Metric label="Reads" value={estimate?.estimatedDocumentReads || 0} icon={<Database className="h-3.5 w-3.5" />} />
-                  <Metric label="Writes" value={estimate?.estimatedDocumentWrites || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Deletes" value={estimate?.estimatedDocumentDeletes || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Snapshots" value={estimate?.realtimeSnapshots || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Carga pico listeners*" value={estimate?.peakRealtimeListeners || 0} icon={<Gauge className="h-3.5 w-3.5" />} />
-                  <Metric label="Flushes" value={estimate?.telemetryFlushes || 0} icon={<RefreshCw className="h-3.5 w-3.5" />} />
+                  <Metric label="Leituras" detail="Consultas de documentos" value={estimate?.estimatedDocumentReads ?? null} icon={<Database className="h-3.5 w-3.5" />} />
+                  <Metric label="Gravações" detail="Dados salvos ou alterados" value={estimate?.estimatedDocumentWrites ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Exclusões" detail="Documentos apagados" value={estimate?.estimatedDocumentDeletes ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Atualizações recebidas" detail="Mudanças vistas em tempo real" value={estimate?.realtimeSnapshots ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Pico de observadores*" detail="Maior carga de consultas acompanhadas" value={estimate?.peakRealtimeListeners ?? null} icon={<Gauge className="h-3.5 w-3.5" />} />
+                  <Metric label="Envios de medição" detail="Vezes em que o uso foi consolidado" value={estimate?.telemetryFlushes ?? null} icon={<RefreshCw className="h-3.5 w-3.5" />} />
                 </div>
+              </div>
+              {reconciliation?.rows.find(row => row.workspaceId === workspace.id) && (
+                <div className="mt-4 rounded-xl border border-[#d2e0f1] bg-[#f0f6fd] p-3" data-testid={`admin-ug-google-proxy-${workspace.id}`}>
+                  <p className="text-xs font-extrabold text-[#24558e]">Estimativa comparada com o Google</p>
+                  <p className="mt-1 text-xs leading-5 text-[#426586]">
+                    Aproximadamente{' '}
+                    <strong>
+                      {Math.round(reconciliation.rows.find(row => row.workspaceId === workspace.id)!.estimatedBillableReadUnits).toLocaleString('pt-BR')} unidades de leitura
+                    </strong>
+                    {' '}associadas a esta UG por aproximação proporcional.
+                    Não é um gasto em reais nem a quantidade de unidades oficialmente cobrada desta UG.
+                  </p>
+                  <p className="mt-1 text-[10px] leading-5 text-[#627d9a]">
+                    Cobertura global observada: {reconciliation.readCoverage.percentage === null
+                      ? 'sem comparação disponível'
+                      : reconciliation.readCoverage.percentage.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'}
+                    . A parcela que não conseguimos atribuir não é distribuída entre as UGs.
+                  </p>
+                </div>
+              )}
+              <div className="mt-4 border-t border-[#d5e4f3] pt-4" data-testid={`admin-ug-modules-${workspace.id}`}>
+                <p className="text-xs font-extrabold text-[#1c4c82]">De onde veio a atividade desta UG?</p>
+                {!estimate?.moduleBreakdownAvailable ? (
+                  <p className="mt-2 text-xs leading-5 text-[#657d9a]">
+                    Sem detalhamento por módulo neste dia. Os registros antigos não permitem saber qual tela gerou as operações.
+                  </p>
+                ) : (() => {
+                  const operations = MODULE_LABELS.map(({ id, label }) => ({
+                    id, label, count: estimate.moduleOperations[id],
+                  }));
+                  const total = operations.reduce((sum, item) => sum + item.count, 0);
+                  const classified = total - estimate.moduleOperations.outros;
+                  return (
+                    <>
+                      <p className="mt-1 text-xs leading-5 text-[#657d9a]">
+                        {formatCount(total)} operações instrumentadas com categoria.
+                        {total > 0
+                          ? ` ${Math.round(classified / total * 100)}% foram associadas a um módulo específico.`
+                          : ' Ainda não há operações classificadas nesta medição.'}
+                        {' '}Isso mede a organização dos registros captados, não a precisão da conta do Google.
+                      </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {operations.map(item => {
+                          const percent = total > 0 ? item.count / total * 100 : 0;
+                          return (
+                            <div key={item.id} className="rounded-lg border border-[#d6e5f4] bg-[#f4f8fd] px-3 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] font-semibold text-[#3f6082]">{item.label}</span>
+                                <span className="text-[11px] font-extrabold text-[#1b4a7d]">{formatCount(item.count)} · {percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+                              </div>
+                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#dce7f5]">
+                                <div className="h-full rounded-full bg-[#568bc5]" style={{ width: `${percent}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           ))}
         </div>
 
         <p className="text-[10px] leading-relaxed text-slate-500">
-          * “Carga pico listeners” é uma atribuição conservadora somada por cliente/aba e não representa
-          conexões simultâneas oficiais do Firebase. A telemetria é agregada no cliente e consolidada
-          com baixa frequência para não gerar um custo relevante por conta própria.
+          * O pico de observadores é estimado por tela e não informa exatamente quantas pessoas estão conectadas.
+          Os registros são agrupados periodicamente para evitar leituras extras desnecessárias.
         </p>
       </div>
     </section>
@@ -175,11 +275,13 @@ export function AdminUsagePanel({
 
 function Metric({
   label,
+  detail,
   value,
   icon,
 }: {
   label: string;
-  value: number;
+  detail: string;
+  value: number | null;
   icon: React.ReactNode;
 }) {
   return (
@@ -188,7 +290,8 @@ function Metric({
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-sm font-black text-slate-100">{formatCount(value)}</div>
+      <div className="mt-1 text-sm font-black text-slate-100">{value === null ? 'Sem medição' : formatCount(value)}</div>
+      <p className="mt-1 text-[10px] leading-4 text-slate-500">{detail}</p>
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { USAGE_TELEMETRY_VERSION } from './platformCapacity';
 import { isValidUnitUg, type Workspace } from './platformIdentity';
 import {
   WORKSPACE_USAGE_SOURCE,
+  WORKSPACE_USAGE_MODULES,
+  type WorkspaceUsageModuleCounts,
   getWorkspaceUsageDayKey,
 } from './workspaceUsageTelemetry';
 
@@ -19,6 +21,8 @@ export interface AdminWorkspaceUsageEstimate {
   ug: string;
   dayKey: string;
   hasTelemetry: boolean;
+  moduleBreakdownAvailable: boolean;
+  moduleOperations: WorkspaceUsageModuleCounts;
   source: typeof WORKSPACE_USAGE_SOURCE;
   estimatedDocumentReads: number;
   estimatedDocumentWrites: number;
@@ -38,12 +42,25 @@ function toIso(value: unknown): string | null {
   return value instanceof Timestamp ? value.toDate().toISOString() : null;
 }
 
+function readModuleOperations(value: unknown): WorkspaceUsageModuleCounts {
+  const result: WorkspaceUsageModuleCounts = {
+    empenhos: 0, notas: 0, deposito: 0, sessoes: 0, outros: 0,
+  };
+  if (!value || typeof value !== 'object') return result;
+  for (const module of WORKSPACE_USAGE_MODULES) {
+    result[module] = safeCounter((value as Record<string, unknown>)[module]);
+  }
+  return result;
+}
+
 function emptyUsage(workspace: Workspace, dayKey: string): AdminWorkspaceUsageEstimate {
   return {
     workspaceId: workspace.id,
     ug: workspace.ug || '',
     dayKey,
     hasTelemetry: false,
+    moduleBreakdownAvailable: false,
+    moduleOperations: readModuleOperations(null),
     source: WORKSPACE_USAGE_SOURCE,
     estimatedDocumentReads: 0,
     estimatedDocumentWrites: 0,
@@ -87,6 +104,11 @@ export async function loadPlatformWorkspaceUsage(
         ug: workspace.ug || '',
         dayKey,
         hasTelemetry: true,
+        moduleBreakdownAvailable: Boolean(
+          data.moduleOperations
+          && typeof data.moduleOperations === 'object'
+        ),
+        moduleOperations: readModuleOperations(data.moduleOperations),
         source: WORKSPACE_USAGE_SOURCE,
         estimatedDocumentReads: safeCounter(data.estimatedDocumentReads),
         estimatedDocumentWrites: safeCounter(data.estimatedDocumentWrites),

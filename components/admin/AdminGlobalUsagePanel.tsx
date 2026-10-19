@@ -241,10 +241,10 @@ export function AdminGlobalUsagePanel({
               <Cloud className="h-4 w-4" />
               Google Cloud Monitoring · fonte real
             </div>
-            <h3 className="text-lg font-extrabold text-white">Consumo global real do Firebase</h3>
+            <h3 className="text-lg font-extrabold text-white">Quanto o banco de dados do EMPROVEX está usando?</h3>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-              Métricas oficiais do projeto Firestore consultadas pelo servidor. Esta visão é global,
-              não é rateada por UG e não representa a fatura final do Google Cloud.
+              Estes números vêm do Google e mostram o uso do banco como um todo.
+              Não representam o gasto em reais nem indicam quanto cada unidade deve pagar.
             </p>
           </div>
 
@@ -257,7 +257,7 @@ export function AdminGlobalUsagePanel({
             {loading
               ? <Loader2 className="h-4 w-4 animate-spin" />
               : <RefreshCw className="h-4 w-4" />}
-            Atualizar métricas reais
+            Atualizar dados do Google
           </button>
         </div>
 
@@ -304,11 +304,24 @@ export function AdminGlobalUsagePanel({
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
+        <div className="rounded-2xl border border-[#d1e1f2] bg-[#f0f6ff] p-4" data-testid="admin-google-simple-guide">
+          <p className="text-sm font-extrabold text-[#1a4b83]">O que você precisa observar aqui?</p>
+          <p className="mt-2 text-xs leading-6 text-[#3f6082]">
+            <strong>As barras mostram o uso registrado comparado com a referência diária.</strong>
+            Quanto mais cheia a barra, mais próximo o consumo está da referência.
+            O Google pode atualizar esses dados com atraso.
+          </p>
+          <p className="mt-2 text-xs leading-6 text-[#3f6082]">
+            <strong>Leitura</strong> é quando o sistema consulta informações;
+            <strong> gravação</strong> é quando salva ou altera informações;
+            <strong> exclusão</strong> é quando apaga documentos.
+            As unidades usadas pelo Google para calcular a franquia não são a mesma coisa que a quantidade de documentos.
+          </p>
+        </div>
         {configured === false && (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-relaxed text-amber-100">
-            A credencial server-side do Cloud Monitoring ainda não está disponível. O leitor aceita
-            a credencial administrativa server-side do Firebase como fonte principal e mantém
-            a credencial dedicada de Monitoring como fallback.
+            Não foi possível acessar as medições do Google neste ambiente. É necessário configurar
+            o acesso de leitura do servidor. Isso não significa que o EMPROVEX ou os workspaces pararam de funcionar.
           </div>
         )}
 
@@ -328,14 +341,15 @@ export function AdminGlobalUsagePanel({
                 <div>
                   <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-200/85">
                     <WalletCards className="h-4 w-4" />
-                    Limite principal · início de cobrança
+                    Uso diário comparado à referência de franquia
                   </div>
                   <h4 className="mt-2 text-base font-black text-white">
-                    Consumo faturável observado pelo Google
+                    Quanto da referência diária já foi utilizado
                   </h4>
                   <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-                    Barras separadas deixam claro o peso de Read Units, Realtime Read Units e Write Units
-                    contra as referências diárias configuradas.
+                    Cada barra mostra uma categoria diferente de uso. Se chegar a 100%,
+                    a referência estará atingida; isso não significa que o sistema parou,
+                    nem confirma sozinho um valor a pagar.
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-right">
@@ -350,18 +364,21 @@ export function AdminGlobalUsagePanel({
 
               <div className="mt-5 space-y-4">
                 <QuotaLane
-                  label="Read Units faturáveis"
+                  label="Leituras contabilizadas (Read Units)"
+                  explanation="O Google chama esta medida de Read Units faturáveis. Ela contabiliza consultas, mas não corresponde diretamente ao número de documentos abertos."
                   used={snapshot.billableReadUnits}
                   limit={snapshot.billingReference.readUnitsDailyLimit}
                   primary
                 />
                 <QuotaLane
-                  label="Realtime Read Units"
+                  label="Leituras em tempo real (Realtime Read Units)"
+                  explanation="Uso gerado por atualizações acompanhadas em tempo real, como telas que recebem mudanças sem recarregar."
                   used={snapshot.billableRealtimeReadUnits}
                   limit={snapshot.billingReference.realtimeReadUnitsDailyLimit}
                 />
                 <QuotaLane
-                  label="Write Units faturáveis"
+                  label="Gravações contabilizadas (Write Units)"
+                  explanation="O Google chama esta medida de Write Units faturáveis. São unidades de cobrança por gravações, não a contagem de documentos alterados."
                   used={snapshot.billableWriteUnits}
                   limit={snapshot.billingReference.writeUnitsDailyLimit}
                 />
@@ -375,42 +392,50 @@ export function AdminGlobalUsagePanel({
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Metric
-                label="Leituras de documentos"
+                label="Documentos consultados"
+                explanation="Quantidade de leituras de documentos observadas; não é igual às Read Units."
                 value={snapshot.documentReads}
                 icon={<Database className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Writes de documentos"
+                label="Documentos gravados ou alterados"
+                explanation="Quantidade de operações de escrita observadas pelo Google."
                 value={snapshot.documentWrites}
                 icon={<Activity className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Deletes de documentos"
+                label="Documentos excluídos"
+                explanation="Quantidade de documentos apagados no período monitorado."
                 value={snapshot.documentDeletes}
                 icon={<Database className="h-3.5 w-3.5" />}
               />
               <Metric
                 label="Conexões ativas"
+                explanation="Conexões identificadas pelo Google com o banco; não é uma contagem exata de pessoas conectadas."
                 value={snapshot.activeConnections}
                 icon={<RadioTower className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Snapshot listeners"
+                label="Consultas acompanhadas em tempo real"
+                explanation="Observadores ativos que acompanham mudanças em dados; um usuário pode manter mais de um."
                 value={snapshot.snapshotListeners}
                 icon={<Gauge className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Read Units faturáveis"
+                label="Unidades de leitura contabilizadas"
+                explanation="Quantidade de Read Units usada na referência diária, diferente da contagem de documentos."
                 value={snapshot.billableReadUnits}
                 icon={<WalletCards className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Realtime Read Units"
+                label="Unidades de leitura em tempo real"
+                explanation="Parte do consumo associada às consultas em tempo real."
                 value={snapshot.billableRealtimeReadUnits}
                 icon={<RadioTower className="h-3.5 w-3.5" />}
               />
               <Metric
-                label="Write Units faturáveis"
+                label="Unidades de gravação contabilizadas"
+                explanation="Uso contabilizado pelo Google para gravações."
                 value={snapshot.billableWriteUnits}
                 icon={<Activity className="h-3.5 w-3.5" />}
               />
@@ -423,7 +448,7 @@ export function AdminGlobalUsagePanel({
               Ainda não há fotografia real carregada
             </p>
             <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-slate-500">
-              Use “Atualizar métricas reais”. Se a integração estiver configurada e continuar sem amostra,
+              Use “Atualizar dados do Google”. Se a integração estiver configurada e continuar sem amostra,
               o painel de diagnóstico abaixo aponta as causas mais prováveis.
             </p>
           </div>
@@ -435,8 +460,8 @@ export function AdminGlobalUsagePanel({
               <div>
                 <p className="text-sm font-extrabold text-white">Frescor de cada métrica Google</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
-                  Mostra o último ponto de cada série separadamente. Isso evita que uma série recente
-                  mascare outra que ainda não foi atualizada.
+                  Indica quando o Google enviou pela última vez cada tipo de informação.
+                  Um número mais antigo pode estar atrasado, não necessariamente zerado.
                 </p>
               </div>
               <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
@@ -468,19 +493,24 @@ export function AdminGlobalUsagePanel({
               <Info className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-extrabold text-white">Diagnóstico da visualização Google</p>
+              <p className="text-sm font-extrabold text-white">Informações técnicas e possíveis problemas</p>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                A leitura abaixo usa o estado real que a interface recebeu e também as restrições do leitor
-                server-side atual.
+                Use esta parte somente se os números não carregarem ou parecerem desatualizados.
+                Ela explica como o EMPROVEX consulta o Google.
               </p>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 xl:grid-cols-2">
-            {diagnostics.map((item) => (
-              <DiagnosticCard key={item.title + item.detail} item={item} />
-            ))}
-          </div>
+          <details className="mt-4 rounded-xl border border-[#cddfed] bg-white/85 p-3">
+            <summary className="cursor-pointer text-xs font-extrabold text-[#285b96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
+              Ver diagnósticos técnicos ({diagnostics.length})
+            </summary>
+            <div className="mt-3 grid gap-2 xl:grid-cols-2">
+              {diagnostics.map((item) => (
+                <DiagnosticCard key={item.title + item.detail} item={item} />
+              ))}
+            </div>
+          </details>
         </section>
 
         <div className="grid gap-3 lg:grid-cols-4">
@@ -503,11 +533,13 @@ export function AdminGlobalUsagePanel({
 
 function QuotaLane({
   label,
+  explanation,
   used,
   limit,
   primary = false,
 }: {
   label: string;
+  explanation: string;
   used: number;
   limit: number;
   primary?: boolean;
@@ -528,18 +560,26 @@ function QuotaLane({
               </span>
             )}
           </div>
-          <p className="mt-1 text-lg font-black text-white">
+          <p className="mt-1 text-[11px] leading-5 text-slate-500">{explanation}</p>
+          <p className="mt-2 text-lg font-black text-white">
             {formatCount(used)}
             <span className="ml-1.5 text-[10px] font-bold text-slate-600">/ {formatCount(limit)}</span>
           </p>
         </div>
         <p className={`text-sm font-black ${exceeded ? 'text-rose-300' : percentage >= 70 ? 'text-amber-300' : 'text-emerald-300'}`}>
-          {percentage.toLocaleString('pt-BR', {
+          {limit > 0 ? percentage.toLocaleString('pt-BR', {
             minimumFractionDigits: percentage > 0 && percentage < 10 ? 1 : 0,
             maximumFractionDigits: 1,
-          })}%
+          }) + '%' : 'Sem referência'}
         </p>
       </div>
+      <p className="mt-2 text-[10px] font-semibold text-slate-500">
+        {limit > 0
+          ? exceeded
+            ? 'Referência ultrapassada'
+            : 'Restam ' + formatCount(Math.max(0, limit - used)) + ' unidades até a referência diária'
+          : 'Referência diária não informada'}
+      </p>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-950/55">
         <div
           className={`h-full rounded-full transition-[width] duration-500 ${exceeded ? 'bg-rose-400' : percentage >= 70 ? 'bg-amber-300' : 'bg-emerald-400'}`}
@@ -552,10 +592,12 @@ function QuotaLane({
 
 function Metric({
   label,
+  explanation,
   value,
   icon,
 }: {
   label: string;
+  explanation: string;
   value: number;
   icon: React.ReactNode;
 }) {
@@ -566,6 +608,7 @@ function Metric({
         {label}
       </div>
       <div className="mt-1 text-lg font-black text-slate-100">{formatCount(value)}</div>
+      <p className="mt-1 text-[10px] leading-5 text-slate-500">{explanation}</p>
     </div>
   );
 }

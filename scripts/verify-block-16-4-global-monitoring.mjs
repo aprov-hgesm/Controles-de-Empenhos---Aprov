@@ -107,11 +107,11 @@ for (const marker of [
 ]) requireText(hook, marker, `Hook global perdeu requisito: ${marker}`);
 
 for (const marker of [
-  'Consumo global real do Firebase',
+  'Quanto o banco de dados do EMPROVEX está usando?',
   'google-cloud-monitoring',
-  'Limite principal · início de cobrança',
+  'Uso diário comparado à referência de franquia',
   'Read Units faturáveis',
-  'não representa a fatura final',
+  'Não representam o gasto em reais',
   'estimativa por UG',
 ]) requireText(panel, marker, `Painel global perdeu separação: ${marker}`);
 

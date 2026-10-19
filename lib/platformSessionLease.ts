@@ -448,7 +448,8 @@ export async function acquireWorkspaceSessionLease(
 
   recordWorkspaceUsage(
     { workspaceId: context.workspaceId, ug },
-    { documentReads: 2, documentWrites: 1 }
+    { documentReads: 2, documentWrites: 1 },
+    'sessoes'
   );
 
   rememberLocalLease({
@@ -520,7 +521,8 @@ export async function releaseWorkspaceSessionLease(
 
   recordWorkspaceUsage(
     { workspaceId: context.workspaceId, ug: context.ug },
-    { documentReads: 1, documentDeletes: deleted ? 1 : 0 }
+    { documentReads: 1, documentDeletes: deleted ? 1 : 0 },
+    'sessoes'
   );
   clearLocalWorkspaceSessionLease(context.workspaceId, user.uid);
 }
@@ -554,7 +556,7 @@ export function subscribeWorkspaceSessionRevocation(
   const unsubscribe = onSnapshot(
     ref,
     (snapshot) => {
-      recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
+      recordWorkspaceRealtimeSnapshot(telemetryScope, 1, 'sessoes');
       if (snapshot.exists()) onRevoked();
     },
     (error) => onError?.(error)
@@ -629,7 +631,8 @@ async function renewKnownWorkspaceSessionLease(
 
   recordWorkspaceUsage(
     { workspaceId: context.workspaceId, ug },
-    { documentWrites: 1 }
+    { documentWrites: 1 },
+    'sessoes'
   );
   markLeaseRenewed(context.workspaceId, user.uid, renewedAtMs);
 

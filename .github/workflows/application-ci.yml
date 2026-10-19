@@ -46,6 +46,12 @@ jobs:
       - name: Vercel manual deployment policy
         run: npm run test:vercel-manual-deploy
 
+      - name: Admin digital neighborhood contracts
+        run: npm run test:admin-world-neighborhood
+
+      - name: Firestore Enterprise financial estimate contract tests
+        run: npm run test:firestore-cost-estimate
+
       - name: TypeScript error budget
         shell: bash
         run: |
@@ -589,6 +595,9 @@ jobs:
 
       - name: Admin sidebar and Google usage UX guard
         run: npm run verify:admin-sidebar-google-usage
+
+      - name: Admin visual-only layout and behavior guard
+        run: node --test scripts/admin-visual-only.test.mjs
 
       - name: SPED NUP reporting guard
         run: npm run verify:sped-nup-reporting

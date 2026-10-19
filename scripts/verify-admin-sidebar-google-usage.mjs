@@ -19,7 +19,9 @@ const reconciliation = read('lib/usageReconciliation.ts');
 
 for (const marker of [
   'data-layout="sidebar"',
-  'lg:grid-cols-[248px_minmax(0,1fr)]',
+  'data-testid="admin-light-content"',
+  'lg:pl-72',
+  'lg:fixed lg:bottom-0 lg:left-0 lg:top-16',
   'aria-label="Áreas administrativas"',
   "activeTabConfig.description",
   "id: 'consumo'",
