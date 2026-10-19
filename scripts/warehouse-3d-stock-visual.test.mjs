@@ -22,7 +22,7 @@ try {
 }
 test.after(() => rmSync(out, { recursive: true, force: true }));
 const require = createRequire(import.meta.url);
-const { warehouseVisualExpiryMap, warehouseVisualStackSlots, WAREHOUSE_VISUAL_EXPIRY_DAYS } =
+const { warehouseVisualExpiryMap, warehouseVisualStackSlots, warehouseVisualExpiryCutoffDate, WAREHOUSE_VISUAL_EXPIRY_DAYS } =
   require(resolve(out, 'stockVisual.js'));
 
 const depot = 'dep_01', location = 'loc_01', sub1 = 'sub_1', sub2 = 'sub_2';
@@ -36,6 +36,7 @@ const today = new Date('2026-10-19T23:45:00.000Z');
 
 test('14 dias inclusive acende amarelo; 15 dias não acende; vencido é vermelho', () => {
   assert.equal(WAREHOUSE_VISUAL_EXPIRY_DAYS, 14);
+  assert.equal(warehouseVisualExpiryCutoffDate(today), '2026-11-02');
   const balances = [balance('A', base), balance('A', child(sub1)), balance('A', child(sub2))];
   const state = warehouseVisualExpiryMap(balances, [
     lot(base, '2026-11-02'),
@@ -110,13 +111,14 @@ test('UI conecta lotes, boxes e brilho branco, sem writes, listeners ou nova reg
   const appliance = readFileSync(resolve(root, 'features/warehouse/components/WarehouseColdAppliance3D.tsx'), 'utf8');
   const croquis = readFileSync(resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'), 'utf8');
   const home = readFileSync(resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'), 'utf8');
-  assert.match(croquis, /listWarehouseLots\(workspaceId, 500\)/);
+  const repository = readFileSync(resolve(root, 'lib/warehouse/lotRepository.ts'), 'utf8');
+  assert.match(croquis, /listWarehouseVisualExpiryLots\(workspaceId, 500\)/);
   assert.match(croquis, /croquiMode !== 'preview' \|\| previewLoaded/);
   assert.match(croquis, /lots=\{previewLots\}/);
   assert.match(croquis, /previewLotsLimited/);
-  assert.match(home, /listWarehouseLots\(workspaceId, 500\)/);
+  assert.match(home, /listWarehouseVisualExpiryLots\(workspaceId, 500\)/);
   assert.match(home, /lots=\{previewLotsLoadedForDepot === selectedDepotId \? previewLots : \[\]\}/);
-  assert.match(home, /previewLotsLoadedForDepot === selectedDepotId && !previewLotsLimited/);
+  assert.match(home, /listWarehouseLots\(workspaceId, 500, selectedMaterialId\)/);
   assert.match(render, /warehouseVisualExpiryMap\(balances, lots\)/);
   assert.match(render, /stockBoxesOnSurface\(/);
   assert.match(render, /data-expiry-state=\{expiry\}/);
@@ -125,5 +127,8 @@ test('UI conecta lotes, boxes e brilho branco, sem writes, listeners ou nova reg
   assert.match(appliance, /data-contains-items=\{occupied \? 'true' : 'false'\}/);
   assert.match(appliance, /occupied-white-sheen/);
   assert.match(appliance, /lot-expiry-signal/);
+  assert.match(repository, /where\('expiresOn', '>=', '0000-01-01'\)/);
+  assert.match(repository, /where\('expiresOn', '<=', warehouseVisualExpiryCutoffDate\(today\)\)/);
+  assert.match(repository, /recordWarehouseDocumentReads\(workspaceId, snapshot.size\)/);
   assert.doesNotMatch(render, /\b(onSnapshot|setDoc|updateDoc|addDoc|runTransaction)\s*\(/);
 });
