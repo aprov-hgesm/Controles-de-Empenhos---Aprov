@@ -596,6 +596,7 @@ export function IntakeBulkActionPanel({
   coverageLimited,
   onClose,
   onComplete,
+  onOpenDetailed,
 }: {
   workspaceId: string;
   subjectKind: 'pregao' | 'invoice';
@@ -604,6 +605,7 @@ export function IntakeBulkActionPanel({
   rows: WarehouseInvoiceIntakeQueueRow[];
   coverageLimited: boolean;
   onClose: () => void;
+  onOpenDetailed?: () => void;
   onComplete: (
     mode: PregaoBulkMode,
     successful: number,
@@ -1016,6 +1018,13 @@ export function IntakeBulkActionPanel({
         </div>
 
         <div className="space-y-5 p-5">
+          {subjectKind === 'invoice' && onOpenDetailed && (
+            <button type="button" onClick={onOpenDetailed} disabled={working}
+              data-testid="warehouse-open-invoice-detailed-allocation"
+              className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-left text-xs font-black text-[#00288e] transition hover:bg-blue-100 disabled:opacity-50">
+              Abrir alocação detalhada desta NF — escolher destinos por item
+            </button>
+          )}
           {coverageLimited && (
             <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold leading-5 text-rose-700">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
