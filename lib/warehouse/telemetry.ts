@@ -26,7 +26,7 @@ export function recordWarehouseDocumentReads(workspaceId: string, count: number)
   const scope = usageScope(workspaceId);
   if (!scope) return;
   try {
-    recordWorkspaceDocumentReads(scope, Math.floor(count));
+    recordWorkspaceDocumentReads(scope, Math.floor(count), 'deposito');
   } catch {
     // Telemetria é best-effort e nunca pode bloquear o ADM Depósito.
   }
@@ -37,7 +37,7 @@ export function recordWarehouseDocumentWrites(workspaceId: string, count: number
   const scope = usageScope(workspaceId);
   if (!scope) return;
   try {
-    recordWorkspaceDocumentWrites(scope, Math.floor(count));
+    recordWorkspaceDocumentWrites(scope, Math.floor(count), 'deposito');
   } catch {
     // Telemetria é best-effort e nunca pode bloquear o ADM Depósito.
   }
