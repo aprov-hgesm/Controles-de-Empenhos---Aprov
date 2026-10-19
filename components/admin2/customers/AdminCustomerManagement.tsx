@@ -7,6 +7,11 @@ import {
   Search, ShieldCheck, UserRound, WalletCards,
 } from 'lucide-react';
 import type { BillingAccountStatus } from '../../../lib/billing';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../../lib/firebase';
+import type { Workspace } from '../../../lib/platformIdentity';
+import { commercialEmulatorWritesEnabled } from '../../../lib/admin2/customers/commercialCustomerRepository';
+import { grantBillingTrial, setBillingCommercialStatus, setBillingExemption } from '../../../lib/platformBillingStore';
 import {
   readCustomerBilling, readCustomerWorkspacePage,
 } from '../../../lib/admin2/customers/customerWorkspaceDirectory';
@@ -43,6 +48,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
   const [override, setOverride] = useState<CustomerBillingSnapshot | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<BillingAccountStatus | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const lookup = async (id: string) => {
     const normalized = id.trim().toLowerCase();
@@ -81,22 +87,55 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
     }
   };
 
-  const applySimulation = (status: BillingAccountStatus) => {
-    if (!selected) return;
-    const base = override || billing;
-    const now = new Date();
-    const trialEndsAt = status === 'trial'
-      ? new Date(now.getTime() + 30 * 86400_000).toISOString()
-      : base?.trialEndsAt || null;
-    setOverride({
-      status, trialEndsAt,
-      monthlyPriceCents: status === 'exempt' ? 0 : 7000,
-      exemptionSource: status === 'exempt' ? 'manual' : null,
-      paymentRequired: false,
-    });
-    const title = MANAGEMENT_OPTIONS.find(action => action.status === status)?.title || status;
-    setHistory(current => [new Date().toLocaleTimeString('pt-BR') + ' — ' + title + ' (simulação local)', ...current]);
-    setConfirm(null);
+  const applyManagementChange = async (status: BillingAccountStatus) => {
+    if (!selected || saving) return;
+    setSaving(true);
+    setError('');
+    try {
+      const isPreview = previews.some(p => p.workspace.id === selected.workspaceId);
+      if (commercialEmulatorWritesEnabled && !isPreview) {
+        // Dev-only Firebase Emulator. Reaproveita o motor de billing e auditoria
+        // existentes, sem segunda regra comercial nem chamada ao servidor real.
+        const actor = auth.currentUser?.email;
+        if (!actor) throw new Error('A sessão administrativa do Emulator não foi encontrada.');
+        const wsSnapshot = await getDoc(doc(db, 'workspaces', selected.workspaceId));
+        if (!wsSnapshot.exists()) throw new Error('Workspace não encontrado no Emulator.');
+        const workspace = wsSnapshot.data() as Workspace;
+        if (workspace.id !== selected.workspaceId) throw new Error('Identidade do workspace inconsistente.');
+        if (status === 'trial') {
+          await grantBillingTrial(workspace, actor, 30);
+        } else if (status === 'exempt') {
+          await setBillingExemption(workspace, true, actor);
+        } else {
+          const current = await readCustomerBilling(workspace.id);
+          if (current?.status === 'exempt') await setBillingExemption(workspace, false, actor);
+          await setBillingCommercialStatus(workspace, status, actor);
+        }
+        setBilling(await readCustomerBilling(workspace.id));
+        setOverride(null);
+        setHistory(current => ['Assinatura atualizada no Firebase Emulator — ' + status, ...current]);
+      } else {
+        // Localhost comum: simula status em memória e NÃO escreve Firestore real.
+        const base = override || billing;
+        const now = new Date();
+        const trialEndsAt = status === 'trial'
+          ? new Date(now.getTime() + 30 * 86400_000).toISOString()
+          : base?.trialEndsAt || null;
+        setOverride({
+          status, trialEndsAt,
+          monthlyPriceCents: status === 'exempt' ? 0 : 7000,
+          exemptionSource: status === 'exempt' ? 'manual' : null,
+          paymentRequired: false,
+        });
+        const title = MANAGEMENT_OPTIONS.find(action => action.status === status)?.title || status;
+        setHistory(current => [new Date().toLocaleTimeString('pt-BR') + ' — ' + title + ' (simulação local)', ...current]);
+      }
+      setConfirm(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Falha na alteração comercial.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const effective = override || billing;
@@ -132,7 +171,9 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
     {selected && <>
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-[#fffbef] p-4 text-[11px] leading-6 text-amber-900">
         <ShieldCheck className="mt-1 h-4 w-4 shrink-0"/>
-        <p><strong>Gestão em modo de simulação.</strong> As alterações de assinatura nesta interface não são gravadas no Firebase. {isPreviewWorkspace ? 'Este workspace também é fictício e existe somente nesta página.' : 'O workspace é real e está sendo consultado somente para leitura.'} Não há mudança de acesso, cobrança ou credencial.</p>
+        <p><strong>{commercialEmulatorWritesEnabled && !isPreviewWorkspace ? 'Homologação Firebase Emulator:' : 'Gestão em modo de simulação:'}</strong> {commercialEmulatorWritesEnabled && !isPreviewWorkspace
+          ? 'Alterações de assinatura são gravadas SOMENTE no Emulator, com auditoria. Nenhuma mudança na produção.'
+          : 'As alterações comerciais são apenas simuladas em memória, sem gravação no Firebase.'} {isPreviewWorkspace ? 'Este workspace também é fictício.' : 'A identificação do workspace foi consultada de forma protegida.'} Credenciais e acesso operacional não são alterados nesta aba.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={styles.sectionCard + ' p-5'}>
@@ -174,10 +215,10 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
             </button>)}
           </div>
           {confirm && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs text-[#2e5380]" data-testid="admin2-subscription-confirm">
-            <p>Simular: <strong>{MANAGEMENT_OPTIONS.find(option=>option.status===confirm)?.title}</strong>?</p>
-            <p className="mt-1 text-[11px]">Esta ação não altera dados nem acessos do cliente.</p>
+            <p>{commercialEmulatorWritesEnabled && !isPreviewWorkspace ? 'Aplicar no Emulator' : 'Simular'}: <strong>{MANAGEMENT_OPTIONS.find(option=>option.status===confirm)?.title}</strong>?</p>
+            <p className="mt-1 text-[11px]">Nunca altera dados produtivos nem o acesso operacional.</p>
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={()=>applySimulation(confirm)} className="rounded-lg bg-[#19529c] px-4 py-2 font-bold text-white">Confirmar simulação</button>
+              <button type="button" disabled={saving} onClick={()=>void applyManagementChange(confirm)} className="rounded-lg bg-[#19529c] px-4 py-2 font-bold text-white disabled:opacity-50">{saving ? 'Aplicando...' : commercialEmulatorWritesEnabled && !isPreviewWorkspace ? 'Confirmar no Emulator' : 'Confirmar simulação'}</button>
               <button type="button" onClick={()=>setConfirm(null)} className="rounded-lg border border-blue-200 bg-white px-4 py-2">Cancelar</button>
             </div>
           </div>}
