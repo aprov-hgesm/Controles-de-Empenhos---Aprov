@@ -167,7 +167,7 @@
 .sceneWaterCard {
   position: absolute;
   z-index: 2;
-  right: clamp(15px, 2.7vw, 35px);
+  left: clamp(15px, 2.7vw, 35px);
   top: clamp(14px, 2.4vw, 28px);
   width: 212px;
   padding: 14px;
@@ -323,7 +323,7 @@
   .statCard strong { font-size: 21px; }
   .statCard small { font-size: 8px; }
   .headerCopy p { font-size: 11px; }
-  .sceneWaterCard { width: 175px; padding: 11px; right: 12px; top: 12px; }
+  .sceneWaterCard { width: 175px; padding: 11px; left: 12px; top: 12px; }
   .sceneWaterCard strong { font-size: 20px; }
   .toolbar { gap: 13px; }
   .toolLabel { display: none; }
