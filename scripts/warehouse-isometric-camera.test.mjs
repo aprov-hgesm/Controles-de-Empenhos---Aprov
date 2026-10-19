@@ -294,4 +294,3 @@ test('renderer premium aplica orientação física e detalhes 3D reais em todas 
   assert.match(renderer,/data-front-face=\{front\}/);
   assert.doesNotMatch(renderer,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
 });
-
