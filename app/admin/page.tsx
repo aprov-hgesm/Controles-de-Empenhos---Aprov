@@ -111,6 +111,7 @@ export default function PlatformAdminPage() {
       adminEmail={context.email}
       customLogo={customLogo}
       workspaces={adminWorkspaces}
+      accounts={adminDirectory.directory.accounts}
       loadingDirectory={adminDirectory.loading}
       directoryError={adminDirectory.error}
       creatingSector={adminDirectory.creating}
