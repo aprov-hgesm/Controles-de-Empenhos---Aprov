@@ -244,7 +244,7 @@ export default function Home() {
       <AppHeader
         customLogo={customLogo}
         syncing={syncing || !activeOperationalDataReady}
-        userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+        userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
         workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
         onOpenAccount={
