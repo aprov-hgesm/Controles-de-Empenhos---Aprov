@@ -82,3 +82,30 @@ Abra `http://localhost:3001/admin` com a **conta fundadora**. Se o navegador est
 ## Handoff
 
 **Onde estamos:** nova branch isolada da main para polimento estético da Administração atual. **O que fazemos:** adaptar navegação/header/identidade do App Shell original sem duplicar sistema. **Quem faz:** executor GitHub. **A seguir:** validar CI + smoke humano no localhost e ajustar detalhes visuais. **Quem fará:** executor valida CI; Fundador avalia a aparência e navegação.
+
+
+## Ampliação expressa de escopo — UG-TELEMETRY-R3 (19/10/2026)
+
+O Fundador pediu a execução das melhorias de estimativa por UG **na mesma branch/PR #341**, apesar de este PR ter nascido como exclusivamente visual. A partir desta autorização, o escopo foi ampliado para telemetria; a produção e a `main` permanecem fora de alcance.
+
+### Implementado nesta rodada
+
+1. **Categoria de origem em cada operação instrumentada**: `empenhos`, `notas`, `deposito`, `sessoes`, `outros`, em `lib/workspaceUsageTelemetry.ts`; as chamadas existentes em FirebaseSync, consultas históricas de NF, realtime operacional, concorrência de empenhos, sessões e depósito foram rotuladas por origem. Não é alegada cobertura completa de operações não instrumentadas.
+2. **Mesmo documento diário por workspace**: campo opcional `moduleOperations`, com cinco contadores monotônicos; preserva `workspaces/{workspaceId}/usageEstimates/{dia}`, buffer em `sessionStorage`, primeiro envio após 60s e subsequentes após 15min. Contadores por módulo usam `increment` junto aos contadores existentes, sem `getDoc`, novos listeners ou documentos extras.
+3. **Compatibilidade com dias antigos**: `lib/platformAdminUsage.ts` identifica ausência do mapa e informa ao painel que o detalhamento não existe; não presume zero como medição de módulo.
+4. **Regras e isolamento**: `firestore.rules` autoriza apenas cinco chaves fixas de mapa, cada uma numérica não negativa e sem redução; conserva owner workspace/UG, version, source, dayKey, lastReportedAt e os demais invariantes v1.
+5. **Interface por UG**: detalhamento de operações classificadas por módulo (incluindo `Outros`) e indicador de qual porcentagem das operações já captadas tem categoria conhecida; comparação proporcional com as Read Units do Google já carregadas, reutilizando `buildUsageReconciliation`; parcela global não atribuída não é redistribuída.
+6. **Qualidade dos eventos**: snapshots de consulta enviados só do cache não são tratados como leitura comprovada do servidor. Os demais custos internos e de Rules continuam descritos como limitações.
+7. **Testes**: cenários do Emulator para módulo aceito, incremento, negativa, redução e nome desconhecido; guardas de preservação do baixo custo e dos limites atualizados.
+
+### Limites assumidos, sem falsos PASS
+
+- **Não existe medição oficial Google de custo financeiro por UG**: os números continuam estimativos/proxy, jamais faturamento.
+- Não há garantia `exactly once` no `setDoc(... increment(...))` atual: em falha ambígua de confirmação da rede um replay pode duplicar um lote. Implementar idempotência de ponta a ponta exigirá modelo adicional de confirmação no servidor/Emulator e comparação de custo, não deve ser improvisado em produção.
+- A cobertura ainda não alcança absolutamente todas as operações diretas (incluindo algumas transações, backend e leituras indiretas de Rules), e a fórmula atual não calcula o custo específico de índices/tamanho por consulta. Isso exigirá auditoria de rotas e calibração representativa com Google Query Explain em ambiente controlado.
+- `moduleOperations` mede o total de operações documentais instrumentadas classificadas por módulo, e **não** Read Units por módulo nem uma taxa de precisão do billing.
+- A política de publicação permanece: PR DRAFT; exigir CI (Application CI, Core Protection, Firestore Emulator, TypeScript/build) e aceite humano de todas as abas afetadas; nunca migrar Rules isoladamente antes do código ou publicar sem autorização.
+
+### Handoff
+
+**Onde estamos:** PR #341 com evolução por módulo implementada, aguardando validações. **O que fazemos:** qualificar estimativas por UG sem leituras desnecessárias. **Quem faz:** executor GitHub. **A seguir:** CI e testes reais de Emulator, revisão de economia por UG e teste no localhost; projetar fase independente de idempotência/cobertura avançada. **Quem fará:** executor e fundador no aceite visual, sem mudanças em produção.
