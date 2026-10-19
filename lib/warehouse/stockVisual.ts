@@ -27,6 +27,15 @@ export interface WarehouseVisualExpiryMap {
 
 export const WAREHOUSE_VISUAL_EXPIRY_DAYS = 14;
 
+/** UTC cutoff used both by the Firestore range query and the renderer. */
+export function warehouseVisualExpiryCutoffDate(today: Date = new Date()): string {
+  return new Date(Date.UTC(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate() + WAREHOUSE_VISUAL_EXPIRY_DAYS
+  )).toISOString().slice(0, 10);
+}
+
 function dateUtc(value: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const ms = Date.parse(value + 'T00:00:00.000Z');
