@@ -8,7 +8,11 @@ const style = read('components/admin/AdminVisualShell.module.css');
 const signature = read('components/layout/chrome/AppShellSignature.tsx');
 const beam = read('components/layout/OperationalNavigationBeam.module.css');
 
-test('Admin original: oito abas e ações preservadas', () => {
+test('Admin original: oito abas e ações preservadas, somadas ao novo Início', () => {
+  assert.ok(view.includes("id: 'inicio'"));
+  assert.ok(view.includes("activeTab === 'inicio'"));
+  assert.ok(view.includes("<AdminWorldHomePanel"));
+
   for (const id of ['overview','setores','novo-setor','consumo','sessoes','assinaturas','backups','seguranca']) {
     assert.ok(view.includes("id: '" + id + "'"), 'aba preservada: '+id);
     assert.ok(view.includes("activeTab === '" + id + "'"), 'conteúdo preservado: '+id);
