@@ -458,7 +458,7 @@ export function PlatformAdminView({
       </header>
 
       <main className="relative z-10 mx-auto min-h-screen w-full max-w-[1840px] px-4 pb-8 pt-20 sm:px-6 xl:px-8" data-testid="admin-light-main">
-        <div className="min-w-0">
+        <div className={'min-w-0 ' + adminVisualStyles.layoutRoot}>
           <aside
             data-testid="admin-tab-navigation"
             data-layout="sidebar"
