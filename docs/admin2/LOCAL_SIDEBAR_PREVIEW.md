@@ -11,6 +11,25 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## NOVO — CADASTRO UNIFICADO E GESTÃO DO CLIENTE (18/10/2026)
+
+**Trabalho sequencial atual:** nova aba **Cadastrar cliente + workspace** cria uma simulação conjunta de cliente comercial, workspace, conta de setor e trial de 30 dias/R$70. A aba **Gestão do cliente** reúne assinatura, contatos e assuntos de usuário em local separado. **No localhost padrão, todos os botões de cadastro e alteração comercial são simulações em memória; não gravam contas, assinaturas ou workspaces reais.** Utilize dados fictícios, inclusive no campo senha inicial.
+
+```powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs scripts/admin2-unified-onboarding.test.mjs scripts/admin2-unified-domain.test.mjs
+npm.cmd run dev -- --port 3001
+```
+
+**Passos:** abrir `http://localhost:3001/admin2-preview?area=customers` → login Google fundador → **Cadastrar cliente + workspace** → preencher dados sintéticos, UG com 6 dígitos, senha fictícia ≥8 caracteres → **Simular cadastro + workspace + trial** → **Abrir Gestão do cliente** → localizar o workspace recém-simulado → simular trial, plano ativo, VIP, pendência e cancelamento com confirmação → abrir Ficha 360° → conferir status e vínculo. Recarregar a página apaga dados simulados, sem gravar nada.
+
+**Limite:** o endpoint server-side de provisionamento foi preparado para gravar o cliente com workspace/trial em commit único, mas **não é acionado pela prévia**; ainda será necessário teste integrado Auth+Firestore Emulator para efetivar onboarding. O novo painel de Gestão só persiste alterações de assinatura quando rodando explicitamente no Firebase Emulator com projectId `demo-`. Resetar senha e suspender acesso ainda não estão habilitados.
+
+Memorial técnico: `docs/admin2/ONBOARDING_UNIFICADO_GESTAO_01.md`.
+
+---
+
 ## CADASTRO COMERCIAL — MODELO 1:1 ATUALIZADO (18/10/2026)
 
 **Novo requisito aprovado:** cada workspace é um cliente comercial independente. Qualquer referência abaixo a "oito workspaces" ou múltiplos vínculos é **histórica e está superada**. O contrato atual exige **um workspace por cadastro**, com ID imutável e assinatura independente.
