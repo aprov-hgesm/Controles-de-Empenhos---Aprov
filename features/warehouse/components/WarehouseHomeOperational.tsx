@@ -112,6 +112,9 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [lots, setLots] = useState<WarehouseLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
+  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
+  const [previewLotsLimited, setPreviewLotsLimited] = useState(false);
+  const [previewLotsLoadedForDepot, setPreviewLotsLoadedForDepot] = useState('');
   const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
 
@@ -174,6 +177,12 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       return;
     }
 
+    // Reuse the full bounded 3D lot read if it was already loaded.
+    if (previewLotsLoadedForDepot === selectedDepotId && !previewLotsLimited) {
+      setLots(previewLots.filter((item) => item.materialId === selectedMaterialId));
+      setLotsLoading(false);
+      return;
+    }
     setLotsLoading(true);
     void listWarehouseLots(workspaceId, 500, selectedMaterialId)
       .then((items) => {
@@ -189,7 +198,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     return () => {
       active = false;
     };
-  }, [selectedMaterialId, workspaceId]);
+  }, [selectedMaterialId, selectedDepotId, previewLots, previewLotsLimited, previewLotsLoadedForDepot, workspaceId]);
 
   const activeDepots = useMemo(
     () => data.depots.filter((item) => item.depot.status === 'active'),
@@ -266,6 +275,32 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       active = false;
     };
   }, [selectedDepotId, workspaceId]);
+
+  // One bounded read for all active lot/position expiry indicators in the
+  // visual depot. No listeners and no extra reads when rotating the camera.
+  useEffect(() => {
+    let active = true;
+    setPreviewLots([]);
+    setPreviewLotsLimited(false);
+    setPreviewLotsLoadedForDepot('');
+    if (!selectedDepotId || !activeLayout || activeLayout.depotId !== selectedDepotId) {
+      return () => { active = false; };
+    }
+    void listWarehouseLots(workspaceId, 500).then((rows) => {
+      if (!active) return;
+      setPreviewLots(rows.map((row) => row.lot).filter(
+        (lot) => lot.position.kind !== 'UNASSIGNED'
+          && lot.position.depotId === selectedDepotId
+      ));
+      setPreviewLotsLimited(rows.length >= 500);
+      setPreviewLotsLoadedForDepot(selectedDepotId);
+    }).catch(() => {
+      if (!active) return;
+      setPreviewLots([]);
+      setPreviewLotsLimited(true);
+    });
+    return () => { active = false; };
+  }, [activeLayout?.id, activeLayout?.depotId, selectedDepotId, workspaceId]);
 
   const depotMaterialBalances = useMemo(
     () => depotPhysicalBalances.filter(
@@ -615,6 +650,11 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
               </span>
             </div>
 
+            {previewLotsLimited && (
+              <p role="status" className="px-4 py-2 text-[11px] font-semibold text-amber-200">
+                Avisos de validade 3D podem estar incompletos (limite de lotes consultados).
+              </p>
+            )}
             <div className={styles.viewport}>
               {layoutLoading ? (
                 <div className={styles.noLayout}>
@@ -630,6 +670,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   objects={activeLayout.objects}
                   locations={previewLocations}
                   balances={previewBalances}
+                  lots={previewLotsLoadedForDepot === selectedDepotId ? previewLots : []}
                   materials={data.materials}
                   selectedMaterialId={selectedMaterialId}
                   queryText={query}
