@@ -30,6 +30,8 @@ export interface UsageReportRange {
 
 export interface GlobalUsageHistoryPoint {
   dayKey: string;
+  /** Legacy or incomplete records must not be priced as if missing units meant zero. */
+  metricsComplete?: boolean;
   billableReadUnits: number;
   billableRealtimeReadUnits: number;
   billableWriteUnits: number;
@@ -111,6 +113,9 @@ export async function loadGlobalUsageHistory(
 
     return {
       dayKey: item.id,
+      metricsComplete: ['billableReadUnits', 'billableRealtimeReadUnits', 'billableWriteUnits'].every(
+        (key) => typeof data[key] === 'number' && Number.isFinite(data[key]) && data[key] >= 0
+      ),
       billableReadUnits,
       billableRealtimeReadUnits: safeCount(data.billableRealtimeReadUnits),
       billableWriteUnits: safeCount(data.billableWriteUnits),
