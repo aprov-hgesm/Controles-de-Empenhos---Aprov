@@ -424,20 +424,24 @@ test('croqui R1 ativo aceita contêiner longo, edita dimensões e usa leitura po
 });
 
 
-test('exclusão de Local confirma e inativa automaticamente suas Subposições', () => {
+test('inativação de Local e subposições usa operação atômica e impede estoque ocupado', () => {
   const locations = readFileSync(
     resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'),
     'utf8'
   );
-
-  assert.match(locations, /Também serão excluídas da operação/);
-  assert.match(locations, /Subposição\(ões\) vinculada\(s\) a este Local/);
-  assert.match(locations, /for \(const child of activeSubpositions\)/);
-  assert.match(locations, /updateWarehouseLocation\(workspaceId, child\.location\.id, \{ status: 'inactive' \}\)/);
-  assert.match(locations, /await updateWarehouseLocation\(workspaceId, editingLocation\.id, \{ status: 'inactive' \}\)/);
-  assert.doesNotMatch(locations, /Remova as Subposições antes de excluir o Local/);
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/locationRepository.ts'),
+    'utf8'
+  );
+  assert.match(locations, /archiveWarehouseStructure\(/);
+  assert.match(locations, /window\.confirm\(/);
+  assert.match(repository, /target\.kind === 'LOCAL'/);
+  assert.match(repository, /row\.kind === 'SUBPOSITION' && row\.parentLocationId === target\.id/);
+  assert.match(repository, /WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(repository, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(repository, /writeBatch\(db\)/);
+  assert.match(repository, /await batch\.commit\(\)/);
 });
-
 
 test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
   const repository = readFileSync(
