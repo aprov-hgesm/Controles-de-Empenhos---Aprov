@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   DoorOpen,
@@ -35,8 +35,9 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
-import { listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
+import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
+import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
@@ -191,11 +192,17 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
   const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
   const [previewBalances, setPreviewBalances] = useState<WarehouseLocationBalance[]>([]);
-  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
-  const [previewLotsLimited, setPreviewLotsLimited] = useState(false);
   const [previewQuery, setPreviewQuery] = useState('');
   const [previewMaterialId, setPreviewMaterialId] = useState('');
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [previewInventoryComplete, setPreviewInventoryComplete] = useState(false);
+  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
+  const [previewLotState, setPreviewLotState] = useState<WarehouseInspectionLotState>('idle');
+  const [previewLotError, setPreviewLotError] = useState<string | null>(null);
+  const [previewLotsComplete, setPreviewLotsComplete] = useState(true);
+  const lotRequestRef = useRef(0);
+  const navigationRef = useRef<string | null>(null);
+  const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -257,12 +264,24 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
-      setCroquiMode('edit');
-      setPreviewQuery('');
-      setPreviewMaterialId('');
-      setPreviewLoaded(false);
-      setPreviewLots([]);
-      setPreviewLotsLimited(false);
+      const globalJump = navigationRef.current === selectedDepotId;
+      navigationRef.current = null;
+      // O salto global conserva o material escolhido e o índice de saldos já lido.
+      if (!globalJump) {
+        setCroquiMode('edit');
+        setPreviewQuery('');
+        setPreviewMaterialId('');
+        setFocusedLocationId(null);
+        setPreviewLoaded(false);
+        setPreviewInventoryComplete(false);
+        setPreviewLots([]);
+        setPreviewLotState('idle');
+        setPreviewLotError(null);
+        setPreviewLotsComplete(true);
+        lotRequestRef.current += 1;
+      } else {
+        setCroquiMode('preview');
+      }
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -274,26 +293,25 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     if (croquiMode !== 'preview' || previewLoaded) return;
     let cancelled = false;
 
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    // Compartilha os lotes com a inspeção já aprovada: UMA consulta por abertura
+    // da prévia 3D, em vez de consultar novamente a cada hover.
     void Promise.all([
-      listWarehouseMaterials(workspaceId, 250),
+      listWarehouseMaterials(workspaceId, 500),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-      // Indexed 14-day range read only when 3D preview opens; no listener or polling.
-      listWarehouseVisualExpiryLots(workspaceId, 500),
-    ]).then(([materials, balances, lots]) => {
+      listWarehouseLots(workspaceId, 500),
+    ]).then(([materials, balances, lotItems]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
-      setPreviewLots(lots.map((item) => item.lot).filter((lot) =>
-        lot.position.kind !== 'UNASSIGNED' && lot.position.depotId === selectedDepotId
-      ));
-      setPreviewLotsLimited(lots.length >= 500);
+      setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
+      setPreviewLots(lotItems.map((item) => item.lot));
+      setPreviewLotsComplete(lotItems.length < 500);
+      setPreviewLotState('ready');
       setPreviewBalances(
-        balances
-          .map((item) => item.balance)
-          .filter((balance) =>
-            balance.quantity > 0
-            && balance.position.kind !== 'UNASSIGNED'
-            && balance.position.depotId === selectedDepotId
-          )
+        balances.map((item) => item.balance).filter((balance) =>
+          balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
+        )
       );
       setPreviewLoaded(true);
     }).catch((error) => {
@@ -304,14 +322,72 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         );
         setPreviewMaterials([]);
         setPreviewBalances([]);
+        setPreviewInventoryComplete(false);
         setPreviewLots([]);
-        setPreviewLotsLimited(false);
+        setPreviewLotsComplete(false);
+        setPreviewLotState('error');
+        setPreviewLotError(messageFrom(error));
         setPreviewLoaded(true);
       }
     });
 
     return () => { cancelled = true; };
   }, [croquiMode, previewLoaded, selectedDepotId, workspaceId]);
+
+  // Validades sob demanda: uma leitura de lotes por sessão de consulta, nunca por movimento do mouse.
+  const loadPreviewLots = useCallback(async (refresh = false) => {
+    if (!selectedDepotId || (!refresh && previewLotState !== 'idle')) return;
+    const request = ++lotRequestRef.current;
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    try {
+      const items = await listWarehouseLots(workspaceId, 500);
+      if (request !== lotRequestRef.current) return;
+      setPreviewLots(items.map((item) => item.lot));
+      setPreviewLotsComplete(items.length < 500);
+      setPreviewLotState('ready');
+    } catch (error) {
+      if (request !== lotRequestRef.current) return;
+      setPreviewLotState('error');
+      setPreviewLotError(messageFrom(error));
+    }
+  }, [previewLotState, selectedDepotId, workspaceId]);
+
+  const refreshPreviewInspection = useCallback(async () => {
+    if (!selectedDepotId) return;
+    const request = ++lotRequestRef.current;
+    setPreviewLotState('loading');
+    setPreviewLotError(null);
+    try {
+      const [materials, balances, items] = await Promise.all([
+        listWarehouseMaterials(workspaceId, 500),
+        listWarehousePositiveLocationBalances(workspaceId, 500),
+        listWarehouseLots(workspaceId, 500),
+      ]);
+      if (request !== lotRequestRef.current) return;
+      setPreviewMaterials(materials);
+      setPreviewBalances(
+        balances.map((item) => item.balance).filter((balance) =>
+          balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
+        )
+      );
+      setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
+      setPreviewLots(items.map((item) => item.lot));
+      setPreviewLotsComplete(items.length < 500);
+      setPreviewLotState('ready');
+    } catch (error) {
+      if (request !== lotRequestRef.current) return;
+      setPreviewLotError(messageFrom(error));
+      setPreviewLotState('error');
+    }
+  }, [selectedDepotId, workspaceId]);
+
+  const navigateToSearchResult = useCallback((depotId: string, locationId: string) => {
+    setFocusedLocationId(locationId);
+    if (depotId === selectedDepotId) return;
+    navigationRef.current = depotId;
+    setSelectedDepotId(depotId);
+  }, [selectedDepotId]);
 
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
@@ -572,92 +648,17 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   }
 
   function handleRemoveObject(object: WarehouseDepotLayoutObject) {
-    const pending = pendingDuplicatedLocals[object.id];
-    if (pending) {
-      setPendingDuplicatedLocals((current) => {
-        const next = { ...current };
-        delete next[object.id];
-        return next;
-      });
-      setMessage('A cópia ainda não salva foi removida e nenhum Local foi criado.');
-      return;
+    if (object.warehouseLocationId) {
+      setMessage('O local foi retirado apenas do desenho. O cadastro e seu estoque continuam preservados. Para inativar, use o cadastro operacional.');
     }
-
-    if (!object.warehouseLocationId) return;
-
-    setPendingRemovedLocationIds((current) =>
-      current.includes(object.warehouseLocationId!)
-        ? current
-        : [...current, object.warehouseLocationId!]
-    );
-    setMessage(
-      'Local removido do croqui. Ao salvar, ele e suas Subposições serão excluídos da operação em Depósitos e localizações.'
-    );
   }
 
   function prepareDuplicatedObject(
-    source: WarehouseDepotLayoutObject,
+    _source: WarehouseDepotLayoutObject,
     copy: WarehouseDepotLayoutObject
   ): WarehouseDepotLayoutObject {
-    const persistedSource = source.warehouseLocationId
-      ? locations.find(
-          (item) =>
-            item.location.id === source.warehouseLocationId
-            && item.location.kind === 'LOCAL'
-            && item.location.depotId === selectedDepotId
-        )?.location
-      : undefined;
-
-    const pendingSource = pendingDuplicatedLocals[source.id];
-
-    if (!persistedSource && !pendingSource) {
-      return copy;
-    }
-
-    const sourceCode = persistedSource?.code || pendingSource!.code;
-    const sourceName = persistedSource?.name || pendingSource!.name;
-    const sourceDescription = persistedSource
-      ? persistedSource.description
-      : pendingSource?.description ?? null;
-    const sourceLocationId = persistedSource?.id || pendingSource!.sourceLocationId;
-
-    const usedCodes = new Set(
-      locations
-        .filter(
-          (item) =>
-            item.location.depotId === selectedDepotId
-            && item.location.status === 'active'
-        )
-        .map((item) => item.location.code)
-    );
-    for (const pending of Object.values(pendingDuplicatedLocals)) {
-      usedCodes.add(pending.code);
-    }
-
-    const code = nextDuplicatedCode(sourceCode, usedCodes);
-    const name = nextDuplicatedName(sourceName, code);
-    const pending: PendingDuplicatedLocal = {
-      objectId: copy.id,
-      sourceLocationId,
-      code,
-      name,
-      description: sourceDescription,
-    };
-
-    setPendingDuplicatedLocals((current) => ({
-      ...current,
-      [copy.id]: pending,
-    }));
-    setMessage(
-      'Cópia preparada como novo Local ' + code
-      + '. Ele será cadastrado em Depósitos e localizações quando você salvar o croqui.'
-    );
-
-    return {
-      ...copy,
-      label: code + ' · ' + name,
-      warehouseLocationId: null,
-    };
+    setMessage('Cópia visual criada sem novo cadastro. Cadastre outros locais somente em Cadastramento de Depósito.');
+    return { ...copy, warehouseLocationId: null, label: 'Cópia visual · ' + copy.label.slice(0, 75) };
   }
 
   async function saveLayout() {
@@ -666,100 +667,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setMessage(null);
     try {
       let objectsForSave = cloneObjects(draftObjects);
-      const pendingEntries = Object.values(pendingDuplicatedLocals)
-        .filter((pending) => objectsForSave.some((object) => object.id === pending.objectId));
-
-      for (const pending of pendingEntries) {
-        const sourceLocation = locations.find(
-          (item) => item.location.id === pending.sourceLocationId
-        )?.location;
-
-        const inactiveLocal = locations.find(
-          (item) =>
-            item.location.depotId === selectedDepotId
-            && item.location.kind === 'LOCAL'
-            && item.location.status === 'inactive'
-            && item.location.code === pending.code
-        )?.location;
-
-        let created;
-        if (inactiveLocal) {
-          await updateWarehouseLocation(workspaceId, inactiveLocal.id, {
-            code: pending.code,
-            name: pending.name,
-            description: pending.description,
-            status: 'active',
-          });
-          created = {
-            ...inactiveLocal,
-            code: pending.code,
-            name: pending.name,
-            description: pending.description,
-            status: 'active' as const,
-          };
-        } else {
-          created = await createWarehouseLocation(workspaceId, {
-            kind: 'LOCAL',
-            depotId: selectedDepotId,
-            code: pending.code,
-            name: pending.name,
-            description: pending.description,
-          });
-        }
-
-        if (sourceLocation) {
-          const sourceChildren = locations.filter(
-            (item) =>
-              item.location.kind === 'SUBPOSITION'
-              && item.location.parentLocationId === sourceLocation.id
-              && item.location.status === 'active'
-          );
-
-          for (const child of sourceChildren) {
-            const duplicatedCode = duplicatedSubpositionCode(
-              child.location.code,
-              sourceLocation.code,
-              created.code
-            );
-            const inactiveChild = locations.find(
-              (item) =>
-                item.location.kind === 'SUBPOSITION'
-                && item.location.status === 'inactive'
-                && item.location.parentLocationId === created.id
-                && item.location.code === duplicatedCode
-            )?.location;
-
-            if (inactiveChild) {
-              await updateWarehouseLocation(workspaceId, inactiveChild.id, {
-                code: duplicatedCode,
-                name: child.location.name,
-                description: child.location.description,
-                status: 'active',
-              });
-            } else {
-              await createWarehouseLocation(workspaceId, {
-                kind: 'SUBPOSITION',
-                depotId: selectedDepotId,
-                parentLocationId: created.id,
-                code: duplicatedCode,
-                name: child.location.name,
-                description: child.location.description,
-              });
-            }
-          }
-        }
-
-        objectsForSave = objectsForSave.map((object) =>
-          object.id === pending.objectId
-            ? {
-                ...object,
-                label: created.code + ' · ' + created.name,
-                warehouseLocationId: created.id,
-              }
-            : object
-        );
-      }
-
+      // Croquis edita apenas geometria. Não cria Local ou Prateleira.
       const saved = await saveWarehouseDepotLayoutVersion(workspaceId, {
         name: draftName.trim() || 'Croqui principal',
         depotId: selectedDepotId,
@@ -770,33 +678,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         expectedVersion: activeLayout?.version ?? null,
       });
 
-      for (const locationId of pendingRemovedLocationIds) {
-        const activeChildren = locations.filter(
-          (item) =>
-            item.location.kind === 'SUBPOSITION'
-            && item.location.parentLocationId === locationId
-            && item.location.status === 'active'
-        );
-        for (const child of activeChildren) {
-          await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
-        }
-
-        const local = locations.find(
-          (item) =>
-            item.location.id === locationId
-            && item.location.kind === 'LOCAL'
-            && item.location.status === 'active'
-        );
-        if (local) {
-          await updateWarehouseLocation(workspaceId, local.location.id, { status: 'inactive' });
-        }
-      }
-
+      // Retirar um objeto do croqui nunca desativa uma posição com estoque.
       setMessage(
         'Croqui salvo com sucesso. Versão ' + saved.version + ' ativa.'
-        + (pendingRemovedLocationIds.length > 0
-          ? ' Os Locais removidos e suas Subposições também foram excluídos da operação.'
-          : '')
+
       );
       const [active, versions] = await Promise.all([
         getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
@@ -1100,12 +985,6 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </p>
           </div>
 
-          {croquiMode === 'preview' && previewLotsLimited && (
-            <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              Aviso: existem 500 ou mais lotes consultáveis. Os alertas de validade no 3D podem estar incompletos;
-              consulte o controle de materiais para a conferência integral.
-            </p>
-          )}
           {croquiMode === 'preview' ? (
             <WarehouseIsometricPreview
               logicalWidth={draftWidth}
@@ -1118,9 +997,34 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                     && item.location.status === 'active'
                 )
                 .map((item) => item.location)}
-              balances={previewBalances}
-              lots={previewLots}
+              balances={previewBalances.filter((balance) =>
+                balance.position.kind !== 'UNASSIGNED'
+                && balance.position.depotId === selectedDepotId
+              )}
               materials={previewMaterials}
+              lots={previewLots}
+              globalDepots={depots.map((item) => item.depot)}
+              globalLocations={locations.map((item) => item.location)}
+              globalBalances={previewBalances}
+              globalLoaded={previewLoaded}
+              globalComplete={
+                previewInventoryComplete
+                && depots.length < 250
+                && locations.length < 500
+              }
+              focusedLocationId={focusedLocationId}
+              onNavigateToGlobalLocation={(depotId, locationId) =>
+                navigateToSearchResult(depotId, locationId)
+              }
+              depotId={selectedDepotId}
+              inspectionLots={previewLots}
+              inspectionLotState={previewLotState}
+              inspectionError={previewLotError}
+              inspectionComplete={previewInventoryComplete && previewLotsComplete}
+              inspectionAvailable={previewLoaded}
+              depotName={selectedDepot?.name || 'Depósito'}
+              onInspectLocation={() => { void loadPreviewLots(); }}
+              onRefreshInspection={() => { void refreshPreviewInspection(); }}
               selectedMaterialId={previewMaterialId}
               queryText={previewQuery}
               onQueryTextChange={setPreviewQuery}
@@ -1219,6 +1123,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                                 />
                               </label>
                             </div>
+                            {localDraft.kind === 'REFRIGERATOR' && (
+                              <p className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-[10px] font-semibold leading-4 text-blue-800">
+                                Frente padronizada: as portas da geladeira serão desenhadas sempre
+                                no lado de maior medida, independentemente da orientação no croqui.
+                                As dimensões cadastradas serão preservadas.
+                              </p>
+                            )}
                             <button
                               type="button"
                               onClick={() => addLocalToCroqui(item)}
