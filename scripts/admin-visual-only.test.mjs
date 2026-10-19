@@ -26,6 +26,12 @@ test('Admin original: oito abas e ações preservadas', () => {
   }
   assert.match(view, /aria-label="Áreas administrativas"/);
   assert.match(view, /data-layout="sidebar"/);
+  assert.match(view, /lg:fixed lg:bottom-0 lg:left-0 lg:top-16/);
+  assert.match(view, /data-testid="admin-light-main"/);
+  assert.match(view, /data-testid="admin-light-content"/);
+  assert.match(view, /lg:pl-72/);
+  assert.match(view, /emprovex-app-header fixed inset-x-0 top-0/);
+  assert.match(view, /bg-\[#edf3fb\]/);
   assert.match(view, /new URLSearchParams\(window.location.search\)/);
   assert.match(view, /url.searchParams.set\('tab', tab\)/);
 });
@@ -45,6 +51,9 @@ test('identidade visual reutiliza App Shell e detalhe ativo original, não reimp
   assert.match(beam, /animation-play-state: paused/);
   assert.match(beam, /prefers-reduced-motion: reduce/);
   assert.match(style, /scrollbar-width: thin/);
+  assert.match(style, /background: #edf3fb/);
+  assert.match(style, /background: rgba\(255, 255, 255, 0.96\)/);
+  assert.match(style, /\.content :global\(input/);
   assert.match(style, /prefers-reduced-motion/);
 });
 
