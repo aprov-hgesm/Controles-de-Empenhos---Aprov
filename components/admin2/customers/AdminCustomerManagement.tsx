@@ -10,6 +10,11 @@ import type { BillingAccountStatus } from '../../../lib/billing';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 import type { Workspace } from '../../../lib/platformIdentity';
+import type { UpdateSectorWorkspaceInput } from '../../../lib/platformAdminStore';
+import { updateSectorWorkspaceProfile } from '../../../lib/platformAdminStore';
+import { HGESM_SECTOR_EMAIL } from '../../../lib/hgesmWorkspace';
+import { previewUpdatedWorkspace } from '../../../lib/admin2/customers/workspaceProfileEditContract';
+import { AdminWorkspaceProfileEditor } from './AdminWorkspaceProfileEditor';
 import { commercialEmulatorWritesEnabled } from '../../../lib/admin2/customers/commercialCustomerRepository';
 import { grantBillingTrial, setBillingCommercialStatus, setBillingExemption } from '../../../lib/platformBillingStore';
 import {
@@ -49,6 +54,8 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
   const [history, setHistory] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<BillingAccountStatus | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState(false);
+  const [workspaceDrafts, setWorkspaceDrafts] = useState<Record<string, CustomerWorkspaceRecord>>({});
 
   const lookup = async (id: string) => {
     const normalized = id.trim().toLowerCase();
@@ -63,7 +70,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
     try {
       const local = previews.find(entry => entry.workspace.id === normalized);
       if (local) {
-        setSelected(buildCustomerWorkspaceRecord(local.workspace.id, local.workspace));
+        setSelected(workspaceDrafts[normalized] || buildCustomerWorkspaceRecord(local.workspace.id, local.workspace));
         setBilling({
           status: local.billing.status,
           monthlyPriceCents: local.billing.monthlyPriceCents,
@@ -76,7 +83,7 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
         const found = page.rows.find(item => item.workspaceId === normalized);
         if (!found) throw new Error('Workspace não encontrado. Confira o ID informado.');
         const summary = await readCustomerBilling(normalized);
-        setSelected(found);
+        setSelected(workspaceDrafts[normalized] || found);
         setBilling(summary);
       }
       setWorkspaceId(normalized);
@@ -84,6 +91,31 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
       setError(reason instanceof Error ? reason.message : 'Não foi possível consultar o workspace.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveWorkspace = async (input: UpdateSectorWorkspaceInput) => {
+    if (!selected) return;
+    setSaving(true);
+    setError('');
+    try {
+      const isLocal = previews.some(p => p.workspace.id === selected.workspaceId);
+      let updated: CustomerWorkspaceRecord;
+      if (commercialEmulatorWritesEnabled && !isLocal) {
+        // Motor já existente: transação entre workspace, conta, UG e auditoria.
+        // Exclusivamente Firebase Emulator demo-*; nunca grava no projeto real.
+        const saved = await updateSectorWorkspaceProfile(input, HGESM_SECTOR_EMAIL);
+        updated = buildCustomerWorkspaceRecord(saved.id, saved);
+      } else {
+        updated = previewUpdatedWorkspace(selected, input, new Date().toISOString());
+      }
+      setSelected(updated);
+      setWorkspaceDrafts(current => ({ ...current, [updated.workspaceId]: updated }));
+      setHistory(current => ['Dados institucionais atualizados ' +
+        (commercialEmulatorWritesEnabled && !isLocal ? 'no Emulator' : 'em simulação local'), ...current]);
+      setEditingWorkspace(false);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -169,6 +201,14 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
       {error && <p role="alert" className="mt-3 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700"><CircleAlert className="h-4 w-4 shrink-0"/>{error}</p>}
     </section>
     {selected && <>
+      {editingWorkspace && <AdminWorkspaceProfileEditor
+        key={selected.workspaceId}
+        workspace={selected}
+        saving={saving}
+        persistentInEmulator={commercialEmulatorWritesEnabled && !isPreviewWorkspace}
+        onClose={() => setEditingWorkspace(false)}
+        onSave={saveWorkspace}
+      />}
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-[#fffbef] p-4 text-[11px] leading-6 text-amber-900">
         <ShieldCheck className="mt-1 h-4 w-4 shrink-0"/>
         <p><strong>{commercialEmulatorWritesEnabled && !isPreviewWorkspace ? 'Homologação Firebase Emulator:' : 'Gestão em modo de simulação:'}</strong> {commercialEmulatorWritesEnabled && !isPreviewWorkspace
@@ -192,6 +232,10 @@ export function AdminCustomerManagement({ previews, commercialDrafts, onEditCont
             </div>)}
           </dl>
           <div className="mt-5 flex flex-wrap gap-2">
+            <button type="button" data-testid="admin2-edit-workspace" onClick={() => setEditingWorkspace(current => !current)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1d579b] px-3 py-2.5 text-[11px] font-bold text-white">
+              <Building2 className="h-4 w-4" /> Editar dados do workspace
+            </button>
             <button onClick={onEditContacts} type="button" className="inline-flex items-center gap-2 rounded-xl border border-[#c8d8eb] bg-white px-3 py-2.5 text-[11px] font-bold text-[#265995]">
               <FilePenLine className="h-4 w-4"/> Editar dados comerciais
             </button>
