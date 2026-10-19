@@ -143,7 +143,7 @@
   min-width: 660px;
   aspect-ratio: 1200 / 675;
   overflow: hidden;
-  background: radial-gradient(circle at 70% 38%, #20526a 0%, #091b30 73%);
+  background: radial-gradient(circle at 56% 36%, #216078 0%, #092134 77%);
 }
 .scenery::after {
   content: '';
