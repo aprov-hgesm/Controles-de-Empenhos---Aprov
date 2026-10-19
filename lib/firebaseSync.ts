@@ -45,7 +45,7 @@ export async function seedInitialDataIfNecessary(userId: string) {
   const path = getOperationalCollectionPath(scope, 'empenhos');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'empenhos'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'empenhos');
     if (snapshot.empty) {
       console.log(`No empenhos found in Firestore at ${path}. Ready to receive data.`);
     }
@@ -59,7 +59,7 @@ export async function getEmpenhos(userId: string): Promise<Empenho[]> {
   const path = getOperationalCollectionPath(scope, 'empenhos');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'empenhos'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'empenhos');
     return snapshot.docs.map(item => item.data() as Empenho);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -80,7 +80,7 @@ export async function getSupplierContacts(userId: string): Promise<SupplierConta
   const path = getOperationalCollectionPath(scope, 'suppliers');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'suppliers'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
     return snapshot.docs.map((item) => ({
       ...(item.data() as SupplierContact),
       id: item.id,
@@ -99,7 +99,7 @@ export async function saveSupplierContact(
   const path = getOperationalDocumentPath(scope, 'suppliers', supplier.id);
   try {
     await setDoc(operationalDocRef(scope, 'suppliers', supplier.id), supplier);
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
@@ -120,7 +120,7 @@ export async function getAlerts(userId: string): Promise<Alert[]> {
   const path = getOperationalCollectionPath(scope, 'alerts');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'alerts'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
     return snapshot.docs.map(item => item.data() as Alert);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -133,7 +133,7 @@ export async function saveAlert(userId: string, alert: Alert): Promise<void> {
   const path = getOperationalDocumentPath(scope, 'alerts', alert.id);
   try {
     await setDoc(operationalDocRef(scope, 'alerts', alert.id), { ...alert, userId });
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -144,7 +144,7 @@ export async function removeAlert(userId: string, id: string): Promise<void> {
   const path = getOperationalDocumentPath(scope, 'alerts', id);
   try {
     await deleteDoc(operationalDocRef(scope, 'alerts', id));
-    recordWorkspaceDocumentDeletes(scope);
+    recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -156,7 +156,7 @@ export async function getInvoices(userId: string): Promise<Invoice[]> {
   const path = getOperationalCollectionPath(scope, 'invoices');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'invoices'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'notas');
     return snapshot.docs.map((item) => {
       const data = item.data() as Invoice;
       return { ...data, recordKey: data.recordKey || item.id };
@@ -173,7 +173,7 @@ export async function saveInvoice(userId: string, invoice: Invoice): Promise<voi
   const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
     await setDoc(operationalDocRef(scope, 'invoices', recordKey), { ...invoice, recordKey, userId });
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentWrites(scope, 1, 'notas');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -184,7 +184,7 @@ export async function removeInvoice(userId: string, recordKey: string): Promise<
   const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
     await deleteDoc(operationalDocRef(scope, 'invoices', recordKey));
-    recordWorkspaceDocumentDeletes(scope);
+    recordWorkspaceDocumentDeletes(scope, 1, 'notas');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -235,7 +235,7 @@ export async function commitAllComissoesDeletion(userId: string, ids: string[]):
     const batch = writeBatch(db);
     ids.forEach((id) => batch.delete(operationalDocRef(scope, 'comissoes', id)));
     await batch.commit();
-    recordWorkspaceDocumentDeletes(scope, ids.length);
+    recordWorkspaceDocumentDeletes(scope, ids.length, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'comissoes')}/bulk`);
   }
@@ -307,7 +307,7 @@ export async function getComissoes(userId: string): Promise<Comissao[]> {
   const path = getOperationalCollectionPath(scope, 'comissoes');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'comissoes'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
     return snapshot.docs.map(item => item.data() as Comissao);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -320,7 +320,7 @@ export async function saveComissao(userId: string, comissao: Comissao): Promise<
   const path = getOperationalDocumentPath(scope, 'comissoes', comissao.id);
   try {
     await setDoc(operationalDocRef(scope, 'comissoes', comissao.id), { ...comissao, userId });
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -331,7 +331,7 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
   const path = getOperationalDocumentPath(scope, 'comissoes', id);
   try {
     await deleteDoc(operationalDocRef(scope, 'comissoes', id));
-    recordWorkspaceDocumentDeletes(scope);
+    recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -343,7 +343,7 @@ export async function getCronogramas(userId: string): Promise<CronogramaEmpenho[
   const path = getOperationalCollectionPath(scope, 'cronogramas');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'cronogramas'));
-    recordWorkspaceDocumentReads(scope, snapshot.size);
+    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
     return snapshot.docs.map(item => item.data() as CronogramaEmpenho);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -359,7 +359,7 @@ export async function saveCronograma(userId: string, cronograma: CronogramaEmpen
     // Último envio e histórico são registrados exclusivamente pela transação pós-Gmail.
     const { ultimoEnvioEmail: _lastEmail, historicoEnviosEmail: _sentHistory, ...planning } = cronograma;
     await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...planning, userId }, { merge: true });
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -401,8 +401,8 @@ export async function recordCronogramaEmailSend(
       });
       return history;
     });
-    recordWorkspaceDocumentReads(scope, 1);
-    recordWorkspaceDocumentWrites(scope);
+    recordWorkspaceDocumentReads(scope, 1, 'outros');
+    recordWorkspaceDocumentWrites(scope, 1, 'outros');
     return entries;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -415,7 +415,7 @@ export async function removeCronograma(userId: string, id: string): Promise<void
   const path = getOperationalDocumentPath(scope, 'cronogramas', id);
   try {
     await deleteDoc(operationalDocRef(scope, 'cronogramas', id));
-    recordWorkspaceDocumentDeletes(scope);
+    recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
