@@ -77,10 +77,10 @@ test('todas as capacidades históricas possuem correspondência explícita sem f
     finance:'assinaturas', reports:'consumo', settings:'assinaturas',
   };
   for (const [area,tab] of Object.entries(routes)) {
-    assert.match(legacy,new RegExp(area + ': \\\\{'));
+    assert.ok(legacy.includes(area + ': {'), area);
     assert.ok(legacy.includes("tab: '" + tab + "'"),tab);
   }
-  assert.match(legacy,/href={['"]?\/admin\?tab=/) || assert.match(legacy,/href={['"]?/);
+  assert.match(legacy, /href=\{'\/admin\?tab='/);
   assert.match(shell,/AdminLegacyCapabilities area={activeId}/);
   assert.match(shell,/activeId === 'workspaces'/);
   assert.match(shell,/activeId === 'finance'/);
