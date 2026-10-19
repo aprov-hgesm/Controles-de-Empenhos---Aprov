@@ -106,11 +106,11 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
       ? 'O uso registrado superou a referência diária. Confira a situação de cobrança no Google Cloud.'
       : usedPercent >= 85
         ? 'Atenção: a cota diária está perto da referência configurada.'
-        : 'O uso registrado está abaixo da faixa de atenção de 85% da referência diária.';
+        : 'O uso registrado está abaixo de 85% da referência diária.';
   const guidance = {
     quota: 'Comece pelas barras de leitura e gravação. Elas mostram a parte usada de cada referência diária. Não representam um valor em reais.',
     consolidated: 'Use para ter uma visão geral. Os dados do Google abrangem o banco; os dados das UGs são aproximados e não devem ser somados como se fossem a conta do Google.',
-    workspace: 'UG é o código da unidade. Quanto maiores as contagens estimadas, maior a atividade captada pelo sistema nessa unidade. Zero também pode significar falta de medição.',
+    workspace: 'UG é o código da unidade. Quanto maiores as contagens estimadas, maior a atividade captada pelo sistema nessa unidade. Falta de medição aparece como “Sem medição”.',
     reports: 'Escolha um período para perceber tendências. Os valores históricos dependem dos registros efetivamente disponíveis para cada data.',
     alerts: 'Os alertas usam faixas e referências configuradas, não bloqueiam automaticamente os usuários e não representam uma cobrança confirmada.',
   } satisfies Record<ConsumptionTab, string>;
@@ -153,7 +153,7 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
 
       <section className="grid gap-3 md:grid-cols-3" aria-label="Entenda os números do consumo" data-testid="admin-consumption-simple-summary">
         <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
-          <p className="text-xs font-extrabold text-[#1b4b87]">1. Cota usada hoje</p>
+          <p className="text-xs font-extrabold text-[#1b4b87]">1. Uso da cota diária</p>
           <p className="mt-2 text-2xl font-black text-[#153960]">
             {usedPercent === null
               ? 'Sem dados'
@@ -162,13 +162,13 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
           <p className="mt-2 text-xs leading-5 text-[#5f7695]">
             {dailyReference !== null && usedReadUnits !== null
               ? formattedCount(usedReadUnits) + ' de ' + formattedCount(dailyReference) + ' unidades de leitura da referência diária'
-              : 'Não confunda ausência de medição com consumo zero.'}
+              : 'Sem dados do Google não é possível afirmar que o consumo foi zero.'}
           </p>
         </div>
         <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
           <p className="text-xs font-extrabold text-[#1b4b87]">2. O que esse uso significa?</p>
           <p className="mt-2 text-xs leading-6 text-[#3c5879]">{summary}</p>
-          <p className="mt-2 text-[11px] text-[#697f9b]">A referência diária não é um teto de funcionamento nem uma fatura.</p>
+          <p className="mt-2 text-[11px] text-[#697f9b]">A medição pode chegar com atraso e o período diário do Google não coincide necessariamente com o horário do Brasil. Não é uma fatura.</p>
         </div>
         <div className="rounded-2xl border border-blue-200 bg-white px-4 py-4 shadow-sm">
           <p className="text-xs font-extrabold text-[#1b4b87]">3. De onde vêm os números?</p>
