@@ -257,7 +257,7 @@ export function AdminGlobalUsagePanel({
             {loading
               ? <Loader2 className="h-4 w-4 animate-spin" />
               : <RefreshCw className="h-4 w-4" />}
-            Atualizar métricas reais
+            Atualizar dados do Google
           </button>
         </div>
 
@@ -320,9 +320,8 @@ export function AdminGlobalUsagePanel({
         </div>
         {configured === false && (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-relaxed text-amber-100">
-            A credencial server-side do Cloud Monitoring ainda não está disponível. O leitor aceita
-            a credencial administrativa server-side do Firebase como fonte principal e mantém
-            a credencial dedicada de Monitoring como fallback.
+            Não foi possível acessar as medições do Google neste ambiente. É necessário configurar
+            o acesso de leitura do servidor. Isso não significa que o EMPROVEX ou os workspaces pararam de funcionar.
           </div>
         )}
 
@@ -449,7 +448,7 @@ export function AdminGlobalUsagePanel({
               Ainda não há fotografia real carregada
             </p>
             <p className="mx-auto mt-1 max-w-xl text-xs leading-relaxed text-slate-500">
-              Use “Atualizar métricas reais”. Se a integração estiver configurada e continuar sem amostra,
+              Use “Atualizar dados do Google”. Se a integração estiver configurada e continuar sem amostra,
               o painel de diagnóstico abaixo aponta as causas mais prováveis.
             </p>
           </div>
