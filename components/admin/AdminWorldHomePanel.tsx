@@ -72,7 +72,7 @@ export function AdminWorldHomePanel({
           <div className={styles.eyebrow}><Sparkles size={14} /> EMPROVEX / DIGITAL DISTRICT · 01</div>
           <h3>Um universo em movimento<span>.</span></h3>
           <p>Uma representação visual dos acessos à plataforma e do consumo de leitura do Firestore.
-            Cada casa corresponde a uma conta real. As luzes acendem quando há sessão monitorada válida.</p>
+            Cada prédio identificado representa uma conta real. As demais construções compõem a maquete. As janelas acendem quando há sessão monitorada válida.</p>
         </div>
         <div className={styles.headerPills}>
           <span><span className={styles.pulseDot}/> {sessionsAvailable ? 'Presença monitorada' : 'Presença indisponível'}</span>
@@ -84,7 +84,7 @@ export function AdminWorldHomePanel({
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Home size={16}/></span>
           <div><p>Residências digitais</p><strong>{hasDirectory ? count(residents.length) : '—'}</strong>
-            <small>uma por conta cadastrada</small></div>
+            <small>edifícios identificados por conta</small></div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Radio size={16}/></span>
@@ -166,7 +166,7 @@ export function AdminWorldHomePanel({
             <span><i className={styles.dark}/> Casa escura · sem sessão</span>
             <span><i className={styles.unknown}/> Cinza · dados indisponíveis</span>
           </div>
-          <p className={styles.finePrint}>“Ativo” indica lease de sessão não expirado, não presença humana em tempo real.
+          <p className={styles.finePrint}>O edifício central simboliza o EMPROVEX; apenas os prédios identificados representam contas. “Ativo” indica lease de sessão não expirado, não presença humana em tempo real.
             Cota exibida é referência diária de leitura, não limite de bloqueio nem valor da fatura.
             {!sessionsAvailable && ' Sessões indisponíveis: nenhuma casa é considerada offline com segurança.'}
             {' '}Medição do Google: {globalUsageDataThrough
