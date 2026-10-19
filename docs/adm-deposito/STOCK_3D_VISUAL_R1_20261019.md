@@ -15,12 +15,17 @@ O croqui 3D em `WarehouseIsometricPreview` já reconhecia ocupação positiva at
 
 **Atenção:** o alerta visual de 14 dias **não altera** a regra geral de alerta/FEFO de 30 dias existente no domínio.
 
+## Superfícies integradas
+
+Além da prévia do editor de croquis, a tela principal **Meus Depósitos** (`WarehouseHomeOperational`) também utiliza o renderizador 3D. Ela agora busca o conjunto de lotes apenas quando existe croqui ativo para o depósito selecionado. A leitura ampla serve também de cache para a pesquisa de um material, evitando consulta adicional enquanto o resultado não estiver no limite de 500 lotes. A checagem de TypeScript/CI protege ambas as chamadas do componente.
+
 ## Arquivos e testes
 
 - `lib/warehouse/stockVisual.ts` — estado da validade por posição e geometria de empilhamento pura.
 - `features/warehouse/components/WarehouseIsometricPreview.tsx` — posicionamento dos cubos, cores, legenda.
 - `features/warehouse/components/WarehouseColdAppliance3D.tsx` — reflexo branco somente quando ocupado.
 - `features/warehouse/components/WarehouseCroquisR1Operational.tsx` — carregamento sob demanda.
+- `features/warehouse/components/WarehouseHomeOperational.tsx` — visualização principal e reaproveitamento dos lotes previamente consultados.
 - `scripts/warehouse-3d-stock-visual.test.mjs` — fronteiras 14/15 dias, vencidos, saldo zero, lote inativo, local incorreto, multicamada e contratos.
 - `package.json` e `.github/workflows/application-ci.yml` — suíte integrada ao Application CI.
 
