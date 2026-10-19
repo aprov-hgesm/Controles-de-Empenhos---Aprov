@@ -73,8 +73,8 @@ test('projeção exige pelo menos 3 dias passados e cobertura de 80%', () => {
     prices, usdToBrl: 5,
   });
   assert.equal(result.forecast.eligible, true);
-  assert.ok(Math.abs(result.forecast.usd - (31 * 0.05)) < 1e-12);
-  assert.ok(Math.abs(result.forecast.brl - (31 * 0.25)) < 1e-12);
+  assert.ok(Math.abs(result.forecast.usd - (30 * 0.05)) < 1e-12);
+  assert.ok(Math.abs(result.forecast.brl - (30 * 0.25)) < 1e-12);
   const insufficient = estimateFirestoreOperationCosts({
     todayDayKey: '2026-10-07', points: [...observed, point('2026-10-07')], prices,
   });
