@@ -421,7 +421,7 @@ export function PlatformAdminView({
               </span>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 lg:hidden">
+              <div className="flex items-center gap-2">
                 <div>
                   <p className="font-mono text-[7px] font-bold uppercase tracking-[0.22em] text-blue-300/55">Central de comando</p>
                   <h1 className="mt-0.5 text-base font-extrabold tracking-[0.16em] text-white sm:text-lg">EMPROVEX</h1>
@@ -430,7 +430,7 @@ export function PlatformAdminView({
                   Administração
                 </span>
               </div>
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-400">Administração da plataforma · EMPROVEX</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-400">Administração da plataforma</p>
             </div>
           </div>
 
