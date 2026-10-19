@@ -26,6 +26,7 @@ import {
 } from './AdminCommandSidebar';
 import styles from './AdminCommandPreview.module.css';
 import { AdminCustomersDirectory } from '../customers/AdminCustomersDirectory';
+import { AdminLegacyCapabilities } from './AdminLegacyCapabilities';
 
 function readAreaFromUrl(): AdminCommandSectionId {
   const area = new URLSearchParams(window.location.search).get('area');
@@ -226,7 +227,9 @@ export function AdminCommandPreview() {
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden rounded-full border border-amber-300/15 bg-amber-300/[0.06] px-3 py-1.5 text-[10px] font-semibold text-amber-100 sm:inline-flex">
-              {activeId === 'customers' ? 'Clientes • leitura administrativa protegida' : 'Preview • dados fictícios'}
+              {['customers', 'workspaces', 'finance'].includes(activeId)
+  ? 'Clientes e workspaces · administração protegida'
+  : 'Administração · migração sequencial'}
             </span>
             <div className="grid h-9 w-9 place-items-center rounded-full border border-blue-300/20 bg-[#102548] text-[10px] font-bold text-blue-100" aria-label="Conta de demonstração">
               AD
@@ -269,16 +272,19 @@ export function AdminCommandPreview() {
           </div>
           <div className={styles.notice + ' mb-5 flex items-start gap-3 px-4 py-3 text-[11px] leading-6'} role="note">
             <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span><strong className="text-[#875613]">Laboratório local:</strong> {activeId === 'customers'
-              ? 'Diretório e ficha 360° conectados aos metadados administrativos reais somente após login Google do fundador. Consultas Firestore limitadas e somente leitura; sem mudanças em workspaces, faturamento ou Drive.'
-              : 'Visão geral e demais áreas ainda apresentam indicadores ilustrativos. Apenas a seção Clientes está conectada para consulta administrativa, mediante autenticação.'}</span>
+            <span><strong className="text-[#875613]">Laboratório local:</strong> {['customers','workspaces','finance'].includes(activeId)
+              ? 'Diretório e Ficha 360° leem metadados reais após autenticação fundadora. Edição institucional e de assinatura são apenas simulação no localhost normal; gravação permitida exclusivamente nos Emulators demo-*.'
+              : 'Os módulos administrativos preservados na main estão acessíveis por integração progressiva; áreas ainda não migradas exibem seu estado real e um acesso explícito à operação existente.'}</span>
           </div>
           {activeId === 'overview' ? (
             <Dashboard onNavigate={navigate} />
-          ) : activeId === 'customers' ? (
-            <AdminCustomersDirectory />
+          ) : activeId === 'customers' || activeId === 'workspaces' || activeId === 'finance' ? (
+            <AdminCustomersDirectory
+              key={activeId}
+              initialMode={activeId === 'finance' ? 'manage' : 'directory'}
+            />
           ) : (
-            <GenericArea activeId={activeId} label={activeItem.label} detail={activeItem.detail} />
+            <AdminLegacyCapabilities area={activeId} />
           )}
           <footer className="mt-7 border-t border-[#ccd8e8] py-5 text-center font-mono text-[10px] font-semibold text-[#8191a8]">
             EMPROVEX COMMAND · ADMIN 2.0 · PRÉVIA LOCAL ISOLADA
