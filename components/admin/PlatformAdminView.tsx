@@ -400,19 +400,12 @@ export function PlatformAdminView({
   const ActiveTabIcon = activeTabConfig.icon;
 
   return (
-    <div className={'relative min-h-screen overflow-x-hidden bg-[#020817] font-montserrat text-white selection:bg-blue-500 selection:text-white ' + adminVisualStyles.root} data-testid="admin-visual-shell">
+    <div className={'relative min-h-screen overflow-x-hidden bg-[#edf3fb] font-montserrat text-[#183456] selection:bg-blue-200 ' + adminVisualStyles.root} data-testid="admin-visual-shell">
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(37,99,235,0.14),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(56,189,248,0.08),transparent_28%),linear-gradient(145deg,#020817_0%,#061126_48%,#071a34_100%)]" />
-        <div className="absolute left-[7%] top-32 h-72 w-72 rounded-full bg-blue-500/[0.06] blur-3xl" />
-        <div className="absolute -right-20 top-[28%] h-96 w-96 rounded-full bg-cyan-400/[0.035] blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/35 to-transparent" />
-        <div className="absolute left-[12%] top-28 hidden h-px w-[28%] bg-gradient-to-r from-blue-300/0 via-blue-300/20 to-blue-300/0 lg:block" />
-        <div className="absolute right-[10%] top-40 hidden h-px w-[22%] bg-gradient-to-r from-cyan-200/0 via-cyan-200/15 to-cyan-200/0 lg:block" />
-      </div>
+      <div className={adminVisualStyles.atmosphere} aria-hidden="true" />
 
-      <header className="emprovex-app-header sticky top-0 z-30">
+      <header className="emprovex-app-header fixed inset-x-0 top-0 z-30">
         <AppShellSignature variant="header" />
         <div className="relative mx-auto flex h-16 w-full max-w-[1640px] items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3.5">
@@ -464,14 +457,14 @@ export function PlatformAdminView({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-[1640px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">
-        <div className="grid min-w-0 gap-5 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[268px_minmax(0,1fr)]">
+      <main className="relative z-10 mx-auto min-h-screen w-full max-w-[1840px] px-4 pb-8 pt-20 sm:px-6 xl:px-8" data-testid="admin-light-main">
+        <div className="min-w-0">
           <aside
             data-testid="admin-tab-navigation"
             data-layout="sidebar"
-            className="min-w-0 lg:sticky lg:top-20 lg:self-start"
+            className="relative mb-5 min-w-0 lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:z-20 lg:mb-0 lg:w-72"
           >
-            <div className={'emprovex-app-sidebar relative isolate flex flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.09] bg-[#030b1b] shadow-[0_24px_70px_rgba(0,8,28,0.24)] lg:max-h-[calc(100dvh-6rem)] ' + adminVisualStyles.sidebarPanel}>
+            <div className={'emprovex-app-sidebar relative isolate flex flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.09] bg-[#030b1b] shadow-[0_24px_70px_rgba(0,8,28,0.24)] lg:h-full lg:rounded-none lg:border-x-0 lg:border-b-0 ' + adminVisualStyles.sidebarPanel}>
               <AppShellSignature variant="sidebar" />
               <section className="emprovex-sidebar-operator relative z-[1] mx-3 mt-3 shrink-0" aria-label="Administrador conectado">
                 <div className="emprovex-sidebar-operator__head">
@@ -558,14 +551,14 @@ export function PlatformAdminView({
             </div>
           </aside>
 
-          <div className="min-w-0 space-y-5">
+          <div className={'min-w-0 space-y-5 lg:pl-72 ' + adminVisualStyles.content} data-testid="admin-light-content">
         <motion.section
           initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: shouldReduceMotion ? 0.12 : 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#071225]/72 p-5 shadow-[0_24px_70px_rgba(0,8,28,0.24)] backdrop-blur-2xl sm:p-6"
+          className="relative overflow-hidden rounded-[1.5rem] border border-[#d4e3f4] bg-white/95 p-5 shadow-[0_12px_36px_rgba(28,61,102,0.08)] sm:p-6"
         >
-          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.10] blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.045] blur-3xl" />
           <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/45 to-transparent" />
           <div className="pointer-events-none absolute left-0 top-14 h-32 w-px bg-gradient-to-b from-transparent via-blue-300/25 to-transparent" />
           <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -582,21 +575,21 @@ export function PlatformAdminView({
                   <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
                     Central de Administração EMPROVEX
                   </p>
-                  <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                  <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight text-[#17375e] sm:text-3xl">
                     {activeTabConfig.label}
                   </h2>
                 </div>
               </div>
-              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-400">
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#647c99]">
                 {activeTabConfig.description}
               </p>
             </div>
 
-            <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-slate-950/30 px-4 py-3.5 shadow-inner shadow-black/10 lg:min-w-[310px]">
+            <div className="min-w-0 rounded-2xl border border-[#d4e3f4] bg-[#f2f7fd] px-4 py-3.5 lg:min-w-[310px]">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Setores ativos</p>
-                  <p className="mt-1 text-lg font-black text-white">{activeWorkspaceCount}</p>
+                  <p className="mt-1 text-lg font-black text-[#17375e]">{activeWorkspaceCount}</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Google Cloud</p>
