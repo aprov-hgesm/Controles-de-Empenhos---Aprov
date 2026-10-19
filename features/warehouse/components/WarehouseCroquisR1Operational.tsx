@@ -35,7 +35,7 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
-import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
+import { listWarehouseLots, listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
@@ -197,6 +197,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [previewLoaded, setPreviewLoaded] = useState(false);
   const [previewInventoryComplete, setPreviewInventoryComplete] = useState(false);
   const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
+  const [visualExpiryLots, setVisualExpiryLots] = useState<WarehouseLot[]>([]);
+  const [visualExpiryComplete, setVisualExpiryComplete] = useState(true);
   const [previewLotState, setPreviewLotState] = useState<WarehouseInspectionLotState>('idle');
   const [previewLotError, setPreviewLotError] = useState<string | null>(null);
   const [previewLotsComplete, setPreviewLotsComplete] = useState(true);
@@ -275,6 +277,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         setPreviewLoaded(false);
         setPreviewInventoryComplete(false);
         setPreviewLots([]);
+        setVisualExpiryLots([]);
+        setVisualExpiryComplete(true);
         setPreviewLotState('idle');
         setPreviewLotError(null);
         setPreviewLotsComplete(true);
@@ -293,21 +297,20 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     if (croquiMode !== 'preview' || previewLoaded) return;
     let cancelled = false;
 
-    setPreviewLotState('loading');
+    // Leitura indexada só de lotes vencidos e até +14d para o 3D.
+    // Lotes completos para relatório só depois do primeiro hover/clique.
+    setPreviewLotState('idle');
     setPreviewLotError(null);
-    // Compartilha os lotes com a inspeção já aprovada: UMA consulta por abertura
-    // da prévia 3D, em vez de consultar novamente a cada hover.
     void Promise.all([
       listWarehouseMaterials(workspaceId, 500),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-      listWarehouseLots(workspaceId, 500),
-    ]).then(([materials, balances, lotItems]) => {
+      listWarehouseVisualExpiryLots(workspaceId, 500),
+    ]).then(([materials, balances, visualLotItems]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
       setPreviewInventoryComplete(materials.length < 500 && balances.length < 500);
-      setPreviewLots(lotItems.map((item) => item.lot));
-      setPreviewLotsComplete(lotItems.length < 500);
-      setPreviewLotState('ready');
+      setVisualExpiryLots(visualLotItems.map((item) => item.lot));
+      setVisualExpiryComplete(visualLotItems.length < 500);
       setPreviewBalances(
         balances.map((item) => item.balance).filter((balance) =>
           balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
@@ -323,6 +326,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         setPreviewMaterials([]);
         setPreviewBalances([]);
         setPreviewInventoryComplete(false);
+        setVisualExpiryLots([]);
+        setVisualExpiryComplete(false);
         setPreviewLots([]);
         setPreviewLotsComplete(false);
         setPreviewLotState('error');
@@ -985,6 +990,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </p>
           </div>
 
+          {croquiMode === 'preview' && !visualExpiryComplete && (
+            <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              Os alertas de validade 3D podem estar incompletos (limite de 500 lotes).
+              Consulte os detalhes do local para verificar o conteúdo.
+            </p>
+          )}
           {croquiMode === 'preview' ? (
             <WarehouseIsometricPreview
               logicalWidth={draftWidth}
@@ -1002,7 +1013,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 && balance.position.depotId === selectedDepotId
               )}
               materials={previewMaterials}
-              lots={previewLots}
+              lots={visualExpiryLots}
               globalDepots={depots.map((item) => item.depot)}
               globalLocations={locations.map((item) => item.location)}
               globalBalances={previewBalances}
