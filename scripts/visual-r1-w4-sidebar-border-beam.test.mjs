@@ -73,6 +73,8 @@ test('external sectors regain warehouse shortcut without bypassing authorization
   const access = read('lib/platformModuleAccess.ts');
   const boundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
   assert.match(page, /warehouseModuleEnabled=\{canAccessWarehouseModule\(workspaceContext\)\}/);
+  assert.match(page, /workspaceContext\.status === 'sector' \? workspaceContext\.workspaceName/);
+  assert.doesNotMatch(page, /user\?\.displayName \|\| 'Aprovisionamento HGeSM'/);
   assert.doesNotMatch(page, /workspaceContext\.workspaceId === HGESM_WORKSPACE_ID/);
   assert.match(access, /context\.status === 'sector'/);
   assert.match(access, /context\.canLoadOperationalData/);
