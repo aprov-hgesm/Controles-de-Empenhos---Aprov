@@ -568,10 +568,10 @@ function QuotaLane({
           </p>
         </div>
         <p className={`text-sm font-black ${exceeded ? 'text-rose-300' : percentage >= 70 ? 'text-amber-300' : 'text-emerald-300'}`}>
-          {percentage.toLocaleString('pt-BR', {
+          {limit > 0 ? percentage.toLocaleString('pt-BR', {
             minimumFractionDigits: percentage > 0 && percentage < 10 ? 1 : 0,
             maximumFractionDigits: 1,
-          })}%
+          }) + '%' : 'Sem referência'}
         </p>
       </div>
       <p className="mt-2 text-[10px] font-semibold text-slate-500">
