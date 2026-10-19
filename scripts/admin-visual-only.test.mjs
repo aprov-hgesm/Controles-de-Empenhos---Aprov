@@ -112,3 +112,47 @@ test('Consumo & Cotas: os cinco painéis explicam números reais em linguagem si
     assert.doesNotMatch(source, /(?:getDocs|onSnapshot|updateDoc|deleteDoc|addDoc|runTransaction|fetch)\s*\(/);
   }
 });
+
+
+test('UG R3: medição por módulo preserva baixo custo, segurança e compatibilidade', () => {
+  const telemetry = read('lib/workspaceUsageTelemetry.ts');
+  const read = readFileSync('lib/platformAdminUsage.ts', 'utf8');
+  const panel = readFileSync('components/admin/AdminUsagePanel.tsx', 'utf8');
+  const hub = readFileSync('components/admin/AdminConsumptionHub.tsx', 'utf8');
+  const realtime = readFileSync('hooks/useOperationalRealtimeCollections.ts', 'utf8');
+  const warehouse = readFileSync('lib/warehouse/telemetry.ts', 'utf8');
+  const rules = readFileSync('firestore.rules', 'utf8');
+  const security = readFileSync('scripts/firestore-multitenancy-security.test.mjs', 'utf8');
+
+  for (const key of ['empenhos', 'notas', 'deposito', 'sessoes', 'outros']) {
+    assert.ok(telemetry.includes("'"+key+"'"), 'categoria segura '+key);
+    assert.ok(rules.includes("'"+key+"'"), 'regra de módulo '+key);
+  }
+  for (const marker of [
+    'WORKSPACE_USAGE_INITIAL_FLUSH_MS = 60 * 1000',
+    'WORKSPACE_USAGE_FLUSH_INTERVAL_MS = 15 * 60 * 1000',
+    'sessionStorage',
+    'moduleOperations: Object.fromEntries(',
+    'increment(snapshot.moduleOperations[module])',
+    'serverTimestamp()',
+    'telemetryFlushes: increment(1)',
+  ]) assert.ok(telemetry.includes(marker), 'buffer agregado preservado: '+marker);
+
+  assert.match(read, /moduleBreakdownAvailable/);
+  assert.match(read, /moduleOperations: readModuleOperations/);
+  assert.match(panel, /admin-ug-modules-/);
+  assert.match(panel, /Sem detalhamento por módulo/);
+  assert.match(panel, /admin-ug-google-proxy-/);
+  assert.match(hub, /globalUsage={props.globalUsage}/);
+  assert.match(realtime, /snapshot.metadata.fromCache \? 0/);
+  assert.match(warehouse, /recordWorkspaceDocumentReads\(scope, Math.floor\(count\), 'deposito'\)/);
+  assert.match(rules, /workspaceModuleOperationsMonotonic/);
+  assert.match(rules, /validWorkspaceModuleOperations/);
+  assert.match(security, /UG R3 rejeita módulo inventado/);
+  assert.match(security, /UG R3 impede reduzir atividade de outro módulo/);
+
+  // O novo detalhamento não gera assinaturas nem leituras adicionais.
+  assert.doesNotMatch(telemetry, /onSnapshot\s*\(|getDoc\s*\(/);
+  assert.doesNotMatch(panel, /onSnapshot\s*\(|getDoc\s*\(|getDocs\s*\(/);
+  assert.doesNotMatch(telemetry, /collectionGroup\s*\(/);
+});
