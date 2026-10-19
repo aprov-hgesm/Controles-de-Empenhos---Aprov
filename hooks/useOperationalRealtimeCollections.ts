@@ -147,7 +147,9 @@ function useRealtimeCollectionSubscription<T>({
       (snapshot) => {
         recordWorkspaceRealtimeSnapshot(
           scope,
-          firstSnapshot ? snapshot.size : snapshot.docChanges().length,
+          // Um evento servido apenas pelo cache local não comprova leitura remota.
+          // Primeiro snapshot e docChanges continuam estimativas (não faturamento).
+          snapshot.metadata.fromCache ? 0 : firstSnapshot ? snapshot.size : snapshot.docChanges().length,
           collectionName === 'empenhos' ? 'empenhos' : collectionName === 'invoices' ? 'notas' : 'outros'
         );
         firstSnapshot = false;
@@ -248,7 +250,7 @@ function useRealtimeInvoiceSubscription({
         (snapshot) => {
           recordWorkspaceRealtimeSnapshot(
             scope,
-            firstSnapshot ? snapshot.size : snapshot.docChanges().length,
+            snapshot.metadata.fromCache ? 0 : firstSnapshot ? snapshot.size : snapshot.docChanges().length,
             'notas'
           );
           firstSnapshot = false;
