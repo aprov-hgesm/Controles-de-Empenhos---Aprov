@@ -5,6 +5,8 @@ import { Building2, CheckCircle2, CircleAlert, Clock3, KeyRound, Loader2, Plus, 
 import { type UnifiedCustomerOnboardingInput, createPreviewOnboarding, ADMIN2_INITIAL_TRIAL_DAYS } from '../../../lib/admin2/customers/unifiedCustomerOnboarding';
 import type { UnifiedPreviewRecord } from '../../../lib/admin2/customers/unifiedCustomerOnboarding';
 import styles from '../shell/AdminCommandPreview.module.css';
+import { deriveNewWorkspaceId } from '../../../lib/admin2/customers/customerDirectoryUx';
+import { readCustomerWorkspacePage } from '../../../lib/admin2/customers/customerWorkspaceDirectory';
 
 const EMPTY: UnifiedCustomerOnboardingInput = {
   sector: {
@@ -20,11 +22,13 @@ const EMPTY: UnifiedCustomerOnboardingInput = {
 
 interface Props {
   existingPreviewIds: string[];
+  existingPreviewUgs: string[];
   onPreviewCreated: (record: UnifiedPreviewRecord) => void;
   onManage: () => void;
+  onDirectory: () => void;
 }
 
-export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreated, onManage }: Props) {
+export function AdminUnifiedCustomerCreate({ existingPreviewIds, existingPreviewUgs, onPreviewCreated, onManage, onDirectory }: Props) {
   const [input, setInput] = useState<UnifiedCustomerOnboardingInput>(EMPTY);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<UnifiedPreviewRecord | null>(null);
@@ -36,16 +40,26 @@ export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreate
   const setCommercial = (field: keyof UnifiedCustomerOnboardingInput['commercial'], value: string) => {
     setInput(current => ({ ...current, commercial: { ...current.commercial, [field]: value } }));
   };
-  const save = (event: FormEvent<HTMLFormElement>) => {
+  const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setBusy(true);
     try {
       // Fase local segura: nunca chamar o provisionamento real nem Auth.signUp.
       // Preview gera os três documentos coerentes, mas não grava nenhum deles.
-      const preview = createPreviewOnboarding(input);
-      if (existingPreviewIds.includes(preview.workspace.id)) {
-        throw new Error('Este workspace já foi criado nesta sessão de prévia.');
+      const workspaceId = deriveNewWorkspaceId(input.sector.ug);
+      const preview = createPreviewOnboarding({
+        ...input,
+        sector: { ...input.sector, workspaceId },
+      });
+      if (existingPreviewIds.includes(preview.workspace.id) || existingPreviewUgs.includes(preview.workspace.ug || '')) {
+        throw new Error('Esta UG já possui um workspace de teste nesta sessão.');
+      }
+      // Checagem de duplicidade pontual no diretório real: uma leitura por envio,
+      // nunca a cada tecla. A UG já possui índice de unicidade no provisionamento.
+      const existing = await readCustomerWorkspacePage({ field: 'ug', term: preview.workspace.ug || '' }, null);
+      if (existing.rows.length) {
+        throw new Error('Esta UG já possui workspace cadastrado. Procure-o no diretório.');
       }
       onPreviewCreated(preview);
       setCreated(preview);
@@ -66,7 +80,7 @@ export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreate
       <div className="grid gap-3 sm:grid-cols-3">
         {[
           ['Cliente comercial', created.commercialCustomer.displayName],
-          ['Workspace', created.workspace.id],
+          ['Setor / UG', created.workspace.name + ' · ' + created.workspace.ug],
           ['Assinatura', 'Trial de 30 dias'],
         ].map(([title,value]) => <div key={title} className="rounded-xl border border-[#d5e3f4] bg-[#f7faff] p-4">
           <p className="text-[11px] text-[#6982a3]">{title}</p><p className="mt-2 break-words text-[13px] font-bold text-[#18365c]">{value}</p>
@@ -74,7 +88,9 @@ export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreate
       </div>
       <p className="text-[11px] text-[#64809f]">Trial de {ADMIN2_INITIAL_TRIAL_DAYS} dias · Plano Completo R$ 70/mês após conversão administrativa · Sem cobrança automática.</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={onManage} className="rounded-xl bg-[#19519b] px-5 py-3 text-xs font-bold text-white">Abrir Gestão do cliente</button>
+        <button type="button" onClick={onDirectory} data-testid="admin2-see-preview-directory"
+          className="rounded-xl bg-[#19519b] px-5 py-3 text-xs font-bold text-white">Ver no diretório de workspaces</button>
+        <button type="button" onClick={onManage} className="rounded-xl border border-[#c6d9ee] bg-white px-5 py-3 text-xs font-bold text-[#275a98]">Abrir Gestão do cliente</button>
         <button type="button" onClick={() => { setCreated(null); setInput(EMPTY); }} className="rounded-xl border border-[#c6d9ee] bg-white px-5 py-3 text-xs font-bold text-[#275a98]">Novo cadastro</button>
       </div>
     </section>;
@@ -99,7 +115,6 @@ export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreate
           <legend className="px-2 text-xs font-extrabold text-[#25588e]"><Building2 className="mr-2 inline h-4 w-4" /> 1. Identificação do setor</legend>
           <div className="grid gap-4 md:grid-cols-2">
             {([
-              ['workspaceId','ID do workspace','Ex.: om-aprov','text',48],
               ['workspaceName','Nome do workspace','Aprovisionamento da unidade','text',120],
               ['ug','UG da OM','Seis dígitos','text',6],
               ['organizationName','Organização Militar','Nome completo da OM','text',160],
@@ -117,6 +132,7 @@ export function AdminUnifiedCustomerCreate({ existingPreviewIds, onPreviewCreate
               </label>
             ))}
           </div>
+          <p className="mt-3 text-[11px] leading-5 text-[#7489a2]">O código interno do workspace será gerado automaticamente a partir da UG. Não é necessário criar outro identificador.</p>
         </fieldset>
         <fieldset className="rounded-2xl border border-[#dce7f5] bg-white p-4 sm:p-5">
           <legend className="px-2 text-xs font-extrabold text-[#25588e]"><UserRound className="mr-2 inline h-4 w-4" /> 2. Relacionamento comercial</legend>
