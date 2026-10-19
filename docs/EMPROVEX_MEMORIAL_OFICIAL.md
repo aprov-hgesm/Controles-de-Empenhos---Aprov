@@ -2951,3 +2951,21 @@ Application CI, TypeScript/build, Core Protection, Firestore Rules/Emulator e ac
 **Como inspecionar sem deploy:** no PowerShell Windows, no checkout da branch do PR #341, \`git pull --ff-only\`, \`npm.cmd ci\` (quando preciso), \`npm.cmd run dev -- --port 3001\` e abrir \`http://localhost:3001/admin\` com a conta fundadora. Para o painel prévio, \`http://localhost:3001/admin?tab=overview\`. Se \`localhost:3001\` já estiver executando uma versão antiga, reiniciar o servidor no checkout atualizado.
 
 **Handoff:** onde estamos — 3D bairro integrado no PR #341 DRAFT; o que fazemos — certificar o HEAD e validar estética no navegador; quem faz — executor GitHub (código e CI), Fundador (aceite visual); a seguir — inspeção visual local, refinamento de detalhes de maquete e confirmação de leitura de sessões/cota; quem fará — Fundador no navegador e executor nas correções, SEM alterar produção.
+
+
+## ADMIN-WORLD-R1.1 — Nova maquete isométrica fiel à referência (19/10/2026)
+
+**Solicitação:** substituir a aparência esparsa do bairro anterior pela composição da referência visual enviada pelo Fundador: malha de ruas convergente, grande edifício central, vários prédios de fachada branca/vidro azul, coberturas verdes, jardins e árvores densas, passagem de pedestres, postes e caixa-d'água translúcida à esquerda com leitura do consumo Firestore. Tema escuro EMPROVEX permanece no restante da UI.
+
+**Executado apenas na branch do PR #341, sem merge ou deploy:**
+- Novo \`components/admin/AdminWorldArchitecture.tsx\` contém geometria projetada 3D de edifícios, fachadas com janelas por pavimento, telhados verdes, hall simbólico da plataforma, árvores detalhadas, luminárias, caixas de correio e reservatório cilíndrico com água interna recortada por clipPath. Sem novas dependências, imagens externas nem WebGL.
+- \`AdminWorldScene.tsx\` redesenhado: maquete simétrica de 15 lotes cenográficos, 4 braços viários principais até a praça central, vias secundárias, faixas, calçadas, jardineiras e pedestal com espessura. O edifício central é **marco simbólico EMPROVEX**, não representa conta adicional nem sessão falsa.
+- Atribuição a usuários: apenas **até nove prédios identificados** por quarteirão representam contas reais. O restante é cenário urbano **não clicável** e não entra nas contagens; não há nomes/usuários fictícios. Fachadas dos usuários só recebem janelas amarelas iluminadas quando a sessão existente foi validada. Sem sessão ou sem telemetria de presença, respeitar os estados originais.
+- Caixa d'água recebe as props existentes \`waterKnown/waterLevel/waterExceeded\`: líquido visível proporcional à referência diária de billableReadUnits, status sem medição e indicação de extrapolação sem cortar a porcentagem textual.
+- Textos da nova Início explicam explicitamente a diferença entre prédio identificado e construção de cenário; mantêm legenda, painel de conta, navegação por quarteirões, zoom, rotação suave e acessibilidade por teclado.
+- Testes do bairro atualizados para separar a geometria \`AdminWorldArchitecture.tsx\` da cena e garantir continuação da ausência de consultas/alterações Firestore. O CI e guardrails devem ser certificados sobre o último HEAD.
+- Edição estética foi feita exclusivamente na nova Início (sem alterar as oito abas originais, stores, Rules, billing, workspaces ou produção).
+
+**Aceite pendente:** abrir \`http://localhost:3001/admin\` com a conta fundadora depois de atualizar o checkout do PR #341; validar estética/densidade, leitura das janelas por conta, proporção do reservatório, zoom e navegação. Não anunciar inspeção de navegador realizada sem evidência do Fundador. Evitar merge/deploy até solicitação expressa.
+
+**Handoff:** onde estamos — R1.1 implementada no PR #341 DRAFT; o que fazemos — certificação de CI e validação estética humana; quem faz — executor GitHub (código, checks, memorial), Fundador (navegador); a seguir — revisar screenshot real da nova Início e ajustar a geometria conforme feedback; responsável — executor somente após aceite/correções solicitadas.
