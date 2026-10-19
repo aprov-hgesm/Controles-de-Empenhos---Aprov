@@ -46,6 +46,9 @@ jobs:
       - name: Vercel manual deployment policy
         run: npm run test:vercel-manual-deploy
 
+      - name: Admin digital neighborhood contracts
+        run: npm run test:admin-world-neighborhood
+
       - name: Firestore Enterprise financial estimate contract tests
         run: npm run test:firestore-cost-estimate
 
