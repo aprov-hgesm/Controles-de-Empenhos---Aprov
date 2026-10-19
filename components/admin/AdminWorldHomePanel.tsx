@@ -50,7 +50,7 @@ export function AdminWorldHomePanel({
     now, sessionsAvailable,
   }), [accounts, sessions, now, sessionsAvailable]);
   const block = useMemo(() => neighborhoodPages(residents, page), [residents, page]);
-  const selected = residents.find((resident) => resident.id === selectedId) || null;
+  const selected = block.displayed.find((resident) => resident.id === selectedId) || null;
   const online = residents.filter((resident) => resident.presence === 'online').length;
   const quota = neighborhoodQuota(globalUsage);
   const hasDirectory = !loadingDirectory && !directoryError;
