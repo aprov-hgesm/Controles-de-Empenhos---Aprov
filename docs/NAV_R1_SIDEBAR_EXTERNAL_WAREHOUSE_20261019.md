@@ -1,7 +1,7 @@
 # Navegação R1 — barra lateral EMPROVEX e acesso externo à Central de Depósitos
 
-Data: 19/10/2026  
-Branch: \`feat/sidebar-navigation-external-warehouse-r1\`  
+Data: 19/10/2026
+Branch: \`feat/sidebar-navigation-external-warehouse-r1\`
 Base: \`feat/warehouse-cold-appliances-3d-premium@153d2349\`
 
 ## Pedido do Fundador
