@@ -65,3 +65,50 @@ test('não adiciona consultas, novas regras, chamadas nem URLs de produção', (
   assert.doesNotMatch(view, /from ['"][^'"]*(?:AdminCustomersDirectory|firebase\/firestore|admin2\/)/);
   assert.doesNotMatch(view, /window\.confirm\s*\(/);
 });
+
+test('Consumo & Cotas: os cinco painéis explicam números reais em linguagem simples', () => {
+  const hub = read('components/admin/AdminConsumptionHub.tsx');
+  const google = read('components/admin/AdminGlobalUsagePanel.tsx');
+  const ug = read('components/admin/AdminUsagePanel.tsx');
+  const consolidated = read('components/admin/AdminConsolidatedUsagePanel.tsx');
+  const reports = read('components/admin/AdminUsageReportsPanel.tsx');
+
+  for (const component of [
+    '<AdminGlobalUsagePanel',
+    '<AdminConsolidatedUsagePanel',
+    '<AdminUsagePanel',
+    '<AdminUsageReportsPanel',
+  ]) assert.ok(hub.includes(component), 'painel preservado: '+component);
+
+  assert.match(hub, /admin-consumption-simple-summary/);
+  assert.match(hub, /quanto o EMPROVEX usa do banco de dados/);
+  assert.match(hub, /Não some nem compare as duas fontes/);
+  assert.match(hub, /Sem dados/);
+  assert.match(hub, /onRefreshUsage/);
+  assert.match(hub, /onRefreshGlobalUsage/);
+
+  assert.match(google, /admin-google-simple-guide/);
+  assert.match(google, /data-testid="admin-firestore-primary-billing-quota"/);
+  assert.match(google, /data-testid="google-usage-diagnostics"/);
+  assert.match(google, /<details/);
+  assert.match(google, /Leituras contabilizadas/);
+  assert.match(google, /Gravações contabilizadas/);
+  assert.match(google, /Read Units faturáveis/);
+  assert.match(google, /Write Units faturáveis/);
+
+  assert.match(ug, /admin-ug-simple-guide/);
+  assert.match(ug, /Sem medição/);
+  assert.match(ug, /data-testid="admin-usage-total-reads"/);
+  assert.match(ug, /estimate\?\.estimatedDocumentReads \?\? null/);
+
+  assert.match(consolidated, /admin-consolidated-simple-guide/);
+  assert.match(consolidated, /data-testid="admin-usage-reconciliation-v2"/);
+  assert.match(consolidated, /data-testid="admin-usage-alerts-panel"/);
+  assert.match(reports, /admin-usage-history-simple-guide/);
+  assert.match(reports, /Exportar CSV/);
+
+  // Texto/explicação apenas: nenhum cliente de leitura/alteração adicionado.
+  for (const source of [hub, google, ug, consolidated]) {
+    assert.doesNotMatch(source, /(?:getDocs|onSnapshot|updateDoc|deleteDoc|addDoc|runTransaction|fetch)\s*\(/);
+  }
+});
