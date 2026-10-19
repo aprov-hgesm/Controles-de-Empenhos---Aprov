@@ -34,7 +34,7 @@ import {
   type WarehouseLot,
   type WarehouseLotExpiryState,
 } from '../../../lib/warehouse/lot';
-import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
+import { listWarehouseLots, listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 import styles from './WarehouseHomeOperational.module.css';
 
@@ -177,12 +177,6 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       return;
     }
 
-    // Reuse the full bounded 3D lot read if it was already loaded.
-    if (previewLotsLoadedForDepot === selectedDepotId && !previewLotsLimited) {
-      setLots(previewLots.filter((item) => item.materialId === selectedMaterialId));
-      setLotsLoading(false);
-      return;
-    }
     setLotsLoading(true);
     void listWarehouseLots(workspaceId, 500, selectedMaterialId)
       .then((items) => {
@@ -198,7 +192,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     return () => {
       active = false;
     };
-  }, [selectedMaterialId, selectedDepotId, previewLots, previewLotsLimited, previewLotsLoadedForDepot, workspaceId]);
+  }, [selectedMaterialId, workspaceId]);
 
   const activeDepots = useMemo(
     () => data.depots.filter((item) => item.depot.status === 'active'),
@@ -276,8 +270,8 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     };
   }, [selectedDepotId, workspaceId]);
 
-  // One bounded read for all active lot/position expiry indicators in the
-  // visual depot. No listeners and no extra reads when rotating the camera.
+  // Single-field indexed range read for 14-day expiry/expired indicators.
+  // No listeners or extra reads when rotating the camera.
   useEffect(() => {
     let active = true;
     setPreviewLots([]);
@@ -286,7 +280,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     if (!selectedDepotId || !activeLayout || activeLayout.depotId !== selectedDepotId) {
       return () => { active = false; };
     }
-    void listWarehouseLots(workspaceId, 500).then((rows) => {
+    void listWarehouseVisualExpiryLots(workspaceId, 500).then((rows) => {
       if (!active) return;
       setPreviewLots(rows.map((row) => row.lot).filter(
         (lot) => lot.position.kind !== 'UNASSIGNED'
