@@ -42,3 +42,8 @@ export function neighborhoodPages(residents: NeighborhoodResident[], page: numbe
   pageCount: number;
   displayed: NeighborhoodResident[];
 };
+
+export function partitionNeighborhoodResidents(residents: NeighborhoodResident[], founderEmail: string): {
+  founder: NeighborhoodResident | null;
+  neighborhood: NeighborhoodResident[];
+};
