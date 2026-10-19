@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
+import { warehouseApplianceFrontForView, type WarehouseApplianceFace } from '../../../lib/warehouse/applianceOrientation';
+import { WarehouseColdAppliance3D } from './WarehouseColdAppliance3D';
 import {
   fitWarehouseIsometricScene,
   transformWarehouseIsoRectForView,
@@ -312,6 +314,7 @@ function WarehouseStructure({
   highlighted,
   highlightedSubpositions,
   dimmed,
+  applianceFront,
 }: {
   object: WarehouseDepotLayoutObject;
   logicalWidth: number;
@@ -323,6 +326,7 @@ function WarehouseStructure({
   highlighted: boolean;
   highlightedSubpositions: WarehouseLocation[];
   dimmed: boolean;
+  applianceFront: WarehouseApplianceFace;
 }) {
   const kind = canonicalKind(object.kind);
   const z = objectHeight(kind, subpositions.length);
@@ -736,132 +740,29 @@ function WarehouseStructure({
     );
   }
 
-  if (kind === 'FREEZER') {
-    const innerA = isoPoint(object.x + object.width * 0.07, object.y + object.height * 0.08, z + 1.5, logicalWidth, logicalHeight);
-    const innerB = isoPoint(object.x + object.width * 0.93, object.y + object.height * 0.08, z + 1.5, logicalWidth, logicalHeight);
-    const innerC = isoPoint(object.x + object.width * 0.93, object.y + object.height * 0.92, z + 1.5, logicalWidth, logicalHeight);
-    const innerD = isoPoint(object.x + object.width * 0.07, object.y + object.height * 0.92, z + 1.5, logicalWidth, logicalHeight);
-
+  if (kind === 'FREEZER' || kind === 'REFRIGERATOR') {
     return (
       <g
         data-location-id={object.warehouseLocationId || ''}
-        data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
+        data-occupied={occupiedQuantity > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
         opacity={groupOpacity}
         filter={highlightFilter}
       >
-        {contactShadow(object, logicalWidth, logicalHeight, 0.2)}
+        {contactShadow(object, logicalWidth, logicalHeight, kind === 'FREEZER' ? 0.22 : 0.25)}
         {commonHighlight}
-
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#freezerFront)" stroke="#68889f" strokeWidth="1.9" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#freezerSide)" stroke="#68889f" strokeWidth="1.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f9fcfe" stroke="#7694a8" strokeWidth="1.8" />
-
-        <polygon points={polygonPoints([innerA, innerB, innerC, innerD])} fill="url(#freezerGlass)" stroke="#5a9ab8" strokeWidth="1.5" opacity="0.92" />
-        <line x1={innerA.x} y1={innerA.y} x2={innerC.x} y2={innerC.y} stroke="#e4faff" strokeWidth="1.4" opacity="0.86" />
-        <line x1={innerB.x} y1={innerB.y} x2={innerD.x} y2={innerD.y} stroke="#e4faff" strokeWidth="1.4" opacity="0.86" />
-
-        <rect x={centerTop.x - 18} y={centerTop.y + 31} width="36" height="7" rx="2.5" fill="#486478" stroke="#314b5e" strokeWidth="0.8" />
-        <rect x={centerTop.x + 28} y={centerTop.y + 19} width="23" height="13" rx="3" fill="#163a57" stroke="#7296ad" strokeWidth="0.9" />
-        <rect x={centerTop.x + 32} y={centerTop.y + 22} width="8" height="3" rx="1" fill="#62dcff" />
-
-        {Array.from({ length: 6 }, (_, index) => (
-          <line
-            key={'vent-' + index}
-            x1={centerTop.x - 45 + index * 8}
-            y1={centerTop.y + 48}
-            x2={centerTop.x - 40 + index * 8}
-            y2={centerTop.y + 48}
-            stroke="#7893a5"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-          />
-        ))}
-
-        {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-          boxGroup('freezer-box-' + index, centerTop.x + (index ? 22 : -18), centerTop.y + 12, 0.6, highlighted)
-        )}
-
-        {renderLabel(
-          centerTop,
-          code,
-          'Freezer industrial',
-          subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
-          highlighted,
-          0,
-          -8
-        )}
-      </g>
-    );
-  }
-
-  if (kind === 'REFRIGERATOR') {
-    const frontBottomLeft = d;
-    const frontBottomRight = c;
-    const frontTopLeft = dt;
-    const frontTopRight = ct;
-    const doorSplitBottom = isoPoint(object.x + object.width / 2, object.y + object.height, 4, logicalWidth, logicalHeight);
-    const doorSplitTop = isoPoint(object.x + object.width / 2, object.y + object.height, z - 4, logicalWidth, logicalHeight);
-
-    return (
-      <g
-        data-location-id={object.warehouseLocationId || ''}
-        data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
-        data-highlighted={highlighted ? 'true' : 'false'}
-        opacity={groupOpacity}
-        filter={highlightFilter}
-      >
-        {contactShadow(object, logicalWidth, logicalHeight, 0.22)}
-        {commonHighlight}
-
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#fridgeStainlessDoor)" stroke="#526875" strokeWidth="2.2" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#fridgeStainlessSide)" stroke="#526875" strokeWidth="2" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#fridgeStainlessTop)" stroke="#526875" strokeWidth="1.9" />
-
-        <polygon
-          points={polygonPoints([frontBottomLeft, frontBottomRight, frontTopRight, frontTopLeft])}
-          fill="url(#fridgeStainlessDoor)"
-          stroke="#607783"
-          strokeWidth="1.45"
-          opacity="0.98"
+        <WarehouseColdAppliance3D
+          object={object}
+          z={z}
+          kind={kind}
+          front={applianceFront}
+          project={(px, py, pz) => isoPoint(px, py, pz, logicalWidth, logicalHeight)}
+          occupied={occupiedQuantity > 0}
         />
-        <line x1={doorSplitBottom.x} y1={doorSplitBottom.y} x2={doorSplitTop.x} y2={doorSplitTop.y} stroke="#6f8792" strokeWidth="2.4" opacity="0.9" />
-
-        {[0.18, 0.38, 0.58, 0.78].map((ratio) => {
-          const p1 = isoPoint(object.x, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
-          const p2 = isoPoint(object.x + object.width, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
-          return (
-            <g key={'fridge-brush-' + ratio}>
-              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f8fafc" strokeWidth="1.25" opacity="0.52" />
-              <line x1={p1.x} y1={p1.y + 1.8} x2={p2.x} y2={p2.y + 1.8} stroke="#9aa9b1" strokeWidth="0.65" opacity="0.42" />
-            </g>
-          );
-        })}
-
-        <line x1={frontTopLeft.x + 8} y1={frontTopLeft.y + 13} x2={frontBottomLeft.x + 8} y2={frontBottomLeft.y - 8} stroke="#ffffff" strokeWidth="2.4" opacity="0.5" />
-        <line x1={frontTopRight.x - 8} y1={frontTopRight.y + 13} x2={frontBottomRight.x - 8} y2={frontBottomRight.y - 8} stroke="#8799a2" strokeWidth="1.5" opacity="0.62" />
-
-        <rect x={centerTop.x + 27} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4d5d65" stroke="#c7d0d5" strokeWidth="0.7" />
-        <rect x={centerTop.x - 32} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4d5d65" stroke="#c7d0d5" strokeWidth="0.7" />
-
-        <rect x={centerTop.x - 29} y={centerTop.y - 2} width="58" height="13" rx="3" fill="#2f414b" stroke="#aebbc2" strokeWidth="0.9" />
-        <circle cx={centerTop.x - 17} cy={centerTop.y + 4.5} r="2.5" fill="#58d8e8" />
-        <rect x={centerTop.x - 8} y={centerTop.y + 2} width="18" height="5" rx="1.5" fill="#a8edf2" opacity="0.88" />
-
-        {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
-          boxGroup(
-            'fridge-box-' + index,
-            centerTop.x + (index - 1) * 17,
-            centerTop.y + 44 + (index % 2) * 14,
-            0.5,
-            highlighted
-          )
-        )}
-
         {renderLabel(
           centerTop,
           code,
-          'Geladeira industrial',
+          kind === 'FREEZER' ? 'Freezer industrial' : 'Geladeira industrial',
           subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
           highlighted,
           0,
@@ -1091,12 +992,16 @@ export function WarehouseIsometricPreview({
     () =>
       objects
         .filter((object) => object.kind !== 'WALL' && object.kind !== 'CORRIDOR')
-        .map((object) => transformWarehouseIsoRectForView(
-          object,
-          logicalWidth,
-          logicalHeight,
-          previewView
-        ))
+        .map((object) => ({
+          ...transformWarehouseIsoRectForView(
+            object,
+            logicalWidth,
+            logicalHeight,
+            previewView
+          ),
+          // Physical door normal is derived BEFORE rotating the room.
+          applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView),
+        }))
         .sort((left, right) => {
           const leftDepth = left.x + left.y + left.layer * 0.001;
           const rightDepth = right.x + right.y + right.layer * 0.001;
@@ -1515,6 +1420,7 @@ export function WarehouseIsometricPreview({
                     highlighted={highlighted}
                     highlightedSubpositions={highlightedSubpositions}
                     dimmed={hasActiveSelection && !highlighted}
+                    applianceFront={object.applianceFront}
                   />
                 );
               })}
