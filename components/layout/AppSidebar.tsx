@@ -121,132 +121,153 @@ export function AppSidebar({
           </section>
 
           <nav className="emprovex-sidebar-nav px-3" aria-label="Navegação principal">
-            <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
-              Navegação
+            <div className="emprovex-sidebar-nav__label px-4 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
+              Áreas de trabalho
             </div>
 
-            <button
-              onClick={() => onNavigate('inicio')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'inicio' ? 'true' : 'false'}
-              aria-current={activeTab === 'inicio' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <Home className="w-5 h-5" aria-hidden="true" />
-              <span>Início</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('painel')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'painel' ? 'true' : 'false'}
-              aria-current={activeTab === 'painel' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <Layers className="w-5 h-5" aria-hidden="true" />
-              <span>Painel</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('empenhos')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'true' : 'false'}
-              aria-current={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <FileSpreadsheet className="w-5 h-5" aria-hidden="true" />
-              <span>Empenhos</span>
-            </button>
-
-            <button
-              data-testid="nav-fornecedores"
-              onClick={() => onNavigate('fornecedores')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'fornecedores' ? 'true' : 'false'}
-              aria-current={activeTab === 'fornecedores' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <Building2 className="w-5 h-5" aria-hidden="true" />
-              <span>Fornecedores</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('itens')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'itens' ? 'true' : 'false'}
-              aria-current={activeTab === 'itens' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <Package className="w-5 h-5" aria-hidden="true" />
-              <span>Consulta de Itens</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('nova_nf')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'nova_nf' ? 'true' : 'false'}
-              aria-current={activeTab === 'nova_nf' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <FileText className="w-5 h-5" aria-hidden="true" />
-              <span>Notas Fiscais</span>
-            </button>
-
-            <button
-              data-testid="nav-avisos"
-              onClick={() => onNavigate('avisos')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'avisos' ? 'true' : 'false'}
-              aria-current={activeTab === 'avisos' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <BellRing className="w-5 h-5" aria-hidden="true" />
-              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                <span>Central de Avisos</span>
-                {noticeCount > 0 && (
-                  <span
-                    className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white"
-                    aria-label={`${noticeCount} aviso(s) pendente(s)`}
-                  >
-                    {noticeCount > 99 ? '99+' : noticeCount}
-                  </span>
-                )}
-              </span>
-            </button>
-
-            <button
-              data-testid="nav-relatorios"
-              onClick={() => onNavigate('relatorios')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'relatorios' ? 'true' : 'false'}
-              aria-current={activeTab === 'relatorios' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <TrendingUp className="w-5 h-5" aria-hidden="true" />
-              <span>Relatórios</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('cronogramas')}
-              className="emprovex-sidebar-nav-item"
-              data-active={activeTab === 'cronogramas' ? 'true' : 'false'}
-              aria-current={activeTab === 'cronogramas' ? 'page' : undefined}
-            >
-              <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-              <CalendarDays className="w-5 h-5" aria-hidden="true" />
-              <span>Cronogramas</span>
-            </button>
-
-            {warehouseModuleEnabled && onOpenWarehouse && (
+            <div className="emprovex-sidebar-nav-group" role="group" aria-label="Visão geral" data-nav-group="overview">
+              <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
+                <span>Visão geral</span>
+              </div>
               <button
-                data-testid="nav-central-depositos"
-                onClick={onOpenWarehouse}
+                onClick={() => onNavigate('inicio')}
                 className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'inicio' ? 'true' : 'false'}
+                aria-current={activeTab === 'inicio' ? 'page' : undefined}
               >
                 <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
-                <Boxes className="w-5 h-5" aria-hidden="true" />
-                <span>Central de Depósitos</span>
+                <Home className="w-5 h-5" aria-hidden="true" />
+                <span>Início</span>
               </button>
+
+              <button
+                onClick={() => onNavigate('painel')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'painel' ? 'true' : 'false'}
+                aria-current={activeTab === 'painel' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <Layers className="w-5 h-5" aria-hidden="true" />
+                <span>Painel</span>
+              </button>
+            </div>
+
+            <div className="emprovex-sidebar-nav-group" role="group" aria-label="Gestão de empenhos" data-nav-group="management">
+              <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
+                <span>Gestão de empenhos</span>
+              </div>
+              <button
+                onClick={() => onNavigate('empenhos')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'true' : 'false'}
+                aria-current={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <FileSpreadsheet className="w-5 h-5" aria-hidden="true" />
+                <span>Empenhos</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('nova_nf')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'nova_nf' ? 'true' : 'false'}
+                aria-current={activeTab === 'nova_nf' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <FileText className="w-5 h-5" aria-hidden="true" />
+                <span>Notas Fiscais</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('itens')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'itens' ? 'true' : 'false'}
+                aria-current={activeTab === 'itens' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <Package className="w-5 h-5" aria-hidden="true" />
+                <span>Consulta de Itens</span>
+              </button>
+
+              <button
+                data-testid="nav-fornecedores"
+                onClick={() => onNavigate('fornecedores')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'fornecedores' ? 'true' : 'false'}
+                aria-current={activeTab === 'fornecedores' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <Building2 className="w-5 h-5" aria-hidden="true" />
+                <span>Fornecedores</span>
+              </button>
+            </div>
+
+            <div className="emprovex-sidebar-nav-group" role="group" aria-label="Acompanhamento" data-nav-group="follow-up">
+              <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
+                <span>Acompanhamento</span>
+              </div>
+              <button
+                onClick={() => onNavigate('cronogramas')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'cronogramas' ? 'true' : 'false'}
+                aria-current={activeTab === 'cronogramas' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <CalendarDays className="w-5 h-5" aria-hidden="true" />
+                <span>Cronogramas</span>
+              </button>
+
+              <button
+                data-testid="nav-relatorios"
+                onClick={() => onNavigate('relatorios')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'relatorios' ? 'true' : 'false'}
+                aria-current={activeTab === 'relatorios' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <TrendingUp className="w-5 h-5" aria-hidden="true" />
+                <span>Relatórios</span>
+              </button>
+
+              <button
+                data-testid="nav-avisos"
+                onClick={() => onNavigate('avisos')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'avisos' ? 'true' : 'false'}
+                aria-current={activeTab === 'avisos' ? 'page' : undefined}
+              >
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                <BellRing className="w-5 h-5" aria-hidden="true" />
+                <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <span>Central de Avisos</span>
+                  {noticeCount > 0 && (
+                    <span
+                      className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white"
+                      aria-label={`${noticeCount} aviso(s) pendente(s)`}
+                    >
+                      {noticeCount > 99 ? '99+' : noticeCount}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </div>
+
+            {warehouseModuleEnabled && onOpenWarehouse && (
+              <div className="emprovex-sidebar-nav-group emprovex-sidebar-nav-group--warehouse" role="group" aria-label="Central de Depósitos" data-nav-group="warehouse">
+                <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
+                  <span>Gestão de depósitos</span>
+                </div>
+                <p className="emprovex-sidebar-nav-group__description">Estoque, localização e movimentações</p>
+                <button
+                  data-testid="nav-central-depositos"
+                  onClick={onOpenWarehouse}
+                  className="emprovex-sidebar-nav-item"
+                >
+                  <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
+                  <Boxes className="w-5 h-5" aria-hidden="true" />
+                  <span>Central de Depósitos</span>
+                </button>
+              </div>
             )}
           </nav>
         </div>

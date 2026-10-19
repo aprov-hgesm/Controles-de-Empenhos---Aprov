@@ -22,7 +22,6 @@ import { LegalAcceptanceGate } from '../components/legal/LegalAcceptanceGate';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
-import { HGESM_WORKSPACE_ID } from '../lib/hgesmWorkspace';
 
 const OperationalWorkspace = lazy(() =>
   import('../features/operational/components/OperationalWorkspace').then((module) => ({
@@ -245,7 +244,7 @@ export default function Home() {
       <AppHeader
         customLogo={customLogo}
         syncing={syncing || !activeOperationalDataReady}
-        userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+        userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
         workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
         onOpenAccount={
@@ -261,7 +260,7 @@ export default function Home() {
         <AppSidebar
           activeTab={activeTab}
           open={sidebarOpen}
-          userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+          userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
           noticeCount={pendingNoticeCount}
           onClose={() => setSidebarOpen(false)}
           onNavigate={(tab) => {
@@ -279,11 +278,7 @@ export default function Home() {
               showToast('Erro ao sair do sistema', 'error');
             }
           }}
-          warehouseModuleEnabled={
-            canAccessWarehouseModule(workspaceContext)
-            && workspaceContext.status === 'sector'
-            && workspaceContext.workspaceId === HGESM_WORKSPACE_ID
-          }
+          warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
           onOpenWarehouse={() => {
             window.location.assign('/central-depositos');
           }}

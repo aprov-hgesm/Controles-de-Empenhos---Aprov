@@ -14,6 +14,7 @@ try {
   execFileSync(process.execPath, [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/isometricCamera.ts'),
+    resolve(root, 'lib/warehouse/applianceOrientation.ts'),
     '--outDir', out,
     '--module', 'commonjs',
     '--target', 'ES2020',
@@ -32,6 +33,11 @@ const {
   warehouseIsoRoomDimensions,
   transformWarehouseIsoRectForView,
 } = require(resolve(out, 'isometricCamera.js'));
+const {
+  warehouseApplianceFrontalAxis,
+  warehouseApplianceFrontForView,
+  warehouseApplianceVisiblePanel,
+} = require(resolve(out, 'applianceOrientation.js'));
 
 const EPS = 0.00001;
 
@@ -233,4 +239,58 @@ test('renderer usa largura e profundidade rotacionadas em piso, paredes, ilumina
   assert.doesNotMatch(preview, /function transformObjectForView\(/);
   assert.match(preview, /subpositionsByParent\.get\(location\.id\)/);
   assert.match(preview, /highlightedSubpositionIds\.has\(candidate\.id\)/);
+});
+
+
+test('geladeira usa lado horizontal maior como frente física, sem alterar o croqui salvo', () => {
+  assert.equal(warehouseApplianceFrontalAxis(180, 80), 'y');
+  assert.equal(warehouseApplianceFrontalAxis(80, 180), 'x');
+  assert.equal(warehouseApplianceFrontalAxis(120, 120), 'y');
+  const wide={x:10,y:20,width:180,height:80};
+  const tall={x:15,y:33,width:70,height:150};
+  for(const box of [wide,tall]){
+    const original=JSON.stringify(box);
+    for(const view of VIEWS){
+      const dims=warehouseIsoRoomDimensions(600,450,view);
+      const result=transformWarehouseIsoRectForView(box,600,450,view);
+      assert.ok(result.width>0&&result.height>0);
+      assert.equal(result.width*result.height,box.width*box.height);
+      assert.ok(result.x>=0&&result.y>=0);
+      assert.ok(result.x+result.width<=dims.width);
+      assert.ok(result.y+result.height<=dims.height);
+      assert.ok(['front','rear','side'].includes(warehouseApplianceVisiblePanel('y+',warehouseApplianceFrontForView(box.width,box.height,view))));
+      assert.ok(['front','rear','side'].includes(warehouseApplianceVisiblePanel('x+',warehouseApplianceFrontForView(box.width,box.height,view))));
+    }
+    assert.equal(JSON.stringify(box),original);
+  }
+});
+
+test('quatro perspectivas preservam portas no plano real e traseira no lado oposto', () => {
+  const wide=['y+','x+','y-','x-'];
+  const narrow=['x+','y-','x-','y+'];
+  for(const [i,view] of VIEWS.entries()){
+    assert.equal(warehouseApplianceFrontForView(170,75,view),wide[i],view);
+    assert.equal(warehouseApplianceFrontForView(75,170,view),narrow[i],view);
+  }
+  for(const physicalFace of ['x+','y+','x-','y-']){
+    const active=['x+','y+'].filter(face=>warehouseApplianceVisiblePanel(face,physicalFace)==='front');
+    const back=['x+','y+'].filter(face=>warehouseApplianceVisiblePanel(face,physicalFace)==='rear');
+    assert.equal(active.length,physicalFace.endsWith('+')?1:0);
+    assert.equal(back.length,physicalFace.endsWith('-')?1:0);
+  }
+});
+
+test('renderer premium aplica orientação física e detalhes 3D reais em todas as vistas', () => {
+  const preview=readFileSync(resolve(root,'features/warehouse/components/WarehouseIsometricPreview.tsx'),'utf8');
+  const renderer=readFileSync(resolve(root,'features/warehouse/components/WarehouseColdAppliance3D.tsx'),'utf8');
+  assert.match(preview,/warehouseApplianceFrontForView\(object\.width, object\.height, previewView\)/);
+  assert.match(preview,/<WarehouseColdAppliance3D/);
+  assert.match(preview,/applianceFront=\{object\.applianceFront\}/);
+  assert.match(renderer,/warehouseApplianceVisiblePanel\(side,front\)/);
+  assert.match(renderer,/data-appliance-detail="refrigerator-double-door"/);
+  assert.match(renderer,/data-appliance-detail="freezer-glazed-lid"/);
+  assert.match(renderer,/data-appliance-detail="compressor-rear"/);
+  assert.match(renderer,/data-appliance-detail="insulated-side"/);
+  assert.match(renderer,/data-front-face=\{front\}/);
+  assert.doesNotMatch(renderer,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
 });

@@ -40,3 +40,47 @@ test('one canonical modular beam, mobile motion safety, focus and contrast prote
   assert.match(css, /display: none !important/);
   assert.match(css, /mask-composite: exclude/);
 });
+
+
+test('sidebar navigation follows operational workflow, preserving the ten native destinations', () => {
+  const sidebar = read('components/layout/AppSidebar.tsx');
+  const css = read('app/globals.css');
+  const nav = sidebar.slice(sidebar.indexOf('<nav className="emprovex-sidebar-nav'), sidebar.indexOf('</nav>'));
+  const groups = ['overview', 'management', 'follow-up', 'warehouse'];
+  let previousGroup = -1;
+  for (const id of groups) {
+    const at = nav.indexOf('data-nav-group="' + id + '"');
+    assert.ok(at > previousGroup, 'sidebar group absent or unordered: ' + id);
+    previousGroup = at;
+  }
+  const orderedTabs = ['inicio', 'painel', 'empenhos', 'nova_nf', 'itens', 'fornecedores', 'cronogramas', 'relatorios', 'avisos'];
+  let previousItem = -1;
+  for (const id of orderedTabs) {
+    const at = nav.indexOf("onNavigate('" + id + "')");
+    assert.ok(at > previousItem, 'navigation must follow workflow: ' + id);
+    previousItem = at;
+  }
+  assert.equal((nav.match(/className="emprovex-sidebar-nav-item"/g) ?? []).length, 10);
+  assert.equal((nav.match(/data-emprovex-nav-beam="true"/g) ?? []).length, 10);
+  assert.match(nav, /warehouseModuleEnabled && onOpenWarehouse && \(/);
+  assert.match(nav, /data-testid="nav-central-depositos"/);
+  assert.match(css, /\.emprovex-sidebar-nav-group--warehouse/);
+  assert.match(css, /\.emprovex-sidebar-nav-group__heading/);
+});
+
+test('external sectors regain warehouse shortcut without bypassing authorization', () => {
+  const page = read('app/page.tsx');
+  const access = read('lib/platformModuleAccess.ts');
+  const boundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
+  assert.match(page, /warehouseModuleEnabled=\{canAccessWarehouseModule\(workspaceContext\)\}/);
+  assert.match(page, /workspaceContext\.status === 'sector' \? workspaceContext\.workspaceName/);
+  assert.doesNotMatch(page, /user\?\.displayName \|\| 'Aprovisionamento HGeSM'/);
+  assert.doesNotMatch(page, /workspaceContext\.workspaceId === HGESM_WORKSPACE_ID/);
+  assert.match(access, /context\.status === 'sector'/);
+  assert.match(access, /context\.canLoadOperationalData/);
+  assert.match(access, /Boolean\(context\.workspaceId\)/);
+  assert.match(boundary, /canAccessWarehouseModule\(context\)/);
+  assert.match(boundary, /requestWarehouseStatus\(currentUser/);
+  assert.match(boundary, /authorization\.status\.workspaceId !== context\.workspaceId/);
+  assert.match(boundary, /setGateState\('allowed'\)/);
+});
