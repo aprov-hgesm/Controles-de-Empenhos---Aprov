@@ -143,8 +143,8 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
               active={props.globalUsageConfigured === true}
             />
             <SourceBadge
-              label="UG instrumentada"
-              value={props.usage.some((item) => item.hasTelemetry) ? 'Com dados' : 'Sem amostra'}
+              label="Dados por unidade"
+              value={props.usage.some((item) => item.hasTelemetry) ? 'Com medição' : 'Sem medição'}
               active={props.usage.some((item) => item.hasTelemetry)}
             />
           </div>
