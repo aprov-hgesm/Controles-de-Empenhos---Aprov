@@ -37,7 +37,7 @@ function FacadeWindow({project,x,z,height,face,lit,seed}:{
     <g aria-hidden="true">
       <CityPolygon project={project} points={outline} fill="#f2f8f8" opacity={.98}/>
       <CityPolygon project={project} points={outline.map(([px,pz,ph])=>[px+(face==='front' ? (px===x?.85:-.85) : 0),pz+(face==='side' ? (pz===z?.85:-.85) : 0),(ph||0)+(ph===height?.9:-.9)] as Point3)}
-        fill={glass} opacity={shine?1:.95}/>
+        fill={glass} opacity={shine?1:.95} className={shine?styles.litWindow:undefined}/>
       {shine && <CityPolygon project={project} points={outline} fill="#ffd27d" opacity={.18} />}
     </g>
   );
@@ -121,7 +121,7 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
           <CityPolygon project={project} points={[[x+w*.16,frontZ-2,32],[x+w*.74,frontZ-2,32],[x+w*.74,frontZ+17,32],[x+w*.16,frontZ+17,32]]}
             fill="#e2ede7" stroke="#c4dfd6"/>
           <CityPolygon project={project} points={[[x+w*.29,frontZ+2,6],[x+w*.59,frontZ+2,6],[x+w*.59,frontZ+2,26],[x+w*.29,frontZ+2,26]]}
-            fill="#ffd096" opacity={.85}/>
+            fill="#b1e9ff" opacity={.85}/>
         </g>
       ):(
         <CityPolygon project={project} points={[[x+w*.38,frontZ+1,0],[x+w*.64,frontZ+1,0],[x+w*.64,frontZ+1,18],[x+w*.38,frontZ+1,18]]}
