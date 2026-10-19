@@ -68,12 +68,12 @@ export function AdminUsagePanel({
         <div>
           <div className="mb-2 flex items-center gap-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-cyan-200/65">
             <Gauge className="h-4 w-4" />
-            Bloco 16.3 · telemetria por UG
+            Informações por unidade
           </div>
-          <h3 className="text-lg font-extrabold text-white">Consumo estimado por UG</h3>
+          <h3 className="text-lg font-extrabold text-white">Quais unidades usam mais o EMPROVEX?</h3>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            Atribuição interna do EMPROVEX. Estes números não são a cobrança oficial do Firebase;
-            o consumo global real continuará separado e será integrado via Cloud Monitoring.
+            Acompanhe a atividade registrada pelo EMPROVEX para cada UG (código da unidade).
+            Estes valores são estimativas internas, não uma cobrança do Google.
           </p>
         </div>
 
@@ -91,24 +91,43 @@ export function AdminUsagePanel({
       </div>
 
       <div className="space-y-4 p-5 sm:p-6">
+        <div className="rounded-xl border border-[#ccddf0] bg-[#eff6ff] px-4 py-3" data-testid="admin-ug-simple-guide">
+          <p className="text-xs font-extrabold text-[#215388]">Como entender estes números</p>
+          <p className="mt-1 text-xs leading-6 text-[#496784]">
+            <strong>Leituras</strong> são consultas de informações.
+            <strong> Gravações</strong> são registros ou alterações salvas.
+            <strong> Exclusões</strong> são documentos apagados.
+            Atualizações em tempo real aparecem separadas porque algumas telas acompanham os dados continuamente.
+          </p>
+          <p className="mt-1 text-xs leading-6 text-[#496784]">
+            <strong>Importante:</strong> números sem medição não significam ausência de uso.
+            A contagem por UG não corresponde diretamente à fatura do Google.
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Reads atribuídos hoje</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Leituras estimadas hoje</p>
             <p data-testid="admin-usage-total-reads" className="mt-1 text-xl font-black text-white">
               {formatCount(totalReads)}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Writes atribuídos hoje</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Gravações estimadas hoje</p>
             <p className="mt-1 text-xl font-black text-white">{formatCount(totalWrites)}</p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Fonte</p>
-            <p className="mt-1 font-mono text-[10px] font-extrabold text-cyan-100">
-              emprovex-workspace-estimate
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Origem dos dados</p>
+            <p className="mt-1 text-xs font-bold text-cyan-100">
+              Medições internas do EMPROVEX
             </p>
           </div>
         </div>
+
+        {usage.length === 0 && !loading && !error && (
+          <p className="text-xs leading-6 text-[#627b98]">
+            Ainda não há medições por UG nesta consulta. Os totais acima não comprovam consumo zero.
+          </p>
+        )}
 
         {error && (
           <div className="rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-4 py-3 text-xs text-rose-100">
@@ -146,17 +165,19 @@ export function AdminUsagePanel({
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-500">
-                    Última consolidação: {formatDateTime(estimate?.lastReportedAt || null)}
+                    {estimate
+                      ? 'Última atualização da medição: ' + formatDateTime(estimate.lastReportedAt)
+                      : 'Ainda não há medição disponível para esta UG.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
-                  <Metric label="Reads" value={estimate?.estimatedDocumentReads || 0} icon={<Database className="h-3.5 w-3.5" />} />
-                  <Metric label="Writes" value={estimate?.estimatedDocumentWrites || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Deletes" value={estimate?.estimatedDocumentDeletes || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Snapshots" value={estimate?.realtimeSnapshots || 0} icon={<Activity className="h-3.5 w-3.5" />} />
-                  <Metric label="Carga pico listeners*" value={estimate?.peakRealtimeListeners || 0} icon={<Gauge className="h-3.5 w-3.5" />} />
-                  <Metric label="Flushes" value={estimate?.telemetryFlushes || 0} icon={<RefreshCw className="h-3.5 w-3.5" />} />
+                  <Metric label="Leituras" detail="Consultas de documentos" value={estimate?.estimatedDocumentReads ?? null} icon={<Database className="h-3.5 w-3.5" />} />
+                  <Metric label="Gravações" detail="Dados salvos ou alterados" value={estimate?.estimatedDocumentWrites ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Exclusões" detail="Documentos apagados" value={estimate?.estimatedDocumentDeletes ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Atualizações recebidas" detail="Mudanças vistas em tempo real" value={estimate?.realtimeSnapshots ?? null} icon={<Activity className="h-3.5 w-3.5" />} />
+                  <Metric label="Pico de observadores*" detail="Maior carga de consultas acompanhadas" value={estimate?.peakRealtimeListeners ?? null} icon={<Gauge className="h-3.5 w-3.5" />} />
+                  <Metric label="Envios de medição" detail="Vezes em que o uso foi consolidado" value={estimate?.telemetryFlushes ?? null} icon={<RefreshCw className="h-3.5 w-3.5" />} />
                 </div>
               </div>
             </div>
@@ -164,9 +185,8 @@ export function AdminUsagePanel({
         </div>
 
         <p className="text-[10px] leading-relaxed text-slate-500">
-          * “Carga pico listeners” é uma atribuição conservadora somada por cliente/aba e não representa
-          conexões simultâneas oficiais do Firebase. A telemetria é agregada no cliente e consolidada
-          com baixa frequência para não gerar um custo relevante por conta própria.
+          * O pico de observadores é estimado por tela e não informa exatamente quantas pessoas estão conectadas.
+          Os registros são agrupados periodicamente para evitar leituras extras desnecessárias.
         </p>
       </div>
     </section>
@@ -175,11 +195,13 @@ export function AdminUsagePanel({
 
 function Metric({
   label,
+  detail,
   value,
   icon,
 }: {
   label: string;
-  value: number;
+  detail: string;
+  value: number | null;
   icon: React.ReactNode;
 }) {
   return (
@@ -188,7 +210,8 @@ function Metric({
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-sm font-black text-slate-100">{formatCount(value)}</div>
+      <div className="mt-1 text-sm font-black text-slate-100">{value === null ? 'Sem medição' : formatCount(value)}</div>
+      <p className="mt-1 text-[10px] leading-4 text-slate-500">{detail}</p>
     </div>
   );
 }
