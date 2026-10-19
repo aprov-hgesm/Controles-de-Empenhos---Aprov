@@ -2,13 +2,14 @@
 
 import type { NeighborhoodResident } from '../../lib/adminNeighborhoodModel.mjs';
 import {
-  CityBuilding, CityLamp, CityMailbox, CityPolygon, CityTree, CityWaterTower,
+  CityBuilding, CityBuildingLabel, CityLamp, CityMailbox, CityPolygon, CityTree, CityWaterTower,
   type CityPlot, type CityProject,
 } from './AdminWorldArchitecture';
 import styles from './AdminWorldHomePanel.module.css';
 
 type Props = {
   residents: NeighborhoodResident[];
+  founder: NeighborhoodResident | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
   waterLevel: number;
@@ -18,8 +19,8 @@ type Props = {
   zoom: number;
 };
 
-// Exactly nine real-user buildings per visible district; the other structures
-// are unassigned architectural scenery. Neither greenery nor skyline creates fake users.
+// Nine possible outer user buildings per page. Unassigned lots remain EMPTY.
+// The central HGeSM account is rendered separately and never duplicated.
 const USER_PLOT_INDICES = [0,3,12,14,2,10,6,9,8] as const;
 
 export const DISTRICT_PLOTS: CityPlot[] = [
@@ -49,7 +50,9 @@ function sceneryObjects(residents:NeighborhoodResident[]):SceneryObject[] {
   const byPlot=new Map<number,NeighborhoodResident|undefined>(
     USER_PLOT_INDICES.map((index,i):[number,NeighborhoodResident|undefined]=>[index,residents[i]])
   );
-  const out:SceneryObject[]=buildings.map(b=>({...b,resident:byPlot.get(b.seed)}));
+  // No resident means no building, no inactive scenic building and no mailbox.
+  const out:SceneryObject[]=buildings.filter(b=>Boolean(byPlot.get(b.seed)))
+    .map(b=>({...b,resident:byPlot.get(b.seed)}));
   out.push({kind:'center',x:390,z:392,seed:39,plot:central});
   out.push({kind:'tower',x:148,z:478,seed:20});
   // Tree-lined avenues, private garden clusters, perimeter hedges.
@@ -88,7 +91,8 @@ function sceneryObjects(residents:NeighborhoodResident[]):SceneryObject[] {
     }
   }
   for(const b of DISTRICT_PLOTS) {
-    out.push({kind:'mail',x:b.x+b.w-5,z:b.z+b.d+14,seed:b.seed});
+    if(byPlot.has(b.seed) && byPlot.get(b.seed))
+      out.push({kind:'mail',x:b.x+b.w-5,z:b.z+b.d+14,seed:b.seed});
   }
   return out.sort((a,b)=>(a.x+a.z)-(b.x+b.z) ||
     (a.kind==='building'?1:-1)-(b.kind==='building'?1:-1));
@@ -153,7 +157,7 @@ function CurbedBlock({project,plot}:{
 }
 
 export function AdminWorldScene({
-  residents,selectedId,onSelect,waterLevel,waterKnown,waterExceeded,viewAngle,zoom,
+  residents,founder,selectedId,onSelect,waterLevel,waterKnown,waterExceeded,viewAngle,zoom,
 }:Props) {
   const project:CityProject=(x,z,h=0)=>{
     const a=viewAngle*Math.PI/180;
@@ -163,6 +167,10 @@ export function AdminWorldScene({
     return [600+(rx-rz)*.774,100+(rx+rz)*.325-h*.95];
   };
   const items=sceneryObjects(residents);
+  const assigned = USER_PLOT_INDICES.slice(0,residents.length).map((plotIndex,i)=>({
+    plot:DISTRICT_PLOTS[plotIndex],resident:residents[i],
+  }));
+  const occupiedPlotIndices = new Set(assigned.map(({plot})=>plot.seed));
   const corners=[
     project(24,24),project(776,24),project(776,776),project(24,776),
   ];
@@ -235,19 +243,39 @@ export function AdminWorldScene({
         <CityPolygon project={project} points={[[316,359],[465,359],[465,419],[316,419]]}
           fill="#c5d5cb" opacity={.7}/>
         {DISTRICT_PLOTS.map(plot=><CurbedBlock key={plot.seed} project={project} plot={plot}/>)}
+        {/* Only empty plot foundations are shown until an actual account occupies them. */}
+        {DISTRICT_PLOTS.filter(plot=>!occupiedPlotIndices.has(plot.seed)).map(plot=>{
+          const inset=12;
+          const x=plot.x+inset, z=plot.z+inset, w=plot.w-2*inset, d=plot.d-2*inset;
+          const [cx,cy]=project(plot.x+plot.w/2,plot.z+plot.d/2,1);
+          return <g key={'vacant-'+plot.seed} data-testid="admin-world-vacant-lot"
+            data-plot-index={plot.seed} aria-label="Lote reservado para futuro usuário">
+            <title>Lote vazio — aguardando cadastro de usuário</title>
+            <CityPolygon project={project} points={[[x,z,1],[x+w,z,1],[x+w,z+d,1],[x,z+d,1]]}
+              fill="#9dbb96" opacity={.47} stroke="#deebe0" strokeWidth={1.3}/>
+            <circle cx={cx} cy={cy} r="9" fill="#527e77" opacity={.8}/>
+            <path d={'M '+(cx-4)+' '+cy+' h 8 M '+cx+' '+(cy-4)+' v 8'}
+              stroke="#e5f5e9" strokeWidth="1.5" strokeLinecap="round"/>
+          </g>;
+        })}
         {/* 3D structures and vegetation are painter-sorted for correct overlap. */}
         {items.map((item,i)=>{
           if(item.kind==='building'&&item.plot) return <CityBuilding key={'building'+item.seed}
             project={project} plot={item.plot} resident={item.resident}
             selected={item.resident?.id===selectedId} onSelect={onSelect}/>;
           if(item.kind==='center'&&item.plot) return <CityBuilding key="emprovex-central" project={project}
-            plot={item.plot} central/>;
+            plot={item.plot} central resident={founder||undefined}
+            selected={founder?.id===selectedId} onSelect={onSelect}/>;
           if(item.kind==='tower') return <CityWaterTower key="firestore" project={project}
             level={waterLevel} known={waterKnown} exceeded={waterExceeded}/>;
           if(item.kind==='tree')return <CityTree key={'tree'+i} project={project} x={item.x} z={item.z} seed={item.seed}/>;
           if(item.kind==='lamp')return <CityLamp key={'lamp'+i} project={project} x={item.x} z={item.z}/>;
           return <CityMailbox key={'mail'+i} project={project} x={item.x} z={item.z}/>;
         })}
+        {/* Topmost pass: all owner names float ABOVE roofs, never at street level. */}
+        {assigned.map(({plot,resident})=><CityBuildingLabel key={'label-'+resident.id}
+          project={project} plot={plot} resident={resident}/>)}
+        <CityBuildingLabel project={project} plot={central} resident={founder||undefined} central/>
       </g>
       <path d="M.5.5 H1199.5 V674.5 H.5 Z" fill="none" stroke="#8ac1cc" strokeOpacity=".13"/>
     </svg>
