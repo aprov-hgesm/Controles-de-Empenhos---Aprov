@@ -1254,6 +1254,8 @@ export function WarehouseIsometricPreview({
             <Sparkles className="h-3.5 w-3.5" /> {embedded ? 'Visão 3D' : 'Prévia 3D'}
           </p>
           <p
+            data-testid={hoveredContents ? 'warehouse-location-hover-status' : undefined}
+            aria-live="polite"
             className={
               embedded
                 ? 'mt-1 text-[10px] font-semibold text-slate-400'
