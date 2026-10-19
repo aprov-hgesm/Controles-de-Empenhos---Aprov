@@ -366,7 +366,7 @@ export function AdminGlobalUsagePanel({
               <div className="mt-5 space-y-4">
                 <QuotaLane
                   label="Leituras contabilizadas (Read Units)"
-                  explanation="Unidades que o Google usa para contabilizar as consultas aos dados; não é a quantidade exata de documentos abertos."
+                  explanation="O Google chama esta medida de Read Units faturáveis. Ela contabiliza consultas, mas não corresponde diretamente ao número de documentos abertos."
                   used={snapshot.billableReadUnits}
                   limit={snapshot.billingReference.readUnitsDailyLimit}
                   primary
@@ -379,7 +379,7 @@ export function AdminGlobalUsagePanel({
                 />
                 <QuotaLane
                   label="Gravações contabilizadas (Write Units)"
-                  explanation="Unidades usadas pelo Google para registrar gravações e alterações, diferentes do total de documentos gravados."
+                  explanation="O Google chama esta medida de Write Units faturáveis. São unidades de cobrança por gravações, não a contagem de documentos alterados."
                   used={snapshot.billableWriteUnits}
                   limit={snapshot.billingReference.writeUnitsDailyLimit}
                 />
