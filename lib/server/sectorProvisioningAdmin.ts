@@ -4,6 +4,7 @@ import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import { buildInitialBillingAccount } from '../billing';
+import { buildCommercialCustomer } from '../admin2/customers/commercialCustomerContract';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
@@ -905,7 +906,8 @@ async function createSectorDirectory(
   result: Pick<SectorProvisioningResult, 'workspace' | 'account'>,
   founder: FounderSession,
   correlationId: string,
-  grantTrial: boolean
+  grantTrial: boolean,
+  commercialInput?: CreateSectorWorkspaceInput['commercialCustomer']
 ): Promise<void> {
   const termCounter = createInitialWorkspaceTermCounter();
   const workspacePath = `workspaces/${result.workspace.id}`;
@@ -926,6 +928,14 @@ async function createSectorDirectory(
     founder.email,
     grantTrial
   );
+  // Cadastro comercial 1:1 faz parte do MESMO commit Firestore.
+  // O fluxo antigo sem commercialCustomer permanece inalterado.
+  const commercialCustomer = commercialInput
+    ? buildCommercialCustomer(result.workspace.id, {
+        ...commercialInput,
+        workspaceId: result.workspace.id,
+      }, founder.email, result.workspace.createdAt)
+    : null;
 
   try {
     await commitFirestoreWrites(accessToken, [
@@ -970,6 +980,13 @@ async function createSectorDirectory(
         },
         currentDocument: { exists: false },
       },
+      ...(commercialCustomer ? [{
+        update: {
+          name: firestoreDocumentName(`platformCustomers/${result.workspace.id}`),
+          fields: toFirestoreFields(commercialCustomer as unknown as Record<string, unknown>),
+        },
+        currentDocument: { exists: false },
+      }] : []),
       serverPlatformAuditWrite({
         operation: 'sector.create',
         workspaceId: result.workspace.id,
@@ -1007,7 +1024,8 @@ async function deleteSectorDirectory(
   accessToken: string,
   workspaceId: string,
   email: string,
-  ug?: string
+  ug?: string,
+  hasCommercialRecord = false
 ): Promise<void> {
   const normalizedUg = normalizeUnitUg(ug);
 
@@ -1022,6 +1040,9 @@ async function deleteSectorDirectory(
   await commitFirestoreWrites(accessToken, [
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
     { delete: firestoreDocumentName(`billingAccounts/${workspaceId}`) },
+    ...(hasCommercialRecord
+      ? [{ delete: firestoreDocumentName(`platformCustomers/${workspaceId}`) }]
+      : []),
     ...(isValidUnitUg(normalizedUg)
       ? [{ delete: firestoreDocumentName(`platformUgIndex/${normalizedUg}`) }]
       : []),
@@ -1492,7 +1513,8 @@ export async function provisionSectorWorkspaceWithAuth(
       },
       founder,
       operationId,
-      input.grantTrial
+      input.grantTrial,
+      input.commercialCustomer
     );
     directoryCreated = true;
 
@@ -1541,7 +1563,7 @@ export async function provisionSectorWorkspaceWithAuth(
 
     if (directoryCreated) {
       try {
-        await deleteSectorDirectory(accessToken, workspaceId, email, ug);
+        await deleteSectorDirectory(accessToken, workspaceId, email, ug, Boolean(input.commercialCustomer));
         directoryCreated = false;
       } catch (rollbackError) {
         recoveryRequired = true;
