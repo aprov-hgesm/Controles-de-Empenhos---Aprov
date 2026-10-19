@@ -1,5 +1,9 @@
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
+  validateCommercialCustomerInput,
+  type CommercialCustomerInput,
+} from './admin2/customers/commercialCustomerContract';
+import {
   SECTOR_AUTH_PROVIDER,
   isValidPlatformEmail,
   isValidUnitUg,
@@ -27,6 +31,8 @@ export interface CreateSectorWorkspaceInput {
   sectionName: string;
   /** Concede o trial comercial padrão no provisionamento. Não interfere no acesso operacional. */
   grantTrial: boolean;
+  /** Contrato comercial 1:1 opcional: somente quando há onboarding unificado. */
+  commercialCustomer?: Omit<CommercialCustomerInput, 'workspaceId'>;
 }
 
 export interface SectorProvisioningResult {
@@ -58,6 +64,12 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
     organizationShortName: optionalString('organizationShortName'),
     sectionName: requiredString('sectionName'),
     grantTrial: typeof source.grantTrial === 'boolean' ? source.grantTrial : true,
+    ...(source.commercialCustomer && typeof source.commercialCustomer === 'object' && !Array.isArray(source.commercialCustomer)
+      ? { commercialCustomer: Object.fromEntries(
+          ['displayName', 'contactName', 'contactEmail', 'contactPhone', 'relationshipStatus', 'relationshipNotes']
+            .map(key => [key, (source.commercialCustomer as Record<string, unknown>)[key]])
+        ) as Omit<CommercialCustomerInput, 'workspaceId'> }
+      : {}),
   };
 }
 
@@ -133,6 +145,20 @@ export function validateSectorProvisioningInput(input: CreateSectorWorkspaceInpu
     );
   }
 
+  if (input.commercialCustomer) {
+    const commercial = input.commercialCustomer;
+    if (input.grantTrial !== true) {
+      errors.push('O onboarding comercial unificado deve iniciar em trial.');
+    }
+    if (Object.values(commercial).some(v => typeof v !== 'string')) {
+      errors.push('Os campos comerciais devem ser textos válidos.');
+    } else {
+      errors.push(...validateCommercialCustomerInput({
+        ...commercial,
+        workspaceId,
+      }));
+    }
+  }
   return errors;
 }
 
