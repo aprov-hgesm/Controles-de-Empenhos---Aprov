@@ -116,7 +116,9 @@ test('isolamento de produção e área operacional permanecem intactos', () => {
   const previewShell = [route, sidebar, preview].join('\n');
   assert.doesNotMatch(previewShell, /from ['"].*(?:operationalPaths|workspaceContext|warehouseAccess|platformBillingStore)['"]/);
   assert.doesNotMatch(customerStore + customerUi + customerV2Read + customerV2Ui, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|signOut)\s*\(/);
-  assert.match(preview, /indicadores ilustrativos/);
+  assert.match(preview, /AdminLegacyCapabilities area={activeId}/);
+  assert.match(preview, /activeId === 'workspaces'/);
+  assert.match(preview, /activeId === 'finance'/);
 });
 
 test('V2 carrega competências e auditoria só nas seções correspondentes', () => {
