@@ -57,6 +57,11 @@ test('gestão comercial separada simula ações com confirmação e não escreve
   assert.match(management, /'pending'/);
   assert.match(management, /'canceled'/);
   assert.match(management, /setOverride/);
-  assert.doesNotMatch(management, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction|grantBillingTrial|setBillingExemption|setBillingCommercialStatus)\s*\(/);
+  assert.match(management, /commercialEmulatorWritesEnabled && !isPreview/);
+  assert.match(management, /grantBillingTrial\(workspace, actor, 30\)/);
+  assert.match(management, /setBillingExemption\(workspace, true, actor\)/);
+  assert.match(management, /setBillingCommercialStatus\(workspace, status, actor\)/);
+  assert.match(management, /setOverride/);
+  assert.doesNotMatch(management, /\b(?:setDoc|updateDoc|deleteDoc|runTransaction)\s*\(/);
   assert.match(management, /Redefinir senha · indisponível/);
 });
