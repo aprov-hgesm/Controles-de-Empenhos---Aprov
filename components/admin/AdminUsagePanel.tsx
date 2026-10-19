@@ -1,5 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
+import { buildUsageReconciliation } from '../../lib/usageReconciliation';
+import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import {
   Activity,
   Database,
@@ -15,6 +18,7 @@ import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 interface AdminUsagePanelProps {
   workspaces: Workspace[];
   usage: AdminWorkspaceUsageEstimate[];
+  globalUsage: FirebaseGlobalUsageSnapshot | null;
   loading: boolean;
   error: string | null;
   onRefresh: () => Promise<void>;
@@ -47,10 +51,17 @@ function formatDateTime(value: string | null): string {
 export function AdminUsagePanel({
   workspaces,
   usage,
+  globalUsage,
   loading,
   error,
   onRefresh,
 }: AdminUsagePanelProps) {
+  // Reutiliza a fotografia global já carregada no Admin; nenhuma leitura extra.
+  // Proxy proporcional somente sobre a parte documentada, nunca faturamento.
+  const reconciliation = useMemo(
+    () => globalUsage ? buildUsageReconciliation(globalUsage, usage) : null,
+    [globalUsage, usage]
+  );
   const rows = workspaces
     .filter((workspace) => workspace.ug)
     .map((workspace) => ({
@@ -189,6 +200,25 @@ export function AdminUsagePanel({
                   <Metric label="Envios de medição" detail="Vezes em que o uso foi consolidado" value={estimate?.telemetryFlushes ?? null} icon={<RefreshCw className="h-3.5 w-3.5" />} />
                 </div>
               </div>
+              {reconciliation?.rows.find(row => row.workspaceId === workspace.id) && (
+                <div className="mt-4 rounded-xl border border-[#d2e0f1] bg-[#f0f6fd] p-3" data-testid={`admin-ug-google-proxy-${workspace.id}`}>
+                  <p className="text-xs font-extrabold text-[#24558e]">Estimativa comparada com o Google</p>
+                  <p className="mt-1 text-xs leading-5 text-[#426586]">
+                    Aproximadamente{' '}
+                    <strong>
+                      {Math.round(reconciliation.rows.find(row => row.workspaceId === workspace.id)!.estimatedBillableReadUnits).toLocaleString('pt-BR')} unidades de leitura
+                    </strong>
+                    {' '}associadas a esta UG por aproximação proporcional.
+                    Não é um gasto em reais nem a quantidade de unidades oficialmente cobrada desta UG.
+                  </p>
+                  <p className="mt-1 text-[10px] leading-5 text-[#627d9a]">
+                    Cobertura global observada: {reconciliation.readCoverage.percentage === null
+                      ? 'sem comparação disponível'
+                      : reconciliation.readCoverage.percentage.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'}
+                    . A parcela que não conseguimos atribuir não é distribuída entre as UGs.
+                  </p>
+                </div>
+              )}
               <div className="mt-4 border-t border-[#d5e4f3] pt-4" data-testid={`admin-ug-modules-${workspace.id}`}>
                 <p className="text-xs font-extrabold text-[#1c4c82]">De onde veio a atividade desta UG?</p>
                 {!estimate?.moduleBreakdownAvailable ? (
