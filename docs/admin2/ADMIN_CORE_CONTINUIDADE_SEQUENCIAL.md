@@ -140,6 +140,27 @@
 
 ---
 
+## PROPOSTA DE PRÓXIMA FASE — ONBOARDING INTEGRADO CLIENTE + WORKSPACE + TRIAL (18/10/2026)
+
+**Origem:** o Fundador perguntou por que o Cadastro Comercial Admin 2.0 não cria o workspace e propôs um fluxo único que cadastre cliente e workspace, inicie automaticamente o **trial** e permita ao administrador alterar a assinatura. **Requisito em discussão — NÃO implementado nem autorizado para escrita real nesta conversa.**
+
+**Constatação do código existente:** `app/api/admin/provision-sector/route.ts` chama `provisionSectorWorkspaceWithAuth` (`lib/server/sectorProvisioningAdmin.ts`) com verificação da identidade fundadora e controles de mutação; `lib/sectorProvisioning.ts` possui `grantTrial: true` como padrão. `createSectorDirectory` grava em commit Firestore os documentos workspace, conta operacional, contador, índice UG, `billingAccounts/{workspaceId}` criado por `buildInitialBillingAccount(..., grantTrial)` e auditoria. `DEFAULT_PLATFORM_BILLING_CONFIG.defaultTrialDays = 30`. O backend já administra lock, erros, rollback/recuperação quando falha Firebase Auth ou commit — **não prometer atomicidade total entre Firebase Auth e Firestore**.
+
+**Assinatura já disponível no domínio existente:** `lib/platformBillingStore.ts` oferece `grantBillingTrial`, `setBillingExemption`, `setBillingCommercialStatus`, `setBillingCycleStatus`, protegendo a isenção fundadora. Plano Completo R$70/mês, VIP/isenção manual, trial 30 dias padrão e confirmação manual de pagamento; nenhuma suspensão automática por inadimplência.
+
+**Proposta técnica da próxima etapa sequencial, dependente de aceite:**
+1. Criar formulário Admin 2.0 **Novo cliente e workspace** contendo nome, OM/UG/setor, workspace ID, e-mail de acesso e credencial inicial segura, além de contato comercial e observações, sem misturar pessoa de contato com conta Firebase.
+2. Reutilizar o endpoint de provisionamento administrativo, passando `grantTrial: true` (default 30 dias) e o payload comercial validado. Garantir que `platformCustomers/{workspaceId}` seja criado **no mesmo commit Firestore** de workspace, conta e billing, com `currentDocument.exists=false`. Integrar rollback/recuperação do registro comercial ao mecanismo já existente. Não criar uma segunda rotina de provisionamento.
+3. Status inicial: `billingAccounts/{workspaceId}` em `trial`, com início/fim e preço-base registrado de R$70/mês, `paymentRequired=false`. Trial não significa cobrança paga, isenção VIP ou garantia de corte automático.
+4. Na Ficha 360, oferecer ações do administrador (prorrogar/conceder trial, ativar plano, registrar VIP/isenção, situação comercial e pagamentos) reutilizando as funções/regras existentes, com confirmação, auditoria, isolamento por workspace e sem edição arbitrária de preço fora da política vigente.
+5. Primeiro executar em **Auth + Firestore Emulator com contas e dados sintéticos**, testar sucesso, duplicidade, retries, erro parcial, rollback, privilégio administrativo, contas comuns negadas e economia Firestore. Entrega no localhost para aceite humano. Não disparar APIs produtivas nem publicar Rules/merge/deploy sem autorização específica.
+
+**Por que ainda não existe no novo cadastro:** a UI atual `AdminCommercialCustomers` foi intencionalmente isolada em rascunhos locais, exige `workspaces/{id}` existente e não chama `/api/admin/provision-sector`. O motor de provisionamento é mais sensível (cria identidade Firebase e ambiente de setor); a criação conjunta deve respeitar proteção e recovery existentes.
+
+**Estado desta conversa:** análise de viabilidade e registro documental; **NENHUMA IMPLEMENTAÇÃO FUNCIONAL DO ONBOARDING UNIFICADO** e nenhuma mudança em contas/workspaces/billing/Rules de produção. Próxima decisão: autorização explícita para desenvolver o fluxo no localhost/Emulator, sem deploy.
+
+---
+
 ## 1. Fontes canônicas a reler em toda ativação de chat
 
 1. **Este documento** \`docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md\` na **branch ATIVA**, para conhecer o estágio e a última decisão.
