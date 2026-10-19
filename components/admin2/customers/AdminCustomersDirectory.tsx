@@ -67,7 +67,7 @@ function statusLabel(value: CustomerWorkspaceRecord['workspaceStatus']): string 
   return value === 'active' ? 'Ativo' : 'Desativado';
 }
 
-export function AdminCustomersDirectory() {
+export function AdminCustomersDirectory({ initialMode = 'directory' }: { initialMode?: 'directory' | 'manage' }) {
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<AuthState>('checking');
   const [authError, setAuthError] = useState('');
@@ -83,7 +83,9 @@ export function AdminCustomersDirectory() {
   const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState<CustomerWorkspaceRecord | null>(null);
   const [commercialMode, setCommercialMode] = useState(false);
-  const [unifiedMode, setUnifiedMode] = useState<'create' | 'manage' | null>(null);
+  const [unifiedMode, setUnifiedMode] = useState<'create' | 'manage' | null>(
+    initialMode === 'manage' ? 'manage' : null
+  );
   const [previewRecords, setPreviewRecords] = useState<UnifiedPreviewRecord[]>([]);
   const [returnToManage, setReturnToManage] = useState(false);
   // Apenas memória React. Nunca copia contatos comerciais para Firestore real,
