@@ -1,6 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
 
+## ADMIN 2.0 — EDIÇÃO DO WORKSPACE + COMPATIBILIDADE DE TODA A MAIN (18/10/2026)
+
+- **Nova edição institucional V3:** Gestão do Cliente → Editar dados do workspace, com nome, OM, sigla, setor e UG somente se vazia. Respeita a decisão já codificada da main: **UG vinculada, ID, e-mail operacional, status e UID não são editáveis**. Localhost comum apenas simula; Auth/Firestore Emulator demo-* reutiliza transação auditada `updateSectorWorkspaceProfile` sem afetar produção.
+- **Auditoria do painel admin original:** inventariadas as 8 áreas reais da main (Visão Geral, Setores, Cadastrar Setor, Consumo/Cotas com 5 subtelas, Sessões, Assinaturas/Ciclos, Backups/Auth e Segurança), incluindo operações e dependências existentes. Fonte: `docs/admin2/AUDITORIA_MAIN_COMPATIBILIDADE_ADMIN2.md`.
+- **Novo shell:** Workspaces abre diretório real; Financeiro abre Gestão; Consumo/Sessões/Backups/Segurança/relatórios/configurações mantêm acesso ao painel original por ponte de compatibilidade `/admin?tab=...`, evitando recarregar globalmente dados Firestore no laboratório. **Esta ponte ainda não é migração nativa visual completa**; as funcionalidades legadas permanecem acessíveis sem reimplementação de seus motores de segurança.
+- As operações sensíveis existentes (reset de senha, suspensão, exclusão, encerramento remoto, backup e pagamentos) permanecem no painel antigo, sujeitas à autorização e confirmação antigas, não habilitadas silenciosamente na Admin 2.0.
+- Estado: alterações na branch isolada `feat/admin2-w01-sidebar-local-preview` / PR #339 DRAFT, testes automáticos e smoke humano desta etapa ainda a confirmar. **Sem merge, deploy ou alteração de dados reais.**
+- Referências: `docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md`, `docs/admin2/AUDITORIA_MAIN_COMPATIBILIDADE_ADMIN2.md`.
+
+---
+
 ## ADMIN 2.0 — IMPLEMENTAÇÃO LOCAL DO CADASTRO UNIFICADO + GESTÃO SEPARADA (18/10/2026)
 
 **Decisão confirmada pelo Fundador:** Cadastro unificado deve reunir cliente comercial, workspace, conta operacional e trial automático de 30 dias. Gestão posterior em **aba específica** com assinatura, contato e segurança de usuário, preservando separação entre controle comercial e acesso operacional.
