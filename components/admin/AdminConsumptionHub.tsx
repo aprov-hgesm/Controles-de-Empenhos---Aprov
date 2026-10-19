@@ -289,6 +289,7 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
             <AdminUsagePanel
               workspaces={props.workspaces}
               usage={props.usage}
+              globalUsage={props.globalUsage}
               loading={props.loadingUsage}
               error={props.usageError}
               onRefresh={props.onRefreshUsage}
