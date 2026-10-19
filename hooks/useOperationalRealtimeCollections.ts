@@ -147,7 +147,8 @@ function useRealtimeCollectionSubscription<T>({
       (snapshot) => {
         recordWorkspaceRealtimeSnapshot(
           scope,
-          firstSnapshot ? snapshot.size : snapshot.docChanges().length
+          firstSnapshot ? snapshot.size : snapshot.docChanges().length,
+          collectionName === 'empenhos' ? 'empenhos' : collectionName === 'invoices' ? 'notas' : 'outros'
         );
         firstSnapshot = false;
         setData(snapshot.docs.map(mapDocument));
@@ -187,7 +188,7 @@ async function isInvoiceHotHistoryReady(
 
   try {
     const snapshot = await getDoc(markerRef);
-    recordWorkspaceDocumentReads(scope, snapshot.exists() ? 1 : 0);
+    recordWorkspaceDocumentReads(scope, snapshot.exists() ? 1 : 0, 'notas');
     if (!snapshot.exists()) return false;
     if (!isInvoiceHotHistoryMarker(snapshot.data(), scope.workspaceId)) return false;
     HOT_HISTORY_READY_WORKSPACES.add(scope.workspaceId);
@@ -247,7 +248,8 @@ function useRealtimeInvoiceSubscription({
         (snapshot) => {
           recordWorkspaceRealtimeSnapshot(
             scope,
-            firstSnapshot ? snapshot.size : snapshot.docChanges().length
+            firstSnapshot ? snapshot.size : snapshot.docChanges().length,
+            'notas'
           );
           firstSnapshot = false;
 
