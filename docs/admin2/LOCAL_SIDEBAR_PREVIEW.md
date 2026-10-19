@@ -11,6 +11,25 @@
 
 **Ambiente:** \`next dev\` (NODE_ENV=development). Fora do modo development a rota chama \`notFound()\`; mesmo que a branch seja implantada em Preview/produção por engano, a tela de laboratório não deve ficar publicamente disponível.
 
+## NOVO — EDITAR WORKSPACE E COMPATIBILIDADE ADMIN MAIN (18/10/2026)
+
+Acesse `http://localhost:3001/admin2-preview?area=customers` com autenticação Google fundadora:
+1. Em **Gestão do cliente**, localize o ID de um workspace existente (ou use um criado apenas em simulação). Clique **Editar dados do workspace**.
+2. Teste nome do setor, nome da OM, sigla e seção. **UG preenchida é bloqueada** por segurança; ID e e-mail operacional sempre imutáveis. Somente workspace não fundador e sem UG pode receber UG de seis dígitos (uma vez).
+3. Clique **Simular atualização**. Confira o novo texto na Gestão e na Ficha 360°, volte ao diretório e reabra a Gestão. A atualização continua em memória enquanto essa página não for recarregada. **Nenhum documento real é alterado.**
+4. Pelo menu fixo V3, selecione **Workspaces** (diretório read-only), **Financeiro** (Gestão do Cliente) ou **Consumo e cotas / Sessões / Backups / Segurança**. Esses últimos exibem um catálogo das funções da main e um acesso explícito ao **painel administrativo existente** via `/admin?tab=...`. **Esse acesso sai da prévia e pode executar operações reais caso o fundador as confirme no sistema atual.** Não confundir ponte com função visual já migrada.
+
+```powershell
+cd "$HOME\emprovex-admin2-preview"
+git pull --ff-only origin feat/admin2-w01-sidebar-local-preview
+node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-workspace-edit.test.mjs
+npm.cmd run dev -- --port 3001
+```
+
+Resumo da auditoria em `docs/admin2/AUDITORIA_MAIN_COMPATIBILIDADE_ADMIN2.md`.
+
+---
+
 ## NOVO — CADASTRO UNIFICADO E GESTÃO DO CLIENTE (18/10/2026)
 
 **Trabalho sequencial atual:** nova aba **Cadastrar cliente + workspace** cria uma simulação conjunta de cliente comercial, workspace, conta de setor e trial de 30 dias/R$70. A aba **Gestão do cliente** reúne assinatura, contatos e assuntos de usuário em local separado. **No localhost padrão, todos os botões de cadastro e alteração comercial são simulações em memória; não gravam contas, assinaturas ou workspaces reais.** Utilize dados fictícios, inclusive no campo senha inicial.
