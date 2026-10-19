@@ -91,6 +91,7 @@ export function AdminCustomersDirectory({ initialMode = 'directory' }: { initial
   // Apenas memória React. Nunca copia contatos comerciais para Firestore real,
   // localStorage ou cookies durante a prévia; remonta após refresh.
   const [commercialDrafts, setCommercialDrafts] = useState<CommercialCustomer[]>([]);
+  const [workspaceEdits, setWorkspaceEdits] = useState<Record<string, CustomerWorkspaceRecord>>({});
 
   useEffect(() => {
     let active = true;
@@ -252,6 +253,8 @@ export function AdminCustomersDirectory({ initialMode = 'directory' }: { initial
       <AdminCustomerManagement
         previews={previewRecords}
         commercialDrafts={commercialDrafts}
+        workspaceEdits={workspaceEdits}
+        onWorkspaceEdit={record => setWorkspaceEdits(current => ({ ...current, [record.workspaceId]: record }))}
         onEditContacts={() => { setCommercialMode(true); setUnifiedMode(null); }}
         onView360={record => { setReturnToManage(true); setSelected(record); }}
       />
@@ -336,7 +339,7 @@ export function AdminCustomersDirectory({ initialMode = 'directory' }: { initial
               {!loading && rows.map((customer) => (
                 <tr key={customer.workspaceId} className="border-t border-[#e4ebf4] text-[#526580] transition-colors hover:bg-[#f0f6ff]">
                   <td className="px-4 py-4">
-                    <p className="font-bold text-[#1b365b]">{customer.name}</p>
+                    <p className="font-bold text-[#1b365b]">{workspaceEdits[customer.workspaceId]?.name || customer.name}</p>
                     <p className="mt-1 text-[11px] text-[#7c8ba0]">{customer.organizationName || customer.sectionName || 'Sem organização cadastrada'}</p>
                   </td>
                   <td className="px-4 py-4 font-mono">{customer.ug || '—'}</td>
@@ -347,7 +350,7 @@ export function AdminCustomersDirectory({ initialMode = 'directory' }: { initial
                   </td>
                   <td className="px-4 py-4">{formatCustomerDate(customer.updatedAt)}</td>
                   <td className="px-4 py-4 text-right">
-                    <button type="button" onClick={() => setSelected(customer)}
+                    <button type="button" onClick={() => { setReturnToManage(false); setSelected(workspaceEdits[customer.workspaceId] || customer); }}
                       aria-label={'Abrir ficha administrativa de ' + customer.name}
                       className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-[#c6d9f1] bg-white px-3 py-2 text-[11px] font-bold text-[#245ca6] hover:bg-blue-50">
                       Ver ficha <ChevronRight className="h-3.5 w-3.5" />
