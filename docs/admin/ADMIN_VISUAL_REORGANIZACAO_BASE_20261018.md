@@ -19,6 +19,21 @@ O Fundador interrompeu a criação da Administração 2.0 e solicitou **somente 
 4. Cabeçalho 64px, fontes e espaçamento compatíveis com o EMPROVEX operacional, sem alterar handlers.
 5. CSS local e de escopo reduzido: `components/admin/AdminVisualShell.module.css`. **Nenhuma alteração no CSS global**, App Sidebar operacional ou componentes de billing/serviços.
 
+## Correção visual solicitada pelo Fundador — fundo claro e sidebar fixa
+
+O primeiro incremento mantinha o canvas escuro e uma sidebar `sticky`. Isso **não refletia** a estética operacional que o Fundador solicitou. Foi corrigido nesta mesma branch:
+
+- **Canvas claro e confortável**: plano de fundo `#edf3fb`, atmosférico discreto, cards brancos com bordas azul-acinzentadas e tipografia escura de bom contraste.
+- **Header escuro fixo**: `emprovex-app-header fixed` com acabamento estrutural/assinatura EMPROVEX, 64 px.
+- **Sidebar escura realmente fixa no desktop**: `lg:fixed lg:bottom-0 lg:left-0 lg:top-16 lg:w-72`, rolagem interna, mesmo visual de operador, status e Border Beam no item selecionado; a área de conteúdo usa `lg:pl-72` sem sobreposição.
+- **Módulos preexistentes**: os painéis existentes foram adaptados com **CSS escopado apenas no conteúdo administrativo**, convertendo superfícies dark em claras, inputs para branco e textos em tons escuros/semânticos. Cabeçalho, menu, diálogos e componentes da aplicação operacional NÃO foram alterados. Não foram mudadas regras de negócio nem consultas.
+- **Responsividade**: abaixo de 1024 px o menu aparece antes do conteúdo (não fica sobreposto), preservando a navegação original e o acesso por teclado.
+- **Guardas**: `scripts/admin-visual-only.test.mjs` verifica fundo, sidebar fixed, cabeçalho, oito abas e componentes; `scripts/verify-admin-sidebar-google-usage.mjs` atualizado para garantir a nova disposição sem perder os diagnósticos Google.
+
+O aceite deve verificar contraste das abas reais (Visão Geral, Setores, Cadastro, Consumo, Sessões, Assinaturas, Backup e Segurança) e indicar pequenos refinamentos. **Não houve publicação**, o CI certifica código, não substitui o smoke visual no navegador.
+
+---
+
 ## Superfícies e arquivos modificados
 
 - `components/admin/PlatformAdminView.tsx`: somente importações visuais, grupos de navegação, marcação e classes de header/sidebar. Não mexer em callbacks/handlers/hook subscriptions.
