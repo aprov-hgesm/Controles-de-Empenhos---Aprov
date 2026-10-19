@@ -43,7 +43,7 @@ function FacadeWindow({project,x,z,height,face,lit,seed}:{
   );
 }
 
-/** A central administration tower is symbolic infrastructure, never an additional fake user. */
+/** Central tower is the real, canonical HGeSM founder account; not an extra dummy user. */
 export function CityBuilding({project, plot, resident, selected=false, onSelect, central=false}:{
   project:CityProject; plot: CityPlot; resident?:NeighborhoodResident; selected?:boolean;
   onSelect?:(id:string)=>void; central?:boolean;
@@ -52,7 +52,7 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
   const h=height;
   const isPerson=Boolean(resident);
   const lit=resident?.presence==='online';
-  const known=resident?.presence!=='unknown';
+  const known=Boolean(resident && resident.presence !== 'unknown');
   const frontZ=z+d;
   const frontX=x+w;
   const floors=central?6:Math.max(2,Math.min(5,Math.floor((height-15)/23)));
@@ -60,7 +60,6 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
   const sideWindows=Math.max(2,Math.floor((d-14)/19));
   const frontStep=(w-22)/frontWindows, sideStep=(d-22)/sideWindows;
   const [cx,cy]=project(x+w/2,z+d/2);
-  const [lx,ly]=project(x+w/2,z+d+18,6);
   const id=resident?.id||'';
   const handleKey=(e:KeyboardEvent<SVGGElement>)=>{
     if(resident && (e.key==='Enter'||e.key===' ')) {e.preventDefault();onSelect?.(id);}
@@ -127,17 +126,6 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
         <CityPolygon project={project} points={[[x+w*.38,frontZ+1,0],[x+w*.64,frontZ+1,0],[x+w*.64,frontZ+1,18],[x+w*.38,frontZ+1,18]]}
           fill={lit?'#ffc986':known?'#376780':'#6e8496'} stroke="#e1f5f1"/>
       )}
-      {isPerson&&(
-        <g pointerEvents="none">
-          <rect x={lx-55} y={ly-2} width="110" height="19" rx="8"
-            fill={selected?'#06465b':'#061d31'} opacity={.94}
-            stroke={selected?'#8ff5e2':'#66909e'} strokeWidth=".9"/>
-          <circle cx={lx-44} cy={ly+7.5} r="3.2"
-            fill={lit?'#ffd37b':!known?'#bac9d3':resident?.disabled?'#fb8490':'#7398af'}/>
-          <text x={lx+5} y={ly+11.2} textAnchor="middle" fill="#f2fbff" fontSize="9" fontWeight="750"
-            fontFamily="system-ui,sans-serif">{resident?.label.slice(0,12)}</text>
-        </g>
-      )}
       {central&&<g>
         <rect x={project(x+w/2,frontZ+14,38)[0]-38} y={project(x+w/2,frontZ+14,38)[1]-12}
           width="76" height="19" rx="4" fill="#072841" opacity={.96} stroke="#d7e8e2"/>
@@ -146,6 +134,28 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
       </g>}
     </g>
   );
+}
+
+
+/** Draw labels in a final overlay pass, always ABOVE buildings and greenery. */
+export function CityBuildingLabel({project,plot,resident,central=false}:{
+  project:CityProject;plot:CityPlot;resident?:NeighborhoodResident;central?:boolean;
+}) {
+  if (!resident && !central) return null;
+  const [lx,ly]=project(plot.x+plot.w/2,plot.z+plot.d/2,plot.height+29);
+  const text=central?'APROV HGeSM':resident?.label.slice(0,16) || '';
+  const online=resident?.presence==='online';
+  const unknown=!resident || resident.presence==='unknown';
+  const fill=online?'#ffd37b':unknown?'#a9bdcb':resident.disabled?'#fb8694':'#779bb2';
+  const labelWidth=central?116:110;
+  return <g pointerEvents="none" data-testid="admin-world-roof-label"
+    data-resident-id={resident?.id||undefined}>
+    <rect x={lx-labelWidth/2} y={ly-11} width={labelWidth} height="23" rx="9"
+      fill="#051d31" opacity={.96} stroke={central?'#8ce4cb':'#7c9db0'} strokeWidth={central?1.7:.9}/>
+    <circle cx={lx-labelWidth/2+12} cy={ly+.3} r="3.7" fill={fill}/>
+    <text x={lx+5} y={ly+4} fill="#f2faff" fontSize={central?10:9.5}
+      fontWeight="750" fontFamily="system-ui,sans-serif" textAnchor="middle">{text}</text>
+  </g>;
 }
 
 export function CityTree({project,x,z,seed=0}:{
