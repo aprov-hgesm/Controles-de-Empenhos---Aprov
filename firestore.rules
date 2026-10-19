@@ -298,6 +298,31 @@ service cloud.firestore {
       return value is number && value >= 0;
     }
 
+    // R3: módulo opcional para manter leitura/gravação de documentos legados.
+    // As cinco chaves são fixas: nenhum setor pode enviar mapas arbitrários.
+    function moduleUsageCount(data, moduleName) {
+      return data.get('moduleOperations', {}).get(moduleName, 0);
+    }
+
+    function validWorkspaceModuleOperations(data) {
+      let counts = data.get('moduleOperations', {});
+      return counts is map
+        && counts.keys().hasOnly(['empenhos', 'notas', 'deposito', 'sessoes', 'outros'])
+        && validWorkspaceUsageCounter(moduleUsageCount(data, 'empenhos'))
+        && validWorkspaceUsageCounter(moduleUsageCount(data, 'notas'))
+        && validWorkspaceUsageCounter(moduleUsageCount(data, 'deposito'))
+        && validWorkspaceUsageCounter(moduleUsageCount(data, 'sessoes'))
+        && validWorkspaceUsageCounter(moduleUsageCount(data, 'outros'));
+    }
+
+    function workspaceModuleOperationsMonotonic(previousData, nextData) {
+      return moduleUsageCount(nextData, 'empenhos') >= moduleUsageCount(previousData, 'empenhos')
+        && moduleUsageCount(nextData, 'notas') >= moduleUsageCount(previousData, 'notas')
+        && moduleUsageCount(nextData, 'deposito') >= moduleUsageCount(previousData, 'deposito')
+        && moduleUsageCount(nextData, 'sessoes') >= moduleUsageCount(previousData, 'sessoes')
+        && moduleUsageCount(nextData, 'outros') >= moduleUsageCount(previousData, 'outros');
+    }
+
     function validWorkspaceUsageEstimate(workspaceId, dayKey) {
       let workspace = workspaceData(workspaceId);
       return canAccessWorkspace(workspaceId)
@@ -333,7 +358,8 @@ service cloud.firestore {
           'realtimeSnapshots',
           'peakRealtimeListeners',
           'telemetryFlushes',
-          'lastReportedAt'
+          'lastReportedAt',
+          'moduleOperations'
         ])
         && request.resource.data.telemetryVersion == 'emprovex_usage_v1'
         && request.resource.data.source == 'emprovex-workspace-estimate'
@@ -348,6 +374,7 @@ service cloud.firestore {
         && validWorkspaceUsageCounter(request.resource.data.realtimeSnapshots)
         && validWorkspaceUsageCounter(request.resource.data.peakRealtimeListeners)
         && validWorkspaceUsageCounter(request.resource.data.telemetryFlushes)
+        && validWorkspaceModuleOperations(request.resource.data)
         && request.resource.data.lastReportedAt == request.time;
     }
 
@@ -378,6 +405,7 @@ service cloud.firestore {
         && request.resource.data.estimatedDocumentWrites >= resource.data.estimatedDocumentWrites
         && request.resource.data.estimatedDocumentDeletes >= resource.data.estimatedDocumentDeletes
         && request.resource.data.realtimeSnapshots >= resource.data.realtimeSnapshots
+        && workspaceModuleOperationsMonotonic(resource.data, request.resource.data)
         && request.resource.data.peakRealtimeListeners >= resource.data.peakRealtimeListeners
         && request.resource.data.telemetryFlushes > resource.data.telemetryFlushes;
     }
