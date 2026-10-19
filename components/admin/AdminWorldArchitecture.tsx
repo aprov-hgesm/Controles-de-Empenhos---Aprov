@@ -10,10 +10,10 @@ type Point3 = [number, number, number?];
 export function cityPoints(project: CityProject, coordinates: Point3[]): string {
   return coordinates.map(([x,z,h=0]) => project(x,z,h).map(v => v.toFixed(2)).join(',')).join(' ');
 }
-export function CityPolygon({project, points, fill, stroke, opacity=1, strokeWidth=1}:{
-  project: CityProject; points: Point3[]; fill: string; stroke?: string; opacity?: number; strokeWidth?: number;
+export function CityPolygon({project, points, fill, stroke, opacity=1, strokeWidth=1, className}:{
+  project: CityProject; points: Point3[]; fill: string; stroke?: string; opacity?: number; strokeWidth?: number; className?: string;
 }) {
-  return <polygon points={cityPoints(project,points)} fill={fill} stroke={stroke}
+  return <polygon points={cityPoints(project,points)} className={className} fill={fill} stroke={stroke}
     strokeWidth={strokeWidth} opacity={opacity} strokeLinejoin="round"/>;
 }
 
