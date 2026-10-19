@@ -20,6 +20,14 @@ interface AdminUsagePanelProps {
   onRefresh: () => Promise<void>;
 }
 
+const MODULE_LABELS = [
+  { id: 'empenhos', label: 'Empenhos' },
+  { id: 'notas', label: 'Notas Fiscais' },
+  { id: 'deposito', label: 'Depósito' },
+  { id: 'sessoes', label: 'Sessões e acesso' },
+  { id: 'outros', label: 'Outros fluxos' },
+] as const;
+
 function formatCount(value: number): string {
   return new Intl.NumberFormat('pt-BR').format(value);
 }
@@ -102,6 +110,7 @@ export function AdminUsagePanel({
           <p className="mt-1 text-xs leading-6 text-[#496784]">
             <strong>Importante:</strong> números sem medição não significam ausência de uso.
             A contagem por UG não corresponde diretamente à fatura do Google.
+            A divisão por módulo identifica apenas as operações que o EMPROVEX conseguiu acompanhar.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -179,6 +188,47 @@ export function AdminUsagePanel({
                   <Metric label="Pico de observadores*" detail="Maior carga de consultas acompanhadas" value={estimate?.peakRealtimeListeners ?? null} icon={<Gauge className="h-3.5 w-3.5" />} />
                   <Metric label="Envios de medição" detail="Vezes em que o uso foi consolidado" value={estimate?.telemetryFlushes ?? null} icon={<RefreshCw className="h-3.5 w-3.5" />} />
                 </div>
+              </div>
+              <div className="mt-4 border-t border-[#d5e4f3] pt-4" data-testid={`admin-ug-modules-${workspace.id}`}>
+                <p className="text-xs font-extrabold text-[#1c4c82]">De onde veio a atividade desta UG?</p>
+                {!estimate?.moduleBreakdownAvailable ? (
+                  <p className="mt-2 text-xs leading-5 text-[#657d9a]">
+                    Sem detalhamento por módulo neste dia. Os registros antigos não permitem saber qual tela gerou as operações.
+                  </p>
+                ) : (() => {
+                  const operations = MODULE_LABELS.map(({ id, label }) => ({
+                    id, label, count: estimate.moduleOperations[id],
+                  }));
+                  const total = operations.reduce((sum, item) => sum + item.count, 0);
+                  const classified = total - estimate.moduleOperations.outros;
+                  return (
+                    <>
+                      <p className="mt-1 text-xs leading-5 text-[#657d9a]">
+                        {formatCount(total)} operações instrumentadas com categoria.
+                        {total > 0
+                          ? ` ${Math.round(classified / total * 100)}% foram associadas a um módulo específico.`
+                          : ' Ainda não há operações classificadas nesta medição.'}
+                        {' '}Isso mede a organização dos registros captados, não a precisão da conta do Google.
+                      </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {operations.map(item => {
+                          const percent = total > 0 ? item.count / total * 100 : 0;
+                          return (
+                            <div key={item.id} className="rounded-lg border border-[#d6e5f4] bg-[#f4f8fd] px-3 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] font-semibold text-[#3f6082]">{item.label}</span>
+                                <span className="text-[11px] font-extrabold text-[#1b4a7d]">{formatCount(item.count)} · {percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+                              </div>
+                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#dce7f5]">
+                                <div className="h-full rounded-full bg-[#568bc5]" style={{ width: `${percent}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           ))}
