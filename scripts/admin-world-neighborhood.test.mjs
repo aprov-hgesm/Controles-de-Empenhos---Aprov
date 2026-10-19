@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   buildNeighborhoodResidents, neighborhoodPages, neighborhoodQuota,
+  partitionNeighborhoodResidents,
 } from '../lib/adminNeighborhoodModel.mjs';
 
 const NOW = Date.parse('2026-10-19T12:00:00Z');
@@ -57,6 +58,35 @@ test('quarteirões paginam todas as casas, sem omitir contas excedentes',()=>{
   assert.equal(neighborhoodPages([],0).displayed.length,0);
 });
 
+
+test('fundador HGeSM ocupa somente a torre central, sem duplicação nos lotes', () => {
+  const founderEmail='aprov1hgesm@gmail.com';
+  const entries=[
+    {email:founderEmail, accountType:'sector', workspaceId:'hgesm-aprov', status:'active'},
+    {email:'setor-a@exemplo.com', accountType:'sector', workspaceId:'w1', status:'active'},
+    {email:'setor-b@exemplo.com', accountType:'sector', workspaceId:'w2', status:'active'},
+  ];
+  const people=buildNeighborhoodResidents(entries, [], {now:NOW,sessionsAvailable:true});
+  const partition=partitionNeighborhoodResidents(people,founderEmail);
+  assert.equal(partition.founder?.email,founderEmail);
+  assert.equal(partition.neighborhood.length,2);
+  assert.equal(partition.neighborhood.some(r=>r.email===founderEmail),false);
+  assert.equal(people.length,3);
+  const none=partitionNeighborhoodResidents(people,'inexistente@exemplo.com');
+  assert.equal(none.founder,null);
+  assert.equal(none.neighborhood.length,3);
+});
+
+test('a paginação cobre apenas lotes laterais, fundador permanece fora da paginação', () => {
+  const founder={id:'founder',email:'aprov1hgesm@gmail.com',label:'founder'};
+  const outer=Array.from({length:14},(_,i)=>({id:'side-'+i,email:'side'+i+'@exemplo.com'}));
+  const split=partitionNeighborhoodResidents([founder,...outer],founder.email);
+  assert.equal(neighborhoodPages(split.neighborhood,0).displayed.length,9);
+  assert.equal(neighborhoodPages(split.neighborhood,1).displayed.length,5);
+  assert.equal(split.founder?.id,'founder');
+  assert.equal(neighborhoodPages(split.neighborhood,1).pageCount,2);
+});
+
 test('nível da água representa referência sem truncar porcentagem informada',()=>{
   assert.deepEqual(neighborhoodQuota(null),{known:false,percentage:null,waterLevel:0,exceeded:false});
   assert.equal(neighborhoodQuota({billableReadUnits:50000,billingReference:{readUnitsDailyLimit:100000}}).waterLevel,.5);
@@ -87,6 +117,14 @@ test('Início ADM é apenas apresentação; não acrescenta Firestore reads/writ
   assert.match(architecture,/CityBuilding/);
   assert.match(architecture,/CityTree/);
   assert.match(architecture,/CityMailbox/);
+  assert.match(architecture,/data-testid="admin-world-roof-label"/);
+  assert.match(scene,/data-testid="admin-world-vacant-lot"/);
+  assert.match(scene,/buildings.filter\(b=>Boolean\(byPlot.get\(b.seed\)\)\)/);
+  assert.match(scene,/resident=\{founder\|\|undefined\}/);
+  assert.match(scene,/occupiedPlotIndices/);
+  assert.match(scene,/CityBuildingLabel/);
+  assert.match(panel,/partitionNeighborhoodResidents\(residents, HGESM_SECTOR_EMAIL\)/);
+  assert.match(panel,/founder=\{founder\}/);
   for(const component of [panel,scene,architecture]){
     assert.doesNotMatch(component,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
   }
