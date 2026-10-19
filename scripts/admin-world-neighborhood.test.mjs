@@ -71,16 +71,23 @@ test('Início ADM é apenas apresentação; não acrescenta Firestore reads/writ
   const page=readFileSync('app/admin/page.tsx','utf8');
   const panel=readFileSync('components/admin/AdminWorldHomePanel.tsx','utf8');
   const scene=readFileSync('components/admin/AdminWorldScene.tsx','utf8');
+  const architecture=readFileSync('components/admin/AdminWorldArchitecture.tsx','utf8');
   assert.match(view,/id: 'inicio'/);
   assert.match(view,/activeTab === 'inicio'/);
   assert.match(view,/<AdminWorldHomePanel/);
   assert.match(page,/accounts=\{adminDirectory\.directory\.accounts\}/);
   assert.match(panel,/buildNeighborhoodResidents\(accounts, sessions/);
   assert.match(panel,/<AdminWorldScene/);
-  assert.match(scene,/data-testid="admin-world-water-tower"/);
-  assert.match(scene,/data-presence=\{resident\.presence\}/);
-  assert.match(scene,/role="button" tabIndex=\{0\}/);
-  for(const component of [panel,scene]){
+  assert.match(architecture,/data-testid="admin-world-water-tower"/);
+  assert.match(architecture,/data-presence=\{resident\?\.presence\}/);
+  assert.match(architecture,/tabIndex=\{isPerson\?0:undefined\}/);
+  assert.match(scene,/USER_PLOT_INDICES/);
+  assert.match(scene,/central: CityPlot/);
+  assert.match(scene,/CityWaterTower/);
+  assert.match(architecture,/CityBuilding/);
+  assert.match(architecture,/CityTree/);
+  assert.match(architecture,/CityMailbox/);
+  for(const component of [panel,scene,architecture]){
     assert.doesNotMatch(component,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
   }
 });
