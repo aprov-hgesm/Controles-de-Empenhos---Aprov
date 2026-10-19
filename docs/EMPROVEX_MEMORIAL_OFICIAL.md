@@ -1,6 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
 
+## ADMIN 2.0 — IMPLEMENTAÇÃO LOCAL DO CADASTRO UNIFICADO + GESTÃO SEPARADA (18/10/2026)
+
+**Decisão confirmada pelo Fundador:** Cadastro unificado deve reunir cliente comercial, workspace, conta operacional e trial automático de 30 dias. Gestão posterior em **aba específica** com assinatura, contato e segurança de usuário, preservando separação entre controle comercial e acesso operacional.
+
+Na branch isolada do PR #339 foram implementados `AdminUnifiedCustomerCreate` (formulário com **simulação local somente**, sem criar contas reais) e `AdminCustomerManagement` (consulta por workspace, ações comerciais com confirmação, histórico local, Ficha 360 e edição comercial). A gestão de assinatura **só grava no Firebase Emulator quando explicitamente configurado com demo-* projectId**; em localhost comum a mudança é simulada. Ações de reset de senha e suspensão operacional ainda desabilitadas.
+
+`unifiedCustomerOnboarding.ts` monta registros coerentes cliente 1:1/workspace/conta/billing trial. O backend de provisionamento existente foi **preparado** para receber dados comerciais opcionais e gravar o cliente no **mesmo commit Firestore** de workspace, UG, conta, trial e auditoria com precondição de exclusividade; rollback contempla o novo documento. Firebase Auth mantém seu fluxo de recuperação separado. Nenhum endpoint produtivo é invocado pela prévia, nenhuma credencial real é criada, nenhum deploy/Rules publish/merge foi feito.
+
+Testes novos integrados ao Application CI, CI do HEAD e validação humana ainda a certificar. Fontes: `docs/admin2/ONBOARDING_UNIFICADO_GESTAO_01.md` e `docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md`. A proposta histórica abaixo foi parcialmente implementada, mas **onboarding persistente end-to-end permanece futuro gate de Emulator**.
+
+---
+
 ## ADMIN 2.0 — PROPOSTA DE ONBOARDING CLIENTE + WORKSPACE + TRIAL (18/10/2026)
 
 O Fundador propôs que o **Cadastro Comercial 1:1 crie simultaneamente o workspace**, inicie automaticamente o **trial padrão de 30 dias** e disponibilize a edição administrativa da assinatura. **Ainda não implementado; proposta registrada para a próxima etapa sequencial, sem autorização de deploy/mutação real.**
