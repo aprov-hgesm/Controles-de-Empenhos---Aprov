@@ -1130,9 +1130,12 @@ export function WarehouseIsometricPreview({
           applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView),
         }))
         .sort((left, right) => {
-          const leftDepth = left.x + left.y + left.layer * 0.001;
-          const rightDepth = right.x + right.y + right.layer * 0.001;
-          return leftDepth - rightDepth;
+          // Painter's order follows the furthest occupied floor corner, not the
+          // object's origin. A long pallet must not paint over the foreground
+          // face of a freezer whose footprint is actually closer to camera.
+          const leftDepth = left.x + left.width + left.y + left.height;
+          const rightDepth = right.x + right.width + right.y + right.height;
+          return leftDepth - rightDepth || left.layer - right.layer || left.id.localeCompare(right.id);
         }),
     [logicalHeight, logicalWidth, objects, previewView]
   );
@@ -1406,12 +1409,14 @@ export function WarehouseIsometricPreview({
           >
             <defs>
               <linearGradient id="floorGradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="100%" stopColor="#e8eef4" />
+                <stop offset="0%" stopColor="#f9fafb" />
+                <stop offset="48%" stopColor="#e3e9ec" />
+                <stop offset="100%" stopColor="#cbd5da" />
               </linearGradient>
               <linearGradient id="wallGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#fbfdff" />
-                <stop offset="100%" stopColor="#dbe6ef" />
+                <stop offset="0%" stopColor="#fcfdfd" />
+                <stop offset="55%" stopColor="#e8edf0" />
+                <stop offset="100%" stopColor="#bac8d0" />
               </linearGradient>
               <linearGradient id="rackDeck" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor={WAREHOUSE_RACK_VISUAL.deckTop} />
@@ -1503,9 +1508,20 @@ export function WarehouseIsometricPreview({
                 <feGaussianBlur stdDeviation="5" />
               </filter>
 
-              <pattern id="floorGrid" width="34" height="17" patternUnits="userSpaceOnUse" patternTransform="skewY(26)">
-                <path d="M 34 0 L 0 0 0 17" fill="none" stroke="#cbd5e1" strokeWidth="0.65" opacity="0.38" />
+              <pattern id="floorGrid" width="72" height="36" patternUnits="userSpaceOnUse" patternTransform="skewY(26)">
+                <path d="M 72 0 L 0 0 0 36" fill="none" stroke="#8798a3" strokeWidth="0.85" opacity="0.32" />
+                <path d="M 0 2 H 72" fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.38" />
               </pattern>
+              <linearGradient id="floorSoftSheen" x1="0" y1="0" x2="0.9" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.30" />
+                <stop offset="58%" stopColor="#ffffff" stopOpacity="0.03" />
+                <stop offset="100%" stopColor="#637888" stopOpacity="0.10" />
+              </linearGradient>
+              <linearGradient id="wallPanelSheen" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.29" />
+                <stop offset="65%" stopColor="#ffffff" stopOpacity="0" />
+                <stop offset="100%" stopColor="#50687b" stopOpacity="0.13" />
+              </linearGradient>
             </defs>
 
             <g filter="url(#warehouseSceneShadow)">
@@ -1522,6 +1538,19 @@ export function WarehouseIsometricPreview({
                 strokeWidth="2"
               />
 
+              <polygon points={polygonPoints([floor[0], floor[1], backWallTop[1], backWallTop[0]])} fill="url(#wallPanelSheen)" />
+              <polygon points={polygonPoints([floor[0], floor[3], leftWallTop[1], leftWallTop[0]])} fill="url(#wallPanelSheen)" />
+              {/* Subtle panel joints follow the wall's physical axes in every camera view. */}
+              {[0.25, 0.5, 0.75].map((ratio) => {
+                const a = isoPoint(viewLogicalWidth * ratio, 0, 0, viewLogicalWidth, viewLogicalHeight);
+                const b = isoPoint(viewLogicalWidth * ratio, 0, wallHeight, viewLogicalWidth, viewLogicalHeight);
+                const c = isoPoint(0, viewLogicalHeight * ratio, 0, viewLogicalWidth, viewLogicalHeight);
+                const d = isoPoint(0, viewLogicalHeight * ratio, wallHeight, viewLogicalWidth, viewLogicalHeight);
+                return <g key={'panel-' + ratio} stroke="#8b9dab" strokeWidth="0.85" opacity="0.24">
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+                  <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} />
+                </g>;
+              })}
               <line x1={backWallTop[0].x} y1={backWallTop[0].y} x2={backWallTop[1].x} y2={backWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.78" />
               <line x1={leftWallTop[0].x} y1={leftWallTop[0].y} x2={leftWallTop[1].x} y2={leftWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.78" />
 
@@ -1546,7 +1575,8 @@ export function WarehouseIsometricPreview({
               })}
 
               <polygon points={polygonPoints(floor)} fill="url(#floorGradient)" stroke="#9fb2c5" strokeWidth="2.5" />
-              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.72" />
+              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.78" />
+              <polygon points={polygonPoints(floor)} fill="url(#floorSoftSheen)" />
 
               <line x1={floor[0].x} y1={floor[0].y} x2={floor[1].x} y2={floor[1].y} stroke="#6e879b" strokeWidth="4" opacity="0.48" />
               <line x1={floor[0].x} y1={floor[0].y} x2={floor[3].x} y2={floor[3].y} stroke="#6e879b" strokeWidth="4" opacity="0.48" />
