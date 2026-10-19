@@ -22,6 +22,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   query,
   runTransaction,
   serverTimestamp,
