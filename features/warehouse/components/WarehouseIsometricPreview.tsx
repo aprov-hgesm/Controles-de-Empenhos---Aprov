@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -14,6 +14,7 @@ import {
   type WarehouseIsoView,
 } from '../../../lib/warehouse/isometricCamera';
 import type {
+  WarehouseDepot,
   WarehouseLocation,
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
@@ -24,6 +25,13 @@ import {
   warehouseVisualStackSlots,
   type WarehouseVisualExpiry,
 } from '../../../lib/warehouse/stockVisual';
+import { deriveWarehouseLocationContents } from '../../../lib/warehouse/locationContents';
+import {
+  WarehouseLocationContentsTooltip,
+  WarehouseLocationDetailsDialog,
+  type WarehouseInspectionLotState,
+} from './WarehouseLocationInspection';
+import { WarehouseGlobalMaterialSearch } from './WarehouseGlobalMaterialSearch';
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
@@ -43,6 +51,22 @@ type Props = {
   onQueryTextChange: (value: string) => void;
   onSelectedMaterialIdChange: (value: string) => void;
   embedded?: boolean;
+  depotId?: string;
+  depotName?: string;
+  inspectionLots?: WarehouseLot[];
+  inspectionLotState?: WarehouseInspectionLotState;
+  inspectionError?: string | null;
+  inspectionComplete?: boolean;
+  inspectionAvailable?: boolean;
+  onInspectLocation?: () => void;
+  onRefreshInspection?: () => void;
+  globalDepots?: WarehouseDepot[];
+  globalLocations?: WarehouseLocation[];
+  globalBalances?: WarehouseLocationBalance[];
+  globalLoaded?: boolean;
+  globalComplete?: boolean;
+  focusedLocationId?: string | null;
+  onNavigateToGlobalLocation?: (depotId: string, locationId: string) => void;
 };
 
 type IsoPoint = { x: number; y: number };
@@ -904,9 +928,40 @@ export function WarehouseIsometricPreview({
   onQueryTextChange,
   onSelectedMaterialIdChange,
   embedded = false,
+  depotId = '',
+  depotName = 'Depósito',
+  inspectionLots = [],
+  inspectionLotState = 'idle',
+  inspectionError = null,
+  inspectionComplete = false,
+  inspectionAvailable = true,
+  onInspectLocation,
+  onRefreshInspection,
+  globalDepots,
+  globalLocations,
+  globalBalances,
+  globalLoaded = true,
+  globalComplete = true,
+  focusedLocationId = null,
+  onNavigateToGlobalLocation,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [viewTransitioning, setViewTransitioning] = useState(false);
+  const [hoveredObject, setHoveredObject] = useState<{
+    objectId: string; locationId: string;
+  } | null>(null);
+  // O painel mantém o último local consultado mesmo quando o cursor sai do SVG.
+  // O highlight continua limitado ao hover ativo para não dar falsa seleção.
+  const [inspectedLocationId, setInspectedLocationId] = useState<string | null>(null);
+  const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
+  const [currentDay, setCurrentDay] = useState(() => new Date());
+
+  // Reavalia o calendário quando o usuário volta à aba após uma virada de dia.
+  useEffect(() => {
+    const refreshDay = () => setCurrentDay(new Date());
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => document.removeEventListener('visibilitychange', refreshDay);
+  }, []);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -916,6 +971,7 @@ export function WarehouseIsometricPreview({
   }, []);
 
   const changePreviewView = (nextView: PreviewView) => {
+    setHoveredObject(null);
     if (nextView === previewView || viewTransitioning) return;
 
     setViewTransitioning(true);
@@ -933,6 +989,35 @@ export function WarehouseIsometricPreview({
     () => new Map(locations.map((location) => [location.id, location])),
     [locations]
   );
+
+  const hoveredContents = useMemo(
+    () => inspectedLocationId
+      ? deriveWarehouseLocationContents(
+        inspectedLocationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [inspectedLocationId, locations, balances, materials, inspectionLots]
+  );
+  const detailContents = useMemo(
+    () => detailLocationId
+      ? deriveWarehouseLocationContents(
+        detailLocationId, locations, balances, materials, inspectionLots
+      )
+      : null,
+    [detailLocationId, locations, balances, materials, inspectionLots]
+  );
+
+  useEffect(() => {
+    setHoveredObject(null);
+    setInspectedLocationId(null);
+    setDetailLocationId(null);
+  }, [depotId]);
+
+  useEffect(() => {
+    setHoveredObject(null);
+    setInspectedLocationId(null);
+    setDetailLocationId(null);
+  }, [depotId]);
 
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
@@ -997,8 +1082,8 @@ export function WarehouseIsometricPreview({
   }, [balances]);
 
   const expiryVisual = useMemo(
-    () => warehouseVisualExpiryMap(balances, lots),
-    [balances, lots]
+    () => warehouseVisualExpiryMap(balances, lots, currentDay),
+    [balances, lots, currentDay]
   );
 
   const selectedMaterialBalances = useMemo(
@@ -1176,9 +1261,16 @@ export function WarehouseIsometricPreview({
                 : 'mt-1 text-xs font-semibold text-slate-500'
             }
           >
-            {embedded
-              ? 'Renderer visual oficial · escolha o ângulo sem alterar o croqui.'
-              : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
+            {hoveredContents
+              ? hoveredContents.location.code + ' · '
+                + (hoveredContents.rowCount === 0
+                  ? 'Local vazio · saldo físico 0'
+                  : hoveredContents.materialCount + ' material(is) · consulte os detalhes abaixo')
+              : onInspectLocation
+                ? inspectionAvailable
+                  ? 'Passe o cursor em um local para consultar os itens; clique para detalhes e PDF.'
+                  : 'Carregando saldos físicos do depósito para habilitar a inspeção…'
+                : 'Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.'}
           </p>
         </div>
 
@@ -1218,6 +1310,24 @@ export function WarehouseIsometricPreview({
           </div>
 
           {!embedded && (
+            globalDepots && globalLocations && globalBalances && onNavigateToGlobalLocation
+              ? (
+                <WarehouseGlobalMaterialSearch
+                  depots={globalDepots}
+                  locations={globalLocations}
+                  balances={globalBalances}
+                  materials={materials}
+                  loaded={globalLoaded}
+                  complete={globalComplete}
+                  queryText={queryText}
+                  selectedMaterialId={selectedMaterialId}
+                  onQueryTextChange={onQueryTextChange}
+                  onSelectedMaterialIdChange={onSelectedMaterialIdChange}
+                  onNavigateToLocation={(position) =>
+                    onNavigateToGlobalLocation(position.depotId, position.locationId)
+                  }
+                />
+              ) : (
             <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
@@ -1252,6 +1362,7 @@ export function WarehouseIsometricPreview({
                 </div>
               )}
             </div>
+            )
           )}
         </div>
       </div>
@@ -1455,15 +1566,66 @@ export function WarehouseIsometricPreview({
                 const location = locationId ? locationById.get(locationId) || null : null;
                 const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
                 const occupiedQuantity = locationId ? occupancyByLocal.get(locationId) || 0 : 0;
-                const highlighted = Boolean(locationId && highlightedLocalIds.has(locationId));
+                const highlighted = Boolean(locationId && (highlightedLocalIds.has(locationId) || focusedLocationId === locationId));
                 const expiry = expiryVisual.byLocation.get(locationId) || 'normal';
                 const highlightedSubpositions = subpositions.filter((candidate) =>
                   highlightedSubpositionIds.has(candidate.id)
                 );
 
+                const interactive = Boolean(onInspectLocation && inspectionAvailable && location?.kind === 'LOCAL');
+                const hovered = hoveredObject?.objectId === object.id;
+                const handleOpen = () => {
+                  if (!interactive || !locationId) return;
+                  onInspectLocation?.();
+                  setHoveredObject(null);
+                  setInspectedLocationId(locationId);
+                  setDetailLocationId(locationId);
+                };
+                const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
+                  if (!interactive || !locationId || event.pointerType === 'touch') return;
+                  setHoveredObject((current) =>
+                    current?.objectId === object.id ? current : { objectId: object.id, locationId }
+                  );
+                  setInspectedLocationId(locationId);
+                };
+
                 return (
-                  <WarehouseStructure
+                  <g
                     key={object.id}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? 0 : undefined}
+                    aria-label={interactive ? 'Consultar ' + location?.name + ': pressione Enter para detalhes' : undefined}
+                    data-testid={interactive ? 'warehouse-location-interactive' : undefined}
+                    data-hovered={hovered ? 'true' : 'false'}
+                    onPointerEnter={(event) => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      handlePointer(event);
+                    }}
+                    onPointerLeave={() => setHoveredObject((current) =>
+                      current?.objectId === object.id ? null : current
+                    )}
+                    onFocus={() => {
+                      if (!interactive) return;
+                      onInspectLocation?.();
+                      setHoveredObject({ objectId: object.id, locationId });
+                      setInspectedLocationId(locationId);
+                    }}
+                    onBlur={() => setHoveredObject(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpen();
+                      }
+                    }}
+                    onClick={handleOpen}
+                    style={{
+                      cursor: interactive ? 'pointer' : undefined,
+                      transition: 'filter 160ms ease, opacity 160ms ease',
+                      filter: hovered ? 'drop-shadow(0 0 9px rgba(37,99,235,0.85))' : undefined,
+                    }}
+                  >
+                    <WarehouseStructure
                     object={object}
                     logicalWidth={viewLogicalWidth}
                     logicalHeight={viewLogicalHeight}
@@ -1480,11 +1642,44 @@ export function WarehouseIsometricPreview({
                     applianceFront={object.applianceFront}
                   />
                 );
+                  </g>
+                );
               })}
             </g>
           </svg>
         )}
+        {inspectionLotState === 'ready' && !inspectionComplete && onInspectLocation && (
+          <p className="absolute bottom-3 right-3 max-w-[240px] rounded-lg bg-amber-50/95 p-2 text-[10px] font-medium text-amber-900 shadow-sm">
+            Consulta parcial: alguns lotes e suas validades podem não estar visíveis.
+          </p>
+        )}
       </div>
+      {onInspectLocation && (
+        <div data-testid="warehouse-location-inspection-dock"
+          className="h-[212px] overflow-y-auto border-t border-blue-100 bg-slate-50/95 px-3 py-3 sm:px-4">
+          {hoveredContents && !detailLocationId && !viewTransitioning ? (
+            <WarehouseLocationContentsTooltip
+              contents={hoveredContents}
+              lotState={inspectionLotState}
+            />
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
+              Passe o cursor ou use Tab sobre um local para consultar a organização dos materiais aqui, sem encobrir o croqui. Clique no local para detalhes e PDF.
+            </p>
+          )}
+        </div>
+      )}
+      {detailContents && onRefreshInspection && (
+        <WarehouseLocationDetailsDialog
+          contents={detailContents}
+          depotName={depotName}
+          lotState={inspectionLotState}
+          lotError={inspectionError}
+          complete={inspectionComplete}
+          onRefresh={onRefreshInspection}
+          onClose={() => setDetailLocationId(null)}
+        />
+      )}
     </section>
   );
 }
