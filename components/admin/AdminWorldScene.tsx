@@ -46,7 +46,9 @@ function onRoad(x:number,z:number) {
 }
 
 function sceneryObjects(residents:NeighborhoodResident[]):SceneryObject[] {
-  const byPlot=new Map(USER_PLOT_INDICES.map((index,i)=>[index,residents[i]]));
+  const byPlot=new Map<number,NeighborhoodResident|undefined>(
+    USER_PLOT_INDICES.map((index,i):[number,NeighborhoodResident|undefined]=>[index,residents[i]])
+  );
   const out:SceneryObject[]=buildings.map(b=>({...b,resident:byPlot.get(b.seed)}));
   out.push({kind:'center',x:390,z:392,seed:39,plot:central});
   out.push({kind:'tower',x:148,z:478,seed:20});
