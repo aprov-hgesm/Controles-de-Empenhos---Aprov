@@ -161,6 +161,33 @@
 
 ---
 
+## MARCO ATUAL — CADASTRO UNIFICADO + ABA DE GESTÃO DO CLIENTE (18/10/2026)
+
+**AUTORIZAÇÃO DO FUNDADOR:** desenvolver **um cadastro único** de Cliente Comercial + Workspace + conta operacional + trial padrão de 30 dias, mantendo **Gestão do cliente** em uma **aba específica** para alterar assinatura, editar contato e gerenciar assuntos administrativos do usuário.
+
+**IMPLEMENTAÇÃO NA BRANCH ISOLADA / PR #339:**
+- `lib/admin2/customers/unifiedCustomerOnboarding.ts`: valida e gera em conjunto Workspace, SectorAccount, cliente comercial `platformCustomers/{workspaceId}` e BillingAccount trial 30 dias/R$70, usando o domínio atual.
+- `components/admin2/customers/AdminUnifiedCustomerCreate.tsx`: formulário de criação unificado, dados institucionais e de contato, credencial inicial *somente no formulário*, trial obrigatório; **preview comum simula localmente**, apaga senha do estado ao concluir e não chama serviços reais.
+- `components/admin2/customers/AdminCustomerManagement.tsx`: aba **Gestão do cliente**, busca por ID, mostra dados do setor, vínculo comercial e billing; confirma ações de trial, plano ativo, isenção VIP, pendência e cancelamento, mostra histórico da sessão; edição comercial direcionada ao cadastro separado, Ficha 360 acessível. **Sem alteração real no localhost comum**. Quando Firebase Emulator demo-* está ligado, pode utilizar `lib/platformBillingStore.ts` para atualizar assinaturas no Emulator com auditoria, sem produção.
+- `components/admin2/customers/AdminCustomersDirectory.tsx`: integra Diretório existente, Cadastro unificado, Gestão, Edição comercial e Ficha 360, preservando autenticação Google fundadora e visual V3.
+- `components/admin2/customers/AdminCustomerDetailV2.tsx`: fichas simuladas leem billing do estado da prévia e **não fazem consultas reais de billing ou audit** para workspace fictício.
+- `lib/sectorProvisioning.ts`: extensão **opcional** `commercialCustomer` ao contrato de provisionamento seguro, validando dados e impondo `grantTrial=true` no novo fluxo.
+- `lib/server/sectorProvisioningAdmin.ts`: quando perfil comercial presente, acrescenta `platformCustomers/{workspaceId}` com `exists=false` ao **mesmo commit Firestore** que workspace, conta, UG/index, termCounter, billing e auditoria; rollback do caminho existente inclui comercial. Firebase Auth e Firestore **não são uma única transação**; preservar proteção/recovery.
+- Testes versionados `scripts/admin2-unified-onboarding.test.mjs` e `scripts/admin2-unified-domain.test.mjs`, incluídos no Application CI. Testes de segurança comercial por Emulator preservados.
+- **Documento detalhado do marco:** `docs/admin2/ONBOARDING_UNIFICADO_GESTAO_01.md`.
+
+**LIMITAÇÃO/GATE:** não foi implementada a chamada da prévia para criar uma conta no Firebase Emulator; o formulário **é simulação em memória**, enquanto o código server-side foi preparado para futura integração real. Alterações de assinatura persistem **somente no Emulator** se configurado; nunca ativar o endpoint de provisionamento real a partir da prévia sem homologação/Auth+Firestore Emulator, testes de rollback, gate de segurança e autorização específica de deploy. Redefinição de senha, suspensão operacional e encerramento de sessão **permanecem ações desabilitadas** na nova aba até integração segura. Não confundir cancelamento comercial com bloqueio operacional.
+
+**PRODUÇÃO:** `main`, Firebase real, workspaces, assinaturas, Rules, IAM, Google Drive, warehouse e deploy **intocados**.
+
+**VALIDAÇÃO PENDENTE:** Application CI / Core Protection do HEAD, smoke humano do formulário e Gestão no localhost. Fundador ainda não aprovou a nova versão.
+
+**PRÓXIMO PASSO SEQUENCIAL:** certificar CI; Fundador atualizar branch e validar três vistas (Diretório, Cadastro unificado, Gestão) e não vazamento de dados simulados; depois implementar **integração de provisionamento Auth+Firestore em Emulator** e testes de recuperação antes de liberar escrita real.
+
+**HANDOFF:** ONDE ESTAMOS — nova UI unificada e gestão em abas implantadas somente na branch; O QUE ESTAMOS FAZENDO — QA estrutural e certificação; QUEM — chat executor; O QUE FAZER A SEGUIR — CI e localhost; QUEM FARÁ — executor testa, Fundador valida.
+
+---
+
 ## 1. Fontes canônicas a reler em toda ativação de chat
 
 1. **Este documento** \`docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md\` na **branch ATIVA**, para conhecer o estágio e a última decisão.
