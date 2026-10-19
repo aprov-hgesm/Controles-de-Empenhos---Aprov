@@ -35,6 +35,8 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import { listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
@@ -189,6 +191,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
   const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
   const [previewBalances, setPreviewBalances] = useState<WarehouseLocationBalance[]>([]);
+  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
+  const [previewLotsLimited, setPreviewLotsLimited] = useState(false);
   const [previewQuery, setPreviewQuery] = useState('');
   const [previewMaterialId, setPreviewMaterialId] = useState('');
   const [previewLoaded, setPreviewLoaded] = useState(false);
@@ -257,6 +261,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPreviewQuery('');
       setPreviewMaterialId('');
       setPreviewLoaded(false);
+      setPreviewLots([]);
+      setPreviewLotsLimited(false);
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -271,9 +277,15 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     void Promise.all([
       listWarehouseMaterials(workspaceId, 250),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-    ]).then(([materials, balances]) => {
+      // Indexed 14-day range read only when 3D preview opens; no listener or polling.
+      listWarehouseVisualExpiryLots(workspaceId, 500),
+    ]).then(([materials, balances, lots]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
+      setPreviewLots(lots.map((item) => item.lot).filter((lot) =>
+        lot.position.kind !== 'UNASSIGNED' && lot.position.depotId === selectedDepotId
+      ));
+      setPreviewLotsLimited(lots.length >= 500);
       setPreviewBalances(
         balances
           .map((item) => item.balance)
@@ -292,6 +304,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         );
         setPreviewMaterials([]);
         setPreviewBalances([]);
+        setPreviewLots([]);
+        setPreviewLotsLimited(false);
         setPreviewLoaded(true);
       }
     });
@@ -1086,6 +1100,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </p>
           </div>
 
+          {croquiMode === 'preview' && previewLotsLimited && (
+            <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              Aviso: existem 500 ou mais lotes consultáveis. Os alertas de validade no 3D podem estar incompletos;
+              consulte o controle de materiais para a conferência integral.
+            </p>
+          )}
           {croquiMode === 'preview' ? (
             <WarehouseIsometricPreview
               logicalWidth={draftWidth}
@@ -1099,6 +1119,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 )
                 .map((item) => item.location)}
               balances={previewBalances}
+              lots={previewLots}
               materials={previewMaterials}
               selectedMaterialId={previewMaterialId}
               queryText={previewQuery}
