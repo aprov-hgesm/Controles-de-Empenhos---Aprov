@@ -11,13 +11,13 @@ O croqui 3D em `WarehouseIsometricPreview` já reconhecia ocupação positiva at
 - **Estantes:** subposições ativas ordenadas por código de localização. Saldo em uma subposição aparece em sua prateleira; saldo do local sem subposição aparece no primeiro nível. Os níveis podem exibir caixas empilhadas dentro da folga vertical; número de níveis representáveis até 8.
 - **Validade:** amarelo do dia do vencimento até **14 dias inclusive**; vermelho se já venceu. Data em formato canônico YYYY-MM-DD; comparação em dia UTC, sem erros por hora local. Sem lote válido ou sem saldo por posição: cor normal, sem presumir validade.
 - **Vínculo estrito:** lote ativo e com quantidade positiva **deve corresponder ao mesmo material e mesma posição** de um saldo positivo. Saldo em outro depósito/local/subposição não acende alerta incorreto. O status do local é agregação da gravidade de suas subposições; cor das caixas na estante segue a prateleira específica.
-- **Leituras Firestore:** em `WarehouseCroquisR1Operational`, consulta de lotes acontece somente ao abrir a prévia 3D, uma vez por ciclo de carregamento/depósito, sem `onSnapshot`, com limite de 500 registros. Não há escrita, nova coleção ou alteração de Rules. Caso o limite seja alcançado, aviso informa que os sinais de validade podem ser incompletos; a consulta de estoque e suas fontes de verdade permanecem disponíveis.
+- **Leituras Firestore:** em `WarehouseCroquisR1Operational`, consulta somente lotes com validade até o corte de 14 dias (incluindo vencidos) por filtro de intervalo indexado no campo `expiresOn`, sem leitura completa do acervo. É executada uma vez por ciclo de carregamento/depósito, sem `onSnapshot`, com limite de 500 registros. Não há escrita, nova coleção ou alteração de Rules. Caso o limite seja alcançado, aviso informa que os sinais de validade podem ser incompletos; a consulta de estoque e suas fontes de verdade permanecem disponíveis.
 
 **Atenção:** o alerta visual de 14 dias **não altera** a regra geral de alerta/FEFO de 30 dias existente no domínio.
 
 ## Superfícies integradas
 
-Além da prévia do editor de croquis, a tela principal **Meus Depósitos** (`WarehouseHomeOperational`) também utiliza o renderizador 3D. Ela agora busca o conjunto de lotes apenas quando existe croqui ativo para o depósito selecionado. A leitura ampla serve também de cache para a pesquisa de um material, evitando consulta adicional enquanto o resultado não estiver no limite de 500 lotes. A checagem de TypeScript/CI protege ambas as chamadas do componente.
+Além da prévia do editor de croquis, a tela principal **Meus Depósitos** (`WarehouseHomeOperational`) também utiliza o renderizador 3D. Ela agora busca os lotes vencidos/próximos do vencimento somente quando existe croqui ativo para o depósito selecionado. A pesquisa detalhada por material mantém sua consulta específica de lotes completos para preservar a exatidão do FEFO. Ambas são limitadas e não usam listeners. A checagem de TypeScript/CI protege ambas as chamadas do componente.
 
 ## Arquivos e testes
 
@@ -25,7 +25,8 @@ Além da prévia do editor de croquis, a tela principal **Meus Depósitos** (`Wa
 - `features/warehouse/components/WarehouseIsometricPreview.tsx` — posicionamento dos cubos, cores, legenda.
 - `features/warehouse/components/WarehouseColdAppliance3D.tsx` — reflexo branco somente quando ocupado.
 - `features/warehouse/components/WarehouseCroquisR1Operational.tsx` — carregamento sob demanda.
-- `features/warehouse/components/WarehouseHomeOperational.tsx` — visualização principal e reaproveitamento dos lotes previamente consultados.
+- `features/warehouse/components/WarehouseHomeOperational.tsx` — visualização principal com consulta seletiva por validade.
+- `lib/warehouse/lotRepository.ts` — consulta de intervalo apenas dos lotes com validade próxima ou vencida; economiza reads.
 - `scripts/warehouse-3d-stock-visual.test.mjs` — fronteiras 14/15 dias, vencidos, saldo zero, lote inativo, local incorreto, multicamada e contratos.
 - `package.json` e `.github/workflows/application-ci.yml` — suíte integrada ao Application CI.
 
