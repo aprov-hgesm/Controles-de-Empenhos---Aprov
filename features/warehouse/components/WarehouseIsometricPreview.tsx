@@ -1013,12 +1013,6 @@ export function WarehouseIsometricPreview({
     setDetailLocationId(null);
   }, [depotId]);
 
-  useEffect(() => {
-    setHoveredObject(null);
-    setInspectedLocationId(null);
-    setDetailLocationId(null);
-  }, [depotId]);
-
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
     for (const location of locations) {
@@ -1641,7 +1635,6 @@ export function WarehouseIsometricPreview({
                     dimmed={hasActiveSelection && !highlighted}
                     applianceFront={object.applianceFront}
                   />
-                );
                   </g>
                 );
               })}
