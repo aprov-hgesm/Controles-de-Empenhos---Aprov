@@ -11,6 +11,7 @@ import {
   Database,
   DatabaseBackup,
   LayoutDashboard,
+  House,
   Loader2,
   LockKeyhole,
   LogOut,
@@ -31,6 +32,7 @@ import { useRouter } from 'next/navigation';
 import { EditSectorModal } from './EditSectorModal';
 import { AdminBackupPanel } from './AdminBackupPanel';
 import { AdminConsumptionHub } from './AdminConsumptionHub';
+import { AdminWorldHomePanel } from './AdminWorldHomePanel';
 import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
 import { AdminSecurityPanel } from './AdminSecurityPanel';
 import { AdminBillingPanel } from './AdminBillingPanel';
@@ -45,7 +47,7 @@ import type {
   SectorLifecycleStatus,
   UpdateSectorWorkspaceInput,
 } from '../../lib/platformAdminStore';
-import type { Workspace } from '../../lib/platformIdentity';
+import type { PlatformAccount, Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type {
@@ -64,6 +66,7 @@ import type {
 import type { UpdatePlatformBillingConfigInput } from '../../lib/platformBillingStore';
 
 type AdminTabId =
+  | 'inicio'
   | 'overview'
   | 'setores'
   | 'novo-setor'
@@ -74,6 +77,12 @@ type AdminTabId =
   | 'seguranca';
 
 const ADMIN_TABS = [
+  {
+    id: 'inicio',
+    label: 'Início',
+    description: 'Bairro digital 3D com presença por conta e reservatório visual do Firestore.',
+    icon: House,
+  },
   {
     id: 'overview',
     label: 'Visão Geral',
@@ -130,11 +139,11 @@ const ADMIN_TABS = [
 }>;
 
 /**
- * Apenas organização visual das OITO abas existentes. O contrato, os IDs,
+ * Preserva as OITO abas originais e adiciona uma nona aba visual (Início). O contrato, os IDs,
  * as rotas e seus handlers permanecem iguais aos da main.
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
-  { label: 'Central', tabs: ['overview'] },
+  { label: 'Central', tabs: ['inicio', 'overview'] },
   { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'assinaturas'] },
   { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
   { label: 'Governança', tabs: ['seguranca'] },
@@ -170,6 +179,7 @@ interface PlatformAdminViewProps {
   adminEmail: string;
   customLogo: string | null;
   workspaces: Workspace[];
+  accounts: PlatformAccount[];
   loadingDirectory: boolean;
   directoryError: string | null;
   creatingSector: boolean;
@@ -209,6 +219,7 @@ export function PlatformAdminView({
   adminEmail,
   customLogo,
   workspaces,
+  accounts,
   loadingDirectory,
   directoryError,
   creatingSector,
@@ -244,7 +255,7 @@ export function PlatformAdminView({
 }: PlatformAdminViewProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const [activeTab, setActiveTab] = useState<AdminTabId>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTabId>('inicio');
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -277,7 +288,7 @@ export function PlatformAdminView({
   const changeAdminTab = useCallback((tab: AdminTabId) => {
     setActiveTab(tab);
     const url = new URL(window.location.href);
-    if (tab === 'overview') {
+    if (tab === 'inicio') {
       url.searchParams.delete('tab');
     } else {
       url.searchParams.set('tab', tab);
@@ -624,6 +635,20 @@ export function PlatformAdminView({
               </p>
             </div>
           </section>
+        )}
+
+        {activeTab === 'inicio' && (
+          <AdminWorldHomePanel
+            accounts={accounts}
+            sessions={sessions}
+            loadingDirectory={loadingDirectory}
+            directoryError={directoryError}
+            loadingSessions={loadingSessions}
+            sessionsError={sessionsError}
+            globalUsage={globalUsage}
+            globalUsageDataThrough={globalUsageDataThrough}
+            loadingGlobalUsage={loadingGlobalUsage}
+          />
         )}
 
         {activeTab === 'overview' && (
