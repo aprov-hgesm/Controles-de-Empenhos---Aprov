@@ -260,7 +260,7 @@ export default function Home() {
         <AppSidebar
           activeTab={activeTab}
           open={sidebarOpen}
-          userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+          userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
           noticeCount={pendingNoticeCount}
           onClose={() => setSidebarOpen(false)}
           onNavigate={(tab) => {
