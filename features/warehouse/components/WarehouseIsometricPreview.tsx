@@ -537,7 +537,13 @@ function WarehouseStructure({
   }
 
   if (kind === 'SHELF') {
-    const levels = clamp(subpositions.length || 4, 2, 6);
+    const levels = clamp(subpositions.length || 4, 2, 8);
+    // Preserve physical clearance between decks even with eight levels.
+    const rackBoxScale = Math.min(0.60, z / ((levels + 0.35) * 48));
+    const subpositionTotal = subpositions.reduce(
+      (sum, item) => sum + (occupiedSubpositions.get(item.id) || 0), 0
+    );
+    const baseQuantity = Math.max(0, occupiedQuantity - subpositionTotal);
     const beamDepth = clamp(object.height * 0.065, 2.6, 7.2);
     const sideBeamWidth = clamp(object.width * 0.022, 1.8, 4.6);
     const beamHeight = 3.35;
@@ -607,10 +613,6 @@ function WarehouseStructure({
           const p4 = isoPoint(object.x, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
 
           const linkedSubposition = subpositions[index] || null;
-          const subpositionTotal = subpositions.reduce(
-            (sum, item) => sum + (occupiedSubpositions.get(item.id) || 0), 0
-          );
-          const baseQuantity = Math.max(0, occupiedQuantity - subpositionTotal);
           const levelQuantity = (linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0)
             + (index === 0 ? baseQuantity : 0);
           const baseExpiry = index === 0
@@ -714,8 +716,8 @@ function WarehouseStructure({
 
               {stockBoxesOnSurface(
                 'rack-level-box-' + index, object, shelfZ, levelQuantity,
-                logicalWidth, logicalHeight, 0.60, levelHighlighted || highlighted,
-                levelExpiry, 4
+                logicalWidth, logicalHeight, rackBoxScale, levelHighlighted || highlighted,
+                levelExpiry, 6
               )}
               {rackBeamPrism({
                 key: 'front-beam-' + index,
