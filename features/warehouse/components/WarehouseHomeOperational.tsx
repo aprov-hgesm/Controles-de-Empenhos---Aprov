@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   CalendarClock,
@@ -36,6 +36,7 @@ import {
 } from '../../../lib/warehouse/lot';
 import { listWarehouseLots, listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import styles from './WarehouseHomeOperational.module.css';
 
 interface WarehouseHomeData {
@@ -112,11 +113,54 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [lots, setLots] = useState<WarehouseLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
-  const [previewLots, setPreviewLots] = useState<WarehouseLot[]>([]);
-  const [previewLotsLimited, setPreviewLotsLimited] = useState(false);
-  const [previewLotsLoadedForDepot, setPreviewLotsLoadedForDepot] = useState('');
   const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
+
+  // A leitura de validades para a inspeção é independente da busca de um
+  // material específico: uma consulta lazy por workspace, nunca por hover.
+  const [visualExpiryLots, setVisualExpiryLots] = useState<WarehouseLot[]>([]);
+  const [visualExpiryLimited, setVisualExpiryLimited] = useState(false);
+  const [visualExpiryDepot, setVisualExpiryDepot] = useState('');
+  const [inspectionLots, setInspectionLots] = useState<WarehouseLot[]>([]);
+  const [inspectionLotState, setInspectionLotState] = useState<WarehouseInspectionLotState>('idle');
+  const [inspectionLotError, setInspectionLotError] = useState<string | null>(null);
+  const [inspectionLotsComplete, setInspectionLotsComplete] = useState(true);
+  const inspectionRequestRef = useRef(0);
+  const inspectionPhaseRef = useRef<WarehouseInspectionLotState>('idle');
+
+  useEffect(() => {
+    // Ignorar qualquer resposta pendente de um workspace anterior.
+    inspectionRequestRef.current += 1;
+    inspectionPhaseRef.current = 'idle';
+    setInspectionLots([]);
+    setInspectionLotState('idle');
+    setInspectionLotError(null);
+    setInspectionLotsComplete(true);
+    return () => { inspectionRequestRef.current += 1; };
+  }, [workspaceId]);
+
+  const loadInspectionLots = useCallback((refresh = false) => {
+    if (!workspaceId || (!refresh && inspectionPhaseRef.current !== 'idle')) return;
+    inspectionPhaseRef.current = 'loading';
+    setInspectionLotState('loading');
+    setInspectionLotError(null);
+    const request = ++inspectionRequestRef.current;
+
+    void listWarehouseLots(workspaceId, 500)
+      .then((items) => {
+        if (request !== inspectionRequestRef.current) return;
+        setInspectionLots(items.map((item) => item.lot));
+        setInspectionLotsComplete(items.length < 500);
+        inspectionPhaseRef.current = 'ready';
+        setInspectionLotState('ready');
+      })
+      .catch((error) => {
+        if (request !== inspectionRequestRef.current) return;
+        inspectionPhaseRef.current = 'error';
+        setInspectionLotError(error instanceof Error ? error.message : 'Falha ao consultar validades.');
+        setInspectionLotState('error');
+      });
+  }, [workspaceId]);
 
   const reload = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
@@ -270,28 +314,27 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     };
   }, [selectedDepotId, workspaceId]);
 
-  // Single-field indexed range read for 14-day expiry/expired indicators.
-  // No listeners or extra reads when rotating the camera.
+  // Query expiration markers once per selected active croqui, independent of
+  // the full lot list that the user may request for inspection/PDF.
   useEffect(() => {
     let active = true;
-    setPreviewLots([]);
-    setPreviewLotsLimited(false);
-    setPreviewLotsLoadedForDepot('');
+    setVisualExpiryLots([]);
+    setVisualExpiryLimited(false);
+    setVisualExpiryDepot('');
     if (!selectedDepotId || !activeLayout || activeLayout.depotId !== selectedDepotId) {
       return () => { active = false; };
     }
     void listWarehouseVisualExpiryLots(workspaceId, 500).then((rows) => {
       if (!active) return;
-      setPreviewLots(rows.map((row) => row.lot).filter(
+      setVisualExpiryLots(rows.map((item) => item.lot).filter(
         (lot) => lot.position.kind !== 'UNASSIGNED'
           && lot.position.depotId === selectedDepotId
       ));
-      setPreviewLotsLimited(rows.length >= 500);
-      setPreviewLotsLoadedForDepot(selectedDepotId);
+      setVisualExpiryLimited(rows.length >= 500);
+      setVisualExpiryDepot(selectedDepotId);
     }).catch(() => {
       if (!active) return;
-      setPreviewLots([]);
-      setPreviewLotsLimited(true);
+      setVisualExpiryLimited(true);
     });
     return () => { active = false; };
   }, [activeLayout?.id, activeLayout?.depotId, selectedDepotId, workspaceId]);
@@ -644,9 +687,9 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
               </span>
             </div>
 
-            {previewLotsLimited && (
-              <p role="status" className="px-4 py-2 text-[11px] font-semibold text-amber-200">
-                Avisos de validade 3D podem estar incompletos (limite de lotes consultados).
+            {visualExpiryLimited && (
+              <p role="status" className="px-3 py-1.5 text-[11px] font-semibold text-amber-200">
+                Alertas de validade 3D podem estar incompletos. Consulte os detalhes do local.
               </p>
             )}
             <div className={styles.viewport}>
@@ -664,8 +707,22 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   objects={activeLayout.objects}
                   locations={previewLocations}
                   balances={previewBalances}
-                  lots={previewLotsLoadedForDepot === selectedDepotId ? previewLots : []}
                   materials={data.materials}
+                  lots={visualExpiryDepot === selectedDepotId ? visualExpiryLots : []}
+                  depotId={selectedDepotId}
+                  depotName={selectedDepot?.name || 'Depósito'}
+                  inspectionLots={inspectionLots}
+                  inspectionLotState={inspectionLotState}
+                  inspectionError={inspectionLotError}
+                  inspectionComplete={
+                    data.materials.length < 250
+                    && data.locations.length < 500
+                    && data.locationBalances.length < 500
+                    && inspectionLotsComplete
+                  }
+                  inspectionAvailable={!data.loading && !data.error}
+                  onInspectLocation={() => loadInspectionLots()}
+                  onRefreshInspection={() => loadInspectionLots(true)}
                   selectedMaterialId={selectedMaterialId}
                   queryText={query}
                   onQueryTextChange={setQuery}
