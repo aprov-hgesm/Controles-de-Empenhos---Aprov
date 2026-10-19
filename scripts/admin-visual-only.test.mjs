@@ -30,6 +30,9 @@ test('Admin original: oito abas e ações preservadas', () => {
   assert.match(view, /data-testid="admin-light-main"/);
   assert.match(view, /data-testid="admin-light-content"/);
   assert.match(view, /lg:pl-72/);
+  assert.match(view, /adminVisualStyles.layoutRoot/);
+  assert.match(style, /\.layoutRoot/);
+  assert.match(style, /transform: none !important/);
   assert.match(view, /emprovex-app-header fixed inset-x-0 top-0/);
   assert.match(view, /bg-\[#edf3fb\]/);
   assert.match(view, /new URLSearchParams\(window.location.search\)/);
