@@ -47,7 +47,7 @@ jobs:
         run: npm run test:vercel-manual-deploy
 
       - name: Admin 2.0 Customers contract and preview tests
-        run: node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs scripts/admin2-unified-onboarding.test.mjs
+        run: node --test scripts/admin2-sidebar-preview.test.mjs scripts/admin2-customer-contract.test.mjs scripts/admin2-customer-360-v2.test.mjs scripts/admin2-commercial-contract.test.mjs scripts/admin2-unified-onboarding.test.mjs scripts/admin2-unified-domain.test.mjs
 
 
       - name: Admin 2.0 Commercial Customer Firestore Rules Emulator
