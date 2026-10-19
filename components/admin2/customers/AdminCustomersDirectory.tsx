@@ -212,6 +212,16 @@ export function AdminCustomersDirectory() {
       key={selected.workspaceId}
       customer={selected}
       commercialCustomer={commercialDrafts.find(c => c.workspaceId === selected.workspaceId) || null}
+      previewBilling={(() => {
+        const entry = previewRecords.find(item => item.workspace.id === selected.workspaceId);
+        return entry ? {
+          status: entry.billing.status,
+          monthlyPriceCents: entry.billing.monthlyPriceCents,
+          trialEndsAt: entry.billing.trialEndsAt,
+          exemptionSource: entry.billing.exemptionSource || null,
+          paymentRequired: entry.billing.paymentRequired,
+        } : null;
+      })()}
       onBack={() => { setSelected(null); if (returnToManage) setUnifiedMode('manage'); }}
     />
   );
