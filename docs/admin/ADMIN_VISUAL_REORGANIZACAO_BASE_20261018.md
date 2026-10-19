@@ -109,3 +109,27 @@ O Fundador pediu a execução das melhorias de estimativa por UG **na mesma bran
 ### Handoff
 
 **Onde estamos:** PR #341 com evolução por módulo implementada, aguardando validações. **O que fazemos:** qualificar estimativas por UG sem leituras desnecessárias. **Quem faz:** executor GitHub. **A seguir:** CI e testes reais de Emulator, revisão de economia por UG e teste no localhost; projetar fase independente de idempotência/cobertura avançada. **Quem fará:** executor e fundador no aceite visual, sem mudanças em produção.
+
+---
+
+
+## Continuidade congelada em 19/10/2026 — próximo objetivo financeiro
+
+**Estado vigente:** PR [#341](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/341) **DRAFT, SEM MERGE, SEM DEPLOY**. O último HEAD de código R3 aprovado por Application CI, Core Protection e Legal foi `5c61636799c53b7464f387a07d37131ead490808`. Os commits posteriores desta retomada são **documentais**; conferir CI do HEAD vigente antes de certificá-los. A `main`, a produção, Rules ativas e os dados dos usuários permanecem intocados nesta iniciativa.
+
+**O Fundador perguntou, em seguida:** “é possível incluir um calculo em cima do consumo do firestore para saber qual vai ser o meu custo (diário, semanal e mensal) em reais considerando os dados que o firebase dispoe?”. A pergunta **ainda não recebeu implementação** e é exatamente a próxima solicitação a ser tratada no chat seguinte.
+
+### Resposta/arquitetura a investigar antes de programar
+
+É tecnicamente possível **estimar parcialmente** gasto do Firestore a partir das métricas e tarifas conhecidas. Para dar um valor em reais que não induza ao erro, o sucessor deve verificar tarifa efetiva, banco/edição/região, franquias diárias, pesos de `Read Units`/`Write Units`/`Realtime Read Units`, custos de storage/backup/rede quando houver fontes, preços e câmbio atuais, impostos/créditos e dados oficiais do Cloud Billing disponíveis. Onde essas fontes faltarem, marcar valor como **estimativa parcial/indisponível**, não como custo exato ou cobrança confirmada.
+
+**Proposta de UX:** acrescentar à área `Consumo & Cotas`, mantendo a identidade visual clara do PR #341, cartões de **Estimativa hoje**, **Últimos 7 dias**, **Mês atual** e **Projeção do mês**, com rótulos sobre períodos incompletos, atraso da métrica, timestamp das tarifas/câmbio, itens incluídos/não incluídos e um link/atalho para fatura oficial. Não somar dados por UG como se fossem a fatura: a comparação por UG segue proxy, não custo financeiro oficial.
+
+**Aproveitar fontes presentes no código:** `lib/server/googleCloudMonitoring.ts`, `lib/platformCapacity.ts`, `lib/server/globalUsageHistory.ts`, `lib/platformAdminUsageHistory.ts`, `lib/usageReconciliation.ts`, `components/admin/AdminConsumptionHub.tsx`, `components/admin/AdminGlobalUsagePanel.tsx` e `components/admin/AdminUsageReportsPanel.tsx`. Evitar novos listeners, polling e gravações por evento para essa projeção.
+
+**Próximo executor:** começar por pesquisa de SKUs e preços oficiais e contrato do snapshot real, explicar limitações, definir modelo calculável e testes de precisão/cobertura; solicitar confirmação de escopo somente se surgirem decisões de produto relevantes. Se solicitado implementar, fazê-lo **na mesma branch** com testes, GitHub Actions e novos registros documentais. Não fazer merge/deploy nem tocar a produção sem autorização explícita.
+
+**Para prévia local Windows:** não reutilizar a branch eliminada `feat/admin2-w01-sidebar-local-preview`. Usar clone limpo da `feat/admin-visual-organizacao-base-emprovex` em `$HOME\emprovex-admin-visual` e abrir `http://localhost:3001/admin?tab=consumo`. A rota real /admin executa funcionalidades verdadeiras; durante QA de layout usar somente navegação/consulta, nunca mutações produtivas.
+
+**Handoff padrão:** onde estamos — PR #341 DRAFT, R3 código pronto/CI certificado antes da atualização documental; o que fazemos — decidir próximo estimador financeiro Firestore global; quem faz — sucessor no GitHub; próximo passo — responder viabilidade e preços/contrato para custo diário/semanal/mensal em BRL; quem fará — sucessor após instrução do Fundador e sob restrições de QA/produção.
+
