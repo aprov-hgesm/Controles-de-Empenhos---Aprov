@@ -1,5 +1,17 @@
 # EMPROVEX — Memorial Oficial
 
+
+## ADMIN 2.0 — PROPOSTA DE ONBOARDING CLIENTE + WORKSPACE + TRIAL (18/10/2026)
+
+O Fundador propôs que o **Cadastro Comercial 1:1 crie simultaneamente o workspace**, inicie automaticamente o **trial padrão de 30 dias** e disponibilize a edição administrativa da assinatura. **Ainda não implementado; proposta registrada para a próxima etapa sequencial, sem autorização de deploy/mutação real.**
+
+A auditoria do código identificou um fluxo de provisionamento seguro preexistente em `app/api/admin/provision-sector/route.ts` + `lib/server/sectorProvisioningAdmin.ts`, que já grava workspace, conta operacional, billing trial, UG e auditoria; por padrão, `grantTrial=true` e `DEFAULT_PLATFORM_BILLING_CONFIG.defaultTrialDays=30`. Também existem rotinas `grantBillingTrial`, `setBillingExemption`, `setBillingCommercialStatus`, `setBillingCycleStatus` em `lib/platformBillingStore.ts`. A integração deve **reutilizar essas rotinas**, incluir `platformCustomers/{workspaceId}` no mesmo commit Firestore do provisionamento e preservar rollback/recovery de Firebase Auth; não alegar atomicidade entre sistemas nem ativar suspensão automática por inadimplência.
+
+Contrato comercial permanece **1 workspace = 1 cliente**, assinatura própria, plano-base R$70/mês, VIP permitido por decisão administrativa e histórico/auditoria. Desenvolver primeiro no localhost com Firebase Emulators e dados fictícios, seguido de aceitação humana e autorização expressa para qualquer mudança real. Fonte detalhada: `docs/admin2/ADMIN_CORE_CONTINUIDADE_SEQUENCIAL.md`.
+
+---
+
+
 ## DECISÃO COMERCIAL ADMIN 2.0 — OPÇÃO B / CONTRATO 1:1 (18/10/2026)
 
 **Fundador definiu que CADA WORKSPACE É UM CLIENTE COMERCIAL INDEPENDENTE.** Essa decisão **tem precedência** sobre os apontamentos históricos de vários workspaces (1:N) registrados abaixo, que estão formalmente revogados. A pessoa responsável pelo pagamento/contato é um atributo do cadastro daquele workspace, não uma conta comercial compartilhada.
