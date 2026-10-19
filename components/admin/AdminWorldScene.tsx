@@ -254,7 +254,7 @@ export function AdminWorldScene({
     x: 58+(i*73)%660, z: 55+(i*131)%655, size: 1+i%3,
   }));
   return (
-    <svg className={styles.sceneSvg} viewBox="0 0 1200 675" role="img"
+    <svg className={styles.sceneSvg} viewBox="0 0 1200 675" role="group"
       aria-label="Bairro digital tridimensional: cada residência representa uma conta; janelas acesas indicam sessão válida. Caixa d'água transparente indica o percentual observado da referência diária do Firestore.">
       <defs>
         <linearGradient id="world-sky" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#061628"/><stop offset=".48" stopColor="#13334a"/><stop offset="1" stopColor="#29495a"/></linearGradient>
