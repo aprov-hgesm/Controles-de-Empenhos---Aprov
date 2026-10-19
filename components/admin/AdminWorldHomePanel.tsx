@@ -6,10 +6,11 @@ import {
   Compass, Droplets, Home, Minus, Plus, Radio, RotateCcw, Sparkles, Users,
 } from 'lucide-react';
 import type { PlatformAccount } from '../../lib/platformIdentity';
+import { HGESM_SECTOR_EMAIL } from '../../lib/hgesmWorkspace';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import {
-  buildNeighborhoodResidents, neighborhoodPages, neighborhoodQuota,
+  buildNeighborhoodResidents, neighborhoodPages, neighborhoodQuota, partitionNeighborhoodResidents,
 } from '../../lib/adminNeighborhoodModel.mjs';
 import { AdminWorldScene } from './AdminWorldScene';
 import styles from './AdminWorldHomePanel.module.css';
@@ -49,8 +50,13 @@ export function AdminWorldHomePanel({
   const residents = useMemo(() => buildNeighborhoodResidents(accounts, sessions, {
     now, sessionsAvailable,
   }), [accounts, sessions, now, sessionsAvailable]);
-  const block = useMemo(() => neighborhoodPages(residents, page), [residents, page]);
-  const selected = block.displayed.find((resident) => resident.id === selectedId) || null;
+  const { founder, neighborhood } = useMemo(
+    () => partitionNeighborhoodResidents(residents, HGESM_SECTOR_EMAIL),
+    [residents]
+  );
+  const block = useMemo(() => neighborhoodPages(neighborhood, page), [neighborhood, page]);
+  const selected = (founder?.id === selectedId ? founder : null)
+    || block.displayed.find((resident) => resident.id === selectedId) || null;
   const online = residents.filter((resident) => resident.presence === 'online').length;
   const quota = neighborhoodQuota(globalUsage);
   const hasDirectory = !loadingDirectory && !directoryError;
@@ -72,7 +78,7 @@ export function AdminWorldHomePanel({
           <div className={styles.eyebrow}><Sparkles size={14} /> EMPROVEX / DIGITAL DISTRICT · 01</div>
           <h3>Um universo em movimento<span>.</span></h3>
           <p>Uma representação visual dos acessos à plataforma e do consumo de leitura do Firestore.
-            Cada prédio identificado representa uma conta real. As demais construções compõem a maquete. As janelas acendem quando há sessão monitorada válida.</p>
+            O prédio central pertence à conta fundadora APROV HGeSM. Cada prédio lateral representa uma conta cadastrada; os lotes ainda livres aguardam novos usuários.</p>
         </div>
         <div className={styles.headerPills}>
           <span><span className={styles.pulseDot}/> {sessionsAvailable ? 'Presença monitorada' : 'Presença indisponível'}</span>
@@ -84,7 +90,7 @@ export function AdminWorldHomePanel({
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Home size={16}/></span>
           <div><p>Residências digitais</p><strong>{hasDirectory ? count(residents.length) : '—'}</strong>
-            <small>edifícios identificados por conta</small></div>
+            <small>uma construção por conta cadastrada</small></div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Radio size={16}/></span>
@@ -94,7 +100,7 @@ export function AdminWorldHomePanel({
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Users size={16}/></span>
           <div><p>Quarteirão exibido</p><strong>{block.page + 1} <span>/ {totalPages}</span></strong>
-            <small>até 9 residências por vista</small></div>
+            <small>até 9 contas laterais por vista</small></div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIcon}><Droplets size={16}/></span>
@@ -107,6 +113,7 @@ export function AdminWorldHomePanel({
         <div className={styles.scenery}>
           <AdminWorldScene
             residents={block.displayed}
+            founder={founder}
             selectedId={selected?.id || null}
             onSelect={setSelectedId}
             waterLevel={isKnown ? quota.waterLevel : 0}
@@ -166,7 +173,7 @@ export function AdminWorldHomePanel({
             <span><i className={styles.dark}/> Casa escura · sem sessão</span>
             <span><i className={styles.unknown}/> Cinza · dados indisponíveis</span>
           </div>
-          <p className={styles.finePrint}>O edifício central simboliza o EMPROVEX; apenas os prédios identificados representam contas. “Ativo” indica lease de sessão não expirado, não presença humana em tempo real.
+          <p className={styles.finePrint}>O edifício central representa a conta fundadora APROV HGeSM e não é duplicado nos lotes laterais. Lotes vazios aguardam novas contas; legendas ficam acima dos edifícios. “Ativo” indica lease de sessão não expirado, não presença humana em tempo real.
             Cota exibida é referência diária de leitura, não limite de bloqueio nem valor da fatura.
             {!sessionsAvailable && ' Sessões indisponíveis: nenhuma casa é considerada offline com segurança.'}
             {' '}Medição do Google: {globalUsageDataThrough
