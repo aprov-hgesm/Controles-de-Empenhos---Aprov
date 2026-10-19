@@ -109,10 +109,14 @@ test('UI conecta lotes, boxes e brilho branco, sem writes, listeners ou nova reg
   const render = readFileSync(resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8');
   const appliance = readFileSync(resolve(root, 'features/warehouse/components/WarehouseColdAppliance3D.tsx'), 'utf8');
   const croquis = readFileSync(resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'), 'utf8');
+  const home = readFileSync(resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'), 'utf8');
   assert.match(croquis, /listWarehouseLots\(workspaceId, 500\)/);
   assert.match(croquis, /croquiMode !== 'preview' \|\| previewLoaded/);
   assert.match(croquis, /lots=\{previewLots\}/);
   assert.match(croquis, /previewLotsLimited/);
+  assert.match(home, /listWarehouseLots\(workspaceId, 500\)/);
+  assert.match(home, /lots=\{previewLotsLoadedForDepot === selectedDepotId \? previewLots : \[\]\}/);
+  assert.match(home, /previewLotsLoadedForDepot === selectedDepotId && !previewLotsLimited/);
   assert.match(render, /warehouseVisualExpiryMap\(balances, lots\)/);
   assert.match(render, /stockBoxesOnSurface\(/);
   assert.match(render, /data-expiry-state=\{expiry\}/);
