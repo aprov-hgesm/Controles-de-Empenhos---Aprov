@@ -35,7 +35,7 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
-import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
+import { listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
@@ -277,8 +277,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     void Promise.all([
       listWarehouseMaterials(workspaceId, 250),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-      // One bounded read only when 3D preview is opened; no listener or polling.
-      listWarehouseLots(workspaceId, 500),
+      // Indexed 14-day range read only when 3D preview opens; no listener or polling.
+      listWarehouseVisualExpiryLots(workspaceId, 500),
     ]).then(([materials, balances, lots]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
