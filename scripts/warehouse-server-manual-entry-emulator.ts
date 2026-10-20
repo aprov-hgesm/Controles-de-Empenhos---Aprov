@@ -20,6 +20,7 @@ import { saveWarehouseLogisticsSettingsServer } from '../lib/server/warehouseLog
 import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusionWrite';
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
+import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -172,6 +173,44 @@ try {
   }),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
   console.log('PASS: saída expressa server-only, saldo/lote atômicos, replay e falta de estoque');
+
+  const returnConsumptionId='cons_'+'c'.repeat(64);
+  const returnSeedUrl='http://127.0.0.1:8080/v1/projects/demo-emprovex-security'
+    +'/databases/emprovex-warehouse/documents/warehouse/'+workspaceId
+    +'/consumptions/'+returnConsumptionId;
+  const returnSeed=await fetch(returnSeedUrl,{
+    method:'PATCH',headers:{authorization:'Bearer owner','content-type':'application/json'},
+    body:JSON.stringify({fields:{
+      schemaVersion:{stringValue:'warehouse_consumption_record_v1'},
+      id:{stringValue:returnConsumptionId},workspaceId:{stringValue:workspaceId},
+      ug:{stringValue:ug},origin:{stringValue:'STOCK_OUTBOUND'},
+      materialId:{stringValue:first.material.id},movementId:{stringValue:outbound.movement.id},
+      quantity:{doubleValue:3},returnedQuantity:{doubleValue:0},
+      materialDescription:{stringValue:'Arroz integral'},unitLabel:{stringValue:'KG'},
+      destinationId:{stringValue:'dest_'+'d'.repeat(32)},
+      destinationName:{stringValue:'QA'},withdrawnBy:{stringValue:'Operador Teste'},
+      operatorUid:{stringValue:uid},siscofisStatus:{stringValue:'PENDING'},
+    }}),
+  });
+  assert.equal(returnSeed.ok,true,'Fixture consumo original do Emulator');
+  const returnInput={
+    consumptionId:returnConsumptionId,quantity:1,reason:'Devolução de QA',
+    operationId:'warehouse-r2-stock-return-01',
+  };
+  const returned=await returnWarehouseStockOutboundServer(access,returnInput);
+  assert.equal(returned.balance.quantity,98);
+  assert.equal(returned.locationBalance.quantity,73);
+  assert.equal(returned.lot?.quantity,73);
+  assert.equal(returned.consumption.returnedQuantity,1);
+  const returnReplay=await returnWarehouseStockOutboundServer(access,returnInput);
+  assert.equal(returnReplay.movement.id,returned.movement.id);
+  assert.equal(returnReplay.balance.quantity,98);
+  await assert.rejects(()=>returnWarehouseStockOutboundServer(access,{
+    ...returnInput,operationId:'warehouse-r2-stock-return-02',quantity:3,
+  }),/WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,98);
+  console.log('PASS: devolução atômica: saldo/lote/consumo/resumo/movimento + replay');
+
 
 
 
