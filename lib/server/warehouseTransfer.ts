@@ -198,8 +198,10 @@ export async function transferWarehouseStockServer(
     if (old) {
       const replay=unwrapMovement(old);
       if (!warehouseMovementMatchesReplay(replay,candidate)) fail('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-      if (!destination) fail('WAREHOUSE_TRANSFER_PROJECTION_INCONSISTENT');
-      return {result:{applied:false,movement:replay,balance,fromBalance:source,toBalance:destination},writes:[]};
+      const replayDestination=destination
+        || fail('WAREHOUSE_TRANSFER_PROJECTION_INCONSISTENT');
+      return {result:{applied:false,movement:replay,balance,
+        fromBalance:source,toBalance:replayDestination},writes:[]};
     }
     const lots:WarehouseLot[]=sourceLots.map(item=>lot(requireDoc(rows,item.path,'WAREHOUSE_TRANSFER_LOT_NOT_FOUND'),materialId,access));
     const plan=planWarehouseTransferLots({materialId,source:from,quantity,availableQuantity:source.quantity,lots});
