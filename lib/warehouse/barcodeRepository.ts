@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
+import { createWorkspaceMemoryReadCache } from './memoryReadCache';
 
 import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
@@ -36,6 +37,10 @@ import {
   warehouseCanonicalBarcodeReadInput,
   warehouseCanonicalMaterialReadInput,
 } from './readCompatibility';
+
+// Cache only non-authoritative barcode lookup metadata; never stock or balances.
+// Scope includes UID and UG so a session change cannot reuse another operator's result.
+const barcodeLookupCache = createWorkspaceMemoryReadCache<WarehouseBarcodeAssociation | null>();
 
 export interface WarehouseBarcodeListItem {
   association: WarehouseBarcodeAssociation;
@@ -139,12 +144,20 @@ export async function getWarehouseBarcodeByCode(
   const id = await createWarehouseBarcodeId(scope.workspaceId, normalized);
   const path = warehouseDocumentPath(scope.workspaceId, 'barcodes', id);
   try {
-    const snapshot = await getDoc(doc(db, path));
-    if (!snapshot.exists()) return null;
-    return parseAssociation(
+    return await barcodeLookupCache.read(
       scope.workspaceId,
-      snapshot.id,
-      snapshot.data() as Record<string, unknown>
+      `${scope.uid}:${scope.ug}:${id}`,
+      async () => {
+        const snapshot = await getDoc(doc(db, path));
+        // Count observed returned documents, not billed reads (missing docs can be billed).
+        if (snapshot.exists()) recordWarehouseDocumentReads(scope.workspaceId, 1);
+        if (!snapshot.exists()) return null;
+        return parseAssociation(
+          scope.workspaceId,
+          snapshot.id,
+          snapshot.data() as Record<string, unknown>
+        );
+      }
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
@@ -174,7 +187,7 @@ export async function saveWarehouseBarcodeAssociation(
   );
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const saved = await runTransaction(db, async (transaction) => {
       const barcodeRef = doc(db, barcodePath);
       const materialRef = doc(db, materialPath);
       const [barcodeSnapshot, materialSnapshot] = await Promise.all([
@@ -217,7 +230,7 @@ export async function saveWarehouseBarcodeAssociation(
           updatedBy: scope.uid,
           updatedAt: serverTimestamp(),
         });
-        return { ...existing, status: 'active', updatedBy: scope.uid };
+        return { ...existing, status: 'active' as const, updatedBy: scope.uid };
       }
 
       const candidate = validateWarehouseBarcodeAssociation(
@@ -254,6 +267,8 @@ export async function saveWarehouseBarcodeAssociation(
       });
       return candidate.data;
     });
+    barcodeLookupCache.invalidate(scope.workspaceId);
+    return saved;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, barcodePath);
     throw error;
@@ -272,6 +287,7 @@ export async function setWarehouseBarcodeStatus(
     updatedBy: scope.uid,
     updatedAt: serverTimestamp(),
   });
+  barcodeLookupCache.invalidate(scope.workspaceId);
 }
 
 
@@ -293,7 +309,7 @@ export async function replaceWarehouseBarcodeAssociation(
   const currentPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const saved = await runTransaction(db, async (transaction) => {
       const currentRef = doc(db, currentPath);
       const currentSnapshot = await transaction.get(currentRef);
       if (!currentSnapshot.exists()) throw new Error('WAREHOUSE_BARCODE_NOT_FOUND');
@@ -393,6 +409,8 @@ export async function replaceWarehouseBarcodeAssociation(
       });
       return nextAssociation;
     });
+    barcodeLookupCache.invalidate(scope.workspaceId);
+    return saved;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, currentPath);
     throw error;
