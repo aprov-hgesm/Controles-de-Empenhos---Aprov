@@ -291,16 +291,26 @@ export async function listWarehouseMovements(
       )
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return snapshot.docs.map((item) => {
+    // Um documento histórico inválido não deve ocultar os demais movimentos.
+    // Nunca fabricar origem PHYSICAL_INVENTORY nem modificar registros antigos.
+    return snapshot.docs.flatMap((item) => {
       const data = item.data() as Record<string, unknown>;
-      const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
-      return {
-        movement: parseMovement(normalizedWorkspaceId, item.id, data),
-        createdAt:
-          rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
-            ? rawCreatedAt.toDate().toISOString()
-            : null,
-      };
+      try {
+        const movement = parseMovement(normalizedWorkspaceId, item.id, data);
+        const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+        return [{
+          movement,
+          createdAt: rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+            ? rawCreatedAt.toDate().toISOString() : null,
+        }];
+      } catch (error) {
+        console.warn('[warehouse] Movimento histórico incompatível; leitura parcial preservada', {
+          movementId: item.id,
+          type: data.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      }
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
