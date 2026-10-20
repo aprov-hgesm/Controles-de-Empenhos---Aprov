@@ -171,6 +171,9 @@ export async function adjustWarehouseInventoryServer(
         }
       }
       const assigned=active.reduce((sum,x)=>sum+x.lot.quantity,0);
+      if(assigned>position.quantity+0.000001) {
+        return fail('WAREHOUSE_INVENTORY_EXISTING_LOT_MISMATCH');
+      }
       let requiredReduction=normalizeWarehouseQuantity(Math.max(0,assigned-nextPosition.quantity));
       if(requiredReduction===null)return fail('WAREHOUSE_INVENTORY_LOT_REDUCTION_INVALID');
       const now=new Date();
