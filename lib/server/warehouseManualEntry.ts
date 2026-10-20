@@ -208,7 +208,12 @@ export async function registerWarehouseManualEntryServer(
 
     const oldMovement = parse(read(paths.movement),
       data=>validateWarehouseMovement({
-        ...data, id:movementId, createdAt:undefined,
+        schemaVersion: data.schemaVersion,
+        id:movementId, workspaceId:data.workspaceId, ug:data.ug,
+        materialId:data.materialId, type:data.type, quantityDelta:data.quantityDelta,
+        idempotencyKeyHash:data.idempotencyKeyHash,
+        reversesMovementId:data.reversesMovementId ?? null,
+        note:data.note ?? null, source:data.source ?? null,
       }, {expectedWorkspaceId:access.workspaceId}),
       'WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
     const existingBarcode = barcodeId ? parse(read(paths.barcode),
