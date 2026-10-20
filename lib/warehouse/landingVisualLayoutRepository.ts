@@ -10,6 +10,7 @@ import { getCurrentOperationalScope } from '../operationalPaths';
 import { normalizeWorkspaceId } from '../platformIdentity';
 import { recordWarehouseDocumentReads, recordWarehouseDocumentWrites } from './telemetry';
 import { warehouseDocumentPath } from './namespace';
+import { warehouseServerCommand } from './serverCommandClient';
 
 export const WAREHOUSE_LANDING_VISUAL_SETTINGS_ID = 'landing-visual-layout';
 export const WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION =
@@ -141,42 +142,17 @@ export async function getWarehouseLandingVisualLayout(
   }
 }
 
+/**
+ * O layout visual é gravado exclusivamente no backend R2.
+ * O servidor valida tenant/UG e evita regravação idêntica.
+ */
 export async function saveWarehouseLandingVisualLayout(
   workspaceId: string,
   overrides: WarehouseLandingVisualOverrides
 ): Promise<WarehouseLandingVisualSettings> {
-  const { currentUser, ug, workspaceId: normalized } =
-    currentScopeForWorkspace(workspaceId);
-
-  const canonical = normalizeWarehouseLandingVisualOverrides(overrides);
-  const arrangementJson = JSON.stringify(canonical);
-  const path = warehouseDocumentPath(
-    normalized,
-    'settings',
-    WAREHOUSE_LANDING_VISUAL_SETTINGS_ID
+  const {workspaceId:normalized}=currentScopeForWorkspace(workspaceId);
+  const canonical=normalizeWarehouseLandingVisualOverrides(overrides);
+  return warehouseServerCommand<WarehouseLandingVisualSettings>(
+    normalized,'LANDING_VISUAL_SAVE',canonical
   );
-
-  try {
-    await setDoc(doc(db, path), {
-      schemaVersion: WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION,
-      workspaceId: normalized,
-      ug,
-      arrangementJson,
-      updatedBy: currentUser.uid,
-      updatedAt: serverTimestamp(),
-    });
-    recordWarehouseDocumentWrites(normalized, 1);
-
-    return {
-      schemaVersion: WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION,
-      workspaceId: normalized,
-      ug,
-      overrides: canonical,
-      updatedBy: currentUser.uid,
-      updatedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
 }
