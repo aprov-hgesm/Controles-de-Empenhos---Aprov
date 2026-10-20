@@ -161,6 +161,7 @@ export async function warehouseStructureArchiveServer(
       :/^(loc_|sub_)[a-f0-9]{32}$/.test(data.id))){
     return fail('WAREHOUSE_ARCHIVE_INVALID_TARGET',400);
   }
+  const archiveId=data.id as string;
   const ws=access.workspaceId,authToken=await token();
   const [depots,locations,balances,lots]=await Promise.all([
     warehouseAdminListCollection(authToken,ws,'depots',500),
@@ -168,7 +169,7 @@ export async function warehouseStructureArchiveServer(
     warehouseAdminListCollection(authToken,ws,'locationBalances',500),
     warehouseAdminListCollection(authToken,ws,'lots',500),
   ]);
-  const targetLocation=locations.find(x=>x.path===path(ws,'locations',data.id));
+  const targetLocation=locations.find(x=>x.path===path(ws,'locations',archiveId));
   if(!isDepot&&(!targetLocation||targetLocation.data.kind!==data.kind)){
     return fail('WAREHOUSE_ARCHIVE_LOCATION_NOT_FOUND',404);
   }
@@ -201,7 +202,7 @@ export async function warehouseStructureArchiveServer(
     if(!depot)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND');
     sameScope(access,depot,'depot');
     if(!isDepot){
-      const loc=rows.get(path(ws,'locations',data.id));
+      const loc=rows.get(path(ws,'locations',archiveId));
       if(!loc||loc.data.status!=='active')return fail('WAREHOUSE_ARCHIVE_LOCATION_NOT_ACTIVE');
       sameScope(access,loc,'location');
     }

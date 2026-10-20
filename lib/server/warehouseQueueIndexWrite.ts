@@ -72,7 +72,6 @@ export async function warehouseQueueIndexServer(
  const dedup=[...new Map(list.map(i=>[i.id,i])).values()];
  const reads=[...new Set(dedup.flatMap(i=>[i.q,i.state,i.exclude]))];
  return warehouseAdminTransaction(token,reads,rows=>{
-  const writes:Array<{path:string;data:Record<string,unknown>}>[];
   const pending:Array<{path:string;data:Record<string,unknown>}>=[];
   for(const x of dedup){
    const ex=rows.get(x.exclude);
