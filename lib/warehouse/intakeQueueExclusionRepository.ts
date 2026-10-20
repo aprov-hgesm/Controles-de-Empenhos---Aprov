@@ -124,7 +124,13 @@ export async function excludeWarehouseInvoicesFromPendingQueue(
   invoices: WarehouseQueueExclusionInput[]
 ): Promise<number> {
   const scope=currentScope(workspaceId);
-  return warehouseServerCommand<number>(
-    scope.workspaceId,'QUEUE_EXCLUDE',invoices
-  );
+  // O endpoint limita a 8 KiB por requisição; lotes pequenos preservam
+  // a validação e permitem retentativa idempotente após falhas de rede.
+  let affected=0;
+  for(let offset=0;offset<invoices.length;offset+=12) {
+    affected+=await warehouseServerCommand<number>(
+      scope.workspaceId,'QUEUE_EXCLUDE',invoices.slice(offset,offset+12)
+    );
+  }
+  return affected;
 }
