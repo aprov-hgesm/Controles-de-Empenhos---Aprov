@@ -46,3 +46,17 @@ node --test scripts/warehouse-manual-entry.test.mjs scripts/mobile-r1-manual-ent
 npx firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-warehouse --only auth,firestore "node --test scripts/warehouse-modular-r1-security.test.mjs"
 ```
 Não considerar o último comando prova do novo caminho sem testes específicos de operações localizadas adicionados à suite.
+
+
+## 20/10/2026 — Limpeza de dados de teste CONFIRMADA pelo Fundador
+- Alvo: `gen-lang-client-0982077967 / emprovex-warehouse / warehouse/hgesm-aprov`, UG `160416`.
+- Autorização expressa do Fundador para excluir registros históricos de materiais de teste; preservação de estruturas físicas e outros módulos.
+- Executor PowerShell `Limpar-Materiais-EMPROVEX.ps1`: execução mostrou `EXCLUÍDOS=3241/3241` e instruiu VERIFY.
+- VERIFY real recebido: `VERIFICACAO=PASS; DOCUMENTOS_OPERACIONAIS_RESTANTES=0; ESTRUTURA_FISICA_PRESERVADA=PASS`.
+- Coleções limpas: materials (57), movements (821), balances (56), locationBalances (70), lots (12), barcodes (3), inventories (1), inventories/*/items (4), intakes (917), intakeQueueIndex (285), queueExclusions (79), withdrawals (13), consumptions (922), outboundReturns (1); demais coleções operacionais verificadas vazias.
+- Preservação confirmada: depots (11), locations (268), layouts (25), settings (1), destinations (4) — total 309 documentos.
+- Durante execução anterior, o guard detectou atualização em `intakeQueueIndex/state`, causada potencialmente pelo `syncWarehouseIntakeQueueIndex` que grava `updatedAt`; abortou sem deletar. Novo PLAN e execução posterior resultaram em exclusão completa e VERIFY PASS.
+- Backup local foi gerado pelo PLAN no Windows do Fundador; **não foi transferido nem validado independentemente neste chat**. Não apagar esse backup.
+- Estado do banco referenciado é o da hora do VERIFY: operações posteriores e rebootstrap de índices baseados em notas fiscais da base operacional podem recriar documentos. Não prometer que permanecerá zerado indefinidamente.
+- A limpeza **não valida nem corrige** as Rules, o fluxo `MANUAL_ENTRY`, o código de barras ou a telemetria. PR #347 continua DRAFT/NO-GO até Emulator + regressão e smoke humano.
+- Próximo trabalho: simplificar fluxo material+movimento+saldos como uma operação atômica, minimizar round-trips e listagens de lotes, validar vínculo de barcode e proteger no Emulator a autorização de LOCAL/SUBPOSITION sem regressões. Publicação não autorizada apenas com limpeza.
