@@ -71,8 +71,8 @@ const canonical = read('lib/warehouse/outboundRepository.ts');
 const serverOutbound = read('lib/server/warehouseOutboundWrite.ts');
 const serverWithdrawal = read('lib/server/warehouseWithdrawalWrite.ts');
 assert.match(canonical, /warehouseServerCommand/);
-assert.doesNotMatch(canonical, /\\brunTransaction\\s*\\(/);
-assert.doesNotMatch(canonical, /\\btransaction\\.(?:set|update|delete)\\s*\\(/);
+assert.doesNotMatch(canonical, /\brunTransaction\s*\(/);
+assert.doesNotMatch(canonical, /\btransaction\.(?:set|update|delete)\s*\(/);
 for (const contract of [
   /warehouseAdminTransaction/,
   /createWarehouseMovementId/,
