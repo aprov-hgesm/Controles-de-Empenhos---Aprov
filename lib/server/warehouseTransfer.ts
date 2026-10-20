@@ -98,7 +98,7 @@ function located(row:WarehouseAdminDocument|null,id:string,access:VerifiedWareho
   if (!row) return null;
   return valid(validateWarehouseLocationBalance(
     warehouseCanonicalLocationBalanceReadInput(id,row.data),
-    {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}
+    {expectedWorkspaceId:access.workspaceId}
   ),'WAREHOUSE_TRANSFER_LOCATION_BALANCE_INVALID');
 }
 function lot(row:WarehouseAdminDocument,materialId:string,access:VerifiedWarehouseRequest) {
@@ -120,14 +120,20 @@ export async function transferWarehouseStockServer(
     || !/^[A-Za-z0-9_:.-]{8,200}$/.test(operationKey)) {
     fail('WAREHOUSE_TRANSFER_INVALID_ID',400);
   }
-  const from=validateWarehouseStockPosition(input.from);
-  const to=validateWarehouseStockPosition(input.to);
-  if (!from || !to || !isWarehousePhysicalStockPosition(from)
-    || !isWarehousePhysicalStockPosition(to) || warehouseStockPositionsEqual(from,to)) {
-    fail('WAREHOUSE_TRANSFER_INVALID_POSITION',400);
+  const fromCandidate=validateWarehouseStockPosition(input.from);
+  const toCandidate=validateWarehouseStockPosition(input.to);
+  if (!fromCandidate || !toCandidate || !isWarehousePhysicalStockPosition(fromCandidate)
+    || !isWarehousePhysicalStockPosition(toCandidate)
+    || warehouseStockPositionsEqual(fromCandidate,toCandidate)) {
+    return fail('WAREHOUSE_TRANSFER_INVALID_POSITION',400);
   }
-  const quantity=normalizeWarehouseLocationQuantity(input.quantity);
-  if (quantity===null || quantity<=0) fail('WAREHOUSE_TRANSFER_INVALID_QUANTITY',400);
+  const from:PhysicalPosition=fromCandidate as PhysicalPosition;
+  const to:PhysicalPosition=toCandidate as PhysicalPosition;
+  const candidateQuantity=normalizeWarehouseLocationQuantity(input.quantity);
+  if (candidateQuantity===null || candidateQuantity<=0) {
+    return fail('WAREHOUSE_TRANSFER_INVALID_QUANTITY',400);
+  }
+  const quantity:number=candidateQuantity;
   const note=typeof input.note==='string' ? input.note.trim() : null;
   if (note && note.length>240) fail('WAREHOUSE_TRANSFER_NOTE_TOO_LONG',400);
   // Never accept arbitrary lots or prepared balances from the browser.
@@ -172,11 +178,12 @@ export async function transferWarehouseStockServer(
     if (material.status!=='active') fail('WAREHOUSE_MATERIAL_INACTIVE');
     const balance=unwrapBalance(requireDoc(rows,p.balance,'WAREHOUSE_BALANCE_NOT_FOUND'));
     if (balance.materialId!==materialId || balance.ug!==access.ug) fail('WAREHOUSE_TRANSFER_BALANCE_SCOPE_INVALID');
-    const source=located(readDocument(rows,p.from),fromId,access);
+    const source=located(readDocument(rows,p.from),fromId,access)
+      || fail('WAREHOUSE_TRANSFER_SOURCE_BALANCE_MISMATCH');
     const destination=located(readDocument(rows,p.to),toId,access);
-    if (!source || !warehouseStockPositionsEqual(source.position,from)
+    if (!warehouseStockPositionsEqual(source.position,from)
       || (destination && !warehouseStockPositionsEqual(destination.position,to))) {
-      fail('WAREHOUSE_TRANSFER_SOURCE_BALANCE_MISMATCH');
+      return fail('WAREHOUSE_TRANSFER_SOURCE_BALANCE_MISMATCH');
     }
     const src={kind:'LOCATION_TRANSFER' as const,actorUid:access.uid,quantity,
       from,to,fromBalanceId:fromId,toBalanceId:toId};
@@ -196,7 +203,7 @@ export async function transferWarehouseStockServer(
     }
     const lots:WarehouseLot[]=sourceLots.map(item=>lot(requireDoc(rows,item.path,'WAREHOUSE_TRANSFER_LOT_NOT_FOUND'),materialId,access));
     const plan=planWarehouseTransferLots({materialId,source:from,quantity,availableQuantity:source.quantity,lots});
-    if (!plan.ok) fail('WAREHOUSE_TRANSFER_'+plan.error);
+    if (plan.ok===false) return fail('WAREHOUSE_TRANSFER_'+plan.error);
     const nextFrom=applyWarehouseLocationDelta(source,{
       id:fromId,workspaceId:access.workspaceId,ug:access.ug,materialId,position:from,
       quantityDelta:-quantity,movementId,
