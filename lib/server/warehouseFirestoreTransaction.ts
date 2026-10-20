@@ -243,3 +243,44 @@ export async function warehouseAdminListByField(
   if (docs.length > maxResults) throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_SATURATED', 409);
   return docs;
 }
+
+/**
+ * Consulta server-only limitada a domínios explícitos. Nunca permite ao
+ * navegador escolher collectionPath, filtros ou consultas arbitrárias.
+ * A saturação aborta inventários para evitar snapshots incompletos.
+ */
+export async function warehouseAdminListCollection(
+  accessToken: string,
+  workspaceId: string,
+  domain: 'materials' | 'balances' | 'locationBalances' | 'depots' | 'locations' | 'inventories',
+  maxResults = 500
+): Promise<WarehouseAdminDocument[]> {
+  if(!Number.isInteger(maxResults)||maxResults<1||maxResults>500) {
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_INVALID',400);
+  }
+  const root='warehouse/'+workspaceId;
+  const stub=root+'/'+domain+'/probe';
+  const stubName=fullName(stub);
+  const namePrefix=stubName.slice(0,-'probe'.length);
+  const result=await request(accessToken,'/'+root+':runQuery',{
+    structuredQuery:{from:[{collectionId:domain}],limit:maxResults+1},
+  });
+  const rows=parseStream(await result.text());
+  const docs:WarehouseAdminDocument[]=[];
+  for(const item of rows) {
+    const raw=item.document as {name?:string;fields?:Record<string,Encoded>;updateTime?:string}|undefined;
+    if(!raw)continue;
+    if(!raw.name?.startsWith(namePrefix)||!raw.updateTime) {
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_OUT_OF_SCOPE',503);
+    }
+    docs.push({
+      path:raw.name.slice(stubName.indexOf('warehouse/')),
+      data:decodeFields(raw.fields||{}),
+      updateTime:raw.updateTime,
+    });
+  }
+  if(docs.length>maxResults) {
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_SATURATED',409);
+  }
+  return docs;
+}
