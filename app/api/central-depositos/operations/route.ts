@@ -16,6 +16,7 @@ import { applyWarehouseExpressOutboundServer } from '../../../../lib/server/ware
 import { returnWarehouseStockOutboundServer } from '../../../../lib/server/warehouseReturnWrite';
 import { finalizeWarehouseWithdrawalServer } from '../../../../lib/server/warehouseWithdrawalWrite';
 import { warehouseInventoryLifecycleServer } from '../../../../lib/server/warehouseInventoryLifecycle';
+import { adjustWarehouseInventoryServer } from '../../../../lib/server/warehouseInventoryAdjustment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,6 +100,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'INVENTORY_STALE':
         result=await warehouseInventoryLifecycleServer(access,'STALE',body.input);
+        break;
+      case 'INVENTORY_ADJUST':
+        result=await adjustWarehouseInventoryServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
