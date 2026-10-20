@@ -48,12 +48,18 @@ for (const marker of [
   'updateWarehouseLocation',
   'listWarehouseLocationBalances',
   'transferWarehouseStock',
-  "type: 'TRANSFER'",
+  'warehouseServerCommand<TransferWarehouseStockResult>',
+]) requireText(repository, marker, 'Cliente sem comando de transferência do servidor: ' + marker);
+
+const serverTransfer=read('lib/server/warehouseTransfer.ts');
+for (const marker of [
+  "type:'TRANSFER'",
   'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK',
-  'runTransaction',
-  'fromBalanceRef',
-  'toBalanceRef',
-]) requireText(repository, marker, 'Persistência/transferência incompleta: ' + marker);
+  'warehouseAdminTransaction',
+  'planWarehouseTransferLots',
+  'fromBalanceId',
+  'toBalanceId',
+]) requireText(serverTransfer, marker, 'Motor transacional servidor incompleto: ' + marker);
 
 for (const marker of [
   "locationBalances: 'locationBalances'",
