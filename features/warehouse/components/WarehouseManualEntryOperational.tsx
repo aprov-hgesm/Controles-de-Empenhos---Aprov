@@ -26,6 +26,7 @@ import {
   registerWarehouseManualEntry,
   type RegisterWarehouseManualEntryResult,
 } from '../../../lib/warehouse/manualEntryRepository';
+import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 
 type MaterialMode = 'existing' | 'new';
 
@@ -236,18 +237,7 @@ export function WarehouseManualEntryOperational({
       resetAfterSuccess();
       await load();
     } catch (submitError) {
-      const raw = submitError instanceof Error ? submitError.message : String(submitError || '');
-      if (raw.includes('WAREHOUSE_MANUAL_ENTRY_PROVENANCE_REQUIRED')) {
-        setError('Informe a procedência diversa do material.');
-      } else if (raw.includes('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED')) {
-        setError('Selecione uma localização física ativa.');
-      } else if (raw.includes('WAREHOUSE_MANUAL_ENTRY_INVALID_EXPIRY')) {
-        setError('Informe uma validade válida ou deixe o campo em branco.');
-      } else if (raw.includes('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK')) {
-        setError('A entrada foi criada, mas o posicionamento precisa ser retomado. Atualize e tente novamente.');
-      } else {
-        setError(raw || 'Não foi possível registrar a entrada avulsa.');
-      }
+      setError(warehouseManualEntryErrorMessage(submitError));
     } finally {
       setWorking(false);
     }
