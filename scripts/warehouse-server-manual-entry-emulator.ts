@@ -21,6 +21,7 @@ import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusi
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
+import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -280,6 +281,28 @@ try {
 
   const newDestination=await warehouseDestinationCreateServer(access,{name:'Cozinha R2 Teste'});
   assert.ok((await getDoc(ref('destinations',newDestination.id))).exists());
+  const withdrawalRequest={
+    withdrawalId:'wd_'+'e'.repeat(32),destinationId:newDestination.id,
+    withdrawnBy:'Operador QA',lines:[{
+      lineId:'wline_'+'f'.repeat(32),materialId:first.material.id,
+      materialDescription:first.material.description,
+      requestedQuantity:2,baseQuantity:2,presentation:first.material.unit,
+      presentationLabel:'KG',unitLabel:'KG',position,
+      positionLabel:'DEP-MANUAL / LOC-MANUAL',
+      barcodeAssociation:null,barcode:null,lotId:first.validity!.id,
+      lotCode:first.validity!.code,
+    }],
+  };
+  const withdrawal=await finalizeWarehouseWithdrawalServer(access,withdrawalRequest);
+  assert.equal(withdrawal.withdrawal.status,'FINALIZED');
+  assert.equal(withdrawal.movementIds.length,1);
+  const finalizedReplay=await finalizeWarehouseWithdrawalServer(access,withdrawalRequest);
+  assert.equal(finalizedReplay.withdrawal.status,'FINALIZED');
+  assert.equal(finalizedReplay.movementIds.length,0);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,96);
+  assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,71);
+  console.log('PASS: retirada servidor com consumo auditável e retomada idempotente');
+
   await warehouseDestinationSetStatusServer(access,{
     destinationId:newDestination.id,status:'inactive',
   });
