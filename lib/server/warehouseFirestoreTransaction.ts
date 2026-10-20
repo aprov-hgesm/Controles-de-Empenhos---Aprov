@@ -225,8 +225,15 @@ export async function warehouseAdminListByField(
       if (!doc.name?.startsWith(prefix) || !doc.updateTime) {
         throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_OUT_OF_SCOPE', 503);
       }
+      // O nome do projeto e do banco podem conter "warehouse/".
+      // Nunca extrair caminho usando indexOf('warehouse/'): validar o
+      // prefixo EXATO e anexar exclusivamente o ID do documento.
+      const id = doc.name.slice(prefix.length);
+      if (!id || id.includes('/') || !/^[A-Za-z0-9_-]+$/.test(id)) {
+        throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_DOCUMENT_INVALID', 503);
+      }
       return {
-        path: doc.name.slice(fullName(parentPath + '/' + domain + '/probe').indexOf('warehouse/')),
+        path: parentPath + '/' + domain + '/' + id,
         data: decodeFields(doc.fields || {}),
         updateTime: doc.updateTime,
       };
