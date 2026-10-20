@@ -106,3 +106,49 @@ test('MANUAL_ENTRY rejeita procedência vazia e delta negativo', () => {
   assert.equal(badDelta.ok, false);
   assert.ok(badDelta.issues.some((item) => item.code === 'invalid_quantity_direction'));
 });
+
+
+test('MANUAL_ENTRY localizada carrega vínculo auditável material/posição/saldo', () => {
+  const position = {
+    kind: 'SUBPOSITION',
+    depotId: 'dep_' + '2'.repeat(32),
+    locationId: 'loc_' + '3'.repeat(32),
+    subpositionId: 'sub_' + '4'.repeat(32),
+  };
+  const locationBalanceId = 'locbal_' + '5'.repeat(64);
+  const input = candidate({
+    source: {
+      kind: 'MANUAL_ENTRY',
+      actorUid: 'founder-uid',
+      provenance: 'Contagem',
+      reference: null,
+      position,
+      locationBalanceId,
+    },
+  });
+  const result = movement.validateWarehouseMovement(input, {
+    expectedWorkspaceId: WORKSPACE,
+    expectedUg: UG,
+    expectedMaterialId: MATERIAL,
+  });
+  assert.equal(result.ok, true, JSON.stringify(result.issues));
+  assert.equal(result.data.source.locationBalanceId, locationBalanceId);
+  assert.deepEqual(result.data.source.position, position);
+});
+
+test('MANUAL_ENTRY rejeita posição sem ID de saldo e ID sem posição', () => {
+  const position = {
+    kind: 'LOCATION',
+    depotId: 'dep_' + '2'.repeat(32),
+    locationId: 'loc_' + '3'.repeat(32),
+    subpositionId: null,
+  };
+  const baseSource = { kind: 'MANUAL_ENTRY', actorUid: 'uid',
+    provenance: 'Contagem', reference: null };
+  assert.equal(movement.validateWarehouseMovement(candidate({
+    source: { ...baseSource, position },
+  })).ok, false);
+  assert.equal(movement.validateWarehouseMovement(candidate({
+    source: { ...baseSource, locationBalanceId: 'locbal_' + '5'.repeat(64) },
+  })).ok, false);
+});
