@@ -133,7 +133,7 @@ export async function warehouseAdminTransaction<T>(
     read: ReadonlyMap<string, WarehouseAdminDocument | null>,
   ) => { result: T; writes: Array<{ path: string; data: Record<string, unknown> }> }
 ): Promise<T> {
-  if (paths.length < 1 || paths.length > 128 || new Set(paths).size !== paths.length) {
+  if (paths.length < 1 || paths.length > 512 || new Set(paths).size !== paths.length) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_READ_SET', 400);
   }
   const names = paths.map(fullName);
@@ -168,7 +168,7 @@ export async function warehouseAdminTransaction<T>(
     if (plan.writes.length === 0) {
       return plan.result;
     }
-    if (plan.writes.length > 128 || new Set(plan.writes.map(w => w.path)).size !== plan.writes.length) {
+    if (plan.writes.length > 450 || new Set(plan.writes.map(w => w.path)).size !== plan.writes.length) {
       throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_WRITE_SET', 400);
     }
     const writes = plan.writes.map(w => {
