@@ -1001,72 +1001,7 @@ export async function archiveWarehouseStructure(
   workspaceId: string,
   target: { kind: 'DEPOT' | WarehouseLocationKind; id: string }
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const isDepot = target.kind === 'DEPOT';
-  if (isDepot && !isValidWarehouseDepotId(target.id)) throw new Error('WAREHOUSE_ARCHIVE_INVALID_DEPOT');
-  if (!isDepot && !isValidWarehouseLocationId(target.id) && !isValidWarehouseSubpositionId(target.id)) {
-    throw new Error('WAREHOUSE_ARCHIVE_INVALID_LOCATION');
-  }
-  const selected = isDepot ? null : await getWarehouseLocation(workspaceId, target.id);
-  if (!isDepot && (!selected || selected.location.kind !== target.kind)) {
-    throw new Error('WAREHOUSE_ARCHIVE_LOCATION_NOT_FOUND');
-  }
-  const depotId = isDepot ? target.id : selected!.location.depotId;
-  const [depotDoc, positions, balances, lots] = await Promise.all([
-    getDoc(doc(db, warehouseDocumentPath(workspaceId, 'depots', depotId))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'locations')), where('depotId', '==', depotId), limit(501))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'locationBalances')), where('position.depotId', '==', depotId), limit(501))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'lots')), where('position.depotId', '==', depotId), limit(501))),
-  ]);
-  if (!depotDoc.exists()) throw new Error('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND');
-  if (positions.size >= 501 || balances.size >= 501 || lots.size >= 501) {
-    throw new Error('WAREHOUSE_ARCHIVE_SCAN_SATURATED');
-  }
-  const entries = positions.docs.map((snap) => parseLocation(workspaceId, snap.id, snap.data() as Record<string, unknown>));
-  if (!isDepot && !entries.some((row) => row.id === target.id && row.status === 'active')) {
-    throw new Error('WAREHOUSE_ARCHIVE_LOCATION_NOT_ACTIVE');
-  }
-  const refersToTarget = (raw: unknown): boolean => {
-    if (!raw || typeof raw !== 'object') return false;
-    const position = raw as WarehouseStockPosition;
-    if (position.kind === 'UNASSIGNED' || position.depotId !== depotId) return false;
-    if (isDepot) return true;
-    return target.kind === 'LOCAL'
-      ? position.locationId === target.id
-      : position.kind === 'SUBPOSITION' && position.subpositionId === target.id;
-  };
-  for (const balance of balances.docs) {
-    const data = balance.data();
-    if (typeof data.quantity !== 'number' || !Number.isFinite(data.quantity)) {
-      throw new Error('WAREHOUSE_ARCHIVE_INVALID_BALANCE');
-    }
-    if (data.quantity > 0 && refersToTarget(data.position)) {
-      throw new Error('WAREHOUSE_ARCHIVE_OCCUPIED: transfira o material antes de inativar.');
-    }
-  }
-  for (const lot of lots.docs) {
-    const data = lot.data();
-    if (data.status === 'active' && (typeof data.quantity !== 'number' || !Number.isFinite(data.quantity))) {
-      throw new Error('WAREHOUSE_ARCHIVE_INVALID_LOT');
-    }
-    if (data.status === 'active' && data.quantity > 0 && refersToTarget(data.position)) {
-      throw new Error('WAREHOUSE_ARCHIVE_ACTIVE_LOT: transfira os lotes antes de inativar.');
-    }
-  }
-  const toArchive = entries.filter((row) =>
-    row.status === 'active' && (isDepot || row.id === target.id
-      || (target.kind === 'LOCAL' && row.kind === 'SUBPOSITION' && row.parentLocationId === target.id)));
-  if (toArchive.length + (isDepot ? 1 : 0) >= 500) throw new Error('WAREHOUSE_ARCHIVE_BATCH_TOO_LARGE');
-  const batch = writeBatch(db);
-  for (const row of toArchive) {
-    batch.update(doc(db, warehouseDocumentPath(workspaceId, 'locations', row.id)), {
-      status: 'inactive', updatedBy: scope.uid, updatedAt: serverTimestamp(),
-    });
-  }
-  if (isDepot) batch.update(doc(db, warehouseDocumentPath(workspaceId, 'depots', depotId)), {
-    status: 'inactive', updatedBy: scope.uid, updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
+  await warehouseServerCommand<{ok:true}>(workspaceId,'STRUCTURE_ARCHIVE',target);
   invalidateWarehouseDepotReadCache(workspaceId);
   invalidateWarehouseLocationReadCache(workspaceId);
 }

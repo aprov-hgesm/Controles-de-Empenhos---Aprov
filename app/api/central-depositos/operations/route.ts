@@ -23,6 +23,8 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
+import { warehouseLedgerMovementServer, warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -132,6 +134,12 @@ export async function POST(request: NextRequest) {
         break;
       case 'INTAKE_STATE_SAVE':
         result=await warehouseIntakeStateServer(access,body.input);
+        break;
+      case 'LEDGER_MOVEMENT':
+        result=await warehouseLedgerMovementServer(access,body.input);
+        break;
+      case 'STRUCTURE_ARCHIVE':
+        result=await warehouseStructureArchiveServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
