@@ -8,6 +8,7 @@ import { transferWarehouseStockServer } from '../../../../lib/server/warehouseTr
 import { saveWarehouseMaterialServer } from '../../../../lib/server/warehouseMaterialWrite';
 import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../../../../lib/server/warehouseDestinationWrite';
 import { warehouseStructureServer } from '../../../../lib/server/warehouseStructureWrite';
+import { saveWarehouseLandingVisualServer } from '../../../../lib/server/warehouseLandingVisualWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'STRUCTURE':
         result=await warehouseStructureServer(access,body.input);
+        break;
+      case 'LANDING_VISUAL_SAVE':
+        result=await saveWarehouseLandingVisualServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
