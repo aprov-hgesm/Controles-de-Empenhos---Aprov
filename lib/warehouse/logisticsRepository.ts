@@ -26,6 +26,7 @@ import { listWarehouseLocationBalances } from './locationRepository';
 import { listWarehouseLots } from './lotRepository';
 import { listWarehouseMaterials } from './materialRepository';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import { warehouseServerCommand } from './serverCommandClient';
 import { listWarehouseSiscofisSnapshots } from './siscofisService';
 import {
   WAREHOUSE_LOGISTICS_SETTINGS_SCHEMA_VERSION,
@@ -217,37 +218,15 @@ export async function getWarehouseLogisticsSettings(
   }
 }
 
+/** A preferência de alertas é mutável somente através do servidor R2. */
 export async function saveWarehouseLogisticsSettings(
   workspaceId: string,
   lowStockThreshold: number | null
 ): Promise<WarehouseLogisticsSettings> {
-  const { currentUser, scope, workspaceId: normalized } = currentScopeForWorkspace(workspaceId);
-  if (!scope.ug) throw new Error('WAREHOUSE_LOGISTICS_UG_REQUIRED');
-
-  const canonical = validateWarehouseLogisticsSettings({
-    schemaVersion: WAREHOUSE_LOGISTICS_SETTINGS_SCHEMA_VERSION,
-    workspaceId: normalized,
-    ug: scope.ug,
-    lowStockThreshold,
-    updatedBy: currentUser.uid,
-    updatedAt: null,
-  }, normalized);
-
-  const path = warehouseDocumentPath(normalized, 'settings', WAREHOUSE_LOGISTICS_SETTINGS_ID);
-  try {
-    await setDoc(doc(db, path), {
-      schemaVersion: canonical.schemaVersion,
-      workspaceId: canonical.workspaceId,
-      ug: canonical.ug,
-      lowStockThreshold: canonical.lowStockThreshold,
-      updatedBy: canonical.updatedBy,
-      updatedAt: serverTimestamp(),
-    });
-    return { ...canonical, updatedAt: new Date().toISOString() };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
+  const { workspaceId: normalized }=currentScopeForWorkspace(workspaceId);
+  return warehouseServerCommand<WarehouseLogisticsSettings>(
+    normalized,'LOGISTICS_SETTINGS_SAVE',lowStockThreshold
+  );
 }
 
 export async function loadWarehouseDeliveriesContext(
