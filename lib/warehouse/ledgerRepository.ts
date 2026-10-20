@@ -337,16 +337,24 @@ export async function listWarehouseMovementsForMaterial(
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
-      .map((item) => {
+      .flatMap((item) => {
         const data = item.data() as Record<string, unknown>;
-        const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
-        return {
-          movement: parseMovement(normalizedWorkspaceId, item.id, data),
-          createdAt:
-            rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
-              ? rawCreatedAt.toDate().toISOString()
-              : null,
-        };
+        try {
+          const movement = parseMovement(normalizedWorkspaceId, item.id, data);
+          const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+          return [{
+            movement,
+            createdAt: rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+              ? rawCreatedAt.toDate().toISOString() : null,
+          }];
+        } catch (error) {
+          console.warn('[warehouse] Movimento histórico incompatível em consulta por material', {
+            movementId: item.id,
+            type: data.type,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return [];
+        }
       })
       .sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''))
       .slice(0, bounded);
@@ -385,17 +393,24 @@ export async function listWarehouseMovementsInPeriod(
       )
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return snapshot.docs.map((item) => {
+    return snapshot.docs.flatMap((item) => {
       const data = item.data() as Record<string, unknown>;
-      const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
-      return {
-        movement: parseMovement(normalizedWorkspaceId, item.id, data),
-        createdAt:
-          rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
-            ? rawCreatedAt.toDate().toISOString()
-            : null,
-      };
-    });
+      try {
+        const movement = parseMovement(normalizedWorkspaceId, item.id, data);
+        const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+        return [{
+          movement,
+          createdAt: rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+            ? rawCreatedAt.toDate().toISOString() : null,
+        }];
+      } catch (error) {
+        console.warn('[warehouse] Movimento histórico incompatível em consulta por período', {
+          movementId: item.id, type: data.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      }
+    });;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
