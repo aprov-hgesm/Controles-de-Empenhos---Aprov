@@ -466,6 +466,18 @@ export async function syncWarehouseIntakeQueueIndex(
     bootstrap: requiresBootstrap,
   });
 
+  // Sem novos documentos processados, não regravar 'state' nem fazer o
+  // watermark retroceder cinco minutos em cada visita à fila.
+  if (!requiresBootstrap
+    && discovered.invoiceReads === 0
+    && discovered.intakeReads === 0
+    && discovered.candidateWrites === 0) {
+    return {
+      bootstrapPerformed: false, invoiceReads: 0, intakeReads: 0,
+      candidateWrites: 0, discoveryComplete: true,
+    };
+  }
+
   const latestObserved =
     discovered.maxRegisteredAt
     || state?.watermarkRegisteredAt
