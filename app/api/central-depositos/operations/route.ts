@@ -15,6 +15,7 @@ import { writeWarehouseLotServer } from '../../../../lib/server/warehouseLotWrit
 import { applyWarehouseExpressOutboundServer } from '../../../../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../../../../lib/server/warehouseReturnWrite';
 import { finalizeWarehouseWithdrawalServer } from '../../../../lib/server/warehouseWithdrawalWrite';
+import { warehouseInventoryLifecycleServer } from '../../../../lib/server/warehouseInventoryLifecycle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,6 +78,27 @@ export async function POST(request: NextRequest) {
         break;
       case 'WITHDRAWAL_FINALIZE':
         result=await finalizeWarehouseWithdrawalServer(access,body.input);
+        break;
+      case 'INVENTORY_COUNT':
+        result=await warehouseInventoryLifecycleServer(access,'COUNT',body.input);
+        break;
+      case 'INVENTORY_REVIEW':
+        result=await warehouseInventoryLifecycleServer(access,'REVIEW',body.input);
+        break;
+      case 'INVENTORY_REOPEN':
+        result=await warehouseInventoryLifecycleServer(access,'REOPEN',body.input);
+        break;
+      case 'INVENTORY_BEGIN_CONFIRM':
+        result=await warehouseInventoryLifecycleServer(access,'BEGIN_CONFIRM',body.input);
+        break;
+      case 'INVENTORY_FINISH_CONFIRM':
+        result=await warehouseInventoryLifecycleServer(access,'FINISH_CONFIRM',body.input);
+        break;
+      case 'INVENTORY_CANCEL':
+        result=await warehouseInventoryLifecycleServer(access,'CANCEL',body.input);
+        break;
+      case 'INVENTORY_STALE':
+        result=await warehouseInventoryLifecycleServer(access,'STALE',body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
