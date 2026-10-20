@@ -28,6 +28,7 @@ import {
 } from '../warehouse/lot';
 import {
   warehouseCanonicalMaterialReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalBarcodeReadInput,
   warehouseCanonicalLotReadInput,
 } from '../warehouse/readCompatibility';
@@ -198,11 +199,15 @@ export async function registerWarehouseManualEntryServer(
     }
 
     const prevBalance = parse(read(paths.balance),
-      data=>validateWarehouseBalance(data,
-        {expectedWorkspaceId:access.workspaceId,expectedMaterialId:materialId}),
+      data=>validateWarehouseBalance({
+        schemaVersion:data.schemaVersion,workspaceId:data.workspaceId,ug:data.ug,
+        materialId:data.materialId,quantity:data.quantity,revision:data.revision,
+        lastMovementId:data.lastMovementId,
+      },{expectedWorkspaceId:access.workspaceId,expectedMaterialId:materialId}),
       'WAREHOUSE_MANUAL_ENTRY_BALANCE_INVALID');
     const prevLocation = parse(read(paths.located),
-      data=>validateWarehouseLocationBalance({...data,id:locationBalanceId},
+      data=>validateWarehouseLocationBalance(
+        warehouseCanonicalLocationBalanceReadInput(locationBalanceId,data),
         {expectedWorkspaceId:access.workspaceId,expectedMaterialId:materialId}),
       'WAREHOUSE_MANUAL_ENTRY_LOCATION_BALANCE_INVALID');
 
