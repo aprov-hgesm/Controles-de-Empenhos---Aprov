@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## REGISTRO DE INCIDENTE — 20/10/2026 · LIMPEZA DE MATERIAIS DE TESTE CONCLUÍDA (PR #347 DRAFT)
+
+> **Registro documental na branch do PR #347, não publicado na `main`.** O estado de release do EMPROVEX continua sujeito aos gates independentes.
+
+- **Banco/escopo:** `gen-lang-client-0982077967`, database `emprovex-warehouse`, workspace `hgesm-aprov`, UG `160416`. Autorização expressa do Fundador para excluir dados de materiais de teste, preservando a estrutura física.
+- **Resultado do PowerShell:** `EXCLUÍDOS=3241/3241`; verificação final apresentada pelo Fundador: `VERIFICACAO=PASS; DOCUMENTOS_OPERACIONAIS_RESTANTES=0; ESTRUTURA_FISICA_PRESERVADA=PASS`.
+- **Preservado e conferido:** 11 depósitos, 268 locais/subposições, 25 croquis, 1 configuração e 4 destinos (309 documentos).
+- **Coleções de material/estoque/histórico/índices:** sem documentos operacionais restantes no momento da verificação. Backup local existente no ambiente do Fundador; manter protegido.
+- **Nota operacional:** `intakeQueueIndex/state` é atualizado pela sincronização da fila; plano anterior abortou ao detectar mudança de versão (nenhuma exclusão), seguido de novo plano e execução bem-sucedida. A fila pode se reconstruir a partir de NFs que permanecem no módulo operacional.
+- **Próximo passo P0:** PR #347 contém implementação parcial das Rules de `MANUAL_ENTRY` localizada e tratamento de leitura histórica. Falta executar Emulator, regressão, compilação e smoke humano; nenhuma publicação desse PR foi validada. Simplificar cadastro em transação consistente e economizar leituras redundantes mantendo workspace/UG, rastreabilidade e saldos corretos.
+- **Detalhes:** `docs/incidents/WAREHOUSE_MANUAL_ENTRY_P0_20261020.md`.
+
+---
+
 ## ESTADO VIGENTE GLOBAL — 19/10/2026 · 3D PREMIUM R4 — PR #346 PUBLICADO
 
 > **ESTADO DE PRODUÇÃO MAIS RECENTE.** Este registro prevalece sobre a seção histórica imediatamente abaixo intitulada “EMPROVEX R4 PUBLICADA”, que continua correta como marco anterior, mas não representa mais o deployment atualmente associado ao domínio.
