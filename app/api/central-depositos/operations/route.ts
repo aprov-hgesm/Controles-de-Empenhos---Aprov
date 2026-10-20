@@ -27,6 +27,8 @@ import { warehouseLedgerMovementServer, warehouseStructureArchiveServer } from '
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
 
+import { warehouseLogisticsAlertsServer } from '../../../../lib/server/warehouseLogisticsAlertWrite';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -151,6 +153,12 @@ export async function POST(request: NextRequest) {
         break;
       case 'QUEUE_INDEX_DEACTIVATE':
         result=await warehouseQueueIndexServer(access,'DEACTIVATE',body.input);
+        break;
+      case 'LOGISTICS_ALERT_UPSERT':
+        result=await warehouseLogisticsAlertsServer(access,'UPSERT',body.input);
+        break;
+      case 'LOGISTICS_ALERT_RESOLVE':
+        result=await warehouseLogisticsAlertsServer(access,'RESOLVE',body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
