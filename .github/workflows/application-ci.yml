@@ -263,6 +263,9 @@ jobs:
       - name: Operador Móvel premium interface and navigation guard
         run: npm run test:operador-movel-premium
 
+      - name: Warehouse R2 direct SDK write audit (report only)
+        run: node scripts/warehouse-r2-direct-write-audit.mjs
+
       - name: Central Móvel entrada avulsa mobile tests
         run: npm run test:mobile-r1-manual-entry
 
