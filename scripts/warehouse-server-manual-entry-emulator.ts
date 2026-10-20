@@ -27,6 +27,11 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../lib/server/wareh
 import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
 import { warehouseInventoryLifecycleServer } from '../lib/server/warehouseInventoryLifecycle';
 import { adjustWarehouseInventoryServer } from '../lib/server/warehouseInventoryAdjustment';
+import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateServer } from '../lib/server/warehouseRemainingWrites';
+import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
+import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
+import { warehouseLedgerMovementServer,warehouseStructureArchiveServer } from '../lib/server/warehouseLedgerAndArchive';
+import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
 
 
@@ -412,6 +417,103 @@ try {
 
 
 
+
+  // Regressões dos últimos motores convertidos para gravação server-only.
+  const barcodeInput={
+    barcode:'7896305701987',materialId:first.material.id,
+    presentation:first.material.unit,
+  };
+  const registered=await warehouseBarcodeServer(access,'SAVE',barcodeInput);
+  assert.equal(registered.barcode,barcodeInput.barcode);
+  const registeredReplay=await warehouseBarcodeServer(access,'SAVE',barcodeInput);
+  assert.equal(registeredReplay.id,registered.id);
+  await warehouseBarcodeServer(access,'STATUS',{barcodeId:registered.id,status:'inactive'});
+  assert.equal((await getDoc(ref('barcodes',registered.id))).data()?.status,'inactive');
+  await warehouseBarcodeServer(access,'STATUS',{barcodeId:registered.id,status:'active'});
+  const replaced=await warehouseBarcodeServer(access,'REPLACE',{
+    barcodeId:registered.id,nextBarcodeInput:'7896305701994',
+  });
+  assert.equal(replaced.barcode,'7896305701994');
+  assert.equal((await getDoc(ref('barcodes',registered.id))).data()?.status,'inactive');
+  console.log('PASS: barcode server SAVE/STATUS/REPLACE e replay');
+
+  const layoutInput={
+    name:'Croqui de homologação',depotId:newDepot.id,
+    logicalWidth:20,logicalHeight:20,objects:[],
+    baseLayoutId:null,expectedVersion:null,
+  };
+  const layoutV1=await warehouseLayoutSaveServer(access,layoutInput);
+  assert.equal(layoutV1.version,1);
+  const layoutV2=await warehouseLayoutSaveServer(access,{
+    ...layoutInput,baseLayoutId:layoutV1.id,expectedVersion:1,
+  });
+  assert.equal(layoutV2.version,2);
+  assert.equal((await getDoc(ref('layouts',layoutV1.id))).data()?.status,'archived');
+  await assert.rejects(()=>warehouseLayoutSaveServer(access,{
+    ...layoutInput,baseLayoutId:layoutV1.id,expectedVersion:1,
+  }),/WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE|WAREHOUSE_LAYOUT_VERSION_CONFLICT/);
+  console.log('PASS: layout server versionamento, arquivamento e concorrência');
+
+  const intakeInput={
+    invoiceRecordKey:'QA-WH-R2-RECEIPT',invoiceId:'QA-NF-R2',
+    empenhoId:'QA-NE-R2',itemId:'QA-ITEM-R2',materialId:first.material.id,
+    description:'Arroz integral QA',unitLabel:'KG',supplier:'Fornecedor QA',
+    receivedQuantity:10,allocatedQuantity:0,immediateConsumptionQuantity:0,
+  };
+  const intakeState=await warehouseIntakeStateServer(access,intakeInput);
+  assert.equal(intakeState.pendingQuantity,10);
+  const stateReplay=await warehouseIntakeStateServer(access,intakeInput);
+  assert.equal(stateReplay.id,intakeState.id);
+  const pendingStateId=await createWarehouseItemIntakeId(
+    workspaceId,intakeInput.invoiceRecordKey,intakeInput.itemId
+  );
+  const indexCandidate={
+    id:pendingStateId,invoiceRecordKey:intakeInput.invoiceRecordKey,
+    invoiceId:intakeInput.invoiceId,empenhoId:intakeInput.empenhoId,
+    itemId:intakeInput.itemId,registeredAt:'2026-10-20T12:00:00.000Z',
+  };
+  assert.equal(await warehouseQueueIndexServer(access,'UPSERT',[indexCandidate]),1);
+  assert.equal(await warehouseQueueIndexServer(access,'UPSERT',[indexCandidate]),0);
+  await warehouseQueueIndexServer(access,'STATE',{cutoffAt:null,watermarkRegisteredAt:null});
+  await warehouseQueueIndexServer(access,'DEACTIVATE',[pendingStateId]);
+  assert.equal((await getDoc(ref('intakeQueueIndex',pendingStateId))).data()?.active,false);
+  console.log('PASS: intake state e índice derivado NF, replay, desativação');
+
+  const alertCandidate={
+    kind:'LOW_STOCK' as const,entityId:first.material.id,
+    severity:'WARNING' as const,title:'Estoque baixo QA',
+    subtitle:'Monitoramento de homologação',description:'Alerta de teste isolado',
+    empenhoId:null,
+  };
+  assert.equal(await warehouseLogisticsAlertsServer(access,'UPSERT',[alertCandidate]),1);
+  assert.equal(await warehouseLogisticsAlertsServer(access,'UPSERT',[alertCandidate]),0);
+  const resolved=await warehouseLogisticsAlertsServer(access,'RESOLVE',{
+    candidateIds:[],allowResolution:true,
+  });
+  assert.equal(typeof resolved,'object');
+  assert.equal((resolved as {resolved:number}).resolved,1);
+  console.log('PASS: alertas logísticos idempotentes e resolução server-only');
+
+  const isolatedMaterial=await saveWarehouseMaterialServer(access,{
+    ...first.material,id:'mat_'+'e'.repeat(32),description:'Material contabil QA',
+    aliases:[],conversions:[],
+  });
+  const ledgerInput={
+    materialId:isolatedMaterial.id,type:'INITIAL_BALANCE' as const,
+    quantityDelta:4,idempotencyKey:'warehouse-r2-ledger-isolated-test-001',
+    note:'Teste de integração legado',source:null,
+  };
+  const ledgerFirst=await warehouseLedgerMovementServer(access,ledgerInput);
+  assert.equal(ledgerFirst.applied,true);
+  assert.equal(ledgerFirst.balance.quantity,4);
+  const ledgerReplay=await warehouseLedgerMovementServer(access,ledgerInput);
+  assert.equal(ledgerReplay.applied,false);
+  assert.equal(ledgerReplay.balance.quantity,4);
+  console.log('PASS: lançamento legado server-only com saldo e idempotência');
+
+  await warehouseStructureArchiveServer(access,{kind:'DEPOT',id:newDepot.id});
+  assert.equal((await getDoc(ref('depots',newDepot.id))).data()?.status,'inactive');
+  console.log('PASS: arquivamento server-only de depósito desocupado');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
