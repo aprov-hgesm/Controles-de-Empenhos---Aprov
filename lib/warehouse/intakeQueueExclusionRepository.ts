@@ -16,6 +16,7 @@ import {
 import { normalizeWorkspaceId } from '../platformIdentity';
 import { recordWarehouseDocumentReads } from './telemetry';
 import { warehouseDomainPath } from './namespace';
+import { warehouseServerCommand } from './serverCommandClient';
 
 export const WAREHOUSE_INTAKE_QUEUE_EXCLUSION_SCHEMA_VERSION =
   'warehouse_intake_queue_exclusion_v1' as const;
@@ -117,53 +118,13 @@ export async function listWarehouseQueueExcludedInvoiceKeys(
   }
 }
 
+/** A exclusão é auditada no servidor e persistida de forma idempotente. */
 export async function excludeWarehouseInvoicesFromPendingQueue(
   workspaceId: string,
   invoices: WarehouseQueueExclusionInput[]
 ): Promise<number> {
-  const scope = currentScope(workspaceId);
-  const unique = Array.from(
-    new Map(
-      invoices
-        .filter((invoice) => invoice.invoiceRecordKey.trim())
-        .map((invoice) => [invoice.invoiceRecordKey.trim(), invoice])
-    ).values()
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<number>(
+    scope.workspaceId,'QUEUE_EXCLUDE',invoices
   );
-  if (unique.length === 0) return 0;
-
-  const path = warehouseDomainPath(scope.workspaceId, 'queueExclusions');
-  const prepared = await Promise.all(
-    unique.map(async (invoice) => ({
-      invoice,
-      id: await createWarehouseQueueExclusionId(
-        scope.workspaceId,
-        invoice.invoiceRecordKey
-      ),
-    }))
-  );
-
-  try {
-    for (let index = 0; index < prepared.length; index += 400) {
-      const batch = writeBatch(db);
-      for (const { invoice, id } of prepared.slice(index, index + 400)) {
-        batch.set(doc(db, path, id), {
-          schemaVersion: WAREHOUSE_INTAKE_QUEUE_EXCLUSION_SCHEMA_VERSION,
-          id,
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          invoiceRecordKey: invoice.invoiceRecordKey.trim(),
-          invoiceId: invoice.invoiceId.trim(),
-          empenhoId: invoice.empenhoId.trim(),
-          pregao: invoice.pregao?.trim() || null,
-          removedBy: scope.uid,
-          removedAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-    }
-    return prepared.length;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
 }
