@@ -11,6 +11,7 @@ import { normalizeWarehouseExpiryDate } from '../../../lib/warehouse/lot';
 import { type WarehouseMaterial } from '../../../lib/warehouse/material';
 import { getWarehouseMaterial, listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
+import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 import { classifyWarehouseMobileProductScan, createWarehouseMobileAllocationOperationId } from '../../../lib/warehouse/mobileIntakeAllocation';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
@@ -32,25 +33,6 @@ type LocationState =
 
 function materialUnitLabel(material: WarehouseMaterial): string {
   return material.unit.label || material.unit.code.toUpperCase();
-}
-
-function errorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error || '');
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED')) {
-    return 'A posição física não está mais ativa. Leia novamente a etiqueta.';
-  }
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_INVALID_EXPIRY')) return 'Data de validade inválida.';
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT')) {
-    return 'O cadastro do material mudou. Confira os dados antes de repetir.';
-  }
-  if (message.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
-    return 'Esta operação já foi usada com outros dados. Atualize a tela antes de tentar novamente.';
-  }
-  if (message.includes('permission-denied') || message.includes('PERMISSION_DENIED')) {
-    return 'Sem permissão para registrar esta entrada. Nenhum sucesso foi confirmado.';
-  }
-  if (error instanceof TypeError) return 'Falha de conexão. O rascunho foi preservado; confira o estoque antes de repetir.';
-  return message || 'Não foi possível confirmar a entrada. Verifique o estoque antes de repetir.';
 }
 
 const inputClass = 'mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-950 outline-none focus:border-[#00288e]';
@@ -269,7 +251,7 @@ export function WarehouseMobileManualEntry() {
       setSuccess(message);
     } catch (caught) {
       // Conserva operationId e dados: repetir após timeout não deve duplicar o lançamento.
-      setError(errorMessage(caught));
+      setError(warehouseManualEntryErrorMessage(caught));
     } finally {
       submittingRef.current = false;
       setWorking(false);
