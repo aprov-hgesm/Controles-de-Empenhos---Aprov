@@ -5,7 +5,7 @@ import {
   warehouseAdminTransaction,warehouseAdminListCollection,
   WarehouseStoreError,
 } from './warehouseFirestoreTransaction';
-import { validateWarehouseMaterial } from '../warehouse/material';
+import { validateWarehouseMaterial, type WarehouseMaterial } from '../warehouse/material';
 import { validateWarehouseBalance,type WarehouseBalance } from '../warehouse/movement';
 import { validateWarehouseLocationBalance,type WarehouseLocationBalance } from '../warehouse/location';
 import {
@@ -40,7 +40,7 @@ export async function startWarehouseInventoryServer(
     warehouseAdminListCollection(token,access.workspaceId,'depots',249),
     warehouseAdminListCollection(token,access.workspaceId,'locations',499),
   ]);
-  const materials=new Map<string,ReturnType<typeof validateWarehouseMaterial> extends {ok:true;data:infer T}?T:never>();
+  const materials=new Map<string,WarehouseMaterial>();
   // Keep canonical parsed values for projection verification.
   for(const row of materialsRows){
     const id=row.path.split('/').at(-1)||'';
