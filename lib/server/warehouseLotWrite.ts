@@ -115,8 +115,13 @@ export async function writeWarehouseLotServer(
     }
     const global=rows.get(balancePath);
     if(!global)return fail('WAREHOUSE_BALANCE_NOT_FOUND');
-    const validatedBalance=validateWarehouseBalance(global.data,{
-      expectedWorkspaceId:access.workspaceId,
+    const b=global.data;
+    const validatedBalance=validateWarehouseBalance({
+      schemaVersion:b.schemaVersion,workspaceId:b.workspaceId,ug:b.ug,
+      materialId:b.materialId,quantity:b.quantity,revision:b.revision,
+      lastMovementId:b.lastMovementId,
+    },{
+      expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
       expectedMaterialId:materialId,
     });
     if(!validatedBalance.ok||validatedBalance.data.ug!==access.ug) {
