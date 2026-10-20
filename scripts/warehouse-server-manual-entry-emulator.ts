@@ -439,7 +439,7 @@ try {
 
   const layoutInput={
     name:'Croqui de homologação',depotId:newDepot.id,
-    logicalWidth:20,logicalHeight:20,objects:[],
+    logicalWidth:640,logicalHeight:480,objects:[],
     baseLayoutId:null,expectedVersion:null,
   };
   const layoutV1=await warehouseLayoutSaveServer(access,layoutInput);
