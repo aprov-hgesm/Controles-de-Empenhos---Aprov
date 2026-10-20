@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   WAREHOUSE_SHORT_MEMORY_CACHE_TTL_MS,
   createWorkspaceMemoryReadCache,
@@ -718,42 +719,16 @@ export async function listWarehouseDestinationsCached(
   }
 }
 
+/** Destinos mutáveis são responsabilidade do servidor R2. */
 export async function createWarehouseDestination(
   workspaceId: string,
   input: CreateWarehouseDestinationInput
 ): Promise<WarehouseDestination> {
-  const scope = currentScope(workspaceId);
-  const name = normalizeWarehouseDestinationName(input.name);
-  if (!name) throw new Error('WAREHOUSE_DESTINATION_NAME_REQUIRED');
-  const id = createWarehouseDestinationId();
-  const path = warehouseDocumentPath(scope.workspaceId, 'destinations', id);
-  const candidate: WarehouseDestination = {
-    schemaVersion: WAREHOUSE_DESTINATION_SCHEMA_VERSION,
-    id,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    name,
-    status: 'active',
-    createdBy: scope.uid,
-    updatedBy: scope.uid,
-  };
-  try {
-    await runTransaction(db, async (transaction) => {
-      const reference = doc(db, path);
-      const existing = await transaction.get(reference);
-      if (existing.exists()) throw new Error('WAREHOUSE_DESTINATION_ID_CONFLICT');
-      transaction.set(reference, {
-        ...candidate,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    });
-    invalidateWarehouseDestinationReadCache(scope.workspaceId);
-    return candidate;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
-    throw error;
-  }
+  const result=await warehouseServerCommand<WarehouseDestination>(
+    workspaceId,'DESTINATION_CREATE',input
+  );
+  invalidateWarehouseDestinationReadCache(workspaceId);
+  return result;
 }
 
 export async function setWarehouseDestinationStatus(
@@ -761,23 +736,10 @@ export async function setWarehouseDestinationStatus(
   destinationId: string,
   status: 'active' | 'inactive'
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = warehouseDocumentPath(
-    scope.workspaceId,
-    'destinations',
-    destinationId
-  );
-  try {
-    await updateDoc(doc(db, path), {
-      status,
-      updatedBy: scope.uid,
-      updatedAt: serverTimestamp(),
-    });
-    invalidateWarehouseDestinationReadCache(scope.workspaceId);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
-    throw error;
-  }
+  await warehouseServerCommand<{ok:true}>(workspaceId,'DESTINATION_STATUS',{
+    destinationId,status,
+  });
+  invalidateWarehouseDestinationReadCache(workspaceId);
 }
 
 async function createWithdrawalPayloadHash(
