@@ -410,7 +410,7 @@ export async function listWarehouseMovementsInPeriod(
         });
         return [];
       }
-    });;
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
