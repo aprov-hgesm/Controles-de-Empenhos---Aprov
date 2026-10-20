@@ -7,9 +7,6 @@ import {
   limit,
   orderBy,
   query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -174,31 +171,6 @@ async function getInvoiceSettings(
   }
 
   return data as unknown as WarehouseInvoiceIntegrationSettings;
-}
-
-async function ensureInvoiceCutoff(input: {
-  workspaceId: string;
-  ug: string;
-  uid: string;
-  existing: WarehouseInvoiceIntegrationSettings | null;
-}): Promise<WarehouseInvoiceIntegrationSettings> {
-  if (input.existing) return input.existing;
-
-  const settings: WarehouseInvoiceIntegrationSettings = {
-    schemaVersion: WAREHOUSE_INVOICE_SETTINGS_SCHEMA_VERSION,
-    workspaceId: input.workspaceId,
-    ug: input.ug,
-    cutoffAt: new Date().toISOString(),
-    activatedBy: input.uid,
-  };
-
-  const path = warehouseDocumentPath(
-    input.workspaceId,
-    'settings',
-    INVOICE_SETTINGS_ID
-  );
-  await setDoc(doc(db, path), settings);
-  return settings;
 }
 
 async function getMarcoZero(
