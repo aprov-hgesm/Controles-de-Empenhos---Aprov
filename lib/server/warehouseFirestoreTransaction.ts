@@ -70,11 +70,19 @@ function firestoreBase(): string {
     if (process.env.NODE_ENV === 'production') {
       throw new WarehouseStoreError('WAREHOUSE_SERVER_EMULATOR_PRODUCTION_FORBIDDEN', 503);
     }
-    const host = process.env.FIRESTORE_EMULATOR_HOST;
-    if (!host || !/^127\.0\.0\.1:\d+$/.test(host)) {
-      throw new WarehouseStoreError('WAREHOUSE_SERVER_EMULATOR_HOST_INVALID', 503);
+    // O banco operacional principal usa 8080. O Warehouse possui Emulator
+    // próprio (normalmente 8081), pois carrega um ruleset independente.
+    if (process.env.EMPROVEX_E2E_SERVER_AUTH !== '1'
+      || process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID !== 'demo-emprovex-security') {
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_EMULATOR_SCOPE_INVALID', 503);
     }
-    return `http://${host}/v1/projects/demo-emprovex-security/databases/${DATABASE_ID}/documents`;
+    const port = process.env.EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT?.trim()
+      || process.env.NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT?.trim()
+      || process.env.FIRESTORE_EMULATOR_HOST?.split(':')[1] || '';
+    if (!/^\d{2,5}$/.test(port) || Number(port) < 1024 || Number(port) > 65535) {
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_EMULATOR_PORT_INVALID', 503);
+    }
+    return `http://127.0.0.1:${port}/v1/projects/demo-emprovex-security/databases/${DATABASE_ID}/documents`;
   }
   return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/databases/${encodeURIComponent(DATABASE_ID)}/documents`;
 }
