@@ -143,9 +143,9 @@ for (const marker of [
 const intakeAllocation = read('lib/warehouse/intakeAllocationRepository.ts');
 const intakeServerRoute = read('app/api/central-depositos/intake-action/route.ts');
 assert.match(intakeAllocation, /allocateWarehousePendingItemFast/);
-assert.doesNotMatch(intakeAllocation, /\\brunTransaction\\s*\\(/);
+assert.equal(intakeAllocation.includes('runTransaction('), false);
 assert.match(intakeServerRoute, /action: 'ALLOCATE'/);
-assert.match(intakeServerRoute, /position\\.kind === 'UNASSIGNED'/);
+assert.equal(intakeServerRoute.includes("position.kind === 'UNASSIGNED'"), true);
 assert.match(intakeServerRoute, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
 assert.match(intakeAllocation, /position\.kind === 'UNASSIGNED'/);
 assert.match(intakeAllocation, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
