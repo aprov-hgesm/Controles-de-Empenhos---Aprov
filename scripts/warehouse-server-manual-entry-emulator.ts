@@ -19,6 +19,7 @@ import { saveWarehouseLandingVisualServer } from '../lib/server/warehouseLanding
 import { saveWarehouseLogisticsSettingsServer } from '../lib/server/warehouseLogisticsSettingsWrite';
 import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusionWrite';
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
+import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -148,6 +149,30 @@ try {
     position:{kind:'UNASSIGNED'},
   }),/WAREHOUSE_LOT_PHYSICAL_POSITION_REQUIRED/);
   console.log('PASS: lotes no servidor protegidos contra superatribuição e posição inválida');
+
+  const outboundInput={
+    materialId:first.material.id,requestedQuantity:3,presentation:first.material.unit,
+    position,barcodeAssociation:null,lotId:first.validity!.id,
+    idempotencyKey:'warehouse-r2-express-outbound-01',note:'Emulator saída expressa',
+  };
+  const outbound=await applyWarehouseExpressOutboundServer(access,outboundInput);
+  assert.equal(outbound.applied,true);
+  assert.equal(outbound.balance.quantity,97);
+  assert.equal(outbound.locationBalance.quantity,72);
+  assert.equal(outbound.lot?.quantity,72);
+  const outboundReplay=await applyWarehouseExpressOutboundServer(access,outboundInput);
+  assert.equal(outboundReplay.applied,false);
+  assert.equal(outboundReplay.balance.quantity,97);
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,requestedQuantity:4,
+  }),/WAREHOUSE_IDEMPOTENCY_CONFLICT/);
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,idempotencyKey:'warehouse-r2-express-outbound-02',
+    requestedQuantity:500,
+  }),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
+  console.log('PASS: saída expressa server-only, saldo/lote atômicos, replay e falta de estoque');
+
 
 
   const newDepot=await warehouseStructureServer(access,{
