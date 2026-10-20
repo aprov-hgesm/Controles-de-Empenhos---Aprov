@@ -29,6 +29,8 @@ import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueue
 
 import { warehouseLogisticsAlertsServer } from '../../../../lib/server/warehouseLogisticsAlertWrite';
 
+import { confirmWarehouseSiscofisServer } from '../../../../lib/server/warehouseSiscofisWrite';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     const size=Number(request.headers.get('content-length')||'0');
     // Até 40 linhas de retirada, com validação estrita no motor por linha.
-    if (!Number.isFinite(size)||size>65536) return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
+    if (!Number.isFinite(size)||size>524288) return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
     const access=await verifyWarehouseRequest(request.headers.get('authorization'));
     const body=await request.json() as Record<string,unknown>;
     if(!body||typeof body!=='object'||Array.isArray(body)
@@ -50,6 +52,10 @@ export async function POST(request: NextRequest) {
       return reject('WAREHOUSE_SERVER_SCOPE_MISMATCH',403);
     }
     const operation=body.operation;
+    if(operation!=='SISCOFIS_CONFIRM' && size>65536)
+      return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
+    if(operation==='SISCOFIS_CONFIRM' && JSON.stringify(body).length>524288)
+      return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
     let result: unknown;
     switch(operation) {
       case 'TRANSFER':
@@ -159,6 +165,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'LOGISTICS_ALERT_RESOLVE':
         result=await warehouseLogisticsAlertsServer(access,'RESOLVE',body.input);
+        break;
+      case 'SISCOFIS_CONFIRM':
+        result=await confirmWarehouseSiscofisServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
