@@ -200,7 +200,7 @@ try {
       status:{stringValue:'inactive'},updatedBy:{stringValue:uid},
     }}),
   });
-  assert.equal(seedResponse.ok(),true,'Fixture administrativa local falhou');
+  assert.equal(seedResponse.ok,true,'Fixture administrativa local falhou');
   const replacementDepot=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito substituto'},
   });
