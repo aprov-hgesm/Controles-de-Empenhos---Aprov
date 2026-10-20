@@ -1321,6 +1321,11 @@ service cloud.firestore {
             && request.resource.data.revision == 1
             && (
               (
+                movement.type == 'MANUAL_ENTRY'
+                && request.resource.data.position.kind != 'UNASSIGNED'
+                && request.resource.data.quantity == movement.quantityDelta
+              )
+              || (
                 !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
                 && request.resource.data.quantity == movement.quantityDelta
               )
