@@ -345,17 +345,16 @@ async function applyWarehouseManualLocatedEntry(input: {
   if (!candidateResult.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
   const candidate = candidateResult.data;
 
-  return runTransaction(db, async (transaction) => {
+  const stock = await runTransaction(db, async (transaction) => {
     // Todas as leituras ocorrem antes da primeira escrita da transação.
     const [
       materialSnapshot, movementSnapshot, balanceSnapshot,
-      locationBalanceSnapshot, lotSnapshot, barcodeSnapshot,
+      locationBalanceSnapshot, barcodeSnapshot,
     ] = await Promise.all([
       transaction.get(materialRef),
       transaction.get(movementRef),
       transaction.get(balanceRef),
       transaction.get(locationBalanceRef),
-      lotRef ? transaction.get(lotRef) : Promise.resolve(null),
       barcodeRef ? transaction.get(barcodeRef) : Promise.resolve(null),
     ]);
 
@@ -391,6 +390,77 @@ async function applyWarehouseManualLocatedEntry(input: {
           locationBalanceId, locationBalanceSnapshot.data() as Record<string, unknown>)
       : null;
 
+    // Um vínculo existente é conferido antes de movimentar estoque.
+    if (barcodeSnapshot?.exists()) {
+      const validated = validateWarehouseBarcodeAssociation(
+        warehouseCanonicalBarcodeReadInput(
+          barcodeSnapshot.id, barcodeSnapshot.data() as Record<string, unknown>
+        ), { expectedWorkspaceId: input.scope.workspaceId, expectedUg: input.scope.ug }
+      );
+      if (!validated.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_BARCODE_INVALID');
+      const linked = validated.data;
+      if (linked.materialId !== material.id || linked.status !== 'active'
+        || linked.barcode !== input.barcode || linked.factorToBaseUnit !== 1
+        || !barcodeAssociationMatchesMaterial(linked, material)) {
+        throw new Error('WAREHOUSE_BARCODE_ALREADY_LINKED');
+      }
+    }
+
+    if (movementSnapshot.exists()) {
+      const existing = parseManualEntryMovement(
+        input.scope.workspaceId, movementSnapshot.id,
+        movementSnapshot.data() as Record<string, unknown>
+      );
+      if (!warehouseMovementMatchesReplay(existing, candidate)) {
+        throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+      }
+      if (!currentBalance || !currentLocationBalance || createMaterial) {
+        throw new Error('WAREHOUSE_MANUAL_ENTRY_PROJECTION_INCONSISTENT');
+      }
+      return {
+        material, entry: { applied: false, movement: existing, balance: currentBalance },
+        locationBalance: currentLocationBalance,
+      };
+    }
+    if (currentLocationBalance
+      && warehouseStockPositionKey(currentLocationBalance.position) !== positionKey) {
+      throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_CONFLICT');
+    }
+
+    const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
+    const nextLocationBalance = applyWarehouseLocationDelta(currentLocationBalance, {
+      id: locationBalanceId, workspaceId: input.scope.workspaceId,
+      ug: input.scope.ug, materialId: material.id, position: input.position,
+      quantityDelta: input.quantity, movementId,
+    });
+
+    if (createMaterial) transaction.set(materialRef, material);
+    transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
+    transaction.set(balanceRef, { ...nextBalance, updatedAt: serverTimestamp() });
+    transaction.set(locationBalanceRef, {
+      ...nextLocationBalance, updatedAt: serverTimestamp(),
+    });
+    return {
+      material,
+      entry: { applied: true, movement: candidate, balance: nextBalance },
+      locationBalance: nextLocationBalance,
+    };
+  });
+
+  if (!lotRef && !barcodeRef) {
+    return { ...stock, validity: null, barcodeLinked: false };
+  }
+
+  // O núcleo do estoque é um commit atômico. Os complementos opcionais
+  // compartilham um segundo commit pequeno para respeitar as 1.000 expressões.
+  // Se falharem, repetir o mesmo operationId NÃO duplica saldo.
+  try {
+    const addon = await runTransaction(db, async (transaction) => {
+      const [lotSnapshot, barcodeSnapshot] = await Promise.all([
+        lotRef ? transaction.get(lotRef) : Promise.resolve(null),
+        barcodeRef ? transaction.get(barcodeRef) : Promise.resolve(null),
+      ]);
+      const material = stock.material;
     let barcodeLinked = false;
     let barcodeToCreate: WarehouseBarcodeAssociation | null = null;
     if (barcodeSnapshot?.exists()) {
@@ -453,55 +523,20 @@ async function applyWarehouseManualLocatedEntry(input: {
       }
     }
 
-    if (movementSnapshot.exists()) {
-      const existing = parseManualEntryMovement(
-        input.scope.workspaceId, movementSnapshot.id,
-        movementSnapshot.data() as Record<string, unknown>
-      );
-      if (!warehouseMovementMatchesReplay(existing, candidate)) {
-        throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-      }
-      if (!currentBalance || !currentLocationBalance || createMaterial || createLot || barcodeToCreate) {
-        throw new Error('WAREHOUSE_MANUAL_ENTRY_PROJECTION_INCONSISTENT');
-      }
-      return {
-        material, entry: { applied: false, movement: existing, balance: currentBalance },
-        locationBalance: currentLocationBalance, validity, barcodeLinked,
-      };
-    }
-    if (lotSnapshot?.exists()) throw new Error('WAREHOUSE_MANUAL_ENTRY_LOT_CONFLICT');
-    if (currentLocationBalance
-      && warehouseStockPositionKey(currentLocationBalance.position) !== positionKey) {
-      throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_CONFLICT');
-    }
 
-    const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
-    const nextLocationBalance = applyWarehouseLocationDelta(currentLocationBalance, {
-      id: locationBalanceId, workspaceId: input.scope.workspaceId,
-      ug: input.scope.ug, materialId: material.id, position: input.position,
-      quantityDelta: input.quantity, movementId,
+      if (lotRef && createLot && validity) transaction.set(lotRef, {
+        ...validity, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+      if (barcodeRef && barcodeToCreate) transaction.set(barcodeRef, {
+        ...barcodeToCreate, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+      return { validity, barcodeLinked };
     });
-
-    if (createMaterial) transaction.set(materialRef, material);
-    transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
-    transaction.set(balanceRef, { ...nextBalance, updatedAt: serverTimestamp() });
-    transaction.set(locationBalanceRef, {
-      ...nextLocationBalance, updatedAt: serverTimestamp(),
-    });
-    if (lotRef && createLot && validity) transaction.set(lotRef, {
-      ...validity, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    });
-    if (barcodeRef && barcodeToCreate) transaction.set(barcodeRef, {
-      ...barcodeToCreate, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    });
-
-    return {
-      material,
-      entry: { applied: true, movement: candidate, balance: nextBalance },
-      locationBalance: nextLocationBalance,
-      validity, barcodeLinked,
-    };
-  });
+    return { ...stock, ...addon };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error('WAREHOUSE_MANUAL_ENTRY_ENRICHMENT_PENDING: ' + detail);
+  }
 }
 
 export async function registerWarehouseManualEntry(
