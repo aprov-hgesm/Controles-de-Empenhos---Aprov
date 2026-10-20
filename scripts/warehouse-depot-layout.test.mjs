@@ -445,13 +445,22 @@ test('inativação de Local e subposições usa operação atômica e impede est
 
 test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
   const repository = readFileSync(
-    resolve(root, 'lib/warehouse/locationRepository.ts'),
-    'utf8'
+    resolve(root, 'lib/warehouse/locationRepository.ts'), 'utf8'
   );
-
-  assert.match(repository, /item\.depot\.status === 'active'/);
-  assert.match(repository, /item\.depot\.code === normalized/);
-  assert.match(repository, /nextStatus === 'active'/);
-  assert.match(repository, /current\.status !== 'active'/);
-  assert.match(repository, /assertDepotCodeAvailable\(scope\.workspaceId, nextCode, depotId\)/);
+  const motor = readFileSync(
+    resolve(root, 'lib/server/warehouseStructureWrite.ts'), 'utf8'
+  );
+  // UI permanece client fino; servidor verifica proprietário anterior,
+  // status, claims e precondições na MESMA transação.
+  assert.match(repository, /warehouseServerCommand<WarehouseDepot>/);
+  assert.match(repository, /'DEPOT_CREATE'/);
+  assert.match(repository, /'DEPOT_UPDATE'/);
+  assert.match(motor, /duplicates\.some\(activeRecord\)/);
+  assert.match(motor, /existingClaim/);
+  assert.match(motor, /ownerPath/);
+  assert.match(motor, /depotData\(access,existingOwnerId as string,owner\)\.status==='active'/);
+  assert.match(motor, /warehouseAdminTransaction\(token,readSet,rows/);
+  assert.match(motor, /desiredStatus==='active' && current\.status!=='active'/);
+  assert.match(motor, /desiredStatus==='active' && claim && claim\.data\.entityId!==id/);
+  assert.match(motor, /WAREHOUSE_DEPOT_DUPLICATE_CODE/);
 });
