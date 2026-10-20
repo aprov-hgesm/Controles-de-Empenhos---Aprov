@@ -665,3 +665,48 @@ test('MOBILE-D usa reader crítico sem retorno vazio silencioso e sem escrita di
   assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_LOTS_READ_FAILED/);
   assert.doesNotMatch(criticalRepository, /return\s+\[\]/);
 });
+
+
+test('F06 replay exige payload integralmente idêntico, inclusive quantidade, nota e ator', async () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const id = await movement.createWarehouseMovementId(workspaceId, 'F06-replay-payload');
+  const source = {
+    kind: 'LOCATION_TRANSFER', actorUid, quantity: 7, from, to,
+    fromBalanceId: await location.createWarehouseLocationBalanceId(workspaceId, materialId, from),
+    toBalanceId: await location.createWarehouseLocationBalanceId(workspaceId, materialId, to),
+  };
+  const payload = {
+    schemaVersion: movement.WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+    id, workspaceId, ug, materialId, type: 'TRANSFER', quantityDelta: 0,
+    idempotencyKeyHash: id.slice(4), reversesMovementId: null,
+    note: 'transferência F06', source,
+  };
+  const candidate = movement.validateWarehouseMovement(payload);
+  assert.equal(candidate.ok, true);
+  assert.equal(movement.warehouseMovementMatchesReplay(candidate.data, candidate.data), true);
+  for (const altered of [
+    { ...payload, note: 'outra nota' },
+    { ...payload, source: { ...source, quantity: 8 } },
+    { ...payload, source: { ...source, actorUid: 'outro-operador' } },
+    { ...payload, source: { ...source, from: to, to: from } },
+    { ...payload, ug: '999999' },
+  ]) {
+    const next = movement.validateWarehouseMovement(altered);
+    if (next.ok) assert.equal(movement.warehouseMovementMatchesReplay(candidate.data, next.data), false);
+  }
+});
+
+test('F06 rejeita transferência que tornaria saldo de origem negativo', async () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const id = await location.createWarehouseLocationBalanceId(workspaceId, materialId, from);
+  const base = {
+    schemaVersion: location.WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION,
+    id, workspaceId, ug, materialId, position: from, quantity: 3,
+    revision: 1, lastMovementId: 'mov_' + 'a'.repeat(64),
+  };
+  assert.throws(() => location.applyWarehouseLocationDelta(base, {
+    id, workspaceId, ug, materialId, position: from,
+    quantityDelta: -4, movementId: 'mov_' + 'b'.repeat(64),
+  }));
+});
