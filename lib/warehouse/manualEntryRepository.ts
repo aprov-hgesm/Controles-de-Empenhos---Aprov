@@ -20,11 +20,7 @@ import {
 } from './barcode';
 import { isWarehouseLocationBarcode } from './locationBarcode';
 import { warehouseUnitFromOperationalLabel } from './invoiceIntegration';
-import {
-  getWarehouseDepot,
-  getWarehouseLocation,
-  type TransferWarehouseStockResult,
-} from './locationRepository';
+import type { TransferWarehouseStockResult } from './locationRepository';
 import {
   applyWarehouseLocationDelta,
   createWarehouseLocationBalanceId,
@@ -263,45 +259,8 @@ function parseManualEntryLocationBalance(
   return result.data;
 }
 
-async function assertManualEntryPositionActive(
-  workspaceId: string,
-  position: Exclude<WarehouseStockPosition, { kind: 'UNASSIGNED' }>
-): Promise<void> {
-  const [depotItem, locationItem] = await Promise.all([
-    getWarehouseDepot(workspaceId, position.depotId),
-    getWarehouseLocation(workspaceId, position.locationId),
-  ]);
-  const depot = depotItem?.depot || null;
-  const location = locationItem?.location || null;
-  if (
-    !depot
-    || depot.status !== 'active'
-    || !location
-    || location.status !== 'active'
-    || location.kind !== 'LOCAL'
-    || location.depotId !== depot.id
-  ) {
-    throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
-  }
-
-  if (position.kind === 'SUBPOSITION') {
-    const subpositionItem = await getWarehouseLocation(
-      workspaceId,
-      position.subpositionId
-    );
-    const subposition = subpositionItem?.location || null;
-    if (
-      !subposition
-      || subposition.status !== 'active'
-      || subposition.kind !== 'SUBPOSITION'
-      || subposition.depotId !== depot.id
-      || subposition.parentLocationId !== location.id
-    ) {
-      throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
-    }
-  }
-}
-
+// A autorização definitiva da posição é feita nas Rules no commit.
+// A interface já oferece apenas posições selecionáveis; evitar 2-3 getDoc extras.
 async function applyWarehouseManualLocatedEntry(input: {
   scope: { workspaceId: string; ug: string; uid: string };
   materialIdentity: { id: string; newMaterial: WarehouseMaterial | null };
@@ -569,7 +528,6 @@ export async function registerWarehouseManualEntry(
   if (!position || position.kind === 'UNASSIGNED') {
     throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
   }
-  await assertManualEntryPositionActive(scope.workspaceId, position);
 
   const normalizedExpiry = normalizeWarehouseExpiryDate(input.expiresOn ?? null);
   if (normalizedExpiry === undefined) {
