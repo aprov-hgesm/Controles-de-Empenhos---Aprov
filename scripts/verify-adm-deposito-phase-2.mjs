@@ -8,6 +8,7 @@ const findings = [];
 
 const movement = read('lib/warehouse/movement.ts');
 const repository = read('lib/warehouse/ledgerRepository.ts');
+const serverLedger = read('lib/server/warehouseLedgerAndArchive.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const rules = read('firestore.warehouse.rules');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
@@ -37,19 +38,32 @@ for (const marker of [
   requireText(movement, marker, 'Contrato ledger/saldo incompleto: ' + marker);
 }
 
+// A API mantém consultas client-side, mas a escrita de ledger deve ser exclusivamente
+// no motor autenticado do servidor. O guard antigo exigia runTransaction no navegador.
 for (const marker of [
-  "warehouseDocumentPath(normalizedWorkspaceId, 'movements', movementId)",
-  'const balancePath = warehouseDocumentPath(',
-  'runTransaction',
-  'existingMovementSnapshot.exists()',
-  'WAREHOUSE_IDEMPOTENCY_CONFLICT',
-  'applyWarehouseMovementToBalance',
-  'serverTimestamp()',
   'getWarehouseBalance',
   'getWarehouseMovement',
+  'warehouseServerCommand',
+  "'LEDGER_MOVEMENT'",
 ]) {
-  requireText(repository, marker, 'Persistência transacional da FASE 2 incompleta: ' + marker);
+  requireText(repository, marker, 'Contrato de leitura/delegação ledger incompleto: ' + marker);
 }
+for (const marker of [
+  'warehouseLedgerMovementServer',
+  'warehouseAdminTransaction',
+  'createWarehouseMovementId',
+  'validateWarehouseMovement',
+  'warehouseMovementMatchesReplay',
+  'WAREHOUSE_IDEMPOTENCY_CONFLICT',
+  'applyWarehouseMovementToBalance',
+  'applyWarehouseLocationDelta',
+  'WAREHOUSE_NEGATIVE_STOCK',
+  'createdAt:now',
+]) {
+  requireText(serverLedger, marker, 'Persistência transacional server-only da FASE 2 incompleta: ' + marker);
+}
+forbidText(repository, 'runTransaction(', 'Ledger voltou a gravar diretamente no cliente.');
+forbidText(repository, 'writeBatch(', 'Ledger voltou a gravar em lote pelo cliente.');
 
 for (const marker of [
   "movements: 'movements'",
@@ -146,7 +160,7 @@ if (findings.length) {
   console.log('DEP-2.1: saldo materializado atualizado atomicamente com o ledger');
   console.log('DEP-2.2: ID determinístico e replay idempotente sem duplicação');
   console.log('Segurança: gate multi-tenant preservado e saldo não pode divergir do ledger');
-  console.log('Escopo: NF→estoque e demais funcionalidades da FASE 3 não iniciadas');
+  console.log('Escopo atual: migração R2 server-only em homologação; merge e Rules exigem gates próprios');
 }
 
 function read(path) {
