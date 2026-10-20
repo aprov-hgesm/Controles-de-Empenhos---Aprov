@@ -205,7 +205,13 @@ export async function transferWarehouseStockServer(
     }
     const lots:WarehouseLot[]=sourceLots.map(item=>lot(requireDoc(rows,item.path,'WAREHOUSE_TRANSFER_LOT_NOT_FOUND'),materialId,access));
     const plan=planWarehouseTransferLots({materialId,source:from,quantity,availableQuantity:source.quantity,lots});
-    if (plan.ok===false) return fail('WAREHOUSE_TRANSFER_'+plan.error);
+    if (plan.ok===false) {
+      // Stable public errors (also checked by Mobile-D and QA fixtures).
+      if(plan.error==='INSUFFICIENT_STOCK') return fail('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
+      if(plan.error==='LOT_ATTRIBUTION_EXCEEDS_STOCK') return fail('WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK');
+      if(plan.error==='TOO_MANY_ACTIVE_LOTS') return fail('WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS');
+      return fail('WAREHOUSE_TRANSFER_INVALID_LOT_PLAN');
+    }
     const nextFrom=applyWarehouseLocationDelta(source,{
       id:fromId,workspaceId:access.workspaceId,ug:access.ug,materialId,position:from,
       quantityDelta:-quantity,movementId,
