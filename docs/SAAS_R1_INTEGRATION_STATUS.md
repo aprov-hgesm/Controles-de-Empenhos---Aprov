@@ -1,9 +1,31 @@
 # EMPROVEX SaaS R1 — Integration Status
 
-Última atualização: **2026-10-02**
+Última atualização: **2026-10-05**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A+B+C+DL+E+DS+I INTEGRADAS / HARDENING PRÉ-PILOTO ATIVO / PILOTO REAL ADIADO / SAAS-J AGUARDANDO**
+Estado global: **SAAS R1 FUNCIONALMENTE CONCLUÍDO / HARDEN-A1+A2+B+C+D ENCERRADOS / SAAS-FINAL-AUDIT-01 PASS COM RISCOS RESIDUAIS DOCUMENTADOS / PILOTO AGUARDA NOVO RC**
+
+## 0. Reconciliação viva — 2026-10-05
+
+Esta seção representa o estado corrente e prevalece sobre checkpoints históricos abaixo quando houver divergência temporal.
+
+- SaaS R1: **funcionalmente concluído e apto para composição do novo RC**;
+- HARDEN-A1: **PASS / encerrada**;
+- HARDEN-A2: **PASS — risco residual aceito tecnicamente**;
+- HARDEN-B: **PASS**, com backup READY nos dois bancos, `recovery:verify`, restore real isolado do Warehouse e integridade 13/13;
+- HARDEN-C: **PASS técnico**;
+- HARDEN-D: **PASS técnico**;
+- SESSION-CAP-01: **PASS / integrada**, sem teto fixo, lease 30 min e heartbeat 15 min;
+- health: **implementado e testado em código**; smoke no deployment autorizado ainda pendente;
+- uptime/alert/canal: **pendentes de evidência real após publicação controlada**;
+- Firestore Rules candidatas: principal `bc91185f34bcdcb4437a4de1078d1089a09292ba`, Warehouse `6e1f1050005314db4e17cb3136409abbddb0ee91`; ownership de auditoria atual é da RULES-COMPAT-01;
+- SAAS-FINAL-AUDIT-01: **PASS COM RISCOS RESIDUAIS DOCUMENTADOS**;
+- piloto real: **não iniciado**;
+- produção do app: **inalterada**.
+
+Próximo gate: concluir MOBILE-K e as auditorias paralelas, compor um novo RC por SHA único, repetir os gates afetados e somente depois executar publicação controlada/smoke/uptime antes do piloto.
+
+Documento detalhado: `docs/SAAS_R1_FINAL_AUDIT_01.md`.
 
 ## 1. Baseline
 

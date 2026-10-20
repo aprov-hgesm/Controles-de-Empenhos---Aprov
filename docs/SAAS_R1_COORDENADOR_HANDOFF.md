@@ -1,9 +1,27 @@
 # EMPROVEX SaaS R1 — Handoff do Coordenador
 
-Última atualização: **2026-10-02**
+Última atualização: **2026-10-05**
 Integrador: `feat/saas-r1-commercializacao`
 Baseline: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
+
+## Estado vivo reconciliado — 2026-10-05
+
+O estado vigente do SaaS R1 é posterior à ordem histórica de 2026-10-02 preservada abaixo.
+
+- SaaS R1: **FUNCIONALMENTE CONCLUÍDO**;
+- HARDEN-A1/A2/B/C/D: encerrados conforme o Memorial Oficial;
+- HARDEN-B: **PASS**, incluindo restore real isolado e integridade 13/13;
+- SAAS-FINAL-AUDIT-01: **PASS COM RISCOS RESIDUAIS DOCUMENTADOS**;
+- blocker funcional SaaS para composição do RC: **nenhum identificado**;
+- uptime produtivo/alerta/canal: ainda exigem evidência externa após publicação controlada;
+- Rules: não pertencem a esta auditoria; aguardar RULES-COMPAT-01;
+- Mobile: MOBILE-K segue owner exclusivo do motor logístico canônico; esta frente tem **SEM DELTA FUNCIONAL** para Mobile;
+- produção/piloto: **não autorizados**.
+
+Próximo movimento do Coordenador: cruzar SAAS-FINAL-AUDIT-01 + RULES-COMPAT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01 com a conclusão da MOBILE-K, compor o novo RC e repetir os gates do SHA re-frozen.
+
+Detalhe: `docs/SAAS_R1_FINAL_AUDIT_01.md`.
 
 ## 0. Ordem oficial vigente — 2026-10-02
 
