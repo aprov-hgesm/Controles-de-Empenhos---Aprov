@@ -5,6 +5,7 @@ import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
 import { transferWarehouseStockServer } from '../../../../lib/server/warehouseTransfer';
+import { saveWarehouseMaterialServer } from '../../../../lib/server/warehouseMaterialWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,9 @@ export async function POST(request: NextRequest) {
     switch(operation) {
       case 'TRANSFER':
         result=await transferWarehouseStockServer(access,body.input);
+        break;
+      case 'MATERIAL_SAVE':
+        result=await saveWarehouseMaterialServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
