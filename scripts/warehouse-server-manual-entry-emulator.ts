@@ -17,6 +17,7 @@ import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer }
 import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
 import { saveWarehouseLandingVisualServer } from '../lib/server/warehouseLandingVisualWrite';
 import { saveWarehouseLogisticsSettingsServer } from '../lib/server/warehouseLogisticsSettingsWrite';
+import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusionWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -214,6 +215,18 @@ try {
   await assert.rejects(()=>saveWarehouseLogisticsSettingsServer(access,-1),
     /WAREHOUSE_LOGISTICS_INVALID_THRESHOLD/);
   console.log('PASS: alertas logísticos server-only, no-op e limite validado');
+  const exclusionInput=[{
+    invoiceRecordKey:'QA-WAREHOUSE-R2-INVOICE',invoiceId:'QA-NF-1',
+    empenhoId:'QA-NE-1',pregao:null,
+  }];
+  const excluded=await excludeWarehouseQueueServer(access,exclusionInput);
+  assert.equal(excluded,1);
+  assert.equal(await excludeWarehouseQueueServer(access,exclusionInput),0);
+  await assert.rejects(()=>excludeWarehouseQueueServer(access,[{
+    ...exclusionInput[0],invoiceRecordKey:'',
+  }]),/WAREHOUSE_QUEUE_EXCLUSION_INVALID/);
+  console.log('PASS: fila NF exclusion server-only e replay sem reescrever');
+
 
 
 
