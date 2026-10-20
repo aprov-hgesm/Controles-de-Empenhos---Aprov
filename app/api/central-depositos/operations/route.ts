@@ -25,6 +25,8 @@ import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeState
 
 import { warehouseLedgerMovementServer, warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
 
+import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +142,15 @@ export async function POST(request: NextRequest) {
         break;
       case 'STRUCTURE_ARCHIVE':
         result=await warehouseStructureArchiveServer(access,body.input);
+        break;
+      case 'QUEUE_INDEX_UPSERT':
+        result=await warehouseQueueIndexServer(access,'UPSERT',body.input);
+        break;
+      case 'QUEUE_INDEX_STATE':
+        result=await warehouseQueueIndexServer(access,'STATE',body.input);
+        break;
+      case 'QUEUE_INDEX_DEACTIVATE':
+        result=await warehouseQueueIndexServer(access,'DEACTIVATE',body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
