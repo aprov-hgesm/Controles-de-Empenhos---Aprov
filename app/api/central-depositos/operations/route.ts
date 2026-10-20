@@ -6,6 +6,7 @@ import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisio
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
 import { transferWarehouseStockServer } from '../../../../lib/server/warehouseTransfer';
 import { saveWarehouseMaterialServer } from '../../../../lib/server/warehouseMaterialWrite';
+import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../../../../lib/server/warehouseDestinationWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
         break;
       case 'MATERIAL_SAVE':
         result=await saveWarehouseMaterialServer(access,body.input);
+        break;
+      case 'DESTINATION_CREATE':
+        result=await warehouseDestinationCreateServer(access,body.input);
+        break;
+      case 'DESTINATION_STATUS':
+        result=await warehouseDestinationSetStatusServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
