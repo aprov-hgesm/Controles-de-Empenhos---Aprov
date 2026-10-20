@@ -1,5 +1,49 @@
 # EMPROVEX — Memorial Oficial
 
+
+## BACKLOG APÓS WAREHOUSE-SERVER-R2 — MIGRAÇÃO DAS FIRESTORE RULES DO EMPROVEX PRINCIPAL (DECISÃO 20/10/2026)
+
+> **PLANEJADO, NÃO IMPLEMENTADO. EXECUTAR SOMENTE APÓS A CONCLUSÃO E HOMOLOGAÇÃO DA CENTRAL DE DEPÓSITOS (WAREHOUSE-SERVER-R2, PR #348 DRAFT, dependente do PR #347).** Este registro é uma decisão de arquitetura e prioridade futura; não constitui autorização de merge, deploy, alteração imediata das Rules do banco principal ou modificação da produção.
+
+### Objetivo e fundamento
+- **Desburocratizar, reduzir consumo cobrado do Firestore e diminuir falhas de Security Rules**, sem enfraquecer o isolamento SaaS por usuário, workspace e UG.
+- Repetir no restante do EMPROVEX o padrão arquitetural do Warehouse: cliente computador/celular -> API autenticada -> motores de domínio **no servidor confiável** -> transações Firestore com precondições, idempotência e auditoria. **Firestore continua sendo o banco.**
+- Regras operacionais/de negócio passam para código executado no backend (não para JavaScript do navegador). Security Rules permanecem como **fronteira restritiva de acesso direto**, com leituras autorizadas e, para comandos efetivamente migrados, **nenhuma gravação pelo SDK cliente**. SDK Admin/REST com credencial de serviço deve ser protegido por IAM e nunca exposto ao cliente.
+- Não usar `allow write: if true`; não liberar permissões genéricas; não aceitar workspace, UG, papel, ator, total, contador, saldo ou mudança de estado informados pelo navegador sem validação no servidor. Verificar Firebase ID token e estado ativo/autorizações, incluindo revogações/suspensões e acesso multi-tenant.
+
+### Escopo da próxima frente, em ordem recomendada
+1. **Notas Fiscais/SAG/NS (prioridade máxima):** mover para motor server-side as verificações atuais de `validInvoiceCreate/Update/Delete`, correspondência entre NF, empenho, fornecedor, UG, trava `sagNsLock_*`, unicidade por número/UG, mudança de titular, atualização e exclusão segura. Reservar NS em transação com identificador determinístico e reconciliar referências; evitar documentos órfãos e disputas concorrentes.
+2. **Gestão de Empenhos (prioridade máxima):** cadastro, edição, revisão sequencial, vínculos com alertas/cronogramas/NF e exclusão por ciclo de vida com trava. Centralizar integridade, autoria, auditoria e tratamento de repetição no motor do servidor.
+3. **Termos de Recebimento e Fornecedores (alta):** contador/numeração atômicos, proteção de duplicidade, identidade/CNPJ, campos imutáveis e vínculos documentais.
+4. **Comissões, Cronogramas, Avisos e documentos (alta):** fluxos de atualização, condições de vínculo, estados e validações no servidor; preservar direitos específicos de cada setor.
+5. **Auditoria, backups e legal (alta sensibilidade):** geração de eventos e status confiáveis no backend, preservando histórico append-only, autoria, horário e evidência de aceite expresso. Não flexibilizar a leitura das aceitações ou permitir que um operador forje aceite, backup ou auditoria.
+6. **Indicadores, snapshots e cotas (otimização):** geração server-side do snapshot da Home, consolidação e contabilização por UG, eliminação de escritas sem alteração e leituras/listeners redundantes. Consolidar cálculo diário/semanal/mensal em R$ com valores de tarifa e consumo efetivamente observados.
+7. **Administração SaaS e sessões (fase sensível):** contas/workspaces, faturamento, ciclos, assinaturas, suspensão, leases e revogação; priorizar backends já existentes e preservar resposta rápida de sessão, limites de acesso e revogação de identidades. Não migrar leases sem testes de concorrência e encerramento remoto.
+
+### Observações técnicas da auditoria
+- O banco principal usa `firestore.rules` (aproximadamente 2.552 linhas na revisão de 20/10/2026); o Warehouse usa `firestore.warehouse.rules` separadamente (aproximadamente 3.462 linhas). A redução de linhas é consequência desejável, **não a métrica de economia**.
+- Pontos de custo: leituras dependentes nas Rules (`get`, `exists`, `getAfter`), consultas redundantes, ouvintes desnecessários, varreduras, atualizações inalteradas e projeções regravadas. **Mover lógica não economiza automaticamente**: leituras administrativas do servidor também são cobradas; pode haver custo de hospedagem adicional.
+- Medir **antes e depois por comando/UG**: leituras, gravações, exclusões, verificações de Rules, latência, tamanho das operações, custo diário/semanal/mensal em R$ e economia real. Considerar preços e condições vigentes e que a cota gratuita não se multiplica por banco adicional.
+- Conferir quais operações já utilizam servidor antes de reconstruí-las. Priorizar reutilizar infraestrutura de autenticação, verificação de papel, IAM, limites, logs, proteção de replay e testes.
+
+### Gates obrigatórios — sem corte antecipado
+- [ ] Central de Depósitos concluída, testes e QA aprovados; PR #348 e dependências tratados formalmente.
+- [ ] Abrir **nova frente/PR específica para o banco principal**, sem substituir silenciosamente regras dos usuários ativos.
+- [ ] Inventariar todos os call-sites de escrita direta, operações de negócio e permissões do banco principal; definir migração por domínio e plano de rollback.
+- [ ] Implementar backend de cada domínio, testar escopos UG/workspace/papéis, concorrência, replays, limites, suspensão/revogação, preservação de trilha de auditoria e consistência transacional.
+- [ ] Comparar consumo/custo real antes/depois; não prometer percentual de economia sem medição.
+- [ ] Habilitar Rules mínimas/read-only **apenas depois** de constatar que os caminhos legítimos foram migrados, com Emulator Security, Browser E2E, Application CI, Core Protection, Recovery e smoke em QA.
+- [ ] Nenhum merge/deploy de Rules ou alterações de produção sem gates PASS e autorização de release.
+
+### Handoff futuro obrigatório
+- **Onde estamos:** concluir a migração do Warehouse no PR #348; este tema do banco principal é backlog **pós-Warehouse**.
+- **O que estamos fazendo agora:** registrar a decisão e seus critérios no memorial oficial; **não iniciar** esta nova migração nesta etapa.
+- **Quem está fazendo:** coordenação técnica documenta e realiza auditoria; Fundador valida prioridade e posterior release.
+- **O que fazer a seguir:** após a conclusão do Warehouse, abrir frente `FIRESTORE-CORE-SERVER-R1` começando por Notas Fiscais/SAG/NS, depois Empenhos, demais módulos e otimização de custo.
+- **Quem o fará:** worker/coordenação técnica com GitHub, Emulator e CI; Fundador dá aceite de Preview/produção.
+
+---
+
 ## ESTADO VIGENTE GLOBAL — 19/10/2026 · 3D PREMIUM R4 — PR #346 PUBLICADO
 
 > **ESTADO DE PRODUÇÃO MAIS RECENTE.** Este registro prevalece sobre a seção histórica imediatamente abaixo intitulada “EMPROVEX R4 PUBLICADA”, que continua correta como marco anterior, mas não representa mais o deployment atualmente associado ao domínio.
