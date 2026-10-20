@@ -146,6 +146,12 @@ export async function warehouseStructureServer(
     }
     const desiredStatus=data.status??current.status;
     if(desiredStatus!=='active'&&desiredStatus!=='inactive') return fail('WAREHOUSE_DEPOT_STATUS_INVALID',400);
+    // A inativação exige varredura transacional de locais, saldos e lotes.
+    // Até a migração do archiveWarehouseStructure, não aceitar bypass
+    // por DEPOT_UPDATE (o fluxo SDK antigo permanece isolado no Draft).
+    if(desiredStatus==='inactive' && current.status==='active') {
+      return fail('WAREHOUSE_ARCHIVE_SERVER_FLOW_REQUIRED');
+    }
     if(desiredStatus==='active' && current.status!=='active') {
       const duplicates=await warehouseAdminListByField(token,access.workspaceId,'depots','code',current.code,250);
       if(duplicates.some(doc=>activeRecord(doc)&&doc.path!==depotPath)) return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
@@ -242,6 +248,9 @@ export async function warehouseStructureServer(
   }
   const desiredStatus=data.status??current.status;
   if(desiredStatus!=='active'&&desiredStatus!=='inactive') return fail('WAREHOUSE_LOCATION_STATUS_INVALID',400);
+  if(desiredStatus==='inactive' && current.status==='active') {
+    return fail('WAREHOUSE_ARCHIVE_SERVER_FLOW_REQUIRED');
+  }
   if(desiredStatus==='active'&&current.status!=='active') {
     const duplicates=await warehouseAdminListByField(token,access.workspaceId,'locations','code',current.code,500);
     if(duplicates.some(doc=>doc.path!==target&&activeRecord(doc)
