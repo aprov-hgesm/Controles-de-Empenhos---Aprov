@@ -33,13 +33,29 @@ assert.match(transfer, /prepareWarehousePhysicalTransfer/);
 assert.match(transfer, /NON_PHYSICAL_POSITION/);
 
 const repository = read('lib/warehouse/locationRepository.ts');
-assert.match(repository, /WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION/);
-assert.match(repository, /buildCanonicalWarehouseTransferLotPlan/);
-assert.match(repository, /isWarehousePhysicalStockPosition\(from\)/);
-assert.match(repository, /isWarehousePhysicalStockPosition\(to\)/);
-assert.doesNotMatch(repository, /from\.kind !== 'UNASSIGNED'/);
-assert.doesNotMatch(repository, /UNASSIGNED flows keep the legacy explicit/);
-assert.doesNotMatch(repository, /fromInitial = from\.kind === 'UNASSIGNED'/);
+const serverTransfer = read('lib/server/warehouseTransfer.ts');
+const operationsRoute = read('app/api/central-depositos/operations/route.ts');
+const transferClient = repository.slice(
+  repository.indexOf('export async function transferWarehouseStock('),
+  repository.indexOf('export function buildWarehousePositionLabel(')
+);
+// Depois do R2, a UI móvel permanece um cliente fino; a transação e as
+// rejeições de posições inválidas pertencem ao motor autenticado no servidor.
+assert.match(transferClient, /warehouseServerCommand<TransferWarehouseStockResult>/);
+assert.match(transferClient, /'TRANSFER'/);
+assert.doesNotMatch(transferClient, /\b(runTransaction|setDoc|updateDoc|writeBatch)\s*\(/);
+assert.match(operationsRoute, /verifyWarehouseRequest/);
+assert.match(operationsRoute, /transferWarehouseStockServer\(access,body\.input\)/);
+assert.match(serverTransfer, /isWarehousePhysicalStockPosition\(fromCandidate\)/);
+assert.match(serverTransfer, /isWarehousePhysicalStockPosition\(toCandidate\)/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_INVALID_POSITION/);
+assert.match(serverTransfer, /warehouseStockPositionsEqual/);
+assert.match(serverTransfer, /planWarehouseTransferLots/);
+assert.match(serverTransfer, /warehouseAdminTransaction<TransferWarehouseStockResult>/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_CLIENT_LOT_PLAN_FORBIDDEN/);
+assert.doesNotMatch(serverTransfer, /from\.kind !== 'UNASSIGNED'/);
+assert.doesNotMatch(serverTransfer, /UNASSIGNED flows keep the legacy explicit/);
+assert.doesNotMatch(serverTransfer, /fromInitial = from\.kind === 'UNASSIGNED'/);
 
 const adapter = read('lib/warehouse/mobileTransfer.ts');
 assert.match(adapter, /planWarehouseTransferLots/);
@@ -168,7 +184,7 @@ assert.match(workflow, /MOBILE-K canonical ops permanent guard/);
 
 console.log('MOBILE-K canonical ops guard: PASS');
 console.log('- UNASSIGNED ficou fora de Transferência e Saída operacionais');
-console.log('- Mobile delega lotes ao motor canônico e retirada ao withdrawal canônico');
+console.log('- Mobile delega TRANSFER e lotes ao motor canônico server-only, e retirada ao withdrawal canônico');
 console.log('- intake v2 continua autoridade de pendingQuantity');
 console.log('- legado UNASSIGNED permanece isolado na ponte técnica do intake');
 console.log('- Entrada Avulsa e devolução normal exigem posição física canônica');
