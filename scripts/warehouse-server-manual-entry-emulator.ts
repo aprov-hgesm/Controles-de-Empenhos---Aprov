@@ -337,6 +337,10 @@ try {
   });
   assert.equal(adjustedReplay.applied,false);
   await warehouseInventoryLifecycleServer(access,'FINISH_CONFIRM',{inventoryId});
+  const postConfirmReplay=await adjustWarehouseInventoryServer(access,{
+    inventoryId,itemId:itemLocationId,
+  });
+  assert.equal(postConfirmReplay.applied,false);
   const savedSession=(await getDoc(ref('inventories',inventoryId))).data();
   assert.equal(savedSession?.status,'CONFIRMED');
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,95);

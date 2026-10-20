@@ -84,7 +84,11 @@ export async function adjustWarehouseInventoryServer(
         ||JSON.stringify(item.position)!==JSON.stringify(oldItem.position)) {
         return fail('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
       }
-      if(knownSession.status!=='CONFIRMING')return fail('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
+      // Um movimento gravado pode ser consultado novamente mesmo após
+      // a confirmação final; novas movimentações só em CONFIRMING.
+      if(knownSession.status!=='CONFIRMING'&&knownSession.status!=='CONFIRMED') {
+        return fail('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
+      }
       if(item.status==='MATCHED')return fail('WAREHOUSE_INVENTORY_ZERO_DIFFERENCE');
       if(item.status==='STALE')return fail('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
       if(item.countedQuantity===null||item.difference===null||item.difference===0) {
@@ -148,10 +152,9 @@ export async function adjustWarehouseInventoryServer(
       // Replay idempotente já foi verificado acima contra o movimento persistido.
       // Exigir a revisão do snapshot somente ANTES da primeira aplicação:
       // após um ajuste válido ela naturalmente avança e não pode bloquear o replay.
+      if(knownSession.status!=='CONFIRMING')return fail('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
       if(position.revision!==item.expectedLocationRevision
-        ||position.lastMovementId!==item.expectedLocationLastMovementId
-        ||balance.revision!==item.expectedBalanceRevision
-        ||balance.lastMovementId!==item.expectedBalanceLastMovementId) {
+        ||position.lastMovementId!==item.expectedLocationLastMovementId) {
         return fail('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
       }
       if(item.status!=='DIVERGENT')return fail('WAREHOUSE_INVENTORY_ITEM_NOT_DIVERGENT');
