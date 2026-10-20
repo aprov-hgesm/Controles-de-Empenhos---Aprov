@@ -148,7 +148,8 @@ export async function getWarehouseBarcodeByCode(
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
-    return null;
+    // Um 403 não significa código livre. Propagar para impedir duplicidade.
+    throw error;
   }
 }
 
