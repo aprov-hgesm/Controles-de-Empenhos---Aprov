@@ -56,7 +56,9 @@ function decodeFields(value: Record<string, Encoded>): Record<string, unknown> {
 }
 
 function fullName(path: string): string {
-  if (!/^warehouse\/[a-z0-9_-]+\/[A-Za-z]+\/[A-Za-z0-9_-]+$/.test(path)) {
+  const warehouseDoc = /^warehouse\/[a-z0-9_-]+\/[A-Za-z]+\/[A-Za-z0-9_-]+$/;
+  const inventoryItemDoc = /^warehouse\/[a-z0-9_-]+\/inventories\/inv_[a-f0-9]{32}\/items\/invit_[a-f0-9]{64}$/;
+  if (!warehouseDoc.test(path) && !inventoryItemDoc.test(path)) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_DOCUMENT_PATH', 400);
   }
   const effectiveProjectId = process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
