@@ -131,7 +131,7 @@ export async function warehouseAdminTransaction<T>(
     read: ReadonlyMap<string, WarehouseAdminDocument | null>,
   ) => { result: T; writes: Array<{ path: string; data: Record<string, unknown> }> }
 ): Promise<T> {
-  if (paths.length < 1 || paths.length > 18 || new Set(paths).size !== paths.length) {
+  if (paths.length < 1 || paths.length > 128 || new Set(paths).size !== paths.length) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_READ_SET', 400);
   }
   const names = paths.map(fullName);
@@ -166,7 +166,7 @@ export async function warehouseAdminTransaction<T>(
     if (plan.writes.length === 0) {
       return plan.result;
     }
-    if (plan.writes.length > 18 || new Set(plan.writes.map(w => w.path)).size !== plan.writes.length) {
+    if (plan.writes.length > 128 || new Set(plan.writes.map(w => w.path)).size !== plan.writes.length) {
       throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_WRITE_SET', 400);
     }
     const writes = plan.writes.map(w => {
@@ -186,4 +186,51 @@ export async function warehouseAdminTransaction<T>(
       await request(accessToken, ':rollback', { transaction }).catch(() => undefined);
     }
   }
+}
+
+// Server-side filtered query; the caller cannot choose collection or query
+// arbitrarily. Used only for canonical lot planning before a transaction.
+export async function warehouseAdminListByField(
+  accessToken: string,
+  workspaceId: string,
+  domain: 'lots' | 'depots' | 'locations' | 'locationBalances',
+  field: 'materialId' | 'code' | 'depotId',
+  value: string,
+  maxResults = 100
+): Promise<WarehouseAdminDocument[]> {
+  const parentPath = `warehouse/${workspaceId}`;
+  // Validate the scope with the same strict document path guard.
+  fullName(parentPath + '/' + domain + '/probe');
+  if (value.length > 180 || !value
+    || !Number.isInteger(maxResults) || maxResults < 1 || maxResults > 500) {
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_INVALID', 400);
+  }
+  const response = await request(accessToken, '/' + parentPath + ':runQuery', {
+    structuredQuery: {
+      from: [{ collectionId: domain }],
+      where: { fieldFilter: {
+        field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: value },
+      } },
+      limit: maxResults + 1,
+    },
+  });
+  const rows = parseStream(await response.text());
+  const prefix = fullName(parentPath + '/' + domain + '/probe').slice(0, -'probe'.length);
+  const docs = rows
+    .filter((row) => typeof row.document === 'object')
+    .map((row) => {
+      const doc = row.document as {
+        name?: string; fields?: Record<string, Encoded>; updateTime?: string;
+      };
+      if (!doc.name?.startsWith(prefix) || !doc.updateTime) {
+        throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_OUT_OF_SCOPE', 503);
+      }
+      return {
+        path: doc.name.slice(fullName(parentPath + '/' + domain + '/probe').indexOf('warehouse/')),
+        data: decodeFields(doc.fields || {}),
+        updateTime: doc.updateTime,
+      };
+    });
+  if (docs.length > maxResults) throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_SATURATED', 409);
+  return docs;
 }
