@@ -221,6 +221,11 @@ export async function registerWarehouseManualEntryServer(
         note:data.note ?? null, source:data.source ?? null,
       }, {expectedWorkspaceId:access.workspaceId}),
       'WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
+    // Verifique primeiro o replay divergente: nenhuma validação auxiliar
+    // de lote/barcode deve mascarar o conflito da operação principal.
+    if (oldMovement && !warehouseMovementMatchesReplay(oldMovement,candidate)) {
+      bad('WAREHOUSE_IDEMPOTENCY_CONFLICT',409);
+    }
     const existingBarcode = barcodeId ? parse(read(paths.barcode),
       data=>validateWarehouseBarcodeAssociation(warehouseCanonicalBarcodeReadInput(barcodeId,data),
         {expectedWorkspaceId:access.workspaceId, expectedUg:access.ug}),
