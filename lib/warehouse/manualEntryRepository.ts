@@ -9,7 +9,16 @@ import {
 import { auth, warehouseDb as db } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import { normalizeWorkspaceId } from '../platformIdentity';
-import { saveWarehouseBarcodeAssociation } from './barcodeRepository';
+import {
+  WAREHOUSE_BARCODE_SCHEMA_VERSION,
+  createWarehouseBarcodeId,
+  normalizeWarehouseBarcode,
+  validateWarehouseBarcodeAssociation,
+  barcodeAssociationMatchesMaterial,
+  warehousePresentationFactor,
+  type WarehouseBarcodeAssociation,
+} from './barcode';
+import { isWarehouseLocationBarcode } from './locationBarcode';
 import { warehouseUnitFromOperationalLabel } from './invoiceIntegration';
 import {
   getWarehouseDepot,
@@ -39,17 +48,20 @@ import {
 import {
   createWarehousePendingLotCode,
   normalizeWarehouseExpiryDate,
+  validateWarehouseLot,
+  WAREHOUSE_LOT_SCHEMA_VERSION,
   type WarehouseLot,
 } from './lot';
-import { createWarehouseLot, listWarehouseLots } from './lotRepository';
 import {
   createWarehouseMaterial,
+  validateWarehouseMaterial,
   type WarehouseMaterial,
 } from './material';
 import {
-  getWarehouseMaterial,
-  saveWarehouseMaterial,
-} from './materialRepository';
+  warehouseCanonicalMaterialReadInput,
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalLotReadInput,
+} from './readCompatibility';
 import { warehouseDocumentPath } from './namespace';
 
 export interface RegisterWarehouseManualEntryInput {
@@ -130,20 +142,13 @@ async function manualMaterialId(
   return 'mat_' + digest.slice(0, 32);
 }
 
-async function ensureMaterial(
+async function prepareManualEntryMaterial(
   scope: { workspaceId: string; ug: string },
   input: RegisterWarehouseManualEntryInput,
   operationId: string
-): Promise<WarehouseMaterial> {
+): Promise<{ id: string; newMaterial: WarehouseMaterial | null }> {
   const existingId = input.existingMaterialId?.trim().toLowerCase() || '';
-  if (existingId) {
-    const existing = await getWarehouseMaterial(scope.workspaceId, existingId);
-    if (!existing) throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_NOT_FOUND');
-    if (existing.status !== 'active' || existing.ug !== scope.ug) {
-      throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_INACTIVE');
-    }
-    return existing;
-  }
+  if (existingId) return { id: existingId, newMaterial: null };
 
   const description = normalizeText(input.description);
   const unitLabel = normalizeText(input.unitLabel);
@@ -155,18 +160,6 @@ async function ensureMaterial(
   }
 
   const id = await manualMaterialId(scope.workspaceId, operationId);
-  const existing = await getWarehouseMaterial(scope.workspaceId, id);
-  if (existing) {
-    if (
-      existing.status !== 'active'
-      || existing.ug !== scope.ug
-      || existing.description !== description
-    ) {
-      throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT');
-    }
-    return existing;
-  }
-
   const candidate = createWarehouseMaterial({
     id,
     workspaceId: scope.workspaceId,
@@ -178,16 +171,24 @@ async function ensureMaterial(
     conversions: [],
   });
   if (!candidate.ok) {
-    throw new Error(
-      'WAREHOUSE_MANUAL_ENTRY_MATERIAL_INVALID: '
-      + candidate.issues.map((issue) => issue.message).join('; ')
-    );
+    throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_INVALID: '
+      + candidate.issues.map((issue) => issue.message).join('; '));
   }
+  // A criação ocorre junto com o movimento, e não em uma gravação anterior.
+  return { id, newMaterial: candidate.data };
+}
 
-  await saveWarehouseMaterial(scope.workspaceId, candidate.data);
-  const saved = await getWarehouseMaterial(scope.workspaceId, id);
-  if (!saved) throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CREATE_FAILED');
-  return saved;
+function parseManualEntryMaterial(
+  workspaceId: string,
+  id: string,
+  data: Record<string, unknown>
+): WarehouseMaterial {
+  const result = validateWarehouseMaterial(
+    warehouseCanonicalMaterialReadInput(id, data),
+    { expectedWorkspaceId: workspaceId }
+  );
+  if (!result.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_INVALID');
+  return result.data;
 }
 
 function parseManualEntryMovement(
@@ -303,15 +304,20 @@ async function assertManualEntryPositionActive(
 
 async function applyWarehouseManualLocatedEntry(input: {
   scope: { workspaceId: string; ug: string; uid: string };
-  material: WarehouseMaterial;
+  materialIdentity: { id: string; newMaterial: WarehouseMaterial | null };
   position: Exclude<WarehouseStockPosition, { kind: 'UNASSIGNED' }>;
   quantity: number;
   operationId: string;
   provenance: string;
   reference: string | null;
+  expiresOn: string | null;
+  barcode: string | null;
 }): Promise<{
+  material: WarehouseMaterial;
   entry: ApplyWarehouseMovementResult;
   locationBalance: WarehouseLocationBalance;
+  validity: WarehouseLot | null;
+  barcodeLinked: boolean;
 }> {
   const positionKey = warehouseStockPositionKey(input.position);
   const positionToken = (await stableHex(positionKey)).slice(0, 16);
@@ -321,26 +327,37 @@ async function applyWarehouseManualLocatedEntry(input: {
   );
   const idempotencyKeyHash = movementId.slice('mov_'.length);
   const locationBalanceId = await createWarehouseLocationBalanceId(
-    input.scope.workspaceId,
-    input.material.id,
-    input.position
+    input.scope.workspaceId, input.materialIdentity.id, input.position
   );
 
-  const movementPath = warehouseDocumentPath(
-    input.scope.workspaceId,
-    'movements',
-    movementId
-  );
-  const balancePath = warehouseDocumentPath(
-    input.scope.workspaceId,
-    'balances',
-    input.material.id
-  );
-  const locationBalancePath = warehouseDocumentPath(
-    input.scope.workspaceId,
-    'locationBalances',
-    locationBalanceId
-  );
+  const materialRef = doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'materials', input.materialIdentity.id
+  ));
+  const movementRef = doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'movements', movementId
+  ));
+  const balanceRef = doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'balances', input.materialIdentity.id
+  ));
+  const locationBalanceRef = doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'locationBalances', locationBalanceId
+  ));
+
+  // IDs estáveis permitem replay seguro sem varrer até 500 lotes.
+  const lotId = input.expiresOn
+    ? 'lot_' + (await stableHex(
+        [input.scope.workspaceId, 'MANUAL_ENTRY_LOT', input.operationId].join('\n')
+      )).slice(0, 32)
+    : null;
+  const lotRef = lotId ? doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'lots', lotId
+  )) : null;
+  const barcodeId = input.barcode
+    ? await createWarehouseBarcodeId(input.scope.workspaceId, input.barcode)
+    : null;
+  const barcodeRef = barcodeId ? doc(db, warehouseDocumentPath(
+    input.scope.workspaceId, 'barcodes', barcodeId
+  )) : null;
 
   const candidateResult = validateWarehouseMovement(
     {
@@ -348,131 +365,183 @@ async function applyWarehouseManualLocatedEntry(input: {
       id: movementId,
       workspaceId: input.scope.workspaceId,
       ug: input.scope.ug,
-      materialId: input.material.id,
+      materialId: input.materialIdentity.id,
       type: 'MANUAL_ENTRY',
       quantityDelta: input.quantity,
       idempotencyKeyHash,
       reversesMovementId: null,
-      note: [
-        'Entrada avulsa',
-        input.provenance,
-        'posição ' + positionToken,
-      ].join(' · '),
+      note: ['Entrada avulsa', input.provenance, 'posição ' + positionToken].join(' · '),
       source: {
-        kind: 'MANUAL_ENTRY',
-        actorUid: input.scope.uid,
-        provenance: input.provenance,
-        reference: input.reference,
-        position: input.position,
-        locationBalanceId,
+        kind: 'MANUAL_ENTRY', actorUid: input.scope.uid,
+        provenance: input.provenance, reference: input.reference,
+        position: input.position, locationBalanceId,
       },
     },
     {
       expectedWorkspaceId: input.scope.workspaceId,
       expectedUg: input.scope.ug,
-      expectedMaterialId: input.material.id,
+      expectedMaterialId: input.materialIdentity.id,
     }
   );
-  if (!candidateResult.ok) {
-    throw new Error('WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
-  }
+  if (!candidateResult.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
   const candidate = candidateResult.data;
 
   return runTransaction(db, async (transaction) => {
-    const movementRef = doc(db, movementPath);
-    const balanceRef = doc(db, balancePath);
-    const locationBalanceRef = doc(db, locationBalancePath);
-    const [movementSnapshot, balanceSnapshot, locationBalanceSnapshot] =
-      await Promise.all([
-        transaction.get(movementRef),
-        transaction.get(balanceRef),
-        transaction.get(locationBalanceRef),
-      ]);
+    // Todas as leituras ocorrem antes da primeira escrita da transação.
+    const [
+      materialSnapshot, movementSnapshot, balanceSnapshot,
+      locationBalanceSnapshot, lotSnapshot, barcodeSnapshot,
+    ] = await Promise.all([
+      transaction.get(materialRef),
+      transaction.get(movementRef),
+      transaction.get(balanceRef),
+      transaction.get(locationBalanceRef),
+      lotRef ? transaction.get(lotRef) : Promise.resolve(null),
+      barcodeRef ? transaction.get(barcodeRef) : Promise.resolve(null),
+    ]);
+
+    let material: WarehouseMaterial;
+    let createMaterial = false;
+    if (materialSnapshot.exists()) {
+      material = parseManualEntryMaterial(
+        input.scope.workspaceId, materialSnapshot.id,
+        materialSnapshot.data() as Record<string, unknown>
+      );
+      if (
+        !input.materialIdentity.newMaterial
+          ? false
+          : material.description !== input.materialIdentity.newMaterial.description
+            || JSON.stringify(material.unit) !== JSON.stringify(input.materialIdentity.newMaterial.unit)
+      ) throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT');
+    } else {
+      if (!input.materialIdentity.newMaterial) {
+        throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_NOT_FOUND');
+      }
+      material = input.materialIdentity.newMaterial;
+      createMaterial = true;
+    }
+    if (material.status !== 'active' || material.ug !== input.scope.ug) {
+      throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_INACTIVE');
+    }
 
     const currentBalance = balanceSnapshot.exists()
-      ? parseManualEntryBalance(
-          input.scope.workspaceId,
-          input.material.id,
-          balanceSnapshot.data() as Record<string, unknown>
-        )
+      ? parseManualEntryBalance(input.scope.workspaceId, material.id,
+          balanceSnapshot.data() as Record<string, unknown>)
       : null;
     const currentLocationBalance = locationBalanceSnapshot.exists()
-      ? parseManualEntryLocationBalance(
-          input.scope.workspaceId,
-          input.material.id,
-          locationBalanceId,
-          locationBalanceSnapshot.data() as Record<string, unknown>
-        )
+      ? parseManualEntryLocationBalance(input.scope.workspaceId, material.id,
+          locationBalanceId, locationBalanceSnapshot.data() as Record<string, unknown>)
       : null;
+
+    let barcodeLinked = false;
+    let barcodeToCreate: WarehouseBarcodeAssociation | null = null;
+    if (barcodeSnapshot?.exists()) {
+      const validated = validateWarehouseBarcodeAssociation(
+        warehouseCanonicalBarcodeReadInput(
+          barcodeSnapshot.id, barcodeSnapshot.data() as Record<string, unknown>
+        ),
+        { expectedWorkspaceId: input.scope.workspaceId, expectedUg: input.scope.ug }
+      );
+      if (!validated.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_BARCODE_INVALID');
+      const linked = validated.data;
+      if (linked.materialId !== material.id || linked.status !== 'active'
+        || linked.barcode !== input.barcode || linked.factorToBaseUnit !== 1
+        || !barcodeAssociationMatchesMaterial(linked, material)) {
+        throw new Error('WAREHOUSE_BARCODE_ALREADY_LINKED');
+      }
+      barcodeLinked = true;
+    } else if (barcodeRef && barcodeId && input.barcode) {
+      const barcodeCandidate = validateWarehouseBarcodeAssociation({
+        schemaVersion: WAREHOUSE_BARCODE_SCHEMA_VERSION, id: barcodeId,
+        workspaceId: input.scope.workspaceId, ug: input.scope.ug,
+        materialId: material.id, barcode: input.barcode,
+        presentation: material.unit, factorToBaseUnit: warehousePresentationFactor(material, material.unit),
+        status: 'active', createdBy: input.scope.uid, updatedBy: input.scope.uid,
+      }, {
+        expectedWorkspaceId: input.scope.workspaceId,
+        expectedUg: input.scope.ug, expectedMaterialId: material.id,
+      });
+      if (!barcodeCandidate.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_BARCODE_INVALID');
+      barcodeToCreate = barcodeCandidate.data;
+      barcodeLinked = true;
+    }
+
+    let validity: WarehouseLot | null = null;
+    let createLot = false;
+    if (lotRef && lotId && input.expiresOn) {
+      const lotCandidate = validateWarehouseLot({
+        schemaVersion: WAREHOUSE_LOT_SCHEMA_VERSION, id: lotId,
+        workspaceId: input.scope.workspaceId, ug: input.scope.ug,
+        materialId: material.id,
+        code: createWarehousePendingLotCode('manual-' + input.operationId),
+        expiresOn: input.expiresOn, quantity: input.quantity,
+        position: input.position, status: 'active',
+        origin: { kind: 'MANUAL_ENRICHMENT', movementId,
+          invoiceRecordKey: null, invoiceId: null, supplier: null, supplierCnpj: null },
+        createdBy: input.scope.uid, updatedBy: input.scope.uid,
+      }, { expectedWorkspaceId: input.scope.workspaceId,
+        expectedUg: input.scope.ug, expectedMaterialId: material.id });
+      if (!lotCandidate.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_LOT_INVALID');
+      validity = lotCandidate.data;
+      if (lotSnapshot?.exists()) {
+        const parsed = validateWarehouseLot(warehouseCanonicalLotReadInput(
+          lotSnapshot.id, lotSnapshot.data() as Record<string, unknown>
+        ), { expectedWorkspaceId: input.scope.workspaceId });
+        if (!parsed.ok || JSON.stringify(parsed.data) !== JSON.stringify(lotCandidate.data)) {
+          throw new Error('WAREHOUSE_MANUAL_ENTRY_LOT_CONFLICT');
+        }
+      } else {
+        createLot = true;
+      }
+    }
 
     if (movementSnapshot.exists()) {
       const existing = parseManualEntryMovement(
-        input.scope.workspaceId,
-        movementSnapshot.id,
+        input.scope.workspaceId, movementSnapshot.id,
         movementSnapshot.data() as Record<string, unknown>
       );
       if (!warehouseMovementMatchesReplay(existing, candidate)) {
         throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
       }
-      if (!currentBalance || !currentLocationBalance) {
+      if (!currentBalance || !currentLocationBalance || createMaterial || createLot || barcodeToCreate) {
         throw new Error('WAREHOUSE_MANUAL_ENTRY_PROJECTION_INCONSISTENT');
       }
       return {
-        entry: {
-          applied: false,
-          movement: existing,
-          balance: currentBalance,
-        },
-        locationBalance: currentLocationBalance,
+        material, entry: { applied: false, movement: existing, balance: currentBalance },
+        locationBalance: currentLocationBalance, validity, barcodeLinked,
       };
     }
-
-    if (currentLocationBalance) {
-      const currentPositionKey = warehouseStockPositionKey(
-        currentLocationBalance.position
-      );
-      if (currentPositionKey !== positionKey) {
-        throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_CONFLICT');
-      }
+    if (lotSnapshot?.exists()) throw new Error('WAREHOUSE_MANUAL_ENTRY_LOT_CONFLICT');
+    if (currentLocationBalance
+      && warehouseStockPositionKey(currentLocationBalance.position) !== positionKey) {
+      throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_CONFLICT');
     }
 
-    const nextBalance = applyWarehouseMovementToBalance(
-      candidate,
-      currentBalance
-    );
-    const nextLocationBalance = applyWarehouseLocationDelta(
-      currentLocationBalance,
-      {
-        id: locationBalanceId,
-        workspaceId: input.scope.workspaceId,
-        ug: input.scope.ug,
-        materialId: input.material.id,
-        position: input.position,
-        quantityDelta: input.quantity,
-        movementId,
-      }
-    );
+    const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
+    const nextLocationBalance = applyWarehouseLocationDelta(currentLocationBalance, {
+      id: locationBalanceId, workspaceId: input.scope.workspaceId,
+      ug: input.scope.ug, materialId: material.id, position: input.position,
+      quantityDelta: input.quantity, movementId,
+    });
 
-    transaction.set(movementRef, {
-      ...candidate,
-      createdAt: serverTimestamp(),
-    });
-    transaction.set(balanceRef, {
-      ...nextBalance,
-      updatedAt: serverTimestamp(),
-    });
+    if (createMaterial) transaction.set(materialRef, material);
+    transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
+    transaction.set(balanceRef, { ...nextBalance, updatedAt: serverTimestamp() });
     transaction.set(locationBalanceRef, {
-      ...nextLocationBalance,
-      updatedAt: serverTimestamp(),
+      ...nextLocationBalance, updatedAt: serverTimestamp(),
+    });
+    if (lotRef && createLot && validity) transaction.set(lotRef, {
+      ...validity, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    if (barcodeRef && barcodeToCreate) transaction.set(barcodeRef, {
+      ...barcodeToCreate, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     });
 
     return {
-      entry: {
-        applied: true,
-        movement: candidate,
-        balance: nextBalance,
-      },
+      material,
+      entry: { applied: true, movement: candidate, balance: nextBalance },
       locationBalance: nextLocationBalance,
+      validity, barcodeLinked,
     };
   });
 }
@@ -508,78 +577,24 @@ export async function registerWarehouseManualEntry(
     throw new Error('WAREHOUSE_MANUAL_ENTRY_INVALID_EXPIRY');
   }
 
-  const material = await ensureMaterial(scope, input, operationId);
+  const materialIdentity = await prepareManualEntryMaterial(scope, input, operationId);
+  const barcode = input.barcode ? normalizeWarehouseBarcode(input.barcode) : null;
+  if (input.barcode && !barcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
+  if (barcode && isWarehouseLocationBarcode(barcode)) {
+    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
+  }
 
-  const locatedEntry = await applyWarehouseManualLocatedEntry({
-    scope,
-    material,
-    position,
-    quantity,
-    operationId,
-    provenance,
-    reference,
+  const result = await applyWarehouseManualLocatedEntry({
+    scope, materialIdentity, position, quantity, operationId, provenance, reference,
+    expiresOn: normalizedExpiry, barcode,
   });
-  const entry = locatedEntry.entry;
-  const transfer = null;
-
-  const warnings: string[] = [];
-  let validity: WarehouseLot | null = null;
-
-  if (normalizedExpiry) {
-    const technicalCode = createWarehousePendingLotCode(
-      'manual-' + operationId
-    );
-    try {
-      const currentLots = await listWarehouseLots(scope.workspaceId, 500, material.id);
-      const current = currentLots.find(
-        (item) =>
-          item.lot.status === 'active'
-          && item.lot.code === technicalCode
-          && warehouseStockPositionKey(item.lot.position) === warehouseStockPositionKey(position)
-      )?.lot || null;
-
-      validity = current || await createWarehouseLot(scope.workspaceId, {
-        materialId: material.id,
-        code: technicalCode,
-        expiresOn: normalizedExpiry,
-        quantity,
-        position,
-        origin: {
-          kind: 'MANUAL_ENRICHMENT',
-          movementId: entry.movement.id,
-          invoiceRecordKey: null,
-          invoiceId: null,
-          supplier: null,
-          supplierCnpj: null,
-        },
-      });
-    } catch {
-      warnings.push('A entrada foi registrada, mas a validade precisa ser revisada no Controle de Itens.');
-    }
-  }
-
-  let barcodeLinked = false;
-  const barcode = normalizeText(input.barcode || '');
-  if (barcode) {
-    try {
-      await saveWarehouseBarcodeAssociation(scope.workspaceId, {
-        barcode,
-        materialId: material.id,
-        presentation: material.unit,
-      });
-      barcodeLinked = true;
-    } catch {
-      warnings.push('A entrada foi registrada, mas o código de barras não pôde ser vinculado.');
-    }
-  }
-
   return {
-    material,
-    entry,
-    transfer,
-    locationBalance: locatedEntry.locationBalance,
-    validity,
-    barcodeLinked,
-    warnings,
+    material: result.material,
+    entry: result.entry,
+    transfer: null,
+    locationBalance: result.locationBalance,
+    validity: result.validity,
+    barcodeLinked: result.barcodeLinked,
+    warnings: [],
   };
 }
