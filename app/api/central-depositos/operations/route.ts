@@ -14,6 +14,7 @@ import { excludeWarehouseQueueServer } from '../../../../lib/server/warehouseQue
 import { writeWarehouseLotServer } from '../../../../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../../../../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../../../../lib/server/warehouseReturnWrite';
+import { finalizeWarehouseWithdrawalServer } from '../../../../lib/server/warehouseWithdrawalWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,8 @@ function reject(code: string, status: number) {
 export async function POST(request: NextRequest) {
   try {
     const size=Number(request.headers.get('content-length')||'0');
-    if (!Number.isFinite(size)||size>8192) return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
+    // Até 40 linhas de retirada, com validação estrita no motor por linha.
+    if (!Number.isFinite(size)||size>65536) return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
     const access=await verifyWarehouseRequest(request.headers.get('authorization'));
     const body=await request.json() as Record<string,unknown>;
     if(!body||typeof body!=='object'||Array.isArray(body)
@@ -72,6 +74,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'STOCK_RETURN':
         result=await returnWarehouseStockOutboundServer(access,body.input);
+        break;
+      case 'WITHDRAWAL_FINALIZE':
+        result=await finalizeWarehouseWithdrawalServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
