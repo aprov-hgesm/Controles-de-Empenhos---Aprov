@@ -15,6 +15,7 @@ import { transferWarehouseStockServer } from '../lib/server/warehouseTransfer';
 import { warehouseStructureServer } from '../lib/server/warehouseStructureWrite';
 import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../lib/server/warehouseDestinationWrite';
 import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
+import { saveWarehouseLandingVisualServer } from '../lib/server/warehouseLandingVisualWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -195,6 +196,17 @@ try {
     ...first.material,unit:{code:'g',label:null},
   }),/WAREHOUSE_MATERIAL_UNIT_LOCKED/);
   console.log('PASS: destinos e materiais alterados por servidor com unidade protegida');
+  const visualPayload={[newDepot.id]:{offsetX:12,offsetY:-9}};
+  const visual1=await saveWarehouseLandingVisualServer(access,visualPayload);
+  assert.equal(visual1.overrides[newDepot.id].offsetX,12);
+  const visual2=await saveWarehouseLandingVisualServer(access,visualPayload);
+  assert.equal(visual1.updatedAt,visual2.updatedAt);
+  await assert.rejects(()=>saveWarehouseLandingVisualServer(access,{
+    [newDepot.id]:{offsetX:9999,offsetY:0},
+  }),/WAREHOUSE_LANDING_VISUAL_INVALID/);
+  assert.ok((await getDoc(ref('settings','landing-visual-layout'))).exists());
+  console.log('PASS: layout visual server-only sem regravar estado idêntico');
+
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
