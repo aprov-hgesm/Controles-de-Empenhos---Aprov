@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -270,90 +271,7 @@ export async function saveWarehouseDepotLayoutVersion(
   workspaceId: string,
   input: SaveWarehouseDepotLayoutVersionInput
 ): Promise<WarehouseDepotLayout> {
-  const scope = currentScope(workspaceId);
-  await assertLayoutLocationReferences(
-    scope.workspaceId,
-    scope.ug,
-    input.depotId,
-    input.objects
-  );
-
-  const active = await getActiveWarehouseDepotLayoutStrict(scope.workspaceId, input.depotId);
-  const baseLayoutId = input.baseLayoutId || active?.layout.id || null;
-  const baseVersion = input.expectedVersion ?? active?.layout.version ?? null;
-
-  if (baseLayoutId && (!active || active.layout.id !== baseLayoutId)) {
-    throw new Error('WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE');
-  }
-  if (baseVersion !== null && (!active || active.layout.version !== baseVersion)) {
-    throw new Error('WAREHOUSE_LAYOUT_VERSION_CONFLICT');
-  }
-
-  const id = createWarehouseDepotLayoutId();
-  const version = active ? active.layout.version + 1 : 1;
-  const candidate = validateWarehouseDepotLayout(
-    {
-      schemaVersion: 'warehouse_depot_layout_v1',
-      id,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      name: input.name,
-      depotId: input.depotId,
-      logicalWidth: input.logicalWidth,
-      logicalHeight: input.logicalHeight,
-      objects: input.objects,
-      version,
-      status: 'active',
-      previousVersionId: active?.layout.id || null,
-      createdBy: scope.uid,
-      updatedBy: scope.uid,
-    },
-    { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug }
-  );
-  if (!candidate.ok) {
-    throw new Error(
-      'WAREHOUSE_INVALID_DEPOT_LAYOUT: '
-      + candidate.issues.map((item) => item.message).join('; ')
-    );
-  }
-
-  const nextPath = warehouseDocumentPath(scope.workspaceId, 'layouts', candidate.data.id);
-  const previousPath = active
-    ? warehouseDocumentPath(scope.workspaceId, 'layouts', active.layout.id)
-    : null;
-
-  try {
-    await runTransaction(db, async (transaction) => {
-      if (previousPath && active) {
-        const previousRef = doc(db, previousPath);
-        const previousSnapshot = await transaction.get(previousRef);
-        if (!previousSnapshot.exists()) throw new Error('WAREHOUSE_LAYOUT_BASE_NOT_FOUND');
-        const previous = parseLayout(
-          scope.workspaceId,
-          previousSnapshot.id,
-          previousSnapshot.data() as Record<string, unknown>
-        );
-        if (previous.status !== 'active' || previous.version !== active.layout.version) {
-          throw new Error('WAREHOUSE_LAYOUT_VERSION_CONFLICT');
-        }
-        transaction.update(previousRef, {
-          status: 'archived',
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      transaction.set(doc(db, nextPath), {
-        ...candidate.data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    });
-    return candidate.data;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, nextPath);
-    throw error;
-  }
+  return warehouseServerCommand<WarehouseDepotLayout>(workspaceId, 'LAYOUT_SAVE', input);
 }
 
 export async function getWarehouseDepotLayout(

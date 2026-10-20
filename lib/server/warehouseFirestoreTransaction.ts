@@ -252,7 +252,7 @@ export async function warehouseAdminListByField(
 export async function warehouseAdminListCollection(
   accessToken: string,
   workspaceId: string,
-  domain: 'materials' | 'balances' | 'locationBalances' | 'depots' | 'locations' | 'inventories',
+  domain: 'materials' | 'balances' | 'locationBalances' | 'depots' | 'locations' | 'inventories' | 'layouts' | 'lots',
   maxResults = 500
 ): Promise<WarehouseAdminDocument[]> {
   if(!Number.isInteger(maxResults)||maxResults<1||maxResults>500) {

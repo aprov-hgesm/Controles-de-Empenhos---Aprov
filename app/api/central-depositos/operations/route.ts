@@ -21,6 +21,8 @@ import { startWarehouseInventoryServer } from '../../../../lib/server/warehouseI
 import { markWarehouseLegacyIntakePostedServer } from '../../../../lib/server/warehouseIntakeLegacyStatus';
 import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/server/warehouseConsumptionStatusWrite';
 
+import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +117,21 @@ export async function POST(request: NextRequest) {
         break;
       case 'CONSUMPTION_SISCOFIS_STATUS':
         result=await setWarehouseConsumptionSiscofisStatusServer(access,body.input);
+        break;
+      case 'BARCODE_SAVE':
+        result=await warehouseBarcodeServer(access,'SAVE',body.input);
+        break;
+      case 'BARCODE_STATUS':
+        result=await warehouseBarcodeServer(access,'STATUS',body.input);
+        break;
+      case 'BARCODE_REPLACE':
+        result=await warehouseBarcodeServer(access,'REPLACE',body.input);
+        break;
+      case 'LAYOUT_SAVE':
+        result=await warehouseLayoutSaveServer(access,body.input);
+        break;
+      case 'INTAKE_STATE_SAVE':
+        result=await warehouseIntakeStateServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);

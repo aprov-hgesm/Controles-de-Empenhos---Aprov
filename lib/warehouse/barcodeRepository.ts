@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -157,108 +158,7 @@ export async function saveWarehouseBarcodeAssociation(
   workspaceId: string,
   input: SaveWarehouseBarcodeAssociationInput
 ): Promise<WarehouseBarcodeAssociation> {
-  const scope = currentScope(workspaceId);
-  const barcode = normalizeWarehouseBarcode(input.barcode);
-  const presentation = normalizeWarehouseMaterialUnit(input.presentation);
-  if (!barcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
-  if (isWarehouseLocationBarcode(barcode)) {
-    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
-  }
-  if (!presentation) throw new Error('WAREHOUSE_BARCODE_INVALID_PRESENTATION');
-
-  const id = await createWarehouseBarcodeId(scope.workspaceId, barcode);
-  const barcodePath = warehouseDocumentPath(scope.workspaceId, 'barcodes', id);
-  const materialPath = warehouseDocumentPath(
-    scope.workspaceId,
-    'materials',
-    input.materialId
-  );
-
-  try {
-    return await runTransaction(db, async (transaction) => {
-      const barcodeRef = doc(db, barcodePath);
-      const materialRef = doc(db, materialPath);
-      const [barcodeSnapshot, materialSnapshot] = await Promise.all([
-        transaction.get(barcodeRef),
-        transaction.get(materialRef),
-      ]);
-      if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
-
-      const material = parseMaterial(
-        scope.workspaceId,
-        materialSnapshot.id,
-        materialSnapshot.data() as Record<string, unknown>
-      );
-      if (material.status !== 'active' || material.ug !== scope.ug) {
-        throw new Error('WAREHOUSE_MATERIAL_INACTIVE');
-      }
-      const factorToBaseUnit = warehousePresentationFactor(material, presentation);
-      if (factorToBaseUnit === null) {
-        throw new Error('WAREHOUSE_BARCODE_PRESENTATION_NOT_CONFIGURED');
-      }
-
-      if (barcodeSnapshot.exists()) {
-        const existing = parseAssociation(
-          scope.workspaceId,
-          barcodeSnapshot.id,
-          barcodeSnapshot.data() as Record<string, unknown>
-        );
-        const sameIdentity = existing.materialId === material.id
-          && existing.barcode === barcode
-          && existing.factorToBaseUnit === factorToBaseUnit
-          && JSON.stringify(existing.presentation) === JSON.stringify(presentation);
-        if (!sameIdentity) throw new Error('WAREHOUSE_BARCODE_ALREADY_LINKED');
-        if (!barcodeAssociationMatchesMaterial(existing, material)) {
-          throw new Error('WAREHOUSE_BARCODE_MATERIAL_CONVERSION_MISMATCH');
-        }
-        if (existing.status === 'active') return existing;
-
-        transaction.update(barcodeRef, {
-          status: 'active',
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-        return { ...existing, status: 'active', updatedBy: scope.uid };
-      }
-
-      const candidate = validateWarehouseBarcodeAssociation(
-        {
-          schemaVersion: WAREHOUSE_BARCODE_SCHEMA_VERSION,
-          id,
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          materialId: material.id,
-          barcode,
-          presentation,
-          factorToBaseUnit,
-          status: 'active',
-          createdBy: scope.uid,
-          updatedBy: scope.uid,
-        },
-        {
-          expectedWorkspaceId: scope.workspaceId,
-          expectedUg: scope.ug,
-          expectedMaterialId: material.id,
-        }
-      );
-      if (!candidate.ok) {
-        throw new Error(
-          'WAREHOUSE_INVALID_BARCODE: '
-          + candidate.issues.map((item) => item.message).join('; ')
-        );
-      }
-
-      transaction.set(barcodeRef, {
-        ...candidate.data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return candidate.data;
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, barcodePath);
-    throw error;
-  }
+  return warehouseServerCommand<WarehouseBarcodeAssociation>(workspaceId, 'BARCODE_SAVE', input);
 }
 
 export async function setWarehouseBarcodeStatus(
@@ -266,136 +166,15 @@ export async function setWarehouseBarcodeStatus(
   barcodeId: string,
   status: 'active' | 'inactive'
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
-  await updateDoc(doc(db, path), {
-    status,
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
+  await warehouseServerCommand(workspaceId, 'BARCODE_STATUS', { barcodeId, status });
 }
-
 
 export async function replaceWarehouseBarcodeAssociation(
   workspaceId: string,
   barcodeId: string,
   nextBarcodeInput: string
 ): Promise<WarehouseBarcodeAssociation> {
-  const scope = currentScope(workspaceId);
-  if (!isValidWarehouseBarcodeId(barcodeId)) {
-    throw new Error('WAREHOUSE_INVALID_BARCODE_ID');
-  }
-  const nextBarcode = normalizeWarehouseBarcode(nextBarcodeInput);
-  if (!nextBarcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
-  if (isWarehouseLocationBarcode(nextBarcode)) {
-    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
-  }
-
-  const currentPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
-
-  try {
-    return await runTransaction(db, async (transaction) => {
-      const currentRef = doc(db, currentPath);
-      const currentSnapshot = await transaction.get(currentRef);
-      if (!currentSnapshot.exists()) throw new Error('WAREHOUSE_BARCODE_NOT_FOUND');
-
-      const current = parseAssociation(
-        scope.workspaceId,
-        currentSnapshot.id,
-        currentSnapshot.data() as Record<string, unknown>
-      );
-      if (current.ug !== scope.ug || current.status !== 'active') {
-        throw new Error('WAREHOUSE_BARCODE_INACTIVE');
-      }
-      if (current.barcode === nextBarcode) return current;
-
-      const nextId = await createWarehouseBarcodeId(scope.workspaceId, nextBarcode);
-      const nextPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', nextId);
-      const materialPath = warehouseDocumentPath(
-        scope.workspaceId,
-        'materials',
-        current.materialId
-      );
-      const nextRef = doc(db, nextPath);
-      const materialRef = doc(db, materialPath);
-      const [nextSnapshot, materialSnapshot] = await Promise.all([
-        transaction.get(nextRef),
-        transaction.get(materialRef),
-      ]);
-
-      if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
-      const material = parseMaterial(
-        scope.workspaceId,
-        materialSnapshot.id,
-        materialSnapshot.data() as Record<string, unknown>
-      );
-      if (material.status !== 'active' || material.ug !== scope.ug) {
-        throw new Error('WAREHOUSE_MATERIAL_INACTIVE');
-      }
-
-      let nextAssociation: WarehouseBarcodeAssociation;
-      if (nextSnapshot.exists()) {
-        const existing = parseAssociation(
-          scope.workspaceId,
-          nextSnapshot.id,
-          nextSnapshot.data() as Record<string, unknown>
-        );
-        const sameIdentity = existing.materialId === current.materialId
-          && existing.barcode === nextBarcode
-          && existing.factorToBaseUnit === current.factorToBaseUnit
-          && JSON.stringify(existing.presentation) === JSON.stringify(current.presentation);
-        if (!sameIdentity) throw new Error('WAREHOUSE_BARCODE_ALREADY_LINKED');
-        nextAssociation = {
-          ...existing,
-          status: 'active',
-          updatedBy: scope.uid,
-        };
-        if (existing.status !== 'active') {
-          transaction.update(nextRef, {
-            status: 'active',
-            updatedBy: scope.uid,
-            updatedAt: serverTimestamp(),
-          });
-        }
-      } else {
-        const candidate = validateWarehouseBarcodeAssociation(
-          {
-            schemaVersion: WAREHOUSE_BARCODE_SCHEMA_VERSION,
-            id: nextId,
-            workspaceId: scope.workspaceId,
-            ug: scope.ug,
-            materialId: current.materialId,
-            barcode: nextBarcode,
-            presentation: current.presentation,
-            factorToBaseUnit: current.factorToBaseUnit,
-            status: 'active',
-            createdBy: scope.uid,
-            updatedBy: scope.uid,
-          },
-          {
-            expectedWorkspaceId: scope.workspaceId,
-            expectedUg: scope.ug,
-            expectedMaterialId: current.materialId,
-          }
-        );
-        if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_BARCODE');
-        nextAssociation = candidate.data;
-        transaction.set(nextRef, {
-          ...candidate.data,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      transaction.update(currentRef, {
-        status: 'inactive',
-        updatedBy: scope.uid,
-        updatedAt: serverTimestamp(),
-      });
-      return nextAssociation;
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, currentPath);
-    throw error;
-  }
+  return warehouseServerCommand<WarehouseBarcodeAssociation>(
+    workspaceId, 'BARCODE_REPLACE', { barcodeId, nextBarcodeInput }
+  );
 }
