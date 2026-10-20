@@ -15,7 +15,7 @@ import { normalizeWarehouseQuantity } from '../warehouse/movement';
 const fail=(error:string,status=409):never=>{throw new WarehouseStoreError(error,status);};
 const sessionPath=(ws:string,id:string)=>`warehouse/${ws}/inventories/${id}`;
 const itemPath=(ws:string,inv:string,id:string)=>sessionPath(ws,inv)+'/items/'+id;
-function verifySession(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument) {
+export function verifySession(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument) {
   const d=row.data;
   const r=validateWarehouseInventorySession({
     schemaVersion:d.schemaVersion,id:d.id,workspaceId:d.workspaceId,ug:d.ug,
@@ -27,7 +27,7 @@ function verifySession(access:VerifiedWarehouseRequest,row:WarehouseAdminDocumen
   if(!r.ok)return fail('WAREHOUSE_INVENTORY_INVALID_SESSION');
   return r.data;
 }
-function verifyItem(access:VerifiedWarehouseRequest,inventoryId:string,row:WarehouseAdminDocument) {
+export function verifyItem(access:VerifiedWarehouseRequest,inventoryId:string,row:WarehouseAdminDocument) {
   const d=row.data;
   const r=validateWarehouseInventoryItem({
     schemaVersion:d.schemaVersion,id:d.id,inventoryId:d.inventoryId,
