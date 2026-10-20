@@ -284,3 +284,35 @@ export async function warehouseAdminListCollection(
   }
   return docs;
 }
+
+/** Lista de itens de uma única sessão de inventário, sem collection group. */
+export async function warehouseAdminListInventoryItems(
+  accessToken: string, workspaceId: string, inventoryId: string,
+  maxResults = 120
+): Promise<WarehouseAdminDocument[]> {
+  if(!/^inv_[a-f0-9]{32}$/.test(inventoryId)
+    ||!Number.isInteger(maxResults)||maxResults<1||maxResults>120){
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_INVENTORY_QUERY_INVALID',400);
+  }
+  const parent='warehouse/'+workspaceId+'/inventories/'+inventoryId;
+  const stubName=fullName(parent+'/items/invit_'+'0'.repeat(64));
+  const prefix=stubName.slice(0,-('invit_'+'0'.repeat(64)).length);
+  const response=await request(accessToken,'/'+parent+':runQuery',{
+    structuredQuery:{from:[{collectionId:'items'}],limit:maxResults+1},
+  });
+  const rows=parseStream(await response.text());
+  const docs:WarehouseAdminDocument[]=[];
+  for(const item of rows){
+    const raw=item.document as {name?:string;fields?:Record<string,Encoded>;updateTime?:string}|undefined;
+    if(!raw)continue;
+    if(!raw.name?.startsWith(prefix)||!raw.updateTime){
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_INVENTORY_QUERY_SCOPE',503);
+    }
+    docs.push({path:raw.name.slice(stubName.indexOf('warehouse/')),
+      data:decodeFields(raw.fields||{}),updateTime:raw.updateTime});
+  }
+  if(docs.length>maxResults){
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_INVENTORY_QUERY_SATURATED',409);
+  }
+  return docs;
+}
