@@ -407,12 +407,11 @@ async function applyWarehouseManualLocatedEntry(input: {
         input.scope.workspaceId, materialSnapshot.id,
         materialSnapshot.data() as Record<string, unknown>
       );
-      if (
-        !input.materialIdentity.newMaterial
-          ? false
-          : material.description !== input.materialIdentity.newMaterial.description
-            || JSON.stringify(material.unit) !== JSON.stringify(input.materialIdentity.newMaterial.unit)
-      ) throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT');
+      if (input.materialIdentity.newMaterial
+        && (material.description !== input.materialIdentity.newMaterial.description
+          || JSON.stringify(material.unit) !== JSON.stringify(input.materialIdentity.newMaterial.unit))) {
+        throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT');
+      }
     } else {
       if (!input.materialIdentity.newMaterial) {
         throw new Error('WAREHOUSE_MANUAL_ENTRY_MATERIAL_NOT_FOUND');
