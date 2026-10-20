@@ -856,7 +856,7 @@ service cloud.firestore {
             'kind', 'actorUid', 'provenance', 'reference', 'position', 'locationBalanceId'
           ])
           && source.keys().hasAll([
-            'kind', 'actorUid', 'provenance', 'reference', 'position', 'locationBalanceId'
+            'kind', 'actorUid', 'provenance', 'reference'
           ])
           && source.actorUid == request.auth.uid
           && (
