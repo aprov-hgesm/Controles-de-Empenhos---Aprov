@@ -27,3 +27,22 @@ Status: **DIAGNÓSTICO CONFIRMADO NO CÓDIGO; REMEDIAÇÃO AINDA BLOQUEADA POR T
 - Não modificar nem reparar dados reais de produção sem plano reversível e autorização específica.
 - Não simular PASS; incidentes permanecem P0 enquanto entrada avulsa e leitura de movimentos não forem validadas fim-a-fim.
 - Reduzir burocracia: um PR de correção, testes focados; não repetir leitura/scan nem realizar deploys intermediários.
+
+## Implementação realizada na branch (ainda não homologada)
+- `movement.ts`: fonte de MANUAL_ENTRY localizada com posição e ID do saldo, mantendo leitura retrocompatível para movimentos manuais anteriores.
+- `manualEntryRepository.ts`: inclui vínculo no movimento transacional.
+- `firestore.warehouse.rules`: vinculação recíproca movement ↔ locationBalance, validação da posição ativa e saldo inicial local isolado do saldo global.
+- `ledgerRepository.ts`: isolamento de registros históricos incompatíveis nas três listagens; registros inválidos são identificados no console, omitidos da visualização, sem correção nem exclusão automática. Histórico **não está plenamente recuperado** enquanto documentos inválidos permanecerem; precisa trilha de quarentena/diagnóstico para auditoria.
+- Revisão estática direcionada: 7/7 verificações de presença dos contratos PASS (não equivale a TypeScript, testes funcionais ou Rules Emulator).
+- **Emulator: NÃO EXECUTADO** neste ambiente: rede indisponível para baixar repositório/dependências e execução de Firebase CLI. GitHub Actions: nenhum workflow/status registrado para HEAD consultado.
+- **Revisão pendente antes de merge**: avaliação do orçamento de `getAfter`, testes reais de Rules (LOCAL/SUBPOSITION, material preexistente, novo material, privilégio e simultaneidade), compilação TypeScript e verificação de leitura parcial no UI.
+- Também pendente: diagnóstico/ajuste de fluxo de código de barras móvel e vínculo eventual de material pré-criado, mais telemetria.
+
+## Comandos sugeridos para validação local (não executados)
+```powershell
+npm ci
+npm run typecheck
+node --test scripts/warehouse-manual-entry.test.mjs scripts/mobile-r1-manual-entry.test.mjs
+npx firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-warehouse --only auth,firestore "node --test scripts/warehouse-modular-r1-security.test.mjs"
+```
+Não considerar o último comando prova do novo caminho sem testes específicos de operações localizadas adicionados à suite.
