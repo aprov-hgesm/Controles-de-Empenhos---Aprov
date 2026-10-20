@@ -507,92 +507,22 @@ export async function createWarehouseDepot(
   workspaceId: string,
   input: CreateWarehouseDepotInput
 ): Promise<WarehouseDepot> {
-  const scope = currentScope(workspaceId);
-  await assertDepotCodeAvailable(scope.workspaceId, input.code);
-  const id = createWarehouseDepotId();
-  const result = validateWarehouseDepot({
-    schemaVersion: WAREHOUSE_DEPOT_SCHEMA_VERSION,
-    id,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    code: input.code,
-    name: input.name,
-    description: input.description ?? null,
-    visualType: input.visualType ?? 'STANDARD',
-    sizeProfile: input.sizeProfile ?? 'MEDIUM',
-    status: 'active',
-    createdBy: scope.uid,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!result.ok) {
-    throw new Error('WAREHOUSE_INVALID_DEPOT: ' + result.issues.map((item) => item.message).join('; '));
-  }
-
-  const path = warehouseDocumentPath(scope.workspaceId, 'depots', result.data.id);
-  try {
-    await setDoc(doc(db, path), {
-      ...result.data,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    invalidateWarehouseDepotReadCache(scope.workspaceId);
-    return result.data;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
-    throw error;
-  }
+  const result=await warehouseServerCommand<WarehouseDepot>(
+    workspaceId,'STRUCTURE',{kind:'DEPOT_CREATE',input}
+  );
+  invalidateWarehouseDepotReadCache(workspaceId);
+  return result;
 }
-
 export async function updateWarehouseDepot(
   workspaceId: string,
   depotId: string,
   input: UpdateWarehouseDepotInput
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  if (!isValidWarehouseDepotId(depotId)) throw new Error('WAREHOUSE_INVALID_DEPOT_ID');
-  const path = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
-  const snapshot = await getDoc(doc(db, path));
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
-  const current = parseDepot(scope.workspaceId, depotId, snapshot.data() as Record<string, unknown>);
-  const nextCode = input.code ?? current.code;
-  // Stable identifiers for existing labels and layout references.
-  if (normalizeWarehouseLogicalCode(nextCode) !== current.code) {
-    throw new Error('WAREHOUSE_DEPOT_CODE_IMMUTABLE');
-  }
-  const nextStatus = input.status ?? current.status;
-
-  if (
-    nextStatus === 'active'
-    && (nextCode !== current.code || current.status !== 'active')
-  ) {
-    await assertDepotCodeAvailable(scope.workspaceId, nextCode, depotId);
-  }
-
-  const candidate = validateWarehouseDepot({
-    ...current,
-    code: nextCode,
-    name: input.name ?? current.name,
-    description: input.description === undefined ? current.description : input.description,
-    visualType: input.visualType ?? current.visualType,
-    sizeProfile: input.sizeProfile ?? current.sizeProfile,
-    status: nextStatus,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_DEPOT_UPDATE');
-
-  await updateDoc(doc(db, path), {
-    code: candidate.data.code,
-    name: candidate.data.name,
-    description: candidate.data.description,
-    visualType: candidate.data.visualType,
-    sizeProfile: candidate.data.sizeProfile,
-    status: candidate.data.status,
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseDepotReadCache(scope.workspaceId);
+  await warehouseServerCommand<{ok:true}>(
+    workspaceId,'STRUCTURE',{kind:'DEPOT_UPDATE',depotId,input}
+  );
+  invalidateWarehouseDepotReadCache(workspaceId);
 }
-
 export async function listWarehouseLocations(
   workspaceId: string,
   maxResults = 500
@@ -632,100 +562,22 @@ export async function createWarehouseLocation(
   workspaceId: string,
   input: CreateWarehouseLocationInput
 ): Promise<WarehouseLocation> {
-  const scope = currentScope(workspaceId);
-  const depotId = input.depotId.trim().toLowerCase();
-  if (!isValidWarehouseDepotId(depotId)) throw new Error('WAREHOUSE_INVALID_DEPOT_ID');
-  const depotPath = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
-  const depotSnapshot = await getDoc(doc(db, depotPath));
-  if (!depotSnapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
-  const depot = parseDepot(scope.workspaceId, depotId, depotSnapshot.data() as Record<string, unknown>);
-  if (depot.status !== 'active') throw new Error('WAREHOUSE_DEPOT_INACTIVE');
-
-  let parentLocationId: string | null = null;
-  if (input.kind === 'SUBPOSITION') {
-    parentLocationId = (input.parentLocationId || '').trim().toLowerCase();
-    if (!isValidWarehouseLocationId(parentLocationId)) throw new Error('WAREHOUSE_INVALID_PARENT_LOCATION_ID');
-    const parentPath = warehouseDocumentPath(scope.workspaceId, 'locations', parentLocationId);
-    const parentSnapshot = await getDoc(doc(db, parentPath));
-    if (!parentSnapshot.exists()) throw new Error('WAREHOUSE_PARENT_LOCATION_NOT_FOUND');
-    const parent = parseLocation(scope.workspaceId, parentLocationId, parentSnapshot.data() as Record<string, unknown>);
-    if (parent.kind !== 'LOCAL' || parent.depotId !== depotId || parent.status !== 'active') {
-      throw new Error('WAREHOUSE_PARENT_LOCATION_INVALID');
-    }
-  }
-
-  await assertLocationCodeAvailable(scope.workspaceId, {
-    kind: input.kind,
-    depotId,
-    parentLocationId,
-    code: input.code,
-  });
-
-  const id = createWarehouseLocationId(input.kind);
-  const result = validateWarehouseLocation({
-    schemaVersion: WAREHOUSE_LOCATION_SCHEMA_VERSION,
-    id,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    depotId,
-    kind: input.kind,
-    parentLocationId,
-    code: input.code,
-    name: input.name,
-    description: input.description ?? null,
-    status: 'active',
-    createdBy: scope.uid,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOCATION');
-
-  const path = warehouseDocumentPath(scope.workspaceId, 'locations', result.data.id);
-  await setDoc(doc(db, path), {
-    ...result.data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseLocationReadCache(scope.workspaceId);
-  return result.data;
+  const result=await warehouseServerCommand<WarehouseLocation>(
+    workspaceId,'STRUCTURE',{kind:'LOCATION_CREATE',input}
+  );
+  invalidateWarehouseLocationReadCache(workspaceId);
+  return result;
 }
-
 export async function updateWarehouseLocation(
   workspaceId: string,
   locationId: string,
   input: UpdateWarehouseLocationInput
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  if (!isValidWarehouseLocationId(locationId) && !isValidWarehouseSubpositionId(locationId)) {
-    throw new Error('WAREHOUSE_INVALID_LOCATION_ID');
-  }
-  const path = warehouseDocumentPath(scope.workspaceId, 'locations', locationId);
-  const snapshot = await getDoc(doc(db, path));
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_LOCATION_NOT_FOUND');
-  const current = parseLocation(scope.workspaceId, locationId, snapshot.data() as Record<string, unknown>);
-  if (input.code !== undefined && normalizeWarehouseLogicalCode(input.code) !== current.code) {
-    throw new Error('WAREHOUSE_LOCATION_CODE_IMMUTABLE');
-  }
-  const candidate = validateWarehouseLocation({
-    ...current,
-    code: input.code ?? current.code,
-    name: input.name ?? current.name,
-    description: input.description === undefined ? current.description : input.description,
-    status: input.status ?? current.status,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_UPDATE');
-
-  await updateDoc(doc(db, path), {
-    code: candidate.data.code,
-    name: candidate.data.name,
-    description: candidate.data.description,
-    status: candidate.data.status,
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseLocationReadCache(scope.workspaceId);
+  await warehouseServerCommand<{ok:true}>(
+    workspaceId,'STRUCTURE',{kind:'LOCATION_UPDATE',locationId,input}
+  );
+  invalidateWarehouseLocationReadCache(workspaceId);
 }
-
 export async function getWarehouseDepot(
   workspaceId: string,
   depotId: string
