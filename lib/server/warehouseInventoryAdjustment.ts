@@ -111,20 +111,8 @@ export async function adjustWarehouseInventoryServer(
       if(!br.ok||!lr.ok||lr.data.ug!==access.ug)return fail('WAREHOUSE_INVENTORY_BALANCE_INVALID');
       const balance:WarehouseBalance=br.data;
       const position:WarehouseLocationBalance=lr.data;
-      if(!warehouseStockPositionsEqual(position.position,item.position)
-        ||position.revision!==item.expectedLocationRevision
-        ||position.lastMovementId!==item.expectedLocationLastMovementId) {
-        // Diagnóstico apenas em Emulator de QA, sem payload ou identidade em produção.
-        if(process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'){
-          console.error('WAREHOUSE_INVENTORY_GUARD_STATE',JSON.stringify({
-            positionKey:position.position,
-            itemPositionKey:item.position,
-            positionRevision:position.revision,
-            expectedRevision:item.expectedLocationRevision,
-            positionMovement:position.lastMovementId,
-            expectedMovement:item.expectedLocationLastMovementId,
-          }));
-        }
+      // Invariantes de posição devem valer inclusive para replay.
+      if(!warehouseStockPositionsEqual(position.position,item.position)) {
         return fail('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
       }
       const source:WarehousePhysicalInventoryMovementSource={
@@ -156,6 +144,15 @@ export async function adjustWarehouseInventoryServer(
         return {result:{
           applied:false,movement:saved,balance,locationBalance:position,
         },writes:[]};
+      }
+      // Replay idempotente já foi verificado acima contra o movimento persistido.
+      // Exigir a revisão do snapshot somente ANTES da primeira aplicação:
+      // após um ajuste válido ela naturalmente avança e não pode bloquear o replay.
+      if(position.revision!==item.expectedLocationRevision
+        ||position.lastMovementId!==item.expectedLocationLastMovementId
+        ||balance.revision!==item.expectedBalanceRevision
+        ||balance.lastMovementId!==item.expectedBalanceLastMovementId) {
+        return fail('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
       }
       if(item.status!=='DIVERGENT')return fail('WAREHOUSE_INVENTORY_ITEM_NOT_DIVERGENT');
       const nextBalance=applyWarehouseMovementToBalance(candidate.data,balance);
