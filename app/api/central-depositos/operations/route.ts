@@ -10,6 +10,7 @@ import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer }
 import { warehouseStructureServer } from '../../../../lib/server/warehouseStructureWrite';
 import { saveWarehouseLandingVisualServer } from '../../../../lib/server/warehouseLandingVisualWrite';
 import { saveWarehouseLogisticsSettingsServer } from '../../../../lib/server/warehouseLogisticsSettingsWrite';
+import { excludeWarehouseQueueServer } from '../../../../lib/server/warehouseQueueExclusionWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'LOGISTICS_SETTINGS_SAVE':
         result=await saveWarehouseLogisticsSettingsServer(access,body.input);
+        break;
+      case 'QUEUE_EXCLUDE':
+        result=await excludeWarehouseQueueServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
