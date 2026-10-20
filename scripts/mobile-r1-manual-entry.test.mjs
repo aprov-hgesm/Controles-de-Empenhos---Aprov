@@ -92,7 +92,7 @@ test('desktop e mobile usam o mesmo comando no servidor, sem gravação direta d
   const api = read('app/api/central-depositos/manual-entry/route.ts');
   const transaction = read('lib/server/warehouseFirestoreTransaction.ts');
   assert.match(api, /verifyWarehouseRequest\(/);
-  assert.match(server, /warehouseAdminTransaction\(/);
+  assert.match(server, /warehouseAdminTransaction<RegisterWarehouseManualEntryResult>/);
   assert.match(server, /applyWarehouseMovementToBalance\(/);
   assert.match(server, /applyWarehouseLocationDelta\(/);
   assert.match(transaction, /:beginTransaction/);
