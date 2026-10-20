@@ -363,6 +363,8 @@ async function applyWarehouseManualLocatedEntry(input: {
         actorUid: input.scope.uid,
         provenance: input.provenance,
         reference: input.reference,
+        position: input.position,
+        locationBalanceId,
       },
     },
     {
