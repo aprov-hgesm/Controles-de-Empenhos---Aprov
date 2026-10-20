@@ -16,6 +16,7 @@ import { warehouseStructureServer } from '../lib/server/warehouseStructureWrite'
 import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../lib/server/warehouseDestinationWrite';
 import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
 import { saveWarehouseLandingVisualServer } from '../lib/server/warehouseLandingVisualWrite';
+import { saveWarehouseLogisticsSettingsServer } from '../lib/server/warehouseLogisticsSettingsWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -206,6 +207,14 @@ try {
   }),/WAREHOUSE_LANDING_VISUAL_INVALID/);
   assert.ok((await getDoc(ref('settings','landing-visual-layout'))).exists());
   console.log('PASS: layout visual server-only sem regravar estado idêntico');
+  const settings=await saveWarehouseLogisticsSettingsServer(access,15);
+  assert.equal(settings.lowStockThreshold,15);
+  const repeatSettings=await saveWarehouseLogisticsSettingsServer(access,15);
+  assert.equal(settings.updatedAt,repeatSettings.updatedAt);
+  await assert.rejects(()=>saveWarehouseLogisticsSettingsServer(access,-1),
+    /WAREHOUSE_LOGISTICS_INVALID_THRESHOLD/);
+  console.log('PASS: alertas logísticos server-only, no-op e limite validado');
+
 
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
