@@ -1,0 +1,57 @@
+name: Warehouse F06 Rules Isolate — Emulator Only
+
+on:
+  push:
+    branches:
+      - warehouse-rules-eval-budget-fix
+    paths:
+      - 'firestore.warehouse.rules'
+      - 'scripts/warehouse-rules-f06-isolate.mjs'
+      - '.github/workflows/warehouse-f06-rules-isolate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [movement, physical, lots]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Overlay immutable F06 engine and test
+        run: |
+          git fetch --no-tags origin warehouse-fix-f06
+          test "$(git rev-parse FETCH_HEAD)" = 'b04f2bf0405fef2e948a00e00700fadb412cfb58'
+          git show FETCH_HEAD:lib/warehouse/locationRepository.ts > lib/warehouse/locationRepository.ts
+          git show FETCH_HEAD:scripts/warehouse-f06-transaction-emulator.test.mjs > scripts/warehouse-f06-transaction-emulator.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Create isolated INSECURE diagnostic variant, NEVER publish
+        env:
+          GITHUB_ACTIONS: 'true'
+          F06_ISOLATION_VARIANT: ${{ matrix.variant }}
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+        run: node scripts/warehouse-rules-f06-isolate.mjs
+      - name: Run real F06 transaction tests on demo Emulator
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-f06
+          NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID: emprovex-warehouse
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --config firebase.warehouse-security-test.json
+          --project demo-emprovex-f06
+          --only auth,firestore
+          "node --test scripts/warehouse-f06-transaction-emulator.test.mjs"
