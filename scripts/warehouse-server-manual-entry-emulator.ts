@@ -184,8 +184,14 @@ try {
     kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito a desativar'},
   });
   if(!('id' in inactiveDepot)) throw new Error('INACTIVE_DEPOT_MISSING');
-  await warehouseStructureServer(access,{
+  await assert.rejects(()=>warehouseStructureServer(access,{
     kind:'DEPOT_UPDATE',depotId:inactiveDepot.id,input:{status:'inactive'},
+  }),/WAREHOUSE_ARCHIVE_SERVER_FLOW_REQUIRED/);
+  // Preparação isolada do estado legado para testar reuso/reativação, sem
+  // transformar DEPOT_UPDATE num atalho inseguro de inativação.
+  const seededInactive=(await getDoc(ref('depots',inactiveDepot.id))).data()!;
+  await setDoc(ref('depots',inactiveDepot.id),{
+    ...seededInactive,status:'inactive',updatedBy:uid,
   });
   const replacementDepot=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito substituto'},
