@@ -18,6 +18,7 @@ import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrit
 import { saveWarehouseLandingVisualServer } from '../lib/server/warehouseLandingVisualWrite';
 import { saveWarehouseLogisticsSettingsServer } from '../lib/server/warehouseLogisticsSettingsWrite';
 import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusionWrite';
+import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -133,6 +134,21 @@ try {
   }),/WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,100);
   console.log('PASS: transferência replay e estoque insuficiente sem dupla movimentação');
+  const changedLot=await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:first.validity!.id,input:{expiresOn:'2027-05-01'},
+  });
+  assert.equal(changedLot.expiresOn,'2027-05-01');
+  assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,75);
+  await assert.rejects(()=>writeWarehouseLotServer(access,'CREATE',{
+    materialId:first.material.id,code:'QA-LOT-EXCESS',quantity:1,
+    position,expiresOn:'2027-06-01',
+  }),/WAREHOUSE_LOT_ATTRIBUTION_EXCEEDS_STOCK/);
+  await assert.rejects(()=>writeWarehouseLotServer(access,'CREATE',{
+    materialId:first.material.id,code:'QA-LOT-UNASSIGNED',quantity:1,
+    position:{kind:'UNASSIGNED'},
+  }),/WAREHOUSE_LOT_PHYSICAL_POSITION_REQUIRED/);
+  console.log('PASS: lotes no servidor protegidos contra superatribuição e posição inválida');
+
 
   const newDepot=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{
