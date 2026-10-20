@@ -161,6 +161,25 @@ try {
   assert.equal((updated as {ok:boolean}).ok,true);
   assert.equal((await getDoc(ref('locations',newLoc.id))).data()?.name,'Local servidor R2 atualizado');
   console.log('PASS: estrutura R2 CRUD servidor e unicidade por código');
+  const inactiveDepot=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito a desativar'},
+  });
+  if(!('id' in inactiveDepot)) throw new Error('INACTIVE_DEPOT_MISSING');
+  await warehouseStructureServer(access,{
+    kind:'DEPOT_UPDATE',depotId:inactiveDepot.id,input:{status:'inactive'},
+  });
+  const replacementDepot=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito substituto'},
+  });
+  if(!('id' in replacementDepot)) throw new Error('REPLACEMENT_DEPOT_MISSING');
+  assert.notEqual(replacementDepot.id,inactiveDepot.id);
+  await assert.rejects(()=>warehouseStructureServer(access,{
+    kind:'DEPOT_UPDATE',depotId:inactiveDepot.id,input:{status:'active'},
+  }),/WAREHOUSE_DEPOT_DUPLICATE_CODE/);
+  assert.equal((await getDoc(ref('depots',inactiveDepot.id))).data()?.status,'inactive');
+  console.log('PASS: código de depósito inativo reutilizado, reativação antiga bloqueada');
+
+
 
   const newDestination=await warehouseDestinationCreateServer(access,{name:'Cozinha R2 Teste'});
   assert.ok((await getDoc(ref('destinations',newDestination.id))).exists());
