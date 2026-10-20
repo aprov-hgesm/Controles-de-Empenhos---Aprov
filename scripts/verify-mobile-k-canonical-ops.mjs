@@ -130,12 +130,16 @@ assert.match(intakeAllocation, /position\.kind === 'UNASSIGNED'/);
 assert.match(intakeAllocation, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
 
 const manualEntry = read('lib/warehouse/manualEntryRepository.ts');
-assert.match(manualEntry, /applyWarehouseManualLocatedEntry/);
-assert.match(manualEntry, /position\.kind === 'UNASSIGNED'/);
-assert.match(manualEntry, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+const manualServer = read('lib/server/warehouseManualEntry.ts');
+assert.match(manualEntry, /api\/central-depositos\/manual-entry/);
+assert.match(manualServer, /validateWarehouseStockPosition/);
+assert.match(manualServer, /position\.kind === 'UNASSIGNED'/);
+assert.match(manualServer, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+assert.match(manualServer, /assertPosition\(/);
+assert.doesNotMatch(manualEntry, /runTransaction\s*\(/);
 assert.doesNotMatch(manualEntry, /allowUnassignedPosition/);
-assert.doesNotMatch(manualEntry, /transferWarehouseStock\s*\(/);
-assert.doesNotMatch(manualEntry, /from:\s*\{ kind: 'UNASSIGNED' \}/);
+assert.doesNotMatch(manualServer, /transferWarehouseStock\s*\(/);
+assert.doesNotMatch(manualServer, /from:\s*\{ kind: 'UNASSIGNED' \}/);
 
 const withdrawalRepository = read('lib/warehouse/withdrawalRepository.ts');
 assert.match(
