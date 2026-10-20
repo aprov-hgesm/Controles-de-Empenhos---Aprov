@@ -2,12 +2,20 @@ name: Browser E2E On Demand
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/e2e/warehouse-manual-entry-server.spec.mjs'
+      - 'scripts/e2e-browser-emulator.mjs'
+      - 'lib/server/warehouseManualEntry.ts'
+      - 'lib/server/warehouseFirestoreTransaction.ts'
+      - 'app/api/central-depositos/manual-entry/route.ts'
+      - '.github/workflows/browser-e2e-on-demand.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: emprovex-browser-e2e-on-demand
+  group: emprovex-browser-e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -40,5 +48,10 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Browser E2E with Firebase Emulator
+      - name: Browser E2E manual entry (PR, isolated)
+        if: github.event_name == 'pull_request'
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/warehouse-manual-entry-server.spec.mjs"
+
+      - name: Browser E2E all scenarios (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
         run: npm run test:e2e:browser
