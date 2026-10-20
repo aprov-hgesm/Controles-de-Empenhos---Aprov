@@ -83,7 +83,7 @@ export async function finalizeWarehouseWithdrawalServer(
   const destinationPath=path(access.workspaceId,'destinations',input.destinationId);
   const headerPath=path(access.workspaceId,'withdrawals',input.withdrawalId);
   const expectedHash=payloadHash(lines);
-  let header=await warehouseAdminTransaction(token,[destinationPath,headerPath],rows=>{
+  let header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[destinationPath,headerPath],rows=>{
     const destination=rows.get(destinationPath);
     if(!destination || destination.data.status!=='active'
       ||destination.data.workspaceId!==access.workspaceId||destination.data.ug!==access.ug) {
@@ -108,7 +108,7 @@ export async function finalizeWarehouseWithdrawalServer(
       appliedLineCount:0,status:'FINALIZING',createdBy:access.uid,
       createdAt:now,updatedAt:now,finalizedAt:null,
     };
-    return {result:candidate,writes:[{path:headerPath,data:candidate}]};
+    return {result:candidate,writes:[{path:headerPath,data:{...candidate}}]};
   });
   if(header.status==='FINALIZED')return {withdrawal:header,movementIds:[]};
   const movementIds:string[]=[];
@@ -173,7 +173,7 @@ export async function finalizeWarehouseWithdrawalServer(
         lastReturnBy:null,lastReturnReason:null,
       }}]};
     });
-    header=await warehouseAdminTransaction(token,[headerPath],rows=>{
+    header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[headerPath],rows=>{
       const row=rows.get(headerPath);
       if(!row)return fail('WAREHOUSE_WITHDRAWAL_HEADER_MISSING');
       const prior=parseHeader(access,row);
@@ -181,14 +181,14 @@ export async function finalizeWarehouseWithdrawalServer(
       if(prior.status==='FINALIZED'||prior.appliedLineCount>=index+1) {
         return {result:prior,writes:[]};
       }
-      const updated={...prior,
-        appliedLineCount:index+1,status:'PARTIALLY_APPLIED' as const,
+      const updated:WarehouseMaterialWithdrawal={...prior,
+        appliedLineCount:index+1,status:'PARTIALLY_APPLIED',
         updatedAt:new Date().toISOString(),
       };
-      return {result:updated,writes:[{path:headerPath,data:updated}]};
+      return {result:updated,writes:[{path:headerPath,data:{...updated}}]};
     });
   }
-  header=await warehouseAdminTransaction(token,[headerPath],rows=>{
+  header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[headerPath],rows=>{
     const row=rows.get(headerPath);
     if(!row)return fail('WAREHOUSE_WITHDRAWAL_HEADER_MISSING');
     const prior=parseHeader(access,row);
@@ -200,7 +200,7 @@ export async function finalizeWarehouseWithdrawalServer(
     const done:WarehouseMaterialWithdrawal={
       ...prior,status:'FINALIZED',updatedAt:now,finalizedAt:now,
     };
-    return {result:done,writes:[{path:headerPath,data:done}]};
+    return {result:done,writes:[{path:headerPath,data:{...done}}]};
   });
   return {withdrawal:header,movementIds};
 }

@@ -273,8 +273,12 @@ export async function warehouseAdminListCollection(
     if(!raw.name?.startsWith(namePrefix)||!raw.updateTime) {
       throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_OUT_OF_SCOPE',503);
     }
+    const id=raw.name.slice(namePrefix.length);
+    if(!id || id.includes('/') || !/^[A-Za-z0-9_-]+$/.test(id)) {
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_QUERY_DOCUMENT_INVALID',503);
+    }
     docs.push({
-      path:raw.name.slice(stubName.indexOf('warehouse/')),
+      path:root+'/'+domain+'/'+id,
       data:decodeFields(raw.fields||{}),
       updateTime:raw.updateTime,
     });
@@ -308,7 +312,11 @@ export async function warehouseAdminListInventoryItems(
     if(!raw.name?.startsWith(prefix)||!raw.updateTime){
       throw new WarehouseStoreError('WAREHOUSE_SERVER_INVENTORY_QUERY_SCOPE',503);
     }
-    docs.push({path:raw.name.slice(stubName.indexOf('warehouse/')),
+    const id=raw.name.slice(prefix.length);
+    if(!/^invit_[a-f0-9]{64}$/.test(id)){
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_INVENTORY_QUERY_DOCUMENT_INVALID',503);
+    }
+    docs.push({path:parent+'/items/'+id,
       data:decodeFields(raw.fields||{}),updateTime:raw.updateTime});
   }
   if(docs.length>maxResults){

@@ -72,7 +72,7 @@ export async function warehouseInventoryLifecycleServer(
     const item=itemPath(access.workspaceId,inventoryId,itemId);
     const count=normalizeWarehouseQuantity(countedQuantity);
     if(action==='COUNT'&&(count===null||count<0))return fail('WAREHOUSE_INVENTORY_INVALID_COUNT',400);
-    return warehouseAdminTransaction(token,[session,item],rows=>{
+    return warehouseAdminTransaction<WarehouseInventoryItem|{ok:true}>(token,[session,item],rows=>{
       const s=rows.get(session),i=rows.get(item);
       if(!s||!i)return fail('WAREHOUSE_INVENTORY_NOT_FOUND',404);
       const known=verifySession(access,s),current=verifyItem(access,inventoryId,i);
@@ -100,7 +100,7 @@ export async function warehouseInventoryLifecycleServer(
     const listed=await warehouseAdminListInventoryItems(token,access.workspaceId,inventoryId,120);
     if(!listed.length)return fail('WAREHOUSE_INVENTORY_EMPTY');
     const paths=[session,...listed.map(x=>x.path)];
-    return warehouseAdminTransaction(token,paths,rows=>{
+    return warehouseAdminTransaction<WarehouseInventoryReviewSummary|{ok:true}>(token,paths,rows=>{
       const current=rows.get(session);
       if(!current)return fail('WAREHOUSE_INVENTORY_NOT_FOUND',404);
       const known=verifySession(access,current);
