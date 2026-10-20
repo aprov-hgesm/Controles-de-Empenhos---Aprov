@@ -4,6 +4,7 @@
  * Iniciado exclusivamente pelo CI com emuladores isolados demo.
  */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import {
@@ -22,6 +23,7 @@ import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
 import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
+import { setWarehouseConsumptionSiscofisStatusServer } from '../lib/server/warehouseConsumptionStatusWrite';
 import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
 import { warehouseInventoryLifecycleServer } from '../lib/server/warehouseInventoryLifecycle';
 import { adjustWarehouseInventoryServer } from '../lib/server/warehouseInventoryAdjustment';
@@ -307,6 +309,26 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,96);
   assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,71);
   console.log('PASS: retirada servidor com consumo auditável e retomada idempotente');
+
+  const consumptionId='cons_'+createHash('sha256').update(
+    workspaceId+'\n'+'stock:'+withdrawalRequest.withdrawalId+':'+withdrawalRequest.lines[0].lineId
+  ).digest('hex');
+  const statusResult=await setWarehouseConsumptionSiscofisStatusServer(access,{
+    consumptionId,status:'PREPARED',
+  });
+  assert.equal(statusResult.status,'PREPARED');
+  assert.equal(statusResult.changed,true);
+  assert.equal((await getDoc(ref('consumptions',consumptionId))).data()?.siscofisStatus,'PREPARED');
+  const statusReplay=await setWarehouseConsumptionSiscofisStatusServer(access,{
+    consumptionId,status:'PREPARED',
+  });
+  assert.equal(statusReplay.changed,false);
+  await assert.rejects(
+    ()=>setWarehouseConsumptionSiscofisStatusServer({...access,ug:'999999'},{
+      consumptionId,status:'POSTED',
+    }),/WAREHOUSE_CONSUMPTION_STATUS_SCOPE/);
+  assert.equal((await getDoc(ref('consumptions',consumptionId))).data()?.siscofisStatus,'PREPARED');
+  console.log('PASS: status SISCOFIS consumo server-only, replay e isolamento UG');
 
   const sessionRecord=await startWarehouseInventoryServer(access,{
     scope:{kind:'DEPOT',depotId:dep},

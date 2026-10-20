@@ -10,7 +10,6 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  updateDoc,
   where,
 } from 'firebase/firestore';
 
@@ -914,15 +913,7 @@ export async function setWarehouseConsumptionSiscofisStatus(
   if (!['PENDING', 'PREPARED', 'POSTED'].includes(status)) {
     throw new Error('WAREHOUSE_CONSUMPTION_INVALID_SISCOFIS_STATUS');
   }
-  const path = warehouseDocumentPath(
-    scope.workspaceId,
-    'consumptions',
-    consumptionId
-  );
-  await updateDoc(doc(db, path), {
-    siscofisStatus: status,
-    updatedAt: serverTimestamp(),
-    siscofisUpdatedBy: scope.uid,
-    siscofisUpdatedAt: serverTimestamp(),
+  await warehouseServerCommand(scope.workspaceId,'CONSUMPTION_SISCOFIS_STATUS',{
+    consumptionId,status,
   });
 }

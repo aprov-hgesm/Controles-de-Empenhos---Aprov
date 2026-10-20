@@ -19,6 +19,7 @@ import { warehouseInventoryLifecycleServer } from '../../../../lib/server/wareho
 import { adjustWarehouseInventoryServer } from '../../../../lib/server/warehouseInventoryAdjustment';
 import { startWarehouseInventoryServer } from '../../../../lib/server/warehouseInventoryStart';
 import { markWarehouseLegacyIntakePostedServer } from '../../../../lib/server/warehouseIntakeLegacyStatus';
+import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/server/warehouseConsumptionStatusWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'LEGACY_INTAKE_POSTED':
         result=await markWarehouseLegacyIntakePostedServer(access,body.input);
+        break;
+      case 'CONSUMPTION_SISCOFIS_STATUS':
+        result=await setWarehouseConsumptionSiscofisStatusServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
