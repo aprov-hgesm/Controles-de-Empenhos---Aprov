@@ -73,6 +73,12 @@ function sameAssociation(a:WarehouseBarcodeAssociation,materialId:string,bar:str
   return a.materialId===materialId && a.barcode===bar && a.factorToBaseUnit===factor
     &&JSON.stringify(a.presentation)===JSON.stringify(unit);
 }
+export function warehouseBarcodeServer(
+  access:VerifiedWarehouseRequest, action:'SAVE'|'REPLACE', raw:unknown
+):Promise<WarehouseBarcodeAssociation>;
+export function warehouseBarcodeServer(
+  access:VerifiedWarehouseRequest, action:'STATUS', raw:unknown
+):Promise<{ok:true}>;
 export async function warehouseBarcodeServer(
   access:VerifiedWarehouseRequest, action:'SAVE'|'STATUS'|'REPLACE', raw:unknown
 ):Promise<WarehouseBarcodeAssociation|{ok:true}> {
