@@ -1612,9 +1612,96 @@ service cloud.firestore {
 
 
 
+    // FAST PATH P0: regras dedicadas à entrada avulsa localizada.
+    // Mantêm identidade, ledger, projeções e posição ativa, mas evitam
+    // reavaliar todos os ramos genéricos (transfer, inventário, saída).
+    function warehouseManualLocatedMovementCreate(workspaceId, movementId) {
+      let m = request.resource.data;
+      return m.type == 'MANUAL_ENTRY'
+        && m.source is map
+        && m.source.kind == 'MANUAL_ENTRY'
+        && ('position' in m.source)
+        && validWarehouseMovementDocument(workspaceId, movementId)
+        && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId);
+    }
+
+    function warehouseManualLocatedBalanceWrite(workspaceId, materialId) {
+      let d = request.resource.data;
+      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(d.lastMovementId);
+      let m = getAfter(movementPath).data;
+      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId);
+      return !exists(movementPath)
+        && m.type == 'MANUAL_ENTRY'
+        && m.source is map
+        && m.source.kind == 'MANUAL_ENTRY'
+        && ('position' in m.source)
+        && m.id == d.lastMovementId
+        && m.workspaceId == workspaceId
+        && m.materialId == materialId
+        && m.ug == d.ug
+        && validWarehouseBalanceDocument(workspaceId, materialId)
+        && (
+          (
+            !exists(balancePath)
+            && d.revision == 1
+            && d.quantity == m.quantityDelta
+          )
+          || (
+            exists(balancePath)
+            && d.revision == resource.data.revision + 1
+            && d.quantity == resource.data.quantity + m.quantityDelta
+            && d.workspaceId == resource.data.workspaceId
+            && d.ug == resource.data.ug
+            && d.materialId == resource.data.materialId
+          )
+        );
+    }
+
+    function warehouseManualLocatedPositionWrite(workspaceId, locationBalanceId) {
+      let d = request.resource.data;
+      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(d.lastMovementId);
+      let m = getAfter(movementPath).data;
+      let currentPath = /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId);
+      return !exists(movementPath)
+        && m.type == 'MANUAL_ENTRY'
+        && m.source is map
+        && m.source.kind == 'MANUAL_ENTRY'
+        && m.source.locationBalanceId == locationBalanceId
+        && m.source.position == d.position
+        && d.position.kind in ['LOCATION', 'SUBPOSITION']
+        && m.id == d.lastMovementId
+        && m.workspaceId == workspaceId
+        && m.materialId == d.materialId
+        && m.ug == d.ug
+        && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
+        && warehousePositionActive(workspaceId, d.position, d.ug)
+        && (
+          (
+            !exists(currentPath)
+            && d.revision == 1
+            && d.quantity == m.quantityDelta
+          )
+          || (
+            exists(currentPath)
+            && d.revision == resource.data.revision + 1
+            && d.quantity == resource.data.quantity + m.quantityDelta
+            && d.workspaceId == resource.data.workspaceId
+            && d.ug == resource.data.ug
+            && d.materialId == resource.data.materialId
+            && d.position == resource.data.position
+          )
+        );
+    }
+
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
       return (
+          movement.type == 'MANUAL_ENTRY'
+          && movement.source is map
+          && ('position' in movement.source)
+          && warehouseManualLocatedMovementCreate(workspaceId, movementId)
+        )
+        || (
           movement.type == 'TRANSFER'
           && validWarehouseTransferMovementCreate(workspaceId, movementId)
         )
@@ -3083,7 +3170,10 @@ service cloud.firestore {
       match /balances/{materialId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && warehouseBalanceWriteAllowed(workspaceId, materialId);
+          && (
+            warehouseManualLocatedBalanceWrite(workspaceId, materialId)
+            || warehouseBalanceWriteAllowed(workspaceId, materialId)
+          );
         allow delete: if false;
       }
 
@@ -3091,7 +3181,10 @@ service cloud.firestore {
       match /locationBalances/{locationBalanceId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId);
+          && (
+            warehouseManualLocatedPositionWrite(workspaceId, locationBalanceId)
+            || warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId)
+          );
         allow delete: if false;
       }
 
