@@ -65,22 +65,34 @@ assert.doesNotMatch(ui, /\bsetDoc\s*\(/);
 assert.doesNotMatch(ui, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(ui, /\brunTransaction\s*\(/);
 
+// The canonical mobile API must dispatch to a server transaction, never
+// preserve browser SDK writes merely to satisfy a historical static guard.
 const canonical = read('lib/warehouse/outboundRepository.ts');
-assert.match(canonical, /runTransaction/);
-assert.match(canonical, /movementSnapshot\.exists\(\)/);
-assert.match(canonical, /applied: false/);
-assert.match(canonical, /WAREHOUSE_IDEMPOTENCY_CONFLICT/);
-assert.match(canonical, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
-assert.match(canonical, /WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/);
-assert.match(canonical, /WAREHOUSE_OUTBOUND_NEGATIVE_STOCK/);
-assert.match(canonical, /transaction\.set\(movementRef/);
-assert.match(canonical, /transaction\.set\(balanceRef/);
-assert.match(canonical, /transaction\.set\(locationBalanceRef/);
+const serverOutbound = read('lib/server/warehouseOutboundWrite.ts');
+const serverWithdrawal = read('lib/server/warehouseWithdrawalWrite.ts');
+assert.match(canonical, /warehouseServerCommand/);
+assert.doesNotMatch(canonical, /\\brunTransaction\\s*\\(/);
+assert.doesNotMatch(canonical, /\\btransaction\\.(?:set|update|delete)\\s*\\(/);
+for (const contract of [
+  /warehouseAdminTransaction/,
+  /createWarehouseMovementId/,
+  /WAREHOUSE_IDEMPOTENCY_CONFLICT/,
+  /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/,
+  /WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/,
+  /WAREHOUSE_OUTBOUND_NEGATIVE_STOCK/,
+  /applyWarehouseMovementToBalance/,
+  /applyWarehouseLocationDelta/,
+  /validateWarehouseLot/,
+  /applied:false/,
+]) assert.match(serverOutbound, contract);
+assert.match(serverWithdrawal, /finalizeWarehouseWithdrawalServer/);
+assert.match(serverWithdrawal, /applyWarehouseExpressOutboundServer/);
+assert.match(serverWithdrawal, /WAREHOUSE_CONSUMPTION_IDEMPOTENCY_CONFLICT/);
+assert.match(serverWithdrawal, /warehouseAdminTransaction/);
 
 const withdrawal = read('lib/warehouse/withdrawalRepository.ts');
 assert.match(withdrawal, /finalizeWarehouseMaterialWithdrawal/);
-assert.match(withdrawal, /applyWarehouseExpressOutbound/);
-assert.match(withdrawal, /recordStockConsumption/);
+assert.match(withdrawal, /warehouseServerCommand/);
 assert.match(withdrawal, /destinationId/);
 assert.match(withdrawal, /withdrawnBy/);
 
