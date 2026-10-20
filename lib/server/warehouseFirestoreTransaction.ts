@@ -59,7 +59,9 @@ function fullName(path: string): string {
   if (!/^warehouse\/[a-z0-9_-]+\/[A-Za-z]+\/[A-Za-z0-9_-]+$/.test(path)) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_DOCUMENT_PATH', 400);
   }
-  return `projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/${path}`;
+  const effectiveProjectId = process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
+    ? 'demo-emprovex-security' : PROJECT_ID;
+  return `projects/${effectiveProjectId}/databases/${DATABASE_ID}/documents/${path}`;
 }
 
 function firestoreBase(): string {
@@ -83,7 +85,7 @@ async function request(accessToken: string, operation: string, body: unknown): P
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(!emulator ? { authorization: 'Bearer ' + accessToken } : {}),
+      authorization: 'Bearer ' + (emulator ? 'owner' : accessToken),
     },
     body: JSON.stringify(body),
     cache: 'no-store',
