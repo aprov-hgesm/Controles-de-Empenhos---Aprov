@@ -18,6 +18,7 @@ import { finalizeWarehouseWithdrawalServer } from '../../../../lib/server/wareho
 import { warehouseInventoryLifecycleServer } from '../../../../lib/server/warehouseInventoryLifecycle';
 import { adjustWarehouseInventoryServer } from '../../../../lib/server/warehouseInventoryAdjustment';
 import { startWarehouseInventoryServer } from '../../../../lib/server/warehouseInventoryStart';
+import { markWarehouseLegacyIntakePostedServer } from '../../../../lib/server/warehouseIntakeLegacyStatus';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,6 +108,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'INVENTORY_START':
         result=await startWarehouseInventoryServer(access,body.input);
+        break;
+      case 'LEGACY_INTAKE_POSTED':
+        result=await markWarehouseLegacyIntakePostedServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
