@@ -1,6 +1,63 @@
 # EMPROVEX — Memorial Oficial
 
 
+## WAREHOUSE-SERVER-R2 — HANDOFF DE CONTINUIDADE (20/10/2026 · PR #348 · HEAD 94306ab)
+
+**Natureza deste registro:** snapshot técnico para continuidade em outro chat; não representa conclusão, liberação de release nem autorização para cortar Rules. Verificado no GitHub em 20/10/2026 por ocasião da solicitação do Fundador. Em caso de commits posteriores, atualizar o HEAD/checks antes de continuar.
+
+### Decisão e objetivo do Fundador
+- Concluir a migração **integral** de TODAS as gravações da Central de Depósitos para motores no servidor confiável, prioritariamente **saída/devolução → inventário → alocação/NF → demais produtores**.
+- Eliminar definitivamente SDK writes do navegador e celular e habilitar Rules mínimas de leitura/autorização e **negação total de gravação direta cliente**, **somente após** inventário estrito ZERO e CI/Emulator/E2E/segurança aprovados.
+- Manter Firestore como banco, dados existentes (estrutura, saldo, lote, movimento, consumo, trilha histórica), isolamento por workspace/UG, autorização por identidade e proteção contra operações concorrentes/replay; preservar os demais módulos do EMPROVEX. Como o Fundador informou não haver usuários ativos na Central de Depósitos, a implantação pode ser única após certificação, não por fases operacionais.
+- Diretriz de otimização: evitar leituras e writes redundantes; medir consumo efetivo do Firestore e impacto em custo antes/depois; não confundir redução de Rules com economia automática.
+
+### Repositório e estado EXATO consultado
+- Repositório: `aprov-hgesm/Controles-de-Empenhos---Aprov`.
+- **PR #348 DRAFT e aberto**: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/348
+- Branch: `feat/warehouse-server-r2-migration-20261020`, HEAD consultado: **`94306ab51d1f0d8914b54ee0ad38352fcfc8dcc1`**; base empilhada `fix/warehouse-manual-entry-p0-audit-20261020` (PR #347, entrada avulsa server-side).
+- **Sem merge, sem deploy, sem publicação das Rules server-only** deste PR; produção não alterada pela migração documentada nesta sessão.
+- Memorial técnico da branch: `docs/WAREHOUSE_SERVER_R2_MIGRATION.md`. Auditoria de pontos restantes: `scripts/warehouse-r2-direct-write-audit.mjs`.
+- Rules mínimas **somente preparadas**: `firestore.warehouse.server-only.rules`. Rules operacionais ativas não devem ser substituídas antes dos gates.
+
+### Código já adicionado/refatorado no PR #348 (IMPLEMENTADO ≠ APROVADO)
+- API autenticada `app/api/central-depositos/operations/route.ts`, `lib/warehouse/serverCommandClient.ts`, verificação de autorização por `verifyWarehouseRequest`, backend Firestore REST `lib/server/warehouseFirestoreTransaction.ts`.
+- Operações expostas na rota: `TRANSFER`, `MATERIAL_SAVE`, `DESTINATION_CREATE`, `DESTINATION_STATUS`, `STRUCTURE`, `LANDING_VISUAL_SAVE`, `LOGISTICS_SETTINGS_SAVE`, `QUEUE_EXCLUDE`, `LOT_CREATE`, `LOT_UPDATE`, `EXPRESS_OUTBOUND`, `STOCK_RETURN`, `WITHDRAWAL_FINALIZE`, `INVENTORY_COUNT`, `INVENTORY_REVIEW`, `INVENTORY_REOPEN`, `INVENTORY_BEGIN_CONFIRM`, `INVENTORY_FINISH_CONFIRM`, `INVENTORY_CANCEL`, `INVENTORY_STALE`, `INVENTORY_ADJUST`, `INVENTORY_START`, `LEGACY_INTAKE_POSTED`. A presença no `switch` não comprova sucesso ou eliminação total do legado.
+- Transferência por FEFO com lote/split e replay; material, destinos, depósito/local/subposição; configurações visuais/logísticas, fila NF, lotes manuais; saída expressa; devolução; retirada de múltiplas linhas com consumo e progresso retomável; inventário server-side em desenvolvimento (`lib/server/warehouseInventoryLifecycle.ts`, `warehouseInventoryAdjustment.ts` e demais motores). Registrar como **parcialmente certificado**, não como migração completa.
+- A retirada processa linhas com progresso/idempotência: conferir consistência em falhas intermediárias e paralelismo; não presumir commit único para uma retirada inteira. O arquivamento estrutural via simples update foi bloqueado (`WAREHOUSE_ARCHIVE_SERVER_FLOW_REQUIRED`); falta implementar operação própria segura.
+
+### RESULTADOS dos checks no HEAD 94306ab (consultados em 20/10)
+- **EMPROVEX Core Protection: SUCCESS** — run `39507486562`.
+- **Application CI: FAILURE** — run `39507486428`, job `validate-application` falhou em **TypeScript error budget** (10 erros; orçamento zero), principalmente:
+  - `lib/server/warehouseInventoryLifecycle.ts`: retorno de tipos diferentes no mesmo `warehouseAdminTransaction` (item / summary / `{ok:true}`) nas linhas próximas a 75 e 103.
+  - `lib/server/warehouseWithdrawalWrite.ts`: `WarehouseMaterialWithdrawal` incompatível com `Record<string, unknown>` no campo de `writes`, fazendo `header` ficar inferido como `unknown`; erros em torno das linhas 86, 113, 164, 165, 191 e 205.
+  - Os gates finais derivados ficaram FAIL em cascata porque o job crítico falhou. **Não declarar Application CI PASS.**
+- **Warehouse Server R2 Smoke: FAILURE** — run `39507486127`. Antes de parar, o log confirmou PASS para entrada avulsa e replay, transferência FEFO com split, lotes, saída expressa, devolução, estrutura e duplicidade, retirada com consumo e replay. Ao começar inventário, `warehouseInventoryLifecycleServer` disparou **`WarehouseStoreError: WAREHOUSE_SERVER_INVALID_DOCUMENT_PATH`**, `lib/server/warehouseFirestoreTransaction.ts:62`, originado em `fullName()` durante `warehouseAdminTransaction` chamada em `warehouseInventoryLifecycle.ts:103` (fixture `scripts/warehouse-server-manual-entry-emulator.ts:325`). **Investigar o caminho real, validar regex/estrutura de itens aninhados e manter o guard de escopo estrito; não relaxar paths genericamente.**
+- **Browser E2E On Demand: IN PROGRESS** — run `39507486395` na consulta; verificar conclusão do run/novo HEAD antes de relatar PASS.
+- Execuções PASS anteriores pertencem a SHAs anteriores e **não liberam** o HEAD atual.
+
+### BLOQUEIOS restantes para a meta zero direct writes
+- A auditoria histórica em começo da R2 identificou **109 pontos de escrita SDK cliente**; migrações subsequentes eliminaram parte deles. **Contagem atual NÃO certificada**. Não supor ZERO nem publicar porcentagem de conclusão.
+- Ainda verificar e migrar completamente: inventário inteiro (início, contagem, revisão, ajuste, confirmação, cancelamento); retirada/consumo/devolução de todos os caminhos alternativos; alocação NF/intakes legados, código de barras, `ledgerRepository`, arquivamento de estrutura, croquis/layouts, índices/filas, SISCOFIS e demais gravações de `lib/warehouse`, `features/warehouse` e componentes auxiliares. Rastrear call sites e evitar manter bypass em outro repositório.
+- Os testes dinâmicos precisam cobrir tenant/UG diferente, token não autorizado, estado suspenso/revogado, concorrência, saldo negativo, FEFO, lote órfão, duplicidade/replay, interrupção de lote de retirada, reativação de depósito e reconciliação de inventário; considerar limites/cotas Firestore.
+
+### Passos operacionais para o PRÓXIMO CHAT (ordem obrigatória)
+1. Reabrir PR #348 no GitHub, **consultar o HEAD atual** e os runs (não assumir que ainda é `94306ab`).
+2. Corrigir todos os erros TypeScript relatados sem `any`, sem aumento de error budget, sem ignorar guard. Para warehouseInventoryLifecycle usar tipagem explícita de união retornada por transação; para WithdrawalWrite converter objetos de domínio para `Record<string,unknown>` sem perder validação, e tipar retorno `WarehouseMaterialWithdrawal`.
+3. Reproduzir e corrigir o `WAREHOUSE_SERVER_INVALID_DOCUMENT_PATH` do inventário; inspecionar caminho exato e preservar o validador de documentos, sem abrir acesso genérico.
+4. Rerodar `Warehouse Server R2 Smoke`, `Application CI`, `Core Protection` e `Browser E2E` no MESMO HEAD; investigar e corrigir cada FAIL, cobrindo cenários positivos/negativos.
+5. Concluir operações ainda mutáveis pelo SDK cliente e executar `WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs`. Gate de corte: **ZERO**. Auditar também código fora dos diretórios percorridos pelo script e chamadas indiretas.
+6. Validar Rules mínimas no Firestore Emulator: isolamento por workspace/UG, leitura autorizada, cliente sem escrita, motor backend IAM sem bypass; garantir Backup/Recovery e métricas de custo.
+7. Somente com gates completos PASS, planejar corte único de Rules e release; **não publicar automaticamente sem validação/aceite do Fundador**. Não testar gravação com materiais reais em produção.
+
+### Handoff no formato exigido
+- **Onde estamos:** PR #348 DRAFT, branch `feat/warehouse-server-r2-migration-20261020`, HEAD de referência `94306ab`, migração parcial e CI/smoke bloqueados.
+- **O que estamos fazendo:** levar todas as mutações Warehouse para servidores transacionais com segurança e economia de Firestore; o corte de Rules não ocorreu.
+- **Quem está fazendo:** executor técnico com acesso ao GitHub e Actions; Fundador fornece diretrizes e aprova release.
+- **O que fazer a seguir:** corrigir TS e path do inventário, certificar smoke, finalizar módulos legados, comprovar ZERO direct writes, CI/E2E/Core/Recovery PASS; só depois habilitar Rules simplificadas.
+- **Quem o fará:** próximo worker/assistente técnico; Fundador apenas no aceite da publicação.
+
+---
+
 ## BACKLOG APÓS WAREHOUSE-SERVER-R2 — MIGRAÇÃO DAS FIRESTORE RULES DO EMPROVEX PRINCIPAL (DECISÃO 20/10/2026)
 
 > **PLANEJADO, NÃO IMPLEMENTADO. EXECUTAR SOMENTE APÓS A CONCLUSÃO E HOMOLOGAÇÃO DA CENTRAL DE DEPÓSITOS (WAREHOUSE-SERVER-R2, PR #348 DRAFT, dependente do PR #347).** Este registro é uma decisão de arquitetura e prioridade futura; não constitui autorização de merge, deploy, alteração imediata das Rules do banco principal ou modificação da produção.
