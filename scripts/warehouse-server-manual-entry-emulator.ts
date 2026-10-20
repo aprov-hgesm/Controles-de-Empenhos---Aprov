@@ -26,6 +26,7 @@ const app=initializeApp({
   projectId:'demo-emprovex-security',apiKey:'fake-api-key',
   authDomain:'demo-emprovex-security.firebaseapp.com',
 },'warehouse-server-manual-entry-e2e');
+async function main(): Promise<void> {
 try {
   const auth=getAuth(app);
   connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
@@ -104,3 +105,9 @@ try {
 } finally {
   await deleteApp(app);
 }
+}
+
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});
