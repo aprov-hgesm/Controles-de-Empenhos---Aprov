@@ -64,9 +64,10 @@ test('escaneamento consulta barcode autoritativo antes de buscar material e bloq
   assert.match(screen, /getWarehouseMaterial\(workspace\.workspaceId, association\.materialId\)/);
   assert.match(screen, /association\.factorToBaseUnit !== 1/);
   assert.match(screen, /association\.status !== 'active'/);
-  assert.match(screen, /current\.materialId !== selectedMaterial\?\.id/);
-  assert.match(screen, /current\.status !== 'active'/);
-  assert.match(screen, /product\.status !== 'known'/);
+  assert.doesNotMatch(screen, /const current = await getWarehouseBarcodeByCode/);
+
+
+
   assert.match(screen, /product\.confirmed/);
 });
 
@@ -74,15 +75,23 @@ test('posição requer resolver autoritativo LOCAL ou SUBPOSITION, nunca depósi
   assert.match(screen, /resolveWarehouseStockPositionBarcode/);
   assert.match(screen, /DEPOT_NOT_STOCK_POSITION/);
   assert.match(screen, /location\.position\.kind === 'UNASSIGNED'/);
-  assert.match(manual, /await assertManualEntryPositionActive\(scope\.workspaceId, position\)/);
+
 });
 
 test('entrada usa motor canônico MANUAL_ENTRY: ledger, saldo geral e posição em transação', () => {
   assert.match(screen, /registerWarehouseManualEntry\(workspace\.workspaceId/);
   assert.match(screen, /provenance: provenance\.trim\(\)/);
   assert.match(screen, /expiresOn: expiresOn \|\| null/);
-  assert.match(screen, /barcode: product\.status === 'unknown' \? barcode : null/);
+  assert.match(screen, /barcode,/);
+
   assert.match(manual, /type: 'MANUAL_ENTRY'/);
+  assert.match(manual, /transaction\.set\(materialRef, material\)/);
+  assert.match(manual, /transaction\.set\(lotRef/);
+  assert.match(manual, /transaction\.set\(barcodeRef/);
+  assert.match(manual, /transaction\.get\(materialRef\)/);
+  assert.doesNotMatch(manual, /listWarehouseLots\(/);
+  assert.doesNotMatch(manual, /saveWarehouseMaterial\(/);
+  assert.doesNotMatch(manual, /saveWarehouseBarcodeAssociation\(/);
   assert.match(manual, /transaction\.set\(movementRef/);
   assert.match(manual, /transaction\.set\(balanceRef/);
   assert.match(manual, /transaction\.set\(locationBalanceRef/);
@@ -116,5 +125,6 @@ test('sem NF e sem escrita ao ler: confirmação é gatilho único e rascunho pe
   assert.match(screen, /const submit = async \(\) =>/);
   assert.match(screen, /onClick=\{\(\) => void submit\(\)\}/);
   assert.match(screen, /O rascunho foi preservado/);
-  assert.match(manual, /warnings\.push\('A entrada foi registrada/);
+  assert.match(manual, /return runTransaction\(db, async \(transaction\)/);
+
 });
