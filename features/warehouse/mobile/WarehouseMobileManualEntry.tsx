@@ -245,25 +245,8 @@ export function WarehouseMobileManualEntry() {
     submittingRef.current = true;
     setWorking(true);
     try {
-      // Reconsulta o vínculo antes de escrever: evita registrar saldo para barcode já tomado.
-      if (barcode) {
-        const current = await getWarehouseBarcodeByCode(workspace.workspaceId, barcode);
-        if (current) {
-          // Código desconhecido no scan pode ter sido vinculado por outra pessoa.
-          // Neste caso falhar fechado ANTES de aumentar o estoque, mesmo que o
-          // usuário tenha escolhido um material coincidente no catálogo.
-          if (product.status !== 'known'
-            || current.status !== 'active'
-            || current.ug !== workspace.ug
-            || current.materialId !== selectedMaterial?.id
-            || current.factorToBaseUnit !== 1) {
-            throw new Error('O código foi alterado ou pertence a outro material. Releia a etiqueta antes de continuar.');
-          }
-        } else if (product.status === 'known') {
-          throw new Error('O vínculo anterior do produto desapareceu. Releia a etiqueta.');
-        }
-      }
-
+      // O motor compartilhado verifica o código DENTRO da transação,
+      // impedindo corrida entre o scan e a gravação sem leitura duplicada.
       const result = await registerWarehouseManualEntry(workspace.workspaceId, {
         operationId,
         existingMaterialId: activeMode === 'existing' ? selectedMaterial?.id : null,
@@ -274,9 +257,7 @@ export function WarehouseMobileManualEntry() {
         reference: reference.trim() || null,
         position: location.position,
         expiresOn: expiresOn || null,
-        // Associação já conhecida não precisa ser recriada (economiza escrita
-        // e preserva apresentações específicas previamente configuradas).
-        barcode: product.status === 'unknown' ? barcode : null,
+        barcode,
       });
 
       const registered = result.entry.applied ? 'Entrada avulsa registrada' : 'Entrada já registrada anteriormente';
