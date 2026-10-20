@@ -125,6 +125,7 @@ test('sem NF e sem escrita ao ler: confirmação é gatilho único e rascunho pe
   assert.match(screen, /const submit = async \(\) =>/);
   assert.match(screen, /onClick=\{\(\) => void submit\(\)\}/);
   assert.match(read('lib/warehouse/manualEntryMessages.ts'), /O rascunho foi preservado/);
-  assert.match(manual, /return runTransaction\(db, async \(transaction\)/);
+  assert.match(manual, /const stock = await runTransaction\(db, async \(transaction\)/);
+  assert.match(manual, /const addon = await runTransaction\(db, async \(transaction\)/);
 
 });
