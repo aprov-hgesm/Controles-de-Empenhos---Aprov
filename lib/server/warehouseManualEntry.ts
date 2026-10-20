@@ -178,7 +178,7 @@ export async function registerWarehouseManualEntryServer(
   const token = process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
     ? 'emulator'
     : await getGoogleAccessToken();
-  return warehouseAdminTransaction(token, reads, (rows) => {
+  return warehouseAdminTransaction<RegisterWarehouseManualEntryResult>(token, reads, (rows) => {
     const read = (path: string | null) => path ? rows.get(path) : null;
     assertPosition(access,position,read(paths.depot),read(paths.local),read(paths.sub));
 
