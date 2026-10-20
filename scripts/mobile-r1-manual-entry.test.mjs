@@ -78,24 +78,26 @@ test('posição requer resolver autoritativo LOCAL ou SUBPOSITION, nunca depósi
 
 });
 
-test('entrada usa motor canônico MANUAL_ENTRY: ledger, saldo geral e posição em transação', () => {
+test('desktop e mobile usam o mesmo comando no servidor, sem gravação direta do navegador', () => {
   assert.match(screen, /registerWarehouseManualEntry\(workspace\.workspaceId/);
-  assert.match(screen, /provenance: provenance\.trim\(\)/);
-  assert.match(screen, /expiresOn: expiresOn \|\| null/);
   assert.match(screen, /barcode,/);
-
-  assert.match(manual, /type: 'MANUAL_ENTRY'/);
-  assert.match(manual, /transaction\.set\(materialRef, material\)/);
-  assert.match(manual, /transaction\.set\(lotRef/);
-  assert.match(manual, /transaction\.set\(barcodeRef/);
-  assert.match(manual, /transaction\.get\(materialRef\)/);
-  assert.doesNotMatch(manual, /listWarehouseLots\(/);
-  assert.doesNotMatch(manual, /saveWarehouseMaterial\(/);
-  assert.doesNotMatch(manual, /saveWarehouseBarcodeAssociation\(/);
-  assert.match(manual, /transaction\.set\(movementRef/);
-  assert.match(manual, /transaction\.set\(balanceRef/);
-  assert.match(manual, /transaction\.set\(locationBalanceRef/);
-  assert.match(manual, /warehouseMovementMatchesReplay/);
+  assert.match(manual, /getIdToken\(\)/);
+  assert.match(manual, /api\/central-depositos\/manual-entry/);
+  assert.doesNotMatch(manual, /transaction\.set\(/);
+  assert.doesNotMatch(manual, /writeBatch\(/);
+  assert.doesNotMatch(manual, /runTransaction\(/);
+  const desktop = read('features/warehouse/components/WarehouseManualEntryOperational.tsx');
+  assert.match(desktop, /registerWarehouseManualEntry\(workspaceId/);
+  const server = read('lib/server/warehouseManualEntry.ts');
+  const api = read('app/api/central-depositos/manual-entry/route.ts');
+  const transaction = read('lib/server/warehouseFirestoreTransaction.ts');
+  assert.match(api, /verifyWarehouseRequest\(/);
+  assert.match(server, /warehouseAdminTransaction\(/);
+  assert.match(server, /applyWarehouseMovementToBalance\(/);
+  assert.match(server, /applyWarehouseLocationDelta\(/);
+  assert.match(transaction, /:beginTransaction/);
+  assert.match(transaction, /:batchGet/);
+  assert.match(transaction, /:commit/);
   assert.match(screen, /submittingRef\.current/);
   assert.match(screen, /setOperationId\(createWarehouseMobileAllocationOperationId\(\)\)/);
 });
@@ -125,7 +127,7 @@ test('sem NF e sem escrita ao ler: confirmação é gatilho único e rascunho pe
   assert.match(screen, /const submit = async \(\) =>/);
   assert.match(screen, /onClick=\{\(\) => void submit\(\)\}/);
   assert.match(read('lib/warehouse/manualEntryMessages.ts'), /O rascunho foi preservado/);
-  assert.match(manual, /const stock = await runTransaction\(db, async \(transaction\)/);
-  assert.match(manual, /const addon = await runTransaction\(db, async \(transaction\)/);
+  assert.match(manual, /fetch\('\/api\/central-depositos\/manual-entry'/);
+  assert.doesNotMatch(manual, /saveWarehouseMaterial\(/);
 
 });
