@@ -443,12 +443,18 @@ test('inativação de Local e subposições usa operação atômica e impede est
   );
   assert.match(locations, /archiveWarehouseStructure\(/);
   assert.match(locations, /window\.confirm\(/);
-  assert.match(repository, /target\.kind === 'LOCAL'/);
-  assert.match(repository, /row\.kind === 'SUBPOSITION' && row\.parentLocationId === target\.id/);
-  assert.match(repository, /WAREHOUSE_ARCHIVE_OCCUPIED/);
-  assert.match(repository, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
-  assert.match(repository, /writeBatch\(db\)/);
-  assert.match(repository, /await batch\.commit\(\)/);
+  const serverArchive = readFileSync(
+    resolve(root, 'lib/server/warehouseLedgerAndArchive.ts'), 'utf8'
+  );
+  assert.match(repository, /warehouseServerCommand/);
+  assert.match(repository, /'STRUCTURE_ARCHIVE'/);
+  assert.doesNotMatch(repository, /\\b(?:writeBatch|runTransaction)\\s*\\(/);
+  assert.match(serverArchive, /warehouseStructureArchiveServer/);
+  assert.match(serverArchive, /data\.kind==='LOCAL'/);
+  assert.match(serverArchive, /data\.kind==='SUBPOSITION'/);
+  assert.match(serverArchive, /WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(serverArchive, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(serverArchive, /warehouseAdminTransaction/);
 });
 
 test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
