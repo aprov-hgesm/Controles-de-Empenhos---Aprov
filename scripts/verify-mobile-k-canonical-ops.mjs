@@ -163,15 +163,16 @@ assert.doesNotMatch(manualServer, /transferWarehouseStock\s*\(/);
 assert.doesNotMatch(manualServer, /from:\s*\{ kind: 'UNASSIGNED' \}/);
 
 const withdrawalRepository = read('lib/warehouse/withdrawalRepository.ts');
-assert.match(
-  withdrawalRepository,
-  /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/
-);
-assert.match(withdrawalRepository, /returnedEntry\.locationBalance/);
+const returnServer = read('lib/server/warehouseReturnWrite.ts');
+assert.match(withdrawalRepository, /warehouseServerCommand/);
+assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/);
+assert.match(returnServer, /locationBalance/);
 assert.doesNotMatch(withdrawalRepository, /allowUnassignedPosition/);
 
 const outboundRepository = read('lib/warehouse/outboundRepository.ts');
-assert.match(outboundRepository, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
+const outboundServer = read('lib/server/warehouseOutboundWrite.ts');
+assert.match(outboundRepository, /warehouseServerCommand/);
+assert.match(outboundServer, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
