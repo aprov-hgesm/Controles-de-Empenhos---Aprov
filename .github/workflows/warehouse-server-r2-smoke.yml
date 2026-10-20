@@ -1,0 +1,38 @@
+name: Warehouse Server R2 Smoke
+
+on:
+  pull_request:
+    paths:
+      - 'lib/server/warehouseTransfer.ts'
+      - 'lib/server/warehouseFirestoreTransaction.ts'
+      - 'lib/server/warehouseStructureWrite.ts'
+      - 'lib/server/warehouseDestinationWrite.ts'
+      - 'lib/server/warehouseMaterialWrite.ts'
+      - 'scripts/warehouse-server-manual-entry-emulator.ts'
+      - '.github/workflows/warehouse-server-r2-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warehouse-r2-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-r2-firestore:
+    name: Auth + Firestore Server R2 Emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Server R2 smoke (demo project only)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
