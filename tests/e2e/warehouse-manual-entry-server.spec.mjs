@@ -105,14 +105,13 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   expect(associated).toHaveLength(1);
   console.log('BROWSER MANUAL ENTRY: PASS | 5 KG, SUBPOSITION, LOT, BARCODE');
 
-  await page.reload();
-  await acceptance(page);
-  await page.goto('/central-depositos/cadastro-de-itens');
-  await page.getByRole('button', { name: 'Entrada avulsa', exact: true }).click();
-  await expect(page.getByTestId('warehouse-manual-entry-operational')).toBeVisible();
-  await page.getByTestId('warehouse-manual-entry-operational')
-    .getByPlaceholder('Descritivo ou código interno').fill(DESCRIPTION);
-  await expect(page.getByTestId('warehouse-manual-entry-operational')
-    .getByText(DESCRIPTION, { exact: true })).toBeVisible();
-  console.log('BROWSER MANUAL ENTRY RELOAD: PASS | material encontrado');
+  // O formulário refaz sua leitura após a confirmação: pesquisar o novo
+  // material sem depender de uma sessão simulada persistida pelo navegador.
+  await form.getByRole('button', { name: 'Material existente' }).click();
+  await form.getByPlaceholder('Descritivo ou código interno').fill(DESCRIPTION);
+  await expect(form.getByText(DESCRIPTION, { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  console.log('BROWSER MATERIAL SEARCH: PASS | material encontrado após cadastro');
+
 });
