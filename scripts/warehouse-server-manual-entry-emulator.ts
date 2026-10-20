@@ -22,6 +22,11 @@ import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
 import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
+import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
+import { warehouseInventoryLifecycleServer } from '../lib/server/warehouseInventoryLifecycle';
+import { adjustWarehouseInventoryServer } from '../lib/server/warehouseInventoryAdjustment';
+import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
+
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -302,6 +307,41 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,96);
   assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,71);
   console.log('PASS: retirada servidor com consumo auditável e retomada idempotente');
+
+  const sessionRecord=await startWarehouseInventoryServer(access,{
+    scope:{kind:'DEPOT',depotId:dep},
+  });
+  assert.equal(sessionRecord.session.status,'COUNTING');
+  assert.equal(sessionRecord.session.itemCount,2);
+  const inventoryId=sessionRecord.session.id;
+  const itemLocationId=await createWarehouseInventoryItemId(inventoryId,first.material.id,position);
+  const itemSubId=await createWarehouseInventoryItemId(inventoryId,first.material.id,subposition);
+  await warehouseInventoryLifecycleServer(access,'COUNT',{
+    inventoryId,itemId:itemLocationId,countedQuantity:70,
+  });
+  await warehouseInventoryLifecycleServer(access,'COUNT',{
+    inventoryId,itemId:itemSubId,countedQuantity:25,
+  });
+  const reviewed=await warehouseInventoryLifecycleServer(access,'REVIEW',{inventoryId});
+  assert.equal((reviewed as {divergentItems:number}).divergentItems,1);
+  await warehouseInventoryLifecycleServer(access,'BEGIN_CONFIRM',{inventoryId});
+  const adjusted=await adjustWarehouseInventoryServer(access,{
+    inventoryId,itemId:itemLocationId,
+  });
+  assert.equal(adjusted.applied,true);
+  assert.equal(adjusted.balance.quantity,95);
+  assert.equal(adjusted.locationBalance.quantity,70);
+  assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,70);
+  const adjustedReplay=await adjustWarehouseInventoryServer(access,{
+    inventoryId,itemId:itemLocationId,
+  });
+  assert.equal(adjustedReplay.applied,false);
+  await warehouseInventoryLifecycleServer(access,'FINISH_CONFIRM',{inventoryId});
+  const savedSession=(await getDoc(ref('inventories',inventoryId))).data();
+  assert.equal(savedSession?.status,'CONFIRMED');
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,95);
+  console.log('PASS: inventário R2 início, contagem, revisão, ajuste FEFO e confirmação');
+
 
   await warehouseDestinationSetStatusServer(access,{
     destinationId:newDestination.id,status:'inactive',
