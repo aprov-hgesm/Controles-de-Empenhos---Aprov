@@ -461,7 +461,7 @@ service cloud.firestore {
     }
 
     function warehouseLotMaterialMatches(workspaceId, materialId, ug) {
-      let material = get(
+      let material = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId)
       ).data;
       return materialId is string
@@ -610,10 +610,10 @@ service cloud.firestore {
     }
 
     function warehouseBarcodeMaterialMatches(workspaceId) {
-      let material = get(
+      let material = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
       ).data;
-      return exists(
+      return existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         )
         && material.workspaceId == workspaceId
@@ -859,11 +859,21 @@ service cloud.firestore {
             'kind', 'actorUid', 'provenance', 'reference', 'position', 'locationBalanceId'
           ])
           && source.actorUid == request.auth.uid
-          && source.position is map
-          && validWarehouseStockPosition(source.position)
-          && source.position.kind in ['LOCATION', 'SUBPOSITION']
-          && source.locationBalanceId is string
-          && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+          && (
+            (
+              !('position' in source)
+              && !('locationBalanceId' in source)
+            )
+            || (
+              ('position' in source)
+              && ('locationBalanceId' in source)
+              && source.position is map
+              && validWarehouseStockPosition(source.position)
+              && source.position.kind in ['LOCATION', 'SUBPOSITION']
+              && source.locationBalanceId is string
+              && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+            )
+          )
           && source.provenance is string
           && source.provenance.size() > 0
           && source.provenance.size() <= 180
@@ -1689,6 +1699,7 @@ service cloud.firestore {
         && warehouseMaterialMatchesMovement(workspaceId)
         && (
           request.resource.data.type != 'MANUAL_ENTRY'
+          || !('position' in request.resource.data.source)
           || (
             existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId))
             && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)).data.lastMovementId == movementId
