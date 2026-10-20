@@ -12,6 +12,7 @@ import { saveWarehouseLandingVisualServer } from '../../../../lib/server/warehou
 import { saveWarehouseLogisticsSettingsServer } from '../../../../lib/server/warehouseLogisticsSettingsWrite';
 import { excludeWarehouseQueueServer } from '../../../../lib/server/warehouseQueueExclusionWrite';
 import { writeWarehouseLotServer } from '../../../../lib/server/warehouseLotWrite';
+import { applyWarehouseExpressOutboundServer } from '../../../../lib/server/warehouseOutboundWrite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'LOT_UPDATE':
         result=await writeWarehouseLotServer(access,'UPDATE',body.input);
+        break;
+      case 'EXPRESS_OUTBOUND':
+        result=await applyWarehouseExpressOutboundServer(access,body.input);
         break;
       default:
         return reject('WAREHOUSE_SERVER_OPERATION_UNSUPPORTED',400);
