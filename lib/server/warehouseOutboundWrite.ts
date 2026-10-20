@@ -112,7 +112,7 @@ export async function applyWarehouseExpressOutboundServer(
       const currentLocationBalance:WarehouseLocationBalance|null=savedLocation
         ?valid(validateWarehouseLocationBalance(
           warehouseCanonicalLocationBalanceReadInput(locationBalanceId,savedLocation.data),
-          {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}
+          {expectedWorkspaceId:access.workspaceId}
         ),'WAREHOUSE_INVALID_LOCATION_BALANCE'):null;
       const liveBarcode:WarehouseBarcodeAssociation|null=typeof barcodeId==='string'
         ?valid(validateWarehouseBarcodeAssociation(
