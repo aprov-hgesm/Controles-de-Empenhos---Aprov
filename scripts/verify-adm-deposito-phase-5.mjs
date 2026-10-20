@@ -54,11 +54,7 @@ for (const marker of [
   'prepareEmprovexSiscofisInventoryData',
   'prepareWarehouseSiscofisImport',
   'confirmWarehouseSiscofisImport',
-  "type: 'INITIAL_BALANCE'",
   'applyWarehouseMovement',
-  "existingMarcoZero?.status === 'CONFIRMED'",
-  "kind: 'SNAPSHOT'",
-  'movementIds: []',
 ]) {
   requireText(service, marker, 'Persistência/Marco Zero incompleto: ' + marker);
 }
@@ -71,6 +67,10 @@ for (const marker of [
   'warehouseLedgerMovementServer',
   'siscofis:marco-zero:',
   'WAREHOUSE_SISCOFIS_PREVIEW_NOT_CONFIRMABLE',
+  "type:'INITIAL_BALANCE'",
+  "stored?.data.status==='CONFIRMED'",
+  "alreadyConfirmed?'SNAPSHOT':'MARCO_ZERO'",
+  'movementIds:[]',
   "status:'APPLYING'",
   "status:'CONFIRMED'",
 ]) {
