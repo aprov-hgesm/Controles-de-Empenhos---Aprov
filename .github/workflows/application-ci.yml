@@ -65,8 +65,8 @@ jobs:
             exit 1
           fi
 
-      - name: Warehouse R2 direct SDK write audit (report only)
-        run: node scripts/warehouse-r2-direct-write-audit.mjs
+      - name: Warehouse R2 strict zero client SDK writes
+        run: WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs
 
       - name: Cronograma Gmail attachment contract tests
         run: npm run test:cronograma-email
