@@ -129,16 +129,21 @@ async function main() {
   assert.equal((await getDoc(ref(db,'balances',materialId))).data().quantity,80);
   console.log('ALLOW PASS: material e entrada LOCAL criados juntos');
 
-  // Segunda entrada na subposição: atomicamente movimento, saldos, lote e código.
+  // Núcleo autoritativo: ledger e saldos em transação.
   await runTransaction(db, async tx=>{
-    const mr=ref(db,'movements',secondMovement), br=ref(db,'balances',materialId),
-      lr=ref(db,'locationBalances',subBalanceId), lot=ref(db,'lots',lotId),
-      barcode=ref(db,'barcodes',barcodeId);
-    const [ms,bs,ls,lotS,barS]=await Promise.all([mr,br,lr,lot,barcode].map(r=>tx.get(r)));
-    assert.ok(!ms.exists() && bs.exists() && !ls.exists() && !lotS.exists() && !barS.exists());
-    tx.set(mr,movement(secondMovement,uid,20,subposition,subBalanceId));
+    const mv=ref(db,'movements',secondMovement), br=ref(db,'balances',materialId),
+      lr=ref(db,'locationBalances',subBalanceId);
+    const [ms,bs,ls]=await Promise.all([mv,br,lr].map(r=>tx.get(r)));
+    assert.ok(!ms.exists() && bs.exists() && !ls.exists());
+    tx.set(mv,movement(secondMovement,uid,20,subposition,subBalanceId));
     tx.set(br,balance(materialId,100,2,secondMovement));
     tx.set(lr,locationBalance(subBalanceId,materialId,subposition,20,1,secondMovement));
+  });
+  // Complementos opcionais em segundo commit, dentro do limite das Rules.
+  await runTransaction(db, async tx=>{
+    const lot=ref(db,'lots',lotId), barcode=ref(db,'barcodes',barcodeId);
+    const [lotS,barS]=await Promise.all([tx.get(lot),tx.get(barcode)]);
+    assert.ok(!lotS.exists() && !barS.exists());
     tx.set(lot,{
       schemaVersion:'warehouse_lot_v1',id:lotId, workspaceId:WORKSPACE,
       ug:UG,materialId,code:'__EMPROVEX_PENDING_LOT__:manual-atomic-test',
@@ -160,7 +165,7 @@ async function main() {
   assert.equal((await getDoc(ref(db,'locationBalances',subBalanceId))).data().quantity,20);
   assert.equal((await getDoc(ref(db,'barcodes',barcodeId))).data().materialId,materialId);
   assert.equal((await getDoc(ref(db,'lots',lotId))).data().quantity,20);
-  console.log('ALLOW PASS: SUBPOSITION + validade + barcode numa única transação');
+  console.log('ALLOW PASS: SUBPOSITION + lote e barcode em commits enxutos');
 
   // Falha na referência física deve invalidar a transação inteira.
   await mustDeny('movimento aponta para outro saldo local',()=>runTransaction(db,async tx=>{
