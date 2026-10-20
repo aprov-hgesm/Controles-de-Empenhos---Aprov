@@ -98,8 +98,32 @@ export async function warehouseStructureServer(
     },{expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}), 'WAREHOUSE_DEPOT_INVALID');
     const depotPath=path(access.workspaceId,'depots',id);
     const indexPath=path(access.workspaceId,'structureCodeClaims',claimId('DEPOT:'+code));
-    return warehouseAdminTransaction(token,[depotPath,indexPath],rows=>{
-      if(rows.get(depotPath) || rows.get(indexPath)) return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
+    // A reivindicação de código pode pertencer a depósito já inativo.
+    // Ler o antigo titular DENTRO da mesma transação impede reutilização
+    // indevida por concorrência com a reativação.
+    const existingClaim=await warehouseAdminTransaction(token,[indexPath],rows=>({
+      result:rows.get(indexPath),writes:[],
+    }));
+    const existingOwnerId=existingClaim?.data.entityId;
+    if(existingClaim && (typeof existingOwnerId!=='string'
+      || !isValidWarehouseDepotId(existingOwnerId))) {
+      return fail('WAREHOUSE_DEPOT_CODE_CLAIM_INVALID');
+    }
+    const ownerPath=typeof existingOwnerId==='string'
+      ?path(access.workspaceId,'depots',existingOwnerId):null;
+    const readSet=[depotPath,indexPath,...(ownerPath?[ownerPath]:[])];
+    return warehouseAdminTransaction(token,readSet,rows=>{
+      if(rows.get(depotPath)) return fail('WAREHOUSE_DEPOT_ID_CONFLICT');
+      const claim=rows.get(indexPath);
+      if(claim) {
+        if(!ownerPath || claim.data.entityId!==existingOwnerId) {
+          return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
+        }
+        const owner=rows.get(ownerPath);
+        if(owner && depotData(access,existingOwnerId as string,owner).status==='active') {
+          return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
+        }
+      }
       return {result:candidate,writes:[
         {path:depotPath,data:{...candidate,createdAt:now,updatedAt:now}},
         {path:indexPath,data:{workspaceId:access.workspaceId,ug:access.ug,
@@ -139,9 +163,12 @@ export async function warehouseStructureServer(
         status:desiredStatus,updatedBy:access.uid,
       },{expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}),'WAREHOUSE_DEPOT_UPDATE_INVALID');
       const claim=rows.get(indexPath);
-      if(claim && claim.data.entityId!==id) return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
+      if(desiredStatus==='active' && claim && claim.data.entityId!==id) {
+        return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
+      }
       const writes=[{path:depotPath,data:stableCreation(present,next as unknown as Record<string,unknown>)}];
-      if(!claim) writes.push({path:indexPath,data:{
+      // Não reassumir uma reivindicação perdida por um depósito inativo.
+      if(desiredStatus==='active' && !claim) writes.push({path:indexPath,data:{
         workspaceId:access.workspaceId,ug:access.ug,entityId:id,entityKind:'DEPOT',
         code:fresh.code,createdAt:now,
       }});
