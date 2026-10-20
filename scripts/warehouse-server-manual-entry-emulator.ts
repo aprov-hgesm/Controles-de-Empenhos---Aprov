@@ -325,6 +325,18 @@ try {
   const reviewed=await warehouseInventoryLifecycleServer(access,'REVIEW',{inventoryId});
   assert.equal((reviewed as {divergentItems:number}).divergentItems,1);
   await warehouseInventoryLifecycleServer(access,'BEGIN_CONFIRM',{inventoryId});
+  // Contract diagnóstico isolado: o snapshot e a posição corrente devem
+  // concordar antes de executar um ajuste que altera saldo e lote.
+  const savedItem=(await getDoc(doc(db,'warehouse',workspaceId,'inventories',inventoryId,'items',itemLocationId))).data();
+  const physical=(await getDoc(ref('locationBalances',String(savedItem?.locationBalanceId)))).data();
+  console.log('INVENTORY_SNAPSHOT_COMPARE',JSON.stringify({
+    expectedRevision:savedItem?.expectedLocationRevision,
+    currentRevision:physical?.revision,
+    expectedMovement:savedItem?.expectedLocationLastMovementId,
+    currentMovement:physical?.lastMovementId,
+    expectedPosition:savedItem?.position,
+    currentPosition:physical?.position,
+  }));
   const adjusted=await adjustWarehouseInventoryServer(access,{
     inventoryId,itemId:itemLocationId,
   });
