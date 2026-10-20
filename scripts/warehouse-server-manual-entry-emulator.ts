@@ -12,6 +12,9 @@ import {
 import { verifyWarehouseRequest } from '../lib/server/warehouseAccess';
 import { registerWarehouseManualEntryServer } from '../lib/server/warehouseManualEntry';
 import { transferWarehouseStockServer } from '../lib/server/warehouseTransfer';
+import { warehouseStructureServer } from '../lib/server/warehouseStructureWrite';
+import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../lib/server/warehouseDestinationWrite';
+import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
@@ -127,6 +130,52 @@ try {
   }),/WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,100);
   console.log('PASS: transferência replay e estoque insuficiente sem dupla movimentação');
+
+  const newDepot=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{
+      code:'DEPR2QA',name:'Depósito servidor R2',description:'Teste isolado',
+      visualType:'STANDARD',sizeProfile:'SMALL',
+    },
+  });
+  if(!('id' in newDepot)) throw new Error('DEPOSIT_SERVER_RESULT_INVALID');
+  assert.ok((await getDoc(ref('depots',newDepot.id))).exists());
+  await assert.rejects(()=>warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'DEPR2QA',name:'Outro duplicado'},
+  }),/WAREHOUSE_DEPOT_DUPLICATE_CODE/);
+  const newLoc=await warehouseStructureServer(access,{
+    kind:'LOCATION_CREATE',input:{depotId:newDepot.id,kind:'LOCAL',
+      code:'LOCR2QA',name:'Local servidor R2',description:null},
+  });
+  if(!('id' in newLoc)) throw new Error('LOCATION_SERVER_RESULT_INVALID');
+  assert.ok((await getDoc(ref('locations',newLoc.id))).exists());
+  const newSub=await warehouseStructureServer(access,{
+    kind:'LOCATION_CREATE',input:{depotId:newDepot.id,kind:'SUBPOSITION',
+      parentLocationId:newLoc.id,code:'SUBR2QA',name:'Subposição servidor R2'},
+  });
+  if(!('id' in newSub)) throw new Error('SUB_SERVER_RESULT_INVALID');
+  assert.ok((await getDoc(ref('locations',newSub.id))).exists());
+  const updated=await warehouseStructureServer(access,{
+    kind:'LOCATION_UPDATE',locationId:newLoc.id,
+    input:{name:'Local servidor R2 atualizado'},
+  });
+  assert.equal((updated as {ok:boolean}).ok,true);
+  assert.equal((await getDoc(ref('locations',newLoc.id))).data()?.name,'Local servidor R2 atualizado');
+  console.log('PASS: estrutura R2 CRUD servidor e unicidade por código');
+
+  const newDestination=await warehouseDestinationCreateServer(access,{name:'Cozinha R2 Teste'});
+  assert.ok((await getDoc(ref('destinations',newDestination.id))).exists());
+  await warehouseDestinationSetStatusServer(access,{
+    destinationId:newDestination.id,status:'inactive',
+  });
+  assert.equal((await getDoc(ref('destinations',newDestination.id))).data()?.status,'inactive');
+  const updatedMaterial=await saveWarehouseMaterialServer(access,{
+    ...first.material,aliases:['Arroz integral QA'],
+  });
+  assert.equal(updatedMaterial.aliases[0],'Arroz integral QA');
+  await assert.rejects(()=>saveWarehouseMaterialServer(access,{
+    ...first.material,unit:{code:'g',label:null},
+  }),/WAREHOUSE_MATERIAL_UNIT_LOCKED/);
+  console.log('PASS: destinos e materiais alterados por servidor com unidade protegida');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
