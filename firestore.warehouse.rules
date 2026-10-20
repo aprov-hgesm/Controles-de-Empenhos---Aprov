@@ -853,12 +853,10 @@ service cloud.firestore {
           && source.kind == 'MANUAL_ENTRY'
           && type == 'MANUAL_ENTRY'
           && source.keys().hasOnly([
-            'kind', 'actorUid', 'provenance', 'reference',
-            'position', 'locationBalanceId'
+            'kind', 'actorUid', 'provenance', 'reference', 'position', 'locationBalanceId'
           ])
           && source.keys().hasAll([
-            'kind', 'actorUid', 'provenance', 'reference',
-            'position', 'locationBalanceId'
+            'kind', 'actorUid', 'provenance', 'reference', 'position', 'locationBalanceId'
           ])
           && source.actorUid == request.auth.uid
           && source.position is map
@@ -1308,9 +1306,7 @@ service cloud.firestore {
             && movement.source.kind == 'MANUAL_ENTRY'
             && movement.source.locationBalanceId == locationBalanceId
             && movement.source.position == request.resource.data.position
-            && warehousePositionActive(
-              workspaceId, request.resource.data.position, request.resource.data.ug
-            )
+            && warehousePositionActive(workspaceId, request.resource.data.position, request.resource.data.ug)
           )
         )
         && (
@@ -1688,15 +1684,9 @@ service cloud.firestore {
         && (
           request.resource.data.type != 'MANUAL_ENTRY'
           || (
-            existsAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)
-            )
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)
-            ).data.lastMovementId == movementId
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)
-            ).data.position == request.resource.data.source.position
+            existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId))
+            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)).data.lastMovementId == movementId
+            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(request.resource.data.source.locationBalanceId)).data.position == request.resource.data.source.position
           )
         )
         && validWarehouseReversalReference(workspaceId, movementId);
