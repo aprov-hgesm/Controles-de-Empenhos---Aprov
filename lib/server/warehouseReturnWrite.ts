@@ -129,7 +129,7 @@ export async function returnWarehouseStockOutboundServer(
         expectedMaterialId:materialId});
       const located=validateWarehouseLocationBalance(
         warehouseCanonicalLocationBalanceReadInput(locationBalanceId,locationData),
-        {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}
+        {expectedWorkspaceId:access.workspaceId}
       );
       if(!bal.ok||!located.ok
         ||!warehouseStockPositionsEqual(located.data.position,source.position)){
@@ -169,8 +169,9 @@ export async function returnWarehouseStockOutboundServer(
       const previousReturn=typeof c.returnedQuantity==='number'?c.returnedQuantity:0;
       const summarized=typeof summary?.returnedQuantity==='number'?summary.returnedQuantity:0;
       const previouslyReturned=Math.max(previousReturn,summarized);
+      const consumptionTotal=typeof c.quantity==='number'?c.quantity:fail('WAREHOUSE_OUTBOUND_RETURN_INVALID_TOTAL');
       const afterReturn=normalizeWarehouseQuantity(previouslyReturned+quantity);
-      if(afterReturn===null||afterReturn>c.quantity+0.000001) {
+      if(afterReturn===null||afterReturn>consumptionTotal+0.000001) {
         return fail('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
       }
       const candidate=validateWarehouseMovement({
@@ -197,7 +198,7 @@ export async function returnWarehouseStockOutboundServer(
       const nextSummary={
         ...(summary||{}),schemaVersion:'warehouse_outbound_return_v1',
         id:consumptionId,workspaceId:access.workspaceId,ug:access.ug,consumptionId,
-        materialId,originalQuantity:c.quantity,returnedQuantity:afterReturn,
+        materialId,originalQuantity:consumptionTotal,returnedQuantity:afterReturn,
         pendingOperationId:null,pendingQuantity:null,pendingReason:null,pendingBy:null,
         lastReturnOperationId:operationId,lastReturnMovementId:movementId,
         lastReturnAt:nowIso,lastReturnBy:access.uid,lastReturnReason:reason,
