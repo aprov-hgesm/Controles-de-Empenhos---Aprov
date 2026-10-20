@@ -33,6 +33,10 @@ export function warehouseManualEntryErrorMessage(error: unknown): string {
   if (match('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
     return 'Esta operação já foi usada com outros dados. Atualize a tela antes de tentar novamente.';
   }
+  if (match('WAREHOUSE_MANUAL_ENTRY_ENRICHMENT_PENDING')) {
+    return 'O estoque já foi registrado, mas faltou concluir lote ou código de barras. '
+      + 'Mantenha os dados e tente novamente: o mesmo lançamento não será duplicado.';
+  }
   if (match('WAREHOUSE_MANUAL_ENTRY_PROJECTION_INCONSISTENT')) {
     return 'Há divergência entre o movimento e o saldo. Não repita até conferir o estoque.';
   }
