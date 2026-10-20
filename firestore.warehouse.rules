@@ -1695,13 +1695,10 @@ service cloud.firestore {
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
+      // MANUAL_ENTRY localizada migrou para o backend. O navegador nunca
+      // possui autorização de gravar seu movimento e projeções diretamente.
+      // Outras operações legadas permanecem protegidas enquanto migram.
       return (
-          movement.type == 'MANUAL_ENTRY'
-          && movement.source is map
-          && ('position' in movement.source)
-          && warehouseManualLocatedMovementCreate(workspaceId, movementId)
-        )
-        || (
           movement.type == 'TRANSFER'
           && validWarehouseTransferMovementCreate(workspaceId, movementId)
         )
@@ -1715,6 +1712,8 @@ service cloud.firestore {
         )
         || (
           movement.type != 'TRANSFER'
+          && !(movement.type == 'MANUAL_ENTRY'
+               && movement.source is map && ('position' in movement.source))
           && !warehouseMovementIsExpressOutbound(movement)
           && !warehouseMovementIsInventoryAdjustment(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
