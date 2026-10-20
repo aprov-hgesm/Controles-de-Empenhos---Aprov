@@ -189,10 +189,18 @@ try {
   }),/WAREHOUSE_ARCHIVE_SERVER_FLOW_REQUIRED/);
   // Preparação isolada do estado legado para testar reuso/reativação, sem
   // transformar DEPOT_UPDATE num atalho inseguro de inativação.
-  const seededInactive=(await getDoc(ref('depots',inactiveDepot.id))).data()!;
-  await setDoc(ref('depots',inactiveDepot.id),{
-    ...seededInactive,status:'inactive',updatedBy:uid,
+  const fixtureUrl='http://127.0.0.1:8080/v1/projects/demo-emprovex-security'
+    +'/databases/emprovex-warehouse/documents/warehouse/'+workspaceId
+    +'/depots/'+inactiveDepot.id
+    +'?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedBy';
+  const seedResponse=await fetch(fixtureUrl,{
+    method:'PATCH',
+    headers:{authorization:'Bearer owner','content-type':'application/json'},
+    body:JSON.stringify({fields:{
+      status:{stringValue:'inactive'},updatedBy:{stringValue:uid},
+    }}),
   });
+  assert.equal(seedResponse.ok(),true,'Fixture administrativa local falhou');
   const replacementDepot=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{code:'REUSER2',name:'Depósito substituto'},
   });
