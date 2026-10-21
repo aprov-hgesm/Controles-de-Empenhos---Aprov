@@ -41,18 +41,24 @@ export function matchBulkStockLocal(
   locals:readonly StockLocationRef[],depotId:string,kind:string,number:string
 ):StockLocationRef[] {
   const required=labelKey(kind+' '+number);
-  if(!required||required.startsWith('PRATELEIRA:'))return [];
+  const literal=compact(kind+' '+number);
+  // Compatibilidade: locais personalizados continuam reconhecidos por código/nome exato.
   return locals.filter(local=>local.status==='active'&&local.kind==='LOCAL'
     &&local.depotId===depotId
-    &&(labelKey(local.name)===required||labelKey(local.code)===required));
+    &&((required&&!required.startsWith('PRATELEIRA:')&&
+      (labelKey(local.name)===required||labelKey(local.code)===required))
+      ||compact(local.name)===literal||compact(local.code)===literal));
 }
 export function matchBulkStockSubposition(
   locations:readonly StockLocationRef[],depotId:string,parentId:string,value:string
 ):StockLocationRef[] {
   const required=numericSubposition(value);
-  if(required===null)return [];
+  const literal=compact(value);
+  // Mantém os códigos livres antigos ("A1" etc.) se informados literalmente.
   return locations.filter(sub=>sub.status==='active'&&sub.kind==='SUBPOSITION'
     &&sub.depotId===depotId&&sub.parentLocationId===parentId
-    &&(labelKey(sub.name)==='PRATELEIRA:'+required
-      ||labelKey(sub.code)==='PRATELEIRA:'+required));
+    &&((required!==null&&
+      (labelKey(sub.name)==='PRATELEIRA:'+required||
+       labelKey(sub.code)==='PRATELEIRA:'+required))
+      ||compact(sub.name)===literal||compact(sub.code)===literal));
 }
