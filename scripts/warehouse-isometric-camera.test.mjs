@@ -134,7 +134,7 @@ test('renderer refaz fit por vista e não muda geometria, domínio nem Firestore
   assert.match(preview, /visibleObjects,/);
   assert.match(preview, /previewView/);
   assert.match(preview, /viewBox=\{\[cameraViewBox\.x, cameraViewBox\.y, cameraViewBox\.width, cameraViewBox\.height\]\.join\(' '\)\}/);
-  assert.match(preview, /preserveAspectRatio=\\{sceneOnly \\? 'none' : 'xMidYMid meet'\\}/);
+  assert.match(preview, /preserveAspectRatio=\{sceneOnly \? 'none' : 'xMidYMid meet'\}/);
   assert.match(preview, /data-camera-fit="bounds"/);
   assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
   assert.doesNotMatch(preview, /viewBox=\{\s*embedded\s*\?/);
@@ -336,10 +336,10 @@ test('miniaturas do Início usam uma única inclinação e piso ancorado no mund
 test('miniatura usa enquadramento estável e omite as etiquetas internas', () => {
   const source = readFileSync(resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8');
   const landing = readFileSync(resolve(root, 'features/warehouse/components/WarehouseLandingOperational.tsx'), 'utf8');
-  assert.match(source, /warehouseLandingIsoFrame\\(viewLogicalWidth, viewLogicalHeight\\)\\.viewBox/);
-  assert.match(source, /data-camera-fit=\\{sceneOnly \\? 'aligned-floor' : 'bounds'\\}/);
-  assert.match(source, /showLabels=\\{!sceneOnly\\}/);
-  assert.match(landing, /placeWarehouseLandingIsoFrame\\(/);
+  assert.match(source, /warehouseLandingIsoFrame\(viewLogicalWidth, viewLogicalHeight\)\.viewBox/);
+  assert.match(source, /data-camera-fit=\{sceneOnly \? 'aligned-floor' : 'bounds'\}/);
+  assert.match(source, /showLabels=\{!sceneOnly\}/);
+  assert.match(landing, /placeWarehouseLandingIsoFrame\(/);
   assert.match(landing, /data-camera-pose="aligned-floor"/);
-  assert.doesNotMatch(landing, /listWarehouseDepotLayouts\\(/);
+  assert.doesNotMatch(landing, /listWarehouseDepotLayouts\(/);
 });
