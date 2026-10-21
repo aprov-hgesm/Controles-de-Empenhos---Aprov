@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## CONFIRMAÇÃO FINAL DE TESTES — EMPROVEX CI LEAN (20/10/2026)
+
+- **Fast CI do código atualizado:** `cd6308ae95d0a82737f5b84438ec24a5107ac517` — [EMPROVEX Fast CI #39526632360](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39526632360) **SUCCESS**, incluindo TypeScript, scanner estrito zero SDK client writes e testes unitários selecionados por diff. [Core Protection #39526632356](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39526632356) **SUCCESS**.
+- O Fast CI identificou um teste de devolução anteriormente não executado na suíte integral. Foi modernizado para verificar o tipo de movimento **OUTBOUND_RETURN**, autorização/posição física, limite de devolução, saldo, histórico e idempotência **no motor servidor**. O teste atualizado passou e agora também está incluído como gate do Application CI integral.
+- **Estado intencional da branch:** Application CI, Warehouse Smoke e Browser E2E aparecem como SKIPPED no SHA `cd6308ae` por se tratar de PR **DRAFT**. Isso NÃO é um PASS de release. A última certificação integral efetivamente executada permanece no SHA funcional `40c5a6ad`, com todos os jobs SUCCESS. A mudança posterior abrange testes, documentação e workflows, não motores de produção.
+- **Obrigação antes de merge/publicação:** marcar PR como ready, executar Application CI integral (incluindo o novo teste de devolução), Core, Smoke, Browser E2E e QA necessário no HEAD de release. Não houve merge, alteração de Rules em produção ou deploy nesta execução.
+
+**Handoff:** onde estamos — PR #348 DRAFT e CI LEAN validado; o que fazemos — apenas registrar evidência, preservando a produção; quem faz — executor GitHub; próximo — preparar PR para ready e recertificar HEAD completo quando houver decisão de integrar/ativar Rules; quem fará — executor/Coordenador com autorização expressa do Fundador.
+
+---
+
 ## EMPROVEX CI LEAN — Implementação real após certificação (20/10/2026)
 
 > Este registro é posterior à seção de proposta CI LEAN. O modelo foi implementado nos workflows do PR #348, mas não publicado nem incorporado à main.

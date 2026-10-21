@@ -77,3 +77,10 @@ Implementações presentes no PR #348 (não publicadas):
 - O Fast CI usa `scripts/ci-fast-tests.mjs` para selecionar testes pelo diff, com falhas agregadas sem falso PASS. TypeScript e scanner de zero client SDK writes continuam automáticos. Não desativar os testes de saldos, lotes, idempotência, concorrência, segurança multi-tenant ou Recovery na etapa de release.
 - O Application CI integral também permanece no push main. O SKIP do CI completo em Draft é intencional e não habilita merge. O código certificado está no SHA de referência anterior à mudança de workflows; antes da integração de qualquer HEAD novo, verificar todos os gates.
 - Próximo: acompanhar Fast CI na branch de implementação, depois preparar a release via ready_for_review e executar os gates completos no HEAD final; sem ativar Rules de produção nem publicar sem autorização.
+
+## CI LEAN validado no novo HEAD — 20/10/2026
+
+- `cd6308ae95d0a82737f5b84438ec24a5107ac517`: Fast CI #39526632360 e Core Protection #39526632356 **SUCCESS**. Escopo: TypeScript, zero-client-writes estrito, testes unitários por diff e invariantes essenciais.
+- Teste legado `scripts/warehouse-outbound-return.test.mjs` passou a certificar o contrato real do motor `warehouseReturnWrite.ts` com tipo `OUTBOUND_RETURN`, limites de quantidade, operação atômica, replay e posição física; também passou a integrar o Application CI de release.
+- CI completo/Smoke/E2E no commit CI LEAN: **SKIPPED intencionalmente em DRAFT**. Última certificação integral com todos os jobs **SUCCESS** continua no SHA `40c5a6ad` anterior a alterações de workflows/testes. Ao preparar merge, mudar PR para ready e executar todos os gates no HEAD final.
+- Sem merge, deploy ou alteração das Rules de produção. **Handoff:** executor prepara QA/release somente sob autorização; Fundador decide publicação.
