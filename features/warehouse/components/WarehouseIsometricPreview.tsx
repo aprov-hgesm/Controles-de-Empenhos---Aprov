@@ -51,6 +51,8 @@ type Props = {
   onQueryTextChange: (value: string) => void;
   onSelectedMaterialIdChange: (value: string) => void;
   embedded?: boolean;
+  /** Read-only scene for the unified landing SVG; reuses the official 3D renderer. */
+  sceneOnly?: boolean;
   depotId?: string;
   depotName?: string;
   inspectionLots?: WarehouseLot[];
@@ -933,6 +935,7 @@ export function WarehouseIsometricPreview({
   onQueryTextChange,
   onSelectedMaterialIdChange,
   embedded = false,
+  sceneOnly = false,
   depotId = '',
   depotName = 'Depósito',
   inspectionLots = [],
@@ -1232,16 +1235,21 @@ export function WarehouseIsometricPreview({
   return (
     <section
       className={
-        embedded
+        sceneOnly
+          ? 'relative h-full w-full overflow-hidden border-0 bg-transparent'
+          : embedded
           ? 'overflow-hidden rounded-[22px] border border-white/10 bg-[#061023] shadow-[0_28px_70px_rgba(0,8,28,0.32)]'
           : 'overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm'
       }
-      data-testid="warehouse-isometric-preview"
+      data-testid={sceneOnly ? "warehouse-isometric-scene-only" : "warehouse-isometric-preview"}
+      data-scene-only={sceneOnly ? "true" : "false"}
       data-embedded={embedded ? 'true' : 'false'}
     >
       <div
         className={
-          embedded
+          sceneOnly
+            ? 'hidden'
+            : embedded
             ? 'flex flex-col gap-3 border-b border-white/10 bg-[#07101f]/95 px-4 py-3 sm:flex-row sm:items-center sm:justify-between'
             : 'flex flex-col gap-3 border-b border-blue-100 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between'
         }
@@ -1371,7 +1379,9 @@ export function WarehouseIsometricPreview({
         </div>
       </div>
 
-        <div className={embedded
+        <div className={sceneOnly
+          ? 'hidden'
+          : embedded
           ? 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-white/10 bg-[#07101f] px-4 py-2 text-[10px] font-semibold text-slate-300'
           : 'flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[10px] font-semibold text-slate-600'
         } data-testid="warehouse-stock-expiry-legend">
@@ -1382,11 +1392,13 @@ export function WarehouseIsometricPreview({
         </div>
 
       <div className={
-        embedded
+        sceneOnly
+          ? 'relative h-full w-full min-h-0 overflow-hidden bg-transparent'
+          : embedded
           ? 'relative min-h-[650px] overflow-hidden bg-[radial-gradient(circle_at_50%_8%,#fbfdff_0%,#eaf2f8_48%,#cfdeea_100%)]'
           : 'relative min-h-[660px] overflow-hidden bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#eef5fa_52%,#dce8f2_100%)]'
       }>
-        {visibleObjects.length === 0 ? (
+        {visibleObjects.length === 0 && !sceneOnly ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/90 px-6 py-5 text-center shadow-sm">
               <PackageSearch className="mx-auto h-7 w-7 text-slate-400" />
@@ -1397,8 +1409,10 @@ export function WarehouseIsometricPreview({
           <svg
             viewBox={[cameraViewBox.x, cameraViewBox.y, cameraViewBox.width, cameraViewBox.height].join(' ')}
             preserveAspectRatio="xMidYMid meet"
+            pointerEvents={sceneOnly ? 'none' : undefined}
             data-camera-fit="bounds"
             className={
+              sceneOnly ? 'absolute inset-0 h-full w-full' :
               'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
               + (viewTransitioning
                 ? 'scale-[0.992] opacity-20 blur-[1px]'
