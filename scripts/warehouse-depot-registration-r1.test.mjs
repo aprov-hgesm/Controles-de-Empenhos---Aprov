@@ -75,9 +75,13 @@ test('novos depósitos permanecem no cadastramento; Estrutura adiciona locais se
 });
 test('rotina de inativação é protegida e códigos cadastrados não podem ser modificados', () => {
   const source = readFileSync(resolve(root, 'lib/warehouse/locationRepository.ts'), 'utf8');
-  assert.match(source, /WAREHOUSE_ARCHIVE_OCCUPIED/);
-  assert.match(source, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
-  assert.match(source, /writeBatch\(db\)/);
+  const archive = readFileSync(resolve(root, 'lib/server/warehouseLedgerAndArchive.ts'), 'utf8');
+  assert.match(source, /'STRUCTURE_ARCHIVE'/);
+  assert.doesNotMatch(source, /\bwriteBatch\s*\(\s*db\s*\)/);
+  assert.match(archive, /warehouseStructureArchiveServer/);
+  assert.match(archive, /WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(archive, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(archive, /warehouseAdminTransaction/);
   const server = readFileSync(resolve(root, 'lib/server/warehouseStructureWrite.ts'), 'utf8');
   assert.match(source, /warehouseServerCommand<WarehouseDepot>/);
   assert.match(source, /warehouseServerCommand<WarehouseLocation>/);
