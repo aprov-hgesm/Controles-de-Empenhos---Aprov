@@ -27,6 +27,7 @@ import {
   type RegisterWarehouseManualEntryResult,
 } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
+import { WarehouseBulkManualEntryOperational } from './WarehouseBulkManualEntryOperational';
 
 type MaterialMode = 'existing' | 'new';
 
@@ -549,6 +550,15 @@ export function WarehouseManualEntryOperational({
           </button>
         </div>
       </div>
+
+      <WarehouseBulkManualEntryOperational
+        workspaceId={workspaceId}
+        materials={materials}
+        depots={depots}
+        locations={locations}
+        onImported={load}
+      />
+
     </section>
   );
 }

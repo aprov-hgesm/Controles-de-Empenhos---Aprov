@@ -19,6 +19,7 @@ export interface RegisterWarehouseManualEntryInput {
   reference?: string | null;
   position: WarehouseStockPosition;
   expiresOn?: string | null;
+  lotCode?: string | null;
   barcode?: string | null;
 }
 
