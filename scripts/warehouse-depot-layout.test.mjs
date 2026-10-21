@@ -448,7 +448,7 @@ test('inativação de Local e subposições usa operação atômica e impede est
   );
   assert.match(repository, /warehouseServerCommand/);
   assert.match(repository, /'STRUCTURE_ARCHIVE'/);
-  assert.doesNotMatch(repository, /\\b(?:writeBatch|runTransaction)\\s*\\(/);
+  assert.doesNotMatch(repository, /\b(?:writeBatch|runTransaction)\s*\(/);
   assert.match(serverArchive, /warehouseStructureArchiveServer/);
   assert.match(serverArchive, /data\.kind==='LOCAL'/);
   assert.match(serverArchive, /data\.kind==='SUBPOSITION'/);
