@@ -9,6 +9,7 @@ import {
   Undo2,
 } from 'lucide-react';
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -18,6 +19,7 @@ import {
 } from 'react';
 
 import type { WarehouseDepotLayout } from '../../../lib/warehouse/layout';
+import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import {
   listActiveWarehouseDepotLayouts,
   type WarehouseDepotLayoutListItem,
@@ -52,6 +54,10 @@ import {
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 import styles from './WarehouseLandingOperational.module.css';
 
+const EMPTY_MATERIALS: WarehouseMaterial[] = [];
+const noopSceneControl = () => {};
+const MemoWarehouseIsometricPreview = memo(WarehouseIsometricPreview);
+
 const LazyIntakeBulkActionPanel = dynamic(
   () => import('./WarehouseItemRegistrationOperational')
     .then((module) => module.IntakeBulkActionPanel),
@@ -67,6 +73,8 @@ interface LandingData {
   locationBalances: WarehouseLocationBalanceListItem[];
   pendingRows: WarehouseInvoiceIntakeQueueRow[];
   pendingAvailable: boolean;
+  pendingLoading: boolean;
+  locationsLoaded: boolean;
 }
 
 interface PendingInvoiceGroup {
@@ -98,7 +106,9 @@ const INITIAL_DATA: LandingData = {
   locations: [],
   locationBalances: [],
   pendingRows: [],
-  pendingAvailable: true,
+  pendingAvailable: false,
+  pendingLoading: true,
+  locationsLoaded: false,
 };
 
 const SVG_WIDTH = 1600;
@@ -392,10 +402,11 @@ function svgDeltaToWorld(deltaX: number, deltaY: number): IsoPoint {
   };
 }
 
-function DepotWorld({
+const DepotWorld = memo(function DepotWorld({
   placement,
   locations,
   balances,
+  locationsLoaded,
   onOpen,
   editMode,
   selected,
@@ -407,6 +418,7 @@ function DepotWorld({
   placement: DepotPlacement;
   locations: WarehouseLocation[];
   balances: WarehouseLocationBalance[];
+  locationsLoaded: boolean;
   onOpen: (depotId: string) => void;
   editMode: boolean;
   selected: boolean;
@@ -421,13 +433,24 @@ function DepotWorld({
   const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
   const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
   const open = () => onOpen(depot.id);
-  const depotLocations = locations.filter((location) => location.depotId === depot.id);
-  const validLocationIds = new Set(depotLocations.map((location) => location.id));
-  const displayedObjects = layout?.objects.filter(
-    (object) => !object.warehouseLocationId || validLocationIds.has(object.warehouseLocationId)
-  ) || [];
-  const depotBalances = balances.filter(
-    (balance) => balance.position.kind !== 'UNASSIGNED' && balance.position.depotId === depot.id
+  const depotLocations = useMemo(
+    () => locations.filter((location) => location.depotId === depot.id),
+    [locations, depot.id]
+  );
+  const displayedObjects = useMemo(() => {
+    if (!layout) return [];
+    // Show valid croqui geometry immediately, before occupancy metadata arrives.
+    if (!locationsLoaded) return layout.objects;
+    const locationIds = new Set(depotLocations.map((location) => location.id));
+    return layout.objects.filter(
+      (object) => !object.warehouseLocationId || locationIds.has(object.warehouseLocationId)
+    );
+  }, [depotLocations, layout, locationsLoaded]);
+  const depotBalances = useMemo(
+    () => balances.filter(
+      (balance) => balance.position.kind !== 'UNASSIGNED' && balance.position.depotId === depot.id
+    ),
+    [balances, depot.id]
   );
   // The landing retains a single SVG plane; each depot embeds the *same*
   // renderer as "Meus Depósitos", scaled to its own position on that plane.
@@ -491,17 +514,17 @@ function DepotWorld({
           data-layout-version={layout.version}
         >
           <div style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
-            <WarehouseIsometricPreview
+            <MemoWarehouseIsometricPreview
               logicalWidth={layout.logicalWidth}
               logicalHeight={layout.logicalHeight}
               objects={displayedObjects}
               locations={depotLocations}
               balances={depotBalances}
-              materials={[]}
+              materials={EMPTY_MATERIALS}
               selectedMaterialId=""
               queryText=""
-              onQueryTextChange={() => {}}
-              onSelectedMaterialIdChange={() => {}}
+              onQueryTextChange={noopSceneControl}
+              onSelectedMaterialIdChange={noopSceneControl}
               sceneOnly
             />
           </div>
@@ -520,7 +543,7 @@ function DepotWorld({
 
     </g>
   );
-}
+});
 
 function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
   const { depot, layout } = placement;
@@ -750,6 +773,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [visualMessage, setVisualMessage] = useState('');
   const [hoveredPendingKey, setHoveredPendingKey] = useState<string | null>(null);
   const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
+  const loadRequestRef = useRef(0);
+  const lastWorkspaceRef = useRef('');
   const dragRef = useRef<{
     depotId: string;
     pointerId: number;
@@ -759,43 +784,84 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   } | null>(null);
 
   const load = useCallback(async () => {
-    setData((current) => ({ ...current, loading: true, error: null }));
+    const requestId = ++loadRequestRef.current;
+    const sameWorkspace = lastWorkspaceRef.current === workspaceId;
+    lastWorkspaceRef.current = workspaceId;
+    // During a refresh, preserve the current picture instead of flashing a skeleton.
+    // When the workspace changes, never display data from the previous workspace.
+    setData((current) => sameWorkspace
+      ? { ...current, loading: !current.depots.length, error: null, pendingLoading: true }
+      : { ...INITIAL_DATA }
+    );
+    if (!sameWorkspace) {
+      setSavedVisualOverrides({});
+      setVisualOverrides({});
+    }
+
+    // Start all reads concurrently, but don't let NF/stock details hold up the
+    // first 3D paint. No additional Firestore queries are introduced.
+    const detailReads = Promise.allSettled([
+      listWarehouseLocations(workspaceId, 500),
+      listWarehousePositiveLocationBalances(workspaceId, 500),
+      loadWarehouseInvoiceIntakeQueue(workspaceId),
+    ]);
+
     try {
-      const [depots, layouts, locations, locationBalances, queue, visualSettings] = await Promise.all([
+      const [depots, layouts, visualSettings] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
         listActiveWarehouseDepotLayouts(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
-        listWarehousePositiveLocationBalances(workspaceId, 500),
-        loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null),
         getWarehouseLandingVisualLayout(workspaceId).catch(() => null),
       ]);
+      if (requestId !== loadRequestRef.current) return;
 
-      setData({
+      setData((current) => ({
+        ...current,
         loading: false,
         error: null,
         depots,
         layouts,
+      }));
+      const overrides = visualSettings?.overrides || {};
+      setSavedVisualOverrides(overrides);
+      // Do not overwrite an active drag/edit session during an NF refresh.
+      setVisualOverrides((current) => editMode ? current : overrides);
+
+      const [locationResult, balanceResult, queueResult] = await detailReads;
+      if (requestId !== loadRequestRef.current) return;
+
+      const locations = locationResult.status === 'fulfilled' ? locationResult.value : [];
+      const locationBalances = balanceResult.status === 'fulfilled' ? balanceResult.value : [];
+      const queue = queueResult.status === 'fulfilled' ? queueResult.value : null;
+      const detailsError = locationResult.status === 'rejected' || balanceResult.status === 'rejected';
+
+      setData((current) => ({
+        ...current,
         locations,
+        locationsLoaded: locationResult.status === 'fulfilled',
         locationBalances,
         pendingRows: queue?.rows || [],
         pendingAvailable: Boolean(queue),
-      });
-      const loadedOverrides = visualSettings?.overrides || {};
-      setSavedVisualOverrides(loadedOverrides);
-      setVisualOverrides(loadedOverrides);
+        pendingLoading: false,
+        error: detailsError
+          ? 'Alguns dados de localização ou saldo não puderam ser atualizados.'
+          : null,
+      }));
     } catch (error) {
+      if (requestId !== loadRequestRef.current) return;
       setData((current) => ({
         ...current,
         loading: false,
+        pendingLoading: false,
         error: error instanceof Error
           ? error.message
           : 'Não foi possível montar o ambiente visual dos depósitos.',
       }));
     }
-  }, [workspaceId]);
+  }, [workspaceId, editMode]);
 
   useEffect(() => {
     void load();
+    return () => { loadRequestRef.current += 1; };
   }, [load]);
 
   const activeDepots = useMemo(
@@ -938,7 +1004,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     });
   };
 
-  const handleDepotPointerDown = (
+  const handleDepotPointerDown = useCallback((
     event: ReactPointerEvent<SVGGElement>,
     depotId: string
   ) => {
@@ -961,9 +1027,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       startOffsetX: current.offsetX,
       startOffsetY: current.offsetY,
     };
-  };
+  }, [visualOverrides]);
 
-  const handleDepotPointerMove = (
+  const handleDepotPointerMove = useCallback((
     event: ReactPointerEvent<SVGGElement>,
     depotId: string
   ) => {
@@ -983,9 +1049,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       offsetX: drag.startOffsetX + delta.x,
       offsetY: drag.startOffsetY + delta.y,
     });
-  };
+  }, [updateVisual]);
 
-  const handleDepotPointerUp = (
+  const handleDepotPointerUp = useCallback((
     event: ReactPointerEvent<SVGGElement>,
     depotId: string
   ) => {
@@ -995,7 +1061,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragRef.current = null;
-  };
+  }, []);
 
   const worldFloor = [
     isoPoint(0, 0, 0),
@@ -1011,9 +1077,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     isoPoint(PALLET_YARD_X - 15, PALLET_YARD_Y + PALLET_YARD_HEIGHT + 18, 1),
   ];
 
-  const openDepot = (depotId: string) => {
+  const openDepot = useCallback((depotId: string) => {
     router.push('/central-depositos/meus-depositos?deposito=' + encodeURIComponent(depotId));
-  };
+  }, [router]);
 
   if (data.loading && !data.depots.length) {
     return (
@@ -1041,7 +1107,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         <small>
           {activeDepots.length} depósito(s)
           {' · '}
-          {data.pendingAvailable ? pendingGroups.length + ' NF(s) aguardando alocação' : 'pendências indisponíveis'}
+          {data.pendingLoading ? 'carregando pendências…' : data.pendingAvailable ? pendingGroups.length + ' NF(s) aguardando alocação' : 'pendências indisponíveis'}
         </small>
       </div>
 
@@ -1203,6 +1269,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               placement={placement}
               locations={activeLocations}
               balances={positiveLocationBalances}
+              locationsLoaded={data.locationsLoaded}
               onOpen={openDepot}
               editMode={editMode}
               selected={selectedVisualDepotId === placement.depot.id}
@@ -1284,7 +1351,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <rect x="-128" y="-15" width="256" height="35" rx="9" className={styles.yardTextBackdrop} />
             <text textAnchor="middle" className={styles.yardTitle}>RECEBIMENTO · AGUARDANDO ALOCAÇÃO</text>
             <text y="15" textAnchor="middle" className={styles.yardSubtitle}>
-              {data.pendingAvailable
+              {data.pendingLoading
+                ? 'carregando notas fiscais…'
+                : data.pendingAvailable
                 ? pendingItems > 0
                   ? pendingItems + ' item(ns) · ' + pendingGroups.length + ' NF(s)'
                   : 'sem pendências · paletes livres'
