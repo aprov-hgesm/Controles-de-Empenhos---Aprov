@@ -3398,3 +3398,14 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - **Evidências GitHub:** Application CI, Browser E2E, Core Protection, Fast CI e Warehouse Server R2 Smoke = **5/5 PASS**. `WAREHOUSE BULK STOCK XLSX R1 PASS` no Emulator.
 - **Dados reais:** a planilha de 121 linhas foi examinada fora do repositório; não foi importada ao Firestore. A correção de parsing não garante que todas as posições estejam cadastradas corretamente, nem que não haja divergências no estoque.
 - **Handoff:** onde — produção oficial no hotfix; o que falta — fundador reenviar a mesma planilha e conferir prévia, linhas e correspondência de depósitos/posições, sem confirmar gravação até validar; quem — fundador. Gravação inicial deve ser deliberada, auditada e respeitar que a carga é **aditiva**; não ajusta SISCOFIS.
+
+
+## WAREHOUSE BULK STOCK — Correspondência com locais existentes (21/10/2026)
+
+**Código integrado e CI 6/6 PASS; deploy Vercel pendente.** PR #353 (squash-merged na main, commit de código `b5de4c4b5f5bea5c3b2c2166d4b51ae861c1cf6b`). A análise da planilha de contagem e do screenshot do Controle de Depósitos revelou que o depósito DEP-001 já possui 20 locais e as subposições necessárias, mas o importador não reconhecia a diferença de formato entre `Estante 9 / 1` e `Estante 09 / Prateleira 01` (código `EST-09 / PRT-01`).
+
+- Implementado `lib/warehouse/bulkStockLocationMatcher.ts` para correspondência **estrita** por tipo e número (sem zero à esquerda), depotId, parentLocationId e status ativo; tipos Estante/Freezer/Geladeira/Palete/Prateleira com equivalentes EST/FRZ/GEL/PAL/PRT/PRAT. Sem fuzzy matching, sem criar ou reativar estrutura e sem gravar saldo.
+- Preservada a correspondência literal de nomes/códigos personalizados já suportados anteriormente (exemplo Armário 12 / A1), evitando regressão em outros depósitos. Correspondências duplicadas continuam ambíguas e bloqueadas.
+- A prévia `WarehouseBulkManualEntryOperational` passa a mostrar a localização **efetivamente cadastrada** ao lado da referência informada na planilha. Teste de regressão novo confirma 20 locais representativos, EST-09/PRT-01, subposição pai, escopo de depósito, inativos, ambiguidades e códigos livres; Warehouse Smoke / Fast CI / Core Protection / Browser E2E / QA Visual / Application CI: **6/6 PASS**.
+- Distribuição do arquivo examinado: 121 linhas (100 estantes 1–10, 18 paletes 1–7, 3 freezers 1–2). A correspondência efetiva depende do catálogo carregado e da validação humana em produção; não afirmar importação/saldo concluído.
+- **Handoff:** onde — hotfix PR #353 integrado na main; fazendo — aguardando única publicação Vercel na equipe proprietária `aprov-hgesms-projects`; quem fez — executor GitHub; próximo — deploy manual PowerShell, recarregar a página e conferir 121 linhas e todos os destinos antes de confirmar entrada; quem fará — Fundador. A carga é aditiva e não altera SISCOFIS.
