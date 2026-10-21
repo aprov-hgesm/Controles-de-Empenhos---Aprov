@@ -175,6 +175,8 @@ jobs:
 
       - name: ADM Depósito Phase 2 ledger contract tests
         run: npm run test:adm-deposito-ledger
+      - name: Warehouse server generic ledger security guard
+        run: node --test scripts/warehouse-server-command-security.test.mjs
 
       - name: ADM Depósito Phase 2 ledger and balance guard
         run: npm run verify:adm-deposito-phase-2

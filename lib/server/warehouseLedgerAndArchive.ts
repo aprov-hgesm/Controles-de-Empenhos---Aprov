@@ -4,25 +4,15 @@ import {
   warehouseAdminTransaction,warehouseAdminListCollection,WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
-import { validateWarehouseMaterial } from '../warehouse/material';
 import {
-  createWarehouseMovementId,validateWarehouseMovement,validateWarehouseBalance,
-  warehouseMovementMatchesReplay,applyWarehouseMovementToBalance,
-  WAREHOUSE_MOVEMENT_SCHEMA_VERSION,type WarehouseBalance,
-  type WarehouseMovement,
-} from '../warehouse/movement';
-import {
-  createWarehouseLocationBalanceId,validateWarehouseLocationBalance,
-  applyWarehouseLocationDelta,validateWarehouseDepot,validateWarehouseLocation,
-  type WarehouseStockPosition,
+  validateWarehouseLocationBalance,validateWarehouseDepot,validateWarehouseLocation,
 } from '../warehouse/location';
 import { validateWarehouseLot } from '../warehouse/lot';
 import {
-  warehouseCanonicalMaterialReadInput,warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalLotReadInput,warehouseCanonicalDepotReadInput,
   warehouseCanonicalLocationReadInput,
 } from '../warehouse/readCompatibility';
-import type { ApplyWarehouseMovementInput,ApplyWarehouseMovementResult } from '../warehouse/ledgerRepository';
 
 const fail=(s:string,code=409):never=>{throw new WarehouseStoreError(s,code)};
 const path=(ws:string,domain:string,id:string)=>'warehouse/'+ws+'/'+domain+'/'+id;
@@ -32,108 +22,6 @@ const obj=(v:unknown):Record<string,unknown>=>{
   if(!v||typeof v!=='object'||Array.isArray(v))return fail('WAREHOUSE_COMMAND_INVALID',400);
   return v as Record<string,unknown>;
 };
-function movement(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument):WarehouseMovement {
-  const d=row.data;
-  const r=validateWarehouseMovement({
-    schemaVersion:d.schemaVersion,id:row.path.split('/').at(-1),workspaceId:d.workspaceId,
-    ug:d.ug,materialId:d.materialId,type:d.type,quantityDelta:d.quantityDelta,
-    idempotencyKeyHash:d.idempotencyKeyHash,reversesMovementId:d.reversesMovementId??null,
-    note:d.note??null,source:d.source??null,
-  },{expectedWorkspaceId:access.workspaceId,expectedUg:access.ug});
-  if(!r.ok)return fail('WAREHOUSE_MOVEMENT_INVALID');
-  return r.data;
-}
-function balance(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument,materialId:string){
-  const d=row.data;
-  const r=validateWarehouseBalance({
-    schemaVersion:d.schemaVersion,workspaceId:d.workspaceId,ug:d.ug,
-    materialId:d.materialId,quantity:d.quantity,revision:d.revision,lastMovementId:d.lastMovementId,
-  },{expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,expectedMaterialId:materialId});
-  if(!r.ok)return fail('WAREHOUSE_BALANCE_INVALID');
-  return r.data;
-}
-export async function warehouseLedgerMovementServer(
-  access:VerifiedWarehouseRequest,raw:unknown
-):Promise<ApplyWarehouseMovementResult>{
-  const v=obj(raw);
-  if(typeof v.materialId!=='string'||!/^mat_[a-f0-9]{32}$/.test(v.materialId)
-    ||typeof v.idempotencyKey!=='string'||v.idempotencyKey.length<1
-    ||v.idempotencyKey.length>240||v.type==='TRANSFER')return fail('WAREHOUSE_LEDGER_INVALID_INPUT',400);
-  if(v.reversesMovementId!==undefined&&v.reversesMovementId!==null
-    &&(typeof v.reversesMovementId!=='string'||!/^mov_[a-f0-9]{64}$/.test(v.reversesMovementId))){
-    return fail('WAREHOUSE_LEDGER_INVALID_REVERSAL',400);
-  }
-  const input=v as unknown as ApplyWarehouseMovementInput;
-  const ws=access.workspaceId,id=await createWarehouseMovementId(ws,input.idempotencyKey);
-  const unassigned:WarehouseStockPosition={kind:'UNASSIGNED'};
-  const locId=await createWarehouseLocationBalanceId(ws,input.materialId,unassigned);
-  const paths={
-    material:path(ws,'materials',input.materialId),movement:path(ws,'movements',id),
-    balance:path(ws,'balances',input.materialId),location:path(ws,'locationBalances',locId),
-    ...(input.reversesMovementId?{reversal:path(ws,'movements',input.reversesMovementId)}:{}),
-  };
-  const authToken=await token();
-  return warehouseAdminTransaction<ApplyWarehouseMovementResult>(
-    authToken,Object.values(paths),rows=>{
-      const matRow=rows.get(paths.material);if(!matRow)return fail('WAREHOUSE_MATERIAL_NOT_FOUND',404);
-      const mat=validateWarehouseMaterial(warehouseCanonicalMaterialReadInput(input.materialId,matRow.data),{
-        expectedWorkspaceId:ws,expectedUg:access.ug,
-      });
-      if(!mat.ok)return fail('WAREHOUSE_MATERIAL_INVALID');
-      const check=validateWarehouseMovement({
-        schemaVersion:WAREHOUSE_MOVEMENT_SCHEMA_VERSION,id,workspaceId:ws,
-        ug:access.ug,materialId:input.materialId,type:input.type,
-        quantityDelta:input.quantityDelta,idempotencyKeyHash:id.slice(4),
-        reversesMovementId:input.reversesMovementId??null,note:input.note??null,
-        source:input.source??null,
-      },{expectedWorkspaceId:ws,expectedUg:access.ug,expectedMaterialId:input.materialId});
-      if(!check.ok)return fail('WAREHOUSE_MOVEMENT_INVALID',400);
-      const candidate=check.data;
-      const balRow=rows.get(paths.balance);
-      const oldBalance=balRow?balance(access,balRow,input.materialId):null;
-      const oldMovement=rows.get(paths.movement);
-      if(oldMovement){
-        const replay=movement(access,oldMovement);
-        if(!warehouseMovementMatchesReplay(replay,candidate))return fail('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-        if(!oldBalance)return fail('WAREHOUSE_LEDGER_BALANCE_INCONSISTENT');
-        return {result:{applied:false,movement:replay,balance:oldBalance},writes:[]};
-      }
-      if(mat.data.status!=='active')return fail('WAREHOUSE_MATERIAL_INACTIVE');
-      if(candidate.type==='REVERSAL'){
-        const reversed=paths.reversal?rows.get(paths.reversal):null;
-        if(!reversed)return fail('WAREHOUSE_REVERSAL_TARGET_NOT_FOUND',404);
-        const prior=movement(access,reversed);
-        if(prior.materialId!==candidate.materialId
-          ||candidate.quantityDelta!==-prior.quantityDelta){
-          return fail('WAREHOUSE_INVALID_REVERSAL');
-        }
-      }
-      if(candidate.type==='OUTBOUND'&&(!oldBalance||oldBalance.quantity+candidate.quantityDelta< -0.000001)){
-        return fail('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK');
-      }
-      const nextBalance=applyWarehouseMovementToBalance(candidate,oldBalance);
-      const locRow=rows.get(paths.location);
-      const oldLocation=locRow?validateWarehouseLocationBalance(
-        warehouseCanonicalLocationBalanceReadInput(locId,locRow.data),{
-          expectedWorkspaceId:ws,
-        }):null;
-      if(oldLocation&&!oldLocation.ok)return fail('WAREHOUSE_LOCATION_BALANCE_INVALID');
-      if(oldLocation?.ok&&oldLocation.data.ug!==access.ug)return fail('WAREHOUSE_LOCATION_SCOPE_MISMATCH',403);
-      const nextLocation=applyWarehouseLocationDelta(oldLocation?.ok?oldLocation.data:null,{
-        id:locId,workspaceId:ws,ug:access.ug,materialId:input.materialId,
-        position:unassigned,quantityDelta:candidate.quantityDelta,movementId:id,
-        initialQuantity:oldLocation?.ok?0:(oldBalance?.quantity||0),
-      });
-      if(nextBalance.quantity<0||nextLocation.quantity<0)return fail('WAREHOUSE_NEGATIVE_STOCK');
-      const now=new Date();
-      return {result:{applied:true,movement:candidate,balance:nextBalance},writes:[
-        {path:paths.movement,data:{...candidate,createdAt:now}},
-        {path:paths.balance,data:{...nextBalance,updatedAt:now}},
-        {path:paths.location,data:{...nextLocation,updatedAt:now}},
-      ]};
-    }
-  );
-}
 function sameScope(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument,kind:string) {
   if(row.data.workspaceId!==access.workspaceId||row.data.ug!==access.ug)return fail('WAREHOUSE_ARCHIVE_SCOPE_MISMATCH',403);
   if(kind==='location'){

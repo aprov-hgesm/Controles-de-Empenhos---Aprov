@@ -23,7 +23,7 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
-import { warehouseLedgerMovementServer, warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+import { warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
 
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
         result=await warehouseIntakeStateServer(access,body.input);
         break;
       case 'LEDGER_MOVEMENT':
-        result=await warehouseLedgerMovementServer(access,body.input);
-        break;
+        // Fluxo genérico obsoleto: nunca aceitar deltas de saldo arbitrários.
+        return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
       case 'STRUCTURE_ARCHIVE':
         result=await warehouseStructureArchiveServer(access,body.input);
         break;

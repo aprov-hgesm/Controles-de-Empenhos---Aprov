@@ -152,6 +152,29 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   'workspace cruzado');
   rejected(await command('OPERATION_UNSUPPORTED',
     {}), 'operação não existente');
+  // Nem o fundador pode fabricar estoque, saída ou ajustes por uma API genérica.
+  for (const type of ['INITIAL_BALANCE','INVOICE_ENTRY','INVENTORY_ADJUSTMENT',
+    'OUTBOUND','REVERSAL','MANUAL_ENTRY']) {
+    const attempted = await command('LEDGER_MOVEMENT', {
+      materialId: result.material.id, type, quantityDelta: 100000,
+      idempotencyKey: 'e2e-denied-direct-ledger-' + type.toLowerCase(),
+    });
+    rejected(attempted, 'ledger genérico rejeitado: ' + type);
+    expect(attempted.http.status()).toBe(403);
+    expect(attempted.body.error).toBe('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED');
+  }
+  const unsignedHealth = await request.get('/api/central-depositos/health');
+  expect(unsignedHealth.status()).toBe(401);
+  const authorizedHealth = await request.get('/api/central-depositos/health', {
+    headers: { authorization },
+  });
+  expect(authorizedHealth.status(), await authorizedHealth.text()).toBe(200);
+  const healthBody = await authorizedHealth.json();
+  expect(healthBody.ok).toBe(true);
+  expect(healthBody.checks.authenticatedFounder).toBe(true);
+  expect(healthBody.checks.warehouseTransaction).toBe(true);
+  console.log('LOCALHOST HOSTING PREFLIGHT: PASS | founder-only, read transaction');
+
   console.log('LOCALHOST AUTH/SCOPE: PASS');
 
   const position = result.locationBalance.position;
