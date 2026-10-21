@@ -57,7 +57,8 @@ function column(n:number):string{
 }
 function sheetXml(rows:string[][]):string{
   const rowXml=rows.map((row,i)=>'<row r="'+(i+1)+'">'+row.map((v,j)=>v?
-    '<c r="'+column(j)+(i+1)+'" t="inlineStr"><is><t>'+esc(v)+'</t></is></c>':'').join('')+'</row>').join('');
+    '<c r="'+column(j)+(i+1)+'" t="inlineStr"><is><t>'+esc(v)+'</t></is></c>':
+    '<c r="'+column(j)+(i+1)+'"/>').join('')+'</row>').join('');
   return '<?xml version="1.0" encoding="UTF-8"?>'+
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+
@@ -135,7 +136,8 @@ function excelRows(sheet:string,strings:string[]):Array<{line:number;cells:strin
     const line=Number(attr(m[1],'r')),cells:string[]=[];
     if(!Number.isInteger(line)||line<1||line>100000||seen.has(line))fail('STOCK_IMPORT_ROW_INVALID');
     seen.add(line);
-    for(const c of m[2].matchAll(/<c\b([^>]*)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+    // A célula vazia <c r="E2"/> não pode consumir a próxima <c r="F2">.
+    for(const c of m[2].matchAll(/<c\b([^>]*?)(?:\s*\/>|>([\s\S]*?)<\/c>)/g)){
       const address=attr(c[1],'r'),letters=address.match(/^[A-Z]+/i)?.[0]?.toUpperCase()||'';
       let index=0;for(const ch of letters)index=index*26+ch.charCodeAt(0)-64;
       index--;
