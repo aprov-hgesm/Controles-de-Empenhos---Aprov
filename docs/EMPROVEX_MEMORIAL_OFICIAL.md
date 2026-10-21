@@ -1,5 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
+## PUBLICAÇÃO CONGELADA — RELEASE ÚNICA, POWERSHELL PROPRIETÁRIO (20/10/2026)
+
+- Processo de deploy já validado pelo Fundador: alterações consolidadas em um único commit na main, gates de CI, prebuild e deploy manual Vercel pelo PowerShell na equipe `aprov-hgesms-projects`.
+- A ausência de acesso do conector Vercel do ChatGPT é **irrelevante** para a publicação pelo PowerShell proprietário. Não exigir novas contas ou membros pagos; não criar projeto alternativo.
+- A configuração `vercel.json` mantém `git.deploymentEnabled=false`, portanto integrar a main não atualiza automaticamente `emprovex.com.br`.
+- Runbook: `docs/EMPROVEX_RELEASE_POWERSHELL.md`. Fazer `vercel.cmd pull --environment=production`, `vercel.cmd build --prod`, `vercel.cmd deploy --prebuilt --archive=tgz --prod --skip-domain` e, após smoke/IAM GO, `vercel.cmd promote` usando o MESMO deployment.
+- Regras Firestore reduzidas **não** são ativadas no mesmo deploy. Preservar as Rules produtivas até validação e janela de corte própria. O Marco Zero SISCOFIS ainda usa projeção UNASSIGNED de compatibilidade; acompanhar em release.
+- O executor GitHub pode compor/certificar/mesclar o código, mas não operar a sessão PowerShell local. O Fundador executa prebuild e deploy na própria conta.
+
+**Handoff:** onde — PR #349 certificado e preparando squash único em main; fazendo — commit/documentação/gates; quem — executor GitHub; próximo — PowerShell proprietário: prebuild, staged, testes de IAM e promover; quem — Fundador.
+
+---
+
 ## HARDENING DE SEGURANÇA E PREPARAÇÃO DA HOSPEDAGEM — 20/10/2026
 
 - **PR #349 (RC sobre main, sem merge):** motor de ledger limitado internamente ao Marco Zero SISCOFIS (chave de origem validada, tipo `INITIAL_BALANCE`, fonte nula); API `LEDGER_MOVEMENT` agora retorna 403 `WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED` sem executar transação. Elimina a capacidade de forjar `quantityDelta` e saldo `UNASSIGNED` pela operação genérica. Motores especializados de NF/alocação, saída, devolução, transferência e inventário permanecem disponíveis. Atenção: helper legado `ensureWarehouseIntakeEntryContext` chama `applyWarehouseMovement`; se reutilizado no futuro precisa migrar, a alocação ativa delega a `allocateWarehousePendingItemFast`.

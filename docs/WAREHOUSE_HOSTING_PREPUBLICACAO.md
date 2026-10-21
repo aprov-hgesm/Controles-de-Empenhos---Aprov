@@ -1,6 +1,6 @@
 # EMPROVEX — Checklist seguro de hospedagem antes da publicação
 
-**Estado:** preparado em código, mas **NÃO configurado no ambiente Vercel proprietário**. O conector atual tem acesso a outra equipe e HTTP 403 para `aprov-hgesms-projects`. Não há autorização para trocar o destino por outro projeto.
+**Estado:** preparado em código, NÃO implantado. O conector Vercel do ChatGPT possui 403 para a equipe proprietária, mas **isso não bloqueia o procedimento já utilizado pelo Fundador**, por PowerShell autenticado em `aprov-hgesms-projects`. Procedimento canônico: `docs/EMPROVEX_RELEASE_POWERSHELL.md`.
 
 ## Implementado no RC
 
@@ -11,7 +11,7 @@
 
 ## Acesso e segredo (ação do proprietário na equipe certa)
 
-1. Conceder ao aplicativo/conexão Vercel acesso à equipe `aprov-hgesms-projects` ou operar com PowerShell autenticado nesta equipe. Confirmar projeto **controles-de-empenhos-aprov**; não criar projeto alternativo nem alterar produção por tentativa.
+1. Operar com PowerShell autenticado na equipe proprietária `aprov-hgesms-projects`. Não é necessário conceder ao ChatGPT acesso adicional à Vercel. Confirmar projeto **controles-de-empenhos-aprov**; não criar projeto alternativo nem alterar produção por tentativa.
 2. Conferir a existência de **FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON** no ambiente **Production** que será usado para criar um deployment staged sem domínio. É variável *server-side*; não usar `NEXT_PUBLIC_`, não salvar no repositório e não imprimir conteúdo em logs. Usar a interface segura da Vercel para inserir/rotacionar o valor, sem colar chaves nesta conversa.
 3. A identidade administrativa deve ser do projeto definido em `firebase-applet-config.json`, com direitos **mínimos suficientes** no database `emprovex-warehouse` e, para operações de setor, acesso às APIs Firebase Auth/Identity Toolkit necessárias para custom claims. Revisar privilégios com administrador Google Cloud; usar conta exclusiva e rotação de chaves.
 4. Garantir que **EMPROVEX_E2E_SERVER_AUTH**, **EMPROVEX_WAREHOUSE_ADMIN_EMULATOR**, **NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS** não estejam ativadas na hospedagem real.
@@ -31,4 +31,4 @@
 - A devolução E2E atual utiliza um registro de consumo semeado no Emulator, não representa retirada finalizada de ponta a ponta; prova adicional ainda necessária para esse subfluxo.
 - O caminho legado `ensureWarehouseIntakeEntryContext` não deve ser reutilizado até migração para comando especializado; o endpoint público de ledger genérico está bloqueado.
 
-**Handoff:** onde — RC #349; fazendo — CI sobre hardening e script preflight; quem — executor GitHub; próximo — concessão do escopo Vercel proprietária, staging sem domínio, smoke real isolado, aprovação e publicação controlada; quem — Fundador (autorização/administração) e executor (testes).
+**Handoff:** onde — RC #349; fazendo — consolidar main por squash único; quem — executor GitHub; próximo — prebuild via PowerShell proprietário, staged, teste IAM e promoção; quem — Fundador no PowerShell e executor no GitHub.
