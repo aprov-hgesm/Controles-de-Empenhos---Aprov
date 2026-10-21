@@ -470,10 +470,12 @@ function DepotWorld({
       <polygon
         className={styles.depotAura}
         points={polygonPoints([floorA, floorB, floorC, floorD])}
+        // Preserve the SVG hit area for drag/click without painting a second
+        // white floor beneath the official scene's own floor and walls.
         fill="#f5f8fa"
-        fillOpacity="0.96"
+        fillOpacity={layout ? "0.04" : "0.96"}
         stroke="#b8cad8"
-        strokeOpacity="0.92"
+        strokeOpacity={layout ? "0.3" : "0.92"}
         strokeWidth="1.15"
         filter="url(#depotFloorShadow)"
       />
