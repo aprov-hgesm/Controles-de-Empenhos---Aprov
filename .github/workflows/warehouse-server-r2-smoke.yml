@@ -9,6 +9,10 @@ on:
       - 'lib/warehouse/serverCommandClient.ts'
       - 'app/api/central-depositos/**'
       - 'scripts/warehouse-server-manual-entry-emulator.ts'
+      - 'scripts/warehouse-read-r1-emulator.ts'
+      - 'lib/warehouse/queueReadClient.ts'
+      - 'lib/warehouse/queueReadContracts.ts'
+      - 'lib/server/warehouseQueueRead*.ts'
       - 'scripts/warehouse-manual-entry-atomic-security.test.mjs'
       - 'firebase.warehouse-security-test.json'
       - 'firebase.warehouse-server-only-test.json'
@@ -43,5 +47,7 @@ jobs:
       - run: npm ci
       - name: Server R2 smoke (demo project only)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+      - name: Warehouse Read R1 — server queue against emulator
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-read-r1-emulator.ts"
       - name: Read-only Rules, tenant isolation and suspension (emulator)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-server-only-rules.test.mjs"
