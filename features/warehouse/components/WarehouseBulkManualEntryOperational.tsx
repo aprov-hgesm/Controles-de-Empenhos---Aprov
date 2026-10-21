@@ -8,6 +8,7 @@ import type { WarehouseDepotListItem, WarehouseLocationListItem } from '../../..
 import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
+import { matchBulkStockLocal, matchBulkStockSubposition } from '../../../lib/warehouse/bulkStockLocationMatcher';
 
 interface UploadLine {
   line:number;material:string;quantity:number;unit:string;expiresOn:string|null;
@@ -19,6 +20,7 @@ interface ResolvedLine extends UploadLine {
   materialId:string|null;
   group:string;
   errors:string[];
+  matchedLocation:string|null;
 }
 interface Checkpoint {completed:Record<string,string>}
 
@@ -45,28 +47,25 @@ function resolveRows(
     && item.location.depotId===depotId).map(item=>item.location);
   return items.map(item=>{
     const errors:string[]=[];
-    const place=norm(item.localType+item.localNumber);
-    const matches=locals.filter(local=>
-      norm(local.code)===place || norm(local.name)===place ||
-      (norm(local.code)===norm(item.localNumber)
-        && norm(local.name).includes(norm(item.localType))));
+    // Excel "Estante 9" deve reconhecer o cadastro "Estante 09" / "EST-09".
+    const matches=matchBulkStockLocal(locals,depotId,item.localType,item.localNumber);
     if(matches.length!==1){
       errors.push(matches.length?'Localização ambígua':'Local não cadastrado');
     }
     const local=matches[0];
+    let matchedLocation:string|null=local && matches.length===1?local.name:null;
     let position:WarehouseStockPosition|null=null;
     if(local && matches.length===1){
       if(!item.subposition){
         position={kind:'LOCATION',depotId,locationId:local.id,subpositionId:null};
       }else{
-        const subKey=norm(item.subposition);
-        const subs=subpositions.filter(sub=>
-          sub.parentLocationId===local.id && (
-            norm(sub.code)===subKey || norm(sub.name)===subKey ||
-            norm(sub.name)===norm('Subposição '+item.subposition)
-          ));
+        // Excel "1" corresponde à "Prateleira 01" / "PRT-01" do local pai.
+        const subs=matchBulkStockSubposition(subpositions,depotId,local.id,item.subposition);
         if(subs.length!==1)errors.push(subs.length?'Subposição ambígua':'Subposição não cadastrada');
-        else position={kind:'SUBPOSITION',depotId,locationId:local.id,subpositionId:subs[0].id};
+        else {
+          position={kind:'SUBPOSITION',depotId,locationId:local.id,subpositionId:subs[0].id};
+          matchedLocation=local.name+' / '+subs[0].name;
+        }
       }
     }
     const group=norm(item.material)+'|'+unitKey(item.unit);
@@ -78,7 +77,7 @@ function resolveRows(
     const materialId=same.length===1?same[0].id:null;
     if(materials.length>=500)errors.push('Limite da lista de materiais atingido; verifique a cobertura do cadastro');
     if(item.barcode && item.barcode.length>128)errors.push('Código de barras inválido');
-    return {...item,position,materialId,group,errors};
+    return {...item,position,materialId,group,errors,matchedLocation};
   });
 }
 async function token():Promise<string>{
@@ -253,7 +252,14 @@ export function WarehouseBulkManualEntryOperational({
           <tbody>{resolved.slice(0,70).map(row=><tr key={row.line} className="border-t border-slate-100">
             <td className="px-3 py-2">{row.line}</td><td className="px-3 py-2">{row.material}</td>
             <td className="px-3 py-2">{row.quantity} {row.unit}</td>
-            <td className="px-3 py-2">{row.localType} {row.localNumber}{row.subposition?' / '+row.subposition:''}</td>
+            <td className="px-3 py-2">
+              {row.matchedLocation
+                ? <><span className="font-semibold text-slate-800">{row.matchedLocation}</span>
+                    <span className="block text-[10px] text-slate-400">
+                      Planilha: {row.localType} {row.localNumber}{row.subposition?' / '+row.subposition:''}
+                    </span></>
+                : <span>{row.localType} {row.localNumber}{row.subposition?' / '+row.subposition:''}</span>}
+            </td>
             <td className={'px-3 py-2 '+(row.errors.length?'text-red-700':'text-emerald-700')}>
               {row.errors.length?row.errors.join('; '):row.materialId?'Material existente':'Novo material'}
             </td>
