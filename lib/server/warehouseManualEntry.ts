@@ -147,7 +147,7 @@ export async function registerWarehouseManualEntryServer(
   const intent = digest(JSON.stringify({
     workspaceId: access.workspaceId, ug: access.ug, actorUid: access.uid,
     materialId, description, unitLabel, quantity, provenance, reference,
-    positionKey, expiry, lotCode, barcode: normalizedBarcode,
+    positionKey, expiry, ...(lotCode ? { lotCode } : {}), barcode: normalizedBarcode,
   })).slice(0, 16);
   const candidate = requireValid(validateWarehouseMovement({
     schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
