@@ -34,7 +34,7 @@ async function getFirestoreDoc(request, collection, id) {
 test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômicas -> persistência', async ({
   page, request,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(210_000);
   await page.goto('/');
   await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
   await acceptance(page);
@@ -114,4 +114,183 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   });
   console.log('BROWSER MATERIAL SEARCH: PASS | material encontrado após cadastro');
 
+  // Integração real sobre HTTP localhost; o token é o da sessão Firebase
+  // autenticada pelo navegador. Nenhuma API externa e nenhum dado produtivo.
+  const headers = await response.request().allHeaders();
+  const authorization = headers.authorization;
+  expect(authorization).toMatch(/^Bearer \S+$/);
+  const api = '/api/central-depositos/operations';
+  const command = async (operation, input, workspaceId = 'hgesm-aprov') => {
+    const http = await request.post(api, {
+      headers: { authorization },
+      data: { workspaceId, operation, input },
+    });
+    return { http, body: await http.json() };
+  };
+  const approved = (call, label) => {
+    expect(call.http.status(), label + ': ' + JSON.stringify(call.body)).toBe(200);
+    expect(call.body.ok, label + ': ' + JSON.stringify(call.body)).toBe(true);
+    return call.body.result;
+  };
+  const rejected = (call, label) => {
+    expect(call.http.ok(), label).toBe(false);
+    expect(call.body.ok, label).toBe(false);
+  };
+  const numeric = (doc) => Number(doc.fields.quantity.integerValue
+    ?? doc.fields.quantity.doubleValue);
+
+  // A API não deve confiar no workspace indicado pelo navegador.
+  const unauthenticated = await request.post(api, {
+    data: { workspaceId: 'hgesm-aprov', operation: 'DESTINATION_CREATE',
+      input: { name: 'Acesso indevido' } },
+  });
+  expect([401, 403]).toContain(unauthenticated.status());
+  rejected(await command('DESTINATION_CREATE',
+    { name: 'Operação de outro setor' }, 'workspace-e2e-foreign'),
+  'workspace cruzado');
+  rejected(await command('OPERATION_UNSUPPORTED',
+    {}), 'operação não existente');
+  console.log('LOCALHOST AUTH/SCOPE: PASS');
+
+  const position = result.locationBalance.position;
+  const materialId = result.material.id;
+  const lotId = result.validity.id;
+  const outboundInput = {
+    materialId, requestedQuantity: 2,
+    presentation: result.material.unit,
+    position, lotId, barcodeAssociation: null,
+    idempotencyKey: 'e2e-r2-express-outbound-001',
+    note: 'Homologação local (Firestore Emulator)',
+  };
+
+  // Rejeição de estoque insuficiente deve preservar ledger, posição e lote.
+  rejected(await command('EXPRESS_OUTBOUND', {
+    ...outboundInput, requestedQuantity: 99,
+    idempotencyKey: 'e2e-r2-express-excess-001',
+  }), 'saída acima do saldo físico');
+  expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(5);
+  expect(numeric(await getFirestoreDoc(request, 'lots', lotId))).toBe(5);
+
+  const outbound = approved(await command('EXPRESS_OUTBOUND', outboundInput),
+    'saída real pelo servidor');
+  expect(outbound.applied).toBe(true);
+  expect(outbound.movement.type).toBe('OUTBOUND');
+  expect(outbound.balance.quantity).toBe(3);
+  expect(outbound.locationBalance.quantity).toBe(3);
+  expect(outbound.lot.quantity).toBe(3);
+  const replay = approved(await command('EXPRESS_OUTBOUND', outboundInput),
+    'replay de saída');
+  expect(replay.applied).toBe(false);
+  expect(replay.movement.id).toBe(outbound.movement.id);
+  rejected(await command('EXPRESS_OUTBOUND', {
+    ...outboundInput, requestedQuantity: 1,
+  }), 'replay divergente');
+  expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(3);
+  console.log('LOCALHOST OUTBOUND: PASS | saldo, lote, idempotência e rejeição');
+
+  // Pré-condição explícita: consumo STOCK_OUTBOUND já registrado, inserido
+  // APENAS pelo administrador do Emulator. Isso testa o motor de devolução,
+  // não afirma cobertura de ponta a ponta de WITHDRAWAL_FINALIZE.
+  const consumptionId = 'cons_' + 'e'.repeat(64);
+  const seeded = await request.patch(WAREHOUSE + '/consumptions/' + consumptionId, {
+    headers: { authorization: 'Bearer owner' },
+    data: { fields: {
+      schemaVersion: { stringValue: 'warehouse_consumption_record_v1' },
+      id: { stringValue: consumptionId },
+      workspaceId: { stringValue: 'hgesm-aprov' },
+      ug: { stringValue: '160416' },
+      origin: { stringValue: 'STOCK_OUTBOUND' },
+      materialId: { stringValue: materialId },
+      movementId: { stringValue: outbound.movement.id },
+      quantity: { integerValue: '2' },
+      returnedQuantity: { integerValue: '0' },
+    } },
+  });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  const returnInput = {
+    consumptionId, quantity: 1, reason: 'Devolução parcial no teste E2E',
+    operationId: 'e2e-r2-return-001',
+  };
+  const returned = approved(await command('STOCK_RETURN', returnInput),
+    'devolução pelo motor');
+  expect(returned.movement.type).toBe('OUTBOUND_RETURN');
+  expect(returned.balance.quantity).toBe(4);
+  expect(returned.locationBalance.quantity).toBe(4);
+  expect(returned.lot.quantity).toBe(4);
+  const returnedReplay = approved(await command('STOCK_RETURN', returnInput),
+    'replay da devolução');
+  expect(returnedReplay.movement.id).toBe(returned.movement.id);
+  rejected(await command('STOCK_RETURN', {
+    ...returnInput, quantity: 2, operationId: 'e2e-r2-return-excess',
+  }), 'devolução acumulada acima da saída');
+  expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(4);
+  const persistedConsumption = await getFirestoreDoc(request, 'consumptions', consumptionId);
+  expect(Number(persistedConsumption.fields.returnedQuantity.integerValue)).toBe(1);
+  console.log('LOCALHOST RETURN: PASS | precondição sintética, saldo, lote e replay');
+
+  // A transferência não pode alterar saldo global; quando fraciona um lote,
+  // a parcela transferida deve acompanhar a nova posição física.
+  const destination = {
+    kind: 'LOCATION', depotId: DEPOT_ID, locationId: LOCATION_ID,
+    subpositionId: null,
+  };
+  const transferInput = {
+    materialId, from: position, to: destination, quantity: 1,
+    idempotencyKey: 'e2e-r2-transfer-001',
+    note: 'Homologação localhost',
+  };
+  const transferred = approved(await command('TRANSFER', transferInput),
+    'transferência física');
+  expect(transferred.applied).toBe(true);
+  expect(transferred.balance.quantity).toBe(4);
+  expect(transferred.fromBalance.quantity).toBe(3);
+  expect(transferred.toBalance.quantity).toBe(1);
+  const transferReplay = approved(await command('TRANSFER', transferInput),
+    'replay de transferência');
+  expect(transferReplay.applied).toBe(false);
+  rejected(await command('TRANSFER', {
+    ...transferInput, quantity: 99, idempotencyKey: 'e2e-r2-transfer-excess',
+  }), 'transferência acima do saldo');
+  expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(4);
+  console.log('LOCALHOST TRANSFER: PASS | projeções e saldo global preservados');
+
+  const inventory = approved(await command('INVENTORY_START', {
+    scope: {
+      kind: 'SUBPOSITION', depotId: DEPOT_ID, locationId: LOCATION_ID,
+      subpositionId: SUBPOSITION_ID,
+    },
+  }), 'inventário em subposição');
+  const invId = inventory.session.id;
+  expect(inventory.session.status).toBe('COUNTING');
+  expect(inventory.session.itemCount).toBe(1);
+  const itemListResponse = await request.get(
+    WAREHOUSE + '/inventories/' + invId + '/items', {
+      headers: { authorization: 'Bearer owner' },
+    });
+  expect(itemListResponse.ok()).toBe(true);
+  const inventoryItems = (await itemListResponse.json()).documents || [];
+  expect(inventoryItems).toHaveLength(1);
+  const inventoryItemId = inventoryItems[0].name.split('/').at(-1);
+  const countInput = { inventoryId: invId, itemId: inventoryItemId, countedQuantity: 3 };
+  rejected(await command('INVENTORY_REVIEW', { inventoryId: invId }),
+    'inventário sem contagem não é revisado');
+  const counted = approved(await command('INVENTORY_COUNT', countInput),
+    'contagem física');
+  expect(counted.status).toBe('MATCHED');
+  expect(counted.difference).toBe(0);
+  const reviewed = approved(await command('INVENTORY_REVIEW', { inventoryId: invId }),
+    'revisão de inventário');
+  expect(reviewed.matchedItems).toBe(1);
+  approved(await command('INVENTORY_BEGIN_CONFIRM', { inventoryId: invId }),
+    'início de confirmação');
+  approved(await command('INVENTORY_FINISH_CONFIRM', { inventoryId: invId }),
+    'fim de confirmação');
+  const confirmed = await getFirestoreDoc(request, 'inventories', invId);
+  expect(confirmed.fields.status.stringValue).toBe('CONFIRMED');
+  expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(4);
+  rejected(await command('INVENTORY_CANCEL', { inventoryId: invId }),
+    'inventário finalizado não pode ser cancelado');
+  console.log('LOCALHOST INVENTORY: PASS | contagem, revisão, confirmação e saldo');
+
+  console.log('WAREHOUSE LOCALHOST ACCEPTANCE: PASS | Auth + saída + devolução + transferência + inventário');
 });
