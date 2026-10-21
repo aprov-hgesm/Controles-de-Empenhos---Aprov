@@ -28,6 +28,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
+          else
+            git diff --check HEAD^
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -637,15 +646,6 @@ jobs:
 
       - name: Final TypeScript validation
         run: npm run typecheck
-
-      - name: Diff hygiene
-        shell: bash
-        run: |
-          if [ -n "$GITHUB_BASE_REF" ]; then
-            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
-          else
-            git diff --check HEAD^
-          fi
 
 
   block-16-release-gate:

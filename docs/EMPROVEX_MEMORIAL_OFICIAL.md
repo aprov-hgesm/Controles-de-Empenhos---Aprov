@@ -31,7 +31,7 @@
 - CI LEAN é uma **proposta registrada**, não uma alteração feita agora. A certificação completa da migração #348 e a manutenção da produção continuam sob a política de bloqueios vigente até aprovação e implementação explícita de um novo pipeline.
 
 ### Handoff de continuidade — quem faz o quê
-**Onde estamos:** migração server-only em PR #348/DRAFT, sem publicação; há um teste da Fase 9 com `SyntaxError` no HEAD funcional `690d20d`. **O que fazemos:** primeiro fechar corretamente a auditoria/certificação desse PR; em seguida separar e implementar o Fast CI/seleção de testes sem dispensar gates de release. **Quem faz:** executor técnico/GitHub. **O que fazer a seguir:** corrigir a regex do teste, executar o teste isolado, rerodar Application CI e resolver apenas blockers reais; após PASS completo, planejar refatoração de CI em alteração controlada. **Quem fará:** assistente executor no GitHub; Fundador autoriza qualquer merge, Rules ou deploy. 
+**Onde estamos:** migração server-only em PR #348/DRAFT, sem publicação; há um teste da Fase 9 com `SyntaxError` no HEAD funcional `690d20d`. **O que fazemos:** primeiro fechar corretamente a auditoria/certificação desse PR; em seguida separar e implementar o Fast CI/seleção de testes sem dispensar gates de release. **Quem faz:** executor técnico/GitHub. **O que fazer a seguir:** corrigir a regex do teste, executar o teste isolado, rerodar Application CI e resolver apenas blockers reais; após PASS completo, planejar refatoração de CI em alteração controlada. **Quem fará:** assistente executor no GitHub; Fundador autoriza qualquer merge, Rules ou deploy.
 
 ---
 
