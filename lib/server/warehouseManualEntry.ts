@@ -23,7 +23,7 @@ import {
 } from '../warehouse/barcode';
 import { isWarehouseLocationBarcode } from '../warehouse/locationBarcode';
 import {
-  normalizeWarehouseExpiryDate, createWarehousePendingLotCode,
+  normalizeWarehouseExpiryDate, createWarehousePendingLotCode, normalizeWarehouseLotCode,
   validateWarehouseLot, WAREHOUSE_LOT_SCHEMA_VERSION, type WarehouseLot,
 } from '../warehouse/lot';
 import {
@@ -112,6 +112,11 @@ export async function registerWarehouseManualEntryServer(
   if (!position || position.kind === 'UNASSIGNED') bad('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
   const expiry = normalizeWarehouseExpiryDate(input.expiresOn ?? null);
   if (expiry === undefined) bad('WAREHOUSE_MANUAL_ENTRY_INVALID_EXPIRY');
+  const rawLotCode = string(input.lotCode, 80, false);
+  const lotCode = rawLotCode ? normalizeWarehouseLotCode(rawLotCode) : null;
+  if (rawLotCode && (!lotCode || lotCode.startsWith('__EMPROVEX_PENDING_LOT__:'))) {
+    bad('WAREHOUSE_MANUAL_ENTRY_INVALID_LOT');
+  }
   const barcode = string(input.barcode, 128, false);
   const normalizedBarcode = barcode ? normalizeWarehouseBarcode(barcode) : null;
   if (barcode && !normalizedBarcode) bad('WAREHOUSE_INVALID_BARCODE');
@@ -142,7 +147,7 @@ export async function registerWarehouseManualEntryServer(
   const intent = digest(JSON.stringify({
     workspaceId: access.workspaceId, ug: access.ug, actorUid: access.uid,
     materialId, description, unitLabel, quantity, provenance, reference,
-    positionKey, expiry, barcode: normalizedBarcode,
+    positionKey, expiry, lotCode, barcode: normalizedBarcode,
   })).slice(0, 16);
   const candidate = requireValid(validateWarehouseMovement({
     schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
@@ -159,7 +164,7 @@ export async function registerWarehouseManualEntryServer(
     expectedMaterialId: materialId,
   }), 'WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
 
-  const lotId = expiry
+  const lotId = (expiry || lotCode)
     ? 'lot_' + digest([access.workspaceId, 'MANUAL_ENTRY_LOT', operationId].join('\n')).slice(0,32)
     : null;
   const barcodeId = normalizedBarcode ? await createWarehouseBarcodeId(access.workspaceId, normalizedBarcode) : null;
@@ -242,10 +247,10 @@ export async function registerWarehouseManualEntryServer(
         {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}),
       'WAREHOUSE_MANUAL_ENTRY_LOT_INVALID') : null;
 
-    const lot = expiry && lotId ? requireValid(validateWarehouseLot({
+    const lot = lotId ? requireValid(validateWarehouseLot({
       schemaVersion:WAREHOUSE_LOT_SCHEMA_VERSION,
       id:lotId,workspaceId:access.workspaceId,ug:access.ug,materialId,
-      code:createWarehousePendingLotCode('manual-'+operationId),
+      code:lotCode || createWarehousePendingLotCode('manual-'+operationId),
       expiresOn:expiry, quantity, position,
       origin:{kind:'MANUAL_ENRICHMENT',movementId,invoiceRecordKey:null,
         invoiceId:null,supplier:null,supplierCnpj:null},
