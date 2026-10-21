@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -283,36 +284,14 @@ async function indexInvoicePage(
     && persistedStateStillActionable(persisted.records.get(entry.stateId))
   );
 
-  const path = warehouseDomainPath(scope.workspaceId, 'intakeQueueIndex');
-  let candidateWrites = 0;
-  try {
-    for (let index = 0; index < candidates.length; index += 400) {
-      const batch = writeBatch(db);
-      const chunk = candidates.slice(index, index + 400);
-      for (const entry of chunk) {
-        const invoiceRecordKey = recordKey(entry.invoice);
-        batch.set(doc(db, path, entry.stateId), {
-          schemaVersion: WAREHOUSE_INTAKE_QUEUE_CANDIDATE_SCHEMA_VERSION,
-          id: entry.stateId,
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          invoiceRecordKey,
-          invoiceId: entry.invoice.id,
-          empenhoId: entry.invoice.empenhoId,
-          itemId: entry.item.itemId,
-          registeredAt: timestampToIso(entry.invoice.registeredAt),
-          active: true,
-          deactivatedAt: null,
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-      candidateWrites += chunk.length;
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
+  let candidateWrites=0;
+  for(let i=0;i<candidates.length;i+=40){
+    candidateWrites+=await warehouseServerCommand<number>(scope.workspaceId,'QUEUE_INDEX_UPSERT',
+      candidates.slice(i,i+40).map(entry=>({
+        id:entry.stateId,invoiceRecordKey:recordKey(entry.invoice),
+        invoiceId:entry.invoice.id,empenhoId:entry.invoice.empenhoId,
+        itemId:entry.item.itemId,registeredAt:timestampToIso(entry.invoice.registeredAt),
+      })));
   }
 
   return {
@@ -414,28 +393,7 @@ async function saveIndexState(
     watermarkRegisteredAt: string | null;
   }
 ): Promise<void> {
-  const scope = currentScopeForWorkspace(workspaceId);
-  const path = warehouseDocumentPath(
-    scope.workspaceId,
-    'intakeQueueIndex',
-    INDEX_STATE_ID
-  );
-
-  try {
-    await setDoc(doc(db, path), {
-      schemaVersion: WAREHOUSE_INTAKE_QUEUE_INDEX_SCHEMA_VERSION,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      cutoffAt: input.cutoffAt,
-      bootstrapComplete: true,
-      watermarkRegisteredAt: input.watermarkRegisteredAt,
-      updatedBy: scope.uid,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
+  await warehouseServerCommand(workspaceId,'QUEUE_INDEX_STATE',input);
 }
 
 /**
@@ -465,6 +423,18 @@ export async function syncWarehouseIntakeQueueIndex(
       : state?.watermarkRegisteredAt || null,
     bootstrap: requiresBootstrap,
   });
+
+  // Sem novos documentos processados, não regravar 'state' nem fazer o
+  // watermark retroceder cinco minutos em cada visita à fila.
+  if (!requiresBootstrap
+    && discovered.invoiceReads === 0
+    && discovered.intakeReads === 0
+    && discovered.candidateWrites === 0) {
+    return {
+      bootstrapPerformed: false, invoiceReads: 0, intakeReads: 0,
+      candidateWrites: 0, discoveryComplete: true,
+    };
+  }
 
   const latestObserved =
     discovered.maxRegisteredAt
@@ -577,22 +547,6 @@ export async function deactivateWarehouseIntakeQueueCandidates(
   const uniqueIds = Array.from(new Set(stateIds.filter(Boolean)));
   if (uniqueIds.length === 0) return;
 
-  const path = warehouseDomainPath(scope.workspaceId, 'intakeQueueIndex');
-  try {
-    for (let index = 0; index < uniqueIds.length; index += 400) {
-      const batch = writeBatch(db);
-      for (const stateId of uniqueIds.slice(index, index + 400)) {
-        batch.update(doc(db, path, stateId), {
-          active: false,
-          deactivatedAt: serverTimestamp(),
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-      }
-      await batch.commit();
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
+  for(let i=0;i<uniqueIds.length;i+=100)
+    await warehouseServerCommand(scope.workspaceId,'QUEUE_INDEX_DEACTIVATE',uniqueIds.slice(i,i+100));
 }

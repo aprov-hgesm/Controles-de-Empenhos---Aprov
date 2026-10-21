@@ -26,6 +26,7 @@ import { listWarehouseLocationBalances } from './locationRepository';
 import { listWarehouseLots } from './lotRepository';
 import { listWarehouseMaterials } from './materialRepository';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import { warehouseServerCommand } from './serverCommandClient';
 import { listWarehouseSiscofisSnapshots } from './siscofisService';
 import {
   WAREHOUSE_LOGISTICS_SETTINGS_SCHEMA_VERSION,
@@ -217,37 +218,15 @@ export async function getWarehouseLogisticsSettings(
   }
 }
 
+/** A preferência de alertas é mutável somente através do servidor R2. */
 export async function saveWarehouseLogisticsSettings(
   workspaceId: string,
   lowStockThreshold: number | null
 ): Promise<WarehouseLogisticsSettings> {
-  const { currentUser, scope, workspaceId: normalized } = currentScopeForWorkspace(workspaceId);
-  if (!scope.ug) throw new Error('WAREHOUSE_LOGISTICS_UG_REQUIRED');
-
-  const canonical = validateWarehouseLogisticsSettings({
-    schemaVersion: WAREHOUSE_LOGISTICS_SETTINGS_SCHEMA_VERSION,
-    workspaceId: normalized,
-    ug: scope.ug,
-    lowStockThreshold,
-    updatedBy: currentUser.uid,
-    updatedAt: null,
-  }, normalized);
-
-  const path = warehouseDocumentPath(normalized, 'settings', WAREHOUSE_LOGISTICS_SETTINGS_ID);
-  try {
-    await setDoc(doc(db, path), {
-      schemaVersion: canonical.schemaVersion,
-      workspaceId: canonical.workspaceId,
-      ug: canonical.ug,
-      lowStockThreshold: canonical.lowStockThreshold,
-      updatedBy: canonical.updatedBy,
-      updatedAt: serverTimestamp(),
-    });
-    return { ...canonical, updatedAt: new Date().toISOString() };
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
+  const { workspaceId: normalized }=currentScopeForWorkspace(workspaceId);
+  return warehouseServerCommand<WarehouseLogisticsSettings>(
+    normalized,'LOGISTICS_SETTINGS_SAVE',lowStockThreshold
+  );
 }
 
 export async function loadWarehouseDeliveriesContext(
@@ -411,82 +390,17 @@ export async function reconcileWarehouseLogisticsAlerts(
   candidates: readonly WarehouseLogisticsAlertCandidate[],
   allowResolution = true
 ): Promise<{ createdOrUpdated: number; resolved: number; skippedResolution: boolean }> {
-  const { scope, workspaceId: normalized } = currentScopeForWorkspace(workspaceId);
-  if (!scope.ug) throw new Error('WAREHOUSE_LOGISTICS_UG_REQUIRED');
-
-  const existing = await listWarehouseLogisticsAlerts(normalized);
-  const existingById = new Map(existing.map((alert) => [alert.id, alert]));
-  const candidateIds = new Set<string>();
-  let createdOrUpdated = 0;
-  let resolved = 0;
-
-  for (const candidate of candidates) {
-    const id = createWarehouseLogisticsAlertId(candidate);
-    candidateIds.add(id);
-    const prior = existingById.get(id);
-    const fingerprint = candidateFingerprint(candidate);
-
-    if (prior?.active && prior.fingerprint === fingerprint) continue;
-
-    const path = warehouseDocumentPath(normalized, 'alerts', id);
-    const ref = doc(db, path);
-    if (prior) {
-      await updateDoc(ref, {
-        severity: candidate.severity,
-        status: 'OPEN',
-        title: candidate.title,
-        subtitle: candidate.subtitle,
-        description: candidate.description,
-        fingerprint,
-        active: true,
-        updatedAt: serverTimestamp(),
-        resolvedAt: null,
-      });
-    } else {
-      await setDoc(ref, {
-        schemaVersion: WAREHOUSE_LOGISTICS_ALERT_SCHEMA_VERSION,
-        id,
-        workspaceId: normalized,
-        ug: scope.ug,
-        kind: candidate.kind,
-        entityId: candidate.entityId,
-        empenhoId: candidate.empenhoId,
-        severity: candidate.severity,
-        status: 'OPEN',
-        title: candidate.title,
-        subtitle: candidate.subtitle,
-        description: candidate.description,
-        fingerprint,
-        active: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        resolvedAt: null,
-      });
-    }
-    recordWarehouseDocumentWrites(normalized, 1);
-    createdOrUpdated += 1;
-  }
-
-  if (allowResolution && existing.length < WAREHOUSE_LOGISTICS_ALERT_LIMIT) {
-    for (const prior of existing) {
-      if (!prior.active || candidateIds.has(prior.id)) continue;
-      const path = warehouseDocumentPath(normalized, 'alerts', prior.id);
-      await updateDoc(doc(db, path), {
-        status: 'RESOLVED',
-        active: false,
-        updatedAt: serverTimestamp(),
-        resolvedAt: serverTimestamp(),
-      });
-      recordWarehouseDocumentWrites(normalized, 1);
-      resolved += 1;
-    }
-  }
-
-  return {
-    createdOrUpdated,
-    resolved,
-    skippedResolution: !allowResolution || existing.length >= WAREHOUSE_LOGISTICS_ALERT_LIMIT,
-  };
+  const { workspaceId: normalized }=currentScopeForWorkspace(workspaceId);
+  let changed=0;
+  for(let i=0;i<candidates.length;i+=35)
+    changed+=await warehouseServerCommand<number>(normalized,'LOGISTICS_ALERT_UPSERT',
+      candidates.slice(i,i+35));
+  const result=await warehouseServerCommand<{resolved:number;skippedResolution:boolean}>(
+    normalized,'LOGISTICS_ALERT_RESOLVE',{
+      candidateIds:Array.from(new Set(candidates.map(createWarehouseLogisticsAlertId))),
+      allowResolution,
+    });
+  return {createdOrUpdated:changed,...result};
 }
 
 export async function refreshWarehouseLogisticsAlerts(

@@ -36,19 +36,28 @@ execFileSync(
 const require = createRequire(import.meta.url);
 const movement = require(resolve(outDir, 'warehouse/movement.js'));
 const repositorySource = readFileSync(
-  resolve(root, 'lib/warehouse/withdrawalRepository.ts'),
-  'utf8'
+  resolve(root, 'lib/warehouse/withdrawalRepository.ts'), 'utf8'
 );
-const manualEntrySource = readFileSync(
-  resolve(root, 'lib/warehouse/manualEntryRepository.ts'),
-  'utf8'
+const returnServer = readFileSync(
+  resolve(root, 'lib/server/warehouseReturnWrite.ts'), 'utf8'
+);
+const manualEntryServer = readFileSync(
+  resolve(root, 'lib/server/warehouseManualEntry.ts'), 'utf8'
 );
 
 const WORKSPACE = 'hgesm-aprov';
 const UG = '160416';
 const MATERIAL = 'mat_' + '1'.repeat(32);
 const MOVEMENT = 'mov_' + 'a'.repeat(64);
+const ORIGINAL_MOVEMENT = 'mov_' + 'b'.repeat(64);
 const CONSUMPTION = 'cons_' + 'c'.repeat(64);
+const POSITION = {
+  kind: 'LOCATION',
+  depotId: 'dep_' + '6'.repeat(32),
+  locationId: 'loc_' + '6'.repeat(32),
+  subpositionId: null,
+};
+const LOCATION_BALANCE = 'locbal_' + 'd'.repeat(64);
 
 function returnEntry(overrides = {}) {
   return {
@@ -57,107 +66,92 @@ function returnEntry(overrides = {}) {
     workspaceId: WORKSPACE,
     ug: UG,
     materialId: MATERIAL,
-    type: 'MANUAL_ENTRY',
+    type: 'OUTBOUND_RETURN',
     quantityDelta: 2,
     idempotencyKeyHash: 'a'.repeat(64),
     reversesMovementId: null,
-    note: 'Devolução/cancelamento de saída · ' + CONSUMPTION,
+    note: 'Devolução de saída',
     source: {
-      kind: 'MANUAL_ENTRY',
+      kind: 'OUTBOUND_RETURN',
       actorUid: 'founder-uid',
-      provenance: 'Devolução de saída',
-      reference: CONSUMPTION,
+      consumptionId: CONSUMPTION,
+      originalMovementId: ORIGINAL_MOVEMENT,
+      quantity: 2,
+      position: POSITION,
+      locationBalanceId: LOCATION_BALANCE,
+      lotId: null,
+      reason: 'Devolução de saída',
     },
     ...overrides,
   };
 }
 
-test('devolução usa MANUAL_ENTRY positivo com procedência auditável', () => {
+test('devolução usa OUTBOUND_RETURN positivo e vincula saída original', () => {
   const result = movement.validateWarehouseMovement(returnEntry(), {
     expectedWorkspaceId: WORKSPACE,
     expectedUg: UG,
     expectedMaterialId: MATERIAL,
   });
   assert.equal(result.ok, true);
-  assert.equal(result.data.type, 'MANUAL_ENTRY');
-  assert.equal(result.data.source.kind, 'MANUAL_ENTRY');
-  assert.equal(result.data.source.provenance, 'Devolução de saída');
-  assert.equal(result.data.source.reference, CONSUMPTION);
+  assert.equal(result.data.type, 'OUTBOUND_RETURN');
+  assert.equal(result.data.source.kind, 'OUTBOUND_RETURN');
+  assert.equal(result.data.source.consumptionId, CONSUMPTION);
+  assert.equal(result.data.source.originalMovementId, ORIGINAL_MOVEMENT);
 });
 
-test('MANUAL_ENTRY de devolução rejeita delta negativo', () => {
-  const result = movement.validateWarehouseMovement(
-    returnEntry({ quantityDelta: -2 })
-  );
-  assert.equal(result.ok, false);
+test('OUTBOUND_RETURN rejeita delta negativo ou quantidade da origem divergente', () => {
+  assert.equal(movement.validateWarehouseMovement(returnEntry({ quantityDelta: -2 })).ok, false);
+  const wrong = returnEntry({
+    source: { ...returnEntry().source, quantity: 1 },
+  });
+  const parsed = movement.validateWarehouseMovement(wrong);
+  assert.equal(parsed.ok, false);
+  assert.match(parsed.issues.map((item) => item.code).join(','), /return_quantity_mismatch/);
 });
 
-test('repository reutiliza o motor oficial de Entrada Avulsa', () => {
-  assert.match(repositorySource, /registerWarehouseManualEntry\(/);
-  assert.match(repositorySource, /provenance: 'Devolução de saída'/);
-  assert.match(repositorySource, /reference: consumptionId/);
+test('repository delega devolução ao motor canônico do servidor, sem gravação SDK', () => {
+  assert.match(repositorySource, /warehouseServerCommand<ReturnWarehouseStockOutboundResult>/);
+  assert.match(repositorySource, /'STOCK_RETURN'/);
+  assert.match(returnServer, /warehouseAdminTransaction<ReturnWarehouseStockOutboundResult>/);
+  assert.match(returnServer, /type:'OUTBOUND_RETURN'/);
+  assert.doesNotMatch(repositorySource, /\brunTransaction\s*\(/);
+  assert.doesNotMatch(repositorySource, /\bwriteBatch\s*\(/);
 });
 
-test('repository limita a devolução ao saldo ainda retirado', () => {
-  assert.match(repositorySource, /consumption\.quantity - baseReturned/);
-  assert.match(repositorySource, /quantity > remaining \+ EPSILON/);
-  assert.match(
-    repositorySource,
-    /current\.returnedQuantity \+ quantity/
-  );
-  assert.match(
-    repositorySource,
-    /nextReturned > current\.originalQuantity \+ EPSILON/
-  );
+test('motor valida saldo ainda retirado, histórico e replay sem duplicação', () => {
+  assert.match(returnServer, /previouslyReturned=Math\.max\(previousReturn,summarized\)/);
+  assert.match(returnServer, /afterReturn>consumptionTotal\+0\.000001/);
+  assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING/);
+  assert.match(returnServer, /if\(exists\)/);
+  assert.match(returnServer, /summary\?\.lastReturnMovementId!==movementId/);
+  assert.match(returnServer, /WAREHOUSE_IDEMPOTENCY_CONFLICT/);
 });
 
-test('status de devolução usa marcador separado e não atualiza consumptions', () => {
-  assert.match(repositorySource, /'outboundReturns'/);
-  assert.match(repositorySource, /warehouse_outbound_return_v1/);
-  assert.equal(
-    /transaction\.update\(consumptionRef,[\s\S]*returnedQuantity/.test(repositorySource),
-    false
-  );
+test('motor atualiza consumption e índice de devolução na mesma transação', () => {
+  assert.match(returnServer, /'warehouse_outbound_return_v1'/);
+  assert.match(returnServer, /returnedQuantity:afterReturn/);
+  assert.match(returnServer, /warehouseAdminTransaction/);
+  assert.match(returnServer, /path:consumptionPath,data:nextConsumption/);
+  assert.match(returnServer, /path:summaryPath,data:nextSummary/);
+  assert.match(returnServer, /path:newMovementPath,data:/);
 });
 
-test('devolução exige posição física e Entrada Avulsa não usa UNASSIGNED operacional', () => {
-  assert.match(
-    manualEntrySource,
-    /!position \|\| position\.kind === 'UNASSIGNED'/
-  );
-  assert.doesNotMatch(manualEntrySource, /allowUnassignedPosition/);
-  assert.doesNotMatch(manualEntrySource, /transferWarehouseStock\s*\(/);
-  assert.match(manualEntrySource, /applyWarehouseManualLocatedEntry/);
-  assert.match(
-    repositorySource,
-    /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/
-  );
-  assert.doesNotMatch(repositorySource, /allowUnassignedPosition/);
-  assert.match(repositorySource, /returnedEntry\.locationBalance/);
+test('devolução exige origem física e Entrada Avulsa rejeita UNASSIGNED', () => {
+  assert.match(returnServer, /source\.position\.kind==='UNASSIGNED'/);
+  assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_INVALID/);
+  assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/);
+  assert.match(manualEntryServer, /position\.kind === 'UNASSIGNED'/);
+  assert.match(manualEntryServer, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+  assert.match(returnServer, /warehouseStockPositionsEqual/);
 });
 
-test('reserva pendente sem movimento pode ser assumida por nova tentativa', () => {
-  assert.match(
-    repositorySource,
-    /existing\.pendingOperationId !== operationId/
-  );
-  assert.match(
-    repositorySource,
-    /if \(pendingMovementSnapshot\.exists\(\)\)/
-  );
-  assert.match(
-    repositorySource,
-    /Reserva antiga sem movimento correspondente/
-  );
+test('reserva pendente legada divergente é rejeitada; nova tentativa não a assume silenciosamente', () => {
+  assert.match(returnServer, /summary\?\.pendingOperationId && summary\.pendingOperationId!==operationId/);
+  assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_LEGACY_PENDING_RECONCILIATION/);
+  assert.match(returnServer, /WAREHOUSE_IDEMPOTENCY_CONFLICT/);
 });
 
-test('devolução não depende da API server-only removida', () => {
-  assert.equal(
-    repositorySource.includes('/api/adm-deposito/outbound-return'),
-    false
-  );
-  assert.equal(
-    repositorySource.includes('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON'),
-    false
-  );
+test('devolução não depende da API server-only antiga ou segredo Firebase no cliente', () => {
+  assert.equal(repositorySource.includes('/api/adm-deposito/outbound-return'), false);
+  assert.equal(repositorySource.includes('FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON'), false);
 });

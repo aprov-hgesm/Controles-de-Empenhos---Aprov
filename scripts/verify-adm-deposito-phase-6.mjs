@@ -17,6 +17,7 @@ function requireText(content, marker, message) {
 const location = read('lib/warehouse/location.ts');
 const repository = read('lib/warehouse/locationRepository.ts');
 const ledger = read('lib/warehouse/ledgerRepository.ts');
+const serverLedger = read('lib/server/warehouseLedgerAndArchive.ts');
 const movement = read('lib/warehouse/movement.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const depotsUi = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
@@ -48,12 +49,18 @@ for (const marker of [
   'updateWarehouseLocation',
   'listWarehouseLocationBalances',
   'transferWarehouseStock',
-  "type: 'TRANSFER'",
+  'warehouseServerCommand<TransferWarehouseStockResult>',
+]) requireText(repository, marker, 'Cliente sem comando de transferência do servidor: ' + marker);
+
+const serverTransfer=read('lib/server/warehouseTransfer.ts');
+for (const marker of [
+  "type:'TRANSFER'",
   'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK',
-  'runTransaction',
-  'fromBalanceRef',
-  'toBalanceRef',
-]) requireText(repository, marker, 'Persistência/transferência incompleta: ' + marker);
+  'warehouseAdminTransaction',
+  'planWarehouseTransferLots',
+  'fromBalanceId',
+  'toBalanceId',
+]) requireText(serverTransfer, marker, 'Motor transacional servidor incompleto: ' + marker);
 
 for (const marker of [
   "locationBalances: 'locationBalances'",
@@ -65,11 +72,21 @@ for (const marker of [
   "type === 'TRANSFER'",
 ]) requireText(movement, marker, 'Ledger não reconhece origem auditável da transferência: ' + marker);
 
+requireText(ledger, "'LEDGER_MOVEMENT'", 'Ledger não delega gravação ao motor autenticado.');
 for (const marker of [
-  'unassignedBalancePath',
+  'warehouseLedgerMovementServer',
+  'warehouseAdminTransaction',
+  "kind:'UNASSIGNED'",
   'applyWarehouseLocationDelta',
-  "WAREHOUSE_TRANSFER_REQUIRES_LOCATION_FLOW",
-]) requireText(ledger, marker, 'Integração do ledger com compatibilidade legada UNASSIGNED ausente: ' + marker);
+]) requireText(serverLedger, marker, 'Ledger server-only perdeu compatibilidade de Marco Zero: ' + marker);
+if (!serverLedger.includes("v.type!=='INITIAL_BALANCE'")
+  || !serverLedger.includes('WAREHOUSE_SISCOFIS_LEDGER_ONLY')) {
+  findings.push('Ledger servidor deve aceitar apenas INITIAL_BALANCE interno do Marco Zero SISCOFIS.');
+}
+const warehouseOperations = read('app/api/central-depositos/operations/route.ts');
+if (!warehouseOperations.includes("return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403)")) {
+  findings.push('Rota pública deve rejeitar LEDGER_MOVEMENT genérico antes de gravações.');
+}
 
 for (const marker of [
   'warehouse-locations-r1-operational',

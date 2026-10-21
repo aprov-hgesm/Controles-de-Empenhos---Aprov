@@ -106,19 +106,16 @@ test('inventário total e parcial usam a mesma abstração de escopo', () => {
 });
 
 test('inventário físico não cria nem ajusta projeção UNASSIGNED', () => {
-  const repositorySource = readFileSync(
-    resolve(root, 'lib/warehouse/inventoryRepository.ts'),
-    'utf8'
-  );
-
-  assert.match(
-    repositorySource,
-    /warehouseInventoryScopeIncludesPosition\(inventoryScope, balance\.position\)/
-  );
-  assert.match(
-    repositorySource,
-    /item\.position\.kind === 'UNASSIGNED'[\s\S]{0,180}WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED/
-  );
+  const repositorySource = readFileSync(resolve(root, 'lib/warehouse/inventoryRepository.ts'), 'utf8');
+  const serverStart = readFileSync(resolve(root, 'lib/server/warehouseInventoryStart.ts'), 'utf8');
+  const serverAdjustment = readFileSync(resolve(root, 'lib/server/warehouseInventoryAdjustment.ts'), 'utf8');
+  assert.match(repositorySource, /warehouseServerCommand/);
+  assert.match(serverStart, /row\.position\.kind!=='UNASSIGNED'/);
+  assert.match(serverStart, /warehouseInventoryScopeIncludesPosition\(requested,row\.position\)/);
+  assert.match(serverStart, /warehouseAdminTransaction/);
+  assert.match(serverAdjustment, /oldItem\.position\.kind==='UNASSIGNED'/);
+  assert.match(serverAdjustment, /WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED/);
+  assert.match(serverAdjustment, /warehouseAdminTransaction/);
 });
 
 

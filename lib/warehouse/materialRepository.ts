@@ -13,6 +13,7 @@ import {
   warehouseDocumentPath,
 } from './namespace';
 import { warehouseCanonicalMaterialReadInput } from './readCompatibility';
+import { warehouseServerCommand } from './serverCommandClient';
 
 function validateForWorkspace(
   workspaceId: string,
@@ -82,18 +83,16 @@ export async function getWarehouseMaterial(
   }
 }
 
+/**
+ * Não há escrita de materiais via SDK cliente.
+ * O servidor revalida tenant, UG, atributos e unidade após lançamentos.
+ */
 export async function saveWarehouseMaterial(
   workspaceId: string,
   material: WarehouseMaterial
 ): Promise<WarehouseMaterial> {
-  const canonical = validateForWorkspace(workspaceId, material);
-  const path = warehouseDocumentPath(workspaceId, 'materials', canonical.id);
-
-  try {
-    await setDoc(doc(db, path), canonical);
-    return canonical;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    return canonical;
-  }
+  const canonical=validateForWorkspace(workspaceId,material);
+  return warehouseServerCommand<WarehouseMaterial>(
+    workspaceId,'MATERIAL_SAVE',canonical
+  );
 }

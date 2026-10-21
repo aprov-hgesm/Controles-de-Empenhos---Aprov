@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   WAREHOUSE_SHORT_MEMORY_CACHE_TTL_MS,
   createWorkspaceMemoryReadCache,
@@ -506,92 +507,22 @@ export async function createWarehouseDepot(
   workspaceId: string,
   input: CreateWarehouseDepotInput
 ): Promise<WarehouseDepot> {
-  const scope = currentScope(workspaceId);
-  await assertDepotCodeAvailable(scope.workspaceId, input.code);
-  const id = createWarehouseDepotId();
-  const result = validateWarehouseDepot({
-    schemaVersion: WAREHOUSE_DEPOT_SCHEMA_VERSION,
-    id,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    code: input.code,
-    name: input.name,
-    description: input.description ?? null,
-    visualType: input.visualType ?? 'STANDARD',
-    sizeProfile: input.sizeProfile ?? 'MEDIUM',
-    status: 'active',
-    createdBy: scope.uid,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!result.ok) {
-    throw new Error('WAREHOUSE_INVALID_DEPOT: ' + result.issues.map((item) => item.message).join('; '));
-  }
-
-  const path = warehouseDocumentPath(scope.workspaceId, 'depots', result.data.id);
-  try {
-    await setDoc(doc(db, path), {
-      ...result.data,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    invalidateWarehouseDepotReadCache(scope.workspaceId);
-    return result.data;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
-    throw error;
-  }
+  const result=await warehouseServerCommand<WarehouseDepot>(
+    workspaceId,'STRUCTURE',{kind:'DEPOT_CREATE',input}
+  );
+  invalidateWarehouseDepotReadCache(workspaceId);
+  return result;
 }
-
 export async function updateWarehouseDepot(
   workspaceId: string,
   depotId: string,
   input: UpdateWarehouseDepotInput
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  if (!isValidWarehouseDepotId(depotId)) throw new Error('WAREHOUSE_INVALID_DEPOT_ID');
-  const path = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
-  const snapshot = await getDoc(doc(db, path));
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
-  const current = parseDepot(scope.workspaceId, depotId, snapshot.data() as Record<string, unknown>);
-  const nextCode = input.code ?? current.code;
-  // Stable identifiers for existing labels and layout references.
-  if (normalizeWarehouseLogicalCode(nextCode) !== current.code) {
-    throw new Error('WAREHOUSE_DEPOT_CODE_IMMUTABLE');
-  }
-  const nextStatus = input.status ?? current.status;
-
-  if (
-    nextStatus === 'active'
-    && (nextCode !== current.code || current.status !== 'active')
-  ) {
-    await assertDepotCodeAvailable(scope.workspaceId, nextCode, depotId);
-  }
-
-  const candidate = validateWarehouseDepot({
-    ...current,
-    code: nextCode,
-    name: input.name ?? current.name,
-    description: input.description === undefined ? current.description : input.description,
-    visualType: input.visualType ?? current.visualType,
-    sizeProfile: input.sizeProfile ?? current.sizeProfile,
-    status: nextStatus,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_DEPOT_UPDATE');
-
-  await updateDoc(doc(db, path), {
-    code: candidate.data.code,
-    name: candidate.data.name,
-    description: candidate.data.description,
-    visualType: candidate.data.visualType,
-    sizeProfile: candidate.data.sizeProfile,
-    status: candidate.data.status,
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseDepotReadCache(scope.workspaceId);
+  await warehouseServerCommand<{ok:true}>(
+    workspaceId,'STRUCTURE',{kind:'DEPOT_UPDATE',depotId,input}
+  );
+  invalidateWarehouseDepotReadCache(workspaceId);
 }
-
 export async function listWarehouseLocations(
   workspaceId: string,
   maxResults = 500
@@ -631,100 +562,22 @@ export async function createWarehouseLocation(
   workspaceId: string,
   input: CreateWarehouseLocationInput
 ): Promise<WarehouseLocation> {
-  const scope = currentScope(workspaceId);
-  const depotId = input.depotId.trim().toLowerCase();
-  if (!isValidWarehouseDepotId(depotId)) throw new Error('WAREHOUSE_INVALID_DEPOT_ID');
-  const depotPath = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
-  const depotSnapshot = await getDoc(doc(db, depotPath));
-  if (!depotSnapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
-  const depot = parseDepot(scope.workspaceId, depotId, depotSnapshot.data() as Record<string, unknown>);
-  if (depot.status !== 'active') throw new Error('WAREHOUSE_DEPOT_INACTIVE');
-
-  let parentLocationId: string | null = null;
-  if (input.kind === 'SUBPOSITION') {
-    parentLocationId = (input.parentLocationId || '').trim().toLowerCase();
-    if (!isValidWarehouseLocationId(parentLocationId)) throw new Error('WAREHOUSE_INVALID_PARENT_LOCATION_ID');
-    const parentPath = warehouseDocumentPath(scope.workspaceId, 'locations', parentLocationId);
-    const parentSnapshot = await getDoc(doc(db, parentPath));
-    if (!parentSnapshot.exists()) throw new Error('WAREHOUSE_PARENT_LOCATION_NOT_FOUND');
-    const parent = parseLocation(scope.workspaceId, parentLocationId, parentSnapshot.data() as Record<string, unknown>);
-    if (parent.kind !== 'LOCAL' || parent.depotId !== depotId || parent.status !== 'active') {
-      throw new Error('WAREHOUSE_PARENT_LOCATION_INVALID');
-    }
-  }
-
-  await assertLocationCodeAvailable(scope.workspaceId, {
-    kind: input.kind,
-    depotId,
-    parentLocationId,
-    code: input.code,
-  });
-
-  const id = createWarehouseLocationId(input.kind);
-  const result = validateWarehouseLocation({
-    schemaVersion: WAREHOUSE_LOCATION_SCHEMA_VERSION,
-    id,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    depotId,
-    kind: input.kind,
-    parentLocationId,
-    code: input.code,
-    name: input.name,
-    description: input.description ?? null,
-    status: 'active',
-    createdBy: scope.uid,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOCATION');
-
-  const path = warehouseDocumentPath(scope.workspaceId, 'locations', result.data.id);
-  await setDoc(doc(db, path), {
-    ...result.data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseLocationReadCache(scope.workspaceId);
-  return result.data;
+  const result=await warehouseServerCommand<WarehouseLocation>(
+    workspaceId,'STRUCTURE',{kind:'LOCATION_CREATE',input}
+  );
+  invalidateWarehouseLocationReadCache(workspaceId);
+  return result;
 }
-
 export async function updateWarehouseLocation(
   workspaceId: string,
   locationId: string,
   input: UpdateWarehouseLocationInput
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  if (!isValidWarehouseLocationId(locationId) && !isValidWarehouseSubpositionId(locationId)) {
-    throw new Error('WAREHOUSE_INVALID_LOCATION_ID');
-  }
-  const path = warehouseDocumentPath(scope.workspaceId, 'locations', locationId);
-  const snapshot = await getDoc(doc(db, path));
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_LOCATION_NOT_FOUND');
-  const current = parseLocation(scope.workspaceId, locationId, snapshot.data() as Record<string, unknown>);
-  if (input.code !== undefined && normalizeWarehouseLogicalCode(input.code) !== current.code) {
-    throw new Error('WAREHOUSE_LOCATION_CODE_IMMUTABLE');
-  }
-  const candidate = validateWarehouseLocation({
-    ...current,
-    code: input.code ?? current.code,
-    name: input.name ?? current.name,
-    description: input.description === undefined ? current.description : input.description,
-    status: input.status ?? current.status,
-    updatedBy: scope.uid,
-  }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
-  if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_UPDATE');
-
-  await updateDoc(doc(db, path), {
-    code: candidate.data.code,
-    name: candidate.data.name,
-    description: candidate.data.description,
-    status: candidate.data.status,
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
-  invalidateWarehouseLocationReadCache(scope.workspaceId);
+  await warehouseServerCommand<{ok:true}>(
+    workspaceId,'STRUCTURE',{kind:'LOCATION_UPDATE',locationId,input}
+  );
+  invalidateWarehouseLocationReadCache(workspaceId);
 }
-
 export async function getWarehouseDepot(
   workspaceId: string,
   depotId: string
@@ -1093,322 +946,21 @@ async function buildCanonicalWarehouseTransferLotPlan(input: {
   throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_PLAN');
 }
 
+/**
+ * Operação crítica migrada: movimentação, saldos e atribuição de lotes
+ * são calculados exclusivamente no servidor confiável.
+ */
 export async function transferWarehouseStock(
   workspaceId: string,
   input: TransferWarehouseStockInput
 ): Promise<TransferWarehouseStockResult> {
-  const scope = currentScope(workspaceId);
-  const from = validateWarehouseStockPosition(input.from);
-  const to = validateWarehouseStockPosition(input.to);
-  if (!from || !to) throw new Error('WAREHOUSE_TRANSFER_INVALID_POSITION');
-  if (
-    !isWarehousePhysicalStockPosition(from)
-    || !isWarehousePhysicalStockPosition(to)
-  ) {
-    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
-  }
-  if (warehouseStockPositionsEqual(from, to)) throw new Error('WAREHOUSE_TRANSFER_SAME_POSITION');
-
-  const normalizedQuantity = normalizeWarehouseLocationQuantity(input.quantity);
-  if (normalizedQuantity === null || normalizedQuantity <= 0) {
-    throw new Error('WAREHOUSE_TRANSFER_INVALID_QUANTITY');
-  }
-
-  await Promise.all([
-    assertPositionActive(scope.workspaceId, from),
-    assertPositionActive(scope.workspaceId, to),
-  ]);
-
-  const movementId = await createWarehouseMovementId(scope.workspaceId, input.idempotencyKey);
-  const idempotencyKeyHash = movementId.slice(4);
-  const fromBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, from);
-  const toBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, to);
-
-  // Physical transfers never trust caller-specific lot hints. The canonical
-  // repository derives lot allocations from the current physical source
-  // balance and canonical lot documents.
-  const lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    materialId: input.materialId,
-    from,
-    quantity: normalizedQuantity,
-    fromBalanceId,
-  });
-  const relocateLotIds: string[] = [];
-
-  if (
-    relocateLotIds.length > 24
-    || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))
-  ) {
-    throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_RELOCATION');
-  }
-
-  const allocationIds = new Set(lotAllocations.map((item) => item.lotId));
-  if (
-    lotAllocations.length > 24
-    || allocationIds.size !== lotAllocations.length
-    || relocateLotIds.some((lotId) => allocationIds.has(lotId))
-  ) {
-    throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_ALLOCATION');
-  }
-  const allocatedQuantity = lotAllocations.reduce(
-    (total, item) => total + item.quantity,
-    0
+  // Dados auxiliares de lotes do navegador são intencionalmente descartados.
+  const {lotAllocations: _ignoredAllocations, relocateLotIds: _ignoredRelocations, ...command} = input;
+  const result = await warehouseServerCommand<TransferWarehouseStockResult>(
+    workspaceId, 'TRANSFER', command
   );
-  if (allocatedQuantity > normalizedQuantity + 0.000001) {
-    throw new Error('WAREHOUSE_TRANSFER_LOT_ALLOCATION_EXCEEDS_TRANSFER');
-  }
-
-  const splitLotIds = await Promise.all(
-    lotAllocations.map((item) =>
-      createWarehouseTransferSplitLotId(movementId, item.lotId)
-    )
-  );
-
-  const materialPath = warehouseDocumentPath(scope.workspaceId, 'materials', input.materialId);
-  const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
-  const balancePath = warehouseDocumentPath(scope.workspaceId, 'balances', input.materialId);
-  const fromBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', fromBalanceId);
-  const toBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', toBalanceId);
-  const relocateLotPaths = relocateLotIds.map((lotId) =>
-    warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
-  );
-  const allocationLotPaths = lotAllocations.map((item) =>
-    warehouseDocumentPath(scope.workspaceId, 'lots', item.lotId)
-  );
-  const splitLotPaths = splitLotIds.map((lotId) =>
-    warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
-  );
-
-  try {
-    return await runTransaction(db, async (transaction) => {
-      const materialRef = doc(db, materialPath);
-      const movementRef = doc(db, movementPath);
-      const balanceRef = doc(db, balancePath);
-      const fromBalanceRef = doc(db, fromBalancePath);
-      const toBalanceRef = doc(db, toBalancePath);
-      const relocateLotRefs = relocateLotPaths.map((path) => doc(db, path));
-      const allocationLotRefs = allocationLotPaths.map((path) => doc(db, path));
-      const splitLotRefs = splitLotPaths.map((path) => doc(db, path));
-
-      const [materialSnapshot, movementSnapshot, balanceSnapshot, fromSnapshot, toSnapshot] = await Promise.all([
-        transaction.get(materialRef),
-        transaction.get(movementRef),
-        transaction.get(balanceRef),
-        transaction.get(fromBalanceRef),
-        transaction.get(toBalanceRef),
-      ]);
-      const [relocateLotSnapshots, allocationLotSnapshots, splitLotSnapshots] = await Promise.all([
-        Promise.all(relocateLotRefs.map((lotRef) => transaction.get(lotRef))),
-        Promise.all(allocationLotRefs.map((lotRef) => transaction.get(lotRef))),
-        Promise.all(splitLotRefs.map((lotRef) => transaction.get(lotRef))),
-      ]);
-
-      if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
-      if (!balanceSnapshot.exists()) throw new Error('WAREHOUSE_BALANCE_NOT_FOUND');
-
-      const material = parseMaterial(scope.workspaceId, materialSnapshot.id, materialSnapshot.data() as Record<string, unknown>);
-      if (material.status !== 'active' || material.ug !== scope.ug) throw new Error('WAREHOUSE_MATERIAL_INACTIVE');
-      const currentBalance = parseBalance(scope.workspaceId, balanceSnapshot.id, balanceSnapshot.data() as Record<string, unknown>);
-
-      const source = {
-        kind: 'LOCATION_TRANSFER' as const,
-        actorUid: scope.uid,
-        quantity: normalizedQuantity,
-        from,
-        to,
-        fromBalanceId,
-        toBalanceId,
-      };
-
-      const candidateResult = validateWarehouseMovement({
-        schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
-        id: movementId,
-        workspaceId: scope.workspaceId,
-        ug: scope.ug,
-        materialId: material.id,
-        type: 'TRANSFER',
-        quantityDelta: 0,
-        idempotencyKeyHash,
-        reversesMovementId: null,
-        note: input.note ?? null,
-        source,
-      }, {
-        expectedWorkspaceId: scope.workspaceId,
-        expectedUg: scope.ug,
-        expectedMaterialId: material.id,
-      });
-      if (!candidateResult.ok) throw new Error('WAREHOUSE_INVALID_TRANSFER_MOVEMENT');
-      const candidate = candidateResult.data;
-
-      const existingFrom = fromSnapshot.exists()
-        ? parseLocationBalance(scope.workspaceId, fromSnapshot.id, fromSnapshot.data() as Record<string, unknown>)
-        : null;
-      const existingTo = toSnapshot.exists()
-        ? parseLocationBalance(scope.workspaceId, toSnapshot.id, toSnapshot.data() as Record<string, unknown>)
-        : null;
-
-      if (movementSnapshot.exists()) {
-        const existingMovement = parseMovement(scope.workspaceId, movementSnapshot.id, movementSnapshot.data() as Record<string, unknown>);
-        if (!warehouseMovementMatchesReplay(existingMovement, candidate)) {
-          throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-        }
-        if (!existingFrom || !existingTo) throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
-        return {
-          applied: false,
-          movement: existingMovement,
-          balance: currentBalance,
-          fromBalance: existingFrom,
-          toBalance: existingTo,
-        };
-      }
-
-      const available = existingFrom?.quantity ?? 0;
-      if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
-
-      const nextFrom = applyWarehouseLocationDelta(existingFrom, {
-        id: fromBalanceId,
-        workspaceId: scope.workspaceId,
-        ug: scope.ug,
-        materialId: material.id,
-        position: from,
-        quantityDelta: -normalizedQuantity,
-        movementId,
-      });
-      const nextTo = applyWarehouseLocationDelta(existingTo, {
-        id: toBalanceId,
-        workspaceId: scope.workspaceId,
-        ug: scope.ug,
-        materialId: material.id,
-        position: to,
-        quantityDelta: normalizedQuantity,
-        movementId,
-      });
-
-      relocateLotSnapshots.forEach((lotSnapshot, index) => {
-        if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
-        const lot = parseTransferLot(
-          scope.workspaceId,
-          scope.ug,
-          material.id,
-          lotSnapshot.id,
-          lotSnapshot.data() as Record<string, unknown>
-        );
-        if (
-          lot.status !== 'active'
-          || lot.quantity <= 0
-          || !warehouseStockPositionsEqual(lot.position, from)
-        ) {
-          throw new Error('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH');
-        }
-        transaction.update(relocateLotRefs[index], {
-          position: to,
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-      });
-
-      lotAllocations.forEach((allocation, index) => {
-        const lotSnapshot = allocationLotSnapshots[index];
-        if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
-
-        const lot = parseTransferLot(
-          scope.workspaceId,
-          scope.ug,
-          material.id,
-          lotSnapshot.id,
-          lotSnapshot.data() as Record<string, unknown>
-        );
-        if (
-          lot.status !== 'active'
-          || lot.quantity <= 0
-          || !warehouseStockPositionsEqual(lot.position, from)
-        ) {
-          throw new Error('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH');
-        }
-        if (allocation.quantity > lot.quantity + 0.000001) {
-          throw new Error('WAREHOUSE_TRANSFER_LOT_INSUFFICIENT_ATTRIBUTION');
-        }
-
-        const movesWholeLot = Math.abs(allocation.quantity - lot.quantity) <= 0.000001;
-        if (movesWholeLot) {
-          if (splitLotSnapshots[index].exists()) {
-            throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT');
-          }
-          transaction.update(allocationLotRefs[index], {
-            position: to,
-            updatedBy: scope.uid,
-            updatedAt: serverTimestamp(),
-          });
-          return;
-        }
-
-        if (splitLotSnapshots[index].exists()) {
-          throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT');
-        }
-
-        const nextSourceQuantity = normalizeWarehouseLocationQuantity(
-          lot.quantity - allocation.quantity
-        );
-        if (nextSourceQuantity === null || nextSourceQuantity <= 0) {
-          throw new Error('WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID');
-        }
-
-        const splitCandidate = validateWarehouseLot(
-          {
-            schemaVersion: WAREHOUSE_LOT_SCHEMA_VERSION,
-            id: splitLotIds[index],
-            workspaceId: scope.workspaceId,
-            ug: scope.ug,
-            materialId: material.id,
-            code: lot.code,
-            expiresOn: lot.expiresOn,
-            quantity: allocation.quantity,
-            position: to,
-            origin: lot.origin,
-            status: 'active',
-            createdBy: scope.uid,
-            updatedBy: scope.uid,
-          },
-          {
-            expectedWorkspaceId: scope.workspaceId,
-            expectedUg: scope.ug,
-            expectedMaterialId: material.id,
-          }
-        );
-        if (!splitCandidate.ok) {
-          throw new Error('WAREHOUSE_TRANSFER_SPLIT_LOT_INVALID');
-        }
-
-        transaction.update(allocationLotRefs[index], {
-          quantity: nextSourceQuantity,
-          updatedBy: scope.uid,
-          updatedAt: serverTimestamp(),
-        });
-        transaction.set(splitLotRefs[index], {
-          ...splitCandidate.data,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      });
-
-      transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
-      transaction.set(fromBalanceRef, { ...nextFrom, updatedAt: serverTimestamp() });
-      transaction.set(toBalanceRef, { ...nextTo, updatedAt: serverTimestamp() });
-
-      return {
-        applied: true,
-        movement: candidate,
-        balance: currentBalance,
-        fromBalance: nextFrom,
-        toBalance: nextTo,
-      };
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, movementPath);
-    throw error;
-  }
+  invalidateWarehouseLocationReadCache(workspaceId);
+  return result;
 }
 
 export function buildWarehousePositionLabel(
@@ -1449,72 +1001,7 @@ export async function archiveWarehouseStructure(
   workspaceId: string,
   target: { kind: 'DEPOT' | WarehouseLocationKind; id: string }
 ): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const isDepot = target.kind === 'DEPOT';
-  if (isDepot && !isValidWarehouseDepotId(target.id)) throw new Error('WAREHOUSE_ARCHIVE_INVALID_DEPOT');
-  if (!isDepot && !isValidWarehouseLocationId(target.id) && !isValidWarehouseSubpositionId(target.id)) {
-    throw new Error('WAREHOUSE_ARCHIVE_INVALID_LOCATION');
-  }
-  const selected = isDepot ? null : await getWarehouseLocation(workspaceId, target.id);
-  if (!isDepot && (!selected || selected.location.kind !== target.kind)) {
-    throw new Error('WAREHOUSE_ARCHIVE_LOCATION_NOT_FOUND');
-  }
-  const depotId = isDepot ? target.id : selected!.location.depotId;
-  const [depotDoc, positions, balances, lots] = await Promise.all([
-    getDoc(doc(db, warehouseDocumentPath(workspaceId, 'depots', depotId))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'locations')), where('depotId', '==', depotId), limit(501))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'locationBalances')), where('position.depotId', '==', depotId), limit(501))),
-    getDocs(query(collection(db, warehouseDomainPath(workspaceId, 'lots')), where('position.depotId', '==', depotId), limit(501))),
-  ]);
-  if (!depotDoc.exists()) throw new Error('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND');
-  if (positions.size >= 501 || balances.size >= 501 || lots.size >= 501) {
-    throw new Error('WAREHOUSE_ARCHIVE_SCAN_SATURATED');
-  }
-  const entries = positions.docs.map((snap) => parseLocation(workspaceId, snap.id, snap.data() as Record<string, unknown>));
-  if (!isDepot && !entries.some((row) => row.id === target.id && row.status === 'active')) {
-    throw new Error('WAREHOUSE_ARCHIVE_LOCATION_NOT_ACTIVE');
-  }
-  const refersToTarget = (raw: unknown): boolean => {
-    if (!raw || typeof raw !== 'object') return false;
-    const position = raw as WarehouseStockPosition;
-    if (position.kind === 'UNASSIGNED' || position.depotId !== depotId) return false;
-    if (isDepot) return true;
-    return target.kind === 'LOCAL'
-      ? position.locationId === target.id
-      : position.kind === 'SUBPOSITION' && position.subpositionId === target.id;
-  };
-  for (const balance of balances.docs) {
-    const data = balance.data();
-    if (typeof data.quantity !== 'number' || !Number.isFinite(data.quantity)) {
-      throw new Error('WAREHOUSE_ARCHIVE_INVALID_BALANCE');
-    }
-    if (data.quantity > 0 && refersToTarget(data.position)) {
-      throw new Error('WAREHOUSE_ARCHIVE_OCCUPIED: transfira o material antes de inativar.');
-    }
-  }
-  for (const lot of lots.docs) {
-    const data = lot.data();
-    if (data.status === 'active' && (typeof data.quantity !== 'number' || !Number.isFinite(data.quantity))) {
-      throw new Error('WAREHOUSE_ARCHIVE_INVALID_LOT');
-    }
-    if (data.status === 'active' && data.quantity > 0 && refersToTarget(data.position)) {
-      throw new Error('WAREHOUSE_ARCHIVE_ACTIVE_LOT: transfira os lotes antes de inativar.');
-    }
-  }
-  const toArchive = entries.filter((row) =>
-    row.status === 'active' && (isDepot || row.id === target.id
-      || (target.kind === 'LOCAL' && row.kind === 'SUBPOSITION' && row.parentLocationId === target.id)));
-  if (toArchive.length + (isDepot ? 1 : 0) >= 500) throw new Error('WAREHOUSE_ARCHIVE_BATCH_TOO_LARGE');
-  const batch = writeBatch(db);
-  for (const row of toArchive) {
-    batch.update(doc(db, warehouseDocumentPath(workspaceId, 'locations', row.id)), {
-      status: 'inactive', updatedBy: scope.uid, updatedAt: serverTimestamp(),
-    });
-  }
-  if (isDepot) batch.update(doc(db, warehouseDocumentPath(workspaceId, 'depots', depotId)), {
-    status: 'inactive', updatedBy: scope.uid, updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
+  await warehouseServerCommand<{ok:true}>(workspaceId,'STRUCTURE_ARCHIVE',target);
   invalidateWarehouseDepotReadCache(workspaceId);
   invalidateWarehouseLocationReadCache(workspaceId);
 }

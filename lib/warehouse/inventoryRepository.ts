@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -310,159 +311,14 @@ function assertProjectionConsistency(
   }
 }
 
+/** Inventário: snapshot físico canônico e itens criados atomicamente no servidor. */
 export async function startWarehouseInventory(
-  workspaceId: string,
-  input: StartWarehouseInventoryInput
-): Promise<WarehouseInventorySessionRecord> {
-  const scope = currentScope(workspaceId);
-  const inventoryScope = validateWarehouseInventoryScope(input.scope);
-  if (!inventoryScope) throw new Error('WAREHOUSE_INVENTORY_INVALID_SCOPE');
-
-  const [materials, balances, locationRecords, depots, locations] = await Promise.all([
-    listWarehouseMaterials(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-    listWarehouseBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-    listWarehouseLocationBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-    listWarehouseDepots(scope.workspaceId, 250),
-    listWarehouseLocations(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-  ]);
-
-  if (
-    materials.length >= INVENTORY_PAGE_LIMIT
-    || balances.length >= INVENTORY_PAGE_LIMIT
-    || locationRecords.length >= INVENTORY_PAGE_LIMIT
-    || locations.length >= INVENTORY_PAGE_LIMIT
-  ) {
-    throw new Error('WAREHOUSE_INVENTORY_SCOPE_TOO_LARGE');
-  }
-
-  validateScopeAgainstStructure(inventoryScope, depots, locations);
-  const locationBalances = locationRecords.map((record) => record.balance);
-
-  const materialById = new Map(materials.map((material) => [material.id, material]));
-  const balanceByMaterial = new Map(balances.map((balance) => [balance.materialId, balance]));
-  const selected = locationBalances.filter((balance) =>
-    balance.quantity > 0
-    && warehouseInventoryScopeIncludesPosition(inventoryScope, balance.position)
-    && materialById.get(balance.materialId)?.status === 'active'
+  workspaceId:string,input:StartWarehouseInventoryInput
+):Promise<WarehouseInventorySessionRecord> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<WarehouseInventorySessionRecord>(
+    scope.workspaceId,'INVENTORY_START',input
   );
-
-  if (selected.length === 0) throw new Error('WAREHOUSE_INVENTORY_SCOPE_EMPTY');
-
-  // Inventário parcial não deve ser bloqueado por lacunas históricas de materiais
-  // fora do escopo. A coerência continua obrigatória para cada material efetivamente
-  // inventariado, somando todas as suas posições oficiais.
-  const selectedMaterialIds = new Set(selected.map((balance) => balance.materialId));
-  assertProjectionConsistency(
-    balances.filter((balance) => selectedMaterialIds.has(balance.materialId)),
-    locationBalances.filter((balance) => selectedMaterialIds.has(balance.materialId))
-  );
-  if (selected.length > 1200) throw new Error('WAREHOUSE_INVENTORY_SCOPE_TOO_LARGE');
-
-  const inventoryId = createWarehouseInventoryId();
-  const sessionPath = inventorySessionPath(scope.workspaceId, inventoryId);
-  const baseSession = {
-    schemaVersion: WAREHOUSE_INVENTORY_SCHEMA_VERSION,
-    id: inventoryId,
-    workspaceId: scope.workspaceId,
-    ug: scope.ug,
-    scope: inventoryScope,
-    status: 'OPENING' as const,
-    itemCount: selected.length,
-    openedBy: scope.uid,
-    reviewedBy: null,
-    confirmationStartedBy: null,
-    confirmedBy: null,
-    cancelledBy: null,
-    reviewSummary: null,
-    staleItemId: null,
-  };
-
-  await setDoc(doc(db, sessionPath), {
-    ...baseSession,
-    referenceCapturedAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    reviewedAt: null,
-    confirmationStartedAt: null,
-    confirmedAt: null,
-    cancelledAt: null,
-  });
-
-  try {
-    const itemWrites: Array<{ id: string; data: WarehouseInventoryItem }> = [];
-    for (const positionBalance of selected) {
-      const aggregate = balanceByMaterial.get(positionBalance.materialId);
-      if (!aggregate) throw new Error('WAREHOUSE_INVENTORY_BALANCE_NOT_FOUND');
-      if (aggregate.ug !== scope.ug || positionBalance.ug !== scope.ug) {
-        throw new Error('WAREHOUSE_INVENTORY_UG_MISMATCH');
-      }
-      const itemId = await createWarehouseInventoryItemId(
-        inventoryId,
-        positionBalance.materialId,
-        positionBalance.position
-      );
-      itemWrites.push({
-        id: itemId,
-        data: {
-          schemaVersion: WAREHOUSE_INVENTORY_ITEM_SCHEMA_VERSION,
-          id: itemId,
-          inventoryId,
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          materialId: positionBalance.materialId,
-          position: positionBalance.position,
-          locationBalanceId: positionBalance.id,
-          expectedQuantity: positionBalance.quantity,
-          expectedBalanceRevision: aggregate.revision,
-          expectedBalanceLastMovementId: aggregate.lastMovementId,
-          expectedLocationRevision: positionBalance.revision,
-          expectedLocationLastMovementId: positionBalance.lastMovementId,
-          countedQuantity: null,
-          difference: null,
-          status: 'PENDING',
-          countedBy: null,
-          adjustmentMovementId: null,
-          adjustedBy: null,
-        },
-      });
-    }
-
-    for (let start = 0; start < itemWrites.length; start += INVENTORY_WRITE_CHUNK) {
-      const batch = writeBatch(db);
-      for (const entry of itemWrites.slice(start, start + INVENTORY_WRITE_CHUNK)) {
-        batch.set(doc(db, inventoryItemPath(scope.workspaceId, inventoryId, entry.id)), {
-          ...entry.data,
-          countedAt: null,
-          adjustedAt: null,
-        });
-      }
-      await batch.commit();
-    }
-
-    await updateDoc(doc(db, sessionPath), {
-      status: 'COUNTING',
-      updatedAt: serverTimestamp(),
-    });
-
-    return {
-      session: { ...baseSession, status: 'COUNTING' },
-      referenceCapturedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      reviewedAt: null,
-      confirmationStartedAt: null,
-      confirmedAt: null,
-      cancelledAt: null,
-    };
-  } catch (error) {
-    await updateDoc(doc(db, sessionPath), {
-      status: 'CANCELLED',
-      cancelledBy: scope.uid,
-      cancelledAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }).catch(() => undefined);
-    throw error;
-  }
 }
 
 export async function listWarehouseInventorySessions(
@@ -511,162 +367,33 @@ export async function listWarehouseInventoryItems(
 }
 
 export async function saveWarehouseInventoryCount(
-  workspaceId: string,
-  inventoryId: string,
-  itemId: string,
-  countedQuantity: number
-): Promise<WarehouseInventoryItem> {
-  const scope = currentScope(workspaceId);
-  const normalizedCount = normalizeWarehouseQuantity(countedQuantity);
-  if (normalizedCount === null || normalizedCount < 0) {
-    throw new Error('WAREHOUSE_INVENTORY_INVALID_COUNT');
-  }
-
-  const sessionPath = inventorySessionPath(scope.workspaceId, inventoryId);
-  const itemPath = inventoryItemPath(scope.workspaceId, inventoryId, itemId);
-
-  return runTransaction(db, async (transaction) => {
-    const sessionRef = doc(db, sessionPath);
-    const itemRef = doc(db, itemPath);
-    const [sessionSnapshot, itemSnapshot] = await Promise.all([
-      transaction.get(sessionRef),
-      transaction.get(itemRef),
-    ]);
-    if (!sessionSnapshot.exists() || !itemSnapshot.exists()) {
-      throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    }
-    const session = parseSession(
-      scope.workspaceId,
-      sessionSnapshot.id,
-      sessionSnapshot.data() as Record<string, unknown>
-    ).session;
-    const current = parseItem(
-      scope.workspaceId,
-      inventoryId,
-      itemSnapshot.id,
-      itemSnapshot.data() as Record<string, unknown>
-    ).item;
-
-    if (session.status !== 'COUNTING') throw new Error('WAREHOUSE_INVENTORY_NOT_COUNTING');
-    if (current.status === 'ADJUSTED') throw new Error('WAREHOUSE_INVENTORY_ITEM_ALREADY_ADJUSTED');
-
-    const difference = calculateWarehouseInventoryDifference(
-      current.expectedQuantity,
-      normalizedCount
-    );
-    const next: WarehouseInventoryItem = {
-      ...current,
-      countedQuantity: normalizedCount,
-      difference,
-      status: warehouseInventoryItemStatusForDifference(normalizedCount, difference),
-      countedBy: scope.uid,
-      adjustmentMovementId: null,
-      adjustedBy: null,
-    };
-
-    transaction.update(itemRef, {
-      countedQuantity: next.countedQuantity,
-      difference: next.difference,
-      status: next.status,
-      countedBy: scope.uid,
-      countedAt: serverTimestamp(),
-      adjustmentMovementId: null,
-      adjustedBy: null,
-      adjustedAt: null,
-    });
-    return next;
-  });
+  workspaceId:string,inventoryId:string,itemId:string,countedQuantity:number
+):Promise<WarehouseInventoryItem> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<WarehouseInventoryItem>(
+    scope.workspaceId,'INVENTORY_COUNT',{inventoryId,itemId,countedQuantity}
+  );
 }
-
 export async function beginWarehouseInventoryReview(
-  workspaceId: string,
-  inventoryId: string
-): Promise<WarehouseInventoryReviewSummary> {
-  const scope = currentScope(workspaceId);
-  const records = await listWarehouseInventoryItems(scope.workspaceId, inventoryId);
-  if (records.length === 0) throw new Error('WAREHOUSE_INVENTORY_EMPTY');
-  const items = records.map((record) => record.item);
-  if (items.some((item) => item.status === 'PENDING' || item.status === 'STALE')) {
-    throw new Error('WAREHOUSE_INVENTORY_COUNT_INCOMPLETE');
-  }
-  const summary = summarizeWarehouseInventoryItems(items);
-  const path = inventorySessionPath(scope.workspaceId, inventoryId);
-
-  await runTransaction(db, async (transaction) => {
-    const ref = doc(db, path);
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      snapshot.data() as Record<string, unknown>
-    ).session;
-    if (session.status !== 'COUNTING') throw new Error('WAREHOUSE_INVENTORY_NOT_COUNTING');
-    transaction.update(ref, {
-      status: 'REVIEW',
-      reviewedBy: scope.uid,
-      reviewSummary: summary,
-      reviewedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      staleItemId: null,
-    });
-  });
-
-  return summary;
+  workspaceId:string,inventoryId:string
+):Promise<WarehouseInventoryReviewSummary> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<WarehouseInventoryReviewSummary>(
+    scope.workspaceId,'INVENTORY_REVIEW',{inventoryId}
+  );
 }
-
 export async function reopenWarehouseInventoryCounting(
-  workspaceId: string,
-  inventoryId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = inventorySessionPath(scope.workspaceId, inventoryId);
-  await runTransaction(db, async (transaction) => {
-    const ref = doc(db, path);
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      snapshot.data() as Record<string, unknown>
-    ).session;
-    if (session.status !== 'REVIEW') throw new Error('WAREHOUSE_INVENTORY_NOT_IN_REVIEW');
-    transaction.update(ref, {
-      status: 'COUNTING',
-      reviewedBy: null,
-      reviewSummary: null,
-      reviewedAt: null,
-      updatedAt: serverTimestamp(),
-    });
-  });
+  workspaceId:string,inventoryId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand(scope.workspaceId,'INVENTORY_REOPEN',{inventoryId});
 }
-
 async function beginWarehouseInventoryConfirmation(
-  workspaceId: string,
-  inventoryId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = inventorySessionPath(scope.workspaceId, inventoryId);
-  await runTransaction(db, async (transaction) => {
-    const ref = doc(db, path);
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      snapshot.data() as Record<string, unknown>
-    ).session;
-    if (session.status === 'CONFIRMING') return;
-    if (session.status !== 'REVIEW') throw new Error('WAREHOUSE_INVENTORY_NOT_IN_REVIEW');
-    transaction.update(ref, {
-      status: 'CONFIRMING',
-      confirmationStartedBy: scope.uid,
-      confirmationStartedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
+  workspaceId:string,inventoryId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand(scope.workspaceId,'INVENTORY_BEGIN_CONFIRM',{inventoryId});
 }
-
 function parseMovement(
   workspaceId: string,
   movementId: string,
@@ -692,285 +419,28 @@ function parseMovement(
   return result.data;
 }
 
+/** A confirmação ajusta ledger, saldo físico e lotes exclusivamente no servidor. */
 export async function applyWarehouseInventoryAdjustment(
-  workspaceId: string,
-  inventoryId: string,
-  itemId: string
-): Promise<ApplyWarehouseInventoryAdjustmentResult> {
-  const scope = currentScope(workspaceId);
-  const idempotencyKey = 'phase10:inventory:' + inventoryId + ':' + itemId;
-  const movementId = await createWarehouseMovementId(scope.workspaceId, idempotencyKey);
-  const idempotencyKeyHash = movementId.slice('mov_'.length);
-
-  const sessionPath = inventorySessionPath(scope.workspaceId, inventoryId);
-  const itemPath = inventoryItemPath(scope.workspaceId, inventoryId, itemId);
-  const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
-
-  try {
-    return await runTransaction(db, async (transaction) => {
-      const sessionRef = doc(db, sessionPath);
-      const itemRef = doc(db, itemPath);
-      const movementRef = doc(db, movementPath);
-      const [sessionSnapshot, itemSnapshot, existingMovementSnapshot] = await Promise.all([
-        transaction.get(sessionRef),
-        transaction.get(itemRef),
-        transaction.get(movementRef),
-      ]);
-
-      if (!sessionSnapshot.exists() || !itemSnapshot.exists()) {
-        throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-      }
-      const session = parseSession(
-        scope.workspaceId,
-        inventoryId,
-        sessionSnapshot.data() as Record<string, unknown>
-      ).session;
-      const item = parseItem(
-        scope.workspaceId,
-        inventoryId,
-        itemId,
-        itemSnapshot.data() as Record<string, unknown>
-      ).item;
-
-      if (item.position.kind === 'UNASSIGNED') {
-        throw new Error('WAREHOUSE_INVENTORY_PHYSICAL_POSITION_REQUIRED');
-      }
-      if (session.status !== 'CONFIRMING') throw new Error('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
-      if (item.status === 'MATCHED') throw new Error('WAREHOUSE_INVENTORY_ZERO_DIFFERENCE');
-      if (item.status === 'STALE') throw new Error('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
-      if (item.countedQuantity === null || item.difference === null || item.difference === 0) {
-        throw new Error('WAREHOUSE_INVENTORY_INVALID_DIVERGENCE');
-      }
-
-      const materialPath = warehouseDocumentPath(scope.workspaceId, 'materials', item.materialId);
-      const balancePath = warehouseDocumentPath(scope.workspaceId, 'balances', item.materialId);
-      const locationPath = warehouseDocumentPath(
-        scope.workspaceId,
-        'locationBalances',
-        item.locationBalanceId
-      );
-      const materialRef = doc(db, materialPath);
-      const balanceRef = doc(db, balancePath);
-      const locationRef = doc(db, locationPath);
-      const [materialSnapshot, balanceSnapshot, locationSnapshot] = await Promise.all([
-        transaction.get(materialRef),
-        transaction.get(balanceRef),
-        transaction.get(locationRef),
-      ]);
-      if (!materialSnapshot.exists() || !balanceSnapshot.exists() || !locationSnapshot.exists()) {
-        throw new Error('WAREHOUSE_INVENTORY_REFERENCE_MISSING');
-      }
-
-      const material = parseMaterial(
-        scope.workspaceId,
-        materialSnapshot.id,
-        materialSnapshot.data() as Record<string, unknown>
-      );
-      const balance = parseBalance(
-        scope.workspaceId,
-        balanceSnapshot.id,
-        balanceSnapshot.data() as Record<string, unknown>
-      );
-      const locationBalance = parseLocationBalance(
-        scope.workspaceId,
-        locationSnapshot.id,
-        locationSnapshot.data() as Record<string, unknown>
-      );
-
-      if (material.ug !== scope.ug || balance.ug !== scope.ug || locationBalance.ug !== scope.ug) {
-        throw new Error('WAREHOUSE_INVENTORY_UG_MISMATCH');
-      }
-      if (
-        locationBalance.materialId !== item.materialId
-        || locationBalance.id !== item.locationBalanceId
-        || locationBalance.revision !== item.expectedLocationRevision
-        || locationBalance.lastMovementId !== item.expectedLocationLastMovementId
-      ) {
-        throw new Error('WAREHOUSE_INVENTORY_CONCURRENT_CHANGE');
-      }
-
-      const source: WarehousePhysicalInventoryMovementSource = {
-        kind: 'PHYSICAL_INVENTORY',
-        actorUid: scope.uid,
-        inventoryId,
-        inventoryItemId: itemId,
-        expectedQuantity: item.expectedQuantity,
-        countedQuantity: item.countedQuantity,
-        position: item.position,
-        locationBalanceId: item.locationBalanceId,
-        expectedLocationRevision: item.expectedLocationRevision,
-        expectedLocationLastMovementId: item.expectedLocationLastMovementId,
-      };
-
-      const candidateResult = validateWarehouseMovement(
-        {
-          schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
-          id: movementId,
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          materialId: item.materialId,
-          type: 'INVENTORY_ADJUSTMENT',
-          quantityDelta: item.difference,
-          idempotencyKeyHash,
-          reversesMovementId: null,
-          note: 'Ajuste confirmado no inventário físico ' + inventoryId,
-          source,
-        },
-        {
-          expectedWorkspaceId: scope.workspaceId,
-          expectedUg: scope.ug,
-          expectedMaterialId: item.materialId,
-        }
-      );
-      if (!candidateResult.ok) throw new Error('WAREHOUSE_INVENTORY_MOVEMENT_INVALID');
-      const candidate = candidateResult.data;
-
-      if (existingMovementSnapshot.exists()) {
-        const existing = parseMovement(
-          scope.workspaceId,
-          existingMovementSnapshot.id,
-          existingMovementSnapshot.data() as Record<string, unknown>
-        );
-        if (
-          existing.type !== 'INVENTORY_ADJUSTMENT'
-          || existing.materialId !== candidate.materialId
-          || JSON.stringify(existing.source) !== JSON.stringify(candidate.source)
-        ) {
-          throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-        }
-        if (item.status !== 'ADJUSTED' || item.adjustmentMovementId !== existing.id) {
-          throw new Error('WAREHOUSE_INVENTORY_ADJUSTMENT_INCONSISTENT');
-        }
-        return {
-          applied: false,
-          movement: existing,
-          balance,
-          locationBalance,
-        };
-      }
-
-      if (item.status !== 'DIVERGENT') throw new Error('WAREHOUSE_INVENTORY_ITEM_NOT_DIVERGENT');
-
-      const nextBalance = applyWarehouseMovementToBalance(candidate, balance);
-      const nextLocationBalance = applyWarehouseLocationDelta(locationBalance, {
-        id: locationBalance.id,
-        workspaceId: scope.workspaceId,
-        ug: scope.ug,
-        materialId: item.materialId,
-        position: item.position,
-        quantityDelta: item.difference,
-        movementId,
-      });
-      if (nextBalance.quantity < 0 || nextLocationBalance.quantity < 0) {
-        throw new Error('WAREHOUSE_INVENTORY_NEGATIVE_STOCK');
-      }
-
-      transaction.set(movementRef, {
-        ...candidate,
-        createdAt: serverTimestamp(),
-      });
-      transaction.set(balanceRef, {
-        ...nextBalance,
-        updatedAt: serverTimestamp(),
-      });
-      transaction.set(locationRef, {
-        ...nextLocationBalance,
-        updatedAt: serverTimestamp(),
-      });
-      transaction.update(itemRef, {
-        status: 'ADJUSTED',
-        adjustmentMovementId: movementId,
-        adjustedBy: scope.uid,
-        adjustedAt: serverTimestamp(),
-      });
-
-      return {
-        applied: true,
-        movement: candidate,
-        balance: nextBalance,
-        locationBalance: nextLocationBalance,
-      };
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, movementPath);
-    throw error;
-  }
+  workspaceId:string,inventoryId:string,itemId:string
+):Promise<ApplyWarehouseInventoryAdjustmentResult> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<ApplyWarehouseInventoryAdjustmentResult>(
+    scope.workspaceId,'INVENTORY_ADJUST',{inventoryId,itemId}
+  );
 }
 
 async function markWarehouseInventoryReconciliationRequired(
-  workspaceId: string,
-  inventoryId: string,
-  itemId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const sessionPath = inventorySessionPath(scope.workspaceId, inventoryId);
-  const itemPath = inventoryItemPath(scope.workspaceId, inventoryId, itemId);
-  await runTransaction(db, async (transaction) => {
-    const sessionRef = doc(db, sessionPath);
-    const itemRef = doc(db, itemPath);
-    const [sessionSnapshot, itemSnapshot] = await Promise.all([
-      transaction.get(sessionRef),
-      transaction.get(itemRef),
-    ]);
-    if (!sessionSnapshot.exists() || !itemSnapshot.exists()) return;
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      sessionSnapshot.data() as Record<string, unknown>
-    ).session;
-    const item = parseItem(
-      scope.workspaceId,
-      inventoryId,
-      itemId,
-      itemSnapshot.data() as Record<string, unknown>
-    ).item;
-    if (session.status !== 'CONFIRMING' || item.status === 'ADJUSTED') return;
-    transaction.update(itemRef, { status: 'STALE' });
-    transaction.update(sessionRef, {
-      status: 'RECONCILIATION_REQUIRED',
-      staleItemId: itemId,
-      updatedAt: serverTimestamp(),
-    });
-  });
+  workspaceId:string,inventoryId:string,itemId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand(scope.workspaceId,'INVENTORY_STALE',{inventoryId,itemId});
 }
-
 async function finishWarehouseInventoryConfirmation(
-  workspaceId: string,
-  inventoryId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const items = await listWarehouseInventoryItems(scope.workspaceId, inventoryId);
-  if (
-    items.some(({ item }) =>
-      item.status === 'PENDING'
-      || item.status === 'DIVERGENT'
-      || item.status === 'STALE'
-    )
-  ) {
-    throw new Error('WAREHOUSE_INVENTORY_CONFIRMATION_INCOMPLETE');
-  }
-
-  const path = inventorySessionPath(scope.workspaceId, inventoryId);
-  await runTransaction(db, async (transaction) => {
-    const ref = doc(db, path);
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      snapshot.data() as Record<string, unknown>
-    ).session;
-    if (session.status !== 'CONFIRMING') throw new Error('WAREHOUSE_INVENTORY_NOT_CONFIRMING');
-    transaction.update(ref, {
-      status: 'CONFIRMED',
-      confirmedBy: scope.uid,
-      confirmedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      staleItemId: null,
-    });
-  });
+  workspaceId:string,inventoryId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand(scope.workspaceId,'INVENTORY_FINISH_CONFIRM',{inventoryId});
 }
-
 export async function confirmWarehouseInventory(
   workspaceId: string,
   inventoryId: string
@@ -1009,35 +479,11 @@ export async function confirmWarehouseInventory(
 }
 
 export async function cancelWarehouseInventory(
-  workspaceId: string,
-  inventoryId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = inventorySessionPath(scope.workspaceId, inventoryId);
-  await runTransaction(db, async (transaction) => {
-    const ref = doc(db, path);
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) throw new Error('WAREHOUSE_INVENTORY_NOT_FOUND');
-    const session = parseSession(
-      scope.workspaceId,
-      inventoryId,
-      snapshot.data() as Record<string, unknown>
-    ).session;
-    if (session.status === 'CONFIRMED' || session.status === 'CANCELLED') {
-      throw new Error('WAREHOUSE_INVENTORY_FINALIZED');
-    }
-    if (session.status === 'CONFIRMING') {
-      throw new Error('WAREHOUSE_INVENTORY_CONFIRMATION_IN_PROGRESS');
-    }
-    transaction.update(ref, {
-      status: 'CANCELLED',
-      cancelledBy: scope.uid,
-      cancelledAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
+  workspaceId:string,inventoryId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand(scope.workspaceId,'INVENTORY_CANCEL',{inventoryId});
 }
-
 export function deriveWarehouseUnlocatedStock(
   materials: readonly WarehouseMaterial[],
   balances: readonly WarehouseBalance[],

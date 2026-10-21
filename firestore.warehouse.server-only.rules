@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // WAREHOUSE-SERVER-R2 — futuro ruleset read-only.
+    //
+    // NÃO publicá-lo antes da migração de TODOS os comandos mutáveis:
+    // ele deliberadamente nega escrita SDK no namespace inteiro.
+    // Os endpoints autenticados usam serviço IAM/REST Admin e não passam
+    // pelas Security Rules de clientes.
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.firebase is map;
+    }
+
+    function providerIs(value) {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == value;
+    }
+
+    function isFounderWorkspace(workspaceId) {
+      return workspaceId == 'hgesm-aprov'
+        && providerIs('google.com')
+        && request.auth.token.email == 'aprov1hgesm@gmail.com';
+    }
+
+    function isBoundSector(workspaceId) {
+      return providerIs('password')
+        && request.auth.token.emprovexWarehouse == true
+        && request.auth.token.emprovexWarehouseVersion == 'v1'
+        && request.auth.token.emprovexRole == 'sector'
+        && request.auth.token.emprovexWorkspaceId == workspaceId
+        && request.auth.token.emprovexUg is string
+        && request.auth.token.emprovexUg.matches('^[0-9]{6}$');
+    }
+
+    // Preserva a revogação imediata para setores com sessão já aberta.
+    // A versão legada verifica este documento antes de permitir leituras.
+    function sectorLifecycleActive(workspaceId) {
+      let lifecycle = get(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ).data;
+      return lifecycle.schemaVersion == 'warehouse_workspace_access_v1'
+        && lifecycle.workspaceId == workspaceId
+        && lifecycle.status == 'active'
+        && lifecycle.ug == request.auth.token.emprovexUg;
+    }
+
+    function sectorLifecycleAllowsAccess(workspaceId) {
+      return !exists(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ) || sectorLifecycleActive(workspaceId);
+    }
+
+    function canReadWorkspace(workspaceId) {
+      return isFounderWorkspace(workspaceId)
+        || (
+          isBoundSector(workspaceId)
+          && sectorLifecycleAllowsAccess(workspaceId)
+        );
+    }
+
+    match /warehouse/{workspaceId}/{document=**} {
+      allow get, list: if canReadWorkspace(workspaceId);
+      allow create, update, delete: if false;
+    }
+  }
+}

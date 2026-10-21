@@ -33,6 +33,7 @@ import {
 import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
 import { validateWarehouseBalance, type WarehouseBalance } from './movement';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import { warehouseServerCommand } from './serverCommandClient';
 import { warehouseVisualExpiryCutoffDate } from './stockVisual';
 
 export interface WarehouseLotListItem {
@@ -328,153 +329,21 @@ export async function getWarehouseLot(
   }
 }
 
+/** Atribuição de lotes passa pelo servidor R2 com controle transacional. */
 export async function createWarehouseLot(
-  workspaceId: string,
-  input: CreateWarehouseLotInput
-): Promise<WarehouseLot> {
-  const scope = currentScope(workspaceId);
-  const position = validateWarehouseStockPosition(input.position);
-  if (!position) throw new Error('WAREHOUSE_LOT_INVALID_POSITION');
-
-  await assertLotPositionBackedByStock({
-    workspaceId: scope.workspaceId,
-    materialId: input.materialId,
-    position,
-    quantity: input.quantity,
-  });
-
-  const id = createWarehouseLotId();
-  const candidate = validateWarehouseLot(
-    {
-      schemaVersion: WAREHOUSE_LOT_SCHEMA_VERSION,
-      id,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      materialId: input.materialId,
-      code: input.code,
-      expiresOn: input.expiresOn ?? null,
-      quantity: input.quantity,
-      position,
-      origin: input.origin || manualOrigin(),
-      status: 'active',
-      createdBy: scope.uid,
-      updatedBy: scope.uid,
-    },
-    {
-      expectedWorkspaceId: scope.workspaceId,
-      expectedUg: scope.ug,
-      expectedMaterialId: input.materialId,
-    }
+  workspaceId:string,input:CreateWarehouseLotInput
+):Promise<WarehouseLot> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<WarehouseLot>(
+    scope.workspaceId,'LOT_CREATE',input
   );
-  if (!candidate.ok) {
-    throw new Error(
-      'WAREHOUSE_INVALID_LOT: '
-      + candidate.issues.map((item) => item.message).join('; ')
-    );
-  }
-
-  const materialPath = warehouseDocumentPath(
-    scope.workspaceId,
-    'materials',
-    candidate.data.materialId
-  );
-  const lotPath = warehouseDocumentPath(scope.workspaceId, 'lots', candidate.data.id);
-
-  try {
-    return await runTransaction(db, async (transaction) => {
-      const materialRef = doc(db, materialPath);
-      const lotRef = doc(db, lotPath);
-      const [materialSnapshot, existingLotSnapshot] = await Promise.all([
-        transaction.get(materialRef),
-        transaction.get(lotRef),
-      ]);
-
-      if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
-      const material = parseMaterial(
-        scope.workspaceId,
-        materialSnapshot.id,
-        materialSnapshot.data() as Record<string, unknown>
-      );
-      if (material.ug !== scope.ug || material.status !== 'active') {
-        throw new Error('WAREHOUSE_MATERIAL_SCOPE_MISMATCH');
-      }
-      if (existingLotSnapshot.exists()) throw new Error('WAREHOUSE_LOT_ID_CONFLICT');
-
-      transaction.set(lotRef, {
-        ...candidate.data,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return candidate.data;
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, lotPath);
-    throw error;
-  }
 }
 
 export async function updateWarehouseLot(
-  workspaceId: string,
-  lotId: string,
-  input: UpdateWarehouseLotInput
-): Promise<WarehouseLot> {
-  const scope = currentScope(workspaceId);
-  const path = warehouseDocumentPath(scope.workspaceId, 'lots', lotId);
-  const snapshot = await getDoc(doc(db, path));
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_LOT_NOT_FOUND');
-  const current = parseLot(
-    scope.workspaceId,
-    snapshot.id,
-    snapshot.data() as Record<string, unknown>
+  workspaceId:string,lotId:string,input:UpdateWarehouseLotInput
+):Promise<WarehouseLot> {
+  const scope=currentScope(workspaceId);
+  return warehouseServerCommand<WarehouseLot>(
+    scope.workspaceId,'LOT_UPDATE',{lotId,input}
   );
-
-  const position = input.position
-    ? validateWarehouseStockPosition(input.position)
-    : current.position;
-  if (!position) throw new Error('WAREHOUSE_LOT_INVALID_POSITION');
-
-  const nextQuantity = input.quantity ?? current.quantity;
-  await assertLotPositionBackedByStock({
-    workspaceId: scope.workspaceId,
-    materialId: current.materialId,
-    position,
-    quantity: nextQuantity,
-  });
-
-  const candidate = validateWarehouseLot(
-    {
-      ...current,
-      code: input.code ?? current.code,
-      expiresOn:
-        input.expiresOn === undefined ? current.expiresOn : input.expiresOn,
-      quantity: nextQuantity,
-      position,
-      origin: input.origin ?? current.origin,
-      status: input.status ?? current.status,
-      updatedBy: scope.uid,
-    },
-    {
-      expectedWorkspaceId: scope.workspaceId,
-      expectedUg: scope.ug,
-      expectedMaterialId: current.materialId,
-    }
-  );
-  if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_LOT_UPDATE');
-
-  try {
-    await updateDoc(doc(db, path), {
-      code: candidate.data.code,
-      expiresOn: candidate.data.expiresOn,
-      quantity: candidate.data.quantity,
-      position: candidate.data.position,
-      origin: candidate.data.origin,
-      status: candidate.data.status,
-      updatedBy: scope.uid,
-      updatedAt: serverTimestamp(),
-    });
-    return candidate.data;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
-    throw error;
-  }
 }

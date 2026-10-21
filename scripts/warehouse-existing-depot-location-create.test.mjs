@@ -69,8 +69,15 @@ test('controles da aba Estrutura reutilizam o cadastro existente por workspace',
   assert.match(ui, /parentLocationId: kind === 'SUBPOSITION' \? selectedLocationId : null/);
   assert.match(ui, /setCreatePanel\(null\)/);
   assert.match(ui, /Local criado, mas a inclusão de todas as subposições não foi concluída/);
-  assert.match(repository, /await assertLocationCodeAvailable/);
-  assert.match(repository, /invalidateWarehouseLocationReadCache\(scope\.workspaceId\)/);
+  const server = read('lib/server/warehouseStructureWrite.ts');
+  assert.match(repository, /warehouseServerCommand<WarehouseLocation>/);
+  assert.match(repository, /'LOCATION_CREATE'/);
+  assert.match(repository, /invalidateWarehouseLocationReadCache\(workspaceId\)/);
+  assert.match(server, /warehouseAdminListByField\(token,access\.workspaceId,'locations','code',code,500\)/);
+  assert.match(server, /WAREHOUSE_LOCATION_DUPLICATE_CODE/);
+  assert.match(server, /warehouseAdminTransaction\(token,reads,rows/);
+  assert.match(server, /known\.kind!=='LOCAL'/);
+  assert.match(server, /known\.status!=='active'/);
   assert.doesNotMatch(ui, /listWarehouseLocationBalances|updateDoc\(|runTransaction\(/);
   assert.doesNotMatch(source, /getDoc\(|getDocs\(|setDoc\(|updateDoc\(/);
 });

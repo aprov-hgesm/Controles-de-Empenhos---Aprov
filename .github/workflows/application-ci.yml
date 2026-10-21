@@ -2,6 +2,7 @@ name: Application CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "docs/**"
   push:
@@ -20,6 +21,8 @@ concurrency:
 
 jobs:
   validate-application:
+    # PR Draft roda Fast CI e Core; PR ready executa toda a certificação.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -27,6 +30,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
+          else
+            git diff --check HEAD^
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -64,6 +76,9 @@ jobs:
             echo 'TypeScript error budget exceeded.'
             exit 1
           fi
+
+      - name: Warehouse R2 strict zero client SDK writes
+        run: WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs
 
       - name: Cronograma Gmail attachment contract tests
         run: npm run test:cronograma-email
@@ -160,6 +175,8 @@ jobs:
 
       - name: ADM Depósito Phase 2 ledger contract tests
         run: npm run test:adm-deposito-ledger
+      - name: Warehouse server generic ledger security guard
+        run: node --test scripts/warehouse-server-command-security.test.mjs
 
       - name: ADM Depósito Phase 2 ledger and balance guard
         run: npm run verify:adm-deposito-phase-2
@@ -196,6 +213,9 @@ jobs:
 
       - name: ADM Depósito Phase 8 barcode and outbound domain tests
         run: npm run test:adm-deposito-barcode-outbound
+
+      - name: Warehouse server outbound return canonical contracts
+        run: npm run test:adm-deposito-outbound-return
 
       - name: ADM Depósito Phase 8 permanent guard
         run: npm run verify:adm-deposito-phase-8
@@ -265,6 +285,9 @@ jobs:
 
       - name: Central Móvel entrada avulsa mobile tests
         run: npm run test:mobile-r1-manual-entry
+
+      - name: Entrada avulsa server-only e seguranca Firestore (Emulator)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-manual-entry-atomic-security.test.mjs && npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
 
       - name: MOBILE-K canonical ops domain tests
         run: npm run test:mobile-k-canonical-ops
@@ -632,19 +655,10 @@ jobs:
       - name: Final TypeScript validation
         run: npm run typecheck
 
-      - name: Diff hygiene
-        shell: bash
-        run: |
-          if [ -n "$GITHUB_BASE_REF" ]; then
-            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
-          else
-            git diff --check HEAD^
-          fi
-
 
   block-16-release-gate:
     name: Block 16 Final Release Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -657,7 +671,7 @@ jobs:
           test "${{ needs.validate-application.result }}" = "success"
   block-17-final-release-gate:
     name: Block 17 Final Release Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -672,7 +686,7 @@ jobs:
 
   block-18-final-release-gate:
     name: Block 18 Final Release Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -687,7 +701,7 @@ jobs:
 
   block-19-final-closure-gate:
     name: Block 19 Final Closure Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -702,7 +716,7 @@ jobs:
 
   block-20-final-release-gate:
     name: Block 20 Final Release Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -717,7 +731,7 @@ jobs:
 
   block-21-final-release-gate:
     name: Block 21 Final Release Gate
-    if: ${{ always() }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04

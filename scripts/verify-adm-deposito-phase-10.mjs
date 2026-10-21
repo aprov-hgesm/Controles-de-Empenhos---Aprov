@@ -8,6 +8,8 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const inventory = read('lib/warehouse/inventory.ts');
 const repository = read('lib/warehouse/inventoryRepository.ts');
+const serverAdjustment = read('lib/server/warehouseInventoryAdjustment.ts');
+const serverLifecycle = read('lib/server/warehouseInventoryLifecycle.ts');
 const movement = read('lib/warehouse/movement.ts');
 const ui = read('features/warehouse/components/WarehouseInventoryOperational.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
@@ -35,10 +37,13 @@ assert.match(repository, /confirmWarehouseInventory/);
 assert.match(repository, /applyWarehouseInventoryAdjustment/);
 assert.match(repository, /WAREHOUSE_INVENTORY_CONCURRENT_CHANGE/);
 assert.match(repository, /listWarehouseUnlocatedStock/);
-assert.match(repository, /runTransaction/);
-assert.match(repository, /INVENTORY_ADJUSTMENT/);
-assert.match(repository, /phase10:inventory:/);
-assert.match(repository, /locationBalance\.revision !== item\.expectedLocationRevision/);
+assert.match(repository, /warehouseServerCommand/);
+assert.doesNotMatch(repository, /\brunTransaction\s*\(/);
+assert.match(serverAdjustment, /warehouseAdminTransaction/);
+assert.match(serverAdjustment, /INVENTORY_ADJUSTMENT/);
+assert.match(serverAdjustment, /phase10:inventory:/);
+assert.match(serverAdjustment, /WAREHOUSE_INVENTORY_CONCURRENT_CHANGE/);
+assert.match(serverLifecycle, /warehouseInventoryLifecycleServer/);
 assert.doesNotMatch(repository, /deleteDoc\(/);
 
 assert.match(movement, /WarehousePhysicalInventoryMovementSource/);

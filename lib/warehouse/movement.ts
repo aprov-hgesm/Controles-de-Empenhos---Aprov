@@ -52,6 +52,8 @@ export interface WarehouseManualEntryMovementSource {
   actorUid: string;
   provenance: string;
   reference: string | null;
+  position?: WarehouseStockPosition;
+  locationBalanceId?: string;
 }
 
 export interface WarehouseLocationTransferMovementSource {
@@ -190,6 +192,8 @@ const MANUAL_ENTRY_MOVEMENT_SOURCE_FIELDS = new Set([
   'actorUid',
   'provenance',
   'reference',
+  'position',
+  'locationBalanceId',
 ]);
 const TRANSFER_MOVEMENT_SOURCE_FIELDS = new Set([
   'kind',
@@ -341,11 +345,25 @@ function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSour
       return null;
     }
 
+    // Historical entries without positional metadata remain readable.
+    // New located entries carry an auditable position/balance binding.
+    const hasPosition = Object.prototype.hasOwnProperty.call(input, 'position');
+    const hasBalanceId = Object.prototype.hasOwnProperty.call(input, 'locationBalanceId');
+    if (hasPosition !== hasBalanceId) return null;
+    const position = hasPosition ? validateWarehouseStockPosition(input.position) : null;
+    const locationBalanceId = hasBalanceId && typeof input.locationBalanceId === 'string'
+      ? input.locationBalanceId.trim().toLowerCase() : '';
+    if (hasPosition && (
+      !position || position.kind === 'UNASSIGNED'
+      || !/^locbal_[a-f0-9]{64}$/.test(locationBalanceId)
+    )) return null;
+
     return {
       kind: 'MANUAL_ENTRY',
       actorUid,
       provenance,
       reference,
+      ...(hasPosition ? { position: position!, locationBalanceId } : {}),
     };
   }
 

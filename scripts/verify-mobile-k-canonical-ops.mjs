@@ -33,13 +33,29 @@ assert.match(transfer, /prepareWarehousePhysicalTransfer/);
 assert.match(transfer, /NON_PHYSICAL_POSITION/);
 
 const repository = read('lib/warehouse/locationRepository.ts');
-assert.match(repository, /WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION/);
-assert.match(repository, /buildCanonicalWarehouseTransferLotPlan/);
-assert.match(repository, /isWarehousePhysicalStockPosition\(from\)/);
-assert.match(repository, /isWarehousePhysicalStockPosition\(to\)/);
-assert.doesNotMatch(repository, /from\.kind !== 'UNASSIGNED'/);
-assert.doesNotMatch(repository, /UNASSIGNED flows keep the legacy explicit/);
-assert.doesNotMatch(repository, /fromInitial = from\.kind === 'UNASSIGNED'/);
+const serverTransfer = read('lib/server/warehouseTransfer.ts');
+const operationsRoute = read('app/api/central-depositos/operations/route.ts');
+const transferClient = repository.slice(
+  repository.indexOf('export async function transferWarehouseStock('),
+  repository.indexOf('export function buildWarehousePositionLabel(')
+);
+// Depois do R2, a UI móvel permanece um cliente fino; a transação e as
+// rejeições de posições inválidas pertencem ao motor autenticado no servidor.
+assert.match(transferClient, /warehouseServerCommand<TransferWarehouseStockResult>/);
+assert.match(transferClient, /'TRANSFER'/);
+assert.doesNotMatch(transferClient, /\b(runTransaction|setDoc|updateDoc|writeBatch)\s*\(/);
+assert.match(operationsRoute, /verifyWarehouseRequest/);
+assert.match(operationsRoute, /transferWarehouseStockServer\(access,body\.input\)/);
+assert.match(serverTransfer, /isWarehousePhysicalStockPosition\(fromCandidate\)/);
+assert.match(serverTransfer, /isWarehousePhysicalStockPosition\(toCandidate\)/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_INVALID_POSITION/);
+assert.match(serverTransfer, /warehouseStockPositionsEqual/);
+assert.match(serverTransfer, /planWarehouseTransferLots/);
+assert.match(serverTransfer, /warehouseAdminTransaction<TransferWarehouseStockResult>/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_CLIENT_LOT_PLAN_FORBIDDEN/);
+assert.doesNotMatch(serverTransfer, /from\.kind !== 'UNASSIGNED'/);
+assert.doesNotMatch(serverTransfer, /UNASSIGNED flows keep the legacy explicit/);
+assert.doesNotMatch(serverTransfer, /fromInitial = from\.kind === 'UNASSIGNED'/);
 
 const adapter = read('lib/warehouse/mobileTransfer.ts');
 assert.match(adapter, /planWarehouseTransferLots/);
@@ -125,28 +141,38 @@ for (const marker of [
 }
 
 const intakeAllocation = read('lib/warehouse/intakeAllocationRepository.ts');
-assert.match(intakeAllocation, /const from: WarehouseStockPosition = \{ kind: 'UNASSIGNED' \}/);
+const intakeServerRoute = read('app/api/central-depositos/intake-action/route.ts');
+assert.match(intakeAllocation, /allocateWarehousePendingItemFast/);
+assert.equal(intakeAllocation.includes('runTransaction('), false);
+assert.match(intakeServerRoute, /action: 'ALLOCATE'/);
+assert.equal(intakeServerRoute.includes("position.kind === 'UNASSIGNED'"), true);
+assert.match(intakeServerRoute, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
 assert.match(intakeAllocation, /position\.kind === 'UNASSIGNED'/);
 assert.match(intakeAllocation, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
 
 const manualEntry = read('lib/warehouse/manualEntryRepository.ts');
-assert.match(manualEntry, /applyWarehouseManualLocatedEntry/);
-assert.match(manualEntry, /position\.kind === 'UNASSIGNED'/);
-assert.match(manualEntry, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+const manualServer = read('lib/server/warehouseManualEntry.ts');
+assert.match(manualEntry, /api\/central-depositos\/manual-entry/);
+assert.match(manualServer, /validateWarehouseStockPosition/);
+assert.match(manualServer, /position\.kind === 'UNASSIGNED'/);
+assert.match(manualServer, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+assert.match(manualServer, /assertPosition\(/);
+assert.doesNotMatch(manualEntry, /runTransaction\s*\(/);
 assert.doesNotMatch(manualEntry, /allowUnassignedPosition/);
-assert.doesNotMatch(manualEntry, /transferWarehouseStock\s*\(/);
-assert.doesNotMatch(manualEntry, /from:\s*\{ kind: 'UNASSIGNED' \}/);
+assert.doesNotMatch(manualServer, /transferWarehouseStock\s*\(/);
+assert.doesNotMatch(manualServer, /from:\s*\{ kind: 'UNASSIGNED' \}/);
 
 const withdrawalRepository = read('lib/warehouse/withdrawalRepository.ts');
-assert.match(
-  withdrawalRepository,
-  /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/
-);
-assert.match(withdrawalRepository, /returnedEntry\.locationBalance/);
+const returnServer = read('lib/server/warehouseReturnWrite.ts');
+assert.match(withdrawalRepository, /warehouseServerCommand/);
+assert.match(returnServer, /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/);
+assert.match(returnServer, /locationBalance/);
 assert.doesNotMatch(withdrawalRepository, /allowUnassignedPosition/);
 
 const outboundRepository = read('lib/warehouse/outboundRepository.ts');
-assert.match(outboundRepository, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
+const outboundServer = read('lib/server/warehouseOutboundWrite.ts');
+assert.match(outboundRepository, /warehouseServerCommand/);
+assert.match(outboundServer, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
@@ -164,7 +190,7 @@ assert.match(workflow, /MOBILE-K canonical ops permanent guard/);
 
 console.log('MOBILE-K canonical ops guard: PASS');
 console.log('- UNASSIGNED ficou fora de Transferência e Saída operacionais');
-console.log('- Mobile delega lotes ao motor canônico e retirada ao withdrawal canônico');
+console.log('- Mobile delega TRANSFER e lotes ao motor canônico server-only, e retirada ao withdrawal canônico');
 console.log('- intake v2 continua autoridade de pendingQuantity');
 console.log('- legado UNASSIGNED permanece isolado na ponte técnica do intake');
 console.log('- Entrada Avulsa e devolução normal exigem posição física canônica');

@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -165,41 +166,6 @@ async function existingIntakeFor(
   );
 }
 
-async function persistCompletedIntake(
-  intake: WarehouseItemIntake
-): Promise<WarehouseItemIntake> {
-  const path = warehouseDocumentPath(intake.workspaceId, 'intakes', intake.id);
-  const reference = doc(db, path);
-  try {
-    const existing = await getDoc(reference);
-    if (existing.exists()) {
-      const parsed = parseIntake(
-        intake.workspaceId,
-        existing.id,
-        existing.data() as Record<string, unknown>
-      );
-      if (
-        parsed.invoiceRecordKey !== intake.invoiceRecordKey
-        || parsed.itemId !== intake.itemId
-        || parsed.mode !== intake.mode
-      ) {
-        throw new Error('WAREHOUSE_INTAKE_IDEMPOTENCY_CONFLICT');
-      }
-      return parsed;
-    }
-
-    await setDoc(reference, {
-      ...intake,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    return intake;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
-  }
-}
-
 export async function getWarehouseInvoiceIntakeCutoff(
   workspaceId: string
 ): Promise<string | null> {
@@ -263,102 +229,23 @@ export async function allocateWarehouseInvoiceItem(
   throw new Error('WAREHOUSE_LEGACY_INTAKE_RECONCILIATION_REQUIRED');
 }
 
+/**
+ * Contrato v1 obsoleto não autoriza mais gravação de consumo.
+ * A interface atual deve chamar applyWarehouseImmediateConsumptionFast.
+ */
 export async function registerWarehouseImmediateConsumption(
-  workspaceId: string,
-  input: RegisterImmediateConsumptionInput
-): Promise<WarehouseItemIntake> {
-  const scope = currentScope(workspaceId);
-  const recordKey = invoiceRecordKey(input.invoice);
-  if (!recordKey) throw new Error('WAREHOUSE_INTAKE_INVOICE_IDENTITY_REQUIRED');
-  if (input.invoice.empenhoId !== input.empenho.id) {
-    throw new Error('WAREHOUSE_INTAKE_EMPENHO_MISMATCH');
-  }
-
-  const existing = await existingIntakeFor(workspaceId, input.invoice, input.itemId);
-  if (existing) {
-    if (existing.mode !== 'IMMEDIATE_CONSUMPTION') {
-      throw new Error('WAREHOUSE_INTAKE_ALREADY_DECIDED');
-    }
-    return existing;
-  }
-
-  const invoiceItem = findInvoiceItem(input.invoice, input.itemId);
-  const { material, item } = await ensureMaterial(
-    scope.workspaceId,
-    scope.ug,
-    input.empenho,
-    input.itemId
-  );
-
-  const barcode = input.barcode?.trim() || null;
-  if (barcode) {
-    await saveWarehouseBarcodeAssociation(scope.workspaceId, {
-      barcode,
-      materialId: material.id,
-      presentation: material.unit,
-    });
-  }
-
-  const id = await createWarehouseItemIntakeId(
-    scope.workspaceId,
-    recordKey,
-    input.itemId
-  );
-  const candidate = validateWarehouseItemIntake(
-    {
-      schemaVersion: 'warehouse_item_intake_v1',
-      id,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      invoiceRecordKey: recordKey,
-      invoiceId: input.invoice.id,
-      empenhoId: input.invoice.empenhoId,
-      itemId: input.itemId,
-      materialId: material.id,
-      description: item.name,
-      unitLabel: item.unit || material.unit.label || material.unit.code,
-      quantity: invoiceItem.quantity,
-      mode: 'IMMEDIATE_CONSUMPTION',
-      position: null,
-      lotId: null,
-      lotCode: null,
-      expiresOn: null,
-      barcode,
-      entryMovementId: null,
-      transferMovementId: null,
-      siscofisStatus: 'PENDING',
-      createdBy: scope.uid,
-      updatedBy: scope.uid,
-    },
-    { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug }
-  );
-  if (!candidate.ok) {
-    throw new Error('WAREHOUSE_INVALID_ITEM_INTAKE');
-  }
-  return persistCompletedIntake(candidate.data);
+  workspaceId:string,input:RegisterImmediateConsumptionInput
+):Promise<WarehouseItemIntake> {
+  currentScope(workspaceId);
+  void input;
+  throw new Error('WAREHOUSE_LEGACY_INTAKE_RECONCILIATION_REQUIRED');
 }
 
 export async function markWarehouseImmediateConsumptionPosted(
-  workspaceId: string,
-  intakeId: string
-): Promise<void> {
-  const scope = currentScope(workspaceId);
-  const path = warehouseDocumentPath(scope.workspaceId, 'intakes', intakeId);
-  const reference = doc(db, path);
-  const snapshot = await getDoc(reference);
-  if (!snapshot.exists()) throw new Error('WAREHOUSE_INTAKE_NOT_FOUND');
-  const current = parseIntake(
-    scope.workspaceId,
-    snapshot.id,
-    snapshot.data() as Record<string, unknown>
+  workspaceId:string,intakeId:string
+):Promise<void> {
+  const scope=currentScope(workspaceId);
+  await warehouseServerCommand<{ok:true}>(
+    scope.workspaceId,'LEGACY_INTAKE_POSTED',intakeId
   );
-  if (current.mode !== 'IMMEDIATE_CONSUMPTION') {
-    throw new Error('WAREHOUSE_INTAKE_NOT_IMMEDIATE');
-  }
-  if (current.siscofisStatus === 'POSTED') return;
-  await updateDoc(reference, {
-    siscofisStatus: 'POSTED',
-    updatedBy: scope.uid,
-    updatedAt: serverTimestamp(),
-  });
 }

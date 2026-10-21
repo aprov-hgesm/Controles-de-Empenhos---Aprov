@@ -1,5 +1,120 @@
 # EMPROVEX — Memorial Oficial
 
+## PUBLICAÇÃO CONGELADA — RELEASE ÚNICA, POWERSHELL PROPRIETÁRIO (20/10/2026)
+
+- Processo de deploy já validado pelo Fundador: alterações consolidadas em um único commit na main, gates de CI, prebuild e deploy manual Vercel pelo PowerShell na equipe `aprov-hgesms-projects`.
+- A ausência de acesso do conector Vercel do ChatGPT é **irrelevante** para a publicação pelo PowerShell proprietário. Não exigir novas contas ou membros pagos; não criar projeto alternativo.
+- A configuração `vercel.json` mantém `git.deploymentEnabled=false`, portanto integrar a main não atualiza automaticamente `emprovex.com.br`.
+- Runbook: `docs/EMPROVEX_RELEASE_POWERSHELL.md`. Fazer `vercel.cmd pull --environment=production`, `vercel.cmd build --prod`, `vercel.cmd deploy --prebuilt --archive=tgz --prod --skip-domain` e, após smoke/IAM GO, `vercel.cmd promote` usando o MESMO deployment.
+- Regras Firestore reduzidas **não** são ativadas no mesmo deploy. Preservar as Rules produtivas até validação e janela de corte própria. O Marco Zero SISCOFIS ainda usa projeção UNASSIGNED de compatibilidade; acompanhar em release.
+- O executor GitHub pode compor/certificar/mesclar o código, mas não operar a sessão PowerShell local. O Fundador executa prebuild e deploy na própria conta.
+
+**Handoff:** onde — PR #349 certificado e preparando squash único em main; fazendo — commit/documentação/gates; quem — executor GitHub; próximo — PowerShell proprietário: prebuild, staged, testes de IAM e promover; quem — Fundador.
+
+---
+
+## HARDENING DE SEGURANÇA E PREPARAÇÃO DA HOSPEDAGEM — 20/10/2026
+
+- **PR #349 (RC sobre main, sem merge):** motor de ledger limitado internamente ao Marco Zero SISCOFIS (chave de origem validada, tipo `INITIAL_BALANCE`, fonte nula); API `LEDGER_MOVEMENT` agora retorna 403 `WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED` sem executar transação. Elimina a capacidade de forjar `quantityDelta` e saldo `UNASSIGNED` pela operação genérica. Motores especializados de NF/alocação, saída, devolução, transferência e inventário permanecem disponíveis. Atenção: helper legado `ensureWarehouseIntakeEntryContext` chama `applyWarehouseMovement`; se reutilizado no futuro precisa migrar, a alocação ativa delega a `allocateWarehousePendingItemFast`.
+- **Provas regressivas:** novo `scripts/warehouse-server-command-security.test.mjs` no Application CI, Emulator rejeita tentativas internas fora do SISCOFIS e Browser E2E testa recusa explícita de seis tipos de ledger com 403; não considerar aprovado sem resultados SUCCESS do HEAD final.
+- **Hospedagem:** nova API restrita ao fundador `GET /api/central-depositos/health`, que valida token de servidor e transação somente de leitura em `emprovex-warehouse`, sem devolver chaves ou payload Firestore. O E2E localhost cobre acesso sem token negado e caminho fundador no Emulator; check com IAM real só no deployment de staging autorizado.
+- **Bloqueio externo confirmado:** integração Vercel disponível pertence a outra equipe e retorna 403 para `aprov-hgesms-projects`. Não foi possível ler, criar ou alterar variáveis do projeto real; não foram usados segredos fora da equipe. `vercel.json` mantém deploy por Git desativado.
+- **Plano e segurança operacional:** `docs/WAREHOUSE_HOSTING_PREPUBLICACAO.md`. Configurar `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` apenas server-side no escopo correto com IAM mínimo; jamais compartilhar segredo na conversa ou rodar workflow PR com secret de produção. Validar staging `--prod --skip-domain`, founder-only health, workspace isolado, rollback, só depois Rules server-only e promoção ao domínio.
+- **Produção:** não tocada. NO-GO para merge/deploy/promote/Rules até CI integral do HEAD, credenciais Vercel e IAM real comprovadas, QA/aceite isolado e autorização do Fundador.
+
+**Handoff:** onde — PR #349 Draft com hardening de segurança; fazendo — validar TypeScript, guard de ledger, Playwright localhost e CI integral; quem — executor GitHub; próximo — obter concessão da integração à equipe Vercel proprietária, executar staged check e decidir GO sem tocar em workspaces reais; quem fará — Fundador para acesso/autorização, executor para CI e QA.
+
+---
+
+## RELEASE CANDIDATE DE INTEGRAÇÃO — 20/10/2026 · WAREHOUSE SERVER R2 + CI LEAN
+
+> **Documento de integração, não comprovante de publicação.** Esta branch é composta diretamente sobre a main atual, preservando as atualizações anteriores do memorial e unindo as mudanças dos PRs #347 e #348. Os testes do RC e o aceite de Preview/Rules ainda devem ser verificados separadamente.
+
+- **Origem funcional:** PR #348, HEAD `049d7e55e3b890ecb85b45cc01f2f5ac9137a89e` (sobre PR #347). No HEAD original, Application CI integral com seis gates, Core Protection, Fast CI, Auth/Firestore Smoke e Browser E2E tiveram **SUCCESS**.
+- **Motivo da composição:** PR #347 ainda era DRAFT e incompatível para merge direto com a main atual; não descartar as atualizações da main nem tentar alterar produção sem validação da composição.
+- **Política CI LEAN:** PR em desenvolvimento recebe Fast CI/Core; PR pronto para revisão e main mantêm certificação integral. Os gates completos de release permanecem obrigatórios.
+- **Rules:** `firestore.warehouse.server-only.rules` é candidato NÃO PUBLICADO. O banco atual continua com as Rules vigentes até análise de equivalência e validação em ambiente isolado; não aplicar o arquivo reduzido por simples substituição sem conferir os demais acessos.
+- **Não é autorização automática de publicação:** nunca fazer merge/publicar/promover sem CI PASS no RC, verificação de configuração administrativa do backend, Preview autenticado, isolamento workspace/UG e aprovação operacional. O conector Vercel não possui autorização atual na equipe administrativa de produção.
+
+**Handoff:** onde — branch release candidate construída em cima de `main@abb111e6`, com conteúdo funcional de #347+#348; fazendo — validar CI e identificar blockers externos de Preview/Rules; quem — executor GitHub; próximo — PR de integração para main, CI completo e QA isolado, publicação apenas com autorização e ambiente acessível; quem fará — executor GitHub/Coordenador e Fundador para operação Vercel.
+
+---
+## CONFIRMAÇÃO FINAL DE TESTES — EMPROVEX CI LEAN (20/10/2026)
+
+- **Fast CI do código atualizado:** `cd6308ae95d0a82737f5b84438ec24a5107ac517` — [EMPROVEX Fast CI #39526632360](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39526632360) **SUCCESS**, incluindo TypeScript, scanner estrito zero SDK client writes e testes unitários selecionados por diff. [Core Protection #39526632356](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/39526632356) **SUCCESS**.
+- O Fast CI identificou um teste de devolução anteriormente não executado na suíte integral. Foi modernizado para verificar o tipo de movimento **OUTBOUND_RETURN**, autorização/posição física, limite de devolução, saldo, histórico e idempotência **no motor servidor**. O teste atualizado passou e agora também está incluído como gate do Application CI integral.
+- **Estado intencional da branch:** Application CI, Warehouse Smoke e Browser E2E aparecem como SKIPPED no SHA `cd6308ae` por se tratar de PR **DRAFT**. Isso NÃO é um PASS de release. A última certificação integral efetivamente executada permanece no SHA funcional `40c5a6ad`, com todos os jobs SUCCESS. A mudança posterior abrange testes, documentação e workflows, não motores de produção.
+- **Obrigação antes de merge/publicação:** marcar PR como ready, executar Application CI integral (incluindo o novo teste de devolução), Core, Smoke, Browser E2E e QA necessário no HEAD de release. Não houve merge, alteração de Rules em produção ou deploy nesta execução.
+
+**Handoff:** onde estamos — PR #348 DRAFT e CI LEAN validado; o que fazemos — apenas registrar evidência, preservando a produção; quem faz — executor GitHub; próximo — preparar PR para ready e recertificar HEAD completo quando houver decisão de integrar/ativar Rules; quem fará — executor/Coordenador com autorização expressa do Fundador.
+
+---
+
+## EMPROVEX CI LEAN — Implementação real após certificação (20/10/2026)
+
+> Este registro é posterior à seção de proposta CI LEAN. O modelo foi implementado nos workflows do PR #348, mas não publicado nem incorporado à main.
+
+- **Certificação do código funcional:** commit `40c5a6ad7f11fc5dbbbf720191f895ad177a30df`. Application CI completo **SUCCESS** (run #39524796663, com seis gates finais PASS), Core Protection **SUCCESS** (#39524796550), Warehouse Server R2 Smoke **SUCCESS** (#39524796528), Browser E2E **SUCCESS** (#39524796594). Build, TypeScript, Recovery, segurança e auditoria estrita zero SDK writes concluídos no Application CI. A auditoria de SDK é estática e cobre os diretórios mapeados.
+- **Implementação CI LEAN:** commit `871c1ee4833f180527b7245d284e8e10996e9b18` cria `.github/workflows/emprovex-fast-ci.yml` e `scripts/ci-fast-tests.mjs`, separa Draft (Fast CI + Core Protection) de PR pronto (Application CI completo, Smoke e Browser E2E aplicável). Preserva Application CI em push main e workflow_dispatch.
+- **Seleção de testes:** alterações Warehouse executam subconjuntos unitários por arquivos afetados, deduplicados; o runner acumula as falhas e reprova se alguma ocorrer. Mudanças de autenticação, Rules e recuperação possuem guards rápidos específicos. TypeScript e scanner zero-client-write executam sempre no Fast CI.
+- **Economia:** PR Draft não inicializa repetidamente Browser/Chromium e Firestore Emulator nem roda Application CI integral em cada commit. Os jobs pesados continuam disponíveis por workflow_dispatch e são executados ao marcar PR como ready para revisão; não se dispensou o gate de release. O Core Protection separado permanece automático.
+- **Proteção:** Full CI em SKIPPED no Draft **não é PASS de release**. Antes do merge, deixar PR não-Draft e exigir todos os gates no HEAD final, incluindo Firestore/Rules, isolamento, recuperação, QA e teste humano aplicável. Proteção efetiva de branch/ruleset deve ser conferida separadamente; não pressupor existência.
+- **Sem impacto na produção:** nenhum merge, deploy, alteração das Rules ativas, gravação de dados reais ou mudança de workspaces.
+- **Documentação:** `docs/CI_LEAN_20261020.md` e `docs/WAREHOUSE_SERVER_R2_MIGRATION.md`.
+
+**Handoff:** onde estamos — PR #348 DRAFT, motor certificado no SHA `40c5a6ad`, CI LEAN implementado no SHA `871c1ee4`; o que fazemos — confirmar Fast CI e manutenção dos gatilhos; quem faz — executor GitHub; próximo — revisar FAST PASS no SHA do código CI, ativar release gates ao converter PR para ready somente na preparação do merge, manter Rules de produção intactas até autorização; quem fará — executor/Coordenador e Fundador para publicação.
+
+---
+
+## DIRETRIZ DE DESENVOLVIMENTO — EMPROVEX CI LEAN (20/10/2026)
+
+> **Decisão de organização registrada, ainda não implementada nos workflows.** Objetivo: desburocratizar a validação durante o desenvolvimento, sem reduzir as garantias de segurança, integridade de estoque ou exigências de release. Não confundir recomendação com gate já alterado.
+
+### Diagnóstico objetivo
+- O `.github/workflows/application-ci.yml` da branch WAREHOUSE-SERVER-R2 possui **738 linhas**, dezenas de guards e três grandes sobreposições de validação: Application CI, Warehouse Server R2 Smoke e Browser E2E. Um ajuste isolado no Warehouse pode provocar testes de SAG, Administração, relatórios e estética sem mudanças nesses módulos.
+- Houve múltiplas falhas de **guards de presença literal de código antigo**, que exigiam `runTransaction`/`writeBatch` ou variáveis no navegador após migração para transações autenticadas no servidor. Corrigir esses guards preservando seus invariantes de comportamento; não recriar o código cliente antigo e não silenciar a reprovação.
+- Parte do custo/tempo é repetição de `npm ci`, inicialização de Firebase Emulator e instalação do Chromium em cada rodada. O ganho de tempo ainda **não foi medido**; não registrar percentuais inventados.
+
+### Política proposta de testes proporcionais ao risco
+1. **Nível 1 — Fast CI (cada alteração):** TypeScript, auditoria estrita de zero gravações diretas no cliente, Core Protection e testes unitários/contratuais dos arquivos/domínios alterados. Execução curta, automática e bloqueante.
+2. **Nível 2 — Integração dirigida (ao concluir uma funcionalidade e após mudanças de risco):** Firestore Auth/Emulator com cenários positivos e negativos do motor afetado. Obrigatórios sempre que houver efeitos sobre saldo agregado/localizado, lotes FEFO, histórico, replay/idempotência, concorrência, autenticação, workspace/UG ou contratos de API. Testar estados adversos e degradação, sem usar dados produtivos para o smoke.
+3. **Nível 3 — Certificação integral (antes do merge/deploy/corte de Rules):** Application CI completo, proteção Core, segurança multi-tenant, Recovery, build, testes de integração, Browser E2E aplicável, QA Preview e aceite humano quando necessário. Reexecutar sobre o **HEAD funcional final** se uma correção invalidar a certificação.
+
+### Simplificações aprovadas como diretriz de trabalho (não executadas ainda)
+- Criar pipeline **EMPROVEX Fast CI**, orientado a caminhos alterados. Mudanças em bibliotecas compartilhadas, autenticação, modelos, persistência, Rules, CI ou infraestrutura acionam validações transversais adequadas; nunca permitir que um filtro deixe uma alteração crítica sem gate.
+- Substituir progressivamente guards que procuram strings por testes de **resultado observável**, preservando bloqueio para regressão. Preferir resultado de movimento/saldo/lote, isolamento de workspace/UG, transação, replay e concorrência a nomes ou posição textual de funções.
+- **Consolidar falhas por rodada:** executar os testes pertinentes de modo que gerem um relatório único de erros e falhar ao final se qualquer um reprovar. Não usar `continue-on-error` como aprovação e não mascarar erros.
+- Evitar rodar o mesmo smoke do servidor simultaneamente em múltiplos workflows: reutilizar o resultado de um job especializado ou racionalizar testes, preservando o gate. Corrigir `paths` do Warehouse Smoke para cobrir todos os novos motores e seus testes.
+- Executar Browser E2E completo sob demanda e na certificação; nos commits apenas de testes/guard internos, rodar o subconjunto atingido. Não repetir publicação Vercel nem modificar Rules por causa de ajustes documentais ou de testes.
+- Um PR/branch de integração, commits objetivos e workers paralelos **somente** em frentes independentes quando reduzirem trabalho real. Não criar PRs, rounds de auditoria e memorializações redundantes a cada correção.
+- **Não dispensar:** estoque não negativo, conservação da transferência, FEFO, movimentações e histórico imutável, idempotência, concorrência, autorização real, workspace/UG, casos negativos, rollback/recovery e prova de zero escritas diretas pelo cliente.
+
+### Estado real do WAREHOUSE-SERVER-R2 neste registro
+- **PR [#348](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/348) DRAFT**, branch `feat/warehouse-server-r2-migration-20261020`, HEAD funcional auditado `690d20da9fca104bc66451a04ab42d95029bf8a8`. Não houve merge, deploy nem corte/ativação de Rules server-only.
+- Nesse HEAD, **Core Protection**, **Warehouse Server R2 Smoke (Auth + Firestore Emulator)** e **Browser E2E** concluíram em **SUCCESS**. No Application CI, TypeScript, auditoria estrita **0 SDK client writes** (dentro dos diretórios examinados), os testes de segurança/contratos anteriores ao bloqueio passaram; o job completo terminou **FAIL**, não PASS.
+- **Bloqueio exato:** `scripts/warehouse-depot-layout.test.mjs:451`, expressão regular inválida no teste de arquivamento: `assert.doesNotMatch(repository, /\\b(?:writeBatch|runTransaction)\\s*\\(/)` causa `SyntaxError: Invalid regular expression: Unterminated group`. Falha do arquivo **de teste**; corrigir sintaxe, verificar o teste localmente com `node --check` e `npm run test:adm-deposito-depot-layout` antes de repetir Application CI. Após isso, tratar quaisquer falhas reais posteriores sem eliminá-las.
+- **Limitação importante:** o scanner `scripts/warehouse-r2-direct-write-audit.mjs` verifica padrões de operações do SDK em `lib/warehouse`, `features/warehouse`, `app/central-depositos` e `components/warehouse`; **zero ocorrências estáticas não é prova suficiente de segurança de todos os caminhos dinâmicos**. Manter review da autorização do motor, concorrência, transações, integridade, Rules e cobertura de rotas.
+- CI LEAN é uma **proposta registrada**, não uma alteração feita agora. A certificação completa da migração #348 e a manutenção da produção continuam sob a política de bloqueios vigente até aprovação e implementação explícita de um novo pipeline.
+
+### Handoff de continuidade — quem faz o quê
+**Onde estamos:** migração server-only em PR #348/DRAFT, sem publicação; há um teste da Fase 9 com `SyntaxError` no HEAD funcional `690d20d`. **O que fazemos:** primeiro fechar corretamente a auditoria/certificação desse PR; em seguida separar e implementar o Fast CI/seleção de testes sem dispensar gates de release. **Quem faz:** executor técnico/GitHub. **O que fazer a seguir:** corrigir a regex do teste, executar o teste isolado, rerodar Application CI e resolver apenas blockers reais; após PASS completo, planejar refatoração de CI em alteração controlada. **Quem fará:** assistente executor no GitHub; Fundador autoriza qualquer merge, Rules ou deploy.
+
+---
+
+## REGISTRO DE INCIDENTE — 20/10/2026 · LIMPEZA DE MATERIAIS DE TESTE CONCLUÍDA (PR #347 DRAFT)
+
+> **Registro documental na branch do PR #347, não publicado na `main`.** O estado de release do EMPROVEX continua sujeito aos gates independentes.
+
+- **Banco/escopo:** `gen-lang-client-0982077967`, database `emprovex-warehouse`, workspace `hgesm-aprov`, UG `160416`. Autorização expressa do Fundador para excluir dados de materiais de teste, preservando a estrutura física.
+- **Resultado do PowerShell:** `EXCLUÍDOS=3241/3241`; verificação final apresentada pelo Fundador: `VERIFICACAO=PASS; DOCUMENTOS_OPERACIONAIS_RESTANTES=0; ESTRUTURA_FISICA_PRESERVADA=PASS`.
+- **Preservado e conferido:** 11 depósitos, 268 locais/subposições, 25 croquis, 1 configuração e 4 destinos (309 documentos).
+- **Coleções de material/estoque/histórico/índices:** sem documentos operacionais restantes no momento da verificação. Backup local existente no ambiente do Fundador; manter protegido.
+- **Nota operacional:** `intakeQueueIndex/state` é atualizado pela sincronização da fila; plano anterior abortou ao detectar mudança de versão (nenhuma exclusão), seguido de novo plano e execução bem-sucedida. A fila pode se reconstruir a partir de NFs que permanecem no módulo operacional.
+- **Próximo passo P0:** PR #347 contém implementação parcial das Rules de `MANUAL_ENTRY` localizada e tratamento de leitura histórica. Falta executar Emulator, regressão, compilação e smoke humano; nenhuma publicação desse PR foi validada. Simplificar cadastro em transação consistente e economizar leituras redundantes mantendo workspace/UG, rastreabilidade e saldos corretos.
+- **Detalhes:** `docs/incidents/WAREHOUSE_MANUAL_ENTRY_P0_20261020.md`.
+
+---
+
 
 ## WAREHOUSE-SERVER-R2 — HANDOFF DE CONTINUIDADE (20/10/2026 · PR #348 · HEAD 94306ab)
 

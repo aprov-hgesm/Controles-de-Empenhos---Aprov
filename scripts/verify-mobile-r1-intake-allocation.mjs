@@ -73,22 +73,29 @@ assert.match(helper, /createWarehouseMobileAllocationOperationId/);
 assert.match(helper, /WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION/);
 
 const allocateRepository = read('lib/warehouse/intakeAllocationRepository.ts');
+const intakeClient = read('lib/warehouse/intakeActionClient.ts');
+const intakeServer = read('app/api/central-depositos/intake-action/route.ts');
+assert.match(allocateRepository, /allocateWarehousePendingItemFast/);
+assert.match(intakeClient, /postFastAction/);
+assert.match(intakeClient, /getIdToken/);
+assert.match(intakeClient, /\/api\/central-depositos\/intake-action/);
+assert.match(intakeServer, /verifyWarehouseRequest/);
+assert.match(intakeServer, /warehouseAdminTransaction|beginTransaction|:commit/);
 for (const contract of [
-  'runTransaction',
   'WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION',
   'WAREHOUSE_INTAKE_ALLOCATION_EXCEEDS_PENDING',
-  'warehouseMovementMatchesReplay',
   'WAREHOUSE_IDEMPOTENCY_CONFLICT',
   'WAREHOUSE_BARCODE_MATERIAL_CONFLICT',
-  'ensureActivePosition',
-  'currentPendingQuantity',
+  'pendingQuantity',
 ]) {
   assert.equal(
-    allocateRepository.includes(contract),
+    intakeServer.includes(contract),
     true,
-    'Proteção autoritativa ausente no ALLOCATE reutilizado: ' + contract
+    'Proteção autoritativa ausente no ALLOCATE do servidor: ' + contract
   );
 }
+assert.match(allocateRepository, /warehouseMovementMatchesReplay/);
+assert.match(allocateRepository, /ensureActivePosition/);
 
 const route = read('app/operador-movel/alocar/page.tsx');
 assert.match(route, /WarehouseMobileIntakeAllocation/);
