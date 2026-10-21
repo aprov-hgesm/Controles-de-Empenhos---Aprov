@@ -1,5 +1,18 @@
 # EMPROVEX — Memorial Oficial
 
+## HARDENING DE SEGURANÇA E PREPARAÇÃO DA HOSPEDAGEM — 20/10/2026
+
+- **PR #349 (RC sobre main, sem merge):** removido motor genérico de ledger em `lib/server/warehouseLedgerAndArchive.ts`; API `LEDGER_MOVEMENT` agora retorna 403 `WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED` sem executar transação. Elimina a capacidade de forjar `quantityDelta` e saldo `UNASSIGNED` pela operação genérica. Motores especializados de NF/alocação, saída, devolução, transferência e inventário permanecem disponíveis. Atenção: helper legado `ensureWarehouseIntakeEntryContext` chama `applyWarehouseMovement`; se reutilizado no futuro precisa migrar, a alocação ativa delega a `allocateWarehousePendingItemFast`.
+- **Provas regressivas:** novo `scripts/warehouse-server-command-security.test.mjs` no Application CI, Browser E2E testa recusa explícita de seis tipos de ledger com 403; não considerar aprovado sem resultados SUCCESS do HEAD final.
+- **Hospedagem:** nova API restrita ao fundador `GET /api/central-depositos/health`, que valida token de servidor e transação somente de leitura em `emprovex-warehouse`, sem devolver chaves ou payload Firestore. O E2E localhost cobre acesso sem token negado e caminho fundador no Emulator; check com IAM real só no deployment de staging autorizado.
+- **Bloqueio externo confirmado:** integração Vercel disponível pertence a outra equipe e retorna 403 para `aprov-hgesms-projects`. Não foi possível ler, criar ou alterar variáveis do projeto real; não foram usados segredos fora da equipe. `vercel.json` mantém deploy por Git desativado.
+- **Plano e segurança operacional:** `docs/WAREHOUSE_HOSTING_PREPUBLICACAO.md`. Configurar `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` apenas server-side no escopo correto com IAM mínimo; jamais compartilhar segredo na conversa ou rodar workflow PR com secret de produção. Validar staging `--prod --skip-domain`, founder-only health, workspace isolado, rollback, só depois Rules server-only e promoção ao domínio.
+- **Produção:** não tocada. NO-GO para merge/deploy/promote/Rules até CI integral do HEAD, credenciais Vercel e IAM real comprovadas, QA/aceite isolado e autorização do Fundador.
+
+**Handoff:** onde — PR #349 Draft com hardening de segurança; fazendo — validar TypeScript, guard de ledger, Playwright localhost e CI integral; quem — executor GitHub; próximo — obter concessão da integração à equipe Vercel proprietária, executar staged check e decidir GO sem tocar em workspaces reais; quem fará — Fundador para acesso/autorização, executor para CI e QA.
+
+---
+
 ## RELEASE CANDIDATE DE INTEGRAÇÃO — 20/10/2026 · WAREHOUSE SERVER R2 + CI LEAN
 
 > **Documento de integração, não comprovante de publicação.** Esta branch é composta diretamente sobre a main atual, preservando as atualizações anteriores do memorial e unindo as mudanças dos PRs #347 e #348. Os testes do RC e o aceite de Preview/Rules ainda devem ser verificados separadamente.
