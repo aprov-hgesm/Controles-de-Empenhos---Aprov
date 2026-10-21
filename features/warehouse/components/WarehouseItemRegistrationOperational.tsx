@@ -38,11 +38,11 @@ import type {
 } from '../../../lib/warehouse/intakeState';
 import {
   loadWarehouseInvoiceIntakeHistory,
-  loadWarehouseInvoiceIntakeQueue,
   refreshWarehouseInvoiceIntakeQueueRows,
   type WarehouseInvoiceIntakeQueueContext,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
+import { loadWarehouseInvoiceQueueFromServer } from '../../../lib/warehouse/queueReadClient';
 import type {
   AllocateWarehousePendingItemResult,
 } from '../../../lib/warehouse/intakeAllocationRepository';
@@ -1453,7 +1453,7 @@ function InvoiceRegistrationQueue({
     try {
       const nextContext = mode === 'history'
         ? await loadWarehouseInvoiceIntakeHistory(workspaceId)
-        : await loadWarehouseInvoiceIntakeQueue(workspaceId);
+        : await loadWarehouseInvoiceQueueFromServer(workspaceId);
       setContext(nextContext);
       setContextMode(mode);
     } catch (error) {
