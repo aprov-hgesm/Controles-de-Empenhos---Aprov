@@ -404,8 +404,7 @@ export async function readWarehouseInvoiceQueueServer(
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ? 'emulator':await getGoogleAccessToken();
   const started=Date.now();
-  const settings=await queueReadDocument(token,'warehouse',ws,'settings' as
-    'intakeQueueIndex','invoice-integration');
+  const settings=await queueReadDocument(token,'warehouse',ws,'settings','invoice-integration');
   const cutoffAt=typeof settings?.data.cutoffAt==='string' &&
     Number.isFinite(Date.parse(settings.data.cutoffAt)) ? settings.data.cutoffAt : null;
   const discovery=await synchronizeIndex(token,access,cutoffAt);
