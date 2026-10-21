@@ -56,15 +56,20 @@ export async function warehouseLedgerMovementServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<ApplyWarehouseMovementResult>{
   const v=obj(raw);
-  // Apenas o Marco Zero SISCOFIS, invocado por um serviço servidor confiável.
-  // Nunca exposto diretamente em operations/route.ts.
-  const expectedKey=typeof v.materialId==='string'
-    ?new RegExp('^siscofis:marco-zero:[a-f0-9]{64}:'+v.materialId+'||!/^mat_[a-f0-9]{32}$/.test(v.materialId)
-    ||typeof v.idempotencyKey!=='string'||v.idempotencyKey.length<1
-    ||v.idempotencyKey.length>240||v.type==='TRANSFER')return fail('WAREHOUSE_LEDGER_INVALID_INPUT',400);
-  if(v.reversesMovementId!==undefined&&v.reversesMovementId!==null
-    &&(typeof v.reversesMovementId!=='string'||!/^mov_[a-f0-9]{64}$/.test(v.reversesMovementId))){
-    return fail('WAREHOUSE_LEDGER_INVALID_REVERSAL',400);
+  if(typeof v.materialId!=='string'||!/^mat_[a-f0-9]{32}$/.test(v.materialId)
+    ||typeof v.idempotencyKey!=='string'||v.idempotencyKey.length>240) {
+    return fail('WAREHOUSE_LEDGER_INVALID_INPUT',400);
+  }
+  // Ledger inicial é reservado ao Marco Zero validado pelo servidor SISCOFIS.
+  // Não interpolar identificadores fornecidos em expressões regulares.
+  const siscofisKey=/^siscofis:marco-zero:[a-f0-9]{64}:mat_[a-f0-9]{32}$/.test(v.idempotencyKey)
+    &&v.idempotencyKey.endsWith(':'+v.materialId);
+  if(v.type!=='INITIAL_BALANCE'
+    ||v.source!==null
+    ||v.reversesMovementId!==undefined&&v.reversesMovementId!==null
+    ||typeof v.quantityDelta!=='number'||v.quantityDelta<=0
+    ||!siscofisKey) {
+    return fail('WAREHOUSE_SISCOFIS_LEDGER_ONLY',403);
   }
   const input=v as unknown as ApplyWarehouseMovementInput;
   const ws=access.workspaceId,id=await createWarehouseMovementId(ws,input.idempotencyKey);
