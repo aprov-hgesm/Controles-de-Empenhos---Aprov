@@ -17,9 +17,9 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 
-import type { WarehouseDepotLayout, WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
+import type { WarehouseDepotLayout } from '../../../lib/warehouse/layout';
 import {
-  listWarehouseDepotLayouts,
+  listActiveWarehouseDepotLayouts,
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
 import type {
@@ -48,8 +48,8 @@ import {
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
-  WAREHOUSE_RACK_VISUAL,
 } from '../visualStyle';
+import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 import styles from './WarehouseLandingOperational.module.css';
 
 const LazyIntakeBulkActionPanel = dynamic(
@@ -128,14 +128,6 @@ function isoPoint(x: number, y: number, z = 0): IsoPoint {
 
 function polygonPoints(points: IsoPoint[]): string {
   return points.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
-}
-
-function visualBoxes(quantity: number): number {
-  if (quantity <= 0) return 0;
-  if (quantity < 5) return 1;
-  if (quantity < 20) return 2;
-  if (quantity < 60) return 3;
-  return 4;
 }
 
 function warehouseBox(
@@ -285,85 +277,6 @@ function warehousePallet(
   );
 }
 
-function warehouseRackBeam({
-  key,
-  x,
-  y,
-  width,
-  depth,
-  z,
-  height,
-  rear = false,
-  side = false,
-}: {
-  key: string;
-  x: number;
-  y: number;
-  width: number;
-  depth: number;
-  z: number;
-  height: number;
-  rear?: boolean;
-  side?: boolean;
-}) {
-  const a = isoPoint(x, y, z);
-  const b = isoPoint(x + width, y, z);
-  const c = isoPoint(x + width, y + depth, z);
-  const d = isoPoint(x, y + depth, z);
-  const at = isoPoint(x, y, z + height);
-  const bt = isoPoint(x + width, y, z + height);
-  const ct = isoPoint(x + width, y + depth, z + height);
-  const dt = isoPoint(x, y + depth, z + height);
-  const frontFill = rear
-    ? WAREHOUSE_RACK_VISUAL.rearBeamFront
-    : side
-      ? WAREHOUSE_RACK_VISUAL.beamSide
-      : WAREHOUSE_RACK_VISUAL.beamFront;
-  const topFill = rear
-    ? WAREHOUSE_RACK_VISUAL.rearBeamTop
-    : WAREHOUSE_RACK_VISUAL.beamTop;
-
-  return (
-    <g key={key} data-visual-role={side ? 'rack-side-beam' : rear ? 'rack-rear-beam' : 'rack-front-beam'}>
-      <polygon
-        points={polygonPoints([d, c, ct, dt])}
-        fill={frontFill}
-        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.46"
-      />
-      <polygon
-        points={polygonPoints([b, c, ct, bt])}
-        fill={WAREHOUSE_RACK_VISUAL.beamSide}
-        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.42"
-      />
-      <polygon
-        points={polygonPoints([at, bt, ct, dt])}
-        fill={topFill}
-        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.46"
-      />
-    </g>
-  );
-}
-
-function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number, subpositions = 0): number {
-  const base = kind === 'SHELF' || kind === 'RACK'
-    ? 112 + Math.min(7, subpositions) * 4
-    : kind === 'REFRIGERATOR'
-      ? 124
-      : kind === 'FREEZER' || kind === 'CHAMBER'
-        ? 72
-        : kind === 'PALLET'
-          ? 15
-          : kind === 'BENCH' || kind === 'CABINET'
-            ? 58
-            : kind === 'WALL'
-              ? 78
-              : 34;
-  return Math.max(8, base * Math.min(1.02, Math.max(0.48, scale)));
-}
-
 function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvoiceGroup[] {
   const actionable = rows.filter(
     (row) =>
@@ -479,347 +392,10 @@ function svgDeltaToWorld(deltaX: number, deltaY: number): IsoPoint {
   };
 }
 
-function renderDepotObject(
-  object: WarehouseDepotLayoutObject,
-  placement: DepotPlacement,
-  subpositionsByParent: Map<string, WarehouseLocation[]>,
-  occupancyByLocal: Map<string, number>,
-  occupancyBySubposition: Map<string, number>
-) {
-  const localScale = placement.scale;
-  const x = placement.x + object.x * localScale;
-  const y = placement.y + object.y * localScale;
-  const width = Math.max(2.6, object.width * localScale);
-  const height = Math.max(2.6, object.height * localScale);
-  const subpositions = object.warehouseLocationId
-    ? subpositionsByParent.get(object.warehouseLocationId) || []
-    : [];
-  const z = objectHeight(object.kind, localScale, subpositions.length);
-  const linkedPositionId = object.warehouseLocationId || '';
-  const occupiedQuantity = linkedPositionId
-    ? (occupancyByLocal.get(linkedPositionId) || occupancyBySubposition.get(linkedPositionId) || 0)
-    : 0;
-  const generalBoxCount = visualBoxes(occupiedQuantity);
-  const a = isoPoint(x, y, 0);
-  const b = isoPoint(x + width, y, 0);
-  const c = isoPoint(x + width, y + height, 0);
-  const d = isoPoint(x, y + height, 0);
-  const at = isoPoint(x, y, z);
-  const bt = isoPoint(x + width, y, z);
-  const ct = isoPoint(x + width, y + height, z);
-  const dt = isoPoint(x, y + height, z);
-
-  if (object.kind === 'CORRIDOR' || object.kind === 'AREA' || object.kind === 'ZONE') {
-    const zoneFill = object.kind === 'CORRIDOR' ? '#eef5fa' : '#e6f0f8';
-    return (
-      <g key={object.id} opacity="0.76">
-        <polygon
-          points={polygonPoints([a, b, c, d])}
-          fill={zoneFill}
-          fillOpacity={object.kind === 'CORRIDOR' ? '0.32' : '0.22'}
-          stroke="#b8c9d9"
-          strokeOpacity="0.72"
-          strokeWidth="0.7"
-          strokeDasharray={object.kind === 'CORRIDOR' ? '4 4' : undefined}
-        />
-      </g>
-    );
-  }
-
-  if (object.kind === 'WALL') {
-    return (
-      <g key={object.id} opacity="0.9">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#e7eef3" stroke="#9bb0c1" strokeWidth="0.9" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#c9d6df" stroke="#91a7b8" strokeWidth="0.8" />
-        <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#ffffff" strokeWidth="1.2" opacity="0.9" />
-      </g>
-    );
-  }
-
-  if (object.kind === 'PALLET') {
-    return (
-      <g key={object.id}>
-        {warehousePallet(
-          'allocated-pallet-structure-' + object.id,
-          x,
-          y,
-          width,
-          height,
-          z,
-          'allocated-warehouse-pallet'
-        )}
-        {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
-          warehouseBox(
-            'allocated-pallet-' + object.id + '-' + index,
-            x + width * (0.22 + (index % 2) * 0.34),
-            y + height * (0.25 + Math.floor(index / 2) * 0.11),
-            z + 3 + Math.floor(index / 2) * 10,
-            11,
-            9,
-            11
-          )
-        )}
-      </g>
-    );
-  }
-
-  if (object.kind === 'SHELF' || object.kind === 'RACK') {
-    const levels = Math.max(2, Math.min(6, subpositions.length || 4));
-    const beamDepth = Math.max(0.8, Math.min(height * 0.065, 2.8));
-    const sideBeamWidth = Math.max(0.8, Math.min(width * 0.028, 2.6));
-    const beamHeight = Math.max(1.55, Math.min(2.8, z * 0.027));
-    const frontBottomLeft = d;
-    const frontBottomRight = c;
-    const frontTopLeft = dt;
-    const frontTopRight = ct;
-    const backBottomLeft = a;
-    const backBottomRight = b;
-    const backTopLeft = at;
-    const backTopRight = bt;
-
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        {[backBottomLeft, backBottomRight].map((base, index) => {
-          const top = [backTopLeft, backTopRight][index];
-          return (
-            <line
-              key={'back-post-' + index}
-              x1={base.x}
-              y1={base.y}
-              x2={top.x}
-              y2={top.y}
-              stroke={WAREHOUSE_RACK_VISUAL.postMain}
-              strokeWidth="3.4"
-              strokeLinecap="round"
-            />
-          );
-        })}
-
-        {Array.from({ length: levels }, (_, index) => {
-          const ratio = (index + 1) / (levels + 0.34);
-          const shelfZ = z * ratio;
-          const p1 = isoPoint(x, y, shelfZ);
-          const p2 = isoPoint(x + width, y, shelfZ);
-          const p3 = isoPoint(x + width, y + height, shelfZ);
-          const p4 = isoPoint(x, y + height, shelfZ);
-          const linkedSubposition = subpositions[index] || null;
-          const levelQuantity = linkedSubposition
-            ? occupancyBySubposition.get(linkedSubposition.id) || 0
-            : 0;
-          const levelBoxCount = visualBoxes(levelQuantity);
-          return (
-            <g key={'level-' + index}>
-              <polygon
-                points={polygonPoints([p1, p2, p3, p4])}
-                fill={WAREHOUSE_RACK_VISUAL.deckTop}
-                stroke={WAREHOUSE_RACK_VISUAL.deckStroke}
-                strokeWidth="0.55"
-                opacity="0.98"
-              />
-              {warehouseRackBeam({
-                key: 'rear-beam-' + object.id + '-' + index,
-                x,
-                y,
-                width,
-                depth: beamDepth,
-                z: shelfZ - beamHeight,
-                height: beamHeight,
-                rear: true,
-              })}
-              {warehouseRackBeam({
-                key: 'left-side-beam-' + object.id + '-' + index,
-                x,
-                y,
-                width: sideBeamWidth,
-                depth: height,
-                z: shelfZ - beamHeight,
-                height: beamHeight * 0.82,
-                side: true,
-              })}
-              {warehouseRackBeam({
-                key: 'right-side-beam-' + object.id + '-' + index,
-                x: x + width - sideBeamWidth,
-                y,
-                width: sideBeamWidth,
-                depth: height,
-                z: shelfZ - beamHeight,
-                height: beamHeight * 0.82,
-                side: true,
-              })}
-              {levelBoxCount > 0 && Array.from({ length: levelBoxCount }, (_, boxIndex) =>
-                warehouseBox(
-                  'allocated-shelf-' + object.id + '-' + index + '-' + boxIndex,
-                  x + width * (0.22 + (boxIndex % 2) * 0.36),
-                  y + height * 0.38,
-                  shelfZ + 1 + Math.floor(boxIndex / 2) * 8,
-                  9,
-                  7,
-                  9
-                )
-              )}
-              {warehouseRackBeam({
-                key: 'front-beam-' + object.id + '-' + index,
-                x,
-                y: y + height - beamDepth,
-                width,
-                depth: beamDepth,
-                z: shelfZ - beamHeight,
-                height: beamHeight,
-              })}
-            </g>
-          );
-        })}
-
-        {subpositions.length === 0 && generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) => {
-          const level = index % levels;
-          const shelfZ = z * ((level + 1) / (levels + 0.34));
-          return warehouseBox(
-            'allocated-shelf-general-' + object.id + '-' + index,
-            x + width * (0.24 + (index % 2) * 0.34),
-            y + height * 0.38,
-            shelfZ + 1,
-            9,
-            7,
-            9
-          );
-        })}
-
-        {[frontBottomLeft, frontBottomRight].map((base, index) => {
-          const top = [frontTopLeft, frontTopRight][index];
-          return (
-            <g key={'front-post-' + index}>
-              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="4.2" strokeLinecap="round" />
-              <line x1={base.x + 1.1} y1={base.y} x2={top.x + 1.1} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="0.8" opacity="0.75" />
-            </g>
-          );
-        })}
-
-      </g>
-    );
-  }
-
-  if (object.kind === 'REFRIGERATOR') {
-    const splitBottom = isoPoint(x + width / 2, y + height, 3);
-    const splitTop = isoPoint(x + width / 2, y + height, z - 3);
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#cbd4d8" stroke="#657985" strokeWidth="1" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#9eafb8" stroke="#5b707c" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
-        <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
-        <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-fridge-' + object.id + '-' + index,
-            x + width * (0.26 + index * 0.18),
-            y + height * 0.74,
-            z * (0.24 + (index % 2) * 0.18),
-            8,
-            6,
-            8
-          )
-        )}
-      </g>
-    );
-  }
-
-  if (object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#b8cad5" stroke="#6c8798" strokeWidth="0.9" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#91adbd" stroke="#648193" strokeWidth="0.9" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f8fa" stroke="#809cac" strokeWidth="0.9" />
-        <polygon
-          points={polygonPoints([
-            isoPoint(x + width * 0.09, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.1, z + 1),
-            isoPoint(x + width * 0.91, y + height * 0.9, z + 1),
-            isoPoint(x + width * 0.09, y + height * 0.9, z + 1),
-          ])}
-          fill="#d9f2fb"
-          fillOpacity="0.64"
-          stroke="#73a9bf"
-          strokeWidth="0.7"
-        />
-        {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-          warehouseBox(
-            'allocated-freezer-' + object.id + '-' + index,
-            x + width * (index ? 0.56 : 0.28),
-            y + height * 0.42,
-            z + 2,
-            8,
-            6,
-            8
-          )
-        )}
-      </g>
-    );
-  }
-
-  if (object.kind === 'BENCH' || object.kind === 'CABINET') {
-    const legPoints = [
-      [x + width * 0.1, y + height * 0.12],
-      [x + width * 0.9, y + height * 0.12],
-      [x + width * 0.1, y + height * 0.88],
-      [x + width * 0.9, y + height * 0.88],
-    ];
-    return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        {legPoints.map(([lx, ly], index) => {
-          const bottom = isoPoint(lx, ly, 2);
-          const top = isoPoint(lx, ly, z - 2);
-          return <line key={index} x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#536a78" strokeWidth="2.8" />;
-        })}
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#e8eef1" stroke="#657b88" strokeWidth="1" />
-        <polygon
-          points={polygonPoints([
-            isoPoint(x, y + height, z - 7),
-            isoPoint(x + width, y + height, z - 7),
-            ct,
-            dt,
-          ])}
-          fill="#aebdc5"
-          stroke="#667d8b"
-          strokeWidth="0.85"
-        />
-        {generalBoxCount > 0 && warehouseBox(
-          'allocated-bench-' + object.id,
-          x + width * 0.42,
-          y + height * 0.38,
-          z + 1,
-          10,
-          8,
-          10
-        )}
-      </g>
-    );
-  }
-
-  return (
-    <g key={object.id} filter="url(#worldObjectShadow)">
-      <polygon points={polygonPoints([d, c, ct, dt])} fill="#dce6ec" stroke="#7e94a4" strokeWidth="0.9" />
-      <polygon points={polygonPoints([b, c, ct, bt])} fill="#b7c7d1" stroke="#718899" strokeWidth="0.85" />
-      <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f7f9" stroke="#8fa3b1" strokeWidth="0.9" />
-      {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-        warehouseBox(
-          'allocated-generic-' + object.id + '-' + index,
-          x + width * (index ? 0.56 : 0.28),
-          y + height * 0.4,
-          z + 1,
-          9,
-          7,
-          9
-        )
-      )}
-    </g>
-  );
-}
-
 function DepotWorld({
   placement,
-  subpositionsByParent,
-  occupancyByLocal,
-  occupancyBySubposition,
+  locations,
+  balances,
   onOpen,
   editMode,
   selected,
@@ -829,9 +405,8 @@ function DepotWorld({
   onPointerUp,
 }: {
   placement: DepotPlacement;
-  subpositionsByParent: Map<string, WarehouseLocation[]>;
-  occupancyByLocal: Map<string, number>;
-  occupancyBySubposition: Map<string, number>;
+  locations: WarehouseLocation[];
+  balances: WarehouseLocationBalance[];
   onOpen: (depotId: string) => void;
   editMode: boolean;
   selected: boolean;
@@ -846,6 +421,25 @@ function DepotWorld({
   const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
   const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
   const open = () => onOpen(depot.id);
+  const depotLocations = locations.filter((location) => location.depotId === depot.id);
+  const validLocationIds = new Set(depotLocations.map((location) => location.id));
+  const displayedObjects = layout?.objects.filter(
+    (object) => !object.warehouseLocationId || validLocationIds.has(object.warehouseLocationId)
+  ) || [];
+  const depotBalances = balances.filter(
+    (balance) => balance.position.kind !== 'UNASSIGNED' && balance.position.depotId === depot.id
+  );
+  // The landing retains a single SVG plane; each depot embeds the *same*
+  // renderer as "Meus Depósitos", scaled to its own position on that plane.
+  const center = isoPoint(
+    placement.x + placement.width / 2,
+    placement.y + placement.height / 2
+  );
+  const projectedSpan =
+    placement.width / WORLD_WIDTH * ISO_HALF_WIDTH
+    + placement.height / WORLD_HEIGHT * ISO_HALF_WIDTH;
+  const sceneWidth = Math.max(190, Math.min(670, projectedSpan * 1.14));
+  const sceneHeight = sceneWidth * 0.72;
 
   return (
     <g
@@ -884,64 +478,44 @@ function DepotWorld({
         filter="url(#depotFloorShadow)"
       />
 
-      <g className={styles.depotFloorGrid} pointerEvents="none">
-        {Array.from({ length: 5 }, (_, index) => {
-          const ratio = (index + 1) / 6;
-          const gx1 = isoPoint(
-            placement.x - 7 + (placement.width + 14) * ratio,
-            placement.y - 7,
-            0.8
-          );
-          const gx2 = isoPoint(
-            placement.x - 7 + (placement.width + 14) * ratio,
-            placement.y + placement.height + 7,
-            0.8
-          );
-          const gy1 = isoPoint(
-            placement.x - 7,
-            placement.y - 7 + (placement.height + 14) * ratio,
-            0.8
-          );
-          const gy2 = isoPoint(
-            placement.x + placement.width + 7,
-            placement.y - 7 + (placement.height + 14) * ratio,
-            0.8
-          );
-          return (
-            <g key={index}>
-              <line x1={gx1.x} y1={gx1.y} x2={gx2.x} y2={gx2.y} stroke="#c8d5de" strokeWidth="0.45" opacity="0.58" />
-              <line x1={gy1.x} y1={gy1.y} x2={gy2.x} y2={gy2.y} stroke="#c8d5de" strokeWidth="0.45" opacity="0.58" />
-            </g>
-          );
-        })}
-      </g>
-
-      {layout
-        ? layout.objects
-            .slice()
-            .sort((left, right) => {
-              const leftDepth = (left.x + left.y) * placement.scale + left.layer * 0.001;
-              const rightDepth = (right.x + right.y) * placement.scale + right.layer * 0.001;
-              return leftDepth - rightDepth;
-            })
-            .map((object) => renderDepotObject(
-              object,
-              placement,
-              subpositionsByParent,
-              occupancyByLocal,
-              occupancyBySubposition
-            ))
-        : (
-          <g opacity="0.58">
-            <polygon
-              points={polygonPoints([floorA, floorB, floorC, floorD])}
-              fill="#0a1530"
-              stroke="#6583bd"
-              strokeOpacity="0.32"
-              strokeDasharray="6 7"
+      {layout ? (
+        <foreignObject
+          x={center.x - sceneWidth / 2}
+          y={center.y - sceneHeight * 0.62}
+          width={sceneWidth}
+          height={sceneHeight}
+          pointerEvents="none"
+          data-testid="warehouse-landing-canonical-scene"
+          data-layout-id={layout.id}
+          data-layout-version={layout.version}
+        >
+          <div style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <WarehouseIsometricPreview
+              logicalWidth={layout.logicalWidth}
+              logicalHeight={layout.logicalHeight}
+              objects={displayedObjects}
+              locations={depotLocations}
+              balances={depotBalances}
+              materials={[]}
+              selectedMaterialId=""
+              queryText=""
+              onQueryTextChange={() => {}}
+              onSelectedMaterialIdChange={() => {}}
+              sceneOnly
             />
-          </g>
-        )}
+          </div>
+        </foreignObject>
+      ) : (
+        <g opacity="0.58">
+          <polygon
+            points={polygonPoints([floorA, floorB, floorC, floorD])}
+            fill="#0a1530"
+            stroke="#6583bd"
+            strokeOpacity="0.32"
+            strokeDasharray="6 7"
+          />
+        </g>
+      )}
 
     </g>
   );
@@ -1188,7 +762,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     try {
       const [depots, layouts, locations, locationBalances, queue, visualSettings] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
-        listWarehouseDepotLayouts(workspaceId, 150),
+        listActiveWarehouseDepotLayouts(workspaceId, 250),
         listWarehouseLocations(workspaceId, 500),
         listWarehousePositiveLocationBalances(workspaceId, 500),
         loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null),
@@ -1260,22 +834,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     [data.locations]
   );
 
-  const subpositionsByParent = useMemo(() => {
-    const map = new Map<string, WarehouseLocation[]>();
-    for (const location of activeLocations) {
-      if (location.kind !== 'SUBPOSITION' || !location.parentLocationId) continue;
-      const current = map.get(location.parentLocationId) || [];
-      current.push(location);
-      map.set(location.parentLocationId, current);
-    }
-    for (const current of map.values()) {
-      current.sort((left, right) =>
-        left.code.localeCompare(right.code, 'pt-BR', { numeric: true })
-      );
-    }
-    return map;
-  }, [activeLocations]);
-
   const positiveLocationBalances = useMemo(
     () => data.locationBalances
       .map((item) => item.balance)
@@ -1284,30 +842,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       ),
     [data.locationBalances]
   );
-
-  const occupancyByLocal = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const balance of positiveLocationBalances) {
-      if (balance.position.kind === 'UNASSIGNED') continue;
-      map.set(
-        balance.position.locationId,
-        (map.get(balance.position.locationId) || 0) + balance.quantity
-      );
-    }
-    return map;
-  }, [positiveLocationBalances]);
-
-  const occupancyBySubposition = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const balance of positiveLocationBalances) {
-      if (balance.position.kind !== 'SUBPOSITION') continue;
-      map.set(
-        balance.position.subpositionId,
-        (map.get(balance.position.subpositionId) || 0) + balance.quantity
-      );
-    }
-    return map;
-  }, [positiveLocationBalances]);
 
   const pendingGroups = useMemo(
     () => buildPendingGroups(data.pendingRows),
@@ -1666,9 +1200,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <DepotWorld
               key={placement.depot.id}
               placement={placement}
-              subpositionsByParent={subpositionsByParent}
-              occupancyByLocal={occupancyByLocal}
-              occupancyBySubposition={occupancyBySubposition}
+              locations={activeLocations}
+              balances={positiveLocationBalances}
               onOpen={openDepot}
               editMode={editMode}
               selected={selectedVisualDepotId === placement.depot.id}
