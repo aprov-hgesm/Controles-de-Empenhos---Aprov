@@ -114,7 +114,16 @@ try {
   });
   assert.equal(second.entry.balance.quantity,100);
   assert.equal(second.locationBalance.quantity,20);
-  console.log('PASS: material existente em outra subposição sem duplicar barcode');
+  const secondReplay=await registerWarehouseManualEntryServer(access,{
+    operationId:'manual-server-entry-002',
+    existingMaterialId:first.material.id,
+    description:'Arroz integral',unitLabel:'KG',quantity:20,
+    provenance:'Contagem',reference:null,
+    position:subposition,expiresOn:null,barcode:'7896305701574',
+  });
+  assert.equal(secondReplay.entry.applied,false);
+  assert.equal(secondReplay.entry.balance.quantity,100);
+  console.log('PASS: entrada legada sem código de lote permanece idempotente');
 
   await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
     ...firstInput,operationId:'manual-server-entry-003',
