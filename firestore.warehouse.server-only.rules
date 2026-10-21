@@ -36,9 +36,30 @@ service cloud.firestore {
         && request.auth.token.emprovexUg.matches('^[0-9]{6}$');
     }
 
+    // Preserva a revogação imediata para setores com sessão já aberta.
+    // A versão legada verifica este documento antes de permitir leituras.
+    function sectorLifecycleActive(workspaceId) {
+      let lifecycle = get(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ).data;
+      return lifecycle.schemaVersion == 'warehouse_workspace_access_v1'
+        && lifecycle.workspaceId == workspaceId
+        && lifecycle.status == 'active'
+        && lifecycle.ug == request.auth.token.emprovexUg;
+    }
+
+    function sectorLifecycleAllowsAccess(workspaceId) {
+      return !exists(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ) || sectorLifecycleActive(workspaceId);
+    }
+
     function canReadWorkspace(workspaceId) {
       return isFounderWorkspace(workspaceId)
-        || isBoundSector(workspaceId);
+        || (
+          isBoundSector(workspaceId)
+          && sectorLifecycleAllowsAccess(workspaceId)
+        );
     }
 
     match /warehouse/{workspaceId}/{document=**} {

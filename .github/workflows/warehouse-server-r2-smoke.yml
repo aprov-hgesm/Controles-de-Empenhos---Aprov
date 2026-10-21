@@ -11,6 +11,8 @@ on:
       - 'scripts/warehouse-server-manual-entry-emulator.ts'
       - 'scripts/warehouse-manual-entry-atomic-security.test.mjs'
       - 'firebase.warehouse-security-test.json'
+      - 'firebase.warehouse-server-only-test.json'
+      - 'scripts/warehouse-server-only-rules.test.mjs'
       - 'firestore.warehouse*.rules'
       - '.github/workflows/warehouse-server-r2-smoke.yml'
   workflow_dispatch:
@@ -41,3 +43,5 @@ jobs:
       - run: npm ci
       - name: Server R2 smoke (demo project only)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+      - name: Read-only Rules, tenant isolation and suspension (emulator)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-server-only-rules.test.mjs"
