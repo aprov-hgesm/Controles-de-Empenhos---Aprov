@@ -150,7 +150,10 @@ export async function queueReadPage(
   const query:Record<string,unknown>={
     from:[{collectionId:collection}],
     limit:pageSize,
-    orderBy:[{field:{fieldPath:options.filter?.field==='registeredAt'?'registeredAt':'__name__'},direction:'ASCENDING'}],
+    orderBy:options.filter?.field==='registeredAt' ?
+      [{field:{fieldPath:'registeredAt'},direction:'ASCENDING'},
+       {field:{fieldPath:'__name__'},direction:'ASCENDING'}] :
+      [{field:{fieldPath:'__name__'},direction:'ASCENDING'}],
   };
   if(options.filter) {
     query.where={fieldFilter:{
@@ -161,16 +164,19 @@ export async function queueReadPage(
     }};
   }
   if(options.after) {
-    const orderValue=options.filter?.field==='registeredAt'
-      ? {stringValue:String(options.after.data.registeredAt || '')}
-      : {referenceValue:'projects/' +
-          (process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
-            ? 'demo-emprovex-security':firebaseConfig.projectId) +
-          '/databases/' + (process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
-            ? (db==='core'?'(default)':'emprovex-warehouse')
-            : (db==='core'?firebaseConfig.firestoreDatabaseId:'emprovex-warehouse')) +
-          '/documents/' + root + '/' + options.after.id};
-    query.startAt={values:[orderValue],before:false};
+    const referenceValue='projects/' +
+      (process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
+        ? 'demo-emprovex-security' : firebaseConfig.projectId) +
+      '/databases/' + (process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR === '1'
+        ? (db==='core'?'(default)':'emprovex-warehouse')
+        : (db==='core'?firebaseConfig.firestoreDatabaseId:'emprovex-warehouse')) +
+      '/documents/' + root + '/' + options.after.id;
+    query.startAt={
+      values:options.filter?.field==='registeredAt'
+        ? [{stringValue:String(options.after.data.registeredAt || '')},{referenceValue}]
+        : [{referenceValue}],
+      before:false,
+    };
   }
   const response=await post(token,db,'/'+documentRoot(db,ws)+':runQuery',{structuredQuery:query});
   const rows=parseStream(response);
