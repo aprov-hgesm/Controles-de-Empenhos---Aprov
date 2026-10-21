@@ -3347,7 +3347,7 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 
 ## WAREHOUSE-READ-R1 — Migração da consulta de Alocação de Material (21/10/2026)
 
-**Estado FINAL: PR #350 MERGED — CI 6/6 PASS; produção preservada.** Base `main@76d78f90`, deployment de produção `dpl_A1WA8xC478i5UNdAuRqaSumr1nFN`; GitHub branch `feat/warehouse-read-r1-server-queue`. Nenhuma alteração aplicada às Firestore Rules, banco produtivo ou deploy da Vercel.
+**Estado ATUAL: PR #350 MERGED — CI 6/6 PASS; Warehouse Read R1 PUBLICADO em produção; usuário confirmou melhoria de velocidade.** Base `main@76d78f90`, deployment de produção `dpl_A1WA8xC478i5UNdAuRqaSumr1nFN`; GitHub branch `feat/warehouse-read-r1-server-queue`. Nenhuma alteração aplicada às Firestore Rules, banco produtivo ou deploy da Vercel.
 
 **Causa técnica confirmada:** acompanhamento de NFs reutiliza dados da sessão e histórico sob demanda; alocação usa o caminho `loadWarehouseInvoiceIntakeQueue`, que sincroniza índice e cruza `invoices`, `intakes`, `queueExclusions`, `movements` e `empenhos` via SDK cliente, com consultas sequenciais. Um acesso visual pode escrever estado derivado do índice, mas nunca deve alterar saldo.
 
@@ -3359,8 +3359,16 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - Telemetria mínima por abertura registra duração, NFs descobertas, intakes, índice e linhas retornadas, sem dados fiscais nem tokens.
 - Teste de contrato no Firestore Emulator com bootstrap, replay, alocação parcial, divergência canônica e isolamento entre workspaces, incluído no workflow Warehouse Server R2 Smoke.
 
-**Certificação do código:** PR #350 squash-merged em `main@7e4697e483e73fb7910e61f9d71519fc8d2ddad1`, com Application CI, Fast CI, Core Protection, Warehouse Server R2 Smoke, Browser E2E e Visual QA PASS. O Emulator do Read R1 confirmou bootstrap/replay, quantidade parcial, divergência canônica e isolamento. Cenário de 1 NF: bootstrap 275 ms e repetição 103 ms, sem nova escrita de índice; esses números NÃO são benchmark de produção nem comparação com a versão anterior. Não presumir economia de Firestore. Histórico/reconciliação continuam no SDK cliente sob demanda; em caso de cobertura incompleta o servidor falha explicitamente. Performance em produção e validação humana continuam exigidas antes da promoção na Vercel.
+**Certificação do código:** PR #350 squash-merged em `main@7e4697e483e73fb7910e61f9d71519fc8d2ddad1`, com Application CI, Fast CI, Core Protection, Warehouse Server R2 Smoke, Browser E2E e Visual QA PASS. O Emulator do Read R1 confirmou bootstrap/replay, quantidade parcial, divergência canônica e isolamento. Cenário de 1 NF: bootstrap 275 ms e repetição 103 ms, sem nova escrita de índice; esses números NÃO são benchmark de produção nem comparação com a versão anterior. Não presumir economia de Firestore. Histórico/reconciliação continuam no SDK cliente sob demanda; em caso de cobertura incompleta o servidor falha explicitamente. Após a publicação, o fundador confirmou que o carregamento da alocação ficou bem mais rápido; não há percentual auditado de redução.
 
 **Governança GOV-SIMP-01:** PR separado, sem deploy automático, sem atualização de Rules produtivas. Somente integrar à `main` após CI e teste de equivalência. Após merge, publicação única com PowerShell proprietário, pré-validação e smoke humano; a publicação não faz parte desta missão.
 
 **Handoff final:** onde — `main@7e4697e4` com READ-R1 certificado em CI, deploy oficial anterior R2 mantido; fazendo — aguardando apenas deploy de validação e smoke humano; quem fez — executor GitHub, PR #350; a seguir — publicação manual única pela sessão proprietária, conferir a fila e suas NFs antes do `promote`; quem fará — Fundador pelo PowerShell. Firestore Rules produtivas inalteradas.
+
+### Fechamento de publicação — Warehouse Read R1 (21/10/2026)
+
+- Código: PR #350 merged (7e4697e4); release fonte e693abe23b69597f4c2878f856f19008c3dd272f.
+- Vercel: https://emprovex.com.br validado via inspect apontando para dpl_J5aHD6V1kCHDvmCGSJHDQYzftPD3; status Ready; /api/health retornou status ok. Repetir promote resultou 409 porque já era o deployment atual.
+- Smoke humano relatado: a aba Alocação de Material ficou bem mais rápida. PASS qualitativo de velocidade percebida; não houve medição comparativa nem confirmação explícita dos detalhes de todas as NFs e quantidades. Não inferir ganho percentual ou redução de custo Firestore.
+- Rules produtivas não foram alteradas pela publicação; não houve confirmação de teste real de operações de estoque após a publicação.
+- Handoff: onde — Read R1 publicado no domínio oficial; fazendo — operação normal/observação de eventuais erros; quem fez — executor GitHub e Fundador pelo PowerShell/navegador; próxima ação — nenhuma publicação adicional necessária, medir objetivamente apenas quando houver demanda; responsável — equipe de desenvolvimento conforme necessário.
