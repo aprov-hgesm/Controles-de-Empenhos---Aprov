@@ -132,6 +132,43 @@ export async function listWarehouseDepotLayouts(
   }
 }
 
+/**
+ * Lightweight read for the landing view: only active croquis, not archived
+ * versions. A single Firestore equality query covers all active depots and
+ * avoids the global version-limit bias of listWarehouseDepotLayouts().
+ */
+export async function listActiveWarehouseDepotLayouts(
+  workspaceId: string,
+  maxResults = 250
+): Promise<WarehouseDepotLayoutListItem[]> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'layouts');
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('status', '==', 'active'),
+        limit(Math.max(1, Math.min(maxResults, 250)))
+      )
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data() as Record<string, unknown>;
+        return {
+          layout: parseLayout(scope.workspaceId, item.id, data),
+          createdAt: timestampToIso(data.createdAt),
+          updatedAt: timestampToIso(data.updatedAt),
+        };
+      })
+      .filter((item) => item.layout.status === 'active')
+      .sort((a, b) => b.layout.version - a.layout.version);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    throw error;
+  }
+}
+
 export async function listWarehouseDepotLayoutsForDepot(
   workspaceId: string,
   depotId: string,
