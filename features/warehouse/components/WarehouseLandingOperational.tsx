@@ -52,6 +52,10 @@ import {
   WAREHOUSE_PALLET_VISUAL,
 } from '../visualStyle';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import {
+  warehouseLandingIsoFrame,
+  placeWarehouseLandingIsoFrame,
+} from '../../../lib/warehouse/isometricCamera';
 import styles from './WarehouseLandingOperational.module.css';
 
 const EMPTY_MATERIALS: WarehouseMaterial[] = [];
@@ -428,11 +432,31 @@ const DepotWorld = memo(function DepotWorld({
   onPointerUp: (event: ReactPointerEvent<SVGGElement>, depotId: string) => void;
 }) {
   const { depot, layout } = placement;
-  const floorA = isoPoint(placement.x - 9, placement.y - 9, 0);
-  const floorB = isoPoint(placement.x + placement.width + 9, placement.y - 9, 0);
-  const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
-  const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
   const open = () => onOpen(depot.id);
+  const sceneGeometry = useMemo(() => {
+    if (!layout) return null;
+    const center = isoPoint(
+      placement.x + placement.width / 2,
+      placement.y + placement.height / 2
+    );
+    // Use the same physical dimensions and source camera as the canonical
+    // 3D renderer. All floors now share the map's single 24-degree inclination.
+    const floorSpan =
+      placement.width / WORLD_WIDTH * ISO_HALF_WIDTH
+      + placement.height / WORLD_HEIGHT * ISO_HALF_WIDTH;
+    return placeWarehouseLandingIsoFrame(
+      warehouseLandingIsoFrame(layout.logicalWidth, layout.logicalHeight),
+      center,
+      floorSpan
+    );
+  }, [layout, placement.x, placement.y, placement.width, placement.height]);
+
+  const [floorA, floorB, floorC, floorD] = sceneGeometry?.floorCorners || [
+    isoPoint(placement.x - 9, placement.y - 9),
+    isoPoint(placement.x + placement.width + 9, placement.y - 9),
+    isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9),
+    isoPoint(placement.x - 9, placement.y + placement.height + 9),
+  ];
   const depotLocations = useMemo(
     () => locations.filter((location) => location.depotId === depot.id),
     [locations, depot.id]
@@ -452,18 +476,6 @@ const DepotWorld = memo(function DepotWorld({
     ),
     [balances, depot.id]
   );
-  // The landing retains a single SVG plane; each depot embeds the *same*
-  // renderer as "Meus Depósitos", scaled to its own position on that plane.
-  const center = isoPoint(
-    placement.x + placement.width / 2,
-    placement.y + placement.height / 2
-  );
-  const projectedSpan =
-    placement.width / WORLD_WIDTH * ISO_HALF_WIDTH
-    + placement.height / WORLD_HEIGHT * ISO_HALF_WIDTH;
-  const sceneWidth = Math.max(190, Math.min(670, projectedSpan * 1.14));
-  const sceneHeight = sceneWidth * 0.72;
-
   return (
     <g
       className={[
@@ -502,13 +514,14 @@ const DepotWorld = memo(function DepotWorld({
         filter="url(#depotFloorShadow)"
       />
 
-      {layout ? (
+      {layout && sceneGeometry ? (
         <foreignObject
-          x={center.x - sceneWidth / 2}
-          y={center.y - sceneHeight * 0.62}
-          width={sceneWidth}
-          height={sceneHeight}
+          x={sceneGeometry.x}
+          y={sceneGeometry.y}
+          width={sceneGeometry.width}
+          height={sceneGeometry.height}
           pointerEvents="none"
+          data-camera-pose="aligned-floor"
           data-testid="warehouse-landing-canonical-scene"
           data-layout-id={layout.id}
           data-layout-version={layout.version}
