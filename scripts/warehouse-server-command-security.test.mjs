@@ -12,7 +12,10 @@ const health = file('app/api/central-depositos/health/route.ts');
 test('LEDGER_MOVEMENT genérico nunca consegue disparar uma transação', () => {
   assert.match(route, /case 'LEDGER_MOVEMENT':\s*[\s\S]*?return reject\('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403\)/);
   assert.doesNotMatch(route, /warehouseLedgerMovementServer/);
-  assert.doesNotMatch(archive, /export async function warehouseLedgerMovementServer/);
+  assert.match(archive, /export async function warehouseLedgerMovementServer/);
+  assert.match(archive, /v\.type!=='INITIAL_BALANCE'/);
+  assert.match(archive, /WAREHOUSE_SISCOFIS_LEDGER_ONLY/);
+  assert.match(archive, /siscofis:marco-zero:/);
 });
 
 test('motores especializados continuam disponíveis', () => {

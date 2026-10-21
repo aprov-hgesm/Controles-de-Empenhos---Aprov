@@ -500,7 +500,7 @@ try {
   });
   const ledgerInput={
     materialId:isolatedMaterial.id,type:'INITIAL_BALANCE' as const,
-    quantityDelta:4,idempotencyKey:'warehouse-r2-ledger-isolated-test-001',
+    quantityDelta:4,idempotencyKey:'siscofis:marco-zero:'+'f'.repeat(64)+':'+isolatedMaterial.id,
     note:'Teste de integração legado',source:null,
   };
   const ledgerFirst=await warehouseLedgerMovementServer(access,ledgerInput);
@@ -509,6 +509,14 @@ try {
   const ledgerReplay=await warehouseLedgerMovementServer(access,ledgerInput);
   assert.equal(ledgerReplay.applied,false);
   assert.equal(ledgerReplay.balance.quantity,4);
+  await assert.rejects(
+    ()=>warehouseLedgerMovementServer(access,{...ledgerInput,type:'INVOICE_ENTRY'}),
+    (error:unknown)=>error instanceof Error && error.message==='WAREHOUSE_SISCOFIS_LEDGER_ONLY',
+  );
+  await assert.rejects(
+    ()=>warehouseLedgerMovementServer(access,{...ledgerInput,idempotencyKey:'forged-ledger'}),
+    (error:unknown)=>error instanceof Error && error.message==='WAREHOUSE_SISCOFIS_LEDGER_ONLY',
+  );
   console.log('PASS: lançamento legado server-only com saldo e idempotência');
 
   await warehouseStructureArchiveServer(access,{kind:'DEPOT',id:newDepot.id});

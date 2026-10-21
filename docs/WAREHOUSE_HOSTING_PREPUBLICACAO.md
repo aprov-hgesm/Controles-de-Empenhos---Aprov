@@ -4,7 +4,7 @@
 
 ## Implementado no RC
 
-- Proteção de servidor: `LEDGER_MOVEMENT` genérico bloqueado com HTTP 403 antes de qualquer operação de estoque; motores especializados continuam disponíveis.
+- Proteção de servidor: `LEDGER_MOVEMENT` genérico bloqueado com HTTP 403 antes de qualquer operação de estoque; a única via de ledger interno é Marco Zero SISCOFIS com prefixo verificável e `INITIAL_BALANCE`; demais motores especializados continuam disponíveis.
 - `GET /api/central-depositos/health` protegido pela sessão Firebase do fundador. Em ambiente real, tenta obter token OAuth com a credencial administrativa e faz transação **read-only** no banco nomeado `emprovex-warehouse`. Retorna somente estados booleanos ou erro 503, não retorna credenciais, token, e-mail de conta de serviço, documentos nem conteúdo do Firestore.
 - Em CI o health usa exclusivamente `demo-emprovex-security`/Emulator. Resultado PASS localhost não atesta credenciais Vercel reais.
 - `vercel.json` contém `git.deploymentEnabled = false`: sem deploy automático com push ou PR.
