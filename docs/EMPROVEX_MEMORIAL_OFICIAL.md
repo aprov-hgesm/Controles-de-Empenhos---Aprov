@@ -1,5 +1,40 @@
 # EMPROVEX — Memorial Oficial
 
+## DIRETRIZ DE DESENVOLVIMENTO — EMPROVEX CI LEAN (20/10/2026)
+
+> **Decisão de organização registrada, ainda não implementada nos workflows.** Objetivo: desburocratizar a validação durante o desenvolvimento, sem reduzir as garantias de segurança, integridade de estoque ou exigências de release. Não confundir recomendação com gate já alterado.
+
+### Diagnóstico objetivo
+- O `.github/workflows/application-ci.yml` da branch WAREHOUSE-SERVER-R2 possui **738 linhas**, dezenas de guards e três grandes sobreposições de validação: Application CI, Warehouse Server R2 Smoke e Browser E2E. Um ajuste isolado no Warehouse pode provocar testes de SAG, Administração, relatórios e estética sem mudanças nesses módulos.
+- Houve múltiplas falhas de **guards de presença literal de código antigo**, que exigiam `runTransaction`/`writeBatch` ou variáveis no navegador após migração para transações autenticadas no servidor. Corrigir esses guards preservando seus invariantes de comportamento; não recriar o código cliente antigo e não silenciar a reprovação.
+- Parte do custo/tempo é repetição de `npm ci`, inicialização de Firebase Emulator e instalação do Chromium em cada rodada. O ganho de tempo ainda **não foi medido**; não registrar percentuais inventados.
+
+### Política proposta de testes proporcionais ao risco
+1. **Nível 1 — Fast CI (cada alteração):** TypeScript, auditoria estrita de zero gravações diretas no cliente, Core Protection e testes unitários/contratuais dos arquivos/domínios alterados. Execução curta, automática e bloqueante.
+2. **Nível 2 — Integração dirigida (ao concluir uma funcionalidade e após mudanças de risco):** Firestore Auth/Emulator com cenários positivos e negativos do motor afetado. Obrigatórios sempre que houver efeitos sobre saldo agregado/localizado, lotes FEFO, histórico, replay/idempotência, concorrência, autenticação, workspace/UG ou contratos de API. Testar estados adversos e degradação, sem usar dados produtivos para o smoke.
+3. **Nível 3 — Certificação integral (antes do merge/deploy/corte de Rules):** Application CI completo, proteção Core, segurança multi-tenant, Recovery, build, testes de integração, Browser E2E aplicável, QA Preview e aceite humano quando necessário. Reexecutar sobre o **HEAD funcional final** se uma correção invalidar a certificação.
+
+### Simplificações aprovadas como diretriz de trabalho (não executadas ainda)
+- Criar pipeline **EMPROVEX Fast CI**, orientado a caminhos alterados. Mudanças em bibliotecas compartilhadas, autenticação, modelos, persistência, Rules, CI ou infraestrutura acionam validações transversais adequadas; nunca permitir que um filtro deixe uma alteração crítica sem gate.
+- Substituir progressivamente guards que procuram strings por testes de **resultado observável**, preservando bloqueio para regressão. Preferir resultado de movimento/saldo/lote, isolamento de workspace/UG, transação, replay e concorrência a nomes ou posição textual de funções.
+- **Consolidar falhas por rodada:** executar os testes pertinentes de modo que gerem um relatório único de erros e falhar ao final se qualquer um reprovar. Não usar `continue-on-error` como aprovação e não mascarar erros.
+- Evitar rodar o mesmo smoke do servidor simultaneamente em múltiplos workflows: reutilizar o resultado de um job especializado ou racionalizar testes, preservando o gate. Corrigir `paths` do Warehouse Smoke para cobrir todos os novos motores e seus testes.
+- Executar Browser E2E completo sob demanda e na certificação; nos commits apenas de testes/guard internos, rodar o subconjunto atingido. Não repetir publicação Vercel nem modificar Rules por causa de ajustes documentais ou de testes.
+- Um PR/branch de integração, commits objetivos e workers paralelos **somente** em frentes independentes quando reduzirem trabalho real. Não criar PRs, rounds de auditoria e memorializações redundantes a cada correção.
+- **Não dispensar:** estoque não negativo, conservação da transferência, FEFO, movimentações e histórico imutável, idempotência, concorrência, autorização real, workspace/UG, casos negativos, rollback/recovery e prova de zero escritas diretas pelo cliente.
+
+### Estado real do WAREHOUSE-SERVER-R2 neste registro
+- **PR [#348](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/348) DRAFT**, branch `feat/warehouse-server-r2-migration-20261020`, HEAD funcional auditado `690d20da9fca104bc66451a04ab42d95029bf8a8`. Não houve merge, deploy nem corte/ativação de Rules server-only.
+- Nesse HEAD, **Core Protection**, **Warehouse Server R2 Smoke (Auth + Firestore Emulator)** e **Browser E2E** concluíram em **SUCCESS**. No Application CI, TypeScript, auditoria estrita **0 SDK client writes** (dentro dos diretórios examinados), os testes de segurança/contratos anteriores ao bloqueio passaram; o job completo terminou **FAIL**, não PASS.
+- **Bloqueio exato:** `scripts/warehouse-depot-layout.test.mjs:451`, expressão regular inválida no teste de arquivamento: `assert.doesNotMatch(repository, /\\b(?:writeBatch|runTransaction)\\s*\\(/)` causa `SyntaxError: Invalid regular expression: Unterminated group`. Falha do arquivo **de teste**; corrigir sintaxe, verificar o teste localmente com `node --check` e `npm run test:adm-deposito-depot-layout` antes de repetir Application CI. Após isso, tratar quaisquer falhas reais posteriores sem eliminá-las.
+- **Limitação importante:** o scanner `scripts/warehouse-r2-direct-write-audit.mjs` verifica padrões de operações do SDK em `lib/warehouse`, `features/warehouse`, `app/central-depositos` e `components/warehouse`; **zero ocorrências estáticas não é prova suficiente de segurança de todos os caminhos dinâmicos**. Manter review da autorização do motor, concorrência, transações, integridade, Rules e cobertura de rotas.
+- CI LEAN é uma **proposta registrada**, não uma alteração feita agora. A certificação completa da migração #348 e a manutenção da produção continuam sob a política de bloqueios vigente até aprovação e implementação explícita de um novo pipeline.
+
+### Handoff de continuidade — quem faz o quê
+**Onde estamos:** migração server-only em PR #348/DRAFT, sem publicação; há um teste da Fase 9 com `SyntaxError` no HEAD funcional `690d20d`. **O que fazemos:** primeiro fechar corretamente a auditoria/certificação desse PR; em seguida separar e implementar o Fast CI/seleção de testes sem dispensar gates de release. **Quem faz:** executor técnico/GitHub. **O que fazer a seguir:** corrigir a regex do teste, executar o teste isolado, rerodar Application CI e resolver apenas blockers reais; após PASS completo, planejar refatoração de CI em alteração controlada. **Quem fará:** assistente executor no GitHub; Fundador autoriza qualquer merge, Rules ou deploy. 
+
+---
+
 ## REGISTRO DE INCIDENTE — 20/10/2026 · LIMPEZA DE MATERIAIS DE TESTE CONCLUÍDA (PR #347 DRAFT)
 
 > **Registro documental na branch do PR #347, não publicado na `main`.** O estado de release do EMPROVEX continua sujeito aos gates independentes.

@@ -56,3 +56,16 @@ Implementações presentes no PR #348 (não publicadas):
 **Testes:** CI em execução na branch; não considerar PASS antes de consultar resultado do HEAD. Core Protection tinha PASS em commits anteriores. A integração das novas operações foi adicionada a scripts/warehouse-server-manual-entry-emulator.ts, mas o resultado conjunto ainda não estava certificado nesta atualização documental. Não houve merge nem deploy.
 
 **Handoff:** Onde estamos: PR #348 Draft; o que fazendo: migração centralizada; quem: assistente/GitHub; próximo: corrigir regressões, certificar transferência/estrutura, migrar estoque e inventário com plano FEFO, zero SDK writes, corte read-only, CI/E2E/Preview; quem fará: próxima sessão técnica com ferramentas GitHub, sem ação do operador até liberar QA.
+
+
+## Adendo 20/10/2026 — Auditoria concluída parcialmente e política CI LEAN
+
+> Este adendo prevalece sobre o parágrafo histórico acima que ainda informa modo REPORT e motores não migrados. O código mudou desde aquele ponto; a migração **não está certificada** nem publicada.
+
+- PR #348 DRAFT, HEAD funcional de referência `690d20da9fca104bc66451a04ab42d95029bf8a8`, sem merge nem deploy. Motores server-only foram estendidos para ledger, lote, saída, devolução, inventário, estrutura/arquivamento, barcode, croquis, estado e índice da fila NF, alertas, SISCOFIS; autenticação e workspace/UG devem continuar revisados em cada rota.
+- `WAREHOUSE_R2_STRICT=1` já é gate do Application CI; resultado **zero gravações diretas pelo SDK** nos diretórios cobertos pelo scanner estático. Não interpretar como validação dinâmica universal.
+- No commit `690d20d`, Core Protection, Smoke Warehouse Auth/Firestore e Browser E2E foram **SUCCESS**. **Application CI FAIL**, teste Fase 9 `scripts/warehouse-depot-layout.test.mjs:451` tem regex inválida (`Unterminated group`). Recuperação: corrigir a regex, fazer `node --check scripts/warehouse-depot-layout.test.mjs`, `npm run test:adm-deposito-depot-layout`, depois Application CI completo. Não mover Rules nem publicar antes dos gates.
+- **Diretriz EMPROVEX CI LEAN, ainda não implementada:** Nível 1 Fast CI (TypeScript, zero-write estrito, Core e teste afetado); Nível 2 Firestore Emulator direcionado para mutação de dados e segurança; Nível 3 CI integral, segurança, Recovery, E2E e Preview antes de merge/release/corte de Rules.
+- Corrigir guards que exigem sintaxe client-side antiga, substituindo por testes de comportamento e invariantes. Agregar falhas de forma segura numa rodada; eliminar execuções repetidas de `npm ci`/Emulator/Chromium e Smoke duplicado, quando possível; revisar gatilhos `paths` do Smoke para todos os novos motores.
+- Invariantes irredutíveis: não permitir estoque negativo, conservar saldo agregado e localizado, preservar lotes/FEFO, histórico, replay, concorrência e isolamento workspace/UG. Proibido desativar guards para obter falso PASS.
+- **Handoff:** Onde estamos — PR #348 sob certificação, com guard de Fase 9 quebrado. O que fazemos — consertar teste isoladamente e seguir certificação; CI LEAN documentado como etapa posterior. Quem — executor GitHub. Próximo — `node --check`, teste do croqui, CI completo, análise de bloqueios; só depois proposta técnica do Fast CI. Quem fará — executor GitHub; Fundador decide merge, Rules e publicação.
