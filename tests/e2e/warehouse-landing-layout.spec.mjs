@@ -17,6 +17,18 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
     const depot = page.locator('[data-testid^="warehouse-landing-depot-"]').first();
     await expect(depot).toBeVisible();
 
+    // Cada depósito com croqui ativo deve usar a cena oficial de "Meus Depósitos".
+    // Um depósito ainda sem croqui continua exibindo o estado vazio previsto.
+    const canonicalScenes = page.getByTestId('warehouse-landing-canonical-scene');
+    for (let index = 0; index < await canonicalScenes.count(); index += 1) {
+      const scene = canonicalScenes.nth(index);
+      await expect(scene).toHaveAttribute('data-layout-id', /.+/);
+      await expect(scene).toHaveAttribute('data-layout-version', /\d+/);
+      await expect(scene.getByTestId('warehouse-isometric-scene-only'))
+        .toHaveAttribute('data-scene-only', 'true');
+      await expect(scene.locator('svg[data-camera-fit="bounds"]')).toHaveCount(1);
+    }
+
     const floor = depot.locator('polygon').first();
     const initialPoints = await floor.getAttribute('points');
 
