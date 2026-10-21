@@ -3343,3 +3343,24 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - **Release gate:** não mergear/publicar até Application CI, Core Protection, Recovery, Legal, QA Visual e smoke humano. Vercel administrativa requer execução PowerShell autenticada do Fundador; usar `git archive` sem .git, deploy --prod --skip-domain, saúde, promote, inspect. Evitar duas publicações.
 
 **Handoff:** onde — PR #345; fazendo — certificação da união R2/R3 + premium; responsáveis — executor GitHub e Fundador; próximo — CI + smoke, squash único na `main` e publicação; quem fará — executor integra, Fundador promove pelo CLI da Vercel.
+
+
+## WAREHOUSE-READ-R1 — Migração da consulta de Alocação de Material (21/10/2026)
+
+**Estado: PR #350 EM CERTIFICAÇÃO; produção preservada.** Base `main@76d78f90`, deployment de produção `dpl_A1WA8xC478i5UNdAuRqaSumr1nFN`; GitHub branch `feat/warehouse-read-r1-server-queue`. Nenhuma alteração aplicada às Firestore Rules, banco produtivo ou deploy da Vercel.
+
+**Causa técnica confirmada:** acompanhamento de NFs reutiliza dados da sessão e histórico sob demanda; alocação usa o caminho `loadWarehouseInvoiceIntakeQueue`, que sincroniza índice e cruza `invoices`, `intakes`, `queueExclusions`, `movements` e `empenhos` via SDK cliente, com consultas sequenciais. Um acesso visual pode escrever estado derivado do índice, mas nunca deve alterar saldo.
+
+**Mudança no candidato R1:**
+- `GET /api/central-depositos/queue`: uma chamada autenticada, usando `verifyWarehouseRequest`, com `workspaceId` e UG determinados no servidor, nunca escolhidos pelo navegador.
+- `warehouseQueueReadStore.ts`: leituras server-only Firestore REST de bancos principal e `emprovex-warehouse`, com coleções permitidas, escopo exato, decodificação, lotes e teto de paginação; nunca expõe endpoint arbitrário.
+- `warehouseQueueReadServer.ts`: sincroniza índice PERF-D com bootstrap inicial quando necessário, preserva o `intake` ausente como PENDING; busca apenas candidatos, NFs, empenhos, estados e movimentos relacionados; mantém reconciliação com projeções legadas e desativa candidatos tratados.
+- `queueReadClient.ts`: transporte autenticado; `WarehouseItemRegistrationOperational` usa a API para fila operacional, preservando o histórico e a consulta pontual de intakes sob demanda no caminho anterior.
+- Telemetria mínima por abertura registra duração, NFs descobertas, intakes, índice e linhas retornadas, sem dados fiscais nem tokens.
+- Teste de contrato no Firestore Emulator com bootstrap, replay, alocação parcial, divergência canônica e isolamento entre workspaces, incluído no workflow Warehouse Server R2 Smoke.
+
+**Limitações / gate antes de merge:** a migração ainda deve demonstrar que o bootstrap REST, a paginação e o CI executam PASS com dados equivalentes. Não declarar economia percentual de Firestore até haver medições antes/depois; migração de leituras ao servidor, isoladamente, não elimina cobranças. Histórico/reconciliação continuam no SDK cliente sob demanda. Em caso de cobertura incompleta, o caminho novo falha explicitamente em vez de mostrar falso conjunto completo.
+
+**Governança GOV-SIMP-01:** PR separado, sem deploy automático, sem atualização de Rules produtivas. Somente integrar à `main` após CI e teste de equivalência. Após merge, publicação única com PowerShell proprietário, pré-validação e smoke humano; a publicação não faz parte desta missão.
+
+**Handoff:** onde — PR #350; fazendo — certificação de consultas, segurança, integridade e tempo da fila; quem — executor GitHub; a seguir — analisar resultado do CI e corrigir eventuais divergências; responsável — executor. Fundador só é necessário para deploy Vercel posterior.
