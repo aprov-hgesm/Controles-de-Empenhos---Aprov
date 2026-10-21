@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## EMPROVEX CI LEAN — Implementação real após certificação (20/10/2026)
+
+> Este registro é posterior à seção de proposta CI LEAN. O modelo foi implementado nos workflows do PR #348, mas não publicado nem incorporado à main.
+
+- **Certificação do código funcional:** commit `40c5a6ad7f11fc5dbbbf720191f895ad177a30df`. Application CI completo **SUCCESS** (run #39524796663, com seis gates finais PASS), Core Protection **SUCCESS** (#39524796550), Warehouse Server R2 Smoke **SUCCESS** (#39524796528), Browser E2E **SUCCESS** (#39524796594). Build, TypeScript, Recovery, segurança e auditoria estrita zero SDK writes concluídos no Application CI. A auditoria de SDK é estática e cobre os diretórios mapeados.
+- **Implementação CI LEAN:** commit `871c1ee4833f180527b7245d284e8e10996e9b18` cria `.github/workflows/emprovex-fast-ci.yml` e `scripts/ci-fast-tests.mjs`, separa Draft (Fast CI + Core Protection) de PR pronto (Application CI completo, Smoke e Browser E2E aplicável). Preserva Application CI em push main e workflow_dispatch.
+- **Seleção de testes:** alterações Warehouse executam subconjuntos unitários por arquivos afetados, deduplicados; o runner acumula as falhas e reprova se alguma ocorrer. Mudanças de autenticação, Rules e recuperação possuem guards rápidos específicos. TypeScript e scanner zero-client-write executam sempre no Fast CI.
+- **Economia:** PR Draft não inicializa repetidamente Browser/Chromium e Firestore Emulator nem roda Application CI integral em cada commit. Os jobs pesados continuam disponíveis por workflow_dispatch e são executados ao marcar PR como ready para revisão; não se dispensou o gate de release. O Core Protection separado permanece automático.
+- **Proteção:** Full CI em SKIPPED no Draft **não é PASS de release**. Antes do merge, deixar PR não-Draft e exigir todos os gates no HEAD final, incluindo Firestore/Rules, isolamento, recuperação, QA e teste humano aplicável. Proteção efetiva de branch/ruleset deve ser conferida separadamente; não pressupor existência.
+- **Sem impacto na produção:** nenhum merge, deploy, alteração das Rules ativas, gravação de dados reais ou mudança de workspaces.
+- **Documentação:** `docs/CI_LEAN_20261020.md` e `docs/WAREHOUSE_SERVER_R2_MIGRATION.md`.
+
+**Handoff:** onde estamos — PR #348 DRAFT, motor certificado no SHA `40c5a6ad`, CI LEAN implementado no SHA `871c1ee4`; o que fazemos — confirmar Fast CI e manutenção dos gatilhos; quem faz — executor GitHub; próximo — revisar FAST PASS no SHA do código CI, ativar release gates ao converter PR para ready somente na preparação do merge, manter Rules de produção intactas até autorização; quem fará — executor/Coordenador e Fundador para publicação.
+
+---
+
 ## DIRETRIZ DE DESENVOLVIMENTO — EMPROVEX CI LEAN (20/10/2026)
 
 > **Decisão de organização registrada, ainda não implementada nos workflows.** Objetivo: desburocratizar a validação durante o desenvolvimento, sem reduzir as garantias de segurança, integridade de estoque ou exigências de release. Não confundir recomendação com gate já alterado.
