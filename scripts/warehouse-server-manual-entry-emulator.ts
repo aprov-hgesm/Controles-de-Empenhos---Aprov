@@ -83,13 +83,14 @@ try {
     operationId:'manual-server-entry-001',existingMaterialId:null,
     description:'Arroz integral',unitLabel:'KG',quantity:80,
     provenance:'Contagem',reference:'Inventário de teste',
-    position,expiresOn:'2027-04-18',barcode:'7896305701574',
+    position,expiresOn:'2027-04-18',lotCode:'LOTE-CONTAGEM-001',barcode:'7896305701574',
   };
   const first=await registerWarehouseManualEntryServer(access,firstInput);
   assert.equal(first.entry.applied,true);
   assert.equal(first.entry.balance.quantity,80);
   assert.equal(first.locationBalance.quantity,80);
   assert.ok(first.validity);
+  assert.equal(first.validity.code,'LOTE-CONTAGEM-001');
   assert.equal(first.barcodeLinked,true);
   assert.ok((await getDoc(ref('lots',first.validity!.id))).exists());
   const replay=await registerWarehouseManualEntryServer(access,firstInput);
