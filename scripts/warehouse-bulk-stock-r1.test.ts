@@ -24,7 +24,7 @@ assert.equal(parsed[2].lot,'LOTE-ABC');
 assert.equal(parsed[2].line,4);
 console.log('PASS: Excel roundtrip com materiais repetidos, múltiplas posições, validade e lote');
 expectReject(generateBulkStockTemplate(),'STOCK_IMPORT_EMPTY');
-expectReject(generateBulkStockTemplate([['','','','','','','','']]),'STOCK_IMPORT_INVALID_ROW_2');
+expectReject(generateBulkStockTemplate([['Arroz integral','','Kg','','','Estante','9','1']]),'STOCK_IMPORT_INVALID_ROW_2');
 expectReject(Buffer.from('not an xlsx'),'STOCK_IMPORT_NOT_XLSX');
 expectReject(Buffer.alloc(STOCK_MAX_FILE_BYTES+1),'STOCK_IMPORT_TOO_LARGE');
 console.log('PASS: cabeçalho vazio, linha inválida, formato inválido e limite de upload');
