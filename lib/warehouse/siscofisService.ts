@@ -1,3 +1,4 @@
+import { warehouseServerCommand } from './serverCommandClient';
 import {
   collection,
   doc,
@@ -6,9 +7,6 @@ import {
   limit,
   orderBy,
   query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -173,31 +171,6 @@ async function getInvoiceSettings(
   }
 
   return data as unknown as WarehouseInvoiceIntegrationSettings;
-}
-
-async function ensureInvoiceCutoff(input: {
-  workspaceId: string;
-  ug: string;
-  uid: string;
-  existing: WarehouseInvoiceIntegrationSettings | null;
-}): Promise<WarehouseInvoiceIntegrationSettings> {
-  if (input.existing) return input.existing;
-
-  const settings: WarehouseInvoiceIntegrationSettings = {
-    schemaVersion: WAREHOUSE_INVOICE_SETTINGS_SCHEMA_VERSION,
-    workspaceId: input.workspaceId,
-    ug: input.ug,
-    cutoffAt: new Date().toISOString(),
-    activatedBy: input.uid,
-  };
-
-  const path = warehouseDocumentPath(
-    input.workspaceId,
-    'settings',
-    INVOICE_SETTINGS_ID
-  );
-  await setDoc(doc(db, path), settings);
-  return settings;
 }
 
 async function getMarcoZero(
@@ -423,191 +396,7 @@ export async function confirmWarehouseSiscofisImport(
   workspaceId: string,
   preview: WarehouseSiscofisPreview
 ): Promise<WarehouseSiscofisSnapshot> {
-  const scope = assertCurrentScope(workspaceId);
-
-  if (!preview.canConfirm) {
-    throw new Error('WAREHOUSE_SISCOFIS_PREVIEW_NOT_CONFIRMABLE');
-  }
-  if (preview.import.ug !== scope.ug) {
-    throw new Error('WAREHOUSE_SISCOFIS_UG_MISMATCH');
-  }
-
-  const settings = await getInvoiceSettings(workspaceId);
-  const existingMarcoZero = await getMarcoZero(workspaceId);
-  const expectedKind = existingMarcoZero?.status === 'CONFIRMED' ? 'SNAPSHOT' : 'MARCO_ZERO';
-
-  if (preview.kind !== expectedKind) {
-    throw new Error('WAREHOUSE_SISCOFIS_PREVIEW_STALE');
-  }
-
-  if (
-    existingMarcoZero
-    && existingMarcoZero.status === 'APPLYING'
-    && existingMarcoZero.sourceHash !== preview.sourceHash
-  ) {
-    throw new Error('WAREHOUSE_SISCOFIS_MARCO_ZERO_IN_PROGRESS');
-  }
-
-  const activeSettings = await ensureInvoiceCutoff({
-    workspaceId,
-    ug: scope.ug,
-    uid: scope.uid,
-    existing: settings,
-  });
-
-  if (preview.kind === 'MARCO_ZERO') {
-    const referenceDay = Date.parse(preview.import.referenceDate + 'T00:00:00.000Z');
-    const cutoffDay = Date.parse(
-      activeSettings.cutoffAt.slice(0, 10) + 'T00:00:00.000Z'
-    );
-    const currentBalances = await listWarehouseBalances(workspaceId, 500);
-    if (
-      currentBalances.some((balance) => balance.quantity !== 0)
-      && referenceDay >= cutoffDay
-    ) {
-      throw new Error('WAREHOUSE_SISCOFIS_MARCO_ZERO_CUTOFF_OVERLAP');
-    }
-
-    const snapshotPath = warehouseDocumentPath(
-      workspaceId,
-      'siscofisSnapshots',
-      MARCO_ZERO_SNAPSHOT_ID
-    );
-    const snapshotRef = doc(db, snapshotPath);
-    const snapshotExisting = await getDoc(snapshotRef);
-
-    if (snapshotExisting.exists()) {
-      const stored = parseSnapshot(
-        workspaceId,
-        snapshotExisting.id,
-        snapshotExisting.data() as Record<string, unknown>
-      );
-      if (stored.sourceHash !== preview.sourceHash) {
-        throw new Error('WAREHOUSE_SISCOFIS_MARCO_ZERO_ALREADY_DEFINED');
-      }
-      if (stored.status === 'CONFIRMED') return stored;
-    } else {
-      await setDoc(snapshotRef, {
-        ...snapshotPayload({
-          id: MARCO_ZERO_SNAPSHOT_ID,
-          workspaceId,
-          ug: scope.ug,
-          kind: 'MARCO_ZERO',
-          status: 'APPLYING',
-          preview,
-          cutoffAt: activeSettings.cutoffAt,
-          uid: scope.uid,
-          movementIds: [],
-        }),
-        createdAt: serverTimestamp(),
-        confirmedAt: null,
-      });
-    }
-
-    const materials = await listWarehouseMaterials(workspaceId, 500);
-    const materialIds = new Set(materials.map((material) => material.id));
-    const movementIds: string[] = [];
-
-    for (const group of aggregateMarcoZeroRows(preview)) {
-      if (!materialIds.has(group.materialId)) {
-        const material = createMaterialFromSiscofisRow({
-          workspaceId,
-          ug: scope.ug,
-          materialId: group.materialId,
-          row: group.representativeRow,
-        });
-        await saveWarehouseMaterial(workspaceId, material);
-        materialIds.add(group.materialId);
-      }
-
-      const result = await applyWarehouseMovement(workspaceId, {
-        materialId: group.materialId,
-        type: 'INITIAL_BALANCE',
-        quantityDelta: group.quantity,
-        idempotencyKey:
-          'siscofis:marco-zero:' + preview.sourceHash + ':' + group.materialId,
-        note:
-          'Marco Zero SISCOFIS ' + preview.import.referenceDate
-          + ' · linhas ' + group.rowIds.join(',').slice(0, 150),
-        source: null,
-      });
-      movementIds.push(result.movement.id);
-    }
-
-    const finalRows = await finalizePreviewWithCurrentBalances(preview, workspaceId);
-    const finalSummary = {
-      ...preview.summary,
-      matchedRows: finalRows.filter((row) => row.state === 'MATCHED').length,
-      unresolvedRows: finalRows.filter((row) => row.state === 'UNRESOLVED').length,
-      divergentRows: 0,
-    };
-
-    await updateDoc(snapshotRef, {
-      status: 'CONFIRMED',
-      rows: finalRows,
-      summary: finalSummary,
-      movementIds: Array.from(new Set(movementIds)),
-      confirmedAt: serverTimestamp(),
-    });
-
-    const confirmed = await getDoc(snapshotRef);
-    return parseSnapshot(
-      workspaceId,
-      confirmed.id,
-      confirmed.data() as Record<string, unknown>
-    );
-  }
-
-  const snapshotId = 'snapshot_' + preview.sourceHash.slice(0, 32);
-  const snapshotPath = warehouseDocumentPath(
-    workspaceId,
-    'siscofisSnapshots',
-    snapshotId
-  );
-  const snapshotRef = doc(db, snapshotPath);
-  const existingSnapshot = await getDoc(snapshotRef);
-
-  if (existingSnapshot.exists()) {
-    const stored = parseSnapshot(
-      workspaceId,
-      existingSnapshot.id,
-      existingSnapshot.data() as Record<string, unknown>
-    );
-    if (stored.sourceHash !== preview.sourceHash) {
-      throw new Error('WAREHOUSE_SISCOFIS_SNAPSHOT_ID_CONFLICT');
-    }
-    return stored;
-  }
-
-  const finalRows = await finalizePreviewWithCurrentBalances(preview, workspaceId);
-  const finalSummary = {
-    ...preview.summary,
-    matchedRows: finalRows.filter((row) => row.state === 'MATCHED').length,
-    unresolvedRows: finalRows.filter((row) => row.state === 'UNRESOLVED').length,
-    divergentRows: finalRows.filter((row) => row.state === 'DIVERGENT').length,
-    createsMaterials: 0,
-  };
-
-  await setDoc(snapshotRef, {
-    ...snapshotPayload({
-      id: snapshotId,
-      workspaceId,
-      ug: scope.ug,
-      kind: 'SNAPSHOT',
-      status: 'CONFIRMED',
-      preview: { ...preview, rows: finalRows, summary: finalSummary },
-      cutoffAt: activeSettings.cutoffAt,
-      uid: scope.uid,
-      movementIds: [],
-    }),
-    createdAt: serverTimestamp(),
-    confirmedAt: serverTimestamp(),
-  });
-
-  const stored = await getDoc(snapshotRef);
-  return parseSnapshot(
-    workspaceId,
-    stored.id,
-    stored.data() as Record<string, unknown>
+  return warehouseServerCommand<WarehouseSiscofisSnapshot>(
+    workspaceId,'SISCOFIS_CONFIRM',preview
   );
 }

@@ -38,41 +38,22 @@ async function postFastAction<T>(
   return payload.result;
 }
 
-function shouldUseLegacyFallback(error: unknown): boolean {
-  const code = error instanceof Error ? error.message : String(error || '');
-  return code.includes('WAREHOUSE_FAST_PATH_LEGACY');
-}
-
 export async function allocateWarehousePendingItemFast(
   workspaceId: string,
   input: AllocateWarehousePendingItemInput
 ): Promise<AllocateWarehousePendingItemResult> {
-  try {
-    return await postFastAction<AllocateWarehousePendingItemResult>(
-      'ALLOCATE',
-      workspaceId,
-      input
-    );
-  } catch (error) {
-    if (!shouldUseLegacyFallback(error)) throw error;
-    const legacy = await import('./intakeAllocationRepository');
-    return legacy.allocateWarehousePendingItem(workspaceId, input);
-  }
+  // Nenhum fallback de gravação via SDK cliente.
+  return postFastAction<AllocateWarehousePendingItemResult>(
+    'ALLOCATE',workspaceId,input
+  );
 }
 
 export async function applyWarehouseImmediateConsumptionFast(
   workspaceId: string,
   input: ApplyWarehouseImmediateConsumptionInput
 ): Promise<ApplyWarehouseImmediateConsumptionResult> {
-  try {
-    return await postFastAction<ApplyWarehouseImmediateConsumptionResult>(
-      'IMMEDIATE_CONSUMPTION',
-      workspaceId,
-      input
-    );
-  } catch (error) {
-    if (!shouldUseLegacyFallback(error)) throw error;
-    const legacy = await import('./withdrawalRepository');
-    return legacy.applyWarehouseImmediateConsumption(workspaceId, input);
-  }
+  // Se a API falhar, propagar o erro sem executar uma escrita insegura.
+  return postFastAction<ApplyWarehouseImmediateConsumptionResult>(
+    'IMMEDIATE_CONSUMPTION',workspaceId,input
+  );
 }

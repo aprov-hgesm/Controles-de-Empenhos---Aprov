@@ -546,11 +546,18 @@ test('MOBILE-D mantém fronteira fina sobre scanner, resolver e TRANSFER canôni
   assert.doesNotMatch(ui, /\bupdateDoc\s*\(/);
   assert.doesNotMatch(ui, /\bOUTBOUND\b/);
 
-  assert.match(repository, /runTransaction\(db/);
-  assert.match(repository, /WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
-  assert.match(repository, /warehouseMovementMatchesReplay/);
-  assert.match(repository, /type:\s*'TRANSFER'/);
-  assert.match(repository, /quantityDelta:\s*0/);
+  const server = readFileSync(
+    resolve(root, 'lib/server/warehouseTransfer.ts'), 'utf8'
+  );
+  assert.match(repository, /warehouseServerCommand<TransferWarehouseStockResult>/);
+  assert.doesNotMatch(repository.slice(repository.indexOf('export async function transferWarehouseStock(')),
+    /runTransaction\(db/);
+  assert.match(server, /WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
+  assert.match(server, /warehouseMovementMatchesReplay/);
+  assert.match(server, /type:'TRANSFER'/);
+  assert.match(server, /quantityDelta:0/);
+  assert.match(server, /warehouseAdminTransaction/);
+  assert.match(server, /planWarehouseTransferLots/);
 });
 
 

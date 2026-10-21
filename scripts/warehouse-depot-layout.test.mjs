@@ -231,7 +231,15 @@ test('croqui v2 preserva integridade logística e vínculos inequívocos nas nov
   assert.match(repository, /WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE/);
   assert.match(repository, /assertUniqueLayoutLocationReferences/);
   assert.match(repository, /getActiveWarehouseDepotLayoutStrict/);
-  assert.match(repository, /const active = await getActiveWarehouseDepotLayoutStrict/);
+  const serverLayout = readFileSync(
+    resolve(root, 'lib/server/warehouseRemainingWrites.ts'),
+    'utf8'
+  );
+  assert.match(repository, /warehouseServerCommand/);
+  assert.match(serverLayout, /warehouseLayoutSaveServer/);
+  assert.match(serverLayout, /warehouseAdminTransaction/);
+  assert.match(serverLayout, /WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE/);
+  assert.match(serverLayout, /WAREHOUSE_LAYOUT_VERSION_CONFLICT/);
   assert.doesNotMatch(repository, /warehouse_balance_v1|warehouse_location_balance_v1|warehouse_movement_v1|warehouse_lot_v1/);
 });
 
@@ -435,23 +443,38 @@ test('inativação de Local e subposições usa operação atômica e impede est
   );
   assert.match(locations, /archiveWarehouseStructure\(/);
   assert.match(locations, /window\.confirm\(/);
-  assert.match(repository, /target\.kind === 'LOCAL'/);
-  assert.match(repository, /row\.kind === 'SUBPOSITION' && row\.parentLocationId === target\.id/);
-  assert.match(repository, /WAREHOUSE_ARCHIVE_OCCUPIED/);
-  assert.match(repository, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
-  assert.match(repository, /writeBatch\(db\)/);
-  assert.match(repository, /await batch\.commit\(\)/);
+  const serverArchive = readFileSync(
+    resolve(root, 'lib/server/warehouseLedgerAndArchive.ts'), 'utf8'
+  );
+  assert.match(repository, /warehouseServerCommand/);
+  assert.match(repository, /'STRUCTURE_ARCHIVE'/);
+  assert.doesNotMatch(repository, /\b(?:writeBatch|runTransaction)\s*\(/);
+  assert.match(serverArchive, /warehouseStructureArchiveServer/);
+  assert.match(serverArchive, /data\.kind==='LOCAL'/);
+  assert.match(serverArchive, /data\.kind==='SUBPOSITION'/);
+  assert.match(serverArchive, /WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(serverArchive, /WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(serverArchive, /warehouseAdminTransaction/);
 });
 
 test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
   const repository = readFileSync(
-    resolve(root, 'lib/warehouse/locationRepository.ts'),
-    'utf8'
+    resolve(root, 'lib/warehouse/locationRepository.ts'), 'utf8'
   );
-
-  assert.match(repository, /item\.depot\.status === 'active'/);
-  assert.match(repository, /item\.depot\.code === normalized/);
-  assert.match(repository, /nextStatus === 'active'/);
-  assert.match(repository, /current\.status !== 'active'/);
-  assert.match(repository, /assertDepotCodeAvailable\(scope\.workspaceId, nextCode, depotId\)/);
+  const motor = readFileSync(
+    resolve(root, 'lib/server/warehouseStructureWrite.ts'), 'utf8'
+  );
+  // UI permanece client fino; servidor verifica proprietário anterior,
+  // status, claims e precondições na MESMA transação.
+  assert.match(repository, /warehouseServerCommand<WarehouseDepot>/);
+  assert.match(repository, /'DEPOT_CREATE'/);
+  assert.match(repository, /'DEPOT_UPDATE'/);
+  assert.match(motor, /duplicates\.some\(activeRecord\)/);
+  assert.match(motor, /existingClaim/);
+  assert.match(motor, /ownerPath/);
+  assert.match(motor, /depotData\(access,existingOwnerId as string,owner\)\.status==='active'/);
+  assert.match(motor, /warehouseAdminTransaction\(token,readSet,rows/);
+  assert.match(motor, /desiredStatus==='active' && current\.status!=='active'/);
+  assert.match(motor, /desiredStatus==='active' && claim && claim\.data\.entityId!==id/);
+  assert.match(motor, /WAREHOUSE_DEPOT_DUPLICATE_CODE/);
 });

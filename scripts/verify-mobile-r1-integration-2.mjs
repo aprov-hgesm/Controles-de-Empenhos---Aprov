@@ -77,13 +77,40 @@ assert.doesNotMatch(transferPage, /\bsetDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bOUTBOUND\b/);
 
+// O MOTOR CANÔNICO de TRANSFER foi migrado para o backend confiável no R2.
 const locationRepository = read('lib/warehouse/locationRepository.ts');
-assert.match(locationRepository, /createWarehouseTransferSplitLotId/);
-assert.match(locationRepository, /WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID/);
-assert.match(locationRepository, /validateWarehouseLot/);
-assert.match(locationRepository, /WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION/);
-assert.match(locationRepository, /buildCanonicalWarehouseTransferLotPlan/);
-assert.doesNotMatch(locationRepository, /UNASSIGNED flows keep the legacy explicit/);
+const serverTransfer = read('lib/server/warehouseTransfer.ts');
+const operationsRoute = read('app/api/central-depositos/operations/route.ts');
+const commandClient = read('lib/warehouse/serverCommandClient.ts');
+const transport = locationRepository.slice(
+  locationRepository.indexOf('export async function transferWarehouseStock('),
+  locationRepository.indexOf('export function buildWarehousePositionLabel(')
+);
+
+assert.match(transport, /warehouseServerCommand<TransferWarehouseStockResult>/);
+assert.match(transport, /'TRANSFER'/);
+assert.doesNotMatch(transport, /\b(runTransaction|setDoc|updateDoc|writeBatch)\s*\(/,
+  'MOBILE-D não pode gravar diretamente no Firestore');
+assert.match(commandClient, /getIdToken\(\)/);
+assert.match(commandClient, /\/api\/central-depositos\/operations/);
+assert.match(operationsRoute, /verifyWarehouseRequest/);
+assert.match(operationsRoute, /transferWarehouseStockServer\(access,body\.input\)/);
+
+assert.match(serverTransfer, /warehouseAdminTransaction<TransferWarehouseStockResult>/);
+assert.match(serverTransfer, /planWarehouseTransferLots/);
+assert.match(serverTransfer, /isWarehousePhysicalStockPosition/);
+assert.match(serverTransfer, /warehouseStockPositionsEqual/);
+assert.match(serverTransfer, /warehouseMovementMatchesReplay/);
+assert.match(serverTransfer, /WAREHOUSE_IDEMPOTENCY_CONFLICT/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_SPLIT_INVALID/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_SPLIT_LOT_INVALID/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT/);
+assert.match(serverTransfer, /validateWarehouseLot/);
+assert.match(serverTransfer, /createHash\('sha256'\)/);
+assert.match(serverTransfer, /WAREHOUSE_TRANSFER_CLIENT_LOT_PLAN_FORBIDDEN/);
+assert.match(serverTransfer, /quantityDelta:0/);
+assert.doesNotMatch(serverTransfer, /UNASSIGNED flows keep the legacy explicit/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
@@ -101,6 +128,6 @@ assert.match(workflow, /Central Móvel R1 Integration 2 guard/);
 
 console.log('MOBILE-R1 INTEGRATION 2: PASS');
 console.log('- alocação, consulta de localização e transferência compartilham posições e autoridades canônicas');
-console.log('- transferência preserva total físico e classificação de produto única');
+console.log('- MOBILE-D usa TRANSFER server-only com FEFO, split, idempotência e saldo físico conservado');
 console.log('- lotes críticos permanecem fail-closed');
 console.log('- consulta física permanece read-only');

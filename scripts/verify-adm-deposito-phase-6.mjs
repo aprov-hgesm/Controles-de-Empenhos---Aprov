@@ -17,6 +17,7 @@ function requireText(content, marker, message) {
 const location = read('lib/warehouse/location.ts');
 const repository = read('lib/warehouse/locationRepository.ts');
 const ledger = read('lib/warehouse/ledgerRepository.ts');
+const serverLedger = read('lib/server/warehouseLedgerAndArchive.ts');
 const movement = read('lib/warehouse/movement.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const depotsUi = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
@@ -48,12 +49,18 @@ for (const marker of [
   'updateWarehouseLocation',
   'listWarehouseLocationBalances',
   'transferWarehouseStock',
-  "type: 'TRANSFER'",
+  'warehouseServerCommand<TransferWarehouseStockResult>',
+]) requireText(repository, marker, 'Cliente sem comando de transferência do servidor: ' + marker);
+
+const serverTransfer=read('lib/server/warehouseTransfer.ts');
+for (const marker of [
+  "type:'TRANSFER'",
   'WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK',
-  'runTransaction',
-  'fromBalanceRef',
-  'toBalanceRef',
-]) requireText(repository, marker, 'Persistência/transferência incompleta: ' + marker);
+  'warehouseAdminTransaction',
+  'planWarehouseTransferLots',
+  'fromBalanceId',
+  'toBalanceId',
+]) requireText(serverTransfer, marker, 'Motor transacional servidor incompleto: ' + marker);
 
 for (const marker of [
   "locationBalances: 'locationBalances'",
@@ -65,11 +72,14 @@ for (const marker of [
   "type === 'TRANSFER'",
 ]) requireText(movement, marker, 'Ledger não reconhece origem auditável da transferência: ' + marker);
 
+requireText(ledger, "'LEDGER_MOVEMENT'", 'Ledger não delega gravação ao motor autenticado.');
 for (const marker of [
-  'unassignedBalancePath',
+  'warehouseLedgerMovementServer',
+  'warehouseAdminTransaction',
+  "kind:'UNASSIGNED'",
   'applyWarehouseLocationDelta',
-  "WAREHOUSE_TRANSFER_REQUIRES_LOCATION_FLOW",
-]) requireText(ledger, marker, 'Integração do ledger com compatibilidade legada UNASSIGNED ausente: ' + marker);
+  "v.type==='TRANSFER'",
+]) requireText(serverLedger, marker, 'Ledger server-only perdeu compatibilidade UNASSIGNED ou bloqueio de TRANSFER: ' + marker);
 
 for (const marker of [
   'warehouse-locations-r1-operational',

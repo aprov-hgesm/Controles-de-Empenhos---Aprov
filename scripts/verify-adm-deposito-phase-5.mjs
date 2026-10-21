@@ -21,6 +21,7 @@ function forbidText(content, marker, message) {
 const domain = read('lib/warehouse/siscofis.ts');
 const pdfExtractor = read('lib/warehouse/siscofisPdf.ts');
 const service = read('lib/warehouse/siscofisService.ts');
+const serverSiscofis = read('lib/server/warehouseSiscofisWrite.ts');
 const movement = read('lib/warehouse/movement.ts');
 const siscofisUi = read('features/warehouse/components/WarehouseSiscofisOperational.tsx');
 const pendingAllocation = read('lib/warehouse/pendingPhysicalAllocationRepository.ts');
@@ -53,16 +54,30 @@ for (const marker of [
   'prepareEmprovexSiscofisInventoryData',
   'prepareWarehouseSiscofisImport',
   'confirmWarehouseSiscofisImport',
-  "type: 'INITIAL_BALANCE'",
   'applyWarehouseMovement',
-  'siscofis:marco-zero:',
-  "existingMarcoZero?.status === 'CONFIRMED'",
-  'WAREHOUSE_SISCOFIS_MARCO_ZERO_CUTOFF_OVERLAP',
-  "kind: 'SNAPSHOT'",
-  'movementIds: []',
 ]) {
   requireText(service, marker, 'Persistência/Marco Zero incompleto: ' + marker);
 }
+
+for (const marker of [
+  'confirmWarehouseSiscofisServer',
+  'warehouseAdminTransaction',
+  'buildWarehouseSiscofisPreview',
+  'hashWarehouseSiscofisImport',
+  'warehouseLedgerMovementServer',
+  'siscofis:marco-zero:',
+  'WAREHOUSE_SISCOFIS_PREVIEW_NOT_CONFIRMABLE',
+  "type:'INITIAL_BALANCE'",
+  "stored?.data.status==='CONFIRMED'",
+  "alreadyConfirmed?'SNAPSHOT':'MARCO_ZERO'",
+  'movementIds:[]',
+  "status:'APPLYING'",
+  "status:'CONFIRMED'",
+]) {
+  requireText(serverSiscofis, marker, 'Motor SISCOFIS transacional do servidor incompleto: ' + marker);
+}
+forbidText(service, 'setDoc(', 'SISCOFIS voltou a gravar diretamente pelo cliente.');
+forbidText(service, 'updateDoc(', 'SISCOFIS voltou a atualizar diretamente pelo cliente.');
 
 for (const marker of [
   "'INITIAL_BALANCE'",

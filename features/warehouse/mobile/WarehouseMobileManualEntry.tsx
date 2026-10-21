@@ -11,6 +11,7 @@ import { normalizeWarehouseExpiryDate } from '../../../lib/warehouse/lot';
 import { type WarehouseMaterial } from '../../../lib/warehouse/material';
 import { getWarehouseMaterial, listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
+import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 import { classifyWarehouseMobileProductScan, createWarehouseMobileAllocationOperationId } from '../../../lib/warehouse/mobileIntakeAllocation';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
@@ -32,25 +33,6 @@ type LocationState =
 
 function materialUnitLabel(material: WarehouseMaterial): string {
   return material.unit.label || material.unit.code.toUpperCase();
-}
-
-function errorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error || '');
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED')) {
-    return 'A posição física não está mais ativa. Leia novamente a etiqueta.';
-  }
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_INVALID_EXPIRY')) return 'Data de validade inválida.';
-  if (message.includes('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT')) {
-    return 'O cadastro do material mudou. Confira os dados antes de repetir.';
-  }
-  if (message.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
-    return 'Esta operação já foi usada com outros dados. Atualize a tela antes de tentar novamente.';
-  }
-  if (message.includes('permission-denied') || message.includes('PERMISSION_DENIED')) {
-    return 'Sem permissão para registrar esta entrada. Nenhum sucesso foi confirmado.';
-  }
-  if (error instanceof TypeError) return 'Falha de conexão. O rascunho foi preservado; confira o estoque antes de repetir.';
-  return message || 'Não foi possível confirmar a entrada. Verifique o estoque antes de repetir.';
 }
 
 const inputClass = 'mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-950 outline-none focus:border-[#00288e]';
@@ -245,25 +227,8 @@ export function WarehouseMobileManualEntry() {
     submittingRef.current = true;
     setWorking(true);
     try {
-      // Reconsulta o vínculo antes de escrever: evita registrar saldo para barcode já tomado.
-      if (barcode) {
-        const current = await getWarehouseBarcodeByCode(workspace.workspaceId, barcode);
-        if (current) {
-          // Código desconhecido no scan pode ter sido vinculado por outra pessoa.
-          // Neste caso falhar fechado ANTES de aumentar o estoque, mesmo que o
-          // usuário tenha escolhido um material coincidente no catálogo.
-          if (product.status !== 'known'
-            || current.status !== 'active'
-            || current.ug !== workspace.ug
-            || current.materialId !== selectedMaterial?.id
-            || current.factorToBaseUnit !== 1) {
-            throw new Error('O código foi alterado ou pertence a outro material. Releia a etiqueta antes de continuar.');
-          }
-        } else if (product.status === 'known') {
-          throw new Error('O vínculo anterior do produto desapareceu. Releia a etiqueta.');
-        }
-      }
-
+      // O motor compartilhado verifica o código DENTRO da transação,
+      // impedindo corrida entre o scan e a gravação sem leitura duplicada.
       const result = await registerWarehouseManualEntry(workspace.workspaceId, {
         operationId,
         existingMaterialId: activeMode === 'existing' ? selectedMaterial?.id : null,
@@ -274,9 +239,7 @@ export function WarehouseMobileManualEntry() {
         reference: reference.trim() || null,
         position: location.position,
         expiresOn: expiresOn || null,
-        // Associação já conhecida não precisa ser recriada (economiza escrita
-        // e preserva apresentações específicas previamente configuradas).
-        barcode: product.status === 'unknown' ? barcode : null,
+        barcode,
       });
 
       const registered = result.entry.applied ? 'Entrada avulsa registrada' : 'Entrada já registrada anteriormente';
@@ -288,7 +251,7 @@ export function WarehouseMobileManualEntry() {
       setSuccess(message);
     } catch (caught) {
       // Conserva operationId e dados: repetir após timeout não deve duplicar o lançamento.
-      setError(errorMessage(caught));
+      setError(warehouseManualEntryErrorMessage(caught));
     } finally {
       submittingRef.current = false;
       setWorking(false);
