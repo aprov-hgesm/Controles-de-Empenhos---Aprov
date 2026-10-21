@@ -212,6 +212,9 @@ jobs:
       - name: ADM Depósito Phase 8 barcode and outbound domain tests
         run: npm run test:adm-deposito-barcode-outbound
 
+      - name: Warehouse server outbound return canonical contracts
+        run: npm run test:adm-deposito-outbound-return
+
       - name: ADM Depósito Phase 8 permanent guard
         run: npm run verify:adm-deposito-phase-8
 
