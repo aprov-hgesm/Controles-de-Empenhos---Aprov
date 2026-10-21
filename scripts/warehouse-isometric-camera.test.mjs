@@ -32,6 +32,9 @@ const {
   fitWarehouseIsometricScene,
   warehouseIsoRoomDimensions,
   transformWarehouseIsoRectForView,
+  warehouseLandingIsoFrame,
+  placeWarehouseLandingIsoFrame,
+  WAREHOUSE_LANDING_ISO,
 } = require(resolve(out, 'isometricCamera.js'));
 const {
   warehouseApplianceFrontalAxis,
@@ -131,7 +134,7 @@ test('renderer refaz fit por vista e não muda geometria, domínio nem Firestore
   assert.match(preview, /visibleObjects,/);
   assert.match(preview, /previewView/);
   assert.match(preview, /viewBox=\{\[cameraViewBox\.x, cameraViewBox\.y, cameraViewBox\.width, cameraViewBox\.height\]\.join\(' '\)\}/);
-  assert.match(preview, /preserveAspectRatio="xMidYMid meet"/);
+  assert.match(preview, /preserveAspectRatio=\\{sceneOnly \\? 'none' : 'xMidYMid meet'\\}/);
   assert.match(preview, /data-camera-fit="bounds"/);
   assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
   assert.doesNotMatch(preview, /viewBox=\{\s*embedded\s*\?/);
@@ -293,4 +296,50 @@ test('renderer premium aplica orientação física e detalhes 3D reais em todas 
   assert.match(renderer,/data-appliance-detail="insulated-side"/);
   assert.match(renderer,/data-front-face=\{front\}/);
   assert.doesNotMatch(renderer,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
+});
+
+test('miniaturas do Início usam uma única inclinação e piso ancorado no mundo', () => {
+  const center = { x: 700, y: 400 };
+  const projectedSpan = 340;
+  const dims = [
+    [12000, 2400], [2400, 12000], [500, 500],
+    [1000, 620], [50000, 240],
+  ];
+  for (const [width, height] of dims) {
+    const frame = warehouseLandingIsoFrame(width, height);
+    const before = JSON.stringify(frame);
+    const placed = placeWarehouseLandingIsoFrame(frame, center, projectedSpan);
+    assert.equal(placed.width, projectedSpan * WAREHOUSE_LANDING_ISO.sceneWidthFactor);
+    assert.equal(placed.height, placed.width * WAREHOUSE_LANDING_ISO.sceneAspect);
+    assert.ok(placed.width > 0 && placed.height > 0);
+    assert.ok(Number.isFinite(placed.x) && Number.isFinite(placed.y));
+
+    const corners = placed.floorCorners;
+    const avgX = corners.reduce((sum, item) => sum + item.x, 0) / 4;
+    const avgY = corners.reduce((sum, item) => sum + item.y, 0) / 4;
+    assert.ok(Math.abs(avgX - center.x) < EPS, 'base sem centro comum X');
+    assert.ok(Math.abs(avgY - center.y) < EPS, 'base sem centro comum Y');
+
+    const widthPx = Math.max(...corners.map(p => p.x)) - Math.min(...corners.map(p => p.x));
+    assert.ok(Math.abs(widthPx - projectedSpan) < EPS, 'base não ocupa o span do mundo');
+    for (let i = 0; i < 4; i += 1) {
+      const p = corners[i];
+      const q = corners[(i + 1) % 4];
+      assert.ok(Math.abs(Math.abs((q.y - p.y) / (q.x - p.x))
+        - WAREHOUSE_LANDING_ISO.worldSlope) < EPS,
+        'ângulo isométrico divergente do mapa');
+    }
+    assert.deepEqual(JSON.stringify(frame), before, 'modelo de câmera foi modificado');
+  }
+});
+
+test('miniatura usa enquadramento estável e omite as etiquetas internas', () => {
+  const source = readFileSync(resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8');
+  const landing = readFileSync(resolve(root, 'features/warehouse/components/WarehouseLandingOperational.tsx'), 'utf8');
+  assert.match(source, /warehouseLandingIsoFrame\\(viewLogicalWidth, viewLogicalHeight\\)\\.viewBox/);
+  assert.match(source, /data-camera-fit=\\{sceneOnly \\? 'aligned-floor' : 'bounds'\\}/);
+  assert.match(source, /showLabels=\\{!sceneOnly\\}/);
+  assert.match(landing, /placeWarehouseLandingIsoFrame\\(/);
+  assert.match(landing, /data-camera-pose="aligned-floor"/);
+  assert.doesNotMatch(landing, /listWarehouseDepotLayouts\\(/);
 });
