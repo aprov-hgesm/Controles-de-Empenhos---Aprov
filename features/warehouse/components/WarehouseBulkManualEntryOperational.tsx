@@ -28,8 +28,8 @@ function unitKey(raw:string):string {
   const unit=norm(raw);
   if(['und','un','unidade','unit'].includes(unit))return 'unit';
   if(['pct','pacote','package'].includes(unit))return 'package';
-  if(['cx','caixa','box'].includes(unit))return 'box';
-  if(['kg','quilo','quilograma'].includes(unit))return 'kg';
+  if(['cx','caixa','caixacx','box'].includes(unit))return 'box';
+  if(['kg','quilo','quilos','quilograma','quilogramas'].includes(unit))return 'kg';
   if(['g','grama'].includes(unit))return 'g';
   if(['l','litro'].includes(unit))return 'l';
   if(['ml','mililitro'].includes(unit))return 'ml';
