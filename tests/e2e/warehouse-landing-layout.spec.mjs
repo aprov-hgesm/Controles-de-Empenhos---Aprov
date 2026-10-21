@@ -26,7 +26,10 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
       await expect(scene).toHaveAttribute('data-layout-version', /\d+/);
       await expect(scene.getByTestId('warehouse-isometric-scene-only'))
         .toHaveAttribute('data-scene-only', 'true');
-      await expect(scene.locator('svg[data-camera-fit="bounds"]')).toHaveCount(1);
+      await expect(scene).toHaveAttribute('data-camera-pose', 'aligned-floor');
+      await expect(scene.locator('svg[data-camera-fit="aligned-floor"]')).toHaveCount(1);
+      await expect(scene.locator('svg')).toHaveAttribute('preserveAspectRatio', 'none');
+      await expect(scene.locator('[data-visual-role="door"] text')).toHaveCount(0);
     }
 
     const floor = depot.locator('polygon').first();
