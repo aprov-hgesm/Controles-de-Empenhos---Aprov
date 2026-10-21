@@ -775,6 +775,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
   const loadRequestRef = useRef(0);
   const lastWorkspaceRef = useRef('');
+  const editModeRef = useRef(false);
+
+  useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   const dragRef = useRef<{
     depotId: string;
     pointerId: number;
@@ -800,11 +803,11 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
 
     // Start all reads concurrently, but don't let NF/stock details hold up the
     // first 3D paint. No additional Firestore queries are introduced.
-    const detailReads = Promise.allSettled([
+    const stockReads = Promise.allSettled([
       listWarehouseLocations(workspaceId, 500),
       listWarehousePositiveLocationBalances(workspaceId, 500),
-      loadWarehouseInvoiceIntakeQueue(workspaceId),
     ]);
+    const queueRead = loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null);
 
     try {
       const [depots, layouts, visualSettings] = await Promise.all([
@@ -824,28 +827,36 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       const overrides = visualSettings?.overrides || {};
       setSavedVisualOverrides(overrides);
       // Do not overwrite an active drag/edit session during an NF refresh.
-      setVisualOverrides((current) => editMode ? current : overrides);
+      setVisualOverrides((current) => editModeRef.current ? current : overrides);
 
-      const [locationResult, balanceResult, queueResult] = await detailReads;
-      if (requestId !== loadRequestRef.current) return;
-
-      const locations = locationResult.status === 'fulfilled' ? locationResult.value : [];
-      const locationBalances = balanceResult.status === 'fulfilled' ? balanceResult.value : [];
-      const queue = queueResult.status === 'fulfilled' ? queueResult.value : null;
-      const detailsError = locationResult.status === 'rejected' || balanceResult.status === 'rejected';
-
-      setData((current) => ({
-        ...current,
-        locations,
-        locationsLoaded: locationResult.status === 'fulfilled',
-        locationBalances,
-        pendingRows: queue?.rows || [],
-        pendingAvailable: Boolean(queue),
-        pendingLoading: false,
-        error: detailsError
-          ? 'Alguns dados de localização ou saldo não puderam ser atualizados.'
-          : null,
-      }));
+      // Stock data and receiving queue finish separately; neither holds the
+      // other back. Keep a coherent scene even when a secondary query fails.
+      await Promise.all([
+        stockReads.then(([locationResult, balanceResult]) => {
+          if (requestId !== loadRequestRef.current) return;
+          const locations = locationResult.status === 'fulfilled' ? locationResult.value : [];
+          const locationBalances = balanceResult.status === 'fulfilled' ? balanceResult.value : [];
+          const detailsError = locationResult.status === 'rejected' || balanceResult.status === 'rejected';
+          setData((current) => ({
+            ...current,
+            locations,
+            locationsLoaded: locationResult.status === 'fulfilled',
+            locationBalances,
+            error: detailsError
+              ? 'Alguns dados de localização ou saldo não puderam ser atualizados.'
+              : current.error,
+          }));
+        }),
+        queueRead.then((queue) => {
+          if (requestId !== loadRequestRef.current) return;
+          setData((current) => ({
+            ...current,
+            pendingRows: queue?.rows || [],
+            pendingAvailable: Boolean(queue),
+            pendingLoading: false,
+          }));
+        }),
+      ]);
     } catch (error) {
       if (requestId !== loadRequestRef.current) return;
       setData((current) => ({
@@ -857,7 +868,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
           : 'Não foi possível montar o ambiente visual dos depósitos.',
       }));
     }
-  }, [workspaceId, editMode]);
+  }, [workspaceId]);
 
   useEffect(() => {
     void load();
