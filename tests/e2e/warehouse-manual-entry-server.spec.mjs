@@ -133,8 +133,10 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
     return call.body.result;
   };
   const rejected = (call, label) => {
-    expect(call.http.ok(), label).toBe(false);
+    expect(call.http.status(), label + ': ' + JSON.stringify(call.body)).toBeGreaterThanOrEqual(400);
+    expect(call.http.status(), label + ': ' + JSON.stringify(call.body)).toBeLessThan(500);
     expect(call.body.ok, label).toBe(false);
+    expect(call.body.error, label).toBeTruthy();
   };
   const numeric = (doc) => Number(doc.fields.quantity.integerValue
     ?? doc.fields.quantity.doubleValue);
@@ -164,10 +166,13 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   };
 
   // Rejeição de estoque insuficiente deve preservar ledger, posição e lote.
-  rejected(await command('EXPRESS_OUTBOUND', {
+  const overdraw = await command('EXPRESS_OUTBOUND', {
     ...outboundInput, requestedQuantity: 99,
     idempotencyKey: 'e2e-r2-express-excess-001',
-  }), 'saída acima do saldo físico');
+  });
+  rejected(overdraw, 'saída acima do saldo físico');
+  expect(overdraw.http.status()).toBe(409);
+  expect(overdraw.body.error).toBe('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK');
   expect(numeric(await getFirestoreDoc(request, 'balances', materialId))).toBe(5);
   expect(numeric(await getFirestoreDoc(request, 'lots', lotId))).toBe(5);
 

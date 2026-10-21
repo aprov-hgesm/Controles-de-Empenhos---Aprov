@@ -170,11 +170,38 @@ export async function applyWarehouseExpressOutboundServer(
             barcodeAssociation:liveBarcode,lot},
         },writes:[]};
       }
-      const plan=prepareWarehouseExpressOutbound({
-        material,balance:currentBalance,requestedQuantity,
-        presentation:input.presentation as WarehouseMaterial['unit'],
-        position,barcodeAssociation:liveBarcode,lot,
-      });
+      // O motor de domínio lança Error para condições de negócio.
+      // A API precisa preservar o status apropriado (400/409), sem
+      // disfarçar saldo insuficiente como indisponibilidade HTTP 503.
+      let plan:ReturnType<typeof prepareWarehouseExpressOutbound>;
+      try {
+        plan=prepareWarehouseExpressOutbound({
+          material,balance:currentBalance,requestedQuantity,
+          presentation:input.presentation as WarehouseMaterial['unit'],
+          position,barcodeAssociation:liveBarcode,lot,
+        });
+      }catch(error){
+        const domainCode=error instanceof Error?error.message:'';
+        if (domainCode==='WAREHOUSE_OUTBOUND_INVALID_QUANTITY'
+          || domainCode==='WAREHOUSE_OUTBOUND_INVALID_CONVERSION') {
+          return reject(domainCode,400);
+        }
+        const expectedErrors=[
+          'WAREHOUSE_MATERIAL_INACTIVE',
+          'WAREHOUSE_OUTBOUND_BALANCE_SCOPE_MISMATCH',
+          'WAREHOUSE_OUTBOUND_PRESENTATION_NOT_CONFIGURED',
+          'WAREHOUSE_BARCODE_INACTIVE',
+          'WAREHOUSE_BARCODE_MATERIAL_CONVERSION_MISMATCH',
+          'WAREHOUSE_BARCODE_PRESENTATION_MISMATCH',
+          'WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK',
+          'WAREHOUSE_OUTBOUND_LOT_SCOPE_MISMATCH',
+          'WAREHOUSE_OUTBOUND_LOT_INACTIVE',
+          'WAREHOUSE_OUTBOUND_LOT_POSITION_MISMATCH',
+          'WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION',
+        ];
+        if(expectedErrors.includes(domainCode))return reject(domainCode,409);
+        throw error;
+      }
       if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
       if(currentLocationBalance.quantity+0.000001<plan.baseQuantity) {
         return reject('WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK');
