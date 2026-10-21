@@ -3387,3 +3387,14 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - **Certificação e governança:** PR #351 integrado por squash na `main` (`38a8f86fc2c07604d6a36bdb36cc98792994546a`); 6/6 workflows PASS: Application CI, Browser E2E, Fast CI, Core Protection, Visual QA, Warehouse Server R2 Smoke (incluindo XLSX/Emulator). A publicação manual ocorreu via PowerShell proprietário na equipe `aprov-hgesms-projects`; nenhuma Firestore Rule foi alterada.
 
 **Handoff de publicação:** onde estamos — `emprovex.com.br` apontando para `dpl_AuJ4yHDLrjk8wDuihCZMgcp7j6r5` (status Ready, `/api/health` status ok); o que foi feito — modelo XLSX, prévia, motor de importação aditivo, CI 6/6, merge e deploy Vercel únicos; quem fez — executor GitHub e Fundador via PowerShell; o que fazer a seguir — smoke humano de baixar, subir e conferir prévia sem gravar saldos, mais primeira carga real apenas após conferência/autorizações cabíveis; quem fará — Fundador e operadores autorizados. **A validação de saúde não comprova, sozinha, a operação de upload ou a equivalência de todos os saldos em produção.**
+
+
+## HOTFIX BULK STOCK XLSX R1 — Correção de células vazias (21/10/2026)
+
+**Status: Publicado em produção no domínio oficial.** PR #352 squash-merged em `main@5c129bbb8416e85075162bfb62c0b940bf6fdc48`; Vercel deployment `dpl_8Xx2xrnss1Se6pDobYWr2GhJha3i` (`controles-de-empenhos-aprov-qiclgd4wp-aprov-hgesms-projects.vercel.app`), confirmado `Ready` em `emprovex.com.br` pelo PowerShell do Fundador; `/api/health` retornou status `ok` (2026-10-21T19:32:53.188Z).
+
+- **Defeito real:** ao enviar planilha Excel com código de barras vazio na coluna E e Tipo de local na coluna F, o parser regex consumia incorretamente a célula seguinte após célula autoconclusiva `<c .../>`, retornando `STOCK_IMPORT_INVALID_ROW_2`, apesar de a linha estar preenchida.
+- **Correção mínima:** `lib/server/warehouseBulkStockWorkbook.ts` distingue célula XML autoconclusiva, preservando colunas seguintes; teste de regressão no `scripts/warehouse-bulk-stock-r1.test.ts` confere E2 vazia, F2 Estante, G2 9, H2 1. Não alterou motor financeiro/estoque, movimentos, índices, Firestore Rules ou autenticação.
+- **Evidências GitHub:** Application CI, Browser E2E, Core Protection, Fast CI e Warehouse Server R2 Smoke = **5/5 PASS**. `WAREHOUSE BULK STOCK XLSX R1 PASS` no Emulator.
+- **Dados reais:** a planilha de 121 linhas foi examinada fora do repositório; não foi importada ao Firestore. A correção de parsing não garante que todas as posições estejam cadastradas corretamente, nem que não haja divergências no estoque.
+- **Handoff:** onde — produção oficial no hotfix; o que falta — fundador reenviar a mesma planilha e conferir prévia, linhas e correspondência de depósitos/posições, sem confirmar gravação até validar; quem — fundador. Gravação inicial deve ser deliberada, auditada e respeitar que a carga é **aditiva**; não ajusta SISCOFIS.
