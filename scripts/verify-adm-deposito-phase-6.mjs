@@ -78,8 +78,15 @@ for (const marker of [
   'warehouseAdminTransaction',
   "kind:'UNASSIGNED'",
   'applyWarehouseLocationDelta',
-  "v.type==='TRANSFER'",
-]) requireText(serverLedger, marker, 'Ledger server-only perdeu compatibilidade UNASSIGNED ou bloqueio de TRANSFER: ' + marker);
+]) requireText(serverLedger, marker, 'Ledger server-only perdeu compatibilidade de Marco Zero: ' + marker);
+if (!serverLedger.includes("v.type!=='INITIAL_BALANCE'")
+  || !serverLedger.includes('WAREHOUSE_SISCOFIS_LEDGER_ONLY')) {
+  findings.push('Ledger servidor deve aceitar apenas INITIAL_BALANCE interno do Marco Zero SISCOFIS.');
+}
+const warehouseOperations = read('app/api/central-depositos/operations/route.ts');
+if (!warehouseOperations.includes("return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403)")) {
+  findings.push('Rota pública deve rejeitar LEDGER_MOVEMENT genérico antes de gravações.');
+}
 
 for (const marker of [
   'warehouse-locations-r1-operational',
