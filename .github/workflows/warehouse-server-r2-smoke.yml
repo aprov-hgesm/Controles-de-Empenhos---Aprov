@@ -2,14 +2,18 @@ name: Warehouse Server R2 Smoke
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - 'lib/server/warehouseTransfer.ts'
-      - 'lib/server/warehouseFirestoreTransaction.ts'
-      - 'lib/server/warehouseStructureWrite.ts'
-      - 'lib/server/warehouseDestinationWrite.ts'
-      - 'lib/server/warehouseMaterialWrite.ts'
+      - 'lib/server/warehouse*.ts'
+      - 'lib/warehouse/*Repository.ts'
+      - 'lib/warehouse/serverCommandClient.ts'
+      - 'app/api/central-depositos/**'
       - 'scripts/warehouse-server-manual-entry-emulator.ts'
+      - 'scripts/warehouse-manual-entry-atomic-security.test.mjs'
+      - 'firebase.warehouse-security-test.json'
+      - 'firestore.warehouse*.rules'
       - '.github/workflows/warehouse-server-r2-smoke.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +24,7 @@ concurrency:
 
 jobs:
   server-r2-firestore:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Auth + Firestore Server R2 Emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 9

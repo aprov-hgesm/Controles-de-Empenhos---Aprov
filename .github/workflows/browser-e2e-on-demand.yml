@@ -3,6 +3,7 @@ name: Browser E2E On Demand
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'tests/e2e/warehouse-manual-entry-server.spec.mjs'
       - 'scripts/e2e-browser-emulator.mjs'
@@ -10,6 +11,10 @@ on:
       - 'lib/server/warehouseFirestoreTransaction.ts'
       - 'app/api/central-depositos/manual-entry/route.ts'
       - '.github/workflows/browser-e2e-on-demand.yml'
+      - 'app/central-depositos/**'
+      - 'features/warehouse/**'
+      - 'lib/warehouse/**'
+      - 'lib/server/warehouse*.ts'
 
 permissions:
   contents: read
@@ -20,6 +25,7 @@ concurrency:
 
 jobs:
   browser-e2e-emulator:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Browser E2E with Firebase Emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 15
