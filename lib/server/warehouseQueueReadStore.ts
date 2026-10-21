@@ -7,7 +7,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { WarehouseStoreError } from './warehouseFirestoreTransaction';
 
 export type ReadDatabase = 'core' | 'warehouse';
-export type ReadCollection = 'invoices' | 'empenhos' | 'intakes' |
+export type ReadCollection = 'invoices' | 'empenhos' | 'settings' | 'intakes' |
   'intakeQueueIndex' | 'queueExclusions' | 'movements';
 
 export interface QueueDocument {
