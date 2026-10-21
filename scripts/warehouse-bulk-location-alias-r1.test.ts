@@ -69,4 +69,13 @@ assert.equal(inactive.status,'inactive');
 make('LOCAL','Estante','EST',9,null,depot);
 assert.equal(matchBulkStockLocal(entries,depot,'Estante','9').length,2);
 console.log('PASS: isolamento por depósito, bloqueio de locais inativos e ambiguidade explícita');
+const custom=make('LOCAL','Armário','ARM',12);
+assert.equal(matchBulkStockLocal(entries,depot,'Armário','12')[0].id,custom.id);
+const customSub:StockLocationRef={
+  id:'sub_a1',kind:'SUBPOSITION',depotId:depot,parentLocationId:custom.id,
+  status:'active',code:'A1',name:'Gaveta A1',
+};
+entries.push(customSub);
+assert.deepEqual(matchBulkStockSubposition(entries,depot,custom.id,'A1').map(x=>x.id),[customSub.id]);
+console.log('PASS: códigos livres legados preservados por correspondência exata');
 console.log('WAREHOUSE BULK LOCATION MATCH R1 PASS');
