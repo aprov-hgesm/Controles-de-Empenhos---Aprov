@@ -27,6 +27,7 @@ import {
   type RegisterWarehouseManualEntryResult,
 } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
+import { WarehouseBulkManualEntryOperational } from './WarehouseBulkManualEntryOperational';
 
 type MaterialMode = 'existing' | 'new';
 
@@ -287,6 +288,14 @@ export function WarehouseManualEntryOperational({
           {error}
         </div>
       )}
+
+      <WarehouseBulkManualEntryOperational
+        workspaceId={workspaceId}
+        materials={materials}
+        depots={depots}
+        locations={locations}
+        onImported={load}
+      />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
