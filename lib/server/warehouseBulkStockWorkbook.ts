@@ -15,7 +15,7 @@ export interface BulkStockRow {
 export class StockImportError extends Error {
   constructor(public readonly code:string,public readonly status=400) {super(code);}
 }
-const fail=(code:string):never=>{throw new StockImportError(code);};
+function fail(code:string):never {throw new StockImportError(code);}
 const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const decode=(s:string)=>s.replace(/&#x([0-9a-f]+);|&#([0-9]+);|&(amp|lt|gt|quot|apos);/gi,
   (_,hex:string,dec:string,named:string)=>named?
@@ -116,7 +116,7 @@ function unzip(buffer:Buffer):Map<string,string>{
     const start=local+30+buffer.readUInt16LE(local+26)+buffer.readUInt16LE(local+28);
     if(start+clen>buffer.length)fail('STOCK_IMPORT_ZIP_INVALID');
     const b=buffer.subarray(start,start+clen);
-    let d:Buffer;
+    let d:Buffer=Buffer.alloc(0);
     try{d=method===0?b:method===8?inflateRawSync(b,{maxOutputLength:25000000}):fail('STOCK_IMPORT_ZIP_METHOD');}
     catch{fail('STOCK_IMPORT_ZIP_CORRUPT');}
     if(d.length!==ulen)fail('STOCK_IMPORT_ZIP_INVALID');
