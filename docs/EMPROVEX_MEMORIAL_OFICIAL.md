@@ -3466,7 +3466,7 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 
 O fundador fez upload de `emprovex-logo.png` diretamente na raiz da `main` (commit `e8985741`). Para que Next.js/Vercel sirvam a imagem em URL pública, a mesma **blob original** foi movida para `public/emprovex-logo.png`, sem reprocessamento nem alteração gráfica.
 
-A rota `/api/install-icon/[size]` agora usa exclusivamente essa imagem local versionada como origem do PNG instalado em 32, 180, 192 e 512 px, com versão maskable do ícone de 512 reservando margem de segurança. Removida a antiga consulta de `settings/global.logo` e toda dependência de credencial Firebase da **rota de ícones**. O restante da identidade visual da aplicação permanece intacto, inclusive o `usePlatformBranding` do cabeçalho/login.
+A rota `/api/install-icon/[size]` agora usa exclusivamente essa imagem local versionada como origem do PNG instalado em 32, 180, 192 e 512 px, com versão maskable do ícone de 512 reservando margem de segurança. O `next.config.ts` emprega `outputFileTracingIncludes` apenas em `/api/install-icon/*` para empacotar `./public/emprovex-logo.png` na função Vercel, além de disponibilizá-lo diretamente em `/emprovex-logo.png`. Removida a antiga consulta de `settings/global.logo` e toda dependência de credencial Firebase da **rota de ícones**. O restante da identidade visual da aplicação permanece intacto, inclusive o `usePlatformBranding` do cabeçalho/login.
 
 O endpoint devolve apenas imagens, indicador de imagem institucional/fallback, cache controlado; não há leitura ou gravação de dados do usuário. A publicação é independente da R362 estética. Novo teste valida presença, cabeçalho PNG, tamanho mínimo, tipos de ícone e inexistência de Firestore no caminho de instalação.
 
