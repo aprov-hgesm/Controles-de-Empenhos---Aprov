@@ -41,6 +41,7 @@ test('R363: mesma identidade da configuração global existente, sem nova foto i
 test('R363: endpoint público só entrega PNG e protege credenciais e fontes de imagem', () => {
   assert.match(route, /ImageResponse/);
   assert.match(route, /CACHE_CONTROL/);
+  assert.match(route, /X-Emprovex-Icon-Source/);
   assert.match(route, /MAX_IMAGE_BYTES/);
   assert.match(route, /getGoogleAccessToken/);
   assert.match(route, /redirect: 'error'/);
