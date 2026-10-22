@@ -1478,6 +1478,11 @@ export function WarehouseIsometricPreview({
             aria-label={'Prévia 3D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
           >
             <defs>
+              <radialGradient id="r362FloorBloom" cx="32%" cy="24%" r="84%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.56" />
+                <stop offset="52%" stopColor="#e0ebf5" stopOpacity="0.14" />
+                <stop offset="100%" stopColor="#5c758a" stopOpacity="0.12" />
+              </radialGradient>
               <linearGradient id="floorGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#f9fafb" />
                 <stop offset="48%" stopColor="#e3e9ec" />
@@ -1666,7 +1671,8 @@ export function WarehouseIsometricPreview({
               })}
 
               <polygon points={polygonPoints(floor)} fill="url(#floorGradient)" stroke="#9fb2c5" strokeWidth="2.5" />
-              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.78" />
+              <polygon points={polygonPoints(floor)} fill="url(#r362FloorBloom)" />
+              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.67" />
               <polygon points={polygonPoints(floor)} fill="url(#floorSoftSheen)" />
 
               <line x1={floor[0].x} y1={floor[0].y} x2={floor[1].x} y2={floor[1].y} stroke="#6e879b" strokeWidth="4" opacity="0.48" />
