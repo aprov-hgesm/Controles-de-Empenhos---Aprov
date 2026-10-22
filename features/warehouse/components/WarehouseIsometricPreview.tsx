@@ -317,7 +317,7 @@ function renderLabel(
         opacity={highlighted ? 1 : 0.65}
       />
       <circle cy="-15" r={highlighted ? 4 : 2.4} fill={highlighted ? '#2563eb' : '#94a3b8'} />
-      <g transform="translate(0 -20)" filter="url(#r362LabelShadow)">
+      <g transform="translate(0 -20)">
         <rect
           x={-width / 2}
           y={-height}
@@ -1511,9 +1511,6 @@ export function WarehouseIsometricPreview({
                 <stop offset="55%" stopColor={WAREHOUSE_RACK_VISUAL.beamFront} />
                 <stop offset="100%" stopColor="#c15e1d" />
               </linearGradient>
-              <filter id="r362LabelShadow" x="-25%" y="-40%" width="150%" height="200%">
-                <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="#1b3550" floodOpacity="0.20" />
-              </filter>
               <linearGradient id="rackDeck" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor={WAREHOUSE_RACK_VISUAL.deckTop} />
                 <stop offset="52%" stopColor={WAREHOUSE_RACK_VISUAL.deckMid} />
