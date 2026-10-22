@@ -9,6 +9,7 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -177,4 +178,34 @@ export async function replaceWarehouseBarcodeAssociation(
   return warehouseServerCommand<WarehouseBarcodeAssociation>(
     workspaceId, 'BARCODE_REPLACE', { barcodeId, nextBarcodeInput }
   );
+}
+
+/**
+ * Consulta sob demanda apenas dos códigos dos materiais exibidos em um local.
+ * Evita varrer todos os códigos do workspace e não executa gravações.
+ */
+export async function listWarehouseBarcodesForMaterials(
+  workspaceId: string,
+  materialIds: string[]
+): Promise<WarehouseBarcodeAssociation[]> {
+  const scope = currentScope(workspaceId);
+  const ids = [...new Set(materialIds.filter((id) => typeof id === 'string' && id.length > 0))];
+  if (ids.length === 0) return [];
+  const path = warehouseDomainPath(scope.workspaceId, 'barcodes');
+  const result: WarehouseBarcodeAssociation[] = [];
+  for (let offset = 0; offset < ids.length; offset += 30) {
+    const batch = ids.slice(offset, offset + 30);
+    const snapshot = await getDocs(
+      query(collection(db, path), where('materialId', 'in', batch), limit(500))
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    if (snapshot.size >= 500) {
+      throw new Error('WAREHOUSE_BARCODE_LOOKUP_INCOMPLETE');
+    }
+    for (const item of snapshot.docs) {
+      const assoc = parseAssociation(scope.workspaceId, item.id, item.data() as Record<string, unknown>);
+      if (assoc.status === 'active') result.push(assoc);
+    }
+  }
+  return result;
 }
