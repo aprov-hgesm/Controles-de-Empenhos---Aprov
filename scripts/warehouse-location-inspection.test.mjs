@@ -22,7 +22,7 @@ runInNewContext(compiled, {
   },
 });
 
-const { deriveWarehouseLocationContents, warehouseLocationExpiry } = exports;
+const { deriveWarehouseLocationContents, warehouseLocationExpiry, warehouseLocationExpiryStatus } = exports;
 const depot = 'dep_1';
 const local = 'loc_1';
 const posA = { kind: 'SUBPOSITION', depotId: depot, locationId: local, subpositionId: 'sub_a' };
@@ -84,6 +84,15 @@ test('validades ISO são apresentadas no padrão brasileiro', () => {
   assert.equal(warehouseLocationExpiry(null), 'Não informada');
 });
 
+test('validade: vencido, até 14 dias inclusive e período normal', () => {
+  const today = new Date(2026, 9, 21);
+  assert.equal(warehouseLocationExpiryStatus('2026-10-20', today), 'expired');
+  assert.equal(warehouseLocationExpiryStatus('2026-10-21', today), 'soon');
+  assert.equal(warehouseLocationExpiryStatus('2026-11-04', today), 'soon');
+  assert.equal(warehouseLocationExpiryStatus('2026-11-05', today), 'normal');
+  assert.equal(warehouseLocationExpiryStatus(null, today), 'none');
+});
+
 test('interface possui interação e relatório somente leitura com carregamento tardio', () => {
   const preview = read('features/warehouse/components/WarehouseIsometricPreview.tsx');
   const croquis = read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
@@ -101,7 +110,12 @@ test('interface possui interação e relatório somente leitura com carregamento
   assert.match(croquis, /listWarehouseLots\(workspaceId, 500\)/);
   assert.match(croquis, /onInspectLocation=/);
   assert.match(dialog, /data-testid="warehouse-location-download-pdf"/);
-  assert.match(dialog, /lotState === 'ready' && complete/);
+  assert.match(dialog, /lotState === 'ready' && barcodeState === 'ready' && complete/);
+  assert.match(dialog, /warehouse-location-material-editor/);
+  assert.match(dialog, /saveWarehouseMaterial\(/);
+  assert.match(dialog, /updateWarehouseLot\(/);
+  assert.match(pdf, /Código de barras/);
+  assert.match(pdf, /warehouseLocationExpiryStatus/);
   assert.match(pdf, /loadJsPdfWithAutoTable\(\)/);
   for (const content of [source, dialog, pdf]) {
     assert.doesNotMatch(content, /setDoc\(|updateDoc\(|deleteDoc\(|runTransaction\(/);
