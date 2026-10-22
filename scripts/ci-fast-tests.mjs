@@ -52,7 +52,7 @@ if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOpe
   add('test:warehouse-stock-report-ux');
 }
 // R363: shell instalável com marca institucional; sem cache offline e sem operações de domínio.
-if (files.some((p) => /^(?:app\/(?:manifest\.ts|layout\.tsx|api\/install-icon\/\[size\]\/route\.tsx)|lib\/pwaBrandIcon\.ts|scripts\/pwa-installability\.test\.mjs)$/.test(p))) {
+if (files.some((p) => /^(?:app\/(?:manifest\.ts|layout\.tsx|api\/install-icon\/\[size\]\/route\.tsx)|public\/emprovex-logo\.png|scripts\/pwa-installability\.test\.mjs)$/.test(p))) {
   add('test:pwa-installability');
 }
 // R361: remover somente o JSON do cadastro de NE e preservar a alocação por item.
