@@ -560,11 +560,16 @@ const DepotWorld = memo(function DepotWorld({
 
 function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
   const { depot, layout } = placement;
-  const labelPoint = isoPoint(
-    placement.x + placement.width * 0.5,
-    placement.y + placement.height + 17,
-    0
+  const center = isoPoint(
+    placement.x + placement.width / 2,
+    placement.y + placement.height / 2
   );
+  const floorSpan =
+    placement.width / WORLD_WIDTH * ISO_HALF_WIDTH
+    + placement.height / WORLD_HEIGHT * ISO_HALF_WIDTH;
+  const labelPoint = layout
+    ? { x: center.x, y: center.y + floorSpan * ISO_HALF_HEIGHT / (2 * ISO_HALF_WIDTH) + 20 }
+    : isoPoint(placement.x + placement.width / 2, placement.y + placement.height + 17);
 
   return (
     <g
