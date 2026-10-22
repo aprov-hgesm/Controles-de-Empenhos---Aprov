@@ -36,6 +36,7 @@ import {
 } from '../../../lib/warehouse/lot';
 import { listWarehouseLots, listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import { WarehouseMobileDepotLocations } from './WarehouseMobileDepotLocations';
 import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import styles from './WarehouseHomeOperational.module.css';
 
@@ -671,6 +672,37 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         </aside>
 
         <div className={styles.visual}>
+          <div className="lg:hidden">
+            <WarehouseMobileDepotLocations
+              key={selectedDepotId}
+              depotName={selectedDepot?.name || 'Depósito'}
+              workspaceId={workspaceId}
+              locations={previewLocations}
+              balances={previewBalances}
+              materials={data.materials}
+              inspectionLots={inspectionLots}
+              lotState={inspectionLotState}
+              lotError={inspectionLotError}
+              complete={
+                data.materials.length < 250
+                && data.locations.length < 500
+                && data.locationBalances.length < 500
+                && inspectionLotsComplete
+              }
+              available={!data.loading && !data.error}
+              onInspect={() => loadInspectionLots()}
+              onRefresh={() => loadInspectionLots(true)}
+              onMaterialUpdated={(updated) => {
+                setData((current) => ({
+                  ...current,
+                  materials: current.materials.map((material) =>
+                    material.id === updated.id ? updated : material
+                  ),
+                }));
+              }}
+            />
+          </div>
+          <div className="hidden lg:block">
           <div className={styles.visualFrame}>
             <div className={styles.visualHeader}>
               <div>
@@ -775,6 +807,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
             >
               Editar estrutura em Controle de Depósitos
             </Link>
+          </div>
           </div>
         </div>
       </div>
