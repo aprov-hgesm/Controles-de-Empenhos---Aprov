@@ -3460,3 +3460,14 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 - Vercel Production sem mudanças durante esta implementação; versão final requer publicação manual via PowerShell depois de revisão e commit certificado.
 
 **Limite de configuração:** a URL/origem real de `settings/global.logo` não está versionada no repositório. A certificação do código não comprova que a imagem externa está acessível no runtime; confirmar em staging antes de promover.
+
+
+### R363.1 — Logo oficial versionada para instalacao (22/10/2026)
+
+O fundador fez upload de `emprovex-logo.png` diretamente na raiz da `main` (commit `e8985741`). Para que Next.js/Vercel sirvam a imagem em URL pública, a mesma **blob original** foi movida para `public/emprovex-logo.png`, sem reprocessamento nem alteração gráfica.
+
+A rota `/api/install-icon/[size]` agora usa exclusivamente essa imagem local versionada como origem do PNG instalado em 32, 180, 192 e 512 px, com versão maskable do ícone de 512 reservando margem de segurança. Removida a antiga consulta de `settings/global.logo` e toda dependência de credencial Firebase da **rota de ícones**. O restante da identidade visual da aplicação permanece intacto, inclusive o `usePlatformBranding` do cabeçalho/login.
+
+O endpoint devolve apenas imagens, indicador de imagem institucional/fallback, cache controlado; não há leitura ou gravação de dados do usuário. A publicação é independente da R362 estética. Novo teste valida presença, cabeçalho PNG, tamanho mínimo, tipos de ícone e inexistência de Firestore no caminho de instalação.
+
+**Gate de homologação:** depois do prebuild/deploy manual, acessar `/emprovex-logo.png`, `/manifest.webmanifest`, `/api/install-icon/192` e `/api/install-icon/512?maskable=1`. Confirmar HTTP 200, PNG real, cabeçalho `X-Emprovex-Icon-Source: institutional`, ícone visual correto e login instalado no smartphone/desktop antes do promote. Não publicar automaticamente na Vercel.
