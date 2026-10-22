@@ -138,3 +138,34 @@ test('interface possui interação e relatório somente leitura com carregamento
     assert.doesNotMatch(content, /setDoc\(|updateDoc\(|deleteDoc\(|runTransaction\(/);
   }
 });
+
+test('Meus Depósitos no celular oferece locais por lista e leitor sem operações de saldo', () => {
+  const home = read('features/warehouse/components/WarehouseHomeOperational.tsx');
+  const mobile = read('features/warehouse/components/WarehouseMobileDepotLocations.tsx');
+  const dialog = read('features/warehouse/components/WarehouseLocationInspection.tsx');
+  const scanner = read('features/warehouse/mobile/WarehouseMobileScanner.tsx');
+  const decoder = read('features/warehouse/mobile/scannerDecoder.ts');
+
+  assert.match(home, /<WarehouseMobileDepotLocations/);
+  assert.match(home, /className="lg:hidden"/);
+  assert.match(home, /className="hidden lg:block"/);
+  assert.match(mobile, /deriveWarehouseLocationContents\(/);
+  assert.match(mobile, /data-testid="warehouse-mobile-location-search"/);
+  assert.match(mobile, /data-testid="warehouse-mobile-location-open"/);
+  assert.match(mobile, /<WarehouseLocationDetailsDialog/);
+  assert.match(mobile, /onInspect\(\)/);
+
+  assert.match(dialog, /data-testid="warehouse-location-scan-barcode"/);
+  assert.match(dialog, /<WarehouseMobileScanner/);
+  assert.match(dialog, /expectation="EXPECT_PRODUCT"/);
+  assert.match(dialog, /onValidatedScan=/);
+  assert.match(dialog, /isWarehouseLocationBarcode\(/);
+  assert.match(dialog, /editableBaseCode\(/);
+  assert.match(dialog, /setScannerFor\(null\)/);
+  assert.match(dialog, /saveWarehouseBarcodeAssociation\(/);
+  assert.match(dialog, /replaceWarehouseBarcodeAssociation\(/);
+  assert.match(dialog, /Salvar alterações/);
+  assert.doesNotMatch(mobile + dialog, /(?:setDoc|updateDoc|runTransaction|deleteDoc)\(/);
+  assert.match(scanner, /startWarehouseMobileDecoder/);
+  assert.match(decoder, /facingMode: \{ ideal: 'environment' \}/);
+});
