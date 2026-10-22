@@ -413,7 +413,7 @@ export function WarehouseLocationDetailsDialog({
                               </p>
                             </div>
                             <div className="flex justify-end">
-                              {canEdit && !editing && (
+                              {canEdit && !editing && materials.some((material) => material.id === row.materialId) && (
                                 <button type="button" onClick={() => startEditing(row)}
                                   aria-label={'Editar ' + row.description} title="Editar dados do material"
                                   data-testid="warehouse-location-edit-material"
