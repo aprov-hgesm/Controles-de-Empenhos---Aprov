@@ -124,3 +124,96 @@ export function transformWarehouseIsoRectForView<T extends WarehouseIsoRect>(
       };
   }
 }
+
+/**
+ * Camera comum para as miniaturas do Início.
+ *
+ * Usa a projeção geométrica do croqui oficial, sem incluir etiquetas/objetos no
+ * enquadramento. A compressão vertical ajusta somente a miniatura para os
+ * 24° do plano do Ambiente Logístico; Meus Depósitos mantém a câmera original.
+ * A âncora é o centro do piso, não o centro arbitrário do SVG.
+ */
+export const WAREHOUSE_LANDING_ISO = {
+  sourceOriginX: 600,
+  sourceOriginY: 160,
+  sourceHalfWidth: 470,
+  sourceHalfHeight: 245,
+  worldSlope: 320 / 720,
+  sceneWidthFactor: 1.32,
+  sceneAspect: 0.72,
+  wallAnchorOffset: 77,
+} as const;
+
+export interface WarehouseLandingIsoFrame {
+  viewBox: WarehouseIsoViewBox;
+  floorCenter: WarehouseIsoPoint;
+  floorCorners: [WarehouseIsoPoint, WarehouseIsoPoint, WarehouseIsoPoint, WarehouseIsoPoint];
+}
+
+/** Quadro estável, independente de quantidade de itens, labels e ocupação. */
+export function warehouseLandingIsoFrame(
+  logicalWidth: number,
+  logicalHeight: number
+): WarehouseLandingIsoFrame {
+  const width = Number.isFinite(logicalWidth) && logicalWidth > 0 ? logicalWidth : 1;
+  const height = Number.isFinite(logicalHeight) && logicalHeight > 0 ? logicalHeight : 1;
+  const denominator = Math.max(width, height);
+  const {
+    sourceOriginX, sourceOriginY, sourceHalfWidth, sourceHalfHeight,
+    worldSlope, sceneWidthFactor, sceneAspect, wallAnchorOffset,
+  } = WAREHOUSE_LANDING_ISO;
+  const project = (x: number, y: number): WarehouseIsoPoint => ({
+    x: sourceOriginX + (x - y) / denominator * sourceHalfWidth,
+    y: sourceOriginY + (x + y) / denominator * sourceHalfHeight,
+  });
+  const floorCorners: WarehouseLandingIsoFrame['floorCorners'] = [
+    project(0, 0), project(width, 0),
+    project(width, height), project(0, height),
+  ];
+  const floorCenter = project(width / 2, height / 2);
+  const floorSpan = sourceHalfWidth * (width + height) / denominator;
+  const viewBoxWidth = floorSpan * sceneWidthFactor;
+  const verticalCompression = worldSlope / (sourceHalfHeight / sourceHalfWidth);
+  const viewBoxHeight = viewBoxWidth * sceneAspect / verticalCompression;
+
+  return {
+    floorCorners,
+    floorCenter,
+    viewBox: {
+      x: floorCenter.x - viewBoxWidth / 2,
+      y: floorCenter.y - wallAnchorOffset - viewBoxHeight / 2,
+      width: viewBoxWidth,
+      height: viewBoxHeight,
+    },
+  };
+}
+
+/**
+ * Posiciona o croqui no mundo 3D sem distorcer suas medidas no eixo horizontal,
+ * alinhando os quatro cantos do piso com a inclinação do tabuleiro externo.
+ */
+export function placeWarehouseLandingIsoFrame(
+  frame: WarehouseLandingIsoFrame,
+  center: WarehouseIsoPoint,
+  floorSpan: number
+): {
+  x: number; y: number; width: number; height: number;
+  floorCorners: WarehouseLandingIsoFrame['floorCorners'];
+} {
+  const safeSpan = Number.isFinite(floorSpan) && floorSpan > 0 ? floorSpan : 1;
+  const width = safeSpan * WAREHOUSE_LANDING_ISO.sceneWidthFactor;
+  const height = width * WAREHOUSE_LANDING_ISO.sceneAspect;
+  const scaleX = width / frame.viewBox.width;
+  const scaleY = height / frame.viewBox.height;
+  const toWorld = (point: WarehouseIsoPoint): WarehouseIsoPoint => ({
+    x: center.x + (point.x - frame.floorCenter.x) * scaleX,
+    y: center.y + (point.y - frame.floorCenter.y) * scaleY,
+  });
+  return {
+    x: center.x - (frame.floorCenter.x - frame.viewBox.x) * scaleX,
+    y: center.y - (frame.floorCenter.y - frame.viewBox.y) * scaleY,
+    width,
+    height,
+    floorCorners: frame.floorCorners.map(toWorld) as WarehouseLandingIsoFrame['floorCorners'],
+  };
+}

@@ -12,6 +12,7 @@ import {
   warehouseIsoRoomDimensions,
   type WarehouseIsoPoint,
   type WarehouseIsoView,
+  warehouseLandingIsoFrame,
 } from '../../../lib/warehouse/isometricCamera';
 import type {
   WarehouseDepot,
@@ -383,6 +384,7 @@ function WarehouseStructure({
   highlightedSubpositions,
   dimmed,
   applianceFront,
+  showLabels,
 }: {
   object: WarehouseDepotLayoutObject;
   logicalWidth: number;
@@ -398,6 +400,7 @@ function WarehouseStructure({
   highlightedSubpositions: WarehouseLocation[];
   dimmed: boolean;
   applianceFront: WarehouseApplianceFace;
+  showLabels: boolean;
 }) {
   const kind = canonicalKind(object.kind);
   const z = objectHeight(kind, subpositions.length);
@@ -444,16 +447,18 @@ function WarehouseStructure({
           return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#8da7ba" strokeWidth="1" />;
         })}
         <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#294e6a" strokeWidth="4" />
-        <text
-          x={(a.x + b.x) / 2}
-          y={(a.y + b.y) / 2 - 10}
-          textAnchor="middle"
-          fontSize="10"
-          fontWeight="900"
-          fill="#29465d"
-        >
-          {object.label}
-        </text>
+        {showLabels && (
+          <text
+            x={(a.x + b.x) / 2}
+            y={(a.y + b.y) / 2 - 10}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="900"
+            fill="#29465d"
+          >
+            {object.label}
+          </text>
+        )}
       </g>
     );
   }
@@ -554,7 +559,7 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.88, highlighted, expiry
         )}
 
-        {renderLabel(
+        {showLabels && renderLabel(
           centerTop,
           code,
           'Palete',
@@ -791,7 +796,7 @@ function WarehouseStructure({
 
 
 
-        {renderLabel(
+        {showLabels && renderLabel(
           centerTop,
           code,
           'Estante industrial',
@@ -824,7 +829,7 @@ function WarehouseStructure({
           occupied={occupiedQuantity > 0}
           expiry={expiry}
         />
-        {renderLabel(
+        {showLabels && renderLabel(
           centerTop,
           code,
           kind === 'FREEZER' ? 'Freezer industrial' : 'Geladeira industrial',
@@ -906,7 +911,7 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.68, highlighted, expiry, 6
         )}
 
-        {renderLabel(
+        {showLabels && renderLabel(
           centerTop,
           code,
           'Mesa inox',
@@ -1170,6 +1175,11 @@ export function WarehouseIsometricPreview({
   // Inclui piso, paredes, volumes e espaço reservado para etiquetas e caixas.
   // A vista altera visibleObjects: o enquadramento se recalcula automaticamente.
   const cameraViewBox = useMemo(() => {
+    // Início uses a fixed floor-anchored camera, independent of object/label
+    // count. The normal detailed preview keeps its existing dynamic fit.
+    if (sceneOnly) {
+      return warehouseLandingIsoFrame(viewLogicalWidth, viewLogicalHeight).viewBox;
+    }
     const roomPoints: WarehouseIsoPoint[] = [
       isoPoint(0, 0, 0, viewLogicalWidth, viewLogicalHeight),
       isoPoint(viewLogicalWidth, 0, 0, viewLogicalWidth, viewLogicalHeight),
@@ -1228,7 +1238,7 @@ export function WarehouseIsometricPreview({
       maxZoom: 1.28,
     });
   }, [
-    embedded, viewLogicalWidth, viewLogicalHeight, visibleObjects,
+    embedded, sceneOnly, viewLogicalWidth, viewLogicalHeight, visibleObjects,
     locationById, subpositionsByParent, highlightedLocalIds,
   ]);
 
@@ -1408,9 +1418,9 @@ export function WarehouseIsometricPreview({
         ) : (
           <svg
             viewBox={[cameraViewBox.x, cameraViewBox.y, cameraViewBox.width, cameraViewBox.height].join(' ')}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio={sceneOnly ? 'none' : 'xMidYMid meet'}
             pointerEvents={sceneOnly ? 'none' : undefined}
-            data-camera-fit="bounds"
+            data-camera-fit={sceneOnly ? 'aligned-floor' : 'bounds'}
             className={
               sceneOnly ? 'absolute inset-0 h-full w-full' :
               'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
@@ -1689,6 +1699,7 @@ export function WarehouseIsometricPreview({
                     highlightedSubpositions={highlightedSubpositions}
                     dimmed={hasActiveSelection && !highlighted}
                     applianceFront={object.applianceFront}
+                    showLabels={!sceneOnly}
                   />
                   </g>
                 );
