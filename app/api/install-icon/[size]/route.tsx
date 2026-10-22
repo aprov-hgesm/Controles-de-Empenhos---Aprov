@@ -107,6 +107,8 @@ export async function GET(
     { width: size, height: size }
   );
   result.headers.set('Cache-Control', CACHE_CONTROL);
+  // Exposes only whether the official image loaded; no URL or credentials.
+  result.headers.set('X-Emprovex-Icon-Source', logo ? 'institutional' : 'fallback');
   result.headers.set('X-Content-Type-Options', 'nosniff');
   return result;
 }
