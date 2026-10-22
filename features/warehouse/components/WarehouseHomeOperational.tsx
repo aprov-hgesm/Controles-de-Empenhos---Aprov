@@ -708,6 +708,15 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   locations={previewLocations}
                   balances={previewBalances}
                   materials={data.materials}
+                  workspaceId={workspaceId}
+                  onMaterialUpdated={(updated) => {
+                    setData((current) => ({
+                      ...current,
+                      materials: current.materials.map((material) =>
+                        material.id === updated.id ? updated : material
+                      ),
+                    }));
+                  }}
                   lots={visualExpiryDepot === selectedDepotId ? visualExpiryLots : []}
                   depotId={selectedDepotId}
                   depotName={selectedDepot?.name || 'Depósito'}
