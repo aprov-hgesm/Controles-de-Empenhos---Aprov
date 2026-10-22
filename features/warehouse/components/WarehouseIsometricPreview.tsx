@@ -971,6 +971,7 @@ export function WarehouseIsometricPreview({
   // O highlight continua limitado ao hover ativo para não dar falsa seleção.
   const [inspectedLocationId, setInspectedLocationId] = useState<string | null>(null);
   const [detailLocationId, setDetailLocationId] = useState<string | null>(null);
+  const onInspectLocationRef = useRef(onInspectLocation);
   const [currentDay, setCurrentDay] = useState(() => new Date());
 
   // Reavalia o calendário quando o usuário volta à aba após uma virada de dia.
@@ -1029,6 +1030,26 @@ export function WarehouseIsometricPreview({
     setInspectedLocationId(null);
     setDetailLocationId(null);
   }, [depotId]);
+
+  useEffect(() => {
+    onInspectLocationRef.current = onInspectLocation;
+  }, [onInspectLocation]);
+
+  // Prioriza a abertura da janela: consulta remota apenas depois do
+  // primeiro paint do dialog, sem repintar a cena 3D no pointer-enter.
+  useEffect(() => {
+    if (!detailLocationId) return;
+    let nextFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      nextFrame = window.requestAnimationFrame(() => {
+        onInspectLocationRef.current?.();
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (nextFrame) window.cancelAnimationFrame(nextFrame);
+    };
+  }, [detailLocationId]);
 
   const subpositionsByParent = useMemo(() => {
     const map = new Map<string, WarehouseLocation[]>();
@@ -1639,9 +1660,7 @@ export function WarehouseIsometricPreview({
                 const hovered = hoveredObject?.objectId === object.id;
                 const handleOpen = () => {
                   if (!interactive || !locationId) return;
-                  onInspectLocation?.();
                   setHoveredObject(null);
-                  setInspectedLocationId(locationId);
                   setDetailLocationId(locationId);
                 };
                 const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
@@ -1662,7 +1681,6 @@ export function WarehouseIsometricPreview({
                     data-hovered={hovered ? 'true' : 'false'}
                     onPointerEnter={(event) => {
                       if (!interactive) return;
-                      onInspectLocation?.();
                       handlePointer(event);
                     }}
                     onPointerLeave={() => setHoveredObject((current) =>
@@ -1670,7 +1688,6 @@ export function WarehouseIsometricPreview({
                     )}
                     onFocus={() => {
                       if (!interactive) return;
-                      onInspectLocation?.();
                       setHoveredObject({ objectId: object.id, locationId });
                       setInspectedLocationId(locationId);
                     }}
