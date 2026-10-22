@@ -740,15 +740,16 @@ export function WarehouseStockOperational({
           <Search className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
           <p className="text-xs font-black uppercase tracking-[0.12em]">Pesquisa operacional</p>
         </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_1fr_1fr_1fr_auto]">
+        <div className="mt-4 space-y-3">
           <input
             value={queryText}
             onChange={(event) => setQueryText(event.target.value)}
             data-testid="warehouse-stock-search"
             aria-label="Pesquisar estoque"
-            placeholder="Material, ID, validade, código de barras, NF, fornecedor ou localização"
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-blue-100"
+            placeholder="Buscar material, código, fornecedor ou NF"
+            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-blue-100"
           />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
           <select
             value={depotFilter}
             onChange={(event) => {
@@ -799,6 +800,7 @@ export function WarehouseStockOperational({
           >
             <RefreshCw className={state.loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
           </button>
+          </div>
         </div>
       </div>
 
@@ -1370,10 +1372,14 @@ export function WarehouseStockOperational({
         document.body
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] leading-5 text-slate-500 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500"><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /><span>Consultas bounded: 250 materiais/saldos, 500 posições/referências de validade e histórico por material somente quando a ficha é aberta.</span></div>
-        <div className="mt-1 flex items-center gap-2 text-slate-500"><PackageSearch className="h-3.5 w-3.5" aria-hidden="true" /><span>Descritivo, validade e código de barras compõem os dados visíveis do item. A retirada física e a baixa de estoque são executadas exclusivamente na aba Saída de Material.</span></div>
-      </div>
+      <details className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <summary className="cursor-pointer font-bold text-[#00288e]">Sobre os dados do estoque</summary>
+        <p className="mt-3 leading-6">
+          As quantidades vêm do saldo oficial. Locais e validades ajudam a consultar
+          e organizar os materiais, mas não alteram o saldo por si só. Movimentações
+          e saídas continuam nos seus fluxos próprios.
+        </p>
+      </details>
     </div>
   );
 }
