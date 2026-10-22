@@ -6,6 +6,8 @@ import {
   Box,
   CalendarClock,
   LocateFixed,
+  Layers3,
+  List,
   MapPin,
   PackageSearch,
   RefreshCw,
@@ -112,6 +114,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [query, setQuery] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [selectedDepotId, setSelectedDepotId] = useState('');
+  const [mobileView, setMobileView] = useState<'locations' | 'map'>('locations');
   const [lots, setLots] = useState<WarehouseLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
   const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
@@ -672,6 +675,23 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         </aside>
 
         <div className={styles.visual}>
+          <div className="mb-3 grid grid-cols-2 gap-2 lg:hidden" role="group" aria-label="Modo de visualização do depósito">
+            <button type="button" onClick={() => setMobileView('locations')}
+              aria-pressed={mobileView === 'locations'}
+              data-testid="warehouse-mobile-view-list"
+              className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black ' +
+                (mobileView === 'locations' ? 'bg-blue-600 text-white' : 'border border-white/20 bg-slate-900 text-slate-300')}>
+              <List className="h-4 w-4" /> Locais
+            </button>
+            <button type="button" onClick={() => setMobileView('map')}
+              aria-pressed={mobileView === 'map'}
+              data-testid="warehouse-mobile-view-map"
+              className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black ' +
+                (mobileView === 'map' ? 'bg-blue-600 text-white' : 'border border-white/20 bg-slate-900 text-slate-300')}>
+              <Layers3 className="h-4 w-4" /> Mapa 3D
+            </button>
+          </div>
+          {mobileView === 'locations' && (
           <div className="lg:hidden">
             <WarehouseMobileDepotLocations
               key={selectedDepotId}
@@ -702,7 +722,8 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
               }}
             />
           </div>
-          <div className="hidden lg:block">
+          )}
+          <div className={mobileView === 'map' ? 'block' : 'hidden lg:block'}>
           <div className={styles.visualFrame}>
             <div className={styles.visualHeader}>
               <div>
