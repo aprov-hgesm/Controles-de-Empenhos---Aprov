@@ -22,6 +22,17 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: 'EMPROVEX - Gestão Logística e Financeira',
   description: 'Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira.',
+  applicationName: 'EMPROVEX',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/api/install-icon/32', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/api/install-icon/180', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'EMPROVEX',
+    statusBarStyle: 'default',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
