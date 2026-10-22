@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, FileUp, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Edit, Eye, FileDown, FileText, FileUp, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
@@ -51,7 +51,6 @@ type NewItemForm = { id: string; name: string; unit: string; quantity: string; u
 interface EmpenhosViewContext {
   alerts: Alert[];
   addEmpenhoClass: (code: string, description: string, requiresTermoRecebimento: boolean) => Promise<EmpenhoClassDefinition>;
-  copiedPrompt: boolean;
   empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
   empenhosClassFilter: string;
@@ -61,11 +60,8 @@ interface EmpenhosViewContext {
   empenhosYearFilter: string;
   formatDateOnly: (dateStr?: string) => string;
   handleAddItemToEmpenho: (...args: any[]) => any;
-  handleCopyPrompt: (...args: any[]) => any;
   handleCreateEmpenho: (...args: any[]) => any;
   handleDeleteItemFromEmpenho: (...args: any[]) => any;
-  handleDownloadPromptPdf: (...args: any[]) => any;
-  handleDownloadPromptTxt: (...args: any[]) => any;
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
@@ -75,14 +71,12 @@ interface EmpenhosViewContext {
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
   handleProcessEmpenhoPdf: (file: File) => Promise<void>;
-  handleProcessJson: (...args: any[]) => any;
   handleSaveReviewEmpenho: (...args: any[]) => any;
   handleSelectEmpenhoForCronograma: (...args: any[]) => any;
   invoices: Invoice[];
   jsonError: string | null;
-  jsonInput: string;
   newEmpenhoForm: NewEmpenhoForm;
-  newEmpenhoMode: 'manual' | 'pdf' | 'json';
+  newEmpenhoMode: 'manual' | 'pdf';
   newItemForm: NewItemForm;
   reviewEmpenho: any;
   savingClassConfig: boolean;
@@ -97,9 +91,8 @@ interface EmpenhosViewContext {
   setEmpenhosYearFilter: Setter<string>;
   setEmpenhoToDelete: Setter<string | null>;
   setJsonError: Setter<string | null>;
-  setJsonInput: Setter<string>;
   setNewEmpenhoForm: Setter<NewEmpenhoForm>;
-  setNewEmpenhoMode: Setter<'manual' | 'pdf' | 'json'>;
+  setNewEmpenhoMode: Setter<'manual' | 'pdf'>;
   setNewItemForm: Setter<NewItemForm>;
   setNfSubTab: Setter<any>;
   setReviewEmpenho: Setter<any>;
@@ -124,7 +117,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -2052,7 +2045,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-100/75">
                           {reviewEmpenho
                             ? 'Revise e edite os dados extraídos antes de confirmar o salvamento.'
-                            : 'Escolha o cadastro manual, o upload direto da Nota de Empenho em PDF ou a importação via JSON.'}
+                            : 'Escolha o cadastro manual ou importe diretamente o PDF da Nota de Empenho.'}
                         </p>
                       </div>
                     </div>
@@ -2061,7 +2054,6 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                       onClick={() => {
                         setShowNewEmpenhoModal(false);
                         setReviewEmpenho(null);
-                        setJsonInput('');
                         setJsonError(null);
                       }}
                       className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3.5 text-xs font-bold text-blue-50 transition hover:bg-white/[0.12]"
@@ -2071,7 +2063,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                     </button>
                   </div>
 
-                      {/* Mode selection buttons - Only shown when not actively reviewing an imported JSON */}
+                      {/* Mode selection buttons - Only shown when not actively reviewing an imported PDF */}
                       {!reviewEmpenho && (
                         <div className="flex border-b border-gray-100 p-3 bg-gray-50/50 gap-2">
                           <button
@@ -2101,20 +2093,6 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             }`}
                           >
                             <FileUp className="w-3.5 h-3.5" /> Importar PDF da NE
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewEmpenhoMode('json');
-                              setJsonError(null);
-                            }}
-                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                              newEmpenhoMode === 'json'
-                                ? 'bg-[#00288e] text-white shadow-sm'
-                                : 'bg-transparent text-gray-500 hover:bg-gray-100'
-                            }`}
-                          >
-                            <Braces className="w-3.5 h-3.5" /> Importar via JSON
                           </button>
                         </div>
                       )}
@@ -2303,118 +2281,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </div>
                       )}
 
-                      {/* MODE 3: JSON IMPORT INPUT */}
-                      {newEmpenhoMode === 'json' && !reviewEmpenho && (
-                        <div className="p-5 space-y-4">
-                          {/* PROMPT DOWNLOAD & INSTRUCTIONS CARD */}
-                          <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-100 rounded-2xl p-4 space-y-3 shadow-xs">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-[#00288e] text-white rounded-xl shadow-xs shrink-0">
-                                  <FileText className="w-4.5 h-4.5" />
-                                </div>
-                                <div>
-                                  <h4 className="text-xs font-bold text-[#00288e] uppercase tracking-wider">
-                                    Prompt para IA (Claude, ChatGPT ou Gemini)
-                                  </h4>
-                                  <p className="text-[11px] text-gray-600 font-medium">
-                                    Baixe o prompt padronizado em <strong>TXT</strong> ou <strong>PDF</strong> para enviar junto ao PDF do Empenho para a IA converter em JSON.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-blue-100/80">
-                              <button
-                                type="button"
-                                onClick={handleDownloadPromptTxt}
-                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-blue-300"
-                                title="Baixar o arquivo prompt_extracao_empenho.txt"
-                              >
-                                <FileText className="w-3.5 h-3.5 text-blue-600" />
-                                <span>Baixar Prompt (.TXT)</span>
-                              </button>
-                              
-                              <button
-                                type="button"
-                                onClick={handleDownloadPromptPdf}
-                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-rose-300"
-                                title="Baixar o arquivo prompt_extracao_empenho.pdf"
-                              >
-                                <FileDown className="w-3.5 h-3.5 text-rose-600" />
-                                <span>Baixar Prompt (.PDF)</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={handleCopyPrompt}
-                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-emerald-300 sm:ml-auto"
-                                title="Copiar texto do prompt para a área de transferência"
-                              >
-                                {copiedPrompt ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="text-emerald-700 font-bold">Copiado!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-gray-600" />
-                                    <span>Copiar Prompt</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">
-                                Cole aqui o JSON retornado pela IA
-                              </label>
-                              <span className="text-[11px] text-gray-400 font-mono">
-                                Formato JSON
-                              </span>
-                            </div>
-                            <textarea
-                              rows={10}
-                              value={jsonInput}
-                              onChange={(e) => setJsonInput(e.target.value)}
-                              placeholder={`Cole aqui o resultado JSON gerado pela IA...\n\n{\n  "numero_empenho": "2025NE124",\n  "data_emissao": "2025-08-27",\n  "tipo_empenho": "Global",\n  "valor_total": 12043.80,\n  "fornecedor": {\n    "razao_social": "JULIANO LUCIO FRANCISCATTO DO AMARAL & CIA LT",\n    "cnpj": "02.483.088/0001-75"\n  },\n  "itens": [\n    {\n      "num_item": "001",\n      "codigo_item": "00002",\n      "descricao": "LEGUME PROCESSADO, TIPO MANDIOCA...",\n      "unidade": "kg",\n      "quantidade": 430,\n      "valor_unitario": 6.90,\n      "valor_total_item": 2967.00\n    }\n  ]\n}`}
-                              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-mono text-xs text-[#0b1c30] bg-gray-50/50 resize-y"
-                            />
-                          </div>
-
-                          {jsonError && (
-                            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs font-semibold flex items-start gap-2.5">
-                              <AlertCircle className="w-4.5 h-4.5 shrink-0 text-rose-500" />
-                              <span>{jsonError}</span>
-                            </div>
-                          )}
-
-                          <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowNewEmpenhoModal(false);
-                                setJsonInput('');
-                                setJsonError(null);
-                              }}
-                              className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleProcessJson}
-                              className="px-5 py-2.5 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm flex items-center gap-1.5"
-                            >
-                              <Braces className="w-4 h-4" /> Processar JSON
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* MODE 2 SUB-VIEW: JSON REVIEW & EDIT SCREEN */}
+                      {/* PDF REVIEW & EDIT SCREEN */}
                       {reviewEmpenho && (
                         <div className="p-5 sm:p-6 space-y-6">
                           

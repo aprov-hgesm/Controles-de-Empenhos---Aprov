@@ -51,6 +51,12 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// R361: remover somente o JSON do cadastro de NE e preservar a alocação por item.
+// Esses testes usam dados sintéticos e não executam gravações de produção.
+if (files.some((p) => /^(?:features\/empenhos\/(?:components\/EmpenhosView|hooks\/useEmpenhoActions)\.tsx?|features\/operational\/components\/OperationalWorkspace\.tsx|hooks\/useOperationalViewState\.ts|features\/warehouse\/components\/WarehouseLandingOperational\.tsx|scripts\/(?:warehouse-r361-ne-nf-ux\.test|verify-empenho-pdf-direct-import)\.mjs)$/.test(p))) {
+  add('test:warehouse-r361-ne-nf-ux');
+  add('verify:empenho-pdf-direct-import');
+}
 // Mudanças na inspeção/UX mobile executam o contrato exato e o leitor de câmera,
 // além dos testes gerais selecionados por domínio.
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:HomeOperational|MobileDepotLocations|LocationInspection)\.tsx|scripts\/warehouse-location-inspection\.test\.mjs)$/.test(p))) {

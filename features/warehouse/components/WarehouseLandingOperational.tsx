@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -61,12 +60,6 @@ import styles from './WarehouseLandingOperational.module.css';
 const EMPTY_MATERIALS: WarehouseMaterial[] = [];
 const noopSceneControl = () => {};
 const MemoWarehouseIsometricPreview = memo(WarehouseIsometricPreview);
-
-const LazyIntakeBulkActionPanel = dynamic(
-  () => import('./WarehouseItemRegistrationOperational')
-    .then((module) => module.IntakeBulkActionPanel),
-  { ssr: false }
-);
 
 interface LandingData {
   loading: boolean;
@@ -300,7 +293,9 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
   const grouped = new Map<string, PendingInvoiceGroup>();
 
   for (const row of actionable) {
-    const key = row.invoiceRecordKey || row.invoiceId || row.key;
+    // Navigate only by the canonical invoice identity: an NF number can repeat.
+    const key = row.invoiceRecordKey?.trim();
+    if (!key) continue;
     const current = grouped.get(key);
     if (current) {
       current.itemCount += 1;
@@ -693,7 +688,7 @@ function PendingPalletTooltip({
   const tooltipWidth = 250;
   const tooltipHeight = 68 + previewRows.length * 17 + (group.rows.length > 3 ? 16 : 0);
   const tooltipX = Math.min(SVG_WIDTH - tooltipWidth - 18, anchor.x + 14);
-  const tooltipY = Math.max(20, anchor.y - 18);
+  const tooltipY = Math.max(20, Math.min(SVG_HEIGHT - tooltipHeight - 16, anchor.y - 18));
 
   return (
     <g
@@ -717,7 +712,7 @@ function PendingPalletTooltip({
         {group.supplier.slice(0, 42)}
       </text>
       <text x="14" y="51" className={styles.palletTooltipHint}>
-        {group.itemCount} item(ns) pendente(s) · clique para alocar
+        {group.itemCount} item(ns) pendente(s) · abrir itens
       </text>
       {previewRows.map((row, index) => (
         <text
@@ -790,7 +785,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [savingVisual, setSavingVisual] = useState(false);
   const [visualMessage, setVisualMessage] = useState('');
   const [hoveredPendingKey, setHoveredPendingKey] = useState<string | null>(null);
-  const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
   const loadRequestRef = useRef(0);
   const lastWorkspaceRef = useRef('');
   const editModeRef = useRef(false);
@@ -959,12 +953,13 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     (_, index) => visiblePendingGroups[index] || null
   );
 
-  const selectedPendingGroup = useMemo(
-    () => selectedPendingKey
-      ? pendingGroups.find((group) => group.key === selectedPendingKey) || null
-      : null,
-    [pendingGroups, selectedPendingKey]
-  );
+  // Draw after every SVG scene layer so structures and labels never cover the NF tooltip.
+  const hoveredPendingIndex = !editMode
+    ? palletGroups.findIndex((group) => group?.key === hoveredPendingKey)
+    : -1;
+  const hoveredPendingGroup = hoveredPendingIndex >= 0
+    ? palletGroups[hoveredPendingIndex]
+    : null;
 
   const updateVisual = useCallback((
     depotId: string,
@@ -1336,18 +1331,14 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
                     setHoveredPendingKey(pendingGroup?.key || null)
                   }
                   onActivate={(pendingGroup) => {
-                    if (editMode) return;
+                    if (editMode || !pendingGroup.key) return;
                     setHoveredPendingKey(null);
-                    setSelectedPendingKey(pendingGroup.key);
+                    router.push(
+                      '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
+                        + encodeURIComponent(pendingGroup.key)
+                    );
                   }}
                 />
-                {group && hoveredPendingKey === group.key && !editMode && (
-                  <PendingPalletTooltip
-                    x={px}
-                    y={py}
-                    group={group}
-                  />
-                )}
               </g>
             );
           })}
@@ -1416,29 +1407,17 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               : 'Clique em um depósito para entrar · passe sobre um palete de NF e clique para alocar'}
           </text>
         </g>
-      </svg>
 
-      {selectedPendingGroup && (
-        <LazyIntakeBulkActionPanel
-          workspaceId={workspaceId}
-          subjectKind="invoice"
-          subjectKey={selectedPendingGroup.key}
-          subjectLabel={'NF ' + selectedPendingGroup.invoiceId}
-          rows={selectedPendingGroup.rows}
-          coverageLimited={false}
-          onOpenDetailed={() => {
-            router.push(
-              '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
-                + encodeURIComponent(selectedPendingGroup.key)
-            );
-            setSelectedPendingKey(null);
-          }}
-          onClose={() => setSelectedPendingKey(null)}
-          onComplete={async () => {
-            await load();
-          }}
-        />
-      )}
+        {hoveredPendingGroup && hoveredPendingIndex >= 0 && (
+          <g data-visual-role="invoice-tooltip-overlay" pointerEvents="none">
+            <PendingPalletTooltip
+              x={PALLET_YARD_X + 18 + (hoveredPendingIndex % 2) * 94}
+              y={PALLET_YARD_Y + 40 + Math.floor(hoveredPendingIndex / 2) * 92}
+              group={hoveredPendingGroup}
+            />
+          </g>
+        )}
+      </svg>
     </section>
   );
 }
