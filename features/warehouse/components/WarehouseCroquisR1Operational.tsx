@@ -1013,6 +1013,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 && balance.position.depotId === selectedDepotId
               )}
               materials={previewMaterials}
+              workspaceId={workspaceId}
+              onMaterialUpdated={(updated) => {
+                setPreviewMaterials((current) => current.map((material) =>
+                  material.id === updated.id ? updated : material
+                ));
+              }}
               lots={visualExpiryLots}
               globalDepots={depots.map((item) => item.depot)}
               globalLocations={locations.map((item) => item.location)}
