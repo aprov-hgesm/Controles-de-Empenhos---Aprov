@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Download, Pencil, RefreshCw, X } from 'lucide-react';
+import { Camera, Check, Download, Pencil, RefreshCw, X } from 'lucide-react';
 import {
   warehouseLocationExpiry,
   warehouseLocationExpiryStatus,
@@ -11,7 +11,9 @@ import {
 } from '../../../lib/warehouse/locationContents';
 
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import type { WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode';
+import { normalizeWarehouseBarcode, type WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode';
+import { isWarehouseLocationBarcode } from '../../../lib/warehouse/locationBarcode';
+import { WarehouseMobileScanner } from '../mobile/WarehouseMobileScanner';
 import {
   listWarehouseBarcodesForMaterials,
   replaceWarehouseBarcodeAssociation,
@@ -109,6 +111,11 @@ function primaryCode(codes: WarehouseBarcodeAssociation[], materialId: string) {
     || null;
 }
 
+// Apresentações convertidas têm barcodes independentes da unidade-base.
+function editableBaseCode(codes: WarehouseBarcodeAssociation[], materialId: string) {
+  return codes.find((item) => item.materialId === materialId && item.factorToBaseUnit === 1) || null;
+}
+
 function expiryBadge(value: string | null, today: Date) {
   const status = warehouseLocationExpiryStatus(value, today);
   const style = status === 'expired'
@@ -148,6 +155,7 @@ export function WarehouseLocationDetailsDialog({
   const [barcodes, setBarcodes] = useState<WarehouseBarcodeAssociation[]>([]);
   const [barcodeVersion, setBarcodeVersion] = useState(0);
   const [editing, setEditing] = useState<EditingDraft | null>(null);
+  const [scannerFor, setScannerFor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editNotice, setEditNotice] = useState<string | null>(null);
@@ -182,7 +190,8 @@ export function WarehouseLocationDetailsDialog({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !saving) {
-        if (editing) setEditing(null);
+        if (scannerFor) setScannerFor(null);
+        else if (editing) setEditing(null);
         else onClose();
       }
     };
@@ -193,12 +202,13 @@ export function WarehouseLocationDetailsDialog({
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [onClose, editing, saving]);
+  }, [onClose, editing, saving, scannerFor]);
 
-  function startEditing(row: ContentsRow) {
+  function startEditing(row: ContentsRow, scan = false) {
     if (!workspaceId || lotState !== 'ready' || !complete || barcodeState !== 'ready') return;
     if (!materials.some((item) => item.id === row.materialId)) return;
-    const current = primaryCode(barcodes, row.materialId);
+    const current = editableBaseCode(barcodes, row.materialId);
+    setScannerFor(scan ? row.materialId : null);
     setEditError(null);
     setEditNotice(null);
     setEditing({
@@ -221,6 +231,11 @@ export function WarehouseLocationDetailsDialog({
       setEditError('Informe a descrição do material.');
       return;
     }
+    const enteredCode = editing.barcode.trim();
+    if (enteredCode && (!normalizeWarehouseBarcode(enteredCode) || isWarehouseLocationBarcode(enteredCode))) {
+      setEditError('Código comercial inválido ou etiqueta do local. Confira a leitura.');
+      return;
+    }
     setSaving(true);
     setEditError(null);
     setEditNotice(null);
@@ -233,8 +248,8 @@ export function WarehouseLocationDetailsDialog({
         onMaterialUpdated?.(updated);
         saved += 1;
       }
-      const old = primaryCode(barcodes, row.materialId);
-      const nextBarcode = editing.barcode.trim();
+      const old = editableBaseCode(barcodes, row.materialId);
+      const nextBarcode = enteredCode;
       if (nextBarcode !== (old?.barcode || '')) {
         if (old) {
           if (nextBarcode) {
@@ -261,6 +276,7 @@ export function WarehouseLocationDetailsDialog({
         }
       }
       setEditing(null);
+      setScannerFor(null);
       if (barcodeSaved) setBarcodeVersion((value) => value + 1);
       if (lotSaved) onRefresh();
       setEditNotice(saved > 0 ? 'Informações atualizadas. O saldo físico não foi alterado.' : 'Nenhuma alteração necessária.');
@@ -301,7 +317,7 @@ export function WarehouseLocationDetailsDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/65 px-3 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/65 p-0 backdrop-blur-[2px] sm:px-3 sm:py-6"
       onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}
       data-testid="warehouse-location-details-overlay"
     >
@@ -310,7 +326,7 @@ export function WarehouseLocationDetailsDialog({
         aria-modal="true"
         aria-labelledby="warehouse-location-details-title"
         data-testid="warehouse-location-details-dialog"
-        className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="flex h-[100dvh] max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-none border border-slate-200 bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 bg-[#f8faff] px-5 py-5 sm:px-6">
           <div>
@@ -417,12 +433,20 @@ export function WarehouseLocationDetailsDialog({
                             </div>
                             <div className="flex justify-end">
                               {canEdit && !editing && materials.some((material) => material.id === row.materialId) && (
-                                <button type="button" onClick={() => startEditing(row)}
-                                  aria-label={'Editar ' + row.description} title="Editar dados do material"
-                                  data-testid="warehouse-location-edit-material"
-                                  className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-blue-800 hover:bg-blue-100">
-                                  <Pencil className="h-4 w-4" />
-                                </button>
+                                <div className="flex flex-wrap justify-end gap-2">
+                                  <button type="button" onClick={() => startEditing(row, true)}
+                                    aria-label={'Ler código de barras de ' + row.description}
+                                    data-testid="warehouse-location-scan-barcode"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-800 lg:hidden">
+                                    <Camera className="h-4 w-4" /> Ler código
+                                  </button>
+                                  <button type="button" onClick={() => startEditing(row)}
+                                    aria-label={'Editar ' + row.description} title="Editar dados do material"
+                                    data-testid="warehouse-location-edit-material"
+                                    className="grid min-h-11 min-w-11 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-blue-800 hover:bg-blue-100">
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -461,10 +485,44 @@ export function WarehouseLocationDetailsDialog({
                                   Não há partida vinculada para editar validade. Cadastre o lote no fluxo de estoque; não é possível atribuir data a saldo sem lote por esta janela.
                                 </p>
                               )}
+                              {scannerFor === row.materialId && (
+                                <div className="mt-4" data-testid="warehouse-location-mobile-camera">
+                                  <WarehouseMobileScanner
+                                    expectation="EXPECT_PRODUCT"
+                                    title="Ler código do material"
+                                    identifyScan={(value) =>
+                                      normalizeWarehouseBarcode(value) && !isWarehouseLocationBarcode(value)
+                                        ? 'PRODUCT' : 'UNKNOWN'}
+                                    onValidatedScan={(event) => {
+                                      setEditing((current) => current?.materialId === row.materialId
+                                        ? { ...current, barcode: event.value } : current);
+                                      setScannerFor(null);
+                                      setEditError(null);
+                                    }}
+                                  />
+                                  <p className="mt-2 text-xs text-slate-600">
+                                    Leia o código do produto, não a etiqueta da estante.
+                                    Confira o número capturado antes de salvar.
+                                  </p>
+                                </div>
+                              )}
+                              {primaryCode(barcodes, row.materialId) && !editableBaseCode(barcodes, row.materialId) && (
+                                <p className="mt-3 text-xs text-amber-800">
+                                  O código de uma apresentação convertida já existe e será preservado.
+                                  Este campo cadastra o código da unidade-base.
+                                </p>
+                              )}
                               <p className="mt-3 text-[11px] text-slate-500">Descrição e código de barras pertencem ao cadastro compartilhado do material. Cada validade pertence à sua partida.</p>
                               <p className="mt-1 text-[11px] text-slate-500">Quantidade: {warehouseLocationQuantity(row.quantity)} {row.unit} · somente entrada, saída ou outro movimento oficial altera o saldo.</p>
                               <div className="mt-3 flex flex-wrap justify-end gap-2">
-                                <button type="button" disabled={saving} onClick={() => { setEditing(null); setEditError(null); }}
+                                {scannerFor !== row.materialId && (
+                                  <button type="button" disabled={saving} onClick={() => setScannerFor(row.materialId)}
+                                    data-testid="warehouse-location-open-camera"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 text-xs font-bold text-blue-900 lg:hidden">
+                                    <Camera className="h-4 w-4" /> Usar câmera
+                                  </button>
+                                )}
+                                <button type="button" disabled={saving} onClick={() => { setScannerFor(null); setEditing(null); setEditError(null); }}
                                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Cancelar</button>
                                 <button type="button" disabled={saving} onClick={() => void saveEditing(row)}
                                   data-testid="warehouse-location-save-metadata"

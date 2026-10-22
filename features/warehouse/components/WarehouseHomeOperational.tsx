@@ -6,6 +6,8 @@ import {
   Box,
   CalendarClock,
   LocateFixed,
+  Layers3,
+  List,
   MapPin,
   PackageSearch,
   RefreshCw,
@@ -36,6 +38,7 @@ import {
 } from '../../../lib/warehouse/lot';
 import { listWarehouseLots, listWarehouseVisualExpiryLots } from '../../../lib/warehouse/lotRepository';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import { WarehouseMobileDepotLocations } from './WarehouseMobileDepotLocations';
 import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import styles from './WarehouseHomeOperational.module.css';
 
@@ -111,6 +114,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [query, setQuery] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [selectedDepotId, setSelectedDepotId] = useState('');
+  const [mobileView, setMobileView] = useState<'locations' | 'map'>('locations');
   const [lots, setLots] = useState<WarehouseLot[]>([]);
   const [lotsLoading, setLotsLoading] = useState(false);
   const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
@@ -671,6 +675,55 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         </aside>
 
         <div className={styles.visual}>
+          <div className="mb-3 grid grid-cols-2 gap-2 lg:hidden" role="group" aria-label="Modo de visualização do depósito">
+            <button type="button" onClick={() => setMobileView('locations')}
+              aria-pressed={mobileView === 'locations'}
+              data-testid="warehouse-mobile-view-list"
+              className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black ' +
+                (mobileView === 'locations' ? 'bg-blue-600 text-white' : 'border border-white/20 bg-slate-900 text-slate-300')}>
+              <List className="h-4 w-4" /> Locais
+            </button>
+            <button type="button" onClick={() => setMobileView('map')}
+              aria-pressed={mobileView === 'map'}
+              data-testid="warehouse-mobile-view-map"
+              className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black ' +
+                (mobileView === 'map' ? 'bg-blue-600 text-white' : 'border border-white/20 bg-slate-900 text-slate-300')}>
+              <Layers3 className="h-4 w-4" /> Mapa 3D
+            </button>
+          </div>
+          {mobileView === 'locations' && (
+          <div className="lg:hidden">
+            <WarehouseMobileDepotLocations
+              key={selectedDepotId}
+              depotName={selectedDepot?.name || 'Depósito'}
+              workspaceId={workspaceId}
+              locations={previewLocations}
+              balances={previewBalances}
+              materials={data.materials}
+              inspectionLots={inspectionLots}
+              lotState={inspectionLotState}
+              lotError={inspectionLotError}
+              complete={
+                data.materials.length < 250
+                && data.locations.length < 500
+                && data.locationBalances.length < 500
+                && inspectionLotsComplete
+              }
+              available={!data.loading && !data.error}
+              onInspect={() => loadInspectionLots()}
+              onRefresh={() => loadInspectionLots(true)}
+              onMaterialUpdated={(updated) => {
+                setData((current) => ({
+                  ...current,
+                  materials: current.materials.map((material) =>
+                    material.id === updated.id ? updated : material
+                  ),
+                }));
+              }}
+            />
+          </div>
+          )}
+          <div className={mobileView === 'map' ? 'block' : 'hidden lg:block'}>
           <div className={styles.visualFrame}>
             <div className={styles.visualHeader}>
               <div>
@@ -775,6 +828,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
             >
               Editar estrutura em Controle de Depósitos
             </Link>
+          </div>
           </div>
         </div>
       </div>
