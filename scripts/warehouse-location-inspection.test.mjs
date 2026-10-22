@@ -148,7 +148,9 @@ test('Meus Depósitos no celular oferece locais por lista e leitor sem operaçõ
 
   assert.match(home, /<WarehouseMobileDepotLocations/);
   assert.match(home, /className="lg:hidden"/);
-  assert.match(home, /className="hidden lg:block"/);
+  assert.match(home, /data-testid="warehouse-mobile-view-list"/);
+  assert.match(home, /data-testid="warehouse-mobile-view-map"/);
+  assert.match(home, /mobileView === 'map'/);
   assert.match(mobile, /deriveWarehouseLocationContents\(/);
   assert.match(mobile, /data-testid="warehouse-mobile-location-search"/);
   assert.match(mobile, /data-testid="warehouse-mobile-location-open"/);
