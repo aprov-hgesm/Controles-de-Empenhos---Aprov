@@ -27,7 +27,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
-        src: '/api/install-icon/512',
+        src: '/api/install-icon/512?maskable=1',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
