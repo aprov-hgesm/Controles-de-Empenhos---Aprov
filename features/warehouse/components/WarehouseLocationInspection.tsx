@@ -27,6 +27,7 @@ function nearestExpiry(
   row: LocationContents['groups'][number]['rows'][number],
   lotState: WarehouseInspectionLotState
 ): string {
+  if (lotState === 'idle') return 'Validade: clique para consultar';
   if (lotState !== 'ready') return 'Validade: consultando…';
   const dates = [...new Set(
     row.lots.flatMap((lot) => lot.expiresOn ? [lot.expiresOn] : [])
@@ -330,7 +331,7 @@ export function WarehouseLocationDetailsDialog({
         </div>
 
         <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
-          {lotState === 'loading' && (
+          {(lotState === 'idle' || lotState === 'loading') && (
             <p className="mb-3 rounded-xl bg-blue-50 p-3 text-xs font-semibold text-blue-800">Consultando validades dos materiais…</p>
           )}
           {lotState === 'error' && (
