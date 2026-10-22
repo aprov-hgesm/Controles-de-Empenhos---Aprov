@@ -9,6 +9,7 @@ const manifest = source('app/manifest.ts');
 const layout = source('app/layout.tsx');
 const route = source('app/api/install-icon/[size]/route.tsx');
 const brandHook = source('hooks/usePlatformBranding.ts');
+const nextConfig = source('next.config.ts');
 
 test('R363: manifest standalone e icones Android, iOS e Windows', () => {
   assert.match(manifest, /short_name: 'EMPROVEX'/);
@@ -37,6 +38,9 @@ test('R363: logo enviada ao repositorio existe como PNG, sem alterar imagem orig
   assert.match(route, /data:image\/png;base64/);
   assert.match(route, /markSize = maskable \? Math\.round\(size \* 0\.76\) : size/);
   assert.match(route, /X-Emprovex-Icon-Source/);
+  assert.match(nextConfig, /outputFileTracingIncludes:/);
+  assert.match(nextConfig, /'\/api\/install-icon\/\*'/);
+  assert.match(nextConfig, /\.\/public\/emprovex-logo\.png/);
 });
 
 test('R363: identificacao institucional existente fica preservada sem Firestore nos icones', () => {
