@@ -46,6 +46,11 @@ for (const path of warehouseFiles) {
       'test:adm-deposito-outbound-return', 'test:adm-deposito-locations'].forEach(add);
   }
 }
+// Este teste verifica os detalhes no topo da experiência, as consultas
+// limitadas e a ausência de operações diretas no Firestore.
+if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-stock-report-ux');
+}
 // Mudanças na inspeção/UX mobile executam o contrato exato e o leitor de câmera,
 // além dos testes gerais selecionados por domínio.
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:HomeOperational|MobileDepotLocations|LocationInspection)\.tsx|scripts\/warehouse-location-inspection\.test\.mjs)$/.test(p))) {
