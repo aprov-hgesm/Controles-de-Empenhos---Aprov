@@ -106,7 +106,8 @@ export async function GET(
     ),
     { width: size, height: size }
   );
-  result.headers.set('Cache-Control', CACHE_CONTROL);
+  // Do not cache the fallback for a full day if the institutional source is temporarily unavailable.
+  result.headers.set('Cache-Control', logo ? CACHE_CONTROL : 'public, max-age=30, s-maxage=60');
   // Exposes only whether the official image loaded; no URL or credentials.
   result.headers.set('X-Emprovex-Icon-Source', logo ? 'institutional' : 'fallback');
   result.headers.set('X-Content-Type-Options', 'nosniff');
