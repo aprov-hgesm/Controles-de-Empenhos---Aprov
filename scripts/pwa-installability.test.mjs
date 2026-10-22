@@ -17,7 +17,8 @@ test('R363: instalação standalone com manifesto, ícones 192/512 e escopo do E
   assert.match(manifest, /display: 'standalone'/);
   assert.match(manifest, /192x192/);
   assert.match(manifest, /512x512/);
-  assert.match(manifest, /purpose: 'any maskable'/);
+  assert.match(manifest, /purpose: 'any'/);
+  assert.match(manifest, /purpose: 'maskable'/);
   assert.match(manifest, /prefer_related_applications: false/);
   assert.match(layout, /manifest: '\/manifest\.webmanifest'/);
   assert.match(layout, /appleWebApp:/);
@@ -53,5 +54,5 @@ test('R363: endpoint público só entrega PNG e protege credenciais e fontes de 
 test('R363: não acrescenta SW/caches de dados administrativos', () => {
   assert.doesNotMatch(layout, /serviceWorker\.register/);
   assert.doesNotMatch(route, /caches\.open\(|indexedDB|localStorage/);
-  assert.doesNotMatch(manifest, /^\\s*related_applications:/m);
+  assert.doesNotMatch(manifest, /^\s*related_applications:/m);
 });
