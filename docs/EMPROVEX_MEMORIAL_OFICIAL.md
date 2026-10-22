@@ -3444,3 +3444,19 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 5. **Publicação:** sem deploy na Vercel nesta tarefa, sem modificação de Firestore Rules ou dados reais. Integração em GitHub somente após CI; publicação manual futura pelo fundador em PowerShell, após prebuild isolado e smoke humano. PR R361 traz a documentação vigente.
 
 **Nota:** a conclusão dos checks deve ser registrada no PR R361; este parágrafo documenta a implementação, não atesta QA manual ou disponibilização na produção.
+
+
+## R363 — EMPROVEX instalável no celular e computador (22/10/2026)
+
+**Pedido do fundador:** instalar o mesmo endereço `emprovex.com.br` como aplicativo Android/iPhone e como janela independente no Windows (Chrome/Edge), usando a logomarca institucional que já aparece no EMPROVEX. Não criar novo aplicativo nativo nem assinatura de app store. R362 estética permanece isolada e NÃO compõe esta release.
+
+**Arquitetura enxuta de PWA instalável:**
+- `app/manifest.ts` inclui nome EMPROVEX, `start_url: '/'`, `scope: '/'`, `display: 'standalone'`, `pt-BR`, tema azul institucional e ícones PNG 192/512 (512 apto a máscara);
+- `app/layout.tsx` conecta manifesto e ícones 32 e Apple 180 para navegação/instalação;
+- `app/api/install-icon/[size]/route.tsx` serve PNG 32/180/192/512. **Não inventa um símbolo**: utiliza prioritariamente `NEXT_PUBLIC_EMPROVEX_LOGO_URL` ou lê exclusivamente o campo `logo` de `settings/global` no banco institucional padrão, a mesma fonte de `usePlatformBranding`; a imagem é incorporada sem alterar seu desenho, centralizada em fundo institucional. Se logo/credenciais não estiverem disponíveis (ex.: localhost), utiliza temporariamente o fallback `EMP`, igual ao fallback visível no site.
+- A rota não expõe credenciais ou documento Firestore, só devolve PNG; valida formatos e hosts externos, restringe tamanho e tempo das imagens e cacheia fonte na instância por 6h e PNG no CDN por 24h. Essa leitura extra é feita para construir ícones, **não a cada abertura do aplicativo**; imagens instaladas são controladas por cache do dispositivo/navegador.
+- **Sem service worker, sem cache offline de NF, lotes ou dados de usuários**. Instalação depende de navegador compatível e contexto seguro (HTTPS/localhost), permanece online e usa a autenticação existente. Não acrescenta endpoints administrativos de escrita nem dependências npm.
+- Teste `test:pwa-installability` entra no Fast CI; antes de publicar, realizar smoke no staging: `/manifest.webmanifest`, ícones PNG 192/512/180, confirmar que o ícone é a logo institucional real (não `EMP`), instalação Android/Edge e retorno do login Google. A validação visual e instalação humana são necessárias.
+- Vercel Production sem mudanças durante esta implementação; versão final requer publicação manual via PowerShell depois de revisão e commit certificado.
+
+**Limite de configuração:** a URL/origem real de `settings/global.logo` não está versionada no repositório. A certificação do código não comprova que a imagem externa está acessível no runtime; confirmar em staging antes de promover.

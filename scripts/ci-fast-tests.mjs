@@ -51,6 +51,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// R363: shell instalável com marca institucional; sem cache offline e sem operações de domínio.
+if (files.some((p) => /^(?:app\/(?:manifest\.ts|layout\.tsx|api\/install-icon\/\[size\]\/route\.tsx)|lib\/pwaBrandIcon\.ts|scripts\/pwa-installability\.test\.mjs)$/.test(p))) {
+  add('test:pwa-installability');
+}
 // R361: remover somente o JSON do cadastro de NE e preservar a alocação por item.
 // Esses testes usam dados sintéticos e não executam gravações de produção.
 if (files.some((p) => /^(?:features\/empenhos\/(?:components\/EmpenhosView|hooks\/useEmpenhoActions)\.tsx?|features\/operational\/components\/OperationalWorkspace\.tsx|hooks\/useOperationalViewState\.ts|features\/warehouse\/components\/WarehouseLandingOperational\.tsx|scripts\/(?:warehouse-r361-ne-nf-ux\.test|verify-empenho-pdf-direct-import)\.mjs)$/.test(p))) {
