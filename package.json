@@ -17,6 +17,7 @@
     "recovery:verify": "node scripts/firestore-recovery.mjs verify",
     "test:recovery": "node --test scripts/firestore-recovery.test.mjs",
     "test:vercel-manual-deploy": "node --test scripts/vercel-manual-deploy.test.mjs",
+    "test:pwa-installability": "node --test scripts/pwa-installability.test.mjs",
     "test:gcloud-command": "node --test scripts/gcloud-command.test.mjs",
     "snapshot:hgesm:plan": "node scripts/firestore-local-snapshot.mjs plan",
     "snapshot:hgesm:create": "node scripts/firestore-local-snapshot.mjs create",
