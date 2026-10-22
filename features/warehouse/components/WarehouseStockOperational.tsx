@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -898,7 +899,7 @@ export function WarehouseStockOperational({
         </div>
       )}
 
-      {selected && (
+      {selected && createPortal(
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-0 sm:p-5" data-testid="warehouse-material-dialog">
           <button type="button" disabled={working} aria-label="Fechar detalhes do material"
             onClick={() => setSelectedMaterialId('')}
@@ -1365,7 +1366,8 @@ export function WarehouseStockOperational({
             </div>
           )}
           </section>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] leading-5 text-slate-500 shadow-sm">
