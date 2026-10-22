@@ -50,6 +50,8 @@ for (const path of warehouseFiles) {
 // de mutações de posições/estoques nesta camada de apresentação.
 if (files.some((p) => /^(?:features\/warehouse\/visualStyle\.ts|features\/warehouse\/components\/Warehouse(?:IsometricPreview|LandingOperational)\.tsx|features\/warehouse\/components\/WarehouseLandingOperational\.module\.css|scripts\/warehouse-r362-visual-polish\.test\.mjs)$/.test(p))) {
   add('test:warehouse-r362-visual-polish');
+  add('test:warehouse-isometric-camera');
+  add('test:warehouse-3d-stock');
 }
 // Este teste verifica os detalhes no topo da experiência, as consultas
 // limitadas e a ausência de operações diretas no Firestore.
