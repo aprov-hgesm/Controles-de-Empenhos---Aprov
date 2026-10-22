@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { ClipboardCheck, FileSpreadsheet, History, PackageSearch, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ChevronDown, FileSpreadsheet, History, RefreshCw } from 'lucide-react';
 
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import { listWarehouseMovementsInPeriod, type WarehouseMovementListItem } from '../../../lib/warehouse/ledgerRepository';
@@ -31,13 +31,25 @@ type ReportTab =
   | 'siscofis';
 
 const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
-  { id: 'stock', label: 'Estoque, locais e validade' },
-  { id: 'outbound', label: 'Relatórios de Saída' },
-  { id: 'immediate', label: 'Relatórios de Consumo Imediato' },
-  { id: 'ledger', label: 'Movimentações e entradas' },
+  { id: 'stock', label: 'Saldo e validade' },
+  { id: 'outbound', label: 'Saídas' },
+  { id: 'immediate', label: 'Consumo imediato' },
+  { id: 'ledger', label: 'Entradas e movimentos' },
   { id: 'inventory', label: 'Inventários' },
   { id: 'siscofis', label: 'SISCOFIS' },
 ];
+
+const MOVEMENT_LABELS: Record<WarehouseMovementType, string> = {
+  INITIAL_BALANCE: 'Saldo inicial',
+  MANUAL_ENTRY: 'Entrada avulsa',
+  INVOICE_ENTRY: 'Entrada por nota fiscal',
+  OUTBOUND: 'Saída',
+  OUTBOUND_RETURN: 'Devolução',
+  TRANSFER: 'Transferência',
+  INVENTORY_ADJUSTMENT: 'Ajuste de inventário',
+  INVOICE_CORRECTION: 'Correção de nota fiscal',
+  REVERSAL: 'Estorno',
+};
 
 function dateInput(daysAgo: number): string {
   const date = new Date();
@@ -69,6 +81,7 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
   const [typeFilter, setTypeFilter] = useState<'ALL' | WarehouseMovementType>('ALL');
   const [materialFilter, setMaterialFilter] = useState('');
   const [invoiceOnly, setInvoiceOnly] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(30);
   const [message, setMessage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -123,6 +136,10 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
     });
   }, [endDate, invoiceOnly, materialById, materialFilter, movements, startDate, typeFilter]);
 
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [startDate, endDate, typeFilter, materialFilter, invoiceOnly]);
+
   const exportCsv = () => {
     const rows = filtered.map((item) => {
       const material = materialById.get(item.movement.materialId);
@@ -157,10 +174,10 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
           <div>
             <div className="flex items-center gap-2 text-[#00288e]">
               <History className="h-4 w-4" />
-              <p className="text-xs font-black uppercase tracking-[0.12em]">Movimentações e entradas por NF</p>
+              <h2 className="text-base font-black">Histórico de movimentações</h2>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Consulta do ledger oficial pelo período selecionado. Entradas por NF e entradas avulsas permanecem auditáveis pela origem estruturada, sem criar fonte paralela de saldo.
+              Veja o que entrou, saiu ou foi transferido. Use os filtros e abra um registro para conferir sua origem e referência.
             </p>
           </div>
           <div className="flex gap-2">
@@ -182,8 +199,8 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
           </label>
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Tipo
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as 'ALL' | WarehouseMovementType)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
-              <option value="ALL">Todos</option>
-              {WAREHOUSE_MOVEMENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+              <option value="ALL">Todos os tipos</option>
+              {WAREHOUSE_MOVEMENT_TYPES.map((type) => <option key={type} value={type}>{MOVEMENT_LABELS[type]}</option>)}
             </select>
           </label>
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Material / origem
@@ -198,34 +215,79 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
 
       {message && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">{message}</div>}
 
-      <section className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-        <table className="min-w-[980px] w-full text-left text-xs">
-          <thead className="bg-slate-50 text-[9px] uppercase tracking-[0.12em] text-slate-500">
-            <tr><th className="p-3">Data/Hora</th><th className="p-3">Tipo</th><th className="p-3">Material</th><th className="p-3">Quantidade</th><th className="p-3">Origem</th><th className="p-3">Referência</th></tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtered.map((item) => {
-              const material = materialById.get(item.movement.materialId);
-              const source = item.movement.source;
-              const reference = source?.kind === 'INVOICE'
-                ? 'NF ' + source.invoiceId + ' · Empenho ' + source.empenhoId
-                : source?.kind === 'MANUAL_ENTRY'
-                  ? source.reference || 'Sem referência adicional'
-                  : item.movement.id;
-              return (
-                <tr key={item.movement.id}>
-                  <td className="p-3 text-slate-500">{item.createdAt ? new Date(item.createdAt).toLocaleString('pt-BR') : '—'}</td>
-                  <td className="p-3"><span className="rounded-lg bg-blue-50 px-2 py-1 font-mono text-[9px] font-black text-[#00288e]">{item.movement.type}</span></td>
-                  <td className="p-3 font-bold text-slate-800">{material?.description || item.movement.materialId}</td>
-                  <td className="p-3 font-black text-slate-700">{item.movement.quantityDelta.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}</td>
-                  <td className="p-3 text-slate-500">{movementSourceLabel(item)}</td>
-                  <td className="p-3 font-mono text-[9px] text-slate-400">{reference}</td>
-                </tr>
-              );
-            })}
-            {!loading && !filtered.length && <tr><td colSpan={6} className="p-6 text-center text-sm text-slate-400">Nenhum movimento encontrado nos filtros selecionados.</td></tr>}
-          </tbody>
-        </table>
+      <section className="space-y-2" data-testid="warehouse-movement-report-list">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <p className="text-sm font-bold text-slate-700">
+            {loading ? 'Consultando movimentos…' : filtered.length + ' movimentação(ões) encontrada(s)'}
+          </p>
+          <span className="text-xs text-slate-500">Clique em um registro para ver os detalhes</span>
+        </div>
+        {!loading && filtered.slice(0, visibleCount).map((item) => {
+          const material = materialById.get(item.movement.materialId);
+          const source = item.movement.source;
+          const reference = source?.kind === 'INVOICE'
+            ? 'NF ' + source.invoiceId + ' · Empenho ' + source.empenhoId
+            : source?.kind === 'MANUAL_ENTRY'
+              ? source.reference || 'Sem referência adicional'
+              : item.movement.id;
+          const quantity = item.movement.quantityDelta;
+          return (
+            <details key={item.movement.id}
+              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm open:border-blue-200"
+              data-testid="warehouse-movement-report-item">
+              <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-slate-900">{material?.description || 'Material não encontrado no cadastro'}</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {MOVEMENT_LABELS[item.movement.type]} · {item.createdAt
+                      ? new Date(item.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                      : 'Data não informada'}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center justify-between gap-4">
+                  <p className={'text-base font-black ' + (quantity < 0 ? 'text-rose-700' : 'text-emerald-700')}>
+                    {quantity > 0 ? '+' : ''}{quantity.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#00288e]">
+                    Detalhes <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+                  </span>
+                </div>
+              </summary>
+              <div className="grid gap-3 border-t border-slate-100 bg-slate-50 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-bold text-slate-500">Origem da movimentação</p>
+                  <p className="mt-1 break-words text-slate-800">{movementSourceLabel(item)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500">Documento ou referência</p>
+                  <p className="mt-1 break-words text-slate-800">{reference}</p>
+                </div>
+                {source?.kind === 'INVOICE' && (
+                  <div>
+                    <p className="text-xs font-bold text-slate-500">Fornecedor</p>
+                    <p className="mt-1 break-words text-slate-800">{source.supplier}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-bold text-slate-500">Identificador do registro</p>
+                  <p className="mt-1 break-all font-mono text-xs text-slate-600">{item.movement.id}</p>
+                </div>
+              </div>
+            </details>
+          );
+        })}
+        {!loading && filtered.length === 0 && (
+          <p className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            Nenhuma movimentação encontrada. Tente outro período ou ajuste os filtros.
+          </p>
+        )}
+        {!loading && filtered.length > visibleCount && (
+          <button type="button" onClick={() => setVisibleCount((count) => count + 30)}
+            data-testid="warehouse-movement-show-more"
+            className="min-h-11 w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-[#00288e]">
+            Mostrar mais movimentações ({filtered.length - visibleCount} restantes)
+          </button>
+        )}
       </section>
     </div>
   );
@@ -236,29 +298,30 @@ export function WarehouseLogisticsReports({ workspaceId }: { workspaceId: string
 
   return (
     <div className="space-y-5" data-testid="warehouse-logistics-reports">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#00288e]"><FileSpreadsheet className="h-5 w-5" /></div>
+      <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-[#00288e]">
+            <FileSpreadsheet className="h-5 w-5" aria-hidden="true" />
+          </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#00288e]">Relatórios logísticos</p>
-            <p className="mt-1 max-w-4xl text-xs leading-5 text-slate-500">
-              Camada de consulta derivada das fontes oficiais. Nenhum relatório possui autoridade quantitativa, nenhum saldo é recalculado pelo ledger e as leituras só montam a superfície selecionada.
+            <h2 className="text-lg font-black text-slate-900">Relatórios de materiais</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Escolha o que deseja consultar. Toque nos registros para abrir os detalhes.
             </p>
           </div>
         </div>
-        <div className="mt-4 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
+        <nav className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3" aria-label="Tipo de relatório">
           {REPORT_TABS.map((item) => (
             <button key={item.id} type="button" onClick={() => setTab(item.id)}
-              className={tab === item.id ? 'shrink-0 rounded-lg bg-white px-3 py-2 text-[11px] font-black text-[#00288e] shadow-sm' : 'shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold text-slate-500'}>
+              aria-current={tab === item.id ? 'page' : undefined}
+              data-testid={'warehouse-report-tab-' + item.id}
+              className={tab === item.id
+                ? 'min-h-11 rounded-xl bg-[#00288e] px-3 py-2 text-left text-xs font-black text-white shadow-sm'
+                : 'min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-blue-50'}>
               {item.label}
             </button>
           ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-500">
-          <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> bounded</span>
-          <span className="inline-flex items-center gap-1"><PackageSearch className="h-3.5 w-3.5" /> joins em memória</span>
-          <span className="inline-flex items-center gap-1"><ClipboardCheck className="h-3.5 w-3.5" /> fontes oficiais</span>
-        </div>
+        </nav>
       </section>
 
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
