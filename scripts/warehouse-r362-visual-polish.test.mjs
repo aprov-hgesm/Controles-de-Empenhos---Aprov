@@ -44,8 +44,9 @@ test('estantes, paletes, iluminação e rótulos usam acabamentos reutilizáveis
   assert.match(preview, /url\(#r362RackBeam\)/);
   assert.match(preview, /id="r362FloorBloom"/);
   assert.match(preview, /url\(#r362FloorBloom\)/);
-  assert.match(preview, /id="r362LabelShadow"/);
-  assert.match(preview, /url\(#r362LabelShadow\)/);
+  // Mantemos o realce de bordas sem um filtro de sombra que ampliaria o hover do SVG.
+  assert.match(preview, /stroke=\{highlighted \? '#7db6ff' : '#d7e0e8'\}/);
+  assert.doesNotMatch(preview, /r362LabelShadow/);
   assert.match(preview, /WAREHOUSE_PALLET_VISUAL\.highlight/);
   assert.match(preview, /WAREHOUSE_RACK_VISUAL\.postHighlight/);
   assert.match(preview, /data-location-id=\{object\.warehouseLocationId \|\| ''\}/);
