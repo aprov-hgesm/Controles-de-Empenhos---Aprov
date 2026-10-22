@@ -3444,3 +3444,20 @@ Handoff: onde estamos — PR #342 DRAFT; o que fazemos — aguardar CI e validar
 5. **Publicação:** sem deploy na Vercel nesta tarefa, sem modificação de Firestore Rules ou dados reais. Integração em GitHub somente após CI; publicação manual futura pelo fundador em PowerShell, após prebuild isolado e smoke humano. PR R361 traz a documentação vigente.
 
 **Nota:** a conclusão dos checks deve ser registrada no PR R361; este parágrafo documenta a implementação, não atesta QA manual ou disponibilização na produção.
+
+
+## R362 — Polimento estético do renderizador 3D (22/10/2026)
+
+**Decisão do fundador:** trabalho exclusivamente visual sobre R361; NÃO implementar gestão de slots/capacidade, reorganizar materiais, alterar quantidades, algoritmos de ocupação, layout físico, Croquis, IDs, saldos, lotes, validade real ou movimentações. Evitar camadas e persistências novas. Quatro vistas oficiais mantidas: Frente, Direita, Trás, Esquerda.
+
+**Arte 3D entregue em branch isolada `feat/r362-warehouse-3d-pure-visual-polish`:**
+- Embalagens: três faces com gradação suave de luz/sombra, pequena fita de selagem e realce de arestas, sombra de contato SVG leve sem filtro individual por caixa. Cor amarela/vermelha de vencimento, seleção e quantidade atual de cubos permanecem.
+- Estantes: nuances de pintura industrial e aço, realce fino das vigas, rebordo frontal e textura visual leve do piso das prateleiras; postes, níveis, vigas, projeção e distribuição continuam com as mesmas coordenadas.
+- Paletes: madeira com luz e profundidade discretas, micro-reflexos acompanhando a direção física das tábuas; empilhamento inalterado.
+- Iluminação/piso: brilho difuso de baixa opacidade, grade sutil, sombras suaves e contraste consistente nas quatro câmeras; sem novos pontos de luz dinamicamente calculados.
+- Etiquetas do 3D: sombras e contornos discretos, tipografia e códigos preservados. A Landing de Recebimento recebe a mesma aparência das caixas, tábuas e etiquetas; vínculo `invoiceRecordKey` e acesso direto à NF preservados.
+- Geladeira/freezer 3D premium e orientação por eixo maior **não alterados**; visual existente preservado.
+
+**Arquivos funcionais de renderização:** `features/warehouse/components/WarehouseIsometricPreview.tsx`, `WarehouseLandingOperational.tsx`, `WarehouseLandingOperational.module.css`, `features/warehouse/visualStyle.ts`. Nenhum arquivo de API, serviço, motor logístico, banco, Rules, migração, histórico ou permissões alterado.
+**Regressão:** `npm run test:warehouse-r362-visual-polish` adicionado ao Fast CI, somado ao TypeScript e guardrails do GitHub; teste de projeção isométrica original permanece. Antes de publicar, realizar smoke visual nas quatro perspectivas e no recebimento; este memorial não equivale a aprovação visual humana.
+**Release:** sem deploy, sem promote, sem mudança de produção; a publicação futura permanece estritamente manual pelo PowerShell, após revisão humana do deployment isolado.
