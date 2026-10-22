@@ -145,3 +145,19 @@ export function warehouseLocationExpiry(value: string | null): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
 }
+
+/** Classificação por dias civis; fuso horário não deve deslocar a validade. */
+export function warehouseLocationExpiryStatus(
+  expiresOn: string | null,
+  today = new Date()
+): 'expired' | 'soon' | 'normal' | 'none' {
+  if (!expiresOn || !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn)) return 'none';
+  const [year, month, day] = expiresOn.split('-').map(Number);
+  const expiresAt = Date.UTC(year, month - 1, day);
+  if (new Date(expiresAt).toISOString().slice(0, 10) !== expiresOn) return 'none';
+  const todayAt = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const remainingDays = Math.round((expiresAt - todayAt) / 86400000);
+  if (remainingDays < 0) return 'expired';
+  if (remainingDays <= 14) return 'soon';
+  return 'normal';
+}
