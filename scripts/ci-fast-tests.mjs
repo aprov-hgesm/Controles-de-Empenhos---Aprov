@@ -46,6 +46,12 @@ for (const path of warehouseFiles) {
       'test:adm-deposito-outbound-return', 'test:adm-deposito-locations'].forEach(add);
   }
 }
+// Mudanças na inspeção/UX mobile executam o contrato exato e o leitor de câmera,
+// além dos testes gerais selecionados por domínio.
+if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:HomeOperational|MobileDepotLocations|LocationInspection)\.tsx|scripts\/warehouse-location-inspection\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-location-inspection');
+  add('test:mobile-r1-scanner');
+}
 if (warehouseFiles.length && tests.size === 0) {
   ['test:adm-deposito-ledger', 'test:adm-deposito-inventory'].forEach(add);
 }
