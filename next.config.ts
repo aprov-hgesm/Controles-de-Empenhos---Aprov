@@ -3,6 +3,11 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // O endpoint PWA precisa da mesma imagem PNG em runtime no bundle Vercel.
+  // O arquivo é incluído somente na função do ícone, não em todas as funções.
+  outputFileTracingIncludes: {
+    '/api/install-icon/*': ['./public/emprovex-logo.png'],
+  },
   // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
   async redirects() {
     return [
