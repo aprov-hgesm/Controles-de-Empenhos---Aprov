@@ -107,6 +107,16 @@ test('interface possui interação e relatório somente leitura com carregamento
   assert.match(preview, /data-testid=\{interactive \? 'warehouse-location-interactive'/);
   assert.match(preview, /onPointerEnter=/);
   assert.match(preview, /onClick=\{handleOpen\}/);
+  // A primeira renderizacao do modal deve acontecer antes da consulta remota.
+  assert.match(preview, /onInspectLocationRef\.current\?\.\(\)/);
+  assert.match(preview, /requestAnimationFrame\(\(\) => \{/);
+  const openHandler = preview.match(/const handleOpen = \(\) => \{([\s\S]*?)\};\s*const handlePointer =/)?.[1];
+  assert.ok(openHandler);
+  assert.match(openHandler, /setDetailLocationId\(locationId\)/);
+  assert.doesNotMatch(openHandler, /onInspectLocation\?\.\(/);
+  const pointerEnterHandler = preview.match(/onPointerEnter=\{\(event\) => \{([\s\S]*?)\}\}/)?.[1];
+  assert.ok(pointerEnterHandler);
+  assert.doesNotMatch(pointerEnterHandler, /onInspectLocation\?\.\(/);
   assert.match(croquis, /listWarehouseLots\(workspaceId, 500\)/);
   assert.match(croquis, /onInspectLocation=/);
   assert.match(dialog, /data-testid="warehouse-location-download-pdf"/);
