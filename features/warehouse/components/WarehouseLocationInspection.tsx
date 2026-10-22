@@ -224,6 +224,8 @@ export function WarehouseLocationDetailsDialog({
     setEditError(null);
     setEditNotice(null);
     let saved = 0;
+    let barcodeSaved = false;
+    let lotSaved = false;
     try {
       if (description !== material.description) {
         const updated = await saveWarehouseMaterial(workspaceId, { ...material, description });
@@ -247,27 +249,27 @@ export function WarehouseLocationDetailsDialog({
           });
         }
         saved += 1;
+        barcodeSaved = true;
       }
       for (const lot of row.lots) {
         const next = editing.dates[lot.id] || null;
         if (next !== lot.expiresOn) {
           await updateWarehouseLot(workspaceId, lot.id, { expiresOn: next });
           saved += 1;
+          lotSaved = true;
         }
       }
       setEditing(null);
-      setBarcodeVersion((value) => value + 1);
-      onRefresh();
+      if (barcodeSaved) setBarcodeVersion((value) => value + 1);
+      if (lotSaved) onRefresh();
       setEditNotice(saved > 0 ? 'Informações atualizadas. O saldo físico não foi alterado.' : 'Nenhuma alteração necessária.');
     } catch (error) {
       setEditError(
         (saved > 0 ? 'Parte das alterações foi salva. Atualize a consulta e confira os campos. ' : '')
         + (error instanceof Error ? error.message : 'Não foi possível salvar as informações.')
       );
-      if (saved > 0) {
-        setBarcodeVersion((value) => value + 1);
-        onRefresh();
-      }
+      if (barcodeSaved) setBarcodeVersion((value) => value + 1);
+      if (lotSaved) onRefresh();
     } finally {
       setSaving(false);
     }
@@ -458,7 +460,8 @@ export function WarehouseLocationDetailsDialog({
                                   Não há partida vinculada para editar validade. Cadastre o lote no fluxo de estoque; não é possível atribuir data a saldo sem lote por esta janela.
                                 </p>
                               )}
-                              <p className="mt-3 text-[11px] text-slate-500">Quantidade: {warehouseLocationQuantity(row.quantity)} {row.unit} · somente entrada, saída ou outro movimento oficial altera o saldo.</p>
+                              <p className="mt-3 text-[11px] text-slate-500">Descrição e código de barras pertencem ao cadastro compartilhado do material. Cada validade pertence à sua partida.</p>
+                              <p className="mt-1 text-[11px] text-slate-500">Quantidade: {warehouseLocationQuantity(row.quantity)} {row.unit} · somente entrada, saída ou outro movimento oficial altera o saldo.</p>
                               <div className="mt-3 flex flex-wrap justify-end gap-2">
                                 <button type="button" disabled={saving} onClick={() => { setEditing(null); setEditError(null); }}
                                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">Cancelar</button>
