@@ -46,6 +46,8 @@ type Props = {
   locations: WarehouseLocation[];
   balances: WarehouseLocationBalance[];
   materials: WarehouseMaterial[];
+  workspaceId?: string;
+  onMaterialUpdated?: (material: WarehouseMaterial) => void;
   lots?: WarehouseLot[];
   selectedMaterialId: string;
   queryText: string;
@@ -934,6 +936,8 @@ export function WarehouseIsometricPreview({
   locations,
   balances,
   materials,
+  workspaceId,
+  onMaterialUpdated,
   lots = [],
   selectedMaterialId,
   queryText,
@@ -1732,6 +1736,9 @@ export function WarehouseIsometricPreview({
         <WarehouseLocationDetailsDialog
           contents={detailContents}
           depotName={depotName}
+          workspaceId={workspaceId}
+          materials={materials}
+          onMaterialUpdated={onMaterialUpdated}
           lotState={inspectionLotState}
           lotError={inspectionError}
           complete={inspectionComplete}
