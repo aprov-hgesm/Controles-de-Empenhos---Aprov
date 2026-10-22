@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ChevronRight,
   FileText,
+  X,
   MapPin,
   PackageSearch,
   RefreshCw,
@@ -173,6 +174,7 @@ export function WarehouseStockOperational({
   const [expiryStatusFilter, setExpiryStatusFilter] =
     useState<WarehouseStockExpiryFilter>('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [visibleCount, setVisibleCount] = useState(25);
   const [movements, setMovements] = useState<WarehouseMovementListItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [locateOpen, setLocateOpen] = useState(false);
@@ -228,6 +230,24 @@ export function WarehouseStockOperational({
   useEffect(() => {
     void refresh();
   }, [workspaceId]);
+
+  useEffect(() => {
+    setVisibleCount(25);
+  }, [queryText, depotFilter, locationFilter, expiryStatusFilter]);
+
+  useEffect(() => {
+    if (!selectedMaterialId) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !working) setSelectedMaterialId('');
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [selectedMaterialId, working]);
 
   useEffect(() => {
     setBarcodeDraft('');
@@ -704,20 +724,15 @@ export function WarehouseStockOperational({
 
   return (
     <div className="space-y-5" data-testid="warehouse-stock-operational">
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#00288e]/70">Saldo disponível</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">Somente materiais com saldo oficial maior que zero são exibidos nesta visão.</p>
+      <header className="flex flex-col gap-3 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-black text-slate-900">Estoque disponível</h2>
+          <p className="mt-1 text-sm text-slate-600">Consulte quantidades, locais e validades. Toque em um material para abrir sua ficha completa.</p>
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">Enriquecimento</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">A validade complementa o item sem gerar movimento ou alterar o saldo oficial.</p>
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700">Prioridade por validade</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">A lista coloca primeiro o material com a menor validade ativa; itens sem validade ficam ao final.</p>
-        </div>
-      </div>
+        <span className="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-[#00288e]">
+          Saldos oficiais · somente itens disponíveis
+        </span>
+      </header>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2 text-slate-800">
@@ -802,76 +817,99 @@ export function WarehouseStockOperational({
               Ordem: menor validade primeiro
             </p>
           </div>
-          {filtered.map((summary) => (
-            <button
-              type="button"
-              key={summary.material.id}
-              data-testid={'warehouse-stock-row-' + summary.material.id}
-              onClick={() => {
-                setSelectedMaterialId(summary.material.id);
-                setLocateOpen(false);
-                resetLotForm();
-                setMessage(null);
-              }}
-              className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left transition hover:border-blue-300/15 hover:bg-blue-400/[0.025]"
-            >
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_0.55fr_0.65fr_0.65fr_minmax(0,1fr)_auto] xl:items-center">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-900">{summary.material.description}</p>
-                  <p className="mt-1 truncate font-mono text-[9px] text-slate-600">{summary.material.id}</p>
-                  <p className="mt-1 truncate text-[9px] text-slate-600">
-                    {summary.locationLabels.length > 0
-                      ? summary.locationLabels.slice(0, 2).join(' · ')
-                      : 'sem posição física materializada'}
-                  </p>
-                  {summary.lots.some((lot) => lot.origin.kind === 'INVOICE') && (
-                    <p className="mt-1 truncate text-[9px] text-[#00288e]/65">
-                      {warehouseLotOriginLabel(
-                        summary.lots.find((lot) => lot.origin.kind === 'INVOICE')!
-                          .origin
-                      )}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Saldo total</p>
-                  <p className="mt-1 text-base font-black text-emerald-700">
-                    {formatWarehouseNumber(summary.balance.quantity)}{' '}
-                    <span className="text-[10px] font-bold text-emerald-600">
-                      {summary.material.unit.label || summary.material.unit.code}
+          {filtered.slice(0, visibleCount).map((summary) => {
+            const nearestState = summary.availableLots.some((lot) =>
+              warehouseLotExpiryState(lot) === 'EXPIRED'
+            ) ? 'EXPIRED' : summary.availableLots.some((lot) =>
+              warehouseLotExpiryState(lot) === 'NEAR_EXPIRY'
+            ) ? 'NEAR_EXPIRY' : null;
+
+            return (
+              <button
+                type="button"
+                key={summary.material.id}
+                data-testid={'warehouse-stock-row-' + summary.material.id}
+                aria-label={'Ver detalhes de ' + summary.material.description}
+                onClick={() => {
+                  setSelectedMaterialId(summary.material.id);
+                  setLocateOpen(false);
+                  resetLotForm();
+                  setMessage(null);
+                }}
+                className="group w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-5"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[15px] font-black text-slate-900">{summary.material.description}</h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {summary.locationLabels.length
+                          ? summary.locationLabels.slice(0, 1).join(' · ')
+                          : 'Localização não informada'}
+                        {summary.locationLabels.length > 1 ? ' (+' + (summary.locationLabels.length - 1) + ')' : ''}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        {summary.nearestExpiry ? 'Próxima validade: ' + dateLabel(summary.nearestExpiry) : 'Validade não informada'}
+                      </span>
+                    </div>
+                    {(summary.unassigned > 0 || nearestState || summary.pendencies.some((item) => item.severity === 'critical')) && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {summary.unassigned > 0 && (
+                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                            {formatWarehouseNumber(summary.unassigned)} aguardando localização
+                          </span>
+                        )}
+                        {nearestState === 'EXPIRED' && (
+                          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700">Possui lote vencido</span>
+                        )}
+                        {nearestState === 'NEAR_EXPIRY' && (
+                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">Vence em breve</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center justify-between gap-4 border-t border-slate-100 pt-3 md:border-l md:border-t-0 md:py-0 md:pl-5">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-500">Quantidade disponível</p>
+                      <p className="mt-1 text-lg font-black text-emerald-700">
+                        {formatWarehouseNumber(summary.balance.quantity)}{' '}
+                        <span className="text-xs font-bold text-emerald-700">
+                          {summary.material.unit.label || summary.material.unit.code}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-xs font-black text-[#00288e]">
+                      Detalhes <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </span>
-                  </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Distribuído</p>
-                  <p className="mt-1 text-sm font-bold text-slate-700">{formatWarehouseNumber(summary.distributed)}</p>
-                  <p className="text-[9px] text-slate-600">{formatWarehouseNumber(summary.unassigned)} pendente de alocação física</p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Validades</p>
-                  <p className="mt-1 text-sm font-bold text-slate-700">{summary.availableLots.length}</p>
-                  <p className="text-[9px] text-slate-600">próxima {dateLabel(summary.nearestExpiry)}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">FEFO / pendências</p>
-                  <p className="mt-1 truncate text-xs font-bold text-[#00288e]">
-                    {summary.fefo ? 'validade ' + dateLabel(summary.fefo.expiresOn) : 'sem recomendação FEFO'}
-                  </p>
-                  <p className="mt-1 text-[9px] text-slate-600">{summary.pendencies.length} pendência(s) logística(s)</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-600" aria-hidden="true" />
-              </div>
+              </button>
+            );
+          })}
+          {filtered.length > visibleCount && (
+            <button type="button" onClick={() => setVisibleCount((count) => count + 25)}
+              data-testid="warehouse-stock-show-more"
+              className="min-h-11 w-full rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-[#00288e] hover:bg-blue-100">
+              Mostrar mais materiais ({filtered.length - visibleCount} restantes)
             </button>
-          ))}
+          )}
         </div>
       )}
 
       {selected && (
-        <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6" data-testid="warehouse-material-sheet">
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-0 sm:p-5" data-testid="warehouse-material-dialog">
+          <button type="button" disabled={working} aria-label="Fechar detalhes do material"
+            onClick={() => setSelectedMaterialId('')}
+            className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] disabled:cursor-not-allowed" />
+          <section role="dialog" aria-modal="true" aria-labelledby="warehouse-material-sheet-title"
+            className="relative z-10 h-[100dvh] max-h-[100dvh] w-full max-w-6xl overflow-y-auto rounded-none border border-blue-100 bg-white p-4 shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl sm:p-6"
+            data-testid="warehouse-material-sheet">
           <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#00288e]/65">Ficha do material</p>
-              <h3 className="mt-2 text-xl font-black text-slate-900">{selected.material.description}</h3>
+              <h3 id="warehouse-material-sheet-title" className="mt-2 text-xl font-black text-slate-900">{selected.material.description}</h3>
               <p className="mt-1 font-mono text-[9px] text-slate-600">{selected.material.id} · {selected.material.unit.label || selected.material.unit.code}</p>
               <div data-testid="warehouse-material-barcodes" className="mt-2 flex flex-wrap gap-1.5">
                 {selected.barcodes.length > 0 ? selected.barcodes.map((barcode) => (
@@ -886,9 +924,12 @@ export function WarehouseStockOperational({
             <button
               type="button"
               onClick={() => setSelectedMaterialId('')}
-              className="w-fit rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]"
+              disabled={working}
+              autoFocus
+              data-testid="warehouse-material-close"
+              className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e] disabled:opacity-50"
             >
-              Fechar ficha
+              <X className="h-4 w-4" aria-hidden="true" /> Fechar ficha
             </button>
           </div>
 
@@ -1323,6 +1364,7 @@ export function WarehouseStockOperational({
               {message}
             </div>
           )}
+          </section>
         </div>
       )}
 
