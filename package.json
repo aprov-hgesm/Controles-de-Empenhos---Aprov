@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test:warehouse-stock-report-ux": "node --test scripts/warehouse-stock-report-ux.test.mjs",
     "test:warehouse-r361-ne-nf-ux": "node --test scripts/warehouse-r361-ne-nf-ux.test.mjs",
+    "test:warehouse-r362-visual-polish": "node --test scripts/warehouse-r362-visual-polish.test.mjs",
     "test:firestore-cost-estimate": "node --test scripts/firestore-cost-estimate.test.mjs",
     "test:admin-world-neighborhood": "node --test scripts/admin-world-neighborhood.test.mjs",
     "start": "next start",
