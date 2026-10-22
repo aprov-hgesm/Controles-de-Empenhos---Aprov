@@ -165,22 +165,37 @@ function warehouseBox(
     >
       <polygon
         points={polygonPoints([d, c, ct, dt])}
-        fill={WAREHOUSE_BOX_VISUAL.frontFill}
+        fill="url(#r362WorldBoxFront)"
         stroke={WAREHOUSE_BOX_VISUAL.frontStroke}
         strokeWidth="0.65"
       />
       <polygon
         points={polygonPoints([b, c, ct, bt])}
-        fill={WAREHOUSE_BOX_VISUAL.sideFill}
+        fill="url(#r362WorldBoxSide)"
         stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
       <polygon
         points={polygonPoints([at, bt, ct, dt])}
-        fill={WAREHOUSE_BOX_VISUAL.topFill}
+        fill="url(#r362WorldBoxTop)"
         stroke={WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
       />
+      {/* Selagem e arestas desenhadas no plano superior físico: acompanha a câmera. */}
+      <polygon
+        points={polygonPoints([
+          isoPoint(x + width * 0.44, y + depth * 0.06, z + height + 0.3),
+          isoPoint(x + width * 0.55, y + depth * 0.06, z + height + 0.3),
+          isoPoint(x + width * 0.55, y + depth * 0.94, z + height + 0.3),
+          isoPoint(x + width * 0.44, y + depth * 0.94, z + height + 0.3),
+        ])}
+        fill="#ffefd1"
+        opacity="0.62"
+      />
+      <line x1={at.x} y1={at.y} x2={bt.x} y2={bt.y}
+        stroke="#fff4d9" strokeWidth="0.85" opacity="0.75" />
+      <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y}
+        stroke="#704326" strokeWidth="0.6" opacity="0.38" />
     </g>
   );
 }
@@ -250,9 +265,7 @@ function warehousePallet(
           <g key={'pallet-slat-' + index}>
             <polygon
               points={polygonPoints([sa, sb, sc, sd])}
-              fill={index % 2 === 0
-                ? WAREHOUSE_PALLET_VISUAL.topLight
-                : WAREHOUSE_PALLET_VISUAL.topMid}
+              fill="url(#r362WorldWood)"
               stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
               strokeWidth="0.7"
             />
@@ -274,9 +287,13 @@ function warehousePallet(
               x2={sb.x}
               y2={sb.y}
               stroke={WAREHOUSE_PALLET_VISUAL.highlight}
-              strokeWidth="0.6"
-              opacity="0.75"
+              strokeWidth="0.7"
+              opacity="0.8"
             />
+            <line x1={sa.x} y1={sa.y} x2={sd.x} y2={sd.y}
+              stroke="#ffebc8" strokeWidth="0.65" opacity="0.40" />
+            <line x1={sb.x} y1={sb.y} x2={sc.x} y2={sc.y}
+              stroke="#56341e" strokeWidth="0.6" opacity="0.25" />
           </g>
         );
       })}
@@ -576,9 +593,12 @@ function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
         y="-13"
         width="136"
         height={layout ? 34 : 46}
-        rx="8"
+        rx="9"
         className={styles.textBackdrop}
+        filter="url(#r362WorldLabelShadow)"
       />
+      <line x1="-58" x2="58" y1="-11" y2="-11"
+        stroke="#bcd8ff" strokeWidth="0.85" opacity="0.32" />
       <text textAnchor="middle" className={styles.depotCode}>{depot.code}</text>
       <text y="15" textAnchor="middle" className={styles.depotName}>{depot.name}</text>
       {!layout && (
@@ -1212,6 +1232,27 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         aria-label="Mundo digital 3D dos depósitos e área de recebimento"
       >
         <defs>
+          <linearGradient id="r362WorldBoxTop" x1="0" y1="0" x2="0.9" y2="1">
+            <stop offset="0%" stopColor="#f4d4a1" />
+            <stop offset="48%" stopColor={WAREHOUSE_BOX_VISUAL.topFill} />
+            <stop offset="100%" stopColor="#cb874a" />
+          </linearGradient>
+          <linearGradient id="r362WorldBoxFront" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#e4aa6a" />
+            <stop offset="100%" stopColor={WAREHOUSE_BOX_VISUAL.frontFill} />
+          </linearGradient>
+          <linearGradient id="r362WorldBoxSide" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={WAREHOUSE_BOX_VISUAL.sideFill} />
+            <stop offset="100%" stopColor="#704026" />
+          </linearGradient>
+          <linearGradient id="r362WorldWood" x1="0" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stopColor="#f2d4a3" />
+            <stop offset="52%" stopColor={WAREHOUSE_PALLET_VISUAL.topMid} />
+            <stop offset="100%" stopColor="#9c6839" />
+          </linearGradient>
+          <filter id="r362WorldLabelShadow" x="-30%" y="-50%" width="160%" height="200%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#020b1a" floodOpacity="0.30" />
+          </filter>
           <linearGradient id="worldFloor" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="#0b1932" />
             <stop offset="50%" stopColor="#071225" />

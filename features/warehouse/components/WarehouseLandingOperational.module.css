@@ -321,8 +321,8 @@
 }
 
 .textBackdrop {
-  fill: rgba(3, 8, 20, .82);
-  stroke: rgba(155, 184, 238, .18);
+  fill: rgba(5, 14, 31, .91);
+  stroke: rgba(172, 200, 243, .28);
   stroke-width: .8px;
 }
 
@@ -340,7 +340,7 @@
 
 
 .depotLabel {
-  opacity: .96;
+  opacity: .99;
   pointer-events: none;
 }
 
@@ -415,7 +415,7 @@
 }
 
 .palletLabel {
-  fill: rgba(231, 238, 250, .95);
+  fill: rgba(240, 246, 255, .98);
   font-size: 7.4px;
   font-weight: 900;
   paint-order: stroke;
@@ -424,7 +424,7 @@
 }
 
 .palletDetail {
-  fill: rgba(178, 194, 225, .82);
+  fill: rgba(190, 210, 242, .91);
   font-size: 6.3px;
   font-weight: 750;
   paint-order: stroke;

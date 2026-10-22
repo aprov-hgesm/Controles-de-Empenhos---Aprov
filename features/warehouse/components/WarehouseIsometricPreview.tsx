@@ -143,6 +143,7 @@ function visualBoxes(quantity: number): number {
   return 4;
 }
 
+/** Arte 3D da embalagem: volume e posição são definidos pelo motor existente. */
 function boxGroup(
   key: string,
   x: number,
@@ -151,6 +152,7 @@ function boxGroup(
   selected = false,
   expiry: WarehouseVisualExpiry = 'normal'
 ) {
+  const normal = expiry === 'normal';
   return (
     <g
       key={key}
@@ -160,24 +162,31 @@ function boxGroup(
       data-expiry-state={expiry}
       opacity={selected ? 1 : 0.98}
     >
+      {/* Sombra de apoio sem filtro por caixa, para manter baixo custo no SVG. */}
+      <ellipse cx="0" cy="22.2" rx="13" ry="3.2" fill="#29303a" opacity="0.16" />
       <polygon
         points="-14,0 0,-8 14,0 0,8"
-        fill={expiry === 'near' ? '#fef08a' : expiry === 'expired' ? '#fecaca' : WAREHOUSE_BOX_VISUAL.topFill}
+        fill={normal ? 'url(#r362BoxTop)' : expiry === 'near' ? '#fef08a' : '#fecaca'}
         stroke={expiry === 'near' ? '#ca8a04' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
       />
       <polygon
         points="-14,0 0,8 0,22 -14,14"
-        fill={expiry === 'near' ? '#facc15' : expiry === 'expired' ? '#f87171' : WAREHOUSE_BOX_VISUAL.frontFill}
+        fill={normal ? 'url(#r362BoxFront)' : expiry === 'near' ? '#facc15' : '#f87171'}
         stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#b91c1c' : WAREHOUSE_BOX_VISUAL.frontStroke}
         strokeWidth="0.65"
       />
       <polygon
         points="14,0 0,8 0,22 14,14"
-        fill={expiry === 'near' ? '#eab308' : expiry === 'expired' ? '#dc2626' : WAREHOUSE_BOX_VISUAL.sideFill}
+        fill={normal ? 'url(#r362BoxSide)' : expiry === 'near' ? '#eab308' : '#dc2626'}
         stroke={expiry === 'near' ? '#a16207' : expiry === 'expired' ? '#991b1b' : WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
+      {/* Fita e reflexos delicados seguem o mesmo cubo nas quatro câmeras. */}
+      <polygon points="-2.5,-6.5 1.6,-7.1 5.4,4.6 1.5,6.6" fill="#fff1d0" opacity="0.64" />
+      <path d="M -13.3 0 L 0 -7.1 L 13.3 0" fill="none" stroke="#fff4da" strokeWidth="0.9" opacity="0.77" />
+      <path d="M -13.1 1 L -13.1 13.4 L -0.8 20.9" fill="none" stroke="#fce0ab" strokeWidth="0.72" opacity="0.55" />
+      <path d="M 13.2 1 L 13.2 13.3 L 0.7 20.9" fill="none" stroke="#4d2c1e" strokeWidth="0.7" opacity="0.21" />
     </g>
   );
 }
@@ -258,7 +267,7 @@ function rackBeamPrism({
     <g key={key} data-visual-role={side ? 'rack-side-beam' : rear ? 'rack-rear-beam' : 'rack-front-beam'}>
       <polygon
         points={polygonPoints([d, c, ct, dt])}
-        fill={frontFill}
+        fill={rear || side ? frontFill : 'url(#r362RackBeam)'}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
         strokeWidth="0.55"
       />
@@ -274,6 +283,10 @@ function rackBeamPrism({
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
         strokeWidth="0.85"
       />
+      <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y}
+        stroke="#ffe0ad" strokeWidth="0.95" opacity="0.74" />
+      <line x1={c.x} y1={c.y} x2={ct.x} y2={ct.y}
+        stroke="#713f20" strokeWidth="0.65" opacity="0.27" />
     </g>
   );
 }
@@ -314,8 +327,10 @@ function renderLabel(
           fill={highlighted ? '#0f3b86' : '#ffffff'}
           stroke={highlighted ? '#7db6ff' : '#d7e0e8'}
           strokeWidth={highlighted ? 2 : 1}
-          opacity={highlighted ? 0.99 : 0.94}
+          opacity={highlighted ? 0.99 : 0.97}
         />
+        <line x1={-width / 2 + 7} x2={width / 2 - 7} y1={-height + 2.3} y2={-height + 2.3}
+          stroke={highlighted ? '#a5d2ff' : '#ffffff'} strokeWidth="1.1" opacity="0.9" />
         <text
           x="0"
           y={-height + 16}
@@ -364,7 +379,7 @@ function contactShadow(
       cy={center.y + 7}
       rx={rx}
       ry={ry}
-      fill="#0f172a"
+      fill="#122538"
       opacity={opacity}
       filter="url(#softGroundShadow)"
     />
@@ -534,6 +549,10 @@ function WarehouseStructure({
                 strokeWidth="0.95"
                 opacity="0.78"
               />
+              <line x1={sa.x} y1={sa.y} x2={sd.x} y2={sd.y}
+                stroke="#fff0ce" strokeWidth="0.6" opacity="0.36" />
+              <line x1={sb.x} y1={sb.y} x2={sc.x} y2={sc.y}
+                stroke="#684223" strokeWidth="0.55" opacity="0.30" />
             </g>
           );
         })}
@@ -682,8 +701,10 @@ function WarehouseStructure({
                 fill="url(#rackDeck)"
                 stroke={WAREHOUSE_RACK_VISUAL.deckStroke}
                 strokeWidth="0.8"
-                opacity="0.96"
+                opacity="0.98"
               />
+              <line x1={p4.x} y1={p4.y} x2={p3.x} y2={p3.y}
+                stroke="#8fa3b3" strokeWidth="1.35" opacity="0.7" />
 
               {Array.from({ length: 6 }, (_, deckIndex) => {
                 const t = (deckIndex + 1) / 7;
@@ -1457,6 +1478,11 @@ export function WarehouseIsometricPreview({
             aria-label={'Prévia 3D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
           >
             <defs>
+              <radialGradient id="r362FloorBloom" cx="32%" cy="24%" r="84%">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.56" />
+                <stop offset="52%" stopColor="#e0ebf5" stopOpacity="0.14" />
+                <stop offset="100%" stopColor="#5c758a" stopOpacity="0.12" />
+              </radialGradient>
               <linearGradient id="floorGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#f9fafb" />
                 <stop offset="48%" stopColor="#e3e9ec" />
@@ -1466,6 +1492,24 @@ export function WarehouseIsometricPreview({
                 <stop offset="0%" stopColor="#fcfdfd" />
                 <stop offset="55%" stopColor="#e8edf0" />
                 <stop offset="100%" stopColor="#bac8d0" />
+              </linearGradient>
+              <linearGradient id="r362BoxTop" x1="0" y1="0" x2="0.9" y2="1">
+                <stop offset="0%" stopColor="#f4d4a1" />
+                <stop offset="48%" stopColor={WAREHOUSE_BOX_VISUAL.topFill} />
+                <stop offset="100%" stopColor="#ca8749" />
+              </linearGradient>
+              <linearGradient id="r362BoxFront" x1="0" y1="0" x2="1" y2="0.85">
+                <stop offset="0%" stopColor="#dfa467" />
+                <stop offset="100%" stopColor={WAREHOUSE_BOX_VISUAL.frontFill} />
+              </linearGradient>
+              <linearGradient id="r362BoxSide" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={WAREHOUSE_BOX_VISUAL.sideFill} />
+                <stop offset="100%" stopColor="#784023" />
+              </linearGradient>
+              <linearGradient id="r362RackBeam" x1="0" y1="0" x2="0.8" y2="1">
+                <stop offset="0%" stopColor="#ffa85d" />
+                <stop offset="55%" stopColor={WAREHOUSE_RACK_VISUAL.beamFront} />
+                <stop offset="100%" stopColor="#c15e1d" />
               </linearGradient>
               <linearGradient id="rackDeck" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor={WAREHOUSE_RACK_VISUAL.deckTop} />
@@ -1624,7 +1668,8 @@ export function WarehouseIsometricPreview({
               })}
 
               <polygon points={polygonPoints(floor)} fill="url(#floorGradient)" stroke="#9fb2c5" strokeWidth="2.5" />
-              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.78" />
+              <polygon points={polygonPoints(floor)} fill="url(#r362FloorBloom)" />
+              <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.67" />
               <polygon points={polygonPoints(floor)} fill="url(#floorSoftSheen)" />
 
               <line x1={floor[0].x} y1={floor[0].y} x2={floor[1].x} y2={floor[1].y} stroke="#6e879b" strokeWidth="4" opacity="0.48" />

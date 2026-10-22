@@ -135,7 +135,8 @@ test('renderer refaz fit por vista e não muda geometria, domínio nem Firestore
   assert.match(preview, /previewView/);
   assert.match(preview, /viewBox=\{\[cameraViewBox\.x, cameraViewBox\.y, cameraViewBox\.width, cameraViewBox\.height\]\.join\(' '\)\}/);
   assert.match(preview, /preserveAspectRatio=\{sceneOnly \? 'none' : 'xMidYMid meet'\}/);
-  assert.match(preview, /data-camera-fit="bounds"/);
+  // Landing R354 usa quadro alinhado ao piso; editor/Meus Depósitos mantém bounds.
+  assert.match(preview, /data-camera-fit=\{sceneOnly \? 'aligned-floor' : 'bounds'\}/);
   assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
   assert.doesNotMatch(preview, /viewBox=\{\s*embedded\s*\?/);
   assert.doesNotMatch(preview, /setDoc\(|updateDoc\(|runTransaction\(/);
