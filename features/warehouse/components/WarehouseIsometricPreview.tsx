@@ -1679,6 +1679,15 @@ export function WarehouseIsometricPreview({
                     aria-label={interactive ? 'Consultar ' + location?.name + ': pressione Enter para detalhes' : undefined}
                     data-testid={interactive ? 'warehouse-location-interactive' : undefined}
                     data-hovered={hovered ? 'true' : 'false'}
+                    className={interactive
+                      ? 'focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+                      : undefined}
+                    // O foco automatico do SVG no clique desenhava um retangulo preto
+                    // entre o pointer-down e a abertura do dialog. Prevenir somente o
+                    // foco por mouse; Tab/Enter/Espaco continuam acessiveis.
+                    onMouseDown={(event) => {
+                      if (interactive && event.button === 0) event.preventDefault();
+                    }}
                     onPointerEnter={(event) => {
                       if (!interactive) return;
                       handlePointer(event);

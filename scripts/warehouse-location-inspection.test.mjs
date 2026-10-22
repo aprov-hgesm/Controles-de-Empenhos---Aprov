@@ -107,6 +107,13 @@ test('interface possui interação e relatório somente leitura com carregamento
   assert.match(preview, /data-testid=\{interactive \? 'warehouse-location-interactive'/);
   assert.match(preview, /onPointerEnter=/);
   assert.match(preview, /onClick=\{handleOpen\}/);
+  // Mouse nao pode produzir o foco nativo retangular do elemento SVG.
+  // Teclado preserva tabIndex, Enter/Espaco e indicador focus-visible.
+  assert.match(preview, /onMouseDown=\{\(event\) => \{/);
+  assert.match(preview, /event\.button === 0\) event\.preventDefault\(\)/);
+  assert.match(preview, /focus:outline-none focus-visible:outline-2/);
+  assert.match(preview, /tabIndex=\{interactive \? 0 : undefined\}/);
+  assert.match(preview, /event\.key === 'Enter' \|\| event\.key === ' '/);
   // A primeira renderizacao do modal deve acontecer antes da consulta remota.
   assert.match(preview, /onInspectLocationRef\.current\?\.\(\)/);
   assert.match(preview, /requestAnimationFrame\(\(\) => \{/);
