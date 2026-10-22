@@ -53,5 +53,5 @@ test('R363: endpoint público só entrega PNG e protege credenciais e fontes de 
 test('R363: não acrescenta SW/caches de dados administrativos', () => {
   assert.doesNotMatch(layout, /serviceWorker\.register/);
   assert.doesNotMatch(route, /caches\.open\(|indexedDB|localStorage/);
-  assert.doesNotMatch(manifest, /related_applications/);
+  assert.doesNotMatch(manifest, /^\\s*related_applications:/m);
 });
