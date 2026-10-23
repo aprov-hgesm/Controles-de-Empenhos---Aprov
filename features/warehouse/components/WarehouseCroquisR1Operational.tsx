@@ -41,6 +41,7 @@ import type { WarehouseInspectionLotState } from './WarehouseLocationInspection'
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
+import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 
@@ -193,6 +194,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
   const [localEdits, setLocalEdits] = useState<Record<string, {name:string;description:string|null}>>({});
   const [newKind, setNewKind] = useState<CanonicalWarehouseVisualKind>('SHELF');
+  const [showDepotRegistration, setShowDepotRegistration] = useState(false);
   const [newSubpositions, setNewSubpositions] = useState<Array<{
     parentLocationId:string;code:string;name:string;description:string|null;
   }>>([]);
@@ -830,14 +832,33 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const activeDepots = depots.filter((item) => item.depot.status === 'active');
   if (!activeDepots.length) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <p className="font-black text-amber-900">Cadastre um depósito antes de desenhar o croqui.</p>
-      </div>
+      <section data-testid="warehouse-croqui-first-depot" className="space-y-4">
+        <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito</h2>
+        <p className="text-xs text-slate-600">Cadastre o primeiro depósito para começar a montar sua estrutura no Croqui 2D.</p>
+        <WarehouseDepotRegistrationR1 workspaceId={workspaceId} depots={depots}
+          onRegistered={async depotId=>{await reloadBase();setSelectedDepotId(depotId);}}/>
+      </section>
     );
   }
 
   return (
     <section className="space-y-4" data-testid="warehouse-r1-croquis">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito · Croqui 2D</h2>
+          <p className="text-xs text-slate-600">Crie, duplique, edite e inative locais em um único mapa.</p>
+        </div>
+        <button type="button" onClick={()=>setShowDepotRegistration(current=>!current)}
+          className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
+          {showDepotRegistration?'Fechar cadastro de depósito':'+ Cadastrar depósito'}
+        </button>
+      </div>
+      {showDepotRegistration&&(
+        <WarehouseDepotRegistrationR1 workspaceId={workspaceId} depots={depots}
+          onRegistered={async depotId=>{
+            await reloadBase();setSelectedDepotId(depotId);setShowDepotRegistration(false);
+          }}/>
+      )}
       <div className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
