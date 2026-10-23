@@ -41,6 +41,7 @@ import type { WarehouseInspectionLotState } from './WarehouseLocationInspection'
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
+import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
@@ -673,6 +674,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   }
 
   const selectedLayoutObject = draftObjects.find((object) => object.id === selectedObjectId) || null;
+  const selectedFaces = selectedLayoutObject ? warehouseObjectFaceLabels(selectedLayoutObject) : null;
   const selectedLocation = selectedLayoutObject?.warehouseLocationId
     ? locations.find((row) => row.location.id === selectedLayoutObject.warehouseLocationId)?.location || null
     : null;
@@ -1372,6 +1374,23 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm"
                 data-testid="warehouse-croqui-structure-editor">
                 <h3 className="text-sm font-black text-[#00288e]">Editar cadastro do local</h3>
+                {selectedFaces && (
+                  <div data-testid="warehouse-croqui-faces" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                    <p className="mb-2 text-[10px] font-black text-emerald-800">
+                      Orientação física (acompanha a rotação do local)
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                      <span className="font-bold text-emerald-800">Frente: {selectedFaces.frontLabel}</span>
+                      <span className="text-slate-600">Costas: {selectedFaces.backLabel}</span>
+                      <span className="text-slate-600">Direita: {selectedFaces.rightLabel}</span>
+                      <span className="text-slate-600">Esquerda: {selectedFaces.leftLabel}</span>
+                    </div>
+                    <p className="mt-2 text-[10px] text-slate-600">
+                      No croqui, a faixa verde indica a frente. Para girar, selecione o local e use
+                      os botões de rotação de 90° abaixo do desenho.
+                    </p>
+                  </div>
+                )}
                 {selectedPending || selectedLocation ? (
                   <div className="mt-3 space-y-3">
                     <label className="block text-[10px] font-bold text-slate-600">Código
