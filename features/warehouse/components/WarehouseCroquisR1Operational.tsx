@@ -65,7 +65,8 @@ type CanonicalWarehouseVisualKind =
   | 'PALLET'
   | 'FREEZER'
   | 'REFRIGERATOR'
-  | 'BENCH';
+  | 'BENCH'
+  | 'OTHER';
 
 const CANONICAL_VISUAL_KINDS: CanonicalWarehouseVisualKind[] = [
   'SHELF',
@@ -73,6 +74,7 @@ const CANONICAL_VISUAL_KINDS: CanonicalWarehouseVisualKind[] = [
   'FREEZER',
   'REFRIGERATOR',
   'BENCH',
+  'OTHER',
 ];
 
 type LocalDraft = {
@@ -136,7 +138,7 @@ function inferKind(name: string): CanonicalWarehouseVisualKind {
     return 'BENCH';
   }
   if (normalized.includes('estante') || normalized.includes('rack')) return 'SHELF';
-  return 'SHELF';
+  return 'OTHER';
 }
 
 function defaultSize(kind: CanonicalWarehouseVisualKind): { widthCm: number; depthCm: number } {
@@ -144,6 +146,7 @@ function defaultSize(kind: CanonicalWarehouseVisualKind): { widthCm: number; dep
   if (kind === 'FREEZER') return { widthCm: 140, depthCm: 75 };
   if (kind === 'REFRIGERATOR') return { widthCm: 90, depthCm: 75 };
   if (kind === 'PALLET') return { widthCm: 120, depthCm: 100 };
+  if (kind === 'OTHER') return {widthCm:100,depthCm:80};
   return { widthCm: 180, depthCm: 70 };
 }
 
@@ -154,6 +157,7 @@ function kindLabel(kind: CanonicalWarehouseVisualKind): string {
     FREEZER: 'Freezer',
     REFRIGERATOR: 'Geladeira industrial',
     BENCH: 'Mesa / bancada',
+    OTHER: 'Outro local',
   };
   return labels[kind];
 }
@@ -817,7 +821,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   function addNewCroquiLocal(kind: CanonicalWarehouseVisualKind) {
     if(!selectedDepotId || !setupReady || saving) return;
     const prefixes:Record<CanonicalWarehouseVisualKind,string> = {
-      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
     };
     const labelPrefix=prefixes[kind];
     const code=warehouseNextAvailableLocationCode(labelPrefix+'00',usedCroquiCodes());
@@ -853,7 +857,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       ||!CANONICAL_VISUAL_KINDS.includes(object.kind as CanonicalWarehouseVisualKind))return;
     const kind=object.kind as CanonicalWarehouseVisualKind;
     const prefixes:Record<CanonicalWarehouseVisualKind,string>={
-      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
     };
     const code=warehouseNextAvailableLocationCode(prefixes[kind]+'00',usedCroquiCodes());
     const name=kindLabel(kind)+' '+code.split('-').at(-1);
@@ -873,7 +877,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       ? locations.find(row=>row.location.id===source.warehouseLocationId)?.location : null;
     const prepared=pendingDuplicatedLocals[source.id];
     const familyPrefix:Record<CanonicalWarehouseVisualKind,string>={
-      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
     };
     const kind=source.kind as CanonicalWarehouseVisualKind;
     if(!parent && !prepared && !CANONICAL_VISUAL_KINDS.includes(kind)){
