@@ -715,10 +715,25 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const code=nextDuplicatedCode(labelPrefix+'00',usedCroquiCodes());
     const name=kindLabel(kind)+' '+code.split('-').at(-1);
     const dims=defaultSize(kind);
+    const width=Math.min(dims.widthCm,draftWidth-20);
+    const height=Math.min(dims.depthCm,draftHeight-20);
+    const occupied=(x:number,y:number)=>draftObjects.some(item=>
+      x<item.x+item.width+5&&x+width+5>item.x
+      &&y<item.y+item.height+5&&y+height+5>item.y);
+    let free:{x:number;y:number}|null=null;
+    for(let y=20;y+height<=draftHeight-10&&!free;y+=20){
+      for(let x=20;x+width<=draftWidth-10;x+=20){
+        if(!occupied(x,y)){free={x,y};break;}
+      }
+    }
+    if(!free){
+      setMessage('Não há espaço livre para um novo local com essas dimensões. '
+        +'Reorganize o croqui antes de cadastrar.');
+      return;
+    }
     const object=createWarehouseDepotLayoutObject({
-      kind,label:code+' · '+name,width:Math.min(dims.widthCm,draftWidth-20),
-      height:Math.min(dims.depthCm,draftHeight-20),
-      x:20,y:20,rotation:0,elevation:1,visualVariant:'solid',
+      kind,label:code+' · '+name,width,height,
+      x:free.x,y:free.y,rotation:0,elevation:1,visualVariant:'solid',
       warehouseLocationId:null,layer:Math.max(0,...draftObjects.map(x=>x.layer))+1,
     });
     checkpoint(draftObjects);
@@ -729,6 +744,24 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     }}));
     setSelectedObjectId(object.id);
     setMessage('Novo local '+code+' preparado. Posicione-o no croqui e salve para cadastrar.');
+  }
+
+  function activateLegacyVisualCopy(object:WarehouseDepotLayoutObject) {
+    if(object.warehouseLocationId||pendingDuplicatedLocals[object.id]
+      ||!CANONICAL_VISUAL_KINDS.includes(object.kind as CanonicalWarehouseVisualKind))return;
+    const kind=object.kind as CanonicalWarehouseVisualKind;
+    const prefixes:Record<CanonicalWarehouseVisualKind,string>={
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+    };
+    const code=nextDuplicatedCode(prefixes[kind]+'00',usedCroquiCodes());
+    const name=kindLabel(kind)+' '+code.split('-').at(-1);
+    setPendingDuplicatedLocals(current=>({...current,[object.id]:{
+      objectId:object.id,sourceLocationId:null,code,name,description:null,
+      subpositionCount:kind==='SHELF'?4:0,
+    }}));
+    setDraftObjects(current=>current.map(item=>item.id===object.id
+      ?{...item,label:code+' · '+name}:item));
+    setMessage('Cópia visual convertida em novo local provisório: '+code+'. Salve para cadastrar.');
   }
 
   function prepareDuplicatedObject(
@@ -1481,9 +1514,20 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Selecione um local no croqui, ou utilize Novo local para cadastrar.
-                  </p>
+                  <div className="mt-2 space-y-3">
+                    <p className="text-xs text-slate-500">
+                      Este elemento ainda não possui cadastro operacional.
+                    </p>
+                    {selectedLayoutObject&&!selectedLayoutObject.warehouseLocationId
+                      &&CANONICAL_VISUAL_KINDS.includes(selectedLayoutObject.kind as CanonicalWarehouseVisualKind)
+                      &&(
+                      <button type="button" data-testid="warehouse-croqui-adopt-visual"
+                        onClick={()=>activateLegacyVisualCopy(selectedLayoutObject)}
+                        className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-bold text-[#00288e]">
+                        Cadastrar este elemento como local
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
