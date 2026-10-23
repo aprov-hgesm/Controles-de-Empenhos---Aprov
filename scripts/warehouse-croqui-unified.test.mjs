@@ -203,6 +203,63 @@ test('versão desatualizada é recusada antes de criar novos locais',async()=>{
   })),/WAREHOUSE_CROQUI_VERSION_CONFLICT/);
   assert.equal(store.rowsOf('layouts').length,1);
 });
+test('EST-02 liberada após inativação pode ser reutilizada com NOVO ID interno',async()=>{
+  const store=createStore(),first=await store.apply(access,input());
+  const archivedId=first.createdLocations[0].id;
+  const removed=await store.apply(access,input({
+    operationId:'12121212-1212-4121-8121-121212121212',
+    baseLayoutId:first.layout.id,expectedVersion:1,objects:[],
+    createLocals:[],archiveLocationIds:[archivedId],
+  }));
+  assert.equal(removed.layout.version,2);
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===archivedId).data.status,'inactive');
+  const newer=await store.apply(access,input({
+    operationId:'34343434-3434-4343-8343-343434343434',
+    baseLayoutId:removed.layout.id,expectedVersion:2,
+    createLocals:[{objectId:objId,code:'EST-01',name:'Estante 01 nova',
+      description:null,sourceLocationId:null,subpositionCount:2}],
+  }));
+  const liveId=newer.createdLocations[0].id;
+  assert.notEqual(liveId,archivedId);
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===archivedId).data.code,'EST-01');
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===archivedId).data.status,'inactive');
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===liveId).data.status,'active');
+  const owner=store.rowsOf('structureCodeClaims').find(x=>x.data.code==='EST-01'&&x.data.entityKind==='LOCAL');
+  assert.equal(owner.data.entityId,liveId);
+  assert.equal(owner.data.previousEntityId,archivedId);
+  assert.equal(store.rowsOf('locations').length,6);
+});
+
+test('inativar e reutilizar código em um mesmo salvar funciona atomicamente',async()=>{
+  const store=createStore(),original=await store.apply(access,input());
+  const oldId=original.createdLocations[0].id;
+  const freshObject=fixed('obj_','d');
+  const saved=await store.apply(access,input({
+    operationId:'56565656-5656-4565-8565-565656565656',
+    baseLayoutId:original.layout.id,expectedVersion:1,
+    objects:[makeObject(freshObject,null,220,20)],
+    archiveLocationIds:[oldId],
+    createLocals:[{objectId:freshObject,code:'EST-01',name:'Estante substituta',
+      description:null,sourceLocationId:null,subpositionCount:1}],
+  }));
+  assert.equal(saved.createdLocations.length,1);
+  assert.notEqual(saved.createdLocations[0].id,oldId);
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===oldId).data.status,'inactive');
+  assert.equal(saved.layout.objects[0].warehouseLocationId,saved.createdLocations[0].id);
+});
+
+test('código visual ativo nunca pode ser sequestrado por um novo registro',async()=>{
+  const store=createStore(),original=await store.apply(access,input());
+  await assert.rejects(()=>store.apply(access,input({
+    operationId:'78787878-7878-4787-8787-787878787878',
+    baseLayoutId:original.layout.id,expectedVersion:1,
+    objects:[...original.layout.objects,makeObject(fixed('obj_','d'),null,220,20)],
+    createLocals:[{objectId:fixed('obj_','d'),code:'EST-01',
+      name:'Estante indevida',description:null,sourceLocationId:null,subpositionCount:0}],
+  })),/WAREHOUSE_CROQUI_DUPLICATE_CODE/);
+  assert.equal(store.rowsOf('locations').filter(x=>x.data.kind==='LOCAL').length,1);
+});
+
 test('subposição pode ser criada, renomeada e inativada em versões posteriores',async()=>{
   const store=createStore(),created=await store.apply(access,input());
   const parent=created.createdLocations[0].id;
