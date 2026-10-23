@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { PackageSearch, Search, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, PackageSearch, RotateCcw, Search, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { warehouseApplianceFrontForView, type WarehouseApplianceFace } from '../../../lib/warehouse/applianceOrientation';
 import { WarehouseColdAppliance3D } from './WarehouseColdAppliance3D';
+import { layoutWarehouseIsoLabels, type WarehouseIsoLabelPlacement } from '../../../lib/warehouse/isometricLabels';
 import {
   fitWarehouseIsometricScene,
   transformWarehouseIsoRectForView,
@@ -111,7 +112,8 @@ function isoPoint(
   const ny = y / scaleBase;
   return {
     x: ORIGIN_X + (nx - ny) * FLOOR_HALF_W,
-    y: ORIGIN_Y + (nx + ny) * FLOOR_HALF_H - z,
+    // Alturas em centimetros seguem a mesma escala horizontal da planta.
+    y: ORIGIN_Y + (nx + ny) * FLOOR_HALF_H - z * (FLOOR_HALF_W / scaleBase),
   };
 }
 
@@ -295,8 +297,8 @@ function renderLabel(
   return (
     <g transform={'translate(' + x + ' ' + y + ')'} pointerEvents="none">
       <line
-        x1="0"
-        y1="0"
+        x1={center.x - x}
+        y1={center.y - y}
         x2="0"
         y2="-15"
         stroke={highlighted ? '#2563eb' : '#9fb0bf'}
@@ -387,6 +389,7 @@ function WarehouseStructure({
   dimmed,
   applianceFront,
   showLabels,
+  labelPlacement,
 }: {
   object: WarehouseDepotLayoutObject;
   logicalWidth: number;
@@ -403,6 +406,7 @@ function WarehouseStructure({
   dimmed: boolean;
   applianceFront: WarehouseApplianceFace;
   showLabels: boolean;
+  labelPlacement: WarehouseIsoLabelPlacement | null;
 }) {
   const kind = canonicalKind(object.kind);
   const z = objectHeight(kind, subpositions.length);
@@ -561,14 +565,14 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.88, highlighted, expiry
         )}
 
-        {showLabels && renderLabel(
+        {showLabels && labelPlacement && renderLabel(
           centerTop,
           code,
           'Palete',
           subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
           highlighted,
-          0,
-          -8
+          labelPlacement.offsetX,
+          labelPlacement.offsetY
         )}
       </g>
     );
@@ -798,14 +802,14 @@ function WarehouseStructure({
 
 
 
-        {showLabels && renderLabel(
+        {showLabels && labelPlacement && renderLabel(
           centerTop,
           code,
           'Estante industrial',
           levels + ' níveis',
           highlighted,
-          0,
-          -10
+          labelPlacement.offsetX,
+          labelPlacement.offsetY
         )}
       </g>
     );
@@ -831,14 +835,14 @@ function WarehouseStructure({
           occupied={occupiedQuantity > 0}
           expiry={expiry}
         />
-        {showLabels && renderLabel(
+        {showLabels && labelPlacement && renderLabel(
           centerTop,
           code,
           kind === 'FREEZER' ? 'Freezer industrial' : 'Geladeira industrial',
           subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
           highlighted,
-          0,
-          -10
+          labelPlacement.offsetX,
+          labelPlacement.offsetY
         )}
       </g>
     );
@@ -913,14 +917,14 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.68, highlighted, expiry, 6
         )}
 
-        {showLabels && renderLabel(
+        {showLabels && labelPlacement && renderLabel(
           centerTop,
           code,
           'Mesa inox',
           subpositions.length ? subpositions.length + ' subposições' : 'Superfície única',
           highlighted,
-          0,
-          -8
+          labelPlacement.offsetX,
+          labelPlacement.offsetY
         )}
       </g>
     );
@@ -963,6 +967,8 @@ export function WarehouseIsometricPreview({
   onNavigateToGlobalLocation,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
+  const [cameraZoom, setCameraZoom] = useState(1);
+  const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
   const [viewTransitioning, setViewTransitioning] = useState(false);
   const [hoveredObject, setHoveredObject] = useState<{
     objectId: string; locationId: string;
@@ -993,6 +999,8 @@ export function WarehouseIsometricPreview({
     if (nextView === previewView || viewTransitioning) return;
 
     setViewTransitioning(true);
+    setCameraZoom(1);
+    setCameraPan({ x: 0, y: 0 });
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
 
     transitionTimerRef.current = setTimeout(() => {
@@ -1029,6 +1037,8 @@ export function WarehouseIsometricPreview({
     setHoveredObject(null);
     setInspectedLocationId(null);
     setDetailLocationId(null);
+    setCameraZoom(1);
+    setCameraPan({ x: 0, y: 0 });
   }, [depotId]);
 
   useEffect(() => {
@@ -1199,6 +1209,35 @@ export function WarehouseIsometricPreview({
   // A câmera SVG deriva da geometria projetada, nunca de offsets fixos.
   // Inclui piso, paredes, volumes e espaço reservado para etiquetas e caixas.
   // A vista altera visibleObjects: o enquadramento se recalcula automaticamente.
+  // Etiquetas pequenas em cenas densas; local selecionado tem prioridade.
+  const labelPlacements = useMemo(() => {
+    if (sceneOnly) return new Map<string, WarehouseIsoLabelPlacement>();
+    return layoutWarehouseIsoLabels(visibleObjects
+      .filter((object) => object.kind !== 'OTHER' || Boolean(object.warehouseLocationId))
+      .map((object) => {
+        const location = object.warehouseLocationId
+          ? locationById.get(object.warehouseLocationId) : undefined;
+        const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
+        const center = isoPoint(
+          object.x + object.width / 2, object.y + object.height / 2,
+          objectHeight(canonicalKind(object.kind), subpositions.length),
+          viewLogicalWidth, viewLogicalHeight
+        );
+        const selected = Boolean(object.warehouseLocationId
+          && (highlightedLocalIds.has(object.warehouseLocationId)
+            || focusedLocationId === object.warehouseLocationId));
+        return {
+          id: object.id, x: center.x, y: center.y,
+          highlighted: selected,
+          priority: selected ? 2 : hoveredObject?.objectId === object.id ? 1 : 0,
+        };
+      }));
+  }, [
+    sceneOnly, visibleObjects, locationById, subpositionsByParent,
+    viewLogicalWidth, viewLogicalHeight, highlightedLocalIds,
+    focusedLocationId, hoveredObject?.objectId,
+  ]);
+
   const cameraViewBox = useMemo(() => {
     // Início uses a fixed floor-anchored camera, independent of object/label
     // count. The normal detailed preview keeps its existing dynamic fit.
@@ -1232,25 +1271,11 @@ export function WarehouseIsometricPreview({
         }
       }
 
-      // A etiqueta selecionada pode ser maior; reservar o espaço no fit
-      // evita cortes durante a pesquisa, sem alterar a projeção da estrutura.
-      if (object.kind !== 'OTHER' || object.warehouseLocationId) {
-        const label = isoPoint(
-          object.x + object.width / 2,
-          object.y + object.height / 2,
-          height,
-          viewLogicalWidth,
-          viewLogicalHeight
-        );
-        const highlighted = object.warehouseLocationId
-          ? highlightedLocalIds.has(object.warehouseLocationId)
-          : false;
-        const labelHalfWidth = highlighted ? 82 : 47;
-        const labelTop = highlighted ? 108 : 80;
-        roomPoints.push(
-          { x: label.x - labelHalfWidth, y: label.y - labelTop },
-          { x: label.x + labelHalfWidth, y: label.y + 36 }
-        );
+      // Somente etiquetas exibidas entram no enquadramento.
+      const placement = labelPlacements.get(object.id);
+      if (placement) {
+        const { x, y, width, height } = placement.bounds;
+        roomPoints.push({ x: x - 8, y: y - 8 }, { x: x + width + 8, y: y + height + 8 });
       }
     }
 
@@ -1260,12 +1285,29 @@ export function WarehouseIsometricPreview({
       width: viewWidth,
       height: viewHeight,
       padding: embedded ? 62 : 72,
-      maxZoom: 1.28,
+      maxZoom: Math.max(viewLogicalWidth, viewLogicalHeight)
+        / Math.max(1, Math.min(viewLogicalWidth, viewLogicalHeight)) >= 2.5 ? 1.65 : 1.28,
     });
   }, [
     embedded, sceneOnly, viewLogicalWidth, viewLogicalHeight, visibleObjects,
-    locationById, subpositionsByParent, highlightedLocalIds,
+    locationById, subpositionsByParent, labelPlacements,
   ]);
+
+  const activeCameraViewBox = useMemo(() => {
+    const width = cameraViewBox.width / cameraZoom;
+    const height = cameraViewBox.height / cameraZoom;
+    return {
+      x: cameraViewBox.x + (cameraViewBox.width - width) / 2 + cameraPan.x * cameraViewBox.width,
+      y: cameraViewBox.y + (cameraViewBox.height - height) / 2 + cameraPan.y * cameraViewBox.height,
+      width, height,
+    };
+  }, [cameraViewBox, cameraZoom, cameraPan]);
+
+  const nudgeCamera = (x: number, y: number) =>
+    setCameraPan((previous) => ({
+      x: Math.max(-0.8, Math.min(0.8, previous.x + x / cameraZoom)),
+      y: Math.max(-0.8, Math.min(0.8, previous.y + y / cameraZoom)),
+    }));
 
   return (
     <section
@@ -1442,7 +1484,7 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
-            viewBox={[cameraViewBox.x, cameraViewBox.y, cameraViewBox.width, cameraViewBox.height].join(' ')}
+            viewBox={[activeCameraViewBox.x, activeCameraViewBox.y, activeCameraViewBox.width, activeCameraViewBox.height].join(' ')}
             preserveAspectRatio={sceneOnly ? 'none' : 'xMidYMid meet'}
             pointerEvents={sceneOnly ? 'none' : undefined}
             data-camera-fit={sceneOnly ? 'aligned-floor' : 'bounds'}
@@ -1730,6 +1772,7 @@ export function WarehouseIsometricPreview({
                     dimmed={hasActiveSelection && !highlighted}
                     applianceFront={object.applianceFront}
                     showLabels={!sceneOnly}
+                    labelPlacement={labelPlacements.get(object.id) || null}
                   />
                   </g>
                 );
