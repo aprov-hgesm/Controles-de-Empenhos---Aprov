@@ -32,6 +32,7 @@ const groups = [
   [/barcode|label/i, ['test:adm-deposito-barcode-outbound']],
   [/intake|invoice|queue|manual.entry/i, ['test:adm-deposito-nf-stock', 'test:adm-deposito-manual-entry']],
   [/layout|croquis|depot|archive/i, ['test:adm-deposito-depot-layout', 'test:warehouse-depot-registration-r1']],
+  [/isometric|3d|visualclarity/i, ['test:warehouse-isometric-camera']],
   [/logistics|alert/i, ['test:adm-deposito-logistics']],
   [/mobile/i, ['test:mobile-k-canonical-ops']],
 ];
