@@ -1137,7 +1137,7 @@ export function WarehouseIsometricPreview({
             previewView
           ),
           // Physical door normal is derived BEFORE rotating the room.
-          applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView),
+          applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView, object.rotation),
         }))
         .sort((left, right) => {
           // Painter's order follows the furthest occupied floor corner, not the
@@ -1839,6 +1839,31 @@ export function WarehouseIsometricPreview({
                     applianceFront={object.applianceFront}
                     showLabels={!sceneOnly}
                   />
+                  {!sceneOnly && (hovered || highlighted || localFocusedId === locationId) && (
+                    <g data-visual-role="warehouse-physical-front" pointerEvents="none">
+                      {(() => {
+                        const face = object.applianceFront;
+                        const frontX = face === 'x+' ? object.x + object.width
+                          : face === 'x-' ? object.x
+                          : object.x + object.width / 2;
+                        const frontY = face === 'y+' ? object.y + object.height
+                          : face === 'y-' ? object.y
+                          : object.y + object.height / 2;
+                        const p = isoPoint(frontX, frontY, 2, viewLogicalWidth, viewLogicalHeight);
+                        return (
+                          <>
+                            <circle cx={p.x} cy={p.y} r="5.2"
+                              stroke="#ffffff" strokeWidth="1.4" fill="#059669" />
+                            <text x={p.x} y={p.y - 9} textAnchor="middle"
+                              fill="#065f46" fontSize="8" fontWeight="900"
+                              paintOrder="stroke" stroke="#ffffff" strokeWidth="2.6">
+                              FRENTE
+                            </text>
+                          </>
+                        );
+                      })()}
+                    </g>
+                  )}
                   </g>
                 );
               })}
