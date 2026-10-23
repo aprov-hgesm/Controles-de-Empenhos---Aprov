@@ -25,6 +25,7 @@ import {
   warehouseCanonicalLocationBalanceReadInput, warehouseCanonicalLotReadInput,
 } from '../warehouse/readCompatibility';
 import type { SaveWarehouseDepotLayoutVersionInput } from '../warehouse/layoutRepository';
+import { warehouseFindOverlappingLocals } from '../warehouse/layoutCollision';
 
 export interface CroquiCreateLocal {
   objectId: string;
@@ -288,6 +289,10 @@ export async function warehouseStructureLayoutApplyServer(
     previousVersionId:current?.layout.id??null,createdBy:access.uid,updatedBy:access.uid,
   },{expectedWorkspaceId:ws,expectedUg:ug});
   if(!candidate.ok)return fail('WAREHOUSE_CROQUI_LAYOUT_INPUT',400);
+  // Validacao autoritativa: um cliente adulterado nao pode gravar locais
+  // ocupando a mesma area, mesmo que o editor bloqueie a interacao.
+  if(warehouseFindOverlappingLocals(candidate.data.objects).length)
+    return fail('WAREHOUSE_CROQUI_LOCATION_OVERLAP',409);
   const layout=candidate.data;
   const archiveBalances=archives.size?
     await warehouseAdminListCollection(authToken,ws,'locationBalances',500):[];
