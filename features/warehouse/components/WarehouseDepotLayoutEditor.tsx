@@ -665,9 +665,7 @@ export function WarehouseDepotLayoutEditor({
                   event.stopPropagation();
                   interactionRef.current = null;
                   onSelectedObjectIdChange(object.id);
-                  const root = editorRootRef.current;
-                  if (!root) return;
-                  const bounds = root.getBoundingClientRect();
+                  if (!editorRootRef.current) return;
                   // Coordenadas de viewport. O menu e montado em document.body
                   // para nao herdar transforms/overflow do croqui 2D.
                   const cx = event.clientX;
