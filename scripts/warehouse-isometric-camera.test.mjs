@@ -376,14 +376,20 @@ test('rotação contrária, limites do ambiente e frente de locais estreitos', (
   assert.equal(turnWarehouseLayoutObject(left,1,2000,600).rotation,0);
   const narrow={...tall,x:5,y:5,width:200,height:90};
   assert.throws(()=>turnWarehouseLayoutObject(narrow,1,250,70),/OUT_OF_BOUNDS/);
-  assert.throws(()=>turnWarehouseLayoutObject(tall,2,2000,600),/TURN_INVALID/);
+  const half=turnWarehouseLayoutObject(tall,2,2000,600);
+  assert.equal(half.rotation,180);
+  assert.equal(half.width,tall.width);
+  assert.equal(half.height,tall.height);
+  assert.equal(half.x,tall.x);
+  assert.equal(half.y,tall.y);
+  assert.throws(()=>turnWarehouseLayoutObject(tall,3,2000,600),/TURN_INVALID/);
 });
 
 test('editor 2D mantém orientação, zoom pelo cursor, pan de espaço e indicadores', () => {
   const editor=readFileSync(resolve(root,'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),'utf8');
   const croqui=readFileSync(resolve(root,'features/warehouse/components/WarehouseCroquisR1Operational.tsx'),'utf8');
   assert.match(editor,/turnWarehouseLayoutObject\(start, turns, logicalWidth, logicalHeight\)/);
-  assert.match(editor,/turnWarehouseLayoutObject\(selected, quarters, logicalWidth, logicalHeight\)/);
+  assert.match(editor,/turnWarehouseLayoutObject\(target, quarters, logicalWidth, logicalHeight\)/);
   assert.match(editor,/event\.deltaY < 0 \? 0\.12 : -0\.12/);
   assert.match(editor,/viewport\.addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
   assert.match(editor,/event\.code !== 'Space'/);
