@@ -34,6 +34,12 @@ export interface CroquiCreateLocal {
   sourceLocationId: string | null;
   subpositionCount: number;
 }
+export interface CroquiCreateSubposition {
+  parentLocationId: string;
+  code: string;
+  name: string;
+  description: string | null;
+}
 export interface CroquiRenameLocal {
   id: string;
   name: string;
@@ -42,8 +48,10 @@ export interface CroquiRenameLocal {
 export interface CroquiStructureApplyInput extends SaveWarehouseDepotLayoutVersionInput {
   operationId: string;
   createLocals: CroquiCreateLocal[];
+  createSubpositions: CroquiCreateSubposition[];
   editLocals: CroquiRenameLocal[];
   archiveLocationIds: string[];
+  archiveSubpositionIds: string[];
 }
 export interface CroquiStructureApplyResult {
   layout: WarehouseDepotLayout;
@@ -89,8 +97,10 @@ export async function warehouseStructureLayoutApplyServer(
     ||typeof data.operationId!=='string'||!/^[a-f0-9-]{32,40}$/.test(data.operationId)
     ||!nonempty(data.name)||!Array.isArray(data.objects)||data.objects.length>160
     ||!Array.isArray(data.createLocals)||data.createLocals.length>12
-    ||!Array.isArray(data.editLocals)||data.editLocals.length>24
+    ||!Array.isArray(data.createSubpositions)||data.createSubpositions.length>20
+    ||!Array.isArray(data.editLocals)||data.editLocals.length>30
     ||!Array.isArray(data.archiveLocationIds)||data.archiveLocationIds.length>12
+    ||!Array.isArray(data.archiveSubpositionIds)||data.archiveSubpositionIds.length>20
     ||!Object.prototype.hasOwnProperty.call(data,'expectedVersion')
     ||!Object.prototype.hasOwnProperty.call(data,'baseLayoutId')
     ||!(data.expectedVersion===null||(typeof data.expectedVersion==='number'&&Number.isInteger(data.expectedVersion)&&data.expectedVersion>=1))
@@ -179,6 +189,30 @@ export async function warehouseStructureLayoutApplyServer(
       }
     }
   }
+  const existingChildCodes = new Set(currentLocations
+    .filter(loc=>loc.kind==='SUBPOSITION'&&loc.status==='active')
+    .map(loc=>loc.parentLocationId+':'+loc.code));
+  const newChildCodes=new Set<string>();
+  for(const child of data.createSubpositions){
+    if(!child||typeof child.parentLocationId!=='string'
+      ||!/^loc_[a-f0-9]{32}$/.test(child.parentLocationId)
+      ||typeof child.code!=='string'||!nonempty(child.name)
+      ||(child.description!==null&&typeof child.description!=='string'))
+      return fail('WAREHOUSE_CROQUI_SUBPOSITION_INPUT',400);
+    const parent=byId.get(child.parentLocationId);
+    if(!parent)return fail('WAREHOUSE_CROQUI_PARENT_MISSING');
+    const parsed=existingLocation(access,parent);
+    if(parsed.kind!=='LOCAL'||parsed.depotId!==depotId||parsed.status!=='active')
+      return fail('WAREHOUSE_CROQUI_PARENT_INVALID');
+    const code=normalizeWarehouseLogicalCode(child.code);
+    if(!code)return fail('WAREHOUSE_CROQUI_SUBPOSITION_CODE',400);
+    const scoped=parsed.id+':'+code;
+    if(existingChildCodes.has(scoped)||newChildCodes.has(scoped))
+      return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
+    newChildCodes.add(scoped);
+    createLocation('SUBPOSITION',code,child.name,child.description,
+      parsed.id,'new-sub:'+parsed.id+':'+code);
+  }
   const objects=data.objects.map(item=>{
     const loc=createByObject.get(item.id);
     return loc?{...item,warehouseLocationId:loc.id,label:loc.code+' · '+loc.name}:item;
@@ -194,6 +228,11 @@ export async function warehouseStructureLayoutApplyServer(
     return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
   const archiveIds=new Set(data.archiveLocationIds);
   if(archiveIds.size!==data.archiveLocationIds.length)return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
+  if(data.archiveSubpositionIds.some(id=>typeof id!=='string'||!/^sub_[a-f0-9]{32}$/.test(id)))
+    return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
+  const directChildArchives=new Set(data.archiveSubpositionIds);
+  if(directChildArchives.size!==data.archiveSubpositionIds.length)
+    return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
   const updatedIds=new Set<string>();
   const edits=data.editLocals.map(item=>{
     if(!item||typeof item.id!=='string'||updatedIds.has(item.id)
@@ -203,11 +242,21 @@ export async function warehouseStructureLayoutApplyServer(
     const row=byId.get(item.id);
     if(!row)return fail('WAREHOUSE_CROQUI_EDIT_NOT_FOUND');
     const loc=existingLocation(access,row);
-    if(loc.kind!=='LOCAL'||loc.status!=='active'||loc.depotId!==depotId||archiveIds.has(loc.id))
+    if(loc.status!=='active'||loc.depotId!==depotId
+      ||(loc.kind!=='LOCAL'&&loc.kind!=='SUBPOSITION')
+      ||archiveIds.has(loc.id)||directChildArchives.has(loc.id))
       return fail('WAREHOUSE_CROQUI_EDIT_INVALID');
     return {id:item.id,location:loc,name:item.name.trim(),description:item.description};
   });
   const archives=new Set<string>();
+  for(const id of directChildArchives){
+    const row=byId.get(id);
+    if(!row)return fail('WAREHOUSE_CROQUI_ARCHIVE_NOT_FOUND');
+    const child=existingLocation(access,row);
+    if(child.kind!=='SUBPOSITION'||child.status!=='active'||child.depotId!==depotId)
+      return fail('WAREHOUSE_CROQUI_ARCHIVE_INVALID');
+    archives.add(id);
+  }
   for(const id of archiveIds){
     const row=byId.get(id);
     if(!row)return fail('WAREHOUSE_CROQUI_ARCHIVE_NOT_FOUND');
@@ -250,6 +299,7 @@ export async function warehouseStructureLayoutApplyServer(
     ...(current?[current.row.path]:[]),
     ...refs.filter(id=>!newRows.some(n=>n.location.id===id)).map(id=>path(ws,'locations',id)),
     ...newRows.flatMap(n=>[path(ws,'locations',n.location.id),path(ws,'structureCodeClaims',n.claim)]),
+    ...data.createSubpositions.map(child=>path(ws,'locations',child.parentLocationId)),
     ...edits.map(e=>path(ws,'locations',e.id)),
     ...[...archives].map(id=>path(ws,'locations',id)),
     ...balances.map(row=>row.path),...lots.map(row=>row.path),
@@ -278,6 +328,13 @@ export async function warehouseStructureLayoutApplyServer(
       const loc=existingLocation(access,row);
       if(loc.status!=='active'||loc.depotId!==depotId||loc.kind!=='LOCAL')
         return fail('WAREHOUSE_CROQUI_LOCATION_INVALID');
+    }
+    for(const child of data.createSubpositions){
+      const row=rows.get(path(ws,'locations',child.parentLocationId));
+      if(!row)return fail('WAREHOUSE_CROQUI_PARENT_MISSING');
+      const parent=existingLocation(access,row);
+      if(parent.status!=='active'||parent.depotId!==depotId||parent.kind!=='LOCAL')
+        return fail('WAREHOUSE_CROQUI_PARENT_INVALID');
     }
     for(const {location,claim} of newRows){
       if(rows.get(path(ws,'locations',location.id))
@@ -343,7 +400,7 @@ export async function warehouseStructureLayoutApplyServer(
     }
     return {result:{
       layout,createdLocations:createSpecs.map(x=>x.location),
-      archivedLocationIds:[...archiveIds],
+      archivedLocationIds:[...archives],
     },writes};
   });
 }
