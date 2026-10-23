@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Central unica: cadastro, gerenciamento, regras server-only e leitura IAM.
+if (files.some((p) => /^(?:firebase\.json|firestore\.warehouse\.server-only\.rules|scripts\/verify-emprovex-warehouse-isolation\.mjs|lib\/server\/warehouse(?:CroquiRead|LedgerAndArchive)\.ts|lib\/warehouse\/croquiReadRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotQuickCreate|DepotsOperational)\.tsx|scripts\/warehouse-croqui-fusion\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-fusion');
+}
 // Croqui de edição: clique direito, rotação, medidas, subposições e 3D sem luminárias.
 if (files.some((p) => /^(?:lib\/warehouse\/layoutOrientation\.ts|lib\/server\/warehouseStructureLayoutApply\.ts|features\/warehouse\/components\/Warehouse(?:DepotLayoutEditor|CroquisR1Operational|Depot20x6Demo|IsometricPreview)\.tsx|scripts\/warehouse-context-menu\.test\.mjs)$/.test(p))) {
   add('test:warehouse-context-menu');
