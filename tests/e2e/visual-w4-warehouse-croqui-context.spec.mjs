@@ -25,6 +25,41 @@ test.describe('Croqui 2D — menu do botao direito', () => {
     await expect(front).toHaveAttribute('title', frontBefore);
   });
 
+  test('menu fica junto ao cursor, inclusive no pallet inferior e perto das bordas', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/visual-lab/deposito-20x6');
+    const editor = page.getByTestId('warehouse-layout-professional-editor');
+    const menu = page.getByTestId('warehouse-croqui-context-menu');
+    for (const name of ['EST-01', 'PAL-06']) {
+      const local = editor.locator('[data-testid^="warehouse-editor-object-"]')
+        .filter({ hasText: name }).first();
+      await expect(local).toBeVisible();
+      const box = await local.boundingBox();
+      expect(box).not.toBeNull();
+      // Playwright clica no centro do objeto, como um operador real.
+      const cursorX = box.x + box.width / 2;
+      const cursorY = box.y + box.height / 2;
+      await local.click({ button: 'right' });
+      await expect(menu).toBeVisible();
+      const position = await menu.boundingBox();
+      const bounds = await editor.boundingBox();
+      expect(position).not.toBeNull();
+      expect(bounds).not.toBeNull();
+      const horizontalGap = Math.max(0, position.x - cursorX,
+        cursorX - position.x - position.width);
+      const verticalGap = Math.max(0, position.y - cursorY,
+        cursorY - position.y - position.height);
+      expect(horizontalGap).toBeLessThanOrEqual(18);
+      expect(verticalGap).toBeLessThanOrEqual(18);
+      expect(position.x).toBeGreaterThanOrEqual(bounds.x);
+      expect(position.x + position.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+      expect(position.y).toBeGreaterThanOrEqual(bounds.y);
+      expect(position.y + position.height).toBeLessThanOrEqual(bounds.y + bounds.height + 1);
+      await page.keyboard.press('Escape');
+      await expect(menu).toHaveCount(0);
+    }
+  });
+
   test('janela de dimensoes aplica valor valido e rejeita valor fora do deposito', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/visual-lab/deposito-20x6');
