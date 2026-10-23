@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { WarehouseRecoveredLink } from './WarehouseRecoveredLink';
 
 import { AppShellSignature } from '../../../components/layout/chrome/AppShellSignature';
 import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
@@ -131,7 +132,7 @@ export function WarehouseSidebar({
               const Icon = SECTION_ICONS[item.id];
               const active = item.id === activeSection;
               return (
-                <Link
+                <WarehouseRecoveredLink
                   key={item.id}
                   href={item.href}
                   onClick={onClose}
@@ -142,7 +143,7 @@ export function WarehouseSidebar({
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
                   <span>{item.label}</span>
-                </Link>
+                </WarehouseRecoveredLink>
               );
             })}
 
