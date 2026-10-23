@@ -202,6 +202,8 @@ export async function warehouseStructureLayoutApplyServer(
       ||typeof child.code!=='string'||!nonempty(child.name)
       ||(child.description!==null&&typeof child.description!=='string'))
       return fail('WAREHOUSE_CROQUI_SUBPOSITION_INPUT',400);
+    if(data.archiveLocationIds.includes(child.parentLocationId))
+      return fail('WAREHOUSE_CROQUI_ARCHIVED_PARENT',400);
     const parent=byId.get(child.parentLocationId);
     if(!parent)return fail('WAREHOUSE_CROQUI_PARENT_MISSING');
     const parsed=existingLocation(access,parent);
@@ -247,7 +249,8 @@ export async function warehouseStructureLayoutApplyServer(
     const loc=existingLocation(access,row);
     if(loc.status!=='active'||loc.depotId!==depotId
       ||(loc.kind!=='LOCAL'&&loc.kind!=='SUBPOSITION')
-      ||archiveIds.has(loc.id)||directChildArchives.has(loc.id))
+      ||archiveIds.has(loc.id)||directChildArchives.has(loc.id)
+      ||(loc.parentLocationId!==null&&archiveIds.has(loc.parentLocationId)))
       return fail('WAREHOUSE_CROQUI_EDIT_INVALID');
     return {id:item.id,location:loc,name:item.name.trim(),description:item.description};
   });
@@ -303,6 +306,11 @@ export async function warehouseStructureLayoutApplyServer(
     ...refs.filter(id=>!newRows.some(n=>n.location.id===id)).map(id=>path(ws,'locations',id)),
     ...newRows.flatMap(n=>[path(ws,'locations',n.location.id),path(ws,'structureCodeClaims',n.claim)]),
     ...data.createSubpositions.map(child=>path(ws,'locations',child.parentLocationId)),
+    ...createSpecs.flatMap(entry=>entry.spec.sourceLocationId
+      ?[path(ws,'locations',entry.spec.sourceLocationId),
+        ...currentLocations.filter(c=>c.parentLocationId===entry.spec.sourceLocationId&&c.status==='active')
+          .map(c=>path(ws,'locations',c.id))]
+      :[]),
     ...edits.map(e=>path(ws,'locations',e.id)),
     ...[...archives].map(id=>path(ws,'locations',id)),
     ...balances.map(row=>row.path),...lots.map(row=>row.path),
@@ -331,6 +339,19 @@ export async function warehouseStructureLayoutApplyServer(
       const loc=existingLocation(access,row);
       if(loc.status!=='active'||loc.depotId!==depotId||loc.kind!=='LOCAL')
         return fail('WAREHOUSE_CROQUI_LOCATION_INVALID');
+    }
+    for(const entry of createSpecs){
+      if(!entry.spec.sourceLocationId)continue;
+      const source=rows.get(path(ws,'locations',entry.spec.sourceLocationId));
+      if(!source)return fail('WAREHOUSE_CROQUI_SOURCE_CHANGED');
+      const loc=existingLocation(access,source);
+      if(loc.status!=='active'||loc.depotId!==depotId)
+        return fail('WAREHOUSE_CROQUI_SOURCE_CHANGED');
+      for(const child of currentLocations.filter(c=>c.parentLocationId===loc.id&&c.status==='active')){
+        const fresh=rows.get(path(ws,'locations',child.id));
+        if(!fresh||existingLocation(access,fresh).status!=='active')
+          return fail('WAREHOUSE_CROQUI_SOURCE_CHANGED');
+      }
     }
     for(const child of data.createSubpositions){
       const row=rows.get(path(ws,'locations',child.parentLocationId));
