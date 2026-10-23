@@ -167,6 +167,36 @@ test('duplicação de estante clona os códigos filhos sem copiar estoque',async
     .map(x=>x.data.code).sort(),['EST-02','EST-02-01','EST-02-02']);
   assert.equal(store.rowsOf('locationBalances').length,0);
 });
+test('copia de estante com inclusao pelo menu cria subposicao extra no mesmo commit',async()=>{
+  const store=createStore(),first=await store.apply(access,input());
+  const cloneId=fixed('obj_','d');
+  const second=await store.apply(access,input({
+    operationId:'99999999-ffff-4999-8999-999999999999',
+    objects:[...first.layout.objects,makeObject(cloneId,null,220,20)],
+    baseLayoutId:first.layout.id,expectedVersion:1,
+    createLocals:[{objectId:cloneId,code:'EST-02',name:'Estante 02',
+      description:null,sourceLocationId:first.createdLocations[0].id,subpositionCount:1}],
+  }));
+  assert.equal(second.createdLocations.length,1);
+  assert.deepEqual(store.rowsOf('locations').filter(x=>x.data.code.startsWith('EST-02'))
+    .map(x=>x.data.code).sort(),['EST-02','EST-02-01','EST-02-02','EST-02-03']);
+  assert.equal(store.rowsOf('locationBalances').length,0);
+});
+
+test('limite de 30 subposicoes copiadas e novas bloqueia todo o salvamento',async()=>{
+  const store=createStore(),first=await store.apply(access,input());
+  const cloneId=fixed('obj_','d');
+  await assert.rejects(()=>store.apply(access,input({
+    operationId:'88888888-ffff-4888-8888-888888888888',
+    objects:[...first.layout.objects,makeObject(cloneId,null,220,20)],
+    baseLayoutId:first.layout.id,expectedVersion:1,
+    createLocals:[{objectId:cloneId,code:'EST-02',name:'Estante 02',
+      description:null,sourceLocationId:first.createdLocations[0].id,subpositionCount:29}],
+  })),/WAREHOUSE_CROQUI_TOO_MANY_SUBPOSITIONS/);
+  assert.equal(store.rowsOf('locations').length,3);
+  assert.equal(store.rowsOf('layouts').length,1);
+});
+
 test('servidor rejeita duplo local no mesmo espaço sem criar documentos extras',async()=>{
   const store=createStore(),first=await store.apply(access,input());
   const secondId=fixed('obj_','d');
