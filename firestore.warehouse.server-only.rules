@@ -2,12 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WAREHOUSE-SERVER-R2 — futuro ruleset read-only.
-    //
-    // NÃO publicá-lo antes da migração de TODOS os comandos mutáveis:
-    // ele deliberadamente nega escrita SDK no namespace inteiro.
-    // Os endpoints autenticados usam serviço IAM/REST Admin e não passam
-    // pelas Security Rules de clientes.
+    // WAREHOUSE-SERVER-R2 — release candidate read-only.
+    // TODAS as mutações canônicas do Warehouse são validadas no código do
+    // servidor (IAM / REST Admin); nenhum cliente pode gravar pelo SDK.
+    // Não publicar antes de aprovar Emulator + smoke de todos os fluxos.
+    // As Rules mantêm somente o isolamento indispensável nas leituras SDK
+    // que ainda existem em outros módulos (3D/relatórios/etiquetas).
     function signedIn() {
       return request.auth != null
         && request.auth.token.email_verified == true
