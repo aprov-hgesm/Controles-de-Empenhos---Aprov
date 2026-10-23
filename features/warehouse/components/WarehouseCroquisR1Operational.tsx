@@ -193,6 +193,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
   const [localEdits, setLocalEdits] = useState<Record<string, {name:string;description:string|null}>>({});
   const [newKind, setNewKind] = useState<CanonicalWarehouseVisualKind>('SHELF');
+  const [newSubpositions, setNewSubpositions] = useState<Array<{
+    parentLocationId:string;code:string;name:string;description:string|null;
+  }>>([]);
+  const [removedSubpositionIds, setRemovedSubpositionIds] = useState<string[]>([]);
   const saveOperationRef = useRef<string | null>(null);
   const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
   const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
@@ -212,7 +216,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
 
   useEffect(()=>{saveOperationRef.current=null;},[
-    draftObjects,pendingDuplicatedLocals,pendingRemovedLocationIds,localEdits,draftName,draftWidth,draftHeight,
+    draftObjects,pendingDuplicatedLocals,pendingRemovedLocationIds,localEdits,
+    newSubpositions,removedSubpositionIds,draftName,draftWidth,draftHeight,
   ]);
 
   const [loading, setLoading] = useState(true);
@@ -276,6 +281,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
       setLocalEdits({});
+      setNewSubpositions([]);
+      setRemovedSubpositionIds([]);
       saveOperationRef.current = null;
       const globalJump = navigationRef.current === selectedDepotId;
       navigationRef.current = null;
@@ -674,8 +681,22 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     || (selectedLocation ? localEdits[selectedLocation.id]?.name || selectedLocation.name : '');
   const selectedChildren = selectedLocation
     ? locations.filter((row) => row.location.parentLocationId === selectedLocation.id
-      && row.location.kind === 'SUBPOSITION' && row.location.status === 'active')
+      && row.location.kind === 'SUBPOSITION' && row.location.status === 'active'
+      && !removedSubpositionIds.includes(row.location.id))
     : [];
+  function addCroquiSubposition(parentId:string,code:string) {
+    const used=new Set([
+      ...locations.filter(row=>row.location.parentLocationId===parentId&&row.location.status==='active')
+        .map(row=>row.location.code),
+      ...newSubpositions.filter(row=>row.parentLocationId===parentId).map(row=>row.code),
+    ]);
+    const nextCode=nextDuplicatedCode(code+'-00',used);
+    const sequence=nextCode.split('-').at(-1)||'01';
+    setNewSubpositions(current=>[...current,{
+      parentLocationId:parentId,code:nextCode,name:'Subposição '+sequence,description:null,
+    }]);
+    setMessage(nextCode+' preparada. A nova subposição será cadastrada ao salvar.');
+  }
 
   const usedCroquiCodes = () => new Set([
     ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active')
@@ -770,13 +791,16 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         name:draftName.trim()||'Croqui principal',depotId:selectedDepotId,
         logicalWidth:draftWidth,logicalHeight:draftHeight,objects:cloneObjects(draftObjects),
         baseLayoutId:activeLayout?.id||null,expectedVersion:activeLayout?.version??null,
-        createLocals,editLocals,archiveLocationIds,
+        createLocals,createSubpositions:newSubpositions,editLocals,archiveLocationIds,
+        archiveSubpositionIds:removedSubpositionIds,
       });
       setActiveLayout(result.layout);
       setDraftObjects(cloneObjects(result.layout.objects));
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
       setLocalEdits({});
+      setNewSubpositions([]);
+      setRemovedSubpositionIds([]);
       setDraftHistory({past:[],future:[]});
       setPreviewLoaded(false);
       setMessage('Estrutura e croqui salvos juntos. Versão '+result.layout.version+' ativa. '
@@ -1347,10 +1371,49 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                         <p className="text-[10px] font-black text-slate-600">
                           {selectedChildren.length} subposição(ões) cadastradas
                         </p>
-                        {selectedChildren.map(child=><p key={child.location.id}
-                          className="mt-1 text-[10px] text-slate-600">
-                          {child.location.code} · {child.location.name}
-                        </p>)}
+                        {selectedChildren.map(child=>(
+                          <div key={child.location.id} className="mt-2 flex items-center gap-1">
+                            <span className="w-16 shrink-0 truncate font-mono text-[9px]">{child.location.code}</span>
+                            <input maxLength={120} aria-label={'Nome '+child.location.code}
+                              value={localEdits[child.location.id]?.name||child.location.name}
+                              onChange={event=>setLocalEdits(current=>({
+                                ...current,[child.location.id]:{
+                                  name:event.target.value,
+                                  description:current[child.location.id]?.description??child.location.description??null,
+                                },
+                              }))}
+                              className="min-w-0 flex-1 rounded border border-slate-200 p-1 text-[10px]"/>
+                            <button type="button" title={'Inativar '+child.location.code}
+                              onClick={()=>{
+                                if(window.confirm('Inativar '+child.location.code+' ao salvar? '
+                                  +'Somente se não possuir estoque ativo.')){
+                                  setRemovedSubpositionIds(current=>[...current,child.location.id]);
+                                }
+                              }}
+                              className="rounded border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700">×</button>
+                          </div>
+                        ))}
+                        {newSubpositions.filter(child=>child.parentLocationId===selectedLocation.id)
+                          .map(child=>(
+                            <div key={child.code} className="mt-2 flex items-center gap-1">
+                              <span className="w-16 shrink-0 truncate font-mono text-[9px]">{child.code}</span>
+                              <input maxLength={120} aria-label={'Nome '+child.code}
+                                value={child.name}
+                                onChange={event=>setNewSubpositions(current=>current.map(row=>
+                                  row.parentLocationId===child.parentLocationId&&row.code===child.code
+                                  ?{...row,name:event.target.value}:row))}
+                                className="min-w-0 flex-1 rounded border border-blue-200 bg-blue-50 p-1 text-[10px]"/>
+                              <button type="button" title={'Descartar '+child.code}
+                                onClick={()=>setNewSubpositions(current=>current.filter(row=>row!==child))}
+                                className="rounded border border-slate-200 px-2 py-1 text-[10px]">×</button>
+                            </div>
+                          ))}
+                        <button type="button" onClick={()=>addCroquiSubposition(selectedLocation.id,selectedLocation.code)}
+                          disabled={saving}
+                          data-testid="warehouse-croqui-create-subposition"
+                          className="mt-3 rounded-lg bg-blue-100 px-3 py-1.5 text-[10px] font-bold text-[#00288e]">
+                          + Nova subposição
+                        </button>
                       </div>
                     )}
                     <p className="text-[10px] text-slate-500">
