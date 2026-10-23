@@ -430,7 +430,7 @@ export function WarehouseDepotLayoutEditor({
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
           <button type="button" aria-label="Centralizar croqui e ajustar zoom" onClick={centerCamera} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-blue-50"><Crosshair className="h-3.5 w-3.5" /></button>
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'top' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Vista superior</button>
-          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Prévia 3D</button>
+          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Perspectiva rápida (2,5D)</button>
         </div>
       </div>
 
