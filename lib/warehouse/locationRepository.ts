@@ -178,7 +178,7 @@ function invalidateWarehouseDepotReadCache(workspaceId: string): void {
   depotItemReadCache.invalidate(workspaceId);
 }
 
-function invalidateWarehouseLocationReadCache(workspaceId: string): void {
+export function invalidateWarehouseLocationReadCache(workspaceId: string): void {
   locationListReadCache.invalidate(workspaceId);
   locationItemReadCache.invalidate(workspaceId);
 }
