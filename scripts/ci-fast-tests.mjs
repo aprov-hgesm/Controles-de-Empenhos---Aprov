@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// UX: não mostrar os IDs internos e exibir apenas o código do local no card 2D.
+if (files.some((p) => /^(?:lib\/warehouse\/croquiCardLabel\.ts|features\/warehouse\/components\/WarehouseDepotLayoutEditor\.tsx|scripts\/warehouse-croqui-card-code\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-card-code');
+}
 // Geometria: detectar intersecao de locais no navegador e no servidor.
 if (files.some((p) => /^(?:lib\/warehouse\/layoutCollision\.ts|lib\/server\/warehouse(?:StructureLayoutApply|RemainingWrites)\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotLayoutEditor|Depot20x6Demo)\.tsx|scripts\/warehouse-croqui-collision\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-collision');
