@@ -146,7 +146,7 @@ export async function warehouseStructureLayoutApplyServer(
     const code=normalizeWarehouseLogicalCode(codeInput);
     if(!code||!nonempty(name))return fail('WAREHOUSE_CROQUI_LOCATION_INPUT',400);
     const id=deterministicId(kind==='LOCAL'?'loc_':'sub_',ws+':'+data.operationId+':'+seed);
-    if(description!==null && (typeof description!=='string'||description.length>500))
+    if(description!==null && (typeof description!=='string'||description.length>240))
       return fail('WAREHOUSE_CROQUI_LOCATION_DESCRIPTION',400);
     const candidate={
       schemaVersion:WAREHOUSE_LOCATION_SCHEMA_VERSION,id,workspaceId:ws,ug,depotId,kind,
