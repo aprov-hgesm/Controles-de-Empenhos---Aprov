@@ -11,7 +11,7 @@ import {
   Warehouse,
   ArrowLeftRight,
 } from 'lucide-react';
-import Link from 'next/link';
+import { WarehouseRecoveredLink } from '../components/WarehouseRecoveredLink';
 
 interface OperatorAction {
   label: string;
@@ -87,7 +87,7 @@ function OperatorActionCard({ action }: { action: OperatorAction }) {
   const Icon = action.Icon;
 
   return (
-    <Link
+    <WarehouseRecoveredLink
       href={action.href}
       aria-label={'Abrir operação: ' + action.label}
       data-testid={'operator-mobile-action-' + action.number}
@@ -116,7 +116,7 @@ function OperatorActionCard({ action }: { action: OperatorAction }) {
           aria-hidden="true"
         />
       </div>
-    </Link>
+    </WarehouseRecoveredLink>
   );
 }
 
