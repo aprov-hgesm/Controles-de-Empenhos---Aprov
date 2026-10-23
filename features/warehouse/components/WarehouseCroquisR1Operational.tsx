@@ -211,6 +211,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const navigationRef = useRef<string | null>(null);
   const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
 
+  useEffect(()=>{saveOperationRef.current=null;},[
+    draftObjects,pendingDuplicatedLocals,pendingRemovedLocationIds,localEdits,draftName,draftWidth,draftHeight,
+  ]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -1137,12 +1141,25 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <Plus className="h-4 w-4 text-[#00288e]" />
-                  <h3 className="text-sm font-black text-slate-900">Locais do depósito</h3>
+                  <h3 className="text-sm font-black text-slate-900">Locais disponíveis</h3>
                 </div>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  Somente os Locais já cadastrados podem ser inseridos. O tipo visual é padronizado em cinco modelos: Estante, Palete, Freezer, Geladeira industrial e Mesa / bancada.
+                  Crie um local novo ou posicione um local existente. O cadastro é efetivado pelo servidor ao salvar.
                 </p>
 
+                <div className="mt-3 flex gap-2">
+                  <select aria-label="Tipo do novo local" value={newKind}
+                    onChange={event=>setNewKind(event.target.value as CanonicalWarehouseVisualKind)}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-bold text-slate-700">
+                    {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
+                  </select>
+                  <button type="button" onClick={()=>addNewCroquiLocal(newKind)} disabled={saving}
+                    data-testid="warehouse-croqui-create-local"
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#00288e] px-3 py-2 text-[11px] font-black text-white disabled:opacity-40">
+                    <Plus className="h-3.5 w-3.5"/> Novo local
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-500">Locais já cadastrados podem ser inseridos no mapa sem novo cadastro.</p>
                 <div className="mt-3 max-h-[640px] space-y-3 overflow-y-auto pr-1">
                   {depotLocals.map((item) => {
                     const inserted = representedLocationIds.has(item.location.id);
@@ -1269,22 +1286,100 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </div>
 
             <aside className="space-y-3">
+              <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm"
+                data-testid="warehouse-croqui-structure-editor">
+                <h3 className="text-sm font-black text-[#00288e]">Editar cadastro do local</h3>
+                {selectedPending || selectedLocation ? (
+                  <div className="mt-3 space-y-3">
+                    <label className="block text-[10px] font-bold text-slate-600">Código
+                      <input value={selectedCode} readOnly className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"/>
+                    </label>
+                    <label className="block text-[10px] font-bold text-slate-600">Nome
+                      <input value={selectedName} maxLength={120} disabled={saving}
+                        onChange={event=>{
+                          const name=event.target.value;
+                          if(selectedPending) setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{...selectedPending,name},
+                          }));
+                          else if(selectedLocation) setLocalEdits(current=>({
+                            ...current,[selectedLocation.id]:{
+                              name,description:current[selectedLocation.id]?.description??selectedLocation.description??null,
+                            },
+                          }));
+                          if(selectedLayoutObject) setDraftObjects(current=>current.map(item=>item.id===selectedLayoutObject.id
+                            ?{...item,label:selectedCode+' · '+name}:item));
+                        }}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                    </label>
+                    <label className="block text-[10px] font-bold text-slate-600">Descrição
+                      <textarea rows={2} disabled={saving}
+                        value={selectedPending?.description??(
+                          selectedLocation?localEdits[selectedLocation.id]?.description??selectedLocation.description:''
+                        )??''}
+                        onChange={event=>{
+                          const description=event.target.value||null;
+                          if(selectedPending) setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{...selectedPending,description},
+                          }));
+                          else if(selectedLocation) setLocalEdits(current=>({
+                            ...current,[selectedLocation.id]:{
+                              name:current[selectedLocation.id]?.name||selectedLocation.name,description,
+                            },
+                          }));
+                        }}
+                        className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                    </label>
+                    {selectedPending && !selectedPending.sourceLocationId && (
+                      <label className="block text-[10px] font-bold text-slate-600">Subposições (0–30)
+                        <input type="number" min={0} max={30} step={1}
+                          value={selectedPending.subpositionCount}
+                          onChange={event=>setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{
+                              ...selectedPending,subpositionCount:Math.max(0,Math.min(30,
+                                Math.trunc(Number(event.target.value)||0))),
+                            },
+                          }))}
+                          className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs"/>
+                      </label>
+                    )}
+                    {selectedLocation && (
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-[10px] font-black text-slate-600">
+                          {selectedChildren.length} subposição(ões) cadastradas
+                        </p>
+                        {selectedChildren.map(child=><p key={child.location.id}
+                          className="mt-1 text-[10px] text-slate-600">
+                          {child.location.code} · {child.location.name}
+                        </p>)}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-slate-500">
+                      Cadastro e desenho são gravados juntos ao salvar.
+                      O servidor não permite inativar locais com estoque ou lotes ativos.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Selecione um local no croqui, ou utilize Novo local para cadastrar.
+                  </p>
+                )}
+              </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#00288e]" />
                   <h3 className="text-sm font-black text-slate-900">Orientação</h3>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Os objetos já entram dimensionados. No desenho você pode mover e girar, mas não redimensionar livremente.
+                  O Croqui 2D administra a estrutura real, o desenho e suas cópias. Salve para efetivar as alterações.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Para corrigir o tamanho de um Local já inserido, remova-o do croqui e insira novamente com as medidas corretas.
+                  Para reposicionar um local, arraste no mapa. Para remover, confirme a inativação; saldos e lotes ativos bloqueiam a operação.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Ao duplicar um Local, a cópia recebe um novo código e também replica suas Subposições. Ao salvar o croqui, toda essa nova estrutura é cadastrada automaticamente em Depósitos e localizações.
+                  Ao duplicar um local, o novo cadastro recebe código único e, se houver, as subposições da origem. Nenhum estoque é copiado.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Ao remover do croqui um Local já cadastrado, a exclusão fica pendente. Ao salvar, o Local e suas Subposições são excluídos da operação também em Depósitos e localizações.
+                  A inativação acontece somente no servidor, durante o salvamento conjunto da estrutura e do croqui.
                 </p>
                 {Object.values(pendingDuplicatedLocals).filter((pending) =>
                   draftObjects.some((object) => object.id === pending.objectId)
