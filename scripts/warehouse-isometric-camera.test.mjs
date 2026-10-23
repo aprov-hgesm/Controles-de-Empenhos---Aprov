@@ -15,6 +15,7 @@ try {
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/isometricCamera.ts'),
     resolve(root, 'lib/warehouse/applianceOrientation.ts'),
+    resolve(root, 'lib/warehouse/layoutOrientation.ts'),
     '--outDir', out,
     '--module', 'commonjs',
     '--target', 'ES2020',
@@ -40,7 +41,13 @@ const {
   warehouseApplianceFrontalAxis,
   warehouseApplianceFrontForView,
   warehouseApplianceVisiblePanel,
+  warehouseObjectPhysicalFront,
+  warehouseFaceLabel,
+  warehouseOppositeFace,
 } = require(resolve(out, 'applianceOrientation.js'));
+const {
+  turnWarehouseLayoutObject, warehouseObjectFaceLabels,
+} = require(resolve(out, 'layoutOrientation.js'));
 
 const EPS = 0.00001;
 
@@ -287,7 +294,8 @@ test('quatro perspectivas preservam portas no plano real e traseira no lado opos
 test('renderer premium aplica orientação física e detalhes 3D reais em todas as vistas', () => {
   const preview=readFileSync(resolve(root,'features/warehouse/components/WarehouseIsometricPreview.tsx'),'utf8');
   const renderer=readFileSync(resolve(root,'features/warehouse/components/WarehouseColdAppliance3D.tsx'),'utf8');
-  assert.match(preview,/warehouseApplianceFrontForView\(object\.width, object\.height, previewView\)/);
+  assert.match(preview,/warehouseApplianceFrontForView\(object\.width, object\.height, previewView, object\.rotation\)/);
+  assert.match(preview,/data-visual-role="warehouse-physical-front"/);
   assert.match(preview,/<WarehouseColdAppliance3D/);
   assert.match(preview,/applianceFront=\{object\.applianceFront\}/);
   assert.match(renderer,/warehouseApplianceVisiblePanel\(side,front\)/);
@@ -297,6 +305,77 @@ test('renderer premium aplica orientação física e detalhes 3D reais em todas 
   assert.match(renderer,/data-appliance-detail="insulated-side"/);
   assert.match(renderer,/data-front-face=\{front\}/);
   assert.doesNotMatch(renderer,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
+});
+
+test('rotações 0/90/180/270 preservam frente real e permutam os lados', () => {
+  const initial = {
+    id:'obj_'+'a'.repeat(32), kind:'REFRIGERATOR', label:'GEL-01',
+    x:300,y:200,width:160,height:75,rotation:0,layer:1,elevation:1,
+    visualVariant:'solid', warehouseLocationId:null,
+  };
+  const frontFaces = ['y+','x-','y-','x+'];
+  let object = initial;
+  const corners = [];
+  for (let k=0;k<4;k++) {
+    corners.push(object.rotation);
+    assert.equal(warehouseObjectPhysicalFront(object.width,object.height,object.rotation),frontFaces[k],
+      'turn '+k);
+    const names=warehouseObjectFaceLabels(object);
+    assert.equal(names.front,frontFaces[k]);
+    assert.equal(names.back,warehouseOppositeFace(names.front));
+    assert.notEqual(names.frontLabel,names.backLabel);
+    assert.equal(warehouseFaceLabel(names.front),names.frontLabel);
+    assert.equal(object.width*object.height,initial.width*initial.height);
+    assert.ok(object.x>=0&&object.y>=0&&object.x+object.width<=2000&&object.y+object.height<=600);
+    for(const view of VIEWS){
+      const face=warehouseApplianceFrontForView(object.width,object.height,view,object.rotation);
+      assert.ok(['x+','x-','y+','y-'].includes(face));
+      assert.equal(warehouseApplianceVisiblePanel('x+',face)==='front'
+        && warehouseApplianceVisiblePanel('y+',face)==='front',false);
+    }
+    object=turnWarehouseLayoutObject(object,1,2000,600);
+  }
+  assert.deepEqual(corners,[0,90,180,-90]);
+  assert.equal(object.rotation,0);
+  assert.equal(object.width,initial.width);
+  assert.equal(object.height,initial.height);
+  assert.equal(object.x,initial.x);
+  assert.equal(object.y,initial.y);
+});
+
+test('rotação contrária, limites do ambiente e frente de locais estreitos', () => {
+  const tall={
+    id:'obj_'+'b'.repeat(32), kind:'SHELF', label:'EST-01',
+    x:50,y:80,width:50,height:140,rotation:0,layer:1,elevation:1,
+    visualVariant:'solid',warehouseLocationId:null,
+  };
+  assert.equal(warehouseObjectPhysicalFront(50,140,0),'x+');
+  const left=turnWarehouseLayoutObject(tall,-1,2000,600);
+  assert.equal(left.rotation,-90);
+  assert.equal(warehouseObjectPhysicalFront(left.width,left.height,left.rotation),'y-');
+  assert.equal(left.width,140);
+  assert.equal(left.height,50);
+  assert.equal(turnWarehouseLayoutObject(left,1,2000,600).rotation,0);
+  const narrow={...tall,x:5,y:5,width:200,height:90};
+  assert.throws(()=>turnWarehouseLayoutObject(narrow,1,250,70),/OUT_OF_BOUNDS/);
+  assert.throws(()=>turnWarehouseLayoutObject(tall,2,2000,600),/TURN_INVALID/);
+});
+
+test('editor 2D mantém orientação, zoom pelo cursor, pan de espaço e indicadores', () => {
+  const editor=readFileSync(resolve(root,'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),'utf8');
+  const croqui=readFileSync(resolve(root,'features/warehouse/components/WarehouseCroquisR1Operational.tsx'),'utf8');
+  assert.match(editor,/turnWarehouseLayoutObject\(start, turns, logicalWidth, logicalHeight\)/);
+  assert.match(editor,/turnWarehouseLayoutObject\(selected, quarters, logicalWidth, logicalHeight\)/);
+  assert.match(editor,/event\.deltaY < 0 \? 0\.12 : -0\.12/);
+  assert.match(editor,/viewport\.addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
+  assert.match(editor,/event\.code !== 'Space'/);
+  assert.match(editor,/data-testid=\{'warehouse-editor-front-'\+object\.id\}/);
+  assert.match(editor,/data-testid=\{'warehouse-editor-back-'\+object\.id\}/);
+  assert.match(editor,/Centralizar croqui e ajustar zoom/);
+  assert.doesNotMatch(editor,/function normalizeCardinalRotation/);
+  assert.match(croqui,/data-testid="warehouse-croqui-faces"/);
+  assert.match(croqui,/selectedFaces\.frontLabel/);
+  assert.match(croqui,/selectedFaces\.backLabel/);
 });
 
 test('miniaturas do Início usam uma única inclinação e piso ancorado no mundo', () => {
