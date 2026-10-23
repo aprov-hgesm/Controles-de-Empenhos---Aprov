@@ -250,7 +250,8 @@
     "verify:central-depositos-routes": "node scripts/verify-central-depositos-routes.mjs",
     "test:operador-movel-premium": "node --test scripts/operador-movel-premium.test.mjs",
     "test:mobile-k-canonical-ops": "node --test scripts/mobile-k-canonical-ops.test.mjs",
-    "verify:mobile-k-canonical-ops": "node scripts/verify-mobile-k-canonical-ops.mjs"
+    "verify:mobile-k-canonical-ops": "node scripts/verify-mobile-k-canonical-ops.mjs",
+    "test:warehouse-3d-demo-20x6": "node --test scripts/warehouse-3d-demo-20x6.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
