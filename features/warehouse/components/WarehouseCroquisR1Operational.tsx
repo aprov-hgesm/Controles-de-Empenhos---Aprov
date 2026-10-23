@@ -10,6 +10,10 @@ import {
   Ruler,
   Save,
   Warehouse,
+  Printer,
+  Settings2,
+  Archive,
+  X,
 } from 'lucide-react';
 
 import {
@@ -27,6 +31,8 @@ import {
 } from '../../../lib/warehouse/layoutRepository';
 import {
   createWarehouseLocation,
+  updateWarehouseDepot,
+  archiveWarehouseStructure,
   listWarehouseDepots,
   listWarehousePositiveLocationBalances,
   listWarehouseLocations,
@@ -44,7 +50,8 @@ import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStru
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
 import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
-import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
+import { WarehouseDepotQuickCreate } from './WarehouseDepotQuickCreate';
+import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 
@@ -182,6 +189,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [localEdits, setLocalEdits] = useState<Record<string, {name:string;description:string|null}>>({});
   const [newKind, setNewKind] = useState<CanonicalWarehouseVisualKind>('SHELF');
   const [showDepotRegistration, setShowDepotRegistration] = useState(false);
+  const [showDepotSettings, setShowDepotSettings] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
+  const [depotWorking, setDepotWorking] = useState(false);
+  const [depotEdit, setDepotEdit] = useState<{
+    name: string; description: string; visualType: 'STANDARD'|'CONTAINER'|'COLD_CONTAINER';
+    sizeProfile: 'SMALL'|'MEDIUM'|'LARGE';
+  } | null>(null);
   const [newSubpositions, setNewSubpositions] = useState<Array<{
     parentLocationId:string;code:string;name:string;description:string|null;
   }>>([]);
@@ -405,6 +419,62 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
     [depots, selectedDepotId]
   );
+
+  function openDepotSettings() {
+    if (!selectedDepot) return;
+    setDepotEdit({
+      name: selectedDepot.name,
+      description: selectedDepot.description || '',
+      visualType: selectedDepot.visualType,
+      sizeProfile: selectedDepot.sizeProfile,
+    });
+    setShowDepotRegistration(false);
+    setShowLabels(false);
+    setShowDepotSettings(true);
+  }
+
+  async function saveDepotSettings() {
+    if (!selectedDepot || !depotEdit || depotWorking) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await updateWarehouseDepot(workspaceId, selectedDepot.id, {
+        name: depotEdit.name, description: depotEdit.description.trim() || null,
+        visualType: depotEdit.visualType, sizeProfile: depotEdit.sizeProfile,
+      });
+      await reloadBase();
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setMessage('Dados do depósito atualizados. Código e histórico preservados.');
+    } catch (error) { setMessage('Não foi possível atualizar o depósito: ' + messageFrom(error)); }
+    finally { setDepotWorking(false); }
+  }
+
+  async function archiveSelectedDepot() {
+    if (!selectedDepot || depotWorking || saving) return;
+    const hasUncommitted = pendingRemovedLocationIds.length > 0
+      || Object.keys(pendingDuplicatedLocals).length > 0
+      || newSubpositions.length > 0 || removedSubpositionIds.length > 0
+      || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
+    if (hasUncommitted) {
+      setMessage('Salve ou descarte as alterações do croqui antes de inativar o depósito.');
+      return;
+    }
+    if (!window.confirm('Inativar ' + selectedDepot.code + ' e seus locais? '
+      + 'Não será permitido se houver saldos ou lotes ativos. '
+      + 'Os históricos e etiquetas antigas continuarão preservados.')) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await archiveWarehouseStructure(workspaceId, {kind:'DEPOT',id:selectedDepot.id});
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setSelectedDepotId('');
+      await reloadBase();
+      setMessage('Depósito e suas estruturas inativados, sem excluir o histórico.');
+    } catch (error) {setMessage('Inativação não realizada: ' + messageFrom(error));}
+    finally {setDepotWorking(false);}
+  }
 
   const depotLocals = useMemo(
     () => locations.filter(
@@ -924,7 +994,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       <section data-testid="warehouse-croqui-first-depot" className="space-y-4">
         <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito</h2>
         <p className="text-xs text-slate-600">Cadastre o primeiro depósito para começar a montar sua estrutura no Croqui 2D.</p>
-        <WarehouseDepotRegistrationR1 workspaceId={workspaceId} depots={depots}
+        <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
           onRegistered={async depotId=>{await reloadBase();setSelectedDepotId(depotId);}}/>
       </section>
     );
@@ -937,17 +1007,94 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
           <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito · Croqui 2D</h2>
           <p className="text-xs text-slate-600">Crie, duplique, edite e inative locais em um único mapa.</p>
         </div>
-        <button type="button" onClick={()=>setShowDepotRegistration(current=>!current)}
-          className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
-          {showDepotRegistration?'Fechar cadastro de depósito':'+ Cadastrar depósito'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => {setShowDepotRegistration(current=>!current);setShowDepotSettings(false);setShowLabels(false);}}
+            data-testid="warehouse-croqui-new-depot"
+            className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
+            {showDepotRegistration?'Fechar cadastro':'+ Cadastrar depósito'}
+          </button>
+          <button type="button" onClick={openDepotSettings} disabled={!selectedDepot || depotWorking}
+            data-testid="warehouse-croqui-manage-depot"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e] disabled:opacity-40">
+            <Settings2 className="h-3.5 w-3.5" /> Gerenciar depósito
+          </button>
+          <button type="button" onClick={() => {setShowLabels(current=>!current);setShowDepotSettings(false);setShowDepotRegistration(false);}}
+            data-testid="warehouse-croqui-show-labels"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
+            <Printer className="h-3.5 w-3.5"/> {showLabels?'Fechar etiquetas':'Etiquetas'}
+          </button>
+        </div>
       </div>
       {showDepotRegistration&&(
-        <WarehouseDepotRegistrationR1 workspaceId={workspaceId} depots={depots}
+        <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
           onRegistered={async depotId=>{
             await reloadBase();setSelectedDepotId(depotId);setShowDepotRegistration(false);
           }}/>
       )}
+      {showDepotSettings && selectedDepot && depotEdit && (
+        <section className="space-y-3 rounded-2xl border border-blue-200 bg-white p-4 shadow-sm"
+          data-testid="warehouse-croqui-depot-settings">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-extrabold text-[#00288e]">Gerenciar {selectedDepot.code}</h3>
+            <button type="button" aria-label="Fechar gestão do depósito"
+              onClick={() => setShowDepotSettings(false)}><X className="h-4 w-4"/></button>
+          </div>
+          <p className="text-xs text-slate-600">O código do depósito é permanente para preservar as etiquetas e os históricos.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold text-slate-700">Nome do depósito
+              <input required minLength={2} maxLength={120} value={depotEdit.name}
+                onChange={event=>setDepotEdit(current=>current&&({...current,name:event.target.value}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"/>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Descrição
+              <input maxLength={240} value={depotEdit.description}
+                onChange={event=>setDepotEdit(current=>current&&({...current,description:event.target.value}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"/>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Tipo de depósito
+              <select value={depotEdit.visualType}
+                onChange={event=>setDepotEdit(current=>current&&({...current,visualType:event.target.value as typeof current.visualType}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+                <option value="STANDARD">Padrão</option>
+                <option value="CONTAINER">Contêiner</option>
+                <option value="COLD_CONTAINER">Contêiner frigorífico</option>
+              </select>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Porte
+              <select value={depotEdit.sizeProfile}
+                onChange={event=>setDepotEdit(current=>current&&({...current,sizeProfile:event.target.value as typeof current.sizeProfile}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+                <option value="SMALL">Pequeno</option>
+                <option value="MEDIUM">Médio</option>
+                <option value="LARGE">Grande</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <button type="button" disabled={depotWorking || saving}
+              data-testid="warehouse-croqui-archive-depot"
+              onClick={()=>void archiveSelectedDepot()}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-extrabold text-rose-700 disabled:opacity-40">
+              <Archive className="h-4 w-4"/> Inativar depósito
+            </button>
+            <button type="button" disabled={depotWorking || saving || !depotEdit.name.trim()}
+              data-testid="warehouse-croqui-save-depot"
+              onClick={()=>void saveDepotSettings()}
+              className="rounded-xl bg-[#00288e] px-4 py-2 text-xs font-extrabold text-white disabled:opacity-40">
+              {depotWorking?'Processando…':'Salvar dados do depósito'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {showLabels && (
+        <section data-testid="warehouse-croqui-labels" className="rounded-2xl border border-blue-200 bg-white p-3">
+          <WarehouseLabelsR1 depots={depots} locations={locations}
+            selectedDepotId={selectedDepotId}
+            selectedLocationId={selectedLayoutObject?.warehouseLocationId || ''}/>
+        </section>
+      )}
+
       <div className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -1098,6 +1245,16 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 >
                   <Ruler className="h-3.5 w-3.5" />
                   Editar dimensões
+                </button>
+                <select aria-label="Tipo do novo local" value={newKind}
+                  onChange={event=>setNewKind(event.target.value as CanonicalWarehouseVisualKind)}
+                  className="h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700">
+                  {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
+                </select>
+                <button type="button" data-testid="warehouse-croqui-primary-new-local"
+                  onClick={()=>addNewCroquiLocal(newKind)} disabled={saving}
+                  className="inline-flex h-10 items-center gap-1 rounded-xl bg-[#00288e] px-4 text-xs font-extrabold text-white disabled:opacity-40">
+                  <Plus className="h-4 w-4"/> Novo local
                 </button>
                 <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-600">
                   {depotLocals.length} Locais cadastrados
@@ -1290,18 +1447,9 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   Crie um local novo ou posicione um local existente. O cadastro é efetivado pelo servidor ao salvar.
                 </p>
 
-                <div className="mt-3 flex gap-2">
-                  <select aria-label="Tipo do novo local" value={newKind}
-                    onChange={event=>setNewKind(event.target.value as CanonicalWarehouseVisualKind)}
-                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-bold text-slate-700">
-                    {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
-                  </select>
-                  <button type="button" onClick={()=>addNewCroquiLocal(newKind)} disabled={saving}
-                    data-testid="warehouse-croqui-create-local"
-                    className="inline-flex items-center gap-1 rounded-lg bg-[#00288e] px-3 py-2 text-[11px] font-black text-white disabled:opacity-40">
-                    <Plus className="h-3.5 w-3.5"/> Novo local
-                  </button>
-                </div>
+                <p className="mt-3 rounded-lg bg-blue-50 p-2 text-[11px] font-bold text-[#00288e]">
+                  Para criar, escolha o tipo e clique em Novo local na barra superior do croqui.
+                </p>
                 <p className="mt-2 text-[10px] text-slate-500">Locais já cadastrados podem ser inseridos no mapa sem novo cadastro.</p>
                 <div className="mt-3 max-h-[640px] space-y-3 overflow-y-auto pr-1">
                   {depotLocals.map((item) => {
