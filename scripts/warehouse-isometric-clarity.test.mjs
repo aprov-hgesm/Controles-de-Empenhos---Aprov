@@ -77,7 +77,7 @@ test('o renderer conserva a escala de centimetros e permite navegacao sem writes
   assert.match(source, /data-testid="warehouse-isometric-label-controls"/);
   assert.match(source, /labelMode === 'codes'/);
   assert.match(source, /labelMode === 'clean'/);
-  assert.match(source, /onWheel=/);
+  assert.match(source, /svg\.addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
   assert.match(source, /onPointerMove=/);
   assert.match(source, /data-testid="warehouse-isometric-context-panel"/);
   assert.doesNotMatch(source, /roomPoints\.push\(\{ x: x - 8, y: y - 8 \}/);
