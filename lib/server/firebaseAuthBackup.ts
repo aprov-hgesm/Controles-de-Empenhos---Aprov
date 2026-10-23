@@ -1,6 +1,7 @@
 import { SignJWT, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunManagedAccessToken } from './cloudRunManagedToken.mjs';
 
 const PROJECT_ID = firebaseConfig.projectId;
 const DATABASE_ID = firebaseConfig.firestoreDatabaseId;
@@ -92,6 +93,9 @@ function parseServiceAccount(): Required<Pick<ServiceAccountCredentials, 'client
 }
 
 async function getGoogleAdminAccessToken(): Promise<string> {
+  if (process.env.K_SERVICE || process.env.EMPROVEX_RUNTIME_TARGET) {
+    return getCloudRunManagedAccessToken();
+  }
   const now = Date.now();
   if (accessTokenCache && accessTokenCache.expiresAt - 60_000 > now) {
     return accessTokenCache.token;

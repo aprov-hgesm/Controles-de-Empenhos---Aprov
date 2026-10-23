@@ -1,3 +1,12 @@
+import baseline from './firebase-applet-config.json';
+import { assertCloudRunBuildReady } from './lib/cloudRunIsolation.mjs';
+
+// Opt-in Cloud Run build gate only. Vercel production remains unchanged.
+// Explicit target alone is insufficient: static production imports must be removed.
+if (process.env.K_SERVICE || process.env.EMPROVEX_RUNTIME_TARGET) {
+  assertCloudRunBuildReady(baseline, process.env, process.cwd());
+}
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {

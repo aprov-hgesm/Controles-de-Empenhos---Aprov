@@ -142,6 +142,14 @@ await billingDayModule.link(async (specifier) => {
 });
 await billingDayModule.evaluate();
 
+// Managed Cloud Run credentials are never authorized in this isolated VM test.
+// Any accidental ADC call must fail rather than contact a metadata service.
+const cloudRunManagedToken = await synthetic('file:///lib/server/cloudRunManagedToken.mjs', {
+  getCloudRunManagedAccessToken: async () => {
+    throw new Error('Cloud Run ADC proibido em teste VM do Bloco 16.8.');
+  },
+});
+
 const monitoringModule = compiled(
   'file:///lib/server/googleCloudMonitoring.js',
   'lib/server/googleCloudMonitoring.ts'
@@ -151,6 +159,7 @@ await monitoringModule.link(async (specifier) => {
   if (specifier === '../../firebase-applet-config.json') return firebaseConfig;
   if (specifier === '../firestoreBillingDay') return billingDayModule;
   if (specifier === '../platformCapacity') return capacityModule;
+  if (specifier === './cloudRunManagedToken.mjs') return cloudRunManagedToken;
   throw new Error(`Import inesperado em googleCloudMonitoring: ${specifier}`);
 });
 await monitoringModule.evaluate();
