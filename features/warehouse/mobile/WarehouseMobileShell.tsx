@@ -2,6 +2,7 @@
 
 import { ArrowLeft, LayoutGrid, Warehouse } from 'lucide-react';
 import Link from 'next/link';
+import { WarehouseRecoveredLink } from '../components/WarehouseRecoveredLink';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -78,7 +79,7 @@ export function WarehouseMobileShell({
           aria-label="Retorno ao menu do Operador Móvel"
         >
           <div className="mx-auto max-w-xl">
-            <Link
+            <WarehouseRecoveredLink
               href="/operador-movel"
               className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#00288e] px-4 py-3 text-white shadow-[0_10px_24px_-14px_rgba(0,40,142,0.7)] transition-colors active:bg-[#001b62] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00288e]"
               data-testid="warehouse-mobile-nav-home"
@@ -90,7 +91,7 @@ export function WarehouseMobileShell({
                 <span className="text-[10px] font-semibold leading-4 text-blue-100">Menu do Operador Móvel</span>
               </span>
               <LayoutGrid className="ml-auto h-5 w-5 shrink-0 text-blue-100" aria-hidden="true" />
-            </Link>
+            </WarehouseRecoveredLink>
           </div>
         </nav>
       )}
