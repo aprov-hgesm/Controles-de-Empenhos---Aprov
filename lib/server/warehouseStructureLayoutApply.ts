@@ -130,7 +130,7 @@ export async function warehouseStructureLayoutApplyServer(
       return fail('WAREHOUSE_CROQUI_REPLAY_CONFLICT');
     return {layout:saved,createdLocations:[],archivedLocationIds:[]};
   }
-  if(current?.layout.id!==data.baseLayoutId || (current?.layout.version??null)!==data.expectedVersion)
+  if((current?.layout.id??null)!==data.baseLayoutId || (current?.layout.version??null)!==data.expectedVersion)
     return fail('WAREHOUSE_CROQUI_VERSION_CONFLICT');
   const usedCodes=new Set(currentLocations
     .filter(loc=>loc.depotId===depotId&&loc.status==='active'&&loc.kind==='LOCAL')
