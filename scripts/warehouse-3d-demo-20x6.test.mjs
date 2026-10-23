@@ -26,16 +26,18 @@ function intersects(a, b) {
     && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-test('os dois cenários usam exatamente 20 × 6 metros', () => {
+test('os tres cenarios usam exatamente 20 × 6 metros', () => {
   assert.equal(W, 2000);
   assert.equal(H, 600);
   assert.match(DEMO_20X6_DEPOT_ID, /^dep_[a-f0-9]{32}$/);
   assert.equal(scenes.simple.objects.length, 9);
   assert.equal(scenes.dense.objects.length, 30);
+  assert.equal(scenes.operational.objects.length, 30);
 });
 
 test('todos os 30 locais possuem IDs, coordenadas e medidas válidas, sem colisões físicas', () => {
-  const objects = scenes.dense.objects;
+  for (const [scenarioName, scene] of Object.entries(scenes)) {
+  const objects = scene.objects;
   const objectIds = new Set();
   const logicalLocationIds = new Set();
   for (const object of objects) {
@@ -55,9 +57,21 @@ test('todos os 30 locais possuem IDs, coordenadas e medidas válidas, sem colis�
   for (let i = 0; i < objects.length; i += 1) {
     for (let j = i + 1; j < objects.length; j += 1) {
       assert.equal(intersects(objects[i], objects[j]), false,
-        'Colisão entre ' + objects[i].label + ' e ' + objects[j].label);
+        scenarioName + ': Colisão entre ' + objects[i].label + ' e ' + objects[j].label);
     }
   }
+  }
+});
+
+test('cenario operacional possui corredores e orientacoes fisicas variadas', () => {
+  const base = scenes.dense.objects;
+  const operational = scenes.operational.objects;
+  assert.ok(operational.filter((object) => {
+    const original = base.find((item) => item.id === object.id);
+    return original && (original.width !== object.width || original.height !== object.height);
+  }).length >= 8);
+  assert.ok(operational.some((object) =>
+    object.kind === 'SHELF' && object.height > object.width));
 });
 
 test('locais, subposições e saldos simulados se referem às mesmas identidades', () => {
@@ -111,6 +125,7 @@ test('laboratório acessível apenas em dev e sem autenticação, consultas ou g
   assert.match(preview, /data-testid="warehouse-demo-preview-3d"/);
   assert.match(preview, /data-testid=\{'warehouse-demo-scenario-' \+ key\}/);
   assert.match(preview, /focusedLocationId=\{focusedLocationId\}/);
+  assert.match(preview, /onFocusLocationChange=\{setFocusedLocationId\}/);
   assert.doesNotMatch(combined, /from ['"][^'"]*(?:firebase|Repository|auth|operationalPaths)/i);
   assert.doesNotMatch(combined, /\b(?:fetch|onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|deleteDoc|runTransaction)\s*\(/);
   assert.doesNotMatch(preview, /onInspectLocation=/);
