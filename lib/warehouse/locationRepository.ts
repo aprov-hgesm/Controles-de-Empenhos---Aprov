@@ -178,7 +178,7 @@ function invalidateWarehouseDepotReadCache(workspaceId: string): void {
   depotItemReadCache.invalidate(workspaceId);
 }
 
-function invalidateWarehouseLocationReadCache(workspaceId: string): void {
+export function invalidateWarehouseLocationReadCache(workspaceId: string): void {
   locationListReadCache.invalidate(workspaceId);
   locationItemReadCache.invalidate(workspaceId);
 }
@@ -999,7 +999,7 @@ export function warehouseLocationBalanceIdentity(balance: WarehouseLocationBalan
 
 export async function archiveWarehouseStructure(
   workspaceId: string,
-  target: { kind: 'DEPOT' | WarehouseLocationKind; id: string }
+  target: { kind: 'DEPOT' | WarehouseLocationKind; id: string; mode?: 'DELETE'; confirmCode?: string }
 ): Promise<void> {
   await warehouseServerCommand<{ok:true}>(workspaceId,'STRUCTURE_ARCHIVE',target);
   invalidateWarehouseDepotReadCache(workspaceId);

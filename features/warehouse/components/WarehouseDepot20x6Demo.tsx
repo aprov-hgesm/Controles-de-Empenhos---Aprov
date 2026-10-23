@@ -9,34 +9,64 @@ import {
 } from '../../../lib/warehouse/demoDepot20x6';
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
+import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
+import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
 
 type DisplayMode = '3d' | '2d';
 
-function fixtureColor(kind: WarehouseDepotLayoutObject['kind']): string {
-  if (kind === 'SHELF') return '#0f766e';
-  if (kind === 'PALLET') return '#b45309';
-  if (kind === 'REFRIGERATOR') return '#0369a1';
-  if (kind === 'FREEZER') return '#7c3aed';
-  return '#64748b';
+type LocalHistory = {
+  objects: WarehouseDepotLayoutObject[];
+  past: WarehouseDepotLayoutObject[][];
+  future: WarehouseDepotLayoutObject[][];
+};
+
+function copyObjects(items:WarehouseDepotLayoutObject[]):WarehouseDepotLayoutObject[]{
+  return items.map(item=>({...item}));
+}
+function createDraft(scenario:Demo20x6Scenario):LocalHistory{
+  return {objects:copyObjects(WAREHOUSE_20X6_SCENARIOS[scenario].objects),past:[],future:[]};
 }
 
 export function WarehouseDepot20x6Demo() {
   const [scenarioId, setScenarioId] = useState<Demo20x6Scenario>('dense');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('3d');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('2d');
+  const [draft, setDraft] = useState<LocalHistory>(()=>createDraft('dense'));
+  const [selectedObjectId, setSelectedObjectId] = useState<string|null>(null);
+  const [demoAddedSubpositions, setDemoAddedSubpositions] = useState<Record<string,number>>({});
+  const [demoNotice, setDemoNotice] = useState<string | null>(null);
   const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
   const [queryText, setQueryText] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const scenario = WAREHOUSE_20X6_SCENARIOS[scenarioId];
-  const focusedObject = scenario.objects.find((object) =>
+  const focusedObject = draft.objects.find((object) =>
     object.warehouseLocationId === focusedLocationId
   ) || null;
 
   const changeScenario = (next: Demo20x6Scenario) => {
     setScenarioId(next);
+    setDraft(createDraft(next));
+    setSelectedObjectId(null);
+    setDemoAddedSubpositions({});
+    setDemoNotice(null);
     setFocusedLocationId(null);
     setQueryText('');
     setSelectedMaterialId('');
   };
+
+  const checkpoint=(old:WarehouseDepotLayoutObject[])=>setDraft(current=>({
+    ...current,past:[...current.past.slice(-29),copyObjects(old)],future:[],
+  }));
+  const undo=()=>setDraft(current=>{
+    if(!current.past.length)return current;
+    const previous=current.past[current.past.length-1];
+    return {objects:copyObjects(previous),past:current.past.slice(0,-1),
+      future:[copyObjects(current.objects),...current.future]};
+  });
+  const redo=()=>setDraft(current=>{
+    if(!current.future.length)return current;
+    const [next,...rest]=current.future;
+    return {objects:copyObjects(next),past:[...current.past,copyObjects(current.objects)],future:rest};
+  });
 
   return (
     <div data-testid="warehouse-demo-20x6" className="space-y-5">
@@ -44,7 +74,7 @@ export function WarehouseDepot20x6Demo() {
         {[
           { label: 'Comprimento', value: '20 metros' },
           { label: 'Profundidade', value: '6 metros' },
-          { label: 'Locais', value: String(scenario.objects.length) },
+          { label: 'Objetos no croqui', value: String(draft.objects.length) },
           { label: 'Dados', value: '100% fictícios' },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -61,7 +91,7 @@ export function WarehouseDepot20x6Demo() {
               <Warehouse className="h-4 w-4 text-blue-700" /> Depósito demonstrativo · 2000 × 600 cm
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Escolha a densidade e compare a planta 2D com o mesmo renderizador 3D do EMPROVEX.
+              Experimente o editor real: zoom com roda, Espaço para mover, seleção e giro de 90°. Tudo aqui é simulado.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -82,8 +112,8 @@ export function WarehouseDepot20x6Demo() {
             </div>
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1" aria-label="Modo de visualização">
               {([
-                ['3d', 'Prévia 3D', Layers3],
-                ['2d', 'Croqui 2D', Map],
+                ['3d', 'Prévia 3D oficial', Layers3],
+                ['2d', 'Editor 2D', Map],
               ] as const).map(([key, label, Icon]) => (
                 <button key={key} type="button" onClick={() => setDisplayMode(key)}
                   data-testid={'warehouse-demo-mode-' + key}
@@ -107,7 +137,7 @@ export function WarehouseDepot20x6Demo() {
               className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800"
             >
               <option value="">Todos os locais</option>
-              {scenario.objects.map((object) => (
+              {draft.objects.map((object) => (
                 <option key={object.id} value={object.warehouseLocationId || ''}>
                   {object.label} · {object.kind === 'SHELF' ? 'Estante' : object.kind === 'PALLET'
                     ? 'Palete' : object.kind === 'FREEZER' ? 'Freezer'
@@ -129,7 +159,7 @@ export function WarehouseDepot20x6Demo() {
             key={scenarioId}
             logicalWidth={DEMO_20X6_WIDTH_CM}
             logicalHeight={DEMO_20X6_DEPTH_CM}
-            objects={scenario.objects}
+            objects={draft.objects}
             locations={scenario.locations}
             balances={scenario.balances}
             materials={scenario.materials}
@@ -146,42 +176,74 @@ export function WarehouseDepot20x6Demo() {
       ) : (
         <section data-testid="warehouse-demo-preview-2d"
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-4 py-3">
+          <div className="border-b border-slate-200 p-4">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              <Box className="h-4 w-4" /> Croqui 2D proporcional
+              <Box className="h-4 w-4" /> Editor 2D oficial · PR #366 · dados fictícios
             </p>
-            <p className="mt-1 text-xs text-slate-500">Cada retângulo corresponde à mesma posição e medida utilizada no 3D.</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Selecione uma estante, gire usando os botões de 90°, teste o zoom,
+              duplique ou arraste. A nova estante recebe o menor número disponível (EST-11, ou EST-02 se o 02 foi excluído).
+              Alterne para Prévia 3D para comparar a orientação.
+            </p>
           </div>
-          <div className="overflow-x-auto bg-[#101f35] p-4">
-            <svg viewBox="0 0 2000 600" role="img" aria-label="Croqui 2D do depósito simulado de 20 por 6 metros"
-              className="min-w-[850px] w-full rounded-lg">
-              <rect width="2000" height="600" fill="#eaf1f6" stroke="#94a3b8" strokeWidth="4" />
-              {Array.from({ length: 19 }, (_, i) => (
-                <line key={'vertical-' + i} x1={(i + 1) * 100} x2={(i + 1) * 100}
-                  y1="0" y2="600" stroke="#cbd5e1" strokeWidth="1" />
-              ))}
-              {Array.from({ length: 5 }, (_, i) => (
-                <line key={'horizontal-' + i} x1="0" x2="2000"
-                  y1={(i + 1) * 100} y2={(i + 1) * 100} stroke="#cbd5e1" strokeWidth="1" />
-              ))}
-              {scenario.objects.map((object) => {
-                const active = focusedLocationId === object.warehouseLocationId;
-                return (
-                  <g key={object.id} onClick={() => setFocusedLocationId(object.warehouseLocationId)}
-                    className="cursor-pointer" data-location-id={object.warehouseLocationId || ''}>
-                    <title>{object.label} · {object.width} × {object.height} cm</title>
-                    <rect x={object.x} y={object.y} width={object.width} height={object.height}
-                      rx="6" fill={fixtureColor(object.kind)}
-                      stroke={active ? '#facc15' : '#f8fafc'} strokeWidth={active ? 9 : 3} />
-                    <text x={object.x + object.width / 2} y={object.y + object.height / 2 + 5}
-                      textAnchor="middle" fontSize="19" fontWeight="700" fill="#ffffff">
-                      {object.label}
-                    </text>
-                  </g>
-                );
-              })}
-              <text x="20" y="590" fill="#334155" fontSize="14">20 m</text>
-            </svg>
+          {demoNotice && (
+            <p data-testid="warehouse-demo-subposition-notice" role="status"
+              className="mx-3 mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900">
+              {demoNotice}
+            </p>
+          )}
+          <div className="bg-slate-50 p-3">
+            <WarehouseDepotLayoutEditor
+              scopeKey={'lab-20x6-'+scenarioId}
+              logicalWidth={DEMO_20X6_WIDTH_CM}
+              logicalHeight={DEMO_20X6_DEPTH_CM}
+              objects={draft.objects}
+              selectedObjectId={selectedObjectId}
+              onSelectedObjectIdChange={setSelectedObjectId}
+              onObjectsChange={objects=>setDraft(current=>({...current,objects:copyObjects(objects)}))}
+              onHistoryCheckpoint={checkpoint}
+              canUndo={draft.past.length>0}
+              canRedo={draft.future.length>0}
+              onUndo={undo}
+              onRedo={redo}
+              lightTheme
+              preventLocalOverlap
+              onAddSubposition={object=>{
+                const count=(demoAddedSubpositions[object.id]||0)+1;
+                setDemoAddedSubpositions(current=>({...current,[object.id]:count}));
+                setDemoNotice('Subposição simulada adicionada a '
+                  +warehouseCodeFromVisualLabel(object.label,'LOC-')
+                  +' ('+count+' nova(s) nesta prévia). Nenhum dado real foi alterado.');
+              }}
+              onDuplicateObject={(source,copy)=>{
+                const family:Record<string,string>={
+                  SHELF:'EST-',RACK:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',
+                  REFRIGERATOR:'GEL-',BENCH:'BAN-',CABINET:'ARM-',CHAMBER:'CAM-',
+                };
+                const prefix=family[source.kind]||'LOC-';
+                const sourceCode=warehouseCodeFromVisualLabel(source.label,prefix);
+                const used=new Set(draft.objects.map(item=>
+                  warehouseCodeFromVisualLabel(item.label,family[item.kind]||'LOC-')));
+                const code=warehouseNextAvailableLocationCode(sourceCode,used);
+                const suffix=code.match(/(\d+)$/)?.[1] || '01';
+                const noun=source.kind==='SHELF'||source.kind==='RACK'?'Estante'
+                  :source.kind==='PALLET'?'Palete'
+                  :source.kind==='REFRIGERATOR'?'Geladeira'
+                  :source.kind==='FREEZER'?'Freezer'
+                  :source.kind==='BENCH'?'Bancada':'Local';
+                return {...copy,warehouseLocationId:null,label:code+' · '+noun+' '+suffix};
+              }}
+            />
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 border-t border-slate-200 px-4 py-3">
+            <span className="text-xs font-semibold text-slate-600">
+              Sem integração com contas, depósitos ou saldos reais.
+            </span>
+            <button type="button" onClick={()=>{setDraft(createDraft(scenarioId));setSelectedObjectId(null);setDemoAddedSubpositions({});setDemoNotice(null);}}
+              data-testid="warehouse-demo-reset-draft"
+              className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-bold text-blue-800">
+              Restaurar cenário
+            </button>
           </div>
         </section>
       )}

@@ -1137,7 +1137,7 @@ export function WarehouseIsometricPreview({
             previewView
           ),
           // Physical door normal is derived BEFORE rotating the room.
-          applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView),
+          applianceFront: warehouseApplianceFrontForView(object.width, object.height, previewView, object.rotation),
         }))
         .sort((left, right) => {
           // Painter's order follows the furthest occupied floor corner, not the
@@ -1703,26 +1703,6 @@ export function WarehouseIsometricPreview({
               <line x1={backWallTop[0].x} y1={backWallTop[0].y} x2={backWallTop[1].x} y2={backWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.78" />
               <line x1={leftWallTop[0].x} y1={leftWallTop[0].y} x2={leftWallTop[1].x} y2={leftWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.78" />
 
-              {[0.16, 0.5, 0.84].map((ratio) => {
-                const p = isoPoint(viewLogicalWidth * ratio, 0, wallHeight * 0.62, viewLogicalWidth, viewLogicalHeight);
-                return (
-                  <g key={'lamp-back-' + ratio}>
-                    <rect x={p.x - 14} y={p.y - 6} width="28" height="8" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
-                    <ellipse cx={p.x} cy={p.y + 4} rx="22" ry="7" fill="#fff7d6" opacity="0.38" />
-                  </g>
-                );
-              })}
-
-              {[0.22, 0.64].map((ratio) => {
-                const p = isoPoint(0, viewLogicalHeight * ratio, wallHeight * 0.58, viewLogicalWidth, viewLogicalHeight);
-                return (
-                  <g key={'lamp-left-' + ratio}>
-                    <rect x={p.x - 12} y={p.y - 5} width="24" height="7" rx="4" fill="#f8fafc" stroke="#cbd5e1" />
-                    <ellipse cx={p.x} cy={p.y + 4} rx="19" ry="6" fill="#fff7d6" opacity="0.34" />
-                  </g>
-                );
-              })}
-
               <polygon points={polygonPoints(floor)} fill="url(#floorGradient)" stroke="#9fb2c5" strokeWidth="2.5" />
               <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.78" />
               <polygon points={polygonPoints(floor)} fill="url(#floorSoftSheen)" />
@@ -1839,6 +1819,31 @@ export function WarehouseIsometricPreview({
                     applianceFront={object.applianceFront}
                     showLabels={!sceneOnly}
                   />
+                  {!sceneOnly && (hovered || highlighted || localFocusedId === locationId) && (
+                    <g data-visual-role="warehouse-physical-front" pointerEvents="none">
+                      {(() => {
+                        const face = object.applianceFront;
+                        const frontX = face === 'x+' ? object.x + object.width
+                          : face === 'x-' ? object.x
+                          : object.x + object.width / 2;
+                        const frontY = face === 'y+' ? object.y + object.height
+                          : face === 'y-' ? object.y
+                          : object.y + object.height / 2;
+                        const p = isoPoint(frontX, frontY, 2, viewLogicalWidth, viewLogicalHeight);
+                        return (
+                          <>
+                            <circle cx={p.x} cy={p.y} r="5.2"
+                              stroke="#ffffff" strokeWidth="1.4" fill="#059669" />
+                            <text x={p.x} y={p.y - 9} textAnchor="middle"
+                              fill="#065f46" fontSize="8" fontWeight="900"
+                              paintOrder="stroke" stroke="#ffffff" strokeWidth="2.6">
+                              FRENTE
+                            </text>
+                          </>
+                        );
+                      })()}
+                    </g>
+                  )}
                   </g>
                 );
               })}

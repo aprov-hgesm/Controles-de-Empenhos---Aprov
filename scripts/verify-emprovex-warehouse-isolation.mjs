@@ -93,11 +93,20 @@ assert.equal(
   'firestore.rules',
   'Database principal precisa continuar vinculado a firestore.rules.'
 );
+// A release candidata usa regras MINIMAS: leitura escopada, TODAS as
+// mutacoes pelo servidor IAM. Nao aceitar Rules de escrita direta novamente.
 assert.equal(
   warehouseTarget?.rules,
-  'firestore.warehouse.rules',
-  'Database ADM Depósito precisa continuar vinculado a firestore.warehouse.rules.'
+  'firestore.warehouse.server-only.rules',
+  'Database ADM Depósito precisa vincular o ruleset server-only; escrita SDK negada.'
 );
+const serverOnlyRules = read('firestore.warehouse.server-only.rules');
+assert.match(serverOnlyRules, /match \/warehouse\/\{workspaceId\}\/\{document=\*\*\}/);
+assert.match(serverOnlyRules, /allow get, list: if canReadWorkspace\(workspaceId\);/);
+assert.match(serverOnlyRules, /allow create, update, delete: if false;/);
+assert.match(serverOnlyRules, /emprovexWorkspaceId == workspaceId/);
+assert.match(serverOnlyRules, /sectorLifecycleAllowsAccess\(workspaceId\)/);
+assert.doesNotMatch(serverOnlyRules, /allow (?:write|create|update|delete): if true;/);
 
 console.log('EMPROVEX / ADM Depósito isolation guard: PASS');
 console.log('- NF create/edit/delete independente do namespace warehouse');

@@ -10,6 +10,10 @@ import {
   Ruler,
   Save,
   Warehouse,
+  Printer,
+  Settings2,
+  Archive,
+  X,
 } from 'lucide-react';
 
 import {
@@ -27,6 +31,8 @@ import {
 } from '../../../lib/warehouse/layoutRepository';
 import {
   createWarehouseLocation,
+  updateWarehouseDepot,
+  archiveWarehouseStructure,
   listWarehouseDepots,
   listWarehousePositiveLocationBalances,
   listWarehouseLocations,
@@ -40,6 +46,13 @@ import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
+import { readWarehouseCroquiCatalog, readWarehouseCroquiLayouts } from '../../../lib/warehouse/croquiReadRepository';
+import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
+import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
+import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
+import { WarehouseDepotQuickCreate } from './WarehouseDepotQuickCreate';
+import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 
@@ -52,7 +65,8 @@ type CanonicalWarehouseVisualKind =
   | 'PALLET'
   | 'FREEZER'
   | 'REFRIGERATOR'
-  | 'BENCH';
+  | 'BENCH'
+  | 'OTHER';
 
 const CANONICAL_VISUAL_KINDS: CanonicalWarehouseVisualKind[] = [
   'SHELF',
@@ -60,6 +74,7 @@ const CANONICAL_VISUAL_KINDS: CanonicalWarehouseVisualKind[] = [
   'FREEZER',
   'REFRIGERATOR',
   'BENCH',
+  'OTHER',
 ];
 
 type LocalDraft = {
@@ -70,28 +85,13 @@ type LocalDraft = {
 
 type PendingDuplicatedLocal = {
   objectId: string;
-  sourceLocationId: string;
+  sourceLocationId: string | null;
   code: string;
   name: string;
   description: string | null;
+  subpositionCount: number;
 };
 
-function nextDuplicatedCode(sourceCode: string, usedCodes: Set<string>): string {
-  const match = sourceCode.match(/^(.*?)(\d+)$/);
-  const rawPrefix = match ? match[1] : sourceCode + '-';
-  const digits = match?.[2] || '01';
-  const width = Math.max(2, digits.length);
-  let number = match ? Number(digits) + 1 : 2;
-
-  for (let attempts = 0; attempts < 999; attempts += 1, number += 1) {
-    const suffix = String(number).padStart(width, '0');
-    const prefix = rawPrefix.slice(0, Math.max(1, 32 - suffix.length));
-    const candidate = prefix + suffix;
-    if (!usedCodes.has(candidate)) return candidate;
-  }
-
-  throw new Error('Não foi possível gerar um código único para o Local duplicado.');
-}
 
 function nextDuplicatedName(sourceName: string, code: string): string {
   const match = sourceName.match(/^(.*?)(\d+)$/);
@@ -118,6 +118,21 @@ function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function depotArchiveError(error: unknown): string {
+  const code = messageFrom(error);
+  const mapped: Record<string, string> = {
+    WAREHOUSE_ARCHIVE_OCCUPIED: 'Há materiais com saldo neste depósito. Transfira-os para um local ativo antes de inativar ou excluir. O retorno automático ao recebimento ainda não está disponível. Nada foi alterado.',
+    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há lotes ativos neste depósito. Conclua a transferência dos lotes antes de inativar ou excluir. Nenhuma alteração foi feita.',
+    WAREHOUSE_ARCHIVE_CATALOG_LIMIT: 'O volume de registros exige uma operação assistida. O depósito não foi alterado.',
+    WAREHOUSE_ARCHIVE_TOO_LARGE: 'Este depósito excede o limite de uma única transação. Nenhum registro foi alterado.',
+    WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE: 'Os dados mudaram durante a operação. Recarregue o depósito e tente novamente.',
+    WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND: 'O depósito não foi encontrado. Atualize a página.',
+    WAREHOUSE_SERVER_AUTH_REQUIRED: 'A sessão expirou. Faça login novamente para continuar.',
+    WAREHOUSE_SERVER_CONFIGURATION: 'O servidor não está configurado. Verifique o ambiente local antes de tentar novamente.',
+  };
+  return mapped[code] || code;
+}
+
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
   return objects.map((item) => ({ ...item }));
 }
@@ -138,7 +153,7 @@ function inferKind(name: string): CanonicalWarehouseVisualKind {
     return 'BENCH';
   }
   if (normalized.includes('estante') || normalized.includes('rack')) return 'SHELF';
-  return 'SHELF';
+  return 'OTHER';
 }
 
 function defaultSize(kind: CanonicalWarehouseVisualKind): { widthCm: number; depthCm: number } {
@@ -146,6 +161,7 @@ function defaultSize(kind: CanonicalWarehouseVisualKind): { widthCm: number; dep
   if (kind === 'FREEZER') return { widthCm: 140, depthCm: 75 };
   if (kind === 'REFRIGERATOR') return { widthCm: 90, depthCm: 75 };
   if (kind === 'PALLET') return { widthCm: 120, depthCm: 100 };
+  if (kind === 'OTHER') return {widthCm:100,depthCm:80};
   return { widthCm: 180, depthCm: 70 };
 }
 
@@ -156,6 +172,7 @@ function kindLabel(kind: CanonicalWarehouseVisualKind): string {
     FREEZER: 'Freezer',
     REFRIGERATOR: 'Geladeira industrial',
     BENCH: 'Mesa / bancada',
+    OTHER: 'Outro local',
   };
   return labels[kind];
 }
@@ -187,8 +204,24 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [doorWidths, setDoorWidths] = useState<number[]>([90]);
   const [setupReady, setSetupReady] = useState(false);
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
+  const [legacyLocationId, setLegacyLocationId] = useState('');
   const [pendingDuplicatedLocals, setPendingDuplicatedLocals] = useState<Record<string, PendingDuplicatedLocal>>({});
   const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
+  const [localEdits, setLocalEdits] = useState<Record<string, {name:string;description:string|null}>>({});
+  const [newKind, setNewKind] = useState<CanonicalWarehouseVisualKind>('SHELF');
+  const [showDepotRegistration, setShowDepotRegistration] = useState(false);
+  const [showDepotSettings, setShowDepotSettings] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
+  const [depotWorking, setDepotWorking] = useState(false);
+  const [depotEdit, setDepotEdit] = useState<{
+    name: string; description: string; visualType: 'STANDARD'|'CONTAINER'|'COLD_CONTAINER';
+    sizeProfile: 'SMALL'|'MEDIUM'|'LARGE';
+  } | null>(null);
+  const [newSubpositions, setNewSubpositions] = useState<Array<{
+    parentLocationId:string;code:string;name:string;description:string|null;
+  }>>([]);
+  const [removedSubpositionIds, setRemovedSubpositionIds] = useState<string[]>([]);
+  const saveOperationRef = useRef<string | null>(null);
   const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
   const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
   const [previewBalances, setPreviewBalances] = useState<WarehouseLocationBalance[]>([]);
@@ -206,6 +239,11 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const navigationRef = useRef<string | null>(null);
   const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
 
+  useEffect(()=>{saveOperationRef.current=null;},[
+    draftObjects,pendingDuplicatedLocals,pendingRemovedLocationIds,localEdits,
+    newSubpositions,removedSubpositionIds,draftName,draftWidth,draftHeight,
+  ]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -213,10 +251,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const reloadBase = useCallback(async () => {
     setLoading(true);
     try {
-      const [depotRows, locationRows] = await Promise.all([
-        listWarehouseDepots(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
-      ]);
+      const {depots:depotRows, locations:locationRows} = await readWarehouseCroquiCatalog(workspaceId);
       setDepots(depotRows);
       setLocations(locationRows);
       const activeDepots = depotRows.filter((item) => item.depot.status === 'active');
@@ -246,10 +281,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       return () => { cancelled = true; };
     }
 
-    void Promise.all([
-      getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
-      listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
-    ]).then(([active, versions]) => {
+    void readWarehouseCroquiLayouts(workspaceId,selectedDepotId).then(({active,layouts:versions}) => {
       if (cancelled) return;
       const layout = active?.layout || null;
       setActiveLayout(layout);
@@ -266,6 +298,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
+      setLocalEdits({});
+      setNewSubpositions([]);
+      setRemovedSubpositionIds([]);
+      saveOperationRef.current = null;
       const globalJump = navigationRef.current === selectedDepotId;
       navigationRef.current = null;
       // O salto global conserva o material escolhido e o índice de saldos já lido.
@@ -399,13 +435,99 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     [depots, selectedDepotId]
   );
 
+  function openDepotSettings() {
+    if (!selectedDepot) return;
+    setDepotEdit({
+      name: selectedDepot.name,
+      description: selectedDepot.description || '',
+      visualType: selectedDepot.visualType,
+      sizeProfile: selectedDepot.sizeProfile,
+    });
+    setShowDepotRegistration(false);
+    setShowLabels(false);
+    setShowDepotSettings(true);
+  }
+
+  async function saveDepotSettings() {
+    if (!selectedDepot || !depotEdit || depotWorking) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await updateWarehouseDepot(workspaceId, selectedDepot.id, {
+        name: depotEdit.name, description: depotEdit.description.trim() || null,
+        visualType: depotEdit.visualType, sizeProfile: depotEdit.sizeProfile,
+      });
+      await reloadBase();
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setMessage('Dados do depósito atualizados. Código e histórico preservados.');
+    } catch (error) { setMessage('Não foi possível atualizar o depósito: ' + messageFrom(error)); }
+    finally { setDepotWorking(false); }
+  }
+
+  async function archiveSelectedDepot() {
+    if (!selectedDepot || depotWorking || saving) return;
+    const hasUncommitted = pendingRemovedLocationIds.length > 0
+      || Object.keys(pendingDuplicatedLocals).length > 0
+      || newSubpositions.length > 0 || removedSubpositionIds.length > 0
+      || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
+    if (hasUncommitted) {
+      setMessage('Há mudanças no croqui ainda não salvas. Salve ou descarte as alterações antes de inativar o depósito.');
+      return;
+    }
+    if (!window.confirm('Inativar ' + selectedDepot.code + ' e seus locais? '
+      + 'Não será permitido se houver saldos ou lotes ativos. '
+      + 'Os históricos e etiquetas antigas continuarão preservados.')) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await archiveWarehouseStructure(workspaceId, {kind:'DEPOT',id:selectedDepot.id});
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setSelectedDepotId('');
+      await reloadBase();
+      setMessage('Depósito e suas estruturas inativados, sem excluir o histórico.');
+    } catch (error) {setMessage('Inativação não realizada: ' + depotArchiveError(error));}
+    finally {setDepotWorking(false);}
+  }
+
+  async function deleteEmptyDepot() {
+    if (!selectedDepot || depotWorking || saving) return;
+    const hasUncommitted = pendingRemovedLocationIds.length > 0
+      || Object.keys(pendingDuplicatedLocals).length > 0
+      || newSubpositions.length > 0 || removedSubpositionIds.length > 0
+      || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
+    if (hasUncommitted) {
+      setMessage('Salve ou descarte as alterações do croqui antes de excluir o depósito.');
+      return;
+    }
+    if (!window.confirm('Excluir definitivamente o depósito ' + selectedDepot.code + '? '
+      + 'Esta opção só funciona se não houver saldo ou lote ativo. '
+      + 'Locais e croquis sairão das telas operacionais, mas o histórico permanecerá para auditoria. '
+      + 'Não movimenta materiais automaticamente.')) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await archiveWarehouseStructure(workspaceId, {
+        kind: 'DEPOT', id: selectedDepot.id, mode: 'DELETE', confirmCode: selectedDepot.code,
+      });
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setSelectedDepotId('');
+      await reloadBase();
+      setMessage('Depósito excluído do cadastro operacional. Estruturas ocultadas e histórico preservado; nome e código podem ser reutilizados.');
+    } catch (error) {
+      setMessage('Exclusão não realizada: ' + depotArchiveError(error));
+    } finally { setDepotWorking(false); }
+  }
+
   const depotLocals = useMemo(
     () => locations.filter(
       (item) =>
         item.location.depotId === selectedDepotId
         && item.location.status === 'active'
         && item.location.kind === 'LOCAL'
-    ),
+    ).sort((a,b)=>a.location.code.localeCompare(b.location.code,'pt-BR',{numeric:true})),
     [locations, selectedDepotId]
   );
 
@@ -453,24 +575,6 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     [activeLocationIdsForSelectedDepot, draftObjects]
   );
 
-  const subpositionsByParent = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const item of locations) {
-      if (
-        item.location.depotId === selectedDepotId
-        && item.location.status === 'active'
-        && item.location.kind === 'SUBPOSITION'
-        && item.location.parentLocationId
-      ) {
-        counts.set(
-          item.location.parentLocationId,
-          (counts.get(item.location.parentLocationId) || 0) + 1
-        );
-      }
-    }
-    return counts;
-  }, [locations, selectedDepotId]);
-
   const representedLocationIds = useMemo(
     () => new Set(
       draftObjects
@@ -479,6 +583,14 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     ),
     [draftObjects]
   );
+
+  // Cadastros legados sem desenho não devem reaparecer quando o usuário remove
+  // um local: só são recuperáveis os que já estavam fora da versão salva.
+  const legacyUnmappedLocals = useMemo(() => depotLocals.filter(item =>
+    !representedLocationIds.has(item.location.id)
+    && !pendingRemovedLocationIds.includes(item.location.id)
+    && !(activeLayout?.objects.some(object => object.warehouseLocationId === item.location.id) ?? false)
+  ), [depotLocals, representedLocationIds, pendingRemovedLocationIds, activeLayout]);
 
   useEffect(() => {
     setPendingRemovedLocationIds((current) => {
@@ -587,9 +699,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const widthRatio = length / Math.max(1, draftWidth);
     const heightRatio = width / Math.max(1, draftHeight);
     const previous = cloneObjects(draftObjects);
-    checkpoint(previous);
-
-    setDraftObjects(previous.map((object) => {
+    const scaled = previous.map((object) => {
       const x = Math.min(
         Math.round(object.x * widthRatio * 100) / 100,
         Math.max(0, length - 12)
@@ -613,7 +723,14 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         width: objectWidth,
         height: objectHeight,
       };
-    }));
+    });
+    if(warehouseFindOverlappingLocals(scaled).length){
+      setMessage('Essas dimensões causariam sobreposição de locais. '
+        +'Mantenha as medidas atuais e reposicione as estruturas antes de redimensionar.');
+      return;
+    }
+    checkpoint(previous);
+    setDraftObjects(scaled);
 
     setDraftWidth(length);
     setDraftHeight(width);
@@ -630,7 +747,9 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
   function addLocalToCroqui(item: WarehouseLocationListItem) {
     const draft = localDrafts[item.location.id];
-    if (!draft || representedLocationIds.has(item.location.id)) return;
+    if (!draft || representedLocationIds.has(item.location.id)
+      || pendingRemovedLocationIds.includes(item.location.id)
+      || !legacyUnmappedLocals.some(row => row.location.id === item.location.id)) return;
     const widthCm = clampDimension(draft.widthCm, draftWidth - 20);
     const depthCm = clampDimension(draft.depthCm, draftHeight - 20);
     const next = createWarehouseDepotLayoutObject({
@@ -646,65 +765,266 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       warehouseLocationId: item.location.id,
       layer: Math.max(0, ...draftObjects.map((object) => object.layer)) + 1,
     });
+    const position=warehouseFindFreePosition(next,draftObjects,draftWidth,draftHeight,{x:30,y:30});
+    if(!position){
+      setMessage('Não existe espaço livre para inserir '+item.location.code+'. Reorganize o depósito.');
+      return;
+    }
     checkpoint(draftObjects);
-    setDraftObjects([...draftObjects, next]);
+    setDraftObjects([...draftObjects,{...next,...position}]);
     setPendingRemovedLocationIds((current) => current.filter((id) => id !== item.location.id));
     setSelectedObjectId(next.id);
   }
 
-  function handleRemoveObject(object: WarehouseDepotLayoutObject) {
-    if (object.warehouseLocationId) {
-      setMessage('O local foi retirado apenas do desenho. O cadastro e seu estoque continuam preservados. Para inativar, use o cadastro operacional.');
+  const selectedLayoutObject = draftObjects.find((object) => object.id === selectedObjectId) || null;
+  const selectedFaces = selectedLayoutObject ? warehouseObjectFaceLabels(selectedLayoutObject) : null;
+  const selectedLocation = selectedLayoutObject?.warehouseLocationId
+    ? locations.find((row) => row.location.id === selectedLayoutObject.warehouseLocationId)?.location || null
+    : null;
+  const selectedPending = selectedLayoutObject
+    ? pendingDuplicatedLocals[selectedLayoutObject.id] || null : null;
+  const selectedCode = selectedPending?.code || selectedLocation?.code || '';
+  const selectedName = selectedPending?.name
+    || (selectedLocation ? localEdits[selectedLocation.id]?.name || selectedLocation.name : '');
+  const selectedChildren = selectedLocation
+    ? locations.filter((row) => row.location.parentLocationId === selectedLocation.id
+      && row.location.kind === 'SUBPOSITION' && row.location.status === 'active'
+      && !removedSubpositionIds.includes(row.location.id))
+    : [];
+  function addCroquiSubposition(parentId:string,code:string) {
+    const used=new Set([
+      ...locations.filter(row=>row.location.parentLocationId===parentId&&row.location.status==='active')
+        .map(row=>row.location.code),
+      ...newSubpositions.filter(row=>row.parentLocationId===parentId).map(row=>row.code),
+    ]);
+    const nextCode=warehouseNextAvailableLocationCode(code+'-00',used);
+    const sequence=nextCode.split('-').at(-1)||'01';
+    setNewSubpositions(current=>[...current,{
+      parentLocationId:parentId,code:nextCode,name:'Subposição '+sequence,description:null,
+    }]);
+    setMessage(nextCode+' preparada. A nova subposição será cadastrada ao salvar.');
+  }
+
+  function addSubpositionFromContext(object: WarehouseDepotLayoutObject) {
+    const pending = pendingDuplicatedLocals[object.id];
+    if (pending) {
+      const copiedCount = pending.sourceLocationId
+        ? locations.filter(row => row.location.parentLocationId === pending.sourceLocationId
+          && row.location.kind === 'SUBPOSITION' && row.location.status === 'active').length
+        : 0;
+      if (copiedCount + pending.subpositionCount >= 30) {
+        setMessage('Este local já alcançou o limite de 30 subposições.');
+        return;
+      }
+      setPendingDuplicatedLocals(current => {
+        const existing = current[object.id];
+        return existing ? {
+          ...current,
+          [object.id]: { ...existing, subpositionCount: existing.subpositionCount + 1 },
+        } : current;
+      });
+      setMessage('Uma subposição adicional foi preparada para ' + pending.code
+        + '. Salve o croqui para concluir o cadastro.');
+      return;
     }
+    const location = object.warehouseLocationId
+      ? locations.find(row => row.location.id === object.warehouseLocationId)?.location
+      : null;
+    if (location && location.kind === 'LOCAL' && location.status === 'active'
+      && !pendingRemovedLocationIds.includes(location.id)) {
+      const existingCount = locations.filter(row => row.location.parentLocationId === location.id
+        && row.location.kind === 'SUBPOSITION' && row.location.status === 'active'
+        && !removedSubpositionIds.includes(row.location.id)).length;
+      const addedCount = newSubpositions.filter(row => row.parentLocationId === location.id).length;
+      if (existingCount + addedCount >= 30) {
+        setMessage('Este local já alcançou o limite de 30 subposições.');
+        return;
+      }
+      addCroquiSubposition(location.id, location.code);
+      return;
+    }
+    setMessage('Este objeto ainda não está cadastrado. Cadastre o local antes de incluir subposições.');
+  }
+
+  // Código reservado enquanto o cadastro continuar ativo no servidor.
+  // Retirar EST-05 do desenho NÃO torna EST-05 disponível para uma cópia.
+  const usedCroquiCodes = () => new Set([
+    ...locations.filter(row => row.location.depotId === selectedDepotId && row.location.status === 'active')
+      .map(row => row.location.code),
+    ...Object.values(pendingDuplicatedLocals)
+      .filter(entry=>draftObjects.some(object=>object.id===entry.objectId))
+      .map((entry) => entry.code),
+  ]);
+
+  function addNewCroquiLocal(kind: CanonicalWarehouseVisualKind) {
+    if(!selectedDepotId || !setupReady || saving) return;
+    const prefixes:Record<CanonicalWarehouseVisualKind,string> = {
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
+    };
+    const labelPrefix=prefixes[kind];
+    const code=warehouseNextAvailableLocationCode(labelPrefix+'00',usedCroquiCodes());
+    const name=kindLabel(kind)+' '+code.split('-').at(-1);
+    const dims=defaultSize(kind);
+    const width=Math.min(dims.widthCm,draftWidth-20);
+    const height=Math.min(dims.depthCm,draftHeight-20);
+    const draft=createWarehouseDepotLayoutObject({
+      kind,label:code+' · '+name,width,height,
+      x:20,y:20,rotation:0,elevation:1,visualVariant:'solid',
+      warehouseLocationId:null,layer:Math.max(0,...draftObjects.map(x=>x.layer))+1,
+    });
+    const free=warehouseFindFreePosition(draft,draftObjects,draftWidth,draftHeight,
+      {x:20,y:20});
+    if(!free){
+      setMessage('Não há espaço livre para um novo local com essas dimensões. '
+        +'Reorganize o croqui antes de cadastrar.');
+      return;
+    }
+    const object={...draft,...free};
+    checkpoint(draftObjects);
+    setDraftObjects([...draftObjects,object]);
+    setPendingDuplicatedLocals(current=>({...current,[object.id]:{
+      objectId:object.id,sourceLocationId:null,code,name,description:null,
+      subpositionCount:kind==='SHELF'?4:0,
+    }}));
+    setSelectedObjectId(object.id);
+    setMessage('Novo local '+code+' preparado. Posicione-o no croqui e salve para cadastrar.');
+  }
+
+  function activateLegacyVisualCopy(object:WarehouseDepotLayoutObject) {
+    if(object.warehouseLocationId||pendingDuplicatedLocals[object.id]
+      ||!CANONICAL_VISUAL_KINDS.includes(object.kind as CanonicalWarehouseVisualKind))return;
+    const kind=object.kind as CanonicalWarehouseVisualKind;
+    const prefixes:Record<CanonicalWarehouseVisualKind,string>={
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
+    };
+    const code=warehouseNextAvailableLocationCode(prefixes[kind]+'00',usedCroquiCodes());
+    const name=kindLabel(kind)+' '+code.split('-').at(-1);
+    setPendingDuplicatedLocals(current=>({...current,[object.id]:{
+      objectId:object.id,sourceLocationId:null,code,name,description:null,
+      subpositionCount:kind==='SHELF'?4:0,
+    }}));
+    setDraftObjects(current=>current.map(item=>item.id===object.id
+      ?{...item,label:code+' · '+name}:item));
+    setMessage('Cópia visual convertida em novo local provisório: '+code+'. Salve para cadastrar.');
   }
 
   function prepareDuplicatedObject(
-    _source: WarehouseDepotLayoutObject,
-    copy: WarehouseDepotLayoutObject
-  ): WarehouseDepotLayoutObject {
-    setMessage('Cópia visual criada sem novo cadastro. Cadastre outros locais somente em Cadastramento de Depósito.');
-    return { ...copy, warehouseLocationId: null, label: 'Cópia visual · ' + copy.label.slice(0, 75) };
+    source:WarehouseDepotLayoutObject, copy:WarehouseDepotLayoutObject
+  ):WarehouseDepotLayoutObject {
+    const parent=source.warehouseLocationId
+      ? locations.find(row=>row.location.id===source.warehouseLocationId)?.location : null;
+    const prepared=pendingDuplicatedLocals[source.id];
+    const familyPrefix:Record<CanonicalWarehouseVisualKind,string>={
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',OTHER:'LOC-',
+    };
+    const kind=source.kind as CanonicalWarehouseVisualKind;
+    if(!parent && !prepared && !CANONICAL_VISUAL_KINDS.includes(kind)){
+      setMessage('Elemento ilustrativo duplicado. Ele não corresponde a um local de estoque.');
+      return {...copy,warehouseLocationId:null,label:'Elemento visual · '+source.label.slice(0,65)};
+    }
+    const sourceCode=parent?.code || prepared?.code
+      || warehouseCodeFromVisualLabel(source.label,familyPrefix[kind]||'LOC-');
+    const code=warehouseNextAvailableLocationCode(sourceCode,usedCroquiCodes());
+    const name=nextDuplicatedName(parent?.name || prepared?.name || kindLabel(kind),code);
+    const sourceLocationId=parent?.id || prepared?.sourceLocationId || null;
+    const subpositionCount=sourceLocationId?0:prepared?.subpositionCount || 0;
+    const pending:PendingDuplicatedLocal={
+      objectId:copy.id,sourceLocationId,code,name,
+      description:parent?.description || prepared?.description || null,subpositionCount,
+    };
+    setPendingDuplicatedLocals(current=>({...current,[copy.id]:pending}));
+    setMessage(code+' preparado. O novo local e suas subposições serão cadastrados ao salvar.');
+    return {...copy,warehouseLocationId:null,label:code+' · '+name};
+  }
+
+  function handleRemoveObject(object:WarehouseDepotLayoutObject):boolean {
+    if(!object.warehouseLocationId) {
+      setMessage('Elemento retirado do croqui. Nenhum cadastro foi alterado.');
+      return true;
+    }
+    const location=locations.find(row=>row.location.id===object.warehouseLocationId)?.location;
+    if(!location)return false;
+    if(!window.confirm('Inativar '+location.code+' e suas subposições ao salvar? '
+      +'O servidor recusará se houver estoque ou lotes ativos.'))return false;
+    setPendingRemovedLocationIds(current=>[...new Set([...current,location.id])]);
+    setMessage(location.code+' marcado para inativação. A alteração só ocorrerá ao salvar.');
+    return true;
   }
 
   async function saveLayout() {
-    if (!selectedDepotId || !selectedDepot || !setupReady) return;
+    if(!selectedDepotId || !selectedDepot || !setupReady || saving) return;
+    const overlaps=warehouseFindOverlappingLocals(draftObjects);
+    if(overlaps.length){
+      const byId=new Map(draftObjects.map(object=>[object.id,object.label]));
+      const first=overlaps[0];
+      setMessage('Salvamento bloqueado: '+(byId.get(first.firstId)||'Local')
+        +' está sobreposto a '+(byId.get(first.secondId)||'outro local')
+        +'. Separe os locais no Croqui 2D e tente novamente.');
+      return;
+    }
+    const plannedCodes = new Set<string>();
+    for (const object of draftObjects) {
+      const registered = object.warehouseLocationId
+        ? locations.find(row => row.location.id === object.warehouseLocationId)?.location : null;
+      const code = registered?.code || pendingDuplicatedLocals[object.id]?.code || null;
+      if (!code) continue;
+      if (plannedCodes.has(code)) {
+        setMessage('Salvamento bloqueado: o código ' + code + ' aparece mais de uma vez no croqui. '
+          + 'Atualize a página ou desfaça a duplicação antes de salvar.');
+        return;
+      }
+      plannedCodes.add(code);
+    }
     setSaving(true);
     setMessage(null);
     try {
-      let objectsForSave = cloneObjects(draftObjects);
-      // Croquis edita apenas geometria. Não cria Local ou Prateleira.
-      const saved = await saveWarehouseDepotLayoutVersion(workspaceId, {
-        name: draftName.trim() || 'Croqui principal',
-        depotId: selectedDepotId,
-        logicalWidth: draftWidth,
-        logicalHeight: draftHeight,
-        objects: objectsForSave,
-        baseLayoutId: activeLayout?.id || null,
-        expectedVersion: activeLayout?.version ?? null,
+      const visibleIds=new Set(draftObjects.map(o=>o.id));
+      const createLocals=Object.values(pendingDuplicatedLocals)
+        .filter(item=>visibleIds.has(item.objectId)).map(item=>({
+          objectId:item.objectId,sourceLocationId:item.sourceLocationId,code:item.code,
+          name:item.name,description:item.description,subpositionCount:item.subpositionCount,
+        }));
+      // Objetos já cadastrados removidos pelo usuario exigem inativação protegida.
+      const represented=new Set(draftObjects.map(o=>o.warehouseLocationId).filter(Boolean));
+      const archiveLocationIds=pendingRemovedLocationIds
+        .filter(id=>!represented.has(id));
+      const editLocals=Object.entries(localEdits)
+        .filter(([id])=>{
+          const parent=locations.find(row=>row.location.id===id)?.location.parentLocationId;
+          return !archiveLocationIds.includes(id)
+            &&!removedSubpositionIds.includes(id)
+            &&(!parent||!archiveLocationIds.includes(parent));
+        })
+        .map(([id,item])=>({id,name:item.name,description:item.description}));
+      if(!saveOperationRef.current)saveOperationRef.current=crypto.randomUUID();
+      const result=await applyWarehouseCroquiStructure(workspaceId,{
+        operationId:saveOperationRef.current,
+        name:draftName.trim()||'Croqui principal',depotId:selectedDepotId,
+        logicalWidth:draftWidth,logicalHeight:draftHeight,objects:cloneObjects(draftObjects),
+        baseLayoutId:activeLayout?.id||null,expectedVersion:activeLayout?.version??null,
+        createLocals,createSubpositions:newSubpositions,editLocals,archiveLocationIds,
+        archiveSubpositionIds:removedSubpositionIds,
       });
-
-      // Retirar um objeto do croqui nunca desativa uma posição com estoque.
-      setMessage(
-        'Croqui salvo com sucesso. Versão ' + saved.version + ' ativa.'
-
-      );
-      const [active, versions] = await Promise.all([
-        getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
-        listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
-      ]);
-      setActiveLayout(active?.layout || saved);
-      setHistory(versions);
-      setDraftObjects(objectsForSave);
+      setActiveLayout(result.layout);
+      setDraftObjects(cloneObjects(result.layout.objects));
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
-      setDraftHistory({ past: [], future: [] });
+      setLocalEdits({});
+      setNewSubpositions([]);
+      setRemovedSubpositionIds([]);
+      setDraftHistory({past:[],future:[]});
       setPreviewLoaded(false);
+      setMessage('Estrutura e croqui salvos juntos. Versão '+result.layout.version+' ativa. '
+        +result.createdLocations.length+' locais cadastrados.');
+      saveOperationRef.current=null;
+      const {active,layouts:versions}=await readWarehouseCroquiLayouts(workspaceId,selectedDepotId);
+      setActiveLayout(active?.layout||result.layout);
+      setHistory(versions);
       await reloadBase();
-    } catch (error) {
-      setMessage('Não foi possível salvar o croqui. ' + messageFrom(error));
-    } finally {
-      setSaving(false);
-    }
+    }catch(error){
+      setMessage('Salvamento não concluído. Nenhuma edição parcial deve ser aplicada. '
+        +messageFrom(error));
+    }finally{setSaving(false);}
   }
 
   if (loading) {
@@ -718,14 +1038,123 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const activeDepots = depots.filter((item) => item.depot.status === 'active');
   if (!activeDepots.length) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <p className="font-black text-amber-900">Cadastre um depósito antes de desenhar o croqui.</p>
-      </div>
+      <section data-testid="warehouse-croqui-first-depot" className="space-y-4">
+        <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito</h2>
+        <p className="text-xs text-slate-600">Cadastre o primeiro depósito para começar a montar sua estrutura no Croqui 2D.</p>
+        {message && <p role="alert" aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">{message}</p>}
+        <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
+          onRegistered={async depotId=>{await reloadBase();setSelectedDepotId(depotId);}}/>
+      </section>
     );
   }
 
   return (
     <section className="space-y-4" data-testid="warehouse-r1-croquis">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito · Croqui 2D</h2>
+          <p className="text-xs text-slate-600">Crie, duplique, edite e inative locais em um único mapa.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => {setShowDepotRegistration(current=>!current);setShowDepotSettings(false);setShowLabels(false);}}
+            data-testid="warehouse-croqui-new-depot"
+            className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
+            {showDepotRegistration?'Fechar cadastro':'+ Cadastrar depósito'}
+          </button>
+          <button type="button" onClick={openDepotSettings} disabled={!selectedDepot || depotWorking}
+            data-testid="warehouse-croqui-manage-depot"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e] disabled:opacity-40">
+            <Settings2 className="h-3.5 w-3.5" /> Gerenciar depósito
+          </button>
+          <button type="button" onClick={() => {setShowLabels(current=>!current);setShowDepotSettings(false);setShowDepotRegistration(false);}}
+            data-testid="warehouse-croqui-show-labels"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e]">
+            <Printer className="h-3.5 w-3.5"/> {showLabels?'Fechar etiquetas':'Etiquetas'}
+          </button>
+        </div>
+      </div>
+      {message && (
+        <div role="alert" aria-live="polite" data-testid="warehouse-croqui-operation-message"
+          className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-slate-900">
+          {message}
+        </div>
+      )}
+      {showDepotRegistration&&(
+        <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
+          onRegistered={async depotId=>{
+            await reloadBase();setSelectedDepotId(depotId);setShowDepotRegistration(false);
+          }}/>
+      )}
+      {showDepotSettings && selectedDepot && depotEdit && (
+        <section className="space-y-3 rounded-2xl border border-blue-200 bg-white p-4 shadow-sm"
+          data-testid="warehouse-croqui-depot-settings">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-extrabold text-[#00288e]">Gerenciar {selectedDepot.code}</h3>
+            <button type="button" aria-label="Fechar gestão do depósito"
+              onClick={() => setShowDepotSettings(false)}><X className="h-4 w-4"/></button>
+          </div>
+          <p className="text-xs text-slate-600">Inativar ou excluir um depósito vazio preserva o histórico. A exclusão é definitiva e libera o nome e o código para novo cadastro. Depósitos com estoque exigem movimentação segura antes da exclusão.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold text-slate-700">Nome do depósito
+              <input required minLength={2} maxLength={120} value={depotEdit.name}
+                onChange={event=>setDepotEdit(current=>current&&({...current,name:event.target.value}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"/>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Descrição
+              <input maxLength={240} value={depotEdit.description}
+                onChange={event=>setDepotEdit(current=>current&&({...current,description:event.target.value}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"/>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Tipo de depósito
+              <select value={depotEdit.visualType}
+                onChange={event=>setDepotEdit(current=>current&&({...current,visualType:event.target.value as typeof current.visualType}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+                <option value="STANDARD">Padrão</option>
+                <option value="CONTAINER">Contêiner</option>
+                <option value="COLD_CONTAINER">Contêiner frigorífico</option>
+              </select>
+            </label>
+            <label className="text-xs font-bold text-slate-700">Porte
+              <select value={depotEdit.sizeProfile}
+                onChange={event=>setDepotEdit(current=>current&&({...current,sizeProfile:event.target.value as typeof current.sizeProfile}))}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2">
+                <option value="SMALL">Pequeno</option>
+                <option value="MEDIUM">Médio</option>
+                <option value="LARGE">Grande</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <button type="button" disabled={depotWorking || saving}
+              data-testid="warehouse-croqui-archive-depot"
+              onClick={()=>void archiveSelectedDepot()}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-extrabold text-rose-700 disabled:opacity-40">
+              <Archive className="h-4 w-4"/> Inativar depósito
+            </button>
+            <button type="button" disabled={depotWorking || saving}
+              data-testid="warehouse-croqui-delete-empty-depot"
+              onClick={()=>void deleteEmptyDepot()}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-extrabold text-rose-800 disabled:opacity-40">
+              Excluir depósito vazio
+            </button>
+            <button type="button" disabled={depotWorking || saving || !depotEdit.name.trim()}
+              data-testid="warehouse-croqui-save-depot"
+              onClick={()=>void saveDepotSettings()}
+              className="rounded-xl bg-[#00288e] px-4 py-2 text-xs font-extrabold text-white disabled:opacity-40">
+              {depotWorking?'Processando…':'Salvar dados do depósito'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {showLabels && (
+        <section data-testid="warehouse-croqui-labels" className="rounded-2xl border border-blue-200 bg-white p-3">
+          <WarehouseLabelsR1 depots={depots} locations={locations}
+            selectedDepotId={selectedDepotId}
+            selectedLocationId={selectedLayoutObject?.warehouseLocationId || ''}/>
+        </section>
+      )}
+
       <div className="rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -877,6 +1306,16 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   <Ruler className="h-3.5 w-3.5" />
                   Editar dimensões
                 </button>
+                <select aria-label="Tipo do novo local" value={newKind}
+                  onChange={event=>setNewKind(event.target.value as CanonicalWarehouseVisualKind)}
+                  className="h-10 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700">
+                  {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
+                </select>
+                <button type="button" data-testid="warehouse-croqui-primary-new-local"
+                  onClick={()=>addNewCroquiLocal(newKind)} disabled={saving}
+                  className="inline-flex h-10 items-center gap-1 rounded-xl bg-[#00288e] px-4 text-xs font-extrabold text-white disabled:opacity-40">
+                  <Plus className="h-4 w-4"/> Novo local
+                </button>
                 <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-600">
                   {depotLocals.length} Locais cadastrados
                 </span>
@@ -904,6 +1343,15 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               </div>
             </div>
           </div>
+
+          {warehouseFindOverlappingLocals(draftObjects).length > 0 && (
+            <div role="alert" data-testid="warehouse-croqui-existing-overlaps"
+              className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+              Atenção: {warehouseFindOverlappingLocals(draftObjects).length} par(es) de locais
+              estão sobrepostos neste croqui. Selecione e reposicione os elementos no mapa
+              antes de salvar. Nenhum local existente foi movido automaticamente.
+            </div>
+          )}
 
           {editingDimensions && (
             <div
@@ -1048,122 +1496,31 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               onSelectedMaterialIdChange={setPreviewMaterialId}
             />
           ) : (
-          <div className="grid gap-4 2xl:grid-cols-[320px_minmax(0,1fr)_260px]">
-            <aside className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-[#00288e]" />
-                  <h3 className="text-sm font-black text-slate-900">Locais do depósito</h3>
-                </div>
-                <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  Somente os Locais já cadastrados podem ser inseridos. O tipo visual é padronizado em cinco modelos: Estante, Palete, Freezer, Geladeira industrial e Mesa / bancada.
-                </p>
-
-                <div className="mt-3 max-h-[640px] space-y-3 overflow-y-auto pr-1">
-                  {depotLocals.map((item) => {
-                    const inserted = representedLocationIds.has(item.location.id);
-                    const localDraft = localDrafts[item.location.id];
-                    if (!localDraft) return null;
-                    return (
-                      <div key={item.location.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-xs font-black text-slate-800">{item.location.code} · {item.location.name}</p>
-                            <p className="mt-0.5 text-[10px] text-slate-500">
-                              {subpositionsByParent.get(item.location.id) || 0} subposição(ões)
-                            </p>
-                          </div>
-                          {inserted && (
-                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700">
-                              Inserido
-                            </span>
-                          )}
-                        </div>
-
-                        {!inserted && (
-                          <>
-                            <label className="mt-3 block">
-                              <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Tipo visual</span>
-                              <select
-                                value={localDraft.kind}
-                                onChange={(event) =>
-                                  setLocalDrafts((current) => ({
-                                    ...current,
-                                    [item.location.id]: {
-                                      ...current[item.location.id],
-                                      kind: event.target.value as CanonicalWarehouseVisualKind,
-                                    },
-                                  }))
-                                }
-                                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700"
-                              >
-                                {CANONICAL_VISUAL_KINDS.map((kind) => (
-                                  <option key={kind} value={kind}>{kindLabel(kind)}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              <label>
-                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Comp. (cm)</span>
-                                <input
-                                  type="number"
-                                  min={20}
-                                  value={localDraft.widthCm}
-                                  onChange={(event) =>
-                                    setLocalDrafts((current) => ({
-                                      ...current,
-                                      [item.location.id]: {
-                                        ...current[item.location.id],
-                                        widthCm: Number(event.target.value),
-                                      },
-                                    }))
-                                  }
-                                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700"
-                                />
-                              </label>
-                              <label>
-                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-500">Larg. (cm)</span>
-                                <input
-                                  type="number"
-                                  min={20}
-                                  value={localDraft.depthCm}
-                                  onChange={(event) =>
-                                    setLocalDrafts((current) => ({
-                                      ...current,
-                                      [item.location.id]: {
-                                        ...current[item.location.id],
-                                        depthCm: Number(event.target.value),
-                                      },
-                                    }))
-                                  }
-                                  className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700"
-                                />
-                              </label>
-                            </div>
-                            {localDraft.kind === 'REFRIGERATOR' && (
-                              <p className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2 text-[10px] font-semibold leading-4 text-blue-800">
-                                Frente padronizada: as portas da geladeira serão desenhadas sempre
-                                no lado de maior medida, independentemente da orientação no croqui.
-                                As dimensões cadastradas serão preservadas.
-                              </p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => addLocalToCroqui(item)}
-                              className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#00288e] px-3 text-[10px] font-black text-white hover:bg-blue-800"
-                            >
-                              <Plus className="h-3.5 w-3.5" /> Inserir no croqui
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </aside>
-
+          <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="min-w-0">
+              {legacyUnmappedLocals.length > 0 && (
+                <div data-testid="warehouse-croqui-legacy-recovery"
+                  className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <span className="font-semibold">{legacyUnmappedLocals.length} local(is) legado(s) sem posição no desenho.</span>
+                  <select aria-label="Selecionar cadastro antigo para recuperar"
+                    className="max-w-48 rounded-lg border border-amber-300 bg-white p-2"
+                    value={legacyUnmappedLocals.some(item=>item.location.id===legacyLocationId)
+                      ?legacyLocationId:legacyUnmappedLocals[0].location.id}
+                    onChange={event=>setLegacyLocationId(event.target.value)}>
+                    {legacyUnmappedLocals.map(item=><option key={item.location.id} value={item.location.id}>
+                      {item.location.code} · {item.location.name}
+                    </option>)}
+                  </select>
+                  <button type="button" className="rounded-lg bg-amber-800 px-3 py-2 font-bold text-white"
+                    onClick={()=>{
+                      const selected=legacyUnmappedLocals.find(item=>item.location.id===legacyLocationId)
+                        ||legacyUnmappedLocals[0];
+                      if(selected)addLocalToCroqui(selected);
+                    }}>
+                    Recuperar cadastro antigo
+                  </button>
+                </div>
+              )}
               <WarehouseDepotLayoutEditor
                 logicalWidth={draftWidth}
                 logicalHeight={draftHeight}
@@ -1179,28 +1536,224 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 scopeKey={selectedDepotId + ':' + (activeLayout?.id || 'new')}
                 lightTheme
                 allowResize={false}
+                preventLocalOverlap
                 onDuplicateObject={prepareDuplicatedObject}
                 onRemoveObject={handleRemoveObject}
+                onAddSubposition={addSubpositionFromContext}
               />
             </div>
 
             <aside className="space-y-3">
+              <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm"
+                data-testid="warehouse-croqui-structure-editor">
+                <h3 className="text-sm font-black text-[#00288e]">Editar cadastro do local</h3>
+                {selectedFaces && (
+                  <div data-testid="warehouse-croqui-faces" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                    <p className="mb-2 text-[10px] font-black text-emerald-800">
+                      Orientação física (acompanha a rotação do local)
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                      <span className="font-bold text-emerald-800">Frente: {selectedFaces.frontLabel}</span>
+                      <span className="text-slate-600">Costas: {selectedFaces.backLabel}</span>
+                      <span className="text-slate-600">Direita: {selectedFaces.rightLabel}</span>
+                      <span className="text-slate-600">Esquerda: {selectedFaces.leftLabel}</span>
+                    </div>
+                    <p className="mt-2 text-[10px] text-slate-600">
+                      No croqui, a faixa verde indica a frente. Para girar, selecione o local e use
+                      os botões de rotação de 90° abaixo do desenho.
+                    </p>
+                  </div>
+                )}
+                {selectedPending || selectedLocation ? (
+                  <div className="mt-3 space-y-3">
+                    <label className="block text-[10px] font-bold text-slate-600">Código
+                      <input value={selectedCode} readOnly className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"/>
+                    </label>
+                    <label className="block text-[10px] font-bold text-slate-600">Tipo visual
+                      <select value={selectedLayoutObject?.kind||'SHELF'} disabled={saving}
+                        onChange={event=>{
+                          if(!selectedLayoutObject)return;
+                          setDraftObjects(current=>current.map(item=>item.id===selectedLayoutObject.id
+                            ?{...item,kind:event.target.value as CanonicalWarehouseVisualKind}:item));
+                        }}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs">
+                        {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
+                      </select>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        ['width','Comprimento (cm)'],['height','Profundidade (cm)'],
+                      ] as const).map(([field,label])=>(
+                        <label key={field} className="block text-[10px] font-bold text-slate-600">
+                          {label}
+                          <input type="number" min={20} step={1} disabled={saving}
+                            value={selectedLayoutObject?.[field]??20}
+                            onChange={event=>{
+                              if(!selectedLayoutObject)return;
+                              const value=Number(event.target.value);
+                              if(!Number.isFinite(value))return;
+                              const max=(field==='width'
+                                ?draftWidth-selectedLayoutObject.x:draftHeight-selectedLayoutObject.y);
+                              const candidate={
+                                ...selectedLayoutObject,
+                                [field]:Math.max(20,Math.min(max,Math.round(value))),
+                              };
+                              if(warehouseLocalHasCollision(candidate,draftObjects)){
+                                setMessage('Medida recusada: o local ocuparia o espaço de outra estrutura.');
+                                return;
+                              }
+                              checkpoint(draftObjects);
+                              setDraftObjects(current=>current.map(item=>
+                                item.id===selectedLayoutObject.id?candidate:item));
+                              setMessage(null);
+                            }}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                        </label>
+                      ))}
+                    </div>
+                    <label className="block text-[10px] font-bold text-slate-600">Nome
+                      <input value={selectedName} maxLength={120} disabled={saving}
+                        onChange={event=>{
+                          const name=event.target.value;
+                          if(selectedPending) setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{...selectedPending,name},
+                          }));
+                          else if(selectedLocation) setLocalEdits(current=>({
+                            ...current,[selectedLocation.id]:{
+                              name,description:current[selectedLocation.id]?.description??selectedLocation.description??null,
+                            },
+                          }));
+                          if(selectedLayoutObject) setDraftObjects(current=>current.map(item=>item.id===selectedLayoutObject.id
+                            ?{...item,label:selectedCode+' · '+name}:item));
+                        }}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                    </label>
+                    <label className="block text-[10px] font-bold text-slate-600">Descrição
+                      <textarea rows={2} disabled={saving}
+                        value={selectedPending?.description??(
+                          selectedLocation?localEdits[selectedLocation.id]?.description??selectedLocation.description:''
+                        )??''}
+                        onChange={event=>{
+                          const description=event.target.value||null;
+                          if(selectedPending) setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{...selectedPending,description},
+                          }));
+                          else if(selectedLocation) setLocalEdits(current=>({
+                            ...current,[selectedLocation.id]:{
+                              name:current[selectedLocation.id]?.name||selectedLocation.name,description,
+                            },
+                          }));
+                        }}
+                        className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                    </label>
+                    {selectedPending?.sourceLocationId && (
+                      <p data-testid="warehouse-croqui-extra-subpositions"
+                        className="rounded-lg bg-blue-50 p-2 text-[10px] text-blue-800">
+                        Copia as subposições da origem e acrescenta
+                        {' '}{selectedPending.subpositionCount} nova(s) ao salvar.
+                      </p>
+                    )}
+                    {selectedPending && !selectedPending.sourceLocationId && (
+                      <label className="block text-[10px] font-bold text-slate-600">Subposições (0–30)
+                        <input type="number" min={0} max={30} step={1}
+                          value={selectedPending.subpositionCount}
+                          onChange={event=>setPendingDuplicatedLocals(current=>({
+                            ...current,[selectedPending.objectId]:{
+                              ...selectedPending,subpositionCount:Math.max(0,Math.min(30,
+                                Math.trunc(Number(event.target.value)||0))),
+                            },
+                          }))}
+                          className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs"/>
+                      </label>
+                    )}
+                    {selectedLocation && (
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-[10px] font-black text-slate-600">
+                          {selectedChildren.length} subposição(ões) cadastradas
+                        </p>
+                        {selectedChildren.map(child=>(
+                          <div key={child.location.id} className="mt-2 flex items-center gap-1">
+                            <span className="w-16 shrink-0 truncate font-mono text-[9px]">{child.location.code}</span>
+                            <input maxLength={120} aria-label={'Nome '+child.location.code}
+                              value={localEdits[child.location.id]?.name||child.location.name}
+                              onChange={event=>setLocalEdits(current=>({
+                                ...current,[child.location.id]:{
+                                  name:event.target.value,
+                                  description:current[child.location.id]?.description??child.location.description??null,
+                                },
+                              }))}
+                              className="min-w-0 flex-1 rounded border border-slate-200 p-1 text-[10px]"/>
+                            <button type="button" title={'Inativar '+child.location.code}
+                              onClick={()=>{
+                                if(window.confirm('Inativar '+child.location.code+' ao salvar? '
+                                  +'Somente se não possuir estoque ativo.')){
+                                  setRemovedSubpositionIds(current=>[...current,child.location.id]);
+                                }
+                              }}
+                              className="rounded border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700">×</button>
+                          </div>
+                        ))}
+                        {newSubpositions.filter(child=>child.parentLocationId===selectedLocation.id)
+                          .map(child=>(
+                            <div key={child.code} className="mt-2 flex items-center gap-1">
+                              <span className="w-16 shrink-0 truncate font-mono text-[9px]">{child.code}</span>
+                              <input maxLength={120} aria-label={'Nome '+child.code}
+                                value={child.name}
+                                onChange={event=>setNewSubpositions(current=>current.map(row=>
+                                  row.parentLocationId===child.parentLocationId&&row.code===child.code
+                                  ?{...row,name:event.target.value}:row))}
+                                className="min-w-0 flex-1 rounded border border-blue-200 bg-blue-50 p-1 text-[10px]"/>
+                              <button type="button" title={'Descartar '+child.code}
+                                onClick={()=>setNewSubpositions(current=>current.filter(row=>row!==child))}
+                                className="rounded border border-slate-200 px-2 py-1 text-[10px]">×</button>
+                            </div>
+                          ))}
+                        <button type="button" onClick={()=>addCroquiSubposition(selectedLocation.id,selectedLocation.code)}
+                          disabled={saving}
+                          data-testid="warehouse-croqui-create-subposition"
+                          className="mt-3 rounded-lg bg-blue-100 px-3 py-1.5 text-[10px] font-bold text-[#00288e]">
+                          + Nova subposição
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-slate-500">
+                      Cadastro e desenho são gravados juntos ao salvar.
+                      O servidor não permite inativar locais com estoque ou lotes ativos.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-3">
+                    <p className="text-xs text-slate-500">
+                      Este elemento ainda não possui cadastro operacional.
+                    </p>
+                    {selectedLayoutObject&&!selectedLayoutObject.warehouseLocationId
+                      &&CANONICAL_VISUAL_KINDS.includes(selectedLayoutObject.kind as CanonicalWarehouseVisualKind)
+                      &&(
+                      <button type="button" data-testid="warehouse-croqui-adopt-visual"
+                        onClick={()=>activateLegacyVisualCopy(selectedLayoutObject)}
+                        className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-bold text-[#00288e]">
+                        Cadastrar este elemento como local
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#00288e]" />
                   <h3 className="text-sm font-black text-slate-900">Orientação</h3>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Os objetos já entram dimensionados. No desenho você pode mover e girar, mas não redimensionar livremente.
+                  O Croqui 2D administra a estrutura real, o desenho e suas cópias. Salve para efetivar as alterações.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Para corrigir o tamanho de um Local já inserido, remova-o do croqui e insira novamente com as medidas corretas.
+                  Para reposicionar um local, arraste no mapa. Para remover, confirme a inativação; saldos e lotes ativos bloqueiam a operação.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Ao duplicar um Local, a cópia recebe um novo código e também replica suas Subposições. Ao salvar o croqui, toda essa nova estrutura é cadastrada automaticamente em Depósitos e localizações.
+                  Ao duplicar um local, o novo cadastro recebe código único e, se houver, as subposições da origem. Nenhum estoque é copiado.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Ao remover do croqui um Local já cadastrado, a exclusão fica pendente. Ao salvar, o Local e suas Subposições são excluídos da operação também em Depósitos e localizações.
+                  A inativação acontece somente no servidor, durante o salvamento conjunto da estrutura e do croqui.
                 </p>
                 {Object.values(pendingDuplicatedLocals).filter((pending) =>
                   draftObjects.some((object) => object.id === pending.objectId)
@@ -1248,11 +1801,6 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         </>
       )}
 
-      {message && (
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-slate-700">
-          {message}
-        </div>
-      )}
     </section>
   );
 }

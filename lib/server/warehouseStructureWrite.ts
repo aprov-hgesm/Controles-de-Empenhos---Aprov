@@ -157,10 +157,13 @@ export async function warehouseStructureServer(
       if(duplicates.some(doc=>activeRecord(doc)&&doc.path!==depotPath)) return fail('WAREHOUSE_DEPOT_DUPLICATE_CODE');
     }
     const indexPath=path(access.workspaceId,'structureCodeClaims',claimId('DEPOT:'+current.code));
-    return warehouseAdminTransaction(token,[depotPath,indexPath],rows=>{
+    const deletedPath=path(access.workspaceId,'depotDeletions',id);
+    return warehouseAdminTransaction(token,[depotPath,indexPath,deletedPath],rows=>{
       const present=rows.get(depotPath);
       if(!present) return fail('WAREHOUSE_DEPOT_NOT_FOUND',404);
       const fresh=depotData(access,id,present);
+      // O status de um depósito excluído não pode ser reativado por uma rota antiga.
+      if(rows.get(deletedPath))return fail('WAREHOUSE_DEPOT_PERMANENTLY_DELETED',409);
       const next=expected(validateWarehouseDepot({
         ...fresh, name:data.name??fresh.name,
         description:data.description===undefined?fresh.description:data.description,
@@ -261,7 +264,14 @@ export async function warehouseStructureServer(
   }
   const indexPath=path(access.workspaceId,'structureCodeClaims',claimId(
     'LOCATION:'+current.kind+':'+current.depotId+':'+(current.parentLocationId??'')+':'+current.code));
-  return warehouseAdminTransaction(token,[target,indexPath],rows=>{
+  const depotPath=path(access.workspaceId,'depots',current.depotId);
+  const deletedPath=path(access.workspaceId,'depotDeletions',current.depotId);
+  return warehouseAdminTransaction(token,[target,indexPath,depotPath,deletedPath],rows=>{
+    if(rows.get(deletedPath))return fail('WAREHOUSE_DEPOT_PERMANENTLY_DELETED');
+    const parentDepot=rows.get(depotPath);
+    if(!parentDepot||depotData(access,current.depotId,parentDepot).status!=='active') {
+      return fail('WAREHOUSE_DEPOT_INACTIVE');
+    }
     const freshRow=rows.get(target);
     if(!freshRow)return fail('WAREHOUSE_LOCATION_NOT_FOUND',404);
     const fresh=locationData(access,locationId,freshRow);

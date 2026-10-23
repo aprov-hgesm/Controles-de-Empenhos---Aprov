@@ -409,7 +409,7 @@ export function renderWarehouseDepotLayoutSvg(layout: WarehouseDepotLayout): str
         '<g data-object-id="' + escapeXml(object.id) + '">',
         '<rect x="' + object.x + '" y="' + object.y + '" width="' + object.width + '" height="' + object.height + '" rx="8"',
         ' fill="' + fill + '" fill-opacity="' + opacity + '" stroke="' + stroke + '" stroke-width="2"',
-        ' transform="rotate(' + object.rotation + ' ' + (object.x + object.width / 2) + ' ' + (object.y + object.height / 2) + ')" />',
+        ' data-orientation-deg="' + object.rotation + '" />',
         '<text x="' + (object.x + 8) + '" y="' + textY + '" fill="#e2e8f0" font-size="12" font-family="system-ui, sans-serif">',
         escapeXml(object.label),
         '</text></g>',

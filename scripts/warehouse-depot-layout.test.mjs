@@ -154,6 +154,18 @@ test('SVG é derivado do layout e não contém quantidade/saldo', () => {
 });
 
 
+
+test('exportacao SVG conserva a planta orientada sem rotacao geometrica duplicada', () => {
+  const original = object({x:100,y:150,width:70,height:140,rotation:90});
+  const valid = source.validateWarehouseDepotLayout(layout({objects:[original]}));
+  assert.equal(valid.ok,true);
+  const svg = source.renderWarehouseDepotLayoutSvg(valid.data);
+  assert.match(svg,/width="70" height="140"/);
+  assert.match(svg,/data-orientation-deg="90"/);
+  assert.doesNotMatch(svg,/transform="rotate\(/);
+});
+
+
 test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout', () => {
   const required = [
     'Estante',
@@ -194,14 +206,15 @@ test('editor visual mantém edição local, 2D/Prévia 3D e sem persistência pa
   );
 
   assert.match(editor, /Vista superior/);
-  assert.match(editor, /Prévia 3D/);
+  assert.match(editor, /Perspectiva rápida \(2,5D\)/);
   assert.match(editor, /Snap/);
   assert.match(editor, /Undo2/);
   assert.match(editor, /Redo2/);
   assert.match(editor, /Duplicar/);
   assert.match(editor, /Trazer para frente/);
   assert.match(editor, /Enviar para trás/);
-  assert.match(editor, /nenhum movimento grava no Firestore/);
+  assert.match(editor, /sem escrita até Salvar|sem escrita.*Salvar|Roda do mouse: zoom/);
+  assert.match(editor, /viewport\.addEventListener\('wheel'/);
   assert.doesNotMatch(editor, /saveWarehouseDepotLayoutVersion|firebase\/firestore|warehouse_balance_v1/);
 
   assert.match(operational, /WAREHOUSE_STRUCTURE_LIBRARY\.map/);
@@ -384,7 +397,8 @@ test('croqui aceita dimensões reais maiores e preserva ajuste proporcional no e
   );
   assert.match(editor, /fitScale/);
   assert.match(editor, /effectiveScale/);
-  assert.match(editor, /proporção \{logicalWidth\}×\{logicalHeight\} preservada/);
+  assert.match(editor, /planta \{logicalWidth\}×\{logicalHeight\} cm/);
+  assert.match(editor, /effectiveScale = fitScale \* zoom/);
   assert.match(operational, /MAX_LAYOUT_DIMENSION = 50000/);
   assert.match(operational, /Aplicar medidas e preservar proporções/);
   assert.match(operational, /warehouse-layout-edit-dimensions/);

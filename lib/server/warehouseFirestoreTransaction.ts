@@ -195,7 +195,7 @@ export async function warehouseAdminTransaction<T>(
 export async function warehouseAdminListByField(
   accessToken: string,
   workspaceId: string,
-  domain: 'lots' | 'depots' | 'locations' | 'locationBalances',
+  domain: 'lots' | 'depots' | 'locations' | 'locationBalances' | 'layouts',
   field: 'materialId' | 'code' | 'depotId',
   value: string,
   maxResults = 100

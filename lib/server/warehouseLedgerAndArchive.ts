@@ -1,7 +1,7 @@
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction,warehouseAdminListCollection,WarehouseStoreError,
+  warehouseAdminTransaction,warehouseAdminListCollection,warehouseAdminListByField,WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import { validateWarehouseMaterial } from '../warehouse/material';
@@ -17,6 +17,7 @@ import {
   type WarehouseStockPosition,
 } from '../warehouse/location';
 import { validateWarehouseLot } from '../warehouse/lot';
+import { validateWarehouseDepotLayout } from '../warehouse/layout';
 import {
   warehouseCanonicalMaterialReadInput,warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalLotReadInput,warehouseCanonicalDepotReadInput,
@@ -163,6 +164,10 @@ export async function warehouseStructureArchiveServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<{ok:true}>{
   const data=obj(raw),isDepot=data.kind==='DEPOT';
+  const permanentDelete=isDepot&&data.mode==='DELETE';
+  if(data.mode!==undefined&&(!permanentDelete||typeof data.confirmCode!=='string')) {
+    return fail('WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION',400);
+  }
   if((!isDepot&&data.kind!=='LOCAL'&&data.kind!=='SUBPOSITION')
     ||typeof data.id!=='string'
     ||!(isDepot?/^dep_[a-f0-9]{32}$/.test(data.id)
@@ -171,12 +176,18 @@ export async function warehouseStructureArchiveServer(
   }
   const archiveId=data.id as string;
   const ws=access.workspaceId,authToken=await token();
-  const [depots,locations,balances,lots]=await Promise.all([
+  const [depots,locations,balances,lots,layouts]=await Promise.all([
     warehouseAdminListCollection(authToken,ws,'depots',500),
     warehouseAdminListCollection(authToken,ws,'locations',500),
     warehouseAdminListCollection(authToken,ws,'locationBalances',500),
     warehouseAdminListCollection(authToken,ws,'lots',500),
+    isDepot?warehouseAdminListByField(authToken,ws,'layouts','depotId',archiveId,500)
+      :Promise.resolve([]),
   ]);
+  // Consultas com limite nao podem liberar exclusao enquanto houver paginas
+  // omitidas: saldos/lotes ou layouts ativos poderiam ficar invisiveis.
+  if(depots.length===500||locations.length===500||balances.length===500
+    ||lots.length===500||layouts.length===500) return fail('WAREHOUSE_ARCHIVE_CATALOG_LIMIT');
   const targetLocation=locations.find(x=>x.path===path(ws,'locations',archiveId));
   if(!isDepot&&(!targetLocation||targetLocation.data.kind!==data.kind)){
     return fail('WAREHOUSE_ARCHIVE_LOCATION_NOT_FOUND',404);
@@ -184,6 +195,9 @@ export async function warehouseStructureArchiveServer(
   const depotId=isDepot?data.id:targetLocation!.data.depotId;
   if(typeof depotId!=='string')return fail('WAREHOUSE_ARCHIVE_DEPOT_INVALID');
   const dp=path(ws,'depots',depotId);
+  // Tombstone externo ao contrato de domínio: exclusão lógica irreversível,
+  // sem remover eventos de estoque, histórico ou índices de auditoria.
+  const deletedPath=permanentDelete?path(ws,'depotDeletions',depotId):null;
   if(!depots.some(x=>x.path===dp))return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND',404);
   const inDepot=locations.filter(x=>x.data.depotId===depotId);
   const positions=(r:Record<string,unknown>)=>{
@@ -201,14 +215,22 @@ export async function warehouseStructureArchiveServer(
   const toArchive=inDepot.filter(x=>x.data.status==='active'&&(isDepot
     ||x.data.id===data.id
     ||(data.kind==='LOCAL'&&x.data.kind==='SUBPOSITION'&&x.data.parentLocationId===data.id)));
-  const reads=[dp,...inDepot.map(x=>x.path),...relevantBalances.map(x=>x.path),...relevantLots.map(x=>x.path)];
-  if(reads.length>450||toArchive.length+(isDepot?1:0)>430){
+  const activeLayouts=layouts.filter(x=>x.data.status==='active');
+  const reads=[dp,...inDepot.map(x=>x.path),...relevantBalances.map(x=>x.path),
+    ...relevantLots.map(x=>x.path),...layouts.map(x=>x.path),
+    ...(deletedPath?[deletedPath]:[])];
+  if(reads.length>450||toArchive.length+(isDepot?1:0)+activeLayouts.length>430){
     return fail('WAREHOUSE_ARCHIVE_TOO_LARGE');
   }
   return warehouseAdminTransaction(authToken,[...new Set(reads)],rows=>{
     const depot=rows.get(dp);
     if(!depot)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND');
-    sameScope(access,depot,'depot');
+    const checkedDepot=sameScope(access,depot,'depot');
+    if(permanentDelete){
+      if(checkedDepot.status!=='active')return fail('WAREHOUSE_DEPOT_DELETE_NOT_ACTIVE');
+      if(data.confirmCode!==checkedDepot.code)return fail('WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION',400);
+      if(deletedPath&&rows.get(deletedPath))return fail('WAREHOUSE_DEPOT_ALREADY_DELETED');
+    }
     if(!isDepot){
       const loc=rows.get(path(ws,'locations',archiveId));
       if(!loc||loc.data.status!=='active')return fail('WAREHOUSE_ARCHIVE_LOCATION_NOT_ACTIVE');
@@ -245,8 +267,37 @@ export async function warehouseStructureArchiveServer(
         writes.push({path:p,data:{...row.data,status:'inactive',updatedBy:access.uid,updatedAt:now}});
       }
     }
+    // A inativacao do deposito deve desativar tambem a versao visual ativa
+    // na mesma transacao. Nenhum Croqui ativo pode sobreviver ao deposito.
+    if(isDepot){
+      for(const layoutEntry of activeLayouts){
+        const old=rows.get(layoutEntry.path);
+        if(!old)return fail('WAREHOUSE_ARCHIVE_LAYOUT_CONCURRENT_CHANGE');
+        const id=layoutEntry.path.split('/').at(-1)||'';
+        const d=old.data;
+        const validated=validateWarehouseDepotLayout({
+          schemaVersion:d.schemaVersion,id,workspaceId:d.workspaceId,ug:d.ug,
+          name:d.name,depotId:d.depotId??null,
+          logicalWidth:d.logicalWidth,logicalHeight:d.logicalHeight,
+          objects:d.objects,version:d.version,status:d.status,
+          previousVersionId:d.previousVersionId??null,
+          createdBy:d.createdBy,updatedBy:d.updatedBy,
+        },{expectedWorkspaceId:ws,expectedUg:access.ug});
+        if(!validated.ok||validated.data.depotId!==depotId||
+          validated.data.status!=='active')return fail('WAREHOUSE_ARCHIVE_INVALID_LAYOUT');
+        writes.push({path:layoutEntry.path,data:{
+          ...old.data,status:'archived',updatedBy:access.uid,updatedAt:now,
+        }});
+      }
+    }
     if(isDepot&&depot.data.status==='active'){
       writes.push({path:dp,data:{...depot.data,status:'inactive',updatedBy:access.uid,updatedAt:now}});
+    }
+    if(permanentDelete&&deletedPath){
+      writes.push({path:deletedPath,data:{
+        workspaceId:ws,ug:access.ug,depotId,code:checkedDepot.code,
+        name:checkedDepot.name,deletedBy:access.uid,deletedAt:now,
+      }});
     }
     return {result:{ok:true as const},writes};
   });

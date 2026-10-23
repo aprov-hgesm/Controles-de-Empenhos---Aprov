@@ -52,6 +52,34 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Prévia operacional emulada: Node válido, portas locais e projeto demo isolado.
+if (files.some(p => /^(?:scripts\/dev-warehouse-isolated\.mjs|scripts\/warehouse-isolated-dev\.test\.mjs|firebase\.warehouse-server-only-browser-test\.json)$/.test(p))) {
+  add('test:warehouse-isolated-dev');
+}
+// Central unica: cadastro, gerenciamento, regras server-only e leitura IAM.
+if (files.some((p) => /^(?:firebase\.json|firestore\.warehouse\.server-only\.rules|scripts\/verify-emprovex-warehouse-isolation\.mjs|lib\/server\/warehouse(?:CroquiRead|LedgerAndArchive)\.ts|lib\/warehouse\/croquiReadRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotQuickCreate|DepotsOperational)\.tsx|scripts\/warehouse-croqui-fusion\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-fusion');
+}
+// Croqui de edição: clique direito, rotação, medidas, subposições e 3D sem luminárias.
+if (files.some((p) => /^(?:lib\/warehouse\/layoutOrientation\.ts|lib\/server\/warehouseStructureLayoutApply\.ts|features\/warehouse\/components\/Warehouse(?:DepotLayoutEditor|CroquisR1Operational|Depot20x6Demo|IsometricPreview)\.tsx|scripts\/warehouse-context-menu\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-context-menu');
+}
+// UX: não mostrar os IDs internos e exibir apenas o código do local no card 2D.
+if (files.some((p) => /^(?:lib\/warehouse\/croquiCardLabel\.ts|features\/warehouse\/components\/WarehouseDepotLayoutEditor\.tsx|scripts\/warehouse-croqui-card-code\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-card-code');
+}
+// Geometria: detectar intersecao de locais no navegador e no servidor.
+if (files.some((p) => /^(?:lib\/warehouse\/layoutCollision\.ts|lib\/server\/warehouse(?:StructureLayoutApply|RemainingWrites)\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotLayoutEditor|Depot20x6Demo)\.tsx|scripts\/warehouse-croqui-collision\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-collision');
+}
+// Sequenciamento: duplicar 3 de 10 gera 11; apos inativar 2, reutilizar 2 com novo ID.
+if (files.some((p) => /^(?:lib\/warehouse\/locationCodeSequence\.ts|lib\/server\/warehouseStructureLayoutApply\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|Depot20x6Demo)\.tsx|scripts\/warehouse-location-code-sequence\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-location-sequence');
+}
+// Central 2D: validar cadastro transacional, idempotencia, conflitos e estoque.
+if (files.some((p) => /^(?:lib\/server\/warehouseStructureLayoutApply\.ts|lib\/warehouse\/croquiStructureRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotsOperational|DepotLayoutEditor)\.tsx|scripts\/warehouse-croqui-unified\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-unified');
+}
 // Demo visual 20×6 m: validar sempre geometria, integridade e isolamento.
 if (files.some((p) => /^(?:lib\/warehouse\/demoDepot20x6\.ts|features\/warehouse\/components\/WarehouseDepot20x6Demo\.tsx|app\/visual-lab\/deposito-20x6\/page\.tsx|scripts\/warehouse-3d-demo-20x6\.test\.mjs)$/.test(p))) {
   add('test:warehouse-3d-demo-20x6');
