@@ -19,7 +19,8 @@ import {
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { turnWarehouseLayoutObject, warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
-import { warehouseFindFreePosition, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
+import { warehouseFindFreePosition, warehouseIsPhysicalLocal, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
+import { warehouseCroquiCardCode } from '../../../lib/warehouse/croquiCardLabel';
 
 type EditorView = 'top' | 'perspective';
 type InteractionMode = 'select' | 'pan';
@@ -518,6 +519,8 @@ export function WarehouseDepotLayoutEditor({
         >
           {objects.slice().sort((a, b) => a.layer - b.layer).map((object) => {
             const active = object.id === selectedObjectId;
+            const cardLabel = warehouseIsPhysicalLocal(object)
+              ? warehouseCroquiCardCode(object.label) : object.label;
             const faces = warehouseObjectFaceLabels(object);
             const edgeStyle = (face: string): React.CSSProperties => {
               if (face === 'y-') return { top: 0, left: '50%', transform: 'translate(-50%,-50%)' };
@@ -549,8 +552,12 @@ export function WarehouseDepotLayoutEditor({
                   startInteraction(event, 'move', object);
                 }}
               >
-                <div className={`pointer-events-none truncate px-2 pt-2 text-[10px] font-black ${lightTheme ? 'text-slate-800' : 'text-slate-100'}`}>{object.label}</div>
-                {object.warehouseLocationId && <div className={`pointer-events-none truncate px-2 pt-1 font-mono text-[8px] ${lightTheme ? 'text-slate-500' : 'text-slate-400'}`}>{object.warehouseLocationId}</div>}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden px-1.5">
+                  <span data-testid={'warehouse-croqui-card-code-'+object.id}
+                    className={`block max-w-full truncate text-center font-extrabold tracking-wide ${object.width < 78 ? 'text-[10px]' : 'text-xs'} ${lightTheme ? 'text-slate-800' : 'text-slate-100'}`}>
+                    {cardLabel}
+                  </span>
+                </div>}
                 <span data-testid={'warehouse-editor-front-'+object.id}
                   title={'Frente voltada para '+faces.frontLabel}
                   aria-label={'Frente de '+object.label+': '+faces.frontLabel}
