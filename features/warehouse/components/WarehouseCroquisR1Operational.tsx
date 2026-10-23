@@ -42,6 +42,7 @@ import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
+import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
 import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
 import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
@@ -81,22 +82,6 @@ type PendingDuplicatedLocal = {
   subpositionCount: number;
 };
 
-function nextDuplicatedCode(sourceCode: string, usedCodes: Set<string>): string {
-  const match = sourceCode.match(/^(.*?)(\d+)$/);
-  const rawPrefix = match ? match[1] : sourceCode + '-';
-  const digits = match?.[2] || '01';
-  const width = Math.max(2, digits.length);
-  let number = match ? Number(digits) + 1 : 2;
-
-  for (let attempts = 0; attempts < 999; attempts += 1, number += 1) {
-    const suffix = String(number).padStart(width, '0');
-    const prefix = rawPrefix.slice(0, Math.max(1, 32 - suffix.length));
-    const candidate = prefix + suffix;
-    if (!usedCodes.has(candidate)) return candidate;
-  }
-
-  throw new Error('Não foi possível gerar um código único para o Local duplicado.');
-}
 
 function nextDuplicatedName(sourceName: string, code: string): string {
   const match = sourceName.match(/^(.*?)(\d+)$/);
@@ -705,7 +690,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         .map(row=>row.location.code),
       ...newSubpositions.filter(row=>row.parentLocationId===parentId).map(row=>row.code),
     ]);
-    const nextCode=nextDuplicatedCode(code+'-00',used);
+    const nextCode=warehouseNextAvailableLocationCode(code+'-00',used);
     const sequence=nextCode.split('-').at(-1)||'01';
     setNewSubpositions(current=>[...current,{
       parentLocationId:parentId,code:nextCode,name:'Subposição '+sequence,description:null,
@@ -714,7 +699,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   }
 
   const usedCroquiCodes = () => new Set([
-    ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active')
+    ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active'
+      && !pendingRemovedLocationIds.includes(row.location.id))
       .map((row) => row.location.code),
     ...Object.values(pendingDuplicatedLocals).map((entry) => entry.code),
   ]);
@@ -725,7 +711,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
     };
     const labelPrefix=prefixes[kind];
-    const code=nextDuplicatedCode(labelPrefix+'00',usedCroquiCodes());
+    const code=warehouseNextAvailableLocationCode(labelPrefix+'00',usedCroquiCodes());
     const name=kindLabel(kind)+' '+code.split('-').at(-1);
     const dims=defaultSize(kind);
     const width=Math.min(dims.widthCm,draftWidth-20);
@@ -760,7 +746,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const prefixes:Record<CanonicalWarehouseVisualKind,string>={
       SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
     };
-    const code=nextDuplicatedCode(prefixes[kind]+'00',usedCroquiCodes());
+    const code=warehouseNextAvailableLocationCode(prefixes[kind]+'00',usedCroquiCodes());
     const name=kindLabel(kind)+' '+code.split('-').at(-1);
     setPendingDuplicatedLocals(current=>({...current,[object.id]:{
       objectId:object.id,sourceLocationId:null,code,name,description:null,
@@ -777,13 +763,18 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const parent=source.warehouseLocationId
       ? locations.find(row=>row.location.id===source.warehouseLocationId)?.location : null;
     const prepared=pendingDuplicatedLocals[source.id];
-    if(!parent && !prepared){
-      setMessage('Copia visual de elemento decorativo, sem cadastro operacional.');
-      return {...copy,warehouseLocationId:null,label:'Cópia visual · '+copy.label.slice(0,75)};
+    const familyPrefix:Record<CanonicalWarehouseVisualKind,string>={
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+    };
+    const kind=source.kind as CanonicalWarehouseVisualKind;
+    if(!parent && !prepared && !CANONICAL_VISUAL_KINDS.includes(kind)){
+      setMessage('Elemento ilustrativo duplicado. Ele não corresponde a um local de estoque.');
+      return {...copy,warehouseLocationId:null,label:'Elemento visual · '+source.label.slice(0,65)};
     }
-    const sourceCode=parent?.code || prepared?.code || 'LOC-00';
-    const code=nextDuplicatedCode(sourceCode,usedCroquiCodes());
-    const name=nextDuplicatedName(parent?.name || prepared?.name || 'Local',code);
+    const sourceCode=parent?.code || prepared?.code
+      || warehouseCodeFromVisualLabel(source.label,familyPrefix[kind]||'LOC-');
+    const code=warehouseNextAvailableLocationCode(sourceCode,usedCroquiCodes());
+    const name=nextDuplicatedName(parent?.name || prepared?.name || kindLabel(kind),code);
     const sourceLocationId=parent?.id || prepared?.sourceLocationId || null;
     const subpositionCount=sourceLocationId?0:prepared?.subpositionCount || 0;
     const pending:PendingDuplicatedLocal={
