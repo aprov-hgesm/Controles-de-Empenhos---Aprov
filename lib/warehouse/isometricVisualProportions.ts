@@ -19,7 +19,7 @@ export function warehouseIsoCartonMetrics(
   const width = Math.max(0, Math.min(30, footprintWidth * 0.24) * factor);
   const depth = Math.max(0, Math.min(26, footprintDepth * 0.24) * factor);
   // Limita pilhas a duas camadas proporcionais, sem caixas gigantes em racks estreitos.
-  const height = Math.min(17, width * 0.76, depth * 0.88);
+  const height = Math.min(14, width * 0.76, depth * 0.82);
   return { width, depth, height: Math.max(0, height) };
 }
 
