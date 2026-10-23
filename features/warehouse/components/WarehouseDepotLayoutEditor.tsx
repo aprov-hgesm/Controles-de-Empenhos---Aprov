@@ -120,7 +120,7 @@ export function WarehouseDepotLayoutEditor({
     source: WarehouseDepotLayoutObject,
     copy: WarehouseDepotLayoutObject
   ) => WarehouseDepotLayoutObject;
-  onRemoveObject?: (object: WarehouseDepotLayoutObject) => void;
+  onRemoveObject?: (object: WarehouseDepotLayoutObject) => boolean | void;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -216,7 +216,7 @@ export function WarehouseDepotLayoutEditor({
 
   const removeSelected = useCallback(() => {
     if (!selected) return;
-    onRemoveObject?.(selected);
+    if (onRemoveObject?.(selected) === false) return;
     commit(objects.filter((item) => item.id !== selected.id));
     onSelectedObjectIdChange(null);
   }, [commit, objects, onRemoveObject, onSelectedObjectIdChange, selected]);
