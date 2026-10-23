@@ -531,7 +531,12 @@ try {
 
   await warehouseStructureArchiveServer(access,{kind:'DEPOT',id:newDepot.id});
   assert.equal((await getDoc(ref('depots',newDepot.id))).data()?.status,'inactive');
-  console.log('PASS: arquivamento server-only de depósito desocupado');
+  assert.equal((await getDoc(ref('layouts',layoutV2.id))).data()?.status,'archived',
+    'O Croqui ativo não pode permanecer ativo após a inativação do depósito.');
+  await assert.rejects(()=>warehouseLayoutSaveServer(access,{
+    ...layoutInput,baseLayoutId:layoutV2.id,expectedVersion:2,
+  }),/WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE|WAREHOUSE_LAYOUT_DEPOT_INACTIVE|WAREHOUSE_LAYOUT_DEPOT_INVALID/);
+  console.log('PASS: arquivamento atômico do depósito, locais e Croqui ativo');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
