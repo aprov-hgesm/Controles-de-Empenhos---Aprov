@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -119,6 +120,66 @@ test('foco recebe legenda compacta ampliada sem sobrepor outras etiquetas', () =
   assert.equal(placed.get(focused[25].id).bounds.height, 18);
   for (const [id, first] of placed) for (const [otherId, second] of placed) {
     if (id !== otherId) assert.equal(overlapsCompact(first, second), false);
+  }
+});
+
+test('30 locais do laboratorio de 20 x 6m continuam legiveis nas quatro vistas', () => {
+  const ts = require('typescript');
+  const fixture = readFileSync(resolve(root, 'lib/warehouse/demoDepot20x6.ts'), 'utf8');
+  const js = ts.transpileModule(fixture, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const mockExports = {};
+  runInNewContext(js, { exports: mockExports });
+  const scenarios = mockExports.WAREHOUSE_20X6_SCENARIOS;
+  for (const mode of ['dense', 'operational']) {
+    const objects = scenarios[mode].objects;
+    assert.equal(objects.length, 30);
+    for (const view of ['front', 'back', 'left', 'right']) {
+      const logicalWidth = (view === 'left' || view === 'right') ? 600 : 2000;
+      const logicalHeight = (view === 'left' || view === 'right') ? 2000 : 600;
+      const max = 2000;
+      const labels = objects.map((object) => {
+        let rotated = object;
+        if (view === 'back') rotated = {
+          ...object, x: 2000 - object.x - object.width,
+          y: 600 - object.y - object.height,
+        };
+        if (view === 'right') rotated = {
+          ...object, x: object.y, y: 2000 - object.x - object.width,
+          width: object.height, height: object.width,
+        };
+        if (view === 'left') rotated = {
+          ...object, x: 600 - object.y - object.height, y: object.x,
+          width: object.height, height: object.width,
+        };
+        const z = object.kind === 'SHELF' ? 136
+          : object.kind === 'REFRIGERATOR' ? 132
+          : object.kind === 'FREEZER' ? 76
+          : object.kind === 'PALLET' ? 13 : 62;
+        const x = rotated.x + rotated.width / 2;
+        const y = rotated.y + rotated.height / 2;
+        return {
+          id: object.id, code: object.label,
+          x: 600 + ((x - y) / max) * 470,
+          y: 160 + ((x + y) / max) * 245 - z * 470 / max,
+          highlighted: false,
+        };
+      });
+      const options = { variant: 'compact', avoidOtherAnchors: true };
+      const placed = layoutWarehouseIsoLabels(labels, options);
+      assert.ok(placed.size >= 3, mode + '/' + view + ': nenhuma legenda util');
+      for (const [id, first] of placed) {
+        assert.equal(first.bounds.width, 42);
+        for (const [otherId, second] of placed) {
+          if (id !== otherId) assert.equal(overlapsCompact(first, second), false,
+            mode + '/' + view + ': choque de ' + id + '/' + otherId);
+        }
+      }
+      assert.deepEqual([...placed], [...layoutWarehouseIsoLabels(labels, options)],
+        mode + '/' + view + ': layout instavel');
+      assert.ok(logicalWidth > 0 && logicalHeight > 0);
+    }
   }
 });
 
