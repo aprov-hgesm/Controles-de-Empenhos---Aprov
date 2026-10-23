@@ -65,6 +65,29 @@ test('inativar deposito bloqueia saldos, lotes e layout concorrente no mesmo com
   ])assert.match(archive,pattern);
 });
 
+test('acoes de deposito mostram erros junto ao comando sem depender do rodape',()=>{
+  assert.match(croqui,/warehouse-croqui-operation-message/);
+  assert.match(croqui,/role="alert" aria-live="polite"/);
+  assert.match(croqui,/WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(croqui,/WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(croqui,/Salve ou descarte as altera[cç][oõ]es/);
+});
+
+test('exclusao do deposito vazio preserva auditoria, bloqueia estoque e impede reativacao',()=>{
+  const structure=read('lib/server/warehouseStructureWrite.ts');
+  const quickCreate=read('features/warehouse/components/WarehouseDepotQuickCreate.tsx');
+  const repository=read('lib/warehouse/locationRepository.ts');
+  assert.match(croqui,/warehouse-croqui-delete-empty-depot/);
+  assert.match(croqui,/mode: 'DELETE', confirmCode: selectedDepot.code/);
+  assert.match(repository,/mode\?: 'DELETE'; confirmCode\?: string/);
+  assert.match(archive,/WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION/);
+  assert.match(archive,/depotDeletions/);
+  assert.match(archive,/WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.match(archive,/WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.match(structure,/WAREHOUSE_DEPOT_PERMANENTLY_DELETED/);
+  assert.match(quickCreate,/row.depot.status === 'active'/);
+});
+
 const serverSource=read('lib/server/warehouseCroquiRead.ts');
 const source=ts.transpileModule(serverSource,{
   compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},
