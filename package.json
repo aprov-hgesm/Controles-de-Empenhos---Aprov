@@ -252,7 +252,8 @@
     "test:mobile-k-canonical-ops": "node --test scripts/mobile-k-canonical-ops.test.mjs",
     "verify:mobile-k-canonical-ops": "node scripts/verify-mobile-k-canonical-ops.mjs",
     "test:warehouse-3d-demo-20x6": "node --test scripts/warehouse-3d-demo-20x6.test.mjs",
-    "test:warehouse-3d-proportions": "node --test scripts/warehouse-3d-proportions.test.mjs"
+    "test:warehouse-3d-proportions": "node --test scripts/warehouse-3d-proportions.test.mjs",
+    "test:warehouse-croqui-unified": "node --test scripts/warehouse-croqui-unified.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
