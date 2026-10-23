@@ -261,9 +261,15 @@ export async function warehouseStructureArchiveServer(
         const old=rows.get(layoutEntry.path);
         if(!old)return fail('WAREHOUSE_ARCHIVE_LAYOUT_CONCURRENT_CHANGE');
         const id=layoutEntry.path.split('/').at(-1)||'';
-        const validated=validateWarehouseDepotLayout({...old.data,id},{
-          expectedWorkspaceId:ws,expectedUg:access.ug,
-        });
+        const d=old.data;
+        const validated=validateWarehouseDepotLayout({
+          schemaVersion:d.schemaVersion,id,workspaceId:d.workspaceId,ug:d.ug,
+          name:d.name,depotId:d.depotId??null,
+          logicalWidth:d.logicalWidth,logicalHeight:d.logicalHeight,
+          objects:d.objects,version:d.version,status:d.status,
+          previousVersionId:d.previousVersionId??null,
+          createdBy:d.createdBy,updatedBy:d.updatedBy,
+        },{expectedWorkspaceId:ws,expectedUg:access.ug});
         if(!validated.ok||validated.data.depotId!==depotId||
           validated.data.status!=='active')return fail('WAREHOUSE_ARCHIVE_INVALID_LAYOUT');
         writes.push({path:layoutEntry.path,data:{
