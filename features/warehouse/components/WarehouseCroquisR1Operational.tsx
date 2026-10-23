@@ -40,6 +40,7 @@ import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseInspectionLotState } from './WarehouseLocationInspection';
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 
@@ -70,10 +71,11 @@ type LocalDraft = {
 
 type PendingDuplicatedLocal = {
   objectId: string;
-  sourceLocationId: string;
+  sourceLocationId: string | null;
   code: string;
   name: string;
   description: string | null;
+  subpositionCount: number;
 };
 
 function nextDuplicatedCode(sourceCode: string, usedCodes: Set<string>): string {
@@ -189,6 +191,9 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
   const [pendingDuplicatedLocals, setPendingDuplicatedLocals] = useState<Record<string, PendingDuplicatedLocal>>({});
   const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
+  const [localEdits, setLocalEdits] = useState<Record<string, {name:string;description:string|null}>>({});
+  const [newKind, setNewKind] = useState<CanonicalWarehouseVisualKind>('SHELF');
+  const saveOperationRef = useRef<string | null>(null);
   const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
   const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
   const [previewBalances, setPreviewBalances] = useState<WarehouseLocationBalance[]>([]);
@@ -266,6 +271,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
+      setLocalEdits({});
+      saveOperationRef.current = null;
       const globalJump = navigationRef.current === selectedDepotId;
       navigationRef.current = null;
       // O salto global conserva o material escolhido e o índice de saldos já lido.
@@ -652,59 +659,136 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setSelectedObjectId(next.id);
   }
 
-  function handleRemoveObject(object: WarehouseDepotLayoutObject) {
-    if (object.warehouseLocationId) {
-      setMessage('O local foi retirado apenas do desenho. O cadastro e seu estoque continuam preservados. Para inativar, use o cadastro operacional.');
-    }
+  const selectedLayoutObject = draftObjects.find((object) => object.id === selectedObjectId) || null;
+  const selectedLocation = selectedLayoutObject?.warehouseLocationId
+    ? locations.find((row) => row.location.id === selectedLayoutObject.warehouseLocationId)?.location || null
+    : null;
+  const selectedPending = selectedLayoutObject
+    ? pendingDuplicatedLocals[selectedLayoutObject.id] || null : null;
+  const selectedCode = selectedPending?.code || selectedLocation?.code || '';
+  const selectedName = selectedPending?.name
+    || (selectedLocation ? localEdits[selectedLocation.id]?.name || selectedLocation.name : '');
+  const selectedChildren = selectedLocation
+    ? locations.filter((row) => row.location.parentLocationId === selectedLocation.id
+      && row.location.kind === 'SUBPOSITION' && row.location.status === 'active')
+    : [];
+
+  const usedCroquiCodes = () => new Set([
+    ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active')
+      .map((row) => row.location.code),
+    ...Object.values(pendingDuplicatedLocals).map((entry) => entry.code),
+  ]);
+
+  function addNewCroquiLocal(kind: CanonicalWarehouseVisualKind) {
+    if(!selectedDepotId || !setupReady || saving) return;
+    const prefixes:Record<CanonicalWarehouseVisualKind,string> = {
+      SHELF:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',REFRIGERATOR:'GEL-',BENCH:'MES-',
+    };
+    const labelPrefix=prefixes[kind];
+    const code=nextDuplicatedCode(labelPrefix+'00',usedCroquiCodes());
+    const name=kindLabel(kind)+' '+code.split('-').at(-1);
+    const dims=defaultSize(kind);
+    const object=createWarehouseDepotLayoutObject({
+      kind,label:code+' · '+name,width:Math.min(dims.widthCm,draftWidth-20),
+      height:Math.min(dims.depthCm,draftHeight-20),
+      x:20,y:20,rotation:0,elevation:1,visualVariant:'solid',
+      warehouseLocationId:null,layer:Math.max(0,...draftObjects.map(x=>x.layer))+1,
+    });
+    checkpoint(draftObjects);
+    setDraftObjects([...draftObjects,object]);
+    setPendingDuplicatedLocals(current=>({...current,[object.id]:{
+      objectId:object.id,sourceLocationId:null,code,name,description:null,
+      subpositionCount:kind==='SHELF'?4:0,
+    }}));
+    setSelectedObjectId(object.id);
+    setMessage('Novo local '+code+' preparado. Posicione-o no croqui e salve para cadastrar.');
   }
 
   function prepareDuplicatedObject(
-    _source: WarehouseDepotLayoutObject,
-    copy: WarehouseDepotLayoutObject
-  ): WarehouseDepotLayoutObject {
-    setMessage('Cópia visual criada sem novo cadastro. Cadastre outros locais somente em Cadastramento de Depósito.');
-    return { ...copy, warehouseLocationId: null, label: 'Cópia visual · ' + copy.label.slice(0, 75) };
+    source:WarehouseDepotLayoutObject, copy:WarehouseDepotLayoutObject
+  ):WarehouseDepotLayoutObject {
+    const parent=source.warehouseLocationId
+      ? locations.find(row=>row.location.id===source.warehouseLocationId)?.location : null;
+    const prepared=pendingDuplicatedLocals[source.id];
+    if(!parent && !prepared){
+      setMessage('Copia visual de elemento decorativo, sem cadastro operacional.');
+      return {...copy,warehouseLocationId:null,label:'Cópia visual · '+copy.label.slice(0,75)};
+    }
+    const sourceCode=parent?.code || prepared?.code || 'LOC-00';
+    const code=nextDuplicatedCode(sourceCode,usedCroquiCodes());
+    const name=nextDuplicatedName(parent?.name || prepared?.name || 'Local',code);
+    const sourceLocationId=parent?.id || prepared?.sourceLocationId || null;
+    const subpositionCount=sourceLocationId?0:prepared?.subpositionCount || 0;
+    const pending:PendingDuplicatedLocal={
+      objectId:copy.id,sourceLocationId,code,name,
+      description:parent?.description || prepared?.description || null,subpositionCount,
+    };
+    setPendingDuplicatedLocals(current=>({...current,[copy.id]:pending}));
+    setMessage(code+' preparado. O novo local e suas subposições serão cadastrados ao salvar.');
+    return {...copy,warehouseLocationId:null,label:code+' · '+name};
+  }
+
+  function handleRemoveObject(object:WarehouseDepotLayoutObject):boolean {
+    if(!object.warehouseLocationId) {
+      setMessage('Elemento retirado do croqui. Nenhum cadastro foi alterado.');
+      return true;
+    }
+    const location=locations.find(row=>row.location.id===object.warehouseLocationId)?.location;
+    if(!location)return false;
+    if(!window.confirm('Inativar '+location.code+' e suas subposições ao salvar? '
+      +'O servidor recusará se houver estoque ou lotes ativos.'))return false;
+    setPendingRemovedLocationIds(current=>[...new Set([...current,location.id])]);
+    setMessage(location.code+' marcado para inativação. A alteração só ocorrerá ao salvar.');
+    return true;
   }
 
   async function saveLayout() {
-    if (!selectedDepotId || !selectedDepot || !setupReady) return;
+    if(!selectedDepotId || !selectedDepot || !setupReady || saving) return;
     setSaving(true);
     setMessage(null);
     try {
-      let objectsForSave = cloneObjects(draftObjects);
-      // Croquis edita apenas geometria. Não cria Local ou Prateleira.
-      const saved = await saveWarehouseDepotLayoutVersion(workspaceId, {
-        name: draftName.trim() || 'Croqui principal',
-        depotId: selectedDepotId,
-        logicalWidth: draftWidth,
-        logicalHeight: draftHeight,
-        objects: objectsForSave,
-        baseLayoutId: activeLayout?.id || null,
-        expectedVersion: activeLayout?.version ?? null,
+      const visibleIds=new Set(draftObjects.map(o=>o.id));
+      const createLocals=Object.values(pendingDuplicatedLocals)
+        .filter(item=>visibleIds.has(item.objectId)).map(item=>({
+          objectId:item.objectId,sourceLocationId:item.sourceLocationId,code:item.code,
+          name:item.name,description:item.description,subpositionCount:item.subpositionCount,
+        }));
+      // Objetos já cadastrados removidos pelo usuario exigem inativação protegida.
+      const represented=new Set(draftObjects.map(o=>o.warehouseLocationId).filter(Boolean));
+      const archiveLocationIds=pendingRemovedLocationIds
+        .filter(id=>!represented.has(id));
+      const editLocals=Object.entries(localEdits)
+        .filter(([id])=>!archiveLocationIds.includes(id))
+        .map(([id,item])=>({id,name:item.name,description:item.description}));
+      if(!saveOperationRef.current)saveOperationRef.current=crypto.randomUUID();
+      const result=await applyWarehouseCroquiStructure(workspaceId,{
+        operationId:saveOperationRef.current,
+        name:draftName.trim()||'Croqui principal',depotId:selectedDepotId,
+        logicalWidth:draftWidth,logicalHeight:draftHeight,objects:cloneObjects(draftObjects),
+        baseLayoutId:activeLayout?.id||null,expectedVersion:activeLayout?.version??null,
+        createLocals,editLocals,archiveLocationIds,
       });
-
-      // Retirar um objeto do croqui nunca desativa uma posição com estoque.
-      setMessage(
-        'Croqui salvo com sucesso. Versão ' + saved.version + ' ativa.'
-
-      );
-      const [active, versions] = await Promise.all([
-        getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
-        listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
-      ]);
-      setActiveLayout(active?.layout || saved);
-      setHistory(versions);
-      setDraftObjects(objectsForSave);
+      setActiveLayout(result.layout);
+      setDraftObjects(cloneObjects(result.layout.objects));
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
-      setDraftHistory({ past: [], future: [] });
+      setLocalEdits({});
+      setDraftHistory({past:[],future:[]});
       setPreviewLoaded(false);
+      setMessage('Estrutura e croqui salvos juntos. Versão '+result.layout.version+' ativa. '
+        +result.createdLocations.length+' locais cadastrados.');
+      saveOperationRef.current=null;
+      const [active,versions]=await Promise.all([
+        getActiveWarehouseDepotLayout(workspaceId,selectedDepotId),
+        listWarehouseDepotLayoutsForDepot(workspaceId,selectedDepotId,100),
+      ]);
+      setActiveLayout(active?.layout||result.layout);
+      setHistory(versions);
       await reloadBase();
-    } catch (error) {
-      setMessage('Não foi possível salvar o croqui. ' + messageFrom(error));
-    } finally {
-      setSaving(false);
-    }
+    }catch(error){
+      setMessage('Salvamento não concluído. Nenhuma edição parcial deve ser aplicada. '
+        +messageFrom(error));
+    }finally{setSaving(false);}
   }
 
   if (loading) {
