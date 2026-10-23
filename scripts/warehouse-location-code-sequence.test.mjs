@@ -38,11 +38,15 @@ test('a prévia 20x6 não produz texto Cópia fictícia e usa o mesmo gerador',(
   assert.match(source,/warehouseNextAvailableLocationCode\(sourceCode,used\)/);
   const real=read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
   assert.match(real,/warehouseNextAvailableLocationCode\(sourceCode,usedCroquiCodes\(\)\)/);
-  assert.match(real,/!pendingRemovedLocationIds\.includes\(row\.location\.id\)/);
+  assert.match(real,/row\.location\.depotId === selectedDepotId && row\.location\.status === 'active'/);
+  assert.doesNotMatch(real,/\!pendingRemovedLocationIds\.includes\(row\.location\.id\)/);
+  assert.doesNotMatch(real,/>Locais disponíveis</);
+  assert.match(real,/warehouse-croqui-legacy-recovery/);
 });
 test('salvamento preserva ID histórico e transfere a reivindicação somente de dono inativo',()=>{
   const source=read('lib/server/warehouseStructureLayoutApply.ts');
-  assert.match(source,/previous\.status==='active' && !archives\.has\(oldId\)/);
+  assert.match(source,/if\(previous\.status==='active'\)/);
+  assert.match(source,/referencedCodes\.has\(loc\.code\)/);
   assert.match(source,/previousEntityId:previousClaim\.data\.entityId/);
   assert.match(source,/WAREHOUSE_CROQUI_CODE_CLAIM_INVALID/);
   assert.match(source,/path\(ws,'locations',oldId\)/);
