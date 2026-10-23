@@ -135,7 +135,8 @@ export async function warehouseStructureLayoutApplyServer(
   if((current?.layout.id??null)!==data.baseLayoutId || (current?.layout.version??null)!==data.expectedVersion)
     return fail('WAREHOUSE_CROQUI_VERSION_CONFLICT');
   const usedCodes=new Set(currentLocations
-    .filter(loc=>loc.depotId===depotId&&loc.status==='active'&&loc.kind==='LOCAL')
+    .filter(loc=>loc.depotId===depotId&&loc.status==='active'&&loc.kind==='LOCAL'
+      &&!data.archiveLocationIds.includes(loc.id))
     .map(loc=>loc.code));
   const createByObject=new Map<string,WarehouseLocation>();
   const newRows:Array<{location:WarehouseLocation;claim:string}>=[];
@@ -311,6 +312,11 @@ export async function warehouseStructureLayoutApplyServer(
     ...(current?[current.row.path]:[]),
     ...refs.filter(id=>!newRows.some(n=>n.location.id===id)).map(id=>path(ws,'locations',id)),
     ...newRows.flatMap(n=>[path(ws,'locations',n.location.id),path(ws,'structureCodeClaims',n.claim)]),
+    // Reutilizar codigo visivel requer ler o antigo dono do indice. O registro
+    // arquivado conserva ID e historico; somente o dono atual do codigo muda.
+    ...currentLocations.filter(loc=>newRows.some(n=>n.location.code===loc.code
+      &&n.location.kind===loc.kind
+      &&n.location.parentLocationId===loc.parentLocationId)).map(loc=>path(ws,'locations',loc.id)),
     ...data.createSubpositions.map(child=>path(ws,'locations',child.parentLocationId)),
     ...createSpecs.flatMap(entry=>entry.spec.sourceLocationId
       ?[path(ws,'locations',entry.spec.sourceLocationId),
@@ -367,8 +373,27 @@ export async function warehouseStructureLayoutApplyServer(
         return fail('WAREHOUSE_CROQUI_PARENT_INVALID');
     }
     for(const {location,claim} of newRows){
-      if(rows.get(path(ws,'locations',location.id))
-        ||rows.get(path(ws,'structureCodeClaims',claim)))
+      if(rows.get(path(ws,'locations',location.id)))
+        return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
+      const claimed=rows.get(path(ws,'structureCodeClaims',claim));
+      if(!claimed)continue;
+      const oldId=claimed.data.entityId;
+      if(typeof oldId!=='string'||!/^(loc_|sub_)[a-f0-9]{32}$/.test(oldId)
+        ||claimed.data.workspaceId!==ws||claimed.data.ug!==ug
+        ||claimed.data.depotId!==depotId||claimed.data.code!==location.code
+        ||claimed.data.entityKind!==location.kind
+        ||(claimed.data.parentLocationId??null)!==location.parentLocationId)
+        return fail('WAREHOUSE_CROQUI_CODE_CLAIM_INVALID');
+      const old=rows.get(path(ws,'locations',oldId));
+      if(!old)return fail('WAREHOUSE_CROQUI_CODE_CLAIM_ORPHAN');
+      const previous=existingLocation(access,old);
+      if(previous.id!==oldId||previous.code!==location.code
+        ||previous.kind!==location.kind||previous.depotId!==depotId
+        ||previous.parentLocationId!==location.parentLocationId)
+        return fail('WAREHOUSE_CROQUI_CODE_CLAIM_CONFLICT');
+      // Codigo liberado apenas se o dono foi inativado anteriormente ou
+      // sera inativado no MESMO commit protegido por saldos e lotes.
+      if(previous.status==='active' && !archives.has(oldId))
         return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
     }
     for(const row of balances){
@@ -405,9 +430,15 @@ export async function warehouseStructureLayoutApplyServer(
     for(const {location,claim} of newRows){
       writes.push({path:path(ws,'locations',location.id),
         data:{...location,createdAt:stamp,updatedAt:stamp}});
+      const previousClaim=rows.get(path(ws,'structureCodeClaims',claim));
       writes.push({path:path(ws,'structureCodeClaims',claim),data:{
         workspaceId:ws,ug,entityId:location.id,entityKind:location.kind,
-        depotId,parentLocationId:location.parentLocationId,code:location.code,createdAt:stamp,
+        depotId,parentLocationId:location.parentLocationId,code:location.code,
+        createdAt:previousClaim?.data.createdAt??stamp,
+        ...(previousClaim?{
+          previousEntityId:previousClaim.data.entityId,
+          reassignedAt:stamp,
+        }:{}),
       }});
     }
     for(const edit of edits){
