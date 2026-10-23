@@ -700,9 +700,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
   const usedCroquiCodes = () => new Set([
     ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active'
-      && !pendingRemovedLocationIds.includes(row.location.id))
+      && (!pendingRemovedLocationIds.includes(row.location.id)
+        || draftObjects.some(object=>object.warehouseLocationId===row.location.id)))
       .map((row) => row.location.code),
-    ...Object.values(pendingDuplicatedLocals).map((entry) => entry.code),
+    ...Object.values(pendingDuplicatedLocals)
+      .filter(entry=>draftObjects.some(object=>object.id===entry.objectId))
+      .map((entry) => entry.code),
   ]);
 
   function addNewCroquiLocal(kind: CanonicalWarehouseVisualKind) {
