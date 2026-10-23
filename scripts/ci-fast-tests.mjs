@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Central 2D: validar cadastro transacional, idempotencia, conflitos e estoque.
+if (files.some((p) => /^(?:lib\/server\/warehouseStructureLayoutApply\.ts|lib\/warehouse\/croquiStructureRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotsOperational|DepotLayoutEditor)\.tsx|scripts\/warehouse-croqui-unified\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-unified');
+}
 // Demo visual 20×6 m: validar sempre geometria, integridade e isolamento.
 if (files.some((p) => /^(?:lib\/warehouse\/demoDepot20x6\.ts|features\/warehouse\/components\/WarehouseDepot20x6Demo\.tsx|app\/visual-lab\/deposito-20x6\/page\.tsx|scripts\/warehouse-3d-demo-20x6\.test\.mjs)$/.test(p))) {
   add('test:warehouse-3d-demo-20x6');
