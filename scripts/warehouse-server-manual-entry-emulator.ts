@@ -31,6 +31,7 @@ import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateSe
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
 import { warehouseLedgerMovementServer,warehouseStructureArchiveServer } from '../lib/server/warehouseLedgerAndArchive';
+import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
 
@@ -538,13 +539,18 @@ try {
   }),/WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE|WAREHOUSE_LAYOUT_DEPOT_INACTIVE|WAREHOUSE_LAYOUT_DEPOT_INVALID/);
   console.log('PASS: arquivamento atômico do depósito, locais e Croqui ativo');
 
+  // Tombstones são privados e intencionalmente não legíveis pelo SDK do navegador.
+  const readDeletionTombstone = (depotId:string) => {
+    const key='warehouse/'+workspaceId+'/depotDeletions/'+depotId;
+    return warehouseAdminTransaction('emulator',[key],rows=>({result:rows.get(key),writes:[]}));
+  };
   // Exclusão operacional definitiva exige depósito realmente vazio.
   // Não é permitido mover saldos para UNASSIGNED ou simular retorno ao recebimento.
   await assert.rejects(()=>warehouseStructureArchiveServer(access,{
     kind:'DEPOT',id:dep,mode:'DELETE',confirmCode:'DEP-MANUAL',
   }),/WAREHOUSE_ARCHIVE_OCCUPIED|WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
   assert.equal((await getDoc(ref('depots',dep))).data()?.status,'active');
-  assert.equal((await getDoc(ref('depotDeletions',dep))).exists(),false);
+  assert.equal(await readDeletionTombstone(dep),null);
 
   const toDelete=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{code:'DELETEQA',name:'Depósito de exclusão QA'},
@@ -570,7 +576,7 @@ try {
   assert.equal((await getDoc(ref('depots',toDelete.id))).data()?.status,'inactive');
   assert.equal((await getDoc(ref('locations',deletionLocal.id))).data()?.status,'inactive');
   assert.equal((await getDoc(ref('locations',deletionSub.id))).data()?.status,'inactive');
-  assert.equal((await getDoc(ref('depotDeletions',toDelete.id))).data()?.deletedBy,access.uid);
+  assert.equal((await readDeletionTombstone(toDelete.id))?.data.deletedBy,access.uid);
   await assert.rejects(()=>warehouseStructureServer(access,{
     kind:'DEPOT_UPDATE',depotId:toDelete.id,input:{status:'active'},
   }),/WAREHOUSE_DEPOT_PERMANENTLY_DELETED/);
