@@ -32,6 +32,8 @@ export function WarehouseDepot20x6Demo() {
   const [displayMode, setDisplayMode] = useState<DisplayMode>('2d');
   const [draft, setDraft] = useState<LocalHistory>(()=>createDraft('dense'));
   const [selectedObjectId, setSelectedObjectId] = useState<string|null>(null);
+  const [demoAddedSubpositions, setDemoAddedSubpositions] = useState<Record<string,number>>({});
+  const [demoNotice, setDemoNotice] = useState<string | null>(null);
   const [focusedLocationId, setFocusedLocationId] = useState<string | null>(null);
   const [queryText, setQueryText] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
@@ -44,6 +46,8 @@ export function WarehouseDepot20x6Demo() {
     setScenarioId(next);
     setDraft(createDraft(next));
     setSelectedObjectId(null);
+    setDemoAddedSubpositions({});
+    setDemoNotice(null);
     setFocusedLocationId(null);
     setQueryText('');
     setSelectedMaterialId('');
@@ -182,6 +186,12 @@ export function WarehouseDepot20x6Demo() {
               Alterne para Prévia 3D para comparar a orientação.
             </p>
           </div>
+          {demoNotice && (
+            <p data-testid="warehouse-demo-subposition-notice" role="status"
+              className="mx-3 mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900">
+              {demoNotice}
+            </p>
+          )}
           <div className="bg-slate-50 p-3">
             <WarehouseDepotLayoutEditor
               scopeKey={'lab-20x6-'+scenarioId}
@@ -198,6 +208,13 @@ export function WarehouseDepot20x6Demo() {
               onRedo={redo}
               lightTheme
               preventLocalOverlap
+              onAddSubposition={object=>{
+                const count=(demoAddedSubpositions[object.id]||0)+1;
+                setDemoAddedSubpositions(current=>({...current,[object.id]:count}));
+                setDemoNotice('Subposição simulada adicionada a '
+                  +warehouseCodeFromVisualLabel(object.label,'LOC-')
+                  +' ('+count+' nova(s) nesta prévia). Nenhum dado real foi alterado.');
+              }}
               onDuplicateObject={(source,copy)=>{
                 const family:Record<string,string>={
                   SHELF:'EST-',RACK:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',
@@ -222,7 +239,7 @@ export function WarehouseDepot20x6Demo() {
             <span className="text-xs font-semibold text-slate-600">
               Sem integração com contas, depósitos ou saldos reais.
             </span>
-            <button type="button" onClick={()=>{setDraft(createDraft(scenarioId));setSelectedObjectId(null);}}
+            <button type="button" onClick={()=>{setDraft(createDraft(scenarioId));setSelectedObjectId(null);setDemoAddedSubpositions({});setDemoNotice(null);}}
               data-testid="warehouse-demo-reset-draft"
               className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-bold text-blue-800">
               Restaurar cenário
