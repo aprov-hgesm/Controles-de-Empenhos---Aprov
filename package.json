@@ -173,7 +173,7 @@
     "test:adm-deposito-barcode-outbound": "node --test scripts/warehouse-barcode-outbound.test.mjs",
     "verify:adm-deposito-phase-8": "node scripts/verify-adm-deposito-phase-8.mjs",
     "test:adm-deposito-depot-layout": "node --test scripts/warehouse-depot-layout.test.mjs",
-    "test:warehouse-isometric-camera": "node --test scripts/warehouse-isometric-camera.test.mjs scripts/warehouse-isometric-clarity.test.mjs",
+    "test:warehouse-isometric-camera": "node --test scripts/warehouse-isometric-camera.test.mjs scripts/warehouse-isometric-clarity.test.mjs scripts/warehouse-3d-proportions.test.mjs",
     "test:warehouse-3d-stock": "node --test scripts/warehouse-3d-stock-visual.test.mjs",
     "test:warehouse-location-inspection": "node --test scripts/warehouse-location-inspection.test.mjs",
     "test:warehouse-global-material-search": "node --test scripts/warehouse-global-material-search.test.mjs",
@@ -251,7 +251,8 @@
     "test:operador-movel-premium": "node --test scripts/operador-movel-premium.test.mjs",
     "test:mobile-k-canonical-ops": "node --test scripts/mobile-k-canonical-ops.test.mjs",
     "verify:mobile-k-canonical-ops": "node scripts/verify-mobile-k-canonical-ops.mjs",
-    "test:warehouse-3d-demo-20x6": "node --test scripts/warehouse-3d-demo-20x6.test.mjs"
+    "test:warehouse-3d-demo-20x6": "node --test scripts/warehouse-3d-demo-20x6.test.mjs",
+    "test:warehouse-3d-proportions": "node --test scripts/warehouse-3d-proportions.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
