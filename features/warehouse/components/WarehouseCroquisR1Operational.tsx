@@ -1344,6 +1344,39 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                     <label className="block text-[10px] font-bold text-slate-600">Código
                       <input value={selectedCode} readOnly className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"/>
                     </label>
+                    <label className="block text-[10px] font-bold text-slate-600">Tipo visual
+                      <select value={selectedLayoutObject?.kind||'SHELF'} disabled={saving}
+                        onChange={event=>{
+                          if(!selectedLayoutObject)return;
+                          setDraftObjects(current=>current.map(item=>item.id===selectedLayoutObject.id
+                            ?{...item,kind:event.target.value as CanonicalWarehouseVisualKind}:item));
+                        }}
+                        className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs">
+                        {CANONICAL_VISUAL_KINDS.map(kind=><option key={kind} value={kind}>{kindLabel(kind)}</option>)}
+                      </select>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        ['width','Comprimento (cm)'],['height','Profundidade (cm)'],
+                      ] as const).map(([field,label])=>(
+                        <label key={field} className="block text-[10px] font-bold text-slate-600">
+                          {label}
+                          <input type="number" min={20} step={1} disabled={saving}
+                            value={selectedLayoutObject?.[field]??20}
+                            onChange={event=>{
+                              if(!selectedLayoutObject)return;
+                              const value=Number(event.target.value);
+                              if(!Number.isFinite(value))return;
+                              setDraftObjects(current=>current.map(item=>{
+                                if(item.id!==selectedLayoutObject.id)return item;
+                                const max=(field==='width'?draftWidth-item.x:draftHeight-item.y);
+                                return {...item,[field]:Math.max(20,Math.min(max,Math.round(value)))};
+                              }));
+                            }}
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
+                        </label>
+                      ))}
+                    </div>
                     <label className="block text-[10px] font-bold text-slate-600">Nome
                       <input value={selectedName} maxLength={120} disabled={saving}
                         onChange={event=>{
