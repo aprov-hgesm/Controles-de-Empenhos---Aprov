@@ -1,0 +1,15 @@
+# W3 — Runtime Next 15, proxy, cache, cron e limites
+
+## Next/container
+next.config.ts:7–32,33–55 contém redirects legados /adm-deposito→/central-depositos, /central-mobile→/operador-movel, Permissions-Policy camera=(self), outros headers, imagens remotas e output standalone. Erros TypeScript/ESLint são ignorados no next build; application-ci.yml:47–59 valida **budget de diagnósticos** com typecheck || true, não equivale a zero erros. Exigir imagem reproduzível que copie .next/standalone, .next/static e public/, com prova de SSR, Server Actions/Components, assets, streaming, redirects, mobile scanner e SIGTERM. Parser PDF (lib/server/empenhoPdfParser.ts) usa buffers/zlib Node; medir CPU e duração, sem inferir timeout real.
+
+## Cabeçalhos, proteção e caches
+lib/server/requestSecurity.ts:68–87 prioriza x-vercel-forwarded-for e depois x-forwarded-for/x-real-ip (primeiro valor separado por vírgula). Sob proxy novo, definir cadeia **confiável**, sobrescrita/remoção dos cabeçalhos de entrada e testes de spoof. :42–51,104–148 guardam buckets globalThis locais, declarados best effort; multi-instância não oferece rate limit global.
+lib/warehouse/memoryReadCache.ts:1–124 define TTL 30s, Map por workspace, coalescing in-flight e invalidation por geração. **Não se demonstrou se o módulo é empregado no servidor ou browser**; mapear importadores antes de atribuir-lhe risco entre réplicas Cloud Run. Distintamente, app/api/billing/regularization/route.ts:34–36,61–64,103–115 define cache **do servidor** de 5 min e Cache-Control público s-maxage=300, stale-while-revalidate=600 para dados de regularização. Testar atualização/revogação e conteúdo projetado com 2 réplicas e CDN.
+
+## Cron
+vercel.json:3–11 prevê 15 9 * * * (09h15 UTC) e desabilita auto-deploy Git. app/api/cron/usage-snapshot/route.ts:12–45 exige Bearer CRON_SECRET; Cloud Scheduler OIDC não corresponde ao verificador atual. globalUsageHistory.ts:188–225 grava via PATCH com ID determinístico por dia: retries sobrescrevem documento, não criam um novo documento; podem duplicar consultas e gravações. Ausência de credencial de histórico retorna persisted=false, mas cron responde ok:true, persisted:false — **sucesso de requisição não é garantia de persistência**. Planejar autenticação Cloud Scheduler e execução exclusiva, janelas UTC, retentativas e monitoramento de persisted.
+Fonte: https://docs.cloud.google.com/scheduler/docs/http-target-auth .
+
+## Timeout, health e custo
+Rewrite Firebase Hosting→Cloud Run tem teto de **60 s** e retorna 504 em requisições longas (https://firebase.google.com/docs/hosting/cloud-run). Medir importação/PDF/backup/admin/transferências antes de escolher borda ou extrair job assíncrono; Cloud Run nativo pode usar timeout diferente, mas isso não remove limite da borda. app/api/health/route.ts:1–20 é liveness superficial; não valida banco/Drive/ADC. Medir cold start, p50/p95/p99, 403/429/504, Firestore reads, custo regional/logging, uptime, com probes de dependência sem efeitos colaterais. Não presumir custo zero.
