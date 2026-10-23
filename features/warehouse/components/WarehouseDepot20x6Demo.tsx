@@ -139,6 +139,7 @@ export function WarehouseDepot20x6Demo() {
             depotId={DEMO_20X6_DEPOT_ID}
             depotName="Depósito 20 × 6 m · simulado"
             focusedLocationId={focusedLocationId}
+            onFocusLocationChange={setFocusedLocationId}
           />
         </div>
       ) : (
