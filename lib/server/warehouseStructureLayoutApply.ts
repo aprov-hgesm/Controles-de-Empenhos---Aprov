@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction, warehouseAdminListCollection, WarehouseStoreError,
+  warehouseAdminTransaction, warehouseAdminListCollection, warehouseAdminListByField, WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import {
@@ -111,9 +111,10 @@ export async function warehouseStructureLayoutApplyServer(
   )return fail('WAREHOUSE_CROQUI_INPUT',400);
   const {workspaceId:ws,ug}=access,depotId=data.depotId;
   const authToken=await token();
+  // Uma consulta por deposito, nunca varrer todos os layouts e locais do workspace.
   const all=await Promise.all([
-    warehouseAdminListCollection(authToken,ws,'layouts',500),
-    warehouseAdminListCollection(authToken,ws,'locations',500),
+    warehouseAdminListByField(authToken,ws,'layouts','depotId',depotId,500),
+    warehouseAdminListByField(authToken,ws,'locations','depotId',depotId,500),
   ]);
   const previous=all[0].map(row=>({row,layout:existingLayout(access,row)}))
     .filter(entry=>entry.layout.depotId===depotId && entry.layout.status==='active');
