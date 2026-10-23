@@ -201,7 +201,8 @@ test('editor visual mantém edição local, 2D/Prévia 3D e sem persistência pa
   assert.match(editor, /Duplicar/);
   assert.match(editor, /Trazer para frente/);
   assert.match(editor, /Enviar para trás/);
-  assert.match(editor, /nenhum movimento grava no Firestore/);
+  assert.match(editor, /sem escrita até Salvar|sem escrita.*Salvar|Roda do mouse: zoom/);
+  assert.match(editor, /viewport\.addEventListener\('wheel'/);
   assert.doesNotMatch(editor, /saveWarehouseDepotLayoutVersion|firebase\/firestore|warehouse_balance_v1/);
 
   assert.match(operational, /WAREHOUSE_STRUCTURE_LIBRARY\.map/);
@@ -384,7 +385,8 @@ test('croqui aceita dimensões reais maiores e preserva ajuste proporcional no e
   );
   assert.match(editor, /fitScale/);
   assert.match(editor, /effectiveScale/);
-  assert.match(editor, /proporção \{logicalWidth\}×\{logicalHeight\} preservada/);
+  assert.match(editor, /planta \{logicalWidth\}×\{logicalHeight\} cm/);
+  assert.match(editor, /effectiveScale = fitScale \* zoom/);
   assert.match(operational, /MAX_LAYOUT_DIMENSION = 50000/);
   assert.match(operational, /Aplicar medidas e preservar proporções/);
   assert.match(operational, /warehouse-layout-edit-dimensions/);
