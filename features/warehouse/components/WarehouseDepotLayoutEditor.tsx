@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   BringToFront,
@@ -35,7 +35,6 @@ const ROTATION_STEP = 90;
 const ZOOM_MIN = 0.55;
 const ZOOM_MAX = 2.2;
 const CONTEXT_MENU_WIDTH = 224;
-const CONTEXT_MENU_HEIGHT = 240;
 const CONTEXT_MENU_GAP = 8;
 
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
@@ -110,6 +109,7 @@ export function WarehouseDepotLayoutEditor({
   onAddSubposition?: (object: WarehouseDepotLayoutObject) => void;
 }) {
   const editorRootRef = useRef<HTMLDivElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const interactionRef = useRef<null | {
@@ -135,7 +135,7 @@ export function WarehouseDepotLayoutEditor({
   const [spacePan, setSpacePan] = useState(false);
   const [collisionNotice, setCollisionNotice] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
-    objectId: string; left: number; top: number;
+    objectId: string; left: number; top: number; cursorX: number; cursorY: number;
   } | null>(null);
   const [sizeDialog, setSizeDialog] = useState<{
     objectId: string; width: string; height: string; error: string | null;
@@ -233,6 +233,36 @@ export function WarehouseDepotLayoutEditor({
       window.removeEventListener('blur', blur);
     };
   }, []);
+
+  // A altura real varia com fontes e zoom. Medir o menu no portal antes de
+  // posiciona-lo evita o salto visual observado ao clicar nas estantes baixas.
+  useLayoutEffect(() => {
+    if (!contextMenu || !contextMenuRef.current || !editorRootRef.current) return;
+    const menu = contextMenuRef.current.getBoundingClientRect();
+    const bounds = editorRootRef.current.getBoundingClientRect();
+    const width = menu.width;
+    const height = menu.height;
+    const gap = CONTEXT_MENU_GAP;
+    const leftEdge = Math.max(gap, bounds.left + gap);
+    const rightEdge = Math.max(leftEdge, Math.min(window.innerWidth - width - gap,
+      bounds.right - width - gap));
+    const topEdge = Math.max(gap, bounds.top + gap);
+    const bottomEdge = Math.max(topEdge, Math.min(window.innerHeight - height - gap,
+      bounds.bottom - height - gap));
+    const x = contextMenu.cursorX;
+    const y = contextMenu.cursorY;
+    const horizontal = x + width + gap <= bounds.right ? x + gap
+      : x - width - gap >= bounds.left ? x - width - gap : x - width / 2;
+    const vertical = y + height + gap <= bounds.bottom && y + height + gap <= window.innerHeight
+      ? y + gap
+      : y - height - gap >= bounds.top && y - height - gap >= gap
+        ? y - height - gap : y - height / 2;
+    const left = clamp(horizontal, leftEdge, rightEdge);
+    const top = clamp(vertical, topEdge, bottomEdge);
+    if (Math.abs(contextMenu.left - left) < 0.5 && Math.abs(contextMenu.top - top) < 0.5)
+      return;
+    setContextMenu(prev=>prev ? {...prev,left,top} : null);
+  }, [contextMenu?.objectId, contextMenu?.cursorX, contextMenu?.cursorY]);
 
   // Fecha ao clicar fora, rolar, perder foco ou pressionar Escape.
   useEffect(() => {
@@ -642,22 +672,14 @@ export function WarehouseDepotLayoutEditor({
                   // para nao herdar transforms/overflow do croqui 2D.
                   const cx = event.clientX;
                   const cy = event.clientY;
-                  const minX = Math.max(CONTEXT_MENU_GAP, bounds.left + CONTEXT_MENU_GAP);
-                  const maxX = Math.max(minX, Math.min(window.innerWidth - CONTEXT_MENU_WIDTH
-                    - CONTEXT_MENU_GAP, bounds.right - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP));
-                  const minY = Math.max(CONTEXT_MENU_GAP, bounds.top + CONTEXT_MENU_GAP);
-                  const maxY = Math.max(minY, Math.min(window.innerHeight - CONTEXT_MENU_HEIGHT
-                    - CONTEXT_MENU_GAP, bounds.bottom - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP));
-                  const left = cx + CONTEXT_MENU_WIDTH + CONTEXT_MENU_GAP <= bounds.right
-                    ? cx + CONTEXT_MENU_GAP
-                    : cx - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP;
-                  const top = cy + CONTEXT_MENU_HEIGHT + CONTEXT_MENU_GAP <= bounds.bottom
-                    ? cy + CONTEXT_MENU_GAP
-                    : cy - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP;
+                  // Monta junto ao clique e deixa o useLayoutEffect ajustar
+                  // pela altura REAL do menu, antes da pintura da tela.
                   setContextMenu({
                     objectId: object.id,
-                    left: clamp(left, minX, maxX),
-                    top: clamp(top, minY, maxY),
+                    cursorX: cx,
+                    cursorY: cy,
+                    left: cx,
+                    top: cy,
                   });
                 }}
                 onPointerDown={(event) => {
@@ -736,7 +758,7 @@ export function WarehouseDepotLayoutEditor({
       </div>
 
       {contextMenu && view === 'top' && objects.some(o => o.id === contextMenu.objectId) && createPortal((
-        <div data-warehouse-context-menu data-testid="warehouse-croqui-context-menu"
+        <div ref={contextMenuRef} data-warehouse-context-menu data-testid="warehouse-croqui-context-menu"
           role="menu" aria-label="Opções do local"
           style={{ position: 'fixed', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
           className="w-[224px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-xl"
