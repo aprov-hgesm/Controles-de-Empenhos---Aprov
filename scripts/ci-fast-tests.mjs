@@ -56,6 +56,10 @@ if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOpe
 if (files.some((p) => /^(?:lib\/warehouse\/layoutCollision\.ts|lib\/server\/warehouse(?:StructureLayoutApply|RemainingWrites)\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotLayoutEditor|Depot20x6Demo)\.tsx|scripts\/warehouse-croqui-collision\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-collision');
 }
+// Sequenciamento: duplicar 3 de 10 gera 11; apos inativar 2, reutilizar 2 com novo ID.
+if (files.some((p) => /^(?:lib\/warehouse\/locationCodeSequence\.ts|lib\/server\/warehouseStructureLayoutApply\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|Depot20x6Demo)\.tsx|scripts\/warehouse-location-code-sequence\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-location-sequence');
+}
 // Central 2D: validar cadastro transacional, idempotencia, conflitos e estoque.
 if (files.some((p) => /^(?:lib\/server\/warehouseStructureLayoutApply\.ts|lib\/warehouse\/croquiStructureRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotsOperational|DepotLayoutEditor)\.tsx|scripts\/warehouse-croqui-unified\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-unified');
