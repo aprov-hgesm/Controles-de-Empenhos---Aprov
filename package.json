@@ -258,7 +258,8 @@
     "test:warehouse-location-sequence": "node --test scripts/warehouse-location-code-sequence.test.mjs",
     "test:warehouse-croqui-card-code": "node --test scripts/warehouse-croqui-card-code.test.mjs",
     "test:warehouse-context-menu": "node --test scripts/warehouse-context-menu.test.mjs",
-    "test:warehouse-croqui-fusion": "node --test scripts/warehouse-croqui-fusion.test.mjs"
+    "test:warehouse-croqui-fusion": "node --test scripts/warehouse-croqui-fusion.test.mjs",
+    "dev:warehouse:isolated": "node scripts/dev-warehouse-isolated.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
