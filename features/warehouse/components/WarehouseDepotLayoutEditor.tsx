@@ -34,7 +34,6 @@ const MIN_SIZE = 20;
 const ROTATION_STEP = 90;
 const ZOOM_MIN = 0.55;
 const ZOOM_MAX = 2.2;
-const CONTEXT_MENU_WIDTH = 224;
 const CONTEXT_MENU_GAP = 8;
 
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
