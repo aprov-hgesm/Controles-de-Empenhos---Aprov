@@ -123,7 +123,7 @@ test('formulário único e operação autenticada substituem abas paralelas',()=
   assert.match(routeSource,/verifyWarehouseRequest\(request\.headers\.get\('authorization'\)\)/);
   assert.match(panelSource,/<WarehouseCroquisR1Operational workspaceId=\{workspaceId\}/);
   assert.doesNotMatch(panelSource,/<WarehouseLocationsR1Operational workspaceId/);
-  assert.match(uiSource,/data-testid="warehouse-croqui-create-local"/);
+  assert.match(uiSource,/data-testid="warehouse-croqui-primary-new-local"/);
   assert.match(uiSource,/data-testid="warehouse-croqui-create-subposition"/);
   assert.match(uiSource,/applyWarehouseCroquiStructure\(workspaceId/);
   assert.doesNotMatch(uiSource,/await createWarehouseLocation\(workspaceId/);
