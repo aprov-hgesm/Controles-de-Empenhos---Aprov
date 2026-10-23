@@ -34,13 +34,21 @@ test.describe('Croqui 2D — menu do botao direito', () => {
       const local = editor.locator('[data-testid^="warehouse-editor-object-"]')
         .filter({ hasText: name }).first();
       await expect(local).toBeVisible();
-      const box = await local.boundingBox();
-      expect(box).not.toBeNull();
-      // Playwright clica no centro do objeto, como um operador real.
-      const cursorX = box.x + box.width / 2;
-      const cursorY = box.y + box.height / 2;
+      // Playwright pode rolar a pagina automaticamente ANTES do clique,
+      // alterando a boundingBox anterior. Capturar as coordenadas REAIS
+      // recebidas no evento contextmenu, em vez de usar um retangulo obsoleto.
+      await page.evaluate(() => {
+        window.__croquiRightClick = null;
+        document.addEventListener('contextmenu', event => {
+          window.__croquiRightClick = {x:event.clientX,y:event.clientY};
+        }, {capture:true,once:true});
+      });
       await local.click({ button: 'right' });
       await expect(menu).toBeVisible();
+      const pointer = await page.evaluate(() => window.__croquiRightClick);
+      expect(pointer).not.toBeNull();
+      const cursorX = pointer.x;
+      const cursorY = pointer.y;
       const position = await menu.boundingBox();
       const bounds = await editor.boundingBox();
       expect(position).not.toBeNull();
