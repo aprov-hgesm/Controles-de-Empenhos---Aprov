@@ -10,6 +10,7 @@ import {
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
+import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
 
 type DisplayMode = '3d' | '2d';
 
@@ -177,7 +178,7 @@ export function WarehouseDepot20x6Demo() {
             </p>
             <p className="mt-1 text-xs text-slate-500">
               Selecione uma estante, gire usando os botões de 90°, teste o zoom,
-              duplique ou arraste. A faixa verde indica a frente física.
+              duplique ou arraste. A nova estante recebe o menor número disponível (EST-11, ou EST-02 se o 02 foi excluído).
               Alterne para Prévia 3D para comparar a orientação.
             </p>
           </div>
@@ -197,11 +198,24 @@ export function WarehouseDepot20x6Demo() {
               onRedo={redo}
               lightTheme
               preventLocalOverlap
-              onDuplicateObject={(source,copy)=>({
-                ...copy,
-                warehouseLocationId:null,
-                label:'Cópia fictícia · '+source.label.slice(0,72),
-              })}
+              onDuplicateObject={(source,copy)=>{
+                const family:Record<string,string>={
+                  SHELF:'EST-',RACK:'EST-',PALLET:'PAL-',FREEZER:'FRZ-',
+                  REFRIGERATOR:'GEL-',BENCH:'BAN-',CABINET:'ARM-',CHAMBER:'CAM-',
+                };
+                const prefix=family[source.kind]||'LOC-';
+                const sourceCode=warehouseCodeFromVisualLabel(source.label,prefix);
+                const used=new Set(draft.objects.map(item=>
+                  warehouseCodeFromVisualLabel(item.label,family[item.kind]||'LOC-')));
+                const code=warehouseNextAvailableLocationCode(sourceCode,used);
+                const suffix=code.match(/(\d+)$/)?.[1] || '01';
+                const noun=source.kind==='SHELF'||source.kind==='RACK'?'Estante'
+                  :source.kind==='PALLET'?'Palete'
+                  :source.kind==='REFRIGERATOR'?'Geladeira'
+                  :source.kind==='FREEZER'?'Freezer'
+                  :source.kind==='BENCH'?'Bancada':'Local';
+                return {...copy,warehouseLocationId:null,label:code+' · '+noun+' '+suffix};
+              }}
             />
           </div>
           <div className="flex flex-wrap justify-between gap-2 border-t border-slate-200 px-4 py-3">
