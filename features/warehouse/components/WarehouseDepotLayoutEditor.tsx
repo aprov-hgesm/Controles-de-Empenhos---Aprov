@@ -19,6 +19,7 @@ import {
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { turnWarehouseLayoutObject, warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
+import { warehouseFindFreePosition, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
 
 type EditorView = 'top' | 'perspective';
 type InteractionMode = 'select' | 'pan';
@@ -73,6 +74,7 @@ export function WarehouseDepotLayoutEditor({
   scopeKey,
   lightTheme = false,
   allowResize = true,
+  preventLocalOverlap = false,
   onDuplicateObject,
   onRemoveObject,
 }: {
@@ -90,6 +92,7 @@ export function WarehouseDepotLayoutEditor({
   scopeKey: string;
   lightTheme?: boolean;
   allowResize?: boolean;
+  preventLocalOverlap?: boolean;
   onDuplicateObject?: (
     source: WarehouseDepotLayoutObject,
     copy: WarehouseDepotLayoutObject
@@ -119,6 +122,7 @@ export function WarehouseDepotLayoutEditor({
   const zoomRef = useRef(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePan, setSpacePan] = useState(false);
+  const [collisionNotice, setCollisionNotice] = useState<string | null>(null);
   const panning = mode === 'pan' || spacePan;
 
   useEffect(() => {
@@ -129,6 +133,7 @@ export function WarehouseDepotLayoutEditor({
     setZoom(1);
     zoomRef.current = 1;
     setPan({ x: 0, y: 0 });
+    setCollisionNotice(null);
     onSelectedObjectIdChange(null);
   }, [scopeKey, onSelectedObjectIdChange]);
 
@@ -226,9 +231,15 @@ export function WarehouseDepotLayoutEditor({
     withHistory = true
   ) => {
     const next = objects.map((item) => item.id === id ? { ...item, ...patch } : item);
+    const changed = next.find(item => item.id === id);
+    if (preventLocalOverlap && changed && warehouseLocalHasCollision(changed, next)) {
+      setCollisionNotice('Espaço ocupado por outro local. Escolha uma posição livre.');
+      return;
+    }
+    setCollisionNotice(null);
     if (withHistory) commit(next);
     else onObjectsChange(next);
-  }, [commit, objects, onObjectsChange]);
+  }, [commit, objects, onObjectsChange, preventLocalOverlap]);
 
   const duplicateSelected = useCallback(() => {
     if (!selected) return;
@@ -241,10 +252,21 @@ export function WarehouseDepotLayoutEditor({
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
       warehouseLocationId: null,
     };
+    if (preventLocalOverlap) {
+      const position = warehouseFindFreePosition(copy, objects, logicalWidth, logicalHeight,
+        { x: copy.x, y: copy.y });
+      if (!position) {
+        setCollisionNotice('Não há espaço livre para duplicar este local no depósito.');
+        return;
+      }
+      copy.x = position.x;
+      copy.y = position.y;
+    }
     const preparedCopy = onDuplicateObject ? onDuplicateObject(selected, copy) : copy;
+    setCollisionNotice(null);
     commit([...objects, preparedCopy]);
     onSelectedObjectIdChange(preparedCopy.id);
-  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange, selected]);
+  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange, selected, preventLocalOverlap]);
 
   const removeSelected = useCallback(() => {
     if (!selected) return;
@@ -265,10 +287,21 @@ export function WarehouseDepotLayoutEditor({
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
       warehouseLocationId: null,
     };
+    if (preventLocalOverlap) {
+      const position = warehouseFindFreePosition(copy, objects, logicalWidth, logicalHeight,
+        { x: copy.x, y: copy.y });
+      if (!position) {
+        setCollisionNotice('Não há espaço livre para colar este local no depósito.');
+        return;
+      }
+      copy.x = position.x;
+      copy.y = position.y;
+    }
     const preparedCopy = onDuplicateObject ? onDuplicateObject(source, copy) : copy;
+    setCollisionNotice(null);
     commit([...objects, preparedCopy]);
     onSelectedObjectIdChange(preparedCopy.id);
-  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange]);
+  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange, preventLocalOverlap]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -378,6 +411,11 @@ export function WarehouseDepotLayoutEditor({
           <button type="button" onClick={() => setShowGrid((value) => !value)} aria-pressed={showGrid} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${showGrid ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
             <Grid3X3 className="h-3.5 w-3.5" /> Grade
           </button>
+          {preventLocalOverlap && (
+            <span data-testid="warehouse-overlap-protection" className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+              Sem sobreposição de locais
+            </span>
+          )}
           <button type="button" onClick={() => setSnapEnabled((value) => !value)} aria-pressed={snapEnabled} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${snapEnabled ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
             Snap {snapEnabled ? 'on' : 'off'}
           </button>
@@ -396,6 +434,12 @@ export function WarehouseDepotLayoutEditor({
         </div>
       </div>
 
+      {collisionNotice && (
+        <p role="status" data-testid="warehouse-croqui-collision-alert"
+          className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">
+          {collisionNotice}
+        </p>
+      )}
       <div
         ref={viewportRef}
         data-testid="warehouse-croqui-editor-viewport"
