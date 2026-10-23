@@ -36,10 +36,10 @@ export function warehouseObjectFaceLabels(object: Pick<WarehouseDepotLayoutObjec
 } {
   const front = warehouseObjectPhysicalFront(object.width, object.height, object.rotation);
   const back = warehouseOppositeFace(front);
-  // Para a pessoa olhando na mesma direcao que o equipamento, o lado direito
-  // fica 90 graus no sentido anti-horario da normal da frente em tela.
+  // Direita/esquerda segundo o operador de pe DIANTE da frente, olhando
+  // PARA o equipamento (nao segundo o observador atras da estante).
   const rightFaces: Record<WarehouseApplianceFace, WarehouseApplianceFace> = {
-    'y+':'x-','x-':'y-','y-':'x+','x+':'y+',
+    'y+':'x+','x+':'y-','y-':'x-','x-':'y+',
   };
   const right = rightFaces[front];
   const left = warehouseOppositeFace(right);
