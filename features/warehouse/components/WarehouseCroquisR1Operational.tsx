@@ -42,6 +42,7 @@ import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
+import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
 import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
@@ -608,9 +609,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const widthRatio = length / Math.max(1, draftWidth);
     const heightRatio = width / Math.max(1, draftHeight);
     const previous = cloneObjects(draftObjects);
-    checkpoint(previous);
-
-    setDraftObjects(previous.map((object) => {
+    const scaled = previous.map((object) => {
       const x = Math.min(
         Math.round(object.x * widthRatio * 100) / 100,
         Math.max(0, length - 12)
@@ -634,7 +633,14 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         width: objectWidth,
         height: objectHeight,
       };
-    }));
+    });
+    if(warehouseFindOverlappingLocals(scaled).length){
+      setMessage('Essas dimensões causariam sobreposição de locais. '
+        +'Mantenha as medidas atuais e reposicione as estruturas antes de redimensionar.');
+      return;
+    }
+    checkpoint(previous);
+    setDraftObjects(scaled);
 
     setDraftWidth(length);
     setDraftHeight(width);
@@ -667,8 +673,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       warehouseLocationId: item.location.id,
       layer: Math.max(0, ...draftObjects.map((object) => object.layer)) + 1,
     });
+    const position=warehouseFindFreePosition(next,draftObjects,draftWidth,draftHeight,{x:30,y:30});
+    if(!position){
+      setMessage('Não existe espaço livre para inserir '+item.location.code+'. Reorganize o depósito.');
+      return;
+    }
     checkpoint(draftObjects);
-    setDraftObjects([...draftObjects, next]);
+    setDraftObjects([...draftObjects,{...next,...position}]);
     setPendingRemovedLocationIds((current) => current.filter((id) => id !== item.location.id));
     setSelectedObjectId(next.id);
   }
@@ -719,25 +730,19 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const dims=defaultSize(kind);
     const width=Math.min(dims.widthCm,draftWidth-20);
     const height=Math.min(dims.depthCm,draftHeight-20);
-    const occupied=(x:number,y:number)=>draftObjects.some(item=>
-      x<item.x+item.width+5&&x+width+5>item.x
-      &&y<item.y+item.height+5&&y+height+5>item.y);
-    let free:{x:number;y:number}|null=null;
-    for(let y=20;y+height<=draftHeight-10&&!free;y+=20){
-      for(let x=20;x+width<=draftWidth-10;x+=20){
-        if(!occupied(x,y)){free={x,y};break;}
-      }
-    }
+    const draft=createWarehouseDepotLayoutObject({
+      kind,label:code+' · '+name,width,height,
+      x:20,y:20,rotation:0,elevation:1,visualVariant:'solid',
+      warehouseLocationId:null,layer:Math.max(0,...draftObjects.map(x=>x.layer))+1,
+    });
+    const free=warehouseFindFreePosition(draft,draftObjects,draftWidth,draftHeight,
+      {x:20,y:20});
     if(!free){
       setMessage('Não há espaço livre para um novo local com essas dimensões. '
         +'Reorganize o croqui antes de cadastrar.');
       return;
     }
-    const object=createWarehouseDepotLayoutObject({
-      kind,label:code+' · '+name,width,height,
-      x:free.x,y:free.y,rotation:0,elevation:1,visualVariant:'solid',
-      warehouseLocationId:null,layer:Math.max(0,...draftObjects.map(x=>x.layer))+1,
-    });
+    const object={...draft,...free};
     checkpoint(draftObjects);
     setDraftObjects([...draftObjects,object]);
     setPendingDuplicatedLocals(current=>({...current,[object.id]:{
@@ -806,6 +811,15 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
   async function saveLayout() {
     if(!selectedDepotId || !selectedDepot || !setupReady || saving) return;
+    const overlaps=warehouseFindOverlappingLocals(draftObjects);
+    if(overlaps.length){
+      const byId=new Map(draftObjects.map(object=>[object.id,object.label]));
+      const first=overlaps[0];
+      setMessage('Salvamento bloqueado: '+(byId.get(first.firstId)||'Local')
+        +' está sobreposto a '+(byId.get(first.secondId)||'outro local')
+        +'. Separe os locais no Croqui 2D e tente novamente.');
+      return;
+    }
     setSaving(true);
     setMessage(null);
     try {
@@ -1365,6 +1379,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 scopeKey={selectedDepotId + ':' + (activeLayout?.id || 'new')}
                 lightTheme
                 allowResize={false}
+                preventLocalOverlap
                 onDuplicateObject={prepareDuplicatedObject}
                 onRemoveObject={handleRemoveObject}
               />
@@ -1419,11 +1434,20 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                               if(!selectedLayoutObject)return;
                               const value=Number(event.target.value);
                               if(!Number.isFinite(value))return;
-                              setDraftObjects(current=>current.map(item=>{
-                                if(item.id!==selectedLayoutObject.id)return item;
-                                const max=(field==='width'?draftWidth-item.x:draftHeight-item.y);
-                                return {...item,[field]:Math.max(20,Math.min(max,Math.round(value)))};
-                              }));
+                              const max=(field==='width'
+                                ?draftWidth-selectedLayoutObject.x:draftHeight-selectedLayoutObject.y);
+                              const candidate={
+                                ...selectedLayoutObject,
+                                [field]:Math.max(20,Math.min(max,Math.round(value))),
+                              };
+                              if(warehouseLocalHasCollision(candidate,draftObjects)){
+                                setMessage('Medida recusada: o local ocuparia o espaço de outra estrutura.');
+                                return;
+                              }
+                              checkpoint(draftObjects);
+                              setDraftObjects(current=>current.map(item=>
+                                item.id===selectedLayoutObject.id?candidate:item));
+                              setMessage(null);
                             }}
                             className="mt-1 w-full rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
                         </label>
