@@ -1863,6 +1863,20 @@ export function WarehouseIsometricPreview({
               <p><strong>Nome:</strong> {selectedContents.location.name}</p>
               <p><strong>Materiais:</strong> {selectedContents.materialCount}</p>
               <p><strong>Registros:</strong> {selectedContents.rowCount}</p>
+              <div className="flex w-full flex-wrap gap-2">
+                {selectedContents.groups.length === 0 ? (
+                  <span className="rounded-lg bg-slate-50 px-3 py-2 text-slate-500">Local vazio</span>
+                ) : selectedContents.groups.map((group) => (
+                  <div key={group.id} className="max-w-[340px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="mb-1 text-[11px] font-bold text-[#123e77]">{group.code}</p>
+                    {group.rows.map((row) => (
+                      <p key={row.materialId} className="text-[11px] text-slate-700">
+                        {row.description} · <strong>{row.quantity} {row.unit}</strong>
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
               <p className="text-slate-500">Passe o cursor, use Tab ou clique em outro local.</p>
             </div>
           ) : (
