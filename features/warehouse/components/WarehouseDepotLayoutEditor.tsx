@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BringToFront,
   Copy,
@@ -637,25 +638,26 @@ export function WarehouseDepotLayoutEditor({
                   const root = editorRootRef.current;
                   if (!root) return;
                   const bounds = root.getBoundingClientRect();
-                  // Posição relativa ao editor, não à janela. Assim o menu
-                  // acompanha o cursor mesmo com scroll, zoom do navegador,
-                  // barras do layout ou ancestrais transformados.
-                  const cursorX = event.clientX - bounds.left;
-                  const cursorY = event.clientY - bounds.top;
-                  const availableRight = bounds.width - cursorX;
-                  const menuLeft = availableRight >= CONTEXT_MENU_WIDTH + CONTEXT_MENU_GAP
-                    ? cursorX + CONTEXT_MENU_GAP
-                    : cursorX - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP;
-                  const availableBelow = bounds.height - cursorY;
-                  const menuTop = availableBelow >= CONTEXT_MENU_HEIGHT + CONTEXT_MENU_GAP
-                    ? cursorY + CONTEXT_MENU_GAP
-                    : cursorY - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP;
+                  // Coordenadas de viewport. O menu e montado em document.body
+                  // para nao herdar transforms/overflow do croqui 2D.
+                  const cx = event.clientX;
+                  const cy = event.clientY;
+                  const minX = Math.max(CONTEXT_MENU_GAP, bounds.left + CONTEXT_MENU_GAP);
+                  const maxX = Math.max(minX, Math.min(window.innerWidth - CONTEXT_MENU_WIDTH
+                    - CONTEXT_MENU_GAP, bounds.right - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP));
+                  const minY = Math.max(CONTEXT_MENU_GAP, bounds.top + CONTEXT_MENU_GAP);
+                  const maxY = Math.max(minY, Math.min(window.innerHeight - CONTEXT_MENU_HEIGHT
+                    - CONTEXT_MENU_GAP, bounds.bottom - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP));
+                  const left = cx + CONTEXT_MENU_WIDTH + CONTEXT_MENU_GAP <= bounds.right
+                    ? cx + CONTEXT_MENU_GAP
+                    : cx - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP;
+                  const top = cy + CONTEXT_MENU_HEIGHT + CONTEXT_MENU_GAP <= bounds.bottom
+                    ? cy + CONTEXT_MENU_GAP
+                    : cy - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP;
                   setContextMenu({
                     objectId: object.id,
-                    left: clamp(menuLeft, CONTEXT_MENU_GAP,
-                      Math.max(CONTEXT_MENU_GAP, bounds.width - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP)),
-                    top: clamp(menuTop, CONTEXT_MENU_GAP,
-                      Math.max(CONTEXT_MENU_GAP, bounds.height - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP)),
+                    left: clamp(left, minX, maxX),
+                    top: clamp(top, minY, maxY),
                   });
                 }}
                 onPointerDown={(event) => {
@@ -733,10 +735,10 @@ export function WarehouseDepotLayoutEditor({
         </div>
       </div>
 
-      {contextMenu && view === 'top' && objects.some(o => o.id === contextMenu.objectId) && (
+      {contextMenu && view === 'top' && objects.some(o => o.id === contextMenu.objectId) && createPortal((
         <div data-warehouse-context-menu data-testid="warehouse-croqui-context-menu"
           role="menu" aria-label="Opções do local"
-          style={{ position: 'absolute', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
+          style={{ position: 'fixed', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
           className="w-[224px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-xl"
           onContextMenu={event => event.preventDefault()}>
           <p className="px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
@@ -773,9 +775,9 @@ export function WarehouseDepotLayoutEditor({
             <Layers3 className="h-4 w-4" /> Incluir subposição
           </button>
         </div>
-      )}
+      ), document.body)}
 
-      {sizeDialog && objects.some(o => o.id === sizeDialog.objectId) && (
+      {sizeDialog && objects.some(o => o.id === sizeDialog.objectId) && createPortal((
         <div data-testid="warehouse-croqui-size-modal"
           className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4"
           onPointerDown={event => { if (event.target === event.currentTarget) setSizeDialog(null); }}>
@@ -835,7 +837,7 @@ export function WarehouseDepotLayoutEditor({
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }
