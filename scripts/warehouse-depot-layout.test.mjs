@@ -206,7 +206,7 @@ test('editor visual mantém edição local, 2D/Prévia 3D e sem persistência pa
   );
 
   assert.match(editor, /Vista superior/);
-  assert.match(editor, /Prévia 3D/);
+  assert.match(editor, /Perspectiva rápida \(2,5D\)/);
   assert.match(editor, /Snap/);
   assert.match(editor, /Undo2/);
   assert.match(editor, /Redo2/);
