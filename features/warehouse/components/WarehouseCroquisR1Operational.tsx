@@ -47,6 +47,7 @@ import type { WarehouseInspectionLotState } from './WarehouseLocationInspection'
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
+import { readWarehouseCroquiCatalog, readWarehouseCroquiLayouts } from '../../../lib/warehouse/croquiReadRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
 import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
@@ -230,10 +231,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const reloadBase = useCallback(async () => {
     setLoading(true);
     try {
-      const [depotRows, locationRows] = await Promise.all([
-        listWarehouseDepots(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
-      ]);
+      const {depots:depotRows, locations:locationRows} = await readWarehouseCroquiCatalog(workspaceId);
       setDepots(depotRows);
       setLocations(locationRows);
       const activeDepots = depotRows.filter((item) => item.depot.status === 'active');
@@ -263,10 +261,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       return () => { cancelled = true; };
     }
 
-    void Promise.all([
-      getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
-      listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
-    ]).then(([active, versions]) => {
+    void readWarehouseCroquiLayouts(workspaceId,selectedDepotId).then(({active,layouts:versions}) => {
       if (cancelled) return;
       const layout = active?.layout || null;
       setActiveLayout(layout);
@@ -967,10 +962,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setMessage('Estrutura e croqui salvos juntos. Versão '+result.layout.version+' ativa. '
         +result.createdLocations.length+' locais cadastrados.');
       saveOperationRef.current=null;
-      const [active,versions]=await Promise.all([
-        getActiveWarehouseDepotLayout(workspaceId,selectedDepotId),
-        listWarehouseDepotLayoutsForDepot(workspaceId,selectedDepotId,100),
-      ]);
+      const {active,layouts:versions}=await readWarehouseCroquiLayouts(workspaceId,selectedDepotId);
       setActiveLayout(active?.layout||result.layout);
       setHistory(versions);
       await reloadBase();
