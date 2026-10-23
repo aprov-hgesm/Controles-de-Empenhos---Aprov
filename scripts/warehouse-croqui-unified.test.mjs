@@ -11,6 +11,14 @@ const ts=require('typescript');
 const root=process.cwd();
 const source=path=>readFileSync(resolve(root,path),'utf8');
 const applySource=source('lib/server/warehouseStructureLayoutApply.ts');
+const collisionSource=source('lib/warehouse/layoutCollision.ts');
+const collisionExports={};
+runInNewContext(ts.transpileModule(collisionSource,{compilerOptions:{
+  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,
+}}).outputText,{
+  exports:collisionExports,
+  require:()=>{throw new Error('Unexpected helper import');},
+});
 const uiSource=source('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
 const routeSource=source('app/api/central-depositos/operations/route.ts');
 const panelSource=source('features/warehouse/components/WarehouseDepotsOperational.tsx');
@@ -18,9 +26,9 @@ const fixed=(prefix,letter)=>prefix+letter.repeat(32);
 const depotId=fixed('dep_','a'),localId=fixed('loc_','b'),objId=fixed('obj_','c');
 const access={uid:'operator',workspaceId:'ws-test',ug:'123456'};
 const key=(group,id)=>'warehouse/ws-test/'+group+'/'+id;
-const makeObject=(id,location=null)=>({
+const makeObject=(id,location=null,x=20,y=20)=>({
   id,kind:'SHELF',label:'EST-01 · Estante 01',
-  x:20,y:20,width:140,height:60,rotation:0,layer:1,
+  x,y,width:140,height:60,rotation:0,layer:1,
   elevation:1,visualVariant:'solid',warehouseLocationId:location,
 });
 function input(overrides={}) {
@@ -66,6 +74,7 @@ function createStore(){
         return plan.result;
       },
     };
+    if(module==='../warehouse/layoutCollision')return collisionExports;
     if(module==='../warehouse/location')return {
       WAREHOUSE_LOCATION_SCHEMA_VERSION:'warehouse_location_v1',
       normalizeWarehouseLogicalCode:value=>typeof value==='string'&&/^[A-Z0-9-]{1,32}$/.test(value)
@@ -147,7 +156,7 @@ test('duplicação de estante clona os códigos filhos sem copiar estoque',async
   const cloneId=fixed('obj_','d');
   const second=await store.apply(access,input({
     operationId:'cccccccc-cccc-4ccc-cccc-cccccccccccc',
-    objects:[...first.layout.objects,makeObject(cloneId)],
+    objects:[...first.layout.objects,makeObject(cloneId,null,220,20)],
     baseLayoutId:first.layout.id,expectedVersion:1,
     createLocals:[{objectId:cloneId,code:'EST-02',name:'Estante 02',
       description:null,sourceLocationId:first.createdLocations[0].id,subpositionCount:0}],
@@ -158,6 +167,20 @@ test('duplicação de estante clona os códigos filhos sem copiar estoque',async
     .map(x=>x.data.code).sort(),['EST-02','EST-02-01','EST-02-02']);
   assert.equal(store.rowsOf('locationBalances').length,0);
 });
+test('servidor rejeita duplo local no mesmo espaço sem criar documentos extras',async()=>{
+  const store=createStore(),first=await store.apply(access,input());
+  const secondId=fixed('obj_','d');
+  await assert.rejects(()=>store.apply(access,input({
+    operationId:'99999999-9999-4999-9999-999999999999',
+    baseLayoutId:first.layout.id,expectedVersion:1,
+    objects:[...first.layout.objects,makeObject(secondId,null,40,20)],
+    createLocals:[{objectId:secondId,code:'EST-02',name:'Estante 02',
+      description:null,sourceLocationId:null,subpositionCount:0}],
+  })),/WAREHOUSE_CROQUI_LOCATION_OVERLAP/);
+  assert.equal(store.rowsOf('locations').length,3);
+  assert.equal(store.rowsOf('layouts').length,1);
+});
+
 test('inativação com saldo bloqueia todo o commit e preserva layout e cadastro',async()=>{
   const store=createStore(),created=await store.apply(access,input());
   store.docs.set(key('locationBalances',fixed('lb_','e')),{
