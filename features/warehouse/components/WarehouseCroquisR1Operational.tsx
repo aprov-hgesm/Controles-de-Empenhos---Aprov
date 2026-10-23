@@ -969,7 +969,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       const code = registered?.code || pendingDuplicatedLocals[object.id]?.code || null;
       if (!code) continue;
       if (plannedCodes.has(code)) {
-        setMessage('Salvamento bloqueado: o código ' + code + ' aparece mais de uma vez no croqui. ' 
+        setMessage('Salvamento bloqueado: o código ' + code + ' aparece mais de uma vez no croqui. '
           + 'Atualize a página ou desfaça a duplicação antes de salvar.');
         return;
       }
