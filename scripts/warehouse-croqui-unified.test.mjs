@@ -269,22 +269,30 @@ test('EST-02 liberada após inativação pode ser reutilizada com NOVO ID intern
   assert.equal(store.rowsOf('locations').length,6);
 });
 
-test('inativar e reutilizar código em um mesmo salvar funciona atomicamente',async()=>{
+test('EST-01 permanece reservado enquanto sua inativação está apenas pendente',async()=>{
   const store=createStore(),original=await store.apply(access,input());
   const oldId=original.createdLocations[0].id;
   const freshObject=fixed('obj_','d');
-  const saved=await store.apply(access,input({
+  await assert.rejects(()=>store.apply(access,input({
     operationId:'56565656-5656-4565-8565-565656565656',
     baseLayoutId:original.layout.id,expectedVersion:1,
     objects:[makeObject(freshObject,null,220,20)],
     archiveLocationIds:[oldId],
     createLocals:[{objectId:freshObject,code:'EST-01',name:'Estante substituta',
       description:null,sourceLocationId:null,subpositionCount:1}],
+  })),/WAREHOUSE_CROQUI_DUPLICATE_CODE/);
+  assert.equal(store.rowsOf('locations').find(x=>x.data.id===oldId).data.status,'active');
+  assert.equal(store.rowsOf('layouts').length,1);
+  const saved=await store.apply(access,input({
+    operationId:'68686868-6868-4686-8686-686868686868',
+    baseLayoutId:original.layout.id,expectedVersion:1,
+    objects:[makeObject(freshObject,null,220,20)],
+    archiveLocationIds:[oldId],
+    createLocals:[{objectId:freshObject,code:'EST-02',name:'Estante substituta',
+      description:null,sourceLocationId:null,subpositionCount:1}],
   }));
-  assert.equal(saved.createdLocations.length,1);
-  assert.notEqual(saved.createdLocations[0].id,oldId);
+  assert.equal(saved.createdLocations[0].code,'EST-02');
   assert.equal(store.rowsOf('locations').find(x=>x.data.id===oldId).data.status,'inactive');
-  assert.equal(saved.layout.objects[0].warehouseLocationId,saved.createdLocations[0].id);
 });
 
 test('código visual ativo nunca pode ser sequestrado por um novo registro',async()=>{
@@ -297,6 +305,24 @@ test('código visual ativo nunca pode ser sequestrado por um novo registro',asyn
       name:'Estante indevida',description:null,sourceLocationId:null,subpositionCount:0}],
   })),/WAREHOUSE_CROQUI_DUPLICATE_CODE/);
   assert.equal(store.rowsOf('locations').filter(x=>x.data.kind==='LOCAL').length,1);
+});
+
+test('referências diferentes não podem compartilhar o mesmo código operacional',async()=>{
+  const store=createStore(),original=await store.apply(access,input());
+  const duplicateId=fixed('loc_','d'), secondObject=fixed('obj_','d');
+  store.docs.set(key('locations',duplicateId),{
+    ...original.createdLocations[0],id:duplicateId,code:'EST-01',
+    name:'Estante duplicada legada',
+  });
+  await assert.rejects(()=>store.apply(access,input({
+    operationId:'90909090-9090-4909-8909-909090909090',
+    baseLayoutId:original.layout.id,expectedVersion:1,
+    objects:[...original.layout.objects,
+      {...makeObject(secondObject,duplicateId,220,20),
+        label:'EST-01 · Estante duplicada legada'}],
+    createLocals:[],
+  })),/WAREHOUSE_CROQUI_DUPLICATE_CODE/);
+  assert.equal(store.rowsOf('layouts').length,1);
 });
 
 test('subposição pode ser criada, renomeada e inativada em versões posteriores',async()=>{
