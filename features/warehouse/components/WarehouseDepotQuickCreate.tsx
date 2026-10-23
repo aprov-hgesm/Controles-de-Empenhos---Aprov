@@ -16,7 +16,7 @@ export function WarehouseDepotQuickCreate({
   onRegistered: (depotId: string) => Promise<void>;
 }) {
   const [code, setCode] = useState(() => {
-    const used = new Set(depots.map(row => row.depot.code));
+    const used = new Set(depots.filter(row => row.depot.status === 'active').map(row => row.depot.code));
     for (let i = 1; i <= 999; i++) {
       const next = 'DEP-' + String(i).padStart(3, '0');
       if (!used.has(next)) return next;
