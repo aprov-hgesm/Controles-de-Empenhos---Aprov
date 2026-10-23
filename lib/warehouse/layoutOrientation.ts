@@ -14,13 +14,15 @@ export function turnWarehouseLayoutObject(
   logicalWidth: number,
   logicalHeight: number
 ): WarehouseDepotLayoutObject {
-  if (!Number.isInteger(quarters) || Math.abs(quarters) !== 1)
+  if (!Number.isInteger(quarters) || (Math.abs(quarters) !== 1 && Math.abs(quarters) !== 2))
     throw new Error('WAREHOUSE_ORIENTATION_TURN_INVALID');
   const newRotation = warehouseCardinalRotation(object.rotation + quarters * 90);
   const centerX = object.x + object.width / 2;
   const centerY = object.y + object.height / 2;
-  const width = object.height;
-  const height = object.width;
+  // Meia volta nao muda a area ocupada. Evita exigir espaco lateral de um
+  // giro intermediario de 90 graus apenas para inverter a frente.
+  const width = Math.abs(quarters) === 2 ? object.width : object.height;
+  const height = Math.abs(quarters) === 2 ? object.height : object.width;
   if (width > logicalWidth || height > logicalHeight)
     throw new Error('WAREHOUSE_ORIENTATION_OUT_OF_BOUNDS');
   return {
