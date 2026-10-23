@@ -136,8 +136,9 @@ export async function warehouseStructureLayoutApplyServer(
   if((current?.layout.id??null)!==data.baseLayoutId || (current?.layout.version??null)!==data.expectedVersion)
     return fail('WAREHOUSE_CROQUI_VERSION_CONFLICT');
   const usedCodes=new Set(currentLocations
-    .filter(loc=>loc.depotId===depotId&&loc.status==='active'&&loc.kind==='LOCAL'
-      &&!data.archiveLocationIds.includes(loc.id))
+    // Somente uma transação POSTERIOR à inativação pode reutilizar o código.
+    // Esta reserva elimina EST-05 duplicada no mesmo rascunho/salvamento.
+    .filter(loc=>loc.depotId===depotId&&loc.status==='active'&&loc.kind==='LOCAL')
     .map(loc=>loc.code));
   const createByObject=new Map<string,WarehouseLocation>();
   const newRows:Array<{location:WarehouseLocation;claim:string}>=[];
@@ -359,13 +360,21 @@ export async function warehouseStructureLayoutApplyServer(
         ||existingLayout(access,stored).version!==current.layout.version)
         return fail('WAREHOUSE_CROQUI_VERSION_CONFLICT');
     }
+    const referencedCodes=new Set<string>();
     for(const id of refs){
-      if(newRows.some(n=>n.location.id===id))continue;
+      const created=newRows.find(n=>n.location.id===id);
+      if(created){
+        if(referencedCodes.has(created.location.code))return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
+        referencedCodes.add(created.location.code);
+        continue;
+      }
       const row=rows.get(path(ws,'locations',id));
       if(!row)return fail('WAREHOUSE_CROQUI_LOCATION_NOT_FOUND');
       const loc=existingLocation(access,row);
       if(loc.status!=='active'||loc.depotId!==depotId||loc.kind!=='LOCAL')
         return fail('WAREHOUSE_CROQUI_LOCATION_INVALID');
+      if(referencedCodes.has(loc.code))return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
+      referencedCodes.add(loc.code);
     }
     for(const entry of createSpecs){
       if(!entry.spec.sourceLocationId)continue;
@@ -406,9 +415,9 @@ export async function warehouseStructureLayoutApplyServer(
         ||previous.kind!==location.kind||previous.depotId!==depotId
         ||previous.parentLocationId!==location.parentLocationId)
         return fail('WAREHOUSE_CROQUI_CODE_CLAIM_CONFLICT');
-      // Codigo liberado apenas se o dono foi inativado anteriormente ou
-      // sera inativado no MESMO commit protegido por saldos e lotes.
-      if(previous.status==='active' && !archives.has(oldId))
+      // Não permitir reutilização no mesmo commit de inativação: o local
+      // precisa estar INATIVO antes que um novo cadastro reivindique o código.
+      if(previous.status==='active')
         return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
     }
     for(const row of balances){
