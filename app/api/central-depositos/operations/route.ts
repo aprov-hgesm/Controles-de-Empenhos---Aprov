@@ -8,6 +8,7 @@ import { transferWarehouseStockServer } from '../../../../lib/server/warehouseTr
 import { saveWarehouseMaterialServer } from '../../../../lib/server/warehouseMaterialWrite';
 import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../../../../lib/server/warehouseDestinationWrite';
 import { warehouseStructureServer } from '../../../../lib/server/warehouseStructureWrite';
+import { warehouseStructureLayoutApplyServer } from '../../../../lib/server/warehouseStructureLayoutApply';
 import { saveWarehouseLandingVisualServer } from '../../../../lib/server/warehouseLandingVisualWrite';
 import { saveWarehouseLogisticsSettingsServer } from '../../../../lib/server/warehouseLogisticsSettingsWrite';
 import { excludeWarehouseQueueServer } from '../../../../lib/server/warehouseQueueExclusionWrite';
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'LAYOUT_SAVE':
         result=await warehouseLayoutSaveServer(access,body.input);
+        break;
+      case 'STRUCTURE_LAYOUT_APPLY':
+        result=await warehouseStructureLayoutApplyServer(access,body.input);
         break;
       case 'INTAKE_STATE_SAVE':
         result=await warehouseIntakeStateServer(access,body.input);
