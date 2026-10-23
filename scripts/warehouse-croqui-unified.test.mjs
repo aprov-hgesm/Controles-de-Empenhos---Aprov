@@ -19,6 +19,14 @@ runInNewContext(ts.transpileModule(collisionSource,{compilerOptions:{
   exports:collisionExports,
   require:()=>{throw new Error('Unexpected helper import');},
 });
+const sequenceSource=source('lib/warehouse/locationCodeSequence.ts');
+const sequenceExports={};
+runInNewContext(ts.transpileModule(sequenceSource,{compilerOptions:{
+  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,
+}}).outputText,{
+  exports:sequenceExports,
+  require:()=>{throw new Error('Unexpected sequence helper import');},
+});
 const uiSource=source('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
 const routeSource=source('app/api/central-depositos/operations/route.ts');
 const panelSource=source('features/warehouse/components/WarehouseDepotsOperational.tsx');
@@ -75,6 +83,7 @@ function createStore(){
       },
     };
     if(module==='../warehouse/layoutCollision')return collisionExports;
+    if(module==='../warehouse/locationCodeSequence')return sequenceExports;
     if(module==='../warehouse/location')return {
       WAREHOUSE_LOCATION_SCHEMA_VERSION:'warehouse_location_v1',
       normalizeWarehouseLogicalCode:value=>typeof value==='string'&&/^[A-Z0-9-]{1,32}$/.test(value)
