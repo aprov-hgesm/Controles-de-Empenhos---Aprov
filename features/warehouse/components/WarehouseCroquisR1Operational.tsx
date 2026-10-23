@@ -785,7 +785,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       const archiveLocationIds=pendingRemovedLocationIds
         .filter(id=>!represented.has(id));
       const editLocals=Object.entries(localEdits)
-        .filter(([id])=>!archiveLocationIds.includes(id))
+        .filter(([id])=>{
+          const parent=locations.find(row=>row.location.id===id)?.location.parentLocationId;
+          return !archiveLocationIds.includes(id)
+            &&!removedSubpositionIds.includes(id)
+            &&(!parent||!archiveLocationIds.includes(parent));
+        })
         .map(([id,item])=>({id,name:item.name,description:item.description}));
       if(!saveOperationRef.current)saveOperationRef.current=crypto.randomUUID();
       const result=await applyWarehouseCroquiStructure(workspaceId,{
