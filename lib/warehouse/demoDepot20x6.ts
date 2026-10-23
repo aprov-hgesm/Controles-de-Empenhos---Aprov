@@ -12,7 +12,7 @@ export const DEMO_20X6_DEPOT_ID = 'dep_' + 'd'.repeat(32);
 const WORKSPACE = 'workspace-demo-3d';
 const UG = '000001';
 
-export type Demo20x6Scenario = 'simple' | 'dense';
+export type Demo20x6Scenario = 'simple' | 'dense' | 'operational';
 
 type FixtureKind = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH';
 type FixtureSlot = {
@@ -85,7 +85,7 @@ function local(
   };
 }
 
-function makeScenario(includeAll: boolean): Demo20x6Fixture {
+function makeScenario(includeAll: boolean, operational = false): Demo20x6Fixture {
   const objects: WarehouseDepotLayoutObject[] = [];
   const locations: WarehouseLocation[] = [];
   const balances: WarehouseLocationBalance[] = [];
@@ -93,6 +93,11 @@ function makeScenario(includeAll: boolean): Demo20x6Fixture {
   slots.forEach((slot, slotIndex) => {
     if (!includeAll && !slot.simple) return;
     const index = slotIndex + 1;
+    // Corredor central com estantes transversais: expõe oclusões que a
+    // distribuição em fileiras uniformes não revela no SVG isométrico.
+    const physical = operational && slot.kind === 'SHELF' && index >= 11 && index <= 18
+      ? { ...slot, x: 100 + (index - 11) * 188, y: 210, width: 80, height: 175 }
+      : slot;
     const locationId = hexId('loc_', index);
     const subpositionIds: string[] = [];
     locations.push(local(locationId, slot.code, 'LOCAL', null));
@@ -108,7 +113,7 @@ function makeScenario(includeAll: boolean): Demo20x6Fixture {
     objects.push({
       id: hexId('obj_', index),
       kind: slot.kind, label: slot.code,
-      x: slot.x, y: slot.y, width: slot.width, height: slot.height,
+      x: physical.x, y: physical.y, width: physical.width, height: physical.height,
       rotation: 0, layer: 1, elevation: 1,
       visualVariant: 'solid', warehouseLocationId: locationId,
     });
@@ -139,4 +144,5 @@ function makeScenario(includeAll: boolean): Demo20x6Fixture {
 export const WAREHOUSE_20X6_SCENARIOS: Record<Demo20x6Scenario, Demo20x6Fixture> = {
   simple: makeScenario(false),
   dense: makeScenario(true),
+  operational: makeScenario(true, true),
 };
