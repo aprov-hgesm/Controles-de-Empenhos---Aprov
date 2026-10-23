@@ -1229,13 +1229,14 @@ export function WarehouseIsometricPreview({
         return {
           id: object.id, x: center.x, y: center.y,
           highlighted: selected,
-          priority: selected ? 2 : hoveredObject?.objectId === object.id ? 1 : 0,
+          // Hover atualiza apenas o painel; nao movimenta a camera nem as etiquetas.
+          priority: selected ? 2 : 0,
         };
       }));
   }, [
     sceneOnly, visibleObjects, locationById, subpositionsByParent,
     viewLogicalWidth, viewLogicalHeight, highlightedLocalIds,
-    focusedLocationId, hoveredObject?.objectId,
+    focusedLocationId,
   ]);
 
   const cameraViewBox = useMemo(() => {
