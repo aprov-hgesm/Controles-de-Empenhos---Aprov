@@ -26,6 +26,7 @@ import {
 } from '../warehouse/readCompatibility';
 import type { SaveWarehouseDepotLayoutVersionInput } from '../warehouse/layoutRepository';
 import { warehouseFindOverlappingLocals } from '../warehouse/layoutCollision';
+import { warehouseNextAvailableLocationCode } from '../warehouse/locationCodeSequence';
 
 export interface CroquiCreateLocal {
   objectId: string;
@@ -183,10 +184,24 @@ export async function warehouseStructureLayoutApplyServer(
       if(parsed.depotId!==depotId||parsed.kind!=='LOCAL'||parsed.status!=='active')
         return fail('WAREHOUSE_CROQUI_SOURCE_INVALID');
       const children=currentLocations.filter(c=>c.parentLocationId===parsed.id&&c.kind==='SUBPOSITION'&&c.status==='active');
-      if(children.length>30)return fail('WAREHOUSE_CROQUI_TOO_MANY_SUBPOSITIONS');
+      if(children.length+spec.subpositionCount>30)
+        return fail('WAREHOUSE_CROQUI_TOO_MANY_SUBPOSITIONS');
+      const copiedCodes=new Set<string>();
       for(const [index,child] of children.entries()){
         const suffix=child.code.startsWith(parsed.code)?child.code.slice(parsed.code.length):'-'+String(index+1).padStart(2,'0');
-        createLocation('SUBPOSITION',code+suffix,child.name,child.description,location.id,spec.objectId+':'+index);
+        const childCode=code+suffix;
+        if(copiedCodes.has(childCode))return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
+        copiedCodes.add(childCode);
+        createLocation('SUBPOSITION',childCode,child.name,child.description,location.id,spec.objectId+':'+index);
+      }
+      // Novas subposicoes adicionadas pelo menu de contexto a uma copia ainda
+      // nao salva. O backend as inclui na MESMA transacao da estante clonada.
+      for(let i=0;i<spec.subpositionCount;i++){
+        const extraCode=warehouseNextAvailableLocationCode(code+'-00',copiedCodes);
+        copiedCodes.add(extraCode);
+        createLocation('SUBPOSITION',extraCode,
+          'Subposição '+extraCode.split('-').at(-1),null,location.id,
+          spec.objectId+':extra:'+i);
       }
     }else{
       for(let i=1;i<=spec.subpositionCount;i++){
