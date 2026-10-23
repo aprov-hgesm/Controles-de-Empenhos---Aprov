@@ -408,7 +408,8 @@ export async function warehouseStructureLayoutApplyServer(
       const p=path(ws,'locations',edit.id),row=rows.get(p);
       if(!row)return fail('WAREHOUSE_CROQUI_EDIT_CONFLICT');
       const live=existingLocation(access,row);
-      if(live.kind!=='LOCAL'||live.status!=='active'||live.depotId!==depotId)
+      if((live.kind!=='LOCAL'&&live.kind!=='SUBPOSITION')
+        ||live.status!=='active'||live.depotId!==depotId)
         return fail('WAREHOUSE_CROQUI_EDIT_CONFLICT');
       writes.push({path:p,data:{...row.data,name:edit.name,description:edit.description,
         updatedAt:stamp,updatedBy:access.uid}});
