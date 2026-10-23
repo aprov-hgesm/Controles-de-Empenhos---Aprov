@@ -538,6 +538,50 @@ try {
   }),/WAREHOUSE_LAYOUT_BASE_NOT_ACTIVE|WAREHOUSE_LAYOUT_DEPOT_INACTIVE|WAREHOUSE_LAYOUT_DEPOT_INVALID/);
   console.log('PASS: arquivamento atômico do depósito, locais e Croqui ativo');
 
+  // Exclusão operacional definitiva exige depósito realmente vazio.
+  // Não é permitido mover saldos para UNASSIGNED ou simular retorno ao recebimento.
+  await assert.rejects(()=>warehouseStructureArchiveServer(access,{
+    kind:'DEPOT',id:dep,mode:'DELETE',confirmCode:'DEP-MANUAL',
+  }),/WAREHOUSE_ARCHIVE_OCCUPIED|WAREHOUSE_ARCHIVE_ACTIVE_LOT/);
+  assert.equal((await getDoc(ref('depots',dep))).data()?.status,'active');
+  assert.equal((await getDoc(ref('depotDeletions',dep))).exists(),false);
+
+  const toDelete=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'DELETEQA',name:'Depósito de exclusão QA'},
+  });
+  if(!('id' in toDelete)) throw new Error('DELETE_DEPOT_RESULT_INVALID');
+  const deletionLocal=await warehouseStructureServer(access,{
+    kind:'LOCATION_CREATE',input:{depotId:toDelete.id,kind:'LOCAL',
+      code:'LOCDELETE',name:'Local para excluir'},
+  });
+  if(!('id' in deletionLocal)) throw new Error('DELETE_LOCAL_RESULT_INVALID');
+  const deletionSub=await warehouseStructureServer(access,{
+    kind:'LOCATION_CREATE',input:{depotId:toDelete.id,kind:'SUBPOSITION',
+      parentLocationId:deletionLocal.id,code:'SUBDELETE',name:'Subposição para excluir'},
+  });
+  if(!('id' in deletionSub)) throw new Error('DELETE_SUBPOSITION_RESULT_INVALID');
+  await assert.rejects(()=>warehouseStructureArchiveServer(access,{
+    kind:'DEPOT',id:toDelete.id,mode:'DELETE',confirmCode:'WRONGCODE',
+  }),/WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION/);
+  assert.equal((await getDoc(ref('depots',toDelete.id))).data()?.status,'active');
+  await warehouseStructureArchiveServer(access,{
+    kind:'DEPOT',id:toDelete.id,mode:'DELETE',confirmCode:'DELETEQA',
+  });
+  assert.equal((await getDoc(ref('depots',toDelete.id))).data()?.status,'inactive');
+  assert.equal((await getDoc(ref('locations',deletionLocal.id))).data()?.status,'inactive');
+  assert.equal((await getDoc(ref('locations',deletionSub.id))).data()?.status,'inactive');
+  assert.equal((await getDoc(ref('depotDeletions',toDelete.id))).data()?.deletedBy,access.uid);
+  await assert.rejects(()=>warehouseStructureServer(access,{
+    kind:'DEPOT_UPDATE',depotId:toDelete.id,input:{status:'active'},
+  }),/WAREHOUSE_DEPOT_PERMANENTLY_DELETED/);
+  const replacement=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'DELETEQA',name:'Depósito de exclusão QA'},
+  });
+  if(!('id' in replacement)) throw new Error('DELETE_REPLACEMENT_RESULT_INVALID');
+  assert.notEqual(replacement.id,toDelete.id);
+  console.log('PASS: exclusão definitiva só de depósito vazio, tombstone atômico, locais inativos e reutilização do código');
+
+
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');
