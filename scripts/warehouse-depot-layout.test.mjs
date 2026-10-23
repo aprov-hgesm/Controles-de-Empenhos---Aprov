@@ -154,6 +154,18 @@ test('SVG é derivado do layout e não contém quantidade/saldo', () => {
 });
 
 
+
+test('exportacao SVG conserva a planta orientada sem rotacao geometrica duplicada', () => {
+  const original = object({x:100,y:150,width:70,height:140,rotation:90});
+  const valid = source.validateWarehouseDepotLayout(layout({objects:[original]}));
+  assert.equal(valid.ok,true);
+  const svg = source.renderWarehouseDepotLayoutSvg(valid.data);
+  assert.match(svg,/width="70" height="140"/);
+  assert.match(svg,/data-orientation-deg="90"/);
+  assert.doesNotMatch(svg,/transform="rotate\(/);
+});
+
+
 test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout', () => {
   const required = [
     'Estante',
