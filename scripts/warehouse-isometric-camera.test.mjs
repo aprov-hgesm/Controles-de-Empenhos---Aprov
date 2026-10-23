@@ -350,6 +350,11 @@ test('rotação contrária, limites do ambiente e frente de locais estreitos', (
     visualVariant:'solid',warehouseLocationId:null,
   };
   assert.equal(warehouseObjectPhysicalFront(50,140,0),'x+');
+  // Direita/esquerda observadas de frente para a estante, como no uso real.
+  assert.equal(warehouseObjectFaceLabels({...tall,width:160,height:70}).rightLabel,'Leste');
+  assert.equal(warehouseObjectFaceLabels({...tall,width:160,height:70}).leftLabel,'Oeste');
+  assert.equal(warehouseObjectFaceLabels(tall).rightLabel,'Norte');
+  assert.equal(warehouseObjectFaceLabels(tall).leftLabel,'Sul');
   const left=turnWarehouseLayoutObject(tall,-1,2000,600);
   assert.equal(left.rotation,-90);
   assert.equal(warehouseObjectPhysicalFront(left.width,left.height,left.rotation),'y-');
