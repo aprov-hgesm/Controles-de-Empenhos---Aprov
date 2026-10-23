@@ -118,6 +118,21 @@ function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function depotArchiveError(error: unknown): string {
+  const code = messageFrom(error);
+  const mapped: Record<string, string> = {
+    WAREHOUSE_ARCHIVE_OCCUPIED: 'Há materiais com saldo neste depósito. Transfira-os para outro local antes de inativar. Nada foi alterado.',
+    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há lotes ativos neste depósito. Conclua a transferência dos lotes antes de inativar. Nada foi alterado.',
+    WAREHOUSE_ARCHIVE_CATALOG_LIMIT: 'O volume de registros exige uma operação assistida. O depósito não foi alterado.',
+    WAREHOUSE_ARCHIVE_TOO_LARGE: 'Este depósito excede o limite de uma única transação. Nenhum registro foi alterado.',
+    WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE: 'Os dados mudaram durante a operação. Recarregue o depósito e tente novamente.',
+    WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND: 'O depósito não foi encontrado. Atualize a página.',
+    WAREHOUSE_SERVER_AUTH_REQUIRED: 'A sessão expirou. Faça login novamente para continuar.',
+    WAREHOUSE_SERVER_CONFIGURATION: 'O servidor não está configurado. Verifique o ambiente local antes de tentar novamente.',
+  };
+  return mapped[code] || code;
+}
+
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
   return objects.map((item) => ({ ...item }));
 }
@@ -456,7 +471,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       || newSubpositions.length > 0 || removedSubpositionIds.length > 0
       || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
     if (hasUncommitted) {
-      setMessage('Salve ou descarte as alterações do croqui antes de inativar o depósito.');
+      setMessage('Há mudanças no croqui ainda não salvas. Salve ou descarte as alterações antes de inativar o depósito.');
       return;
     }
     if (!window.confirm('Inativar ' + selectedDepot.code + ' e seus locais? '
@@ -471,8 +486,38 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setSelectedDepotId('');
       await reloadBase();
       setMessage('Depósito e suas estruturas inativados, sem excluir o histórico.');
-    } catch (error) {setMessage('Inativação não realizada: ' + messageFrom(error));}
+    } catch (error) {setMessage('Inativação não realizada: ' + depotArchiveError(error));}
     finally {setDepotWorking(false);}
+  }
+
+  async function deleteEmptyDepot() {
+    if (!selectedDepot || depotWorking || saving) return;
+    const hasUncommitted = pendingRemovedLocationIds.length > 0
+      || Object.keys(pendingDuplicatedLocals).length > 0
+      || newSubpositions.length > 0 || removedSubpositionIds.length > 0
+      || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
+    if (hasUncommitted) {
+      setMessage('Salve ou descarte as alterações do croqui antes de excluir o depósito.');
+      return;
+    }
+    if (!window.confirm('Excluir definitivamente o depósito ' + selectedDepot.code + '? '
+      + 'Esta opção só funciona se não houver saldo ou lote ativo. '
+      + 'Locais e croquis sairão das telas operacionais, mas o histórico permanecerá para auditoria. '
+      + 'Não movimenta materiais automaticamente.')) return;
+    setDepotWorking(true);
+    setMessage(null);
+    try {
+      await archiveWarehouseStructure(workspaceId, {
+        kind: 'DEPOT', id: selectedDepot.id, mode: 'DELETE', confirmCode: selectedDepot.code,
+      });
+      setShowDepotSettings(false);
+      setDepotEdit(null);
+      setSelectedDepotId('');
+      await reloadBase();
+      setMessage('Depósito excluído do cadastro operacional. Estruturas ocultadas e histórico preservado; nome e código podem ser reutilizados.');
+    } catch (error) {
+      setMessage('Exclusão não realizada: ' + depotArchiveError(error));
+    } finally { setDepotWorking(false); }
   }
 
   const depotLocals = useMemo(
@@ -990,6 +1035,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       <section data-testid="warehouse-croqui-first-depot" className="space-y-4">
         <h2 className="text-lg font-black text-[#00288e]">Gerenciar Depósito</h2>
         <p className="text-xs text-slate-600">Cadastre o primeiro depósito para começar a montar sua estrutura no Croqui 2D.</p>
+        {message && <p role="alert" aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">{message}</p>}
         <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
           onRegistered={async depotId=>{await reloadBase();setSelectedDepotId(depotId);}}/>
       </section>
@@ -1021,6 +1067,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
           </button>
         </div>
       </div>
+      {message && (
+        <div role="alert" aria-live="polite" data-testid="warehouse-croqui-operation-message"
+          className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-slate-900">
+          {message}
+        </div>
+      )}
       {showDepotRegistration&&(
         <WarehouseDepotQuickCreate workspaceId={workspaceId} depots={depots}
           onRegistered={async depotId=>{
@@ -1035,7 +1087,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             <button type="button" aria-label="Fechar gestão do depósito"
               onClick={() => setShowDepotSettings(false)}><X className="h-4 w-4"/></button>
           </div>
-          <p className="text-xs text-slate-600">O código do depósito é permanente para preservar as etiquetas e os históricos.</p>
+          <p className="text-xs text-slate-600">Inativar ou excluir um depósito vazio preserva o histórico. A exclusão é definitiva e libera o nome e o código para novo cadastro. Depósitos com estoque exigem movimentação segura antes da exclusão.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-slate-700">Nome do depósito
               <input required minLength={2} maxLength={120} value={depotEdit.name}
@@ -1072,6 +1124,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               onClick={()=>void archiveSelectedDepot()}
               className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-extrabold text-rose-700 disabled:opacity-40">
               <Archive className="h-4 w-4"/> Inativar depósito
+            </button>
+            <button type="button" disabled={depotWorking || saving}
+              data-testid="warehouse-croqui-delete-empty-depot"
+              onClick={()=>void deleteEmptyDepot()}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-extrabold text-rose-800 disabled:opacity-40">
+              Excluir depósito vazio
             </button>
             <button type="button" disabled={depotWorking || saving || !depotEdit.name.trim()}
               data-testid="warehouse-croqui-save-depot"
@@ -1832,11 +1890,6 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         </>
       )}
 
-      {message && (
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-slate-700">
-          {message}
-        </div>
-      )}
     </section>
   );
 }
