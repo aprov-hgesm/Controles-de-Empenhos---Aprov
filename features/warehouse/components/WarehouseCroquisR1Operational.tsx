@@ -698,6 +698,47 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setMessage(nextCode+' preparada. A nova subposição será cadastrada ao salvar.');
   }
 
+  function addSubpositionFromContext(object: WarehouseDepotLayoutObject) {
+    const pending = pendingDuplicatedLocals[object.id];
+    if (pending) {
+      const copiedCount = pending.sourceLocationId
+        ? locations.filter(row => row.location.parentLocationId === pending.sourceLocationId
+          && row.location.kind === 'SUBPOSITION' && row.location.status === 'active').length
+        : 0;
+      if (copiedCount + pending.subpositionCount >= 30) {
+        setMessage('Este local já alcançou o limite de 30 subposições.');
+        return;
+      }
+      setPendingDuplicatedLocals(current => {
+        const existing = current[object.id];
+        return existing ? {
+          ...current,
+          [object.id]: { ...existing, subpositionCount: existing.subpositionCount + 1 },
+        } : current;
+      });
+      setMessage('Uma subposição adicional foi preparada para ' + pending.code
+        + '. Salve o croqui para concluir o cadastro.');
+      return;
+    }
+    const location = object.warehouseLocationId
+      ? locations.find(row => row.location.id === object.warehouseLocationId)?.location
+      : null;
+    if (location && location.kind === 'LOCAL' && location.status === 'active'
+      && !pendingRemovedLocationIds.includes(location.id)) {
+      const existingCount = locations.filter(row => row.location.parentLocationId === location.id
+        && row.location.kind === 'SUBPOSITION' && row.location.status === 'active'
+        && !removedSubpositionIds.includes(row.location.id)).length;
+      const addedCount = newSubpositions.filter(row => row.parentLocationId === location.id).length;
+      if (existingCount + addedCount >= 30) {
+        setMessage('Este local já alcançou o limite de 30 subposições.');
+        return;
+      }
+      addCroquiSubposition(location.id, location.code);
+      return;
+    }
+    setMessage('Este objeto ainda não está cadastrado. Cadastre o local antes de incluir subposições.');
+  }
+
   const usedCroquiCodes = () => new Set([
     ...locations.filter((row) => row.location.depotId === selectedDepotId && row.location.status === 'active'
       && (!pendingRemovedLocationIds.includes(row.location.id)
@@ -1385,6 +1426,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 preventLocalOverlap
                 onDuplicateObject={prepareDuplicatedObject}
                 onRemoveObject={handleRemoveObject}
+                onAddSubposition={addSubpositionFromContext}
               />
             </div>
 
@@ -1491,6 +1533,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                         }}
                         className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white p-2 text-xs"/>
                     </label>
+                    {selectedPending?.sourceLocationId && (
+                      <p data-testid="warehouse-croqui-extra-subpositions"
+                        className="rounded-lg bg-blue-50 p-2 text-[10px] text-blue-800">
+                        Copia as subposições da origem e acrescenta
+                        {' '}{selectedPending.subpositionCount} nova(s) ao salvar.
+                      </p>
+                    )}
                     {selectedPending && !selectedPending.sourceLocationId && (
                       <label className="block text-[10px] font-bold text-slate-600">Subposições (0–30)
                         <input type="number" min={0} max={30} step={1}
