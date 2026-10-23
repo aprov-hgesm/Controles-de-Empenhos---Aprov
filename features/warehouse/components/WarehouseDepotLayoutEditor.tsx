@@ -6,6 +6,9 @@ import {
   Copy,
   Grid3X3,
   Hand,
+  Crosshair,
+  RotateCcw,
+  ArrowUp,
   Redo2,
   RotateCw,
   SendToBack,
@@ -16,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
+import { turnWarehouseLayoutObject, warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 
 type EditorView = 'top' | 'perspective';
 type InteractionMode = 'select' | 'pan';
@@ -38,35 +42,6 @@ function snap(value: number, enabled: boolean): number {
   return enabled ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value);
 }
 
-function normalizeCardinalRotation(
-  object: WarehouseDepotLayoutObject,
-  logicalWidth: number,
-  logicalHeight: number
-): WarehouseDepotLayoutObject {
-  const rotation = ((Math.round(object.rotation) % 360) + 360) % 360;
-  if (rotation === 0) return object;
-
-  if (rotation === 90 || rotation === 270) {
-    const centerX = object.x + object.width / 2;
-    const centerY = object.y + object.height / 2;
-    const width = object.height;
-    const height = object.width;
-    return {
-      ...object,
-      width,
-      height,
-      x: clamp(centerX - width / 2, 0, Math.max(0, logicalWidth - width)),
-      y: clamp(centerY - height / 2, 0, Math.max(0, logicalHeight - height)),
-      rotation: 0,
-    };
-  }
-
-  if (rotation === 180) {
-    return { ...object, rotation: 0 };
-  }
-
-  return object;
-}
 
 function isTextInput(target: EventTarget | null): boolean {
   return target instanceof HTMLInputElement
@@ -79,7 +54,7 @@ function perspectiveStyle(object: WarehouseDepotLayoutObject, logicalHeight: num
   const depth = Math.max(5, Math.min(18, object.elevation * 4 + 6));
   const yLift = ((logicalHeight - object.y) / logicalHeight) * 4;
   return {
-    transform: `rotate(${object.rotation}deg) translate(${depth * 0.35}px, ${-depth * 0.28 - yLift}px)`,
+    transform: `translate(${depth * 0.35}px, ${-depth * 0.28 - yLift}px)`,
     boxShadow: `${depth * 0.45}px ${depth * 0.55}px 0 rgba(15,23,42,0.42), 0 10px 24px rgba(2,8,23,0.18)`,
   };
 }
@@ -142,7 +117,10 @@ export function WarehouseDepotLayoutEditor({
   const [showGrid, setShowGrid] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [spacePan, setSpacePan] = useState(false);
+  const panning = mode === 'pan' || spacePan;
 
   useEffect(() => {
     interactionRef.current = null;
@@ -150,6 +128,7 @@ export function WarehouseDepotLayoutEditor({
     setView('top');
     setMode('select');
     setZoom(1);
+    zoomRef.current = 1;
     setPan({ x: 0, y: 0 });
     onSelectedObjectIdChange(null);
   }, [scopeKey, onSelectedObjectIdChange]);
@@ -177,6 +156,60 @@ export function WarehouseDepotLayoutEditor({
   }, [logicalHeight, logicalWidth, viewportSize.height, viewportSize.width]);
 
   const effectiveScale = fitScale * zoom;
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  const centerCamera = useCallback(() => {
+    zoomRef.current = 1;
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  // Zoom ancorado ao ponto sob o mouse: preserva o local que o operador
+  // esta examinando, sem saltar para o centro a cada giro da roda.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const current = zoomRef.current;
+      const next = clamp(+(current + (event.deltaY < 0 ? 0.12 : -0.12)).toFixed(3), ZOOM_MIN, ZOOM_MAX);
+      if (next === current) return;
+      const bounds = viewport.getBoundingClientRect();
+      const cursorX = event.clientX - bounds.left - bounds.width / 2;
+      const cursorY = event.clientY - bounds.top - bounds.height / 2;
+      const ratio = next / current;
+      setPan(previous => ({
+        x: previous.x + (cursorX - previous.x) * (1 - ratio),
+        y: previous.y + (cursorY - previous.y) * (1 - ratio),
+      }));
+      zoomRef.current = next;
+      setZoom(next);
+    };
+    viewport.addEventListener('wheel', handleWheel, { passive: false });
+    return () => viewport.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  // Segurar Espaco: deslocamento temporario sem abandonar a selecao.
+  useEffect(() => {
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat || isTextInput(event.target)) return;
+      if (event.target instanceof HTMLElement && event.target.closest('button')) return;
+      event.preventDefault();
+      setSpacePan(true);
+    };
+    const keyUp = (event: KeyboardEvent) => {
+      if (event.code === 'Space') setSpacePan(false);
+    };
+    const blur = () => setSpacePan(false);
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    window.addEventListener('blur', blur);
+    return () => {
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('blur', blur);
+    };
+  }, []);
 
   const selected = useMemo(
     () => objects.find((item) => item.id === selectedObjectId) || null,
@@ -282,7 +315,7 @@ export function WarehouseDepotLayoutEditor({
     object: WarehouseDepotLayoutObject
   ) => {
     if (type === 'resize' && !allowResize) return;
-    if (view !== 'top' || mode === 'pan') return;
+    if (view !== 'top' || panning) return;
     const viewport = viewportRef.current;
     if (!viewport) return;
     event.stopPropagation();
@@ -310,17 +343,21 @@ export function WarehouseDepotLayoutEditor({
           objects.map((item) => item.id === interaction.objectId ? interaction.startObject! : item)
         ));
 
-        if (interaction.type === 'rotate') {
-          const normalized = normalizeCardinalRotation(current, logicalWidth, logicalHeight);
-          if (JSON.stringify(normalized) !== JSON.stringify(current)) {
-            onObjectsChange(
-              objects.map((item) => item.id === interaction.objectId ? normalized : item)
-            );
-          }
-        }
+        // A rotacao ja foi convertida em largura/profundidade e direcao persistente.
       }
     }
     interactionRef.current = null;
+  };
+
+  const rotateSelected = (quarters: -1 | 1) => {
+    if (!selected) return;
+    try {
+      const rotated = turnWarehouseLayoutObject(selected, quarters, logicalWidth, logicalHeight);
+      patchObject(selected.id, rotated);
+    } catch {
+      // Se nao couber fisicamente no ambiente, manter posicao original.
+      return;
+    }
   };
 
   const layerShift = (direction: 'front' | 'back') => {
@@ -354,6 +391,7 @@ export function WarehouseDepotLayoutEditor({
           <span className="min-w-16 text-center text-[10px] font-bold text-slate-500">{Math.round(zoom * 100)}% · ajuste</span>
           <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomIn className="h-3.5 w-3.5" /></button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
+          <button type="button" aria-label="Centralizar croqui e ajustar zoom" onClick={centerCamera} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-slate-600 hover:bg-blue-50"><Crosshair className="h-3.5 w-3.5" /></button>
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'top' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Vista superior</button>
           <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Prévia 3D</button>
         </div>
@@ -362,9 +400,9 @@ export function WarehouseDepotLayoutEditor({
       <div
         ref={viewportRef}
         data-testid="warehouse-croqui-editor-viewport"
-        className={`relative h-[clamp(440px,62vh,720px)] min-h-[440px] max-w-full overflow-hidden ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+        className={`relative h-[clamp(440px,62vh,720px)] min-h-[440px] max-w-full overflow-hidden ${panning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
         onPointerDown={(event) => {
-          if (mode !== 'pan') {
+          if (!panning) {
             if (event.target === event.currentTarget) onSelectedObjectIdChange(null);
             return;
           }
@@ -404,9 +442,15 @@ export function WarehouseDepotLayoutEditor({
             }, false);
           } else {
             const delta = (event.clientX - interaction.startClientX) + (event.clientY - interaction.startClientY);
-            patchObject(interaction.objectId, {
-              rotation: ((Math.round((start.rotation + delta * 0.6) / ROTATION_STEP) * ROTATION_STEP) % 360 + 360) % 360,
-            }, false);
+            const turns = Math.max(-1, Math.min(1, Math.round(delta * 0.6 / ROTATION_STEP)));
+            if (turns !== 0) {
+              try {
+                const updated = turnWarehouseLayoutObject(start, turns, logicalWidth, logicalHeight);
+                patchObject(interaction.objectId, updated, false);
+              } catch {
+                // A estante nao cabe girada. Nao mover nem corromper a planta.
+              }
+            } else patchObject(interaction.objectId, start, false);
           }
         }}
         onPointerUp={finishInteraction}
@@ -444,7 +488,7 @@ export function WarehouseDepotLayoutEditor({
                   height: object.height,
                   zIndex: object.layer + 20,
                   transformOrigin: 'center',
-                  ...(view === 'top' ? { transform: `rotate(${object.rotation}deg)` } : style25d),
+                  ...(view === 'top' ? {} : style25d),
                 }}
                 onPointerDown={(event) => {
                   if (view !== 'top') {
@@ -485,9 +529,15 @@ export function WarehouseDepotLayoutEditor({
 
       <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.02]'}`}>
         <p className={`text-[9px] ${lightTheme ? 'text-slate-500' : 'text-slate-600'}`}>
-          Edição local · proporção {logicalWidth}×{logicalHeight} preservada · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'} · nenhum movimento grava no Firestore
+          Roda do mouse: zoom · Espaço + arrastar: mover mapa · orientação preservada · planta {logicalWidth}×{logicalHeight} cm · snap {snapEnabled ? 'ativo' : 'livre'} · sem escrita até Salvar
         </p>
         <div className="flex items-center gap-1">
+          <button type="button" aria-label="Girar local 90 graus para esquerda" title="Girar 90° para esquerda"
+            disabled={!selected || view !== 'top'} onClick={() => rotateSelected(-1)}
+            className="rounded-lg border border-slate-200 px-2 py-1.5 text-slate-600 disabled:opacity-30"><RotateCcw className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Girar local 90 graus para direita" title="Girar 90° para direita"
+            disabled={!selected || view !== 'top'} onClick={() => rotateSelected(1)}
+            className="rounded-lg border border-slate-200 px-2 py-1.5 text-slate-600 disabled:opacity-30"><RotateCw className="h-3.5 w-3.5" /></button>
           <button type="button" disabled={!selected} onClick={duplicateSelected} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Copy className="h-3 w-3" /> Duplicar</button>
           <button type="button" aria-label="Trazer objeto para frente" disabled={!selected} onClick={() => layerShift('front')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Trazer para frente"><BringToFront className="h-3.5 w-3.5" /></button>
           <button type="button" aria-label="Enviar objeto para trás" disabled={!selected} onClick={() => layerShift('back')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Enviar para trás"><SendToBack className="h-3.5 w-3.5" /></button>
