@@ -21,6 +21,7 @@ import {
   type WarehouseDepotLayout, type WarehouseDepotLayoutObject,
 } from '../warehouse/layout';
 import type { SaveWarehouseDepotLayoutVersionInput } from '../warehouse/layoutRepository';
+import { warehouseFindOverlappingLocals } from '../warehouse/layoutCollision';
 import { validateWarehouseDepot, validateWarehouseLocation } from '../warehouse/location';
 import {
   warehouseCanonicalMaterialReadInput, warehouseCanonicalBarcodeReadInput,
@@ -223,6 +224,9 @@ export async function warehouseLayoutSaveServer(
     createdBy:access.uid,updatedBy:access.uid,
   },{expectedWorkspaceId:ws,expectedUg:access.ug});
   if(!r.ok)return fail('WAREHOUSE_LAYOUT_INVALID',400);
+  // O endpoint legado nao pode contornar a mesma protecao da Central 2D.
+  if(warehouseFindOverlappingLocals(r.data.objects).length)
+    return fail('WAREHOUSE_LAYOUT_LOCATION_OVERLAP',409);
   const nextPath=path(ws,'layouts',id);
   const oldPath=current?.row.path;
   const depotPath=data.depotId?path(ws,'depots',data.depotId):null;
