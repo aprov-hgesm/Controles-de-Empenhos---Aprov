@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Prévia operacional emulada: Node válido, portas locais e projeto demo isolado.
+if (files.some(p => /^(?:scripts\/dev-warehouse-isolated\.mjs|scripts\/warehouse-isolated-dev\.test\.mjs|firebase\.warehouse-server-only-browser-test\.json)$/.test(p))) {
+  add('test:warehouse-isolated-dev');
+}
 // Central unica: cadastro, gerenciamento, regras server-only e leitura IAM.
 if (files.some((p) => /^(?:firebase\.json|firestore\.warehouse\.server-only\.rules|scripts\/verify-emprovex-warehouse-isolation\.mjs|lib\/server\/warehouse(?:CroquiRead|LedgerAndArchive)\.ts|lib\/warehouse\/croquiReadRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotQuickCreate|DepotsOperational)\.tsx|scripts\/warehouse-croqui-fusion\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-fusion');
