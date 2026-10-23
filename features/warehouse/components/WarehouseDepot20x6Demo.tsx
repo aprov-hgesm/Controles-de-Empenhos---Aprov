@@ -107,8 +107,8 @@ export function WarehouseDepot20x6Demo() {
             </div>
             <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1" aria-label="Modo de visualização">
               {([
-                ['3d', 'Prévia 3D', Layers3],
-                ['2d', 'Croqui 2D', Map],
+                ['3d', 'Prévia 3D oficial', Layers3],
+                ['2d', 'Editor 2D', Map],
               ] as const).map(([key, label, Icon]) => (
                 <button key={key} type="button" onClick={() => setDisplayMode(key)}
                   data-testid={'warehouse-demo-mode-' + key}
@@ -196,6 +196,7 @@ export function WarehouseDepot20x6Demo() {
               onUndo={undo}
               onRedo={redo}
               lightTheme
+              preventLocalOverlap
               onDuplicateObject={(source,copy)=>({
                 ...copy,
                 warehouseLocationId:null,
