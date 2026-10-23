@@ -254,7 +254,8 @@
     "test:warehouse-3d-demo-20x6": "node --test scripts/warehouse-3d-demo-20x6.test.mjs",
     "test:warehouse-3d-proportions": "node --test scripts/warehouse-3d-proportions.test.mjs",
     "test:warehouse-croqui-unified": "node --test scripts/warehouse-croqui-unified.test.mjs",
-    "test:warehouse-croqui-collision": "node --test scripts/warehouse-croqui-collision.test.mjs"
+    "test:warehouse-croqui-collision": "node --test scripts/warehouse-croqui-collision.test.mjs",
+    "test:warehouse-location-sequence": "node --test scripts/warehouse-location-code-sequence.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
