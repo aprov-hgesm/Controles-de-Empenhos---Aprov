@@ -8,13 +8,14 @@ import type { WarehouseDepotLayoutObject } from './layout';
 export type WarehouseFloorRect = Pick<
   WarehouseDepotLayoutObject, 'id' | 'kind' | 'warehouseLocationId' |
     'x' | 'y' | 'width' | 'height'
->;
+> & Partial<Pick<WarehouseDepotLayoutObject,'visualVariant'>>;
 const PHYSICAL_KINDS = new Set<string>([
   'SHELF', 'RACK', 'CABINET', 'CHAMBER', 'FREEZER',
   'REFRIGERATOR', 'PALLET', 'BENCH',
 ]);
 export function warehouseIsPhysicalLocal(object: WarehouseFloorRect): boolean {
-  return object.warehouseLocationId !== null || PHYSICAL_KINDS.has(object.kind);
+  return object.warehouseLocationId !== null || PHYSICAL_KINDS.has(object.kind)
+    || (object.kind === 'OTHER' && object.visualVariant === 'solid');
 }
 export function warehouseFloorRectsOverlap(
   left: Pick<WarehouseFloorRect, 'x' | 'y' | 'width' | 'height'>,
