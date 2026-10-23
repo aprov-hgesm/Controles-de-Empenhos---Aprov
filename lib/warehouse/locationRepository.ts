@@ -999,7 +999,7 @@ export function warehouseLocationBalanceIdentity(balance: WarehouseLocationBalan
 
 export async function archiveWarehouseStructure(
   workspaceId: string,
-  target: { kind: 'DEPOT' | WarehouseLocationKind; id: string }
+  target: { kind: 'DEPOT' | WarehouseLocationKind; id: string; mode?: 'DELETE'; confirmCode?: string }
 ): Promise<void> {
   await warehouseServerCommand<{ok:true}>(workspaceId,'STRUCTURE_ARCHIVE',target);
   invalidateWarehouseDepotReadCache(workspaceId);
