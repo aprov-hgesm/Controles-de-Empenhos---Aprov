@@ -41,6 +41,10 @@ test('corredores portas zonas e desenhos podem sobrepor estruturas livremente',(
     assert.equal(warehouseLocalHasCollision(decor,[a]),false,kind);
     assert.equal(warehouseFindOverlappingLocals([a,decor]).length,0,kind);
   }
+  const newGeneric={...fixture(4,20,20,120,60,'OTHER',false),
+    visualVariant:'solid'};
+  assert.equal(warehouseIsPhysicalLocal(newGeneric),true);
+  assert.equal(warehouseLocalHasCollision(newGeneric,[a]),true);
   const legacyLocation=fixture(3,20,20,120,60,'OTHER',true);
   assert.equal(warehouseIsPhysicalLocal(legacyLocation),true);
   assert.equal(warehouseFindOverlappingLocals([a,legacyLocation]).length,1);
