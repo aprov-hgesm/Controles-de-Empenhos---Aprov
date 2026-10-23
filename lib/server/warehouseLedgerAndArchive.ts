@@ -1,7 +1,7 @@
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction,warehouseAdminListCollection,WarehouseStoreError,
+  warehouseAdminTransaction,warehouseAdminListCollection,warehouseAdminListByField,WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import { validateWarehouseMaterial } from '../warehouse/material';
@@ -17,6 +17,7 @@ import {
   type WarehouseStockPosition,
 } from '../warehouse/location';
 import { validateWarehouseLot } from '../warehouse/lot';
+import { validateWarehouseDepotLayout } from '../warehouse/layout';
 import {
   warehouseCanonicalMaterialReadInput,warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalLotReadInput,warehouseCanonicalDepotReadInput,
@@ -171,12 +172,18 @@ export async function warehouseStructureArchiveServer(
   }
   const archiveId=data.id as string;
   const ws=access.workspaceId,authToken=await token();
-  const [depots,locations,balances,lots]=await Promise.all([
+  const [depots,locations,balances,lots,layouts]=await Promise.all([
     warehouseAdminListCollection(authToken,ws,'depots',500),
     warehouseAdminListCollection(authToken,ws,'locations',500),
     warehouseAdminListCollection(authToken,ws,'locationBalances',500),
     warehouseAdminListCollection(authToken,ws,'lots',500),
+    isDepot?warehouseAdminListByField(authToken,ws,'layouts','depotId',archiveId,500)
+      :Promise.resolve([]),
   ]);
+  // Consultas com limite nao podem liberar exclusao enquanto houver paginas
+  // omitidas: saldos/lotes ou layouts ativos poderiam ficar invisiveis.
+  if(depots.length===500||locations.length===500||balances.length===500
+    ||lots.length===500||layouts.length===500) return fail('WAREHOUSE_ARCHIVE_CATALOG_LIMIT');
   const targetLocation=locations.find(x=>x.path===path(ws,'locations',archiveId));
   if(!isDepot&&(!targetLocation||targetLocation.data.kind!==data.kind)){
     return fail('WAREHOUSE_ARCHIVE_LOCATION_NOT_FOUND',404);
@@ -201,8 +208,10 @@ export async function warehouseStructureArchiveServer(
   const toArchive=inDepot.filter(x=>x.data.status==='active'&&(isDepot
     ||x.data.id===data.id
     ||(data.kind==='LOCAL'&&x.data.kind==='SUBPOSITION'&&x.data.parentLocationId===data.id)));
-  const reads=[dp,...inDepot.map(x=>x.path),...relevantBalances.map(x=>x.path),...relevantLots.map(x=>x.path)];
-  if(reads.length>450||toArchive.length+(isDepot?1:0)>430){
+  const activeLayouts=layouts.filter(x=>x.data.status==='active');
+  const reads=[dp,...inDepot.map(x=>x.path),...relevantBalances.map(x=>x.path),
+    ...relevantLots.map(x=>x.path),...layouts.map(x=>x.path)];
+  if(reads.length>450||toArchive.length+(isDepot?1:0)+activeLayouts.length>430){
     return fail('WAREHOUSE_ARCHIVE_TOO_LARGE');
   }
   return warehouseAdminTransaction(authToken,[...new Set(reads)],rows=>{
@@ -243,6 +252,23 @@ export async function warehouseStructureArchiveServer(
       if(row.data.status==='active'){
         sameScope(access,row,'location');
         writes.push({path:p,data:{...row.data,status:'inactive',updatedBy:access.uid,updatedAt:now}});
+      }
+    }
+    // A inativacao do deposito deve desativar tambem a versao visual ativa
+    // na mesma transacao. Nenhum Croqui ativo pode sobreviver ao deposito.
+    if(isDepot){
+      for(const layoutEntry of activeLayouts){
+        const old=rows.get(layoutEntry.path);
+        if(!old)return fail('WAREHOUSE_ARCHIVE_LAYOUT_CONCURRENT_CHANGE');
+        const id=layoutEntry.path.split('/').at(-1)||'';
+        const validated=validateWarehouseDepotLayout({...old.data,id},{
+          expectedWorkspaceId:ws,expectedUg:access.ug,
+        });
+        if(!validated.ok||validated.data.depotId!==depotId||
+          validated.data.status!=='active')return fail('WAREHOUSE_ARCHIVE_INVALID_LAYOUT');
+        writes.push({path:layoutEntry.path,data:{
+          ...old.data,status:'archived',updatedBy:access.uid,updatedAt:now,
+        }});
       }
     }
     if(isDepot&&depot.data.status==='active'){
