@@ -53,6 +53,8 @@ function createStore(){
     if(module==='./warehouseFirestoreTransaction')return {
       WarehouseStoreError,
       warehouseAdminListCollection:async(_t,_ws,kind)=>rowsOf(kind),
+      warehouseAdminListByField:async(_t,_ws,kind,field,value)=>
+        rowsOf(kind).filter(row=>row.data[field]===value),
       warehouseAdminTransaction:async(_t,paths,callback)=>{
         const rows=new Map(paths.map(path=>[path,docs.has(path)
           ?{path,data:{...docs.get(path)},updateTime:'2026-10-23T00:00:00.000Z'}:null]));
@@ -98,6 +100,8 @@ function createStore(){
 
 test('formulário único e operação autenticada substituem abas paralelas',()=>{
   assert.match(routeSource,/case 'STRUCTURE_LAYOUT_APPLY':/);
+  assert.match(applySource,/warehouseAdminListByField\(authToken,ws,'layouts','depotId',depotId,500\)/);
+  assert.match(applySource,/warehouseAdminListByField\(authToken,ws,'locations','depotId',depotId,500\)/);
   assert.match(routeSource,/verifyWarehouseRequest\(request\.headers\.get\('authorization'\)\)/);
   assert.match(panelSource,/<WarehouseCroquisR1Operational workspaceId=\{workspaceId\}/);
   assert.doesNotMatch(panelSource,/<WarehouseLocationsR1Operational workspaceId/);
