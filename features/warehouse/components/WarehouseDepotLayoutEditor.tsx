@@ -33,6 +33,9 @@ const MIN_SIZE = 20;
 const ROTATION_STEP = 90;
 const ZOOM_MIN = 0.55;
 const ZOOM_MAX = 2.2;
+const CONTEXT_MENU_WIDTH = 224;
+const CONTEXT_MENU_HEIGHT = 240;
+const CONTEXT_MENU_GAP = 8;
 
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
   return objects.map((item) => ({ ...item }));
@@ -105,6 +108,7 @@ export function WarehouseDepotLayoutEditor({
   onRemoveObject?: (object: WarehouseDepotLayoutObject) => boolean | void;
   onAddSubposition?: (object: WarehouseDepotLayoutObject) => void;
 }) {
+  const editorRootRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const interactionRef = useRef<null | {
@@ -483,7 +487,7 @@ export function WarehouseDepotLayoutEditor({
   };
 
   return (
-    <div className={`min-w-0 max-w-full overflow-hidden rounded-2xl border ${lightTheme ? 'border-slate-200 bg-white shadow-sm' : 'border-white/[0.08] bg-[#050b16]'}`} data-testid="warehouse-layout-professional-editor">
+    <div ref={editorRootRef} className={`relative min-w-0 max-w-full overflow-hidden rounded-2xl border ${lightTheme ? 'border-slate-200 bg-white shadow-sm' : 'border-white/[0.08] bg-[#050b16]'}`} data-testid="warehouse-layout-professional-editor">
       <div className={`flex min-w-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.025]'}`} data-testid="warehouse-croqui-editor-toolbar">
         <div className="flex flex-wrap items-center gap-1">
           <button type="button" aria-label="Alternar modo de pan" onClick={() => setMode(mode === 'pan' ? 'select' : 'pan')} aria-pressed={mode === 'pan'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${mode === 'pan' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
@@ -630,10 +634,28 @@ export function WarehouseDepotLayoutEditor({
                   event.stopPropagation();
                   interactionRef.current = null;
                   onSelectedObjectIdChange(object.id);
+                  const root = editorRootRef.current;
+                  if (!root) return;
+                  const bounds = root.getBoundingClientRect();
+                  // Posição relativa ao editor, não à janela. Assim o menu
+                  // acompanha o cursor mesmo com scroll, zoom do navegador,
+                  // barras do layout ou ancestrais transformados.
+                  const cursorX = event.clientX - bounds.left;
+                  const cursorY = event.clientY - bounds.top;
+                  const availableRight = bounds.width - cursorX;
+                  const menuLeft = availableRight >= CONTEXT_MENU_WIDTH + CONTEXT_MENU_GAP
+                    ? cursorX + CONTEXT_MENU_GAP
+                    : cursorX - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP;
+                  const availableBelow = bounds.height - cursorY;
+                  const menuTop = availableBelow >= CONTEXT_MENU_HEIGHT + CONTEXT_MENU_GAP
+                    ? cursorY + CONTEXT_MENU_GAP
+                    : cursorY - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP;
                   setContextMenu({
                     objectId: object.id,
-                    left: clamp(event.clientX, 8, Math.max(8, window.innerWidth - 235)),
-                    top: clamp(event.clientY, 8, Math.max(8, window.innerHeight - 258)),
+                    left: clamp(menuLeft, CONTEXT_MENU_GAP,
+                      Math.max(CONTEXT_MENU_GAP, bounds.width - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP)),
+                    top: clamp(menuTop, CONTEXT_MENU_GAP,
+                      Math.max(CONTEXT_MENU_GAP, bounds.height - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP)),
                   });
                 }}
                 onPointerDown={(event) => {
@@ -714,7 +736,7 @@ export function WarehouseDepotLayoutEditor({
       {contextMenu && view === 'top' && objects.some(o => o.id === contextMenu.objectId) && (
         <div data-warehouse-context-menu data-testid="warehouse-croqui-context-menu"
           role="menu" aria-label="Opções do local"
-          style={{ position: 'fixed', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
+          style={{ position: 'absolute', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
           className="w-[224px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-xl"
           onContextMenu={event => event.preventDefault()}>
           <p className="px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
