@@ -22,7 +22,7 @@ try {
 }
 test.after(() => rmSync(out, { recursive: true, force: true }));
 const require = createRequire(import.meta.url);
-const { layoutWarehouseIsoLabels } = require(resolve(out, 'isometricLabels.js'));
+const { layoutWarehouseIsoLabels, warehouseIsoLabelSize, warehouseIsoLabelText } = require(resolve(out, 'isometricLabels.js'));
 
 function overlap(a, b) {
   const r = a.bounds, s = b.bounds;
@@ -68,6 +68,60 @@ test('local selecionado aparece mesmo em layout denso', () => {
   assert.deepEqual([...unfocused], [...layoutWarehouseIsoLabels(labels)]);
 });
 
+function overlapsCompact(a, b) {
+  const r = a.bounds, s = b.bounds;
+  return r.x < s.x + s.width + 3 && r.x + r.width + 3 > s.x
+    && r.y < s.y + s.height + 3 && r.y + r.height + 3 > s.y;
+}
+
+test('etiqueta compacta preserva contraste e as dimensoes exatas prometidas', () => {
+  assert.deepEqual(warehouseIsoLabelSize(false, 'compact'),
+    { width: 42, height: 16, fontSize: 7.8 });
+  assert.deepEqual(warehouseIsoLabelSize(true, 'compact'),
+    { width: 52, height: 18, fontSize: 9 });
+  assert.deepEqual(warehouseIsoLabelSize(false, 'standard'),
+    { width: 58, height: 20, fontSize: 9.2 });
+  assert.equal(warehouseIsoLabelText('EST-01', 'compact'), 'EST-01');
+  assert.equal(warehouseIsoLabelText('EST-00001', 'compact'), 'EST-00…');
+  assert.equal(warehouseIsoLabelText('EST-00001', 'standard'), 'EST-00001');
+});
+
+test('em 26 locais compactos as legendas nao colidem e nao cobrem as ancoras vizinhas', () => {
+  const labels = longDepotObjects().map((entry, i) => ({ ...entry, code: 'EST-' + i }));
+  const options = { variant: 'compact', avoidOtherAnchors: true };
+  const placements = layoutWarehouseIsoLabels(labels, options);
+  assert.ok(placements.size >= 4, 'exibir codigos suficientes para orientacao');
+  for (const [id, placed] of placements) {
+    assert.equal(placed.bounds.width, 42, id);
+    assert.equal(placed.bounds.height, 16, id);
+    for (const [otherId, other] of placements) {
+      if (id !== otherId) assert.equal(overlapsCompact(placed, other), false, id + ' / ' + otherId);
+    }
+    for (const other of labels) {
+      if (other.id === id) continue;
+      assert.equal(other.x >= placed.bounds.x - 5 && other.x <= placed.bounds.x + placed.bounds.width + 5
+        && other.y >= placed.bounds.y - 5 && other.y <= placed.bounds.y + placed.bounds.height + 5,
+      false, id + ' cobriu ancora de ' + other.id);
+    }
+  }
+  assert.deepEqual([...layoutWarehouseIsoLabels(labels, options)], [...placements],
+    'sem aleatoriedade em qualquer vista');
+});
+
+test('foco recebe legenda compacta ampliada sem sobrepor outras etiquetas', () => {
+  const original = longDepotObjects().map((entry, i) => ({ ...entry, code: 'EST-' + i }));
+  const focused = original.map((entry, i) => i === 25
+    ? { ...entry, highlighted: true, priority: 2 } : entry);
+  const placed = layoutWarehouseIsoLabels(focused,
+    { variant: 'compact', avoidOtherAnchors: true });
+  assert.ok(placed.has(focused[25].id), 'codigo focado deve permanecer visivel');
+  assert.equal(placed.get(focused[25].id).bounds.width, 52);
+  assert.equal(placed.get(focused[25].id).bounds.height, 18);
+  for (const [id, first] of placed) for (const [otherId, second] of placed) {
+    if (id !== otherId) assert.equal(overlapsCompact(first, second), false);
+  }
+});
+
 test('o renderer conserva a escala de centimetros e permite navegacao sem writes', () => {
   const source = readFileSync(resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'), 'utf8');
   assert.match(source, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
@@ -76,6 +130,12 @@ test('o renderer conserva a escala de centimetros e permite navegacao sem writes
   assert.match(source, /data-testid="warehouse-isometric-label-overlay"/);
   assert.match(source, /data-testid="warehouse-isometric-label-controls"/);
   assert.match(source, /labelMode === 'codes'/);
+  assert.match(source, /labelMode === 'compact'/);
+  assert.match(source, /warehouse-label-mode-/);
+  assert.match(source, /Legendas compactas/);
+  assert.match(source, /avoidOtherAnchors: labelMode === 'compact'/);
+  assert.match(source, /data-visual-role=\{variant === 'compact' \? 'warehouse-compact-label' : 'warehouse-label'\}/);
+  assert.match(source, /warehouseIsoLabelText\(code, variant\)/);
   assert.match(source, /labelMode === 'clean'/);
   assert.match(source, /svg\.addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
   assert.match(source, /onPointerMove=/);
