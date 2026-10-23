@@ -905,7 +905,8 @@ export function WarehouseIsometricPreview({
   const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
   const [labelMode, setLabelMode] = useState<IsoLabelMode>('clean');
   const [localFocusedId, setLocalFocusedId] = useState<string | null>(null);
-  const dragRef = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const dragRef = useRef<{ id: number; x: number; y: number; originX: number; originY: number; moved: boolean } | null>(null);
   const suppressClickRef = useRef(false);
   const [viewTransitioning, setViewTransitioning] = useState(false);
   const [hoveredObject, setHoveredObject] = useState<{
@@ -1255,6 +1256,20 @@ export function WarehouseIsometricPreview({
       y: Math.max(-0.8, Math.min(0.8, previous.y + y / cameraZoom)),
     }));
 
+  // Scroll sobre a maquete: listener nao passivo para impedir rolagem da pagina.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || sceneOnly) return;
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) return;
+      event.preventDefault();
+      setCameraZoom((value) => Math.max(1, Math.min(3,
+        Math.round((value + (event.deltaY < 0 ? 0.12 : -0.12)) * 100) / 100)));
+    };
+    svg.addEventListener('wheel', handleWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', handleWheel);
+  }, [sceneOnly, visibleObjects.length]);
+
   return (
     <section
       className={
@@ -1469,23 +1484,23 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
-            onWheel={(event) => {
-              if (sceneOnly || event.ctrlKey) return;
-              event.preventDefault();
-              setCameraZoom((value) => Math.max(1, Math.min(3,
-                Math.round((value + (event.deltaY < 0 ? 0.12 : -0.12)) * 100) / 100)));
-            }}
+            ref={svgRef}
             onPointerDown={(event) => {
               if (sceneOnly || event.button !== 0 || event.pointerType === 'touch') return;
               suppressClickRef.current = false;
-              dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+              dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY,
+                originX: event.clientX, originY: event.clientY, moved: false };
             }}
             onPointerMove={(event) => {
               const drag = dragRef.current;
               if (!drag || drag.id !== event.pointerId) return;
               const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
               drag.x = event.clientX; drag.y = event.clientY;
-              if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+              if (!drag.moved &&
+                Math.abs(event.clientX - drag.originX) + Math.abs(event.clientY - drag.originY) > 5) {
+                drag.moved = true;
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }
               if (!drag.moved) return;
               suppressClickRef.current = true;
               const element = event.currentTarget;
@@ -1495,7 +1510,12 @@ export function WarehouseIsometricPreview({
               }));
             }}
             onPointerUp={(event) => {
-              if (dragRef.current?.id === event.pointerId) dragRef.current = null;
+              if (dragRef.current?.id === event.pointerId) {
+                dragRef.current = null;
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                }
+              }
             }}
             onPointerCancel={() => { dragRef.current = null; }}
             viewBox={[activeCameraViewBox.x, activeCameraViewBox.y, activeCameraViewBox.width, activeCameraViewBox.height].join(' ')}
