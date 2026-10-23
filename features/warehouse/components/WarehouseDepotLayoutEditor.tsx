@@ -8,7 +8,6 @@ import {
   Hand,
   Crosshair,
   RotateCcw,
-  ArrowUp,
   Redo2,
   RotateCw,
   SendToBack,
@@ -475,6 +474,13 @@ export function WarehouseDepotLayoutEditor({
         >
           {objects.slice().sort((a, b) => a.layer - b.layer).map((object) => {
             const active = object.id === selectedObjectId;
+            const faces = warehouseObjectFaceLabels(object);
+            const edgeStyle = (face: string): React.CSSProperties => {
+              if (face === 'y-') return { top: 0, left: '50%', transform: 'translate(-50%,-50%)' };
+              if (face === 'y+') return { bottom: 0, left: '50%', transform: 'translate(-50%,50%)' };
+              if (face === 'x-') return { left: 0, top: '50%', transform: 'translate(-50%,-50%)' };
+              return { right: 0, top: '50%', transform: 'translate(50%,-50%)' };
+            };
             const style25d = view === 'perspective' ? perspectiveStyle(object, logicalHeight) : {};
             return (
               <div
@@ -501,6 +507,21 @@ export function WarehouseDepotLayoutEditor({
               >
                 <div className={`pointer-events-none truncate px-2 pt-2 text-[10px] font-black ${lightTheme ? 'text-slate-800' : 'text-slate-100'}`}>{object.label}</div>
                 {object.warehouseLocationId && <div className={`pointer-events-none truncate px-2 pt-1 font-mono text-[8px] ${lightTheme ? 'text-slate-500' : 'text-slate-400'}`}>{object.warehouseLocationId}</div>}
+                <span data-testid={'warehouse-editor-front-'+object.id}
+                  title={'Frente voltada para '+faces.frontLabel}
+                  aria-label={'Frente de '+object.label+': '+faces.frontLabel}
+                  style={edgeStyle(faces.front)}
+                  className={`pointer-events-none absolute z-10 rounded border border-white/80 bg-emerald-600 text-white shadow-sm ${active?'px-1.5 py-0.5 text-[9px] font-black':'h-1.5 w-4'}`}>
+                  {active ? 'FRENTE' : ''}
+                </span>
+                {active && (
+                  <span data-testid={'warehouse-editor-back-'+object.id}
+                    title={'Costas voltadas para '+faces.backLabel}
+                    style={edgeStyle(faces.back)}
+                    className="pointer-events-none absolute z-10 rounded bg-slate-600 px-1 py-0.5 text-[8px] font-bold text-white">
+                    TRÁS
+                  </span>
+                )}
                 {active && view === 'top' && (
                   <>
                     {allowResize && (
@@ -529,7 +550,7 @@ export function WarehouseDepotLayoutEditor({
 
       <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.02]'}`}>
         <p className={`text-[9px] ${lightTheme ? 'text-slate-500' : 'text-slate-600'}`}>
-          Roda do mouse: zoom · Espaço + arrastar: mover mapa · orientação preservada · planta {logicalWidth}×{logicalHeight} cm · snap {snapEnabled ? 'ativo' : 'livre'} · sem escrita até Salvar
+          Roda do mouse: zoom · Espaço + arrastar: mover mapa · faixa verde = frente · cinza = costas · planta {logicalWidth}×{logicalHeight} cm · snap {snapEnabled ? 'ativo' : 'livre'}
         </p>
         <div className="flex items-center gap-1">
           <button type="button" aria-label="Girar local 90 graus para esquerda" title="Girar 90° para esquerda"
