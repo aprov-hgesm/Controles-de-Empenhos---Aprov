@@ -25,6 +25,7 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
 import { warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+import { warehouseCroquiReadServer } from '../../../../lib/server/warehouseCroquiRead';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
 
@@ -145,6 +146,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'STRUCTURE_LAYOUT_APPLY':
         result=await warehouseStructureLayoutApplyServer(access,body.input);
+        break;
+      case 'CROQUI_READ':
+        result=await warehouseCroquiReadServer(access,body.input);
         break;
       case 'INTAKE_STATE_SAVE':
         result=await warehouseIntakeStateServer(access,body.input);
