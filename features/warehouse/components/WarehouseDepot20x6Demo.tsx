@@ -69,6 +69,7 @@ export function WarehouseDepot20x6Demo() {
               {([
                 ['simple', 'Simples'],
                 ['dense', 'Denso'],
+                ['operational', 'Operacional'],
               ] as const).map(([key, label]) => (
                 <button key={key} type="button" onClick={() => changeScenario(key)}
                   data-testid={'warehouse-demo-scenario-' + key}
