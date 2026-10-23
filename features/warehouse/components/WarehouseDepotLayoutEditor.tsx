@@ -557,7 +557,7 @@ export function WarehouseDepotLayoutEditor({
                     className={`block max-w-full truncate text-center font-extrabold tracking-wide ${object.width < 78 ? 'text-[10px]' : 'text-xs'} ${lightTheme ? 'text-slate-800' : 'text-slate-100'}`}>
                     {cardLabel}
                   </span>
-                </div>}
+                </div>
                 <span data-testid={'warehouse-editor-front-'+object.id}
                   title={'Frente voltada para '+faces.frontLabel}
                   aria-label={'Frente de '+object.label+': '+faces.frontLabel}
