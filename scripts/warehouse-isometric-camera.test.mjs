@@ -136,7 +136,7 @@ test('renderer refaz fit por vista e não muda geometria, domínio nem Firestore
   assert.match(preview, /viewBox=\{\[activeCameraViewBox\.x, activeCameraViewBox\.y, activeCameraViewBox\.width, activeCameraViewBox\.height\]\.join\(' '\)\}/);
   assert.match(preview, /const activeCameraViewBox = useMemo\(\(\) =>/);
   assert.match(preview, /preserveAspectRatio=\{sceneOnly \? 'none' : 'xMidYMid meet'\}/);
-  assert.match(preview, /data-camera-fit="bounds"/);
+  assert.match(preview, /data-camera-fit=\{sceneOnly \? 'aligned-floor' : 'bounds'\}/);
   assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
   assert.doesNotMatch(preview, /viewBox=\{\s*embedded\s*\?/);
   assert.doesNotMatch(preview, /setDoc\(|updateDoc\(|runTransaction\(/);
