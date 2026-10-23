@@ -6,7 +6,7 @@
     },
     {
       "database": "emprovex-warehouse",
-      "rules": "firestore.warehouse.rules"
+      "rules": "firestore.warehouse.server-only.rules"
     }
   ]
 }
