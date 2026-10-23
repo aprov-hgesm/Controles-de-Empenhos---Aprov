@@ -356,7 +356,6 @@ function WarehouseStructure({
   dimmed,
   applianceFront,
   showLabels,
-  labelPlacement,
 }: {
   object: WarehouseDepotLayoutObject;
   logicalWidth: number;
@@ -373,7 +372,6 @@ function WarehouseStructure({
   dimmed: boolean;
   applianceFront: WarehouseApplianceFace;
   showLabels: boolean;
-  labelPlacement: WarehouseIsoLabelPlacement | null;
 }) {
   const kind = canonicalKind(object.kind);
   const z = objectHeight(kind, subpositions.length);
@@ -404,7 +402,7 @@ function WarehouseStructure({
     : expiry === 'near'
       ? 'url(#warehouseExpirySoftGlow)'
       : 'url(#warehouseObjectShadow)';
-  const groupOpacity = dimmed ? 0.48 : 1;
+  const groupOpacity = dimmed ? 0.62 : 1;
 
   if (object.kind === 'OTHER' && !object.warehouseLocationId) {
     const doorTopA = isoPoint(object.x, object.y, 54, logicalWidth, logicalHeight);
@@ -532,15 +530,7 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.88, highlighted, expiry
         )}
 
-        {showLabels && labelPlacement && renderLabel(
-          centerTop,
-          code,
-          'Palete',
-          subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
-          highlighted,
-          labelPlacement.offsetX,
-          labelPlacement.offsetY
-        )}
+
       </g>
     );
   }
@@ -769,15 +759,7 @@ function WarehouseStructure({
 
 
 
-        {showLabels && labelPlacement && renderLabel(
-          centerTop,
-          code,
-          'Estante industrial',
-          levels + ' níveis',
-          highlighted,
-          labelPlacement.offsetX,
-          labelPlacement.offsetY
-        )}
+
       </g>
     );
   }
@@ -802,15 +784,7 @@ function WarehouseStructure({
           occupied={occupiedQuantity > 0}
           expiry={expiry}
         />
-        {showLabels && labelPlacement && renderLabel(
-          centerTop,
-          code,
-          kind === 'FREEZER' ? 'Freezer industrial' : 'Geladeira industrial',
-          subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
-          highlighted,
-          labelPlacement.offsetX,
-          labelPlacement.offsetY
-        )}
+
       </g>
     );
   }
@@ -884,15 +858,7 @@ function WarehouseStructure({
           logicalWidth, logicalHeight, 0.68, highlighted, expiry, 6
         )}
 
-        {showLabels && labelPlacement && renderLabel(
-          centerTop,
-          code,
-          'Mesa inox',
-          subpositions.length ? subpositions.length + ' subposições' : 'Superfície única',
-          highlighted,
-          labelPlacement.offsetX,
-          labelPlacement.offsetY
-        )}
+
       </g>
     );
   }
@@ -1214,7 +1180,7 @@ export function WarehouseIsometricPreview({
           highlighted: selected,
           // Hover atualiza apenas o painel; nao movimenta a camera nem as etiquetas.
           priority: selected ? 2 : hoveredObject?.objectId === object.id ? 1 : 0,
-          visible: labelMode === 'codes' || selected || hoveredObject?.objectId === object.id,
+          visible: labelMode === 'codes' || selected || (labelMode === 'clean' && hoveredObject?.objectId === object.id),
         };
       }).filter((label) => label.visible));
   }, [
@@ -1627,10 +1593,10 @@ export function WarehouseIsometricPreview({
               </linearGradient>
 
               <filter id="warehouseSceneShadow" x="-30%" y="-30%" width="160%" height="180%">
-                <feDropShadow dx="0" dy="14" stdDeviation="14" floodColor="#0f2740" floodOpacity="0.16" />
+                <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="#0f2740" floodOpacity="0.14" />
               </filter>
               <filter id="warehouseObjectShadow" x="-60%" y="-60%" width="220%" height="220%">
-                <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#10273c" floodOpacity="0.24" />
+                <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#10273c" floodOpacity="0.18" />
               </filter>
               <filter id="warehouseExpirySoftGlow" x="-65%" y="-65%" width="230%" height="230%">
                 <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#eab308" floodOpacity="0.62" />
@@ -1828,12 +1794,35 @@ export function WarehouseIsometricPreview({
                     dimmed={hasActiveSelection && !highlighted}
                     applianceFront={object.applianceFront}
                     showLabels={!sceneOnly}
-                    labelPlacement={labelPlacements.get(object.id) || null}
                   />
                   </g>
                 );
               })}
             </g>
+            {!sceneOnly && (
+              <g data-testid="warehouse-isometric-label-overlay" pointerEvents="none">
+                {visibleObjects.map((object) => {
+                  const placement = labelPlacements.get(object.id);
+                  if (!placement) return null;
+                  const locationId = object.warehouseLocationId || '';
+                  const location = locationId ? locationById.get(locationId) : null;
+                  const subpositions = location ? subpositionsByParent.get(location.id) || [] : [];
+                  const center = isoPoint(
+                    object.x + object.width / 2,
+                    object.y + object.height / 2,
+                    objectHeight(canonicalKind(object.kind), subpositions.length),
+                    viewLogicalWidth, viewLogicalHeight
+                  );
+                  const highlighted = Boolean(locationId
+                    && (highlightedLocalIds.has(locationId)
+                      || focusedLocationId === locationId || localFocusedId === locationId));
+                  return <g key={'label-' + object.id}>
+                    {renderLabel(center, location?.code || object.label, '', undefined, highlighted,
+                      placement.offsetX, placement.offsetY)}
+                  </g>;
+                })}
+              </g>
+            )}
           </svg>
         )}
         {inspectionLotState === 'ready' && !inspectionComplete && onInspectLocation && (
