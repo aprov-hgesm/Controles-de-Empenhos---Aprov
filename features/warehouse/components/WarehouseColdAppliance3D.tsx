@@ -16,6 +16,8 @@ type Props = {
   project: (x: number, y: number, z: number) => Point;
   occupied: boolean;
   expiry: WarehouseVisualExpiry;
+  /** Ajusta somente detalhes SVG, sem modificar as dimensoes fisicas do corpo. */
+  detailScale?: number;
 };
 type VisibleSide = 'x+' | 'y+';
 
@@ -24,7 +26,7 @@ function points(items: Point[]) {
 }
 
 /** Every decorative part is defined in world coordinates before projection. */
-export function WarehouseColdAppliance3D({ object, z, kind, front, project, occupied, expiry }: Props) {
+export function WarehouseColdAppliance3D({ object, z, kind, front, project, occupied, expiry, detailScale = 1 }: Props) {
   const { x, y, width: w, height: d } = object;
   const fridge = kind === 'REFRIGERATOR';
   const top = z;
@@ -65,7 +67,7 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
           fill={role==='front'
             ? fridge?'url(#fridgeStainlessDoor)':'url(#freezerFront)'
             : fridge?'url(#fridgeStainlessSide)':'url(#freezerSide)'}
-          stroke="#536979" strokeWidth="1.65" />
+          stroke="#536979" strokeWidth={1.65 * detailScale} />
 
         {occupied && (
           <g data-appliance-detail="occupied-white-sheen">
@@ -104,11 +106,11 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
               <line {...(()=>{const a=surface(side,u,top*.33,2.2);
                 const b=surface(side,u,top*.7,2.2);
                 return {x1:a.x,y1:a.y,x2:b.x,y2:b.y};})()}
-                stroke="#63717a" strokeWidth="5.3" strokeLinecap="round"/>
+                stroke="#63717a" strokeWidth={5.3 * detailScale} strokeLinecap="round"/>
               <line {...(()=>{const a=surface(side,u+.009,top*.34,2.55);
                 const b=surface(side,u+.009,top*.69,2.55);
                 return {x1:a.x,y1:a.y,x2:b.x,y2:b.y};})()}
-                stroke="#f9fdff" strokeWidth="1.6" strokeLinecap="round"/>
+                stroke="#f9fdff" strokeWidth={1.6 * detailScale} strokeLinecap="round"/>
             </g>)}
             <polygon points={patch(side,.11,.31,top*.76,top*.85)}
               fill="#18384d" stroke="#9db7c4" strokeWidth="1"/>
@@ -192,7 +194,7 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
       <polygon points={points([a,b,c,dpt])}
         fill={fridge?'url(#fridgeStainlessTop)':'url(#freezerGlass)'}
         stroke={occupied ? '#f7feff' : '#6b8494'}
-        strokeWidth={occupied ? 3.1 : 2.4}/>
+        strokeWidth={(occupied ? 3.1 : 2.4) * detailScale}/>
       {occupied && (
         <g data-appliance-detail="white-occupancy-reflection">
           <polygon points={quad([
@@ -200,17 +202,17 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
             [x+w*.92,y+d*.16,top+1.3],[x+w*.06,y+d*.16,top+1.3],
           ])} fill="#ffffff" opacity=".34"/>
           <polyline points={points([dpt,c,b])} fill="none"
-            stroke="#ffffff" strokeWidth="4" opacity=".79"/>
+            stroke="#ffffff" strokeWidth={4 * detailScale} opacity=".79"/>
         </g>
       )}
       {expiry !== 'normal' && (
         <g data-appliance-detail="lot-expiry-signal">
           <circle cx={world(x+w*.9,y+d*.9,top+5).x}
-            cy={world(x+w*.9,y+d*.9,top+5).y} r="8.2"
+            cy={world(x+w*.9,y+d*.9,top+5).y} r={8.2 * detailScale}
             fill={expiry === 'expired' ? '#f87171' : '#facc15'}
             stroke="#fffef5" strokeWidth="2.2"/>
           <circle cx={world(x+w*.9,y+d*.9,top+5).x}
-            cy={world(x+w*.9,y+d*.9,top+5).y} r="2.3"
+            cy={world(x+w*.9,y+d*.9,top+5).y} r={2.3 * detailScale}
             fill={expiry === 'expired' ? '#991b1b' : '#854d0e'}/>
         </g>
       )}
@@ -252,14 +254,14 @@ export function WarehouseColdAppliance3D({ object, z, kind, front, project, occu
           {/* Hinges are physically on the rear of the chest. */}
           {[.18,.82].map((u,i)=>{
             const p=world(x+w*u,y+d*.04,top+2);
-            return <ellipse key={i} cx={p.x} cy={p.y} rx="5" ry="2.7"
+            return <ellipse key={i} cx={p.x} cy={p.y} rx={5 * detailScale} ry={2.7 * detailScale}
               fill="#d6e3e9" stroke="#7c94a2" strokeWidth=".9"/>;
           })}
         </g>
       )}
       {/* Continuous premium light catch on the upper silhouette. */}
       <polyline points={points([dpt,c,b])} fill="none" stroke="#f8feff"
-        strokeWidth="2.25" strokeLinejoin="round" opacity=".88"/>
+        strokeWidth={2.25 * detailScale} strokeLinejoin="round" opacity=".88"/>
     </g>
   );
 }

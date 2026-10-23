@@ -32,6 +32,7 @@ const groups = [
   [/barcode|label/i, ['test:adm-deposito-barcode-outbound']],
   [/intake|invoice|queue|manual.entry/i, ['test:adm-deposito-nf-stock', 'test:adm-deposito-manual-entry']],
   [/layout|croquis|depot|archive/i, ['test:adm-deposito-depot-layout', 'test:warehouse-depot-registration-r1']],
+  [/isometric|3d|visualclarity/i, ['test:warehouse-isometric-camera']],
   [/logistics|alert/i, ['test:adm-deposito-logistics']],
   [/mobile/i, ['test:mobile-k-canonical-ops']],
 ];
@@ -50,6 +51,10 @@ for (const path of warehouseFiles) {
 // limitadas e a ausência de operações diretas no Firestore.
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
+}
+// Demo visual 20×6 m: validar sempre geometria, integridade e isolamento.
+if (files.some((p) => /^(?:lib\/warehouse\/demoDepot20x6\.ts|features\/warehouse\/components\/WarehouseDepot20x6Demo\.tsx|app\/visual-lab\/deposito-20x6\/page\.tsx|scripts\/warehouse-3d-demo-20x6\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-3d-demo-20x6');
 }
 // R363: shell instalável com marca institucional; sem cache offline e sem operações de domínio.
 if (files.some((p) => /^(?:app\/(?:manifest\.ts|layout\.tsx|api\/install-icon\/\[size\]\/route\.tsx)|public\/emprovex-logo\.png|next\.config\.ts|scripts\/pwa-installability\.test\.mjs)$/.test(p))) {
