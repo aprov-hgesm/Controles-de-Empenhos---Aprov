@@ -6,7 +6,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand, PackageSearch, RotateC
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { warehouseApplianceFrontForView, type WarehouseApplianceFace } from '../../../lib/warehouse/applianceOrientation';
 import { WarehouseColdAppliance3D } from './WarehouseColdAppliance3D';
-import { layoutWarehouseIsoLabels, type WarehouseIsoLabelPlacement } from '../../../lib/warehouse/isometricLabels';
+import { layoutWarehouseIsoLabels, warehouseIsoLabelSize, warehouseIsoLabelText, type WarehouseIsoLabelPlacement, type WarehouseIsoLabelVariant } from '../../../lib/warehouse/isometricLabels';
 import { warehouseIsoCartonMetrics, warehouseIsoDetailScale } from '../../../lib/warehouse/isometricVisualProportions';
 import {
   fitWarehouseIsometricScene,
@@ -81,7 +81,7 @@ type Props = {
 type IsoPoint = { x: number; y: number };
 type CanonicalVisualKind = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH';
 type PreviewView = WarehouseIsoView;
-type IsoLabelMode = 'clean' | 'codes' | 'details';
+type IsoLabelMode = 'clean' | 'codes' | 'compact' | 'details';
 
 const PREVIEW_VIEWS: ReadonlyArray<{ id: PreviewView; label: string }> = [
   { id: 'front', label: 'Frente' },
@@ -304,23 +304,25 @@ function renderLabel(
   _detail: string | undefined,
   highlighted: boolean,
   labelOffsetX = 0,
-  labelOffsetY = 0
+  labelOffsetY = 0,
+  variant: WarehouseIsoLabelVariant = 'standard'
 ) {
-  const width = highlighted ? 72 : 58;
-  const height = highlighted ? 24 : 20;
+  const { width, height, fontSize } = warehouseIsoLabelSize(highlighted, variant);
   const x = center.x + labelOffsetX;
   const y = center.y + labelOffsetY;
-  // Cartao compacto, sem conector atravessando outras estruturas.
+  // Textos compactos, contrastantes, sem conectores nem sombras pesadas.
   return (
-    <g transform={'translate(' + x + ' ' + y + ')'} pointerEvents="none">
+    <g transform={'translate(' + x + ' ' + y + ')'} pointerEvents="none"
+      data-visual-role={variant === 'compact' ? 'warehouse-compact-label' : 'warehouse-label'}>
       <rect x={-width / 2} y={-height - 9} width={width} height={height}
-        rx="6" fill={highlighted ? '#123e77' : '#ffffff'}
-        stroke={highlighted ? '#7ba9d5' : '#c3d2dd'} strokeWidth="1"
-        opacity="0.97"/>
+        rx={variant === 'compact' ? 4.5 : 6}
+        fill={highlighted ? '#123e77' : '#ffffff'}
+        stroke={highlighted ? '#7ba9d5' : '#c3d2dd'}
+        strokeWidth={variant === 'compact' ? 0.8 : 1} opacity="0.97"/>
       <text x="0" y={-height / 2 - 5.5} textAnchor="middle"
-        dominantBaseline="middle" fontSize={highlighted ? 10.5 : 9.2}
-        fontWeight="800" fill={highlighted ? '#ffffff' : '#22435f'}>
-        {code}
+        dominantBaseline="middle" fontSize={fontSize}
+        fontWeight="800" fill={highlighted ? '#ffffff' : '#173956'}>
+        {warehouseIsoLabelText(code, variant)}
       </text>
     </g>
   );
@@ -1194,12 +1196,17 @@ export function WarehouseIsometricPreview({
             || localFocusedId === object.warehouseLocationId));
         return {
           id: object.id, x: center.x, y: center.y,
+          code: location?.code || object.label,
           highlighted: selected,
           // Hover atualiza apenas o painel; nao movimenta a camera nem as etiquetas.
-          priority: selected ? 2 : hoveredObject?.objectId === object.id ? 1 : 0,
-          visible: labelMode === 'codes' || selected || (labelMode === 'clean' && hoveredObject?.objectId === object.id),
+          priority: selected ? 2 : labelMode === 'compact' ? 0 : hoveredObject?.objectId === object.id ? 1 : 0,
+          visible: labelMode === 'codes' || labelMode === 'compact'
+            || selected || (labelMode === 'clean' && hoveredObject?.objectId === object.id),
         };
-      }).filter((label) => label.visible));
+      }).filter((label) => label.visible), {
+        variant: labelMode === 'compact' ? 'compact' : 'standard',
+        avoidOtherAnchors: labelMode === 'compact',
+      });
   }, [
     sceneOnly, labelMode, hoveredObject?.objectId, localFocusedId,
     visibleObjects, locationById, subpositionsByParent,
@@ -1379,7 +1386,8 @@ export function WarehouseIsometricPreview({
             aria-label="Exibicao de etiquetas">
             <span className={embedded ? 'mr-1 text-[10px] text-slate-300' : 'mr-1 text-[10px] text-slate-600'}>Etiquetas</span>
             {([
-              ['clean', 'Limpo'], ['codes', 'Identificação'], ['details', 'Detalhes'],
+              ['clean', 'Limpo'], ['codes', 'Identificação'],
+              ['compact', 'Legendas compactas'], ['details', 'Detalhes'],
             ] as const).map(([mode, title]) => (
               <button key={mode} type="button" aria-pressed={labelMode === mode}
                 data-testid={'warehouse-label-mode-' + mode}
@@ -1854,7 +1862,8 @@ export function WarehouseIsometricPreview({
                       || focusedLocationId === locationId || localFocusedId === locationId));
                   return <g key={'label-' + object.id}>
                     {renderLabel(center, location?.code || object.label, '', undefined, highlighted,
-                      placement.offsetX, placement.offsetY)}
+                      placement.offsetX, placement.offsetY,
+                      labelMode === 'compact' ? 'compact' : 'standard')}
                   </g>;
                 })}
               </g>
