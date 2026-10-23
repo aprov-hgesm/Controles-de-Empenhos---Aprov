@@ -1398,6 +1398,28 @@ export function WarehouseIsometricPreview({
             ))}
           </div>
 
+          <div className="flex flex-wrap items-center justify-end gap-1" data-testid="warehouse-isometric-camera-controls" aria-label="Zoom e deslocamento da prévia">
+            {[
+              { title: 'Afastar', action: () => setCameraZoom((z) => Math.max(1, +(z - 0.2).toFixed(2))), icon: <ZoomOut className="h-3.5 w-3.5" /> },
+              { title: 'Aproximar', action: () => setCameraZoom((z) => Math.min(3, +(z + 0.2).toFixed(2))), icon: <ZoomIn className="h-3.5 w-3.5" /> },
+              { title: 'Mover para a esquerda', action: () => nudgeCamera(-0.12, 0), icon: <ArrowLeft className="h-3.5 w-3.5" /> },
+              { title: 'Mover para a direita', action: () => nudgeCamera(0.12, 0), icon: <ArrowRight className="h-3.5 w-3.5" /> },
+              { title: 'Mover para cima', action: () => nudgeCamera(0, -0.12), icon: <ArrowUp className="h-3.5 w-3.5" /> },
+              { title: 'Mover para baixo', action: () => nudgeCamera(0, 0.12), icon: <ArrowDown className="h-3.5 w-3.5" /> },
+              { title: 'Centralizar', action: () => { setCameraZoom(1); setCameraPan({ x: 0, y: 0 }); }, icon: <RotateCcw className="h-3.5 w-3.5" /> },
+            ].map((control) => (
+              <button key={control.title} type="button" title={control.title} aria-label={control.title}
+                onClick={control.action}
+                className={embedded
+                  ? 'rounded-lg border border-white/10 px-2 py-1 text-blue-100 hover:bg-white/10'
+                  : 'rounded-lg border border-slate-200 px-2 py-1 text-slate-600 hover:bg-blue-50'}
+              >{control.icon}</button>
+            ))}
+            <span className={embedded ? 'ml-1 text-[10px] text-slate-300' : 'ml-1 text-[10px] text-slate-500'}>
+              {Math.round(cameraZoom * 100)}%
+            </span>
+          </div>
+
           {!embedded && (
             globalDepots && globalLocations && globalBalances && onNavigateToGlobalLocation
               ? (
