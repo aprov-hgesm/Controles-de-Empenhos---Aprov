@@ -173,7 +173,7 @@
     "test:adm-deposito-barcode-outbound": "node --test scripts/warehouse-barcode-outbound.test.mjs",
     "verify:adm-deposito-phase-8": "node scripts/verify-adm-deposito-phase-8.mjs",
     "test:adm-deposito-depot-layout": "node --test scripts/warehouse-depot-layout.test.mjs",
-    "test:warehouse-isometric-camera": "node --test scripts/warehouse-isometric-camera.test.mjs",
+    "test:warehouse-isometric-camera": "node --test scripts/warehouse-isometric-camera.test.mjs scripts/warehouse-isometric-clarity.test.mjs",
     "test:warehouse-3d-stock": "node --test scripts/warehouse-3d-stock-visual.test.mjs",
     "test:warehouse-location-inspection": "node --test scripts/warehouse-location-inspection.test.mjs",
     "test:warehouse-global-material-search": "node --test scripts/warehouse-global-material-search.test.mjs",
