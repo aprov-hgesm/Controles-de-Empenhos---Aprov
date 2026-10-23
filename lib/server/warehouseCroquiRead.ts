@@ -65,8 +65,15 @@ export async function warehouseCroquiReadServer(
     const docs=await warehouseAdminListByField(token,ws,'layouts','depotId',depotId,500);
     const layouts=docs.map(row=>{
       const id=idOf(row);
-      const check=validateWarehouseDepotLayout({...row.data,id},
-        {expectedWorkspaceId:ws,expectedUg:access.ug});
+      const d=row.data;
+      const check=validateWarehouseDepotLayout({
+        schemaVersion:d.schemaVersion,id,workspaceId:d.workspaceId,ug:d.ug,
+        name:d.name,depotId:d.depotId??null,
+        logicalWidth:d.logicalWidth,logicalHeight:d.logicalHeight,
+        objects:d.objects,version:d.version,status:d.status,
+        previousVersionId:d.previousVersionId??null,
+        createdBy:d.createdBy,updatedBy:d.updatedBy,
+      },{expectedWorkspaceId:ws,expectedUg:access.ug});
       if(!check.ok||check.data.depotId!==depotId)return fail('WAREHOUSE_CROQUI_LAYOUT_INVALID');
       return {layout:check.data,createdAt:timestamp(row.data.createdAt),
         updatedAt:timestamp(row.data.updatedAt)};
