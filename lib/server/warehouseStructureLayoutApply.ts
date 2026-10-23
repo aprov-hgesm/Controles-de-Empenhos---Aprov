@@ -93,7 +93,7 @@ export async function warehouseStructureLayoutApplyServer(
     ||!Array.isArray(data.archiveLocationIds)||data.archiveLocationIds.length>12
     ||!Object.prototype.hasOwnProperty.call(data,'expectedVersion')
     ||!Object.prototype.hasOwnProperty.call(data,'baseLayoutId')
-    ||!(data.expectedVersion===null||(Number.isInteger(data.expectedVersion)&&data.expectedVersion!>=1))
+    ||!(data.expectedVersion===null||(typeof data.expectedVersion==='number'&&Number.isInteger(data.expectedVersion)&&data.expectedVersion>=1))
     ||!(data.baseLayoutId===null||(typeof data.baseLayoutId==='string'&&/^lay_[a-f0-9]{32}$/.test(data.baseLayoutId)))
   )return fail('WAREHOUSE_CROQUI_INPUT',400);
   const {workspaceId:ws,ug}=access,depotId=data.depotId;
@@ -133,6 +133,8 @@ export async function warehouseStructureLayoutApplyServer(
     const code=normalizeWarehouseLogicalCode(codeInput);
     if(!code||!nonempty(name))return fail('WAREHOUSE_CROQUI_LOCATION_INPUT',400);
     const id=deterministicId(kind==='LOCAL'?'loc_':'sub_',ws+':'+data.operationId+':'+seed);
+    if(description!==null && (typeof description!=='string'||description.length>500))
+      return fail('WAREHOUSE_CROQUI_LOCATION_DESCRIPTION',400);
     const candidate={
       schemaVersion:WAREHOUSE_LOCATION_SCHEMA_VERSION,id,workspaceId:ws,ug,depotId,kind,
       parentLocationId,code,name,description,status:'active' as const,
@@ -188,7 +190,10 @@ export async function warehouseStructureLayoutApplyServer(
     if(!item||data.objects.find(o=>o.id===objectId)?.warehouseLocationId!==null)
       return fail('WAREHOUSE_CROQUI_OBJECT_NOT_FOUND',400);
   }
+  if(data.archiveLocationIds.some(id=>typeof id!=='string'||!/^loc_[a-f0-9]{32}$/.test(id)))
+    return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
   const archiveIds=new Set(data.archiveLocationIds);
+  if(archiveIds.size!==data.archiveLocationIds.length)return fail('WAREHOUSE_CROQUI_ARCHIVE_INPUT',400);
   const updatedIds=new Set<string>();
   const edits=data.editLocals.map(item=>{
     if(!item||typeof item.id!=='string'||updatedIds.has(item.id)
@@ -250,7 +255,7 @@ export async function warehouseStructureLayoutApplyServer(
     ...balances.map(row=>row.path),...lots.map(row=>row.path),
   ];
   const reads=[...new Set(allPaths)];
-  if(reads.length>450||newRows.length+archives.size+edits.length+2>430)
+  if(reads.length>450||newRows.length*2+archives.size+edits.length+3>430)
     return fail('WAREHOUSE_CROQUI_TOO_LARGE',400);
   return warehouseAdminTransaction(authToken,reads,rows=>{
     if(rows.get(path(ws,'layouts',layoutId)))return fail('WAREHOUSE_CROQUI_RETRY');
@@ -302,6 +307,8 @@ export async function warehouseStructureLayoutApplyServer(
     }
     const writes:Array<{path:string;data:Record<string,unknown>}>=[
       {path:path(ws,'layouts',layoutId),data:{...layout,createdAt:stamp,updatedAt:stamp}},
+      // O mesmo documento do deposito serializa commits concorrentes da Central.
+      {path:path(ws,'depots',depotId),data:{...depotRow.data,updatedAt:stamp,updatedBy:access.uid}},
     ];
     if(current){
       const old=rows.get(current.row.path)!;
