@@ -12,28 +12,58 @@ export function warehouseApplianceFrontalAxis(width: number, depth: number): War
   return width >= depth ? 'y' : 'x';
 }
 
+export function warehouseCardinalRotation(rotation: number): 0 | 90 | 180 | -90 {
+  const normalized = ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
+  return normalized === 270 ? -90 : normalized as 0 | 90 | 180;
+}
+
+/**
+ * Frente funcional do equipamento no plano 2D (y cresce para baixo).
+ * O objeto possui dimensoes ja rotacionadas em quartos de volta; a rotacao
+ * persistida guarda somente a direcao. Nao rotacionar sua caixa visual novamente.
+ * Sem migracao: objetos antigos rotation=0 mantem a regra do lado maior.
+ */
+export function warehouseObjectPhysicalFront(
+  width: number,
+  depth: number,
+  rotation = 0
+): WarehouseApplianceFace {
+  const angle = warehouseCardinalRotation(rotation);
+  const odd = Math.abs(angle) === 90;
+  const unrotatedWidth = odd ? depth : width;
+  const unrotatedDepth = odd ? width : depth;
+  const base: WarehouseApplianceFace =
+    warehouseApplianceFrontalAxis(unrotatedWidth, unrotatedDepth) === 'y' ? 'y+' : 'x+';
+  const clockwise: WarehouseApplianceFace[] = ['y+', 'x-', 'y-', 'x+'];
+  const start = clockwise.indexOf(base);
+  const quarter = (((angle / 90) % 4) + 4) % 4;
+  return clockwise[(start + quarter) % 4];
+}
+
+export function warehouseOppositeFace(face: WarehouseApplianceFace): WarehouseApplianceFace {
+  return ({'x+':'x-','x-':'x+','y+':'y-','y-':'y+'})[face];
+}
+
+export function warehouseFaceLabel(face: WarehouseApplianceFace): string {
+  return ({'x+':'Leste','x-':'Oeste','y+':'Sul','y-':'Norte'})[face];
+}
+
+/** Transformacao de normais a partir do mesmo sistema das quatro cameras. */
 export function warehouseApplianceFrontForView(
   originalWidth: number,
   originalDepth: number,
-  view: WarehouseIsoView
+  view: WarehouseIsoView,
+  rotation = 0
 ): WarehouseApplianceFace {
-  const axis = warehouseApplianceFrontalAxis(originalWidth, originalDepth);
-  // Right view: x'=y, y'=W-x. Left view: x'=H-y, y'=x.
-  // Reapply these directional rotations to the physical door normal.
-  if (axis === 'y') {
-    switch (view) {
-      case 'front': return 'y+';
-      case 'right': return 'x+';
-      case 'back': return 'y-';
-      case 'left': return 'x-';
-    }
-  }
-  switch (view) {
-    case 'front': return 'x+';
-    case 'right': return 'y-';
-    case 'back': return 'x-';
-    case 'left': return 'y+';
-  }
+  const face = warehouseObjectPhysicalFront(originalWidth, originalDepth, rotation);
+  if (view === 'front') return face;
+  const mapping: Record<WarehouseIsoView, Record<WarehouseApplianceFace, WarehouseApplianceFace>> = {
+    front: {'x+':'x+','x-':'x-','y+':'y+','y-':'y-'},
+    back: {'x+':'x-','x-':'x+','y+':'y-','y-':'y+'},
+    right: {'x+':'y-','x-':'y+','y+':'x+','y-':'x-'},
+    left: {'x+':'y+','x-':'y-','y+':'x-','y-':'x+'},
+  };
+  return mapping[view][face];
 }
 
 export function warehouseApplianceVisiblePanel(
