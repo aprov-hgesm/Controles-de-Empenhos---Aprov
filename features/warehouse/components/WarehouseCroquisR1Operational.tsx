@@ -121,8 +121,8 @@ function messageFrom(error: unknown): string {
 function depotArchiveError(error: unknown): string {
   const code = messageFrom(error);
   const mapped: Record<string, string> = {
-    WAREHOUSE_ARCHIVE_OCCUPIED: 'Há materiais com saldo neste depósito. Transfira-os para outro local antes de inativar. Nada foi alterado.',
-    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há lotes ativos neste depósito. Conclua a transferência dos lotes antes de inativar. Nada foi alterado.',
+    WAREHOUSE_ARCHIVE_OCCUPIED: 'Há materiais com saldo neste depósito. Transfira-os para um local ativo antes de inativar ou excluir. O retorno automático ao recebimento ainda não está disponível. Nada foi alterado.',
+    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há lotes ativos neste depósito. Conclua a transferência dos lotes antes de inativar ou excluir. Nenhuma alteração foi feita.',
     WAREHOUSE_ARCHIVE_CATALOG_LIMIT: 'O volume de registros exige uma operação assistida. O depósito não foi alterado.',
     WAREHOUSE_ARCHIVE_TOO_LARGE: 'Este depósito excede o limite de uma única transação. Nenhum registro foi alterado.',
     WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE: 'Os dados mudaram durante a operação. Recarregue o depósito e tente novamente.',
