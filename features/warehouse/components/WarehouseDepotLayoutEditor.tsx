@@ -15,6 +15,9 @@ import {
   Undo2,
   ZoomIn,
   ZoomOut,
+  Ruler,
+  Layers3,
+  X,
 } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -78,6 +81,7 @@ export function WarehouseDepotLayoutEditor({
   preventLocalOverlap = false,
   onDuplicateObject,
   onRemoveObject,
+  onAddSubposition,
 }: {
   logicalWidth: number;
   logicalHeight: number;
@@ -99,6 +103,7 @@ export function WarehouseDepotLayoutEditor({
     copy: WarehouseDepotLayoutObject
   ) => WarehouseDepotLayoutObject;
   onRemoveObject?: (object: WarehouseDepotLayoutObject) => boolean | void;
+  onAddSubposition?: (object: WarehouseDepotLayoutObject) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -124,6 +129,12 @@ export function WarehouseDepotLayoutEditor({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spacePan, setSpacePan] = useState(false);
   const [collisionNotice, setCollisionNotice] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    objectId: string; left: number; top: number;
+  } | null>(null);
+  const [sizeDialog, setSizeDialog] = useState<{
+    objectId: string; width: string; height: string; error: string | null;
+  } | null>(null);
   const panning = mode === 'pan' || spacePan;
 
   useEffect(() => {
@@ -135,6 +146,8 @@ export function WarehouseDepotLayoutEditor({
     zoomRef.current = 1;
     setPan({ x: 0, y: 0 });
     setCollisionNotice(null);
+    setContextMenu(null);
+    setSizeDialog(null);
     onSelectedObjectIdChange(null);
   }, [scopeKey, onSelectedObjectIdChange]);
 
@@ -215,6 +228,32 @@ export function WarehouseDepotLayoutEditor({
       window.removeEventListener('blur', blur);
     };
   }, []);
+
+  // Fecha ao clicar fora, rolar, perder foco ou pressionar Escape.
+  useEffect(() => {
+    if (!contextMenu && !sizeDialog) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!contextMenu) return;
+      if (event.target instanceof Element && event.target.closest('[data-warehouse-context-menu]')) return;
+      setContextMenu(null);
+    };
+    const closeScroll = () => setContextMenu(null);
+    const closeKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setContextMenu(null);
+        setSizeDialog(null);
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    window.addEventListener('keydown', closeKeys);
+    window.addEventListener('resize', closeScroll);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      window.removeEventListener('keydown', closeKeys);
+      window.removeEventListener('resize', closeScroll);
+    };
+  }, [contextMenu, sizeDialog]);
 
   const selected = useMemo(
     () => objects.find((item) => item.id === selectedObjectId) || null,
@@ -348,7 +387,8 @@ export function WarehouseDepotLayoutEditor({
     object: WarehouseDepotLayoutObject
   ) => {
     if (type === 'resize' && !allowResize) return;
-    if (view !== 'top' || panning) return;
+    if (event.button !== 0 || view !== 'top' || panning || sizeDialog) return;
+    setContextMenu(null);
     const viewport = viewportRef.current;
     if (!viewport) return;
     event.stopPropagation();
@@ -382,15 +422,55 @@ export function WarehouseDepotLayoutEditor({
     interactionRef.current = null;
   };
 
-  const rotateSelected = (quarters: -1 | 1) => {
-    if (!selected) return;
+  const rotateObject = (objectId: string, quarters: -1 | 1 | 2) => {
+    const target = objects.find(item => item.id === objectId);
+    if (!target) return;
     try {
-      const rotated = turnWarehouseLayoutObject(selected, quarters, logicalWidth, logicalHeight);
-      patchObject(selected.id, rotated);
+      const rotated = turnWarehouseLayoutObject(target, quarters, logicalWidth, logicalHeight);
+      patchObject(target.id, rotated);
     } catch {
-      // Se nao couber fisicamente no ambiente, manter posicao original.
+      setCollisionNotice('O local não cabe nessa orientação dentro do depósito.');
+    }
+  };
+  const rotateSelected = (quarters: -1 | 1) => {
+    if (selected) rotateObject(selected.id, quarters);
+  };
+
+  const openSizeDialog = (objectId: string) => {
+    const target = objects.find(item => item.id === objectId);
+    if (!target) return;
+    setContextMenu(null);
+    setSizeDialog({
+      objectId: target.id,
+      width: String(target.width),
+      height: String(target.height),
+      error: null,
+    });
+  };
+
+  const saveSizeDialog = () => {
+    if (!sizeDialog) return;
+    const target = objects.find(item => item.id === sizeDialog.objectId);
+    if (!target) { setSizeDialog(null); return; }
+    const width = Number(sizeDialog.width);
+    const height = Number(sizeDialog.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height) ||
+        width < MIN_SIZE || height < MIN_SIZE ||
+        width > logicalWidth - target.x || height > logicalHeight - target.y) {
+      setSizeDialog(prev => prev && {
+        ...prev, error: 'Informe medidas de pelo menos 20 cm que caibam no depósito.',
+      });
       return;
     }
+    const candidate = { ...target, width, height };
+    if (preventLocalOverlap && warehouseLocalHasCollision(candidate, objects)) {
+      setSizeDialog(prev => prev && {
+        ...prev, error: 'As dimensões ocupam o espaço de outro local.',
+      });
+      return;
+    }
+    patchObject(target.id, { width, height });
+    setSizeDialog(null);
   };
 
   const layerShift = (direction: 'front' | 'back') => {
@@ -450,6 +530,7 @@ export function WarehouseDepotLayoutEditor({
             if (event.target === event.currentTarget) onSelectedObjectIdChange(null);
             return;
           }
+          if (event.button !== 0 || sizeDialog) return;
           event.currentTarget.setPointerCapture(event.pointerId);
           interactionRef.current = {
             type: 'pan',
@@ -543,7 +624,20 @@ export function WarehouseDepotLayoutEditor({
                   transformOrigin: 'center',
                   ...(view === 'top' ? {} : style25d),
                 }}
+                onContextMenu={event => {
+                  if (view !== 'top' || !warehouseIsPhysicalLocal(object)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  interactionRef.current = null;
+                  onSelectedObjectIdChange(object.id);
+                  setContextMenu({
+                    objectId: object.id,
+                    left: clamp(event.clientX, 8, Math.max(8, window.innerWidth - 235)),
+                    top: clamp(event.clientY, 8, Math.max(8, window.innerHeight - 258)),
+                  });
+                }}
                 onPointerDown={(event) => {
+                  if (event.button !== 0) return;
                   if (view !== 'top') {
                     event.stopPropagation();
                     onSelectedObjectIdChange(object.id);
@@ -616,6 +710,110 @@ export function WarehouseDepotLayoutEditor({
           <button type="button" aria-label="Remover somente do croqui" disabled={!selected} onClick={removeSelected} className="rounded-lg p-1.5 text-rose-300 hover:bg-rose-400/[0.06] disabled:opacity-30" title="Excluir somente do croqui"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
       </div>
+
+      {contextMenu && view === 'top' && objects.some(o => o.id === contextMenu.objectId) && (
+        <div data-warehouse-context-menu data-testid="warehouse-croqui-context-menu"
+          role="menu" aria-label="Opções do local"
+          style={{ position: 'fixed', left: contextMenu.left, top: contextMenu.top, zIndex: 90 }}
+          className="w-[224px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-800 shadow-xl"
+          onContextMenu={event => event.preventDefault()}>
+          <p className="px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+            {warehouseCroquiCardCode(
+              objects.find(o => o.id === contextMenu.objectId)?.label || ''
+            )}
+          </p>
+          {([
+            { label: 'Girar para esquerda', value: -1, icon: <RotateCcw className="h-4 w-4" /> },
+            { label: 'Girar para direita', value: 1, icon: <RotateCw className="h-4 w-4" /> },
+            { label: 'Meia-volta (180°)', value: 2, icon: <RotateCw className="h-4 w-4" /> },
+          ] as const).map(item => (
+            <button type="button" role="menuitem" key={item.value}
+              data-testid={'warehouse-context-turn-'+item.value}
+              onClick={() => { rotateObject(contextMenu.objectId, item.value); setContextMenu(null); }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-blue-50 focus:bg-blue-50">
+              {item.icon} {item.label}
+            </button>
+          ))}
+          <div className="my-1 border-t border-slate-100" />
+          <button type="button" role="menuitem" data-testid="warehouse-context-edit-size"
+            onClick={() => openSizeDialog(contextMenu.objectId)}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-blue-50 focus:bg-blue-50">
+            <Ruler className="h-4 w-4" /> Editar tamanho
+          </button>
+          <button type="button" role="menuitem" data-testid="warehouse-context-add-subposition"
+            disabled={!onAddSubposition}
+            onClick={() => {
+              const object = objects.find(o => o.id === contextMenu.objectId);
+              setContextMenu(null);
+              if (object) onAddSubposition?.(object);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-blue-50 focus:bg-blue-50 disabled:opacity-40">
+            <Layers3 className="h-4 w-4" /> Incluir subposição
+          </button>
+        </div>
+      )}
+
+      {sizeDialog && objects.some(o => o.id === sizeDialog.objectId) && (
+        <div data-testid="warehouse-croqui-size-modal"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4"
+          onPointerDown={event => { if (event.target === event.currentTarget) setSizeDialog(null); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="warehouse-croqui-size-title"
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 id="warehouse-croqui-size-title" className="text-base font-extrabold">Editar tamanho</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {warehouseCroquiCardCode(objects.find(o => o.id === sizeDialog.objectId)?.label || '')}
+                  {' · '}Medidas em centímetros
+                </p>
+              </div>
+              <button type="button" aria-label="Fechar edição de tamanho"
+                onClick={() => setSizeDialog(null)}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={event => { event.preventDefault(); saveSizeDialog(); }}>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-bold text-slate-700">Comprimento (cm)
+                  <input autoFocus type="number" min={MIN_SIZE} step="any" required
+                    data-testid="warehouse-size-width" value={sizeDialog.width}
+                    onChange={event => setSizeDialog(previous => previous && {
+                      ...previous, width: event.target.value, error: null,
+                    })}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+                </label>
+                <label className="text-xs font-bold text-slate-700">Profundidade (cm)
+                  <input type="number" min={MIN_SIZE} step="any" required
+                    data-testid="warehouse-size-depth" value={sizeDialog.height}
+                    onChange={event => setSizeDialog(previous => previous && {
+                      ...previous, height: event.target.value, error: null,
+                    })}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
+                </label>
+              </div>
+              <p className="mt-3 text-[11px] text-slate-500">
+                O tamanho altera apenas este local. Nenhum material ou saldo será modificado.
+              </p>
+              {sizeDialog.error && (
+                <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  {sizeDialog.error}
+                </p>
+              )}
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setSizeDialog(null)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">
+                  Cancelar
+                </button>
+                <button type="submit" data-testid="warehouse-size-save"
+                  className="rounded-lg bg-[#00288e] px-4 py-2 text-xs font-extrabold text-white">
+                  Aplicar tamanho
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
