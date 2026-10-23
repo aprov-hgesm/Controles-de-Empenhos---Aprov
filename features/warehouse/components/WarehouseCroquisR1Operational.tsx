@@ -425,7 +425,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         item.location.depotId === selectedDepotId
         && item.location.status === 'active'
         && item.location.kind === 'LOCAL'
-    ),
+    ).sort((a,b)=>a.location.code.localeCompare(b.location.code,'pt-BR',{numeric:true})),
     [locations, selectedDepotId]
   );
 
