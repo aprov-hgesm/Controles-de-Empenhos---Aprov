@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, PackageSearch, RotateCcw, Search, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Hand, PackageSearch, RotateCcw, Search, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import { warehouseApplianceFrontForView, type WarehouseApplianceFace } from '../../../lib/warehouse/applianceOrientation';
@@ -73,11 +73,14 @@ type Props = {
   globalComplete?: boolean;
   focusedLocationId?: string | null;
   onNavigateToGlobalLocation?: (depotId: string, locationId: string) => void;
+  /** Para laboratorio isolado, sem autenticacao nem gravacao. */
+  onFocusLocationChange?: (locationId: string | null) => void;
 };
 
 type IsoPoint = { x: number; y: number };
 type CanonicalVisualKind = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH';
 type PreviewView = WarehouseIsoView;
+type IsoLabelMode = 'clean' | 'codes' | 'details';
 
 const PREVIEW_VIEWS: ReadonlyArray<{ id: PreviewView; label: string }> = [
   { id: 'front', label: 'Frente' },
@@ -283,64 +286,28 @@ function rackBeamPrism({
 function renderLabel(
   center: IsoPoint,
   code: string,
-  subtitle: string,
-  detail: string | undefined,
+  _subtitle: string,
+  _detail: string | undefined,
   highlighted: boolean,
   labelOffsetX = 0,
   labelOffsetY = 0
 ) {
-  const width = highlighted ? 132 : 68;
-  const height = highlighted ? 52 : 24;
+  const width = highlighted ? 72 : 58;
+  const height = highlighted ? 24 : 20;
   const x = center.x + labelOffsetX;
   const y = center.y + labelOffsetY;
-
+  // Cartao compacto, sem conector atravessando outras estruturas.
   return (
     <g transform={'translate(' + x + ' ' + y + ')'} pointerEvents="none">
-      <line
-        x1={center.x - x}
-        y1={center.y - y}
-        x2="0"
-        y2="-15"
-        stroke={highlighted ? '#2563eb' : '#9fb0bf'}
-        strokeWidth={highlighted ? 2 : 1}
-        opacity={highlighted ? 1 : 0.65}
-      />
-      <circle cy="-15" r={highlighted ? 4 : 2.4} fill={highlighted ? '#2563eb' : '#94a3b8'} />
-      <g transform="translate(0 -20)">
-        <rect
-          x={-width / 2}
-          y={-height}
-          width={width}
-          height={height}
-          rx={highlighted ? 10 : 7}
-          fill={highlighted ? '#0f3b86' : '#ffffff'}
-          stroke={highlighted ? '#7db6ff' : '#d7e0e8'}
-          strokeWidth={highlighted ? 2 : 1}
-          opacity={highlighted ? 0.99 : 0.94}
-        />
-        <text
-          x="0"
-          y={-height + 16}
-          textAnchor="middle"
-          fontSize={highlighted ? 11 : 9.5}
-          fontWeight="900"
-          fill={highlighted ? '#ffffff' : '#173a5e'}
-        >
-          {code}
-        </text>
-        {highlighted && (
-          <>
-            <text x="0" y={-height + 32} textAnchor="middle" fontSize="8.4" fontWeight="700" fill="#dbeafe">
-              {subtitle}
-            </text>
-            {detail && (
-              <text x="0" y={-height + 44} textAnchor="middle" fontSize="7.4" fontWeight="700" fill="#bfdbfe">
-                {detail}
-              </text>
-            )}
-          </>
-        )}
-      </g>
+      <rect x={-width / 2} y={-height - 9} width={width} height={height}
+        rx="6" fill={highlighted ? '#123e77' : '#ffffff'}
+        stroke={highlighted ? '#7ba9d5' : '#c3d2dd'} strokeWidth="1"
+        opacity="0.97"/>
+      <text x="0" y={-height / 2 - 5.5} textAnchor="middle"
+        dominantBaseline="middle" fontSize={highlighted ? 10.5 : 9.2}
+        fontWeight="800" fill={highlighted ? '#ffffff' : '#22435f'}>
+        {code}
+      </text>
     </g>
   );
 }
@@ -433,7 +400,7 @@ function WarehouseStructure({
   const generalBoxCount = visualBoxes(occupiedQuantity);
   // A seleção azul prevalece sobre a sinalização suave de validade.
   const highlightFilter = highlighted
-    ? 'url(#warehouseGlowStrong)'
+    ? 'url(#warehouseObjectShadow)'
     : expiry === 'near'
       ? 'url(#warehouseExpirySoftGlow)'
       : 'url(#warehouseObjectShadow)';
@@ -474,8 +441,8 @@ function WarehouseStructure({
       points={polygonPoints([a, b, c, d])}
       fill={highlighted ? '#dbeafe' : '#fef3c7'}
       stroke={highlighted ? '#2563eb' : '#eab308'}
-      strokeWidth={highlighted ? 4.5 : 2.4}
-      opacity={highlighted ? 0.9 : 0.6}
+      strokeWidth={highlighted ? 2.3 : 2.4}
+      opacity={highlighted ? 0.45 : 0.6}
     />
   ) : null;
 
@@ -965,10 +932,15 @@ export function WarehouseIsometricPreview({
   globalComplete = true,
   focusedLocationId = null,
   onNavigateToGlobalLocation,
+  onFocusLocationChange,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
   const [cameraZoom, setCameraZoom] = useState(1);
   const [cameraPan, setCameraPan] = useState({ x: 0, y: 0 });
+  const [labelMode, setLabelMode] = useState<IsoLabelMode>('clean');
+  const [localFocusedId, setLocalFocusedId] = useState<string | null>(null);
+  const dragRef = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
   const [viewTransitioning, setViewTransitioning] = useState(false);
   const [hoveredObject, setHoveredObject] = useState<{
     objectId: string; locationId: string;
@@ -1024,6 +996,15 @@ export function WarehouseIsometricPreview({
       : null,
     [inspectedLocationId, locations, balances, materials, inspectionLots]
   );
+  const selectedContents = useMemo(
+    () => !sceneOnly && (focusedLocationId || localFocusedId || inspectedLocationId)
+      ? deriveWarehouseLocationContents(
+        focusedLocationId || localFocusedId || inspectedLocationId || '',
+        locations, balances, materials, inspectionLots
+      ) : null,
+    [sceneOnly, focusedLocationId, localFocusedId, inspectedLocationId,
+      locations, balances, materials, inspectionLots]
+  );
   const detailContents = useMemo(
     () => detailLocationId
       ? deriveWarehouseLocationContents(
@@ -1039,6 +1020,7 @@ export function WarehouseIsometricPreview({
     setDetailLocationId(null);
     setCameraZoom(1);
     setCameraPan({ x: 0, y: 0 });
+    setLocalFocusedId(null);
   }, [depotId]);
 
   useEffect(() => {
@@ -1225,16 +1207,19 @@ export function WarehouseIsometricPreview({
         );
         const selected = Boolean(object.warehouseLocationId
           && (highlightedLocalIds.has(object.warehouseLocationId)
-            || focusedLocationId === object.warehouseLocationId));
+            || focusedLocationId === object.warehouseLocationId
+            || localFocusedId === object.warehouseLocationId));
         return {
           id: object.id, x: center.x, y: center.y,
           highlighted: selected,
           // Hover atualiza apenas o painel; nao movimenta a camera nem as etiquetas.
-          priority: selected ? 2 : 0,
+          priority: selected ? 2 : hoveredObject?.objectId === object.id ? 1 : 0,
+          visible: labelMode === 'codes' || selected || hoveredObject?.objectId === object.id,
         };
-      }));
+      }).filter((label) => label.visible));
   }, [
-    sceneOnly, visibleObjects, locationById, subpositionsByParent,
+    sceneOnly, labelMode, hoveredObject?.objectId, localFocusedId,
+    visibleObjects, locationById, subpositionsByParent,
     viewLogicalWidth, viewLogicalHeight, highlightedLocalIds,
     focusedLocationId,
   ]);
@@ -1272,12 +1257,6 @@ export function WarehouseIsometricPreview({
         }
       }
 
-      // Somente etiquetas exibidas entram no enquadramento.
-      const placement = labelPlacements.get(object.id);
-      if (placement) {
-        const { x, y, width, height } = placement.bounds;
-        roomPoints.push({ x: x - 8, y: y - 8 }, { x: x + width + 8, y: y + height + 8 });
-      }
     }
 
     const viewWidth = embedded ? VIEW_WIDTH - 110 : VIEW_WIDTH;
@@ -1291,7 +1270,7 @@ export function WarehouseIsometricPreview({
     });
   }, [
     embedded, sceneOnly, viewLogicalWidth, viewLogicalHeight, visibleObjects,
-    locationById, subpositionsByParent, labelPlacements,
+    locationById, subpositionsByParent,
   ]);
 
   const activeCameraViewBox = useMemo(() => {
@@ -1399,6 +1378,23 @@ export function WarehouseIsometricPreview({
             ))}
           </div>
 
+          <div className="flex flex-wrap items-center justify-end gap-1" data-testid="warehouse-isometric-label-controls"
+            aria-label="Exibicao de etiquetas">
+            <span className={embedded ? 'mr-1 text-[10px] text-slate-300' : 'mr-1 text-[10px] text-slate-600'}>Etiquetas</span>
+            {([
+              ['clean', 'Limpo'], ['codes', 'Identificação'], ['details', 'Detalhes'],
+            ] as const).map(([mode, title]) => (
+              <button key={mode} type="button" aria-pressed={labelMode === mode}
+                data-testid={'warehouse-label-mode-' + mode}
+                onClick={() => setLabelMode(mode)}
+                className={labelMode === mode
+                  ? 'rounded-lg bg-[#123e77] px-2.5 py-1.5 text-[10px] font-bold text-white'
+                  : embedded
+                    ? 'rounded-lg border border-white/15 px-2.5 py-1.5 text-[10px] text-slate-200'
+                    : 'rounded-lg border border-slate-200 px-2.5 py-1.5 text-[10px] text-slate-600'}
+              >{title}</button>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center justify-end gap-1" data-testid="warehouse-isometric-camera-controls" aria-label="Zoom e deslocamento da prévia">
             {[
               { title: 'Afastar', action: () => setCameraZoom((z) => Math.max(1, +(z - 0.2).toFixed(2))), icon: <ZoomOut className="h-3.5 w-3.5" /> },
@@ -1507,6 +1503,35 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
+            onWheel={(event) => {
+              if (sceneOnly || event.ctrlKey) return;
+              event.preventDefault();
+              setCameraZoom((value) => Math.max(1, Math.min(3,
+                Math.round((value + (event.deltaY < 0 ? 0.12 : -0.12)) * 100) / 100)));
+            }}
+            onPointerDown={(event) => {
+              if (sceneOnly || event.button !== 0 || event.pointerType === 'touch') return;
+              suppressClickRef.current = false;
+              dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+            }}
+            onPointerMove={(event) => {
+              const drag = dragRef.current;
+              if (!drag || drag.id !== event.pointerId) return;
+              const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+              drag.x = event.clientX; drag.y = event.clientY;
+              if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+              if (!drag.moved) return;
+              suppressClickRef.current = true;
+              const element = event.currentTarget;
+              setCameraPan((prev) => ({
+                x: Math.max(-0.8, Math.min(0.8, prev.x - dx / ((element.clientWidth || 1200) * cameraZoom))),
+                y: Math.max(-0.8, Math.min(0.8, prev.y - dy / ((element.clientHeight || 760) * cameraZoom))),
+              }));
+            }}
+            onPointerUp={(event) => {
+              if (dragRef.current?.id === event.pointerId) dragRef.current = null;
+            }}
+            onPointerCancel={() => { dragRef.current = null; }}
             viewBox={[activeCameraViewBox.x, activeCameraViewBox.y, activeCameraViewBox.width, activeCameraViewBox.height].join(' ')}
             preserveAspectRatio={sceneOnly ? 'none' : 'xMidYMid meet'}
             pointerEvents={sceneOnly ? 'none' : undefined}
@@ -1724,12 +1749,20 @@ export function WarehouseIsometricPreview({
                 const interactive = Boolean(onInspectLocation && inspectionAvailable && location?.kind === 'LOCAL');
                 const hovered = hoveredObject?.objectId === object.id;
                 const handleOpen = () => {
-                  if (!interactive || !locationId) return;
-                  setHoveredObject(null);
-                  setDetailLocationId(locationId);
+                  if (!locationId || suppressClickRef.current) {
+                    suppressClickRef.current = false; return;
+                  }
+                  if (interactive) {
+                    setHoveredObject(null);
+                    setDetailLocationId(locationId);
+                  } else if (!onInspectLocation && !sceneOnly) {
+                    setLocalFocusedId(locationId);
+                    onFocusLocationChange?.(locationId);
+                    setInspectedLocationId(locationId);
+                  }
                 };
                 const handlePointer = (event: ReactPointerEvent<SVGGElement>) => {
-                  if (!interactive || !locationId || event.pointerType === 'touch') return;
+                  if (!locationId || sceneOnly || event.pointerType === 'touch') return;
                   setHoveredObject((current) =>
                     current?.objectId === object.id ? current : { objectId: object.id, locationId }
                   );
@@ -1739,9 +1772,9 @@ export function WarehouseIsometricPreview({
                 return (
                   <g
                     key={object.id}
-                    role={interactive ? 'button' : undefined}
-                    tabIndex={interactive ? 0 : undefined}
-                    aria-label={interactive ? 'Consultar ' + location?.name + ': pressione Enter para detalhes' : undefined}
+                    role={(interactive || (!onInspectLocation && !!locationId && !sceneOnly)) ? 'button' : undefined}
+                    tabIndex={(interactive || (!onInspectLocation && !!locationId && !sceneOnly)) ? 0 : undefined}
+                    aria-label={(interactive || (!onInspectLocation && !!locationId && !sceneOnly)) ? 'Consultar ' + (location?.name || object.label) + ': pressione Enter para detalhes' : undefined}
                     data-testid={interactive ? 'warehouse-location-interactive' : undefined}
                     data-hovered={hovered ? 'true' : 'false'}
                     className={interactive
@@ -1754,14 +1787,14 @@ export function WarehouseIsometricPreview({
                       if (interactive && event.button === 0) event.preventDefault();
                     }}
                     onPointerEnter={(event) => {
-                      if (!interactive) return;
+                      if (!locationId || sceneOnly) return;
                       handlePointer(event);
                     }}
                     onPointerLeave={() => setHoveredObject((current) =>
                       current?.objectId === object.id ? null : current
                     )}
                     onFocus={() => {
-                      if (!interactive) return;
+                      if (!locationId || sceneOnly) return;
                       setHoveredObject({ objectId: object.id, locationId });
                       setInspectedLocationId(locationId);
                     }}
@@ -1774,9 +1807,9 @@ export function WarehouseIsometricPreview({
                     }}
                     onClick={handleOpen}
                     style={{
-                      cursor: interactive ? 'pointer' : undefined,
+                      cursor: (interactive || (!onInspectLocation && !!locationId)) ? 'pointer' : undefined,
                       transition: 'filter 160ms ease, opacity 160ms ease',
-                      filter: hovered ? 'drop-shadow(0 0 9px rgba(37,99,235,0.85))' : undefined,
+                      filter: hovered ? 'drop-shadow(0 0 3px rgba(37,99,235,0.35))' : undefined,
                     }}
                   >
                     <WarehouseStructure
@@ -1809,6 +1842,28 @@ export function WarehouseIsometricPreview({
           </p>
         )}
       </div>
+      {!sceneOnly && !onInspectLocation && (
+        <div data-testid="warehouse-isometric-context-panel"
+          className="border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
+          {selectedContents ? (
+            <div className="flex flex-wrap items-center gap-5 text-xs text-slate-700">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Local em foco</p>
+                <p className="text-base font-extrabold text-[#123e77]">{selectedContents.location.code}</p>
+              </div>
+              <p><strong>Nome:</strong> {selectedContents.location.name}</p>
+              <p><strong>Materiais:</strong> {selectedContents.materialCount}</p>
+              <p><strong>Registros:</strong> {selectedContents.rowCount}</p>
+              <p className="text-slate-500">Passe o cursor, use Tab ou clique em outro local.</p>
+            </div>
+          ) : (
+            <p className="text-xs font-medium text-slate-500">
+              <Hand className="mr-1 inline h-3.5 w-3.5" />
+              Selecione um equipamento para consultar detalhes sem encobrir a maquete.
+            </p>
+          )}
+        </div>
+      )}
       {onInspectLocation && (
         <div data-testid="warehouse-location-inspection-dock"
           className="h-[212px] overflow-y-auto border-t border-blue-100 bg-slate-50/95 px-3 py-3 sm:px-4">
