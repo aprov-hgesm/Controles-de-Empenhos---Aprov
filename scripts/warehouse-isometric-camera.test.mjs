@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
+import { runInNewContext } from 'node:vm';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -15,7 +16,6 @@ try {
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/isometricCamera.ts'),
     resolve(root, 'lib/warehouse/applianceOrientation.ts'),
-    resolve(root, 'lib/warehouse/layoutOrientation.ts'),
     '--outDir', out,
     '--module', 'commonjs',
     '--target', 'ES2020',
@@ -45,9 +45,22 @@ const {
   warehouseFaceLabel,
   warehouseOppositeFace,
 } = require(resolve(out, 'applianceOrientation.js'));
-const {
-  turnWarehouseLayoutObject, warehouseObjectFaceLabels,
-} = require(resolve(out, 'layoutOrientation.js'));
+// O helper adicional e compilado isoladamente: manter o mesmo rootDir
+// dos testes historicos evita mudar o nome do modulo isometricCamera.js.
+const ts = require('typescript');
+const orientationExports = {};
+const orientationJs = ts.transpileModule(
+  readFileSync(resolve(root, 'lib/warehouse/layoutOrientation.ts'), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }
+).outputText;
+runInNewContext(orientationJs, {
+  exports: orientationExports,
+  require: (name) => {
+    if (name === './applianceOrientation') return require(resolve(out, 'applianceOrientation.js'));
+    throw new Error('Unexpected module: ' + name);
+  },
+});
+const { turnWarehouseLayoutObject, warehouseObjectFaceLabels } = orientationExports;
 
 const EPS = 0.00001;
 
