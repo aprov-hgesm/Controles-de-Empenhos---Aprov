@@ -79,9 +79,12 @@ function existingLocation(access:VerifiedWarehouseRequest,row:WarehouseAdminDocu
 }
 function existingLayout(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument){
   const id=row.path.split('/').at(-1)||'';
+  const d=row.data;
   const r=validateWarehouseDepotLayout({
-    ...row.data,id,workspaceId:access.workspaceId,ug:access.ug,
-    previousVersionId:row.data.previousVersionId??null,
+    schemaVersion:d.schemaVersion,id,workspaceId:d.workspaceId,ug:d.ug,
+    name:d.name,depotId:d.depotId??null,logicalWidth:d.logicalWidth,
+    logicalHeight:d.logicalHeight,objects:d.objects,version:d.version,status:d.status,
+    previousVersionId:d.previousVersionId??null,createdBy:d.createdBy,updatedBy:d.updatedBy,
   },{expectedWorkspaceId:access.workspaceId,expectedUg:access.ug});
   if(!r.ok)return fail('WAREHOUSE_CROQUI_LAYOUT_INVALID');
   return r.data;
