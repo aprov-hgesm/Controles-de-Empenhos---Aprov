@@ -1092,6 +1092,15 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </div>
           </div>
 
+          {warehouseFindOverlappingLocals(draftObjects).length > 0 && (
+            <div role="alert" data-testid="warehouse-croqui-existing-overlaps"
+              className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+              Atenção: {warehouseFindOverlappingLocals(draftObjects).length} par(es) de locais
+              estão sobrepostos neste croqui. Selecione e reposicione os elementos no mapa
+              antes de salvar. Nenhum local existente foi movido automaticamente.
+            </div>
+          )}
+
           {editingDimensions && (
             <div
               className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm"
