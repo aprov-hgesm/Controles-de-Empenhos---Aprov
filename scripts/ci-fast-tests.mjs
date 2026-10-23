@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Geometria: detectar intersecao de locais no navegador e no servidor.
+if (files.some((p) => /^(?:lib\/warehouse\/layoutCollision\.ts|lib\/server\/warehouse(?:StructureLayoutApply|RemainingWrites)\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotLayoutEditor|Depot20x6Demo)\.tsx|scripts\/warehouse-croqui-collision\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-croqui-collision');
+}
 // Central 2D: validar cadastro transacional, idempotencia, conflitos e estoque.
 if (files.some((p) => /^(?:lib\/server\/warehouseStructureLayoutApply\.ts|lib\/warehouse\/croquiStructureRepository\.ts|features\/warehouse\/components\/Warehouse(?:CroquisR1Operational|DepotsOperational|DepotLayoutEditor)\.tsx|scripts\/warehouse-croqui-unified\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-unified');
