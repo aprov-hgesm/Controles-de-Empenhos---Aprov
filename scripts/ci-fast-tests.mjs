@@ -52,6 +52,10 @@ for (const path of warehouseFiles) {
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
   add('test:warehouse-stock-report-ux');
 }
+// Croqui de edição: clique direito, rotação, medidas, subposições e 3D sem luminárias.
+if (files.some((p) => /^(?:lib\/warehouse\/layoutOrientation\.ts|lib\/server\/warehouseStructureLayoutApply\.ts|features\/warehouse\/components\/Warehouse(?:DepotLayoutEditor|CroquisR1Operational|Depot20x6Demo|IsometricPreview)\.tsx|scripts\/warehouse-context-menu\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-context-menu');
+}
 // UX: não mostrar os IDs internos e exibir apenas o código do local no card 2D.
 if (files.some((p) => /^(?:lib\/warehouse\/croquiCardLabel\.ts|features\/warehouse\/components\/WarehouseDepotLayoutEditor\.tsx|scripts\/warehouse-croqui-card-code\.test\.mjs)$/.test(p))) {
   add('test:warehouse-croqui-card-code');
