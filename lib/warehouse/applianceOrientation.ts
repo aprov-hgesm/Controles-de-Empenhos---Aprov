@@ -41,7 +41,9 @@ export function warehouseObjectPhysicalFront(
 }
 
 export function warehouseOppositeFace(face: WarehouseApplianceFace): WarehouseApplianceFace {
-  return ({'x+':'x-','x-':'x+','y+':'y-','y-':'y+'})[face];
+  const opposite: Record<WarehouseApplianceFace, WarehouseApplianceFace> =
+    {'x+':'x-','x-':'x+','y+':'y-','y-':'y+'};
+  return opposite[face];
 }
 
 export function warehouseFaceLabel(face: WarehouseApplianceFace): string {
