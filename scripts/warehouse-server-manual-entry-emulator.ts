@@ -574,6 +574,9 @@ try {
   await assert.rejects(()=>warehouseStructureServer(access,{
     kind:'DEPOT_UPDATE',depotId:toDelete.id,input:{status:'active'},
   }),/WAREHOUSE_DEPOT_PERMANENTLY_DELETED/);
+  await assert.rejects(()=>warehouseStructureServer(access,{
+    kind:'LOCATION_UPDATE',locationId:deletionLocal.id,input:{status:'active'},
+  }),/WAREHOUSE_DEPOT_PERMANENTLY_DELETED/);
   const replacement=await warehouseStructureServer(access,{
     kind:'DEPOT_CREATE',input:{code:'DELETEQA',name:'Depósito de exclusão QA'},
   });
