@@ -142,26 +142,9 @@ export async function applyWarehouseExpressOutboundServer(
           {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
             expectedMaterialId:materialId}
         ),'WAREHOUSE_OUTBOUND_LOT_INVALID'):null;
-      // Autoridade no servidor: cliente não pode expedir referência já vencida
-      // enviando um lotId diretamente à API (independente do FEFO removido).
-      if(lot && warehouseLotExpiryState(lot)==='EXPIRED') {
-        return reject('WAREHOUSE_OUTBOUND_LOT_EXPIRED');
-      }
-      const depot=needed(rows,p.depot,'WAREHOUSE_OUTBOUND_DEPOT_NOT_FOUND').data;
-      const loc=needed(rows,p.location,'WAREHOUSE_OUTBOUND_LOCATION_NOT_FOUND').data;
-      if(depot.workspaceId!==access.workspaceId||depot.ug!==access.ug||depot.status!=='active'
-        ||loc.workspaceId!==access.workspaceId||loc.ug!==access.ug||loc.status!=='active'
-        ||loc.kind!=='LOCAL'||loc.depotId!==position.depotId) {
-        return reject('WAREHOUSE_OUTBOUND_LOCATION_INACTIVE');
-      }
-      if(position.kind==='SUBPOSITION'){
-        const sub=needed(rows,p.subposition!,'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data;
-        if(sub.kind!=='SUBPOSITION'||sub.depotId!==position.depotId
-          ||sub.parentLocationId!==position.locationId||sub.status!=='active'
-          ||sub.workspaceId!==access.workspaceId||sub.ug!==access.ug) {
-          return reject('WAREHOUSE_OUTBOUND_SUBPOSITION_INACTIVE');
-        }
-      }
+      // Replay legado: validar primeiro a movimentação já comprometida.
+      // Uma validade que venceu ou posição desativada DEPOIS da baixa não
+      // pode impedir a recuperação do consumo pendente nem gerar outra baixa.
       const old=rows.get(p.movement);
       if(old) {
         const replay=movementFrom(old,access,movementId);
@@ -185,6 +168,26 @@ export async function applyWarehouseExpressOutboundServer(
             position:source.position,interface:source.interface,
             barcodeAssociation:liveBarcode,lot},
         },writes:[]};
+      }
+      // Autoridade no servidor: cliente não pode expedir referência já vencida
+      // enviando um lotId diretamente à API (independente do FEFO removido).
+      if(lot && warehouseLotExpiryState(lot)==='EXPIRED') {
+        return reject('WAREHOUSE_OUTBOUND_LOT_EXPIRED');
+      }
+      const depot=needed(rows,p.depot,'WAREHOUSE_OUTBOUND_DEPOT_NOT_FOUND').data;
+      const loc=needed(rows,p.location,'WAREHOUSE_OUTBOUND_LOCATION_NOT_FOUND').data;
+      if(depot.workspaceId!==access.workspaceId||depot.ug!==access.ug||depot.status!=='active'
+        ||loc.workspaceId!==access.workspaceId||loc.ug!==access.ug||loc.status!=='active'
+        ||loc.kind!=='LOCAL'||loc.depotId!==position.depotId) {
+        return reject('WAREHOUSE_OUTBOUND_LOCATION_INACTIVE');
+      }
+      if(position.kind==='SUBPOSITION'){
+        const sub=needed(rows,p.subposition!,'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data;
+        if(sub.kind!=='SUBPOSITION'||sub.depotId!==position.depotId
+          ||sub.parentLocationId!==position.locationId||sub.status!=='active'
+          ||sub.workspaceId!==access.workspaceId||sub.ug!==access.ug) {
+          return reject('WAREHOUSE_OUTBOUND_SUBPOSITION_INACTIVE');
+        }
       }
       // O motor de domínio lança Error para condições de negócio.
       // A API precisa preservar o status apropriado (400/409), sem
