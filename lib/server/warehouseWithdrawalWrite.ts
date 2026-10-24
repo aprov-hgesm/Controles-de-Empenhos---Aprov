@@ -118,6 +118,7 @@ export async function finalizeWarehouseWithdrawalServer(
       materialId:line.materialId,requestedQuantity:line.requestedQuantity,
       presentation:line.presentation,position:line.position,
       barcodeAssociation:line.barcodeAssociation,lotId:line.lotId,
+      expectedBaseQuantity:line.baseQuantity,
       idempotencyKey:'material-withdrawal:'+input.withdrawalId+':'+line.lineId,
       note:'Saída de Material · '+input.withdrawalId+' · '+line.lineId,
     });
