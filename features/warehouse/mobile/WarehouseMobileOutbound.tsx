@@ -354,6 +354,7 @@ export function WarehouseMobileOutbound() {
     try {
       const uid=auth.currentUser?.uid;
       if(!uid)throw Error('WAREHOUSE_WITHDRAWAL_AUTH_REQUIRED');
+      if(!workspace.ug)throw Error('WAREHOUSE_MOBILE_UG_REQUIRED');
       const command:PendingWithdrawal={
         workspaceId:workspace.workspaceId,ug:workspace.ug,uid,destinationId,review,
       };
