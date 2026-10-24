@@ -4,7 +4,9 @@
  * A fotografia dos documentos de atribuição, inclusive mutex, é verificada
  * DENTRO da transação antes da primeira escrita: falhas não causam baixa parcial.
  */
-import { createHash } from 'node:crypto';
+import {
+  warehouseWithdrawalV3IntentHash, warehouseWithdrawalV3DerivedLineId,
+} from './warehouseWithdrawalV3Identity.mjs';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import {
   warehouseAdminBatchRead, warehouseAdminListByField, WarehouseStoreError,
@@ -32,7 +34,6 @@ import { WAREHOUSE_WITHDRAWAL_MAX_LINES, type WarehouseWithdrawalLineInput,
   type WarehouseMaterialWithdrawal } from '../warehouse/withdrawal';
 import type { FinalizeWarehouseMaterialWithdrawalResult } from '../warehouse/withdrawalRepository';
 
-const sha=(text:string)=>createHash('sha256').update(text).digest('hex');
 const path=(ws:string,domain:string,id:string)=>'warehouse/'+ws+'/'+domain+'/'+id;
 const fail=(code:string,status=409):never=>{throw new WarehouseStoreError(code,status);};
 function valid<T>(validation:{ok:boolean;data?:T},code:string):T {
@@ -49,22 +50,6 @@ async function readMany(token:string,names:string[]):Promise<Map<string,Warehous
 }
 function required(rows:ReadonlyMap<string,WarehouseAdminDocument|null>,name:string) {
   return rows.get(name)??fail('WAREHOUSE_WITHDRAWAL_V3_REFERENCE_MISSING');
-}
-/** Identidade de intenção: versão + destino + campos operacionais normalizados. */
-export function warehouseWithdrawalV3IntentHash(command:WarehouseWithdrawalV3Command):string {
-  return sha('warehouse_withdrawal_intent_v3\n'+JSON.stringify({
-    destinationId:command.destinationId,
-    lines:command.lines.map(line=>({
-      materialId:line.materialId,
-      position:line.position,
-      requestedQuantity:line.requestedQuantity,
-      presentationCode:line.presentationCode??null,
-      barcodeId:line.barcodeId??null,
-    })),
-  }));
-}
-export function warehouseWithdrawalV3DerivedLineId(withdrawalId:string,index:number,part:number):string {
-  return 'wline_'+sha('warehouse_withdrawal_line_v3\n'+withdrawalId+'\n'+index+'\n'+part).slice(0,32);
 }
 function replay(
   access:VerifiedWarehouseRequest,command:WarehouseWithdrawalV3Command,
