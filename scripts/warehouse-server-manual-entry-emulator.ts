@@ -805,7 +805,7 @@ try {
     assert.equal(await legacyBalance(),startBalance-2);
     for(const line of testInput.lines) {
       const consumptionId='cons_'+createHash('sha256').update(
-        workspaceId+'\\n'+'stock:'+headId+':'+line.lineId).digest('hex');
+        workspaceId+'\n'+'stock:'+headId+':'+line.lineId).digest('hex');
       assert.equal((await getDoc(ref('consumptions',consumptionId))).exists(),true);
     }
     const replay=await finalizeWarehouseWithdrawalServer(access,testInput);
