@@ -67,15 +67,26 @@ jobs:
       - name: TypeScript error budget
         shell: bash
         run: |
-          npm run typecheck > /tmp/typecheck.txt 2>&1 || true
+          rc=0
+          npm run typecheck > /tmp/typecheck.txt 2>&1 || rc=$?
           cat /tmp/typecheck.txt
           current=$(grep -c 'error TS[0-9]' /tmp/typecheck.txt || true)
           budget=$(node -p "require('./ops/typescript-error-budget.json').maxErrors")
           echo "TypeScript diagnostics: $current / budget: $budget"
+          if [ "$rc" -ne 0 ] && [ "$current" -eq 0 ]; then
+            echo 'TypeScript command failed without TS diagnostics.'
+            exit "$rc"
+          fi
           if [ "$current" -gt "$budget" ]; then
             echo 'TypeScript error budget exceeded.'
             exit 1
           fi
+
+      - name: CI LEAN R2 selector and syntax negative tests
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs
+
+      - name: Changed executable JavaScript syntax
+        run: node scripts/ci-lean-syntax.mjs
 
       - name: Warehouse R2 strict zero client SDK writes
         run: WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs
@@ -652,8 +663,8 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Final TypeScript validation
-        run: npm run typecheck
+      # No second tsc here: the zero-error TypeScript budget gate above already
+      # compiles TS, and the Next production build validates generated types.
 
 
   block-16-release-gate:
