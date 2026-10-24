@@ -73,7 +73,9 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
   const saved=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
   if(saved) {
     const h=saved.data;
-    if(h.atomicVersion!==version)return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
+    if(h.atomicVersion!==version)return deny(v3
+        ?'WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
+        :'WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
     if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
       ||h.payloadHash!==hash||h.destinationId!==input.destinationId
       ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
@@ -130,7 +132,9 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       const old=rows.get(headerPath);
       if(old) {
         const h=old.data;
-        if(h.atomicVersion!==version)return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
+        if(h.atomicVersion!==version)return deny(v3
+        ?'WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
+        :'WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
         if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
           ||h.payloadHash!==hash||h.destinationId!==input.destinationId
           ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
