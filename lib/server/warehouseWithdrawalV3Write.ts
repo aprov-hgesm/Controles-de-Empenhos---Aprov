@@ -164,9 +164,14 @@ export async function finalizeWarehouseWithdrawalV3Server(
       if(barcode.status!=='active')return fail('WAREHOUSE_BARCODE_INACTIVE');
     }
     const presentations=[material.unit,...material.conversions.map(x=>x.presentation)];
-    const candidates=presentations.filter(x=>x.code===(line.presentationCode??barcode?.presentation.code??material.unit.code));
-    if(candidates.length!==1)return fail('WAREHOUSE_WITHDRAWAL_V3_PRESENTATION_AMBIGUOUS',400);
-    const presentation=barcode?.presentation??candidates[0];
+    const candidates=line.presentationCode
+      ?presentations.filter(x=>x.code===line.presentationCode):[];
+    // Base sem seleção: unidade canônica. Barcode identifica a apresentação
+    // de forma inequívoca, mesmo quando códigos de unidades coincidam.
+    if(!barcode && line.presentationCode && candidates.length!==1)
+      return fail('WAREHOUSE_WITHDRAWAL_V3_PRESENTATION_AMBIGUOUS',400);
+    const presentation=barcode?.presentation
+      ??(line.presentationCode?candidates[0]:material.unit);
     if(line.presentationCode&&presentation.code!==line.presentationCode)
       return fail('WAREHOUSE_BARCODE_PRESENTATION_MISMATCH',400);
     const used=reservedByMaterial.get(line.materialId)||0;
