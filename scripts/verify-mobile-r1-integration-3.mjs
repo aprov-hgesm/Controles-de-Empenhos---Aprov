@@ -46,7 +46,23 @@ assert.doesNotMatch(inventory, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(inventory, /\brunTransaction\s*\(/);
 
 const outbound = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
-assert.match(outbound, /finalizeWarehouseMaterialWithdrawal/);
+// MOBILE-G now submits a single authenticated server command instead of
+// calling the legacy client-side withdrawal function. Guard the active
+// client -> authenticated route -> canonical server finalizer contract.
+assert.match(outbound, /warehouseServerCommand\s*</);
+assert.match(outbound, /['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
+assert.match(outbound, /withdrawalId:\s*command\.review\.withdrawalId/);
+assert.match(outbound, /destinationId:\s*command\.destinationId/);
+assert.match(outbound, /lines:\s*command\.review\.lines/);
+assert.match(outbound, /result\.withdrawal\.status\s*!==\s*['"]FINALIZED['"]/);
+const serverRoute = read('app/api/central-depositos/operations/route.ts');
+assert.match(serverRoute, /verifyWarehouseRequest\s*\(/);
+assert.match(serverRoute, /case\s+['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
+assert.match(serverRoute, /finalizeWarehouseWithdrawalServer\s*\(/);
+assert.match(serverRoute, /withdrawnBy:\s*access\.email/);
+assert.doesNotMatch(serverRoute, /withdrawnBy:\s*body\.input\.withdrawnBy/);
+const mobileTrust = read('lib/server/warehouseMobileTrust.mjs');
+assert.match(mobileTrust, /['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
 assert.match(outbound, /createWarehouseWithdrawalId/);
 assert.match(outbound, /createWarehouseWithdrawalLineId/);
 assert.match(outbound, /listWarehouseDestinationsCached/);
