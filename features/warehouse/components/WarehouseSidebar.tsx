@@ -36,6 +36,7 @@ interface WarehouseSidebarProps {
   userDisplayName: string;
   showMobileAccess: boolean;
   onClose: () => void;
+  onNavigate: (href: string) => void;
   onLogout: () => void | Promise<void>;
 }
 
@@ -45,6 +46,7 @@ export function WarehouseSidebar({
   userDisplayName,
   showMobileAccess,
   onClose,
+  onNavigate,
   onLogout,
 }: WarehouseSidebarProps) {
   return (
@@ -131,10 +133,10 @@ export function WarehouseSidebar({
               const Icon = SECTION_ICONS[item.id];
               const active = item.id === activeSection;
               return (
-                <Link
+                <button
+                  type="button"
+                  onClick={() => onNavigate(item.href)}
                   key={item.id}
-                  href={item.href}
-                  onClick={onClose}
                   className="emprovex-sidebar-nav-item"
                   data-active={active ? 'true' : 'false'}
                   aria-current={active ? 'page' : undefined}
@@ -142,7 +144,7 @@ export function WarehouseSidebar({
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
                   <span>{item.label}</span>
-                </Link>
+                </button>
               );
             })}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useWarehouseTabNavigation } from './WarehouseTabNavigation';
 import {
   Check,
   Move,
@@ -776,7 +776,7 @@ function PalletWorldLabel({
 }
 
 export function WarehouseLandingOperational({ workspaceId }: { workspaceId: string }) {
-  const router = useRouter();
+  const navigateWarehouseTab = useWarehouseTabNavigation();
   const [data, setData] = useState<LandingData>(INITIAL_DATA);
   const [visualOverrides, setVisualOverrides] = useState<WarehouseLandingVisualOverrides>({});
   const [savedVisualOverrides, setSavedVisualOverrides] = useState<WarehouseLandingVisualOverrides>({});
@@ -1102,8 +1102,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   ];
 
   const openDepot = useCallback((depotId: string) => {
-    router.push('/central-depositos/meus-depositos?deposito=' + encodeURIComponent(depotId));
-  }, [router]);
+    navigateWarehouseTab('/central-depositos/meus-depositos?deposito=' + encodeURIComponent(depotId));
+  }, [navigateWarehouseTab]);
 
   if (data.loading && !data.depots.length) {
     return (
@@ -1333,7 +1333,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
                   onActivate={(pendingGroup) => {
                     if (editMode || !pendingGroup.key) return;
                     setHoveredPendingKey(null);
-                    router.push(
+                    navigateWarehouseTab(
                       '/central-depositos/cadastro-de-itens?aba=pendentes&nf='
                         + encodeURIComponent(pendingGroup.key)
                     );
