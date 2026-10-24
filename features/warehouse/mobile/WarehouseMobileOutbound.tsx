@@ -2,6 +2,7 @@
 
 import { ArrowLeft, CheckCircle2, ShieldCheck, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
+import { auth } from '../../../lib/firebase';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode';
 import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
@@ -57,6 +58,12 @@ type Review = {
   baseQuantity:number;
   lines:WarehouseWithdrawalLineInput[];
 };
+type PendingWithdrawal = {
+  workspaceId:string;ug:string;uid:string;destinationId:string;review:Review;
+};
+function pendingKey(workspaceId:string,uid:string) {
+  return 'emprovex:mobile-withdrawal-r2:'+workspaceId+':'+uid;
+}
 type Success = {
   withdrawalId:string; movementIds:string[];
   quantity:number;
@@ -120,6 +127,7 @@ function Option({onClick,title,detail,disabled=false}:{onClick:()=>void;title:st
 export function WarehouseMobileOutbound() {
   const workspace=useWarehouseWorkspaceContext();
   const requestId=useRef(0);
+  const confirming=useRef(false);
   const [location,setLocation]=useState<LocationScan|null>(null);
   const [product,setProduct]=useState<Product|null>(null);
   const [origin,setOrigin]=useState<Origin|null>(null);
@@ -133,13 +141,40 @@ export function WarehouseMobileOutbound() {
   const [success,setSuccess]=useState<Success|null>(null);
   const [working,setWorking]=useState(false);
   const [message,setMessage]=useState<string|null>(null);
+  const [pending,setPending]=useState<PendingWithdrawal|null>(null);
+  const [recoveryLoaded,setRecoveryLoaded]=useState(false);
+
+  // Após reload/queda de rede, NÃO gerar outra identidade de retirada.
+  // O mesmo comando persiste apenas nesta sessão e neste usuário/workspace.
+  useEffect(()=>{
+    const uid=auth.currentUser?.uid;
+    if(!uid){setRecoveryLoaded(true);return;}
+    try {
+      const saved=sessionStorage.getItem(pendingKey(workspace.workspaceId,uid));
+      if(saved) {
+        const raw=JSON.parse(saved) as Partial<PendingWithdrawal>;
+        if(raw.workspaceId!==workspace.workspaceId||raw.ug!==workspace.ug
+          ||raw.uid!==uid||typeof raw.destinationId!=='string'
+          ||!raw.review||!/^wd_[a-f0-9]{32}$/.test(raw.review.withdrawalId)
+          ||!Array.isArray(raw.review.lines)||raw.review.lines.length===0) {
+          throw Error('WAREHOUSE_WITHDRAWAL_PENDING_INVALID');
+        }
+        setPending(raw as PendingWithdrawal);
+      }
+    } catch {
+      // Não apagar um comando possivelmente confirmado sem reconciliação.
+      setMessage('Há uma saída pendente que não pôde ser recuperada nesta sessão. Consulte o histórico antes de criar outra.');
+    }
+    setRecoveryLoaded(true);
+  },[workspace.workspaceId,workspace.ug]);
 
   const reset=useCallback(()=>{
+    if(pending)return; // Baixa incerta nunca é descartada por troca de tela.
     requestId.current++;
     setLocation(null);setProduct(null);setOrigin(null);setQuantityText('');
     setReview(null);setDestinationId('');setNewDestination('');setDestinationReady(false);
     setSuccess(null);setMessage(null);setWorking(false);
-  },[]);
+  },[pending]);
 
   const options=(value:Product):Origin[]=>value.availability.locationBalances
     .filter((row):row is WarehouseLocationBalance & {position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>}=>
@@ -263,27 +298,57 @@ export function WarehouseMobileOutbound() {
     finally{setWorking(false);}
   };
 
-  const confirm=async()=>{
-    if(!product||!origin||!review||!destinationReady||!destinationId||working)return;
-    setWorking(true);setMessage(null);
+  const resumeWithdrawal=async(command:PendingWithdrawal)=>{
+    if(confirming.current)return;
+    confirming.current=true;setWorking(true);setMessage(null);
     try {
+      const uid=auth.currentUser?.uid;
+      if(!uid||command.uid!==uid||command.workspaceId!==workspace.workspaceId
+        ||command.ug!==workspace.ug)throw Error('WAREHOUSE_WITHDRAWAL_AUTH_REQUIRED');
       const result=await warehouseServerCommand<FinalizeWarehouseMaterialWithdrawalResult>(
-        workspace.workspaceId,'WITHDRAWAL_FINALIZE_MOBILE',{
-          withdrawalId:review.withdrawalId,destinationId,lines:review.lines,
+        command.workspaceId,'WITHDRAWAL_FINALIZE_MOBILE',{
+          withdrawalId:command.review.withdrawalId,
+          destinationId:command.destinationId,lines:command.review.lines,
         });
+      if(result.withdrawal.id!==command.review.withdrawalId
+        ||result.withdrawal.status!=='FINALIZED') {
+        throw Error('WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED');
+      }
       let updated:number|null=null;
-      try {
-        const availability=await loadWarehouseMobileOutboundAvailability(
-          workspace.workspaceId,product.availability.material.id);
-        updated=availability.balance.quantity;
-      } catch { /* O commit ja esta confirmado; nao induzir nova baixa por falha de refresh. */ }
+      if(product) {
+        try {
+          const availability=await loadWarehouseMobileOutboundAvailability(
+            command.workspaceId,product.availability.material.id);
+          updated=availability.balance.quantity;
+        } catch { /* Commit já confirmado; leitura complementar não decide sucesso. */ }
+      }
+      sessionStorage.removeItem(pendingKey(command.workspaceId,uid));
+      setPending(null);
       setSuccess({
         withdrawalId:result.withdrawal.id,movementIds:result.movementIds,
-        quantity:review.baseQuantity,balance:updated,
+        quantity:command.review.baseQuantity,balance:updated,
       });
       setMessage(null);
+    }catch(e){
+      // Retirar da sessão um comando de resultado desconhecido permitiria dupla baixa.
+      setMessage(messageFor(e)+' Retente a MESMA retirada abaixo; não inicie outra.');
+    }finally{confirming.current=false;setWorking(false);}
+  };
+  const confirm=async()=>{
+    if(!product||!origin||!review||!destinationReady||!destinationId
+      ||working||confirming.current||pending)return;
+    try {
+      const uid=auth.currentUser?.uid;
+      if(!uid)throw Error('WAREHOUSE_WITHDRAWAL_AUTH_REQUIRED');
+      const command:PendingWithdrawal={
+        workspaceId:workspace.workspaceId,ug:workspace.ug,uid,destinationId,review,
+      };
+      // Persistir ANTES do envio: uma resposta perdida ou reload preserva
+      // withdrawalId, lineIds, validades e payload exatamente idênticos.
+      sessionStorage.setItem(pendingKey(workspace.workspaceId,uid),JSON.stringify(command));
+      setPending(command);
+      await resumeWithdrawal(command);
     }catch(e){setMessage(messageFor(e));}
-    finally{setWorking(false);}
   };
 
   const allPositions=product?options(product):[];
@@ -306,7 +371,18 @@ export function WarehouseMobileOutbound() {
       Verificando dados com o servidor…
     </p>}
 
-    {!success&&<Panel title="1 · LER CÓDIGO DE BARRAS">
+    {!recoveryLoaded&&<p className="text-sm font-semibold">Verificando retirada pendente nesta sessão…</p>}
+    {pending&&<Panel title="Retirada pendente · reconciliar antes de continuar">
+      <p className="text-sm font-semibold text-amber-900">
+        O resultado da última confirmação pode ter sido perdido pela rede.
+        Não será gerada uma segunda retirada: o servidor verificará a mesma identidade.
+      </p>
+      <p className="break-all font-mono text-[10px]">{pending.review.withdrawalId}</p>
+      <Primary disabled={working} onClick={()=>void resumeWithdrawal(pending)}>
+        {working?'VERIFICANDO…':'VERIFICAR E RETOMAR A MESMA SAÍDA'}
+      </Primary>
+    </Panel>}
+    {recoveryLoaded&&!pending&&!success&&<Panel title="1 · LER CÓDIGO DE BARRAS">
       {!location&&!product&&<WarehouseMobileScanner
         expectation="EXPECT_PRODUCT_OR_LOCATION"
         identifyScan={classifyWarehouseMobileProductScan}
@@ -348,7 +424,7 @@ export function WarehouseMobileOutbound() {
       </button>}
     </Panel>}
 
-    {product&&origin&&!review&&!success&&<Panel title="2 · INDICAR QUANTIDADE">
+    {recoveryLoaded&&!pending&&product&&origin&&!review&&!success&&<Panel title="2 · INDICAR QUANTIDADE">
       <p className="text-xs text-slate-600">
         Apresentação: {product.association
           ?unit(product.association.presentation.code,product.association.presentation.label)
@@ -365,7 +441,7 @@ export function WarehouseMobileOutbound() {
       <Primary onClick={continueQuantity}>Continuar para destino</Primary>
     </Panel>}
 
-    {review&&!destinationReady&&!success&&<Panel title="3 · DESTINO">
+    {recoveryLoaded&&!pending&&review&&!destinationReady&&!success&&<Panel title="3 · DESTINO">
       <p className="text-xs font-semibold text-slate-600">
         A identidade do responsável será registrada automaticamente pela conta autenticada.
       </p>
@@ -393,7 +469,7 @@ export function WarehouseMobileOutbound() {
       </Primary>
     </Panel>}
 
-    {review&&destinationReady&&!success&&<Panel title="4 · REVISAR E CONFIRMAR">
+    {recoveryLoaded&&!pending&&review&&destinationReady&&!success&&<Panel title="4 · REVISAR E CONFIRMAR">
       <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-xs font-semibold"
         data-testid="warehouse-mobile-outbound-review">
         <p className="flex items-center gap-2 font-black text-emerald-800">
