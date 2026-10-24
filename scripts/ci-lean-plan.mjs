@@ -73,14 +73,35 @@ export function classifyChanges(files, importers = []) {
   return { domains: DOMAINS.filter(x => domains.has(x)), scripts: [...selected].sort(), reasons };
 }
 
+// Include both sides of renames. Otherwise moving an authorization module
+// into a documentation path could incorrectly look like a docs-only change.
+export function parseGitNameStatusZ(output) {
+  const fields = output.split('\0');
+  const files = [];
+  let index = 0;
+  while (index < fields.length) {
+    const status = fields[index++];
+    if (!status) continue;
+    if (!/^[ACDMRT][0-9]*$/.test(status)) throw Error('CI_LEAN_UNRECOGNIZED_DIFF_STATUS: ' + status);
+    const first = fields[index++];
+    if (!first) throw Error('CI_LEAN_MALFORMED_DIFF');
+    files.push(normalized(first));
+    if (/^[RC]/.test(status)) {
+      const second = fields[index++];
+      if (!second) throw Error('CI_LEAN_MALFORMED_RENAME');
+      files.push(normalized(second));
+    }
+  }
+  if (!files.length) throw Error('CI_LEAN_EMPTY_DIFF: diff empty or base unavailable');
+  return [...new Set(files)];
+}
+
 export function changedFiles(base = process.env.GITHUB_BASE_REF, cwd = process.cwd()) {
   const args = base
-    ? ['diff', '--name-only', '--diff-filter=ACMRD', 'origin/' + base + '...HEAD']
-    : ['diff', '--name-only', '--diff-filter=ACMRD', 'HEAD^', 'HEAD'];
-  const text = execFileSync('git', args, { cwd, encoding: 'utf8', timeout: 30000 });
-  const files = text.split(/\r?\n/).map(normalized).filter(Boolean);
-  if (!files.length) throw Error('CI_LEAN_EMPTY_DIFF: diff empty or base unavailable');
-  return files;
+    ? ['diff', '--name-status', '-z', '--find-renames', '--diff-filter=ACMRDT', 'origin/' + base + '...HEAD']
+    : ['diff', '--name-status', '-z', '--find-renames', '--diff-filter=ACMRDT', 'HEAD^', 'HEAD'];
+  const output = execFileSync('git', args, { cwd, encoding: 'utf8', timeout: 30000 });
+  return parseGitNameStatusZ(output);
 }
 
 /**
