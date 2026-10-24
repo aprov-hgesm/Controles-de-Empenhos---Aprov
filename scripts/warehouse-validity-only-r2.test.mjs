@@ -27,6 +27,14 @@ test('nenhuma area ativa seleciona prioridade FEFO ou exibe lotes tecnicos',()=>
   assert.doesNotMatch(csv,/'Lote', 'SISCOFIS'/);
   assert.doesNotMatch(read('lib/warehouse/logisticsAlerts.ts'),/Lote ' \+ lot\.code/);
   assert.match(read('lib/warehouse/stockView.ts'),/left\.material\.description\.localeCompare/);
+  const positionCheck=read('features/warehouse/mobile/WarehouseMobilePositionCheck.tsx');
+  assert.doesNotMatch(positionCheck,/warehouseLotDisplayCode|Lote \{/);
+  const intake=read('features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx');
+  assert.doesNotMatch(intake,/referência técnica do lote|posição, lote, barcode/);
+  const validityRepository=read('lib/warehouse/lotRepository.ts');
+  assert.doesNotMatch(validityRepository,/expiryCompare|expiryA\.localeCompare/);
+  assert.match(validityRepository,/left\.lot\.id\.localeCompare\(right\.lot\.id\)/);
+
 });
 test('baixa automatica ignora ordem de validade e preserva totais por referencia',()=>{
   const lots=[
