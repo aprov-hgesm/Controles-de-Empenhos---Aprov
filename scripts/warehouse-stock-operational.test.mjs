@@ -337,7 +337,7 @@ test('subposição também conta como localizada e UNASSIGNED não entra na list
   );
 });
 
-test('visão de Estoque ordena primeiro a menor validade e deixa sem validade por último', () => {
+test('visão de Estoque usa ordem por descrição sem priorização de vencimento', () => {
   const rows = [
     {
       balance: { quantity: 10 },
@@ -358,7 +358,7 @@ test('visão de Estoque ordena primeiro a menor validade e deixa sem validade po
 
   assert.deepEqual(
     rows.map((item) => item.material.description),
-    ['Validade mais próxima', 'Validade posterior', 'Material sem validade']
+    ['Material sem validade', 'Validade mais próxima', 'Validade posterior']
   );
 });
 

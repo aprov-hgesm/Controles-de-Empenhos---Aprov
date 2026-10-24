@@ -239,7 +239,7 @@ test('lote escolhido precisa corresponder à posição e quantidade; lote contin
     presentation: material.unit,
     position: { kind: 'UNASSIGNED' },
   });
-  assert.equal(withoutLot.lot, null, 'FEFO não escolhe lote silenciosamente');
+  assert.equal(withoutLot.lot, null, 'sem escolha automática pelo motor legado');
 
   assert.throws(
     () =>
@@ -256,16 +256,7 @@ test('lote escolhido precisa corresponder à posição e quantidade; lote contin
   );
 });
 
-test('FEFO existente continua sendo recomendação derivada e não entra no plano sem escolha', () => {
-  const sooner = lot({ id: 'lot_' + '1'.repeat(32), code: 'PRIMEIRO', expiresOn: '2026-10-01' });
-  const later = lot({ id: 'lot_' + '2'.repeat(32), code: 'DEPOIS', expiresOn: '2026-12-01' });
-  assert.equal(
-    lotDomain.selectWarehouseFefoLot(
-      [later, sooner],
-      new Date('2026-09-23T12:00:00Z')
-    )?.code,
-    'PRIMEIRO'
-  );
+test('contrato da saída não depende da prioridade por validade', () => {
   const plan = outbound.prepareWarehouseExpressOutbound({
     material,
     balance,

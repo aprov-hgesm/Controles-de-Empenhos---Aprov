@@ -61,7 +61,7 @@ assert.match(ui, /CONFIRMAR SAÍDA/);
 assert.match(ui, /mesma identificação é preservada/);
 assert.match(ui, /Destino/);
 assert.doesNotMatch(ui, /Retirado por|pickedBy|withdrawnBy/);
-assert.match(ui, /FEFO/);
+assert.doesNotMatch(ui, /FEFO/);
 assert.doesNotMatch(ui, /escolher lote|selecionar lote|onClick=\{\(\) => chooseLot/);
 assert.doesNotMatch(ui, /\bsetDoc\s*\(/);
 assert.doesNotMatch(ui, /\bupdateDoc\s*\(/);

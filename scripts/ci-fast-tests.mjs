@@ -47,7 +47,7 @@ for (const path of warehouseFiles) {
       'test:adm-deposito-outbound-return', 'test:adm-deposito-locations'].forEach(add);
   }
 }
-// Saida Móvel R2 — scanner dual e FEFO automatico seguro.
+// Saida Móvel R2 — scanner dual e baixa por validade sem FEFO.
 if (files.some(p => /^(?:features\/warehouse\/mobile\/WarehouseMobile(?:Outbound|IntakeAllocation)\.tsx|lib\/warehouse\/(?:mobileOutboundPlan\.mjs|mobileScanner\.ts|mobileOutbound\.ts)|app\/api\/central-depositos\/operations\/route\.ts|lib\/server\/warehouseMobileTrust\.mjs|scripts\/mobile-outbound-unified\.test\.mjs)$/.test(p))) {
   add('test:mobile-outbound-unified');
 }
