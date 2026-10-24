@@ -26,6 +26,7 @@ const MOBILE = [
   'test:mobile-r1-scanner', 'test:mobile-r1-outbound',
   'test:mobile-r1-integration-3', 'test:mobile-outbound-unified',
   'verify:mobile-r1-integration-3',
+  'verify:mobile-r1-integration-final', 'verify:mobile-k-canonical-ops',
 ];
 const RULES = [
   [/^(?:app\/api\/central-depositos\/|app\/central-depositos\/|app\/operador-movel\/|features\/warehouse\/|components\/warehouse\/|lib\/warehouse\/|lib\/server\/warehouse|scripts\/(?:warehouse|mobile|verify-(?:warehouse|mobile|adm-deposito|central-depositos|emprovex-warehouse)))/, ['warehouse']],
