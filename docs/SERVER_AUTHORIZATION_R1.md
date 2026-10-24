@@ -37,3 +37,7 @@ O servidor confia em **identidade Firebase autenticada** e em dados de setor/wor
 ## Migração incremental das leituras operacionais — 24/10/2026
 
 O novo endpoint `GET /api/core/operational-read?resource=...` atende exclusivamente a uma lista fechada (`empenhos`, `invoices`, `alerts`, `comissoes`, `cronogramas`) e deriva o caminho `workspaces/{workspaceId}` da identidade Firebase validada no servidor. `lib/firebaseSync.ts` usa essa API para listagens pontuais; os **listeners realtime** e as **transações de NF/NS, exclusão de empenhos, sessão e billing** continuam com SDK cliente e regras vigentes. Os testes de emulador verificam tipos aninhados, ID interno de NF, escopo e suspensão. Esta migração de leitura não autoriza remover Rules.
+
+## Alertas e comissões
+
+As funções `saveAlert`, `removeAlert` e `saveComissao` de `firebaseSync.ts` agora chamam `POST /api/core/simple-write`, com recurso/action explicitamente permitidos, registro de UID no servidor, limites de tamanho, validação de campos e precondições de versão do Firestore para atualização. Excluir comissões mantém o endpoint de lote atômico existente. A migração não inclui NS, exclusão de empenhos, sessões ou faturamento, que ainda exigem contratos transacionais especializados. Teste autenticado com Firebase Emulator cobre criação, leitura, exclusão, forja de autor, injeção de workspace e suspensão.

@@ -10,6 +10,7 @@ import { evaluateServerAuthorization } from '../lib/server/authorizationPolicy';
 import { assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
 import { GET as getSuppliers, POST as saveSupplier } from '../app/api/core/suppliers/route';
 import { GET as getOperational } from '../app/api/core/operational-read/route';
+import { POST as saveSimple } from '../app/api/core/simple-write/route';
 import { POST as transactEmpenho } from '../app/api/core/empenhos/transact/route';
 import { POST as deleteCommissions } from '../app/api/core/comissoes/bulk-delete/route';
 
@@ -127,6 +128,43 @@ async function main() {
   }));
   assert.equal(forgedScope.status,400,'workspace override rejected');
   console.log('PASS: scoped IAM operational reads, nested fields, invoice identity');
+  const simple=(resource:string,action:string,payload:unknown,token=sector.token)=>
+    saveSimple(new Request('http://localhost/api/core/simple-write',{
+      method:'POST',headers:{authorization:token,'content-type':'application/json'},
+      body:JSON.stringify({resource,action,payload}),
+    }));
+  const alert={id:'alert_demo_01',type:'ATENÇÃO',status:'NOVO',source:'SISTEMA',
+    title:'Aviso de teste',subtitle:'Atenção',description:'Mensagem de teste',
+    date:'2026-10-24',userId:'forged-other-user'};
+  const savedAlert=await simple('alerts','save',alert);
+  assert.equal(savedAlert.status,200,'alert saved through verified server IAM');
+  const alertList=await operationalRequest('alerts');
+  assert.equal(alertList.status,200,'alerts list');
+  const alertRows=await alertList.json() as {items:Array<{id:string,userId:string}>};
+  assert.equal(alertRows.items.find(x=>x.id===alert.id)?.userId,sector.uid,
+    'alert author is verified UID');
+  const forgedAlert=await simple('alerts','save',{...alert,workspaceId:'victim'});
+  assert.equal(forgedAlert.status,400,'foreign workspace field rejected');
+  const deletedAlert=await simple('alerts','delete',alert.id);
+  assert.equal(deletedAlert.status,200,'alert deletion');
+  const afterAlert=await operationalRequest('alerts');
+  const remaining=await afterAlert.json() as {items:Array<{id:string}>};
+  assert.ok(!remaining.items.some(x=>x.id===alert.id),'deleted alert not returned');
+  const commission={id:'comissao_demo_03',mesReferencia:'2026-10',
+    boletimNumero:'37',boletimData:'2026-10-24',
+    presidente:{postoGraduacao:'CAP',nomeCompleto:'PRESIDENTE DEMO'},
+    auxiliares:[{postoGraduacao:'SGT',nomeCompleto:'MEMBRO DEMO'}],
+    userId:'forged-user'};
+  const savedCommission=await simple('comissoes','save',commission);
+  assert.equal(savedCommission.status,200,'commission saved via server IAM');
+  const commissionsList=await operationalRequest('comissoes');
+  assert.equal(commissionsList.status,200,'commissions list');
+  const commissions=await commissionsList.json() as {items:Array<{id:string,userId:string}>};
+  assert.equal(commissions.items.find(x=>x.id===commission.id)?.userId,sector.uid);
+  const outsiderSimple=await simple('alerts','save',alert);
+  assert.equal(outsiderSimple.status,200,'sector still active');
+  console.log('PASS: authenticated alerts CRUD, commission write, forged author and tenant field');
+
 
   const supplier={id:'supplier_11222333000181',cnpj:'11222333000181',
     legalName:'Fornecedor de teste 01',email:'fornecedor@example.test',
@@ -186,6 +224,9 @@ async function main() {
   console.log('PASS: no directory entry denied');
   const intruderRead=await operationalRequest('empenhos',intruder.token);
   assert.equal(intruderRead.status,403,'outsider cannot enumerate operational data');
+  const intruderWrite=await simple('alerts','save',alert,intruder.token);
+  assert.equal(intruderWrite.status,403,'outsider cannot write alerts');
+
 
 
   const baseEmpenho={
@@ -264,6 +305,9 @@ async function main() {
   console.log('PASS: disabled account denied');
   const revokedRead=await operationalRequest('empenhos');
   assert.equal(revokedRead.status,403,'suspended sector cannot read operational data');
+  const revokedWrite=await simple('alerts','save',alert);
+  assert.equal(revokedWrite.status,403,'suspended sector cannot save alerts');
+
 
   const blockedSupplier=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
     method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
