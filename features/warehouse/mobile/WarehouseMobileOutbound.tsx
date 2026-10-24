@@ -360,7 +360,7 @@ export function WarehouseMobileOutbound() {
         placeholder="Quantidade a retirar"
         className="min-h-12 w-full rounded-xl border border-slate-200 px-4 font-bold"/>
       <p className="text-xs text-slate-500">
-        A validade continua registrada automaticamente. Não é necessário escolher lotes.
+        A validade continua registrada automaticamente. A baixa de estoque é conciliada automaticamente.
       </p>
       <Primary onClick={continueQuantity}>Continuar para destino</Primary>
     </Panel>}
