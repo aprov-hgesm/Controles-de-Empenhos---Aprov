@@ -10,6 +10,7 @@ Não foi executado merge, deploy, atualização de Rules ou acesso a dados produ
 - `lib/server/warehouseAccess.ts` verifica JWT Firebase, provider, UID vinculado, status da conta, workspace e UG, sem aceitar essas identidades declaradas pelo corpo da requisição.
 - A leitura dos documentos `platformAccounts/{email}` e `workspaces/{id}` passou para `lib/server/coreIdentityStore.ts`, usando **IAM server-side** com conta de serviço e allowlist de caminhos; não depende do Firebase token como autorização da consulta Firestore. Emulador somente com projeto `demo-` e host local, fora de produção.
 - APIs Warehouse de operações, alocação/consumo imediato, entrada avulsa, fila de NF, status e importação XLSX passam pela mesma política.
+- Novo endpoint autenticado `GET /api/authz/context` fornece ao navegador apenas papel, UG e workspace obtidos de fontes verificadas (sem aceitar escopo do cliente). Preparado para substituir verificações locais na migração desktop; não dispensa a validação de cada operação.
 - A API de leitura/extração de Nota de Empenho (`/api/empenhos/parse-ne`) exige também a identidade operacional ativa no servidor, em vez de aceitar qualquer Firebase JWT assinado. Motores específicos continuam responsáveis por saldo, lotes, transações, idempotência e consistência.
 - Testes de política isolada e scanner de integração das rotas em `scripts/server-authz-policy.test.mjs`.
 

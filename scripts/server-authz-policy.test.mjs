@@ -100,6 +100,15 @@ test('verificadores de administrador integram política central',()=>{
   }
 });
 
+test('endpoint de contexto usa identidade autoritativa, sem aceitar escopo declarado',()=>{
+  const context=read('app/api/authz/context/route.ts');
+  assert.match(context,/verifyPlatformPrincipal/);
+  assert.match(context,/principal.workspaceId/);
+  assert.match(context,/principal.ug/);
+  assert.match(context,/no-store/);
+  assert.doesNotMatch(context,/request\.json\(/);
+});
+
 test('consulta do diretório usa IAM e NÃO o token Firebase do cliente',()=>{
   const access=read('lib/server/warehouseAccess.ts');
   const platform=read('lib/server/platformAuthorization.ts');
