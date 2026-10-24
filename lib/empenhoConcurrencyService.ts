@@ -34,7 +34,8 @@ async function writeEmpenhoServer(
       throw new Error(body.error||'EMPENHO_SERVER_UNAVAILABLE');
     }
     if(!body.ok||!body.result)throw new Error('Resposta de empenho inválida.');
-    recordWorkspaceUsage(scope,{documentReads:1,documentWrites:1},'empenhos');
+    // Estimativa do comando: 1 NE + 1 lock. Identidade do setor é verificada separadamente.
+    recordWorkspaceUsage(scope,{documentReads:2,documentWrites:1},'empenhos');
     return body.result;
   }catch(error){
     if(error instanceof EmpenhoConcurrencyError)throw error;
