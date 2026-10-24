@@ -760,7 +760,7 @@ try {
       withdrawalId:headId,destinationId:atomicDestination.id,
       withdrawnBy:'Operador QA',
       lines:[0,1].map(line=>({
-        lineId:'wline_'+String.fromCharCode(97+stageIndex*2+line).repeat(32),
+        lineId:'wline_'+String(stageIndex+1).repeat(31)+String(line+1),
         materialId:legacySeed.material.id,
         materialDescription:legacySeed.material.description,
         requestedQuantity:1,baseQuantity:1,
