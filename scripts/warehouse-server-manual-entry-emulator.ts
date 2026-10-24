@@ -198,6 +198,30 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
   console.log('PASS: saída expressa server-only, saldo/lote atômicos, replay e falta de estoque');
 
+  // Segurança R2: uma linha adulterada sem lotId NÃO consome saldo
+  // já totalmente vinculado a referências técnicas de validade.
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,lotId:null,
+    idempotencyKey:'warehouse-r2-express-untracked-bypass-01',requestedQuantity:1,
+  }),/WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
+  assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,72);
+  console.log('PASS: servidor rejeita bypass lotId nulo quando todo saldo está atribuído');
+
+  await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:first.validity!.id,input:{expiresOn:'2026-01-01'},
+  });
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,idempotencyKey:'warehouse-r2-expired-bypass-01',
+    requestedQuantity:1,
+  }),/WAREHOUSE_OUTBOUND_LOT_EXPIRED/);
+  await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:first.validity!.id,input:{expiresOn:'2027-05-01'},
+  });
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
+  console.log('PASS: servidor rejeita referencia vencida mesmo com cliente adulterado');
+
+
   const returnConsumptionId='cons_'+'c'.repeat(64);
   const returnSeedUrl='http://127.0.0.1:8080/v1/projects/demo-emprovex-security'
     +'/databases/emprovex-warehouse/documents/warehouse/'+workspaceId
