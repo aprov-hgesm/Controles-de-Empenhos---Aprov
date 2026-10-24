@@ -769,7 +769,7 @@ try {
     '2:movement','2:consumption','2:progress'];
   for(let stageIndex=0;stageIndex<legacyStages.length;stageIndex++) {
     const stage=legacyStages[stageIndex];
-    const headId='wd_'+String.fromCharCode(97+stageIndex).repeat(32);
+    const headId='wd_'+String(stageIndex+1).repeat(32);
     const testInput={
       withdrawalId:headId,destinationId:atomicDestination.id,
       withdrawnBy:'Operador QA',
@@ -814,7 +814,7 @@ try {
     console.log('PASS: recuperação v1 em '+stage+' sem segunda baixa');
   }
   // O cabeçalho FINALIZED isolado não constitui prova do saldo/consumo.
-  const phantomId='wd_'+'f'.repeat(32);
+  const phantomId='wd_'+'0'.repeat(32);
   const phantomLine={
     lineId:'wline_'+'f'.repeat(32),
     materialId:legacySeed.material.id,materialDescription:legacySeed.material.description,
