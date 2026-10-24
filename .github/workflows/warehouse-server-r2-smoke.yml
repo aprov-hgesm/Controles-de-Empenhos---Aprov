@@ -5,6 +5,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'lib/server/warehouse*.ts'
+      - 'lib/server/platformAuthorization.ts'
+      - 'lib/server/authorizationPolicy.ts'
+      - 'lib/server/coreIdentityStore.ts'
+      - 'lib/server/firebaseFounderAuth.ts'
+      - 'scripts/server-authorization-emulator.ts'
       - 'lib/warehouse/*Repository.ts'
       - 'lib/warehouse/serverCommandClient.ts'
       - 'app/api/central-depositos/**'
@@ -50,6 +55,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: npm ci
+      - name: Authorization R1 — verified identity, IAM, cross-tenant and suspension
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/server-authorization-emulator.ts"
       - name: Server R2 smoke (demo project only)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
       - name: Warehouse Bulk Stock — Excel parser and template guards

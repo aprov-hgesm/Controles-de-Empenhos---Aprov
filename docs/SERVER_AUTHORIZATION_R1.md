@@ -29,3 +29,7 @@ O servidor confia em **identidade Firebase autenticada** e em dados de setor/wor
 5. Somente promover produção manualmente após aceite explícito e possibilidade de rollback, conforme runbook `docs/EMPROVEX_RELEASE_POWERSHELL.md`.
 
 **Handoff:** Onde estamos — núcleo de autorização server-side em PR isolado. Fazendo — certificação do código/política e compatibilidade. Quem — executor GitHub. Próximo — verificar CI e testar a autorização autenticada no Emulador e Vercel Staging. Quem fará — executor (GitHub/CI) e responsável pela conta Vercel (PowerShell). Regras e produção permanecem intactas.
+
+### Teste autenticado integrado (Firebase Auth e Firestore Emulator)
+
+`scripts/server-authorization-emulator.ts` valida JWT de setor real no Emulator, reconsulta autoritativa pela API IAM simulada (`owner`), rejeição a UID divergente, conta desativada, workspace suspenso, UG divergente, provider incorreto, outsider sem cadastro e ledger genérico. Workflow Warehouse Server R2 Smoke executa este teste no banco demo isolado. O CI PASS é requerido antes do release.
