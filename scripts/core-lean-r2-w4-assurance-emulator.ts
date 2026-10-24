@@ -281,6 +281,48 @@ async function run() {
   await noEffects(overflow);
   pass('identidades arbitrárias, linhas duplicadas e limites rejeitados');
 
+  const secondValidity=await writeWarehouseLotServer(access,'CREATE',{
+    materialId:material.id,code:'W4-V-002',quantity:3,
+    position,expiresOn:'2027-12-01',
+  });
+  assert.equal(secondValidity.quantity,3);
+  const withConversion=await saveWarehouseMaterialServer(access,{
+    ...renamed,conversions:[{
+      presentation:{code:'box',label:'Caixa 2 KG'},factorToBaseUnit:2,
+    }],
+  });
+  assert.equal(withConversion.conversions.length,1);
+  const secondLine:WarehouseWithdrawalLineInput={
+    ...line(2,262,secondValidity.id),requestedQuantity:1,
+    baseQuantity:2,presentation:{code:'box',label:'Caixa 2 KG'},
+    presentationLabel:'Caixa 2 KG',lotCode:secondValidity.code,
+  };
+  const splitValidity=command(260,[line(1,261),secondLine]);
+  const splitResult=await finalizeWarehouseWithdrawalServer(access,splitValidity);
+  assert.equal(splitResult.movementIds.length,2);
+  await complete(splitValidity);
+  const splitRecords=await effects(splitValidity);
+  assert.equal(splitRecords.lines[0].movement?.source.lotId,lotId);
+  assert.equal(splitRecords.lines[1].movement?.source.lotId,secondValidity.id);
+  assert.equal(splitRecords.lines[1].movement?.source.factorToBaseUnit,2);
+  assert.equal(splitRecords.lines[1].consumption?.requestedQuantity,1);
+  assert.equal((await read('lots',secondValidity.id))?.quantity,1);
+  assert.deepEqual(await state(),{total:11,local:11,tracked:3});
+  assert.equal((await finalizeWarehouseWithdrawalServer(access,splitValidity)).movementIds.length,0);
+  pass('duas validades no mesmo comando e apresentação convertida 1 caixa = 2 KG');
+
+  await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:secondValidity.id,input:{status:'inactive'},
+  });
+  const inactive=command(270,[{
+    ...line(1,271,secondValidity.id),lotCode:secondValidity.code,
+  }]);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,inactive),
+    /WAREHOUSE_OUTBOUND_LOT_INACTIVE/);
+  await noEffects(inactive);
+  assert.deepEqual(await state(),{total:11,local:11,tracked:3});
+  pass('validade inativa é rejeitada antes do commit sem documentos residuais');
+
   // Negative control: forged FINALIZED v2 header without any movements/consumptions.
   // Should fail until engine checks audit evidence on a confirmed replay.
   const forged=command(300,[line(1,301)]);
