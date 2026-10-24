@@ -37,7 +37,7 @@ import {
   saveWarehouseInventoryCount,
   startWarehouseInventory,
   type WarehouseInventorySessionRecord,
-} from '../../../lib/warehouse/inventoryRepository';
+} from '../../../lib/warehouse/mobileInventoryClient';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
 import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';

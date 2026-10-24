@@ -42,7 +42,7 @@ import {
   createWarehouseDestination,
   finalizeWarehouseMaterialWithdrawal,
   listWarehouseDestinationsCached,
-} from '../../../lib/warehouse/withdrawalRepository';
+} from '../../../lib/warehouse/mobileDestinationClient';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 
