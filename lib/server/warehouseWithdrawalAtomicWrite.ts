@@ -114,7 +114,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
 
   // Um único commit; a transação serializa concorrência por saldo, referência,
   // movimento, consumo e cabeçalho. No replay retorna sem escritas.
-  return warehouseAdminTransaction<FinalizeWarehouseMaterialWithdrawalResult>(
+  const committed=await warehouseAdminTransaction<FinalizeWarehouseMaterialWithdrawalResult>(
     token,[...set],rows=>{
       const old=rows.get(headerPath);
       if(old) {
@@ -309,4 +309,11 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
         writes:[...writes].map(([name,data])=>({path:name,data}))};
     }
   );
+  // Injeção estritamente no Emulator: simula perda da resposta HTTP após
+  // commit remoto confirmado. O mesmo withdrawalId recupera sem nova baixa.
+  if(process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
+    &&process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID==='demo-emprovex-security'
+    &&process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT===input.withdrawalId)
+    return deny('WAREHOUSE_ATOMIC_TEST_RESPONSE_LOST',503);
+  return committed;
 }
