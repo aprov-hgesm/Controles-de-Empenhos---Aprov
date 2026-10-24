@@ -752,6 +752,13 @@ try {
   assert.ok(legacySeed.validity);
   const legacyBalance=()=>getDoc(ref('balances',legacySeed.material.id))
     .then(snapshot=>snapshot.data()?.quantity as number);
+  const seedLegacyHeader=async(id:string,data:Record<string,unknown>)=>{
+    const docPath='warehouse/'+workspaceId+'/withdrawals/'+id;
+    await warehouseAdminTransaction('emulator',[docPath],rows=>{
+      assert.equal(rows.get(docPath),null);
+      return {result:null,writes:[{path:docPath,data}]};
+    });
+  };
   const legacyStages=['1:movement','1:consumption','1:progress',
     '2:movement','2:consumption','2:progress'];
   for(let stageIndex=0;stageIndex<legacyStages.length;stageIndex++) {
@@ -772,7 +779,7 @@ try {
       })),
     };
     const startBalance=await legacyBalance();
-    await setDoc(ref('withdrawals',headId),{
+    await seedLegacyHeader(headId,{
       schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
       id:headId,workspaceId,ug,destinationId:atomicDestination.id,
       destinationName:atomicDestination.name,withdrawnBy:testInput.withdrawnBy,
@@ -812,7 +819,7 @@ try {
   };
   const phantomInput={withdrawalId:phantomId,destinationId:atomicDestination.id,
     withdrawnBy:'Operador QA',lines:[phantomLine]};
-  await setDoc(ref('withdrawals',phantomId),{
+  await seedLegacyHeader(phantomId,{
     schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
     id:phantomId,workspaceId,ug,destinationId:atomicDestination.id,
     destinationName:atomicDestination.name,withdrawnBy:'Operador QA',
