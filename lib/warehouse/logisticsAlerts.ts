@@ -166,15 +166,15 @@ export function buildWarehouseLogisticsAlertCandidates(
     if (state === 'EXPIRED') {
       result.push(candidate(
         'LOT_EXPIRED', lot.id, 'CRITICAL',
-        'Lote vencido', materialName(materialById, lot.materialId),
-        'Lote ' + lot.code + ' possui saldo rastreado e validade vencida em '
+        'Validade vencida', materialName(materialById, lot.materialId),
+        'Há saldo rastreado com validade vencida em '
           + (lot.expiresOn || 'data não informada') + '.'
       ));
     } else if (state === 'NEAR_EXPIRY') {
       result.push(candidate(
         'LOT_NEAR_EXPIRY', lot.id, 'WARNING',
-        'Lote próximo do vencimento', materialName(materialById, lot.materialId),
-        'Lote ' + lot.code + ' vence em ' + (lot.expiresOn || 'data não informada') + '.'
+        'Validade próxima do vencimento', materialName(materialById, lot.materialId),
+        'Há saldo rastreado com validade até ' + (lot.expiresOn || 'data não informada') + '.'
       ));
     }
   }

@@ -40,7 +40,8 @@ import {
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
-import { selectWarehouseFefoLot, warehouseLotExpiryState } from '../../../lib/warehouse/lot';
+import { warehouseLotExpiryState } from '../../../lib/warehouse/lot';
+import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOutboundPlan.mjs';
 import {
   getWarehouseLot,
   listWarehouseLots,
@@ -149,7 +150,7 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
-    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A validade selecionada já não possui quantidade suficiente vinculada.'],
+    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A quantidade vinculada à validade mudou antes da confirmação.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
     ['WAREHOUSE_WITHDRAWAL_LINE_LIMIT', 'A retirada excede o limite operacional de linhas. Finalize esta operação e inicie outra.'],
@@ -301,7 +302,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [selectedPresentationKey, setSelectedPresentationKey] = useState('');
   const [requestedQuantity, setRequestedQuantity] = useState('');
   const [positionKey, setPositionKey] = useState('');
-  const [selectedLotId, setSelectedLotId] = useState('');
   const [newDestinationName, setNewDestinationName] = useState('');
   const [manageDestinations, setManageDestinations] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -450,15 +450,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const materialLots = state.lots
     .filter((item) => item.lot.materialId === selectedMaterialId)
     .map((item) => item.lot);
-  const lotOptions = selectedPosition
-    ? materialLots.filter((lot) =>
-        lot.status === 'active'
-        && lot.quantity > 0
-        && warehouseStockPositionKey(lot.position) === warehouseStockPositionKey(selectedPosition.position)
-      )
-    : [];
-  const fefo = selectWarehouseFefoLot(materialLots);
-  const selectedLot = lotOptions.find((lot) => lot.id === selectedLotId) || null;
 
   const associationMaterial = state.materials.find((material) => material.id === associationMaterialId) || null;
   const associationPresentations = associationMaterial ? presentationOptions(associationMaterial) : [];
@@ -482,7 +473,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setSelectedPresentationKey('');
     setRequestedQuantity('');
     setPositionKey('');
-    setSelectedLotId('');
     setTimeout(() => scannerRef.current?.focus(), 0);
   };
 
@@ -529,15 +519,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       lots,
     };
     const positions = positionOptionsFor(material, balance, selectionState);
-    const materialLots = lots
-      .filter((item) =>
-        item.lot.status === 'active'
-        && item.lot.quantity > 0
-      )
-      .map((item) => item.lot);
-    const suggested = selectWarehouseFefoLot(materialLots);
-    const suggestedPositionKey = suggested ? warehouseStockPositionKey(suggested.position) : '';
-    const position = positions.find((item) => item.key === suggestedPositionKey) || positions[0] || null;
+    const position = positions[0] || null;
 
     setState((current) => {
       const materialById = new Map(current.materials.map((item) => [item.id, item]));
@@ -562,8 +544,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setSelectedPresentationKey('');
       setRequestedQuantity('');
       setPositionKey('');
-      setSelectedLotId('');
-      setUnknownBarcode('');
+        setUnknownBarcode('');
       setMessageKind('info');
       setMessage('Este material ainda não possui saldo alocado fisicamente. Conclua a alocação antes de registrar uma saída.');
       return;
@@ -576,18 +557,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     );
     setRequestedQuantity('');
     setPositionKey(position.key);
-    setSelectedLotId(
-      suggested && warehouseStockPositionKey(suggested.position) === position.key
-        ? suggested.id
-        : ''
-    );
     setUnknownBarcode('');
     setMessageKind('info');
-    setMessage(
-      suggested
-        ? 'Material reconhecido. A validade FEFO foi pré-selecionada como recomendação; ENTER/TAB confirma a linha no carrinho, sem baixar estoque.'
-        : 'Material reconhecido. Informe a quantidade e pressione ENTER ou TAB.'
-    );
+    setMessage('Material reconhecido. Informe a quantidade e pressione ENTER ou TAB.');
     setTimeout(() => quantityRef.current?.focus(), 0);
   };
 
@@ -676,8 +648,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       )
       .reduce((sum, line) => sum + line.baseQuantity, 0);
 
-  const currentReservedLot = (lotId: string) =>
-    cart.filter((line) => line.lotId === lotId).reduce((sum, line) => sum + line.baseQuantity, 0);
 
   const addCurrentLine = () => {
     if (retryRequired || !selectedMaterial || !selectedBalance || !selectedPresentation || !selectedPosition) return;
@@ -709,52 +679,64 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       );
       return;
     }
-    if (
-      selectedLot
-      && currentReservedLot(selectedLot.id) + baseQuantity > selectedLot.quantity + 0.000001
-    ) {
+    // Cada registro técnico da validade recebe uma linha de baixa na unidade-base;
+    // registros tecnicos de validade sao selecionados sem prioridade por vencimento.
+    const reservedLots = new Map<string,number>();
+    const existingLines = cart.filter(line => line.materialId === selectedMaterial.id
+      && warehouseStockPositionKey(line.position) === selectedPosition.key);
+    for (const line of existingLines) {
+      if (line.lotId) reservedLots.set(line.lotId,
+        normalizedQuantity((reservedLots.get(line.lotId) || 0) + line.baseQuantity));
+    }
+    const remainingLots = state.lots
+      .map(item=>item.lot)
+      .filter(lot=>lot.materialId===selectedMaterial.id
+        && warehouseStockPositionKey(lot.position)===selectedPosition.key)
+      .map(lot=>({...lot,quantity:normalizedQuantity(lot.quantity-(reservedLots.get(lot.id)||0))}));
+    if (remainingLots.some(lot=>lot.quantity < -0.000001)) {
       setMessageKind('error');
-      setMessage('As linhas do carrinho excedem a quantidade vinculada à validade selecionada.');
+      setMessage('Há divergência nas quantidades rastreadas por validade. Recarregue o estoque.');
       return;
     }
-
-    const line: CartLine = {
-      lineId: createWarehouseWithdrawalLineId(),
-      materialId: selectedMaterial.id,
-      materialDescription: selectedMaterial.description,
-      requestedQuantity: requested,
-      presentation: selectedPresentation.unit,
-      presentationLabel: unitLabel(selectedPresentation.unit),
-      baseQuantity,
-      unitLabel: unitLabel(selectedMaterial.unit),
-      position: selectedPosition.position,
-      positionLabel: selectedPosition.label,
-      barcodeAssociation: selectedBarcode,
-      barcode: selectedBarcode?.barcode || null,
-      lotId: selectedLot?.id || null,
-      lotCode: selectedLot?.code || null,
-      factorToBaseUnit: selectedPresentation.factor,
-      availableAtPosition: selectedPosition.quantity,
-      availableBalance: selectedBalance.quantity,
-    };
-    setCart((current) => [...current, line]);
+    let parts: Array<{lotId:string|null;quantity:number}>;
+    try {
+      parts=planMobileOutboundAutomaticLots({
+        quantity:baseQuantity,
+        physicalQuantity:normalizedQuantity(selectedPosition.quantity-reserved),
+        lots:remainingLots,
+      });
+    }catch(error){
+      setMessageKind('error');
+      setMessage('A quantidade não pôde ser conciliada com as validades: '+errorMessage(error));
+      return;
+    }
+    if (cart.length + parts.length > WAREHOUSE_WITHDRAWAL_MAX_LINES) {
+      setMessageKind('error');
+      setMessage('Limite de linhas atingido. Finalize esta retirada antes de continuar.');
+      return;
+    }
+    const newLines:CartLine[]=parts.map(part=>({
+      lineId:createWarehouseWithdrawalLineId(),
+      materialId:selectedMaterial.id,
+      materialDescription:selectedMaterial.description,
+      requestedQuantity:part.quantity,baseQuantity:part.quantity,
+      presentation:selectedMaterial.unit,
+      presentationLabel:unitLabel(selectedMaterial.unit),
+      unitLabel:unitLabel(selectedMaterial.unit),
+      position:selectedPosition.position,positionLabel:selectedPosition.label,
+      barcodeAssociation:null,barcode:selectedBarcode?.barcode||null,
+      lotId:part.lotId,
+      lotCode:remainingLots.find(lot=>lot.id===part.lotId)?.code||null,
+      factorToBaseUnit:1,
+      availableAtPosition:selectedPosition.quantity,
+      availableBalance:selectedBalance.quantity,
+    }));
+    setCart((current) => [...current, ...newLines]);
     void loadDestinations();
     setReviewing(false);
     setMessageKind('success');
     setMessage(selectedMaterial.description + ' adicionado ao carrinho. Nenhuma baixa foi realizada ainda.');
     clearCurrentLine();
-  };
-
-  const updateCartQuantity = (lineId: string, value: number) => {
-    if (retryRequired || !Number.isFinite(value) || value <= 0) return;
-    setCart((current) =>
-      current.map((line) =>
-        line.lineId === lineId
-          ? { ...line, requestedQuantity: value, baseQuantity: normalizedQuantity(value * line.factorToBaseUnit) }
-          : line
-      )
-    );
-    setReviewing(false);
   };
 
   const cartIssues = useMemo(() => {
@@ -787,7 +769,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       }
     }
     for (const group of lotGroups.values()) {
-      if (group.total > group.available + 0.000001) issues.push('Carrinho excede a quantidade vinculada à validade selecionada.');
+      if (group.total > group.available + 0.000001) issues.push('Carrinho excede a quantidade vinculada a uma validade.');
     }
     return issues;
   }, [cart, state.lots]);
@@ -1139,32 +1121,17 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                         Posição
-                        <select value={positionKey} onChange={(event) => { setPositionKey(event.target.value); setSelectedLotId(''); }}
+                        <select value={positionKey} onChange={(event) => setPositionKey(event.target.value)}
                           className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
                           {positionOptions.map((option) => (
                             <option key={option.key} value={option.key}>{option.label} · {formatWarehouseNumber(option.quantity)}</option>
                           ))}
                         </select>
                       </label>
-                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                        Validade / FEFO
-                        <select value={selectedLotId} onChange={(event) => setSelectedLotId(event.target.value)}
-                          className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
-                          <option value="">Sem validade vinculada</option>
-                          {lotOptions.map((lot) => (
-                            <option key={lot.id} value={lot.id}>
-                              {formatWarehouseDateOnly(lot.expiresOn)} · {formatWarehouseNumber(lot.quantity)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                     </div>
-
-                    {fefo && selectedLotId === fefo.id && (
-                      <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
-                        FEFO recomendado: validade {formatWarehouseDateOnly(fefo.expiresOn)}. A baixa só ocorrerá na finalização.
-                      </p>
-                    )}
+                    <p className="mt-2 text-[10px] font-semibold text-slate-600">
+                      Validade preservada automaticamente, sem seleção e sem ordem por vencimento.
+                    </p>
 
                     <button data-testid="warehouse-outbound-submit" type="button" onClick={addCurrentLine}
                       disabled={!requestedQuantity || !selectedPosition || !selectedPresentation}
@@ -1341,10 +1308,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                           <div className="mt-3 grid gap-2 sm:grid-cols-3">
                             <label className="text-[9px] uppercase tracking-wide text-slate-600">
                               Quantidade
-                              <input type="number" step="any" min="0.000001" value={line.requestedQuantity}
-                                disabled={retryRequired}
-                                onChange={(event) => updateCartQuantity(line.lineId, Number(event.target.value))}
-                                className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-50" />
+                              <p className="mt-1 text-xs font-black text-slate-800">{formatWarehouseNumber(line.requestedQuantity)}</p>
                             </label>
                             <div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
                               <p className="text-[8px] uppercase tracking-wide text-slate-600">Unidade-base</p>

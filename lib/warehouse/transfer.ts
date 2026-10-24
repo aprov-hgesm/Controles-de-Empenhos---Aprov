@@ -77,19 +77,9 @@ function activeLotsAtSource(input: {
 }
 
 function sortLotsForTransfer(lots: readonly WarehouseLot[]): WarehouseLot[] {
-  return [...lots].sort((left, right) => {
-    const leftExpiry = left.expiresOn || '9999-12-31';
-    const rightExpiry = right.expiresOn || '9999-12-31';
-    const expiryCompare = leftExpiry.localeCompare(rightExpiry);
-    if (expiryCompare !== 0) return expiryCompare;
-
-    const codeCompare = (left.code || '').localeCompare(
-      right.code || '',
-      'pt-BR'
-    );
-    if (codeCompare !== 0) return codeCompare;
-    return left.id.localeCompare(right.id);
-  });
+  // Critério técnico estável, sem prioridade por data de vencimento.
+  // Os identificadores antigos permanecem apenas para rastreabilidade.
+  return [...lots].sort((left, right) => left.id.localeCompare(right.id));
 }
 
 /**

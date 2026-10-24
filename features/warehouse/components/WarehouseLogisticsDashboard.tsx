@@ -116,8 +116,8 @@ export function WarehouseLogisticsDashboard({ workspaceId }: { workspaceId: stri
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard testId="warehouse-dashboard-stock-positive" label="Materiais com saldo" value={summary.materialsWithStock} detail="Saldos canônicos positivos" href="/adm-deposito/estoque" />
         <MetricCard testId="warehouse-dashboard-unlocated" label="Sem localização" value={summary.materialsWithoutLocation} detail="Saldo físico ainda não totalmente posicionado" href="/adm-deposito/localizacoes" />
-        <MetricCard testId="warehouse-dashboard-expired" label="Lotes vencidos" value={summary.expiredLots} detail="Lotes ativos com quantidade rastreada" href="/adm-deposito/estoque" />
-        <MetricCard testId="warehouse-dashboard-near-expiry" label="Próximos do vencimento" value={summary.nearExpiryLots} detail="Janela canônica da FASE 7" href="/adm-deposito/estoque" />
+        <MetricCard testId="warehouse-dashboard-expired" label="Validades vencidas" value={summary.expiredLots} detail="Referências ativas com quantidade rastreada" href="/adm-deposito/estoque" />
+        <MetricCard testId="warehouse-dashboard-near-expiry" label="Próximos do vencimento" value={summary.nearExpiryLots} detail="Materiais próximos do vencimento" href="/adm-deposito/estoque" />
         <MetricCard testId="warehouse-dashboard-deliveries-overdue" label="Previsões vencidas" value={summary.overdueDeliveries} detail="Previsto acumulado ainda não recebido" href="/adm-deposito/entregas" />
         <MetricCard testId="warehouse-dashboard-deliveries-upcoming" label="Entregas futuras" value={summary.upcomingDeliveries} detail="Cronogramas ativos com próxima previsão" href="/adm-deposito/entregas" />
         <MetricCard testId="warehouse-dashboard-inventory" label="Inventários em atenção" value={context.degradedSources.includes('inventories') ? '—' : summary.inventoryAttention} detail={context.degradedSources.includes('inventories') ? 'Fonte temporariamente indisponível' : 'Reconciliação física requerida'} href="/adm-deposito/inventario" />

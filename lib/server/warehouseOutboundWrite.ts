@@ -1,15 +1,16 @@
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction, WarehouseStoreError,
+  warehouseAdminTransaction, warehouseAdminBatchRead, warehouseAdminListByField, WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import {
   applyWarehouseLocationDelta, createWarehouseLocationBalanceId,
+  warehouseStockPositionsEqual,
   validateWarehouseLocationBalance, validateWarehouseStockPosition,
   type WarehouseLocationBalance,
 } from '../warehouse/location';
-import { validateWarehouseLot, type WarehouseLot } from '../warehouse/lot';
+import { validateWarehouseLot, warehouseLotExpiryState, type WarehouseLot } from '../warehouse/lot';
 import { validateWarehouseMaterial, type WarehouseMaterial } from '../warehouse/material';
 import {
   applyWarehouseMovementToBalance, createWarehouseMovementId,
@@ -94,8 +95,18 @@ export async function applyWarehouseExpressOutboundServer(
   };
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ?'emulator':await getGoogleAccessToken();
+  // Um lotId nulo não comprova saldo livre: listar referências apenas
+  // nesse caso, para evitar reads adicionais nas retiradas rastreadas.
+  // O mutex registra alterações de atribuição e evita aceitar lista obsoleta.
+  const lockPath=doc(access.workspaceId,'lotAttributionLocks',materialId);
+  const initialLock=lotId===null
+    ?(await warehouseAdminBatchRead(token,[lockPath])).get(lockPath)??null:null;
+  const attributedCandidates=lotId===null
+    ?await warehouseAdminListByField(token,access.workspaceId,'lots','materialId',materialId,120):[];
   return warehouseAdminTransaction<ApplyWarehouseExpressOutboundResult>(
-    token,[...new Set(Object.values(p))],rows=>{
+    token,[...new Set([...Object.values(p),
+      ...(lotId===null?[lockPath,...attributedCandidates.map(candidate=>candidate.path)]:[]),
+    ])],rows=>{
       const material=valid(validateWarehouseMaterial(
         warehouseCanonicalMaterialReadInput(materialId,
           needed(rows,p.material,'WAREHOUSE_MATERIAL_NOT_FOUND').data),
@@ -131,21 +142,9 @@ export async function applyWarehouseExpressOutboundServer(
           {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
             expectedMaterialId:materialId}
         ),'WAREHOUSE_OUTBOUND_LOT_INVALID'):null;
-      const depot=needed(rows,p.depot,'WAREHOUSE_OUTBOUND_DEPOT_NOT_FOUND').data;
-      const loc=needed(rows,p.location,'WAREHOUSE_OUTBOUND_LOCATION_NOT_FOUND').data;
-      if(depot.workspaceId!==access.workspaceId||depot.ug!==access.ug||depot.status!=='active'
-        ||loc.workspaceId!==access.workspaceId||loc.ug!==access.ug||loc.status!=='active'
-        ||loc.kind!=='LOCAL'||loc.depotId!==position.depotId) {
-        return reject('WAREHOUSE_OUTBOUND_LOCATION_INACTIVE');
-      }
-      if(position.kind==='SUBPOSITION'){
-        const sub=needed(rows,p.subposition!,'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data;
-        if(sub.kind!=='SUBPOSITION'||sub.depotId!==position.depotId
-          ||sub.parentLocationId!==position.locationId||sub.status!=='active'
-          ||sub.workspaceId!==access.workspaceId||sub.ug!==access.ug) {
-          return reject('WAREHOUSE_OUTBOUND_SUBPOSITION_INACTIVE');
-        }
-      }
+      // Replay legado: validar primeiro a movimentação já comprometida.
+      // Uma validade que venceu ou posição desativada DEPOIS da baixa não
+      // pode impedir a recuperação do consumo pendente nem gerar outra baixa.
       const old=rows.get(p.movement);
       if(old) {
         const replay=movementFrom(old,access,movementId);
@@ -169,6 +168,26 @@ export async function applyWarehouseExpressOutboundServer(
             position:source.position,interface:source.interface,
             barcodeAssociation:liveBarcode,lot},
         },writes:[]};
+      }
+      // Autoridade no servidor: cliente não pode expedir referência já vencida
+      // enviando um lotId diretamente à API (independente do FEFO removido).
+      if(lot && warehouseLotExpiryState(lot)==='EXPIRED') {
+        return reject('WAREHOUSE_OUTBOUND_LOT_EXPIRED');
+      }
+      const depot=needed(rows,p.depot,'WAREHOUSE_OUTBOUND_DEPOT_NOT_FOUND').data;
+      const loc=needed(rows,p.location,'WAREHOUSE_OUTBOUND_LOCATION_NOT_FOUND').data;
+      if(depot.workspaceId!==access.workspaceId||depot.ug!==access.ug||depot.status!=='active'
+        ||loc.workspaceId!==access.workspaceId||loc.ug!==access.ug||loc.status!=='active'
+        ||loc.kind!=='LOCAL'||loc.depotId!==position.depotId) {
+        return reject('WAREHOUSE_OUTBOUND_LOCATION_INACTIVE');
+      }
+      if(position.kind==='SUBPOSITION'){
+        const sub=needed(rows,p.subposition!,'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data;
+        if(sub.kind!=='SUBPOSITION'||sub.depotId!==position.depotId
+          ||sub.parentLocationId!==position.locationId||sub.status!=='active'
+          ||sub.workspaceId!==access.workspaceId||sub.ug!==access.ug) {
+          return reject('WAREHOUSE_OUTBOUND_SUBPOSITION_INACTIVE');
+        }
       }
       // O motor de domínio lança Error para condições de negócio.
       // A API precisa preservar o status apropriado (400/409), sem
@@ -201,6 +220,41 @@ export async function applyWarehouseExpressOutboundServer(
         ];
         if(expectedErrors.includes(domainCode))return reject(domainCode,409);
         throw error;
+      }
+      if(lotId===null) {
+        // Rastreabilidade autoritativa no snapshot transacional; nunca
+        // usar o saldo livre declarado/estimado pelo navegador.
+        const liveLock=rows.get(lockPath);
+        if((liveLock?.updateTime??null)!==(initialLock?.updateTime??null)) {
+          return reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED');
+        }
+        let attributed=0;
+        for(const candidate of attributedCandidates) {
+          const stored=needed(rows,candidate.path,'WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED');
+          const linked=valid(validateWarehouseLot(
+            warehouseCanonicalLotReadInput(candidate.path.split('/').at(-1)!,stored.data),
+            {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
+              expectedMaterialId:materialId}
+          ),'WAREHOUSE_OUTBOUND_ATTRIBUTION_INVALID');
+          if(warehouseStockPositionsEqual(linked.position,position)) {
+            attributed=normalizeWarehouseQuantity(attributed+linked.quantity)
+              ??reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_INVALID');
+          }
+        }
+        if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
+        const free=normalizeWarehouseQuantity(currentLocationBalance.quantity-attributed);
+        if(free===null||free<0)return reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK');
+        if(plan.baseQuantity>free+0.000001) {
+          return reject('WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE');
+        }
+      }
+      // A retirada composta deve declarar a quantidade base realmente
+      // validada no servidor; rejeitar divergência antes de escrever movimento.
+      if(input.expectedBaseQuantity!==undefined) {
+        const expected=normalizeWarehouseQuantity(input.expectedBaseQuantity);
+        if(expected===null||expected<=0||Math.abs(expected-plan.baseQuantity)>0.000001) {
+          return reject('WAREHOUSE_OUTBOUND_EXPECTED_BASE_MISMATCH',400);
+        }
       }
       if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
       if(currentLocationBalance.quantity+0.000001<plan.baseQuantity) {

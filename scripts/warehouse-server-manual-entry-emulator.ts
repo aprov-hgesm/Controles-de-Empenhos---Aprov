@@ -22,7 +22,9 @@ import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusi
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
-import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
+import { finalizeWarehouseWithdrawalServer, legacyWithdrawalPayloadHash } from '../lib/server/warehouseWithdrawalWrite';
+import { auditWarehouseLegacyWithdrawalsServer } from '../lib/server/warehouseWithdrawalLegacyAudit';
+import { WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION } from '../lib/warehouse/withdrawal';
 import { setWarehouseConsumptionSiscofisStatusServer } from '../lib/server/warehouseConsumptionStatusWrite';
 import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
 import { warehouseInventoryLifecycleServer } from '../lib/server/warehouseInventoryLifecycle';
@@ -198,6 +200,30 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
   console.log('PASS: saída expressa server-only, saldo/lote atômicos, replay e falta de estoque');
 
+  // Segurança R2: uma linha adulterada sem lotId NÃO consome saldo
+  // já totalmente vinculado a referências técnicas de validade.
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,lotId:null,
+    idempotencyKey:'warehouse-r2-express-untracked-bypass-01',requestedQuantity:1,
+  }),/WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
+  assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,72);
+  console.log('PASS: servidor rejeita bypass lotId nulo quando todo saldo está atribuído');
+
+  await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:first.validity!.id,input:{expiresOn:'2026-01-01'},
+  });
+  await assert.rejects(()=>applyWarehouseExpressOutboundServer(access,{
+    ...outboundInput,idempotencyKey:'warehouse-r2-expired-bypass-01',
+    requestedQuantity:1,
+  }),/WAREHOUSE_OUTBOUND_LOT_EXPIRED/);
+  await writeWarehouseLotServer(access,'UPDATE',{
+    lotId:first.validity!.id,input:{expiresOn:'2027-05-01'},
+  });
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,97);
+  console.log('PASS: servidor rejeita referencia vencida mesmo com cliente adulterado');
+
+
   const returnConsumptionId='cons_'+'c'.repeat(64);
   const returnSeedUrl='http://127.0.0.1:8080/v1/projects/demo-emprovex-security'
     +'/databases/emprovex-warehouse/documents/warehouse/'+workspaceId
@@ -316,6 +342,18 @@ try {
       lotCode:first.validity!.code,
     }],
   };
+  const beforeForged=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...withdrawalRequest,withdrawalId:'wd_'+'d'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],baseQuantity:999}],
+  }),/WAREHOUSE_OUTBOUND_EXPECTED_BASE_MISMATCH/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeForged);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...withdrawalRequest,withdrawalId:'wd_'+'c'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],lotId:'lot_invalid'}],
+  }),/WAREHOUSE_WITHDRAWAL_INPUT_INVALID/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeForged);
+  console.log('PASS: retirada rejeita base forjada e referencia invalida antes de debitar');
   const withdrawal=await finalizeWarehouseWithdrawalServer(access,withdrawalRequest);
   assert.equal(withdrawal.withdrawal.status,'FINALIZED');
   assert.equal(withdrawal.movementIds.length,1);
@@ -591,6 +629,222 @@ try {
   console.log('PASS: exclusão definitiva só de depósito vazio, tombstone atômico, locais inativos e reutilização do código');
 
 
+  const atomicDestination=await warehouseDestinationCreateServer(access,{
+    name:'Destino isolado para atomicidade R2',
+  });
+  // Isolado: 2 linhas para o MESMO saldo e a MESMA referência,
+  // com rollback total antes do commit e replay após confirmação.
+  const atomicSeed=await registerWarehouseManualEntryServer(access,{
+    operationId:'withdrawal-atomic-r2-seed',existingMaterialId:null,
+    description:'Estoque Atomicidade R2',unitLabel:'KG',quantity:12,
+    provenance:'Teste automático',reference:'Isolado no Emulator',
+    position,expiresOn:'2027-07-20',lotCode:'ATOMIC-R2-REF',barcode:null,
+  });
+  assert.ok(atomicSeed.validity);
+  const atomicMaterialId=atomicSeed.material.id;
+  const atomicLotId=atomicSeed.validity!.id;
+  const atomicId='wd_'+'9'.repeat(32);
+  const atomicInput={
+    withdrawalId:atomicId,destinationId:atomicDestination.id,
+    withdrawnBy:'Operador QA',lines:[3,4].map((quantity,i)=>({
+      lineId:'wline_'+String(i+1).repeat(32),
+      materialId:atomicMaterialId,materialDescription:atomicSeed.material.description,
+      requestedQuantity:quantity,baseQuantity:quantity,
+      presentation:atomicSeed.material.unit,presentationLabel:'KG',unitLabel:'KG',
+      position,positionLabel:'DEP-MANUAL / LOC-MANUAL',barcodeAssociation:null,
+      barcode:null,lotId:atomicLotId,lotCode:atomicSeed.validity!.code,
+    })),
+  };
+  const atomicBalance=()=>getDoc(ref('balances',atomicMaterialId)).then(s=>s.data()?.quantity);
+  const atomicLot=()=>getDoc(ref('lots',atomicLotId)).then(s=>s.data()?.quantity);
+  const atomicHeader=()=>warehouseAdminTransaction('emulator',[
+    'warehouse/'+workspaceId+'/withdrawals/'+atomicId
+  ],rows=>({result:rows.get('warehouse/'+workspaceId+'/withdrawals/'+atomicId),writes:[]}));
+  const atomicConsumption=(i:number)=>'cons_'+createHash('sha256').update(
+    workspaceId+'\n'+'stock:'+atomicId+':'+atomicInput.lines[i].lineId
+  ).digest('hex');
+  process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_LINE='2';
+  try {
+    await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,atomicInput),
+      /WAREHOUSE_ATOMIC_TEST_INJECTED_FAILURE/);
+  } finally {delete process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_LINE;}
+  assert.equal(await atomicBalance(),12);
+  assert.equal(await atomicLot(),12);
+  assert.equal(await atomicHeader(),null);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(0)))).exists(),false);
+  console.log('PASS: falha injetada na linha 2 = rollback integral, sem header/consumo');
+
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...atomicInput,lines:[atomicInput.lines[0],{...atomicInput.lines[1],requestedQuantity:20,
+      baseQuantity:20}],
+  }),/WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION|WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+  assert.equal(await atomicBalance(),12);
+  assert.equal(await atomicLot(),12);
+  assert.equal(await atomicHeader(),null);
+  console.log('PASS: falta de estoque na linha 2 não confirma a linha 1');
+
+  const atomic=await finalizeWarehouseWithdrawalServer(access,atomicInput);
+  assert.equal(atomic.withdrawal.status,'FINALIZED');
+  assert.equal(atomic.withdrawal.appliedLineCount,2);
+  assert.equal(atomic.movementIds.length,2);
+  assert.equal(await atomicBalance(),5);
+  assert.equal(await atomicLot(),5);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(0)))).exists(),true);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(1)))).exists(),true);
+  assert.equal((await atomicHeader())?.data.atomicVersion,2);
+  const atomicReplay=await finalizeWarehouseWithdrawalServer(access,atomicInput);
+  assert.equal(atomicReplay.withdrawal.status,'FINALIZED');
+  assert.equal(atomicReplay.movementIds.length,0);
+  assert.equal(await atomicBalance(),5);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...atomicInput,lines:atomicInput.lines.map((l,i)=>i===1?{...l,requestedQuantity:3,baseQuantity:3}:l),
+  }),/WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT/);
+  assert.equal(await atomicBalance(),5);
+  console.log('PASS: 2 linhas confirmadas com saldo/lote/consumo/cabeçalho em um commit; replay sem duplicação');
+
+  // Duas sessões repetindo a mesma identidade simultaneamente:
+  // somente uma pode confirmar a retirada e ambas podem recuperar via replay.
+  const concurrent={
+    ...atomicInput,withdrawalId:'wd_'+'8'.repeat(32),
+    lines:[{...atomicInput.lines[0],lineId:'wline_'+'3'.repeat(32),
+      requestedQuantity:1,baseQuantity:1}],
+  };
+  const simultaneous=await Promise.allSettled([
+    finalizeWarehouseWithdrawalServer(access,concurrent),
+    finalizeWarehouseWithdrawalServer(access,concurrent),
+  ]);
+  // O Emulator pode devolver conflito às duas requisições concorrentes.
+  // O contrato é convergência após replay com a MESMA identidade, não
+  // sucesso obrigatório de alguma das duas primeiras respostas.
+  const afterRace=await atomicBalance();
+  assert.ok(afterRace===4||afterRace===5);
+  const repeat=await finalizeWarehouseWithdrawalServer(access,concurrent);
+  assert.equal(repeat.withdrawal.status,'FINALIZED');
+  assert.equal(await atomicBalance(),4);
+  const finalReplay=await finalizeWarehouseWithdrawalServer(access,concurrent);
+  assert.equal(finalReplay.movementIds.length,0);
+  assert.equal(await atomicBalance(),4);
+  console.log('PASS: concorrência possivelmente abortada, retry com mesma identidade converge sem dupla baixa');
+
+  // Falha após o commit: cliente vê 503, mas os registros foram salvos.
+  // Repetição com a mesma identidade devolve FINALIZED sem nova saída.
+  const lostReply={
+    ...atomicInput,withdrawalId:'wd_'+'7'.repeat(32),
+    lines:[{...atomicInput.lines[0],lineId:'wline_'+'4'.repeat(32),
+      requestedQuantity:1,baseQuantity:1}],
+  };
+  process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT=lostReply.withdrawalId;
+  try {
+    await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,lostReply),
+      /WAREHOUSE_ATOMIC_TEST_RESPONSE_LOST/);
+  }finally {delete process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT;}
+  assert.equal(await atomicBalance(),3,'Commit confirmado apesar da resposta perdida');
+  const rescued=await finalizeWarehouseWithdrawalServer(access,lostReply);
+  assert.equal(rescued.withdrawal.status,'FINALIZED');
+  assert.equal(rescued.movementIds.length,0);
+  assert.equal(await atomicBalance(),3);
+  console.log('PASS: resposta perdida após commit recuperada por replay exato, sem débito duplicado');
+
+
+
+  // Recuperação histórica v1: seis interrupções após etapas já persistidas
+  // e replay da MESMA retirada. Nunca emitir movimento duplicado.
+  const legacySeed=await registerWarehouseManualEntryServer(access,{
+    operationId:'withdrawal-legacy-r2-seed',existingMaterialId:null,
+    description:'Estoque legado de recuperação',unitLabel:'KG',quantity:30,
+    provenance:'Teste legado isolado',reference:'Simulação v1',
+    position,expiresOn:'2027-07-20',lotCode:'LEGACY-R2-REF',barcode:null,
+  });
+  assert.ok(legacySeed.validity);
+  const legacyBalance=()=>getDoc(ref('balances',legacySeed.material.id))
+    .then(snapshot=>snapshot.data()?.quantity as number);
+  const seedLegacyHeader=async(id:string,data:Record<string,unknown>)=>{
+    const docPath='warehouse/'+workspaceId+'/withdrawals/'+id;
+    await warehouseAdminTransaction('emulator',[docPath],rows=>{
+      assert.equal(rows.get(docPath),null);
+      return {result:null,writes:[{path:docPath,data}]};
+    });
+  };
+  const legacyStages=['1:movement','1:consumption','1:progress',
+    '2:movement','2:consumption','2:progress'];
+  for(let stageIndex=0;stageIndex<legacyStages.length;stageIndex++) {
+    const stage=legacyStages[stageIndex];
+    const headId='wd_'+String(stageIndex+1).repeat(32);
+    const testInput={
+      withdrawalId:headId,destinationId:atomicDestination.id,
+      withdrawnBy:'Operador QA',
+      lines:[0,1].map(line=>({
+        lineId:'wline_'+String(stageIndex+1).repeat(31)+String(line+1),
+        materialId:legacySeed.material.id,
+        materialDescription:legacySeed.material.description,
+        requestedQuantity:1,baseQuantity:1,
+        presentation:legacySeed.material.unit,presentationLabel:'KG',unitLabel:'KG',
+        position,positionLabel:'DEP-MANUAL / LOC-MANUAL',
+        barcodeAssociation:null,barcode:null,
+        lotId:legacySeed.validity!.id,lotCode:legacySeed.validity!.code,
+      })),
+    };
+    const startBalance=await legacyBalance();
+    await seedLegacyHeader(headId,{
+      schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
+      id:headId,workspaceId,ug,destinationId:atomicDestination.id,
+      destinationName:atomicDestination.name,withdrawnBy:testInput.withdrawnBy,
+      payloadHash:legacyWithdrawalPayloadHash(testInput.lines),
+      expectedLineCount:2,appliedLineCount:0,status:'FINALIZING',
+      createdBy:access.uid,createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString(),finalizedAt:null,
+    });
+    process.env.EMPROVEX_WAREHOUSE_LEGACY_FAULT_STAGE=stage;
+    try {
+      await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,testInput),
+        /WAREHOUSE_LEGACY_TEST_INJECTED_FAILURE/);
+    }finally{delete process.env.EMPROVEX_WAREHOUSE_LEGACY_FAULT_STAGE;}
+    const recovered=await finalizeWarehouseWithdrawalServer(access,testInput);
+    assert.equal(recovered.withdrawal.status,'FINALIZED');
+    assert.equal(recovered.withdrawal.appliedLineCount,2);
+    assert.equal(await legacyBalance(),startBalance-2);
+    for(const line of testInput.lines) {
+      const consumptionId='cons_'+createHash('sha256').update(
+        workspaceId+'\n'+'stock:'+headId+':'+line.lineId).digest('hex');
+      assert.equal((await getDoc(ref('consumptions',consumptionId))).exists(),true);
+    }
+    const replay=await finalizeWarehouseWithdrawalServer(access,testInput);
+    assert.equal(replay.movementIds.length,0);
+    assert.equal(await legacyBalance(),startBalance-2);
+    console.log('PASS: recuperação v1 em '+stage+' sem segunda baixa');
+  }
+  // O cabeçalho FINALIZED isolado não constitui prova do saldo/consumo.
+  const phantomId='wd_'+'0'.repeat(32);
+  const phantomLine={
+    lineId:'wline_'+'f'.repeat(32),
+    materialId:legacySeed.material.id,materialDescription:legacySeed.material.description,
+    requestedQuantity:1,baseQuantity:1,presentation:legacySeed.material.unit,
+    presentationLabel:'KG',unitLabel:'KG',position,positionLabel:'DEP-MANUAL / LOC-MANUAL',
+    barcodeAssociation:null,barcode:null,
+    lotId:legacySeed.validity!.id,lotCode:legacySeed.validity!.code,
+  };
+  const phantomInput={withdrawalId:phantomId,destinationId:atomicDestination.id,
+    withdrawnBy:'Operador QA',lines:[phantomLine]};
+  await seedLegacyHeader(phantomId,{
+    schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
+    id:phantomId,workspaceId,ug,destinationId:atomicDestination.id,
+    destinationName:atomicDestination.name,withdrawnBy:'Operador QA',
+    payloadHash:legacyWithdrawalPayloadHash(phantomInput.lines),
+    expectedLineCount:1,appliedLineCount:1,status:'FINALIZED',
+    createdBy:access.uid,createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),finalizedAt:new Date().toISOString(),
+  });
+  const beforePhantom=await legacyBalance();
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,phantomInput),
+    /WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED/);
+  assert.equal(await legacyBalance(),beforePhantom);
+  console.log('PASS: cabeçalho legado FINALIZED sem movimento/consumo bloqueado');
+
+  const legacyAudit=await auditWarehouseLegacyWithdrawalsServer(access);
+  assert.ok(legacyAudit.legacyFinalizedChecked>=6);
+  assert.ok(legacyAudit.findings.some(item=>item.id===phantomId
+    &&item.reason==='CONSUMPTION_COUNT_MISMATCH'));
+  console.log('PASS: auditor v1 somente leitura detecta falso FINALIZED e valida replays reais');
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');

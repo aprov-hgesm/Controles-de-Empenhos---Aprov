@@ -20,7 +20,8 @@ for (const path of [
 const mobile = read('lib/warehouse/mobileOutbound.ts');
 assert.match(mobile, /classifyWarehouseMobileProductScan/);
 assert.match(mobile, /prepareWarehouseExpressOutbound/);
-assert.match(mobile, /selectWarehouseFefoLot/);
+assert.doesNotMatch(mobile, /selectWarehouseFefoLot/);
+assert.match(mobile, /options\.sort\(/);
 assert.match(mobile, /WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/);
 assert.match(mobile, /warehouseMobileOutboundScannedPositionMatches/);
 
@@ -44,23 +45,25 @@ assert.doesNotMatch(
 
 const ui = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
 assert.match(ui, /WarehouseMobileScanner/);
-assert.match(ui, /EXPECT_PRODUCT/);
-assert.match(ui, /EXPECT_LOCATION/);
+assert.match(ui, /EXPECT_PRODUCT_OR_LOCATION/);
+assert.match(ui, /classifyWarehouseMobileProductScan/);
+assert.match(ui, /loadWarehouseMobilePhysicalPositionContents/);
 assert.match(ui, /resolveWarehouseStockPositionBarcode/);
 assert.match(ui, /createWarehouseWithdrawalId/);
 assert.match(ui, /createWarehouseWithdrawalLineId/);
-assert.match(ui, /finalizeWarehouseMaterialWithdrawal/);
+assert.match(ui, /WITHDRAWAL_FINALIZE_MOBILE/);
+assert.match(ui, /planMobileOutboundAutomaticLots/);
 assert.match(ui, /listWarehouseDestinationsCached/);
 assert.match(ui, /createWarehouseDestination/);
 assert.match(ui, /destinationId/);
 assert.doesNotMatch(ui, /WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS/);
 assert.doesNotMatch(ui, /applyWarehouseExpressOutbound\s*\(/);
 assert.match(ui, /CONFIRMAR SAÍDA/);
-assert.match(ui, /Replay idempotente/);
-assert.match(ui, /replay seguro/);
+assert.match(ui, /mesma identificação é preservada/);
 assert.match(ui, /Destino/);
-assert.match(ui, /Retirado por/);
-assert.match(ui, /FEFO/);
+assert.doesNotMatch(ui, /Retirado por|pickedBy|withdrawnBy/);
+assert.doesNotMatch(ui, /FEFO/);
+assert.doesNotMatch(ui, /escolher lote|selecionar lote|onClick=\{\(\) => chooseLot/);
 assert.doesNotMatch(ui, /\bsetDoc\s*\(/);
 assert.doesNotMatch(ui, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(ui, /\brunTransaction\s*\(/);
@@ -118,6 +121,6 @@ assert.match(workflow, /Central Móvel R1 MOBILE-G outbound guard/);
 
 console.log('MOBILE-G outbound guard: PASS');
 console.log('- jornada móvel entra pelo withdrawal canônico, que delega ao OUTBOUND transacional');
-console.log('- scanner, EPX1/resolver, FEFO, lote, posição e idempotência são reutilizados');
+console.log('- scanner, EPX1/resolver, validade sem FEFO, posição e idempotência são reutilizados');
 console.log('- reader MOBILE-G é bounded/fail-closed e não possui writes');
 console.log('- UI exige confirmação humana e preserva replay seguro');

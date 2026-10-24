@@ -418,6 +418,24 @@ test('MOBILE-D preserva lote em transferência parcial e integral', () => {
   ]);
 });
 
+test('MOBILE-D não prioriza validades: atribuição segue ID técnico estável', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const lots = [
+    {id:'lot_'+'b'.repeat(32),materialId,status:'active',quantity:4,
+      code:'ABC',expiresOn:'2026-12-01',position:from},
+    {id:'lot_'+'a'.repeat(32),materialId,status:'active',quantity:4,
+      code:'XYZ',expiresOn:'2027-12-01',position:from},
+  ];
+  const prepared=mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId,from,to,quantity:2,availableQuantity:8,lots,
+  });
+  assert.equal(prepared.ok,true);
+  assert.deepEqual(prepared.lotAllocations,[
+    {lotId:'lot_'+'a'.repeat(32),quantity:2},
+  ]);
+});
+
 test('MOBILE-D bloqueia lote atribuído acima do saldo físico', () => {
   const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
   const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };

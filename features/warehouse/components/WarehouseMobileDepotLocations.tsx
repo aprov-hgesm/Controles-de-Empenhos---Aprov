@@ -30,7 +30,7 @@ interface Props {
 
 /**
  * Lista mobile: reusa o mesmo saldo/local do mapa 3D. Nenhuma leitura extra é
- * disparada ao rolar, pesquisar ou expandir os cards; lotes/códigos só sob demanda.
+ * disparada ao rolar, pesquisar ou expandir os cards; validades e códigos só sob demanda.
  */
 export function WarehouseMobileDepotLocations({
   depotName,

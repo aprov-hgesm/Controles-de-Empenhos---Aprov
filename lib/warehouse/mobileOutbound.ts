@@ -5,7 +5,7 @@ import {
   type WarehouseLocationBalance,
   type WarehouseStockPosition,
 } from './location';
-import { selectWarehouseFefoLot, type WarehouseLot } from './lot';
+import { type WarehouseLot } from './lot';
 import type { WarehouseMaterial } from './material';
 import { classifyWarehouseMobileProductScan } from './mobileIntakeAllocation';
 import type { WarehouseMobileScanKind } from './mobileScanner';
@@ -27,7 +27,6 @@ export interface WarehouseMobileOutboundPositionOption {
   position: WarehouseMobilePhysicalPosition;
   balance: WarehouseLocationBalance;
   lots: WarehouseLot[];
-  fefoLot: WarehouseLot | null;
 }
 
 export interface WarehouseMobileOutboundPreparation {
@@ -35,8 +34,6 @@ export interface WarehouseMobileOutboundPreparation {
   baseQuantity: number;
   plan: WarehouseExpressOutboundPlan;
   options: WarehouseMobileOutboundPositionOption[];
-  recommendedLot: WarehouseLot | null;
-  recommendedPosition: WarehouseMobilePhysicalPosition | null;
 }
 
 export function classifyWarehouseMobileOutboundProductScan(
@@ -96,7 +93,7 @@ export function prepareWarehouseMobileOutboundOptions(input: {
     material: input.material,
     balance: input.balance,
     requestedQuantity: input.requestedQuantity,
-    presentation: input.barcodeAssociation.presentation,
+    presentation: input.barcodeAssociation?.presentation || input.material.unit,
     position: { kind: 'UNASSIGNED' },
     barcodeAssociation: input.barcodeAssociation,
   });
@@ -117,59 +114,29 @@ export function prepareWarehouseMobileOutboundOptions(input: {
         lot.quantity > 0
         && warehouseStockPositionsEqual(lot.position, balance.position)
     );
-    const fefoLot = selectWarehouseFefoLot(
-      lots.filter((lot) => lot.quantity + QUANTITY_EPSILON >= plan.baseQuantity),
-      input.today
-    );
-
     return {
       key: warehouseStockPositionKey(balance.position),
       position: balance.position,
       balance,
       lots,
-      fefoLot,
     };
   });
 
-  const recommendedLot = selectWarehouseFefoLot(
-    options.flatMap((option) =>
-      option.lots.filter(
-        (lot) => lot.quantity + QUANTITY_EPSILON >= plan.baseQuantity
-      )
-    ),
-    input.today
-  );
-
-  let recommendedPosition: WarehouseMobilePhysicalPosition | null = null;
-  if (recommendedLot && recommendedLot.position.kind !== 'UNASSIGNED') {
-    recommendedPosition = recommendedLot.position;
-  }
-  const recommendedKey = recommendedPosition
-    ? warehouseStockPositionKey(recommendedPosition)
-    : null;
-
-  options.sort((left, right) => {
-    if (recommendedKey) {
-      if (left.key === recommendedKey && right.key !== recommendedKey) return -1;
-      if (right.key === recommendedKey && left.key !== recommendedKey) return 1;
-    }
-    return left.key.localeCompare(right.key);
-  });
+  // A ordem de posição é estável, não baseada na data de vencimento.
+  options.sort((left,right)=>left.key.localeCompare(right.key));
 
   return {
     requestedQuantity: plan.requestedQuantity,
     baseQuantity: plan.baseQuantity,
     plan,
     options,
-    recommendedLot,
-    recommendedPosition,
   };
 }
 
 export function prepareWarehouseMobileOutboundReview(input: {
   material: WarehouseMaterial;
   balance: WarehouseBalance;
-  barcodeAssociation: WarehouseBarcodeAssociation;
+  barcodeAssociation: WarehouseBarcodeAssociation | null;
   requestedQuantity: number;
   position: WarehouseMobilePhysicalPosition;
   locationBalance: WarehouseLocationBalance;
@@ -188,7 +155,7 @@ export function prepareWarehouseMobileOutboundReview(input: {
     material: input.material,
     balance: input.balance,
     requestedQuantity: input.requestedQuantity,
-    presentation: input.barcodeAssociation.presentation,
+    presentation: input.barcodeAssociation?.presentation || input.material.unit,
     position: input.position,
     barcodeAssociation: input.barcodeAssociation,
     lot: input.lot || null,

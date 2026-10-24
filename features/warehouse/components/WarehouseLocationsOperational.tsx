@@ -766,7 +766,7 @@ export function WarehouseLocationsOperational({
       </section>
 
       <div className="rounded-xl border border-slate-300/10 bg-slate-400/[0.025] px-4 py-3 text-xs leading-5 text-slate-500">
-        Lotes, validade/FEFO, scanner, saída expressa, inventário e Visão do Depósito permanecem fora desta fase.
+        Validade, scanner, saída expressa, inventário e Visão do Depósito permanecem fora desta fase.
       </div>
     </div>
   );

@@ -1,5 +1,214 @@
 # EMPROVEX — Memorial Oficial
 
+## R2 OPERADOR MÓVEL — COMPLEMENTO EXECUTIVO DE 24/10/2026 (REVISÃO ESPECIAL, GOV-SIMP-01)
+
+**Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`. **PR:** #371, branch `feat/mobile-outbound-unified-scan-r2`. **HEAD de código deste checkpoint, antes do presente memorial:** `949852a342be7f79819c69a2093b646ddc7b465f`. Reconsultar HEAD atual, nunca confundir checkpoint com release validado.
+
+**Autorização atual do Fundador:** o Application CI está sob revisão de eficiência e foi dispensado como critério de bloqueio nesta missão. Não alterar seu arquivo/política nem reintroduzir guards de FEFO. Em substituição, exigir uma revisão final independente com typecheck, Fast CI, autenticação Firestore Emulator, inspeção de código e testes adversariais de saída. **Não usar ausência de CI para liberar falhas de segurança ou estoque.**
+
+**O que foi gravado nesta sequência de commits:**
+- `d6d7d87`: corrige `SyntaxError` do guard MOBILE-C (`scripts/verify-mobile-r1-intake-allocation.mjs`), identificado nos logs do Application CI anterior. O Application CI não é mais gate obrigatório nesta missão.
+- `f85381b`, `8ff31d4`, `be72f3a`, `4cb3e23`: saída móvel preserva `withdrawalId` e linhas idênticas em `sessionStorage` antes do envio, permite reconciliar após resposta perdida/reload com mesma identidade, impede nova retirada quando resultado é desconhecido; bloqueia recuperação corrompida; seleciona automaticamente material único de local lido; valida UG não nula; inclui testes contratuais.
+- `3e58589`: prioriza reconhecimento de movimento legado comprometido antes de aplicar restrição atual de vencimento/local; evita que alteração posterior à baixa impeça replay idempotente (sem alterar o motor de saída nova).
+- `65ff69e`: no legado v1, a resposta `FINALIZED` exige prova read-only de movimentos e consumos determinísticos por linha (incluindo o caso de header falsamente finalizado). Injeções de interrupção limitadas estritamente ao Emulator de teste.
+- `7b2a42d`, `2150c5b`, `949852a`: testes QA no Firestore Emulator de seis pontos de interrupção v1, repetição sem nova baixa e rejeição de header falso `FINALIZED`; verificação do auditor.
+- `cca22ed`: `warehouseWithdrawalLegacyAudit.ts` fornece auditoria explicitamente solicitada, limitada, somente leitura e escopada por workspace/UG, incluindo conferência dos consumos e movimentos de headers FINALIZED. Não reconcilia registros reais nem substitui o comando original.
+
+**Evidências prévias verificadas:** no `5a60f5b`, Fast CI, Core Protection, Recovery, SAAS Legal, Warehouse Server R2 Smoke, Visual QA e Browser E2E exibiam sucesso; Application CI 40114104513 falhou por sintaxe do guard MOBILE-C (corrigido depois). Os resultados prévios NÃO certificam os commits deste checkpoint. O workflow Legal no `be72f3a` apontou TS2322 por UG anulável em `WarehouseMobileOutbound.tsx`; corrigido em `4cb3e23`, ainda exige nova prova no HEAD final. O `npm ci` desse workflow reportou 15 advisories (6 moderados, 7 altos, 2 críticos); classificação de alcance e exposição pendente — não executar `npm audit fix --force` cegamente.
+
+**Critérios de fechamento:** após estabilizar HEAD, marcar PR Ready uma única vez para disparar `Warehouse Server R2 Smoke`, `Browser E2E`, Fast CI, Legal/typecheck, Core, Recovery e Visual QA. **Application CI pode falhar/ficar skip sem invalidar, conforme autorização atual**. Inspecionar logs do Emulator para os 6 testes legados e falso FINALIZED; corrigir falhas reais. Validar câmera em aparelho físico e confirmar isoladamente ausência de FEFO/seleção de lotes; não modificar Central 3D. Nenhum merge, publish Vercel, alteração de Rules ou dados reais foi autorizado.
+
+**Handoff:** onde — PR #371 com melhorias de confiança v2+recuperação v1; o que — certificação independente do Application CI; quem — executor GitHub/ChatGPT; próximo — terminar QA no HEAD final, publicar evidências no PR sem criar commit após CI; quem — executor; Fundador somente autoriza eventual publicação final, em etapa distinta.
+
+---
+
+
+## CERTIFICAÇÃO DE ATOMICIDADE R2 — 24/10/2026
+
+### Decisão arquitetural e implementação final
+**Novas retiradas com múltiplas linhas passam a ser um único commit transacional Firestore (ACID), sem saga parcial.** Arquivo `lib/server/warehouseWithdrawalAtomicWrite.ts`; ativado por `finalizeWarehouseWithdrawalServer` em `lib/server/warehouseWithdrawalWrite.ts` quando o identificador da retirada ainda não possui cabeçalho. Os cabeçalhos da implementação anterior permanecem no caminho histórico de recuperação, sem conversão para v2.
+
+A transação lê e valida no servidor, sob workspace/UG autenticados: destino ativo, material/unidade/código de barras, posição/local/subposição ativos, saldo oficial, referências de validade, incluindo bloqueio de vencidos, e idempotência. A função prepara **todas** as linhas em memória (atualizando virtualmente o mesmo saldo/local/referência entre linhas) e só entrega writes ao Firestore se todas validarem. O único commit abrange movimentos, saldos material e por posição, referências de validade, consumos SISCOFIS `PENDING` e cabeçalho `FINALIZED` com `atomicVersion:2`. Até 40 linhas pelo contrato existente; leitura e escrita limitadas para falhar fechado se a operação ficar grande demais.
+
+A identidade imutável é formada pelo `withdrawalId` e hash integral dos campos do comando. Movimentos e consumos têm IDs determinísticos. Uma retirada já finalizada é retornada como replay sem escritas, sem depender do saldo/validade atual; um payload divergente com o mesmo ID retorna conflito. Duas requisições concorrentes do mesmo ID são serializadas por precondições transacionais Firestore; basta repetir a mesma identidade após erro de concorrência ou resposta perdida. `lotId:null` só consome saldo comprovadamente sem atribuição de validade, com leitura de referências e mutex de atribuição. Sem FEFO nas interfaces nem alteração visual da Central 3D.
+
+### Provas de testes autenticados isolados
+**Código testado:** `61cef6e1939f441f6fa844bf4cebe71f49e47f52`.
+**GitHub Actions:**
+- Warehouse Server R2 Smoke `40113559078`: **PASS** (Firestore Emulator e autenticação, `demo-emprovex-security`). Job `120930391110`.
+- EMPROVEX Fast CI `40113559067`: **PASS**.
+- EMPROVEX Core Protection, Recovery guardrails, SAAS-DL Legal Validation, VISUAL-R1 W4 QA e Browser E2E On Demand `40113559083`: **PASS**.
+- Application CI integral `40113559099`: **PENDING** no instante deste registro. Confirmar antes de qualquer GO; não alegar sucesso antecipadamente.
+
+Log verificável do Emulator:
+- `PASS: falha injetada na linha 2 = rollback integral, sem header/consumo`.
+- `PASS: falta de estoque na linha 2 não confirma a linha 1`.
+- `PASS: 2 linhas confirmadas com saldo/lote/consumo/cabeçalho em um commit; replay sem duplicação`.
+- `PASS: concorrência e retry mesma identidade resultam em uma única baixa`.
+- `PASS: resposta perdida após commit recuperada por replay exato, sem débito duplicado`.
+- `SERVER MANUAL ENTRY EMULATOR PASS`.
+
+Injeções de falha só ficam ativas em Emulator `EMPROVEX_WAREHOUSE_ADMIN_EMULATOR=1` combinado ao projeto `demo-emprovex-security`. Nenhum script de produção usa essas variáveis; nenhum deploy, alteração de Rules, escrita em workspace real ou merge foi executado.
+
+### Gate de release e legado
+**Atomicidade da nova retirada v2: CERTIFICADA EM EMULATOR.** **Publicação: NÃO AUTORIZADA.** Antes de liberar: Application CI integral no SHA correto, validação QA autenticada, e avaliar cabeçalhos v1 antigos `FINALIZING/PARTIALLY_APPLIED`: não podem ser reemitidos com novo withdrawalId. O recuperador v1 idempotente permanece por compatibilidade histórica, mas não é convertido automaticamente nem foi certificado nesta rodada com injeção multietapa v1. Encaminhar eventuais registros incompletos para reconciliação supervisionada. Sem atalhos de merge nem alteração das Firestore Rules.
+
+**Handoff GOV-SIMP-01:** Onde estamos — PR #371 branch `feat/mobile-outbound-unified-scan-r2`, v2 transacional commit `61cef6e...`; o que fazemos — certificação de release além do contrato atômico; quem faz — executor ChatGPT/GitHub; próximo — observar Application CI, conferir backlog legado e smoke autenticado em QA; quem fará — executor conclui testes e Founder valida promoção manual somente após GO expresso.
+
+---
+
+
+## CHECKPOINT ADICIONAL — REMOÇÃO DE FEFO DA TRANSFERÊNCIA E GATE DE RELEASE (24/10/2026)
+
+**Estado verificável:** branch `feat/mobile-outbound-unified-scan-r2` no código `e1bfa2606658631c6b25999d5b54cc0305067713` antes deste commit de memorial; PR #371 aberto, **NO-GO**. Antes de qualquer sequência, verificar se o novo HEAD/CI mudou. Produção R1 `47323e3b8583e68c8344336a265ddd7d63563c36` preservada.
+
+**Auditoria adicional:** o motor `lib/warehouse/transfer.ts`, compartilhado entre Transferência Mobile e servidor, ainda ordenava as referências técnicas por `expiresOn` e código, priorizando vencimento indiretamente. Isso contrariava remoção integral do FEFO. Alterado `sortLotsForTransfer` para ordenação determinística por `lot.id`, sem comparar validade ou código (commit `771133ca`). Novo teste em `scripts/warehouse-location-transfer.test.mjs` cria dois registros com expiração inversa à ordem de ID e comprova atribuição estável pelo ID (commit `e1bfa260`). Mantém intactos saldos, posições e identificadores históricos. **Validar teste no CI novo**.
+
+**Gates de CI legados adicionais corrigidos:** `scripts/verify-mobile-r1-physical-query.mjs` deixou de exigir `warehouseLotOriginLabel` e passa a verificar `expiryLabel(lot.expiresOn)`; `scripts/verify-mobile-r1-outbound.mjs` não exige `selectWarehouseFefoLot`; `scripts/verify-adm-deposito-phase-9.mjs` rejeita `selectWarehouseFefoLot` e confirma projeção por depósito, sem alterar arquitetura do croqui. A última execução confirmada de Application CI tinha alcançado e passado Fase 7 e Fase 8, mas parou no guard antigo MOBILE-E; o HEAD posterior precisa de certificação completa. **Não declarar Application CI PASS enquanto não houver run completa com conclusão success**.
+
+**Segurança de saída:** teste autenticado Firestore Emulator (run `40069216965`, SHA histórico `65980d...`) passou para bloqueio de expedição com `lotId:null` quando todo saldo está atribuído, rejeição de referência vencida, rejeição de base falsa e compatibilidade Excel 10/11 colunas. Confirmar reexecução no SHA final. O endpoint ainda tem **BLOCKER S2**: a retirada com várias linhas não é atômica, registra consumos após cada movimento e pode falhar parcialmente; idempotência por linha não equivale a rollback de toda retirada. Exige solução transacional/saga certificada e smoke humano QA. **PUBLICAÇÃO EXPRESSAMENTE BLOQUEADA**, não fazer merge, Vercel, Rules ou dados reais.
+
+**Handoff:** onde — PR #371/branch acima; fazendo — remover FEFO residual e certificar servidor; quem — executor ChatGPT/GitHub; próximo — CI completo, solucionar S2, testes multi-linha e smoke autenticado; quem fará — executor implementa, fundador valida e promove somente após GO explícito.
+
+---
+
+
+## ATUALIZAÇÃO EXECUTIVA DE AUDITORIA — PR #371, 24/10/2026
+
+**STATUS: NO-GO / PR #371 DRAFT após os testes.** Verificar o HEAD corrente antes de executar; HEAD de código no checkpoint: `d6666263bae229826283721d4d3a881966759078`. A versão anterior na main/produção permanece `47323e3b8583e68c8344336a265ddd7d63563c36`; sem publicação, sem merge ou alteração de Rules.
+
+### Evidência mais recente
+- **Application CI:** correção real e confirmada para guard da **FASE 7** (FEFO extinto) e da **FASE 8** (FEFO extinto). CI alcançou o guard **MOBILE-E**, que falhou por exigir `warehouseLotOriginLabel` na tela; adaptado para validade `expiryLabel(lot.expiresOn)` em commit `98c1966`. Guard **MOBILE-G** também passou a rejeitar FEFO e exigir planejamento neutro, commit `d666626`. Nova execução de CI integral acionada; **obter conclusão do SHA vigente**.
+- **Warehouse Server R2 Smoke**, execução **40069216965** no SHA `65980d2...`: **PASS no Firestore Emulator**, com passos de autenticação, segurança multi-tenant, XLSX, Motor de Confiança, novo bloqueio de `lotId:null` com saldo atribuído, bloqueio de referência vencida e rejeição de quantidade-base adulterada. Evidências nos logs (ex.: `PASS: servidor rejeita bypass lotId nulo`, `PASS: retirada rejeita base forjada`, `PASS: novo Excel com 10 colunas ... legado 11`). Esses resultados pertencem ao SHA citado; repetir/confirmar no HEAD final.
+- Código `lib/server/warehouseOutboundWrite.ts` agora consulta referências canônicas ao baixar `lotId:null` e calcula saldo livre na transação, com mutex `lotAttributionLocks`. O servidor compara `expectedBaseQuantity` com a conversão canônica antes do débito. `lib/server/warehouseWithdrawalWrite.ts` faz validação sintática/campo e repassa expectativa de base. Retenção de identificadores técnicos `lotId` para histórico, sem visualização de códigos no operador. Referência explícita vencida rejeitada no servidor.
+- Modelo Excel novo sem lote, 10 colunas; importador ainda lê histórico de 11 colunas. Menções antigas a lotes físicos nas interfaces revisadas foram substituídas por validade/referências de validade; Central 3D não foi alterada.
+
+### Impedimento de release que não é um simples guard
+**S2 CRÍTICO — retirada composta não é atômica:** `finalizeWarehouseWithdrawalServer` aplica linhas em transações distintas e só depois registra consumo/progresso. Se uma linha posterior falhar, pode haver retirada parcial. A idempotência por linha facilita recuperação, mas não garante rollback, ausência de consumo pendente ou ausência de inconsistências em caso de concorrência. **Antes de GO**: implementar fechamento transacional de todos os movimentos e consumos num único commit, quando viável, **ou** saga de recuperação robusta, observável e certificada no Emulator com injeção de falhas a cada passo, incluindo múltiplas linhas, replays, concorrência, falhas de rede, invariantes de saldo, consumo e SISCOFIS. O servidor não deve aceitar plano adulterado. Outro ponto: metadados textuais client-side em documento de consumo exigem validação de origem server-side antes de certificação.
+
+### Handoff padrão GOV-SIMP-01
+**ONDE ESTAMOS:** branch do PR #371 com correções de CI FASE 7, 8, MOBILE-E e MOBILE-G; Smoke server PASS em checkpoint anterior, nova certificação completa em andamento; NO-GO.
+**O QUE ESTAMOS FAZENDO:** finalizar CI e validar atomicidade/recuperação do fluxo de saída automatizado sem FEFO nem seleção de lotes.
+**QUEM ESTÁ FAZENDO:** ChatGPT executor GitHub; Fundador apenas autoriza versão e opera Vercel no PowerShell.
+**O QUE FAZER A SEGUIR:** consultar HEAD, logs do Application CI e Warehouse Server R2 Smoke do SHA final, corrigir novos guards legados sem restaurar FEFO, solucionar S2 com testes adversariais, executar smoke autenticado em QA isolado; somente então pedir GO do Fundador.
+**QUEM FARÁ:** executor técnico nas branches; Fundador valida visual/manual e promove o deployment apenas depois de autorização.
+
+---
+
+
+## AUDITORIA FUNCIONAL E DE SEGURANÇA R2 — CHECKPOINT E BLOQUEIO DE RELEASE (24/10/2026)
+
+**PR #371: DRAFT / NÃO PUBLICAR / NO-GO.** Repositório `aprov-hgesm/Controles-de-Empenhos---Aprov`; branch `feat/mobile-outbound-unified-scan-r2`. HEAD de código auditado imediatamente antes deste commit documental: `11030cd4249dde0dd1279f26b8f58f3b66d522cd`. Após salvar este documento, obter novo HEAD e verificar novamente pipelines no SHA vigente. Nenhum merge, deploy, alteração de Rules ou dados reais foi executado nesta auditoria.
+
+### 1. Correções efetivamente gravadas na branch
+- **Guard do Application CI, FASE 7:** `scripts/verify-adm-deposito-phase-7.mjs` já não exige `selectWarehouseFefoLot` ou `warehouse-fefo-recommendation` como funcionalidades ativas. Em vez disso, rejeita seu reaparecimento na implementação. O teste Playwright `tests/e2e/warehouse-phase-7.spec.mjs` passou a verificar a *ausência* de recomendação FEFO. O histórico da FASE 7 pode conservar FEFO em testes/documentos legados sem habilitar a função na operação.
+- **Varredura de UX** nos componentes relacionados: WarehouseItemControlOperational, WarehouseCroquisR1Operational, WarehouseIsometricPreview, WarehouseImmediateConsumptionPanel, WarehouseLocationInspectionLocalPreview e WarehouseMobileOutbound; mensagens ao operador mostram validade ou referências de validade, não escolha/código de lotes. Preservados croqui e Central 3D sem alteração de geometria, comportamento ou renderização.
+- **Excel:** `lib/server/warehouseBulkStockWorkbook.ts` gera template novo com **10 colunas**, excluindo `Lote (opcional)`. Seu parser identifica e aceita cabeçalhos antigos de **11 colunas**, conservando a informação lida na estrutura interna para compatibilidade. `WarehouseBulkManualEntryOperational.tsx` não propaga `row.lot` ao comando de entrada, deixando o motor gerar referência técnica de validade. Teste `scripts/warehouse-bulk-stock-r1.test.ts` passa a cobrir formatos novo/legado, cabeçalhos e índices de procedência/referência.
+- **Validade vencida diretamente na API:** `lib/server/warehouseOutboundWrite.ts` rejeita referência de validade explicitamente vencida usando `warehouseLotExpiryState(lot)==='EXPIRED'` com `WAREHOUSE_OUTBOUND_LOT_EXPIRED`; teste contratual adicionado em `scripts/mobile-outbound-unified.test.mjs`. A proteção se aplica ao motor canônico server-side, independente do planejamento do navegador.
+- Histórico de commits de implementação desta intervenção: `1b4b932`, `dac2eaf`, `9b32936`, `b78b742`, `9d15f3e`, `0f3e307`, `c8a89ad`, `51bbb25`, `e7ed2ca`, `caefc03`, `9aba38c`, `844f0e9`, `11030cd`. Consultar PR #371 para HEAD real e patches.
+
+### 2. Auditoria funcional — observações comprovadas por inspeção de código
+- Scanner unificado limita `EXPECT_PRODUCT_OR_LOCATION` ao fluxo de saída. Produto com único local ativo é escolhido automaticamente; código de posição permite selecionar material naquele local. Quatro etapas: leitura, quantidade, destino, revisão/confirmar. Necessário smoke em celular real para câmera, recuperação de rede e acessibilidade.
+- `WITHDRAWAL_FINALIZE_MOBILE` passa por `verifyWarehouseRequest` e `bindWarehouseMobileTrust`; o endpoint ignora `withdrawnBy` vindo do aparelho e injeta `access.email` autenticado. Não é uma identidade digitável no Mobile. `WITHDRAWAL_FINALIZE` no Desktop mantém contrato legado.
+- `applyWarehouseExpressOutboundServer` reconstrói material, saldo, local, subposição, barcode e referência técnica a partir de registros em Firestore do **workspace/UG autenticados**; valida quantidades e idempotencyKey; movimentação, saldo agregado, saldo por posição e redução de referência explícita compartilham commit da transação **por linha**. Guard novo impede referência vencida explícita.
+- Planificador `planMobileOutboundAutomaticLots` é determinístico por ID de referência, sem priorizar vencimento, rejeita atribuição superior ao saldo e não escolhe referências vencidas/inativas. Mas é executado no **cliente**, razão pela qual não é uma validação autoritativa.
+- Verificação textual dos componentes de UX do escopo modificado não identificou seleção ativa FEFO nem rótulos visíveis de lote. `lotId/lotCode` técnicos permanecem no ledger, no servidor e em contratos históricos. **Uma varredura estática não equivale a smoke visual completo.**
+
+### 3. BLOQUEADORES DE SEGURANÇA E INTEGRIDADE — NÃO OMITIR
+**BLOCKER S1 — plano sem referência pode burlar saldo rastreado.** `applyWarehouseExpressOutboundServer` aceita `lotId:null` e, nesse caso, faz baixa em saldo agregado/local sem verificar, na mesma transação, a quantidade do local já atribuída a referências de validade; o navegador decide quando enviar null. Um cliente autenticado adulterado pode enviar linha sem lotId, mesmo quando o saldo não atribuído seja insuficiente, produzindo divergência entre referências de validade e saldo físico. Confirmado por leitura da implementação; **não foi explorado contra produção**. Correção requerida: cálculo/revalidação autoritativa do saldo livre no servidor, sem confiar no plano do cliente, com proteção contra inserção/alteração concorrente de referências. Criar testes autenticados no Emulator para freeQty=0, freeQty parcial, referência vencida/inativa, outra UG e concorrência.
+
+**BLOCKER S2 — retirada completa não é transação atômica.** `finalizeWarehouseWithdrawalServer` cria cabeçalho `FINALIZING`, depois itera as linhas e chama `applyWarehouseExpressOutboundServer` em commits separados; só depois de cada baixa grava consumo e `appliedLineCount`. Falha de rede, bloqueio na linha N ou interrupção entre baixa/consumo pode deixar retirada `PARTIALLY_APPLIED` ou movimento sem consumo até retomada. Idempotência por linha e retry mitigam duplicações, mas **não garantem rollback total nem finalização automática**. A UX não deve afirmar que nenhuma linha foi aplicada após falha. Correção requerida: transação atômica por retirada (quando dentro dos limites Firestore) OU protocolo de saga recuperável certificado, com estado de recuperação explícito ao operador, compensação/consistência comprovadas e rejeição de encerramento incompleto. Testar injeção de falhas após cada estágio, mesma chave e chaves diferentes, concorrência, reconciliação sem baixa duplicada, estado de consumo/SISCOFIS, saldos e lotes.
+
+**BLOCKER S3 — campos de quantidade/cadastro aceitos do cliente sem pré-validação do lote completo.** `isLine` confere sintaxe e números positivos, mas os campos `baseQuantity`, `materialDescription`, `lotCode`, `positionLabel` e `presentationLabel` provêm do input do cliente. O motor por linha recalcula baseQuantity a partir da apresentação autorizada; deve-se comparar explicitamente baseQuantity declarado à soma server-side antes de gravar e derivar os dados de documentação exclusivamente de entidades verificadas. O hash de payload por linha não valida integridade econômica ou soma cross-line antes do primeiro movimento. Criar casos de adulteração e verificar saída fail-closed sem gravações.
+
+**Conclusão da auditoria:** as proteções existentes de autenticação, isolamento, idempotência por linha e validação de saldo são úteis, porém não bastam para certificar a nova saída automatizada em várias referências. **NÃO LIBERAR RELEASE R2**, ainda que todos os checks existentes fiquem verdes: a matriz adversarial precisa cobrir S1/S2/S3 com evidência de Emulator + smoke autenticado. Não reduzir as barreiras apenas para tornar o CI verde.
+
+### 4. Estado CI e orientação
+- Na base de código `c6c356a3`, Fast CI, Core Protection, Recovery, Warehouse Server R2 Smoke, Legal, Visual e Browser E2E passaram; Application CI falhou precisamente porque o guard FASE 7 exigia `selectWarehouseFefoLot` e `warehouse-fefo-recommendation`.
+- O ajuste de guard foi commitado. No checkpoint deste documento, as execuções para `11030cd...` ainda estavam **em andamento**; nunca converter `in_progress` ou `skipped` em PASS. Retomar pelo PR #371, consultar SHA atual e logs, corrigir quaisquer regressões.
+- Core e Recovery já exibiram PASS nas primeiras rodadas de `11030cd...`; Fast CI também retornou PASS, mas **certificação completa no HEAD final ainda não foi observada** e checks podem ser refeitos por este commit documental.
+- Não realizar deploy Vercel, merge, promoção, alteração de Rules/IAM nem acesso de escrita a dados reais nesta fase. Autorizar publicação somente após cobertura autenticada de todas as retiradas e decisão explícita do Fundador.
+
+### 5. Próximo executor — handoff exigido
+**ONDE ESTAMOS:** PR #371 em DRAFT, código R2 implementado e guard histórico corrigido; segurança de retirada multi-linhas **NO-GO**. HEAD de código `11030cd...` antes do checkpoint; main anterior `47323e3...`.
+**O QUE ESTAMOS FAZENDO:** validação server-side das referências e estoque livre, transação/reconciliação de retirada multi-linha, CI completo.
+**QUEM ESTÁ FAZENDO:** executor ChatGPT com acesso ao GitHub; não delegar publicação ao executor.
+**O QUE FAZER A SEGUIR:** implementar correção S1/S2/S3 reaproveitando o motor canônico e preservando contratos; testar no Firestore Emulator concorrência e rollback/retry; validar Desktop + Mobile e validade; observar Application CI e todos os workflows no SHA final; executar smoke real autenticado em QA isolado; atualizar memorial e PR com evidências de GO/NO-GO.
+**QUEM FARÁ:** próximo executor ChatGPT para implementação e certificação; Fundador só valida smoke e, quando autorizado, executa PowerShell/Vercel manualmente.
+
+---
+
+## CHECKPOINT VERIFICADO — PR #371 / WAREHOUSE R2 / RESULTADO DOS CHECKS (24/10/2026)
+
+**Esta seção é o PONTO DE RETOMADA MAIS RECENTE; prevalece sobre status históricos abaixo.** Fonte primária: [PR #371](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371), [handoff integral](./EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md) e [handoff técnico](./MOBILE_OUTBOUND_R2_VALIDITY_ONLY_HANDOFF.md). Verificado no GitHub em 24/10/2026, nos checks associados ao **HEAD DE CÓDIGO c6c356a336e24e90116dc074b70894e815d4cdd5** (antes deste commit documental). Ao retomar, consultar o HEAD **novo** e repetir os checks no SHA final — nenhuma linha aqui é certificação do commit que atualiza o memorial.
+
+### Estado de branch e segurança operacional
+- Repositório correto: `aprov-hgesm/Controles-de-Empenhos---Aprov`. PR **#371 ABERTO, NÃO MESCLADO**; branch `feat/mobile-outbound-unified-scan-r2`, alvo `main`.
+- Base `main` no checkpoint: `47323e3b8583e68c8344336a265ddd7d63563c36`, versão R1 anterior. Não houve nesta frente merge, deploy, mudança de Firestore Rules, IAM, dados reais, domínio ou promoção de Vercel; **R2 NÃO está em produção**.
+- Não confundir PR #371 (Saída Móvel R2 + validade sem FEFO) com PR #369 (Motor de Confiança R1 já em produção). Reusar API canônica, identidade de servidor, autorizações e idempotência existentes.
+- O PR tinha **38 arquivos alterados e 16 commits** no HEAD de código referenciado. O documento é apenas checkpoint, não aprovação de release.
+
+### Contrato funcional irrevogável nesta frente
+1. Saída Móvel com **quatro etapas**: ler **item OU local/subposição** no mesmo scanner; escolher item quando o código for de local, ou escolher local apenas quando houver mais de um com saldo do item; informar quantidade; indicar destino; revisar/confirmar. A identidade de quem retira é a do usuário autenticado, definida no servidor — não exibir campo livre de responsável no Móvel. Mantido campo Desktop fora do escopo desse pedido específico.
+2. Eliminar recomendações, priorização, seleção e rótulos **FEFO** na Central (Desktop/Mobile), mas **manter validade, alertas e bloqueios de integridade aplicáveis**. Não equivale a permitir saída de materiais vencidos.
+3. Retirar códigos, seleção e exposição de **lotes** em UX, relatórios, documentos PDF/CSV e planilhas novas. **Não apagar** `lotId`, `lotCode`, documentos, referências persistidas ou contratos de compatibilidade necessários a saldos, conciliação e histórico. Retirada técnica automaticamente repartida entre referências rastreáveis; sem ordenar por vencimento.
+4. Central de Depósitos **3D e 2D integralmente preservadas**, sem simplificação visual, perda de informações operacionais ou regressão no modo Essencial. Desburocratização máxima GOV-SIMP-01, sem abrir mão de isolamento workspace/UG, idempotência e segurança.
+
+### Código existente no PR (implementado, não completamente certificado)
+- `WarehouseMobileOutbound.tsx`: novo fluxo de quatro passos; `mobileScanner.ts`: expectativa dual somente no outbound; `mobileOutbound.ts`: consulta contextual; `mobileOutboundPlan.mjs`: divisão técnica por ID neutro e limites de saldo, sem FEFO.
+- `app/api/central-depositos/operations/route.ts` + `lib/server/warehouseMobileTrust.mjs`: `WITHDRAWAL_FINALIZE_MOBILE` com verificação de confiança/autorização e autoria server-side `access.email`; `finalizeWarehouseWithdrawalServer` canônico.
+- Desktop `WarehouseMaterialWithdrawal.tsx` usando planner sem seleção de lote; Alocação Móvel sem `lotCode` digitável mas mantendo validade e contrato interno; Home, Estoque, Consultas, Croqui, Alertas, Relatórios, CSV/PDF atualizados em parte. Novos testes `scripts/mobile-outbound-unified.test.mjs` e `scripts/warehouse-validity-only-r2.test.mjs`. Ver lista integral no handoff.
+
+### Resultado real dos workflows do SHA c6c356a3 (NÃO CONFUNDIR com GO)
+- **PASS:** EMPROVEX Fast CI (run `40067713862`), EMPROVEX Core Protection (`40067713873`), Recovery guardrails (`40067713865`), Warehouse Server R2 Smoke (`40067713875`), SAAS-DL Legal Validation (`40067713867`), VISUAL-R1 W4 QA (`40067713915`) e Browser E2E On Demand (`40067713924`, job com Emulator PASS; cenário automático do job ignorado por desenho do dispatch). São checks de CI, **não prova de smoke humano autenticado R2**.
+- **FAIL — Application CI run `40067713864`:** job `validate-application` interrompido no passo 55, `ADM Depósito Phase 7 permanent guard` (`npm run verify:adm-deposito-phase-7`). Log objetivo: `Domínio de lote/validade/FEFO incompleto: selectWarehouseFefoLot` e `Superfície Estoque FASE 7 incompleta: warehouse-fefo-recommendation`. O guard `scripts/verify-adm-deposito-phase-7.mjs` ainda EXIGE dois marcadores legados que o Fundador mandou remover. Testes de domínio Phase 7 (19/19), TypeScript error budget, verificação de zero writes client SDK, Core e vários contratos anteriores passaram antes da interrupção; steps posteriores foram **skipped, não PASS**. Gates finais Block 16–21 ficaram FAIL por dependência desse job. **Não restaurar a seleção FEFO para satisfazer teste velho**: atualizar guard/evidências conforme o novo contrato de validade e manter as demais checagens de lotes técnicos, Rules, segurança e UX. Revisar também `tests/e2e/warehouse-phase-7.spec.mjs` que contém marcador FEFO legado.
+- Revisões anteriores documentadas no handoff: guard MOBILE-C legado exigia `lotCode.trim()` (corrigido); importadores FEFO em Home e DepotView corrigidos; asserção FEFO de `warehouse-depot-layout.test.mjs` corrigida. Não ressuscitar esses requisitos.
+
+### Pendências técnicas antes de GO
+1. Adaptar `scripts/verify-adm-deposito-phase-7.mjs` e cenários históricos para validação de **validade sem FEFO**; executar **Application CI completo no mesmo HEAD final**, além de Fast CI, Core, Recovery, Legal, Warehouse Smoke e Browser E2E. Evitar aprovação baseada em gates parciais/skipped.
+2. `lib/server/warehouseBulkStockWorkbook.ts` ainda oferece coluna `Lote` em template novo, e `WarehouseBulkManualEntryOperational.tsx` ainda envia `lotCode:row.lot`: remover na **nova** planilha de 10 colunas e preservar leitura compatível das **antigas** de 11; teste das duas versões. Alteração anterior **não foi commitada**.
+3. Corrigir menções visíveis remanescentes, particularmente `WarehouseItemControlOperational.tsx` (texto FEFO), `WarehouseCroquisR1Operational.tsx` (lotes ativos em proteção de remoção), `WarehouseIsometricPreview.tsx`, `WarehouseImmediateConsumptionPanel.tsx`, `WarehouseLocationInspectionLocalPreview.tsx`. Escanear demais telas, exportações e documentos. Não confundir “operação em lote” (ação massiva) com código de lote físico. Preservar guardas de exclusão/inativação e a estética/funcionalidade 3D.
+4. **Auditar confiança da baixa multi-linha no servidor:** a seleção neutra feita no navegador não pode criar autoridade para submeter plano adulterado. Revalidar lotId, saldo global/local, workspace/UG, validade, quantidades por referência, concorrência, idempotência, rollback e ausência de baixa parcial. Corrigir onde necessário, com testes adversariais.
+5. Smoke autenticado com workspace QA isolado, sem alterar produção: item com 1/N locais, posição com 1/N itens, material sem validade, validades diferentes, estoque insuficiente, expirados/inativos, destino, replay/chave duplicada, outros workspaces, Desktop (carrinho/PDF), Mobile, transferência/inventário e consistência de saldos.
+
+### Handoff GOV-SIMP-01
+**ONDE ESTAMOS:** PR #371 aberto, base R1 em `main@47323e3...`, último HEAD de código avaliado `c6c356a3...`; este checkpoint documental produzirá um SHA posterior. R2 não publicada.
+**O QUE ESTAMOS FAZENDO:** finalizar fluxo de saída, validade sem FEFO/lotes visíveis, auditar integridade e obter CI integral verde.
+**QUEM ESTÁ FAZENDO:** executor ChatGPT/GitHub em branch do PR; Fundador não precisa manipular código.
+**O QUE FAZER A SEGUIR:** ler os dois handoffs vinculados; obter novo HEAD e logs; corrigir guard Phase 7 sem reintroduzir FEFO; completar Excel e varredura UX; auditar servidor e testes; certificar todas as pipelines e smoke autenticado; só então preparar GO/revisão.
+**QUEM FARÁ:** próximo ChatGPT executor no GitHub; **Fundador** faz validação humana e eventual publicação **manual PowerShell / Vercel**, com staged/health/smoke e promoção do mesmo deployment, após autorização expressa.
+**CLASSIFICAÇÃO: IMPLEMENTAÇÃO EM ANDAMENTO — CI AINDA FALHA — NÃO PUBLICAR.**
+
+---
+
+
+## HANDOFF VIGENTE — WAREHOUSE R2 / SAÍDA MÓVEL / VALIDADE SEM FEFO (24/10/2026)
+
+**PR #371 aberto e ainda não publicado.** Branch: feat/mobile-outbound-unified-scan-r2. Meta: saída móvel em quatro etapas (item/local → quantidade → destino → revisar/confirmar), remover FEFO e indicação de lotes na Central sem apagar dados internos de rastreabilidade/validade. O HEAD de código anterior ao handoff era 77127c2fa2d79b9b9566a4694f3f1f8ef63c1e42; consultar HEAD atual ao retomar. Main/produção: 47323e3b8583e68c8344336a265ddd7d63563c36.
+
+**MEMORIAL COMPLETO PARA OUTRO CHAT:** [EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md](./EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md). Contém implementação, commits, CI PASS/FAIL/CANCELLED, pendências Excel/croqui/segurança e sequência exata. **NÃO fazer merge ou deploy com os gates ainda incompletos.**
+
+**Onde:** PR #371. **Fazendo:** código e testes R2. **Quem:** executor GitHub. **Próximo:** eliminar indicações residuais de FEFO/lote, endurecer a baixa server, corrigir CI, testar cenário autenticado e certificar. **Quem fará:** executor; Fundador apenas smoke final e Vercel via PowerShell após GO.
+
+---
+
+
+## ATUALIZAÇÃO PRIORITÁRIA — R2 SAÍDA MÓVEL / REMOÇÃO FEFO / VALIDADE APENAS — 24/10/2026
+
+**LEIA ANTES DE QUALQUER DESENVOLVIMENTO:** docs/MOBILE_OUTBOUND_R2_VALIDITY_ONLY_HANDOFF.md (handoff completo e único ponto de continuidade deste trabalho).
+
+- **PR #371** (https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371), branch feat/mobile-outbound-unified-scan-r2, HEAD de checkpoint 4a2a2dc44bd505749c689bdc978b534b2315985f; main 47323e3b8583e68c8344336a265ddd7d63563c36. **NÃO MERGED, NÃO PUBLICADO**. A produção permanece no R1 Motor de Confiança, PR #369, promovido pelo Fundador no PowerShell.
+- O Fundador determinou Saída Móvel de quatro passos: ler item OU posição (se local, escolher item; se item único local, autoescolher); quantidade; destino; revisar/confirmar; usuário logado é o autor, sem campo de responsável.
+- Remover toda indicação de **FEFO** e códigos/seleção de **lotes** em Desktop e Mobile e documentos, mostrando apenas **validade**. Preservar IDs/contratos históricos de lote para conservar saldos, auditoria, concorrência e as baixas transacionais; validade vencida continua relevante para alertas/integridade.
+- Alterações distribuídas por 35 arquivos do PR: mobile scanner, saída, API autorizada, leitor físico, alocação, carrinho Desktop, fichas, Início/Depósito 3D, relatórios, PDF/CSV, alertas, lot.ts e testes. Novos scripts mobile-outbound-unified.test.mjs, warehouse-validity-only-r2.test.mjs e planejador mobileOutboundPlan.mjs.
+- **CI ainda NÃO certificado no último HEAD:** 357ddb teve gates PASS exceto guard antigo de Alocação (corrigido); c850 teve Fast CI FAIL porque teste de croqui ainda exigia FEFO (corrigido em 4a2a2dc44bd505749c689bdc978b534b2315985f); outros gates aprovaram ou foram interrompidos por novo push. Reexecutar tudo no HEAD final, inspecionar saídas reais e manter main/Vercel/Rules intocados até GO.
+- Próximo responsável: chat sucessor via ferramentas GitHub; Fundador somente smoke manual e publicação pelo PowerShell após aceite. **Não promover R2 automaticamente.**
+
+**Handoff:** onde — PR #371, branch feat/mobile-outbound-unified-scan-r2; fazendo — corrigir retirada, UI de validades e testes sem FEFO; quem — executor GitHub; próximo — CI final e testes autenticados no Emulator, correção de regressões, smoke staging; quem fará — chat sucessor e Fundador na publicação.
+
+---
+
+
 ## PUBLICAÇÃO CONGELADA — RELEASE ÚNICA, POWERSHELL PROPRIETÁRIO (20/10/2026)
 
 - Processo de deploy já validado pelo Fundador: alterações consolidadas em um único commit na main, gates de CI, prebuild e deploy manual Vercel pelo PowerShell na equipe `aprov-hgesms-projects`.

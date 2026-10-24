@@ -122,7 +122,7 @@ function depotArchiveError(error: unknown): string {
   const code = messageFrom(error);
   const mapped: Record<string, string> = {
     WAREHOUSE_ARCHIVE_OCCUPIED: 'Há materiais com saldo neste depósito. Transfira-os para um local ativo antes de inativar ou excluir. O retorno automático ao recebimento ainda não está disponível. Nada foi alterado.',
-    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há lotes ativos neste depósito. Conclua a transferência dos lotes antes de inativar ou excluir. Nenhuma alteração foi feita.',
+    WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há referências de validade ativas neste depósito. Transfira o estoque vinculado antes de inativar ou excluir. Nenhuma alteração foi feita.',
     WAREHOUSE_ARCHIVE_CATALOG_LIMIT: 'O volume de registros exige uma operação assistida. O depósito não foi alterado.',
     WAREHOUSE_ARCHIVE_TOO_LARGE: 'Este depósito excede o limite de uma única transação. Nenhum registro foi alterado.',
     WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE: 'Os dados mudaram durante a operação. Recarregue o depósito e tente novamente.',
@@ -476,7 +476,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       return;
     }
     if (!window.confirm('Inativar ' + selectedDepot.code + ' e seus locais? '
-      + 'Não será permitido se houver saldos ou lotes ativos. '
+      + 'Não será permitido se houver saldos ou referências de validade ativas. '
       + 'Os históricos e etiquetas antigas continuarão preservados.')) return;
     setDepotWorking(true);
     setMessage(null);
@@ -502,7 +502,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       return;
     }
     if (!window.confirm('Excluir definitivamente o depósito ' + selectedDepot.code + '? '
-      + 'Esta opção só funciona se não houver saldo ou lote ativo. '
+      + 'Esta opção só funciona se não houver saldo ou referência de validade ativa. '
       + 'Locais e croquis sairão das telas operacionais, mas o histórico permanecerá para auditoria. '
       + 'Não movimenta materiais automaticamente.')) return;
     setDepotWorking(true);
@@ -945,7 +945,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     const location=locations.find(row=>row.location.id===object.warehouseLocationId)?.location;
     if(!location)return false;
     if(!window.confirm('Inativar '+location.code+' e suas subposições ao salvar? '
-      +'O servidor recusará se houver estoque ou lotes ativos.'))return false;
+      +'O servidor recusará se houver estoque ou referências de validade ativas.'))return false;
     setPendingRemovedLocationIds(current=>[...new Set([...current,location.id])]);
     setMessage(location.code+' marcado para inativação. A alteração só ocorrerá ao salvar.');
     return true;
@@ -1440,7 +1440,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
           {croquiMode === 'preview' && !visualExpiryComplete && (
             <p role="status" className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-              Os alertas de validade 3D podem estar incompletos (limite de 500 lotes).
+              Os alertas de validade 3D podem estar incompletos (limite de 500 registros).
               Consulte os detalhes do local para verificar o conteúdo.
             </p>
           )}
@@ -1718,7 +1718,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                     )}
                     <p className="text-[10px] text-slate-500">
                       Cadastro e desenho são gravados juntos ao salvar.
-                      O servidor não permite inativar locais com estoque ou lotes ativos.
+                      O servidor não permite inativar locais com estoque ou referências de validade ativas.
                     </p>
                   </div>
                 ) : (
@@ -1747,7 +1747,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   O Croqui 2D administra a estrutura real, o desenho e suas cópias. Salve para efetivar as alterações.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Para reposicionar um local, arraste no mapa. Para remover, confirme a inativação; saldos e lotes ativos bloqueiam a operação.
+                  Para reposicionar um local, arraste no mapa. Para remover, confirme a inativação; saldos e referências de validade ativas bloqueiam a operação.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   Ao duplicar um local, o novo cadastro recebe código único e, se houver, as subposições da origem. Nenhum estoque é copiado.

@@ -3,10 +3,6 @@
 import { Box, MapPin, PackageSearch } from 'lucide-react';
 
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import {
-  warehouseLotDisplayCode,
-  warehouseLotOriginLabel,
-} from '../../../lib/warehouse/lot';
 import type { WarehouseMobilePhysicalQueryResult as WarehouseMobilePhysicalQueryData } from '../../../lib/warehouse/mobilePhysicalQuery';
 
 type ResolvedPosition = Extract<
@@ -138,7 +134,7 @@ export function WarehouseMobilePhysicalQueryResult({
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-[11px] font-black text-slate-800">
-                              Lote {warehouseLotDisplayCode(lot.code)}
+                              Validade
                             </p>
                             <p className="mt-0.5 text-[10px] font-semibold leading-4 text-slate-500">
                               {expiryLabel(lot.expiresOn)}
@@ -148,15 +144,12 @@ export function WarehouseMobilePhysicalQueryResult({
                             {formatQuantity(lot.quantity)}
                           </span>
                         </div>
-                        <p className="mt-2 text-[10px] font-semibold leading-4 text-slate-500">
-                          Origem: {warehouseLotOriginLabel(lot.origin)}
-                        </p>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="mt-3 text-[10px] font-semibold leading-4 text-slate-500">
-                    Sem lote ou validade registrados para este material nesta posição.
+                    Sem validade registrada para este material nesta posição.
                   </p>
                 )}
               </article>

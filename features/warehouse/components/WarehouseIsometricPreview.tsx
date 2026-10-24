@@ -1877,7 +1877,7 @@ export function WarehouseIsometricPreview({
         )}
         {inspectionLotState === 'ready' && !inspectionComplete && onInspectLocation && (
           <p className="absolute bottom-3 right-3 max-w-[240px] rounded-lg bg-amber-50/95 p-2 text-[10px] font-medium text-amber-900 shadow-sm">
-            Consulta parcial: alguns lotes e suas validades podem não estar visíveis.
+            Consulta parcial: alguns registros de validade podem não estar visíveis.
           </p>
         )}
       </div>

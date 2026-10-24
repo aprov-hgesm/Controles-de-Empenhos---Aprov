@@ -243,6 +243,8 @@
     "test:mobile-r1-inventory": "node --test scripts/mobile-r1-inventory.test.mjs",
     "verify:mobile-r1-inventory": "node scripts/verify-mobile-r1-inventory.mjs",
     "test:mobile-r1-outbound": "node --test scripts/mobile-r1-outbound.test.mjs",
+    "test:mobile-outbound-unified": "node --test scripts/mobile-outbound-unified.test.mjs",
+    "test:warehouse-validity-only": "node --test scripts/warehouse-validity-only-r2.test.mjs",
     "verify:mobile-r1-outbound": "node scripts/verify-mobile-r1-outbound.mjs",
     "test:mobile-r1-position-check": "node --test scripts/mobile-r1-position-check.test.mjs",
     "verify:mobile-r1-position-check": "node scripts/verify-mobile-r1-position-check.mjs",

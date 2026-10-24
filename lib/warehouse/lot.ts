@@ -486,24 +486,6 @@ export function warehouseLotExpiryState(
   return expiryMs - todayMs <= warningMs ? 'NEAR_EXPIRY' : 'VALID';
 }
 
-export function selectWarehouseFefoLot(
-  lots: readonly WarehouseLot[],
-  today: Date = new Date()
-): WarehouseLot | null {
-  return lots
-    .filter((lot) => {
-      const state = warehouseLotExpiryState(lot, today);
-      return state === 'VALID' || state === 'NEAR_EXPIRY';
-    })
-    .slice()
-    .sort((left, right) => {
-      const expiryCompare = (left.expiresOn || '').localeCompare(right.expiresOn || '');
-      if (expiryCompare !== 0) return expiryCompare;
-      const codeCompare = left.code.localeCompare(right.code, 'pt-BR');
-      return codeCompare !== 0 ? codeCompare : left.id.localeCompare(right.id);
-    })[0] || null;
-}
-
 export function warehouseLotOriginLabel(origin: WarehouseLotOrigin): string {
   if (origin.kind === 'INVOICE') {
     return 'NF ' + (origin.invoiceId || '—') + ' · ' + (origin.supplier || 'Fornecedor não informado');
@@ -577,7 +559,7 @@ export function buildWarehouseLogisticsPendencies(input: {
       code: 'EXPIRED_LOT',
       severity: 'critical',
       title: 'Validade vencida',
-      message: 'Existe quantidade com validade vencida. O FEFO não recomenda essa referência para retirada.',
+      message: 'Existe quantidade com validade vencida. Confira sua utilização antes da retirada.',
     });
   }
 

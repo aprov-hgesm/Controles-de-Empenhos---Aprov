@@ -16,7 +16,6 @@ import {
   warehouseStockPositionKey,
   warehouseStockPositionsEqual,
 } from '../../../lib/warehouse/location';
-import { warehouseLotDisplayCode } from '../../../lib/warehouse/lot';
 import { classifyWarehouseMobileProductScan } from '../../../lib/warehouse/mobileIntakeAllocation';
 import {
   loadWarehouseMobileItemAvailability,
@@ -321,7 +320,7 @@ export function WarehouseMobileItemQuery() {
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2"
                           >
                             <p className="text-[11px] font-black text-slate-800">
-                              Lote {warehouseLotDisplayCode(lot.code)}
+                              Validade
                             </p>
                             <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
                               {formatQuantity(lot.quantity)} · {expiryLabel(lot.expiresOn)}
@@ -375,11 +374,11 @@ export function WarehouseMobileItemQuery() {
                 key={'lot-overage-' + row.key}
                 className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-900"
               >
-                A soma dos lotes ativos em {row.label} é{' '}
+                A soma das referências de validade em {row.label} é{' '}
                 {formatQuantity(row.lotQuantity)} {unitLabel(state.availability)},
                 acima do saldo físico de {formatQuantity(row.balance.quantity)}{' '}
                 {unitLabel(state.availability)}. A consulta não altera dados; revise a
-                atribuição de lotes na Central desktop.
+                quantidades por validade na Central desktop.
               </p>
             ))}
           </section>

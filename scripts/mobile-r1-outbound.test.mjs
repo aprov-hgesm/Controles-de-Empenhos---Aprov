@@ -257,7 +257,7 @@ test('barcode inativo ou de outro material é rejeitado pelo contrato canônico'
   );
 });
 
-test('FEFO recomenda lote futuro mais próximo sem seleção silenciosa', () => {
+test('opções de posição são estáveis e sem recomendação FEFO', () => {
   const sooner = lot({
     id: 'lot_' + '5'.repeat(32),
     code: 'FEFO-1',
@@ -282,8 +282,8 @@ test('FEFO recomenda lote futuro mais próximo sem seleção silenciosa', () => 
     lots: [later, sooner],
     today: new Date('2026-10-03T12:00:00Z'),
   });
-  assert.equal(result.recommendedLot?.id, sooner.id);
-  assert.deepEqual(result.recommendedPosition, positionB);
+  assert.deepEqual(result.options.map(x=>x.key),result.options.map(x=>x.key).slice().sort());
+  assert.equal('recommendedLot' in result,false);
   assert.equal(result.plan.lot, null);
 });
 

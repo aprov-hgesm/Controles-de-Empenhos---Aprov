@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { generateBulkStockTemplate, parseBulkStockWorkbook, STOCK_MAX_FILE_BYTES } from '../lib/server/warehouseBulkStockWorkbook';
+import { generateBulkStockTemplate, parseBulkStockWorkbook, STOCK_HEADERS, STOCK_MAX_FILE_BYTES } from '../lib/server/warehouseBulkStockWorkbook';
 
 function expectReject(buffer:Buffer,code:string){
   assert.throws(()=>parseBulkStockWorkbook(buffer),(error:unknown)=>{
@@ -7,9 +7,9 @@ function expectReject(buffer:Buffer,code:string){
   });
 }
 const rows=[
-  ['Arroz integral','80','Kg','2027-04-18','','Estante','9','1','','Contagem física inicial','Termo 001'],
-  ['Arroz integral','300','Kg','2027-04-18','','Estante','9','2','','Contagem física inicial','Termo 001'],
-  ['Creme de confeiteiro','13','Und','2026-11-22','','Estante','9','4','LOTE-ABC','Contagem física inicial','Termo 001'],
+  ['Arroz integral','80','Kg','2027-04-18','','Estante','9','1','Contagem física inicial','Termo 001'],
+  ['Arroz integral','300','Kg','2027-04-18','','Estante','9','2','Contagem física inicial','Termo 001'],
+  ['Creme de confeiteiro','13','Und','2026-11-22','','Estante','9','4','Contagem física inicial','Termo 001'],
 ];
 const buffer=generateBulkStockTemplate(rows);
 assert.equal(buffer.subarray(0,2).toString('utf8'),'PK');
@@ -24,9 +24,21 @@ assert.equal(parsed[0].subposition,'1');
 assert.equal(parsed[0].expiresOn,'2027-04-18');
 assert.equal(parsed[1].quantity,300);
 assert.equal(parsed[1].subposition,'2');
-assert.equal(parsed[2].lot,'LOTE-ABC');
+assert.equal(parsed[2].lot,null);
+assert.equal(parsed[2].provenance,'Contagem física inicial');
+assert.equal(parsed[2].reference,'Termo 001');
+assert.equal(STOCK_HEADERS.length,10);
+assert.equal(STOCK_HEADERS.some(x=>/lote/i.test(x)),false);
+const legacyRows=[
+  ['Creme de confeiteiro','13','Und','2026-11-22','','Estante','9','4','LEGACY-ABC','Contagem física inicial','Termo legado'],
+];
+const legacy=parseBulkStockWorkbook(generateBulkStockTemplate(legacyRows,true));
+assert.equal(legacy[0].lot,'LEGACY-ABC');
+assert.equal(legacy[0].provenance,'Contagem física inicial');
+assert.equal(legacy[0].reference,'Termo legado');
+assert.equal(legacy[0].expiresOn,'2026-11-22');
 assert.equal(parsed[2].line,4);
-console.log('PASS: Excel com célula vazia em E2 e local obrigatório em F2 preservado; materiais repetidos e lotes');
+console.log('PASS: novo Excel com 10 colunas sem lote; leitor compatível com arquivo legado de 11 colunas');
 expectReject(generateBulkStockTemplate(),'STOCK_IMPORT_EMPTY');
 expectReject(generateBulkStockTemplate([['Arroz integral','','Kg','','','Estante','9','1']]),'STOCK_IMPORT_INVALID_ROW_2');
 expectReject(Buffer.from('not an xlsx'),'STOCK_IMPORT_NOT_XLSX');
