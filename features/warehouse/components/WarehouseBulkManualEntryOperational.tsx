@@ -188,7 +188,7 @@ export function WarehouseBulkManualEntryOperational({
           provenance:row.provenance||'Contagem física inicial',
           reference:row.reference||('Planilha '+filename+' — linha '+row.line).slice(0,160),
           expiresOn:row.expiresOn,
-          lotCode:row.lot,
+          lotCode:null, // A referência técnica é criada pelo servidor a partir da validade.
           barcode:row.barcode,
         });
         materialsByGroup.set(row.group,result.material.id);
