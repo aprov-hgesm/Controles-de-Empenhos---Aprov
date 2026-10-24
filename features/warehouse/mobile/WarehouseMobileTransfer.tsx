@@ -10,21 +10,21 @@ import {
 import Link from 'next/link';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { listWarehouseLocationBalances } from '../../../lib/warehouse/mobileLocationRead';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import {
   normalizeWarehouseLocationQuantity,
   warehouseStockPositionsEqual,
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import {
   createWarehouseTransferIdempotencyKey,
-  listWarehouseLocationBalances,
   transferWarehouseStock,
 } from '../../../lib/warehouse/locationRepository';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import { getWarehouseMaterial } from '../../../lib/warehouse/materialRepository';
+import { getWarehouseMaterial } from '../../../lib/warehouse/mobileMaterialRead';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import { classifyWarehouseMobileTransferProductScan } from '../../../lib/warehouse/mobileTransfer';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
@@ -191,7 +191,7 @@ export function WarehouseMobileTransfer() {
     position: WarehouseStockPosition
   ): Promise<MaterialSelection> => {
     if (!workspace.ug) throw new Error('WAREHOUSE_MOBILE_UG_REQUIRED');
-    const association = await getWarehouseBarcodeByCode(
+    const association = await getWarehouseMobileBarcodeByCode(
       workspace.workspaceId,
       barcode
     );

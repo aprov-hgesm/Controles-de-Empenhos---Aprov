@@ -6,7 +6,7 @@ import {
   limit,
   query,
   where,
-} from 'firebase/firestore';
+} from './mobileReadSdkBridge';
 
 import {
   auth,
@@ -41,7 +41,7 @@ import {
   WAREHOUSE_LOCATION_BARCODE_PREFIX,
   type WarehouseStockPositionResolveResult,
 } from './locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from './locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from './mobileLocationBarcodeResolver';
 import {
   validateWarehouseMaterial,
   type WarehouseMaterial,

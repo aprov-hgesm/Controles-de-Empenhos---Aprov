@@ -60,3 +60,5 @@ jobs:
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-read-r1-emulator.ts"
       - name: Read-only Rules, tenant isolation and suspension (emulator)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-server-only-rules.test.mjs"
+      - name: Mobile Trust R1 — scopes and server-only reads (emulator)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-mobile-trust-emulator.ts"

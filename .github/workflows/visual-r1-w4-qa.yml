@@ -5,11 +5,12 @@ on:
     paths:
       - 'components/layout/**'
       - 'components/visual/**'
-      - 'features/**'
+      # W4 cobre componentes visuais; alterações isoladas do Operador Móvel
+      # são verificadas por Application/Fast CI, Warehouse e Browser E2E.
+      - 'features/warehouse/components/**'
       - 'scripts/visual-r1-w4-*.test.mjs'
       - 'tests/e2e/visual-w4-*.spec.mjs'
       - 'playwright.visual-r1.config.mts'
-      - '.github/workflows/visual-r1-w4-qa.yml'
   workflow_dispatch:
 
 permissions:

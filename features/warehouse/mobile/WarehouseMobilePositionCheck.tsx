@@ -13,7 +13,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import {
   resolveWarehouseStockPositionBarcode,
-} from '../../../lib/warehouse/locationBarcodeResolver';
+} from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import type {
   WarehouseStockPositionResolveResult,
 } from '../../../lib/warehouse/locationBarcode';

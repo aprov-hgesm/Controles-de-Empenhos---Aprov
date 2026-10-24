@@ -7,7 +7,7 @@ import {
   limit,
   query,
   where,
-} from 'firebase/firestore';
+} from './mobileReadSdkBridge';
 
 import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';

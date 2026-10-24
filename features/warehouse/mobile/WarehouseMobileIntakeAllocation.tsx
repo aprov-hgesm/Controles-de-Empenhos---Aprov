@@ -19,7 +19,7 @@ import {
   useState,
 } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import { deriveWarehouseMaterialIdForEmpenhoItem } from '../../../lib/warehouse/invoiceIntegration';
 import { allocateWarehousePendingItemFast } from '../../../lib/warehouse/intakeActionClient';
 import {
@@ -27,7 +27,7 @@ import {
   type WarehouseInvoiceIntakeQueueContext,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   classifyWarehouseMobileProductScan,
@@ -217,7 +217,7 @@ export function WarehouseMobileIntakeAllocation() {
           selectedRow.empenhoId,
           selectedRow.itemId
         );
-      const association = await getWarehouseBarcodeByCode(
+      const association = await getWarehouseMobileBarcodeByCode(
         workspace.workspaceId,
         event.value
       );
