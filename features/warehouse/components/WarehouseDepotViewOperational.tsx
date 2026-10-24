@@ -33,8 +33,6 @@ import {
   listWarehouseLocationBalances,
   listWarehouseLocations,
 } from '../../../lib/warehouse/locationRepository';
-import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
-import { selectWarehouseFefoLot } from '../../../lib/warehouse/lot';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import type {
   WarehouseDepot,
@@ -135,13 +133,11 @@ function duplicateWarehouseLocationIds(objects: WarehouseDepotLayoutObject[]): s
 function objectClass(
   object: WarehouseDepotLayoutObject,
   highlighted: boolean,
-  fefo: boolean,
   selected: boolean,
   dimmed: boolean
 ): string {
   const base = 'absolute rounded-xl border transition duration-200 select-none';
   if (selected) return base + ' border-blue-200 bg-blue-400/25 ring-2 ring-blue-300/30';
-  if (fefo) return base + ' border-amber-200 bg-amber-400/25 ring-2 ring-amber-300/25 shadow-[0_10px_28px_rgba(251,191,36,0.18)]';
   if (highlighted) return base + ' border-emerald-200 bg-emerald-400/25 ring-2 ring-emerald-300/25 shadow-[0_10px_28px_rgba(52,211,153,0.18)]';
   if (dimmed) return base + ' border-white/[0.05] bg-slate-700/20 opacity-35';
   if (object.visualVariant === 'outline') return base + ' border-slate-500 bg-transparent';
@@ -155,7 +151,6 @@ function WarehouseCanvas({
   mode,
   selectedObjectId,
   highlightedLocationIds,
-  fefoLocationId,
   onSelect,
   onMove,
 }: {
@@ -164,7 +159,6 @@ function WarehouseCanvas({
   mode: Mode;
   selectedObjectId: string | null;
   highlightedLocationIds: Set<string>;
-  fefoLocationId: string | null;
   onSelect: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
 }) {
@@ -214,10 +208,6 @@ function WarehouseCanvas({
             object.warehouseLocationId
             && highlightedLocationIds.has(object.warehouseLocationId)
           );
-          const fefo = Boolean(
-            object.warehouseLocationId
-            && object.warehouseLocationId === fefoLocationId
-          );
           return (
             <button
               key={object.id}
@@ -225,11 +215,9 @@ function WarehouseCanvas({
               data-testid={'warehouse-layout-object-' + object.id}
               data-location-id={object.warehouseLocationId || ''}
               data-highlighted={highlighted ? 'true' : 'false'}
-              data-fefo-highlighted={fefo ? 'true' : 'false'}
               className={objectClass(
                 object,
                 highlighted,
-                fefo,
                 selectedObjectId === object.id,
                 searchActive && !highlighted
               )}
@@ -534,42 +522,6 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     setSelectedObjectId(null);
   }, [mode, selectedActiveLayout, selectedDepotId]);
 
-  const [fefoLocationId, setFefoLocationId] = useState<string | null>(null);
-  const [fefoDepotId, setFefoDepotId] = useState<string | null>(null);
-  const [fefoUnassigned, setFefoUnassigned] = useState(false);
-  useEffect(() => {
-    let active = true;
-    if (!selectedMaterialId) {
-      setFefoLocationId(null);
-      setFefoDepotId(null);
-      setFefoUnassigned(false);
-      return;
-    }
-    void listWarehouseLots(workspaceId, 500, selectedMaterialId).then((lots) => {
-      if (!active) return;
-      const lot = selectWarehouseFefoLot(lots.map((item) => item.lot));
-      if (!lot) {
-        setFefoLocationId(null);
-        setFefoDepotId(null);
-        setFefoUnassigned(false);
-        return;
-      }
-      setFefoLocationId(warehouseLocationIdForPosition(lot.position));
-      setFefoDepotId(lot.position.kind === 'UNASSIGNED' ? null : lot.position.depotId);
-      setFefoUnassigned(lot.position.kind === 'UNASSIGNED');
-    }).catch(() => {
-      if (active) {
-        setFefoLocationId(null);
-        setFefoDepotId(null);
-        setFefoUnassigned(false);
-      }
-    });
-    return () => { active = false; };
-  }, [selectedMaterialId, workspaceId]);
-
-  const currentDepotFefoLocationId =
-    fefoDepotId === selectedDepotId ? fefoLocationId : null;
-
   const representedLocationIds = useMemo(
     () => representedWarehouseLocationIds(selectedActiveLayout?.objects || []),
     [selectedActiveLayout]
@@ -843,18 +795,6 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                       {otherDepotPositionCount > 0 && (
                         <p>{otherDepotPositionCount} posição(ões) física(s) adicional(is) existem em outro(s) depósito(s).</p>
                       )}
-                      {fefoUnassigned ? (
-                        <p>FEFO prioritário está sem posição física atribuída.</p>
-                      ) : fefoDepotId && fefoDepotId !== selectedDepotId ? (
-                        <p>
-                          Posição FEFO prioritária localizada em outro depósito
-                          {depotById.get(fefoDepotId) ? ': ' + depotById.get(fefoDepotId)!.name : ''}.
-                        </p>
-                      ) : currentDepotFefoLocationId ? (
-                        <p>FEFO sinaliza em âmbar a posição prioritária deste depósito.</p>
-                      ) : (
-                        <p>FEFO não possui posição prioritária aplicável.</p>
-                      )}
                     </div>
 
                     {unrepresentedCurrentDepotPositions.length > 0 && (
@@ -912,7 +852,6 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                     mode={mode}
                     selectedObjectId={selectedObjectId}
                     highlightedLocationIds={highlightedLocationIds}
-                    fefoLocationId={currentDepotFefoLocationId}
                     onSelect={() => undefined}
                     onMove={() => undefined}
                   />

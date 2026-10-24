@@ -31,7 +31,6 @@ import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
 import {
-  selectWarehouseFefoLot,
   warehouseLotExpiryState,
   type WarehouseLot,
   type WarehouseLotExpiryState,
@@ -57,7 +56,6 @@ interface ValidityRow {
   expiresOn: string | null;
   quantity: number;
   state: WarehouseLotExpiryState;
-  fefo: boolean;
 }
 
 const INITIAL_DATA: WarehouseHomeData = {
@@ -432,11 +430,6 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     [lots, selectedDepotId]
   );
 
-  const fefoLot = useMemo(
-    () => selectWarehouseFefoLot(depotLots),
-    [depotLots]
-  );
-
   const validityRows = useMemo<ValidityRow[]>(() => {
     const grouped = new Map<string, ValidityRow>();
 
@@ -447,14 +440,12 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
 
       if (current) {
         current.quantity += lot.quantity;
-        current.fefo = current.fefo || lot.id === fefoLot?.id;
       } else {
         grouped.set(key, {
           key,
           expiresOn: lot.expiresOn,
           quantity: lot.quantity,
           state,
-          fefo: lot.id === fefoLot?.id,
         });
       }
     }
@@ -462,7 +453,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     return Array.from(grouped.values()).sort((left, right) =>
       (left.expiresOn || '9999-12-31').localeCompare(right.expiresOn || '9999-12-31')
     );
-  }, [depotLots, fefoLot]);
+  }, [depotLots]);
 
   const selectMaterial = (material: WarehouseMaterial) => {
     setSelectedMaterialId(material.id);
@@ -637,7 +628,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
               <div className={styles.sectionBlock}>
                 <p className={styles.sectionTitle}>
                   <CalendarClock className="h-3.5 w-3.5" />
-                  Validade / FEFO
+                  Validade
                 </p>
                 <div className={styles.rowList}>
                   {lotsLoading ? (
@@ -648,7 +639,6 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                         <p className={styles.infoName}>{dateLabel(row.expiresOn)}</p>
                         <p className={styles.infoSub}>
                           {formatQuantity(row.quantity)} {unitLabel(selectedMaterial)}
-                          {row.fefo ? ' · prioridade FEFO' : ''}
                         </p>
                       </div>
                       <span className={`${styles.state} ${validityStateClass(row.state)}`}>
