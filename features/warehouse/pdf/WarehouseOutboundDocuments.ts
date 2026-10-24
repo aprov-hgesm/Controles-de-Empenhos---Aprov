@@ -287,7 +287,7 @@ function drawSiscofisInstructions(doc: JsPDF, y: number): number {
 
 function drawPickingTableHeader(doc: JsPDF, y: number): number {
   const widths = [10, 61, 20, 67, 28];
-  const labels = ['#', 'MATERIAL', 'QTD.', 'LOCALIZAÇÃO EXATA', 'LOTE / CÓDIGO'];
+  const labels = ['#', 'MATERIAL', 'QTD.', 'LOCALIZAÇÃO EXATA', 'VALIDADE / CÓDIGO'];
   let x = MARGIN_X;
 
   doc.setFillColor('#E8E8E8');

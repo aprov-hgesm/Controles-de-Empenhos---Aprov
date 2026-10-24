@@ -307,7 +307,7 @@ export function WarehouseConsumptionReports({
     const header = [
       'Data/Hora', 'Origem', 'Material', 'Quantidade original', 'Devolvido',
       'Quantidade líquida', 'Unidade', 'Destino', 'Retirado/Recebido por',
-      'Saída/Intake', 'Movimento', 'Barcode', 'Lote', 'SISCOFIS',
+      'Saída/Intake', 'Movimento', 'Barcode', 'SISCOFIS',
     ];
     const body = filtered.map((record) => [
       record.occurredAt || '',
@@ -322,7 +322,6 @@ export function WarehouseConsumptionReports({
       record.withdrawalId || record.intakeId || '',
       record.movementId || '',
       record.barcode || '',
-      record.lotCode || '',
       record.legacy ? 'Legado' : siscofisLabel(record.siscofisStatus),
     ]);
     const csv = [header, ...body].map((row) => row.map(csvCell).join(';')).join('\n');

@@ -366,7 +366,7 @@ export function WarehouseLocationDetailsDialog({
           )}
           {contents.hasLotDiscrepancy && (
             <p className="mb-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800">
-              Divergência entre atribuições de lotes e saldo físico. Conferir integridade logística.
+              Divergência entre quantidades por validade e saldo físico. Conferir integridade logística.
             </p>
           )}
           {editNotice && <p role="status" className="mb-3 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">{editNotice}</p>}
@@ -482,7 +482,7 @@ export function WarehouseLocationDetailsDialog({
                                 </div>
                               ) : (
                                 <p className="mt-3 text-xs text-amber-800">
-                                  Não há partida vinculada para editar validade. Cadastre o lote no fluxo de estoque; não é possível atribuir data a saldo sem lote por esta janela.
+                                  Não há partida vinculada para editar validade. Registre a validade na ficha de estoque; não é possível atribuir data a saldo sem referência técnica por esta janela.
                                 </p>
                               )}
                               {scannerFor === row.materialId && (
