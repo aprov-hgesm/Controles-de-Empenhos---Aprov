@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## HANDOFF VIGENTE — WAREHOUSE R2 / SAÍDA MÓVEL / VALIDADE SEM FEFO (24/10/2026)
+
+**PR #371 aberto e ainda não publicado.** Branch: feat/mobile-outbound-unified-scan-r2. Meta: saída móvel em quatro etapas (item/local → quantidade → destino → revisar/confirmar), remover FEFO e indicação de lotes na Central sem apagar dados internos de rastreabilidade/validade. O HEAD de código anterior ao handoff era 77127c2fa2d79b9b9566a4694f3f1f8ef63c1e42; consultar HEAD atual ao retomar. Main/produção: 47323e3b8583e68c8344336a265ddd7d63563c36.
+
+**MEMORIAL COMPLETO PARA OUTRO CHAT:** [EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md](./EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md). Contém implementação, commits, CI PASS/FAIL/CANCELLED, pendências Excel/croqui/segurança e sequência exata. **NÃO fazer merge ou deploy com os gates ainda incompletos.**
+
+**Onde:** PR #371. **Fazendo:** código e testes R2. **Quem:** executor GitHub. **Próximo:** eliminar indicações residuais de FEFO/lote, endurecer a baixa server, corrigir CI, testar cenário autenticado e certificar. **Quem fará:** executor; Fundador apenas smoke final e Vercel via PowerShell após GO.
+
+---
+
+
 ## ATUALIZAÇÃO PRIORITÁRIA — R2 SAÍDA MÓVEL / REMOÇÃO FEFO / VALIDADE APENAS — 24/10/2026
 
 **LEIA ANTES DE QUALQUER DESENVOLVIMENTO:** docs/MOBILE_OUTBOUND_R2_VALIDITY_ONLY_HANDOFF.md (handoff completo e único ponto de continuidade deste trabalho).
