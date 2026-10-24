@@ -44,5 +44,7 @@ jobs:
       - run: npm ci
       - name: Stable v2 identity compatibility (public contract)
         run: npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts
+      - name: Historical v1 and atomic v2 recovery baseline (isolated)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
       - name: Warehouse authenticated adversarial tests (isolated)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts"
