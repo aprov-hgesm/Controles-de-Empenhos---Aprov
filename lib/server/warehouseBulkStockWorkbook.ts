@@ -5,7 +5,11 @@ export const STOCK_MAX_ROWS=1500;
 export const STOCK_MAX_FILE_BYTES=5*1024*1024;
 export const STOCK_HEADERS=[
   'Material','Quantidade','Unidade','Data de Validade','Código de Barras',
-  'Tipo de local','Nº Local','Subposição','Lote (opcional)','Procedência','Referência',
+  'Tipo de local','Nº Local','Subposição','Procedência','Referência',
+] as const;
+// Somente importações legadas usam 11 colunas: o novo modelo nunca mostra Lote.
+const STOCK_HEADERS_LEGACY=[
+  ...STOCK_HEADERS.slice(0,8),'Lote (opcional)',...STOCK_HEADERS.slice(8),
 ] as const;
 export interface BulkStockRow {
   line:number;material:string;quantity:number;unit:string;expiresOn:string|null;
@@ -55,18 +59,18 @@ function column(n:number):string{
     t=String.fromCharCode(65+(i-1)%26)+t;
   return t;
 }
-function sheetXml(rows:string[][]):string{
+function sheetXml(rows:string[][],legacyFormat=false):string{
   const rowXml=rows.map((row,i)=>'<row r="'+(i+1)+'">'+row.map((v,j)=>v?
     '<c r="'+column(j)+(i+1)+'" t="inlineStr"><is><t>'+esc(v)+'</t></is></c>':
     '<c r="'+column(j)+(i+1)+'"/>').join('')+'</row>').join('');
   return '<?xml version="1.0" encoding="UTF-8"?>'+
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+
-    '<cols>'+[34,16,17,21,24,20,14,16,22,27,32].map((w,i)=>
+    '<cols>'+(legacyFormat?[34,16,17,21,24,20,14,16,22,27,32]:[34,16,17,21,24,20,14,16,27,32]).map((w,i)=>
       '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols>'+
     '<sheetData>'+rowXml+'</sheetData></worksheet>';
 }
-export function generateBulkStockTemplate(sampleRows:string[][]=[]):Buffer{
+export function generateBulkStockTemplate(sampleRows:string[][]=[],legacyFormat=false):Buffer{
   const wb='<?xml version="1.0" encoding="UTF-8"?>'+
     '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
     '<sheets><sheet name="Materiais" sheetId="1" r:id="rId1"/><sheet name="Instrucoes" sheetId="2" r:id="rId2"/></sheets></workbook>';
@@ -76,7 +80,7 @@ export function generateBulkStockTemplate(sampleRows:string[][]=[]):Buffer{
   const help=[
     ['ETAPA','INSTRUÇÃO'],
     ['1','Cadastre antes o depósito, os locais e as subposições no EMPROVEX.'],
-    ['2','Cada linha representa material + posição + eventual lote/validade.'],
+    ['2','Cada linha representa material + posição + validade, quando informada.'],
     ['3','Use as colunas da aba Materiais; não altere os cabeçalhos.'],
     ['4','Data AAAA-MM-DD; a importação adiciona saldo, não substitui inventário.'],
     ['5','Revise todas as linhas na prévia antes de confirmar.'],
@@ -86,7 +90,7 @@ export function generateBulkStockTemplate(sampleRows:string[][]=[]):Buffer{
     '[Content_Types].xml':'<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
     '_rels/.rels':'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
     'xl/workbook.xml':wb,'xl/_rels/workbook.xml.rels':rel,
-    'xl/worksheets/sheet1.xml':sheetXml([Array.from(STOCK_HEADERS),...sampleRows]),
+    'xl/worksheets/sheet1.xml':sheetXml([Array.from(legacyFormat?STOCK_HEADERS_LEGACY:STOCK_HEADERS),...sampleRows],legacyFormat),
     'xl/worksheets/sheet2.xml':sheetXml(help),
   });
 }
@@ -194,8 +198,11 @@ export function parseBulkStockWorkbook(buffer:Buffer):BulkStockRow[]{
   const header=all.find(r=>r.line<=12&&canonical(r.cells[0]||'')==='material'
     &&canonical(r.cells[1]||'')==='quantidade'&&canonical(r.cells[2]||'')==='unidade');
   if(!header)fail('STOCK_IMPORT_HEADERS_INVALID');
-  for(let i=0;i<8;i++)if(canonical(header.cells[i]||'')!==canonical(STOCK_HEADERS[i]))
-    fail('STOCK_IMPORT_HEADERS_INVALID');
+  const legacyFormat=canonical(header.cells[8]||'')===canonical(STOCK_HEADERS_LEGACY[8]);
+  const headers=legacyFormat?STOCK_HEADERS_LEGACY:STOCK_HEADERS;
+  for(let i=0;i<headers.length;i++)
+    if(canonical(header.cells[i]||'')!==canonical(headers[i]))
+      fail('STOCK_IMPORT_HEADERS_INVALID');
   const result:BulkStockRow[]=[];
   for(const row of all.filter(r=>r.line>header.line)){
     const v=row.cells;
@@ -211,8 +218,9 @@ export function parseBulkStockWorkbook(buffer:Buffer):BulkStockRow[]{
     catch{throw new StockImportError('STOCK_IMPORT_DATE_ROW_'+row.line);}
     result.push({line:row.line,material,quantity,unit,expiresOn,localType,localNumber,
       barcode:field(v[4],128)||null,subposition:field(v[7],80)||null,
-      lot:field(v[8],80)||null,provenance:field(v[9],180)||null,
-      reference:field(v[10],160)||null});
+      lot:legacyFormat?field(v[8],80)||null:null,
+      provenance:field(v[legacyFormat?9:8],180)||null,
+      reference:field(v[legacyFormat?10:9],160)||null});
     if(result.length>STOCK_MAX_ROWS)fail('STOCK_IMPORT_TOO_MANY_ROWS');
   }
   if(!result.length)fail('STOCK_IMPORT_EMPTY');
