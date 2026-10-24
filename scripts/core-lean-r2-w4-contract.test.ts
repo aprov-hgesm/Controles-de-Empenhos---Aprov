@@ -7,20 +7,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { atomicWarehouseWithdrawalHash } from '../lib/server/warehouseWithdrawalAtomicWrite';
 import { createWarehouseMovementId } from '../lib/warehouse/movement';
+import type { FinalizeWarehouseMaterialWithdrawalInput } from '../lib/warehouse/withdrawalRepository';
 
-const request=()=>({
+const request=():FinalizeWarehouseMaterialWithdrawalInput=>({
   withdrawalId:'wd_'+'a'.repeat(32),
   destinationId:'dest_'+'b'.repeat(32),
   withdrawnBy:'Operador W4',
   lines:[{
     lineId:'wline_'+'c'.repeat(32),materialId:'mat_'+'d'.repeat(32),
+    materialDescription:'Material W4',
     requestedQuantity:2,baseQuantity:2,
+    presentation:{code:'kg',label:'KG'},
+    presentationLabel:'KG',unitLabel:'KG',
+    position:{kind:'LOCATION',depotId:'dep_'+'e'.repeat(32),
+      locationId:'loc_'+'f'.repeat(32),subpositionId:null},
+    positionLabel:'D/L',barcodeAssociation:null,barcode:null,
+    lotId:null,lotCode:null,
   }],
 });
 
 test('vetor v2 é estável entre serializações e execuções',()=>{
   const input=request();
-  const canonical='eeb961cc4dfa79e1162220a944d6bad3934f58a023b41e25f671df1ac7166daf';
+  const canonical='dc55d383c233bf8aa569e1e683c91a52592faaf74c5d2536291bbbb43fb41169';
   assert.equal(atomicWarehouseWithdrawalHash(input),canonical);
   assert.equal(atomicWarehouseWithdrawalHash(JSON.parse(JSON.stringify(input))),canonical);
 });
