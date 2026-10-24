@@ -10,7 +10,7 @@ import {
 import Link from 'next/link';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import {
   normalizeWarehouseLocationQuantity,
   warehouseStockPositionsEqual,
@@ -191,7 +191,7 @@ export function WarehouseMobileTransfer() {
     position: WarehouseStockPosition
   ): Promise<MaterialSelection> => {
     if (!workspace.ug) throw new Error('WAREHOUSE_MOBILE_UG_REQUIRED');
-    const association = await getWarehouseBarcodeByCode(
+    const association = await getWarehouseMobileBarcodeByCode(
       workspace.workspaceId,
       barcode
     );

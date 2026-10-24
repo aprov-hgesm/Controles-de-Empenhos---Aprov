@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle2, LoaderCircle, PackagePlus, TriangleAlert } fro
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import { normalizeWarehouseLocationQuantity, type WarehouseStockPosition } from '../../../lib/warehouse/location';
 import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
 import { normalizeWarehouseExpiryDate } from '../../../lib/warehouse/lot';
@@ -116,7 +116,7 @@ export function WarehouseMobileManualEntry() {
     renewOperation();
 
     void (async () => {
-      const association = await getWarehouseBarcodeByCode(workspace.workspaceId, event.value);
+      const association = await getWarehouseMobileBarcodeByCode(workspace.workspaceId, event.value);
       if (requestId !== productRequestRef.current) return;
 
       if (!association) {

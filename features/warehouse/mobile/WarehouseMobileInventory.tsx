@@ -22,7 +22,7 @@ import {
   useState,
 } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import {
   summarizeWarehouseInventoryItems,
   type WarehouseInventoryItem,
@@ -349,7 +349,7 @@ export function WarehouseMobileInventory() {
     setSuccess(null);
 
     void (async () => {
-      const association = await getWarehouseBarcodeByCode(
+      const association = await getWarehouseMobileBarcodeByCode(
         workspace.workspaceId,
         event.value
       );

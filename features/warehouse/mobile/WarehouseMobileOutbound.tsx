@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 
 import type { WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode';
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import { warehouseStockPositionKey } from '../../../lib/warehouse/location';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
 import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
@@ -351,7 +351,7 @@ export function WarehouseMobileOutbound() {
     setSuccess(null);
 
     void (async () => {
-      const association = await getWarehouseBarcodeByCode(
+      const association = await getWarehouseMobileBarcodeByCode(
         workspace.workspaceId,
         event.value
       );
@@ -509,7 +509,7 @@ export function WarehouseMobileOutbound() {
     try {
       const [freshPosition, freshAssociation] = await Promise.all([
         resolvePosition(scannedPosition.code),
-        getWarehouseBarcodeByCode(workspace.workspaceId, product.barcode),
+        getWarehouseMobileBarcodeByCode(workspace.workspaceId, product.barcode),
       ]);
       if (
         !warehouseMobileOutboundScannedPositionMatches(
