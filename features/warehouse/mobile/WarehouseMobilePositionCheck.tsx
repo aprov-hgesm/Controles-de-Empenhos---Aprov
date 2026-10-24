@@ -24,7 +24,6 @@ import {
   type WarehouseMobilePositionCheckResult,
 } from '../../../lib/warehouse/mobilePositionCheck';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
-import { warehouseLotDisplayCode } from '../../../lib/warehouse/lot';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 
@@ -351,10 +350,10 @@ export function WarehouseMobilePositionCheck() {
                     className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
                   >
                     <p className="font-black text-slate-800">
-                      Lote {warehouseLotDisplayCode(lot.code)}
+                      {expiryLabel(lot.expiresOn)}
                     </p>
                     <p className="mt-0.5 font-semibold text-slate-500">
-                      {formatQuantity(lot.quantity)} · {expiryLabel(lot.expiresOn)}
+                      {formatQuantity(lot.quantity)} unidades registradas
                     </p>
                   </div>
                 ))}
