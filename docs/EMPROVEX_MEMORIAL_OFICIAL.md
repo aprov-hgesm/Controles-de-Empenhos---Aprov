@@ -1,5 +1,49 @@
 # EMPROVEX — Memorial Oficial
 
+## CHECKPOINT VERIFICADO — PR #371 / WAREHOUSE R2 / RESULTADO DOS CHECKS (24/10/2026)
+
+**Esta seção é o PONTO DE RETOMADA MAIS RECENTE; prevalece sobre status históricos abaixo.** Fonte primária: [PR #371](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371), [handoff integral](./EMPROVEX_HANDOFF_WAREHOUSE_R2_SAIDA_VALIDADE_2026-10-24.md) e [handoff técnico](./MOBILE_OUTBOUND_R2_VALIDITY_ONLY_HANDOFF.md). Verificado no GitHub em 24/10/2026, nos checks associados ao **HEAD DE CÓDIGO c6c356a336e24e90116dc074b70894e815d4cdd5** (antes deste commit documental). Ao retomar, consultar o HEAD **novo** e repetir os checks no SHA final — nenhuma linha aqui é certificação do commit que atualiza o memorial.
+
+### Estado de branch e segurança operacional
+- Repositório correto: `aprov-hgesm/Controles-de-Empenhos---Aprov`. PR **#371 ABERTO, NÃO MESCLADO**; branch `feat/mobile-outbound-unified-scan-r2`, alvo `main`.
+- Base `main` no checkpoint: `47323e3b8583e68c8344336a265ddd7d63563c36`, versão R1 anterior. Não houve nesta frente merge, deploy, mudança de Firestore Rules, IAM, dados reais, domínio ou promoção de Vercel; **R2 NÃO está em produção**.
+- Não confundir PR #371 (Saída Móvel R2 + validade sem FEFO) com PR #369 (Motor de Confiança R1 já em produção). Reusar API canônica, identidade de servidor, autorizações e idempotência existentes.
+- O PR tinha **38 arquivos alterados e 16 commits** no HEAD de código referenciado. O documento é apenas checkpoint, não aprovação de release.
+
+### Contrato funcional irrevogável nesta frente
+1. Saída Móvel com **quatro etapas**: ler **item OU local/subposição** no mesmo scanner; escolher item quando o código for de local, ou escolher local apenas quando houver mais de um com saldo do item; informar quantidade; indicar destino; revisar/confirmar. A identidade de quem retira é a do usuário autenticado, definida no servidor — não exibir campo livre de responsável no Móvel. Mantido campo Desktop fora do escopo desse pedido específico.
+2. Eliminar recomendações, priorização, seleção e rótulos **FEFO** na Central (Desktop/Mobile), mas **manter validade, alertas e bloqueios de integridade aplicáveis**. Não equivale a permitir saída de materiais vencidos.
+3. Retirar códigos, seleção e exposição de **lotes** em UX, relatórios, documentos PDF/CSV e planilhas novas. **Não apagar** `lotId`, `lotCode`, documentos, referências persistidas ou contratos de compatibilidade necessários a saldos, conciliação e histórico. Retirada técnica automaticamente repartida entre referências rastreáveis; sem ordenar por vencimento.
+4. Central de Depósitos **3D e 2D integralmente preservadas**, sem simplificação visual, perda de informações operacionais ou regressão no modo Essencial. Desburocratização máxima GOV-SIMP-01, sem abrir mão de isolamento workspace/UG, idempotência e segurança.
+
+### Código existente no PR (implementado, não completamente certificado)
+- `WarehouseMobileOutbound.tsx`: novo fluxo de quatro passos; `mobileScanner.ts`: expectativa dual somente no outbound; `mobileOutbound.ts`: consulta contextual; `mobileOutboundPlan.mjs`: divisão técnica por ID neutro e limites de saldo, sem FEFO.
+- `app/api/central-depositos/operations/route.ts` + `lib/server/warehouseMobileTrust.mjs`: `WITHDRAWAL_FINALIZE_MOBILE` com verificação de confiança/autorização e autoria server-side `access.email`; `finalizeWarehouseWithdrawalServer` canônico.
+- Desktop `WarehouseMaterialWithdrawal.tsx` usando planner sem seleção de lote; Alocação Móvel sem `lotCode` digitável mas mantendo validade e contrato interno; Home, Estoque, Consultas, Croqui, Alertas, Relatórios, CSV/PDF atualizados em parte. Novos testes `scripts/mobile-outbound-unified.test.mjs` e `scripts/warehouse-validity-only-r2.test.mjs`. Ver lista integral no handoff.
+
+### Resultado real dos workflows do SHA c6c356a3 (NÃO CONFUNDIR com GO)
+- **PASS:** EMPROVEX Fast CI (run `40067713862`), EMPROVEX Core Protection (`40067713873`), Recovery guardrails (`40067713865`), Warehouse Server R2 Smoke (`40067713875`), SAAS-DL Legal Validation (`40067713867`), VISUAL-R1 W4 QA (`40067713915`) e Browser E2E On Demand (`40067713924`, job com Emulator PASS; cenário automático do job ignorado por desenho do dispatch). São checks de CI, **não prova de smoke humano autenticado R2**.
+- **FAIL — Application CI run `40067713864`:** job `validate-application` interrompido no passo 55, `ADM Depósito Phase 7 permanent guard` (`npm run verify:adm-deposito-phase-7`). Log objetivo: `Domínio de lote/validade/FEFO incompleto: selectWarehouseFefoLot` e `Superfície Estoque FASE 7 incompleta: warehouse-fefo-recommendation`. O guard `scripts/verify-adm-deposito-phase-7.mjs` ainda EXIGE dois marcadores legados que o Fundador mandou remover. Testes de domínio Phase 7 (19/19), TypeScript error budget, verificação de zero writes client SDK, Core e vários contratos anteriores passaram antes da interrupção; steps posteriores foram **skipped, não PASS**. Gates finais Block 16–21 ficaram FAIL por dependência desse job. **Não restaurar a seleção FEFO para satisfazer teste velho**: atualizar guard/evidências conforme o novo contrato de validade e manter as demais checagens de lotes técnicos, Rules, segurança e UX. Revisar também `tests/e2e/warehouse-phase-7.spec.mjs` que contém marcador FEFO legado.
+- Revisões anteriores documentadas no handoff: guard MOBILE-C legado exigia `lotCode.trim()` (corrigido); importadores FEFO em Home e DepotView corrigidos; asserção FEFO de `warehouse-depot-layout.test.mjs` corrigida. Não ressuscitar esses requisitos.
+
+### Pendências técnicas antes de GO
+1. Adaptar `scripts/verify-adm-deposito-phase-7.mjs` e cenários históricos para validação de **validade sem FEFO**; executar **Application CI completo no mesmo HEAD final**, além de Fast CI, Core, Recovery, Legal, Warehouse Smoke e Browser E2E. Evitar aprovação baseada em gates parciais/skipped.
+2. `lib/server/warehouseBulkStockWorkbook.ts` ainda oferece coluna `Lote` em template novo, e `WarehouseBulkManualEntryOperational.tsx` ainda envia `lotCode:row.lot`: remover na **nova** planilha de 10 colunas e preservar leitura compatível das **antigas** de 11; teste das duas versões. Alteração anterior **não foi commitada**.
+3. Corrigir menções visíveis remanescentes, particularmente `WarehouseItemControlOperational.tsx` (texto FEFO), `WarehouseCroquisR1Operational.tsx` (lotes ativos em proteção de remoção), `WarehouseIsometricPreview.tsx`, `WarehouseImmediateConsumptionPanel.tsx`, `WarehouseLocationInspectionLocalPreview.tsx`. Escanear demais telas, exportações e documentos. Não confundir “operação em lote” (ação massiva) com código de lote físico. Preservar guardas de exclusão/inativação e a estética/funcionalidade 3D.
+4. **Auditar confiança da baixa multi-linha no servidor:** a seleção neutra feita no navegador não pode criar autoridade para submeter plano adulterado. Revalidar lotId, saldo global/local, workspace/UG, validade, quantidades por referência, concorrência, idempotência, rollback e ausência de baixa parcial. Corrigir onde necessário, com testes adversariais.
+5. Smoke autenticado com workspace QA isolado, sem alterar produção: item com 1/N locais, posição com 1/N itens, material sem validade, validades diferentes, estoque insuficiente, expirados/inativos, destino, replay/chave duplicada, outros workspaces, Desktop (carrinho/PDF), Mobile, transferência/inventário e consistência de saldos.
+
+### Handoff GOV-SIMP-01
+**ONDE ESTAMOS:** PR #371 aberto, base R1 em `main@47323e3...`, último HEAD de código avaliado `c6c356a3...`; este checkpoint documental produzirá um SHA posterior. R2 não publicada.
+**O QUE ESTAMOS FAZENDO:** finalizar fluxo de saída, validade sem FEFO/lotes visíveis, auditar integridade e obter CI integral verde.
+**QUEM ESTÁ FAZENDO:** executor ChatGPT/GitHub em branch do PR; Fundador não precisa manipular código.
+**O QUE FAZER A SEGUIR:** ler os dois handoffs vinculados; obter novo HEAD e logs; corrigir guard Phase 7 sem reintroduzir FEFO; completar Excel e varredura UX; auditar servidor e testes; certificar todas as pipelines e smoke autenticado; só então preparar GO/revisão.
+**QUEM FARÁ:** próximo ChatGPT executor no GitHub; **Fundador** faz validação humana e eventual publicação **manual PowerShell / Vercel**, com staged/health/smoke e promoção do mesmo deployment, após autorização expressa.
+**CLASSIFICAÇÃO: IMPLEMENTAÇÃO EM ANDAMENTO — CI AINDA FALHA — NÃO PUBLICAR.**
+
+---
+
+
 ## HANDOFF VIGENTE — WAREHOUSE R2 / SAÍDA MÓVEL / VALIDADE SEM FEFO (24/10/2026)
 
 **PR #371 aberto e ainda não publicado.** Branch: feat/mobile-outbound-unified-scan-r2. Meta: saída móvel em quatro etapas (item/local → quantidade → destino → revisar/confirmar), remover FEFO e indicação de lotes na Central sem apagar dados internos de rastreabilidade/validade. O HEAD de código anterior ao handoff era 77127c2fa2d79b9b9566a4694f3f1f8ef63c1e42; consultar HEAD atual ao retomar. Main/produção: 47323e3b8583e68c8344336a265ddd7d63563c36.
