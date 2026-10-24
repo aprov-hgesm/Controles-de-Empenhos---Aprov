@@ -4,7 +4,7 @@
  * Regras de saldo, lotes e estado permanecem nos motores transacionais existentes.
  */
 export type ServerRole = 'founder' | 'sector';
-export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin';
+export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin' | 'core.parse';
 export interface ServerPrincipal {
   uid: string;
   email: string;
@@ -66,7 +66,8 @@ export function evaluateServerAuthorization(
   }
 
   if (request.capability !== 'warehouse.read' &&
-      request.capability !== 'warehouse.command') {
+      request.capability !== 'warehouse.command' &&
+      request.capability !== 'core.parse') {
     return deny('FORBIDDEN');
   }
 
@@ -85,7 +86,7 @@ export function evaluateServerAuthorization(
     return deny('SCOPE_MISMATCH');
   }
 
-  if (request.capability === 'warehouse.read') {
+  if (request.capability === 'core.parse' || request.capability === 'warehouse.read') {
     return request.operation === undefined ? { allowed: true } : deny('OPERATION_DENIED');
   }
 

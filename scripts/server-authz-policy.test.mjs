@@ -43,6 +43,13 @@ test('saldo genérico, privilégios implícitos e operações arbitrárias proib
   denied(evaluate(sector,'warehouse.read','workspace-a','TRANSFER'),'OPERATION_DENIED');
 });
 
+test('processamento de NE também exige identidade operacional ativa',()=>{
+  allowed(evaluate(sector,'core.parse','workspace-a'));
+  denied(evaluate(sector,'core.parse','workspace-b'),'SCOPE_MISMATCH');
+  denied(evaluate({...sector,ug:''},'core.parse'),'INVALID_PRINCIPAL');
+  denied(evaluate(sector,'core.parse',undefined,'DELETE_ALL'),'OPERATION_DENIED');
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));
@@ -66,6 +73,13 @@ test('nenhuma operação executável do dispatcher fica fora da lista positiva',
     assert.ok(WAREHOUSE_ALLOWED_OPERATIONS.includes(op),'ação não protegida: '+op);
   assert.ok(!WAREHOUSE_ALLOWED_OPERATIONS.includes('LEDGER_MOVEMENT'));
   assert.match(route,/assertWarehouseAuthorization\(access,/);
+});
+
+test('API de análise de NE autentica setor/workspace pelo servidor',()=>{
+  const parser=read('app/api/empenhos/parse-ne/route.ts');
+  assert.match(parser,/verifyPlatformPrincipal/);
+  assert.match(parser,/capability: 'core.parse'/);
+  assert.doesNotMatch(parser,/await verifyFirebaseRequest/);
 });
 
 test('todas as rotas operacionais utilizam a política central',()=>{

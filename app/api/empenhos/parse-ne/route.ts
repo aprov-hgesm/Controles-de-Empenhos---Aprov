@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import {
-  FounderAuthError,
-  verifyFirebaseRequest,
-} from '../../../../lib/server/firebaseFounderAuth';
+import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
+import { verifyPlatformPrincipal, PlatformAuthorizationError } from '../../../../lib/server/platformAuthorization';
+import { evaluateServerAuthorization } from '../../../../lib/server/authorizationPolicy';
 import { parseEmpenhoPdfBytes } from '../../../../lib/server/empenhoPdfParser';
 
 export const runtime = 'nodejs';
@@ -13,7 +12,11 @@ const MAX_FILE_SIZE = 12 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
-    await verifyFirebaseRequest(request.headers.get('authorization'));
+    const principal = await verifyPlatformPrincipal(request.headers.get('authorization'));
+    const authorization = evaluateServerAuthorization(principal, { capability: 'core.parse' });
+    if (!authorization.allowed) {
+      return NextResponse.json({error:'Acesso operacional negado.'},{status:403});
+    }
 
     const formData = await request.formData();
     const file = formData.get('file');
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
       }
     );
   } catch (error) {
-    if (error instanceof FounderAuthError) {
+    if (error instanceof FounderAuthError || error instanceof PlatformAuthorizationError) {
       return NextResponse.json(
         { error: error.message },
         { status: error.status }

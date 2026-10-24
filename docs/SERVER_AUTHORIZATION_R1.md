@@ -9,7 +9,8 @@ Não foi executado merge, deploy, atualização de Rules ou acesso a dados produ
 - Comandos Warehouse classificados por allowlist; `LEDGER_MOVEMENT` permanece proibido.
 - `lib/server/warehouseAccess.ts` verifica JWT Firebase, provider, UID vinculado, status da conta, workspace e UG, sem aceitar essas identidades declaradas pelo corpo da requisição.
 - A leitura dos documentos `platformAccounts/{email}` e `workspaces/{id}` passou para `lib/server/coreIdentityStore.ts`, usando **IAM server-side** com conta de serviço e allowlist de caminhos; não depende do Firebase token como autorização da consulta Firestore. Emulador somente com projeto `demo-` e host local, fora de produção.
-- APIs Warehouse de operações, alocação/consumo imediato, entrada avulsa, fila de NF, status e importação XLSX passam pela mesma política. Motores específicos continuam responsáveis por saldo, lotes, transações, idempotência e consistência.
+- APIs Warehouse de operações, alocação/consumo imediato, entrada avulsa, fila de NF, status e importação XLSX passam pela mesma política.
+- A API de leitura/extração de Nota de Empenho (`/api/empenhos/parse-ne`) exige também a identidade operacional ativa no servidor, em vez de aceitar qualquer Firebase JWT assinado. Motores específicos continuam responsáveis por saldo, lotes, transações, idempotência e consistência.
 - Testes de política isolada e scanner de integração das rotas em `scripts/server-authz-policy.test.mjs`.
 
 ## Segurança e compatibilidade
