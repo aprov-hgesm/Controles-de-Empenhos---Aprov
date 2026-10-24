@@ -8,7 +8,6 @@
     "typecheck": "tsc --noEmit",
     "test:warehouse-react-tab-navigation": "node --test scripts/warehouse-react-tab-navigation.test.mjs",
     "test:mobile-server-barcode-read": "node --test scripts/mobile-server-barcode-read.test.mjs",
-    "test:warehouse-mobile-trust": "node --test scripts/mobile-server-barcode-read.test.mjs",
     "test:warehouse-stock-report-ux": "node --test scripts/warehouse-stock-report-ux.test.mjs",
     "test:warehouse-r361-ne-nf-ux": "node --test scripts/warehouse-r361-ne-nf-ux.test.mjs",
     "test:firestore-cost-estimate": "node --test scripts/firestore-cost-estimate.test.mjs",

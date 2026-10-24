@@ -52,7 +52,7 @@ if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:ModuleSh
   add('test:warehouse-react-tab-navigation');
 }
 // Leitura móvel via IAM: validar os seis fluxos e o endpoint autenticado.
-if (files.some(p => /^(?:lib\/warehouse\/mobileBarcodeReadClient\.ts|lib\/server\/warehouseMobileBarcodeRead\.ts|app\/api\/central-depositos\/mobile-barcode\/route\.ts|scripts\/mobile-server-barcode-read\.test\.mjs|features\/warehouse\/mobile\/WarehouseMobile(?:IntakeAllocation|Transfer|Inventory|Outbound|ItemQuery|ManualEntry)\.tsx)$/.test(p))) {
+if (files.some(p => /^(?:lib\/warehouse\/mobileBarcodeReadClient\.ts|lib\/server\/warehouseMobileBarcodeRead\.ts|lib\/server\/warehouseMobileTrust\.mjs|app\/api\/central-depositos\/mobile-barcode\/route\.ts|scripts\/mobile-server-barcode-read\.test\.mjs|features\/warehouse\/mobile\/WarehouseMobile(?:IntakeAllocation|Transfer|Inventory|Outbound|ItemQuery|ManualEntry)\.tsx)$/.test(p))) {
   add('test:mobile-server-barcode-read');
 }
 // Este teste verifica os detalhes no topo da experiência, as consultas
