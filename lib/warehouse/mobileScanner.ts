@@ -9,6 +9,7 @@ export type WarehouseMobileScanKind =
 
 export const WAREHOUSE_MOBILE_SCANNER_EXPECTATIONS = [
   'EXPECT_PRODUCT',
+  'EXPECT_PRODUCT_OR_LOCATION',
   'EXPECT_LOCATION',
   'EXPECT_SOURCE_LOCATION',
   'EXPECT_DESTINATION_LOCATION',
@@ -48,15 +49,18 @@ export function normalizeWarehouseMobileScanValue(
 
 export function expectedWarehouseMobileScanKind(
   expectation: WarehouseMobileScannerExpectation
-): Exclude<WarehouseMobileScanKind, 'UNKNOWN'> {
-  return expectation === 'EXPECT_PRODUCT' ? 'PRODUCT' : 'LOCATION';
+): Exclude<WarehouseMobileScanKind, 'UNKNOWN'> | 'PRODUCT_OR_LOCATION' {
+  return expectation === 'EXPECT_PRODUCT_OR_LOCATION' ? 'PRODUCT_OR_LOCATION'
+    : expectation === 'EXPECT_PRODUCT' ? 'PRODUCT' : 'LOCATION';
 }
 
 export function isWarehouseMobileScanKindAccepted(
   expectation: WarehouseMobileScannerExpectation,
   kind: WarehouseMobileScanKind
 ): boolean {
-  return kind === expectedWarehouseMobileScanKind(expectation);
+  return expectation === 'EXPECT_PRODUCT_OR_LOCATION'
+    ? kind === 'PRODUCT' || kind === 'LOCATION'
+    : kind === expectedWarehouseMobileScanKind(expectation);
 }
 
 export function buildWarehouseMobileScanEvent(input: {

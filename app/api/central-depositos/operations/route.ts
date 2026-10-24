@@ -103,6 +103,16 @@ export async function POST(request: NextRequest) {
       case 'WITHDRAWAL_FINALIZE':
         result=await finalizeWarehouseWithdrawalServer(access,body.input);
         break;
+      case 'WITHDRAWAL_FINALIZE_MOBILE': {
+        if(!body.input||typeof body.input!=='object'||Array.isArray(body.input))
+          return reject('WAREHOUSE_WITHDRAWAL_INPUT_INVALID',400);
+        // A identidade de quem retira vem do login verificado, nunca do celular.
+        const {withdrawnBy: _ignored,...mobileInput}=body.input as Record<string,unknown>;
+        result=await finalizeWarehouseWithdrawalServer(access,{
+          ...mobileInput,withdrawnBy:access.email,
+        });
+        break;
+      }
       case 'INVENTORY_COUNT':
         result=await warehouseInventoryLifecycleServer(access,'COUNT',body.input);
         break;
