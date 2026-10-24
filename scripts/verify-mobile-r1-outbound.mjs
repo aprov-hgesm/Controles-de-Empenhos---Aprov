@@ -20,7 +20,8 @@ for (const path of [
 const mobile = read('lib/warehouse/mobileOutbound.ts');
 assert.match(mobile, /classifyWarehouseMobileProductScan/);
 assert.match(mobile, /prepareWarehouseExpressOutbound/);
-assert.match(mobile, /selectWarehouseFefoLot/);
+assert.doesNotMatch(mobile, /selectWarehouseFefoLot/);
+assert.match(mobile, /options\.sort\(/);
 assert.match(mobile, /WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/);
 assert.match(mobile, /warehouseMobileOutboundScannedPositionMatches/);
 
@@ -120,6 +121,6 @@ assert.match(workflow, /Central Móvel R1 MOBILE-G outbound guard/);
 
 console.log('MOBILE-G outbound guard: PASS');
 console.log('- jornada móvel entra pelo withdrawal canônico, que delega ao OUTBOUND transacional');
-console.log('- scanner, EPX1/resolver, FEFO, lote, posição e idempotência são reutilizados');
+console.log('- scanner, EPX1/resolver, validade sem FEFO, posição e idempotência são reutilizados');
 console.log('- reader MOBILE-G é bounded/fail-closed e não possui writes');
 console.log('- UI exige confirmação humana e preserva replay seguro');
