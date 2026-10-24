@@ -62,6 +62,8 @@ test('cadastro de fornecedor exige identidade ativa e decisão no servidor',()=>
   assert.match(route,/evaluateServerAuthorization/);
   assert.match(store,/getGoogleAccessToken/);
   assert.match(store,/currentDocument:/);
+  assert.match(store,/SupplierServerError/);
+  assert.match(store,/supplier_/);
   assert.match(store,/isValidSupplierCnpj/);
   assert.match(client,/fetch\('\/api\/core\/suppliers'/);
 });

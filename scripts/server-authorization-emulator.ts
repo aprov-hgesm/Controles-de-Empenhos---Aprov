@@ -7,7 +7,8 @@
 import assert from 'node:assert/strict';
 import { verifyPlatformPrincipal, PlatformAuthorizationError } from '../lib/server/platformAuthorization';
 import { evaluateServerAuthorization } from '../lib/server/authorizationPolicy';
-import { verifyWarehouseRequest, assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
+import { assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
+import { GET as getSuppliers, POST as saveSupplier } from '../app/api/core/suppliers/route';
 
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
 process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID = 'demo-emprovex-security';
@@ -85,6 +86,34 @@ async function main() {
     capability:'warehouse.command',workspaceId:'other-workspace',operation:'TRANSFER',
   }),/Operação não autorizada/);
   console.log('PASS: verified Firebase token + active IAM directory + tenant-scoped command');
+  const supplier={id:'supplier_11222333000181',cnpj:'11222333000181',
+    legalName:'Fornecedor de teste 01',email:'fornecedor@example.test',
+    phone:'55991112222',whatsapp:'55991112222',
+    createdAt:'2026-01-01T00:00:00.000Z',
+    updatedAt:'2026-01-01T00:00:00.000Z',updatedBy:'forged-by-client'};
+  const write=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({supplier}),
+  }));
+  assert.equal(write.status,200,'server supplier write');
+  const writeData=await write.json() as {ok:boolean,item:{updatedBy:string,createdAt:string}};
+  assert.equal(writeData.ok,true);
+  assert.equal(writeData.item.updatedBy,sector.uid,'authoritative updatedBy');
+  assert.notEqual(writeData.item.createdAt,supplier.createdAt,'authoritative creation timestamp');
+  const list=await getSuppliers(new Request('http://localhost/api/core/suppliers',{
+    headers:{authorization:sector.token},
+  }));
+  assert.equal(list.status,200,'server supplier list');
+  const listData=await list.json() as {ok:boolean,items:Array<{cnpj:string}>};
+  assert.ok(listData.items.some(x=>x.cnpj===supplier.cnpj));
+  console.log('PASS: supplier create/list over server IAM and no forged metadata');
+  const forged=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({supplier:{...supplier,workspaceId:'victim-workspace'}}),
+  }));
+  assert.equal(forged.status,400,'injected tenant metadata denied');
+  console.log('PASS: forged workspace field rejected');
+
 
   const intruder=await bearer('authz-intruder@example.test');
   await rejected(()=>verifyPlatformPrincipal(intruder.token));
@@ -102,6 +131,13 @@ async function main() {
   });
   await rejected(()=>verifyPlatformPrincipal(sector.token));
   console.log('PASS: disabled account denied');
+  const blockedSupplier=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({supplier}),
+  }));
+  assert.equal(blockedSupplier.status,403,'suspended sector should not write supplier');
+  console.log('PASS: supplier API denies suspended sectors');
+
   await document('platformAccounts/'+email,{
     email,accountType:'sector',status:'active',firebaseUid:sector.uid,
     workspaceId:ws,ug,authProvider:'password',
