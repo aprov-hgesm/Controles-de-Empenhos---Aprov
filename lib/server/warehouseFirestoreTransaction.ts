@@ -126,6 +126,39 @@ function parseStream(text: string): Array<Record<string, unknown>> {
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
+/**
+ * Leitura IAM de documentos definidos exclusivamente no servidor.
+ * Nunca aceitar caminhos Firestore arbitrários do navegador.
+ */
+export async function warehouseAdminBatchRead(
+  accessToken: string, paths: readonly string[]
+): Promise<ReadonlyMap<string, WarehouseAdminDocument | null>> {
+  if (!paths.length || paths.length > 30 || new Set(paths).size !== paths.length) {
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_READ_SET', 400);
+  }
+  const expected = new Map(paths.map((path) => [fullName(path), path]));
+  const response = await request(accessToken, ':batchGet', { documents: [...expected.keys()] });
+  const rows = parseStream(await response.text());
+  const docs = new Map<string, WarehouseAdminDocument | null>();
+  for (const row of rows) {
+    const found = row.found as { name?: string; fields?: Record<string, Encoded>; updateTime?: string } | undefined;
+    const name = found?.name ?? row.missing;
+    if (typeof name !== 'string' || !expected.has(name)) {
+      throw new WarehouseStoreError('WAREHOUSE_SERVER_READ_OUT_OF_SCOPE', 503);
+    }
+    const path = expected.get(name)!;
+    if (docs.has(path)) throw new WarehouseStoreError('WAREHOUSE_SERVER_READ_DUPLICATE', 503);
+    if (found && !found.updateTime) throw new WarehouseStoreError('WAREHOUSE_SERVER_READ_INVALID', 503);
+    docs.set(path, found
+      ? { path, data: decodeFields(found.fields ?? {}), updateTime: found.updateTime! }
+      : null);
+  }
+  if (docs.size !== paths.length) {
+    throw new WarehouseStoreError('WAREHOUSE_SERVER_INCOMPLETE_READ', 503);
+  }
+  return docs;
+}
+
 export async function warehouseAdminTransaction<T>(
   accessToken: string,
   paths: string[],
