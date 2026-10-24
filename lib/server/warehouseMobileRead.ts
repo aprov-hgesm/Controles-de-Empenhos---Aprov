@@ -14,6 +14,10 @@ const DOMAINS = new Set([
   'balances','lots','inventories','items','destinations',
 ]);
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,130}$/;
+const QUERY_CAPS:Record<string,number>={
+  materials:500,depots:250,locations:500,locationBalances:500,
+  lots:121,inventories:60,items:500,destinations:250,
+};
 const FILTERS: Record<string, readonly string[]> = {
   materials: [], barcodes: ['materialId'], depots: ['code'],
   locations: ['code'], locationBalances: ['materialId','position.kind',
@@ -68,7 +72,8 @@ export async function warehouseMobileReadServer(
     if(item)rows=[item];
   } else {
     if(r.id!==undefined||!Number.isInteger(r.maxResults)
-      ||(r.maxResults as number)<1||(r.maxResults as number)>500
+      ||(r.maxResults as number)<1
+      ||!QUERY_CAPS[r.domain]||(r.maxResults as number)>QUERY_CAPS[r.domain]
       ||!Array.isArray(r.filters)||r.filters.length>3
       ||(r.newestFirst===true&&r.domain!=='inventories'))return invalid();
     const filters=r.filters;
