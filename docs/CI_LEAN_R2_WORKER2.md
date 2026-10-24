@@ -57,8 +57,10 @@ A redução de 89 etapas nomeadas (**aprox. 42,8%**) diminui overhead de steps e
 
 - **CI Fast PASS**: [run 40136335428](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40136335428), SHA `2d6b9be9`.
 - **Application CI integral PASS**: [run 40136332916](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40136332916), SHA `2d6b9be9`, incluindo `validate-application`, produção build, testes de emulator, regressões, 100 guards em 10 lotes e **seis aliases finais PASS**.
-- **Core Protection**: check preservado no PR. Domain CI está preparado, porém **skipped no PR DRAFT**; nenhum resultado da matriz Domain deve ser declarado PASS antes da execução.
-- Uma edição exclusivamente temporária autorizou `push` da branch `feat/core-lean-r2-w2-ci` no Application para executar a suíte integral sem tirar o PR de DRAFT. Esta exceção deve ser retirada antes de concluir a entrega.
+- **Core Protection PASS**, **Recovery guardrails PASS**, **SAAS-DL Legal Validation PASS** e **Fast CI PASS** no SHA `aad72b6f025ccdcef808c7df2ab5bfb6aea42136`.
+- **Domain CI integral PASS**: [run 40137282359](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40137282359), mesmo SHA `aad72b6f0`: planner, Warehouse (Rules server-only, entrada avulsa atômica, saída móvel), Financeiro, Autorização, Legal, Visual e Recuperação — sete jobs SUCCESS. O plano de seleção executou seis domínios.
+- **Falha real encontrada na primeira matriz**: teste legado `test:adm-deposito-modular-r1-security` exigia escrita direta do cliente autorizada; essa expectativa contradiz as Rules server-only. Foi substituído no Domain Warehouse por dois testes reais de Emulator server-only e transação atômica, sem flexibilização de Rules.
+- Para certificar o release no PR DRAFT, foi habilitado temporariamente push do branch no Application; exceção **já retirada**. Para certificar Domain, o planner foi temporariamente liberado no PR DRAFT; exceção **já retirada**. Os dois workflows voltaram aos gatilhos conservadores usuais; nenhum ambiente foi promovido.
 
 ### Comparação quantitativa de duas execuções bem-sucedidas
 
@@ -84,13 +86,14 @@ O novo run entrou na execução do runner por volta de 21:57:01 UTC após ter si
 ### Limites remanescentes da certificação
 
 - Sem permissão para ler os required checks de proteção de `main` (API 403), os seis aliases finais continuam. A decisão única de release fica pendente de migração administrativamente certificada.
-- Domain CI R2 é um estágio novo ainda sem matriz executada nesta branch DRAFT; as suítes profundas equivalentes do Application foram executadas. Domain precisa de validação própria antes de substituir qualquer executor antigo.
+- Domain CI R2 já executou toda a matriz uma vez com PASS no SHA `aad72b6f0`. O último commit removeu exclusivamente sua exceção temporária de PR DRAFT; esse último commit, por si só, não é um novo PASS integral do Application CI. O fluxo normal mantém Domain e Application *skipped* em DRAFT; antes do merge, conferir a certificação completa no SHA de integração conforme política do Coordenador.
 - É necessário comparar conjuntos de mudanças representativos por domínio em múltiplos runs para uma distribuição de tempo, runner minutes e cobertura; os casos negativos do seletor já estão implementados.
 - Nenhum deploy, merge na `main`, nem alteração de Firestore Rules foi realizado.
 
 ## Handoff
 
 - **Onde estamos:** branch `feat/core-lean-r2-w2-ci`, PR DRAFT #372.
-- **O que estamos fazendo:** corrigir o guard móvel obsoleto e iniciar CI por risco sem perder certificação histórica.
+- **O que foi executado:** restaurado o guard móvel, corrigidos verificadores de contratos históricos, Fast CI fail-closed, Domain CI de seis domínios e Application CI com 100 guardas agrupados em dez blocos, preservados seis checks legados e build.
 - **Quem faz:** Worker 2 (CI), Worker 4 (testes de integridade independentes), Coordenador (integração e aprovação).
-- **A seguir:** verificar runs finais GitHub, resolver falhas reais sem `continue-on-error`; executar Release completo após autorização de mudança de estágio; obter branch protection administrativa; decidir retirada dos aliases e duplicações restantes baseada em provas.
+- **A seguir (Coordenador):** integrar auditoria independente do Worker 4, verificar que `main` não avançou ou rebasear de forma controlada, revisar status checks obrigatórios com credencial administrativa (consulta inicial 403), obter PASS no commit de integração e autorizar merge somente após revisão. Manter os seis aliases legados até prova de substituição. Não fazer deploy nem alterar Rules a partir deste PR sem autorização.
+- **Worker 2:** concluir a revisão de PR DRAFT e responder a regressões de integração. Nenhuma alteração direta na `main` realizada.
