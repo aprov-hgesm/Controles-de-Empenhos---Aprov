@@ -1,5 +1,40 @@
 # EMPROVEX — Memorial Oficial
 
+## CERTIFICAÇÃO DE ATOMICIDADE R2 — 24/10/2026
+
+### Decisão arquitetural e implementação final
+**Novas retiradas com múltiplas linhas passam a ser um único commit transacional Firestore (ACID), sem saga parcial.** Arquivo `lib/server/warehouseWithdrawalAtomicWrite.ts`; ativado por `finalizeWarehouseWithdrawalServer` em `lib/server/warehouseWithdrawalWrite.ts` quando o identificador da retirada ainda não possui cabeçalho. Os cabeçalhos da implementação anterior permanecem no caminho histórico de recuperação, sem conversão para v2.
+
+A transação lê e valida no servidor, sob workspace/UG autenticados: destino ativo, material/unidade/código de barras, posição/local/subposição ativos, saldo oficial, referências de validade, incluindo bloqueio de vencidos, e idempotência. A função prepara **todas** as linhas em memória (atualizando virtualmente o mesmo saldo/local/referência entre linhas) e só entrega writes ao Firestore se todas validarem. O único commit abrange movimentos, saldos material e por posição, referências de validade, consumos SISCOFIS `PENDING` e cabeçalho `FINALIZED` com `atomicVersion:2`. Até 40 linhas pelo contrato existente; leitura e escrita limitadas para falhar fechado se a operação ficar grande demais.
+
+A identidade imutável é formada pelo `withdrawalId` e hash integral dos campos do comando. Movimentos e consumos têm IDs determinísticos. Uma retirada já finalizada é retornada como replay sem escritas, sem depender do saldo/validade atual; um payload divergente com o mesmo ID retorna conflito. Duas requisições concorrentes do mesmo ID são serializadas por precondições transacionais Firestore; basta repetir a mesma identidade após erro de concorrência ou resposta perdida. `lotId:null` só consome saldo comprovadamente sem atribuição de validade, com leitura de referências e mutex de atribuição. Sem FEFO nas interfaces nem alteração visual da Central 3D.
+
+### Provas de testes autenticados isolados
+**Código testado:** `61cef6e1939f441f6fa844bf4cebe71f49e47f52`.
+**GitHub Actions:**
+- Warehouse Server R2 Smoke `40113559078`: **PASS** (Firestore Emulator e autenticação, `demo-emprovex-security`). Job `120930391110`.
+- EMPROVEX Fast CI `40113559067`: **PASS**.
+- EMPROVEX Core Protection, Recovery guardrails, SAAS-DL Legal Validation, VISUAL-R1 W4 QA e Browser E2E On Demand `40113559083`: **PASS**.
+- Application CI integral `40113559099`: **PENDING** no instante deste registro. Confirmar antes de qualquer GO; não alegar sucesso antecipadamente.
+
+Log verificável do Emulator:
+- `PASS: falha injetada na linha 2 = rollback integral, sem header/consumo`.
+- `PASS: falta de estoque na linha 2 não confirma a linha 1`.
+- `PASS: 2 linhas confirmadas com saldo/lote/consumo/cabeçalho em um commit; replay sem duplicação`.
+- `PASS: concorrência e retry mesma identidade resultam em uma única baixa`.
+- `PASS: resposta perdida após commit recuperada por replay exato, sem débito duplicado`.
+- `SERVER MANUAL ENTRY EMULATOR PASS`.
+
+Injeções de falha só ficam ativas em Emulator `EMPROVEX_WAREHOUSE_ADMIN_EMULATOR=1` combinado ao projeto `demo-emprovex-security`. Nenhum script de produção usa essas variáveis; nenhum deploy, alteração de Rules, escrita em workspace real ou merge foi executado.
+
+### Gate de release e legado
+**Atomicidade da nova retirada v2: CERTIFICADA EM EMULATOR.** **Publicação: NÃO AUTORIZADA.** Antes de liberar: Application CI integral no SHA correto, validação QA autenticada, e avaliar cabeçalhos v1 antigos `FINALIZING/PARTIALLY_APPLIED`: não podem ser reemitidos com novo withdrawalId. O recuperador v1 idempotente permanece por compatibilidade histórica, mas não é convertido automaticamente nem foi certificado nesta rodada com injeção multietapa v1. Encaminhar eventuais registros incompletos para reconciliação supervisionada. Sem atalhos de merge nem alteração das Firestore Rules.
+
+**Handoff GOV-SIMP-01:** Onde estamos — PR #371 branch `feat/mobile-outbound-unified-scan-r2`, v2 transacional commit `61cef6e...`; o que fazemos — certificação de release além do contrato atômico; quem faz — executor ChatGPT/GitHub; próximo — observar Application CI, conferir backlog legado e smoke autenticado em QA; quem fará — executor conclui testes e Founder valida promoção manual somente após GO expresso.
+
+---
+
+
 ## CHECKPOINT ADICIONAL — REMOÇÃO DE FEFO DA TRANSFERÊNCIA E GATE DE RELEASE (24/10/2026)
 
 **Estado verificável:** branch `feat/mobile-outbound-unified-scan-r2` no código `e1bfa2606658631c6b25999d5b54cc0305067713` antes deste commit de memorial; PR #371 aberto, **NO-GO**. Antes de qualquer sequência, verificar se o novo HEAD/CI mudou. Produção R1 `47323e3b8583e68c8344336a265ddd7d63563c36` preservada.
