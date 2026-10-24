@@ -60,7 +60,7 @@ test('scanner reutilizado distingue produto comercial de posição física', () 
 });
 
 test('escaneamento consulta barcode autoritativo antes de buscar material e bloqueia apresentação convertida', () => {
-  assert.match(screen, /getWarehouseBarcodeByCode\(workspace\.workspaceId, event\.value\)/);
+  assert.match(screen, /getWarehouseMobileBarcodeByCode\(workspace\.workspaceId, event\.value\)/);
   assert.match(screen, /getWarehouseMaterial\(workspace\.workspaceId, association\.materialId\)/);
   assert.match(screen, /association\.factorToBaseUnit !== 1/);
   assert.match(screen, /association\.status !== 'active'/);
