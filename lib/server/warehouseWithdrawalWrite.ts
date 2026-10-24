@@ -19,6 +19,7 @@ import type {
   FinalizeWarehouseMaterialWithdrawalResult,
 } from '../warehouse/withdrawalRepository';
 import { normalizeWarehouseQuantity } from '../warehouse/movement';
+import { validateWarehouseStockPosition } from '../warehouse/location';
 
 const path=(ws:string,type:string,id:string)=>`warehouse/${ws}/${type}/${id}`;
 const fail=(code:string,status=409):never=>{throw new WarehouseStoreError(code,status);};
@@ -32,7 +33,19 @@ function isLine(line:unknown):line is WarehouseWithdrawalLineInput {
     && Number.isFinite(v.requestedQuantity)
     && typeof v.baseQuantity==='number' && v.baseQuantity>0
     && Number.isFinite(v.baseQuantity)
-    && v.presentation!==null && typeof v.presentation==='object';
+    && normalizeWarehouseQuantity(v.requestedQuantity)!==null
+    && normalizeWarehouseQuantity(v.baseQuantity)!==null
+    && typeof v.materialDescription==='string' && v.materialDescription.length<=240
+    && typeof v.presentationLabel==='string' && v.presentationLabel.length<=120
+    && typeof v.unitLabel==='string' && v.unitLabel.length<=80
+    && typeof v.positionLabel==='string' && v.positionLabel.length<=180
+    && (v.barcode===null || (typeof v.barcode==='string' && v.barcode.length<=128))
+    && (v.lotCode===null || (typeof v.lotCode==='string' && v.lotCode.length<=80))
+    && (v.lotId===null || (typeof v.lotId==='string' && /^lot_[a-f0-9]{32}$/.test(v.lotId)))
+    && v.presentation!==null && typeof v.presentation==='object'
+    && !Array.isArray(v.presentation)
+    && validateWarehouseStockPosition(v.position)?.kind!=='UNASSIGNED'
+    && validateWarehouseStockPosition(v.position)!==null;
 }
 function payloadHash(lines:WarehouseWithdrawalLineInput[]) {
   return digest(JSON.stringify(lines.map(line=>({
