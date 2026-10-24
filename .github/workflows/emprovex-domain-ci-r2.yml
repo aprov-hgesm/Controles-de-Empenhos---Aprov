@@ -1,0 +1,72 @@
+name: EMPROVEX Domain CI R2 (staged)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - 'docs/**'
+      - 'memorial/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emprovex-domain-r2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  domain-plan:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_domains: ${{ steps.plan.outputs.has_domains }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify domain selector negative cases
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-domain.test.mjs
+      - id: plan
+        name: Plan affected domains (unknown means all)
+        shell: bash
+        run: |
+          matrix=$(node scripts/ci-lean-plan.mjs --matrix)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$matrix" = '{"include":[]}' ]; then
+            echo "has_domains=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_domains=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Domains: $matrix"
+  affected-domain:
+    name: Domain — ${{ matrix.domain }}
+    needs: domain-plan
+    if: ${{ needs.domain-plan.result == 'success' && needs.domain-plan.outputs.has_domains == 'true' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.domain-plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Domain behavior, security and emulator integration
+        run: node scripts/ci-lean-domain.mjs ${{ matrix.domain }}
+
+# Staged transition: existing Application CI and its required check aliases
+# remain authoritative until their branch protection bindings are inspected.
