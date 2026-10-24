@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",
+    "test:server-authorization": "node --test scripts/server-authz-policy.test.mjs",
     "test:warehouse-react-tab-navigation": "node --test scripts/warehouse-react-tab-navigation.test.mjs",
     "test:warehouse-stock-report-ux": "node --test scripts/warehouse-stock-report-ux.test.mjs",
     "test:warehouse-r361-ne-nf-ux": "node --test scripts/warehouse-r361-ne-nf-ux.test.mjs",
