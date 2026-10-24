@@ -114,63 +114,17 @@ test('material sem validade continua válido e gera apenas contexto logístico',
   assert.equal(lot.warehouseLotExpiryState(result.data, new Date('2026-09-23T12:00:00Z')), 'NO_EXPIRY');
 });
 
-test('FEFO recomenda o lote disponível com vencimento válido mais próximo', () => {
-  const today = new Date('2026-09-23T12:00:00Z');
-  const later = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + 'b'.repeat(32),
-    code: 'DEPOIS',
-    expiresOn: '2026-12-15',
-    quantity: 4,
-  })).data;
-  const sooner = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + 'c'.repeat(32),
-    code: 'PRIMEIRO',
-    expiresOn: '2026-10-20',
-    quantity: 3,
-  })).data;
-  assert.equal(lot.selectWarehouseFefoLot([later, sooner], today)?.code, 'PRIMEIRO');
-});
-
-test('FEFO ignora lote vencido, sem saldo, sem validade e inativo', () => {
-  const today = new Date('2026-09-23T12:00:00Z');
-  const valid = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + 'd'.repeat(32),
-    code: 'VALIDO',
-    expiresOn: '2026-12-01',
-    quantity: 1,
-  })).data;
-  const expired = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + 'e'.repeat(32),
-    code: 'VENCIDO',
-    expiresOn: '2026-09-01',
-    quantity: 5,
-  })).data;
-  const depleted = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + 'f'.repeat(32),
-    code: 'ZERADO',
-    expiresOn: '2026-09-25',
-    quantity: 0,
-  })).data;
-  const noExpiry = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + '1'.repeat(32),
-    code: 'SEM-VALIDADE',
-    expiresOn: null,
-    quantity: 2,
-  })).data;
-  const inactive = lot.validateWarehouseLot(sampleLot({
-    id: 'lot_' + '2'.repeat(32),
-    code: 'INATIVO',
-    expiresOn: '2026-09-24',
-    quantity: 2,
-    status: 'inactive',
-  })).data;
-
-  assert.equal(
-    lot.selectWarehouseFefoLot([expired, depleted, noExpiry, inactive, valid], today)?.code,
-    'VALIDO'
-  );
-  assert.equal(lot.warehouseLotExpiryState(expired, today), 'EXPIRED');
-  assert.equal(lot.warehouseLotExpiryState(depleted, today), 'DEPLETED');
+test('estado de validade preservado sem função de priorização FEFO', () => {
+  const today=new Date('2026-09-23T12:00:00Z');
+  const expired=lot.validateWarehouseLot(sampleLot({expiresOn:'2026-09-01',quantity:5})).data;
+  const depleted=lot.validateWarehouseLot(sampleLot({expiresOn:'2026-09-25',quantity:0})).data;
+  const undated=lot.validateWarehouseLot(sampleLot({expiresOn:null,quantity:2})).data;
+  const inactive=lot.validateWarehouseLot(sampleLot({expiresOn:'2026-09-24',quantity:2,status:'inactive'})).data;
+  assert.equal(lot.selectWarehouseFefoLot,undefined);
+  assert.equal(lot.warehouseLotExpiryState(expired,today),'EXPIRED');
+  assert.equal(lot.warehouseLotExpiryState(depleted,today),'DEPLETED');
+  assert.equal(lot.warehouseLotExpiryState(undated,today),'NO_EXPIRY');
+  assert.equal(lot.warehouseLotExpiryState(inactive,today),'INACTIVE');
 });
 
 test('validade próxima ao vencimento recebe estado operacional próprio', () => {
@@ -207,7 +161,7 @@ test('referência técnica sem validade vira pendência mas não bloqueia o esto
   assert.ok(pendencies.some((item) => item.code === 'LOT_EXPIRY_MISSING'));
 });
 
-test('validade vencida é separada da recomendação e sinalizada criticamente', () => {
+test('validade vencida produz alerta crítico sem recomendação FEFO', () => {
   const expired = lot.validateWarehouseLot(sampleLot({
     expiresOn: '2026-08-30',
     quantity: 2,
@@ -224,10 +178,7 @@ test('validade vencida é separada da recomendação e sinalizada criticamente',
       (item) => item.code === 'EXPIRED_LOT' && item.severity === 'critical'
     )
   );
-  assert.equal(
-    lot.selectWarehouseFefoLot([expired], new Date('2026-09-23T12:00:00Z')),
-    null
-  );
+
 });
 
 test('distribuição física maior que saldo gera pendência sem autocorreção', () => {

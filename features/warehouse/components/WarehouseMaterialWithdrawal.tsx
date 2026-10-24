@@ -150,7 +150,7 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
-    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A validade selecionada já não possui quantidade suficiente vinculada.'],
+    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A quantidade vinculada à validade mudou antes da confirmação.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
     ['WAREHOUSE_WITHDRAWAL_LINE_LIMIT', 'A retirada excede o limite operacional de linhas. Finalize esta operação e inicie outra.'],
@@ -769,7 +769,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       }
     }
     for (const group of lotGroups.values()) {
-      if (group.total > group.available + 0.000001) issues.push('Carrinho excede a quantidade vinculada à validade selecionada.');
+      if (group.total > group.available + 0.000001) issues.push('Carrinho excede a quantidade vinculada a uma validade.');
     }
     return issues;
   }, [cart, state.lots]);

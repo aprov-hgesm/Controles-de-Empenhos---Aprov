@@ -394,7 +394,7 @@ export function WarehouseLocationsR1Operational({
 
   async function archiveDepot() {
     if (!selectedDepot) return;
-    if (!window.confirm('Inativar este depósito e seus locais? A operação será bloqueada se houver estoque ou lotes ocupando posições.')) return;
+    if (!window.confirm('Inativar este depósito e seus locais? A operação será bloqueada se houver estoque ou validades vinculadas às posições.')) return;
     setWorking(true);
     setMessage(null);
     try {
@@ -434,7 +434,7 @@ export function WarehouseLocationsR1Operational({
   async function archiveSelectedLocation() {
     if (!editingLocation) return;
     const label = editingLocation.kind === 'LOCAL' ? 'local e suas prateleiras' : 'subposição';
-    if (!window.confirm('Inativar ' + label + '? A operação será bloqueada se houver material ou lotes associados.')) return;
+    if (!window.confirm('Inativar ' + label + '? A operação será bloqueada se houver material ou validades associadas.')) return;
     setWorking(true);
     setMessage(null);
     try {
