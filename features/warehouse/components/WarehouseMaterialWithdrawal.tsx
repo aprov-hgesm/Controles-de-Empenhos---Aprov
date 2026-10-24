@@ -680,7 +680,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       return;
     }
     // Cada registro técnico da validade recebe uma linha de baixa na unidade-base;
-    // nunca se escolhe lote nem ordena por data (sem FEFO).
+    // registros tecnicos de validade sao selecionados sem prioridade por vencimento.
     const reservedLots = new Map<string,number>();
     const existingLines = cart.filter(line => line.materialId === selectedMaterial.id
       && warehouseStockPositionKey(line.position) === selectedPosition.key);
