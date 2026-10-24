@@ -943,7 +943,7 @@ export function WarehouseStockOperational({
               <p className="mt-1 text-[10px] text-slate-600">{formatWarehouseNumber(selected.unassigned)} pendente de alocação física</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Validades rastreadas</p>
+              <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Registros de validade</p>
               <p className="mt-2 text-2xl font-black text-slate-900">{selected.lots.length}</p>
             </div>
             <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">

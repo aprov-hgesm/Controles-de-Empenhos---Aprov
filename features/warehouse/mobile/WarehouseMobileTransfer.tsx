@@ -108,13 +108,13 @@ function operationError(error: unknown) {
     return 'O saldo da origem mudou antes da confirmação. Revise a operação.';
   }
   if (raw.includes('WAREHOUSE_TRANSFER_LOT_ATTRIBUTION_EXCEEDS_STOCK')) {
-    return 'Os lotes ativos somam mais do que o saldo físico da origem. A divergência foi detectada e nenhuma movimentação foi feita. Revise os lotes na Central Desktop.';
+    return 'As quantidades associadas às validades excedem o saldo físico. Nenhuma movimentação foi feita; revise as validades na Central Desktop.';
   }
   if (raw.includes('WAREHOUSE_TRANSFER_TOO_MANY_ACTIVE_LOTS')) {
-    return 'Há lotes ativos demais para uma transferência segura. Revise o material na Central Desktop.';
+    return 'Há referências de validade em excesso para esta transferência. Revise o material na Central Desktop.';
   }
   if (raw.includes('WAREHOUSE_TRANSFER_LOTS_SATURATED')) {
-    return 'Não foi possível provar a leitura completa dos lotes. A transferência foi bloqueada por segurança.';
+    return 'Não foi possível validar todas as quantidades por validade. A transferência foi bloqueada.';
   }
   if (
     raw.includes('WAREHOUSE_POSITION_INACTIVE')
@@ -129,16 +129,16 @@ function operationError(error: unknown) {
     return 'Origem ou destino não existe mais.';
   }
   if (raw.includes('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH')) {
-    return 'Um lote mudou de posição antes da confirmação. Refaça a operação.';
+    return 'A referência de validade mudou de posição antes da confirmação. Refaça a operação.';
   }
   if (raw.includes('WAREHOUSE_TRANSFER_LOT_INSUFFICIENT_ATTRIBUTION')) {
-    return 'A quantidade de um lote mudou antes da confirmação. Refaça a operação.';
+    return 'A quantidade vinculada a uma validade mudou antes da confirmação. Refaça a operação.';
   }
   if (
     raw.includes('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT')
     || raw.includes('WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID')
   ) {
-    return 'Não foi possível preservar lote e validade durante a transferência. Refaça a operação.';
+    return 'Não foi possível preservar a rastreabilidade da validade durante a transferência. Refaça a operação.';
   }
   if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
     return 'Conflito de idempotência. Recomece a operação.';
@@ -592,7 +592,7 @@ export function WarehouseMobileTransfer() {
       <p className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-[11px] font-semibold text-slate-500">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         A confirmação envia apenas origem, material, quantidade e destino. Saldo,
-        lotes, validade, fracionamento, idempotência e ledger são decididos pelo
+        validade, fracionamento, idempotência e ledger são decididos pelo
         mesmo motor operacional canônico usado pela Central Desktop.
       </p>
     </div>
