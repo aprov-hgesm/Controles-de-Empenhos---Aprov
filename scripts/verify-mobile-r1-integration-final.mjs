@@ -234,9 +234,11 @@ assert.match(
 );
 assert.match(
   itemQuery,
-  /A soma dos lotes ativos em/,
-  'Consultar Item deve sinalizar atribuição ativa de lotes acima do saldo da posição'
+  /A soma das referências de validade em/,
+  'Consultar Item deve sinalizar referências de validade acima do saldo físico'
 );
+assert.match(itemQuery, /lotQuantity - row\.balance\.quantity > 0\.000001/, 'Alerta deve usar comparação real de validades e saldo');
+assert.match(itemQuery, /lotOverages\.map/, 'Divergências por validade devem aparecer ao usuário');
 assert.doesNotMatch(
   itemQuery,
   /Saldo agregado e soma das posições ativas não coincidem/,
