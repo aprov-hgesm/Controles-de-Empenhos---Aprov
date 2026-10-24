@@ -25,7 +25,7 @@ const component = read('features/warehouse/mobile/WarehouseMobileIntakeAllocatio
 for (const required of [
   'loadWarehouseInvoiceIntakeQueue',
   'allocateWarehousePendingItemFast',
-  'getWarehouseBarcodeByCode',
+  'getWarehouseMobileBarcodeByCode',
   'deriveWarehouseMaterialIdForEmpenhoItem',
   'resolveWarehouseStockPositionBarcode',
   'classifyWarehouseMobileLocationScan',
@@ -63,6 +63,11 @@ for (const forbidden of [
     'MOBILE-C não pode escrever diretamente domínio de estoque: ' + forbidden
   );
 }
+
+const mobileBarcode = read('lib/warehouse/mobileBarcodeReadClient.ts');
+assert.match(mobileBarcode, /\/api\/central-depositos\/mobile-barcode/);
+assert.doesNotMatch(mobileBarcode, /\bgetDoc\s*\(/);
+assert.doesNotMatch(component, /\bgetWarehouseBarcodeByCode\s*\(/);
 
 const helper = read('lib/warehouse/mobileIntakeAllocation.ts');
 assert.match(helper, /WAREHOUSE_LOCATION_BARCODE_PREFIX/);

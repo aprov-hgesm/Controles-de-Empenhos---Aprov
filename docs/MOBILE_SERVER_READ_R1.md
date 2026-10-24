@@ -22,3 +22,12 @@ Somente após zerar dependências de leitura SDK considerar negar get/list na ru
 Preservar sempre allow create/update/delete: false para clientes. O banco principal não entra nesse corte.
 
 firebase.json aponta para firestore.warehouse.server-only.rules, mas isso não prova qual ruleset está ativo no Firebase de produção.
+
+## Piloto Motor de Confiança (escopo: somente Operador Móvel)
+
+- `bindWarehouseMobileTrust`: policy fail-closed isolada, acionada DEPOIS de `verifyWarehouseRequest` sem nova autenticação ou consulta ao Firestore.
+- Primeira operação liberada: `BARCODE_READ`. Escopo e UG vêm apenas do token já validado no servidor. As demais operações seguem os motores atuais até migração controlada.
+- Uma solicitação com workspace divergente, identidade incompleta, UG inválida ou ação não autorizada é negada.
+- `scripts/mobile-server-barcode-read.test.mjs` executa o motor de verdade com casos positivos/negativos; `verify-mobile-r1-intake-allocation.mjs` atualizado para exigir o novo contrato.
+- Verificação mínima de Rules em teste: manter negação total de escritas SDK e isolamento de leitura; não usar leitura adicional no Firestore a cada operação para demonstrar confiança.
+- Necessário Emulator de segurança e prova comportamental autenticada antes do merge. Não declarar piloto aprovado apenas por testes de contrato.
