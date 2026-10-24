@@ -1,5 +1,20 @@
 # EMPROVEX — Memorial Oficial
 
+## CHECKPOINT ADICIONAL — REMOÇÃO DE FEFO DA TRANSFERÊNCIA E GATE DE RELEASE (24/10/2026)
+
+**Estado verificável:** branch `feat/mobile-outbound-unified-scan-r2` no código `e1bfa2606658631c6b25999d5b54cc0305067713` antes deste commit de memorial; PR #371 aberto, **NO-GO**. Antes de qualquer sequência, verificar se o novo HEAD/CI mudou. Produção R1 `47323e3b8583e68c8344336a265ddd7d63563c36` preservada.
+
+**Auditoria adicional:** o motor `lib/warehouse/transfer.ts`, compartilhado entre Transferência Mobile e servidor, ainda ordenava as referências técnicas por `expiresOn` e código, priorizando vencimento indiretamente. Isso contrariava remoção integral do FEFO. Alterado `sortLotsForTransfer` para ordenação determinística por `lot.id`, sem comparar validade ou código (commit `771133ca`). Novo teste em `scripts/warehouse-location-transfer.test.mjs` cria dois registros com expiração inversa à ordem de ID e comprova atribuição estável pelo ID (commit `e1bfa260`). Mantém intactos saldos, posições e identificadores históricos. **Validar teste no CI novo**.
+
+**Gates de CI legados adicionais corrigidos:** `scripts/verify-mobile-r1-physical-query.mjs` deixou de exigir `warehouseLotOriginLabel` e passa a verificar `expiryLabel(lot.expiresOn)`; `scripts/verify-mobile-r1-outbound.mjs` não exige `selectWarehouseFefoLot`; `scripts/verify-adm-deposito-phase-9.mjs` rejeita `selectWarehouseFefoLot` e confirma projeção por depósito, sem alterar arquitetura do croqui. A última execução confirmada de Application CI tinha alcançado e passado Fase 7 e Fase 8, mas parou no guard antigo MOBILE-E; o HEAD posterior precisa de certificação completa. **Não declarar Application CI PASS enquanto não houver run completa com conclusão success**.
+
+**Segurança de saída:** teste autenticado Firestore Emulator (run `40069216965`, SHA histórico `65980d...`) passou para bloqueio de expedição com `lotId:null` quando todo saldo está atribuído, rejeição de referência vencida, rejeição de base falsa e compatibilidade Excel 10/11 colunas. Confirmar reexecução no SHA final. O endpoint ainda tem **BLOCKER S2**: a retirada com várias linhas não é atômica, registra consumos após cada movimento e pode falhar parcialmente; idempotência por linha não equivale a rollback de toda retirada. Exige solução transacional/saga certificada e smoke humano QA. **PUBLICAÇÃO EXPRESSAMENTE BLOQUEADA**, não fazer merge, Vercel, Rules ou dados reais.
+
+**Handoff:** onde — PR #371/branch acima; fazendo — remover FEFO residual e certificar servidor; quem — executor ChatGPT/GitHub; próximo — CI completo, solucionar S2, testes multi-linha e smoke autenticado; quem fará — executor implementa, fundador valida e promove somente após GO explícito.
+
+---
+
+
 ## ATUALIZAÇÃO EXECUTIVA DE AUDITORIA — PR #371, 24/10/2026
 
 **STATUS: NO-GO / PR #371 DRAFT após os testes.** Verificar o HEAD corrente antes de executar; HEAD de código no checkpoint: `d6666263bae229826283721d4d3a881966759078`. A versão anterior na main/produção permanece `47323e3b8583e68c8344336a265ddd7d63563c36`; sem publicação, sem merge ou alteração de Rules.
