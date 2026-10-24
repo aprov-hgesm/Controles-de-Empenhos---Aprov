@@ -107,6 +107,30 @@ async function main() {
   const listData=await list.json() as {ok:boolean,items:Array<{cnpj:string}>};
   assert.ok(listData.items.some(x=>x.cnpj===supplier.cnpj));
   console.log('PASS: supplier create/list over server IAM and no forged metadata');
+  const optionalEmail=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({supplier:{...supplier,email:''}}),
+  }));
+  assert.equal(optionalEmail.status,200,'UI allows supplier without e-mail');
+  const legacyId='legacy_supplier_01';
+  await document('workspaces/'+ws+'/suppliers/'+legacyId,{
+    id:legacyId,cnpj:'11222333000181',legalName:'Fornecedor legado',
+    email:'',phone:'',whatsapp:'',createdAt:'2024-01-01T00:00:00.000Z',
+    updatedAt:'2024-01-01T00:00:00.000Z',updatedBy:sector.uid,
+  });
+  const withLegacy=await getSuppliers(new Request('http://localhost/api/core/suppliers',{
+    headers:{authorization:sector.token},
+  }));
+  assert.equal(withLegacy.status,200,'legacy supplier must be listable');
+  const legacyResults=await withLegacy.json() as {items:Array<{id:string}>};
+  assert.ok(legacyResults.items.some(x=>x.id===legacyId));
+  const legacyUpdated=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({supplier:{...supplier,id:legacyId,email:''}}),
+  }));
+  assert.equal(legacyUpdated.status,200,'legacy supplier update allowed only if CNPJ matches');
+  console.log('PASS: optional e-mail and existing supplier IDs preserved');
+
   const forged=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
     method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
     body:JSON.stringify({supplier:{...supplier,workspaceId:'victim-workspace'}}),

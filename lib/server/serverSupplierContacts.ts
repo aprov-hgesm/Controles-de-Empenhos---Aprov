@@ -38,14 +38,14 @@ function contact(data:RemoteRecord):SupplierContact {
   const values=Object.fromEntries(names.map(x=>[x,data.fields?.[x]?.stringValue||'']));
   return values as unknown as SupplierContact;
 }
-function sanitize(input:unknown,uid:string,createdAt:string):SupplierContact {
+function sanitize(input:unknown,uid:string,createdAt:string,recordId:string):SupplierContact {
   if(!input || typeof input!=='object' || Array.isArray(input))
     throw new SupplierServerError('SUPPLIER_INVALID',400);
   const data=input as Record<string,unknown>;
   if(Object.keys(data).some(k=>!names.includes(k as (typeof names)[number])))
     throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
   const cnpj=normalizeSupplierCnpj(typeof data.cnpj==='string'?data.cnpj:'');
-  if(!isValidSupplierCnpj(cnpj)||data.id!=='supplier_'+cnpj)
+  if(!isValidSupplierCnpj(cnpj)||data.id!==recordId)
     throw new SupplierServerError('SUPPLIER_IDENTITY_INVALID',400);
   const fields=['legalName','email','phone','whatsapp'] as const;
   const values=Object.fromEntries(fields.map(k=>{
@@ -55,8 +55,11 @@ function sanitize(input:unknown,uid:string,createdAt:string):SupplierContact {
     return [k,value.trim()];
   }));
   const now=new Date().toISOString();
-  if(!(values.legalName as string)||!(values.email as string))throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
-  return {id:'supplier_'+cnpj,cnpj,...values,
+  if(!(values.legalName as string))throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
+  const email=values.email as string;
+  if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))
+    throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
+  return {id:recordId,cnpj,...values,
     createdAt,updatedAt:now,updatedBy:uid} as SupplierContact;
 }
 export async function listServerSupplierContacts(principal:VerifiedPlatformPrincipal):Promise<SupplierContact[]> {
@@ -71,7 +74,7 @@ export async function listServerSupplierContacts(principal:VerifiedPlatformPrinc
     const payload=await response.json() as {documents?:RemoteRecord[],nextPageToken?:string};
     for(const entry of payload.documents||[]){
       const item=contact(entry);
-      if(!/^supplier_\d{14}$/.test(item.id))throw new SupplierServerError('SUPPLIER_READ_FAILED',503);
+      if(!/^[A-Za-z0-9_-]{1,120}$/.test(item.id))throw new SupplierServerError('SUPPLIER_READ_FAILED',503);
       result.push(item);
     }
     pageToken=payload.nextPageToken||'';
@@ -84,16 +87,22 @@ export async function saveServerSupplierContact(principal:VerifiedPlatformPrinci
     throw new SupplierServerError('SUPPLIER_INVALID',400);
   const supplied=input as Record<string,unknown>;
   const cnpj=normalizeSupplierCnpj(typeof supplied.cnpj==='string'?supplied.cnpj:'');
-  if(!isValidSupplierCnpj(cnpj)||supplied.id!=='supplier_'+cnpj)
+  const recordId=typeof supplied.id==='string'?supplied.id:'';
+  if(!isValidSupplierCnpj(cnpj)||!(/^[A-Za-z0-9_-]{1,120}$/).test(recordId))
     throw new SupplierServerError('SUPPLIER_IDENTITY_INVALID',400);
   const {root,authorization}=await credentials();
-  const path=collectionPath(principal)+'/'+encodeURIComponent('supplier_'+cnpj);
+  const path=collectionPath(principal)+'/'+encodeURIComponent(recordId);
   const existing=await fetch(root+'/'+path,{headers:{authorization},cache:'no-store'});
   if(existing.status!==404&&!existing.ok)throw new SupplierServerError('SUPPLIER_READ_FAILED',503);
   const record:RemoteRecord|null=existing.ok?await existing.json() as RemoteRecord:null;
   if(record&&!record.updateTime)throw new SupplierServerError('SUPPLIER_READ_FAILED',503);
   const current=record?contact(record):null;
-  const sanitized=sanitize(input,principal.uid,current?.createdAt||new Date().toISOString());
+  // IDs históricos só podem ser atualizados se o registro existir e mantiver CNPJ.
+  // Novos registros usam obrigatoriamente a identidade canônica supplier_{cnpj}.
+  if((recordId!=='supplier_'+cnpj && !current) ||
+      (current && (current.id!==recordId||normalizeSupplierCnpj(current.cnpj)!==cnpj)))
+    throw new SupplierServerError('SUPPLIER_IDENTITY_INVALID',400);
+  const sanitized=sanitize(input,principal.uid,current?.createdAt||new Date().toISOString(),recordId);
   const fields=Object.fromEntries(names.map(k=>[k,{stringValue:String(sanitized[k])}]));
   const response=await fetch(root+':commit',{
     method:'POST',

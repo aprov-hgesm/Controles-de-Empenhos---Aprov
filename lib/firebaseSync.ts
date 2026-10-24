@@ -87,7 +87,7 @@ export async function getSupplierContacts(userId: string): Promise<SupplierConta
     if(!response.ok)throw new Error('Não foi possível consultar fornecedores autorizados.');
     const result=await response.json() as {ok:boolean,items:SupplierContact[]};
     if(!result.ok||!Array.isArray(result.items))throw new Error('Resposta de fornecedores inválida.');
-    recordWorkspaceDocumentReads(scope,0,'outros'); // Leituras reais contabilizadas no servidor
+    recordWorkspaceDocumentReads(scope,result.items.length,'outros'); // estimativa de documentos retornados via servidor
     return result.items;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
