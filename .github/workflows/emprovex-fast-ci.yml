@@ -35,8 +35,11 @@ jobs:
         run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs
       - name: Executable JavaScript syntax (including .mjs)
         run: node scripts/ci-lean-syntax.mjs
-      - name: Mobile-G authenticated withdrawal contract (phase 0)
-        run: npm run verify:mobile-r1-integration-3
+      - name: Mobile R2 authenticated operation contracts (phase 0)
+        run: |
+          npm run verify:mobile-r1-integration-3
+          npm run verify:mobile-r1-integration-final
+          npm run verify:mobile-k-canonical-ops
       - name: TypeScript sem erros
         run: npm run typecheck
       - name: Zero gravações Warehouse pelo SDK do cliente
