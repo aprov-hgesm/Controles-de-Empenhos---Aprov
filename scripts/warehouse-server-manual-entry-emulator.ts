@@ -23,6 +23,7 @@ import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
 import { finalizeWarehouseWithdrawalServer, legacyWithdrawalPayloadHash } from '../lib/server/warehouseWithdrawalWrite';
+import { auditWarehouseLegacyWithdrawalsServer } from '../lib/server/warehouseWithdrawalLegacyAudit';
 import { WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION } from '../lib/warehouse/withdrawal';
 import { setWarehouseConsumptionSiscofisStatusServer } from '../lib/server/warehouseConsumptionStatusWrite';
 import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
@@ -826,6 +827,11 @@ try {
   assert.equal(await legacyBalance(),beforePhantom);
   console.log('PASS: cabeçalho legado FINALIZED sem movimento/consumo bloqueado');
 
+  const legacyAudit=await auditWarehouseLegacyWithdrawalsServer(access);
+  assert.ok(legacyAudit.legacyFinalizedChecked>=6);
+  assert.ok(legacyAudit.findings.some(item=>item.id===phantomId
+    &&item.reason==='CONSUMPTION_COUNT_MISMATCH'));
+  console.log('PASS: auditor v1 somente leitura detecta falso FINALIZED e valida replays reais');
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');
