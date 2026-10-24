@@ -48,12 +48,15 @@ export function parseWarehouseWithdrawalV3(raw:unknown):WarehouseWithdrawalV3Com
     const quantity=normalizeWarehouseQuantity(entry.requestedQuantity);
     if(!position||position.kind==='UNASSIGNED'||quantity===null||quantity<=0)
       throw new Error('WAREHOUSE_WITHDRAWAL_V3_LINE_INVALID');
-    const code=entry.presentationCode;
-    if(code!==undefined && (typeof code!=='string'||! /^[a-z]{1,16}$/.test(code)))
+    const code=typeof entry.presentationCode==='string'
+      ?entry.presentationCode:undefined;
+    if(entry.presentationCode!==undefined
+      &&(!code||!/^[a-z]{1,16}$/.test(code)))
       throw new Error('WAREHOUSE_WITHDRAWAL_V3_PRESENTATION_INVALID');
-    const barcodeId=entry.barcodeId;
-    if(barcodeId!==undefined && (typeof barcodeId!=='string'
-      ||!/^bar_[a-f0-9]{64}$/.test(barcodeId)))
+    const barcodeId=typeof entry.barcodeId==='string'
+      ?entry.barcodeId:undefined;
+    if(entry.barcodeId!==undefined
+      &&(!barcodeId||!/^bar_[a-f0-9]{64}$/.test(barcodeId)))
       throw new Error('WAREHOUSE_WITHDRAWAL_V3_BARCODE_INVALID');
     return {
       materialId:entry.materialId,
