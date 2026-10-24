@@ -48,7 +48,11 @@ test('UI: primeira leitura resolve ambos, destino sem responsavel ou lote manual
   assert.match(ui,/getWarehouseMobileBarcodeByCode/);
   assert.match(ui,/available\.length===1\?available\[0\]:null/);
   assert.match(ui,/warehouseStockPositionsEqual\(o\.position,location\.resolved\.position\)/);
-  assert.match(ui,/planMobileOutboundAutomaticLots/);
+  assert.match(ui,/WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+  const server=text('lib/server/warehouseWithdrawalV3Write.ts');
+  assert.match(server,/planMobileOutboundAutomaticLots/);
+  assert.match(server,/finalizeWarehouseWithdrawalAtomicServer/);
+  assert.match(server,/warehouseWithdrawalV3DerivedLineId/);
   assert.match(ui,/WITHDRAWAL_FINALIZE_MOBILE/);
   assert.doesNotMatch(ui,/chooseLot|setLotId|selectedLot|pickedBy|setPickedBy|onClick.*lot/);
   assert.match(ui,/1 · LER CÓDIGO DE BARRAS/);
