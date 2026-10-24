@@ -57,7 +57,7 @@ function sanitize(input:unknown,uid:string,createdAt:string,recordId:string):Sup
   const now=new Date().toISOString();
   if(!(values.legalName as string))throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
   const email=values.email as string;
-  if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     throw new SupplierServerError('SUPPLIER_INVALID_FIELDS',400);
   return {id:recordId,cnpj,...values,
     createdAt,updatedAt:now,updatedBy:uid} as SupplierContact;
