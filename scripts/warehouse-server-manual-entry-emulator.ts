@@ -22,7 +22,8 @@ import { excludeWarehouseQueueServer } from '../lib/server/warehouseQueueExclusi
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { applyWarehouseExpressOutboundServer } from '../lib/server/warehouseOutboundWrite';
 import { returnWarehouseStockOutboundServer } from '../lib/server/warehouseReturnWrite';
-import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
+import { finalizeWarehouseWithdrawalServer, legacyWithdrawalPayloadHash } from '../lib/server/warehouseWithdrawalWrite';
+import { WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION } from '../lib/warehouse/withdrawal';
 import { setWarehouseConsumptionSiscofisStatusServer } from '../lib/server/warehouseConsumptionStatusWrite';
 import { startWarehouseInventoryServer } from '../lib/server/warehouseInventoryStart';
 import { warehouseInventoryLifecycleServer } from '../lib/server/warehouseInventoryLifecycle';
@@ -737,6 +738,93 @@ try {
   assert.equal(await atomicBalance(),3);
   console.log('PASS: resposta perdida após commit recuperada por replay exato, sem débito duplicado');
 
+
+
+  // Recuperação histórica v1: seis interrupções após etapas já persistidas
+  // e replay da MESMA retirada. Nunca emitir movimento duplicado.
+  const legacySeed=await registerWarehouseManualEntryServer(access,{
+    operationId:'withdrawal-legacy-r2-seed',existingMaterialId:null,
+    description:'Estoque legado de recuperação',unitLabel:'KG',quantity:30,
+    provenance:'Teste legado isolado',reference:'Simulação v1',
+    position,expiresOn:'2027-07-20',lotCode:'LEGACY-R2-REF',barcode:null,
+  });
+  assert.ok(legacySeed.validity);
+  const legacyBalance=()=>getDoc(ref('balances',legacySeed.material.id))
+    .then(snapshot=>snapshot.data()?.quantity as number);
+  const legacyStages=['1:movement','1:consumption','1:progress',
+    '2:movement','2:consumption','2:progress'];
+  for(let stageIndex=0;stageIndex<legacyStages.length;stageIndex++) {
+    const stage=legacyStages[stageIndex];
+    const headId='wd_'+String.fromCharCode(97+stageIndex).repeat(32);
+    const testInput={
+      withdrawalId:headId,destinationId:atomicDestination.id,
+      withdrawnBy:'Operador QA',
+      lines:[0,1].map(line=>({
+        lineId:'wline_'+String.fromCharCode(97+stageIndex*2+line).repeat(32),
+        materialId:legacySeed.material.id,
+        materialDescription:legacySeed.material.description,
+        requestedQuantity:1,baseQuantity:1,
+        presentation:legacySeed.material.unit,presentationLabel:'KG',unitLabel:'KG',
+        position,positionLabel:'DEP-MANUAL / LOC-MANUAL',
+        barcodeAssociation:null,barcode:null,
+        lotId:legacySeed.validity!.id,lotCode:legacySeed.validity!.code,
+      })),
+    };
+    const startBalance=await legacyBalance();
+    await setDoc(ref('withdrawals',headId),{
+      schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
+      id:headId,workspaceId,ug,destinationId:atomicDestination.id,
+      destinationName:atomicDestination.name,withdrawnBy:testInput.withdrawnBy,
+      payloadHash:legacyWithdrawalPayloadHash(testInput.lines),
+      expectedLineCount:2,appliedLineCount:0,status:'FINALIZING',
+      createdBy:access.uid,createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString(),finalizedAt:null,
+    });
+    process.env.EMPROVEX_WAREHOUSE_LEGACY_FAULT_STAGE=stage;
+    try {
+      await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,testInput),
+        /WAREHOUSE_LEGACY_TEST_INJECTED_FAILURE/);
+    }finally{delete process.env.EMPROVEX_WAREHOUSE_LEGACY_FAULT_STAGE;}
+    const recovered=await finalizeWarehouseWithdrawalServer(access,testInput);
+    assert.equal(recovered.withdrawal.status,'FINALIZED');
+    assert.equal(recovered.withdrawal.appliedLineCount,2);
+    assert.equal(await legacyBalance(),startBalance-2);
+    for(const line of testInput.lines) {
+      const consumptionId='cons_'+createHash('sha256').update(
+        workspaceId+'\\n'+'stock:'+headId+':'+line.lineId).digest('hex');
+      assert.equal((await getDoc(ref('consumptions',consumptionId))).exists(),true);
+    }
+    const replay=await finalizeWarehouseWithdrawalServer(access,testInput);
+    assert.equal(replay.movementIds.length,0);
+    assert.equal(await legacyBalance(),startBalance-2);
+    console.log('PASS: recuperação v1 em '+stage+' sem segunda baixa');
+  }
+  // O cabeçalho FINALIZED isolado não constitui prova do saldo/consumo.
+  const phantomId='wd_'+'f'.repeat(32);
+  const phantomLine={
+    lineId:'wline_'+'f'.repeat(32),
+    materialId:legacySeed.material.id,materialDescription:legacySeed.material.description,
+    requestedQuantity:1,baseQuantity:1,presentation:legacySeed.material.unit,
+    presentationLabel:'KG',unitLabel:'KG',position,positionLabel:'DEP-MANUAL / LOC-MANUAL',
+    barcodeAssociation:null,barcode:null,
+    lotId:legacySeed.validity!.id,lotCode:legacySeed.validity!.code,
+  };
+  const phantomInput={withdrawalId:phantomId,destinationId:atomicDestination.id,
+    withdrawnBy:'Operador QA',lines:[phantomLine]};
+  await setDoc(ref('withdrawals',phantomId),{
+    schemaVersion:WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
+    id:phantomId,workspaceId,ug,destinationId:atomicDestination.id,
+    destinationName:atomicDestination.name,withdrawnBy:'Operador QA',
+    payloadHash:legacyWithdrawalPayloadHash(phantomInput.lines),
+    expectedLineCount:1,appliedLineCount:1,status:'FINALIZED',
+    createdBy:access.uid,createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),finalizedAt:new Date().toISOString(),
+  });
+  const beforePhantom=await legacyBalance();
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,phantomInput),
+    /WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED/);
+  assert.equal(await legacyBalance(),beforePhantom);
+  console.log('PASS: cabeçalho legado FINALIZED sem movimento/consumo bloqueado');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
