@@ -1,5 +1,28 @@
 # EMPROVEX — Memorial Oficial
 
+## ATUALIZAÇÃO EXECUTIVA DE AUDITORIA — PR #371, 24/10/2026
+
+**STATUS: NO-GO / PR #371 DRAFT após os testes.** Verificar o HEAD corrente antes de executar; HEAD de código no checkpoint: `d6666263bae229826283721d4d3a881966759078`. A versão anterior na main/produção permanece `47323e3b8583e68c8344336a265ddd7d63563c36`; sem publicação, sem merge ou alteração de Rules.
+
+### Evidência mais recente
+- **Application CI:** correção real e confirmada para guard da **FASE 7** (FEFO extinto) e da **FASE 8** (FEFO extinto). CI alcançou o guard **MOBILE-E**, que falhou por exigir `warehouseLotOriginLabel` na tela; adaptado para validade `expiryLabel(lot.expiresOn)` em commit `98c1966`. Guard **MOBILE-G** também passou a rejeitar FEFO e exigir planejamento neutro, commit `d666626`. Nova execução de CI integral acionada; **obter conclusão do SHA vigente**.
+- **Warehouse Server R2 Smoke**, execução **40069216965** no SHA `65980d2...`: **PASS no Firestore Emulator**, com passos de autenticação, segurança multi-tenant, XLSX, Motor de Confiança, novo bloqueio de `lotId:null` com saldo atribuído, bloqueio de referência vencida e rejeição de quantidade-base adulterada. Evidências nos logs (ex.: `PASS: servidor rejeita bypass lotId nulo`, `PASS: retirada rejeita base forjada`, `PASS: novo Excel com 10 colunas ... legado 11`). Esses resultados pertencem ao SHA citado; repetir/confirmar no HEAD final.
+- Código `lib/server/warehouseOutboundWrite.ts` agora consulta referências canônicas ao baixar `lotId:null` e calcula saldo livre na transação, com mutex `lotAttributionLocks`. O servidor compara `expectedBaseQuantity` com a conversão canônica antes do débito. `lib/server/warehouseWithdrawalWrite.ts` faz validação sintática/campo e repassa expectativa de base. Retenção de identificadores técnicos `lotId` para histórico, sem visualização de códigos no operador. Referência explícita vencida rejeitada no servidor.
+- Modelo Excel novo sem lote, 10 colunas; importador ainda lê histórico de 11 colunas. Menções antigas a lotes físicos nas interfaces revisadas foram substituídas por validade/referências de validade; Central 3D não foi alterada.
+
+### Impedimento de release que não é um simples guard
+**S2 CRÍTICO — retirada composta não é atômica:** `finalizeWarehouseWithdrawalServer` aplica linhas em transações distintas e só depois registra consumo/progresso. Se uma linha posterior falhar, pode haver retirada parcial. A idempotência por linha facilita recuperação, mas não garante rollback, ausência de consumo pendente ou ausência de inconsistências em caso de concorrência. **Antes de GO**: implementar fechamento transacional de todos os movimentos e consumos num único commit, quando viável, **ou** saga de recuperação robusta, observável e certificada no Emulator com injeção de falhas a cada passo, incluindo múltiplas linhas, replays, concorrência, falhas de rede, invariantes de saldo, consumo e SISCOFIS. O servidor não deve aceitar plano adulterado. Outro ponto: metadados textuais client-side em documento de consumo exigem validação de origem server-side antes de certificação.
+
+### Handoff padrão GOV-SIMP-01
+**ONDE ESTAMOS:** branch do PR #371 com correções de CI FASE 7, 8, MOBILE-E e MOBILE-G; Smoke server PASS em checkpoint anterior, nova certificação completa em andamento; NO-GO.
+**O QUE ESTAMOS FAZENDO:** finalizar CI e validar atomicidade/recuperação do fluxo de saída automatizado sem FEFO nem seleção de lotes.
+**QUEM ESTÁ FAZENDO:** ChatGPT executor GitHub; Fundador apenas autoriza versão e opera Vercel no PowerShell.
+**O QUE FAZER A SEGUIR:** consultar HEAD, logs do Application CI e Warehouse Server R2 Smoke do SHA final, corrigir novos guards legados sem restaurar FEFO, solucionar S2 com testes adversariais, executar smoke autenticado em QA isolado; somente então pedir GO do Fundador.
+**QUEM FARÁ:** executor técnico nas branches; Fundador valida visual/manual e promove o deployment apenas depois de autorização.
+
+---
+
+
 ## AUDITORIA FUNCIONAL E DE SEGURANÇA R2 — CHECKPOINT E BLOQUEIO DE RELEASE (24/10/2026)
 
 **PR #371: DRAFT / NÃO PUBLICAR / NO-GO.** Repositório `aprov-hgesm/Controles-de-Empenhos---Aprov`; branch `feat/mobile-outbound-unified-scan-r2`. HEAD de código auditado imediatamente antes deste commit documental: `11030cd4249dde0dd1279f26b8f58f3b66d522cd`. Após salvar este documento, obter novo HEAD e verificar novamente pipelines no SHA vigente. Nenhum merge, deploy, alteração de Rules ou dados reais foi executado nesta auditoria.
