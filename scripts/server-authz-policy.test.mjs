@@ -79,6 +79,13 @@ test('todas as rotas operacionais utilizam a política central',()=>{
   ])assert.match(read(path),/assertWarehouseAuthorization\(/,'gate ausente '+path);
 });
 
+test('verificadores de administrador integram política central',()=>{
+  for(const p of ['lib/server/sectorProvisioningAdmin.ts','lib/server/firebaseFounderAuth.ts']){
+    assert.match(read(p),/evaluateServerAuthorization/);
+    assert.match(read(p),/capability: 'platform.admin'/);
+  }
+});
+
 test('consulta do diretório usa IAM e NÃO o token Firebase do cliente',()=>{
   const access=read('lib/server/warehouseAccess.ts');
   const store=read('lib/server/coreIdentityStore.ts');
