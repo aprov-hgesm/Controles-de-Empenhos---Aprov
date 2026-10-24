@@ -18,6 +18,9 @@ import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdr
 import { atomicWarehouseWithdrawalHash } from '../lib/server/warehouseWithdrawalAtomicWrite';
 import { createWarehouseMovementId } from '../lib/warehouse/movement';
 import { createWarehouseLocationBalanceId } from '../lib/warehouse/location';
+import type { WarehouseStockPosition } from '../lib/warehouse/location';
+import type { WarehouseWithdrawalLineInput } from '../lib/warehouse/withdrawal';
+import type { FinalizeWarehouseMaterialWithdrawalInput } from '../lib/warehouse/withdrawalRepository';
 
 const project='demo-emprovex-security';
 if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8080'
@@ -30,13 +33,13 @@ process.env.EMPROVEX_E2E_SERVER_AUTH='1';
 
 const ws='hgesm-aprov', ug='160416';
 const depotId='dep_'+'4'.repeat(32), locationId='loc_'+'5'.repeat(32);
-const position={kind:'LOCATION',depotId,locationId,subpositionId:null};
+const position:WarehouseStockPosition={kind:'LOCATION',depotId,locationId,subpositionId:null};
 const app=initializeApp({projectId:project,apiKey:'fake-api-key',
   authDomain:project+'.firebaseapp.com'},'core-lean-w4-assurance');
 
-const pass=(name)=>console.log('W4 PASS: '+name);
-const ident=(prefix,number)=>prefix+Number(number).toString(16).padStart(32,'0');
-const consumptionId=(withdrawalId,lineId)=>'cons_'+createHash('sha256')
+const pass=(name:string)=>console.log('W4 PASS: '+name);
+const ident=(prefix:string,number:number)=>prefix+Number(number).toString(16).padStart(32,'0');
+const consumptionId=(withdrawalId:string,lineId:string)=>'cons_'+createHash('sha256')
   .update(ws+'\n'+'stock:'+withdrawalId+':'+lineId).digest('hex');
 
 async function run() {
@@ -51,8 +54,8 @@ async function run() {
   assert.equal(access.uid,login.user.uid);
   const db=getFirestore(app,'emprovex-warehouse');
   connectFirestoreEmulator(db,'127.0.0.1',8080);
-  const ref=(kind,id)=>doc(db,'warehouse',ws,kind,id);
-  const read=async(kind,id)=>(await getDoc(ref(kind,id))).data()??null;
+  const ref=(kind:string,id:string)=>doc(db,'warehouse',ws,kind,id);
+  const read=async(kind:string,id:string)=>(await getDoc(ref(kind,id))).data()??null;
 
   await setDoc(ref('depots',depotId),{
     schemaVersion:'warehouse_depot_v1',id:depotId,workspaceId:ws,ug,
@@ -75,8 +78,9 @@ async function run() {
     provenance:'Contagem',reference:'W4 fixture',position,
     expiresOn:'2027-11-10',lotCode:'W4-V-001',barcode:null,
   });
-  assert.ok(seeded.validity,'Seed de validade obrigatória');
-  const material=seeded.material, lotId=seeded.validity.id;
+  const validity=seeded.validity;
+  if(!validity) throw new Error('SEED_VALIDADE_AUSENTE');
+  const material=seeded.material, lotId=validity.id;
   await registerWarehouseManualEntryServer(access,{
     operationId:'core-lean-w4-stock-free',existingMaterialId:material.id,
     description:material.description,unitLabel:'KG',quantity:10,
@@ -89,19 +93,19 @@ async function run() {
     local:(await read('locationBalances',locationBalanceId))?.quantity,
     tracked:(await read('lots',lotId))?.quantity,
   });
-  const line=(quantity,serial,lot=lotId)=>({
+  const line=(quantity:number,serial:number,lot:string|null=lotId):WarehouseWithdrawalLineInput=>({
     lineId:ident('wline_',serial),materialId:material.id,
     materialDescription:material.description,requestedQuantity:quantity,
     baseQuantity:quantity,presentation:material.unit,
     presentationLabel:'KG',unitLabel:'KG',position,
     positionLabel:'W4QA / W4LOCAL',barcodeAssociation:null,
-    barcode:null,lotId:lot,lotCode:lot===lotId?seeded.validity.code:null,
+    barcode:null,lotId:lot,lotCode:lot===lotId?validity.code:null,
   });
-  const command=(number,lines)=>({
+  const command=(number:number,lines:WarehouseWithdrawalLineInput[]):FinalizeWarehouseMaterialWithdrawalInput=>({
     withdrawalId:ident('wd_',number),destinationId:destination.id,
     withdrawnBy:'Operador QA',lines,
   });
-  const effects=async(input)=>{
+  const effects=async(input:FinalizeWarehouseMaterialWithdrawalInput)=>{
     const h=await read('withdrawals',input.withdrawalId);
     const lines=await Promise.all(input.lines.map(async item=>{
       const mid=await createWarehouseMovementId(ws,
@@ -111,7 +115,7 @@ async function run() {
     }));
     return {header:h,lines};
   };
-  const noEffects=async(input)=>{
+  const noEffects=async(input:FinalizeWarehouseMaterialWithdrawalInput)=>{
     const actual=await effects(input);
     assert.equal(actual.header,null,'Cabeçalho indevido');
     for(const item of actual.lines){
@@ -119,7 +123,7 @@ async function run() {
       assert.equal(item.consumption,null,'Consumo indevido');
     }
   };
-  const complete=async(input)=>{
+  const complete=async(input:FinalizeWarehouseMaterialWithdrawalInput)=>{
     const actual=await effects(input);
     assert.equal(actual.header?.status,'FINALIZED');
     assert.equal(actual.header?.atomicVersion,2);
