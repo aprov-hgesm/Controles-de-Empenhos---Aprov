@@ -353,7 +353,7 @@ export function WarehouseMobilePositionCheck() {
                       {expiryLabel(lot.expiresOn)}
                     </p>
                     <p className="mt-0.5 font-semibold text-slate-500">
-                      {formatQuantity(lot.quantity)} unidades registradas
+                      {formatQuantity(lot.quantity)} {unitLabel(result)} vinculados a esta validade
                     </p>
                   </div>
                 ))}
