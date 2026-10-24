@@ -1,5 +1,35 @@
 # EMPROVEX — Memorial Oficial
 
+## ESTADO VIGENTE — EMPROVEX R2 PUBLICADO E MÉTODO DE PUBLICAÇÃO VERCEL (24/10/2026)
+
+> **Atualização que prevalece sobre os checkpoints anteriores de release.** Os registros antigos abaixo permanecem históricos, inclusive instruções com `--prebuilt`, PR #371 ainda aberto ou publicação bloqueada. A fonte operacional atual é o [runbook revisado](./EMPROVEX_RELEASE_POWERSHELL.md).
+
+**Release confirmada pelo Fundador em PowerShell:** PR [#371](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371) mesclado por squash; **SHA do código publicado** `7d4eafd582bff8620d98258c560e8cd0a1f2ef60`; domínio oficial `https://emprovex.com.br`.
+
+- **Equipe/projeto:** `aprov-hgesms-projects` / `controles-de-empenhos-aprov` (`prj_DZ2y10DUaXrcHoRMaZ58FkTCvOHB`).
+- **Deployment imutável publicado:** `dpl_86S1rK9dAZoAgQ385AEfB81LEPbz`, `https://controles-de-empenhos-aprov-3srmos6lf-aprov-hgesms-projects.vercel.app`. Ambiente `production`; status `Ready`.
+- **Provas da publicação:** `vercel.cmd curl /api/health --deployment <URL_IMUTAVEL> --scope aprov-hgesms-projects` retornou `{"status":"ok","timestamp":"2026-10-24T20:57:35.433Z"}`; `vercel.cmd promote <URL_IMUTAVEL> --yes --scope aprov-hgesms-projects` retornou `Success!`; `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` apresentou o **mesmo ID**, target `production`, `Ready`. Build remoto 58s; pós-build 40s; uso de 4 CPU-minutos. **DEPLOY/PROMOÇÃO/DOMÍNIO=PASS.**
+- **Limites da evidência:** saúde básica e promoção estão comprovadas; smoke autenticado da câmera/saída móvel, autorização/IAM de escrita e triagem de avisos de dependências são verificações separadas. Firestore Rules não foram alteradas nesta publicação.
+
+### Procedimento canônico consolidado — GOV-SIMP-01
+
+1. **Uma release, um deployment:** integrar o commit funcional certificado na `main` e verificar o SHA; exportar os arquivos com `git archive` para uma pasta limpa **sem `.git`**, vincular ao projeto existente, conferir nomes dos segredos e executar **uma única vez** `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`. Este é o método de **build remoto** efetivamente aprovado no plano Hobby em 19/10 e 24/10; não usar `vercel build --prod`/`--prebuilt` por hábito.
+2. **Retomada sem redeploy:** guardar URL individual e ID do deployment assim que estiver `Ready`. A partir daí, erros de shell, parser, TTY, health ou codificação **NÃO AUTORIZAM** repetir clone, `link`, build, deploy ou promoção sem conferir estado. Usar diretamente `vercel.cmd inspect <URL> --scope ...` e `vercel.cmd curl /api/health --deployment <URL> --scope ...`.
+3. **Sem wrappers frágeis:** não extrair `target`, `Ready` ou URL de `vercel inspect` por regex sobre stdout/stderr, formato de tabela, cores ou caracteres Unicode. Não passar `--no-color` para `vercel curl` na CLI 64.0.2 — a opção é repassada ao `curl` nativo, que falha com exit code 2. Preferir os comandos oficiais isolados.
+4. **GO antes da promoção:** conferir `target production`, ID e `Ready`, health básico, health restrito do Warehouse autenticado e smoke em workspace QA isolado (incluindo câmera, retirada multilinha, saldos e regras de validade), sem imprimir token ou segredo. Em seguida `vercel.cmd promote <MESMA_URL> --yes --scope aprov-hgesms-projects` e `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` para confirmar o **mesmo ID**. Falha/timeout após `promote`: inspecionar domínio **antes** de repetir.
+5. **Separação de responsabilidades:** deploy de código não altera Firestore Rules nem deve gerar migração de dados. `vercel.json` mantém `git.deploymentEnabled=false`: commits de documentação posteriores ao SHA funcional não exigem redeploy. Proibir novos scripts de release que reinstalem verificações falhas sem teste em CLI real.
+
+### Auditoria da sequência de cinco erros que não podem se repetir
+
+- Primeiro script: tentou promover sem staged preparado e fez verificações desnecessárias antes de consultar estado.
+- Segundo bloqueio: checou árvore Git após `vercel link`, confundindo modificações locais com código de release (arquivo específico não comprovado).
+- Terceiro: retomada refez preparação e vínculo antes de verificar a existência de staged.
+- Quarto: parser rejeitou `target production`/`status Ready` já exibidos pelo `vercel inspect`; falso negativo.
+- Quinto: `--no-color` encaminhado ao `vercel curl` causou exit code 2 por argumento inválido. **São erros dos scripts de automação, não do build do EMPROVEX.**
+
+**Regra operacional permanente:** um SHA funcional, um staged imutável, uma verificação e uma promoção por ID. Registro complementar de evidências no [PR #371](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371#issuecomment-6389486383).
+
+---
 ## R2 OPERADOR MÓVEL — COMPLEMENTO EXECUTIVO DE 24/10/2026 (REVISÃO ESPECIAL, GOV-SIMP-01)
 
 **Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`. **PR:** #371, branch `feat/mobile-outbound-unified-scan-r2`. **HEAD de código deste checkpoint, antes do presente memorial:** `949852a342be7f79819c69a2093b646ddc7b465f`. Reconsultar HEAD atual, nunca confundir checkpoint com release validado.
