@@ -92,6 +92,22 @@ test('bulk delete de comissões é atômico e restrito ao workspace autorizado',
   assert.doesNotMatch(client,/batch\.delete\(operationalDocRef\(scope, 'comissoes'/);
 });
 
+test('leituras operacionais utilizam IAM com recurso restrito e isolamento por servidor',()=>{
+  const route=read('app/api/core/operational-read/route.ts');
+  const server=read('lib/server/coreOperationalRead.ts');
+  const client=read('lib/firebaseSync.ts');
+  for(const collection of ['empenhos','invoices','alerts','comissoes','cronogramas']){
+    assert.match(server,new RegExp("'"+collection+"'"));
+    assert.match(client,new RegExp("listOperationalFromServer<[^>]+>\\(userId,'"+collection+"'\\)"));
+  }
+  assert.match(route,/verifyPlatformPrincipal/);
+  assert.match(route,/CORE_READ_COLLECTIONS.includes/);
+  assert.match(server,/principal.workspaceId/);
+  assert.match(route,/core.operational.read/);
+  allowed(evaluate(sector,'core.operational.read','workspace-a'));
+  denied(evaluate(sector,'core.operational.read','workspace-b'),'SCOPE_MISMATCH');
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));
