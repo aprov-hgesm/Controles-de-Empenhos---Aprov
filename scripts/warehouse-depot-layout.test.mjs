@@ -326,9 +326,10 @@ test('Início consome somente layout ativo e mantém croqui como consulta do est
   assert.match(home, /listWarehousePositiveLocationBalances/);
   assert.match(home, /listWarehousePositiveBalances/);
   assert.match(home, /depotMaterialIds\.has\(material\.id\)/);
-  assert.match(home, /selectWarehouseFefoLot/);
+  // A visualização mantém validades sem priorizar saída por vencimento.
+  assert.doesNotMatch(home, /selectWarehouseFefoLot|prioridade FEFO/);
   assert.match(home, /fora da visão atual/);
-  assert.match(home, /prioridade FEFO/);
+  assert.match(home, /validade/i);
   assert.match(home, /locationRows/);
   assert.match(home, /WarehouseIsometricPreview/);
   assert.match(home, /embedded/);
