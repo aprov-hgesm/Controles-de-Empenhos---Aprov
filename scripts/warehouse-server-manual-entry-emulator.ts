@@ -627,6 +627,9 @@ try {
   console.log('PASS: exclusão definitiva só de depósito vazio, tombstone atômico, locais inativos e reutilização do código');
 
 
+  const atomicDestination=await warehouseDestinationCreateServer(access,{
+    name:'Destino isolado para atomicidade R2',
+  });
   // Isolado: 2 linhas para o MESMO saldo e a MESMA referência,
   // com rollback total antes do commit e replay após confirmação.
   const atomicSeed=await registerWarehouseManualEntryServer(access,{
@@ -640,7 +643,7 @@ try {
   const atomicLotId=atomicSeed.validity!.id;
   const atomicId='wd_'+'9'.repeat(32);
   const atomicInput={
-    withdrawalId:atomicId,destinationId:newDestination.id,
+    withdrawalId:atomicId,destinationId:atomicDestination.id,
     withdrawnBy:'Operador QA',lines:[3,4].map((quantity,i)=>({
       lineId:'wline_'+String(i+1).repeat(32),
       materialId:atomicMaterialId,materialDescription:atomicSeed.material.description,
