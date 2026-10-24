@@ -65,6 +65,12 @@ test('Servidor define retirado por usando exclusivamente identidade autenticada'
   assert.match(route,/verifyWarehouseRequest/);
   assert.match(route,/finalizeWarehouseWithdrawalServer/);
 });
+test('motor canonico rejeita referencia vencida diretamente no servidor',()=>{
+  const code=text('lib/server/warehouseOutboundWrite.ts');
+  assert.match(code,/warehouseLotExpiryState\(lot\)==='EXPIRED'/);
+  assert.match(code,/WAREHOUSE_OUTBOUND_LOT_EXPIRED/);
+});
+
 test('Alocacao nao exige codigo manual de lote; validade e rastreio continuam',()=>{
   const alloc=text('features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx');
   assert.doesNotMatch(alloc,/setLotCode|Lote · opcional/);
