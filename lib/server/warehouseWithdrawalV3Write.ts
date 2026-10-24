@@ -143,6 +143,7 @@ export async function finalizeWarehouseWithdrawalV3Server(
   const reservedByPosition=new Map<string,number>();
   const reservedByLot=new Map<string,number>();
   const lines:WarehouseWithdrawalLineInput[]=[];
+  const barcodeIdsByLine:Record<string,string|null>={};
   for(let index=0;index<command.lines.length;index++) {
     const line=command.lines[index],material=mats.get(line.materialId)!;
     const balance=globalBalances.get(line.materialId)!;
@@ -211,8 +212,10 @@ export async function finalizeWarehouseWithdrawalV3Server(
       if(allocationPart.lotId)reservedByLot.set(allocationPart.lotId,
         (reservedByLot.get(allocationPart.lotId)||0)+allocationPart.quantity);
       // IDs de linhas repetidas não dependem de material, lote ou descrição.
+      const derivedLineId=warehouseWithdrawalV3DerivedLineId(command.withdrawalId,index,part);
+      barcodeIdsByLine[derivedLineId]=barcode?.id||null;
       lines.push({
-        lineId:warehouseWithdrawalV3DerivedLineId(command.withdrawalId,index,part),
+        lineId:derivedLineId,
         materialId:material.id,materialDescription:material.description,
         requestedQuantity:allocationPart.quantity,baseQuantity:allocationPart.quantity,
         presentation:material.unit,presentationLabel:presentation.label||presentation.code,
@@ -232,5 +235,6 @@ export async function finalizeWarehouseWithdrawalV3Server(
     withdrawnBy:access.email,lines,
   },{
     intentHash:hash,intentLineCount:command.lines.length,snapshotVersions:snapshots,
+    barcodeIdsByLine,
   });
 }
