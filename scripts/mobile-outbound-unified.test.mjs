@@ -9,16 +9,16 @@ const lot=(id,quantity,expiresOn='2027-02-01',status='active')=>({
   id:'lot_'+id.repeat(32),code:'L-'+id,quantity,expiresOn,status,
 });
 
-test('FEFO automatico debita um lote sem perguntar ao operador',()=>{
+test('baixa tecnica escolhe referencia estavel, sem prioridade de validade',()=>{
   assert.deepEqual(plan({quantity:4,physicalQuantity:20,today:new Date('2026-10-24'),
     lots:[lot('a',10,'2027-04-01'),lot('b',5,'2026-11-01')]}),
-    [{lotId:'lot_'+'b'.repeat(32),quantity:4}]);
+    [{lotId:'lot_'+'a'.repeat(32),quantity:4}]);
 });
-test('FEFO divide uma retirada em varios lotes com soma conservada',()=>{
+test('baixa sem FEFO divide a quantidade e preserva a soma',()=>{
   assert.deepEqual(plan({quantity:12,physicalQuantity:20,today:new Date('2026-10-24'),
     lots:[lot('a',8,'2027-04-01'),lot('b',5,'2026-11-01')]}),
-    [{lotId:'lot_'+'b'.repeat(32),quantity:5},
-     {lotId:'lot_'+'a'.repeat(32),quantity:7}]);
+    [{lotId:'lot_'+'a'.repeat(32),quantity:8},
+     {lotId:'lot_'+'b'.repeat(32),quantity:4}]);
 });
 test('Sem lotes permite a baixa de estoque livre; mistura lote e livre corretamente',()=>{
   assert.deepEqual(plan({quantity:6,physicalQuantity:6,lots:[]}),

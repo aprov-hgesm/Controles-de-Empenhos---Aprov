@@ -79,9 +79,9 @@ function labelForPosition(value:ResolvedPosition) {
 function messageFor(error:unknown) {
   const e=error instanceof Error?error.message:String(error);
   if(e.includes('WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED'))
-    return 'A soma de lotes está acima do saldo físico. Corrija a divergência na Central.';
+    return 'As quantidades vinculadas às validades excedem o saldo físico. Confira a Central.';
   if(e.includes('WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE'))
-    return 'Estoque atribuído a lotes vencidos ou indisponíveis. A saída foi bloqueada.';
+    return 'Existe saldo vinculado a uma validade indisponível. A saída foi bloqueada.';
   if(e.includes('WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK')
     ||e.includes('WAREHOUSE_MOBILE_OUTBOUND_INVALID_QUANTITY'))
     return 'A posição não tem quantidade suficiente ou a quantidade é inválida.';
@@ -360,7 +360,7 @@ export function WarehouseMobileOutbound() {
         placeholder="Quantidade a retirar"
         className="min-h-12 w-full rounded-xl border border-slate-200 px-4 font-bold"/>
       <p className="text-xs text-slate-500">
-        Os lotes serão atribuídos automaticamente por FEFO. Não é necessário selecioná-los.
+        A validade continua registrada automaticamente. Não é necessário escolher lotes.
       </p>
       <Primary onClick={continueQuantity}>Continuar para destino</Primary>
     </Panel>}
@@ -404,7 +404,7 @@ export function WarehouseMobileOutbound() {
         <p>Quantidade: {format(review.requestedQuantity)} → {format(review.baseQuantity)} em unidade-base</p>
         <p>Destino: {destinationName}</p>
         <p>Responsável: conta autenticada no EMPROVEX</p>
-        <p>Rastreabilidade: atribuição automática FEFO ({review.lines.length} linha(s))</p>
+        <p>Validade rastreada automaticamente na movimentação.</p>
       </div>
       <Primary disabled={working} onClick={()=>void confirm()}>
         {working?'REVALIDANDO…':'CONFIRMAR SAÍDA'}
@@ -432,7 +432,7 @@ export function WarehouseMobileOutbound() {
     <p className="flex gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600">
       <TriangleAlert className="h-4 w-4 shrink-0 text-amber-600"/>
       A saída reduz estoque físico localizado; não transfere para outra posição.
-      O servidor revalida os saldos, o destino, a autorização e cada lote antes de gravar.
+      O servidor revalida os saldos, o destino, a autorização e a rastreabilidade antes de gravar.
     </p>
   </div>;
 }

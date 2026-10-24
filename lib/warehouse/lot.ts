@@ -577,7 +577,7 @@ export function buildWarehouseLogisticsPendencies(input: {
       code: 'EXPIRED_LOT',
       severity: 'critical',
       title: 'Validade vencida',
-      message: 'Existe quantidade com validade vencida. O FEFO não recomenda essa referência para retirada.',
+      message: 'Existe quantidade com validade vencida. Confira sua utilização antes da retirada.',
     });
   }
 
