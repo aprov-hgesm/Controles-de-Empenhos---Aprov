@@ -108,6 +108,12 @@ jobs:
 
       - name: CI LEAN R2 G01 — 17 historical guards
         run: node scripts/ci-lean-guards.mjs --group G01
+        # CI_LEAN_LEGACY G01: Final document storage guard | Workspace Google Drive guard | Hybrid authentication model guard
+        # CI_LEAN_LEGACY G01: Firestore provider enforcement guard | Sector auth provisioning guard | Sector admin deletion guard
+        # CI_LEAN_LEGACY G01: Sector password reset guard | SaaS R1 onboarding and credentials guard | SAAS R1 security enforcement guard
+        # CI_LEAN_LEGACY G01: SAAS R1 integrated contract guard | SAAS R1 final audit contract guard | Empenho class configuration guard
+        # CI_LEAN_LEGACY G01: Public OAuth legal pages guard | External sector login guard | Secure UID binding guard
+        # CI_LEAN_LEGACY G01: Workspace provisioning guard | Workspace Drive onboarding guard
 
       - name: External Drive OAuth behavior tests
         run: npm run test:external-drive-auth
@@ -236,6 +242,7 @@ jobs:
 
       - name: CI LEAN R2 G02 — 3 historical guards
         run: node scripts/ci-lean-guards.mjs --group G02
+        # CI_LEAN_LEGACY G02: Central Móvel R1 Integration 3 guard | Central Móvel R1 MOBILE-I integrated product guard | Central de Depósitos canonical route and API compatibility guard
 
       - name: Operador Móvel premium interface and navigation guard
         run: npm run test:operador-movel-premium
@@ -287,12 +294,15 @@ jobs:
 
       - name: CI LEAN R2 G03 — 4 historical guards
         run: node scripts/ci-lean-guards.mjs --group G03
+        # CI_LEAN_LEGACY G03: ADM Depósito Phase 11 protected guard | ADM Depósito Phase 11.5 visual guard | ADM Depósito Module 13 hardening guard
+        # CI_LEAN_LEGACY G03: Production multi-tenant readiness guard
 
       - name: Reporting foundation identity tests
         run: npm run test:invoice-identity
 
       - name: CI LEAN R2 G04 — 3 historical guards
         run: node scripts/ci-lean-guards.mjs --group G04
+        # CI_LEAN_LEGACY G04: Reporting foundation guard | Reports subtabs shell guard | Report empenho card selector guard
 
       - name: Reporting period tests
         run: npm run test:reporting-period
@@ -332,6 +342,7 @@ jobs:
 
       - name: CI LEAN R2 G05 — 3 historical guards
         run: node scripts/ci-lean-guards.mjs --group G05
+        # CI_LEAN_LEGACY G05: SAG NS idempotent import guard | SAG NS hardening guard | SAG UX guard
 
       - name: NS integrity contract tests
         run: npm run test:ns-integrity-contract
@@ -344,12 +355,17 @@ jobs:
 
       - name: CI LEAN R2 G06 — 5 historical guards
         run: node scripts/ci-lean-guards.mjs --group G06
+        # CI_LEAN_LEGACY G06: NS integrity service guard | Manual NS integrity guard | Invoice NS lifecycle guard
+        # CI_LEAN_LEGACY G06: EMPROVEX / ADM Depósito isolation guard | Invoice mirror document guard
 
       - name: Supplier CNPJ migration tests
         run: npm run test:supplier-cnpj-migration
 
       - name: CI LEAN R2 G07 — 9 historical guards
         run: node scripts/ci-lean-guards.mjs --group G07
+        # CI_LEAN_LEGACY G07: Supplier CNPJ migration guard | Global NS Firestore Rules guard | Official CNPJ validation guard
+        # CI_LEAN_LEGACY G07: NS UG identity guard | Immutable audit trail guard | Block 9 browser E2E guard
+        # CI_LEAN_LEGACY G07: Block 10 historical consistency guard | Block 11 SAG conservative refactor guard | Block 12 empenho deletion integrity guard
 
       - name: Empenho concurrency domain tests
         run: npm run test:empenho-concurrency
@@ -362,18 +378,37 @@ jobs:
 
       - name: CI LEAN R2 G08 — 12 historical guards
         run: node scripts/ci-lean-guards.mjs --group G08
+        # CI_LEAN_LEGACY G08: Block 14 operational scalability guard | Block 15 final hardening guard | Block 16.0 capacity foundation guard
+        # CI_LEAN_LEGACY G08: Block 16.1 session enforcement guard | Block 16.2 admin session panel guard | Block 16.3 workspace telemetry guard
+        # CI_LEAN_LEGACY G08: Block 16.4 global Cloud Monitoring guard | Block 16.5 consolidated usage dashboard guard | Block 16.6 usage alerts guard
+        # CI_LEAN_LEGACY G08: Admin usage intelligence guard | UG telemetry v2 reconciliation guard | Block 16.7 security and concurrency hardening guard
 
       - name: Block 16.8 integrated domain tests
         run: npm run test:block-16-8-integrated-domain
 
       - name: CI LEAN R2 G09 — 14 historical guards
         run: node scripts/ci-lean-guards.mjs --group G09
+        # CI_LEAN_LEGACY G09: Block 16.8 integrated E2E guard | Block 16.9 final audit and closure guard | Block 17.0 Firestore consumption baseline guard
+        # CI_LEAN_LEGACY G09: Block 17.1 session lease efficiency guard | Block 17.2 multi-tab session coordination guard | Block 17.3 branding efficiency guard
+        # CI_LEAN_LEGACY G09: Block 17.4 operational listeners guard | Block 17.5 historical scalability guard | Block 17.6 telemetry fidelity guard
+        # CI_LEAN_LEGACY G09: Block 17.7 App Check guard | Block 17.8 consumption regression guard | Block 17.9 final closure guard
+        # CI_LEAN_LEGACY G09: Block 18 security and resilience guard | Backup and recovery architecture guard
 
       - name: Backup disaster recovery emulator test
         run: npm run test:backup-recovery
 
       - name: CI LEAN R2 G10 — 30 historical guards
         run: node scripts/ci-lean-guards.mjs --group G10
+        # CI_LEAN_LEGACY G10: RPNP visual priority guard | TR counter and workspace document identity guard | Inicio background texture guard
+        # CI_LEAN_LEGACY G10: Inicio slow planet orbit guard | Block 22 billing observe guard | Block 19 home experience foundation guard
+        # CI_LEAN_LEGACY G10: Block 19.2 cinematic scene guard | Block 19.3 interactive core guard | Block 19.4 operational orbit guard
+        # CI_LEAN_LEGACY G10: Block 19.5 operational constellation guard | Block 19.6 unit identity guard | Block 19.7 quick actions and resume guard
+        # CI_LEAN_LEGACY G10: Block 19.8 microinteraction guard | Block 19.9 surface transition guard | Block 19.10 economical home snapshot guard
+        # CI_LEAN_LEGACY G10: Block 19.11 performance and GPU guard | Block 19.12 responsiveness guard | Block 19.13 visual polish guard
+        # CI_LEAN_LEGACY G10: Block 19.14 final closure guard | Block 20 premium orbital redesign guard | Block 21 operational stars and shooting stars guard
+        # CI_LEAN_LEGACY G10: Central de Avisos guard | EMPROVEX App Shell guard | EMPROVEX brand identity foundation guard
+        # CI_LEAN_LEGACY G10: EMPROVEX brand notifications guard | EMPROVEX empenhos subtabs guard | Empenho direct PDF import guard
+        # CI_LEAN_LEGACY G10: EMPROVEX brand admin guard | EMPROVEX admin information architecture guard | Admin sidebar and Google usage UX guard
 
       - name: Admin visual-only layout and behavior guard
         run: node --test scripts/admin-visual-only.test.mjs
