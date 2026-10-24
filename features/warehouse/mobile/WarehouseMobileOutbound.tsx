@@ -69,6 +69,7 @@ function unit(code:string,label:string|null) {
     bundle:'fardo',other:'unidade'} as Record<string,string>)[code]||code;
 }
 function labelForPosition(value:ResolvedPosition) {
+  if(value.position.kind==='UNASSIGNED')return 'Posição não física';
   return value.depot.code+' · '
     +(value.position.kind==='SUBPOSITION'
       ?(value.parentLocation?.code||value.position.locationId)+' · '
