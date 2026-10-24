@@ -716,7 +716,7 @@ export function WarehouseMobileIntakeAllocation() {
                 />
               </label>
               <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                A referência técnica do lote é gerenciada automaticamente, sem seleção pelo operador.
+                A validade é vinculada automaticamente ao material, sem seleção de referências técnicas.
               </p>
             </div>
           )}
@@ -787,7 +787,7 @@ export function WarehouseMobileIntakeAllocation() {
                 CONFIRMAR ALOCAÇÃO
               </button>
               <p className="mt-2 text-[10px] font-semibold leading-4 text-blue-900/70">
-                O backend revalida pendência, material, posição, lote, barcode e idempotência no commit.
+                O servidor revalida pendência, material, posição, validade, código de barras e segurança da confirmação.
               </p>
             </div>
           )}
