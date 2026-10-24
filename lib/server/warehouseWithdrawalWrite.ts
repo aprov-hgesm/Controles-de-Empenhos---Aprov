@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction, WarehouseStoreError,
+  warehouseAdminBatchRead, warehouseAdminTransaction, WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import { applyWarehouseExpressOutboundServer } from './warehouseOutboundWrite';
+import { finalizeWarehouseWithdrawalAtomicServer } from './warehouseWithdrawalAtomicWrite';
 import {
   WAREHOUSE_WITHDRAWAL_SCHEMA_VERSION,
   WAREHOUSE_CONSUMPTION_SCHEMA_VERSION,
@@ -95,6 +96,16 @@ export async function finalizeWarehouseWithdrawalServer(
     ?'emulator':await getGoogleAccessToken();
   const destinationPath=path(access.workspaceId,'destinations',input.destinationId);
   const headerPath=path(access.workspaceId,'withdrawals',input.withdrawalId);
+  // Novos comandos são atômicos; somente cabeçalhos criados pela
+  // implementação antiga passam pelo caminho de recuperação v1.
+  // Nunca reexecutar linhas v1 como se fossem uma nova retirada v2.
+  const previous=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
+  if(!previous || previous.data.atomicVersion===2) {
+    return finalizeWarehouseWithdrawalAtomicServer(access,{
+      withdrawalId:input.withdrawalId,destinationId:input.destinationId,
+      withdrawnBy,lines,
+    });
+  }
   const expectedHash=payloadHash(lines);
   let header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[destinationPath,headerPath],rows=>{
     const destination=rows.get(destinationPath);
