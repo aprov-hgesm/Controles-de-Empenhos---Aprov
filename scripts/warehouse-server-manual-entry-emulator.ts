@@ -627,6 +627,94 @@ try {
   console.log('PASS: exclusão definitiva só de depósito vazio, tombstone atômico, locais inativos e reutilização do código');
 
 
+  // Isolado: 2 linhas para o MESMO saldo e a MESMA referência,
+  // com rollback total antes do commit e replay após confirmação.
+  const atomicSeed=await registerWarehouseManualEntryServer(access,{
+    operationId:'withdrawal-atomic-r2-seed',existingMaterialId:null,
+    description:'Estoque Atomicidade R2',unitLabel:'KG',quantity:12,
+    provenance:'Teste automático',reference:'Isolado no Emulator',
+    position,expiresOn:'2027-07-20',lotCode:'ATOMIC-R2-REF',barcode:null,
+  });
+  assert.ok(atomicSeed.validity);
+  const atomicMaterialId=atomicSeed.material.id;
+  const atomicLotId=atomicSeed.validity!.id;
+  const atomicId='wd_'+'9'.repeat(32);
+  const atomicInput={
+    withdrawalId:atomicId,destinationId:newDestination.id,
+    withdrawnBy:'Operador QA',lines:[3,4].map((quantity,i)=>({
+      lineId:'wline_'+String(i+1).repeat(32),
+      materialId:atomicMaterialId,materialDescription:atomicSeed.material.description,
+      requestedQuantity:quantity,baseQuantity:quantity,
+      presentation:atomicSeed.material.unit,presentationLabel:'KG',unitLabel:'KG',
+      position,positionLabel:'DEP-MANUAL / LOC-MANUAL',barcodeAssociation:null,
+      barcode:null,lotId:atomicLotId,lotCode:atomicSeed.validity!.code,
+    })),
+  };
+  const atomicBalance=()=>getDoc(ref('balances',atomicMaterialId)).then(s=>s.data()?.quantity);
+  const atomicLot=()=>getDoc(ref('lots',atomicLotId)).then(s=>s.data()?.quantity);
+  const atomicHeader=()=>warehouseAdminTransaction('emulator',[
+    'warehouse/'+workspaceId+'/withdrawals/'+atomicId
+  ],rows=>({result:rows.get('warehouse/'+workspaceId+'/withdrawals/'+atomicId),writes:[]}));
+  const atomicConsumption=(i:number)=>'cons_'+createHash('sha256').update(
+    workspaceId+'\n'+'stock:'+atomicId+':'+atomicInput.lines[i].lineId
+  ).digest('hex');
+  process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_LINE='2';
+  try {
+    await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,atomicInput),
+      /WAREHOUSE_ATOMIC_TEST_INJECTED_FAILURE/);
+  } finally {delete process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_LINE;}
+  assert.equal(await atomicBalance(),12);
+  assert.equal(await atomicLot(),12);
+  assert.equal(await atomicHeader(),null);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(0)))).exists(),false);
+  console.log('PASS: falha injetada na linha 2 = rollback integral, sem header/consumo');
+
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...atomicInput,lines:[atomicInput.lines[0],{...atomicInput.lines[1],requestedQuantity:20,
+      baseQuantity:20}],
+  }),/WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION|WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+  assert.equal(await atomicBalance(),12);
+  assert.equal(await atomicLot(),12);
+  assert.equal(await atomicHeader(),null);
+  console.log('PASS: falta de estoque na linha 2 não confirma a linha 1');
+
+  const atomic=await finalizeWarehouseWithdrawalServer(access,atomicInput);
+  assert.equal(atomic.withdrawal.status,'FINALIZED');
+  assert.equal(atomic.withdrawal.appliedLineCount,2);
+  assert.equal(atomic.movementIds.length,2);
+  assert.equal(await atomicBalance(),5);
+  assert.equal(await atomicLot(),5);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(0)))).exists(),true);
+  assert.equal((await getDoc(ref('consumptions',atomicConsumption(1)))).exists(),true);
+  assert.equal((await atomicHeader())?.data.atomicVersion,2);
+  const atomicReplay=await finalizeWarehouseWithdrawalServer(access,atomicInput);
+  assert.equal(atomicReplay.withdrawal.status,'FINALIZED');
+  assert.equal(atomicReplay.movementIds.length,0);
+  assert.equal(await atomicBalance(),5);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...atomicInput,lines:atomicInput.lines.map((l,i)=>i===1?{...l,requestedQuantity:3,baseQuantity:3}:l),
+  }),/WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT/);
+  assert.equal(await atomicBalance(),5);
+  console.log('PASS: 2 linhas confirmadas com saldo/lote/consumo/cabeçalho em um commit; replay sem duplicação');
+
+  // Duas sessões repetindo a mesma identidade simultaneamente:
+  // somente uma pode confirmar a retirada e ambas podem recuperar via replay.
+  const concurrent={
+    ...atomicInput,withdrawalId:'wd_'+'8'.repeat(32),
+    lines:[{...atomicInput.lines[0],lineId:'wline_'+'3'.repeat(32),
+      requestedQuantity:1,baseQuantity:1}],
+  };
+  const simultaneous=await Promise.allSettled([
+    finalizeWarehouseWithdrawalServer(access,concurrent),
+    finalizeWarehouseWithdrawalServer(access,concurrent),
+  ]);
+  assert.ok(simultaneous.some(r=>r.status==='fulfilled'));
+  assert.equal(await atomicBalance(),4);
+  const repeat=await finalizeWarehouseWithdrawalServer(access,concurrent);
+  assert.equal(repeat.movementIds.length,0);
+  assert.equal(await atomicBalance(),4);
+  console.log('PASS: concorrência e retry mesma identidade resultam em uma única baixa');
+
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');
