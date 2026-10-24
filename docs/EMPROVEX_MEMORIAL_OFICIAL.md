@@ -1,5 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
+## ATUALIZAÇÃO PRIORITÁRIA — R2 SAÍDA MÓVEL / REMOÇÃO FEFO / VALIDADE APENAS — 24/10/2026
+
+**LEIA ANTES DE QUALQUER DESENVOLVIMENTO:** docs/MOBILE_OUTBOUND_R2_VALIDITY_ONLY_HANDOFF.md (handoff completo e único ponto de continuidade deste trabalho).
+
+- **PR #371** (https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/371), branch feat/mobile-outbound-unified-scan-r2, HEAD de checkpoint 4a2a2dc44bd505749c689bdc978b534b2315985f; main 47323e3b8583e68c8344336a265ddd7d63563c36. **NÃO MERGED, NÃO PUBLICADO**. A produção permanece no R1 Motor de Confiança, PR #369, promovido pelo Fundador no PowerShell.
+- O Fundador determinou Saída Móvel de quatro passos: ler item OU posição (se local, escolher item; se item único local, autoescolher); quantidade; destino; revisar/confirmar; usuário logado é o autor, sem campo de responsável.
+- Remover toda indicação de **FEFO** e códigos/seleção de **lotes** em Desktop e Mobile e documentos, mostrando apenas **validade**. Preservar IDs/contratos históricos de lote para conservar saldos, auditoria, concorrência e as baixas transacionais; validade vencida continua relevante para alertas/integridade.
+- Alterações distribuídas por 35 arquivos do PR: mobile scanner, saída, API autorizada, leitor físico, alocação, carrinho Desktop, fichas, Início/Depósito 3D, relatórios, PDF/CSV, alertas, lot.ts e testes. Novos scripts mobile-outbound-unified.test.mjs, warehouse-validity-only-r2.test.mjs e planejador mobileOutboundPlan.mjs.
+- **CI ainda NÃO certificado no último HEAD:** 357ddb teve gates PASS exceto guard antigo de Alocação (corrigido); c850 teve Fast CI FAIL porque teste de croqui ainda exigia FEFO (corrigido em 4a2a2dc44bd505749c689bdc978b534b2315985f); outros gates aprovaram ou foram interrompidos por novo push. Reexecutar tudo no HEAD final, inspecionar saídas reais e manter main/Vercel/Rules intocados até GO.
+- Próximo responsável: chat sucessor via ferramentas GitHub; Fundador somente smoke manual e publicação pelo PowerShell após aceite. **Não promover R2 automaticamente.**
+
+**Handoff:** onde — PR #371, branch feat/mobile-outbound-unified-scan-r2; fazendo — corrigir retirada, UI de validades e testes sem FEFO; quem — executor GitHub; próximo — CI final e testes autenticados no Emulator, correção de regressões, smoke staging; quem fará — chat sucessor e Fundador na publicação.
+
+---
+
+
 ## PUBLICAÇÃO CONGELADA — RELEASE ÚNICA, POWERSHELL PROPRIETÁRIO (20/10/2026)
 
 - Processo de deploy já validado pelo Fundador: alterações consolidadas em um único commit na main, gates de CI, prebuild e deploy manual Vercel pelo PowerShell na equipe `aprov-hgesms-projects`.
