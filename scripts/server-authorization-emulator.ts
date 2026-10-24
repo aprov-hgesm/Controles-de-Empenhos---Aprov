@@ -9,6 +9,7 @@ import { verifyPlatformPrincipal, PlatformAuthorizationError } from '../lib/serv
 import { evaluateServerAuthorization } from '../lib/server/authorizationPolicy';
 import { assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
 import { GET as getSuppliers, POST as saveSupplier } from '../app/api/core/suppliers/route';
+import { GET as getOperational } from '../app/api/core/operational-read/route';
 import { POST as transactEmpenho } from '../app/api/core/empenhos/transact/route';
 import { POST as deleteCommissions } from '../app/api/core/comissoes/bulk-delete/route';
 
@@ -88,6 +89,45 @@ async function main() {
     capability:'warehouse.command',workspaceId:'other-workspace',operation:'TRANSFER',
   }),/Operação não autorizada/);
   console.log('PASS: verified Firebase token + active IAM directory + tenant-scoped command');
+  const operationalRequest=(resource:string,token=sector.token)=>
+    getOperational(new Request('http://localhost/api/core/operational-read?resource='+resource,{
+      headers:{authorization:token},
+    }));
+  const nested=await fetch(fs+'/workspaces/'+ws+'/empenhos/demoNE001',{
+    method:'PATCH',
+    headers:{authorization:'Bearer owner','content-type':'application/json'},
+    body:JSON.stringify({fields:{
+      id:{stringValue:'demoNE001'},
+      supplier:{stringValue:'Fornecedor Teste'},
+      status:{stringValue:'Ativo'},
+      items:{arrayValue:{values:[{mapValue:{fields:{
+        id:{stringValue:'item_1'},quantity:{integerValue:'2'},
+        name:{stringValue:'Arroz'},unit:{stringValue:'KG'},
+      }}}]}},
+    }}),
+  });
+  assert.equal(nested.status,200,'seed nested empenho');
+  const readNE=await operationalRequest('empenhos');
+  assert.equal(readNE.status,200,'IAM list empenhos');
+  const readNEBody=await readNE.json() as {items:Array<{id:string,items:Array<{quantity:number}>}>};
+  const nestedItem=readNEBody.items.find(x=>x.id==='demoNE001');
+  assert.equal(nestedItem?.items[0].quantity,2,'nested Firestore map and array values retained');
+  await document('workspaces/'+ws+'/invoices/record_key_demo',{
+    id:'NF001',empenhoId:'demoNE001',issueDate:'2026-10-24',
+  });
+  const readNF=await operationalRequest('invoices');
+  assert.equal(readNF.status,200,'IAM list invoices');
+  const readNFBody=await readNF.json() as {items:Array<{id:string,recordKey:string}>};
+  assert.ok(readNFBody.items.some(x=>x.id==='NF001'&&x.recordKey==='record_key_demo'),
+    'invoice display ID and internal recordKey preserved');
+  const forbiddenRead=await operationalRequest('../other');
+  assert.equal(forbiddenRead.status,400,'arbitrary collection rejected');
+  const forgedScope=await getOperational(new Request('http://localhost/api/core/operational-read?resource=empenhos&workspaceId=victim',{
+    headers:{authorization:sector.token},
+  }));
+  assert.equal(forgedScope.status,400,'workspace override rejected');
+  console.log('PASS: scoped IAM operational reads, nested fields, invoice identity');
+
   const supplier={id:'supplier_11222333000181',cnpj:'11222333000181',
     legalName:'Fornecedor de teste 01',email:'fornecedor@example.test',
     phone:'55991112222',whatsapp:'55991112222',
@@ -144,6 +184,9 @@ async function main() {
   const intruder=await bearer('authz-intruder@example.test');
   await rejected(()=>verifyPlatformPrincipal(intruder.token));
   console.log('PASS: no directory entry denied');
+  const intruderRead=await operationalRequest('empenhos',intruder.token);
+  assert.equal(intruderRead.status,403,'outsider cannot enumerate operational data');
+
 
   const baseEmpenho={
     id:'2026NE008820',supplier:'Fornecedor E2E',description:'Teste transacional',
@@ -219,6 +262,9 @@ async function main() {
   });
   await rejected(()=>verifyPlatformPrincipal(sector.token));
   console.log('PASS: disabled account denied');
+  const revokedRead=await operationalRequest('empenhos');
+  assert.equal(revokedRead.status,403,'suspended sector cannot read operational data');
+
   const blockedSupplier=await saveSupplier(new Request('http://localhost/api/core/suppliers',{
     method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
     body:JSON.stringify({supplier}),

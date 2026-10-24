@@ -33,3 +33,7 @@ O servidor confia em **identidade Firebase autenticada** e em dados de setor/wor
 ### Teste autenticado integrado (Firebase Auth e Firestore Emulator)
 
 `scripts/server-authorization-emulator.ts` valida JWT de setor real no Emulator, reconsulta autoritativa pela API IAM simulada (`owner`), rejeição a UID divergente, conta desativada, workspace suspenso, UG divergente, provider incorreto, outsider sem cadastro e ledger genérico. Workflow Warehouse Server R2 Smoke executa este teste no banco demo isolado. O CI PASS é requerido antes do release.
+
+## Migração incremental das leituras operacionais — 24/10/2026
+
+O novo endpoint `GET /api/core/operational-read?resource=...` atende exclusivamente a uma lista fechada (`empenhos`, `invoices`, `alerts`, `comissoes`, `cronogramas`) e deriva o caminho `workspaces/{workspaceId}` da identidade Firebase validada no servidor. `lib/firebaseSync.ts` usa essa API para listagens pontuais; os **listeners realtime** e as **transações de NF/NS, exclusão de empenhos, sessão e billing** continuam com SDK cliente e regras vigentes. Os testes de emulador verificam tipos aninhados, ID interno de NF, escopo e suspensão. Esta migração de leitura não autoriza remover Rules.
