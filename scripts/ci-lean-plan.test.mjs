@@ -4,7 +4,7 @@ import test from 'node:test';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { classifyChanges, discoverImporters, DOMAINS } from './ci-lean-plan.mjs';
+import { classifyChanges, discoverImporters, parseGitNameStatusZ, DOMAINS } from './ci-lean-plan.mjs';
 
 const has = (plan, domain) => assert.ok(plan.domains.includes(domain), domain + ' not selected');
 
@@ -74,4 +74,12 @@ test('importer propagation includes dependent tests and their domains', () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('renaming an auth or stock module cannot become docs-only', () => {
+  const files = parseGitNameStatusZ('R100\0lib/server/warehouseWithdrawalWrite.ts\0docs/old-withdrawal.md\0');
+  assert.deepEqual(files, ['lib/server/warehouseWithdrawalWrite.ts', 'docs/old-withdrawal.md']);
+  has(classifyChanges(files), 'warehouse');
+  assert.throws(() => parseGitNameStatusZ('R100\0old.ts\0'), /CI_LEAN_MALFORMED_RENAME/);
+  assert.throws(() => parseGitNameStatusZ('Z\0file.ts\0'), /CI_LEAN_UNRECOGNIZED_DIFF_STATUS/);
 });
