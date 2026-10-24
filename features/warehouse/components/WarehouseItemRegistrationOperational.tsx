@@ -2581,13 +2581,18 @@ export function WarehouseItemRegistrationOperational({
           ? 'immediate'
           : 'invoices';
   const [tab, setTab] = useState<RegistrationTab>(requestedTab);
+  const [clientHydrated, setClientHydrated] = useState(false);
+
+  useEffect(() => {
+    setClientHydrated(true);
+  }, []);
 
   useEffect(() => {
     setTab(requestedTab);
   }, [requestedTab]);
 
   return (
-    <div className="mt-4 space-y-5" data-testid="warehouse-registration-operational">
+    <div className="mt-4 space-y-5" data-testid="warehouse-registration-operational" data-client-hydrated={clientHydrated ? 'true' : 'false'} data-active-tab={tab}>
       <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
         <button
           type="button"

@@ -120,7 +120,8 @@ test('capacidades consolidadas estão ligadas às superfícies atuais', () => {
 
   assert.ok(registration.includes('WarehouseSiscofisOperational'));
   assert.ok(registration.includes('InvoiceRegistrationQueue'));
-  assert.ok(depots.includes('WarehouseLocationsR1Operational'));
+  // PR #366 unificou cadastro e locais no Croqui 2D; não reintroduzir subaba legada.
+  assert.ok(!depots.includes('WarehouseLocationsR1Operational'));
   assert.ok(depots.includes('WarehouseCroquisR1Operational'));
 
   for (const component of [

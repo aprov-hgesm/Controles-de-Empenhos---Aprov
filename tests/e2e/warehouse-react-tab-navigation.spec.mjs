@@ -47,5 +47,11 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
   await expect(shell).toHaveAttribute('data-warehouse-section', 'control', { timeout: 45_000 });
   await expect(page.getByTestId('warehouse-item-control-operational')).toBeVisible({ timeout: 45_000 });
 
-  console.log('WAREHOUSE REACT NAVIGATION: PASS (6 abas, voltar, F5, acesso direto)');
+  // Mesmo motor de estado React com a sidebar aberta no telefone.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Abrir menu principal' }).click();
+  await page.getByTestId('warehouse-nav-overview').click();
+  await expect(shell).toHaveAttribute('data-warehouse-section', 'overview', { timeout: 45_000 });
+  await expect(page.getByTestId('warehouse-home-operational').first()).toBeVisible({ timeout: 45_000 });
+  console.log('WAREHOUSE REACT NAVIGATION: PASS (6 abas, voltar, F5, acesso direto e celular)');
 });

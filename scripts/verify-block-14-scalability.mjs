@@ -79,7 +79,9 @@ for (const [name, source] of [
   forbidText(source, "from 'jspdf'", `Hook ${name} voltou a importar jsPDF estaticamente.`);
   forbidText(source, "from 'jspdf-autotable'", `Hook ${name} voltou a importar autoTable estaticamente.`);
 }
-requireText(empenhoActions, 'await loadJsPdf()', 'Prompt PDF não usa lazy loading.');
+// O fluxo de PDF do empenho foi migrado: este hook já não gera PDF.
+// O carregamento dinâmico segue verificado no toolkit, e imports estáticos são proibidos acima.
+forbidText(empenhoActions, 'new jsPDF(', 'Hook de empenho voltou a criar PDF via construtor estático.');
 requireText(cronogramaActions, 'await loadJsPdfWithAutoTable()', 'Cronograma PDF não usa lazy loading.');
 requireText(documentActions, 'await loadJsPdfWithAutoTable()', 'Relatórios PDF não usam lazy loading.');
 
