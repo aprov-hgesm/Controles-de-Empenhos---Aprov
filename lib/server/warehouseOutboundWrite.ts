@@ -9,7 +9,7 @@ import {
   validateWarehouseLocationBalance, validateWarehouseStockPosition,
   type WarehouseLocationBalance,
 } from '../warehouse/location';
-import { validateWarehouseLot, type WarehouseLot } from '../warehouse/lot';
+import { validateWarehouseLot, warehouseLotExpiryState, type WarehouseLot } from '../warehouse/lot';
 import { validateWarehouseMaterial, type WarehouseMaterial } from '../warehouse/material';
 import {
   applyWarehouseMovementToBalance, createWarehouseMovementId,
@@ -131,6 +131,11 @@ export async function applyWarehouseExpressOutboundServer(
           {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
             expectedMaterialId:materialId}
         ),'WAREHOUSE_OUTBOUND_LOT_INVALID'):null;
+      // Autoridade no servidor: cliente não pode expedir referência já vencida
+      // enviando um lotId diretamente à API (independente do FEFO removido).
+      if(lot && warehouseLotExpiryState(lot)==='EXPIRED') {
+        return reject('WAREHOUSE_OUTBOUND_LOT_EXPIRED');
+      }
       const depot=needed(rows,p.depot,'WAREHOUSE_OUTBOUND_DEPOT_NOT_FOUND').data;
       const loc=needed(rows,p.location,'WAREHOUSE_OUTBOUND_LOCATION_NOT_FOUND').data;
       if(depot.workspaceId!==access.workspaceId||depot.ug!==access.ug||depot.status!=='active'
