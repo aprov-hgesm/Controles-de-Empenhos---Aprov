@@ -94,7 +94,7 @@ export async function auditLegacyWithdrawalFinalized(
   const ids=await Promise.all(input.lines.map(async line=>({
     line,movementId:await createWarehouseMovementId(access.workspaceId,
       'material-withdrawal:'+input.withdrawalId+':'+line.lineId),
-    consumptionId:'cons_'+digest(access.workspaceId+'\\n'
+    consumptionId:'cons_'+digest(access.workspaceId+'\n'
       +'stock:'+input.withdrawalId+':'+line.lineId),
   })));
   const paths=ids.flatMap(({movementId,consumptionId})=>[
