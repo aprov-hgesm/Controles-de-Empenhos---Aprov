@@ -23,6 +23,9 @@ try {
     '--moduleResolution','node','--skipLibCheck','--esModuleInterop',
   ],{cwd:root,stdio:'pipe'});
 } catch(error) {
+  // Preserve diagnostic details instead of masking TypeScript compilation errors.
+  if(error?.stdout)process.stderr.write(String(error.stdout));
+  if(error?.stderr)process.stderr.write(String(error.stderr));
   rmSync(dir,{recursive:true,force:true});
   throw error;
 }
