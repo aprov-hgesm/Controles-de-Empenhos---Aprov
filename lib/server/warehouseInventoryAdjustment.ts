@@ -165,9 +165,9 @@ export async function adjustWarehouseInventoryServer(
       });
       if(nextBalance.quantity<0||nextPosition.quantity<0)return fail('WAREHOUSE_INVENTORY_NEGATIVE_STOCK');
 
-      // Se a contagem física reduziu o saldo, a soma atribuída a lotes não
-      // pode permanecer maior que o novo saldo. Reconciliar lotes FEFO
-      // no mesmo commit, preservando lote, validade e autoria.
+      // Se a contagem física reduziu o saldo, as referências de validade
+      // devem acompanhar o novo saldo. Conciliar em ordem de ID estável,
+      // sem priorizar vencimento, no mesmo commit atômico.
       const active: Array<{row:WarehouseAdminDocument;lot:WarehouseLot}>=[];
       for(const result of queriedLots){
         const row=rows.get(result.path);
@@ -196,8 +196,7 @@ export async function adjustWarehouseInventoryServer(
           adjustmentMovementId:movementId,adjustedBy:access.uid,adjustedAt:now}},
       ];
       if(requiredReduction>0){
-        active.sort((a,b)=>(a.lot.expiresOn||'9999-12-31').localeCompare(b.lot.expiresOn||'9999-12-31')
-          ||a.lot.id.localeCompare(b.lot.id));
+        active.sort((a,b)=>a.lot.id.localeCompare(b.lot.id));
         for(const entry of active){
           if(requiredReduction<=0)break;
           const deduction=Math.min(entry.lot.quantity,requiredReduction);
