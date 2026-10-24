@@ -8,7 +8,9 @@ import { spawnSync } from 'node:child_process';
 import { DOMAINS } from './ci-lean-plan.mjs';
 
 export const DEEP_DOMAIN_TESTS = Object.freeze({
-  warehouse: ['test:adm-deposito-modular-r1-security', 'test:mobile-outbound-unified'],
+  // Server-only Warehouse: direct SDK writes MUST be denied. Old modular-r1
+  // emulator expected a client-side write ALLOW, so it cannot certify R2 Rules.
+  warehouse: ['test:warehouse-server-only-rules', 'test:warehouse-server-manual-entry-security', 'test:mobile-outbound-unified'],
   finance: ['test:ns-integrity', 'test:empenho-concurrency'],
   auth: ['test:security:multitenant', 'test:external-drive-auth-emulator'],
   legal: ['test:saas-r1-legal-acceptance'],
