@@ -25,7 +25,7 @@
 | `outboundReturns/{consumptionId}` | Consumo histórico e `operationId` da devolução | agregados de devolução, movimentos corretivos | Não fundir com ID do movimento; impedir devolução em duplicidade |
 | `lotAttributionLocks/{materialId}` | Mutex/revisão por material dos motores que alteram atribuições | Coleção de bloqueios, guardas de concorrência | Revalidar também saldos e lotes; lock sozinho não substitui transação |
 
-**Notas de auditoria:** `warehouseManualEntry.ts` cria referências de validade junto com aumento do saldo, sem incrementar o mutex; `warehouseTransfer.ts` move referências junto com os saldos localizados. A v3 revalida a versão transacional da `locationBalance`, `balance`, material, lotes consultados e mutex para impedir confiar somente em listagem secundária obsoleta. A existência de novos caminhos de escrita exige reauditoria dos invariantes antes de produção.
+**Notas de auditoria:** três produtores de referências precisaram ser corrigidos para incrementar `lotAttributionLocks` na MESMA operação de gravação: entrada avulsa (`warehouseManualEntry.ts`), transferência/divisão (`warehouseTransfer.ts`) e entrada de NF (`app/api/central-depositos/intake-action/route.ts`). A v3 revalida a versão transacional da `locationBalance`, `balance`, material, lotes consultados e mutex para impedir confiar somente em listagem secundária obsoleta. Outros consumidores/atualizadores de quantidade mantêm suas próprias transações sobre saldo e lotes. Novos caminhos de escrita exigirão o mesmo protocolo antes de serem liberados.
 
 ## 2. Contrato v3 implementado
 
