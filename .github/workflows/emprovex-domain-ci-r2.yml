@@ -17,8 +17,7 @@ concurrency:
 
 jobs:
   domain-plan:
-    # TEMPORARY: certify Domain matrix on Worker 2 DRAFT without changing release state.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.head_ref == 'feat/core-lean-r2-w2-ci' }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 4
     outputs:
