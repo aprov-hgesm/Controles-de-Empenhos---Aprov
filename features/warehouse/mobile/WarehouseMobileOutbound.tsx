@@ -143,6 +143,7 @@ export function WarehouseMobileOutbound() {
   const [message,setMessage]=useState<string|null>(null);
   const [pending,setPending]=useState<PendingWithdrawal|null>(null);
   const [recoveryLoaded,setRecoveryLoaded]=useState(false);
+  const [recoveryBlocked,setRecoveryBlocked]=useState(false);
 
   // Após reload/queda de rede, NÃO gerar outra identidade de retirada.
   // O mesmo comando persiste apenas nesta sessão e neste usuário/workspace.
@@ -163,6 +164,7 @@ export function WarehouseMobileOutbound() {
       }
     } catch {
       // Não apagar um comando possivelmente confirmado sem reconciliação.
+      setRecoveryBlocked(true);
       setMessage('Há uma saída pendente que não pôde ser recuperada nesta sessão. Consulte o histórico antes de criar outra.');
     }
     setRecoveryLoaded(true);
@@ -207,8 +209,20 @@ export function WarehouseMobileOutbound() {
           workspaceId:workspace.workspaceId,ug:workspace.ug,position:resolved.value.position,
         });
         if(current!==requestId.current)return;
-        setLocation({code:event.value,resolved:resolved.value,contents});
-        setProduct(null);setOrigin(null);
+        const available=contents.items.filter(item=>
+          item.material.status==='active'&&item.balance.quantity>0);
+        if(available.length===1) {
+          const value=await loadProduct(available[0].material.id,null,null);
+          if(current!==requestId.current)return;
+          const selected=options(value).find(o=>
+            warehouseStockPositionsEqual(o.position,resolved.value.position));
+          if(!selected)throw Error('WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK');
+          setLocation({code:event.value,resolved:resolved.value,contents});
+          setProduct(value);setOrigin(selected);
+        } else {
+          setLocation({code:event.value,resolved:resolved.value,contents});
+          setProduct(null);setOrigin(null);
+        }
       } else if(event.kind==='PRODUCT') {
         const association=await getWarehouseMobileBarcodeByCode(workspace.workspaceId,event.value);
         if(!association||association.status!=='active'||association.ug!==workspace.ug)
@@ -372,6 +386,10 @@ export function WarehouseMobileOutbound() {
     </p>}
 
     {!recoveryLoaded&&<p className="text-sm font-semibold">Verificando retirada pendente nesta sessão…</p>}
+    {recoveryBlocked&&<Panel title="Reconciliação necessária">
+      <p className="text-sm text-red-800">A operação pendente está ilegível ou o armazenamento da sessão falhou.
+      Nenhuma nova baixa será permitida nesta tela até a conferência do histórico.</p>
+    </Panel>}
     {pending&&<Panel title="Retirada pendente · reconciliar antes de continuar">
       <p className="text-sm font-semibold text-amber-900">
         O resultado da última confirmação pode ter sido perdido pela rede.
@@ -382,7 +400,7 @@ export function WarehouseMobileOutbound() {
         {working?'VERIFICANDO…':'VERIFICAR E RETOMAR A MESMA SAÍDA'}
       </Primary>
     </Panel>}
-    {recoveryLoaded&&!pending&&!success&&<Panel title="1 · LER CÓDIGO DE BARRAS">
+    {recoveryLoaded&&!recoveryBlocked&&!pending&&!success&&<Panel title="1 · LER CÓDIGO DE BARRAS">
       {!location&&!product&&<WarehouseMobileScanner
         expectation="EXPECT_PRODUCT_OR_LOCATION"
         identifyScan={classifyWarehouseMobileProductScan}
@@ -424,7 +442,7 @@ export function WarehouseMobileOutbound() {
       </button>}
     </Panel>}
 
-    {recoveryLoaded&&!pending&&product&&origin&&!review&&!success&&<Panel title="2 · INDICAR QUANTIDADE">
+    {recoveryLoaded&&!recoveryBlocked&&!pending&&product&&origin&&!review&&!success&&<Panel title="2 · INDICAR QUANTIDADE">
       <p className="text-xs text-slate-600">
         Apresentação: {product.association
           ?unit(product.association.presentation.code,product.association.presentation.label)
@@ -441,7 +459,7 @@ export function WarehouseMobileOutbound() {
       <Primary onClick={continueQuantity}>Continuar para destino</Primary>
     </Panel>}
 
-    {recoveryLoaded&&!pending&&review&&!destinationReady&&!success&&<Panel title="3 · DESTINO">
+    {recoveryLoaded&&!recoveryBlocked&&!pending&&review&&!destinationReady&&!success&&<Panel title="3 · DESTINO">
       <p className="text-xs font-semibold text-slate-600">
         A identidade do responsável será registrada automaticamente pela conta autenticada.
       </p>
@@ -469,7 +487,7 @@ export function WarehouseMobileOutbound() {
       </Primary>
     </Panel>}
 
-    {recoveryLoaded&&!pending&&review&&destinationReady&&!success&&<Panel title="4 · REVISAR E CONFIRMAR">
+    {recoveryLoaded&&!recoveryBlocked&&!pending&&review&&destinationReady&&!success&&<Panel title="4 · REVISAR E CONFIRMAR">
       <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-xs font-semibold"
         data-testid="warehouse-mobile-outbound-review">
         <p className="flex items-center gap-2 font-black text-emerald-800">
