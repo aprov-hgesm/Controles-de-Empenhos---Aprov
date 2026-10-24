@@ -718,6 +718,26 @@ try {
   assert.equal(await atomicBalance(),4);
   console.log('PASS: concorrência e retry mesma identidade resultam em uma única baixa');
 
+  // Falha após o commit: cliente vê 503, mas os registros foram salvos.
+  // Repetição com a mesma identidade devolve FINALIZED sem nova saída.
+  const lostReply={
+    ...atomicInput,withdrawalId:'wd_'+'7'.repeat(32),
+    lines:[{...atomicInput.lines[0],lineId:'wline_'+'4'.repeat(32),
+      requestedQuantity:1,baseQuantity:1}],
+  };
+  process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT=lostReply.withdrawalId;
+  try {
+    await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,lostReply),
+      /WAREHOUSE_ATOMIC_TEST_RESPONSE_LOST/);
+  }finally {delete process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT;}
+  assert.equal(await atomicBalance(),3,'Commit confirmado apesar da resposta perdida');
+  const rescued=await finalizeWarehouseWithdrawalServer(access,lostReply);
+  assert.equal(rescued.withdrawal.status,'FINALIZED');
+  assert.equal(rescued.movementIds.length,0);
+  assert.equal(await atomicBalance(),3);
+  console.log('PASS: resposta perdida após commit recuperada por replay exato, sem débito duplicado');
+
+
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');
