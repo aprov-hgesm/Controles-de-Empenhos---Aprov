@@ -101,7 +101,6 @@ export function WarehouseMobileIntakeAllocation() {
   const [queueError, setQueueError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<WarehouseInvoiceIntakeQueueRow | null>(null);
   const [quantity, setQuantity] = useState('');
-  const [lotCode, setLotCode] = useState('');
   const [expiresOn, setExpiresOn] = useState('');
   const [productResolution, setProductResolution] = useState<ProductResolution>({ status: 'idle' });
   const [positionResolution, setPositionResolution] = useState<PositionResolution>({ status: 'idle' });
@@ -173,7 +172,6 @@ export function WarehouseMobileIntakeAllocation() {
     positionRequestIdRef.current += 1;
     setSelectedRow(row);
     setQuantity(String(row.pendingQuantity));
-    setLotCode('');
     setExpiresOn('');
     setProductResolution({ status: 'idle' });
     setPositionResolution({ status: 'idle' });
@@ -362,7 +360,7 @@ export function WarehouseMobileIntakeAllocation() {
           effectiveStatus: selectedRow.status,
           quantity: numericQuantity,
           position: positionResolution.position,
-          lotCode: lotCode.trim(),
+          lotCode: '',
           expiresOn: expiresOn || null,
           barcode: productBarcode,
           operationId,
@@ -407,8 +405,7 @@ export function WarehouseMobileIntakeAllocation() {
         setLastSuccess(actionLabel + '. Item totalmente tratado.');
         setSelectedRow(null);
         setQuantity('');
-        setLotCode('');
-        setExpiresOn('');
+            setExpiresOn('');
         setProductResolution({ status: 'idle' });
         setPositionResolution({ status: 'idle' });
         setOperationId('');
@@ -698,29 +695,11 @@ export function WarehouseMobileIntakeAllocation() {
           {productReady && (
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                3 · Lote / validade
+                3 · Validade
               </p>
               <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                O lote técnico é criado/reutilizado pelo ALLOCATE oficial. Informe a validade quando aplicável.
+                Informe a validade, quando aplicável. O controle técnico de lotes é automático.
               </p>
-              <label className="mt-3 block">
-                <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                  Lote · opcional
-                </span>
-                <input
-                  type="text"
-                  maxLength={80}
-                  value={lotCode}
-                  onChange={(event) => {
-                    setLotCode(event.target.value);
-                    renewOperationId();
-                    setAllocationError(null);
-                  }}
-                  placeholder="Ex.: LOTE-2026-10"
-                  autoComplete="off"
-                  className="mt-2 min-h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm font-black text-slate-900 outline-none focus:border-[#00288e]"
-                />
-              </label>
               <label className="mt-3 block">
                 <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
                   Validade · opcional
@@ -737,7 +716,7 @@ export function WarehouseMobileIntakeAllocation() {
                 />
               </label>
               <p className="mt-2 text-[10px] font-semibold text-slate-500">
-                Lote vazio usa a referência técnica oficial. Sem validade informada é permitido pelo contrato vigente.
+                A referência técnica do lote é gerenciada automaticamente, sem seleção pelo operador.
               </p>
             </div>
           )}
@@ -793,7 +772,6 @@ export function WarehouseMobileIntakeAllocation() {
                 <p><span className="font-black">Item:</span> {selectedRow.itemName}</p>
                 <p><span className="font-black">Quantidade:</span> {formatQuantity(numericQuantity, selectedRow.unitLabel)}</p>
                 <p className="break-all"><span className="font-black">Material lido:</span> {productBarcode}</p>
-                <p><span className="font-black">Lote:</span> {lotCode.trim() || 'Referência técnica automática'}</p>
                 <p><span className="font-black">Validade:</span> {expiresOn || 'Não informada'}</p>
                 <p><span className="font-black">Posição:</span> {positionResolution.label}</p>
               </div>

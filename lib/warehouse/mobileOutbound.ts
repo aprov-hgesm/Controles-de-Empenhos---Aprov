@@ -188,7 +188,7 @@ export function prepareWarehouseMobileOutboundReview(input: {
     material: input.material,
     balance: input.balance,
     requestedQuantity: input.requestedQuantity,
-    presentation: input.barcodeAssociation.presentation,
+    presentation: input.barcodeAssociation?.presentation || input.material.unit,
     position: input.position,
     barcodeAssociation: input.barcodeAssociation,
     lot: input.lot || null,
