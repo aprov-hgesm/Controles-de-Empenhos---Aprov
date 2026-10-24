@@ -101,7 +101,9 @@ export async function coreDocumentTransaction<T>(
       throw new CoreTransactionError('CORE_FIRESTORE_UNAVAILABLE',503);
     }
     if(!response.ok){
-      if(response.status===409||response.status===412)
+      const reason=await response.text();
+      if(response.status===409||response.status===412||
+        reason.includes('ABORTED')||reason.includes('FAILED_PRECONDITION'))
         throw new CoreTransactionError('CORE_CONCURRENT_MODIFICATION',409);
       throw new CoreTransactionError('CORE_FIRESTORE_UNAVAILABLE',503);
     }

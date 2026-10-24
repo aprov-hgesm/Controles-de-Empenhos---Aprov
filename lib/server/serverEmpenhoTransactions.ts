@@ -18,8 +18,6 @@ export function validateEmpenhoServerInput(input:unknown):Empenho {
     ||!statuses.has(String(doc.status))||!Array.isArray(doc.items)
     ||doc.items.length>450)
     throw new CoreTransactionError('EMPENHO_INVALID',400);
-  if(doc.supplierCnpj!==undefined && normalizeSupplierCnpj(String(doc.supplierCnpj))!==doc.supplierCnpj)
-    throw new CoreTransactionError('EMPENHO_CNPJ_INVALID',400);
   for(const item of doc.items){
     if(!item||typeof item!=='object'||Array.isArray(item))throw new CoreTransactionError('EMPENHO_ITEM_INVALID',400);
     const i=item as Record<string,unknown>;
@@ -30,6 +28,11 @@ export function validateEmpenhoServerInput(input:unknown):Empenho {
       ||typeof i.received!=='number'||!Number.isFinite(i.received)||i.received<0)
       throw new CoreTransactionError('EMPENHO_ITEM_INVALID',400);
   }
+  const allowed=new Set(['id','supplier','supplierCnpj','description','date',
+    'status','items','lastNFDaysAgo','pregao','modalidadeContratacao',
+    'numeroContratacao','notaCredito','contrato','classification','revision',
+    'updatedAt','updatedBy','notaEmpenhoPdf','notaEmpenhoPdfVersions','userId']);
+  if(Object.keys(doc).some(k=>!allowed.has(k)))throw new CoreTransactionError('EMPENHO_INVALID_FIELDS',400);
   const raw=JSON.stringify(input);
   if(raw.length>800000)throw new CoreTransactionError('EMPENHO_TOO_LARGE',413);
   return doc as unknown as Empenho;
@@ -49,6 +52,10 @@ export async function commitServerEmpenho(
     if(mode==='update'&&!stored)throw new EmpenhoConcurrencyError('missing_empenho',
       'O empenho não existe mais. Atualize os dados.');
     if(mode==='update'&&stored)assertEmpenhoRevision(stored,candidate.revision);
+    if(candidate.supplierCnpj!==undefined &&
+       normalizeSupplierCnpj(candidate.supplierCnpj)!==candidate.supplierCnpj &&
+       !(mode==='update'&&stored?.supplierCnpj===candidate.supplierCnpj))
+      throw new CoreTransactionError('EMPENHO_CNPJ_INVALID',400);
     const next=buildNextEmpenho(candidate,stored||null,actor.uid);
     // Rules on the old client required revision increment and trusted updatedBy.
     return {result:next,writes:[{path,data:{...next,userId:actor.uid} as unknown as Record<string,CoreTxValue>}]};

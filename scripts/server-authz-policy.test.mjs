@@ -68,6 +68,19 @@ test('cadastro de fornecedor exige identidade ativa e decisão no servidor',()=>
   assert.match(client,/fetch\('\/api\/core\/suppliers'/);
 });
 
+test('transação NE exige API autorizada e revisão/lock no servidor',()=>{
+  const service=read('lib/server/serverEmpenhoTransactions.ts');
+  const endpoint=read('app/api/core/empenhos/transact/route.ts');
+  const client=read('lib/empenhoConcurrencyService.ts');
+  assert.match(service,/assertEmpenhoRevision/);
+  assert.match(service,/empenhoDelete_/);
+  assert.match(service,/buildNextEmpenho/);
+  assert.match(endpoint,/verifyPlatformPrincipal/);
+  assert.match(endpoint,/core.empenho.write/);
+  assert.match(client,/fetch\('\/api\/core\/empenhos\/transact'/);
+  assert.doesNotMatch(client,/runTransaction\(/);
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));

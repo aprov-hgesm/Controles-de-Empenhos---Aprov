@@ -9,6 +9,7 @@ import { verifyPlatformPrincipal, PlatformAuthorizationError } from '../lib/serv
 import { evaluateServerAuthorization } from '../lib/server/authorizationPolicy';
 import { assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
 import { GET as getSuppliers, POST as saveSupplier } from '../app/api/core/suppliers/route';
+import { POST as transactEmpenho } from '../app/api/core/empenhos/transact/route';
 
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
 process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID = 'demo-emprovex-security';
@@ -142,6 +143,41 @@ async function main() {
   const intruder=await bearer('authz-intruder@example.test');
   await rejected(()=>verifyPlatformPrincipal(intruder.token));
   console.log('PASS: no directory entry denied');
+
+  const baseEmpenho={
+    id:'2026NE008820',supplier:'Fornecedor E2E',description:'Teste transacional',
+    date:'2026-10-24',status:'Ativo' as const,
+    items:[{id:'item_1',name:'Arroz',unit:'KG',quantity:10,unitPrice:5,received:0}],
+    updatedBy:'forged-client',revision:0,
+  };
+  const transact=async(mode:'create'|'update',empenho:unknown,token=sector.token)=>
+    transactEmpenho(new Request('http://localhost/api/core/empenhos/transact',{
+      method:'POST',headers:{authorization:token,'content-type':'application/json'},
+      body:JSON.stringify({mode,empenho}),
+    }));
+  const created=await transact('create',baseEmpenho);
+  assert.equal(created.status,200,'NE initial create transaction');
+  const createdBody=await created.json() as {ok:boolean,result:{revision:number,updatedBy:string}};
+  assert.equal(createdBody.result.revision,1);
+  assert.equal(createdBody.result.updatedBy,sector.uid);
+  const duplicate=await transact('create',baseEmpenho);
+  assert.equal(duplicate.status,409,'concurrent duplicate NE');
+  const stale=await transact('update',{...baseEmpenho,description:'stale revision'});
+  assert.equal(stale.status,409,'stale revision');
+  const updated=await transact('update',{...baseEmpenho,revision:1,description:'Novo título'});
+  assert.equal(updated.status,200,'revision increment');
+  const updatedBody=await updated.json() as {result:{revision:number,description:string}};
+  assert.equal(updatedBody.result.revision,2);
+  assert.equal(updatedBody.result.description,'Novo título');
+  await document('workspaces/'+ws+'/settings/empenhoDelete_'+baseEmpenho.id,{
+    id:'empenhoDelete_'+baseEmpenho.id,empenhoId:baseEmpenho.id,
+    workspaceId:ws,type:'empenho-deletion-lock',
+  });
+  const locked=await transact('update',{...baseEmpenho,revision:2});
+  assert.equal(locked.status,409,'NE deletion lock');
+  const wrongTenant=await transact('update',{...baseEmpenho,revision:2},intruder.token);
+  assert.equal(wrongTenant.status,403,'outsider cannot mutate NE');
+  console.log('PASS: NE IAM create/update revision, duplicate, lock and outsider');
 
   await document('platformAccounts/'+email,{
     email,accountType:'sector',status:'active',firebaseUid:intruder.uid,
