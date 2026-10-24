@@ -36,6 +36,12 @@ test('baixa automatica ignora ordem de validade e preserva totais por referencia
   const result=planMobileOutboundAutomaticLots({quantity:8,physicalQuantity:12,lots,today:new Date('2026-10-24')});
   assert.deepEqual(result,[{lotId:lots[1].id,quantity:6},{lotId:lots[0].id,quantity:2}]);
 });
+test('inventario fisico concilia validades por ID, jamais por prioridade de vencimento',()=>{
+  const inventory=read('lib/server/warehouseInventoryAdjustment.ts');
+  assert.match(inventory,/active\.sort\(\(a,b\)=>a\.lot\.id\.localeCompare\(b\.lot\.id\)\)/);
+  assert.doesNotMatch(inventory,/active\.sort\([^\n]*expiresOn|Reconciliar lotes FEFO/);
+  assert.match(inventory,/warehouseAdminTransaction/);
+});
 test('retirada Desktop e Movel reutilizam o mesmo planejamento e autorizacao',()=>{
   const desktop=read('features/warehouse/components/WarehouseMaterialWithdrawal.tsx');
   const mobile=read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
