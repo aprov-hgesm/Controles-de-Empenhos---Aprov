@@ -56,6 +56,19 @@ test('UI: primeira leitura resolve ambos, destino sem responsavel ou lote manual
   assert.match(ui,/3 · DESTINO/);
   assert.match(ui,/4 · REVISAR E CONFIRMAR/);
 });
+test('Retirada móvel preserva comando no reload e reconcilia sem nova identidade',()=>{
+  const ui=text('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
+  assert.match(ui,/sessionStorage\.setItem\(pendingKey/);
+  assert.match(ui,/sessionStorage\.getItem\(pendingKey/);
+  assert.match(ui,/sessionStorage\.removeItem\(pendingKey/);
+  assert.match(ui,/withdrawalId:command\.review\.withdrawalId/);
+  assert.match(ui,/result\.withdrawal\.status!=='FINALIZED'/);
+  assert.match(ui,/confirming\.current/);
+  assert.match(ui,/recoveryBlocked/);
+  assert.match(ui,/available\.length===1/);
+  assert.match(ui,/contents\.items\.filter/);
+  assert.match(ui,/VERIFICAR E RETOMAR A MESMA SAÍDA/);
+});
 test('Servidor define retirado por usando exclusivamente identidade autenticada',()=>{
   const route=text('app/api/central-depositos/operations/route.ts');
   const engine=text('lib/server/warehouseMobileTrust.mjs');
