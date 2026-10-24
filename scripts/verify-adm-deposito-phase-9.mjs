@@ -90,13 +90,14 @@ assert.match(locatorTest, /somente posições do depósito atual/);
 assert.match(locatorTest, /sem saldo positivo não produz destaque/);
 assert.match(ui, /Nenhum saldo ou movimento de estoque foi alterado/);
 assert.match(depots, /WarehouseCroquisR1Operational/);
-assert.match(depots, /WarehouseLocationsR1Operational/);
+// Após PR #366, a administração de locais passou para o Croqui único.
+assert.doesNotMatch(depots, /WarehouseLocationsR1Operational/);
 assert.match(croquisR1, /WarehouseDepotLayoutEditor/);
 assert.match(croquisR1, /WarehouseIsometricPreview/);
 assert.match(croquisR1, /saveWarehouseDepotLayoutVersion/);
 assert.match(croquisR1, /listWarehousePositiveLocationBalances/);
 assert.match(locationsR1, /warehouse-locations-r1-operational/);
-assert.match(depots, /requested === 'croquis'/);
+assert.match(depots, /WarehouseCroquisR1Operational/);
 assert.match(navigation, /id: 'depots'/);
 assert.match(navigation, /label: 'Controle de Depósitos'/);
 

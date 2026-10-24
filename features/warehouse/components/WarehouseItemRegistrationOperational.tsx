@@ -2581,17 +2581,40 @@ export function WarehouseItemRegistrationOperational({
           ? 'immediate'
           : 'invoices';
   const [tab, setTab] = useState<RegistrationTab>(requestedTab);
+  const [clientHydrated, setClientHydrated] = useState(false);
+
+  useEffect(() => {
+    setClientHydrated(true);
+  }, []);
 
   useEffect(() => {
     setTab(requestedTab);
   }, [requestedTab]);
 
+  const selectRegistrationTab = (nextTab: RegistrationTab) => {
+    // Mantenha a escolha no endereço: transições/renovação de sessão não
+    // devem reverter a aba manualmente selecionada para "Materiais pendentes".
+    const queryValue: Record<RegistrationTab, string | null> = {
+      invoices: null,
+      manual: 'entrada-avulsa',
+      stored: 'itens-armazenados',
+      siscofis: 'siscofis',
+      immediate: 'consumo-imediato',
+    };
+    const url = new URL(window.location.href);
+    const value = queryValue[nextTab];
+    if (value) url.searchParams.set('aba', value);
+    else url.searchParams.delete('aba');
+    setTab(nextTab);
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  };
+
   return (
-    <div className="mt-4 space-y-5" data-testid="warehouse-registration-operational">
+    <div className="mt-4 space-y-5" data-testid="warehouse-registration-operational" data-client-hydrated={clientHydrated ? 'true' : 'false'} data-active-tab={tab}>
       <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
         <button
           type="button"
-          onClick={() => setTab('invoices')}
+          onClick={() => selectRegistrationTab('invoices')}
           className={
             tab === 'invoices'
               ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
@@ -2602,7 +2625,7 @@ export function WarehouseItemRegistrationOperational({
         </button>
         <button
           type="button"
-          onClick={() => setTab('manual')}
+          onClick={() => selectRegistrationTab('manual')}
           className={
             tab === 'manual'
               ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
@@ -2613,7 +2636,7 @@ export function WarehouseItemRegistrationOperational({
         </button>
         <button
           type="button"
-          onClick={() => setTab('stored')}
+          onClick={() => selectRegistrationTab('stored')}
           className={
             tab === 'stored'
               ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
@@ -2624,7 +2647,7 @@ export function WarehouseItemRegistrationOperational({
         </button>
         <button
           type="button"
-          onClick={() => setTab('siscofis')}
+          onClick={() => selectRegistrationTab('siscofis')}
           className={
             tab === 'siscofis'
               ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
@@ -2635,7 +2658,7 @@ export function WarehouseItemRegistrationOperational({
         </button>
         <button
           type="button"
-          onClick={() => setTab('immediate')}
+          onClick={() => selectRegistrationTab('immediate')}
           className={
             tab === 'immediate'
               ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'

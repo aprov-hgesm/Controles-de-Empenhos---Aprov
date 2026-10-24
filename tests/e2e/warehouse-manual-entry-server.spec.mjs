@@ -40,9 +40,14 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   await acceptance(page);
 
   await page.goto('/central-depositos/cadastro-de-itens');
-  await page.getByRole('button', { name: 'Entrada avulsa', exact: true }).click();
+  const registration = page.getByTestId('warehouse-registration-operational');
+  await expect(registration).toBeVisible({ timeout: 45_000 });
+  // Aguarda hidratação real: um clique sobre HTML pré-hidratado pode ser descartado.
+  await expect(registration).toHaveAttribute('data-client-hydrated', 'true', { timeout: 45_000 });
+  await registration.getByRole('button', { name: 'Entrada avulsa', exact: true }).click();
+  await expect(registration).toHaveAttribute('data-active-tab', 'manual', { timeout: 25_000 });
   const form = page.getByTestId('warehouse-manual-entry-operational');
-  await expect(form).toBeVisible({ timeout: 25_000 });
+  await expect(form).toBeVisible({ timeout: 45_000 });
   await expect(form.getByText('Cadastrar material de procedência diversa')).toBeVisible();
 
   await form.getByRole('button', { name: 'Novo material' }).click();
