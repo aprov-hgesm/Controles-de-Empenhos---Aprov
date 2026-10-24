@@ -1,5 +1,28 @@
 # EMPROVEX — Memorial Oficial
 
+## R2 OPERADOR MÓVEL — COMPLEMENTO EXECUTIVO DE 24/10/2026 (REVISÃO ESPECIAL, GOV-SIMP-01)
+
+**Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`. **PR:** #371, branch `feat/mobile-outbound-unified-scan-r2`. **HEAD de código deste checkpoint, antes do presente memorial:** `949852a342be7f79819c69a2093b646ddc7b465f`. Reconsultar HEAD atual, nunca confundir checkpoint com release validado.
+
+**Autorização atual do Fundador:** o Application CI está sob revisão de eficiência e foi dispensado como critério de bloqueio nesta missão. Não alterar seu arquivo/política nem reintroduzir guards de FEFO. Em substituição, exigir uma revisão final independente com typecheck, Fast CI, autenticação Firestore Emulator, inspeção de código e testes adversariais de saída. **Não usar ausência de CI para liberar falhas de segurança ou estoque.**
+
+**O que foi gravado nesta sequência de commits:**
+- `d6d7d87`: corrige `SyntaxError` do guard MOBILE-C (`scripts/verify-mobile-r1-intake-allocation.mjs`), identificado nos logs do Application CI anterior. O Application CI não é mais gate obrigatório nesta missão.
+- `f85381b`, `8ff31d4`, `be72f3a`, `4cb3e23`: saída móvel preserva `withdrawalId` e linhas idênticas em `sessionStorage` antes do envio, permite reconciliar após resposta perdida/reload com mesma identidade, impede nova retirada quando resultado é desconhecido; bloqueia recuperação corrompida; seleciona automaticamente material único de local lido; valida UG não nula; inclui testes contratuais.
+- `3e58589`: prioriza reconhecimento de movimento legado comprometido antes de aplicar restrição atual de vencimento/local; evita que alteração posterior à baixa impeça replay idempotente (sem alterar o motor de saída nova).
+- `65ff69e`: no legado v1, a resposta `FINALIZED` exige prova read-only de movimentos e consumos determinísticos por linha (incluindo o caso de header falsamente finalizado). Injeções de interrupção limitadas estritamente ao Emulator de teste.
+- `7b2a42d`, `2150c5b`, `949852a`: testes QA no Firestore Emulator de seis pontos de interrupção v1, repetição sem nova baixa e rejeição de header falso `FINALIZED`; verificação do auditor.
+- `cca22ed`: `warehouseWithdrawalLegacyAudit.ts` fornece auditoria explicitamente solicitada, limitada, somente leitura e escopada por workspace/UG, incluindo conferência dos consumos e movimentos de headers FINALIZED. Não reconcilia registros reais nem substitui o comando original.
+
+**Evidências prévias verificadas:** no `5a60f5b`, Fast CI, Core Protection, Recovery, SAAS Legal, Warehouse Server R2 Smoke, Visual QA e Browser E2E exibiam sucesso; Application CI 40114104513 falhou por sintaxe do guard MOBILE-C (corrigido depois). Os resultados prévios NÃO certificam os commits deste checkpoint. O workflow Legal no `be72f3a` apontou TS2322 por UG anulável em `WarehouseMobileOutbound.tsx`; corrigido em `4cb3e23`, ainda exige nova prova no HEAD final. O `npm ci` desse workflow reportou 15 advisories (6 moderados, 7 altos, 2 críticos); classificação de alcance e exposição pendente — não executar `npm audit fix --force` cegamente.
+
+**Critérios de fechamento:** após estabilizar HEAD, marcar PR Ready uma única vez para disparar `Warehouse Server R2 Smoke`, `Browser E2E`, Fast CI, Legal/typecheck, Core, Recovery e Visual QA. **Application CI pode falhar/ficar skip sem invalidar, conforme autorização atual**. Inspecionar logs do Emulator para os 6 testes legados e falso FINALIZED; corrigir falhas reais. Validar câmera em aparelho físico e confirmar isoladamente ausência de FEFO/seleção de lotes; não modificar Central 3D. Nenhum merge, publish Vercel, alteração de Rules ou dados reais foi autorizado.
+
+**Handoff:** onde — PR #371 com melhorias de confiança v2+recuperação v1; o que — certificação independente do Application CI; quem — executor GitHub/ChatGPT; próximo — terminar QA no HEAD final, publicar evidências no PR sem criar commit após CI; quem — executor; Fundador somente autoriza eventual publicação final, em etapa distinta.
+
+---
+
+
 ## CERTIFICAÇÃO DE ATOMICIDADE R2 — 24/10/2026
 
 ### Decisão arquitetural e implementação final
