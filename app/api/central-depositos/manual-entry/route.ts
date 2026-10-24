@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { bindWarehouseMobileTrust, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
@@ -29,13 +30,17 @@ export async function POST(request: NextRequest) {
       return errorResponse('WAREHOUSE_MANUAL_ENTRY_SCOPE_MISMATCH', 403);
     }
     assertWarehouseAuthorization(session, {capability:'warehouse.command',workspaceId:body.workspaceId,operation:'MANUAL_ENTRY'});
-    const result = await registerWarehouseManualEntryServer(session, body.input);
+    const trusted = bindWarehouseMobileTrust(session, { workspaceId: body.workspaceId, action: 'MANUAL_ENTRY' });
+    const result = await registerWarehouseManualEntryServer(trusted, body.input);
     return NextResponse.json({ ok: true, result }, {
       headers: { 'cache-control': 'no-store' },
     });
   } catch (error) {
     if (error instanceof WarehouseAccessError || error instanceof FounderAuthError) {
       return errorResponse('WAREHOUSE_MANUAL_ENTRY_UNAUTHORIZED', error.status);
+    }
+    if (error instanceof WarehouseMobileTrustError) {
+      return errorResponse(error.message, error.status);
     }
     if (error instanceof WarehouseStoreError) {
       return errorResponse(error.code, error.status);

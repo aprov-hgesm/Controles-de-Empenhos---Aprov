@@ -22,7 +22,7 @@ import {
   useState,
 } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import {
   summarizeWarehouseInventoryItems,
   type WarehouseInventoryItem,
@@ -37,9 +37,9 @@ import {
   saveWarehouseInventoryCount,
   startWarehouseInventory,
   type WarehouseInventorySessionRecord,
-} from '../../../lib/warehouse/inventoryRepository';
+} from '../../../lib/warehouse/mobileInventoryClient';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   classifyWarehouseMobileInventoryProductScan,
@@ -51,7 +51,7 @@ import {
 } from '../../../lib/warehouse/mobileInventory';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import { getWarehouseMaterial } from '../../../lib/warehouse/materialRepository';
+import { getWarehouseMaterial } from '../../../lib/warehouse/mobileMaterialRead';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 
@@ -349,7 +349,7 @@ export function WarehouseMobileInventory() {
     setSuccess(null);
 
     void (async () => {
-      const association = await getWarehouseBarcodeByCode(
+      const association = await getWarehouseMobileBarcodeByCode(
         workspace.workspaceId,
         event.value
       );

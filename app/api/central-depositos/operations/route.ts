@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { bindWarehouseMobileTrust, isWarehouseMobilePilotAction, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
@@ -47,16 +48,18 @@ export async function POST(request: NextRequest) {
     const size=Number(request.headers.get('content-length')||'0');
     // Até 40 linhas de retirada, com validação estrita no motor por linha.
     if (!Number.isFinite(size)||size>524288) return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
-    const access=await verifyWarehouseRequest(request.headers.get('authorization'));
+    const verified=await verifyWarehouseRequest(request.headers.get('authorization'));
     const body=await request.json() as Record<string,unknown>;
     if(!body||typeof body!=='object'||Array.isArray(body)
-      ||body.workspaceId!==access.workspaceId) {
+      ||body.workspaceId!==verified.workspaceId) {
       return reject('WAREHOUSE_SERVER_SCOPE_MISMATCH',403);
     }
     const operation=body.operation;
-    // A política valida o comando; o switch mantém as invariantes transacionais do domínio.
-    if (operation === 'LEDGER_MOVEMENT') return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
-    assertWarehouseAuthorization(access, {capability:'warehouse.command',workspaceId:body.workspaceId,operation});
+    if(operation==='LEDGER_MOVEMENT')return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
+    assertWarehouseAuthorization(verified, {capability:'warehouse.command',workspaceId:body.workspaceId,operation});
+    const access=isWarehouseMobilePilotAction(operation)
+      ? bindWarehouseMobileTrust(verified,{workspaceId:body.workspaceId,action:operation})
+      : verified;
     if(operation!=='SISCOFIS_CONFIRM' && size>65536)
       return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
     if(operation==='SISCOFIS_CONFIRM' && JSON.stringify(body).length>524288)
@@ -188,6 +191,7 @@ export async function POST(request: NextRequest) {
     if(error instanceof WarehouseAccessError||error instanceof FounderAuthError) {
       return reject('WAREHOUSE_SERVER_UNAUTHORIZED',error.status);
     }
+    if(error instanceof WarehouseMobileTrustError) return reject(error.message,error.status);
     if(error instanceof WarehouseStoreError) return reject(error.code,error.status);
     if(error instanceof SectorProvisioningFailure) return reject('WAREHOUSE_SERVER_CONFIGURATION',503);
     console.error('[warehouse/operations] failed:',error instanceof Error?error.name:'error');

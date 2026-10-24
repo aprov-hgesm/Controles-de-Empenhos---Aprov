@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import firebaseConfig from '../../../../firebase-applet-config.json';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
+import { bindWarehouseMobileTrust, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import {
   verifyWarehouseRequest,
   assertWarehouseAuthorization,
@@ -1169,11 +1170,15 @@ export async function POST(request: Request) {
       throw new FastPathError('WAREHOUSE_FAST_PATH_SCOPE_MISMATCH', 403);
     }
     assertWarehouseAuthorization(access, {capability:'warehouse.command',workspaceId:body.workspaceId,operation:body.action});
+    const trusted = bindWarehouseMobileTrust(access, {
+      workspaceId: body.workspaceId,
+      action: body.action === 'ALLOCATE' ? 'ALLOCATE' : 'IMMEDIATE_CONSUMPTION',
+    });
     const accessToken = await getGoogleAccessToken();
     const result = body.action === 'ALLOCATE'
-      ? await performAllocation(accessToken, access, body.input)
+      ? await performAllocation(accessToken, trusted, body.input)
       : body.action === 'IMMEDIATE_CONSUMPTION'
-        ? await performImmediateConsumption(accessToken, access, body.input)
+        ? await performImmediateConsumption(accessToken, trusted, body.input)
         : null;
     if (!result) {
       throw new FastPathError('WAREHOUSE_FAST_PATH_INVALID_ACTION', 400);
@@ -1188,6 +1193,9 @@ export async function POST(request: Request) {
         { error: 'WAREHOUSE_ACCESS_DENIED' },
         { status: error.status }
       );
+    }
+    if (error instanceof WarehouseMobileTrustError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     if (error instanceof FastPathError) {
       return NextResponse.json(

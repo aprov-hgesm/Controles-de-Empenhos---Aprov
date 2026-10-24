@@ -11,7 +11,7 @@ import {
 import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { getWarehouseBarcodeByCode } from '../../../lib/warehouse/barcodeRepository';
+import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import {
   warehouseStockPositionKey,
   warehouseStockPositionsEqual,
@@ -100,7 +100,7 @@ export function WarehouseMobileItemQuery() {
     setState({ status: 'loading', barcode: event.value });
 
     void (async () => {
-      const association = await getWarehouseBarcodeByCode(
+      const association = await getWarehouseMobileBarcodeByCode(
         workspace.workspaceId,
         event.value
       );
