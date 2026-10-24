@@ -19,7 +19,7 @@ import type {
   FinalizeWarehouseMaterialWithdrawalInput,
   FinalizeWarehouseMaterialWithdrawalResult,
 } from '../warehouse/withdrawalRepository';
-import { normalizeWarehouseQuantity } from '../warehouse/movement';
+import { createWarehouseMovementId, normalizeWarehouseQuantity } from '../warehouse/movement';
 import { validateWarehouseStockPosition } from '../warehouse/location';
 
 const path=(ws:string,type:string,id:string)=>`warehouse/${ws}/${type}/${id}`;
@@ -48,7 +48,7 @@ function isLine(line:unknown):line is WarehouseWithdrawalLineInput {
     && validateWarehouseStockPosition(v.position)?.kind!=='UNASSIGNED'
     && validateWarehouseStockPosition(v.position)!==null;
 }
-function payloadHash(lines:WarehouseWithdrawalLineInput[]) {
+export function legacyWithdrawalPayloadHash(lines:WarehouseWithdrawalLineInput[]) {
   return digest(JSON.stringify(lines.map(line=>({
     lineId:line.lineId,materialId:line.materialId,
     requestedQuantity:normalizeWarehouseQuantity(line.requestedQuantity),
@@ -76,6 +76,68 @@ function parseHeader(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument)
     finalizedAt:typeof d.finalizedAt==='string'?d.finalizedAt:null,
   };
 }
+/**
+ * Diagnóstico read-only da finalização legada. Não basta o cabeçalho dizer
+ * FINALIZED: para cada linha deve existir exatamente o movimento determinístico
+ * e o consumo SISCOFIS coerente com o comando imutável.
+ */
+export async function auditLegacyWithdrawalFinalized(
+  access:VerifiedWarehouseRequest,token:string,
+  input:FinalizeWarehouseMaterialWithdrawalInput,
+  header:WarehouseMaterialWithdrawal,
+):Promise<void>{
+  if(header.status!=='FINALIZED'||header.appliedLineCount!==input.lines.length
+    ||header.expectedLineCount!==input.lines.length
+    ||header.payloadHash!==legacyWithdrawalPayloadHash(input.lines)) {
+    return fail('WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED');
+  }
+  const ids=await Promise.all(input.lines.map(async line=>({
+    line,movementId:await createWarehouseMovementId(access.workspaceId,
+      'material-withdrawal:'+input.withdrawalId+':'+line.lineId),
+    consumptionId:'cons_'+digest(access.workspaceId+'\\n'
+      +'stock:'+input.withdrawalId+':'+line.lineId),
+  })));
+  const paths=ids.flatMap(({movementId,consumptionId})=>[
+    path(access.workspaceId,'movements',movementId),
+    path(access.workspaceId,'consumptions',consumptionId),
+  ]);
+  const all=new Map<string,WarehouseAdminDocument|null>();
+  for(let index=0;index<paths.length;index+=30) {
+    const part=await warehouseAdminBatchRead(token,paths.slice(index,index+30));
+    for(const [name,doc] of part)all.set(name,doc);
+  }
+  for(const {line,movementId,consumptionId} of ids){
+    const m=all.get(path(access.workspaceId,'movements',movementId))?.data;
+    const c=all.get(path(access.workspaceId,'consumptions',consumptionId))?.data;
+    const source=m?.source as Record<string,unknown>|undefined;
+    if(!m||!c||m.workspaceId!==access.workspaceId||m.ug!==access.ug
+      ||m.materialId!==line.materialId||m.type!=='OUTBOUND'
+      ||source?.kind!=='EXPRESS_OUTBOUND'
+      ||source?.lotId!==(line.lotId??null)
+      ||source?.quantity!==normalizeWarehouseQuantity(line.baseQuantity)
+      ||source?.requestedQuantity!==normalizeWarehouseQuantity(line.requestedQuantity)
+      ||m.quantityDelta!==-normalizeWarehouseQuantity(line.baseQuantity)!
+      ||c.workspaceId!==access.workspaceId||c.ug!==access.ug
+      ||c.origin!=='STOCK_OUTBOUND'
+      ||c.withdrawalId!==input.withdrawalId||c.lineId!==line.lineId
+      ||c.movementId!==movementId||c.materialId!==line.materialId
+      ||c.destinationId!==header.destinationId
+      ||c.withdrawnBy!==header.withdrawnBy
+      ||c.quantity!==normalizeWarehouseQuantity(line.baseQuantity)
+      ||c.siscofisStatus!=='PENDING'&&c.siscofisStatus!=='PREPARED'&&c.siscofisStatus!=='POSTED') {
+      return fail('WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED');
+    }
+  }
+}
+/** Injeção exclusiva dos testes em Emulator, nunca em produção. */
+function legacyTestFault(stage:string):void {
+  if(process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
+    &&process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID==='demo-emprovex-security'
+    &&process.env.EMPROVEX_WAREHOUSE_LEGACY_FAULT_STAGE===stage) {
+    fail('WAREHOUSE_LEGACY_TEST_INJECTED_FAILURE');
+  }
+}
+
 export async function finalizeWarehouseWithdrawalServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<FinalizeWarehouseMaterialWithdrawalResult>{
@@ -106,7 +168,7 @@ export async function finalizeWarehouseWithdrawalServer(
       withdrawnBy,lines,
     });
   }
-  const expectedHash=payloadHash(lines);
+  const expectedHash=legacyWithdrawalPayloadHash(lines);
   let header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[destinationPath,headerPath],rows=>{
     const destination=rows.get(destinationPath);
     if(!destination || destination.data.status!=='active'
@@ -134,7 +196,13 @@ export async function finalizeWarehouseWithdrawalServer(
     };
     return {result:candidate,writes:[{path:headerPath,data:{...candidate}}]};
   });
-  if(header.status==='FINALIZED')return {withdrawal:header,movementIds:[]};
+  if(header.status==='FINALIZED') {
+    await auditLegacyWithdrawalFinalized(access,token,{
+      withdrawalId:input.withdrawalId,destinationId:input.destinationId,
+      withdrawnBy,lines,
+    },header);
+    return {withdrawal:header,movementIds:[]};
+  }
   const movementIds:string[]=[];
   for(let index=0;index<lines.length;index++){
     const line=lines[index];
@@ -147,6 +215,7 @@ export async function finalizeWarehouseWithdrawalServer(
       note:'Saída de Material · '+input.withdrawalId+' · '+line.lineId,
     });
     movementIds.push(outbound.movement.id);
+    legacyTestFault((index+1)+':movement');
     const consumptionId='cons_'+digest(
       access.workspaceId+'\n'+'stock:'+input.withdrawalId+':'+line.lineId
     );
@@ -187,7 +256,7 @@ export async function finalizeWarehouseWithdrawalServer(
         quantity:outbound.plan.baseQuantity,requestedQuantity:outbound.plan.requestedQuantity,
         presentationLabel:line.presentationLabel,
         destinationId:header.destinationId,destinationName:header.destinationName,
-        withdrawnBy:header.withdrawnBy,operatorUid:access.uid,
+        withdrawnBy:header.withdrawnBy,operatorUid:header.createdBy,
         movementId:outbound.movement.id,withdrawalId:input.withdrawalId,
         lineId:line.lineId,intakeId:null,invoiceRecordKey:null,
         barcode:outbound.plan.barcodeAssociation?.barcode??null,
@@ -198,6 +267,7 @@ export async function finalizeWarehouseWithdrawalServer(
         lastReturnBy:null,lastReturnReason:null,
       }}]};
     });
+    legacyTestFault((index+1)+':consumption');
     header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[headerPath],rows=>{
       const row=rows.get(headerPath);
       if(!row)return fail('WAREHOUSE_WITHDRAWAL_HEADER_MISSING');
@@ -212,6 +282,7 @@ export async function finalizeWarehouseWithdrawalServer(
       };
       return {result:updated,writes:[{path:headerPath,data:{...updated}}]};
     });
+    legacyTestFault((index+1)+':progress');
   }
   header=await warehouseAdminTransaction<WarehouseMaterialWithdrawal>(token,[headerPath],rows=>{
     const row=rows.get(headerPath);
@@ -227,5 +298,9 @@ export async function finalizeWarehouseWithdrawalServer(
     };
     return {result:done,writes:[{path:headerPath,data:{...done}}]};
   });
+  await auditLegacyWithdrawalFinalized(access,token,{
+    withdrawalId:input.withdrawalId,destinationId:input.destinationId,
+    withdrawnBy,lines,
+  },header);
   return {withdrawal:header,movementIds};
 }
