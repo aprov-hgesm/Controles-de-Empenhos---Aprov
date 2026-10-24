@@ -69,8 +69,9 @@ assert.match(withdrawalUi, /warehouse-scanner-input/);
 assert.match(withdrawalUi, /SCAN → quantidade → TAB/);
 assert.match(withdrawalUi, /Código não cadastrado/);
 assert.match(withdrawalUi, /saveWarehouseBarcodeAssociation/);
-assert.match(withdrawalUi, /selectWarehouseFefoLot/);
-assert.match(withdrawalUi, /FEFO recomendado/);
+// A Fase 8 continua garantindo barcode/carrinho sem restaurar FEFO descontinuado.
+assert.match(withdrawalUi, /planMobileOutboundAutomaticLots/);
+assert.doesNotMatch(withdrawalUi, /selectWarehouseFefoLot|FEFO recomendado/);
 assert.match(withdrawalUi, /warehouse-material-withdrawal/);
 assert.match(withdrawalUi, /scannerRef\.current\?\.focus\(\)/);
 assert.match(withdrawalUi, /OUTBOUND_BARCODE_CACHE_MAX = 12/);
