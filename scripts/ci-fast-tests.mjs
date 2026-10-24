@@ -47,6 +47,10 @@ for (const path of warehouseFiles) {
       'test:adm-deposito-outbound-return', 'test:adm-deposito-locations'].forEach(add);
   }
 }
+// Saida Móvel R2 — scanner dual e FEFO automatico seguro.
+if (files.some(p => /^(?:features\/warehouse\/mobile\/WarehouseMobile(?:Outbound|IntakeAllocation)\.tsx|lib\/warehouse\/(?:mobileOutboundPlan\.mjs|mobileScanner\.ts|mobileOutbound\.ts)|app\/api\/central-depositos\/operations\/route\.ts|lib\/server\/warehouseMobileTrust\.mjs|scripts\/mobile-outbound-unified\.test\.mjs)$/.test(p))) {
+  add('test:mobile-outbound-unified');
+}
 // Navegação por estado React: contrato isolado, sem Firestore ou produção.
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:ModuleShell|Sidebar|TabNavigation|TabContent|SectionContent|SectionLoading|LandingOperational|HomeOperational)\.tsx|scripts\/warehouse-react-tab-navigation\.test\.mjs)$/.test(p))) {
   add('test:warehouse-react-tab-navigation');
