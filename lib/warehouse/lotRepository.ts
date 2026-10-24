@@ -258,14 +258,8 @@ export async function listWarehouseLots(
           updatedAt: timestampToIso(data.updatedAt),
         };
       })
-      .sort((left, right) => {
-        const expiryA = left.lot.expiresOn || '9999-12-31';
-        const expiryB = right.lot.expiresOn || '9999-12-31';
-        const expiryCompare = expiryA.localeCompare(expiryB);
-        return expiryCompare !== 0
-          ? expiryCompare
-          : left.lot.code.localeCompare(right.lot.code, 'pt-BR');
-      });
+      // Listagem técnica neutra: a validade é exibida, sem preferência FEFO.
+      .sort((left, right) => left.lot.id.localeCompare(right.lot.id));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
