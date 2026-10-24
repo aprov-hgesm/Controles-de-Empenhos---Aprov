@@ -6,7 +6,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve, posix } from 'node:path';
+import { dirname, extname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const DOMAINS = Object.freeze(['warehouse', 'finance', 'auth', 'legal', 'visual', 'recovery']);
 const TESTS = Object.freeze({
@@ -135,7 +136,7 @@ export function currentPlan(base, cwd = process.cwd()) {
   return { files, importers, ...classifyChanges(files, importers) };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const plan = currentPlan();
     const mode = process.argv[2] || '--report';
