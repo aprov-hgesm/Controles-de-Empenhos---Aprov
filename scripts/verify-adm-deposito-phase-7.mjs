@@ -35,12 +35,11 @@ for (const marker of [
   'validateWarehouseLot',
   'normalizeWarehouseExpiryDate',
   'warehouseLotExpiryState',
-  'selectWarehouseFefoLot',
   'buildWarehouseLogisticsPendencies',
   'LOT_EXPIRY_MISSING',
   'EXPIRED_LOT',
 ]) {
-  requireText(lot, marker, 'Domínio de lote/validade/FEFO incompleto: ' + marker);
+  requireText(lot, marker, 'Domínio de validade e rastreabilidade incompleto: ' + marker);
 }
 
 for (const marker of [
@@ -65,7 +64,6 @@ for (const marker of [
   'warehouse-stock-operational',
   'warehouse-stock-search',
   'warehouse-material-sheet',
-  'warehouse-fefo-recommendation',
   'warehouse-logistics-pendencies',
   'warehouse-lot-save',
   'warehouse-locate-in-depot',
@@ -77,6 +75,12 @@ for (const marker of [
   requireText(stock, marker, 'Superfície Estoque FASE 7 incompleta: ' + marker);
 }
 
+// FEFO foi aposentado da experiência operacional; não restaurar por conta de guards históricos.
+for (const [source, name] of [[lot, 'lot.ts'], [stock, 'WarehouseStockOperational.tsx']]) {
+  for (const marker of ['selectWarehouseFefoLot', 'warehouse-fefo-recommendation']) {
+    if (source.includes(marker)) findings.push('FEFO reapareceu em '+name+': '+marker);
+  }
+}
 requireText(control, 'WarehouseStockOperational', 'Controle de Materiais não expõe Estoque.');
 requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Materiais.');
 requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Materiais.');
@@ -109,7 +113,7 @@ for (const marker of [
 
 for (const marker of [
   'warehouse-stock-operational',
-  'warehouse-fefo-recommendation',
+  "toHaveCount(0)",
   '30/10/2026',
   'warehouse-lot-save',
   '2026-10-30',
@@ -158,14 +162,14 @@ for (const marker of ['D-039', 'D-040', 'D-041']) {
 }
 
 if (findings.length) {
-  console.error('FASE 7 — Estoque Operável / Lotes / Validade / FEFO: FALHOU');
+  console.error('FASE 7 — Estoque Operável / Validade: FALHOU');
   for (const finding of findings) console.error('- ' + finding);
   process.exit(1);
 }
 
-console.log('FASE 7 — Estoque Operável / Lotes / Validade / FEFO: OK');
+console.log('FASE 7 — Estoque Operável / Validade: OK');
 console.log('- warehouse_lot_v1 enriquece estoque sem criar saldo concorrente');
-console.log('- validade, vencidos, pendências e FEFO possuem contratos explícitos');
+console.log('- validade, alertas de vencimento e rastreabilidade preservam os contratos sem FEFO');
 console.log('- Estoque oferece busca, filtros, ficha, localização e histórico bounded');
 console.log('- Rules preservam isolamento por workspace/UG e integridade material/origem');
 console.log('- Browser E2E confirma visibilidade externa; autorização profunda permanece protegida por workspace/UG');
