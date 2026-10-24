@@ -10,7 +10,8 @@ import { WarehouseStoreError, warehouseAdminBatchRead, warehouseAdminListByField
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { applyWarehouseLocationDelta, createWarehouseLocationBalanceId,
   warehouseStockPositionsEqual, validateWarehouseLocationBalance,
-  validateWarehouseStockPosition, type WarehouseLocationBalance } from '../warehouse/location';
+  validateWarehouseStockPosition, type WarehouseLocationBalance,
+  type WarehouseStockPosition } from '../warehouse/location';
 import { validateWarehouseMaterial, type WarehouseMaterial } from '../warehouse/material';
 import { validateWarehouseLot, warehouseLotExpiryState, type WarehouseLot } from '../warehouse/lot';
 import { validateWarehouseBarcodeAssociation, type WarehouseBarcodeAssociation } from '../warehouse/barcode';
@@ -41,7 +42,7 @@ interface ReadLine {
   movementId:string;
   locationBalanceId:string;
   consumptionId:string;
-  position:NonNullable<ReturnType<typeof validateWarehouseStockPosition>>;
+  position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>;
 }
 export function atomicWarehouseWithdrawalHash(input:FinalizeWarehouseMaterialWithdrawalInput) {
   // Todos os campos documentais fazem parte da identidade imutável do comando.
@@ -57,6 +58,21 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
   const ws=access.workspaceId, destinationPath=path(ws,'destinations',input.destinationId);
   const headerPath=path(ws,'withdrawals',input.withdrawalId);
   const hash=atomicWarehouseWithdrawalHash(input);
+  // Replay confirmado deve independer de saldo atual, validade alterada,
+  // localização desativada ou da disponibilidade de consultas secundárias.
+  const saved=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
+  if(saved) {
+    const h=saved.data;
+    if(h.atomicVersion!==2)return deny('WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
+    if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
+      ||h.payloadHash!==hash||h.destinationId!==input.destinationId
+      ||h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy)
+      ||h.expectedLineCount!==input.lines.length)
+      return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
+    if(h.status!=='FINALIZED'||h.appliedLineCount!==input.lines.length)
+      return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
+    return {withdrawal:h as unknown as WarehouseMaterialWithdrawal,movementIds:[]};
+  }
   const prepared:ReadLine[]=await Promise.all(input.lines.map(async line=>{
     const position=validateWarehouseStockPosition(line.position);
     if(!position||position.kind==='UNASSIGNED')return deny('WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION',400);
