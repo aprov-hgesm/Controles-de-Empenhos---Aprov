@@ -340,6 +340,18 @@ try {
       lotCode:first.validity!.code,
     }],
   };
+  const beforeForged=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...withdrawalRequest,withdrawalId:'wd_'+'d'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],baseQuantity:999}],
+  }),/WAREHOUSE_OUTBOUND_EXPECTED_BASE_MISMATCH/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeForged);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
+    ...withdrawalRequest,withdrawalId:'wd_'+'c'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],lotId:'lot_invalid'}],
+  }),/WAREHOUSE_WITHDRAWAL_INPUT_INVALID/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeForged);
+  console.log('PASS: retirada rejeita base forjada e referencia invalida antes de debitar');
   const withdrawal=await finalizeWarehouseWithdrawalServer(access,withdrawalRequest);
   assert.equal(withdrawal.withdrawal.status,'FINALIZED');
   assert.equal(withdrawal.movementIds.length,1);
