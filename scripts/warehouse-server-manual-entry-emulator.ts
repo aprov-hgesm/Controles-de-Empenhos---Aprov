@@ -713,12 +713,18 @@ try {
     finalizeWarehouseWithdrawalServer(access,concurrent),
     finalizeWarehouseWithdrawalServer(access,concurrent),
   ]);
-  assert.ok(simultaneous.some(r=>r.status==='fulfilled'));
-  assert.equal(await atomicBalance(),4);
+  // O Emulator pode devolver conflito às duas requisições concorrentes.
+  // O contrato é convergência após replay com a MESMA identidade, não
+  // sucesso obrigatório de alguma das duas primeiras respostas.
+  const afterRace=await atomicBalance();
+  assert.ok(afterRace===4||afterRace===5);
   const repeat=await finalizeWarehouseWithdrawalServer(access,concurrent);
-  assert.equal(repeat.movementIds.length,0);
+  assert.equal(repeat.withdrawal.status,'FINALIZED');
   assert.equal(await atomicBalance(),4);
-  console.log('PASS: concorrência e retry mesma identidade resultam em uma única baixa');
+  const finalReplay=await finalizeWarehouseWithdrawalServer(access,concurrent);
+  assert.equal(finalReplay.movementIds.length,0);
+  assert.equal(await atomicBalance(),4);
+  console.log('PASS: concorrência possivelmente abortada, retry com mesma identidade converge sem dupla baixa');
 
   // Falha após o commit: cliente vê 503, mas os registros foram salvos.
   // Repetição com a mesma identidade devolve FINALIZED sem nova saída.
