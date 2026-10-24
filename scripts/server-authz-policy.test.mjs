@@ -88,9 +88,13 @@ test('verificadores de administrador integram política central',()=>{
 
 test('consulta do diretório usa IAM e NÃO o token Firebase do cliente',()=>{
   const access=read('lib/server/warehouseAccess.ts');
+  const platform=read('lib/server/platformAuthorization.ts');
   const store=read('lib/server/coreIdentityStore.ts');
-  assert.match(access,/readCoreIdentityDocument/);
-  assert.doesNotMatch(access,/verified\.idToken/);
+  assert.match(access,/verifyPlatformPrincipal/);
+  assert.match(platform,/readCoreIdentityDocument/);
+  assert.match(platform,/value\(account, 'firebaseUid'\) !== verified.uid/);
+  assert.match(platform,/value\(workspace, 'status'\) !== 'active'/);
+  assert.doesNotMatch(platform,/verified\.idToken/);
   assert.match(store,/getGoogleAccessToken/);
   assert.match(store,/sections\.length === 2/);
   assert.match(store,/EMPROVEX_E2E_SERVER_AUTH/);
