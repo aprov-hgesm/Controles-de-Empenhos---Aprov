@@ -1,10 +1,10 @@
 import {NextResponse} from 'next/server';
-import {verifyPlatformPrincipal,PlatformAuthorizationError} from '../../../../lib/server/platformAuthorization';
-import {FounderAuthError} from '../../../../lib/server/firebaseFounderAuth';
-import {evaluateServerAuthorization} from '../../../../lib/server/authorizationPolicy';
-import {commitServerEmpenho} from '../../../../lib/server/serverEmpenhoTransactions';
-import {CoreTransactionError} from '../../../../lib/server/coreFirestoreTransaction';
-import {EmpenhoConcurrencyError} from '../../../../lib/empenhoConcurrency';
+import {verifyPlatformPrincipal,PlatformAuthorizationError} from '../../../../../lib/server/platformAuthorization';
+import {FounderAuthError} from '../../../../../lib/server/firebaseFounderAuth';
+import {evaluateServerAuthorization} from '../../../../../lib/server/authorizationPolicy';
+import {commitServerEmpenho} from '../../../../../lib/server/serverEmpenhoTransactions';
+import {CoreTransactionError} from '../../../../../lib/server/coreFirestoreTransaction';
+import {EmpenhoConcurrencyError} from '../../../../../lib/empenhoConcurrency';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 function reply(body:unknown,status:number){return NextResponse.json(body,{status,headers:{'cache-control':'private, no-store'}});}
 export async function POST(request:Request){

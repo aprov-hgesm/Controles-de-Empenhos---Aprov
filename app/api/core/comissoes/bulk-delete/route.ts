@@ -1,8 +1,8 @@
 import {NextResponse} from 'next/server';
-import {FounderAuthError} from '../../../../lib/server/firebaseFounderAuth';
-import {verifyPlatformPrincipal,PlatformAuthorizationError} from '../../../../lib/server/platformAuthorization';
-import {evaluateServerAuthorization} from '../../../../lib/server/authorizationPolicy';
-import {deleteCommissionsServer,CommissionDeleteError} from '../../../../lib/server/coreCommissionDelete';
+import {FounderAuthError} from '../../../../../lib/server/firebaseFounderAuth';
+import {verifyPlatformPrincipal,PlatformAuthorizationError} from '../../../../../lib/server/platformAuthorization';
+import {evaluateServerAuthorization} from '../../../../../lib/server/authorizationPolicy';
+import {deleteCommissionsServer,CommissionDeleteError} from '../../../../../lib/server/coreCommissionDelete';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 function reply(body:unknown,status:number){return NextResponse.json(body,{status,headers:{'cache-control':'private, no-store'}});}
 export async function POST(request:Request){
