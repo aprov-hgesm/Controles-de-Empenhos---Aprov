@@ -1,3 +1,16 @@
+## AUTORIZAÇÃO SERVER-SIDE EMPROVEX R1 — 24/10/2026 (PR #370 DRAFT)
+
+- **Código isolado, não publicado:** PR #370, branch `feat/emprovex-server-authz-r1-20261024`. Nenhum corte de Rules, merge, deploy ou acesso a dados produtivos realizado.
+- Núcleo `lib/server/authorizationPolicy.ts`: negação por padrão, isolamento workspace/UG, allowlist de comandos Warehouse; o comando de ledger genérico permanece bloqueado.
+- Gate Warehouse `lib/server/warehouseAccess.ts`: autenticação Firebase verificada, provider e UID, vínculo setor ativo, workspace ativo; diretório consultado no servidor por IAM via `lib/server/coreIdentityStore.ts`, e não mais com ID token Firebase para autorizar a leitura.
+- Políticas usadas nas APIs Warehouse de operações, alocação/consumo de NF, entrada avulsa, fila, status e XLSX, além dos verificadores administrativos da plataforma.
+- Testes em `scripts/server-authz-policy.test.mjs` e Fast/Application CI; consultar `docs/SERVER_AUTHORIZATION_R1.md`.
+- **Limite:** cliente desktop ainda utiliza SDK Firebase diretamente para módulos principais, sessões e billing; Warehouse ainda faz algumas leituras por SDK. Não reduzir Rules de produção antes de migrar TODOS os acessos impactados, executar Auth/Firestore Emulator, certificação CI e staging IAM; Motor de Confiança Móvel permanece frente piloto complementar.
+
+**Handoff:** Onde — PR #370 DRAFT. Fazendo — validar motor/CI e compatibilidade. Quem — executor GitHub. Próximo — testes adversariais Auth/Firestore Emulator e staging Vercel, depois migração progressiva dos demais domínios sem duplicar autorização. Quem fará — executor técnico; responsável Vercel realiza PowerShell e aprovação de publicação.
+
+---
+
 # EMPROVEX — Memorial Oficial
 
 ## R2 OPERADOR MÓVEL — COMPLEMENTO EXECUTIVO DE 24/10/2026 (REVISÃO ESPECIAL, GOV-SIMP-01)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { bindWarehouseMobileTrust, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
@@ -17,6 +17,7 @@ function reply(body:Record<string,unknown>,status:number) {
 export async function GET(request:NextRequest) {
   try {
     const access = await verifyWarehouseRequest(request.headers.get('authorization'));
+    assertWarehouseAuthorization(access, {capability:'warehouse.read'});
     const trusted = bindWarehouseMobileTrust(access, { workspaceId: access.workspaceId, action: 'QUEUE_READ' });
     const result = await readWarehouseInvoiceQueueServer(trusted);
     return reply({ok:true,result},200);

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import {
   verifyWarehouseRequest,
+  assertWarehouseAuthorization,
   WarehouseAccessError,
 } from '../../../../lib/server/warehouseAccess';
 import {
@@ -23,6 +24,7 @@ import {
 export async function GET(request: Request) {
   try {
     const access = await verifyWarehouseRequest(request.headers.get('authorization'));
+    assertWarehouseAuthorization(access,{capability:'warehouse.read'});
 
     return NextResponse.json({
       enabled: true,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { bindWarehouseMobileTrust, isWarehouseMobilePilotAction, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
       return reject('WAREHOUSE_SERVER_SCOPE_MISMATCH',403);
     }
     const operation=body.operation;
+    if(operation==='LEDGER_MOVEMENT')return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
+    assertWarehouseAuthorization(verified, {capability:'warehouse.command',workspaceId:body.workspaceId,operation});
     const access=isWarehouseMobilePilotAction(operation)
       ? bindWarehouseMobileTrust(verified,{workspaceId:body.workspaceId,action:operation})
       : verified;

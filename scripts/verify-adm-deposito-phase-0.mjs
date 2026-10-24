@@ -8,6 +8,10 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const moduleAccess = read('lib/platformModuleAccess.ts');
 const serverAccess = read('lib/server/warehouseAccess.ts');
+const platformAuthorization = read('lib/server/platformAuthorization.ts');
+const jwtVerifier = read('lib/server/firebaseFounderAuth.ts');
+const coreIdentityStore = read('lib/server/coreIdentityStore.ts');
+const authorizationSources = [serverAccess, platformAuthorization, jwtVerifier, coreIdentityStore].join('\n');
 const route = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const api = read('app/api/central-depositos/status/route.ts');
 const sidebar = read('components/layout/AppSidebar.tsx');
@@ -47,9 +51,20 @@ for (const marker of [
   'currentClaimsMatchWorkspace',
   'firebaseUid',
 ]) {
-  requireText(serverAccess, marker, 'Gate server-side multi-tenant incompleto: ' + marker);
+  requireText(authorizationSources, marker, 'Gate server-side multi-tenant incompleto: ' + marker);
 }
 
+// A rota delega para um verificador reutilizável, não pode pular o diretório.
+for (const marker of ['verifyPlatformPrincipal', 'ensureSectorWarehouseClaims',
+  'currentClaimsMatchWorkspace']) {
+  requireText(serverAccess, marker, 'Warehouse deixou de delegar autorização: ' + marker);
+}
+for (const marker of ['readCoreIdentityDocument', 'firebaseUid', "'status') !== 'active'"]) {
+  requireText(platformAuthorization, marker, 'Identidade principal sem vínculo autoritativo: ' + marker);
+}
+for (const marker of ['getGoogleAccessToken', 'sections.length === 2', "NODE_ENV === 'production'"]) {
+  requireText(coreIdentityStore, marker, 'Leitura IAM das contas não está restrita: ' + marker);
+}
 for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
   'canAccessWarehouseModule(context)',

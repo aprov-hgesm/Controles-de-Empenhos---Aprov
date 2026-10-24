@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { evaluateServerAuthorization } from './authorizationPolicy';
 
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
@@ -308,6 +309,17 @@ export async function verifyFounderSession(idToken: string): Promise<FounderSess
       'FORBIDDEN',
       403
     );
+  }
+
+  const decision = evaluateServerAuthorization({
+    uid: user.localId,
+    email: normalizedEmail,
+    role: 'founder',
+    workspaceId: HGESM_WORKSPACE_ID,
+    ug: HGESM_UG,
+  }, { capability: 'platform.admin' });
+  if (!decision.allowed) {
+    throw new SectorProvisioningFailure('Acesso administrativo negado.', 'FORBIDDEN', 403);
   }
 
   return {

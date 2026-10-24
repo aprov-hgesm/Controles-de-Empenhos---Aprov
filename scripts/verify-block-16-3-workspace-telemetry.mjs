@@ -88,7 +88,7 @@ for (const marker of [
 
 requireText(
   concurrency,
-  "recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 }, 'empenhos')",
+  "recordWorkspaceUsage(scope,{documentReads:2,documentWrites:1},'empenhos')",
   'Concorrência de empenho não atribui a transação à UG.'
 );
 
