@@ -6,7 +6,7 @@ import {
   limit,
   query,
   where,
-} from 'firebase/firestore';
+} from './mobileReadSdkBridge';
 
 import {
   auth,

@@ -23,7 +23,7 @@ const FILTERS: Record<string, readonly string[]> = {
   inventories: [],items:[],destinations:[],
 };
 type Filter = {field:string;op:string;value:unknown};
-type Input = {kind:'DOCUMENT'|'QUERY';domain:string;id?:string;filters?:Filter[];
+type Input = {kind:'DOCUMENT'|'QUERY'|'BATCH';domain:string;id?:string;ids?:string[];filters?:Filter[];
   maxResults?:number;inventoryId?:string;newestFirst?:boolean};
 
 function invalid():never {
@@ -42,7 +42,7 @@ export async function warehouseMobileReadServer(
   if(!input||typeof input!=='object'||Array.isArray(input))return invalid();
   const r=input as Input;
   if(!DOMAINS.has(r.domain)
-    || (r.kind!=='DOCUMENT'&&r.kind!=='QUERY')
+    || (r.kind!=='DOCUMENT'&&r.kind!=='QUERY'&&r.kind!=='BATCH')
     || (r.domain==='items')!==Boolean(r.inventoryId)
     || (r.inventoryId!==undefined&&(!/^inv_[a-f0-9]{32}$/.test(r.inventoryId))))
     return invalid();
@@ -51,7 +51,15 @@ export async function warehouseMobileReadServer(
   const parent='warehouse/'+access.workspaceId
     +(r.inventoryId?'/inventories/'+r.inventoryId:'');
   let rows:WarehouseAdminDocument[]=[];
-  if(r.kind==='DOCUMENT') {
+  if(r.kind==='BATCH') {
+    if(!Array.isArray(r.ids)||!r.ids.length||r.ids.length>30
+      ||new Set(r.ids).size!==r.ids.length||r.ids.some(id=>typeof id!=='string'||!ID_PATTERN.test(id))
+      ||r.id!==undefined||r.filters!==undefined||r.maxResults!==undefined
+      ||r.newestFirst!==undefined)return invalid();
+    const paths=r.ids.map(id=>parent+'/'+r.domain+'/'+id);
+    const docs=await warehouseAdminBatchRead(token,paths);
+    rows=paths.flatMap(path=>{const value=docs.get(path);return value?[value]:[];});
+  } else if(r.kind==='DOCUMENT') {
     if(typeof r.id!=='string'||!ID_PATTERN.test(r.id)||r.filters!==undefined
       ||r.maxResults!==undefined||r.newestFirst!==undefined
       ||(r.domain==='items'&&!/^invit_[a-f0-9]{64}$/.test(r.id)))return invalid();
