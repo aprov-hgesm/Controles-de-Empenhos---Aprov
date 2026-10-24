@@ -60,8 +60,10 @@ assert.match(component, /Falha ao consultar o conteúdo esperado/);
 const result = read('features/warehouse/mobile/WarehouseMobilePhysicalQueryResult.tsx');
 assert.match(result, /O que deveria estar aqui\?/);
 assert.match(result, /Nenhum material registrado nesta posição\./);
-assert.match(result, /warehouseLotOriginLabel/);
-assert.match(result, /lot\.expiresOn/);
+// A consulta preserva referência técnica no modelo, mas só apresenta validade.
+assert.match(result, /expiryLabel\(lot\.expiresOn\)/);
+assert.match(result, /Validade não informada/);
+assert.doesNotMatch(result, /warehouseLotOriginLabel|warehouseLotDisplayCode/);
 assert.doesNotMatch(result, /button/i);
 
 const model = read('lib/warehouse/mobilePhysicalQueryModel.ts');
