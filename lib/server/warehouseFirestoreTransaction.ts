@@ -278,6 +278,67 @@ export async function warehouseAdminListByField(
 }
 
 /**
+ * Consulta tipada e escopada para o adaptador de leitura do Operador Movel.
+ * A colecao e os filtros sao enumerados no endpoint (nao ha SQL/Firestore
+ * arbitrario, collectionGroup ou paths aceitos do cliente).
+ */
+export async function warehouseAdminReadScopedQuery(
+  token: string,
+  ws: string,
+  domain: string,
+  filters: readonly {field:string;value:string}[],
+  maxResults: number,
+  inventoryId: string | null = null,
+  newestFirst = false
+): Promise<WarehouseAdminDocument[]> {
+  if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 500) {
+    throw new WarehouseStoreError('WAREHOUSE_MOBILE_READ_LIMIT_INVALID', 400);
+  }
+  const parent = inventoryId
+    ? 'warehouse/' + ws + '/inventories/' + inventoryId
+    : 'warehouse/' + ws;
+  const probe = domain === 'items' ? 'invit_' + '0'.repeat(64) : 'probe';
+  const full = fullName(parent + '/' + domain + '/' + probe);
+  const prefix = full.slice(0, -probe.length);
+  const where = filters.length === 0 ? undefined : filters.length === 1
+    ? { fieldFilter: {
+      field: { fieldPath: filters[0].field }, op: 'EQUAL',
+      value: { stringValue: filters[0].value },
+    } } : { compositeFilter: { op: 'AND', filters: filters.map(f => ({
+      fieldFilter: { field: { fieldPath: f.field }, op: 'EQUAL',
+        value: { stringValue: f.value } },
+    })) } };
+  const response = await request(token, '/' + parent + ':runQuery', {
+    structuredQuery: {
+      from: [{collectionId: domain}],
+      ...(where ? {where} : {}),
+      ...(newestFirst ? {orderBy: [{
+        field:{fieldPath:'createdAt'},direction:'DESCENDING',
+      }]} : {}),
+      limit: maxResults,
+    },
+  });
+  const rows = parseStream(await response.text());
+  const out: WarehouseAdminDocument[] = [];
+  for (const entry of rows) {
+    const row = entry.document as {
+      name?: string; fields?: Record<string, Encoded>; updateTime?: string;
+    } | undefined;
+    if (!row) continue;
+    if (!row.name?.startsWith(prefix) || !row.updateTime) {
+      throw new WarehouseStoreError('WAREHOUSE_MOBILE_READ_OUT_OF_SCOPE', 503);
+    }
+    const id = row.name.slice(prefix.length);
+    if (!/^[A-Za-z0-9_-]+$/.test(id) || (domain === 'items' && !/^invit_[a-f0-9]{64}$/.test(id))) {
+      throw new WarehouseStoreError('WAREHOUSE_MOBILE_READ_DOCUMENT_INVALID', 503);
+    }
+    out.push({path:parent+'/'+domain+'/'+id,
+      data:decodeFields(row.fields ?? {}),updateTime:row.updateTime});
+  }
+  return out;
+}
+
+/**
  * Consulta server-only limitada a domínios explícitos. Nunca permite ao
  * navegador escolher collectionPath, filtros ou consultas arbitrárias.
  * A saturação aborta inventários para evitar snapshots incompletos.
