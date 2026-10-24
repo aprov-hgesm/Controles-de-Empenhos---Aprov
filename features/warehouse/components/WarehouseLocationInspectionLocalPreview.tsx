@@ -169,7 +169,7 @@ export function WarehouseLocationInspectionLocalPreview({ showExpiryWarnings = f
       />
       <p className="text-xs leading-5 text-slate-600">
         Passe o cursor na estante para consultar itens separados em P1, P2 e P3. Clique para
-        conferir todos os lotes e gerar um PDF demonstrativo. Geladeira, freezer e palete
+        conferir os itens e suas validades e gerar um PDF demonstrativo. Geladeira, freezer e palete
         exibem os itens abaixo do croqui; a GEL-02 vazia deve indicar saldo físico 0.
         As caixas empilhadas no palete são ilustrativas,
         não a contagem física exata de unidades. Nenhum dado real do EMPROVEX é acessado neste laboratório.
