@@ -50,6 +50,22 @@ test('processamento de NE também exige identidade operacional ativa',()=>{
   denied(evaluate(sector,'core.parse',undefined,'DELETE_ALL'),'OPERATION_DENIED');
 });
 
+test('cadastro de fornecedor exige identidade ativa e decisão no servidor',()=>{
+  allowed(evaluate(sector,'core.suppliers.read','workspace-a'));
+  allowed(evaluate(sector,'core.suppliers.write','workspace-a'));
+  denied(evaluate(sector,'core.suppliers.write','workspace-b'),'SCOPE_MISMATCH');
+  denied(evaluate({...sector,uid:''},'core.suppliers.write'),'INVALID_PRINCIPAL');
+  const route=read('app/api/core/suppliers/route.ts');
+  const store=read('lib/server/serverSupplierContacts.ts');
+  const client=read('lib/firebaseSync.ts');
+  assert.match(route,/verifyPlatformPrincipal/);
+  assert.match(route,/evaluateServerAuthorization/);
+  assert.match(store,/getGoogleAccessToken/);
+  assert.match(store,/currentDocument:/);
+  assert.match(store,/isValidSupplierCnpj/);
+  assert.match(client,/fetch\('\/api\/core\/suppliers'/);
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));

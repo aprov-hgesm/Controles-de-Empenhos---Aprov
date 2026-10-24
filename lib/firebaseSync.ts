@@ -5,7 +5,7 @@ import {
   runTransaction,
   writeBatch,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { getInvoiceRecordKey } from './invoiceIdentity';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, CronogramaEmailEnvio, SupplierContact } from './types';
 import {
@@ -79,12 +79,16 @@ export async function getSupplierContacts(userId: string): Promise<SupplierConta
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalCollectionPath(scope, 'suppliers');
   try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'suppliers'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
-    return snapshot.docs.map((item) => ({
-      ...(item.data() as SupplierContact),
-      id: item.id,
-    }));
+    const user=auth.currentUser;
+    if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+    const response=await fetch('/api/core/suppliers',{
+      headers:{authorization:'Bearer '+await user.getIdToken()},cache:'no-store',
+    });
+    if(!response.ok)throw new Error('Não foi possível consultar fornecedores autorizados.');
+    const result=await response.json() as {ok:boolean,items:SupplierContact[]};
+    if(!result.ok||!Array.isArray(result.items))throw new Error('Resposta de fornecedores inválida.');
+    recordWorkspaceDocumentReads(scope,0,'outros'); // Leituras reais contabilizadas no servidor
+    return result.items;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
@@ -98,8 +102,15 @@ export async function saveSupplierContact(
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'suppliers', supplier.id);
   try {
-    await setDoc(operationalDocRef(scope, 'suppliers', supplier.id), supplier);
-    recordWorkspaceDocumentWrites(scope, 1, 'outros');
+    const user=auth.currentUser;
+    if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+    const response=await fetch('/api/core/suppliers',{
+      method:'POST',
+      headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+      body:JSON.stringify({supplier}),cache:'no-store',
+    });
+    if(!response.ok)throw new Error('Servidor recusou cadastro de fornecedor.');
+    recordWorkspaceDocumentWrites(scope,1,'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
