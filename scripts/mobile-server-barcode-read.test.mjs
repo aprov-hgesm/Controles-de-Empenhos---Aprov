@@ -113,3 +113,54 @@ test('motor de confiança cobre as oito jornadas pelas operacoes reais', () => {
   assert.match(queue, /readWarehouseInvoiceQueueServer\(trusted/);
   assert.doesNotMatch(trust, /getDoc\(|getDocs\(|fetch\(|getGoogleAccessToken\(/);
 });
+
+
+test('oito fluxos moveis usam repositorios de leitura server-only', () => {
+  const ui={
+    WarehouseMobileIntakeAllocation:['mobileBarcodeReadClient','mobileLocationBarcodeResolver'],
+    WarehouseMobileManualEntry:['mobileMaterialRead','mobileLocationBarcodeResolver'],
+    WarehouseMobileTransfer:['mobileLocationRead','mobileMaterialRead'],
+    WarehouseMobileOutbound:['mobileOutboundRepository','mobileDestinationClient'],
+    WarehouseMobileInventory:['mobileInventoryClient','mobileMaterialRead'],
+    WarehouseMobileItemQuery:['mobileOutboundRepository'],
+    WarehouseMobileLocationFoundationCheck:['mobilePhysicalQuery','mobileLocationBarcodeResolver'],
+    WarehouseMobilePositionCheck:['mobilePositionCheck','mobileLocationBarcodeResolver'],
+  };
+  for(const [name,expected] of Object.entries(ui)){
+    const source=file('features/warehouse/mobile/'+name+'.tsx');
+    for(const module of expected)assert.match(source,new RegExp(module));
+    assert.doesNotMatch(source,/from ['"]firebase\/firestore['"]/);
+  }
+  for(const name of ['mobilePhysicalQuery','mobilePositionCheck','mobileOutboundRepository']){
+    const source=file('lib/warehouse/'+name+'.ts');
+    assert.match(source,/mobileReadSdkBridge/);
+    assert.doesNotMatch(source,/from ['"]firebase\/firestore['"]/);
+  }
+  for(const name of ['mobileMaterialRead','mobileLocationRead','mobileInventoryClient',
+    'mobileDestinationClient']){
+    assert.match(file('lib/warehouse/'+name+'.ts'),/mobileReadSdkBridge/);
+  }
+  const resolver=file('lib/warehouse/mobileLocationBarcodeResolver.ts');
+  assert.match(resolver,/mobileLocationRead/);
+  assert.doesNotMatch(resolver,/from ['"]\.\/locationRepository['"]/);
+});
+
+test('gateway da leitura so aceita consultas fechadas e verifica UG por registro',()=>{
+  const api=file('app/api/central-depositos/mobile-read/route.ts');
+  const server=file('lib/server/warehouseMobileRead.ts');
+  const bridge=file('lib/warehouse/mobileReadSdkBridge.ts');
+  const transaction=file('lib/server/warehouseFirestoreTransaction.ts');
+  assert.match(api,/verifyWarehouseRequest/);
+  assert.match(api,/bindWarehouseMobileTrust/);
+  assert.match(api,/WAREHOUSE_MOBILE_READ_INVALID_JSON/);
+  assert.match(api,/Object\.keys\(input\)\.sort\(\)/);
+  assert.match(server,/r\.data\.workspaceId|row\.data\.workspaceId/);
+  assert.match(server,/row\.data\.ug !== access\.ug/);
+  assert.match(server,/warehouseAdminBatchRead/);
+  assert.match(server,/warehouseAdminReadScopedQuery/);
+  assert.match(server,/new Set\(r\.ids\)/);
+  assert.match(server,/FILTERS\[r\.domain\]/);
+  assert.match(transaction,/WAREHOUSE_MOBILE_READ_OUT_OF_SCOPE/);
+  assert.match(bridge,/\/api\/central-depositos\/mobile-read/);
+  assert.doesNotMatch(bridge,/from ['"]firebase\/firestore['"]/);
+});
