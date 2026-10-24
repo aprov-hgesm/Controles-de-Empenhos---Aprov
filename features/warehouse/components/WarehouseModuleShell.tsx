@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import { usePathname } from 'next/navigation';
 
@@ -20,8 +20,10 @@ import {
 } from '../../../lib/platformSessionLease';
 import { flushWorkspaceUsageTelemetry } from '../../../lib/workspaceUsageTelemetry';
 import { usePlatformBranding } from '../../../hooks/usePlatformBranding';
-import { getWarehouseSectionForPathname } from '../navigation';
+import { getWarehouseSectionForPathname, WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 import { WarehouseSidebar } from './WarehouseSidebar';
+import { WarehouseTabNavigationProvider } from './WarehouseTabNavigation';
+import { WarehouseTabContent } from './WarehouseTabContent';
 
 export function WarehouseModuleShell({
   children,
@@ -32,8 +34,63 @@ export function WarehouseModuleShell({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<WarehouseSectionId>(
+    () => getWarehouseSectionForPathname(pathname).id
+  );
+  // URLs abertas diretamente continuam usando a página Next original.
+  // O shell assume a superfície só após uma troca local efetiva de aba.
+  const [hasLocalTabNavigation, setHasLocalTabNavigation] = useState(false);
   const { customLogo } = usePlatformBranding();
-  const activeSection = getWarehouseSectionForPathname(pathname);
+
+  // A URL continua válida para favoritos, F5 e links diretos. A interação
+  // normal, porém, usa o mesmo setState das abas do EMPROVEX principal.
+  const routeSection = getWarehouseSectionForPathname(pathname);
+  const isPrimaryRoute = WAREHOUSE_SECTIONS.some((item) => item.href === (
+    pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
+  ));
+
+  useEffect(() => {
+    setActiveSectionId(routeSection.id);
+  }, [routeSection.id]);
+
+  useEffect(() => {
+    const restoreTab = () => {
+      setActiveSectionId(getWarehouseSectionForPathname(window.location.pathname).id);
+      setSidebarOpen(false);
+    };
+    window.addEventListener('popstate', restoreTab);
+    return () => window.removeEventListener('popstate', restoreTab);
+  }, []);
+
+  const navigateWarehouseTab = useCallback((href: string) => {
+    const targetUrl = new URL(href, window.location.origin);
+    const target = WAREHOUSE_SECTIONS.find((item) => item.href === targetUrl.pathname);
+
+    if (!href.startsWith('/') || href.startsWith('//') || targetUrl.origin !== window.location.origin) {
+      // URLs externas não devem ser aceitas neste mecanismo interno.
+      return;
+    }
+    if (!target) {
+      // Aliases ou outras páginas continuam com o redirecionamento normal.
+      window.location.assign(targetUrl.href);
+      return;
+    }
+
+    const nextUrl = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+    const currentUrl = window.location.pathname + window.location.search + window.location.hash;
+    if (target.id !== activeSectionId) {
+      setHasLocalTabNavigation(true);
+    }
+    setActiveSectionId(target.id);
+    setSidebarOpen(false);
+    if (currentUrl !== nextUrl) {
+      // API nativa oficialmente integrada ao usePathname/useSearchParams do
+      // Next App Router; não dispara fetch de nova rota nem desmonta o shell.
+      window.history.pushState(null, '', nextUrl);
+    }
+  }, [activeSectionId]);
+
+  const activeSection = WAREHOUSE_SECTIONS.find((item) => item.id === activeSectionId) || routeSection;
   const section = activeSection.id;
   const isImmersive = section === 'home' || section === 'overview';
   const currentUser = auth.currentUser;
@@ -72,7 +129,8 @@ export function WarehouseModuleShell({
   };
 
   return (
-    <div
+    <WarehouseTabNavigationProvider navigate={navigateWarehouseTab}>
+      <div
       className={`min-h-screen antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${isImmersive
         ? 'bg-[#02040b] text-white'
         : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'
@@ -97,6 +155,7 @@ export function WarehouseModuleShell({
           userDisplayName={userDisplayName}
           showMobileAccess={showMobileAccess}
           onClose={() => setSidebarOpen(false)}
+          onNavigate={navigateWarehouseTab}
           onLogout={handleLogout}
         />
 
@@ -111,7 +170,11 @@ export function WarehouseModuleShell({
               data-testid="warehouse-surface"
               className="warehouse-emprovex-content min-w-0"
             >
-              {children}
+              {isPrimaryRoute && hasLocalTabNavigation ? (
+                <WarehouseTabContent section={section} workspaceId={workspaceContext.workspaceId} />
+              ) : (
+                <>{children}</>
+              )}
             </section>
           ) : (
             <section
@@ -142,7 +205,11 @@ export function WarehouseModuleShell({
               </div>
 
               <div className="warehouse-emprovex-content min-w-0">
-                {children}
+                {isPrimaryRoute && hasLocalTabNavigation ? (
+                  <WarehouseTabContent section={section} workspaceId={workspaceContext.workspaceId} />
+                ) : (
+                  <>{children}</>
+                )}
               </div>
             </section>
           )}
@@ -152,6 +219,7 @@ export function WarehouseModuleShell({
           </footer>
         </main>
       </div>
-    </div>
+      </div>
+    </WarehouseTabNavigationProvider>
   );
 }

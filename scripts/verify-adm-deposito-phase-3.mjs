@@ -81,8 +81,14 @@ for (const marker of [
 ]) {
   requireText(registration, marker, `Alocação de Material perdeu capacidade oficial: ${marker}`);
 }
-for (const marker of ['WarehouseLocationsR1Operational', 'WarehouseCroquisR1Operational']) {
-  requireText(depots, marker, `Controle de Depósitos perdeu capacidade oficial: ${marker}`);
+// Desde o PR #366, locais e croquis foram consolidados em uma única superfície.
+requireText(
+  depots,
+  'WarehouseCroquisR1Operational',
+  'Controle de Depósitos perdeu a superfície oficial de croquis e locais.'
+);
+if (depots.includes('WarehouseLocationsR1Operational')) {
+  findings.push('Controle de Depósitos voltou a montar a subaba legada de locais.');
 }
 for (const marker of [
   'WarehouseItemControlSummary',

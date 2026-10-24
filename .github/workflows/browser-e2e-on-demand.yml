@@ -56,7 +56,7 @@ jobs:
 
       - name: Browser E2E manual entry (PR, isolated)
         if: github.event_name == 'pull_request'
-        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/warehouse-manual-entry-server.spec.mjs"
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/warehouse-react-tab-navigation.spec.mjs tests/e2e/warehouse-manual-entry-server.spec.mjs"
 
       - name: Browser E2E all scenarios (manual dispatch)
         if: github.event_name == 'workflow_dispatch'

@@ -1,26 +1,33 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { WarehouseSectionLoading } from './WarehouseSectionLoading';
 
 import type { WarehouseSectionId } from '../navigation';
 
 const WarehouseDepotsOperational = dynamic(
-  () => import('./WarehouseDepotsOperational').then((module) => module.WarehouseDepotsOperational)
+  () => import('./WarehouseDepotsOperational').then((module) => module.WarehouseDepotsOperational),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 const WarehouseItemRegistrationOperational = dynamic(
-  () => import('./WarehouseItemRegistrationOperational').then((module) => module.WarehouseItemRegistrationOperational)
+  () => import('./WarehouseItemRegistrationOperational').then((module) => module.WarehouseItemRegistrationOperational),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 const WarehouseMaterialWithdrawal = dynamic(
-  () => import('./WarehouseMaterialWithdrawal').then((module) => module.WarehouseMaterialWithdrawal)
+  () => import('./WarehouseMaterialWithdrawal').then((module) => module.WarehouseMaterialWithdrawal),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 const WarehouseItemControlOperational = dynamic(
-  () => import('./WarehouseItemControlOperational').then((module) => module.WarehouseItemControlOperational)
+  () => import('./WarehouseItemControlOperational').then((module) => module.WarehouseItemControlOperational),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 const WarehouseHomeOperational = dynamic(
-  () => import('./WarehouseHomeOperational').then((module) => module.WarehouseHomeOperational)
+  () => import('./WarehouseHomeOperational').then((module) => module.WarehouseHomeOperational),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 const WarehouseLandingOperational = dynamic(
-  () => import('./WarehouseLandingOperational').then((module) => module.WarehouseLandingOperational)
+  () => import('./WarehouseLandingOperational').then((module) => module.WarehouseLandingOperational),
+  { loading: () => <WarehouseSectionLoading /> }
 );
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {

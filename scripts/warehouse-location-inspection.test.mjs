@@ -112,7 +112,8 @@ test('interface possui interação e relatório somente leitura com carregamento
   assert.match(preview, /onMouseDown=\{\(event\) => \{/);
   assert.match(preview, /event\.button === 0\) event\.preventDefault\(\)/);
   assert.match(preview, /focus:outline-none focus-visible:outline-2/);
-  assert.match(preview, /tabIndex=\{interactive \? 0 : undefined\}/);
+  // A navegação por teclado também contempla locais não interativos do croqui.
+  assert.match(preview, /tabIndex=\{\(interactive \|\| \(!onInspectLocation && !!locationId && !sceneOnly\)\) \? 0 : undefined\}/);
   assert.match(preview, /event\.key === 'Enter' \|\| event\.key === ' '/);
   // A primeira renderizacao do modal deve acontecer antes da consulta remota.
   assert.match(preview, /onInspectLocationRef\.current\?\.\(\)/);

@@ -100,8 +100,15 @@ for (const marker of [
 
 requireText(navigation, "id: 'depots'", 'Navegação Controle de Depósitos ausente.');
 requireText(navigation, "label: 'Controle de Depósitos'", 'Rótulo Controle de Depósitos ausente.');
-requireText(depotsUi, 'WarehouseLocationsR1Operational', 'Controle de Depósitos não expõe Localizações R1.');
-requireText(depotsUi, "requested === 'croquis'", 'Controle de Depósitos perdeu seleção de subaba estrutural/croqui.');
+// PR #366 consolidou os locais e croquis numa única superfície oficial.
+requireText(
+  depotsUi,
+  'WarehouseCroquisR1Operational',
+  'Controle de Depósitos perdeu a gestão unificada de locais e croquis.'
+);
+if (depotsUi.includes('WarehouseLocationsR1Operational')) {
+  findings.push('Subaba antiga Localizações R1 voltou a competir com o Croqui unificado.');
+}
 
 for (const marker of [
   'function validWarehouseDepotCreate',

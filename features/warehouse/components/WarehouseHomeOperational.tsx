@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { WarehouseTabLink } from './WarehouseTabNavigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
@@ -800,13 +800,13 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                       O depósito continua operando normalmente. Configure o croqui em Controle de Depósitos
                       para transformar esta área no localizador visual do estoque.
                     </p>
-                    <Link
+                    <WarehouseTabLink
                       href="/central-depositos/controle-de-depositos?aba=croquis"
                       className={styles.configureLink}
                     >
                       <LocateFixed className="h-4 w-4" />
                       Configurar visão
-                    </Link>
+                    </WarehouseTabLink>
                   </div>
                 </div>
               )}
@@ -822,12 +822,12 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   : 'Material sem posição física neste depósito'
                 : 'Selecione um material para acender sua localização na Visão 3D'}
             </div>
-            <Link
+            <WarehouseTabLink
               href="/central-depositos/controle-de-depositos?aba=croquis"
               className={styles.editLink}
             >
               Editar estrutura em Controle de Depósitos
-            </Link>
+            </WarehouseTabLink>
           </div>
           </div>
         </div>

@@ -47,6 +47,10 @@ for (const path of warehouseFiles) {
       'test:adm-deposito-outbound-return', 'test:adm-deposito-locations'].forEach(add);
   }
 }
+// Navegação por estado React: contrato isolado, sem Firestore ou produção.
+if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:ModuleShell|Sidebar|TabNavigation|TabContent|SectionContent|SectionLoading|LandingOperational|HomeOperational)\.tsx|scripts\/warehouse-react-tab-navigation\.test\.mjs)$/.test(p))) {
+  add('test:warehouse-react-tab-navigation');
+}
 // Este teste verifica os detalhes no topo da experiência, as consultas
 // limitadas e a ausência de operações diretas no Firestore.
 if (files.some((p) => /^(?:features\/warehouse\/components\/Warehouse(?:StockOperational|LogisticsReports)\.tsx|scripts\/warehouse-stock-report-ux\.test\.mjs)$/.test(p))) {
