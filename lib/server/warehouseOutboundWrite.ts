@@ -245,6 +245,14 @@ export async function applyWarehouseExpressOutboundServer(
           return reject('WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE');
         }
       }
+      // A retirada composta deve declarar a quantidade base realmente
+      // validada no servidor; rejeitar divergência antes de escrever movimento.
+      if(input.expectedBaseQuantity!==undefined) {
+        const expected=normalizeWarehouseQuantity(input.expectedBaseQuantity);
+        if(expected===null||expected<=0||Math.abs(expected-plan.baseQuantity)>0.000001) {
+          return reject('WAREHOUSE_OUTBOUND_EXPECTED_BASE_MISMATCH',400);
+        }
+      }
       if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
       if(currentLocationBalance.quantity+0.000001<plan.baseQuantity) {
         return reject('WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK');
