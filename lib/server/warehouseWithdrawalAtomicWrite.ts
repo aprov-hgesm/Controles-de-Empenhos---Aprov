@@ -77,7 +77,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
       ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
-    if(h.status!=='FINALIZED'||h.appliedLineCount!==input.lines.length)
+    if(h.status!=='FINALIZED'||h.appliedLineCount!==(v3?h.expectedLineCount:input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
     return {withdrawal:h as unknown as WarehouseMaterialWithdrawal,movementIds:[]};
   }
@@ -135,7 +135,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==prepared.length)) {
           return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         }
-        if(h.status!=='FINALIZED'||h.appliedLineCount!==prepared.length) {
+        if(h.status!=='FINALIZED'||h.appliedLineCount!==(v3?h.expectedLineCount:prepared.length)) {
           return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
         }
         const withdrawal=h as unknown as WarehouseMaterialWithdrawal;
