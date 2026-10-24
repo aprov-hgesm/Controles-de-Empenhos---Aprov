@@ -52,7 +52,7 @@ test('motor rejeita acesso entre workspaces, falta de identidade e UG inválida'
 });
 
 test('motor é fail-closed para operações não aprovadas no piloto', () => {
-  for (const action of ['TRANSFER', 'INVENTORY_ADJUST', 'BULK_READ', '', null]) {
+  for (const action of ['BULK_READ', 'ADMIN_DELETE', '', null]) {
     assert.throws(() => bind(verified, verified.workspaceId, action),
       /WAREHOUSE_MOBILE_TRUST_ACTION_DENIED/);
   }
@@ -89,4 +89,27 @@ test('SDK direto nao é fallback em falha de IAM e Rule continua protegendo clie
   assert.match(rules, /isFounderWorkspace/);
   assert.equal(config.firestore.find(x=>x.database==='emprovex-warehouse')?.rules,
     'firestore.warehouse.server-only.rules');
+});
+
+
+test('motor de confiança cobre as oito jornadas pelas operacoes reais', () => {
+  const trust = file('lib/server/warehouseMobileTrust.mjs');
+  const operations = file('app/api/central-depositos/operations/route.ts');
+  const intake = file('app/api/central-depositos/intake-action/route.ts');
+  const manual = file('app/api/central-depositos/manual-entry/route.ts');
+  const queue = file('app/api/central-depositos/queue/route.ts');
+  for (const action of ['BARCODE_READ','QUEUE_READ','MATERIAL_READ','POSITION_READ',
+    'POSITION_BALANCES_READ','STOCK_READ','INVENTORY_READ','POSITION_CHECK','POSITION_CONTENTS',
+    'ALLOCATE','MANUAL_ENTRY','TRANSFER','WITHDRAWAL_FINALIZE','DESTINATION_CREATE',
+    'INVENTORY_START','INVENTORY_COUNT','INVENTORY_REVIEW','INVENTORY_REOPEN',
+    'INVENTORY_BEGIN_CONFIRM','INVENTORY_ADJUST','INVENTORY_STALE',
+    'INVENTORY_FINISH_CONFIRM','INVENTORY_CANCEL']) {
+    assert.match(trust, new RegExp("'"+action+"'"));
+  }
+  assert.match(operations, /bindWarehouseMobileTrust\(verified/);
+  assert.match(operations, /isWarehouseMobilePilotAction\(operation\)/);
+  assert.match(intake, /performAllocation\(accessToken, trusted/);
+  assert.match(manual, /registerWarehouseManualEntryServer\(trusted/);
+  assert.match(queue, /readWarehouseInvoiceQueueServer\(trusted/);
+  assert.doesNotMatch(trust, /getDoc\(|getDocs\(|fetch\(|getGoogleAccessToken\(/);
 });
