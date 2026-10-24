@@ -5,6 +5,7 @@ import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
 import {
   verifyWarehouseRequest,
+  assertWarehouseAuthorization,
   WarehouseAccessError,
 } from '../../../../lib/server/warehouseAccess';
 import type { Empenho, Invoice } from '../../../../lib/types';
@@ -1167,6 +1168,7 @@ export async function POST(request: Request) {
     if (!body || body.workspaceId !== access.workspaceId || !body.input) {
       throw new FastPathError('WAREHOUSE_FAST_PATH_SCOPE_MISMATCH', 403);
     }
+    assertWarehouseAuthorization(access, {capability:'warehouse.command',workspaceId:body.workspaceId,operation:body.action});
     const accessToken = await getGoogleAccessToken();
     const result = body.action === 'ALLOCATE'
       ? await performAllocation(accessToken, access, body.input)

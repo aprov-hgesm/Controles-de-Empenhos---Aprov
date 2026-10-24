@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       || body.workspaceId !== session.workspaceId) {
       return errorResponse('WAREHOUSE_MANUAL_ENTRY_SCOPE_MISMATCH', 403);
     }
+    assertWarehouseAuthorization(session, {capability:'warehouse.command',workspaceId:body.workspaceId,operation:'MANUAL_ENTRY'});
     const result = await registerWarehouseManualEntryServer(session, body.input);
     return NextResponse.json({ ok: true, result }, {
       headers: { 'cache-control': 'no-store' },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
@@ -16,6 +16,7 @@ function reply(body:Record<string,unknown>,status:number) {
 export async function GET(request:NextRequest) {
   try {
     const access = await verifyWarehouseRequest(request.headers.get('authorization'));
+    assertWarehouseAuthorization(access,{capability:'warehouse.read'});
     const result = await readWarehouseInvoiceQueueServer(access);
     return reply({ok:true,result},200);
   } catch (error) {

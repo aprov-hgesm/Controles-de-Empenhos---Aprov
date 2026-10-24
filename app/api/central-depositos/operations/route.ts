@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { SectorProvisioningFailure } from '../../../../lib/server/sectorProvisioningAdmin';
 import { WarehouseStoreError } from '../../../../lib/server/warehouseFirestoreTransaction';
@@ -54,6 +54,9 @@ export async function POST(request: NextRequest) {
       return reject('WAREHOUSE_SERVER_SCOPE_MISMATCH',403);
     }
     const operation=body.operation;
+    // A política valida o comando; o switch mantém as invariantes transacionais do domínio.
+    if (operation === 'LEDGER_MOVEMENT') return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
+    assertWarehouseAuthorization(access, {capability:'warehouse.command',workspaceId:body.workspaceId,operation});
     if(operation!=='SISCOFIS_CONFIRM' && size>65536)
       return reject('WAREHOUSE_SERVER_REQUEST_TOO_LARGE',413);
     if(operation==='SISCOFIS_CONFIRM' && JSON.stringify(body).length>524288)
