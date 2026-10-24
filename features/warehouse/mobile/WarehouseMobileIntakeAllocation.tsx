@@ -27,7 +27,7 @@ import {
   type WarehouseInvoiceIntakeQueueContext,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   classifyWarehouseMobileProductScan,

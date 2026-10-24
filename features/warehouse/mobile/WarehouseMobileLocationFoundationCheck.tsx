@@ -12,7 +12,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   loadWarehouseMobilePhysicalPositionContents,

@@ -6,10 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import { normalizeWarehouseLocationQuantity, type WarehouseStockPosition } from '../../../lib/warehouse/location';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { normalizeWarehouseExpiryDate } from '../../../lib/warehouse/lot';
 import { type WarehouseMaterial } from '../../../lib/warehouse/material';
-import { getWarehouseMaterial, listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import { getWarehouseMaterial, listWarehouseMaterials } from '../../../lib/warehouse/mobileMaterialRead';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 import { classifyWarehouseMobileProductScan, createWarehouseMobileAllocationOperationId } from '../../../lib/warehouse/mobileIntakeAllocation';

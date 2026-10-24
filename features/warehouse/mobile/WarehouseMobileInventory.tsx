@@ -39,7 +39,7 @@ import {
   type WarehouseInventorySessionRecord,
 } from '../../../lib/warehouse/inventoryRepository';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   classifyWarehouseMobileInventoryProductScan,
@@ -51,7 +51,7 @@ import {
 } from '../../../lib/warehouse/mobileInventory';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import { getWarehouseMaterial } from '../../../lib/warehouse/materialRepository';
+import { getWarehouseMaterial } from '../../../lib/warehouse/mobileMaterialRead';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 

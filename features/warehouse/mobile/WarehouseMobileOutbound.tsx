@@ -14,7 +14,7 @@ import type { WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode
 import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
 import { warehouseStockPositionKey } from '../../../lib/warehouse/location';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
-import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
+import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/mobileLocationBarcodeResolver';
 import {
   warehouseLotExpiryState,
   type WarehouseLot,
