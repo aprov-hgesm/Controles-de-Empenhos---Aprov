@@ -50,24 +50,32 @@ export function atomicWarehouseWithdrawalHash(input:FinalizeWarehouseMaterialWit
     withdrawnBy:normalizeWarehouseWithdrawnBy(input.withdrawnBy),
     lines:input.lines}));
 }
+export interface WarehouseWithdrawalAtomicV3Options {
+  intentHash:string;
+  intentLineCount:number;
+  /** Versões lidas no planejamento, rechecadas na transação de baixa. */
+  snapshotVersions:Record<string,string|null>;
+}
 export async function finalizeWarehouseWithdrawalAtomicServer(
   access:VerifiedWarehouseRequest,input:FinalizeWarehouseMaterialWithdrawalInput,
+  v3?:WarehouseWithdrawalAtomicV3Options,
 ):Promise<FinalizeWarehouseMaterialWithdrawalResult> {
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ?'emulator':await getGoogleAccessToken();
   const ws=access.workspaceId, destinationPath=path(ws,'destinations',input.destinationId);
   const headerPath=path(ws,'withdrawals',input.withdrawalId);
-  const hash=atomicWarehouseWithdrawalHash(input);
+  const hash=v3?.intentHash??atomicWarehouseWithdrawalHash(input);
+  const version=v3?3:2;
   // Replay confirmado deve independer de saldo atual, validade alterada,
   // localização desativada ou da disponibilidade de consultas secundárias.
   const saved=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
   if(saved) {
     const h=saved.data;
-    if(h.atomicVersion!==2)return deny('WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
+    if(h.atomicVersion!==version)return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
     if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
       ||h.payloadHash!==hash||h.destinationId!==input.destinationId
-      ||h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy)
-      ||h.expectedLineCount!==input.lines.length)
+      ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
+      ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
     if(h.status!=='FINALIZED'||h.appliedLineCount!==input.lines.length)
       return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
@@ -110,6 +118,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
     candidateByMaterial.set(materialId,names);
     for(const name of names)set.add(name);
   }
+  if(v3)for(const name of Object.keys(v3.snapshotVersions))set.add(name);
   if(set.size>450)return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_TOO_MANY_DOCUMENTS',400);
 
   // Um único commit; a transação serializa concorrência por saldo, referência,
@@ -119,11 +128,11 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       const old=rows.get(headerPath);
       if(old) {
         const h=old.data;
-        if(h.atomicVersion!==2)return deny('WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
+        if(h.atomicVersion!==version)return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
           ||h.payloadHash!==hash||h.destinationId!==input.destinationId
-          ||h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy)
-          ||h.expectedLineCount!==prepared.length) {
+          ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
+          ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==prepared.length)) {
           return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         }
         if(h.status!=='FINALIZED'||h.appliedLineCount!==prepared.length) {
@@ -132,6 +141,10 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
         const withdrawal=h as unknown as WarehouseMaterialWithdrawal;
         // Nenhuma segunda baixa, e sinal inequívoco de replay ao cliente.
         return {result:{withdrawal,movementIds:[]},writes:[]};
+      }
+      if(v3)for(const [name,updateTime] of Object.entries(v3.snapshotVersions)) {
+        if((rows.get(name)?.updateTime||null)!==updateTime)
+          return deny('WAREHOUSE_WITHDRAWAL_V3_SNAPSHOT_CHANGED');
       }
       const destination=get(rows,destinationPath,'WAREHOUSE_DESTINATION_INACTIVE').data;
       if(destination.status!=='active'||destination.workspaceId!==ws||destination.ug!==access.ug
@@ -303,7 +316,8 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
         status:'FINALIZED',createdBy:access.uid,createdAt:nowString,
         updatedAt:nowString,finalizedAt:nowString,
       };
-      place(headerPath,{...withdrawal,atomicVersion:2});
+      place(headerPath,{...withdrawal,atomicVersion:version,
+        ...(v3?{intentLineCount:v3.intentLineCount}:{})});
       if(writes.size>450)return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_TOO_MANY_WRITES',400);
       return {result:{withdrawal,movementIds:ids},
         writes:[...writes].map(([name,data])=>({path:name,data}))};
