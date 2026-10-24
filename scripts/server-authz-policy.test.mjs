@@ -114,7 +114,8 @@ test('nenhuma operação executável do dispatcher fica fora da lista positiva',
   for(const op of cases)if(op!=='LEDGER_MOVEMENT')
     assert.ok(WAREHOUSE_ALLOWED_OPERATIONS.includes(op),'ação não protegida: '+op);
   assert.ok(!WAREHOUSE_ALLOWED_OPERATIONS.includes('LEDGER_MOVEMENT'));
-  assert.match(route,/assertWarehouseAuthorization\(access,/);
+  assert.match(route,/assertWarehouseAuthorization\((?:access|verified),/);
+  assert.match(route,/bindWarehouseMobileTrust/);
 });
 
 test('API de análise de NE autentica setor/workspace pelo servidor',()=>{
