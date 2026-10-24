@@ -1,4 +1,3 @@
-import firebaseConfig from '../../firebase-applet-config.json';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
@@ -10,6 +9,8 @@ import {
   normalizeWorkspaceId,
 } from '../platformIdentity';
 import { warehouseModuleEnabled } from '../warehouse/featureFlag';
+import { evaluateServerAuthorization, type ServerAuthorizationRequest } from './authorizationPolicy';
+import { readCoreIdentityDocument, CoreIdentityStoreError } from './coreIdentityStore';
 import {
   FounderAuthError,
   verifyFirebaseRequest,
@@ -48,25 +49,6 @@ interface FirestoreDocumentPayload {
   fields?: Record<string, FirestoreValue>;
 }
 
-function coreFirestoreBaseUrl(): string {
-  const emulatorEnabled = process.env.EMPROVEX_E2E_SERVER_AUTH === '1';
-  const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST?.trim();
-  const projectId = emulatorEnabled
-    ? process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || firebaseConfig.projectId
-    : firebaseConfig.projectId;
-  const databaseId = emulatorEnabled ? '(default)' : firebaseConfig.firestoreDatabaseId;
-
-  if (emulatorEnabled && emulatorHost) {
-    return `http://${emulatorHost}/v1/projects/${encodeURIComponent(projectId)}/databases/${encodeURIComponent(databaseId)}/documents`;
-  }
-
-  return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/${encodeURIComponent(databaseId)}/documents`;
-}
-
-function encodeDocumentPath(path: string): string {
-  return path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
-}
-
 function stringField(
   document: FirestoreDocumentPayload | null,
   field: string
@@ -74,30 +56,15 @@ function stringField(
   return document?.fields?.[field]?.stringValue || '';
 }
 
-async function readCoreDocument(
-  path: string,
-  idToken: string
-): Promise<FirestoreDocumentPayload | null> {
-  const response = await fetch(
-    `${coreFirestoreBaseUrl()}/${encodeDocumentPath(path)}`,
-    {
-      headers: {
-        authorization: `Bearer ${idToken}`,
-      },
-      cache: 'no-store',
+async function readCoreDocument(path: string): Promise<FirestoreDocumentPayload | null> {
+  try {
+    return await readCoreIdentityDocument(path);
+  } catch (error) {
+    if (error instanceof CoreIdentityStoreError) {
+      throw new WarehouseAccessError('Diretório de autorização indisponível.', error.status);
     }
-  );
-
-  if (response.status === 404) return null;
-
-  if (!response.ok) {
-    throw new WarehouseAccessError(
-      'Não foi possível validar a autorização operacional do setor.',
-      response.status >= 500 ? 503 : 403
-    );
+    throw error;
   }
-
-  return await response.json() as FirestoreDocumentPayload;
 }
 
 function currentClaimsMatchWorkspace(
@@ -122,8 +89,7 @@ async function resolveExternalWarehouseAccess(
   }
 
   const account = await readCoreDocument(
-    `platformAccounts/${verified.email}`,
-    verified.idToken
+    'platformAccounts/' + verified.email
   );
 
   if (!account) {
@@ -151,8 +117,7 @@ async function resolveExternalWarehouseAccess(
   }
 
   const workspace = await readCoreDocument(
-    `workspaces/${workspaceId}`,
-    verified.idToken
+    'workspaces/' + workspaceId
   );
 
   if (!workspace) {
@@ -253,4 +218,21 @@ export async function verifyWarehouseFounderRequest(
     uid: verified.uid,
     email: verified.email,
   };
+}
+
+/** Ponto único de decisão: nunca confiar em role, workspace ou UG vindos do body. */
+export function assertWarehouseAuthorization(
+  access: VerifiedWarehouseRequest,
+  request: Omit<ServerAuthorizationRequest, 'capability'> & { capability: 'warehouse.read' | 'warehouse.command' },
+): void {
+  const isFounder = access.email === HGESM_SECTOR_EMAIL
+    && access.workspaceId === HGESM_WORKSPACE_ID && access.ug === HGESM_UG;
+  const decision = evaluateServerAuthorization({
+    uid: access.uid,
+    email: access.email,
+    role: isFounder ? 'founder' : 'sector',
+    workspaceId: access.workspaceId,
+    ug: access.ug,
+  }, request);
+  if (!decision.allowed) throw new WarehouseAccessError('Operação não autorizada.', 403);
 }
