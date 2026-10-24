@@ -35,3 +35,14 @@ test('groups never silently PASS if unknown or executable fails', () => {
   assert.equal(report.failed, guardsFor(id)[1].script);
   assert.equal(calls.length, 2, 'must stop on first failure');
 });
+
+test('compatibility labels are exact and remain backed by executable manifest groups', () => {
+  for (const group of manifest.groups) {
+    const labelLines = workflow.split('\n')
+      .filter(line => line.includes('# CI_LEAN_LEGACY ' + group.id + ': '))
+      .map(line => line.split('# CI_LEAN_LEGACY ' + group.id + ': ')[1]);
+    const labels = labelLines.flatMap(line => line.split(' | '));
+    assert.deepEqual(labels, group.steps.map(step => step.name),
+      group.id + ': every historical label must refer to a real guarded command');
+  }
+});
