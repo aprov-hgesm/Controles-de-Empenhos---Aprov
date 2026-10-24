@@ -137,6 +137,19 @@ export async function removeEmpenho(
   return commitEmpenhoDeletionLifecycle(userId, id, expectedRevision);
 }
 
+async function mutateSimpleOnServer(
+  userId:string,resource:'alerts'|'comissoes',action:'save'|'delete',payload:unknown,
+):Promise<void>{
+  const user=auth.currentUser;
+  if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+  const response=await fetch('/api/core/simple-write',{
+    method:'POST',
+    headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+    body:JSON.stringify({resource,action,payload}),cache:'no-store',
+  });
+  if(!response.ok)throw new Error('Servidor recusou mutação operacional autorizada: '+resource);
+}
+
 // Alerts operations
 export async function getAlerts(userId:string):Promise<Alert[]>{
   const scope=getCurrentOperationalScope(userId);
@@ -152,7 +165,7 @@ export async function saveAlert(userId: string, alert: Alert): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'alerts', alert.id);
   try {
-    await setDoc(operationalDocRef(scope, 'alerts', alert.id), { ...alert, userId });
+    await mutateSimpleOnServer(userId,'alerts','save',alert);
     recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -163,7 +176,7 @@ export async function removeAlert(userId: string, id: string): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'alerts', id);
   try {
-    await deleteDoc(operationalDocRef(scope, 'alerts', id));
+    await mutateSimpleOnServer(userId,'alerts','delete',id);
     recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -339,7 +352,7 @@ export async function saveComissao(userId: string, comissao: Comissao): Promise<
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'comissoes', comissao.id);
   try {
-    await setDoc(operationalDocRef(scope, 'comissoes', comissao.id), { ...comissao, userId });
+    await mutateSimpleOnServer(userId,'comissoes','save',comissao);
     recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);

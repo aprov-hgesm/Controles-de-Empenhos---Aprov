@@ -4,7 +4,7 @@
  * Regras de saldo, lotes e estado permanecem nos motores transacionais existentes.
  */
 export type ServerRole = 'founder' | 'sector';
-export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin' | 'core.parse' | 'core.suppliers.read' | 'core.suppliers.write' | 'core.empenho.write' | 'core.comissoes.delete' | 'core.operational.read';
+export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin' | 'core.parse' | 'core.suppliers.read' | 'core.suppliers.write' | 'core.empenho.write' | 'core.comissoes.delete' | 'core.operational.read' | 'core.alerts.write' | 'core.comissoes.write';
 export interface ServerPrincipal {
   uid: string;
   email: string;
@@ -72,7 +72,9 @@ export function evaluateServerAuthorization(
       request.capability !== 'core.suppliers.write' &&
       request.capability !== 'core.empenho.write' &&
       request.capability !== 'core.comissoes.delete' &&
-      request.capability !== 'core.operational.read') {
+      request.capability !== 'core.operational.read' &&
+      request.capability !== 'core.alerts.write' &&
+      request.capability !== 'core.comissoes.write') {
     return deny('FORBIDDEN');
   }
 
@@ -95,6 +97,8 @@ export function evaluateServerAuthorization(
       request.capability === 'core.suppliers.write' || request.capability === 'core.empenho.write' ||
       request.capability === 'core.comissoes.delete' ||
       request.capability === 'core.operational.read' ||
+      request.capability === 'core.alerts.write' ||
+      request.capability === 'core.comissoes.write' ||
       request.capability === 'warehouse.read') {
     return request.operation === undefined ? { allowed: true } : deny('OPERATION_DENIED');
   }

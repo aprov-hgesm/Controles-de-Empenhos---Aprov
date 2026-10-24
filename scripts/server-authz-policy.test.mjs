@@ -108,6 +108,24 @@ test('leituras operacionais utilizam IAM com recurso restrito e isolamento por s
   denied(evaluate(sector,'core.operational.read','workspace-b'),'SCOPE_MISMATCH');
 });
 
+test('gravações de alertas e comissões são autorizadas e nunca proxies Firestore',()=>{
+  const route=read('app/api/core/simple-write/route.ts');
+  const store=read('lib/server/coreSimpleWrites.ts');
+  const client=read('lib/firebaseSync.ts');
+  assert.match(route,/verifyPlatformPrincipal/);
+  assert.match(route,/core.alerts.write/);
+  assert.match(route,/core.comissoes.write/);
+  assert.match(store,/currentDocument:/);
+  assert.match(store,/actor.workspaceId/);
+  assert.match(store,/alertTypes/);
+  assert.match(store,/CORE_WRITE_CONFLICT/);
+  assert.match(client,/mutateSimpleOnServer\(userId,'alerts','delete',id\)/);
+  assert.match(client,/mutateSimpleOnServer\(userId,'comissoes','save',comissao\)/);
+  allowed(evaluate(sector,'core.alerts.write','workspace-a'));
+  allowed(evaluate(sector,'core.comissoes.write','workspace-a'));
+  denied(evaluate(sector,'core.comissoes.write','workspace-b'),'SCOPE_MISMATCH');
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));
