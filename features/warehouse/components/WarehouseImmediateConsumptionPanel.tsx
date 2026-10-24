@@ -319,7 +319,7 @@ export function WarehouseImmediateConsumptionPanel({
           <div className="rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-[10px] leading-5 text-slate-600">
             <strong className="text-violet-800">Efeito operacional:</strong>{' '}
             item integralmente pendente é tratado como consumo direto: não entra no estoque,
-            não cria lote e não gera movimento de entrada/saída. O sistema mantém somente o
+            não cria registro de validade e não gera movimento de entrada/saída. O sistema mantém somente o
             estado do intake e o registro de consumo para auditoria/SISCOFIS. Em casos parciais
             já movimentados, o ajuste de saldo continua sendo preservado.
           </div>
