@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const MATERIAL_ID = 'mat_123e4567e89b12d3a456426614174000';
 
 test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
-  test('fundador pesquisa material, consulta ficha, FEFO, pendências e persiste validade', async ({ page }) => {
+  test('fundador pesquisa material, consulta ficha, validade, pendências e persiste validade', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
@@ -27,9 +27,8 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
     await expect(sheet).toContainText(MATERIAL_ID);
     await expect(sheet).toContainText('Saldo agregado');
     await expect(sheet).toContainText('Distribuição física');
-    await expect(page.getByTestId('warehouse-fefo-recommendation')).toContainText(
-      'Recomendação FEFO'
-    );
+    // O módulo mantém validade e pendências sem reintroduzir escolha/prioridade FEFO.
+    await expect(page.getByTestId('warehouse-fefo-recommendation')).toHaveCount(0);
     await expect(page.getByTestId('warehouse-lot-list')).toContainText(
       'Validade'
     );
