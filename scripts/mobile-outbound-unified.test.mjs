@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { planMobileOutboundAutomaticLots as plan } from '../lib/warehouse/mobileOutboundPlan.mjs';
+// Executado pelo gate já existente, sem editar workflows do Worker 2.
+import './warehouse-withdrawal-v3-contract.test.mjs';
 
 const text=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const lot=(id,quantity,expiresOn='2027-02-01',status='active')=>({
