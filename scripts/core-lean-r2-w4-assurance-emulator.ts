@@ -12,6 +12,7 @@ import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, serverTime
 import { verifyWarehouseRequest } from '../lib/server/warehouseAccess';
 import { registerWarehouseManualEntryServer } from '../lib/server/warehouseManualEntry';
 import { warehouseDestinationCreateServer } from '../lib/server/warehouseDestinationWrite';
+import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
 import { writeWarehouseLotServer } from '../lib/server/warehouseLotWrite';
 import { finalizeWarehouseWithdrawalServer } from '../lib/server/warehouseWithdrawalWrite';
 import { atomicWarehouseWithdrawalHash } from '../lib/server/warehouseWithdrawalAtomicWrite';
@@ -180,6 +181,14 @@ async function run() {
   }),/WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT/);
   assert.deepEqual(await state(),{total:43,local:43,tracked:33});
   pass('mesmo ID e payload divergente bloqueados');
+
+  const renamed=await saveWarehouseMaterialServer(access,{
+    ...material,description:'Material W4 renomeado após a primeira retirada',
+  });
+  assert.equal(renamed.description,'Material W4 renomeado após a primeira retirada');
+  assert.equal((await finalizeWarehouseWithdrawalServer(access,multi)).movementIds.length,0);
+  assert.deepEqual(await state(),{total:43,local:43,tracked:33});
+  pass('rótulo de material alterado após commit não impede replay do comando original');
 
   const afterCommit=command(130,[line(2,131)]);
   process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT=afterCommit.withdrawalId;
