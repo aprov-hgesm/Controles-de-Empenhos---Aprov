@@ -55,6 +55,8 @@ export interface WarehouseWithdrawalAtomicV3Options {
   intentLineCount:number;
   /** Versões lidas no planejamento, rechecadas na transação de baixa. */
   snapshotVersions:Record<string,string|null>;
+  /** Barcode IDs obtidos de associações lidas/validadas no servidor. */
+  barcodeIdsByLine:Record<string,string|null>;
 }
 export async function finalizeWarehouseWithdrawalAtomicServer(
   access:VerifiedWarehouseRequest,input:FinalizeWarehouseMaterialWithdrawalInput,
@@ -260,7 +262,8 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           kind:'EXPRESS_OUTBOUND',interface:plan.interface,actorUid:access.uid,
           requestedQuantity:plan.requestedQuantity,quantity:plan.baseQuantity,
           presentation:plan.presentation,factorToBaseUnit:plan.factorToBaseUnit,
-          barcodeId:barcode?.id||null,barcode:barcode?.barcode||null,
+          barcodeId:v3?.barcodeIdsByLine[line.lineId]??barcode?.id??null,
+          barcode:v3?line.barcode:barcode?.barcode||null,
           position,locationBalanceId:p.locationBalanceId,lotId:lot?.id||null,lotCode:lot?.code||null,
         };
         const movement:WarehouseMovement=checked(validateWarehouseMovement({
@@ -293,12 +296,13 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           materialId:line.materialId,materialDescription:material.description,
           unitLabel:material.unit.label||material.unit.code,
           quantity:plan.baseQuantity,requestedQuantity:plan.requestedQuantity,
-          presentationLabel:barcode?.presentation.label||line.presentation.label||line.presentation.code,
+          presentationLabel:v3?line.presentationLabel:
+            barcode?.presentation.label||line.presentation.label||line.presentation.code,
           destinationId:input.destinationId,destinationName:destination.name,
           withdrawnBy:normalizeWarehouseWithdrawnBy(input.withdrawnBy),
           operatorUid:access.uid,movementId:p.movementId,withdrawalId:input.withdrawalId,
           lineId:line.lineId,intakeId:null,invoiceRecordKey:null,
-          barcode:barcode?.barcode||null,lotCode:lot?.code||null,
+          barcode:v3?line.barcode:barcode?.barcode||null,lotCode:lot?.code||null,
           positionLabel:local.name+(position.kind==='SUBPOSITION'?' / '+get(rows,
             path(ws,'locations',position.subpositionId),'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data.name:''),
           siscofisStatus:'PENDING',occurredAt:now,updatedAt:now,
