@@ -1,11 +1,12 @@
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
-  warehouseAdminTransaction, WarehouseStoreError,
+  warehouseAdminTransaction, warehouseAdminBatchRead, warehouseAdminListByField, WarehouseStoreError,
   type WarehouseAdminDocument,
 } from './warehouseFirestoreTransaction';
 import {
   applyWarehouseLocationDelta, createWarehouseLocationBalanceId,
+  warehouseStockPositionsEqual,
   validateWarehouseLocationBalance, validateWarehouseStockPosition,
   type WarehouseLocationBalance,
 } from '../warehouse/location';
@@ -94,8 +95,18 @@ export async function applyWarehouseExpressOutboundServer(
   };
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ?'emulator':await getGoogleAccessToken();
+  // Um lotId nulo não comprova saldo livre: listar referências apenas
+  // nesse caso, para evitar reads adicionais nas retiradas rastreadas.
+  // O mutex registra alterações de atribuição e evita aceitar lista obsoleta.
+  const lockPath=doc(access.workspaceId,'lotAttributionLocks',materialId);
+  const initialLock=lotId===null
+    ?(await warehouseAdminBatchRead(token,[lockPath])).get(lockPath)??null:null;
+  const attributedCandidates=lotId===null
+    ?await warehouseAdminListByField(token,access.workspaceId,'lots','materialId',materialId,120):[];
   return warehouseAdminTransaction<ApplyWarehouseExpressOutboundResult>(
-    token,[...new Set(Object.values(p))],rows=>{
+    token,[...new Set([...Object.values(p),
+      ...(lotId===null?[lockPath,...attributedCandidates.map(candidate=>candidate.path)]:[]),
+    ])],rows=>{
       const material=valid(validateWarehouseMaterial(
         warehouseCanonicalMaterialReadInput(materialId,
           needed(rows,p.material,'WAREHOUSE_MATERIAL_NOT_FOUND').data),
@@ -206,6 +217,33 @@ export async function applyWarehouseExpressOutboundServer(
         ];
         if(expectedErrors.includes(domainCode))return reject(domainCode,409);
         throw error;
+      }
+      if(lotId===null) {
+        // Rastreabilidade autoritativa no snapshot transacional; nunca
+        // usar o saldo livre declarado/estimado pelo navegador.
+        const liveLock=rows.get(lockPath);
+        if((liveLock?.updateTime??null)!==(initialLock?.updateTime??null)) {
+          return reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED');
+        }
+        let attributed=0;
+        for(const candidate of attributedCandidates) {
+          const stored=needed(rows,candidate.path,'WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED');
+          const linked=valid(validateWarehouseLot(
+            warehouseCanonicalLotReadInput(candidate.path.split('/').at(-1)!,stored.data),
+            {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug,
+              expectedMaterialId:materialId}
+          ),'WAREHOUSE_OUTBOUND_ATTRIBUTION_INVALID');
+          if(warehouseStockPositionsEqual(linked.position,position)) {
+            attributed=normalizeWarehouseQuantity(attributed+linked.quantity)
+              ??reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_INVALID');
+          }
+        }
+        if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
+        const free=normalizeWarehouseQuantity(currentLocationBalance.quantity-attributed);
+        if(free===null||free<0)return reject('WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK');
+        if(plan.baseQuantity>free+0.000001) {
+          return reject('WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE');
+        }
       }
       if(!currentLocationBalance)return reject('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
       if(currentLocationBalance.quantity+0.000001<plan.baseQuantity) {
