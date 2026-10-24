@@ -96,7 +96,7 @@ export function prepareWarehouseMobileOutboundOptions(input: {
     material: input.material,
     balance: input.balance,
     requestedQuantity: input.requestedQuantity,
-    presentation: input.barcodeAssociation.presentation,
+    presentation: input.barcodeAssociation?.presentation || input.material.unit,
     position: { kind: 'UNASSIGNED' },
     barcodeAssociation: input.barcodeAssociation,
   });
@@ -169,7 +169,7 @@ export function prepareWarehouseMobileOutboundOptions(input: {
 export function prepareWarehouseMobileOutboundReview(input: {
   material: WarehouseMaterial;
   balance: WarehouseBalance;
-  barcodeAssociation: WarehouseBarcodeAssociation;
+  barcodeAssociation: WarehouseBarcodeAssociation | null;
   requestedQuantity: number;
   position: WarehouseMobilePhysicalPosition;
   locationBalance: WarehouseLocationBalance;
