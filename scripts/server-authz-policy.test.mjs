@@ -81,6 +81,17 @@ test('transação NE exige API autorizada e revisão/lock no servidor',()=>{
   assert.doesNotMatch(client,/runTransaction\(/);
 });
 
+test('bulk delete de comissões é atômico e restrito ao workspace autorizado',()=>{
+  const route=read('app/api/core/comissoes/bulk-delete/route.ts');
+  const service=read('lib/server/coreCommissionDelete.ts');
+  const client=read('lib/firebaseSync.ts');
+  assert.match(route,/verifyPlatformPrincipal/);
+  assert.match(service,/:commit/);
+  assert.match(service,/new Set\(ids\)/);
+  assert.match(client,/removeCommissionsOnServer/);
+  assert.doesNotMatch(client,/batch\.delete\(operationalDocRef\(scope, 'comissoes'/);
+});
+
 test('setor não recebe privilégios administrativos',()=>{
   denied(evaluate(sector,'platform.admin'),'FORBIDDEN');
   allowed(evaluate(founder,'platform.admin'));

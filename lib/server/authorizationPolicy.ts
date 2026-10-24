@@ -4,7 +4,7 @@
  * Regras de saldo, lotes e estado permanecem nos motores transacionais existentes.
  */
 export type ServerRole = 'founder' | 'sector';
-export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin' | 'core.parse' | 'core.suppliers.read' | 'core.suppliers.write' | 'core.empenho.write';
+export type ServerCapability = 'warehouse.read' | 'warehouse.command' | 'platform.admin' | 'core.parse' | 'core.suppliers.read' | 'core.suppliers.write' | 'core.empenho.write' | 'core.comissoes.delete';
 export interface ServerPrincipal {
   uid: string;
   email: string;
@@ -70,7 +70,8 @@ export function evaluateServerAuthorization(
       request.capability !== 'core.parse' &&
       request.capability !== 'core.suppliers.read' &&
       request.capability !== 'core.suppliers.write' &&
-      request.capability !== 'core.empenho.write') {
+      request.capability !== 'core.empenho.write' &&
+      request.capability !== 'core.comissoes.delete') {
     return deny('FORBIDDEN');
   }
 
@@ -91,6 +92,7 @@ export function evaluateServerAuthorization(
 
   if (request.capability === 'core.parse' || request.capability === 'core.suppliers.read' ||
       request.capability === 'core.suppliers.write' || request.capability === 'core.empenho.write' ||
+      request.capability === 'core.comissoes.delete' ||
       request.capability === 'warehouse.read') {
     return request.operation === undefined ? { allowed: true } : deny('OPERATION_DENIED');
   }

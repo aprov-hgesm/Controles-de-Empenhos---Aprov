@@ -10,6 +10,7 @@ import { evaluateServerAuthorization } from '../lib/server/authorizationPolicy';
 import { assertWarehouseAuthorization } from '../lib/server/warehouseAccess';
 import { GET as getSuppliers, POST as saveSupplier } from '../app/api/core/suppliers/route';
 import { POST as transactEmpenho } from '../app/api/core/empenhos/transact/route';
+import { POST as deleteCommissions } from '../app/api/core/comissoes/bulk-delete/route';
 
 process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
 process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID = 'demo-emprovex-security';
@@ -178,6 +179,33 @@ async function main() {
   const wrongTenant=await transact('update',{...baseEmpenho,revision:2},intruder.token);
   assert.equal(wrongTenant.status,403,'outsider cannot mutate NE');
   console.log('PASS: NE IAM create/update revision, duplicate, lock and outsider');
+  await document('workspaces/'+ws+'/comissoes/comissao_demo_01',{
+    id:'comissao_demo_01',mesReferencia:'2026-10',boletimNumero:'1',
+  });
+  await document('workspaces/'+ws+'/comissoes/comissao_demo_02',{
+    id:'comissao_demo_02',mesReferencia:'2026-10',boletimNumero:'2',
+  });
+  const bulkDelete=await deleteCommissions(new Request('http://localhost/api/core/comissoes/bulk-delete',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({ids:['comissao_demo_01','comissao_demo_02']}),
+  }));
+  assert.equal(bulkDelete.status,200,'atomic commission deletion');
+  const afterDelete=await fetch(fs+'/workspaces/'+ws+'/comissoes/comissao_demo_01',{
+    headers:{authorization:'Bearer owner'},
+  });
+  assert.equal(afterDelete.status,404,'commission must be deleted');
+  const invalidDelete=await deleteCommissions(new Request('http://localhost/api/core/comissoes/bulk-delete',{
+    method:'POST',headers:{authorization:sector.token,'content-type':'application/json'},
+    body:JSON.stringify({ids:['../../victim']}),
+  }));
+  assert.equal(invalidDelete.status,400,'path injection rejected');
+  const outsiderDelete=await deleteCommissions(new Request('http://localhost/api/core/comissoes/bulk-delete',{
+    method:'POST',headers:{authorization:intruder.token,'content-type':'application/json'},
+    body:JSON.stringify({ids:['comissao_demo_01']}),
+  }));
+  assert.equal(outsiderDelete.status,403,'unauthorized commission delete');
+  console.log('PASS: atomic server commission deletion, path injection and outsider');
+
 
   await document('platformAccounts/'+email,{
     email,accountType:'sector',status:'active',firebaseUid:intruder.uid,

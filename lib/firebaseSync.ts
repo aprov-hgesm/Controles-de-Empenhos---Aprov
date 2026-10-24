@@ -237,15 +237,24 @@ export async function commitAllInvoicesDeletion(
   });
 }
 
+async function removeCommissionsOnServer(userId:string,ids:string[]):Promise<void>{
+  const user=auth.currentUser;
+  if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+  const response=await fetch('/api/core/comissoes/bulk-delete',{
+    method:'POST',
+    headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+    body:JSON.stringify({ids}),cache:'no-store',
+  });
+  if(!response.ok)throw new Error('Não foi possível remover comissões autorizadas.');
+}
+
 export async function commitAllComissoesDeletion(userId: string, ids: string[]): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   try {
     if (ids.length > 450) {
       throw new Error('Quantidade de comissões excede o limite seguro para exclusão em lote.');
     }
-    const batch = writeBatch(db);
-    ids.forEach((id) => batch.delete(operationalDocRef(scope, 'comissoes', id)));
-    await batch.commit();
+    await removeCommissionsOnServer(userId,ids);
     recordWorkspaceDocumentDeletes(scope, ids.length, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'comissoes')}/bulk`);
@@ -341,7 +350,7 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'comissoes', id);
   try {
-    await deleteDoc(operationalDocRef(scope, 'comissoes', id));
+    await removeCommissionsOnServer(userId,[id]);
     recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
