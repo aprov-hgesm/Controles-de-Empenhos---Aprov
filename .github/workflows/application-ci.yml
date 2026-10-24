@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - main
+      # TEMPORARY Worker 2 certification on isolated branch; remove before merge.
+      - feat/core-lean-r2-w2-ci
     paths-ignore:
       - "docs/**"
   workflow_dispatch:
