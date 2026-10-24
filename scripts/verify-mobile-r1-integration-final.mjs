@@ -139,7 +139,7 @@ const operations = new Map([
   ]],
   ['features/warehouse/mobile/WarehouseMobileOutbound.tsx', [
     'WarehouseMobileScanner',
-    'finalizeWarehouseMaterialWithdrawal',
+    'WITHDRAWAL_FINALIZE_MOBILE',
     'createWarehouseWithdrawalId',
     'listWarehouseDestinationsCached',
     'createWarehouseDestination',
@@ -173,21 +173,14 @@ for (const [path, requiredContracts] of operations) {
 }
 
 const outboundUi = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
-assert.match(
-  outboundUi,
-  /ESCOLHER ORIGEM DA RETIRADA/,
-  'Saída deve tratar posição física como origem da baixa'
-);
-assert.match(
-  outboundUi,
-  /DESTINO DA RETIRADA \/ RETIRADO POR/,
-  'Saída deve distinguir destino administrativo de destino físico'
-);
-assert.doesNotMatch(
-  outboundUi,
-  /title="LER DESTINO"/,
-  'Saída não pode pedir destino físico como uma transferência'
-);
+assert.match(outboundUi, /EXPECT_PRODUCT_OR_LOCATION/, 'MOBILE-G deve aceitar leitura do item ou local');
+assert.match(outboundUi, /Este item está em mais de um local/, 'Selecionar origem apenas quando houver múltiplas posições');
+assert.match(outboundUi, /warehouseStockPositionKey\(option\.position\)/, 'Origem deve identificar a posição física');
+assert.match(outboundUi, /data-testid="warehouse-mobile-outbound-destination"/, 'Destino administrativo obrigatório');
+assert.match(outboundUi, /A identidade do responsável será registrada automaticamente pela conta autenticada/, 'Responsável não pode ser entrada manual');
+assert.match(outboundUi, /sessionStorage\.setItem\(pendingKey/, 'Preservar identidade em falha de resposta');
+assert.match(outboundUi, /sessionStorage\.getItem\(pendingKey/, 'Recuperar a mesma retirada');
+assert.doesNotMatch(outboundUi, /title="LER DESTINO"/, 'Saída não deve solicitar destino físico como transferência');
 
 const transferUi = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
 assert.match(
