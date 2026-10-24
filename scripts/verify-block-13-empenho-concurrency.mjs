@@ -15,6 +15,10 @@ const forbidText = (source, forbidden, message) => {
 
 const domain = read('lib/empenhoConcurrency.ts');
 const service = read('lib/empenhoConcurrencyService.ts');
+const serverService = read('lib/server/serverEmpenhoTransactions.ts');
+const serverTransaction = read('lib/server/coreFirestoreTransaction.ts');
+const serverRoute = read('app/api/core/empenhos/transact/route.ts');
+const emulator = read('scripts/server-authorization-emulator.ts');
 const sync = read('lib/firebaseSync.ts');
 const empenhoHook = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const invoiceHook = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
@@ -40,15 +44,56 @@ for (const expected of [
   requireText(domain, expected, `Primitiva de concorrência perdeu requisito: ${expected}`);
 }
 
+// Contrato novo: a gravação não ocorre mais no SDK do navegador.
 for (const expected of [
   'commitEmpenhoCreate',
   'commitEmpenhoUpdate',
-  'runTransaction(db, async (transaction)',
-  'transaction.get(ref)',
-  'assertEmpenhoRevision(stored, empenho.revision)',
-  'transaction.set(ref, { ...next, userId })',
+  "writeEmpenhoServer(userId,'create',empenho)",
+  "writeEmpenhoServer(userId,'update',empenho)",
+  "/api/core/empenhos/transact",
+  'user.getIdToken()',
+  'EmpenhoConcurrencyError',
 ]) {
-  requireText(service, expected, `Serviço de concorrência perdeu requisito: ${expected}`);
+  requireText(service, expected, `Cliente revisionado perdeu requisito: ${expected}`);
+}
+forbidText(service, 'runTransaction(', 'Cliente voltou a controlar a transação de empenho diretamente.');
+forbidText(service, 'transaction.set(', 'Cliente voltou a gravar empenho diretamente.');
+for (const expected of [
+  'coreDocumentTransaction([path,lock]',
+  'assertEmpenhoRevision(stored,candidate.revision)',
+  'buildNextEmpenho(candidate,stored||null,actor.uid)',
+  'empenhoDelete_',
+  'create_conflict',
+  'missing_empenho',
+]) {
+  requireText(serverService, expected, `Motor de empenho server-side perdeu invariante: ${expected}`);
+}
+for (const expected of [
+  ':beginTransaction',
+  ':batchGet',
+  ':commit',
+  'currentDocument:',
+  'updateTime:',
+  'CORE_CONCURRENT_MODIFICATION',
+]) {
+  requireText(serverTransaction, expected, `Transação Firestore IAM perdeu requisito: ${expected}`);
+}
+for (const expected of [
+  'verifyPlatformPrincipal',
+  "capability:'core.empenho.write'",
+  'commitServerEmpenho',
+]) {
+  requireText(serverRoute, expected, `API não verifica autoria e permissão: ${expected}`);
+}
+for (const expected of [
+  'NE initial create transaction',
+  'concurrent duplicate NE',
+  'stale revision',
+  'revision increment',
+  'NE deletion lock',
+  'outsider cannot mutate NE',
+]) {
+  requireText(emulator, expected, `Emulador não verifica concorrência/lock: ${expected}`);
 }
 
 requireText(sync, 'return commitEmpenhoCreate(userId, empenho);', 'firebaseSync não delega criação ao serviço revisionado.');
@@ -155,7 +200,6 @@ function walk(dir) {
 }
 
 const allowedDirectWriters = new Set([
-  'lib/empenhoConcurrencyService.ts',
   'lib/nsIntegrityService.ts',
   'lib/empenhoDeletionService.ts',
 ]);
