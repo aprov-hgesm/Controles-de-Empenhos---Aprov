@@ -73,7 +73,7 @@ export function WarehouseLogisticsAlerts({ workspaceId }: { workspaceId: string 
             <p className="text-xs font-black uppercase tracking-[0.12em]">Alertas do ADM Depósito</p>
           </div>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
-            Alertas logísticos são derivados de estoque, localização, lotes, inventário,
+            Alertas logísticos são derivados de estoque, localização, validade, inventário,
             SISCOFIS e entregas. Eles permanecem exclusivamente em warehouse/{'{workspaceId}'}/alerts
             e não alteram a Central de Avisos operacional do EMPROVEX.
           </p>

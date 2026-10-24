@@ -45,7 +45,6 @@ import {
 import {
   buildWarehouseLogisticsPendencies,
   createWarehousePendingLotCode,
-  selectWarehouseFefoLot,
   warehouseLotExpiryState,
   warehouseLotOriginLabel,
   type WarehouseLot,
@@ -100,7 +99,6 @@ interface MaterialSummary {
   unassigned: number;
   distributed: number;
   locationLabels: string[];
-  fefo: WarehouseLot | null;
   pendencies: ReturnType<typeof buildWarehouseLogisticsPendencies>;
   nearestExpiry: string | null;
 }
@@ -380,7 +378,6 @@ export function WarehouseStockOperational({
             ...(unassigned > 0 ? ['Pendente de alocação física'] : []),
           ])
         );
-        const fefo = selectWarehouseFefoLot(availableLots);
         const nearestExpiry =
           availableLots
             .filter((lot) => lot.expiresOn)
@@ -397,7 +394,6 @@ export function WarehouseStockOperational({
           unassigned,
           distributed: Math.max(0, balance.quantity - unassigned),
           locationLabels,
-          fefo,
           nearestExpiry,
           pendencies: buildWarehouseLogisticsPendencies({
             materialId: material.id,
@@ -817,7 +813,7 @@ export function WarehouseStockOperational({
               {filtered.length} material(is) com saldo disponível
             </p>
             <p className="text-[10px] font-bold text-[#00288e]">
-              Ordem: menor validade primeiro
+              Validades informativas, sem prioridade de saída
             </p>
           </div>
           {filtered.slice(0, visibleCount).map((summary) => {
@@ -865,7 +861,7 @@ export function WarehouseStockOperational({
                           </span>
                         )}
                         {nearestState === 'EXPIRED' && (
-                          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700">Possui lote vencido</span>
+                          <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700">Possui validade vencida</span>
                         )}
                         {nearestState === 'NEAR_EXPIRY' && (
                           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800">Vence em breve</span>
@@ -950,10 +946,10 @@ export function WarehouseStockOperational({
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Validades rastreadas</p>
               <p className="mt-2 text-2xl font-black text-slate-900">{selected.lots.length}</p>
             </div>
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4" data-testid="warehouse-fefo-recommendation">
-              <p className="text-[9px] uppercase tracking-[0.12em] text-[#00288e]/70">Recomendação FEFO</p>
-              <p className="mt-2 text-sm font-black text-[#00288e]">{selected.fefo ? dateLabel(selected.fefo.expiresOn) : 'Sem validade elegível'}</p>
-              <p className="mt-1 text-[10px] text-slate-500">{selected.fefo ? 'validade ' + dateLabel(selected.fefo.expiresOn) : 'nenhuma saída é executada automaticamente'}</p>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <p className="text-[9px] uppercase tracking-[0.12em] text-[#00288e]/70">Validade mais próxima registrada</p>
+              <p className="mt-2 text-sm font-black text-[#00288e]">{dateLabel(selected.nearestExpiry)}</p>
+              <p className="mt-1 text-[10px] text-slate-500">Informação consultiva, sem priorização automática de retirada.</p>
             </div>
           </div>
 
