@@ -11,6 +11,7 @@ import {
 import { auth } from '../../lib/firebase';
 import { getResolvedWorkspaceContextForSession, resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
+import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 
 const PRICING = [
   { months: '1º ao 3º', cents: 2990 },
@@ -72,10 +73,10 @@ export function InfinitePayReadinessPanel() {
     // The InfinitePay redirect alone is NEVER proof of payment.
     // Sensitive transaction identifiers must not remain in history/referrer URLs
     // while the authenticated server-side reconciliation is not enabled.
-    const current = new URL(window.location.href);
-    if (['order_nsu', 'transaction_nsu', 'slug', 'receipt_url'].some((key) => current.searchParams.has(key))) {
+    const result = inspectInfinitePayReturn(window.location.href);
+    if (result.isReturn) {
       setReturnNotice(true);
-      window.history.replaceState(window.history.state, '', current.pathname + current.hash);
+      window.history.replaceState(window.history.state, '', result.cleanedPath);
     }
   }, []);
 
