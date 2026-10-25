@@ -342,19 +342,32 @@ async function race(version,same){
   const t0=performance.now();
   const results=await Promise.allSettled([execute(a),execute(b)]);
   const elapsedMs=performance.now()-t0;
+  const failures=results.filter(x=>x.status==='rejected')
+    .map(x=>String(x.reason?.code||x.reason?.message||x.reason));
+  const fulfilled=results.filter(x=>x.status==='fulfilled').length;
+  console.log('W5 RACE OBSERVED '+JSON.stringify({version,same,fulfilled,failures}));
+  // Firestore may abort BOTH concurrent transaction attempts before commit.
+  // Accept this only if explicitly reported as conflict AND retry commits one.
+  let retried=false;
+  if(!fulfilled) {
+    assert.ok(failures.length===2&&failures.every(x=>
+      /WAREHOUSE_CONCURRENT_MODIFICATION/.test(x)),
+    'unexpected double rejection in contention: '+JSON.stringify(failures));
+    const retriedResult=await execute(a);
+    assert.equal(retriedResult.withdrawal.status,'FINALIZED');
+    retried=true;
+  }
   const after=(await read('balances',item.material.id)).quantity;
   const headers=await Promise.all([read('withdrawals',a.cmd.withdrawalId),
     ...(same?[]:[read('withdrawals',b.cmd.withdrawalId)])]);
   assert.equal(after,20,'concurrent withdrawal must debit exactly once');
   assert.equal(headers.filter(h=>h?.status==='FINALIZED').length,1);
-  assert.ok(results.some(x=>x.status==='fulfilled'));
   const check=await execute(a).catch(()=>null);
   if(check)assert.equal(check.movementIds.length,0);
   return {scenario:same?'concurrent-same-id':'concurrent-different-ids',
-    version,elapsedMs:Number(elapsedMs.toFixed(3)),
-    fulfilled:results.filter(x=>x.status==='fulfilled').length,
-    rejected:results.filter(x=>x.status==='rejected').length,
-    finalBalance:after};
+    version,elapsedMs:Number(elapsedMs.toFixed(3)),fulfilled,
+    rejected:results.filter(x=>x.status==='rejected').length,retried,
+    rejectionCodes:failures,finalBalance:after};
 }
 async function lostResponse(version){
   const item=await seed('simple',version);
