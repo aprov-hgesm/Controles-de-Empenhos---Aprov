@@ -266,7 +266,10 @@
     "test:warehouse-context-menu": "node --test scripts/warehouse-context-menu.test.mjs",
     "test:warehouse-croqui-fusion": "node --test scripts/warehouse-croqui-fusion.test.mjs",
     "dev:warehouse:isolated": "node scripts/dev-warehouse-isolated.mjs",
-    "test:warehouse-isolated-dev": "node --test scripts/warehouse-isolated-dev.test.mjs"
+    "test:warehouse-isolated-dev": "node --test scripts/warehouse-isolated-dev.test.mjs",
+    "test:financial-identity-v2": "node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs",
+    "test:core-lean-r2-w4-contract": "npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts",
+    "test:core-lean-r2-w4-assurance": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts\""
   },
   "dependencies": {
     "clsx": "^2.1.1",

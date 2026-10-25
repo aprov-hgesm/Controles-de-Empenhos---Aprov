@@ -32,7 +32,7 @@ jobs:
       - name: Dependências
         run: npm ci
       - name: CI LEAN planner — fail-closed selection and negative tests
-        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs
       - name: Executable JavaScript syntax (including .mjs)
         run: node scripts/ci-lean-syntax.mjs
       - name: Mobile R2 authenticated operation contracts (phase 0)

@@ -30,11 +30,18 @@ test('server transactions and Firestore Rules select critical security tests', (
   const p = classifyChanges(['lib/server/warehouseWithdrawalWrite.ts', 'firestore.warehouse.server-only.rules']);
   has(p, 'warehouse');
   has(p, 'auth');
+  assert.ok(p.scripts.includes('test:core-lean-r2-w4-contract'));
   for (const script of ['test:adm-deposito-inventory', 'verify:multitenant-security',
     'verify:emprovex-warehouse-isolation']) assert.ok(p.scripts.includes(script), script);
 });
 test('financial and shared identity paths cannot escape financial tests', () => {
-  has(classifyChanges(['features/empenhos/components/EmpenhosView.tsx']), 'finance');
+  const nf=classifyChanges(['features/empenhos/components/EmpenhosView.tsx']);
+  has(nf, 'finance');
+  assert.ok(nf.scripts.includes('test:financial-identity-v2'));
+  for(const p of ['lib/financialIdentityV2.ts','lib/invoiceIdentity.ts','lib/nsIntegrity.ts','lib/empenhoConcurrency.ts','scripts/financial-identity-v2.test.mjs']) {
+    const plan=classifyChanges([p]);
+    assert.ok(plan.scripts.includes('test:financial-identity-v2'),p);
+  }
   const p = classifyChanges(['lib/identities/ids.ts']);
   has(p, 'finance');
   has(p, 'auth');

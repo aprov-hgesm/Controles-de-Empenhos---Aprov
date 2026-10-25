@@ -14,9 +14,9 @@ const TESTS = Object.freeze({
   warehouse: [
     'test:adm-deposito-ledger', 'test:adm-deposito-inventory',
     'test:adm-deposito-outbound-return', 'test:mobile-outbound-unified',
-    'verify:mobile-r1-integration-3',
+    'verify:mobile-r1-integration-3', 'test:core-lean-r2-w4-contract',
   ],
-  finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency'],
+  finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2'],
   auth: ['verify:multitenant-security', 'verify:emprovex-warehouse-isolation', 'verify:saas-r1-security-enforcement'],
   legal: ['verify:public-oauth-legal-pages', 'verify:saas-r1-legal-acceptance'],
   visual: ['test:warehouse-isometric-camera', 'test:warehouse-3d-proportions'],
@@ -30,7 +30,7 @@ const MOBILE = [
 ];
 const RULES = [
   [/^(?:app\/api\/central-depositos\/|app\/central-depositos\/|app\/operador-movel\/|features\/warehouse\/|components\/warehouse\/|lib\/warehouse\/|lib\/server\/warehouse|scripts\/(?:warehouse|mobile|verify-(?:warehouse|mobile|adm-deposito|central-depositos|emprovex-warehouse)))/, ['warehouse']],
-  [/^(?:features\/empenhos\/|features\/sag\/|app\/(?:empenhos|sag)\/|lib\/(?:empenho|sag|financial|invoice|supplier|ns|operational)|scripts\/(?:empenho|sag|ns-|invoice|supplier|verify-(?:empenho|ns-|sag|supplier|block-1[0123])))/, ['finance']],
+  [/^(?:features\/empenhos\/|features\/sag\/|app\/(?:empenhos|sag)\/|lib\/(?:empenho|sag|financial|invoice|supplier|ns|operational)|scripts\/(?:financial-identity|empenho|sag|ns-|invoice|supplier|verify-(?:empenho|ns-|sag|supplier|block-1[0123])))/, ['finance']],
   [/^(?:firestore.*\.rules$|lib\/(?:auth|firebase|session|workspace|security)|lib\/server\/(?:auth|session|workspace)|app\/api\/(?:auth|session|workspace)\/|scripts\/(?:verify-(?:uid|sector|multitenant|hybrid-auth|saas-r1-security|session-cap)|firestore-multitenancy))/, ['auth']],
   [/^(?:app\/(?:privacy|terms)\/|components\/legal\/|hooks\/useLegal|lib\/legal|scripts\/(?:legal-|verify-(?:public-oauth-legal|saas-r1-legal)))/, ['legal']],
   [/^(?:components\/visual\/|components\/layout\/|app\/visual-lab\/|scripts\/(?:visual-|verify-(?:block-19|block-20|block-21)))/, ['visual']],
@@ -50,6 +50,7 @@ function tags(path) {
   if (/^(?:features\/warehouse\/mobile\/|app\/operador-movel\/|lib\/warehouse\/mobile|scripts\/(?:mobile|verify-mobile))/.test(p))
     domains.add('warehouse');
   if (/^(?:features\/warehouse\/.*(?:Isometric|3D|Croqui|DepotLayout)|app\/visual-lab\/)/i.test(p)) domains.add('visual');
+  if (/^scripts\/core-lean-r2-w4-(?:assurance-emulator|contract\.test)\.ts$/.test(p)) domains.add('warehouse');
   if (/^scripts\/.*\.(?:test\.)?mjs$/.test(p) && !domains.size)
     return { domains: [...DOMAINS], reason: 'unmapped executable test/guard' };
   if (!domains.size) return { domains: [...DOMAINS], reason: 'unclassified path (fail-safe)' };

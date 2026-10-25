@@ -66,6 +66,8 @@ jobs:
           java-version: '21'
       - run: npm ci
       - name: Domain behavior, security and emulator integration
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
         run: node scripts/ci-lean-domain.mjs ${{ matrix.domain }}
 
 # Staged transition: existing Application CI and its required check aliases

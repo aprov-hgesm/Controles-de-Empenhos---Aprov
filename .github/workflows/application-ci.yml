@@ -83,7 +83,7 @@ jobs:
           fi
 
       - name: CI LEAN R2 selector and syntax negative tests
-        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs
 
       - name: Changed executable JavaScript syntax
         run: node scripts/ci-lean-syntax.mjs
@@ -129,6 +129,14 @@ jobs:
 
       - name: Multi-tenant Firestore security tests
         run: npm run test:security:multitenant
+
+      - name: W4 stable v2 identity compatibility
+        run: npm run test:core-lean-r2-w4-contract
+
+      - name: W4 isolated authenticated adversarial Warehouse transactions
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+        run: npm run test:core-lean-r2-w4-assurance
 
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0
@@ -299,6 +307,9 @@ jobs:
 
       - name: Reporting foundation identity tests
         run: npm run test:invoice-identity
+
+      - name: W3 NF/NS historical and financial identity V2 contracts
+        run: npm run test:financial-identity-v2
 
       - name: CI LEAN R2 G04 — 3 historical guards
         run: node scripts/ci-lean-guards.mjs --group G04
