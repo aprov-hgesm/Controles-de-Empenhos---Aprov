@@ -262,7 +262,7 @@ try{
   pass('v3 replay refuses FINALIZED missing consumption');
   // Mutating a manifest requires a full JSON-to-Firestore transformation; corrupt
   // its stored hash instead, which must fail manifest integrity without writes.
-  assert.ok(await read('withdrawals',scanned.withdrawalId));
+  assert.ok(await read('withdrawals',manifestCase.withdrawalId));
   await mutate('withdrawals/'+manifestCase.withdrawalId,'PATCH',{
     effectManifestHash:{stringValue:'f'.repeat(64)},
   });
