@@ -88,3 +88,31 @@ test('unavailable legacy API does not block My Subscription and is only checked 
   expect(legacyQueries, 'legacy API is called only on user request').toBe(1);
   expect(crashes).toEqual([]);
 });
+
+test('desktop: light EMPROVEX platform shell keeps navigation fixed', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  const sidebar = page.getByTestId('billing-fixed-sidebar');
+  await expect(sidebar).toHaveCSS('position', 'fixed');
+  await expect(sidebar).toBeInViewport();
+  await expect(page.getByTestId('billing-platform-shell')).toHaveCSS('background-color', 'rgb(246, 248, 252)');
+  await expect(page.getByRole('heading', { name: 'Minha assinatura', exact: true })).toBeVisible();
+  await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  await page.getByRole('link', { name: 'Plano e valores' }).click();
+  await expect(page).toHaveURL(/#precos$/);
+  await expect(page.locator('#precos')).toBeInViewport();
+});
+
+test('mobile: sidebar drawer opens, navigates and closes without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  const menu = page.getByTestId('billing-mobile-menu');
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await menu.click();
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('link', { name: 'Plano e valores' }).click();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).toHaveURL(/#precos$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2)).toBe(true);
+});
