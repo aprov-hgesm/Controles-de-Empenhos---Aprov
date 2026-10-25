@@ -8,6 +8,8 @@ on:
       - 'components/layout/AppHeader.tsx'
       - 'lib/billing/infinitepayReturnStatus.mjs'
       - 'scripts/infinitepay-payment-ui.test.mjs'
+      - 'tests/e2e/infinitepay-regularization-runtime.spec.mjs'
+      - 'playwright.infinitepay-ui.config.mts'
       - '.github/workflows/infinitepay-ui-preview.yml'
   workflow_dispatch:
 
@@ -17,11 +19,22 @@ permissions:
 jobs:
   ui-preview:
     runs-on: ubuntu-24.04
-    timeout-minutes: 3
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
       - name: Certify no-live-payment preview and unverified returns
         run: node --test scripts/infinitepay-payment-ui.test.mjs
+      - name: Install app dependencies
+        run: npm ci
+      - name: Install isolated Playwright (no package-lock changes)
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify DOM runtime and redirect handling in real browser
+        env:
+          CI: 'true'
+        run: npx playwright test --config=playwright.infinitepay-ui.config.mts
