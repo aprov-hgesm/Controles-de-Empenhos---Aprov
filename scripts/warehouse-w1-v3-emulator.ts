@@ -356,7 +356,7 @@ async function run(){
   const desktopMovementId=await createWarehouseMovementId(ws,
     'material-withdrawal:'+desktopId+':'+desktopLineId);
   const desktopConsumptionId='cons_'+createHash('sha256')
-    .update(ws+'\\n'+'stock:'+desktopId+':'+desktopLineId).digest('hex');
+    .update(ws+'\n'+'stock:'+desktopId+':'+desktopLineId).digest('hex');
   const dMove=await read('movements',desktopMovementId);
   const dConsume=await read('consumptions',desktopConsumptionId);
   const vEvidence=await inspect(mobileCommand);
