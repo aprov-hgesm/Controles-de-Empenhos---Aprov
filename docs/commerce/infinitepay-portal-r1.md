@@ -65,3 +65,14 @@ A interface read-only pode ir à `main` com o piloto **desligado** após CI e va
 ## Ajuste de infraestrutura Vercel
 
 As operações do portal foram consolidadas em **uma única rota Next.js** (GET/POST `/api/billing/portal`, com `action` no POST). Isso evita acrescentar três funções serverless ao deployment. As operações continuam separadas logicamente, autenticadas e com autorização por workspace. O `Application CI` deve verificar esta composição antes de qualquer promoção.
+
+## Identidade visual definitiva: padrão EMPROVEX claro (25/10)
+
+A tela `/regularizacao` agora reutiliza o padrão da aplicação: barra superior azul-marinho, sidebar fixa à esquerda no desktop (288 px), menu móvel com overlay/fechamento por botão ou Escape, fundo claro `#f6f8fc`, cartões brancos de borda sutil e acentos verde-escuro. Mantém as proporções da navegação, `AppShellSignature`, tipografia e contraste da plataforma.
+
+- Componente da página: `components/billing/BillingPortalShell.tsx`. É um shell de rota próprio porque `AppSidebar` depende do estado das abas operacionais do app principal; não faz uma segunda instância funcional dos motores.
+- Navegação lateral por âncoras para visão geral, histórico, faixas de preço e pagamento; retornos para `/`.
+- A interface mostra o status real e histórico somente após autenticação/autorização de workspace; o estilo **não** altera contratos, Rules, isenções ou segurança de pagamentos.
+- Conteúdos de laboratório, avisos e links de checkout foram convertidos para paleta clara com contraste suficiente, preservando alertas amarelos e confirmação verde.
+- Novos testes no Playwright: fundo claro, sidebar fixa no desktop, drawer móvel funcional e ausência de overflow horizontal. Teste Node verifica componentes e invariantes de cobrança.
+- Manter `main` e Vercel inalterados até certificação e publicação controlada.
