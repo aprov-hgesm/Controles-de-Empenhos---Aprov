@@ -26,6 +26,7 @@ test('overview has its own content and switches to payment view without reload',
   const crashes = [];
   page.on('pageerror', (error) => crashes.push(error.message));
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   await expect(page.getByTestId('billing-active-panel')).toHaveAttribute('data-tab', 'overview');
   await expect(page.getByRole('heading', { name: 'Minha assinatura e pagamentos' })).toBeVisible();
   await expect(page.getByTestId('billing-payment-journey')).toHaveCount(0);
@@ -59,6 +60,7 @@ test('InfinitePay return selects payments tab but never grants subscription', as
 
 test('history has an isolated panel and rejects unauthenticated cross-tenant access', async ({ page }) => {
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   await page.getByTestId('billing-nav-history').click();
   await expect(page.getByTestId('billing-active-panel')).toHaveAttribute('data-tab', 'history');
   await expect(page.getByTestId('billing-history-unauthorized')).toBeVisible();
@@ -84,6 +86,7 @@ test('manual payment API failure is isolated to payment tab and loaded only on r
     });
   });
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   expect(queries).toBe(0);
   await page.getByTestId('billing-nav-payments').click();
   expect(queries).toBe(0);
@@ -96,6 +99,7 @@ test('manual payment API failure is isolated to payment tab and loaded only on r
 test('desktop fixed sidebar shows one selected tab at a time', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   await expect(page.getByTestId('billing-fixed-sidebar')).toHaveCSS('position', 'fixed');
   await expect(page.getByTestId('billing-fixed-sidebar')).toBeInViewport();
   await expect(page.getByTestId('billing-platform-shell')).toHaveCSS('background-color', 'rgb(246, 248, 252)');
@@ -109,6 +113,7 @@ test('desktop fixed sidebar shows one selected tab at a time', async ({ page }) 
 test('mobile navigation drawer switches tabs, closes and avoids horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   const menu = page.getByTestId('billing-mobile-menu');
   await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true');
   await expect(menu).toBeEnabled();
@@ -126,6 +131,7 @@ test('mobile navigation drawer switches tabs, closes and avoids horizontal overf
 test('keyboard arrows and Home/End navigate real sidebar tabs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   const overview = page.getByTestId('billing-nav-overview');
   await overview.focus();
   await page.keyboard.press('ArrowDown');
@@ -138,6 +144,7 @@ test('keyboard arrows and Home/End navigate real sidebar tabs', async ({ page })
 
 test('unreleased price escalation and visual simulator never appear on any tab', async ({ page }) => {
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true', { timeout: 30_000 });
   for (const tab of ['overview', 'history', 'payments', 'help']) {
     await page.getByTestId('billing-nav-' + tab).click();
     await expect(page.getByText('Escalonamento previsto para novos clientes')).toHaveCount(0);
