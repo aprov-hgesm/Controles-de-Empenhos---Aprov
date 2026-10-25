@@ -1,0 +1,42 @@
+name: CORE LEAN R2 - W1 Warehouse v2/v3 Assurance
+
+on:
+  push:
+    branches:
+      - feat/core-lean-r2-w1-warehouse-identity
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-lean-w1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v2-v3-authenticated-emulator:
+    name: W1 v2/v3 contract + independent W4 + authenticated Emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Dependencias reprodutiveis
+        run: npm ci
+      - name: Contrato historico v2 — vetor do Worker 4, inalterado
+        run: npx --yes tsx --test scripts/w1-upstream-w4-contract.test.ts
+      - name: Compatibilidade historica v1/v2 — Firebase Emulator
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+      - name: V2 — suite adversarial do Worker 4 (copiada byte a byte do SHA a16bab6)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/w1-upstream-w4-adversarial-emulator.ts"
+      - name: V3 — manifesto, conversoes, corrida, rollback, replay e adulteracao
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-w1-v3-emulator.ts"
