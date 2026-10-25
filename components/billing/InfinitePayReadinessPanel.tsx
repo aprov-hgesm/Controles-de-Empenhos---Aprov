@@ -14,6 +14,7 @@ import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBilling
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 import { InfinitePayPilotPanel, type PilotReturnParams } from './InfinitePayPilotPanel';
+import type { BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 function money(cents: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -81,7 +82,12 @@ function useSafeWorkspaceBillingContext() {
   return { status, context, email };
 }
 
-export function InfinitePayReadinessPanel() {
+export function InfinitePayReadinessPanel({
+  activeTab, onNavigate,
+}: {
+  activeTab: BillingPortalTab;
+  onNavigate: (tab: BillingPortalTab) => void;
+}) {
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
   const [returnNotice, setReturnNotice] = useState(false);
@@ -103,15 +109,16 @@ export function InfinitePayReadinessPanel() {
         setReturnParams({ orderNsu, transactionNsu, slug });
       }
       setReturnNotice(true);
+      onNavigate('payments');
       window.history.replaceState(window.history.state, '', result.cleanedPath);
     }
-  }, []);
+  }, [onNavigate]);
 
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
   return (
     <div data-testid="infinitepay-regularization-panel" className="mt-5 space-y-5">
-      {returnNotice && (
+      {returnNotice && activeTab === 'payments' && (
         <div role="status" data-testid="infinitepay-unverified-return" className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <div className="flex items-center gap-2 font-bold text-amber-900">
             <Clock3 className="h-4 w-4" /> Retorno do checkout identificado
@@ -124,6 +131,7 @@ export function InfinitePayReadinessPanel() {
         </div>
       )}
 
+      {activeTab === 'overview' && (
       <section className="overflow-hidden rounded-[1.65rem] border border-[#dfe8f0] bg-gradient-to-br from-white via-white to-[#f3faf7] p-5 shadow-[0_16px_45px_rgba(15,40,70,0.055)] sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[#0b725d]">
@@ -131,12 +139,12 @@ export function InfinitePayReadinessPanel() {
             <h2 className="text-lg font-extrabold text-[#13263a]">Minha assinatura e pagamentos</h2>
           </div>
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
-            InfinitePay em homologação
+            Plano Completo
           </span>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Acompanhe o seu plano e visualize como funcionará o checkout protegido da InfinitePay.
-          Nenhuma cobrança é gerada por este painel.
+          Acompanhe o plano contratado e a situação comercial do seu setor.
+          Somente as condições registradas na sua conta são consideradas nesta consulta.
         </p>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -196,7 +204,62 @@ export function InfinitePayReadinessPanel() {
           </div>
         </div>
 
-        <InfinitePayPilotPanel authorizedWorkspace={workspaceResolved && status === 'authenticated'} returnParams={returnParams} />
+        {workspaceResolved && !billingLoading && account?.status === 'trial' && account.trialEndsAt && (
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+            <p className="font-extrabold">Período de teste</p>
+            <p className="mt-1">
+              Prazo cadastrado até {account.trialEndsAt.slice(0, 10).split('-').reverse().join('/')}.
+              Não há cobrança por esta consulta.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3" aria-label="Acessos da assinatura">
+          <button type="button" onClick={() => onNavigate('history')}
+            data-testid="billing-overview-history"
+            className="rounded-xl border border-[#dce8e7] bg-white p-4 text-left transition hover:border-emerald-300 hover:shadow-sm">
+            <span className="text-xs font-extrabold text-[#0b725d]">Histórico financeiro</span>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">Competências emitidas, valores, vencimentos e situação de cada registro.</p>
+          </button>
+          <button type="button" onClick={() => onNavigate('payments')}
+            data-testid="billing-overview-payments"
+            className="rounded-xl border border-[#dce8e7] bg-white p-4 text-left transition hover:border-emerald-300 hover:shadow-sm">
+            <span className="text-xs font-extrabold text-[#0b725d]">Formas de pagamento</span>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">Orientações para pagar com segurança e verificar um pagamento.</p>
+          </button>
+          <button type="button" onClick={() => onNavigate('help')}
+            data-testid="billing-overview-help"
+            className="rounded-xl border border-[#dce8e7] bg-white p-4 text-left transition hover:border-emerald-300 hover:shadow-sm">
+            <span className="text-xs font-extrabold text-[#0b725d]">Ajuda e orientações</span>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">Entenda isenções, registros pendentes e como obter suporte.</p>
+          </button>
+        </div>
+      </section>
+      )}
+
+      <InfinitePayPilotPanel
+        authorizedWorkspace={workspaceResolved && status === 'authenticated'}
+        returnParams={returnParams}
+        activeTab={activeTab}
+      />
+
+      {activeTab === 'history' && !workspaceResolved && (
+        <div data-testid="billing-history-unauthorized" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          {status === 'loading' ? 'Validando sua sessão para consultar o histórico...' :
+            'Entre novamente com sua conta de setor para consultar os registros financeiros.'}
+        </div>
+      )}
+
+      {activeTab === 'payments' && (
+      <section data-testid="billing-payment-journey" className="mt-5 rounded-[1.65rem] border border-[#dfe8f0] bg-white p-5 shadow-[0_12px_35px_rgba(15,40,70,0.04)] sm:p-7">
+        <div>
+          <h2 className="text-lg font-extrabold text-[#13263a]">Como funciona a confirmação de pagamento</h2>
+          <p className="mt-1 max-w-2xl text-sm text-slate-600">
+            Confira a competência e o valor efetivamente emitidos antes de abrir o checkout.
+            Não há pagamento automático de mensalidades habilitado nesta etapa.
+          </p>
+        </div>
+
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Etapas do checkout InfinitePay">
           <div className="rounded-xl border border-[#e2eaf0] bg-white p-4 transition-colors hover:border-[#c6ded7]">
@@ -233,7 +296,7 @@ export function InfinitePayReadinessPanel() {
           </p>
         </div>
       </section>
-
+      )}
 
     </div>
   );
