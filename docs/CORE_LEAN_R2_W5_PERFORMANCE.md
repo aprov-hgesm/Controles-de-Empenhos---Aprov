@@ -86,3 +86,61 @@ QUEM ESTÁ FAZENDO: W5 benchmarks; W1 motor; W2 orquestrador CI; W3 identidade f
 O QUE FAZER A SEGUIR: validar logs/artifacts CI, corrigir falhas, entregar proposta de deduplicação ao W1 e scripts Fast/Domain/Release ao W2; medir v2/v3 no SHA certificado.
 QUEM FARÁ: W5 onde isolado; W1/W4 para mudança segura, W2 composição CI; coordenador aprova release.
 GO/NO-GO: NO-GO enquanto não houver comparativo E2E e adversarial PASS.
+
+---
+
+## FECHAMENTO DEFINITIVO W5 — benchmark transacional v2/v3 em composição isolada (25/10/2026)
+
+**Código medido W1:** \`afa0deba94905156a63bb636ae4ebcbb7452967d\` (PR #375, sem edição pelo W5). **Fonte W5:** \`e2d0ad8c156a34df02ab7ef10109e3ab151960b2\` (benchmark + negativos finalizados; memorial atualizado depois). **Composição de teste:** branch \`test/core-lean-r2-w5-w1-transactional-20261025\`, HEAD \`09a55373a52c328bb4cba0c651dad96975647605\`. **Workflow PASS:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200112711. **Artefato:** \`w5-authenticated-v2-v3-transactions\` com JSON bruto: registros por execução, commits/replays, quantidades, leituras/writes REST, latências, p50/p95 e negativos. CI isolado do PR W5 também PASS no SHA \`e2d0ad8c\`: Fast / Core Protection / workflow W5; Application CI SKIPPED por DRAFT.
+
+### Metodologia e prova de equivalência
+
+- Autenticação real por Firebase Auth Emulator com usuário de teste verificado; funções server-side reais \`finalizeWarehouseWithdrawalServer\` (v2) e \`finalizeWarehouseWithdrawalV3Server\` (v3); named Firestore Emulator \`emprovex-warehouse\`, projeto exclusivamente \`demo-emprovex-security\`. Guardas exigem host local e proíbem ambientes produtivos; carga sintética por REST admin do Emulator, não por bypass de Rules reais.
+- 7 cenários equivalentes com **4 execuções independentes de cada versão por cenário** = **56 commits reais e 56 replays pós-commit**. Fixtures usam materiais separados por versão (IDs técnicos distintos mas mesmo estoque/posições/quantidades/referências e autenticação), seed fora da medição, ordem v2/v3 alternada. v2 recebe linhas/IDs de validade canônicos já resolvidos; v3 recebe intenção mínima e resolve no servidor. Essa diferença é inerente aos contratos e impede afirmar que a medição server-side represente o tempo TOTAL da jornada client+network+server.
+- Cada commit foi validado no Firestore: cabeçalho FINALIZED/atomicVersion, saldo, movimentos determinísticos, consumos vinculados, autoria, destino e ausência de baixa adicional no replay. Também passaram: colisão de dois pedidos simultâneos com mesmo ID e disputa de saldo com IDs diferentes (v2 e v3); injeção de falha de linha intermediária com rollback; resposta perdida após commit, seguida de replay; identidade de material inexistente; replay divergente; saturação 121 candidatos de validade sem header, sem writes e sem baixa. Na concorrência v3 retornou \`WAREHOUSE_WITHDRAWAL_V3_SNAPSHOT_CHANGED\` em uma disputa; isso é abort seguro, não uma segunda baixa.
+- Instrumentação **somente durante a chamada do motor** observa os RPCs REST batchGet/runQuery/beginTransaction/commit/rollback, caminhos solicitados, documentos retornados, escritas, bytes do comando e tempo total e por fase/RPC. Validações do saldo e ledger com SDK cliente acontecem FORA do timer e não adulteram a latência. \`beforeTransactionRpcMs\` e \`transactionRpcMs\` são somas de durações de RPCs, não CPU exato de fases. Nada disso determina reads faturáveis do Firestore, custo de índices, UX/RTT de celular ou SLA de produção.
+- **n=4 por versão/cenário:** p95 corresponde ao pior tempo amostrado, não a estimativa estatisticamente robusta de P95 na produção. Entre runs do mesmo SHA e runners diferentes houve variação considerável nas medianas absolutas; nunca apresentar regressão percentual como SLA. Comparar prioritariamente contagens determinísticas de RPCs/documentos e contratos.
+
+### Tempos observados (ms): mediana / p95, run PASS 40200112711
+
+| Cenário | v2 commit p50/p95 | v3 commit p50/p95 | v2 replay p50 | v3 replay p50 | RPC v2→v3 | Writes v2/v3 |
+|---|---:|---:|---:|---:|---:|---:|
+| Simples (1 validade + livre) | 34,326 / 124,051 | 58,877 / 91,058 | 15,383 | 12,453 | 7→11 | 8 / 8 |
+| Multilinha, material repetido, duas posições | 25,717 / 34,953 | 39,393 / 53,492 | 10,276 | 7,891 | 7→11 | 10 / 10 |
+| Várias validades + livre | 22,463 / 30,427 | 34,955 / 44,156 | 8,589 | 7,109 | 7→11 | 14 / 14 |
+| Conversão e barcode de apresentação | 16,519 / 25,007 | 31,770 / 35,799 | 6,234 | 4,757 | 7→11 | 5 / 5 |
+| 1 validade | 12,338 / 14,573 | 24,523 / 29,794 | 6,084 | 4,090 | 5→9 | 6 / 6 |
+| 12 validades | 16,067 / 17,631 | 26,111 / 34,431 | 6,137 | 5,295 | 5→9 | 9 / 9 |
+| 60 validades | 11,687 / 24,521 | 37,163 / 44,270 | 5,487 | 4,216 | 5→9 | 9 / 9 |
+
+**Payloads (bytes, mediana):** simples v2 1.260 / v3 399; multilinha v2 1.757 / v3 857; validades v2 2.428 / v3 399; conversão v2 1.151 / v3 482; 60 validades v2 1.306 / v3 399. **Docs retornados por RPCs (mediana de contagem):** simples v2 10 / v3 16; multilinha 8/12; validade 14/22; conversão 7/11; 1 lot 7/14; 12 lots 8/36; 60 lots 8/132. Contagens incluem leituras repetidas/snapshots e documentos de query; não equivalem a cobrança em reais. Os JSONs contêm p95 e outros percentis relativos aos replays e RPC, min/max, abortos e tentativas de transação.
+
+### Oportunidades e decisão de arquitetura GOV-SIMP-01
+
+1. **Preflight de header repetido — DEPENDÊNCIA W1, possível ganho de RPC:** \`warehouseWithdrawalV3Write\` lê o cabeçalho, \`warehouseWithdrawalAtomicWrite\` consulta-o novamente e a transação lê o mesmo cabeçalho no readset. É tentador retirar o segundo preflight; porém a janela entre preflight e commit pode introduzir replay concorrente, e o branch transacional que encontra cabeçalho precisa garantir auditoria persistida de movimentos/consumos. NÃO eliminar até haver patch W1 com prova independente W4.
+2. **Consulta adicional de lots quando há saldo livre — DEPENDÊNCIA W1, possível ganho de RPC:** V3 já lista candidatos + mutex antes/depois, enquanto AtomicWrite pode relistar candidatos para linhas com \`lotId:null\`. Proposta é carregar candidatos versionados, validar readset dentro da transação, reter mutex de phantom atualizado por todos os writers de lote e rejeitar snapshot stale. Sem cobertura contra novas atribuições concorrentes, NÃO remover consulta.
+3. **BatchGet e readset — DEDUP LICENCIADO, sem otimização comprovada:** v3 já deduplica paths por Set e lê em lotes de até 30; não demonstrado que alterar o adaptador produza ganho líquido. Manter.
+4. **Replay — GANHO MEDIDO no Emulator, auditoria INTACTA:** com manifest v3 o replay rejeita efeitos ausentes e demonstrou menor mediana que v2 em sete cenários, com zero writes. Não sacrificar auditoria para desempenho.
+5. **Saturação — PASS:** runQuery de 121 candidatos (max 120) rejeitou a retirada sem tocar em saldo/ledger. NÃO paginar silenciosamente, nem permitir planejamento com listas incompletas.
+
+**Otimizações executadas pelo W5:** melhorias reais na infraestrutura de medição, deduplicação estável de caminhos em ferramenta própria, parser REST de JSON streaming, fixtures equivalentes e testes históricos estendidos; **nenhuma mudança no motor produtivo**, pois os pontos transacionais possíveis pertencem ao W1 e têm riscos de integridade. Assim, ganho percentual de performance por otimização aplicada = **NÃO MEDIDO / NÃO ALEGADO**. Diminuição do payload cliente é comprovada, redução de writes NÃO ocorreu, e a v3 executou +4 RPC por commit no ambiente medido. Um custo de segurança pode ser necessário e aceitável.
+
+### Compatibilidade histórica / limitações
+
+- Executado no PR W5: EPX1 vinculada ao ID imutável, EPX2 lógica, numérico 981 13 dígitos, barcodes workspace-scoped, namespaces wd/wline, IDs determinísticos de movimento e consumo, validade com origem \`INVOICE\` e \`invoiceRecordKey\` legado, negativa se movimento obrigatório falta. Existe risco arquitetural de **reutilização de código lógico EPX2/981** que requer política de unicidade/reuso externo ao teste; não declarar essa propriedade imutável sem prova.
+- Suites W1 executadas na composição tratam ledger v2/v3, replay e efeito. A composição W4 + W3 #379, SHA \`cbf59291bf5594bb394a52d17e8601f53418f223\`, teve **W4 Cross-PR Certified Composition PASS** (run 40159186764) incluindo contratos financeiros; é outro SHA, não certifica uma release unificada. NF/NS/recordKey e PDF integrados dependem do W3 e do PR #370; não afirmar leitura de produção.
+- Não foram medidos tempo de câmera, UI mobile, RTT real, CPU/GPU do cliente, nem custos cobrados em produção. Nenhum dado de produção foi lido, e a Central de Depósitos 3D permaneceu intacta.
+
+### Handoff, CI e GO/NO-GO
+
+**FAST CI:** \`node --test scripts/core-lean-r2-w5-profile.test.mjs\` (invariantes, limites e determinismo; NÃO travar por p95).
+**DOMAIN:** \`npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts\`.
+**RELEASE autenticado no SHA W1+W5 composto:** definir \`EMPROVEX_WAREHOUSE_ADMIN_EMULATOR=1\`, \`EMPROVEX_E2E_SERVER_AUTH=1\`, \`NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security\`, \`FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\`, \`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099\`; executar \`npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w5-transactions.mjs"\`. Falha fechada sem v3/evidence e sem Emulator local. Arquivos disparadores: WithdrawalV3Write, AtomicWrite, WithdrawalEvidence, Firestore transaction, lot/barcode/identity, alterações Authz, scripts W5. Scripts e evidências enviados aos PRs #372, #374; pedido com números enviado ao W1 #375.
+
+**ONDE ESTAMOS:** W5 técnica e quantitativamente certificada no SHA composto W1+W5; PR #377 isolado DRAFT.  
+**O QUE FOI MEDIDO:** 56 commits+56 replays reais; erros/concorrência/rollback/saturação; payload, p50/p95, RPCs, docs/writes, custos adicionais do replay.  
+**O QUE FOI OTIMIZADO:** apenas instrumentos, parser REST e fixtures/testes; motor produtivo não alterado por segurança e propriedade W1.  
+**O QUE ESTÁ COMPROVADO:** v3 é contrato mais enxuto no cliente e custa mais RPCs/tempo de servidor no Emulator; writes iguais e replay com menor mediana, sem violação de integridade nas fixtures testadas.  
+**O QUE NÃO FOI COMPROVADO:** ganho de custo ou latência real de produção; segurança de remover header/lots; integração unificada com PR #370 e PDFs; imutabilidade de códigos lógicos reutilizados.  
+**O QUE O COORDENADOR DEVE FAZER:** compor W1/W2/W3/W4/W5 com SHAs fixos; rodar gates Application/Domain/Release no SHA final; exigir parecer W4 sobre qualquer otimização W1; conferir políticas de required checks e autenticação antes de release.  
+**GO/NO-GO:** **GO TÉCNICO para integrar benchmark e testes W5**. **NO-GO para afirmar ganho produtivo ou liberar main/deploy/Rules** sem a certificação final do conjunto. O W5 não tem regressão crítica conhecida sem proprietário; melhorias possíveis de header/lots foram explicitamente transferidas ao W1.
