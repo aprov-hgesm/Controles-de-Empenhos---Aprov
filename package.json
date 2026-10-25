@@ -193,6 +193,8 @@
     "test:adm-deposito-depot-locator": "node --test scripts/warehouse-depot-locator.test.mjs",
     "verify:adm-deposito-modular-r1": "node scripts/verify-adm-deposito-modular-r1.mjs",
     "test:adm-deposito-modular-r1-security": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-modular-r1-security.test.mjs\"",
+    "test:warehouse-server-only-rules": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-server-only-rules.test.mjs\"",
+    "test:warehouse-server-manual-entry-security": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-manual-entry-atomic-security.test.mjs && npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts\"",
     "test:adm-deposito-structure-import-r1": "node --test scripts/warehouse-structure-import-r1.test.mjs",
     "test:adm-deposito-labels-r1": "node --test scripts/warehouse-labels-r1.test.mjs",
     "warehouse:db:plan": "node scripts/migrate-warehouse-database.mjs plan",
@@ -264,7 +266,17 @@
     "test:warehouse-context-menu": "node --test scripts/warehouse-context-menu.test.mjs",
     "test:warehouse-croqui-fusion": "node --test scripts/warehouse-croqui-fusion.test.mjs",
     "dev:warehouse:isolated": "node scripts/dev-warehouse-isolated.mjs",
-    "test:warehouse-isolated-dev": "node --test scripts/warehouse-isolated-dev.test.mjs"
+    "test:warehouse-isolated-dev": "node --test scripts/warehouse-isolated-dev.test.mjs",
+    "test:financial-identity-v2": "node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs",
+    "test:core-lean-r2-w4-contract": "npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts",
+    "test:core-lean-r2-w4-assurance": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts\"",
+    "test:core-lean-r2-w5-profile": "node --test scripts/core-lean-r2-w5-profile.test.mjs",
+    "test:core-lean-r2-w5-historical": "npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts",
+    "test:core-lean-r2-w1-contract": "node scripts/ci-lean-w1-v3.mjs contract",
+    "test:core-lean-r2-w1-emulator": "node scripts/ci-lean-w1-v3.mjs emulator",
+    "test:core-lean-r2-w4-financial": "node --experimental-vm-modules --test scripts/core-lean-r2-w4-financial.test.mjs",
+    "test:core-lean-r2-w4-authz": "node scripts/ci-lean-optional-authz.mjs",
+    "test:core-lean-r2-w4-v3": "node scripts/ci-lean-w1-v3.mjs independent-v3"
   },
   "dependencies": {
     "clsx": "^2.1.1",

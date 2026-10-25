@@ -146,12 +146,17 @@ for (const ciStep of [
   'Workspace Google Drive guard',
   'External Drive OAuth Firebase Auth emulator tests',
   'Production build',
-  'Final TypeScript validation',
+  'TypeScript error budget',
   'Diff hygiene',
   'Block 16 Final Release Gate',
 ]) {
   requireText(workflow, ciStep, `Application CI perdeu gate integrado: ${ciStep}`);
 }
+requireText(workflow, 'npm run typecheck > /tmp/typecheck.txt 2>&1 || rc=$?',
+  'A compilação TypeScript do CI não pode desaparecer junto do step redundante.');
+requireText(workflow, 'budget=$(node -p "require(\'./ops/typescript-error-budget.json\').maxErrors")',
+  'A validação TypeScript perdeu seu orçamento zero verificável.');
+
 
 requireText(e2eWorkflow, 'workflow_dispatch:', 'Browser E2E sob demanda perdeu acionamento manual.');
 requireText(e2eWorkflow, 'Browser E2E with Firebase Emulator', 'Workflow sob demanda perdeu o Browser E2E.');
