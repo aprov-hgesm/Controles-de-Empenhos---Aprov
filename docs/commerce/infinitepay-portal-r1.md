@@ -1,7 +1,7 @@
 # EMPROVEX — Portal de assinatura e pagamento InfinitePay R1
 
 **Integração:** PR #385 (composição de #382 e #384).
-**Estado:** DRAFT, ainda sem publicação.
+**Estado:** pronto para revisão técnica, ainda sem publicação.
 **Ciclo de faturamento normal:** DESATIVADO, `billingMode='observe'`, `requirePayment=false`, `automaticSuspension=false`.
 
 ## O que a interface já faz
@@ -19,7 +19,7 @@
 
 O checkout de R$1 é uma transação **real**, mas **não é uma mensalidade**. O recebedor pode ter taxas e obrigações aplicáveis. O cliente confirma o valor no checkout e efetua Pix voluntariamente.
 
-Somente um setor autorizado consegue acessar `/api/billing/portal`, `/api/billing/pilot-checkout` e `/api/billing/pilot-verify`; o servidor valida token Firebase, diretório, UID vinculado, workspace e UG (Security Rules do Firestore continuam aplicadas à busca). O piloto verifica *duplamente* email e workspace nos segredos do servidor.
+Somente um setor autorizado consegue usar `GET /api/billing/portal`, `POST /api/billing/portal?action=create-pilot` e `POST /api/billing/portal?action=verify-pilot`; o servidor valida token Firebase, diretório, UID vinculado, workspace e UG (Security Rules do Firestore continuam aplicadas à busca). O piloto verifica *duplamente* email e workspace nos segredos do servidor.
 
 O cliente marca o checkbox de confirmação, gera um link de pagamento **sem movimentar dinheiro automaticamente**, abre o endereço InfinitePay oficial e, após o Pix, pressiona **Continuar**. O EMPROVEX capta o retorno e solicita verificação autenticada pelo endpoint `payment_check`; exige HMAC de pedido correspondente à identidade, status aprovado, valor integral de R$1,00 e Pix. O resultado é **somente** `PILOT_PIX_AUTHENTICATED`: nunca marca `billingCycles` como paga ou muda privilégios.
 
@@ -61,3 +61,7 @@ Nunca publicar a chave em Git, logs, prints, navegador ou ChatGPT. Para desligar
 ## Regra de publicação
 
 A interface read-only pode ir à `main` com o piloto **desligado** após CI e validação; isso NÃO autoriza ativar cobrança SaaS. A ativação do piloto precisa de configuração explícita do workspace/email e aceitação da realização de Pix real pela pessoa pagadora. Em nenhuma etapa remover VIPs ou ativar suspensão automática.
+
+## Ajuste de infraestrutura Vercel
+
+As operações do portal foram consolidadas em **uma única rota Next.js** (GET/POST `/api/billing/portal`, com `action` no POST). Isso evita acrescentar três funções serverless ao deployment. As operações continuam separadas logicamente, autenticadas e com autorização por workspace. O `Application CI` deve verificar esta composição antes de qualquer promoção.
