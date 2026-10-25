@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { BadgeCheck, Copy, ExternalLink, Loader2, ShieldCheck, WalletCards } from 'lucide-react';
+import { InfinitePayReadinessPanel } from '../../components/billing/InfinitePayReadinessPanel';
 
 interface RegularizationInfo {
   planName: string;
@@ -75,10 +76,13 @@ export default function RegularizationPage() {
             Regularização da assinatura
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-            O pagamento é realizado fora do EMPROVEX. Nenhum dado de cartão, CVV ou credencial de pagamento é solicitado nesta página.
-            Após o pagamento, a confirmação é feita administrativamente.
+            Consulte a situação da sua assinatura e as opções de pagamento disponíveis.
+            O checkout pela InfinitePay está em homologação, sem cobranças geradas nesta página.
+            Nenhum dado de cartão, CVV ou credencial de pagamento é solicitado pelo EMPROVEX.
           </p>
         </header>
+
+        <InfinitePayReadinessPanel />
 
         {error && (
           <section className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-5 text-sm text-amber-100">
@@ -97,7 +101,7 @@ export default function RegularizationPage() {
           <>
             <section className="mt-5 grid gap-4 md:grid-cols-3">
               <InfoCard label="Plano" value={info.planName} />
-              <InfoCard label="Mensalidade" value={`${money(info.monthlyPriceCents)} / mês`} />
+              <InfoCard label="Preço de referência legado" value={`${money(info.monthlyPriceCents)} / mês`} />
               <InfoCard label="Vencimento" value={`${info.dueBusinessDay}º dia útil · ${info.gracePeriodDays} dias de tolerância`} />
             </section>
 
