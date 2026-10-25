@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { percentile, summary, uniqueReadPaths, planBatchGet,
-  checkedLotQueryCount, describeRPCs, cpuProfile } from './core-lean-r2-w5-profile.mjs';
+  checkedLotQueryCount, describeRPCs, cpuProfile, parseStream } from './core-lean-r2-w5-profile.mjs';
 import { planMobileOutboundAutomaticLots } from '../lib/warehouse/mobileOutboundPlan.mjs';
 
 test('p50/p95 are measured on sorted samples and do not mutate inputs',()=>{
@@ -75,3 +75,11 @@ test('v3 hash and derived identities are versioned and stable when W1 is compose
     assert.notEqual(lineId('wd_'+'f'.repeat(32),0,0),
       lineId('wd_'+'f'.repeat(32),0,1));
   });
+
+test('emulator parses JSON array, pretty JSON and concatenated REST JSON objects',()=>{
+  assert.deepEqual(parseStream('[{"found":{"name":"one"}}]'),[{found:{name:'one'}}]);
+  assert.deepEqual(parseStream('{\n "writeResults": [1]\n}'),[{writeResults:[1]}]);
+  const stream='{\n "found": {"name":"one"}\n}\n{\n "missing":"two"\n}';
+  assert.deepEqual(parseStream(stream),[{found:{name:'one'}},{missing:'two'}]);
+  assert.throws(()=>parseStream('{\n"bad"'),/W5_RPC_RESPONSE_INVALID/);
+});
