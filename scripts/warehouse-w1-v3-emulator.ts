@@ -4,6 +4,7 @@
  * No live data, no mock store, no production access.
  */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -13,6 +14,7 @@ import { finalizeWarehouseWithdrawalV3Server } from '../lib/server/warehouseWith
 import { registerWarehouseManualEntryServer } from '../lib/server/warehouseManualEntry';
 import { saveWarehouseMaterialServer } from '../lib/server/warehouseMaterialWrite';
 import { warehouseDestinationCreateServer } from '../lib/server/warehouseDestinationWrite';
+import { warehouseBarcodeServer } from '../lib/server/warehouseRemainingWrites';
 import { warehouseWithdrawalV3IntentHash } from '../lib/server/warehouseWithdrawalV3Identity.mjs';
 import {
   buildWarehouseWithdrawalEffectManifest,warehouseWithdrawalManifestHash,
@@ -297,6 +299,101 @@ async function run(){
   await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,
     v3(20,Array.from({length:41},()=>logical(1)))),/WAREHOUSE_/);
   pass('isolamento de UG, material desconhecido e limite de linhas');
+
+  // Desktop v2 e Mobile v3: materiais idênticos em contextos isolados,
+  // mesma apresentação, quantidade, posição, autoria, destino e barcode.
+  const originalA=await registerWarehouseManualEntryServer(access,{
+    operationId:'w1-desktop-parity',existingMaterialId:null,
+    description:'Paridade Desktop v2',unitLabel:'UN',quantity:24,
+    provenance:'Contagem',reference:'paridade',position:pos,
+    expiresOn:null,barcode:null,
+  });
+  const originalB=await registerWarehouseManualEntryServer(access,{
+    operationId:'w1-mobile-parity',existingMaterialId:null,
+    description:'Paridade Mobile v3',unitLabel:'UN',quantity:24,
+    provenance:'Contagem',reference:'paridade',position:pos,
+    expiresOn:null,barcode:null,
+  });
+  const presentation={code:'box' as const,label:'Caixa com 12 unidades'};
+  const [desktopMaterial,mobileMaterial]=await Promise.all([
+    saveWarehouseMaterialServer(access,{...originalA.material,
+      conversions:[{presentation,factorToBaseUnit:12}]}),
+    saveWarehouseMaterialServer(access,{...originalB.material,
+      conversions:[{presentation,factorToBaseUnit:12}]}),
+  ]);
+  const [desktopBarcode,mobileBarcode]=await Promise.all([
+    warehouseBarcodeServer(access,'SAVE',{
+      materialId:desktopMaterial.id,barcode:'7891234567801',presentation,
+    }),
+    warehouseBarcodeServer(access,'SAVE',{
+      materialId:mobileMaterial.id,barcode:'7891234567802',presentation,
+    }),
+  ]);
+  const desktopId=ident('wd_',31),desktopLineId=ident('wline_',31);
+  const desktopCommand={
+    withdrawalId:desktopId,destinationId:destination.id,withdrawnBy:access.email,
+    lines:[{
+      lineId:desktopLineId,materialId:desktopMaterial.id,
+      materialDescription:desktopMaterial.description,requestedQuantity:1,
+      baseQuantity:12,presentation,presentationLabel:presentation.label,
+      unitLabel:'UN',position:pos,positionLabel:'W1LOCAL',
+      barcodeAssociation:desktopBarcode,barcode:desktopBarcode.barcode,
+      lotId:null,lotCode:null,
+    }],
+  };
+  const mobileCommand=v3(32,[{
+    materialId:mobileMaterial.id,position:pos,requestedQuantity:1,
+    barcodeId:mobileBarcode.id,
+  }]);
+  const [desktopDone,mobileDone]=await Promise.all([
+    finalizeWarehouseWithdrawalServer(access,desktopCommand),
+    finalizeWarehouseWithdrawalV3Server(access,mobileCommand),
+  ]);
+  assert.equal(desktopDone.withdrawal.status,'FINALIZED');
+  assert.equal(mobileDone.withdrawal.status,'FINALIZED');
+  assert.equal((await read('balances',desktopMaterial.id))?.quantity,12);
+  assert.equal((await read('balances',mobileMaterial.id))?.quantity,12);
+  const desktopMovementId=await createWarehouseMovementId(ws,
+    'material-withdrawal:'+desktopId+':'+desktopLineId);
+  const desktopConsumptionId='cons_'+createHash('sha256')
+    .update(ws+'\\n'+'stock:'+desktopId+':'+desktopLineId).digest('hex');
+  const dMove=await read('movements',desktopMovementId);
+  const dConsume=await read('consumptions',desktopConsumptionId);
+  const vEvidence=await inspect(mobileCommand);
+  const vMove=vEvidence.movements[0],vConsume=vEvidence.consumptions[0];
+  for(const item of [dMove,vMove]){
+    assert.equal(item.type,'OUTBOUND');
+    assert.equal(item.quantityDelta,-12);
+    assert.equal(item.source.actorUid,access.uid);
+    assert.deepEqual(item.source.position,pos);
+  }
+  for(const item of [dConsume,vConsume]){
+    assert.equal(item.quantity,12);
+    assert.equal(item.requestedQuantity,1);
+    assert.equal(item.destinationId,destination.id);
+    assert.equal(item.operatorUid,access.uid);
+    assert.equal(item.presentationLabel,presentation.label);
+  }
+  assert.equal(dMove.source.barcodeId,desktopBarcode.id);
+  assert.equal(vMove.source.barcodeId,mobileBarcode.id);
+  assert.equal(dConsume.barcode,desktopBarcode.barcode);
+  assert.equal(vConsume.barcode,mobileBarcode.barcode);
+  assert.equal(vEvidence.header.effectManifest.lines[0].factorToBaseUnit,12);
+  assert.equal((await finalizeWarehouseWithdrawalServer(access,desktopCommand)).movementIds.length,0);
+  assert.equal((await finalizeWarehouseWithdrawalV3Server(access,mobileCommand)).movementIds.length,0);
+  pass('Desktop v2 e Mobile v3: saldos, movimentos, consumos, apresentação, barcode, autoria e destino equivalentes');
+
+  await warehouseBarcodeServer(access,'STATUS',{barcodeId:mobileBarcode.id,status:'inactive'});
+  const inactiveBarcode=v3(33,[{
+    materialId:mobileMaterial.id,position:pos,requestedQuantity:1,
+    barcodeId:mobileBarcode.id,
+  }]);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,inactiveBarcode),
+    /WAREHOUSE_BARCODE_INACTIVE/);
+  assert.equal(await read('withdrawals',inactiveBarcode.withdrawalId),null);
+  assert.equal((await finalizeWarehouseWithdrawalV3Server(access,mobileCommand)).movementIds.length,0);
+  pass('barcode inativo recusa nova baixa, mas não inviabiliza replay confirmado');
+
   console.log('W1 V3 ASSURANCE COMPLETE');
 }
 function encode(value:unknown):unknown{
