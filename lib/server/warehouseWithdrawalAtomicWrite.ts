@@ -275,7 +275,12 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         const note='Saída de Material · '+input.withdrawalId+' · '+line.lineId;
         const source:WarehouseExpressOutboundMovementSource={
-          kind:'EXPRESS_OUTBOUND',interface:plan.interface,actorUid:access.uid,
+          // Na v3 a associação foi resolvida previamente pelo servidor.
+          // Cada parte técnica usa a unidade-base, mas a proveniência
+          // BARCODE_SCANNER deve permanecer coerente com barcodeId/barcode.
+          kind:'EXPRESS_OUTBOUND',
+          interface:v3?.barcodeIdsByLine[line.lineId]?'BARCODE_SCANNER':plan.interface,
+          actorUid:access.uid,
           requestedQuantity:plan.requestedQuantity,quantity:plan.baseQuantity,
           presentation:plan.presentation,factorToBaseUnit:plan.factorToBaseUnit,
           barcodeId:v3?.barcodeIdsByLine[line.lineId]??barcode?.id??null,
