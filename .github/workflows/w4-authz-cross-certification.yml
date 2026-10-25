@@ -31,4 +31,5 @@ jobs:
       - name: Existing policy coverage under same PR370 SHA
         run: npm run test:server-authorization
       - name: W4 Auth and Firestore signed token runtime
+        if: always()
         run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/server-authorization-emulator.ts"
