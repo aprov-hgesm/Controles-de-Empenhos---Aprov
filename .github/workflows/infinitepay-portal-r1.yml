@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - 'app/api/billing/portal/**'
-      - 'app/api/billing/pilot-*/**'
       - 'components/billing/**'
       - 'lib/server/billingPortalIdentity.ts'
       - 'lib/server/payments/infinitepay*.mjs'
