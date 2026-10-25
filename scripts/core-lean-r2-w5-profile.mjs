@@ -151,7 +151,7 @@ async function emulatorProfile(repetitions = 15) {
       method:'POST', headers:{authorization:'Bearer owner','content-type':'application/json'},
       body:JSON.stringify(payload), cache:'no-store',
     });
-    if (!res.ok) throw new Error('W5_FIRESTORE_EMULATOR_RPC_FAILED_' + res.status);
+    if (!res.ok) { const diagnostic = (await res.text()).slice(0,450).replace(/[\r\n]+/g,' '); throw new Error('W5_FIRESTORE_EMULATOR_RPC_FAILED_' + operation.replace(/[^A-Za-z0-9_:/-]/g,'') + '_' + res.status + '_' + diagnostic); }
     const data = parseStream(await res.text());
     if (observed) events.push({operation:operation.split(':').at(-1),
       requested:payload.documents?.length || 0,
