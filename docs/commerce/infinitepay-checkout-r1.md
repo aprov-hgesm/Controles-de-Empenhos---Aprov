@@ -62,3 +62,47 @@ Os testes usam um `fetchImpl` falso, sem API Key real e sem emitir cobranças. O
 - Não usa testes com chaves reais.
 
 Ao final da homologação, abrir PR separado para interface, rotas autenticadas, armazenamento transacional e observabilidade.
+
+## 6. Integração offline com competências (25/10/2026)
+
+Os módulos adicionais implementados nesta branch são:
+
+- `lib/server/payments/infinitepayBillingBridge.mjs`
+  - `prepareWorkspaceCheckout`: confere autorização delegada ao chamador confiável, vínculo `workspaceId` + `billingCycles`, plano de R$ 70, isenção de VIP/fundador, trial, `observe` e prazo máximo de validade.
+  - `prepareVerification`: vincula `order_nsu`, `transaction_nsu`, `invoice_slug` e `handle` para requisição oficial `payment_check`. Nunca considera redirect/webhook como prova financeira.
+  - `planVerifiedSettlement`: apenas sugere uma transição de competência após `paid=true`, `success=true` e valores conferidos; não altera o banco.
+  - `planFinancialException`: sinaliza estornos, falhas e cancelamentos para revisão sem suspender contas automaticamente.
+- `lib/server/payments/infinitepayTransactionalSettlement.mjs`
+  - `transactionLedgerId`: identidade global determinística e opaca de cada transação InfinitePay.
+  - `commitVerifiedSettlementWithStore`: contrato de persistência atômica com `runTransaction`, leitura da conta/competência/ledger, registro único e detecção de concorrência, inconsistência e pagamento já registrado.
+  - **IMPORTANTE:** este módulo é uma **porta transacional abstrata**. Não existe ainda uma implementação ligada ao Firestore de produção.
+- `scripts/infinitepay-billing-bridge.test.mjs`: testes sintéticos do vínculo financeiro, autorizações, valores, validade, VIPs e eventos.
+- `scripts/infinitepay-transactional-settlement.test.mjs`: testes de transação **simulada em memória**, incluindo notificações concorrentes, idempotência, queda de commit, isolamento de tenants e proteção de VIP.
+
+A documentação oficial atual utilizada na preparação de requests é:
+https://ajuda.infinitepay.io/pt-BR/articles/10766888-como-usar-o-checkout-integrado-da-infinitepay
+
+Ela descreve os endpoints `POST /links` e `POST /payment_check` em `api.checkout.infinitepay.io`, com `X-Api-Key`; o segundo precisa de `handle`, `order_nsu`, `transaction_nsu` e `slug`. **Nenhuma requisição foi enviada ao provedor nessa fase**.
+
+### Teste offline completo
+
+```powershell
+node --test scripts/infinitepay-checkout.test.mjs scripts/infinitepay-billing-bridge.test.mjs scripts/infinitepay-transactional-settlement.test.mjs
+```
+
+O workflow `InfinitePay Adapter Unit Tests` roda essas suites com dados e chaves **fictícios**. A aprovação dos testes de transação em memória NÃO significa que o adapter Firestore real tenha passado testes no Emulator.
+
+### Gates ainda pendentes (NO-GO para cobrança real)
+
+1. Homologar forma de contratação, conta recebedora e tratamento fiscal do SaaS.
+2. Obter confirmação formal de elegibilidade e documentação de segurança do checkout/webhook.
+3. Implementar autorização de usuário/admin no servidor e persistência de intent ANTES da criação de link.
+4. Implementar `runTransaction` real com atomicidade Firestore de `billingCycles` + ledger, unique `transaction_nsu` global e CAS no ciclo; testar no Emulator com falhas e concorrência.
+5. Implementar endpoints de checkout, webhook e reconciliação autenticada; bloquear em produção por feature flag desabilitada.
+6. Restringir credenciais InfinitePay à configuração de servidor, com rotação; nunca enviar API Key por chat, GitHub ou front-end.
+7. Certificar pagamentos de homologação somente quando autorizados; não realizar cobrança real automaticamente.
+8. Concluir CI completo, auditoria independente e aprovação de publicação. `billingMode='observe'` e VIPs permanecem protegidos.
+
+### Estado garantido
+
+**Sem endpoints públicos, sem valores reais, sem credenciais, sem gravações em Firestore, sem deploy e sem criação de links operacionais.** O projeto não transforma uma assinatura SaaS em treinamento por alterar o texto fiscal ou um módulo educacional.
