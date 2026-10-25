@@ -1,0 +1,24 @@
+name: InfinitePay Adapter Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - 'lib/server/payments/infinitepayCheckout.mjs'
+      - 'scripts/infinitepay-checkout.test.mjs'
+      - '.github/workflows/infinitepay-adapter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline InfinitePay adapter tests (no credentials or network)
+        run: node --test scripts/infinitepay-checkout.test.mjs
