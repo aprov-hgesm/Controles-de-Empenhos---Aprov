@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, Copy, ExternalLink, Loader2, ShieldCheck, WalletCards } from 'lucide-react';
 import { InfinitePayReadinessPanel } from '../../components/billing/InfinitePayReadinessPanel';
 import { BillingPortalShell } from '../../components/billing/BillingPortalShell';
+import { BILLING_PORTAL_TABS, type BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 interface RegularizationInfo {
   planName: string;
@@ -39,6 +40,8 @@ export default function RegularizationPage() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [showManualMethods, setShowManualMethods] = useState(false);
+  const [activeTab, setActiveTab] = useState<BillingPortalTab>('overview');
+  const currentTab = BILLING_PORTAL_TABS.find((tab) => tab.id === activeTab) || BILLING_PORTAL_TABS[0];
 
   useEffect(() => {
     // Manual options are legacy and optional. Do not fetch private billing settings
@@ -71,10 +74,10 @@ export default function RegularizationPage() {
   };
 
   return (
-    <BillingPortalShell>
+    <BillingPortalShell activeTab={activeTab} onTabChange={setActiveTab}>
     <main data-testid="billing-light-content" className="space-y-5 text-slate-800">
       <div className="w-full">
-        <header id="visao-geral" className="scroll-mt-24 overflow-hidden rounded-[1.65rem] border border-[#dfe7f1] bg-white shadow-[0_14px_44px_rgba(15,40,70,0.055)]">
+        <header className="overflow-hidden rounded-[1.65rem] border border-[#dfe7f1] bg-white shadow-[0_14px_44px_rgba(15,40,70,0.055)]">
           <div className="flex flex-col gap-6 p-6 sm:p-8 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-3xl">
               <div className="flex items-center gap-2 text-[#0a6556]">
@@ -82,11 +85,11 @@ export default function RegularizationPage() {
                 <span className="font-mono text-[10px] font-black uppercase tracking-[0.17em]">EMPROVEX / Área do cliente</span>
               </div>
               <h1 className="mt-3 text-[28px] font-black tracking-tight text-[#142338] sm:text-[34px]">
-                Minha assinatura
+                {currentTab.title}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-                Gerencie seu plano, consulte o histórico financeiro e acompanhe a integração de pagamentos
-                em um único lugar, com a identidade visual e a segurança do EMPROVEX.
+                {currentTab.description}. Consulte informações do seu setor com segurança,
+                sem misturar os dados e as ações das outras abas.
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-emerald-100 bg-[#f0faf6] p-4 text-[#14644d]">
@@ -102,8 +105,71 @@ export default function RegularizationPage() {
           <div className="h-1 bg-gradient-to-r from-[#0b755d] via-[#168d78] to-[#c7dedd]" />
         </header>
 
-        <InfinitePayReadinessPanel />
+        <div
+          id="billing-active-panel"
+          role="tabpanel"
+          aria-labelledby={`billing-tab-${activeTab}`}
+          data-testid="billing-active-panel"
+          data-tab={activeTab}
+          tabIndex={0}
+        >
+          <InfinitePayReadinessPanel activeTab={activeTab} onNavigate={setActiveTab} />
 
+          {activeTab === 'help' && (
+            <section data-testid="billing-help-content" className="mt-5 space-y-4">
+              <div className="rounded-2xl border border-[#dfe8f0] bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-black text-slate-900">Como acompanhar minha assinatura?</h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  Na aba Minha assinatura você encontra a situação comercial do seu setor.
+                  No Histórico financeiro aparecem somente as competências registradas,
+                  com seus valores, vencimentos e estados. A ausência de registros não comprova pagamento.
+                </p>
+                <button type="button" className="mt-4 text-sm font-extrabold text-[#0a755d] hover:underline"
+                  onClick={() => setActiveTab('history')}>
+                  Consultar histórico financeiro
+                </button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <article className="rounded-2xl border border-[#dfe8f0] bg-white p-6">
+                  <h3 className="font-extrabold text-slate-900">Paguei, mas ainda aparece pendente</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Não pague novamente a mesma cobrança. Confira o comprovante no seu banco
+                    e o recebimento na InfinitePay. O retorno do checkout não substitui a
+                    confirmação do pagamento pelo servidor.
+                  </p>
+                </article>
+                <article className="rounded-2xl border border-[#dfe8f0] bg-white p-6">
+                  <h3 className="font-extrabold text-slate-900">Minha conta está isenta ou em teste</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    A isenção cadastrada permanece válida. O período de teste e seus prazos
+                    são mostrados somente quando constam da conta do setor.
+                    Não realize Pix sem uma cobrança individual emitida.
+                  </p>
+                </article>
+                <article className="rounded-2xl border border-[#dfe8f0] bg-white p-6">
+                  <h3 className="font-extrabold text-slate-900">Preciso de um comprovante</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Consulte o histórico da sua conta e os comprovantes do aplicativo bancário.
+                    Esta versão não disponibiliza emissão automática de recibos fiscais.
+                  </p>
+                </article>
+                <article className="rounded-2xl border border-[#dfe8f0] bg-white p-6">
+                  <h3 className="font-extrabold text-slate-900">Onde encontro atendimento?</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    Utilize o canal oficial de suporte informado no cadastro do EMPROVEX.
+                    Nenhum contato não configurado será apresentado como oficial.
+                  </p>
+                </article>
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-xs leading-relaxed text-[#17624e]">
+                Os dados da assinatura são restritos ao workspace autenticado. Nunca forneça senhas,
+                códigos de autenticação ou sua API Key em solicitações de suporte.
+              </div>
+            </section>
+          )}
+
+        {activeTab === 'payments' && (
+          <>
         <section id="formas-pagamento" data-testid="manual-payment-options" className="scroll-mt-24 mt-5 rounded-2xl border border-[#e2e8f1] bg-white p-5 shadow-[0_12px_36px_rgba(15,40,70,0.04)] sm:p-6">
           <button
             type="button"
@@ -219,6 +285,10 @@ export default function RegularizationPage() {
             </section>
           </>
         )}
+
+          </>
+        )}
+        </div>
 
         <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
           <Link href="/" className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</Link>
