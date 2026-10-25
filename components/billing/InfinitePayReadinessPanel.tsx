@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
-  ArrowUpRight, BadgeCheck, CircleAlert, Clock3, CreditCard,
-  FileCheck2, LockKeyhole, ShieldCheck, Sparkles, UserRound,
+  ArrowUpRight, BadgeCheck, Clock3, CreditCard,
+  FileCheck2, LockKeyhole, ShieldCheck, UserRound,
 } from 'lucide-react';
 
 import { auth } from '../../lib/firebase';
@@ -13,14 +13,6 @@ import { resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../li
 import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBillingWorkspaceContext';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
-
-const PRICING = [
-  { months: '1º ao 3º', cents: 2990 },
-  { months: '4º ao 6º', cents: 3990 },
-  { months: '7º ao 9º', cents: 4990 },
-  { months: '10º ao 12º', cents: 5990 },
-  { months: '13º em diante', cents: 6990 },
-] as const;
 
 function money(cents: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -92,9 +84,6 @@ export function InfinitePayReadinessPanel() {
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
   const [returnNotice, setReturnNotice] = useState(false);
-  // Local, display-only preview for the exempt test workspace.
-  // This state never updates billingAccount, an invoice, Firestore, or provider checkout.
-  const [simulateFirstMonth, setSimulateFirstMonth] = useState(false);
 
   useEffect(() => {
     // The InfinitePay redirect alone is NEVER proof of payment.
@@ -109,7 +98,6 @@ export function InfinitePayReadinessPanel() {
 
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
-  const showLocalSimulation = process.env.NODE_ENV === 'development' && workspaceResolved && exempt;
   return (
     <div data-testid="infinitepay-regularization-panel" className="mt-5 space-y-4">
       {returnNotice && (
@@ -196,38 +184,6 @@ export function InfinitePayReadinessPanel() {
           </div>
         </div>
 
-        {showLocalSimulation && (
-          <div className="mt-4 rounded-xl border border-violet-300/25 bg-violet-400/[0.07] p-4" data-testid="billing-local-demo">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-extrabold text-violet-100">Laboratório local · conta de teste isenta</p>
-                <p className="mt-1 text-xs text-slate-300">
-                  Apenas para visualizar a jornada de um novo assinante, sem alterar sua conta real.
-                </p>
-              </div>
-              <button
-                type="button"
-                data-testid="billing-local-demo-toggle"
-                aria-pressed={simulateFirstMonth}
-                onClick={() => setSimulateFirstMonth((active) => !active)}
-                className="rounded-lg border border-violet-300/30 bg-violet-200/10 px-3 py-2 text-xs font-bold text-violet-100 hover:bg-violet-200/20"
-              >
-                {simulateFirstMonth ? 'Encerrar simulação' : 'Simular novo assinante'}
-              </button>
-            </div>
-            {simulateFirstMonth && (
-              <div role="status" data-testid="billing-local-demo-result" className="mt-4 rounded-xl border border-white/10 bg-[#0b172b]/80 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Simulação visual — não é uma cobrança</p>
-                <p className="mt-2 text-xl font-black text-white">{money(2990)} <span className="text-xs font-semibold text-slate-300">/ mês · meses 1–3</span></p>
-                <p className="mt-1 text-xs text-slate-300">
-                  Primeiro ciclo após os 30 dias gratuitos. Nenhuma competência, checkout ou pagamento foi criado.
-                  A conta real continua <strong>isenta</strong>.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Etapas do checkout InfinitePay">
           <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
             <FileCheck2 className="h-5 w-5 text-cyan-200" aria-hidden />
@@ -264,31 +220,7 @@ export function InfinitePayReadinessPanel() {
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-white/[0.08] bg-[#071225]/80 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Sparkles className="h-5 w-5 text-blue-200" aria-hidden />
-          <h2 className="text-sm font-extrabold text-white">Escalonamento previsto para novos clientes</h2>
-          <span className="rounded-full bg-blue-400/[0.10] px-2.5 py-1 text-[10px] font-bold text-blue-100">Proposta R1</span>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-slate-400">
-          Cada novo cliente começa na primeira faixa após o teste gratuito de 30 dias.
-          A tabela não reprecifica contas existentes, isenções ou competências já emitidas.
-          Não é uma oferta ativa enquanto a integração estiver em homologação.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {PRICING.map((tier) => (
-            <div key={tier.months} className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3">
-              <p className="text-[10px] font-semibold text-slate-400">{tier.months}</p>
-              <p className="mt-2 text-base font-black text-white">{money(tier.cents)}</p>
-              <p className="text-[10px] text-slate-500">por mês</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 flex items-start gap-2 text-xs text-slate-500">
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          Para o cliente atual, somente os valores do contrato e das competências efetivamente registradas serão exigíveis.
-        </p>
-      </section>
+
     </div>
   );
 }
