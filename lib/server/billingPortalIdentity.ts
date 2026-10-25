@@ -59,7 +59,7 @@ async function firestoreGet(
   fetchImpl: typeof fetch
 ): Promise<Record<string, any> | null> {
   if (!/^[a-zA-Z0-9_-]+$/.test(collection)
-    || !/^[a-zA-Z0-9@._-]{1,240}$/.test(document)) {
+    || !/^[a-zA-Z0-9@._+-]{1,240}$/.test(document)) {
     throw new BillingPortalFailure('BILLING_INVALID_DOCUMENT', 400);
   }
   const path = `${FIRESTORE_ROOT}/${encodeURIComponent(collection)}/${encodeURIComponent(document)}`;
