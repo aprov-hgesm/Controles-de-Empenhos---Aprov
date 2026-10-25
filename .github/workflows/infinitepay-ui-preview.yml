@@ -7,7 +7,10 @@ on:
       - 'components/billing/InfinitePayReadinessPanel.tsx'
       - 'components/layout/AppHeader.tsx'
       - 'lib/billing/infinitepayReturnStatus.mjs'
+      - 'lib/billing/billingWorkspaceIdentity.mjs'
+      - 'lib/billing/resolveBillingWorkspaceContext.ts'
       - 'scripts/infinitepay-payment-ui.test.mjs'
+      - 'scripts/billing-workspace-rehydration.test.mjs'
       - 'tests/e2e/infinitepay-regularization-runtime.spec.mjs'
       - 'playwright.infinitepay-ui.config.mts'
       - '.github/workflows/infinitepay-ui-preview.yml'
@@ -27,7 +30,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Certify no-live-payment preview and unverified returns
-        run: node --test scripts/infinitepay-payment-ui.test.mjs
+        run: node --test scripts/infinitepay-payment-ui.test.mjs scripts/billing-workspace-rehydration.test.mjs
       - name: Install app dependencies
         run: npm ci
       - name: Install isolated Playwright (no package-lock changes)
