@@ -106,3 +106,19 @@ Somente uma fase posterior, em ambiente Preview isolado e com autorização/aute
 
 - https://ajuda.infinitepay.io/pt-BR/articles/10766888-como-usar-o-checkout-integrado-da-infinitepay
 - https://www.infinitepay.io/checkout-documentacao
+
+## 5. Recuperação depois do pagamento, sem fazer outro Pix
+
+Se o usuário colou um link `https://checkout.infinitepay.io/...` no comando `verify`, **isso é o endereço de abertura da cobrança, não o retorno após o pagamento**. O erro de URL, sozinho, NÃO indica falha do Pix; não criar outro link nem pagar de novo.
+
+1. Voltar à aba de finalização do checkout. Se ainda houver a tela de sucesso, clicar em **Continuar**. A InfinitePay envia o navegador ao `redirect_url` fornecido na criação do link.
+2. Copiar da barra de endereços o endereço `https://emprovex.com.br/regularizacao?...`, com os parâmetros `order_nsu`, `transaction_nsu` e `slug` (não enviar em chat). Repetir apenas `verify --order <mesmo-pedido>`.
+3. Se a aba de checkout/retorno foi perdida, conferir a venda **já recebida** no app InfinitePay em **Vendas → Histórico de vendas**, filtrando por data, Pix e R$1,00. Conforme a interface da conta, talvez seja possível ver referências da venda; NÃO presumir que o ID Pix EndToEnd corresponde a `transaction_nsu`.
+4. A documentação atual de `payment_check` exige quatro campos: `handle`, `order_nsu`, `transaction_nsu` e `slug`. NÃO inventar transaction_nsu ou slug, nem tratá-los como os últimos caracteres do link do checkout. Se a plataforma não expuser esses campos e o retorno estiver perdido, tratar a conferência da API como **INCONCLUSIVA**; pedir ao suporte InfinitePay orientações para recuperar as referências do pedido já pago.
+5. Para ensaios **futuros**, preservar a URL completa de retorno em arquivo local seguro imediatamente após clicar em Continuar; nunca enviá-la por chat.
+
+A versão posterior do utilitário trata o link inicial com mensagem específica: `Este e o link inicial do checkout. Nao pague novamente...`. O script não faz chamadas remotas quando os parâmetros de retorno não foram validados.
+
+**Fontes:**
+- https://ajuda.infinitepay.io/pt-BR/articles/10766888-como-usar-o-checkout-integrado-da-infinitepay
+- https://ajuda.infinitepay.io/pt-BR/articles/6545817-como-acompanhar-suas-vendas-pelo-app-infinitepay
