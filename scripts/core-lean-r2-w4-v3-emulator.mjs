@@ -10,6 +10,7 @@ import {warehouseDestinationCreateServer} from '../lib/server/warehouseDestinati
 import {saveWarehouseMaterialServer} from '../lib/server/warehouseMaterialWrite';
 import {warehouseBarcodeServer} from '../lib/server/warehouseRemainingWrites';
 import {finalizeWarehouseWithdrawalV3Server} from '../lib/server/warehouseWithdrawalV3Write';
+import {finalizeWarehouseWithdrawalServer} from '../lib/server/warehouseWithdrawalWrite';
 import {warehouseWithdrawalV3IntentHash as hash,warehouseWithdrawalV3DerivedLineId as lineId} from '../lib/server/warehouseWithdrawalV3Identity.mjs';
 import {atomicWarehouseWithdrawalHash} from '../lib/server/warehouseWithdrawalAtomicWrite';
 
@@ -152,6 +153,18 @@ try{
     /IDEMPOTENCY_CONFLICT/);
   pass('multiple intents/multiple expiries/free stock, immutable ledger and divergent replay');
 
+  const legacySameId={withdrawalId:multi.withdrawalId,destinationId:dest.id,
+    withdrawnBy:access.email,lines:[{
+      lineId:id('wline_',700),materialId:mat,materialDescription:material.description,
+      requestedQuantity:1,baseQuantity:1,presentation:material.unit,
+      presentationLabel:'KG',unitLabel:'KG',position:pos,positionLabel:'W4V3LOC',
+      barcodeAssociation:null,barcode:null,lotId:null,lotCode:null,
+    }]};
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,legacySameId),
+    /WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT|WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED/);
+  assert.equal(await stock(),5);
+  pass('v2 cannot reinterpret previously finalized v3 withdrawalId');
+
   const lost=cmd(613,[line(1)]);
   process.env.EMPROVEX_WAREHOUSE_ATOMIC_FAULT_AFTER_COMMIT=lost.withdrawalId;
   try{await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,lost),
@@ -239,6 +252,58 @@ try{
   await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,ceiling));
   await assertAbsent(ceiling);
   pass('max logical lines fail closed');
+
+  const isolated=await registerWarehouseManualEntryServer(access,{
+    operationId:'w4-v3-independent-race',existingMaterialId:null,
+    description:'W4 v3 contested stock',unitLabel:'UN',quantity:1,
+    provenance:'Contagem',reference:'W4 concorrência',position:pos,
+    expiresOn:null,barcode:null,
+  });
+  const raceA=cmd(641,[{materialId:isolated.material.id,position:pos,requestedQuantity:1}]);
+  const raceB=cmd(642,[{materialId:isolated.material.id,position:pos,requestedQuantity:1}]);
+  for(let attempt=0;attempt<3;attempt++){
+    await Promise.allSettled([
+      finalizeWarehouseWithdrawalV3Server(access,raceA),
+      finalizeWarehouseWithdrawalV3Server(access,raceB),
+    ]);
+    if((await read('withdrawals',raceA.withdrawalId))
+      ||(await read('withdrawals',raceB.withdrawalId)))break;
+  }
+  const raceHeaderA=await read('withdrawals',raceA.withdrawalId);
+  const raceHeaderB=await read('withdrawals',raceB.withdrawalId);
+  assert.equal(Number(Boolean(raceHeaderA))+Number(Boolean(raceHeaderB)),1,
+    'exactly one independent v3 command may debit a single available unit');
+  await verify(raceHeaderA?raceA:raceB,1);
+  await assertAbsent(raceHeaderA?raceB:raceA);
+  assert.equal((await read('balances',isolated.material.id))?.quantity,0);
+  pass('two different v3 command IDs compete for one available unit: exactly one commit');
+
+  const inactiveSeed=await registerWarehouseManualEntryServer(access,{
+    operationId:'w4-v3-inactive-position',existingMaterialId:null,
+    description:'W4 v3 status protection',unitLabel:'UN',quantity:2,
+    provenance:'Contagem',reference:'W4 status',position:pos,
+    expiresOn:null,barcode:null,
+  });
+  const locDoc=await read('locations',loc);
+  assert.ok(locDoc);
+  await setDoc(ref('locations',loc),{...locDoc,status:'inactive'});
+  const inactivePosition=cmd(643,[{
+    materialId:inactiveSeed.material.id,position:pos,requestedQuantity:1,
+  }]);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,inactivePosition),
+    /WAREHOUSE_OUTBOUND_LOCATION_INACTIVE/);
+  await assertAbsent(inactivePosition);
+  assert.equal((await read('balances',inactiveSeed.material.id))?.quantity,2);
+  await setDoc(ref('locations',loc),{...locDoc,status:'active'});
+  await saveWarehouseMaterialServer(access,{...inactiveSeed.material,status:'inactive'});
+  const inactiveMaterial=cmd(644,[{
+    materialId:inactiveSeed.material.id,position:pos,requestedQuantity:1,
+  }]);
+  await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,inactiveMaterial),
+    /WAREHOUSE_MATERIAL_INACTIVE/);
+  await assertAbsent(inactiveMaterial);
+  assert.equal((await read('balances',inactiveSeed.material.id))?.quantity,2);
+  pass('inactive physical location and inactive material reject v3 without writes');
 
   // Three isolated forgeries; do not repair them automatically or issue another debit.
   const corrupt=cmd(623,[line(1)]);
