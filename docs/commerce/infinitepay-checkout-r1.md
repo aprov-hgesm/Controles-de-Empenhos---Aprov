@@ -106,3 +106,32 @@ O workflow `InfinitePay Adapter Unit Tests` roda essas suites com dados e chaves
 ### Estado garantido
 
 **Sem endpoints públicos, sem valores reais, sem credenciais, sem gravações em Firestore, sem deploy e sem criação de links operacionais.** O projeto não transforma uma assinatura SaaS em treinamento por alterar o texto fiscal ou um módulo educacional.
+
+## 7. Escalonamento INDIVIDUAL de novos assinantes (25/10/2026)
+
+**Decisão de produto:** cada cliente NOVO inicia no menor valor na primeira competência faturável **depois do trial**; o preço progride conforme a idade da assinatura de cada workspace, não conforme o calendário global de marketing.
+
+| Competências faturáveis desde a entrada | Valor da competência |
+|---|---:|
+| 1–3 | R$ 29,90 |
+| 4–6 | R$ 39,90 |
+| 7–9 | R$ 49,90 |
+| 10–12 | R$ 59,90 |
+| 13 em diante | R$ 69,90 |
+
+- Exemplo: primeiro mês faturável 2027-01 -> 2027-01/02/03 R$29,90; 2027-04/05/06 R$39,90; 2027-07/08/09 R$49,90; 2027-10/11/12 R$59,90; a partir de 2028-01 R$69,90.
+- O trial de 30 dias continua gratuito; a primeira competência faturável deve ser determinada **após** o fim do trial pelo motor de servidor.
+- A progressão é por **competências do contrato** (meses calendários sucessivos desde a primeira cobrança) e **não** pelo número de pagamentos efetivamente liquidados; inadimplência não reinicia o desconto.
+- A tabela completa precisa ser apresentada e aceita **antes da contratação**, com datas relativas claras e a forma contratual de cada aumento. Mudanças posteriores nas faixas demandam uma nova versão de política e tratamento contratual; **não editar retroativamente** a política `emprovex_individual_ramp_v1`.
+- Novos clientes são explicitamente inscritos (`pricingPolicyId`, `firstPaidReferenceMonth`, `pricingTermsAcceptedAt`); contas legadas sem política continuam sob R$70 no adaptador atual, sem migração automática.
+- Isentos, founder, VIP e workspaces com ciclos anteriores não se inscrevem automaticamente.
+- O valor de cada `billingCycles.amountCents` é materializado no momento da emissão e não muda por movimento de faixa, data, mudança de preço de catálogo ou replay de webhook.
+- O checkout da InfinitePay é gerado a partir do valor materializado da competência e só prossegue se coincidir com a faixa contratada.
+- Esta política não transforma a modalidade `Checkout Integrado` em assinatura recorrente com débito automático; cada checkout criado é de pagamento único.
+
+**Implementação offline:**
+- `lib/server/payments/emprovexRampPricing.mjs`: tabela versionada, projeção de inscrição com aceite, cálculo e validação da competência.
+- `lib/server/payments/infinitepayBillingBridge.mjs`: rejeita cobranças incompatíveis com o escalonamento e conserva o tratamento dos contratos legados.
+- `scripts/infinitepay-ramp-pricing.test.mjs`: cobre limites das faixas, mudanças de ano, clientes com datas de início distintas, termo de aceite, VIPs, preço histórico, checkout e validação de liquidação.
+
+**NO-GO adicional para produção:** o domínio legando `lib/billing.ts`, `lib/platformBillingStore.ts`, o painel e as Firestore Rules ainda têm valores fixos (R$70) e migrações automáticas; é necessário implementar um gerador transacional de competências por política e um modelo de contrato/aceite no servidor, ajustar as rules/testes e certificar com Firestore Emulator. O código nesta branch **não altera o faturamento real de novos clientes**. Não fazer rollout até esse bloqueio ser resolvido e até validação comercial/legal.
