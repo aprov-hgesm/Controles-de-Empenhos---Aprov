@@ -114,6 +114,7 @@ export function BillingPortalShell({
                     id={`billing-tab-${tab.id}`}
                     type="button"
                     role="tab"
+                    disabled={!hydrated}
                     tabIndex={selected ? 0 : -1}
                     aria-selected={selected}
                     aria-controls="billing-active-panel"
