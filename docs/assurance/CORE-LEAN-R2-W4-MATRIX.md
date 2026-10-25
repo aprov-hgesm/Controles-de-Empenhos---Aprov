@@ -1,126 +1,104 @@
-# EMPROVEX CORE LEAN R2 — W4 Independent Assurance
+# CORE LEAN R2 — Worker 4 independent assurance and certification matrix
 
-**Owner:** Worker 4 (domain/adversarial tests only).  
-**Isolation:** branch test/core-lean-r2-w4-assurance; Firebase Auth + Firestore named database emulators; demo project only.  
-**Production:** no deploy, no merge, no production Rules changes, no live credentials.  
-**Gate:** FAIL remains FAIL. A workflow definition, static review, or pending run is NOT certification.
+**Technical verdict: NO-GO for full integration** until the exact final composition is certified, including AuthZ #370, CI selection and remaining external paths. All runs below are from disposable Firebase Auth / Firestore Emulators or pure domain tests; no real workspaces, Rules production, merges or deploys were touched.
 
-## Execution (Auth + Firestore)
+## Independent v3 technical GO on exact composite SHA
 
-The separate workflow .github/workflows/core-lean-r2-w4-assurance.yml is triggered even
-for a **draft** PR, independently of Application CI's draft skip.
+At composite **b401f935165de756b8f8b7ac3b5a16461b23c577** (PR #379), GitHub Actions [run 40158808874](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808874) completed **SUCCESS** on W4 independent v3 Auth+Firestore with **17 named adversarial scenarios PASS**, including the previously failing canonical barcode item and its exact movement/consumption/manifest provenance, 1-unit race between different IDs, v2-on-v3 ID rejection, inactive material and location without writes, missing movements, missing consumptions and altered manifest. The same run includes **5/5 W1 v3 contract, 14/14 W3 fiscal opt-in, 5/5 W4 independent fiscal** tests. **No v3 engine FAIL remains in those 17 executed scenarios.** This technical GO is strictly scope/SHA-bound, not a release GO.
 
-1. npm ci
-2. npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts
-3. NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts"
+Other exact-composition checks: [Fast CI run 40158808855](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808855) **PASS**, Core Protection and Recovery PASS. Historical W4 v2 Auth+Firestore **PASS** in [run 40158808820](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808820) at **the identical SHA b401f935**: historical v1 six recovery cut points, v2 immutable hash 4 tests, W4 15 adversarial scenarios including rejection of a false FINALIZED header. Therefore **Warehouse v2 and v3 both have technical GO on the exact tested composition**.
 
-The emulator executable fails closed if the hosts/project differ from its
-isolated test topology.
+**Global CORE LEAN R2 stays NO-GO** because PR #370 AuthZ central policy is 16/17 FAIL (missing WITHDRAWAL_FINALIZE_MOBILE allowlist), the migration still has unmigrated client paths, W2 needs to compose the independent v3/finance tests into final CI selectors, and the coordinator must certify and approve the official final composition. An in-scope Warehouse PASS must not be reported as final release certification.
 
-## Traceability matrix (test definitions; NOT pass/fail results)
+## Frozen evidence: immutable versions, no inherited PASS
 
-| Property / risk | Executable scenario | Expected assurance | Status before GitHub Actions |
-| --- | --- | --- | --- |
-| Stable command v2 signature | W4 contract pinned SHA-256 vector | preserve historic v2 hash | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Deterministic movement identity | W4 contract distinct line/workspace | same key = same ID | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Multiline same material/location/expiry | W4 emulator multi | exact movements, consumptions, totals | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Insufficient last line | W4 emulator lastLineFails | rollback; no stray documents | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Fault at line 2 | W4 emulator fault | full rollback | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Confirmed exact replay | W4 emulator multi | no new debit | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Divergent replay | W4 mutated quantity | reject, no stock drift | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| HTTP answer lost after commit | W4 emulator afterCommit | recover without second debit | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Same command concurrent | W4 emulator sameId | one logical debit | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Different commands competing | W4 contenderA / contenderB | one debit, never negative | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Null reference bypass | W4 emulator nullBypass | cannot debit attributed stock | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Expired expiry reference | W4 emulator expired | reject without writes | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Access from Firebase Auth token | W4 signed emulator credential | UID/UG/workspace derived from session | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Forged or missing bearer token | W4 verifyWarehouseRequest | deny | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Wrong UG/material/path | W4 adversarial inputs | deny without effects | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| Duplicate lines and line ceiling | W4 repeatedLines / overflow | reject | 15 scenarios plus 4 contract tests executed PASS where applicable; see evidence section |
-| v2 fabricated FINALIZED | W4 forged negative control | reject without ledger records | **FAIL reproduced** in GitHub Actions run 40135063573 |
-| Historical v1 interrupted writes | Existing manual-entry emulator | six recovery cut points | Executed PASS in W4 GitHub Actions historical baseline |
-| Historical phantom FINALIZED | Existing emulator + legacy audit | safe block, read-only findings | Prior coverage; W4 re-run pending |
-| Mutable material/destination labels | Further W4 scenario | confirmed replay survives label changes | Pending |
-| Multiple expiry records/conversion | Existing domain tests | totals and tracking retained | Two expiry / conversion E2E scenarios PASS |
-| v3 identity + v2 migration | Worker 1 contract not yet received | explicit version pin, no silent hash rewrite | BLOCKED |
-| NF, NS and NE concurrent operations | Worker 3 owns service | scope-specific identity, locks, dependencies | BLOCKED |
-| PR #370 authorization | PR #370 remains Draft on another base | provider, UID, suspension, unknown command | BLOCKED |
-| Fast CI mutation negatives | Worker 2 owns CI selector | syntax, contracts, auth, isolation and unclassified file | PENDING |
+| Source | SHA | Role |
+| --- | --- | --- |
+| main at initial analysis | afe163139089a1af8ffc81804464429d4d0f9528 | unchanged |
+| W1 Warehouse source, first cross-cert | 58388a78cdab810db676a6f9d93d4dc677389b9b | PR #375, v2 replay integrity fix |
+| W3 first opt-in fiscal identity contract | 939b8cb5a88ab6bcc0b43cb02f4d85d08d21a3db | PR #373 |
+| W4 first cross-cert scripts | 1a31b88f30f47344ab4c9f005ac1254282a2cb98 | PR #374 |
+| First composition | ef71fd75809e33bafc011634f66c5cb1117f668f | disposable PR #376 |
+| v3 forensic follow-up composition | f1a2ecbb67491937ad9f4d602ee669db66f3c3af | PR #376; barcode negative |
+| W3 strengthened fiscal PDF attestation | 64bd70072def5b0898ffbe57d969476ab630ad37 | PDF is unattested without server-proven document + storage identity |
+| W1 barcode source fix and strict fixture correction | 7a271c51f86f83a58a6b5cf149cf5e3ed8bf57fe | PR #375, source tree overlaid in PR #379 |
+| W4 AuthZ scripts | 316b5c92340483374ebcf449809ffd04c6c14f29 | pure additional policy tests |
+| AuthZ engine | bc4b6592d1442dead22dd01886e165cacbcbd031 | PR #370 |
+| AuthZ forensic composition | 226bd6238ce9c360e7f5e2ae5fb67f1435dc216e | PR #378 |
+| W2 CI selector and negative mutation run | eda0c651b67650b25c6bd7249a497f200320347e | PR #372 |
+| W1/W3/W4 corrected barcode and PDF test composition | cb32935fafbc5c22420ee8be4f167fa4cfd31f2b | PR #379 prior to inactive-location fixture fix |
+| W4 updated v3 fixture (Emulator owner REST only) | 684276ac1b98cafc4c0ee32b8f3987e287f00442 | PR #374 W4 code |
+| Latest isolated corrected composite at report writing | b401f935165de756b8f8b7ac3b5a16461b23c577 | PR #379, W1 source 7a271c5, W3 64bd700, W4 latest tests, status must be verified separately |
 
-## Evidence from GitHub Actions — 2026-10-24
+A run PASS is valid **only for its recorded SHA**. Newer Worker 1 commits may include unrelated script changes; final integration requires running these suites again.
 
-**Tested revision:** `5fd02a4430faf76c1922447d3600ccef3417d29e`.
-**Workflow:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40135063573
+## Executed PASS / FAIL
 
-| Gate | Actual result |
+| Property / domain | Result, exact provenance | Run |
+| --- | --- | --- |
+| W4 original v2 forged FINALIZED previously accepted | **FIX REVALIDATED PASS**: replay now rejects missing ledger evidence; 15 W4 v2 cases PASS including rollback, idempotency, concurrent same/different identities, post-commit response loss and no residual writes; SHA ef71fd7 | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157472250 |
+| Historical v1 interrupted withdrawals | **PASS** including six cut points, orphan finalized and read-only reconciliation; SHA ef71fd7 | same run 40157472250 |
+| v2 hash pinned and deterministic movement IDs | **4/4 PASS**; SHA ef71fd7 | same run 40157472250 |
+| Fast CI + Core Protection in initial W1 composite | **PASS**, SHA ef71fd7 | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157472228 |
+| W1 v3 command parser/hash/split contract | **5/5 PASS**, SHA ef71fd7 | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157472308 |
+| W3 initial identity tests | **10/10 PASS**, W3 939b8cb and composition ef71fd7 | same run 40157472308 |
+| W4 independent fiscal tests on initial W3 | **5/5 PASS**, W3 939b8cb and composition ef71fd7 | same run 40157472308 |
+| W3 strengthened identity tests | **14/14 PASS** in W3 64bd700 / composite 3991d08 | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158391177 |
+| W4 v3 before barcode correction | **14 named behavioral scenarios PASS**, **barcode item FAIL**; W1 58388a7, composition f1a2ecb. Missing movement, missing consumption, corrupted effectManifestHash all correctly rejected without re-debit. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157990902 |
+| W4 v3 after barcode correction | Barcode movement/consumption/manifest **PASS**, true one-unit contention **PASS**, v2-on-v3 ID **PASS**; run then stopped on W4 fixture trying direct SDK local-state write, correctly denied by server-only Rules. Composition cb32935f. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158609313 |
+| W4 newer fiscal PDF case | Initial test expected legacy verified but W3 requires server attestation. W4 test corrected to assert unattested without trusted keys and verified ONLY with server-known documentId+objectKey; renewed execution at cb32935f **5/5 PASS**. | 40158609313 |
+| W4 signed AuthZ negative controls | **4/4 PASS**, PR370 bc4b659 | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158064082 |
+| PR370 existing AuthZ policy suite | **16/17 PASS, 1 FAIL**: WITHDRAWAL_FINALIZE_MOBILE in dispatcher but not allowlist; fix belongs to PR370 | same run 40158064082 |
+| Signed Firebase Auth + Firestore authorization | **PASS**: active, suspended, provider mismatch, UID forgeries, tenant, UG, authorship, unknown ledger, core endpoints; PR370 bc4b659 | same run 40158064082 |
+| Server-only Firestore Rules on emulator | **PASS** direct client writes forbidden, cross-workspace reads forbidden; PR370 bc4b659 | same run 40158064082 |
+| Worker 2 controlled CI mutations and conservative selector | **11 mutation tests PASS** in W2 eda0c65 Fast CI; including syntax failure, auth, idempotency, tenant, finance, new unclassified file fallback. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157862322 |
+| W2 Domain & Application on uncomposed main | Warehouse **FAIL** legitimately detects unpatched v2 replay in its old baseline; other selected domains PASS. Not evidence against updated W1. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157502115 |
+| Same-SHA W4 v2 and historical recovery at b401f935 | **PASS:** 4 v2 contracts, 15 W4 adversarial Warehouse scenarios and six legacy interruption recovery cut points; evidence and headers checked, no duplication. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808820 |
+| Corrected W1/W3/W4 composite after Emulator admin-fixture fix | **17/17 W4 v3 adversarial PASS** plus **5 W1 v3 + 14 W3 financial + 5 W4 financial PASS**, SHA b401f935. Exact same-SHA v2 and v1 also PASS. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808874 |
+
+Counts of PASS messages are not counts of individual assertions. A skipped Application CI on a DRAFT PR is SKIPPED, never PASS.
+
+## Behavioral coverage versus gap
+
+| Invariant | Coverage |
 | --- | --- |
-| Fast CI | **PASS** — https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40135063572 |
-| Core Protection | **PASS** — https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40135063578 |
-| Application CI | **SKIPPED** (DRAFT); NOT PASS |
-| Stable v2 public identity contract | **4/4 PASS** |
-| Existing authenticated v1/v2 integration suite | **PASS**; six historical interruption cut-points recovered; forged legacy FINALIZED rejected |
-| W4 isolated authenticated adversarial cases | **15 PASS**; two expiries + presentation conversion and inactive validity included |
-| W4 fabricated v2 FINALIZED without committed ledger | **FAIL CONFIRMED**, final negative assertion (expected rejection not thrown) |
-| Overall assurance | **NO-GO**; a legitimate integrity regression is reproducible |
+| v1/v2 immutable historical hash/replay, success and negative control | W4 v2 audited actual persisted balance, location, movements, consumptions, historical six fault injection points; PASS on W1 58388a7 |
+| v3 minimal normalized intent, hash and deterministic splits, v2/v3 isolation | W4 black-box v3, W1 parser contract; PASS in prior runs |
+| v3 atomic multiline across expiries, attributed plus untracked, idempotency & response-loss | Passed and compared exact persisted quantities plus manifest, ledger, session actor |
+| v3 corruption detection | Missing movement, missing consumption, incorrect effectManifestHash individually rejected; PASS no second debit |
+| v3 real barcode item | Initially reproducible domain FAIL; after W1 fix barcode movement/consumption/manifest PASS at cb32935f. Re-run at b401f935 pending |
+| v3 presentation | Original operator request 1 box with base 2 KG preserved as separate documentary fields, PASS |
+| v3 same ID/different ID concurrency | PASS; includes fresh material one unit for two concurrent different commands |
+| v3 forged actor, UG, workspace, identity, no residual writes | Signed session identity on W4 emulator; foreign material and UG reject |
+| v3 inactive material and location | New W4 cases seeded via isolated administrative emulator API; must re-execute after fixture correction |
+| v3 transaction upper bound | >40 command lines fail closed; true 450-document boundary NOT TESTED |
+| Mobile location barcode | UI route/scanner integration NOT independently browser-tested; item barcode E2E server only |
+| PDF output after conversion | Document metadata checked, PDF renderer NOT E2E tested |
+| Financial fiscal identity and PDF attestation | W3 opt-in 14 tests and W4 5 independent assertions; actual transactional NF/NS writers/locks NOT migrated/certified |
+| AuthZ migration | PR370 implemented routes signed-token E2E PASS; old/unmigrated client paths are NOT certified as server-only |
+| CI selector | W2 11 mutations PASS; W2 planner at eda0c65 did not yet explicitly select new W4 v3 / independent finance tests, integration ownership W2 |
 
-**Note on counting:** 15 W4 named PASS messages include multiple assertions
-each; they are independent test scenarios, not total assertions. The v1/v2
-integration suite has many additional PASS messages not included in the 15.
-Do not aggregate counters from distinct frameworks into an invented test total.
+## Defects / owner / exact recovery contract
 
-**Updated cross-worker dependencies (still NO-GO):**
-- Worker 1 PR #375 is now open DRAFT with the v3 intent/version contract; review identified
-  analogous header-only v3 replay acceptance and potential loss of conversion/barcode
-  provenance. Findings communicated on PR #375; **no v3 authenticated Emulator execution
-  has been completed by W4**, and no v3 PASS is asserted.
-- Worker 3 PR #373 introduced an opt-in financial identity v2 contract, but financial
-  writers, transaction locks and Auth Emulator tests are not integrated;
-  **no financial operational certification**.
-- Worker 2 PR #372 is DRAFT. W4 notified W2 to demonstrate selector
-  classification and controlled mutations (authorization, idempotency,
-  isolation, financial uniqueness, syntax). These **negative selector tests
-  remain to be proven**.
-- PR #370 remains DRAFT. No combined authenticated authorization
-  certification or production Rules change is included in W4.
+**Worker 1, PR #375:** v2 false finalized header FIXED and independently PASS; v3 barcode originally FAILED movement validation because source was tagged MANUAL_SEARCH with a canonical barcodeId. Corrected barcode v3 PASS at exact composite cb32935f. W1 added TS test fixture guards in 7a271c5 to fix four TS18047 errors observed on 3991d08 Fast CI. Latest W4 composite b401f935 PASS: inactive location/material, v2/v3 distinction, conversion, contention, corrupted manifest and full historical recovery. Do not relax movement validator or silent replay.
 
-**Engine ownership:** the confirmed v2 replay integrity failure belongs to
-Worker 1. W4 preserves the red negative test. Closing this issue must
-retain atomicity, idempotency and all legacy compatibility evidence.
+**AuthZ owner PR #370:** existing policy test fails on missing WITHDRAWAL_FINALIZE_MOBILE operation central positive list. W4 documented reproduction on PR370 and did not touch its engine or rules. Must reconcile Mobile Trust with central authorized command semantics; then re-run Auth Emulator and client Rules test. Additional unmigrated routes remain NO-GO.
 
-## Independent finding to reproduce in emulator
+**Worker 2 PR #372:** mutation selector test PASS, but W4 new v3 signed Auth+Firestore and W4 independent financial suite should enter the right domain selection when material/ledger/financial identities change. No CI workflow was altered by W4 in W2 PR. Release gates must be checked in final integration.
 
-The current finalizeWarehouseWithdrawalAtomicServer v2 replay path checks
-the saved header fields, including status, atomicVersion, hash, and line
-counts, but does not appear to audit corresponding movement/consumption
-documents before returning success. A fabricated or damaged FINALIZED
-header **without committed ledger evidence must not be considered success**.
+**Worker 3 PR #373:** fiscal identity module is opt-in and read-only; no persisted IDs changed. New document+storage attestation requires trusted server-known keys; W4 now explicitly verifies that untrusted metadata cannot be classified verified.
 
-The forged adversarial fixture writes ONLY a synthetic header in the
-isolated emulator (admin REST endpoint) and expects the real server
-function to reject reconciliation. A failed assertion is an **integrity
-FAIL**, not a test defect to suppress. Fix owner: Worker 1 / warehouse
-withdrawal engine. W4 must not patch or bypass this motor.
+## Run commands
 
-A safe remedy cannot re-debit a command simply because ledger evidence
-is missing. Preserve identity and require proven repair/intervention.
+- W4 v2 + historical: npm ci; NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts && npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts"
+- W4 v3: NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-v3-emulator.mjs"
+- W3 plus W4 financial: node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs scripts/core-lean-r2-w4-financial.test.mjs
+- Auth policy: node --test scripts/core-lean-r2-w4-authz.test.mjs && npm run test:server-authorization
+- Auth Emulator: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/server-authorization-emulator.ts"
+- Warehouse Rules Emulator: npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-server-only-rules.test.mjs"
 
-## Worker 2 negative mutation obligations
+Only run scripts against their own isolated matching branch/composition; v3 server module and W3 financial module do not exist in the uncomposed main.
 
-Use throwaway checkouts and demonstrate that each of these fails:
-- SyntaxError in affected executable.
-- Violation of NF/NS/NE uniqueness.
-- Missing Warehouse authorization.
-- Non-idempotent command replay.
-- Cross-workspace data access.
-- Unclassified newly introduced file under the fast selector.
+## Gate
 
-Revert each mutation afterwards. A selector based on filenames only,
-with no safe fallback, is insufficient. Integrate W4 behavior tests
-without rewriting Worker 2's workflow from this branch.
-
-## Evidence protocol
-
-Record PR commit SHA, GitHub Actions run URL, conclusion, executed test count
-and reproducibility command. Never claim PASS from source review alone.
-Legacy Application CI and Warehouse Smoke may skip drafts; W4 workflow
-must still run for draft branches.
+**NO-GO for final composition as of this report.** Release remains blocked until current exact SHA has complete green independent Auth+Firestore Warehouse v2/v3, central AuthZ policy, approved financial contracts, CI mutation/selector, final full release gates, and no unaddressed critical findings. The Coordinator alone manages official composition and promotion.
