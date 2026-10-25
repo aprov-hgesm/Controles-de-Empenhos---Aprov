@@ -46,6 +46,14 @@ test('financial and shared identity paths cannot escape financial tests', () => 
   has(p, 'finance');
   has(p, 'auth');
 });
+test('Warehouse authentication and API entry points also select institutional authorization', () => {
+  for (const path of ['lib/server/warehouseAccess.ts', 'lib/server/warehouseMobileTrust.mjs', 'app/api/central-depositos/operations/route.ts']) {
+    const plan = classifyChanges([path]);
+    has(plan, 'auth');
+    has(plan, 'warehouse');
+    assert.ok(plan.scripts.includes('verify:emprovex-warehouse-isolation'));
+  }
+});
 test('auth/login and legal changes select their protection suites', () => {
   has(classifyChanges(['app/api/auth/session/route.ts']), 'auth');
   has(classifyChanges(['lib/legalAcceptance.ts']), 'legal');

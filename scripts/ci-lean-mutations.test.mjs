@@ -74,7 +74,7 @@ test('mutation 7: new unknown code expands to all domains',()=>{
   assert.deepEqual(classifyChanges(['new-module/new-command.ts']).domains,DOMAINS);
 });
 test('mutation 8: critical renamed into docs retains security selection',()=>{
-  const files=parseGitNameStatusZ('R100\\0lib/server/warehouseAccess.ts\\0docs/warehouseAccess.md\\0'.replaceAll('\\0','\\0'));
+  const files=parseGitNameStatusZ(['R100','lib/server/warehouseAccess.ts','docs/warehouseAccess.md',''].join(String.fromCharCode(0)));
   const plan=classifyChanges(files);
   assert.ok(plan.domains.includes('warehouse'));
   assert.ok(plan.domains.includes('auth'));

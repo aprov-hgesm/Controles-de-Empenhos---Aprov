@@ -50,6 +50,7 @@ function tags(path) {
   if (/^(?:features\/warehouse\/mobile\/|app\/operador-movel\/|lib\/warehouse\/mobile|scripts\/(?:mobile|verify-mobile))/.test(p))
     domains.add('warehouse');
   if (/^(?:features\/warehouse\/.*(?:Isometric|3D|Croqui|DepotLayout)|app\/visual-lab\/)/i.test(p)) domains.add('visual');
+  if (/^lib\/server\/warehouse(?:Access|Request|MobileTrust)/.test(p) || /^app\/api\/central-depositos\/operations\/route\.ts$/.test(p)) domains.add('auth');
   if (/^scripts\/core-lean-r2-w4-(?:assurance-emulator|contract\.test)\.ts$/.test(p)) domains.add('warehouse');
   if (/^scripts\/.*\.(?:test\.)?mjs$/.test(p) && !domains.size)
     return { domains: [...DOMAINS], reason: 'unmapped executable test/guard' };
