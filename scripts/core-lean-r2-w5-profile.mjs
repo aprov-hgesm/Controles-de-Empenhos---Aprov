@@ -129,9 +129,38 @@ function encode(value) {
   return {mapValue:{fields:Object.fromEntries(Object.entries(value).map(([k,v])=>[k,encode(v)]))}};
 }
 const fields = record => Object.fromEntries(Object.entries(record).map(([k,v])=>[k,encode(v)]));
-function parseStream(value) {
+export function parseStream(value) {
   const s = value.trim();
-  return s ? (s.startsWith('[') ? JSON.parse(s) : s.split(/\r?\n/).map(JSON.parse)) : [];
+  if (!s) return [];
+  // Emulator responses can contain one pretty-printed object, an array,
+  // or a sequence of objects separated by newlines. Do not split within JSON.
+  if (s.startsWith('[')) {
+    const rows = JSON.parse(s);
+    if (!Array.isArray(rows)) throw new Error('W5_RPC_RESPONSE_INVALID');
+    return rows;
+  }
+  try { return [JSON.parse(s)]; } catch { /* possibly concatenated JSON objects */ }
+  const rows = [];
+  let start = -1, depth = 0, quoted = false, escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') quoted = false;
+      continue;
+    }
+    if (ch === '"') { quoted = true; continue; }
+    if (ch === '{') { if (depth++ === 0) start = i; continue; }
+    if (ch === '}') {
+      if (--depth < 0 || start < 0) throw new Error('W5_RPC_RESPONSE_INVALID');
+      if (depth === 0) { rows.push(JSON.parse(s.slice(start, i + 1))); start = -1; }
+      continue;
+    }
+    if (depth === 0 && !/\s/.test(ch)) throw new Error('W5_RPC_RESPONSE_INVALID');
+  }
+  if (depth !== 0 || quoted || !rows.length) throw new Error('W5_RPC_RESPONSE_INVALID');
+  return rows;
 }
 export function describeRPCs(events) {
   return events.reduce((r,e) => {
