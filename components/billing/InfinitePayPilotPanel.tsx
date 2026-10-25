@@ -88,7 +88,7 @@ export function InfinitePayPilotPanel({
     const marker = [returnParams.orderNsu, returnParams.transactionNsu, returnParams.slug].join('|');
     if (verifiedKeyRef.current === marker) return;
     verifiedKeyRef.current = marker;
-    void authenticatedPortalFetch('/api/billing/pilot-verify', {
+    void authenticatedPortalFetch('/api/billing/portal?action=verify-pilot', {
       body: {
         orderNsu: returnParams.orderNsu,
         transactionNsu: returnParams.transactionNsu,
@@ -109,7 +109,7 @@ export function InfinitePayPilotPanel({
     setBusy(true);
     setError('');
     try {
-      const result = await authenticatedPortalFetch('/api/billing/pilot-checkout', {
+      const result = await authenticatedPortalFetch('/api/billing/portal?action=create-pilot', {
         body: { confirmRealPix: true, amountCents: 100 },
       }) as CheckoutInfo;
       const url = new URL(result.checkoutUrl);
