@@ -132,35 +132,35 @@ export function InfinitePayPilotPanel({
   return (
     <>
       {history && (
-        <section data-testid="billing-cycle-history" className="mt-4 rounded-2xl border border-white/10 bg-slate-950/25 p-5">
+        <section id="historico-financeiro" data-testid="billing-cycle-history" className="scroll-mt-24 mt-5 rounded-2xl border border-[#e2e8f1] bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-black text-white">Histórico de competências</h3>
-            <span className="text-[10px] text-slate-400">Até 24 registros materializados</span>
+            <h3 className="text-sm font-black text-slate-900">Histórico de competências</h3>
+            <span className="text-[10px] text-slate-500">Até 24 registros materializados</span>
           </div>
           {!history.available ? (
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-slate-500">
               O histórico financeiro não está disponível neste ambiente. Isso não altera a situação da sua conta.
             </p>
           ) : history.cycles.length === 0 ? (
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-slate-500">
               Nenhuma competência faturável para apresentar neste histórico.
             </p>
           ) : (
             <div className="mt-4 space-y-2">
               {history.cycles.map((cycle) => (
                 <div key={cycle.referenceMonth}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-[#f9fbfd] px-4 py-3">
                   <div>
-                    <p className="text-xs font-bold text-white">{cycle.referenceMonth}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs font-bold text-slate-900">{cycle.referenceMonth}</p>
+                    <p className="text-[11px] text-slate-500">
                       {cycle.dueDate ? 'Vencimento: ' + cycle.dueDate.split('-').reverse().join('/') : 'Vencimento não definido'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-white">
+                    <p className="text-sm font-black text-slate-900">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cycle.amountCents / 100)}
                     </p>
-                    <span className="text-[10px] font-semibold text-slate-300">
+                    <span className="text-[10px] font-semibold text-slate-600">
                       {cycle.status === 'paid' ? 'Pago' : cycle.status === 'waived' ? 'Dispensado' : 'Pendente'}
                     </span>
                   </div>
@@ -174,12 +174,12 @@ export function InfinitePayPilotPanel({
         </section>
       )}
       {available && (
-    <section data-testid="infinitepay-real-pilot" className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/[0.07] p-5">
-      <div className="flex items-center gap-2 text-amber-100">
+    <section data-testid="infinitepay-real-pilot" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+      <div className="flex items-center gap-2 text-amber-900">
         <ShieldCheck className="h-5 w-5" aria-hidden />
         <h3 className="text-sm font-black">Laboratório de Pix real · conta autorizada</h3>
       </div>
-      <p className="mt-2 text-xs leading-relaxed text-slate-300">
+      <p className="mt-2 text-xs leading-relaxed text-slate-600">
         Teste técnico opcional de <strong>R$ 1,00</strong> pelo checkout oficial InfinitePay.
         É um pagamento verdadeiro, sujeito às condições do provedor, mas <strong>não é mensalidade</strong>,
         não remove isenções e não altera sua assinatura. Não repita o pagamento de um pedido já pago.
@@ -212,9 +212,9 @@ export function InfinitePayPilotPanel({
       )}
 
       {checkout && (
-        <div data-testid="infinitepay-pilot-link-ready" className="mt-4 rounded-xl border border-amber-100/15 bg-slate-950/40 p-4">
-          <p className="text-xs font-bold text-amber-100">Link criado para o teste de R$ 1,00</p>
-          <p className="mt-1 text-xs text-slate-300">Confira o favorecido e o valor no checkout. Não pague duas vezes.</p>
+        <div data-testid="infinitepay-pilot-link-ready" className="mt-4 rounded-xl border border-amber-200 bg-white p-4">
+          <p className="text-xs font-bold text-amber-900">Link criado para o teste de R$ 1,00</p>
+          <p className="mt-1 text-xs text-slate-600">Confira o favorecido e o valor no checkout. Não pague duas vezes.</p>
           <a href={checkout.checkoutUrl} target="_blank" rel="noopener noreferrer"
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-300 px-4 py-3 text-xs font-black text-slate-900"
             data-testid="infinitepay-pilot-open">
@@ -224,13 +224,13 @@ export function InfinitePayPilotPanel({
       )}
 
       {verify?.verified && (
-        <div role="status" data-testid="infinitepay-pilot-verified" className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200/25 bg-emerald-400/[0.12] p-3 text-xs font-bold text-emerald-100">
+        <div role="status" data-testid="infinitepay-pilot-verified" className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">
           <CheckCheck className="h-5 w-5 shrink-0" aria-hidden />
           Pix técnico confirmado pela API da InfinitePay. Sua assinatura não foi alterada.
         </div>
       )}
       {error && (
-        <div role="status" className="mt-4 flex items-start gap-2 text-xs text-amber-100">
+        <div role="status" className="mt-4 flex items-start gap-2 text-xs text-amber-900">
           <CircleAlert className="h-4 w-4 shrink-0" /> {error}
         </div>
       )}
