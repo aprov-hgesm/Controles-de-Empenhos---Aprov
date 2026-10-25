@@ -31,6 +31,9 @@ test('desktop: opens regularization without React DOM removal crashes', async ({
   await expect(page.getByTestId('infinitepay-regularization-panel')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Minha assinatura e pagamentos' })).toBeVisible();
   await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  await expect(page.getByTestId('manual-payment-options-toggle')).toBeVisible();
+  await expect(page.getByText('Preço de referência legado')).toHaveCount(0);
+  await page.getByTestId('manual-payment-options-toggle').click();
   await expect(page.getByText('Preço de referência legado')).toBeVisible();
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('infinitepay-regularization-panel')).toBeVisible();
@@ -57,5 +60,31 @@ test('mobile: payment preview is usable and read-only', async ({ page }) => {
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('infinitepay-regularization-panel')).toBeVisible();
   await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  expect(crashes).toEqual([]);
+});
+
+test('unavailable legacy API does not block My Subscription and is only checked on demand', async ({ page }) => {
+  const crashes = [];
+  let legacyQueries = 0;
+  page.on('pageerror', (error) => crashes.push(error.message));
+  await page.route('**/api/billing/regularization', async (route) => {
+    legacyQueries += 1;
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 'REGULARIZATION_CONFIG_UNAVAILABLE',
+        message: 'As instruções de regularização estão temporariamente indisponíveis.',
+      }),
+    });
+  });
+  await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('infinitepay-regularization-panel')).toBeVisible();
+  await expect(page.getByTestId('manual-payment-options-toggle')).toBeVisible();
+  expect(legacyQueries, 'legacy API must not be called on page entry').toBe(0);
+  await page.getByTestId('manual-payment-options-toggle').click();
+  await expect(page.getByTestId('manual-payment-config-unavailable')).toBeVisible();
+  await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  expect(legacyQueries, 'legacy API is called only on user request').toBe(1);
   expect(crashes).toEqual([]);
 });
