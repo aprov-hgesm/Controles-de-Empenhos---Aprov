@@ -374,13 +374,13 @@ async function run(){
     assert.equal(item.operatorUid,access.uid);
     assert.equal(item.presentationLabel,presentation.label);
   }
-  assert.equal(dMove.source.barcodeId,desktopBarcode.id);
+  assert.equal(dMove?.source.barcodeId,desktopBarcode.id);
   assert.equal(vMove.source.barcodeId,mobileBarcode.id);
-  assert.equal(dMove.source.interface,'BARCODE_SCANNER');
+  assert.equal(dMove?.source.interface,'BARCODE_SCANNER');
   assert.equal(vMove.source.interface,'BARCODE_SCANNER');
-  assert.equal(dConsume.barcode,desktopBarcode.barcode);
+  assert.equal(dConsume?.barcode,desktopBarcode.barcode);
   assert.equal(vConsume.barcode,mobileBarcode.barcode);
-  assert.equal(vEvidence.header.effectManifest.lines[0].factorToBaseUnit,12);
+  assert.equal(vEvidence.header?.effectManifest?.lines?.[0]?.factorToBaseUnit,12);
   assert.equal((await finalizeWarehouseWithdrawalServer(access,desktopCommand)).movementIds.length,0);
   assert.equal((await finalizeWarehouseWithdrawalV3Server(access,mobileCommand)).movementIds.length,0);
   pass('Desktop v2 e Mobile v3: saldos, movimentos, consumos, apresentação, barcode, autoria e destino equivalentes');
