@@ -32,6 +32,9 @@ const ENROLLED = {
   monthlyPriceCents: 2990,
 };
 const checkoutForMonth = (referenceMonth, amountCents, account = ENROLLED) => {
+  const [year, month] = referenceMonth.split('-').map(Number);
+  const precedingMonth = new Date(Date.UTC(year, month - 2, 25, 15)).toISOString();
+  const expiresInBilledMonth = new Date(Date.UTC(year, month - 1, 15, 22)).toISOString();
   const cycle = {
     ...CYCLE,
     referenceMonth,
@@ -43,7 +46,7 @@ const checkoutForMonth = (referenceMonth, amountCents, account = ENROLLED) => {
     orderIdSecret: 'fake-only-price-progression-secret-0000000000',
     redirectUrl: 'https://emprovex.com.br/regularizacao',
     webhookUrl: 'https://emprovex.com.br/api/payments/infinitepay/webhook',
-    now: NOW, validUntil: '2027-01-02T23:00:00Z',
+    now: precedingMonth, validUntil: expiresInBilledMonth,
   });
   return { cycle, result };
 };
@@ -157,6 +160,22 @@ test('invoice with wrong price or policy lacking signed price table cannot pass 
   assert.equal(checkoutForMonth('2027-01', 2990, { ...ENROLLED, pricingTermsAcceptedAt: '' }).result.code,
     'PRICE_SCHEDULE_NOT_ACCEPTED');
   assert.equal(checkoutForMonth('2026-12', 2990).result.code, 'BEFORE_FIRST_PAID_MONTH');
+});
+
+test('checkout must remain valid until the billing month begins', () => {
+  const first = checkoutForMonth('2027-04', 3990);
+  const invalid = prepareWorkspaceCheckout({
+    authorized: true,
+    account: ENROLLED,
+    cycle: first.cycle,
+    config: CONFIG,
+    orderIdSecret: 'fake-only-price-progression-secret-0000000000',
+    redirectUrl: 'https://emprovex.com.br/regularizacao',
+    webhookUrl: 'https://emprovex.com.br/api/payments/infinitepay/webhook',
+    now: '2027-03-20T10:00:00Z',
+    validUntil: '2027-03-30T22:00:00Z',
+  });
+  assert.equal(invalid.code, 'CHECKOUT_EXPIRES_BEFORE_CYCLE');
 });
 
 test('existing paid invoice amount remains immutable after client moves tiers', () => {
