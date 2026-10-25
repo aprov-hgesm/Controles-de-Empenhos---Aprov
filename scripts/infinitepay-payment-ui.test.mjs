@@ -6,6 +6,9 @@ import { inspectInfinitePayReturn } from '../lib/billing/infinitepayReturnStatus
 const panel = fs.readFileSync('components/billing/InfinitePayReadinessPanel.tsx', 'utf8');
 const page = fs.readFileSync('app/regularizacao/page.tsx', 'utf8');
 const header = fs.readFileSync('components/layout/AppHeader.tsx', 'utf8');
+const shell = fs.readFileSync('components/billing/BillingPortalShell.tsx', 'utf8');
+const pilot = fs.readFileSync('components/billing/InfinitePayPilotPanel.tsx', 'utf8');
+
 
 test('visual return alone is never a confirmation of payment', () => {
   const result = inspectInfinitePayReturn(
@@ -101,4 +104,40 @@ test('account tab is accessible from the authenticated application header', () =
   assert.match(header, /data-testid="billing-account-open"/);
   assert.match(header, /router\.push\('\/regularizacao'\)/);
   assert.match(header, /workspaceContext\.status === 'sector'/);
+});
+
+test('subscription uses EMPROVEX fixed navigation and light operational surfaces', () => {
+  assert.match(page, /<BillingPortalShell>/);
+  assert.match(shell, /data-testid="billing-platform-shell"/);
+  assert.match(shell, /data-testid="billing-fixed-sidebar"/);
+  assert.match(shell, /fixed bottom-0 left-0 top-16/);
+  assert.match(shell, /lg:translate-x-0/);
+  assert.match(shell, /AppShellSignature variant="sidebar"/);
+  assert.match(shell, /bg-\[#f6f8fc\]/);
+  assert.match(page, /data-testid="billing-light-content"/);
+  assert.match(page, /bg-white/);
+  assert.doesNotMatch(page, /bg-\[#020817\]/);
+  assert.doesNotMatch(shell, /<AppSidebar/);
+});
+
+test('mobile subscription navigation is accessible and functional', () => {
+  assert.match(shell, /aria-label="Abrir navegação"/);
+  assert.match(shell, /aria-expanded=\{drawerOpen\}/);
+  assert.match(shell, /onClick=\{\(\) => setDrawerOpen\(true\)\}/);
+  assert.match(shell, /onClick=\{\(\) => setDrawerOpen\(false\)\}/);
+  assert.match(shell, /href="#visao-geral"/);
+  assert.match(shell, /href="#historico-financeiro"/);
+  assert.match(shell, /href="#precos"/);
+  assert.match(shell, /href="#formas-pagamento"/);
+  assert.match(panel, /id="precos"/);
+  assert.match(pilot, /id="historico-financeiro"/);
+  assert.match(page, /id="formas-pagamento"/);
+});
+
+test('visual-only restyle does not activate subscription billing', () => {
+  assert.match(panel, /data-testid="infinitepay-checkout-disabled"/);
+  assert.match(panel, /disabled\s+aria-disabled="true"/);
+  assert.match(pilot, /data-testid="infinitepay-pilot-consent"/);
+  assert.match(panel, /resolveBillingWorkspaceContext\(user\)/);
+  assert.doesNotMatch(shell + page, /INFINITEPAY_API_KEY|NEXT_PUBLIC_INFINITEPAY/);
 });
