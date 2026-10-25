@@ -98,9 +98,11 @@ test('desktop: light EMPROVEX platform shell keeps navigation fixed', async ({ p
   await expect(page.getByTestId('billing-platform-shell')).toHaveCSS('background-color', 'rgb(246, 248, 252)');
   await expect(page.getByRole('heading', { name: 'Minha assinatura', exact: true })).toBeVisible();
   await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
-  await page.getByRole('link', { name: 'Plano e valores' }).click();
-  await expect(page).toHaveURL(/#precos$/);
-  await expect(page.locator('#precos')).toBeInViewport();
+  await expect(page.getByText('Escalonamento previsto para novos clientes')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Plano e valores' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Formas de pagamento' }).click();
+  await expect(page).toHaveURL(/#formas-pagamento$/);
+  await expect(page.locator('#formas-pagamento')).toBeInViewport();
 });
 
 test('mobile: sidebar drawer opens, navigates and closes without horizontal overflow', async ({ page }) => {
@@ -113,8 +115,19 @@ test('mobile: sidebar drawer opens, navigates and closes without horizontal over
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await menu.click();
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
-  await page.getByRole('link', { name: 'Plano e valores' }).click();
+  await expect(page.getByText('Escalonamento previsto para novos clientes')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Formas de pagamento' }).click();
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
-  await expect(page).toHaveURL(/#precos$/);
+  await expect(page).toHaveURL(/#formas-pagamento$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2)).toBe(true);
+});
+
+test('unreleased progressive pricing is never visible even on page reload', async ({ page }) => {
+  await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Escalonamento previsto para novos clientes')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Plano e valores' })).toHaveCount(0);
+  await expect(page.getByTestId('billing-local-demo')).toHaveCount(0);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('infinitepay-regularization-panel')).toBeVisible();
+  await expect(page.getByTestId('billing-local-demo')).toHaveCount(0);
 });
