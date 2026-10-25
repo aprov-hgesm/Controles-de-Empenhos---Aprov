@@ -85,3 +85,48 @@ Exemplo de intenção mínima, sem rótulos, fator, lote, saldo ou operador:
 **Pendências conscientes:** ampliar v3 Desktop só após harmonizar os documentos de saída e pós-commit; certificar concorrência de todos os produtores de validade; medir leitura/escrita do v3 contra baseline; avaliar expansão progressiva para entrada/devolução e inventários somente com testes por domínio. Não remover legados antes da prova.
 
 **Próxima ação coordenada:** Worker 4 certifica transações e invariantes v3 no Emulator; Worker 2 mantém os gates CI; Coordenador autoriza integração apenas com evidências e sem sobreposição dos arquivos proprietários.
+
+## 6. Retomada de segurança /goal — 25/10/2026
+
+### Falhas críticas corrigidas
+
+- **V2 (`atomicVersion=2`):** um `FINALIZED` não é prova suficiente. `auditWarehouseAtomicWithdrawalReplay` deriva `mov_*` e `cons_*` da chave histórica de linha, busca os efeitos persistidos e exige integridade de hash/ID, versão, workspace, UG, ator do commit, quantidade-base, apresentação solicitada, destino, posição, validade e vínculos do consumo. Sem efeitos, lança `WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED`; **não executa nova baixa**. O hash v2 e IDs v1/v2 não foram modificados.
+- **V3 (`atomicVersion=3`):** `effectManifest` e `effectManifestHash` são gravados no MESMO commit do cabeçalho, ledger e consumos. O manifesto contém `intentIndex`, `partIndex`, `lineId`, `materialId`, posição, validade, barcodeId, quantidade-base, apresentação original, fator e IDs determinísticos dos efeitos. Replay usa o manifesto persistido, valida a sua integridade e confere cada documento. **Não replaneja saldos nem lotes após o commit**.
+- **Corrida com mesmo `withdrawalId`:** se outro operador confirmou antes da transação atual, o retorno com zero movimentos passa pela mesma auditoria documental fora da transação, sem rebaixar estoque.
+- **Conversão:** saída v3 cria movimento interno em unidade-base por referência técnica; `consumptions.requestedQuantity` é registrado na unidade/apresentação do operador. Ex.: **1 caixa de 12 unidades** -> `movement.quantityDelta=-12`, `consumption.quantity=12`, `consumption.requestedQuantity=1`, `consumption.presentationLabel='Caixa de 12 unidades'`. Campos adicionais `operatorRequestedQuantity`, `operatorPresentationCode`, `operatorPresentationLabel`, `operatorFactorToBaseUnit`, `operatorIntentIndex` preservam a intenção documental em linhas subdivididas; manifesto dá rastreabilidade das partes. Histórico v2 mantém a sua semântica.
+- **Validades:** `warehouseManualEntry.ts`, `warehouseTransfer.ts` e `app/api/central-depositos/intake-action/route.ts` incrementam `lotAttributionLocks` junto de criações/divisões e mudanças da atribuição no commit. Ajuste de inventário já atualizava mutex ao reduzir atribuição; devolução e retirada alteram quantidades existentes junto de saldos/lotes. A v3 revalida versões de documentos e mutex antes das escritas. FEFO e seleção manual não foram reintroduzidos.
+
+### Provas executadas
+
+**Prova completa autenticada (HEAD de código `57f93259dd94c4567c4e1e4da6f73f2e510e37ca`):** [GitHub Actions #40157629023](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157629023) — **PASS**. Ambiente: `demo-emprovex-security`, Firebase Auth Emulator, banco nomeado `emprovex-warehouse` no Firestore Emulator; dados fictícios.
+
+- Contrato histórico v2 copiado **sem modificação** do Worker 4 PR #374 / SHA `a16bab62f9bda3664db724abed44f1f5b2498ce7`: PASS, incluindo hash fixo e IDs determinísticos.
+- Emulador de migração/recuperação v1/v2: PASS, incluindo 6 pontos de interrupção legados, transação v2 multilinha, rollback, concorrência, resposta perdida, inventário, entrada, transferência e devolução.
+- Suíte adversarial W4 intacta: PASS, incluindo **rejeição de cabeçalho `FINALIZED` v2 forjado sem documentos**.
+- Suíte adversarial W1 v3: PASS, incluindo manifesto/head forjados, adulteração de manifesto, consumo ausente, movimento ausente, mesmo ID concorrente e IDs diferentes disputando saldo, lotes, duas posições, base/apresentação, idempotência, reversão sem resíduo, perda de resposta, UG e limites de linhas.
+- [Fast CI #40157630862](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157630862) PASS: TypeScript, proibição de escritas Warehouse via cliente, testes unitários relevantes, operações móveis, barcode, estoque e validade.
+- [Core Protection #40157630857](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157630857) PASS.
+- Complemento posterior: suíte de paridade Desktop v2/Mobile v3 em `scripts/warehouse-w1-v3-emulator.ts` com dois materiais de 24 unidades, apresentação box de 12, barcode associado server-side, baixa 1 caixa, comparação de saldo, movimento, consumo, UID/destino, provenance e replay; também recusa novo comando com barcode desativado. **Exige nova execução do Emulator sobre o HEAD pós-complemento.**
+
+**Comandos reproduzíveis** (PowerShell, sem WSL):
+
+```powershell
+npm.cmd ci
+npx.cmd --yes tsx --test scripts/w1-upstream-w4-contract.test.ts
+$env:NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID='demo-emprovex-security'
+npx.cmd --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+npx.cmd --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/w1-upstream-w4-adversarial-emulator.ts"
+npx.cmd --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-w1-v3-emulator.ts"
+```
+
+O workflow isolado da branch é `.github/workflows/core-lean-r2-w1-warehouse-assurance.yml`.
+
+### Fronteiras, custo e integração
+
+- **Não mergear nem publicar automaticamente.** PR #375 permanece DRAFT até o Coordenador certificar a composição com Worker 2 (#372), Worker 3 e PR de autorização; Worker 4 deve avaliar formalmente o SHA final do Worker 1.
+- Não houve alteração de Firestore Rules, dados reais, DOM da Central 3D nem modelos históricos.
+- O replay agora faz leituras adicionais para confirmar efeitos persistidos. Para 40 linhas podem ser até **80 documentos derivados**, divididos em batches de 30; os comandos novos v3 continuam com pré-leituras para consultas de validade. **Não há alegação de redução de reads Firestore**; medir em QA antes de qualquer promessa de desempenho.
+- **Sem migração de IDs históricos.** Manifesto é apenas v3; nenhuma retroadição do manifesto a cabeçalhos v1/v2; contrato v2 valida efeitos derivados com chave histórica.
+- Documentos e relatórios de saída Desktop continuam no contrato v2 e não foram reescritos. A equivalência de negócio Desktop/Mobile deve ser verificada na suíte de paridade; a única diferença intencional é a granularidade técnica de referências no ledger v3.
+
+**Handoff:** Worker 1 entregará SHA final testado, links GitHub Actions e manifesto de arquivos no PR #375; Worker 4 fará revisão independente cross-PR, Worker 2 cuidará da composição do CI, Coordenador decidirá GO/NO-GO de integração com `main`. Até essa autorização, **NO-GO para merge/produção**.
