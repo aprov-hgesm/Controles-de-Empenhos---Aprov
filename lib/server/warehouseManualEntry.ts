@@ -177,6 +177,9 @@ export async function registerWarehouseManualEntryServer(
     balance: root(access.workspaceId,'balances',materialId),
     located: root(access.workspaceId,'locationBalances',locationBalanceId),
     lot: lotId ? root(access.workspaceId,'lots',lotId) : null,
+    // Registrar também a criação de validade no mutex por material. Uma query
+    // secundária nunca é prova de ausência de atribuição concorrente.
+    lotLock: lotId ? root(access.workspaceId,'lotAttributionLocks',materialId) : null,
     barcode: barcodeId ? root(access.workspaceId,'barcodes',barcodeId) : null,
   };
   const reads = Object.values(paths).filter((p):p is string=>p!==null);
@@ -301,9 +304,22 @@ export async function registerWarehouseManualEntryServer(
       {path:paths.balance,data:{...balance,updatedAt:now}},
       {path:paths.located,data:{...located,updatedAt:now}},
     );
-    if (lot && paths.lot) writes.push({
-      path:paths.lot,data:{...lot,createdAt:now,updatedAt:now},
-    });
+    if (lot && paths.lot) {
+      const lock=read(paths.lotLock);
+      if(lock&&(lock.data.workspaceId!==access.workspaceId
+        ||lock.data.ug!==access.ug||lock.data.materialId!==materialId))
+        bad('WAREHOUSE_MANUAL_ENTRY_LOT_LOCK_SCOPE_MISMATCH',403);
+      const revision=typeof lock?.data.revision==='number'
+        &&Number.isSafeInteger(lock.data.revision)?lock.data.revision:0;
+      if(revision>=Number.MAX_SAFE_INTEGER)bad('WAREHOUSE_LOT_LOCK_REVISION_OVERFLOW',409);
+      writes.push({
+        path:paths.lot,data:{...lot,createdAt:now,updatedAt:now},
+      });
+      writes.push({path:paths.lotLock!,data:{
+        workspaceId:access.workspaceId,ug:access.ug,materialId,revision:revision+1,
+        updatedBy:access.uid,updatedAt:now,
+      }});
+    }
     if (candidateBarcode && paths.barcode) writes.push({
       path:paths.barcode,data:{...candidateBarcode,createdAt:now,updatedAt:now},
     });
