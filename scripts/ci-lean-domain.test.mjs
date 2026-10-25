@@ -30,6 +30,8 @@ test('Warehouse Domain runs canonical server-only Rules and atomic command tests
   assert.ok(scripts.includes('test:core-lean-r2-w4-assurance'));
   assert.ok(scripts.includes('test:core-lean-r2-w5-profile'));
   assert.ok(scripts.includes('test:core-lean-r2-w5-historical'));
+  assert.ok(scripts.includes('test:core-lean-r2-w1-contract'));
+  assert.ok(scripts.includes('test:core-lean-r2-w1-emulator'));
   assert.ok(domainTests('finance').includes('test:financial-identity-v2'));
   assert.ok(!scripts.includes('test:adm-deposito-modular-r1-security'),
     'Legacy ALLOW-to-client test is incompatible with the server-only security boundary');

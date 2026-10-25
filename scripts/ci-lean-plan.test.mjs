@@ -106,6 +106,14 @@ test('tsconfig @/ aliases and side-effect imports extend transitive reverse impo
     has(classifyChanges(['lib/shared/financial.ts'],deps),'finance');
   } finally {rmSync(root,{recursive:true,force:true});}
 });
+test('W1 v3 changed paths always select its behavioral contract',()=>{
+  for(const path of ['lib/server/warehouseWithdrawalV3Write.ts','lib/server/warehouseWithdrawalV3Identity.mjs',
+    'lib/warehouse/withdrawalV3.ts','scripts/warehouse-withdrawal-v3-contract.test.mjs','scripts/warehouse-w1-v3-emulator.ts']) {
+    const plan=classifyChanges([path]);
+    has(plan,'warehouse');
+    assert.ok(plan.scripts.includes('test:core-lean-r2-w1-contract'),path);
+  }
+});
 test('W5 performance and historical scripts remain within Warehouse domain',()=>{
   for(const path of ['scripts/core-lean-r2-w5-profile.mjs','scripts/core-lean-r2-w5-profile.test.mjs',
     'scripts/core-lean-r2-w5-historical.test.ts','lib/warehouse/locationBarcode.ts']) {

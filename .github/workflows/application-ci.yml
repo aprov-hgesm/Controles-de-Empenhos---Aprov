@@ -136,6 +136,9 @@ jobs:
       - name: W5 historical EPX1/EPX2/barcode/withdrawal identity compatibility
         run: npm run test:core-lean-r2-w5-historical
 
+      - name: W1 v3 behavioral contract (strict when composed)
+        run: npm run test:core-lean-r2-w1-contract
+
       - name: W4 stable v2 identity compatibility
         run: npm run test:core-lean-r2-w4-contract
 
@@ -143,6 +146,9 @@ jobs:
         env:
           NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
         run: npm run test:core-lean-r2-w4-assurance
+
+      - name: W1 isolated v3 concurrency, replay and withdrawal (required when composed)
+        run: npm run test:core-lean-r2-w1-emulator
 
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0

@@ -15,7 +15,7 @@ const TESTS = Object.freeze({
     'test:adm-deposito-ledger', 'test:adm-deposito-inventory',
     'test:adm-deposito-outbound-return', 'test:mobile-outbound-unified',
     'verify:mobile-r1-integration-3', 'test:core-lean-r2-w4-contract',
-    'test:core-lean-r2-w5-profile',
+    'test:core-lean-r2-w5-profile', 'test:core-lean-r2-w1-contract',
   ],
   finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2'],
   auth: ['verify:multitenant-security', 'verify:emprovex-warehouse-isolation', 'verify:saas-r1-security-enforcement'],

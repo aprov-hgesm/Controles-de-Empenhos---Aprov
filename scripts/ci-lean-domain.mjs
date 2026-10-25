@@ -10,7 +10,7 @@ import { DOMAINS } from './ci-lean-plan.mjs';
 export const DEEP_DOMAIN_TESTS = Object.freeze({
   // Server-only Warehouse: direct SDK writes MUST be denied. Old modular-r1
   // emulator expected a client-side write ALLOW, so it cannot certify R2 Rules.
-  warehouse: ['test:warehouse-server-only-rules', 'test:warehouse-server-manual-entry-security', 'test:mobile-outbound-unified', 'test:core-lean-r2-w4-contract', 'test:core-lean-r2-w4-assurance', 'test:core-lean-r2-w5-profile', 'test:core-lean-r2-w5-historical'],
+  warehouse: ['test:warehouse-server-only-rules', 'test:warehouse-server-manual-entry-security', 'test:mobile-outbound-unified', 'test:core-lean-r2-w4-contract', 'test:core-lean-r2-w4-assurance', 'test:core-lean-r2-w5-profile', 'test:core-lean-r2-w5-historical', 'test:core-lean-r2-w1-contract', 'test:core-lean-r2-w1-emulator'],
   finance: ['test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2'],
   auth: ['test:security:multitenant', 'test:external-drive-auth-emulator'],
   legal: ['test:saas-r1-legal-acceptance'],

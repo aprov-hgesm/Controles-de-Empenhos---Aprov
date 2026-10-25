@@ -271,7 +271,9 @@
     "test:core-lean-r2-w4-contract": "npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts",
     "test:core-lean-r2-w4-assurance": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts\"",
     "test:core-lean-r2-w5-profile": "node --test scripts/core-lean-r2-w5-profile.test.mjs",
-    "test:core-lean-r2-w5-historical": "npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts"
+    "test:core-lean-r2-w5-historical": "npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts",
+    "test:core-lean-r2-w1-contract": "node scripts/ci-lean-w1-v3.mjs contract",
+    "test:core-lean-r2-w1-emulator": "node scripts/ci-lean-w1-v3.mjs emulator"
   },
   "dependencies": {
     "clsx": "^2.1.1",

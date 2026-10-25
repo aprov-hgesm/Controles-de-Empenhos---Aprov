@@ -89,6 +89,16 @@ test('mutation 9b: W5 benchmark/compatibility fixtures remain guarded, never tim
   assert.ok(domainTests('warehouse').includes('test:core-lean-r2-w5-historical'));
   failingDomain('warehouse','test:core-lean-r2-w5-historical');
 });
+test('mutation 9c: v3 partial-composition is an explicit fail, not a false PASS',async()=>{
+  const { inspectW1 } = await import('./ci-lean-w1-v3.mjs');
+  const root=mkdtempSync(join(tmpdir(),'emprovex-w1-gate-'));
+  try {
+    assert.equal(inspectW1(root).status,'not_composed');
+    mkdirSync(join(root,'lib/server'),{recursive:true});
+    writeFileSync(join(root,'lib/server/warehouseWithdrawalV3Write.ts'),'fixture');
+    assert.throws(()=>inspectW1(root),/CI_W1_PARTIAL_COMPOSITION/);
+  }finally{rmSync(root,{recursive:true,force:true});}
+});
 test('mutation 10: workflow edit triggers conservative all-domain coverage',()=>{
   assert.deepEqual(classifyChanges(['.github/workflows/application-ci.yml']).domains,DOMAINS);
 });
