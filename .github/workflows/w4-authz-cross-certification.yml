@@ -40,4 +40,6 @@ jobs:
 
       - name: W4 signed mobile route integration — deny safely before write
         if: always()
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
         run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-authz-mobile.integration.mjs"
