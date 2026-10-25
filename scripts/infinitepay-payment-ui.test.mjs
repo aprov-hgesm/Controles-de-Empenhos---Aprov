@@ -75,11 +75,23 @@ test('trial pricing is shown as planned, not contracted or live', () => {
   assert.match(panel, /Isenção preservada/);
 });
 
-test('regularization screen remains operational with manual fallback', () => {
+test('manual payment fallback loads on demand, not for every InfinitePay visit', () => {
   assert.match(page, /<InfinitePayReadinessPanel\s*\/>/);
+  assert.match(page, /if \(!showManualMethods\) return;/);
+  assert.match(page, /data-testid="manual-payment-options-toggle"/);
+  assert.match(page, /showManualMethods && error/);
+  assert.match(page, /showManualMethods && info/);
   assert.match(page, /Abrir Link de Pagamento/);
   assert.match(page, /Copiar chave Pix/);
   assert.match(page, /Preço de referência legado/);
+});
+
+test('exempt test account gets a local-only payer visual simulation', () => {
+  assert.match(panel, /showLocalSimulation = process\.env\.NODE_ENV === 'development' && workspaceResolved && exempt/);
+  assert.match(panel, /data-testid="billing-local-demo-toggle"/);
+  assert.match(panel, /data-testid="billing-local-demo-result"/);
+  assert.match(panel, /Nenhuma competência, checkout ou pagamento foi criado/);
+  assert.doesNotMatch(panel, /updatePlatformBillingConfig\(|setDoc\(|updateDoc\(/);
 });
 
 test('account tab is accessible from the authenticated application header', () => {
