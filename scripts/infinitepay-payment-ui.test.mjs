@@ -8,6 +8,7 @@ const page = fs.readFileSync('app/regularizacao/page.tsx', 'utf8');
 const header = fs.readFileSync('components/layout/AppHeader.tsx', 'utf8');
 const shell = fs.readFileSync('components/billing/BillingPortalShell.tsx', 'utf8');
 const pilot = fs.readFileSync('components/billing/InfinitePayPilotPanel.tsx', 'utf8');
+const tabs = fs.readFileSync('lib/billing/billingPortalTabs.ts', 'utf8');
 
 
 test('visual return alone is never a confirmation of payment', () => {
@@ -83,7 +84,7 @@ test('unannounced progressive pricing remains completely absent from client view
 });
 
 test('manual payment fallback loads on demand, not for every InfinitePay visit', () => {
-  assert.match(page, /<InfinitePayReadinessPanel\s*\/>/);
+  assert.match(page, /<InfinitePayReadinessPanel activeTab=\{activeTab\} onNavigate=\{setActiveTab\}/);
   assert.match(page, /if \(!showManualMethods\) return;/);
   assert.match(page, /data-testid="manual-payment-options-toggle"/);
   assert.match(page, /showManualMethods && error/);
@@ -125,9 +126,12 @@ test('mobile subscription navigation is accessible and functional', () => {
   assert.match(shell, /aria-expanded=\{drawerOpen\}/);
   assert.match(shell, /onClick=\{\(\) => setDrawerOpen\(true\)\}/);
   assert.match(shell, /onClick=\{\(\) => setDrawerOpen\(false\)\}/);
-  assert.match(shell, /href="#visao-geral"/);
-  assert.match(shell, /href="#historico-financeiro"/);
-  assert.match(shell, /href="#formas-pagamento"/);
+  assert.match(shell, /role="tablist"/);
+  assert.match(shell, /role="tab"/);
+  assert.match(shell, /aria-selected=\{selected\}/);
+  assert.match(shell, /onTabChange\(tab.id\)/);
+  assert.match(shell, /event.key === 'ArrowDown'/);
+  assert.match(shell, /event.key === 'ArrowUp'/);
   assert.match(pilot, /id="historico-financeiro"/);
   assert.match(page, /id="formas-pagamento"/);
 });
@@ -138,4 +142,36 @@ test('visual-only restyle does not activate subscription billing', () => {
   assert.match(pilot, /data-testid="infinitepay-pilot-consent"/);
   assert.match(panel, /resolveBillingWorkspaceContext\(user\)/);
   assert.doesNotMatch(shell + page, /INFINITEPAY_API_KEY|NEXT_PUBLIC_INFINITEPAY/);
+});
+
+test('four distinct pages use exclusive content panels and real navigation state', () => {
+  assert.match(tabs, /'overview' \| 'history' \| 'payments' \| 'help'/);
+  assert.match(page, /useState<BillingPortalTab>\('overview'\)/);
+  assert.match(page, /<BillingPortalShell activeTab=\{activeTab\} onTabChange=\{setActiveTab\}>/);
+  assert.match(page, /role="tabpanel"/);
+  assert.match(page, /data-tab=\{activeTab\}/);
+  assert.match(page, /activeTab === 'help'/);
+  assert.match(page, /activeTab === 'payments'/);
+  assert.match(panel, /activeTab === 'overview'/);
+  assert.match(panel, /activeTab === 'history'/);
+  assert.match(panel, /activeTab === 'payments'/);
+  assert.match(pilot, /activeTab === 'history'/);
+  assert.match(pilot, /activeTab === 'payments'/);
+  assert.doesNotMatch(shell, /href="#visao-geral"|href="#historico-financeiro"|href="#formas-pagamento"/);
+});
+
+test('history is read-only, searchable and filterable within own authorized workspace', () => {
+  assert.match(pilot, /data-testid="billing-history-search"/);
+  assert.match(pilot, /data-testid="billing-history-filter"/);
+  assert.match(pilot, /const filteredCycles/);
+  assert.match(pilot, /history\.cycles/);
+  assert.match(pilot, /Nenhuma competência corresponde aos filtros/);
+  assert.match(pilot, /if \(!authorizedWorkspace\) return null/);
+  assert.doesNotMatch(pilot, /setDoc\(|updateDoc\(|writeBatch\(/);
+});
+
+test('unpublished progressive pricing is absent from every public tab', () => {
+  for (const source of [panel, shell, pilot, page, tabs]) {
+    assert.doesNotMatch(source, /Escalonamento previsto|Simular novo assinante|PRICING|1º ao 3º|4º ao 6º/);
+  }
 });
