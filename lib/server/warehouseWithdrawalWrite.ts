@@ -162,6 +162,8 @@ export async function finalizeWarehouseWithdrawalServer(
   // implementação antiga passam pelo caminho de recuperação v1.
   // Nunca reexecutar linhas v1 como se fossem uma nova retirada v2.
   const previous=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
+  if(previous?.data.atomicVersion===3)
+    return fail('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
   if(!previous || previous.data.atomicVersion===2) {
     return finalizeWarehouseWithdrawalAtomicServer(access,{
       withdrawalId:input.withdrawalId,destinationId:input.destinationId,
