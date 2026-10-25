@@ -2,6 +2,14 @@
 
 **Technical verdict: NO-GO for full integration** until the exact final composition is certified, including AuthZ #370, CI selection and remaining external paths. All runs below are from disposable Firebase Auth / Firestore Emulators or pure domain tests; no real workspaces, Rules production, merges or deploys were touched.
 
+## Independent v3 technical GO on exact composite SHA
+
+At composite **b401f935165de756b8f8b7ac3b5a16461b23c577** (PR #379), GitHub Actions [run 40158808874](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808874) completed **SUCCESS** on W4 independent v3 Auth+Firestore with **17 named adversarial scenarios PASS**, including the previously failing canonical barcode item and its exact movement/consumption/manifest provenance, 1-unit race between different IDs, v2-on-v3 ID rejection, inactive material and location without writes, missing movements, missing consumptions and altered manifest. The same run includes **5/5 W1 v3 contract, 14/14 W3 fiscal opt-in, 5/5 W4 independent fiscal** tests. **No v3 engine FAIL remains in those 17 executed scenarios.** This technical GO is strictly scope/SHA-bound, not a release GO.
+
+Other exact-composition checks: [Fast CI run 40158808855](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808855) **PASS**, Core Protection and Recovery PASS. Historical W4 v2 Auth+Firestore run 40158808820 started against same commit; use its final GitHub conclusion for current-SHA v2 GO (the earlier v2 40157472250 is for a prior W1 version).
+
+**Global CORE LEAN R2 stays NO-GO** because PR #370 AuthZ central policy is 16/17 FAIL (missing WITHDRAWAL_FINALIZE_MOBILE allowlist), the migration still has unmigrated client paths, W2 needs to compose the independent v3/finance tests into final CI selectors, and the coordinator must certify and approve the official final composition. An in-scope Warehouse PASS must not be reported as final release certification.
+
 ## Frozen evidence: immutable versions, no inherited PASS
 
 | Source | SHA | Role |
@@ -45,7 +53,7 @@ A run PASS is valid **only for its recorded SHA**. Newer Worker 1 commits may in
 | Server-only Firestore Rules on emulator | **PASS** direct client writes forbidden, cross-workspace reads forbidden; PR370 bc4b659 | same run 40158064082 |
 | Worker 2 controlled CI mutations and conservative selector | **11 mutation tests PASS** in W2 eda0c65 Fast CI; including syntax failure, auth, idempotency, tenant, finance, new unclassified file fallback. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157862322 |
 | W2 Domain & Application on uncomposed main | Warehouse **FAIL** legitimately detects unpatched v2 replay in its old baseline; other selected domains PASS. Not evidence against updated W1. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157502115 |
-| Corrected W1/W3/W4 composite after Emulator admin-fixture fix | **NOT YET CLASSIFIED** until workflow final verdict at SHA b401f935, do not borrow PASS from cb32935f | PR #379 |
+| Corrected W1/W3/W4 composite after Emulator admin-fixture fix | **17/17 W4 v3 adversarial PASS** plus **5 W1 v3 + 14 W3 financial + 5 W4 financial PASS**, SHA b401f935. Exact same-sha W4 v2 runner tracked separately. | https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158808874 |
 
 Counts of PASS messages are not counts of individual assertions. A skipped Application CI on a DRAFT PR is SKIPPED, never PASS.
 
