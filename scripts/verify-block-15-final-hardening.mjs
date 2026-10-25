@@ -106,10 +106,15 @@ for (const step of [
   'Block 14 operational scalability guard',
   'Block 15 final hardening guard',
   'Production build',
-  'Final TypeScript validation',
+  'TypeScript error budget',
 ]) {
   requireText(workflow, step, `Application CI perdeu etapa obrigatória: ${step}`);
 }
+requireText(workflow, 'npm run typecheck > /tmp/typecheck.txt 2>&1 || rc=$?',
+  'A compilação TypeScript do CI não pode desaparecer junto do step redundante.');
+requireText(workflow, 'budget=$(node -p "require(\'./ops/typescript-error-budget.json\').maxErrors")',
+  'A validação TypeScript perdeu seu orçamento zero verificável.');
+
 
 requireText(workflow, 'pull_request:', 'Application CI deixou de validar pull requests.');
 requireText(workflow, 'push:\n    branches:\n      - main', 'Application CI deixou de validar push na main.');

@@ -3,24 +3,22 @@
  * EMPROVEX CI LEAN: unidade por diff. Nunca substitui os gates de release.
  * Executa todos os testes aplicáveis e retorna FAIL se qualquer teste falhar.
  */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { currentPlan } from './ci-lean-plan.mjs';
 
-const base = process.env.GITHUB_BASE_REF?.trim();
-const diffArgs = base
-  ? ['diff', '--name-only', '--diff-filter=ACMR', 'origin/' + base + '...HEAD']
-  : ['diff', '--name-only', '--diff-filter=ACMR', 'HEAD^', 'HEAD'];
-
-let files;
+// Retain existing fine-grained test mappings. Add conservative domain coverage
+// and recursively discovered importers, including shared contracts.
+let plan;
 try {
-  files = execFileSync('git', diffArgs, { encoding: 'utf8' })
-    .split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
+  plan = currentPlan();
 } catch (error) {
-  console.error('[CI LEAN] Diff indisponível: falha fechada.', error);
+  console.error('[CI LEAN] FAIL CLOSED:', error.message);
   process.exit(1);
 }
+const files = [...new Set([...plan.files, ...plan.importers])];
 
 const warehouse = /^(?:lib\/warehouse\/|lib\/server\/warehouse[^/]*\.ts$|features\/warehouse\/|components\/warehouse\/|app\/central-depositos\/|app\/api\/central-depositos\/|scripts\/(?:warehouse-|verify-adm-deposito|mobile-r1-|mobile-k-))/;
-const tests = new Set();
+const tests = new Set(plan.scripts);
 const add = (name) => tests.add(name);
 const groups = [
   [/material|siscofis/i, ['test:adm-deposito-material', 'test:adm-deposito-siscofis']],
@@ -127,7 +125,8 @@ if (files.some((p) => /^(?:scripts\/firestore-recovery|ops\/firestore-recovery|s
   add('test:recovery');
 }
 const selected = [...tests].sort();
-console.log('[CI LEAN] Arquivos alterados:', files.length, '| Warehouse:', warehouseFiles.length);
+console.log('[CI LEAN] Arquivos alterados:', plan.files.length, '| importadores:', plan.importers.length, '| Warehouse:', warehouseFiles.length);
+console.log('[CI LEAN] Domínios (fallback conservador):', plan.domains.join(', ') || '(somente documentação)');
 console.log('[CI LEAN] Testes selecionados:', selected.length ? selected.join(', ') : '(nenhum específico)');
 if (process.env.CI_FAST_LIST_ONLY === '1') process.exit(0);
 

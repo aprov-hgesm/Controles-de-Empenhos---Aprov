@@ -25,6 +25,9 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    # Explicit manual certification is always strict: absent W1/AuthZ is NO-GO.
+    env:
+      CI_LEAN_REQUIRE_COMPOSED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,15 +70,26 @@ jobs:
       - name: TypeScript error budget
         shell: bash
         run: |
-          npm run typecheck > /tmp/typecheck.txt 2>&1 || true
+          rc=0
+          npm run typecheck > /tmp/typecheck.txt 2>&1 || rc=$?
           cat /tmp/typecheck.txt
           current=$(grep -c 'error TS[0-9]' /tmp/typecheck.txt || true)
           budget=$(node -p "require('./ops/typescript-error-budget.json').maxErrors")
           echo "TypeScript diagnostics: $current / budget: $budget"
+          if [ "$rc" -ne 0 ] && [ "$current" -eq 0 ]; then
+            echo 'TypeScript command failed without TS diagnostics.'
+            exit "$rc"
+          fi
           if [ "$current" -gt "$budget" ]; then
             echo 'TypeScript error budget exceeded.'
             exit 1
           fi
+
+      - name: CI LEAN R2 selector and syntax negative tests
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
+
+      - name: Changed executable JavaScript syntax
+        run: node scripts/ci-lean-syntax.mjs
 
       - name: Warehouse R2 strict zero client SDK writes
         run: WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs
@@ -95,56 +109,14 @@ jobs:
       - name: Legacy runtime guard
         run: npm run audit:legacy-runtime
 
-      - name: Final document storage guard
-        run: npm run verify:storage-provider
-
-      - name: Workspace Google Drive guard
-        run: npm run verify:workspace-drive
-
-      - name: Hybrid authentication model guard
-        run: npm run verify:hybrid-auth-model
-
-      - name: Firestore provider enforcement guard
-        run: npm run verify:firestore-provider-enforcement
-
-      - name: Sector auth provisioning guard
-        run: npm run verify:sector-auth-provisioning
-
-      - name: Sector admin deletion guard
-        run: npm run verify:sector-admin-deletion
-
-      - name: Sector password reset guard
-        run: npm run verify:sector-password-reset
-
-      - name: SaaS R1 onboarding and credentials guard
-        run: npm run verify:saas-r1-onboarding
-
-      - name: SAAS R1 security enforcement guard
-        run: npm run verify:saas-r1-security-enforcement
-
-      - name: SAAS R1 integrated contract guard
-        run: npm run verify:saas-r1-integration
-
-      - name: SAAS R1 final audit contract guard
-        run: npm run verify:saas-r1-final-audit
-
-      - name: Empenho class configuration guard
-        run: npm run verify:empenho-class-config
-
-      - name: Public OAuth legal pages guard
-        run: npm run verify:public-oauth-legal-pages
-
-      - name: External sector login guard
-        run: npm run verify:external-sector-login
-
-      - name: Secure UID binding guard
-        run: npm run verify:uid-binding
-
-      - name: Workspace provisioning guard
-        run: npm run verify:workspace-provisioning
-
-      - name: Workspace Drive onboarding guard
-        run: npm run verify:workspace-drive-onboarding
+      - name: CI LEAN R2 G01 — 17 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G01
+        # CI_LEAN_LEGACY G01: Final document storage guard | Workspace Google Drive guard | Hybrid authentication model guard
+        # CI_LEAN_LEGACY G01: Firestore provider enforcement guard | Sector auth provisioning guard | Sector admin deletion guard
+        # CI_LEAN_LEGACY G01: Sector password reset guard | SaaS R1 onboarding and credentials guard | SAAS R1 security enforcement guard
+        # CI_LEAN_LEGACY G01: SAAS R1 integrated contract guard | SAAS R1 final audit contract guard | Empenho class configuration guard
+        # CI_LEAN_LEGACY G01: Public OAuth legal pages guard | External sector login guard | Secure UID binding guard
+        # CI_LEAN_LEGACY G01: Workspace provisioning guard | Workspace Drive onboarding guard
 
       - name: External Drive OAuth behavior tests
         run: npm run test:external-drive-auth
@@ -160,6 +132,32 @@ jobs:
 
       - name: Multi-tenant Firestore security tests
         run: npm run test:security:multitenant
+
+      - name: W5 deterministic profile/candidate-saturation invariants (no timing thresholds)
+        run: npm run test:core-lean-r2-w5-profile
+
+      - name: W5 historical EPX1/EPX2/barcode/withdrawal identity compatibility
+        run: npm run test:core-lean-r2-w5-historical
+
+      - name: W1 v3 behavioral contract (strict when composed)
+        run: npm run test:core-lean-r2-w1-contract
+
+      - name: W4 stable v2 identity compatibility
+        run: npm run test:core-lean-r2-w4-contract
+
+      - name: W4 isolated authenticated adversarial Warehouse transactions
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+        run: npm run test:core-lean-r2-w4-assurance
+
+      - name: W1 isolated v3 concurrency, replay and withdrawal (required when composed)
+        run: npm run test:core-lean-r2-w1-emulator
+
+      - name: W4 independent v3 replay, scope and concurrent transaction adversarial (when composed)
+        run: npm run test:core-lean-r2-w4-v3
+
+      - name: W4 authorization boundary and scope invariants (when AuthZ composed)
+        run: npm run test:core-lean-r2-w4-authz
 
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0
@@ -271,14 +269,9 @@ jobs:
       - name: Central Móvel R1 Integration 3 domain tests
         run: npm run test:mobile-r1-integration-3
 
-      - name: Central Móvel R1 Integration 3 guard
-        run: npm run verify:mobile-r1-integration-3
-
-      - name: Central Móvel R1 MOBILE-I integrated product guard
-        run: npm run verify:mobile-r1-integration-final
-
-      - name: Central de Depósitos canonical route and API compatibility guard
-        run: npm run verify:central-depositos-routes
+      - name: CI LEAN R2 G02 — 3 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G02
+        # CI_LEAN_LEGACY G02: Central Móvel R1 Integration 3 guard | Central Móvel R1 MOBILE-I integrated product guard | Central de Depósitos canonical route and API compatibility guard
 
       - name: Operador Móvel premium interface and navigation guard
         run: npm run test:operador-movel-premium
@@ -328,29 +321,23 @@ jobs:
       - name: ADM Depósito Phase 11 logistics domain tests
         run: npm run test:adm-deposito-logistics
 
-      - name: ADM Depósito Phase 11 protected guard
-        run: npm run verify:adm-deposito-phase-11
-
-      - name: ADM Depósito Phase 11.5 visual guard
-        run: npm run verify:adm-deposito-phase-11-5
-
-      - name: ADM Depósito Module 13 hardening guard
-        run: npm run verify:adm-deposito-phase-13
-
-      - name: Production multi-tenant readiness guard
-        run: npm run verify:production-multitenant-readiness
+      - name: CI LEAN R2 G03 — 4 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G03
+        # CI_LEAN_LEGACY G03: ADM Depósito Phase 11 protected guard | ADM Depósito Phase 11.5 visual guard | ADM Depósito Module 13 hardening guard
+        # CI_LEAN_LEGACY G03: Production multi-tenant readiness guard
 
       - name: Reporting foundation identity tests
         run: npm run test:invoice-identity
 
-      - name: Reporting foundation guard
-        run: npm run verify:reporting-foundation
+      - name: W3 NF/NS historical and financial identity V2 contracts
+        run: npm run test:financial-identity-v2
 
-      - name: Reports subtabs shell guard
-        run: npm run verify:reports-shell
+      - name: W4 independent financial tenant, PDF and legacy identity invariants
+        run: npm run test:core-lean-r2-w4-financial
 
-      - name: Report empenho card selector guard
-        run: npm run verify:report-empenho-selector
+      - name: CI LEAN R2 G04 — 3 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G04
+        # CI_LEAN_LEGACY G04: Reporting foundation guard | Reports subtabs shell guard | Report empenho card selector guard
 
       - name: Reporting period tests
         run: npm run test:reporting-period
@@ -388,14 +375,9 @@ jobs:
       - name: SAG NS persistence tests
         run: npm run test:sag-ns-persistence
 
-      - name: SAG NS idempotent import guard
-        run: npm run verify:sag-ns-idempotent-import
-
-      - name: SAG NS hardening guard
-        run: npm run verify:sag-ns-hardening
-
-      - name: SAG UX guard
-        run: npm run verify:sag-ux
+      - name: CI LEAN R2 G05 — 3 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G05
+        # CI_LEAN_LEGACY G05: SAG NS idempotent import guard | SAG NS hardening guard | SAG UX guard
 
       - name: NS integrity contract tests
         run: npm run test:ns-integrity-contract
@@ -406,50 +388,19 @@ jobs:
       - name: NS integrity domain tests
         run: npm run test:ns-integrity
 
-      - name: NS integrity service guard
-        run: npm run verify:ns-integrity-service
-
-      - name: Manual NS integrity guard
-        run: npm run verify:manual-ns-integrity
-
-      - name: Invoice NS lifecycle guard
-        run: npm run verify:invoice-ns-lifecycle
-
-      - name: EMPROVEX / ADM Depósito isolation guard
-        run: npm run verify:emprovex-warehouse-isolation
-
-      - name: Invoice mirror document guard
-        run: npm run verify:invoice-mirror-document
+      - name: CI LEAN R2 G06 — 5 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G06
+        # CI_LEAN_LEGACY G06: NS integrity service guard | Manual NS integrity guard | Invoice NS lifecycle guard
+        # CI_LEAN_LEGACY G06: EMPROVEX / ADM Depósito isolation guard | Invoice mirror document guard
 
       - name: Supplier CNPJ migration tests
         run: npm run test:supplier-cnpj-migration
 
-      - name: Supplier CNPJ migration guard
-        run: npm run verify:supplier-cnpj-migration
-
-      - name: Global NS Firestore Rules guard
-        run: npm run verify:global-ns-rules
-
-      - name: Official CNPJ validation guard
-        run: npm run verify:cnpj-validation
-
-      - name: NS UG identity guard
-        run: npm run verify:ns-ug-identity
-
-      - name: Immutable audit trail guard
-        run: npm run verify:immutable-audit
-
-      - name: Block 9 browser E2E guard
-        run: npm run verify:block-9-e2e
-
-      - name: Block 10 historical consistency guard
-        run: npm run verify:block-10-consistency
-
-      - name: Block 11 SAG conservative refactor guard
-        run: npm run verify:block-11-sag-refactor
-
-      - name: Block 12 empenho deletion integrity guard
-        run: npm run verify:block-12-empenho-deletion
+      - name: CI LEAN R2 G07 — 9 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G07
+        # CI_LEAN_LEGACY G07: Supplier CNPJ migration guard | Global NS Firestore Rules guard | Official CNPJ validation guard
+        # CI_LEAN_LEGACY G07: NS UG identity guard | Immutable audit trail guard | Block 9 browser E2E guard
+        # CI_LEAN_LEGACY G07: Block 10 historical consistency guard | Block 11 SAG conservative refactor guard | Block 12 empenho deletion integrity guard
 
       - name: Empenho concurrency domain tests
         run: npm run test:empenho-concurrency
@@ -460,179 +411,39 @@ jobs:
       - name: Operational subscription plan tests
         run: npm run test:operational-subscription-plan
 
-      - name: Block 14 operational scalability guard
-        run: npm run verify:block-14-scalability
-
-      - name: Block 15 final hardening guard
-        run: npm run verify:block-15-final-hardening
-
-      - name: Block 16.0 capacity foundation guard
-        run: npm run verify:block-16-0-capacity-foundation
-
-      - name: Block 16.1 session enforcement guard
-        run: npm run verify:block-16-1-session-enforcement
-
-      - name: Block 16.2 admin session panel guard
-        run: npm run verify:block-16-2-admin-session-panel
-
-      - name: Block 16.3 workspace telemetry guard
-        run: npm run verify:block-16-3-workspace-telemetry
-
-      - name: Block 16.4 global Cloud Monitoring guard
-        run: npm run verify:block-16-4-global-monitoring
-
-      - name: Block 16.5 consolidated usage dashboard guard
-        run: npm run verify:block-16-5-consolidated-usage
-
-      - name: Block 16.6 usage alerts guard
-        run: npm run verify:block-16-6-usage-alerts
-
-      - name: Admin usage intelligence guard
-        run: npm run verify:admin-usage-intelligence
-
-      - name: UG telemetry v2 reconciliation guard
-        run: npm run verify:ug-telemetry-v2
-
-      - name: Block 16.7 security and concurrency hardening guard
-        run: npm run verify:block-16-7-security-concurrency
+      - name: CI LEAN R2 G08 — 12 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G08
+        # CI_LEAN_LEGACY G08: Block 14 operational scalability guard | Block 15 final hardening guard | Block 16.0 capacity foundation guard
+        # CI_LEAN_LEGACY G08: Block 16.1 session enforcement guard | Block 16.2 admin session panel guard | Block 16.3 workspace telemetry guard
+        # CI_LEAN_LEGACY G08: Block 16.4 global Cloud Monitoring guard | Block 16.5 consolidated usage dashboard guard | Block 16.6 usage alerts guard
+        # CI_LEAN_LEGACY G08: Admin usage intelligence guard | UG telemetry v2 reconciliation guard | Block 16.7 security and concurrency hardening guard
 
       - name: Block 16.8 integrated domain tests
         run: npm run test:block-16-8-integrated-domain
 
-      - name: Block 16.8 integrated E2E guard
-        run: npm run verify:block-16-8-integrated-e2e
-
-      - name: Block 16.9 final audit and closure guard
-        run: npm run verify:block-16-9-final-closure
-
-      - name: Block 17.0 Firestore consumption baseline guard
-        run: npm run verify:block-17-0-firestore-baseline
-
-      - name: Block 17.1 session lease efficiency guard
-        run: npm run verify:block-17-1-session-lease-efficiency
-
-      - name: Block 17.2 multi-tab session coordination guard
-        run: npm run verify:block-17-2-multitab-coordination
-
-      - name: Block 17.3 branding efficiency guard
-        run: npm run verify:block-17-3-branding-efficiency
-
-      - name: Block 17.4 operational listeners guard
-        run: npm run verify:block-17-4-operational-listeners
-
-      - name: Block 17.5 historical scalability guard
-        run: npm run verify:block-17-5-historical-scalability
-
-      - name: Block 17.6 telemetry fidelity guard
-        run: npm run verify:block-17-6-telemetry-fidelity
-
-      - name: Block 17.7 App Check guard
-        run: npm run verify:block-17-7-app-check
-
-      - name: Block 17.8 consumption regression guard
-        run: npm run verify:block-17-8-consumption-regression
-
-      - name: Block 17.9 final closure guard
-        run: npm run verify:block-17-9-final-closure
-
-      - name: Block 18 security and resilience guard
-        run: npm run verify:block-18-security-resilience
-
-      - name: Backup and recovery architecture guard
-        run: npm run verify:backup-recovery
+      - name: CI LEAN R2 G09 — 14 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G09
+        # CI_LEAN_LEGACY G09: Block 16.8 integrated E2E guard | Block 16.9 final audit and closure guard | Block 17.0 Firestore consumption baseline guard
+        # CI_LEAN_LEGACY G09: Block 17.1 session lease efficiency guard | Block 17.2 multi-tab session coordination guard | Block 17.3 branding efficiency guard
+        # CI_LEAN_LEGACY G09: Block 17.4 operational listeners guard | Block 17.5 historical scalability guard | Block 17.6 telemetry fidelity guard
+        # CI_LEAN_LEGACY G09: Block 17.7 App Check guard | Block 17.8 consumption regression guard | Block 17.9 final closure guard
+        # CI_LEAN_LEGACY G09: Block 18 security and resilience guard | Backup and recovery architecture guard
 
       - name: Backup disaster recovery emulator test
         run: npm run test:backup-recovery
 
-      - name: RPNP visual priority guard
-        run: npm run verify:rpnp-visual-priority
-
-      - name: TR counter and workspace document identity guard
-        run: npm run verify:tr-workspace-documents
-
-      - name: Inicio background texture guard
-        run: npm run verify:inicio-background-texture
-
-      - name: Inicio slow planet orbit guard
-        run: npm run verify:inicio-slow-planet-orbits
-
-      - name: Block 22 billing observe guard
-        run: npm run verify:block-22-billing
-
-      - name: Block 19 home experience foundation guard
-        run: npm run verify:block-19-home-experience
-
-      - name: Block 19.2 cinematic scene guard
-        run: npm run verify:block-19-2-cinematic-scene
-
-      - name: Block 19.3 interactive core guard
-        run: npm run verify:block-19-3-interactive-core
-
-      - name: Block 19.4 operational orbit guard
-        run: npm run verify:block-19-4-operational-orbits
-
-      - name: Block 19.5 operational constellation guard
-        run: npm run verify:block-19-5-operational-constellation
-
-      - name: Block 19.6 unit identity guard
-        run: npm run verify:block-19-6-unit-identity
-
-      - name: Block 19.7 quick actions and resume guard
-        run: npm run verify:block-19-7-quick-actions-resume
-
-      - name: Block 19.8 microinteraction guard
-        run: npm run verify:block-19-8-microinteractions
-
-      - name: Block 19.9 surface transition guard
-        run: npm run verify:block-19-9-surface-transitions
-
-      - name: Block 19.10 economical home snapshot guard
-        run: npm run verify:block-19-10-home-snapshot-economy
-
-      - name: Block 19.11 performance and GPU guard
-        run: npm run verify:block-19-11-performance-gpu
-
-      - name: Block 19.12 responsiveness guard
-        run: npm run verify:block-19-12-responsiveness
-
-      - name: Block 19.13 visual polish guard
-        run: npm run verify:block-19-13-visual-polish
-
-      - name: Block 19.14 final closure guard
-        run: npm run verify:block-19-14-final-closure
-
-      - name: Block 20 premium orbital redesign guard
-        run: npm run verify:block-20-premium-orbital-redesign
-
-      - name: Block 21 operational stars and shooting stars guard
-        run: npm run verify:block-21-operational-stars-shooting-stars
-
-      - name: Central de Avisos guard
-        run: npm run verify:central-avisos
-
-      - name: EMPROVEX App Shell guard
-        run: npm run verify:app-shell
-
-      - name: EMPROVEX brand identity foundation guard
-        run: npm run verify:brand-identity-foundation
-
-      - name: EMPROVEX brand notifications guard
-        run: npm run verify:brand-notifications
-
-      - name: EMPROVEX empenhos subtabs guard
-        run: npm run verify:empenhos-subtabs
-
-      - name: Empenho direct PDF import guard
-        run: npm run verify:empenho-pdf-direct-import
-
-      - name: EMPROVEX brand admin guard
-        run: npm run verify:brand-admin
-
-      - name: EMPROVEX admin information architecture guard
-        run: npm run verify:admin-information-architecture
-
-      - name: Admin sidebar and Google usage UX guard
-        run: npm run verify:admin-sidebar-google-usage
+      - name: CI LEAN R2 G10 — 30 historical guards
+        run: node scripts/ci-lean-guards.mjs --group G10
+        # CI_LEAN_LEGACY G10: RPNP visual priority guard | TR counter and workspace document identity guard | Inicio background texture guard
+        # CI_LEAN_LEGACY G10: Inicio slow planet orbit guard | Block 22 billing observe guard | Block 19 home experience foundation guard
+        # CI_LEAN_LEGACY G10: Block 19.2 cinematic scene guard | Block 19.3 interactive core guard | Block 19.4 operational orbit guard
+        # CI_LEAN_LEGACY G10: Block 19.5 operational constellation guard | Block 19.6 unit identity guard | Block 19.7 quick actions and resume guard
+        # CI_LEAN_LEGACY G10: Block 19.8 microinteraction guard | Block 19.9 surface transition guard | Block 19.10 economical home snapshot guard
+        # CI_LEAN_LEGACY G10: Block 19.11 performance and GPU guard | Block 19.12 responsiveness guard | Block 19.13 visual polish guard
+        # CI_LEAN_LEGACY G10: Block 19.14 final closure guard | Block 20 premium orbital redesign guard | Block 21 operational stars and shooting stars guard
+        # CI_LEAN_LEGACY G10: Central de Avisos guard | EMPROVEX App Shell guard | EMPROVEX brand identity foundation guard
+        # CI_LEAN_LEGACY G10: EMPROVEX brand notifications guard | EMPROVEX empenhos subtabs guard | Empenho direct PDF import guard
+        # CI_LEAN_LEGACY G10: EMPROVEX brand admin guard | EMPROVEX admin information architecture guard | Admin sidebar and Google usage UX guard
 
       - name: Admin visual-only layout and behavior guard
         run: node --test scripts/admin-visual-only.test.mjs
@@ -652,8 +463,8 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Final TypeScript validation
-        run: npm run typecheck
+      # No second tsc here: the zero-error TypeScript budget gate above already
+      # compiles TS, and the Next production build validates generated types.
 
 
   block-16-release-gate:
