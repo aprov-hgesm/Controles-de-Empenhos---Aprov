@@ -108,7 +108,7 @@ test('account tab is accessible from the authenticated application header', () =
 });
 
 test('subscription uses EMPROVEX fixed navigation and light operational surfaces', () => {
-  assert.match(page, /<BillingPortalShell>/);
+  assert.match(page, /<BillingPortalShell activeTab=\{activeTab\} onTabChange=\{setActiveTab\}>/);
   assert.match(shell, /data-testid="billing-platform-shell"/);
   assert.match(shell, /data-testid="billing-fixed-sidebar"/);
   assert.match(shell, /fixed bottom-0 left-0 top-16/);
