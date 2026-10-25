@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, CheckCheck, CircleAlert, CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { auth } from '../../lib/firebase';
+import type { BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 export interface PilotReturnParams {
   orderNsu: string;
@@ -45,12 +46,15 @@ async function authenticatedPortalFetch(path: string, options?: { body?: Record<
 }
 
 export function InfinitePayPilotPanel({
-  authorizedWorkspace, returnParams,
+  authorizedWorkspace, returnParams, activeTab,
 }: {
   authorizedWorkspace: boolean;
   returnParams: PilotReturnParams | null;
+  activeTab: BillingPortalTab;
 }) {
   const [available, setAvailable] = useState(false);
+  const [cycleFilter, setCycleFilter] = useState<'all' | 'pending' | 'paid' | 'waived'>('all');
+  const [cycleQuery, setCycleQuery] = useState('');
   const [history, setHistory] = useState<PilotAvailability['history'] | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -66,6 +70,8 @@ export function InfinitePayPilotPanel({
       setCheckout(null);
       return;
     }
+    // No financial fetch on overview or help; load only on relevant tabs.
+    if (activeTab !== 'history' && activeTab !== 'payments') return;
     let active = true;
     void authenticatedPortalFetch('/api/billing/portal')
       .then((result: PilotAvailability) => {
@@ -81,7 +87,7 @@ export function InfinitePayPilotPanel({
         }
       });
     return () => { active = false; };
-  }, [authorizedWorkspace]);
+  }, [authorizedWorkspace, activeTab]);
 
   useEffect(() => {
     if (!available || !authorizedWorkspace || !returnParams) return;
@@ -127,45 +133,103 @@ export function InfinitePayPilotPanel({
     }
   };
 
+  const filteredCycles = (history?.cycles || []).filter((cycle) => {
+    const matchesStatus = cycleFilter === 'all' ||
+      (cycleFilter === 'pending' && (cycle.status === 'pending' || cycle.status === 'open')) ||
+      cycle.status === cycleFilter;
+    const query = cycleQuery.trim().toLowerCase();
+    return matchesStatus && (!query || cycle.referenceMonth.toLowerCase().includes(query)
+      || cycle.dueDate.toLowerCase().includes(query));
+  });
+
   if (!authorizedWorkspace) return null;
 
   return (
     <>
-      {history && (
+      {activeTab === 'history' && (
         <section id="historico-financeiro" data-testid="billing-cycle-history" className="scroll-mt-24 mt-5 rounded-2xl border border-[#e2e8f1] bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-black text-slate-900">Histórico de competências</h3>
             <span className="text-[10px] text-slate-500">Até 24 registros materializados</span>
           </div>
-          {!history.available ? (
-            <p className="mt-3 text-xs text-slate-500">
+          {!history ? (
+            <p role="status" className="mt-3 text-sm text-slate-600">Consultando suas competências...</p>
+          ) : !history.available ? (
+            <p role="status" className="mt-3 text-sm text-slate-600">
               O histórico financeiro não está disponível neste ambiente. Isso não altera a situação da sua conta.
             </p>
           ) : history.cycles.length === 0 ? (
-            <p className="mt-3 text-xs text-slate-500">
-              Nenhuma competência faturável para apresentar neste histórico.
+            <p role="status" className="mt-3 text-sm text-slate-600">
+              Nenhuma competência emitida foi localizada para este setor.
+              Caso sua conta seja isenta, não é necessário efetuar pagamento.
             </p>
           ) : (
-            <div className="mt-4 space-y-2">
-              {history.cycles.map((cycle) => (
-                <div key={cycle.referenceMonth}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-[#f9fbfd] px-4 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">{cycle.referenceMonth}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {cycle.dueDate ? 'Vencimento: ' + cycle.dueDate.split('-').reverse().join('/') : 'Vencimento não definido'}
-                    </p>
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap gap-3" data-testid="billing-history-summary">
+                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                  {history.cycles.length} registro(s) consultado(s)
+                </span>
+                <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                  {history.cycles.filter((cycle) => cycle.status === 'paid').length} pago(s)
+                </span>
+                <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  {history.cycles.filter((cycle) => cycle.status === 'open' || cycle.status === 'pending').length} em aberto
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <label className="block text-xs font-bold text-slate-700">
+                  Buscar competência ou vencimento
+                  <input
+                    type="search"
+                    data-testid="billing-history-search"
+                    value={cycleQuery}
+                    onChange={(event) => setCycleQuery(event.target.value)}
+                    placeholder="Ex.: 2026-10"
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#0b725d]"
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Situação
+                  <select
+                    data-testid="billing-history-filter"
+                    value={cycleFilter}
+                    onChange={(event) => setCycleFilter(event.target.value as typeof cycleFilter)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-[#0b725d]"
+                  >
+                    <option value="all">Todas</option>
+                    <option value="pending">Em aberto</option>
+                    <option value="paid">Pagas</option>
+                    <option value="waived">Dispensadas</option>
+                  </select>
+                </label>
+              </div>
+              {filteredCycles.length === 0 && (
+                <p role="status" className="rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  Nenhuma competência corresponde aos filtros.
+                </p>
+              )}
+              <div className="space-y-2">
+                {filteredCycles.map((cycle) => (
+                  <div key={cycle.referenceMonth}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-[#f9fbfd] px-4 py-3">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">{cycle.referenceMonth}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {cycle.dueDate ? 'Vencimento: ' + cycle.dueDate.split('-').reverse().join('/') : 'Vencimento não definido'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-slate-900">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cycle.amountCents / 100)}
+                      </p>
+                      <span className="text-[10px] font-semibold text-slate-600">
+                        {cycle.status === 'paid' ? 'Pago' : cycle.status === 'waived' ? 'Dispensado' :
+                          cycle.status === 'open' ? 'Em aberto' : 'Pendente'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-slate-900">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cycle.amountCents / 100)}
-                    </p>
-                    <span className="text-[10px] font-semibold text-slate-600">
-                      {cycle.status === 'paid' ? 'Pago' : cycle.status === 'waived' ? 'Dispensado' : 'Pendente'}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
           <p className="mt-3 text-[11px] text-slate-500">
@@ -173,7 +237,7 @@ export function InfinitePayPilotPanel({
           </p>
         </section>
       )}
-      {available && (
+      {activeTab === 'payments' && available && (
     <section data-testid="infinitepay-real-pilot" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
       <div className="flex items-center gap-2 text-amber-900">
         <ShieldCheck className="h-5 w-5" aria-hidden />
