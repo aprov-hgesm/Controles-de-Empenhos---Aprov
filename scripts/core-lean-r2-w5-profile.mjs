@@ -220,11 +220,11 @@ async function emulatorProfile(repetitions = 15) {
         returnedDocumentsPerInvocation:counts.returnedDocuments/perInvocation,
         note:'Observable REST calls and returned docs; NOT billed reads'}];
     };
-    const [barcode,position,planning,replay]=await Promise.all([
-      sample('barcode',()=>batch([docPath('barcodes','bar_'+hash(id))])),
-      sample('position',()=>batch([docPath('materials',id),docPath('balances',id),
+    const [barcode,position,planning,replay]=await (async () => [
+      await sample('barcode',()=>batch([docPath('barcodes','bar_'+hash(id))])),
+      await sample('position',()=>batch([docPath('materials',id),docPath('balances',id),
         docPath('locationBalances','locbal_'+hash(id+':0'))])),
-      sample('v3_preplan_read_probe',async()=>{
+      await sample('v3_preplan_read_probe',async()=>{
         await batch([docPath('withdrawals','wd_'+hex(i+1))]);
         await batch([docPath('lotAttributionLocks',id)]);
         await lots(id,fixture.lotCount);
@@ -232,8 +232,8 @@ async function emulatorProfile(repetitions = 15) {
         return batch([docPath('materials',id),docPath('balances',id),
           docPath('locationBalances','locbal_'+hash(id+':0'))]);
       }),
-      sample('replay_header_read_probe',()=>batch([docPath('withdrawals','wd_'+hex(i+1))])),
-    ]);
+      await sample('replay_header_read_probe',()=>batch([docPath('withdrawals','wd_'+hex(i+1))])),
+    ])();
     probes[fixture.name] = Object.fromEntries([barcode,position,planning,replay]);
   }
   return {kind:'firebase_emulator_read_probes', project:PROJECT,database:DATABASE,
