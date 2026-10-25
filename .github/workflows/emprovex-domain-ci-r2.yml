@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   domain-plan:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci' }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 4
     outputs:
