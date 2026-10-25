@@ -71,6 +71,8 @@ test('provider checkout link is accepted only from trusted HTTPS InfinitePay hos
     'https://checkout.infinitepay.io/link/123');
   assert.equal(readCheckoutUrl({ data: { checkout_url: 'https://www.infinitepay.io/pay/123' } }),
     'https://www.infinitepay.io/pay/123');
+  assert.equal(readCheckoutUrl({ url: 'https://checkout.infinitepay.com.br/pay/123' }),
+    'https://checkout.infinitepay.com.br/pay/123');
   for (const url of [
     'http://checkout.infinitepay.io/link', 'https://infinitepay.io.evil.example/fake',
     'https://user:pass@checkout.infinitepay.io/test', 'https://attacker.example/checkout',
