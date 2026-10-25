@@ -53,7 +53,14 @@ test('W4: forensic PDF ownership excludes forged workspace and foreign invoice',
   const pdf={id:'pdf-1',pathname:'doc/NF.pdf',invoiceId:'nf-1',empenhoId:'ne-1',
     storage:{provider:'google-drive',status:'active',workspaceId:'ws-a',objectKey:'sha-a'}};
   const expected={invoiceId:'nf-1',empenhoId:'ne-1',workspaceId:'ws-a'};
-  assert.equal(fi.assertInvoicePdfReferences(pdf,expected),'verified');
+  assert.equal(fi.assertInvoicePdfReferences(pdf,expected),'unattested',
+    'matching client metadata without server attestation is not verified ownership');
+  const attested={...expected,documentId:pdf.id,objectKey:pdf.storage.objectKey};
+  assert.equal(fi.assertInvoicePdfReferences(pdf,attested),'verified');
+  assert.throws(()=>fi.assertInvoicePdfReferences(pdf,{...attested,documentId:'pdf-other'}),
+    e=>e?.code==='pdf_document_id_mismatch');
+  assert.throws(()=>fi.assertInvoicePdfReferences(pdf,{...attested,objectKey:'other-file'}),
+    e=>e?.code==='pdf_object_key_mismatch');
   assert.throws(()=>fi.assertInvoicePdfReferences(pdf,{...expected,workspaceId:'ws-b'}),
     e=>e?.code==='pdf_workspace_mismatch');
   assert.throws(()=>fi.assertInvoicePdfReferences({...pdf,invoiceId:'nf-foreign'},expected),
