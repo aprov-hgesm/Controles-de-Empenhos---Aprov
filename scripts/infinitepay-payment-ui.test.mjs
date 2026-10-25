@@ -66,7 +66,7 @@ test('InfinitePay checkout is visibly disabled until backend homologation', () =
 test('payment return is displayed as unverified and URL sanitized', () => {
   assert.match(panel, /setReturnNotice\(true\)/);
   assert.match(panel, /window\.history\.replaceState/);
-  assert.match(panel, /A verificação autenticada da InfinitePay/);
+  assert.match(panel, /a validação pela API aparecerá abaixo/);
   assert.doesNotMatch(panel, /setAccount\(.*paid/);
 });
 
