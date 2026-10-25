@@ -68,11 +68,13 @@ test('verify never gives subscription settlement even for a genuinely paid Pix',
 
 test('API endpoints keep explicit user opt-in and no Firestore billing modifications', async () => {
   const { readFile } = await import('node:fs/promises');
-  const create = await readFile('app/api/billing/pilot-checkout/route.ts', 'utf8');
-  const verify = await readFile('app/api/billing/pilot-verify/route.ts', 'utf8');
   const portal = await readFile('app/api/billing/portal/route.ts', 'utf8');
+  const create = portal;
+  const verify = portal;
   const identity = await readFile('lib/server/billingPortalIdentity.ts', 'utf8');
   assert.match(create, /confirmRealPix !== true/);
+  assert.match(portal, /action === 'create-pilot'/);
+  assert.match(portal, /action === 'verify-pilot'/);
   assert.match(create, /resolveBillingPortalSession\(request\)/);
   assert.match(create, /pilotEnabledFor/);
   assert.match(verify, /pilotReturnBelongsToSession/);
