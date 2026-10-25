@@ -5,12 +5,15 @@ on:
     paths:
       - 'lib/server/payments/infinitepayCheckout.mjs'
       - 'lib/server/payments/emprovexRampPricing.mjs'
+      - 'lib/server/payments/infinitepaySmokeHarness.mjs'
       - 'lib/server/payments/infinitepayBillingBridge.mjs'
       - 'lib/server/payments/infinitepayTransactionalSettlement.mjs'
       - 'scripts/infinitepay-checkout.test.mjs'
       - 'scripts/infinitepay-billing-bridge.test.mjs'
       - 'scripts/infinitepay-transactional-settlement.test.mjs'
       - 'scripts/infinitepay-ramp-pricing.test.mjs'
+      - 'scripts/infinitepay-live-smoke.mjs'
+      - 'scripts/infinitepay-live-smoke.test.mjs'
       - '.github/workflows/infinitepay-adapter.yml'
   workflow_dispatch:
 
@@ -27,4 +30,4 @@ jobs:
         with:
           node-version: '22'
       - name: Offline InfinitePay adapter, billing and transaction simulation
-        run: node --test scripts/infinitepay-checkout.test.mjs scripts/infinitepay-billing-bridge.test.mjs scripts/infinitepay-transactional-settlement.test.mjs scripts/infinitepay-ramp-pricing.test.mjs
+        run: node --test scripts/infinitepay-checkout.test.mjs scripts/infinitepay-billing-bridge.test.mjs scripts/infinitepay-transactional-settlement.test.mjs scripts/infinitepay-ramp-pricing.test.mjs scripts/infinitepay-live-smoke.test.mjs
