@@ -130,3 +130,11 @@ O workflow isolado da branch é `.github/workflows/core-lean-r2-w1-warehouse-ass
 - Documentos e relatórios de saída Desktop continuam no contrato v2 e não foram reescritos. A equivalência de negócio Desktop/Mobile deve ser verificada na suíte de paridade; a única diferença intencional é a granularidade técnica de referências no ledger v3.
 
 **Handoff:** Worker 1 entregará SHA final testado, links GitHub Actions e manifesto de arquivos no PR #375; Worker 4 fará revisão independente cross-PR, Worker 2 cuidará da composição do CI, Coordenador decidirá GO/NO-GO de integração com `main`. Até essa autorização, **NO-GO para merge/produção**.
+
+## 7. Diagnóstico adicional da prova A/B com barcode
+
+A execução de paridade Desktop v2 / Mobile v3 em [W1 run #40158057123](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158057123) revelou **FAIL legítimo** ao testar associação de apresentação com barcode no v3. O v3 preservava `barcodeId` mas o movimento técnico estava marcado `interface:'MANUAL_SEARCH'`, combinação recusada corretamente pelo contrato de `warehouse_movement_v1` (`WAREHOUSE_INVALID_OUTBOUND_MOVEMENT`). Todos os cenários históricos, a suíte adversarial v2 W4 e os cenários v3 anteriores à paridade haviam passado.
+
+**Correção executada:** no motor `warehouseWithdrawalAtomicWrite.ts`, somente as linhas técnicas v3 cuja associação `barcodeId` já foi validada pelo servidor são persistidas com `interface:'BARCODE_SCANNER'`; continuam em unidade-base internamente. Linhas sem associação seguem `MANUAL_SEARCH`. O teste A/B exige explicitamente `BARCODE_SCANNER` nos dois contratos, barcodeId/código corretos, `1 caixa` no histórico, `12 unidades` no ledger, autoria, destino, saldo final, replay e rejeição de barcode desativado.
+
+**Critério de aceite pendente da última revisão:** PASS do workflow W1 Auth/Firestore Emulator e Fast CI no SHA posterior aos commits `99ffaac32529af74d536a2715f84bfa4319a44f6` (motor) e `d9bae156db5619629d1e7ea0f5437e48e2d3a276` (asserção). Após o resultado, o Coordenador e o Worker 4 devem consumir o HEAD final reportado no PR #375. Até lá não promover.
