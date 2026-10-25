@@ -1,7 +1,8 @@
 import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
-import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
+import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
+import { evaluateServerAuthorization } from './authorizationPolicy';
 import {
   FOUNDER_AUTH_PROVIDER,
   normalizePlatformEmail,
@@ -14,7 +15,8 @@ const FIREBASE_JWKS = createRemoteJWKSet(
 const FIREBASE_ISSUER = `https://securetoken.google.com/${firebaseConfig.projectId}`;
 
 function emulatorAuthContext(): { projectId: string; issuer: string } | null {
-  const enabled = process.env.EMPROVEX_E2E_SERVER_AUTH === '1';
+  const enabled = process.env.NODE_ENV !== 'production'
+    && process.env.EMPROVEX_E2E_SERVER_AUTH === '1';
   const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
   const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
   const localEmulator = emulatorHost === '127.0.0.1:9099' || emulatorHost === 'localhost:9099';
@@ -157,6 +159,17 @@ export async function verifyFounderFirebaseRequest(
 
   if (verified.signInProvider !== FOUNDER_AUTH_PROVIDER) {
     throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
+  }
+
+  const decision = evaluateServerAuthorization({
+    uid: verified.uid,
+    email: verified.email,
+    role: 'founder',
+    workspaceId: HGESM_WORKSPACE_ID,
+    ug: HGESM_UG,
+  }, { capability: 'platform.admin' });
+  if (!decision.allowed) {
+    throw new FounderAuthError('Acesso administrativo negado.', 403);
   }
 
   return {

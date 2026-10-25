@@ -1,0 +1,45 @@
+name: W4 Independent AuthZ PR370
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/core-lean-r2-w4-authz.test.mjs'
+      - '.github/workflows/w4-authz-cross-certification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: W4 independent AuthZ policy negatives
+        run: node --test scripts/core-lean-r2-w4-authz.test.mjs
+      - name: Existing policy coverage under same PR370 SHA
+        run: npm run test:server-authorization
+      - name: W4 Auth and Firestore signed token runtime
+        if: always()
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/server-authorization-emulator.ts"
+
+      - name: W4 direct Firestore client writes denied (server-only Rules emulator)
+        if: always()
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-server-only-test.json --project demo-emprovex-security --only auth,firestore "node scripts/warehouse-server-only-rules.test.mjs"
+
+      - name: W4 signed mobile route integration — deny safely before write
+        if: always()
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-authz-mobile.integration.mjs"

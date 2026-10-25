@@ -38,7 +38,14 @@ for (const marker of [
   requireText(parser, marker, `Parser direto perdeu requisito: ${marker}`);
 }
 
-requireText(route, 'verifyFirebaseRequest', 'Rota de leitura direta precisa exigir sessão Firebase.');
+// A API passou da simples verificação de JWT para identidade, conta/workspace
+// ativos e autorização do domínio, sempre no servidor.
+for (const marker of [
+  'verifyPlatformPrincipal',
+  'evaluateServerAuthorization',
+  "capability: 'core.parse'",
+]) requireText(route, marker, `Rota de PDF não aplica autorização server-side: ${marker}`);
+forbidText(route, 'await verifyFirebaseRequest(', 'PDF não pode autorizar apenas por JWT sem vínculo operacional.');
 requireText(route, 'MAX_FILE_SIZE = 12 * 1024 * 1024', 'Rota perdeu limite de tamanho do PDF.');
 requireText(route, 'parseEmpenhoPdfBytes', 'Rota deixou de usar o parser determinístico.');
 forbidText(route, 'openai', 'Rota direta não pode depender de OpenAI.');

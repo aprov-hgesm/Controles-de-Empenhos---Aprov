@@ -5,7 +5,7 @@ import {
   runTransaction,
   writeBatch,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { getInvoiceRecordKey } from './invoiceIdentity';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, CronogramaEmailEnvio, SupplierContact } from './types';
 import {
@@ -39,6 +39,21 @@ import {
   recordWorkspaceDocumentWrites,
 } from './workspaceUsageTelemetry';
 
+async function listOperationalFromServer<T>(
+  userId:string,resource:'empenhos'|'invoices'|'alerts'|'comissoes'|'cronogramas',
+):Promise<T[]>{
+  const user=auth.currentUser;
+  if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+  const response=await fetch('/api/core/operational-read?resource='+encodeURIComponent(resource),{
+    headers:{authorization:'Bearer '+await user.getIdToken()},
+    cache:'no-store',
+  });
+  if(!response.ok)throw new Error('Consulta operacional indisponível: '+resource);
+  const body=await response.json() as {ok:boolean,items?:T[]};
+  if(!body.ok||!Array.isArray(body.items))throw new Error('Resposta operacional inválida.');
+  return body.items;
+}
+
 // Seeding function (no-op as data is now fully persistent and shared on Firestore)
 export async function seedInitialDataIfNecessary(userId: string) {
   const scope = getCurrentOperationalScope(userId);
@@ -54,17 +69,14 @@ export async function seedInitialDataIfNecessary(userId: string) {
   }
 }
 
-export async function getEmpenhos(userId: string): Promise<Empenho[]> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalCollectionPath(scope, 'empenhos');
-  try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'empenhos'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'empenhos');
-    return snapshot.docs.map(item => item.data() as Empenho);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
-  }
+export async function getEmpenhos(userId:string):Promise<Empenho[]>{
+  const scope=getCurrentOperationalScope(userId);
+  const path=getOperationalCollectionPath(scope,'empenhos');
+  try{
+    const items=await listOperationalFromServer<Empenho>(userId,'empenhos');
+    recordWorkspaceDocumentReads(scope,items.length,'empenhos');
+    return items;
+  }catch(error){handleFirestoreError(error,OperationType.LIST,path);throw error;}
 }
 
 export async function createEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
@@ -79,12 +91,16 @@ export async function getSupplierContacts(userId: string): Promise<SupplierConta
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalCollectionPath(scope, 'suppliers');
   try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'suppliers'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
-    return snapshot.docs.map((item) => ({
-      ...(item.data() as SupplierContact),
-      id: item.id,
-    }));
+    const user=auth.currentUser;
+    if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+    const response=await fetch('/api/core/suppliers',{
+      headers:{authorization:'Bearer '+await user.getIdToken()},cache:'no-store',
+    });
+    if(!response.ok)throw new Error('Não foi possível consultar fornecedores autorizados.');
+    const result=await response.json() as {ok:boolean,items:SupplierContact[]};
+    if(!result.ok||!Array.isArray(result.items))throw new Error('Resposta de fornecedores inválida.');
+    recordWorkspaceDocumentReads(scope,result.items.length,'outros'); // estimativa de documentos retornados via servidor
+    return result.items;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
@@ -98,8 +114,15 @@ export async function saveSupplierContact(
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'suppliers', supplier.id);
   try {
-    await setDoc(operationalDocRef(scope, 'suppliers', supplier.id), supplier);
-    recordWorkspaceDocumentWrites(scope, 1, 'outros');
+    const user=auth.currentUser;
+    if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+    const response=await fetch('/api/core/suppliers',{
+      method:'POST',
+      headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+      body:JSON.stringify({supplier}),cache:'no-store',
+    });
+    if(!response.ok)throw new Error('Servidor recusou cadastro de fornecedor.');
+    recordWorkspaceDocumentWrites(scope,1,'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
@@ -114,25 +137,35 @@ export async function removeEmpenho(
   return commitEmpenhoDeletionLifecycle(userId, id, expectedRevision);
 }
 
+async function mutateSimpleOnServer(
+  userId:string,resource:'alerts'|'comissoes',action:'save'|'delete',payload:unknown,
+):Promise<void>{
+  const user=auth.currentUser;
+  if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+  const response=await fetch('/api/core/simple-write',{
+    method:'POST',
+    headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+    body:JSON.stringify({resource,action,payload}),cache:'no-store',
+  });
+  if(!response.ok)throw new Error('Servidor recusou mutação operacional autorizada: '+resource);
+}
+
 // Alerts operations
-export async function getAlerts(userId: string): Promise<Alert[]> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalCollectionPath(scope, 'alerts');
-  try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'alerts'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
-    return snapshot.docs.map(item => item.data() as Alert);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
-  }
+export async function getAlerts(userId:string):Promise<Alert[]>{
+  const scope=getCurrentOperationalScope(userId);
+  const path=getOperationalCollectionPath(scope,'alerts');
+  try{
+    const items=await listOperationalFromServer<Alert>(userId,'alerts');
+    recordWorkspaceDocumentReads(scope,items.length,'outros');
+    return items;
+  }catch(error){handleFirestoreError(error,OperationType.LIST,path);throw error;}
 }
 
 export async function saveAlert(userId: string, alert: Alert): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'alerts', alert.id);
   try {
-    await setDoc(operationalDocRef(scope, 'alerts', alert.id), { ...alert, userId });
+    await mutateSimpleOnServer(userId,'alerts','save',alert);
     recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -143,7 +176,7 @@ export async function removeAlert(userId: string, id: string): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'alerts', id);
   try {
-    await deleteDoc(operationalDocRef(scope, 'alerts', id));
+    await mutateSimpleOnServer(userId,'alerts','delete',id);
     recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -151,20 +184,14 @@ export async function removeAlert(userId: string, id: string): Promise<void> {
 }
 
 // Invoices operations
-export async function getInvoices(userId: string): Promise<Invoice[]> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalCollectionPath(scope, 'invoices');
-  try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'invoices'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'notas');
-    return snapshot.docs.map((item) => {
-      const data = item.data() as Invoice;
-      return { ...data, recordKey: data.recordKey || item.id };
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
-  }
+export async function getInvoices(userId:string):Promise<Invoice[]>{
+  const scope=getCurrentOperationalScope(userId);
+  const path=getOperationalCollectionPath(scope,'invoices');
+  try{
+    const items=await listOperationalFromServer<Invoice>(userId,'invoices');
+    recordWorkspaceDocumentReads(scope,items.length,'notas');
+    return items;
+  }catch(error){handleFirestoreError(error,OperationType.LIST,path);throw error;}
 }
 
 export async function saveInvoice(userId: string, invoice: Invoice): Promise<void> {
@@ -226,15 +253,24 @@ export async function commitAllInvoicesDeletion(
   });
 }
 
+async function removeCommissionsOnServer(userId:string,ids:string[]):Promise<void>{
+  const user=auth.currentUser;
+  if(!user||user.uid!==userId)throw new Error('Sessão operacional inválida.');
+  const response=await fetch('/api/core/comissoes/bulk-delete',{
+    method:'POST',
+    headers:{authorization:'Bearer '+await user.getIdToken(),'content-type':'application/json'},
+    body:JSON.stringify({ids}),cache:'no-store',
+  });
+  if(!response.ok)throw new Error('Não foi possível remover comissões autorizadas.');
+}
+
 export async function commitAllComissoesDeletion(userId: string, ids: string[]): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   try {
     if (ids.length > 450) {
       throw new Error('Quantidade de comissões excede o limite seguro para exclusão em lote.');
     }
-    const batch = writeBatch(db);
-    ids.forEach((id) => batch.delete(operationalDocRef(scope, 'comissoes', id)));
-    await batch.commit();
+    await removeCommissionsOnServer(userId,ids);
     recordWorkspaceDocumentDeletes(scope, ids.length, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'comissoes')}/bulk`);
@@ -302,24 +338,21 @@ export async function ensureTermoRecebimentoAssignment(
 }
 
 // Comissoes operations
-export async function getComissoes(userId: string): Promise<Comissao[]> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalCollectionPath(scope, 'comissoes');
-  try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'comissoes'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
-    return snapshot.docs.map(item => item.data() as Comissao);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
-  }
+export async function getComissoes(userId:string):Promise<Comissao[]>{
+  const scope=getCurrentOperationalScope(userId);
+  const path=getOperationalCollectionPath(scope,'comissoes');
+  try{
+    const items=await listOperationalFromServer<Comissao>(userId,'comissoes');
+    recordWorkspaceDocumentReads(scope,items.length,'outros');
+    return items;
+  }catch(error){handleFirestoreError(error,OperationType.LIST,path);throw error;}
 }
 
 export async function saveComissao(userId: string, comissao: Comissao): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'comissoes', comissao.id);
   try {
-    await setDoc(operationalDocRef(scope, 'comissoes', comissao.id), { ...comissao, userId });
+    await mutateSimpleOnServer(userId,'comissoes','save',comissao);
     recordWorkspaceDocumentWrites(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -330,7 +363,7 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
   const scope = getCurrentOperationalScope(userId);
   const path = getOperationalDocumentPath(scope, 'comissoes', id);
   try {
-    await deleteDoc(operationalDocRef(scope, 'comissoes', id));
+    await removeCommissionsOnServer(userId,[id]);
     recordWorkspaceDocumentDeletes(scope, 1, 'outros');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -338,17 +371,14 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
 }
 
 // Cronogramas operations
-export async function getCronogramas(userId: string): Promise<CronogramaEmpenho[]> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalCollectionPath(scope, 'cronogramas');
-  try {
-    const snapshot = await getDocs(operationalCollectionRef(scope, 'cronogramas'));
-    recordWorkspaceDocumentReads(scope, snapshot.size, 'outros');
-    return snapshot.docs.map(item => item.data() as CronogramaEmpenho);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
-    return [];
-  }
+export async function getCronogramas(userId:string):Promise<CronogramaEmpenho[]>{
+  const scope=getCurrentOperationalScope(userId);
+  const path=getOperationalCollectionPath(scope,'cronogramas');
+  try{
+    const items=await listOperationalFromServer<CronogramaEmpenho>(userId,'cronogramas');
+    recordWorkspaceDocumentReads(scope,items.length,'outros');
+    return items;
+  }catch(error){handleFirestoreError(error,OperationType.LIST,path);throw error;}
 }
 
 export async function saveCronograma(userId: string, cronograma: CronogramaEmpenho): Promise<void> {

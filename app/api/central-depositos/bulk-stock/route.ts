@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWarehouseRequest, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
+import { verifyWarehouseRequest, assertWarehouseAuthorization, WarehouseAccessError } from '../../../../lib/server/warehouseAccess';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import { StockImportError, STOCK_MAX_FILE_BYTES, generateBulkStockTemplate, parseBulkStockWorkbook } from '../../../../lib/server/warehouseBulkStockWorkbook';
 
@@ -11,7 +11,8 @@ function reply(error:string,status:number){
 /** The template does not include workspace data. Authentication still required. */
 export async function GET(request:NextRequest){
   try{
-    await verifyWarehouseRequest(request.headers.get('authorization'));
+    const access=await verifyWarehouseRequest(request.headers.get('authorization'));
+    assertWarehouseAuthorization(access,{capability:'warehouse.read'});
     const file=generateBulkStockTemplate();
     return new NextResponse(new Uint8Array(file),{
       status:200,headers:{

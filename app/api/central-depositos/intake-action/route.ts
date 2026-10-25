@@ -6,6 +6,7 @@ import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningA
 import { bindWarehouseMobileTrust, WarehouseMobileTrustError } from '../../../../lib/server/warehouseMobileTrust.mjs';
 import {
   verifyWarehouseRequest,
+  assertWarehouseAuthorization,
   WarehouseAccessError,
 } from '../../../../lib/server/warehouseAccess';
 import type { Empenho, Invoice } from '../../../../lib/types';
@@ -1168,6 +1169,7 @@ export async function POST(request: Request) {
     if (!body || body.workspaceId !== access.workspaceId || !body.input) {
       throw new FastPathError('WAREHOUSE_FAST_PATH_SCOPE_MISMATCH', 403);
     }
+    assertWarehouseAuthorization(access, {capability:'warehouse.command',workspaceId:body.workspaceId,operation:body.action});
     const trusted = bindWarehouseMobileTrust(access, {
       workspaceId: body.workspaceId,
       action: body.action === 'ALLOCATE' ? 'ALLOCATE' : 'IMMEDIATE_CONSUMPTION',
