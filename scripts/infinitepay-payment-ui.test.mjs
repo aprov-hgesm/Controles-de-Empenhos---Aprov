@@ -73,11 +73,12 @@ test('payment return is displayed as unverified and URL sanitized', () => {
   assert.doesNotMatch(panel, /setAccount\(.*paid/);
 });
 
-test('trial pricing is shown as planned, not contracted or live', () => {
-  for (const amount of [2990, 3990, 4990, 5990, 6990]) {
-    assert.match(panel, new RegExp('cents: ' + amount));
+test('unannounced progressive pricing remains completely absent from client views', () => {
+  for (const source of [panel, shell, page, pilot]) {
+    assert.doesNotMatch(source, /Escalonamento previsto|PRICING|precos|Plano e valores|Simular novo assinante|billing-local-demo/);
+    assert.doesNotMatch(source, /1º ao 3º|4º ao 6º|7º ao 9º|10º ao 12º|13º em diante/);
+    assert.doesNotMatch(source, /cents: (2990|3990|4990|5990|6990)/);
   }
-  assert.match(panel, /Não é uma oferta ativa/);
   assert.match(panel, /Isenção preservada/);
 });
 
@@ -92,11 +93,10 @@ test('manual payment fallback loads on demand, not for every InfinitePay visit',
   assert.match(page, /Preço de referência legado/);
 });
 
-test('exempt test account gets a local-only payer visual simulation', () => {
-  assert.match(panel, /showLocalSimulation = process\.env\.NODE_ENV === 'development' && workspaceResolved && exempt/);
-  assert.match(panel, /data-testid="billing-local-demo-toggle"/);
-  assert.match(panel, /data-testid="billing-local-demo-result"/);
-  assert.match(panel, /Nenhuma competência, checkout ou pagamento foi criado/);
+test('exempt clients keep their actual contract and cannot preview unpublished tiers', () => {
+  assert.match(panel, /exempt = account\?\.status === 'exempt'/);
+  assert.match(panel, /Isenção preservada/);
+  assert.doesNotMatch(panel, /billing-local-demo|simulateFirstMonth|setSimulateFirstMonth/);
   assert.doesNotMatch(panel, /updatePlatformBillingConfig\(|setDoc\(|updateDoc\(/);
 });
 
@@ -127,9 +127,7 @@ test('mobile subscription navigation is accessible and functional', () => {
   assert.match(shell, /onClick=\{\(\) => setDrawerOpen\(false\)\}/);
   assert.match(shell, /href="#visao-geral"/);
   assert.match(shell, /href="#historico-financeiro"/);
-  assert.match(shell, /href="#precos"/);
   assert.match(shell, /href="#formas-pagamento"/);
-  assert.match(panel, /id="precos"/);
   assert.match(pilot, /id="historico-financeiro"/);
   assert.match(page, /id="formas-pagamento"/);
 });
