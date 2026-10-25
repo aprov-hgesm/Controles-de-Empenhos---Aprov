@@ -107,7 +107,9 @@ test('mobile: sidebar drawer opens, navigates and closes without horizontal over
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/regularizacao', { waitUntil: 'domcontentloaded' });
   const menu = page.getByTestId('billing-mobile-menu');
+  await expect(page.getByTestId('billing-platform-shell')).toHaveAttribute('data-hydrated', 'true');
   await expect(menu).toBeVisible();
+  await expect(menu).toBeEnabled();
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
   await menu.click();
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
