@@ -141,3 +141,32 @@ The W4 v3 suite checks committed headers, movements, consumptions, global/local 
 Worker 1: Warehouse motor W1 source and replay safeguards certified in earlier exact composites; no live writes or Rules changes by W4. Worker 2: align both old mobile verifier tests with server-derived v3 IDs and ensure W4 v3 / finance / W5 deep checks are selected and EXECUTED; negative removal mutations must cause CI FAIL. Worker 3: preserve optional fiscal contracts and trusted PDF attestation without claiming writers integrated. Worker 5: certify benchmark seed and genuine contention with reasoned rejection diagnostics; never drop the debit invariants. PR370 owner: correct Mobile alias allowlist regression before mixing AuthZ migration. Coordinator: combine final SHAs, execute all active release gates and deliver official GO/NO-GO.
 
 **W4 verdict**: GO technical for historical Warehouse v1/v2/v3 and opt-in finance at the recorded successful composite SHA, but NO-GO for full five-worker closure until the current exact integration composite Fast CI + W5 true transaction + Legal and required checks are green. No merge, production deploy, real data access or Rules changes authorized.
+
+## 25 October 2026 — final W4-W5 all-five-worker SHA controls
+
+### Same-SHA previously successful all-five-worker evidence
+
+Experimental PR #380 / **f60445ed226a6edb9bba060c749703d624dcbb79**:
+- **PASS W4 historical v1/v2:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031405
+- **PASS W4 17 v3 signed Auth+Firestore adversarial and W3/W4 financial contracts:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031433
+- **PASS W2 mutation planner + W5 historical and W5 actual v2/v3 transactions:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031348 (both jobs)
+- **PASS W5 bounded read/legacy IDs:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031507
+- **PASS Fast CI:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031472
+- **PASS Legal, diff, build:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200031554
+- Core Protection and Recovery PASS. Application CI, Domain CI, Browser E2E are SKIPPED due to DRAFT, not PASS. This is GO technical for covered additive contracts, not production GO.
+
+The source W5 SHA then was f71d5f590531c16cf391556e84072bd829b65de1. Later W5 code e2d0ad8c156a34df02ab7ef10109e3ab151960b2 added strict negative controls for 121 validity candidates, missing material and divergent replay with zero writes. Those passed separately in W1+W5 composition https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40200112711. The newest all-five-worker SHA **36a7aa3599e214040650cf26fbba3e28102117a2**, W5 docs c1dc5d9f, must have its own Actions conclusion checked: never transfer PASS across commits.
+
+### Performance and security interpretation
+
+W5 real transactions used three synthetic samples per scenario in the named Firestore/Auth Emulators. v3 was smaller at the HTTP request layer, but used **4 more RPCs** per committed operation than v2 and the same number of document writes. Observed median latency in ms: simple v2/v3 40.985/65.073, multiline 26.253/40.928, 60 validity candidates 12.892/49.646. These are not production SLAs, billed reads, or evidence v3 is faster. Preserve mutex, phantom prevention, balance rechecks and movement+consumption ledger. Propose query optimizations to W1 only after independent W4 invariants remain PASS.
+
+### AuthZ #370 separate precise scope
+
+A synthetic PR370 merge with main db6f33ea26a35b08707fd5dca5e9fa102a5ea7cb includes the mobile withdrawal alias absent from PR370 source. Central authorization executes BEFORE MobileTrust and ledger writes, but the allowlist lacks WITHDRAWAL_FINALIZE_MOBILE. Signed actual HTTP Auth Emulator test PASS for **safe HTTP 403 deny** of mobile alias, canonical allowlist permission and denial of forged workspace/ledger: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40199218101. Existing central policy 16/17 FAIL is a functional integration availability regression of #370, not an established auth bypass. PR370 must fix when integrating its separate unfinished server-only migration, but additive CORE LEAN should not be blocked if it introduces no auth regression.
+
+### Owner handoff
+
+W1 source afa0deba94905156a63bb636ae4ebcbb7452967d is fixed on covered warehouse motors. W3 64bd70072def5b0898ffbe57d969476ab630ad37 remains opt-in fiscal contracts, not persisted writers. W4 suite PR374 certifies documentary ledger v1/v2/v3, adversarial replay, concurrency, barcode, scopes, rollbacks and financial ownership. W2 must sync both legacy mobile verifier scripts to server-derived v3 line-ID behavior (fix applied only on temporary #380), preserving all other checks, and keep fail-closed selecting v3 signed emulator and financial independently. W5 handled Admin Emulator fixture, corrected accidental v2 double-request concurrency, historical invoice movement and new 121-query saturation negatives; do not claim productive speed improvement. Coordinator: compose official final SHA, run W4 v2/v3, W1 v3, W3 financial, W2 all negative mutations and release gates, W5 genuine v2/v3 probes, complete Application CI / Domain CI / Legal, and classify skipped separately. No merge, deploy, Rules modifications or customer data performed by W4.
+
+**W4 verdict at evidence f60445ed: scoped Warehouse + fiscal add-on GO technical; global release / incomplete authorization migration NO-GO until official final-SHA release gates.**
