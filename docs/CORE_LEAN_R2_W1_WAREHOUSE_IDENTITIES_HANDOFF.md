@@ -106,7 +106,7 @@ Exemplo de intenção mínima, sem rótulos, fator, lote, saldo ou operador:
 - Suíte adversarial W1 v3: PASS, incluindo manifesto/head forjados, adulteração de manifesto, consumo ausente, movimento ausente, mesmo ID concorrente e IDs diferentes disputando saldo, lotes, duas posições, base/apresentação, idempotência, reversão sem resíduo, perda de resposta, UG e limites de linhas.
 - [Fast CI #40157630862](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157630862) PASS: TypeScript, proibição de escritas Warehouse via cliente, testes unitários relevantes, operações móveis, barcode, estoque e validade.
 - [Core Protection #40157630857](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40157630857) PASS.
-- Complemento posterior: suíte de paridade Desktop v2/Mobile v3 em `scripts/warehouse-w1-v3-emulator.ts` com dois materiais de 24 unidades, apresentação box de 12, barcode associado server-side, baixa 1 caixa, comparação de saldo, movimento, consumo, UID/destino, provenance e replay; também recusa novo comando com barcode desativado. **Exige nova execução do Emulator sobre o HEAD pós-complemento.**
+- Complemento posterior: suíte de paridade Desktop v2/Mobile v3 em `scripts/warehouse-w1-v3-emulator.ts` com dois materiais de 24 unidades, apresentação box de 12, barcode associado server-side, baixa 1 caixa, comparação de saldo, movimento, consumo, UID/destino, provenance e replay; também recusa novo comando com barcode desativado. **Emulator autenticado aprovado com a prova de paridade no SHA de código `7a271c51f86f83a58a6b5cf149cf5e3ed8bf57fe`.**
 
 **Comandos reproduzíveis** (PowerShell, sem WSL):
 
@@ -137,4 +137,9 @@ A execução de paridade Desktop v2 / Mobile v3 em [W1 run #40158057123](https:/
 
 **Correção executada:** no motor `warehouseWithdrawalAtomicWrite.ts`, somente as linhas técnicas v3 cuja associação `barcodeId` já foi validada pelo servidor são persistidas com `interface:'BARCODE_SCANNER'`; continuam em unidade-base internamente. Linhas sem associação seguem `MANUAL_SEARCH`. O teste A/B exige explicitamente `BARCODE_SCANNER` nos dois contratos, barcodeId/código corretos, `1 caixa` no histórico, `12 unidades` no ledger, autoria, destino, saldo final, replay e rejeição de barcode desativado.
 
-**Critério de aceite pendente da última revisão:** PASS do workflow W1 Auth/Firestore Emulator e Fast CI no SHA posterior aos commits `99ffaac32529af74d536a2715f84bfa4319a44f6` (motor) e `d9bae156db5619629d1e7ea0f5437e48e2d3a276` (asserção). Após o resultado, o Coordenador e o Worker 4 devem consumir o HEAD final reportado no PR #375. Até lá não promover.
+**Resultado técnico do fechamento:** PASS no SHA de código `7a271c51f86f83a58a6b5cf149cf5e3ed8bf57fe`:
+- [Fast CI #40158544948](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158544948) — PASS (TypeScript, proibição de writes cliente, testes do domínio e Mobile).
+- [Core Protection #40158544929](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158544929) — PASS.
+- [W1 Auth/Firestore Emulator #40158541670](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158541670) — PASS (v1/v2 histórico, suíte W4 inalterada, v3 manifestos/replay adulterado/concorrência/recuperação, Desktop v2 x Mobile v3 com barcode e conversão, barcode inativo).
+
+**Fechamento técnico Worker 1:** contratos v2/v3 e provas executadas **GO para análise de integração coordenada**, sem autorização de merge. **A integração com a main/produção continua NO-GO** até revisão formal Worker 4 no SHA final, certificação conjunta dos PRs e autorização expressa do Coordenador. Nenhum dado real, rules de produção ou Central 3D foram modificados.
