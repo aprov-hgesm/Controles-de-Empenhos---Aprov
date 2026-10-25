@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     });
     const result = verifyPilotResponse({ paymentCheck });
     return NextResponse.json({
-      verified: result.verified, code: result.code || result.reason,
+      verified: result.verified, code: 'code' in result ? result.code : result.reason,
       settlesSubscription: false,
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
