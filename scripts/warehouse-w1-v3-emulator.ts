@@ -125,7 +125,7 @@ async function run(){
   const committed=await finalizeWarehouseWithdrawalV3Server(access,simple);
   assert.equal(committed.movementIds.length,1);
   const a=await inspect(simple);
-  assert.equal(a.header.status,'FINALIZED');assert.equal(a.header.atomicVersion,3);
+  assert.equal(a.header?.status,'FINALIZED');assert.equal(a.header?.atomicVersion,3);
   assert.equal(a.effect.length,1);
   assert.equal(a.movements[0].source.actorUid,access.uid);
   assert.equal(a.consumptions[0].operatorUid,access.uid);
@@ -158,7 +158,7 @@ async function run(){
   assert.equal(b.consumptions[0].requestedQuantity,1); // histórico na apresentação
   assert.equal(b.consumptions[0].presentationLabel,'Caixa de 12 unidades');
   assert.equal(b.consumptions[0].operatorRequestedQuantity,1);
-  assert.equal(b.header.effectManifest.lines[0].factorToBaseUnit,12);
+  assert.equal(b.header?.effectManifest?.lines?.[0]?.factorToBaseUnit,12);
   assert.equal((await finalizeWarehouseWithdrawalV3Server(access,boxes)).movementIds.length,0);
   pass('1 caixa corresponde a 12 unidades no ledger, mas a 1 caixa no histórico');
 
