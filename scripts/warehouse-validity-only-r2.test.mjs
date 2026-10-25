@@ -55,7 +55,10 @@ test('retirada Desktop e Movel reutilizam o mesmo planejamento e autorizacao',()
   const mobile=read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
   const route=read('app/api/central-depositos/operations/route.ts');
   assert.match(desktop,/planMobileOutboundAutomaticLots/);
-  assert.match(mobile,/planMobileOutboundAutomaticLots/);
+  assert.match(mobile,/WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+  const v3=read('lib/server/warehouseWithdrawalV3Write.ts');
+  assert.match(v3,/planMobileOutboundAutomaticLots/);
+  assert.match(v3,/snapshotVersions:snapshots/);
   assert.doesNotMatch(desktop,/setSelectedLotId|selectWarehouseFefoLot/);
   assert.doesNotMatch(mobile,/chooseLot/);
   assert.match(route,/withdrawnBy:access\.email/);

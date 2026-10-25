@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync } from 'node:fs';
+import { guardsFor } from './ci-lean-guards.mjs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -42,6 +43,16 @@ for (const path of requiredFiles) {
 
 const pkg = JSON.parse(read('package.json'));
 const ci = read('.github/workflows/application-ci.yml');
+// Resolve only actual executable workflow entries, not comments or labels.
+// The manifest coverage test certifies that each declared group is executed
+// exactly once, without omissions or reordering of historical guard scripts.
+const ciCommands = new Set(
+  [...ci.matchAll(/^\s*run:\s*npm run ([a-z0-9:-]+)\s*$/gm)].map(match => match[1])
+);
+for (const match of ci.matchAll(/^\s*run:\s*node scripts\/ci-lean-guards\.mjs --group (G\d+)\s*$/gm)) {
+  for (const step of guardsFor(match[1])) ciCommands.add(step.script);
+}
+
 const rules = read('firestore.rules');
 const firebaseConfig = JSON.parse(read('firebase.json'));
 const admin = read('components/admin/PlatformAdminView.tsx');
@@ -104,7 +115,8 @@ for (const expected of [
   'npm run verify:multitenant-security',
   'npm run test:security:multitenant',
 ]) {
-  requireText(ci, expected, `CI não executa: ${expected}`);
+  const name = expected.slice('npm run '.length);
+  if (!ciCommands.has(name)) findings.push(`CI não executa: ${expected}`);
 }
 
 requireText(admin, 'Cadastrar novo setor', 'Painel administrativo perdeu o cadastro de setor.');

@@ -4,6 +4,10 @@
  * Caminhos legados FINALIZING/PARTIALLY_APPLIED são tratados pelo motor v1.
  */
 import { createHash } from 'node:crypto';
+import {
+  auditWarehouseAtomicWithdrawalReplay, buildWarehouseWithdrawalEffectManifest,
+  warehouseWithdrawalManifestHash,
+} from './warehouseWithdrawalEvidence';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { WarehouseStoreError, warehouseAdminBatchRead, warehouseAdminListByField,
   warehouseAdminTransaction, type WarehouseAdminDocument } from './warehouseFirestoreTransaction';
@@ -50,28 +54,45 @@ export function atomicWarehouseWithdrawalHash(input:FinalizeWarehouseMaterialWit
     withdrawnBy:normalizeWarehouseWithdrawnBy(input.withdrawnBy),
     lines:input.lines}));
 }
+export interface WarehouseWithdrawalAtomicV3Options {
+  intentHash:string;
+  intentLineCount:number;
+  /** Versões lidas no planejamento, rechecadas na transação de baixa. */
+  snapshotVersions:Record<string,string|null>;
+  /** Barcode IDs obtidos de associações lidas/validadas no servidor. */
+  barcodeIdsByLine:Record<string,string|null>;
+  originalByLine:Record<string,{intentIndex:number;partIndex:number;
+    originalRequestedQuantity:number;originalPresentationCode:string;
+    factorToBaseUnit:number;barcodeId:string|null}>;
+}
 export async function finalizeWarehouseWithdrawalAtomicServer(
   access:VerifiedWarehouseRequest,input:FinalizeWarehouseMaterialWithdrawalInput,
+  v3?:WarehouseWithdrawalAtomicV3Options,
 ):Promise<FinalizeWarehouseMaterialWithdrawalResult> {
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ?'emulator':await getGoogleAccessToken();
   const ws=access.workspaceId, destinationPath=path(ws,'destinations',input.destinationId);
   const headerPath=path(ws,'withdrawals',input.withdrawalId);
-  const hash=atomicWarehouseWithdrawalHash(input);
+  const hash=v3?.intentHash??atomicWarehouseWithdrawalHash(input);
+  const version=v3?3:2;
   // Replay confirmado deve independer de saldo atual, validade alterada,
   // localização desativada ou da disponibilidade de consultas secundárias.
   const saved=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
   if(saved) {
     const h=saved.data;
-    if(h.atomicVersion!==2)return deny('WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
+    if(h.atomicVersion!==version)return deny(v3
+        ?'WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
+        :'WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
     if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
       ||h.payloadHash!==hash||h.destinationId!==input.destinationId
-      ||h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy)
-      ||h.expectedLineCount!==input.lines.length)
+      ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
+      ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
-    if(h.status!=='FINALIZED'||h.appliedLineCount!==input.lines.length)
+    if(h.status!=='FINALIZED'||h.appliedLineCount!==(v3?h.expectedLineCount:input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
-    return {withdrawal:h as unknown as WarehouseMaterialWithdrawal,movementIds:[]};
+    return auditWarehouseAtomicWithdrawalReplay(access,token,input.withdrawalId,saved,
+      v3?{version:3,intentHash:hash,intentLineCount:v3.intentLineCount}
+        :{version:2,lines:input.lines});
   }
   const prepared:ReadLine[]=await Promise.all(input.lines.map(async line=>{
     const position=validateWarehouseStockPosition(line.position);
@@ -83,6 +104,8 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       consumptionId:'cons_'+sha(ws+'\n'+'stock:'+input.withdrawalId+':'+line.lineId),
     };
   }));
+  const effectManifest=v3?await buildWarehouseWithdrawalEffectManifest(
+    ws,input.withdrawalId,hash,v3.intentLineCount,input.lines,v3.originalByLine):null;
   const set=new Set<string>([headerPath,destinationPath]);
   const untracked=new Set<string>();
   for(const p of prepared) {
@@ -110,6 +133,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
     candidateByMaterial.set(materialId,names);
     for(const name of names)set.add(name);
   }
+  if(v3)for(const name of Object.keys(v3.snapshotVersions))set.add(name);
   if(set.size>450)return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_TOO_MANY_DOCUMENTS',400);
 
   // Um único commit; a transação serializa concorrência por saldo, referência,
@@ -119,19 +143,26 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       const old=rows.get(headerPath);
       if(old) {
         const h=old.data;
-        if(h.atomicVersion!==2)return deny('WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
+        if(h.atomicVersion!==version)return deny(v3
+        ?'WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT'
+        :'WAREHOUSE_WITHDRAWAL_LEGACY_RECOVERY_REQUIRED');
         if(h.workspaceId!==ws||h.ug!==access.ug||h.id!==input.withdrawalId
           ||h.payloadHash!==hash||h.destinationId!==input.destinationId
-          ||h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy)
-          ||h.expectedLineCount!==prepared.length) {
+          ||(!v3&&h.withdrawnBy!==normalizeWarehouseWithdrawnBy(input.withdrawnBy))
+          ||(v3?h.intentLineCount!==v3.intentLineCount:h.expectedLineCount!==prepared.length)) {
           return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         }
-        if(h.status!=='FINALIZED'||h.appliedLineCount!==prepared.length) {
+        if(h.status!=='FINALIZED'||h.appliedLineCount!==(v3?h.expectedLineCount:prepared.length)) {
           return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
         }
         const withdrawal=h as unknown as WarehouseMaterialWithdrawal;
-        // Nenhuma segunda baixa, e sinal inequívoco de replay ao cliente.
+        // Checagem de movimentos e consumos é feita após esta transação
+        // no caminho de replay, sempre sem novas escritas.
         return {result:{withdrawal,movementIds:[]},writes:[]};
+      }
+      if(v3)for(const [name,updateTime] of Object.entries(v3.snapshotVersions)) {
+        if((rows.get(name)?.updateTime||null)!==updateTime)
+          return deny('WAREHOUSE_WITHDRAWAL_V3_SNAPSHOT_CHANGED');
       }
       const destination=get(rows,destinationPath,'WAREHOUSE_DESTINATION_INACTIVE').data;
       if(destination.status!=='active'||destination.workspaceId!==ws||destination.ug!==access.ug
@@ -244,10 +275,16 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
         const note='Saída de Material · '+input.withdrawalId+' · '+line.lineId;
         const source:WarehouseExpressOutboundMovementSource={
-          kind:'EXPRESS_OUTBOUND',interface:plan.interface,actorUid:access.uid,
+          // Na v3 a associação foi resolvida previamente pelo servidor.
+          // Cada parte técnica usa a unidade-base, mas a proveniência
+          // BARCODE_SCANNER deve permanecer coerente com barcodeId/barcode.
+          kind:'EXPRESS_OUTBOUND',
+          interface:v3?.barcodeIdsByLine[line.lineId]?'BARCODE_SCANNER':plan.interface,
+          actorUid:access.uid,
           requestedQuantity:plan.requestedQuantity,quantity:plan.baseQuantity,
           presentation:plan.presentation,factorToBaseUnit:plan.factorToBaseUnit,
-          barcodeId:barcode?.id||null,barcode:barcode?.barcode||null,
+          barcodeId:v3?.barcodeIdsByLine[line.lineId]??barcode?.id??null,
+          barcode:v3?line.barcode:barcode?.barcode||null,
           position,locationBalanceId:p.locationBalanceId,lotId:lot?.id||null,lotCode:lot?.code||null,
         };
         const movement:WarehouseMovement=checked(validateWarehouseMovement({
@@ -279,13 +316,24 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           workspaceId:ws,ug:access.ug,origin:'STOCK_OUTBOUND',
           materialId:line.materialId,materialDescription:material.description,
           unitLabel:material.unit.label||material.unit.code,
-          quantity:plan.baseQuantity,requestedQuantity:plan.requestedQuantity,
-          presentationLabel:barcode?.presentation.label||line.presentation.label||line.presentation.code,
+          quantity:plan.baseQuantity,
+          requestedQuantity:v3
+            ?normalizeWarehouseQuantity(plan.baseQuantity/
+              v3.originalByLine[line.lineId].factorToBaseUnit)
+              ??deny('WAREHOUSE_WITHDRAWAL_V3_CONVERSION_INVALID')
+            :plan.requestedQuantity,
+          presentationLabel:v3?line.presentationLabel:
+            barcode?.presentation.label||line.presentation.label||line.presentation.code,
           destinationId:input.destinationId,destinationName:destination.name,
           withdrawnBy:normalizeWarehouseWithdrawnBy(input.withdrawnBy),
           operatorUid:access.uid,movementId:p.movementId,withdrawalId:input.withdrawalId,
           lineId:line.lineId,intakeId:null,invoiceRecordKey:null,
-          barcode:barcode?.barcode||null,lotCode:lot?.code||null,
+          barcode:v3?line.barcode:barcode?.barcode||null,lotCode:lot?.code||null,
+          ...(v3?{operatorRequestedQuantity:v3.originalByLine[line.lineId].originalRequestedQuantity,
+            operatorPresentationCode:v3.originalByLine[line.lineId].originalPresentationCode,
+            operatorPresentationLabel:line.presentationLabel,
+            operatorFactorToBaseUnit:v3.originalByLine[line.lineId].factorToBaseUnit,
+            operatorIntentIndex:v3.originalByLine[line.lineId].intentIndex}:{}),
           positionLabel:local.name+(position.kind==='SUBPOSITION'?' / '+get(rows,
             path(ws,'locations',position.subpositionId),'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data.name:''),
           siscofisStatus:'PENDING',occurredAt:now,updatedAt:now,
@@ -303,12 +351,21 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
         status:'FINALIZED',createdBy:access.uid,createdAt:nowString,
         updatedAt:nowString,finalizedAt:nowString,
       };
-      place(headerPath,{...withdrawal,atomicVersion:2});
+      place(headerPath,{...withdrawal,atomicVersion:version,
+        ...(v3&&effectManifest?{intentLineCount:v3.intentLineCount,
+          effectManifest,effectManifestHash:warehouseWithdrawalManifestHash(effectManifest)}:{})});
       if(writes.size>450)return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_TOO_MANY_WRITES',400);
       return {result:{withdrawal,movementIds:ids},
         writes:[...writes].map(([name,data])=>({path:name,data}))};
     }
   );
+  if(committed.movementIds.length===0) {
+    const savedReplay=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
+    if(!savedReplay)return deny('WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED');
+    return auditWarehouseAtomicWithdrawalReplay(access,token,input.withdrawalId,
+      savedReplay,v3?{version:3,intentHash:hash,intentLineCount:v3.intentLineCount}
+        :{version:2,lines:input.lines});
+  }
   // Injeção estritamente no Emulator: simula perda da resposta HTTP após
   // commit remoto confirmado. O mesmo withdrawalId recupera sem nova baixa.
   if(process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'

@@ -1,0 +1,54 @@
+name: W4 Five-Worker Integration Evidence
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['scripts/**','lib/**','package.json','.github/workflows/w4-five-worker-cross.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent-w2-w5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20', cache: npm}
+      - run: npm ci
+      - run: npm run typecheck
+      - name: W2 fail-closed planner, syntax, mutation, coverage
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs
+      - name: W1 v3 contract through W2 dispatcher
+        run: node scripts/ci-lean-w1-v3.mjs contract
+      - name: W3 plus W4 independent fiscal ownership
+        run: node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs scripts/core-lean-r2-w4-financial.test.mjs
+      - name: W5 historical barcode identities
+        run: npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts
+      - name: W5 deterministic query limits and saturation
+        run: node --test scripts/core-lean-r2-w5-profile.test.mjs
+  true-transaction-probes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+      EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1'
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W5_TRANSACTION_SAMPLES: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20', cache: npm}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - run: npm ci
+      - name: W5 authentic Warehouse v2-v3 transactions, replay, ledger and RPC comparisons
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w5-transactions.mjs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: w5-authenticated-transaction-measures
+          path: w5-transactions.json
+          if-no-files-found: ignore
+          retention-days: 7

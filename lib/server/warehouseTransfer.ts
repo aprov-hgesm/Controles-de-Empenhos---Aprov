@@ -165,7 +165,9 @@ export async function transferWarehouseStockServer(
     return 'lot_'+createHash('sha256').update(movementId+'\n'+id+'\nLOT_SPLIT').digest('hex').slice(0,32);
   });
   const splitPaths=splitIds.map(id=>root(access.workspaceId,'lots',id));
-  const reads=[...new Set([...Object.values(p),...checks,...sourceLots.map(row=>row.path),...splitPaths])];
+  const lotLockPath=root(access.workspaceId,'lotAttributionLocks',materialId);
+  const reads=[...new Set([...Object.values(p),...checks,...sourceLots.map(row=>row.path),
+    ...splitPaths,lotLockPath])];
 
   return warehouseAdminTransaction<TransferWarehouseStockResult>(token,reads,(rows)=>{
     checkPosition(access,from,rows);
@@ -262,6 +264,22 @@ export async function transferWarehouseStockServer(
           {path:destPath,data:{...split,createdAt:now,updatedAt:now}},
         );
       }
+    }
+    // Lotes movidos ou divididos alteram a atribuição por posição. A versão
+    // do mutex identifica novas referências não vistas em queries secundárias.
+    if(writes.some(write=>write.path.includes('/lots/'))){
+      const lock=rows.get(lotLockPath);
+      if(lock&&(lock.data.workspaceId!==access.workspaceId
+        ||lock.data.ug!==access.ug||lock.data.materialId!==materialId))
+        return fail('WAREHOUSE_TRANSFER_LOT_LOCK_SCOPE_MISMATCH');
+      const revision=typeof lock?.data.revision==='number'
+        &&Number.isSafeInteger(lock.data.revision)?lock.data.revision:0;
+      if(revision>=Number.MAX_SAFE_INTEGER)
+        return fail('WAREHOUSE_TRANSFER_LOT_LOCK_REVISION_OVERFLOW');
+      writes.push({path:lotLockPath,data:{
+        workspaceId:access.workspaceId,ug:access.ug,materialId,revision:revision+1,
+        updatedBy:access.uid,updatedAt:now,
+      }});
     }
     return {result:{applied:true,movement:candidate,balance,fromBalance:nextFrom,toBalance:nextTo},writes};
   });

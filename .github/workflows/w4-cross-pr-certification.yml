@@ -1,0 +1,40 @@
+name: W4 Cross-PR Certified Composition
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/core-lean-r2-w4-*.mjs'
+      - 'lib/server/warehouseWithdrawal*.ts'
+      - 'lib/financialIdentityV2.ts'
+      - '.github/workflows/w4-cross-pr-certification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-v3-financial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: W1 v3 strict command contracts
+        run: node --test scripts/warehouse-withdrawal-v3-contract.test.mjs
+      - name: W3 optional financial identity test baseline
+        run: node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs
+      - name: W4 independent financial contracts
+        run: node --experimental-vm-modules --test scripts/core-lean-r2-w4-financial.test.mjs
+      - name: W4 independent v3 Firebase Auth and Firestore emulator
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-v3-emulator.mjs"

@@ -16,6 +16,15 @@ function forbidText(content, needle, message) {
 
 const packageJson = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
+const typeScriptBudget = JSON.parse(read('ops/typescript-error-budget.json'));
+if (typeScriptBudget.maxErrors !== 0) throw new Error('CI não pode aceitar budget TypeScript acima de zero.');
+if (!workflow.includes('npm run typecheck > /tmp/typecheck.txt 2>&1 || rc=$?')) {
+  throw new Error('A validação TypeScript executável não está no CI.');
+}
+if (!workflow.includes('run: npm run build')) {
+  throw new Error('A certificação de produção perdeu o build.');
+}
+
 const e2eWorkflow = read('.github/workflows/browser-e2e-on-demand.yml');
 const rules = read('firestore.rules');
 const closure = read('docs/BLOCK_16_9_FINAL_AUDIT_CLOSURE.md');
@@ -79,7 +88,7 @@ for (const ciStep of [
   'Immutable audit trail guard',
   'Empenho concurrency domain tests',
   'Production build',
-  'Final TypeScript validation',
+  'TypeScript error budget',
   'Diff hygiene',
   'Block 16 Final Release Gate',
 ]) {
