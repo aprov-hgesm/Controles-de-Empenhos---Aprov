@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 
 import { auth } from '../../lib/firebase';
-import { getResolvedWorkspaceContextForSession, resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../lib/workspaceContext';
+import { resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../lib/workspaceContext';
+import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBillingWorkspaceContext';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 
@@ -40,25 +41,48 @@ function accountStatus(value: string | undefined) {
 }
 
 function useSafeWorkspaceBillingContext() {
-  const [status, setStatus] = useState<'loading' | 'anonymous' | 'authenticated'>('loading');
+  const [status, setStatus] = useState<'loading' | 'anonymous' | 'authenticated' | 'denied'>('loading');
   const [context, setContext] = useState<ResolvedWorkspaceContext>(() => resolveWorkspaceContext(null));
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (user) => {
+    let active = true;
+    let requestId = 0;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const currentRequest = ++requestId;
+      setContext(resolveWorkspaceContext(null));
+      setEmail(user?.email || null);
       if (!user || !user.email) {
-        setEmail(null);
-        setContext(resolveWorkspaceContext(null));
         setStatus('anonymous');
         return;
       }
-      setEmail(user.email);
-      // The logged-in main application already validated the UID/workspace pair.
-      // Never infer or look up another tenant from a URL query parameter.
-      const validated = getResolvedWorkspaceContextForSession(user.uid, user.email);
-      setContext(validated || resolveWorkspaceContext(null));
-      setStatus('authenticated');
+
+      setStatus('loading');
+      // Works after full reload/HMR: reads this user's directory entry and its
+      // matching workspace. This cannot create a session, change billing, or
+      // select another customer's workspace from the URL.
+      void resolveBillingWorkspaceContext(user)
+        .then((verifiedContext) => {
+          if (!active || currentRequest !== requestId) return;
+          setContext(verifiedContext);
+          setStatus('authenticated');
+        })
+        .catch((error: unknown) => {
+          if (!active || currentRequest !== requestId) return;
+          console.warn(
+            'Consulta segura do workspace comercial não concluída.',
+            error instanceof Error ? error.message : 'erro desconhecido'
+          );
+          setContext(resolveWorkspaceContext(null));
+          setStatus('denied');
+        });
     });
+
+    return () => {
+      active = false;
+      requestId += 1;
+      unsubscribe();
+    };
   }, []);
 
   return { status, context, email };
@@ -120,7 +144,7 @@ export function InfinitePayReadinessPanel() {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
               <UserRound className="h-4 w-4" /> Identidade da sessão
             </div>
-            {status === 'loading' && <p className="mt-3 text-sm text-slate-300">Verificando sessão...</p>}
+            {status === 'loading' && <p className="mt-3 text-sm text-slate-300">Validando identidade e workspace...</p>}
             {status === 'anonymous' && (
               <div className="mt-3 space-y-2">
                 <p className="text-sm text-amber-100">Entre no EMPROVEX para identificar seu setor.</p>
@@ -128,6 +152,12 @@ export function InfinitePayReadinessPanel() {
                   Ir para o login <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
+            )}
+            {status === 'denied' && (
+              <p role="status" data-testid="billing-workspace-validation-error" className="mt-3 text-xs leading-relaxed text-amber-100">
+                Não foi possível validar o vínculo com seu setor. Retorne ao início e faça login novamente.
+                Nenhuma cobrança será exibida sem autorização.
+              </p>
             )}
             {status === 'authenticated' && (
               <>
@@ -145,7 +175,7 @@ export function InfinitePayReadinessPanel() {
               <ShieldCheck className="h-4 w-4" /> Situação comercial
             </div>
             <p className="mt-3 text-base font-extrabold text-white">
-              {!workspaceResolved || billingLoading ? 'Consultando conta...' : accountStatus(account?.status)}
+              {!workspaceResolved ? (status === 'loading' ? 'Validando acesso...' : 'Sem setor autorizado') : (billingLoading ? 'Consultando conta...' : accountStatus(account?.status))}
             </p>
             {workspaceResolved && !billingLoading && account && (
               <p className="mt-1 text-xs text-slate-400">
@@ -160,7 +190,7 @@ export function InfinitePayReadinessPanel() {
             )}
             {!workspaceResolved && (
               <p className="mt-1 text-xs text-slate-400">
-                Não exibimos boletos ou cobranças sem identificar o workspace autorizado.
+                Não exibimos boletos ou cobranças sem validar o workspace autorizado.
               </p>
             )}
           </div>
