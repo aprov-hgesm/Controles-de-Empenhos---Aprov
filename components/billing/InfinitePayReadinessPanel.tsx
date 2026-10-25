@@ -122,13 +122,13 @@ export function InfinitePayReadinessPanel() {
   const exempt = account?.status === 'exempt';
   const showLocalSimulation = process.env.NODE_ENV === 'development' && workspaceResolved && exempt;
   return (
-    <div data-testid="infinitepay-regularization-panel" className="mt-5 space-y-4">
+    <div data-testid="infinitepay-regularization-panel" className="mt-5 space-y-5">
       {returnNotice && (
-        <div role="status" data-testid="infinitepay-unverified-return" className="rounded-2xl border border-amber-300/25 bg-amber-400/[0.09] p-5">
-          <div className="flex items-center gap-2 font-bold text-amber-100">
+        <div role="status" data-testid="infinitepay-unverified-return" className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-center gap-2 font-bold text-amber-900">
             <Clock3 className="h-4 w-4" /> Retorno do checkout identificado
           </div>
-          <p className="mt-2 text-sm leading-relaxed text-amber-100/80">
+          <p className="mt-2 text-sm leading-relaxed text-amber-900/80">
             Sua volta ao EMPROVEX não confirma pagamento. Quando o retorno pertencer ao piloto autorizado,
             a validação pela API aparecerá abaixo. Outros pagamentos precisam de conciliação administrativa.
             Não repita o Pix do mesmo pedido.
@@ -136,45 +136,45 @@ export function InfinitePayReadinessPanel() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[1.75rem] border border-cyan-300/20 bg-gradient-to-br from-[#0d2840] via-[#0a1a31] to-[#0b1427] p-5 shadow-[0_18px_70px_rgba(15,118,160,0.09)] sm:p-7">
+      <section className="overflow-hidden rounded-[1.65rem] border border-[#dfe8f0] bg-gradient-to-br from-white via-white to-[#f3faf7] p-5 shadow-[0_16px_45px_rgba(15,40,70,0.055)] sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-2 text-cyan-200">
+          <div className="flex items-center gap-2 text-[#0b725d]">
             <CreditCard className="h-5 w-5" aria-hidden />
-            <h2 className="text-lg font-extrabold text-white">Minha assinatura e pagamentos</h2>
+            <h2 className="text-lg font-extrabold text-[#13263a]">Minha assinatura e pagamentos</h2>
           </div>
-          <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-100">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
             InfinitePay em homologação
           </span>
         </div>
-        <p className="mt-2 max-w-2xl text-sm text-slate-300">
+        <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Acompanhe o seu plano e visualize como funcionará o checkout protegido da InfinitePay.
           Nenhuma cobrança é gerada por este painel.
         </p>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <div className="rounded-2xl border border-[#dce8e7] bg-white/90 p-5 shadow-[0_6px_20px_rgba(30,60,70,0.03)]">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <UserRound className="h-4 w-4" /> Identidade da sessão
             </div>
-            {status === 'loading' && <p className="mt-3 text-sm text-slate-300">Validando identidade e workspace...</p>}
+            {status === 'loading' && <p className="mt-3 text-sm text-slate-600">Validando identidade e workspace...</p>}
             {status === 'anonymous' && (
               <div className="mt-3 space-y-2">
-                <p className="text-sm text-amber-100">Entre no EMPROVEX para identificar seu setor.</p>
-                <Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-cyan-200 hover:text-cyan-100">
+                <p className="text-sm text-amber-900">Entre no EMPROVEX para identificar seu setor.</p>
+                <Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-[#0b725d] hover:text-cyan-100">
                   Ir para o login <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             )}
             {status === 'denied' && (
-              <p role="status" data-testid="billing-workspace-validation-error" className="mt-3 text-xs leading-relaxed text-amber-100">
+              <p role="status" data-testid="billing-workspace-validation-error" className="mt-3 text-xs leading-relaxed text-amber-900">
                 Não foi possível validar o vínculo com seu setor. Retorne ao início e faça login novamente.
                 Nenhuma cobrança será exibida sem autorização.
               </p>
             )}
             {status === 'authenticated' && (
               <>
-                <p className="mt-3 break-all text-sm font-bold text-white">{email}</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-3 break-all text-sm font-bold text-[#13263a]">{email}</p>
+                <p className="mt-1 text-xs text-slate-500">
                   {workspaceResolved
                     ? `Workspace validado na sessão: ${context.workspaceName}`
                     : 'Sessão Firebase encontrada. Abra esta aba a partir do EMPROVEX autenticado para vincular o setor.'}
@@ -182,26 +182,26 @@ export function InfinitePayReadinessPanel() {
               </>
             )}
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4" data-testid="billing-session-state">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <div className="rounded-2xl border border-[#dce8e7] bg-white/90 p-5 shadow-[0_6px_20px_rgba(30,60,70,0.03)]" data-testid="billing-session-state">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <ShieldCheck className="h-4 w-4" /> Situação comercial
             </div>
-            <p className="mt-3 text-base font-extrabold text-white">
+            <p className="mt-3 text-base font-extrabold text-[#13263a]">
               {!workspaceResolved ? (status === 'loading' ? 'Validando acesso...' : 'Sem setor autorizado') : (billingLoading ? 'Consultando conta...' : accountStatus(account?.status))}
             </p>
             {workspaceResolved && !billingLoading && account && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
                   `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
             {workspaceResolved && !billingLoading && !account && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 Nenhum registro comercial acessível para esta sessão. Não é possível calcular cobrança.
               </p>
             )}
             {!workspaceResolved && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 Não exibimos boletos ou cobranças sem validar o workspace autorizado.
               </p>
             )}
@@ -209,11 +209,11 @@ export function InfinitePayReadinessPanel() {
         </div>
 
         {showLocalSimulation && (
-          <div className="mt-4 rounded-xl border border-violet-300/25 bg-violet-400/[0.07] p-4" data-testid="billing-local-demo">
+          <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4" data-testid="billing-local-demo">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-extrabold text-violet-100">Laboratório local · conta de teste isenta</p>
-                <p className="mt-1 text-xs text-slate-300">
+                <p className="text-xs font-extrabold text-violet-900">Laboratório local · conta de teste isenta</p>
+                <p className="mt-1 text-xs text-slate-600">
                   Apenas para visualizar a jornada de um novo assinante, sem alterar sua conta real.
                 </p>
               </div>
@@ -222,16 +222,16 @@ export function InfinitePayReadinessPanel() {
                 data-testid="billing-local-demo-toggle"
                 aria-pressed={simulateFirstMonth}
                 onClick={() => setSimulateFirstMonth((active) => !active)}
-                className="rounded-lg border border-violet-300/30 bg-violet-200/10 px-3 py-2 text-xs font-bold text-violet-100 hover:bg-violet-200/20"
+                className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-800 transition hover:bg-violet-100"
               >
                 {simulateFirstMonth ? 'Encerrar simulação' : 'Simular novo assinante'}
               </button>
             </div>
             {simulateFirstMonth && (
-              <div role="status" data-testid="billing-local-demo-result" className="mt-4 rounded-xl border border-white/10 bg-[#0b172b]/80 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-200">Simulação visual — não é uma cobrança</p>
-                <p className="mt-2 text-xl font-black text-white">{money(2990)} <span className="text-xs font-semibold text-slate-300">/ mês · meses 1–3</span></p>
-                <p className="mt-1 text-xs text-slate-300">
+              <div role="status" data-testid="billing-local-demo-result" className="mt-4 rounded-xl border border-violet-200 bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-violet-700">Simulação visual — não é uma cobrança</p>
+                <p className="mt-2 text-xl font-black text-[#13263a]">{money(2990)} <span className="text-xs font-semibold text-slate-600">/ mês · meses 1–3</span></p>
+                <p className="mt-1 text-xs text-slate-600">
                   Primeiro ciclo após os 30 dias gratuitos. Nenhuma competência, checkout ou pagamento foi criado.
                   A conta real continua <strong>isenta</strong>.
                 </p>
@@ -243,20 +243,20 @@ export function InfinitePayReadinessPanel() {
         <InfinitePayPilotPanel authorizedWorkspace={workspaceResolved && status === 'authenticated'} returnParams={returnParams} />
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Etapas do checkout InfinitePay">
-          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
-            <FileCheck2 className="h-5 w-5 text-cyan-200" aria-hidden />
-            <p className="mt-2 text-xs font-bold text-white">1. Cobrança individual</p>
-            <p className="mt-1 text-xs text-slate-400">Valor e competência confirmados no servidor.</p>
+          <div className="rounded-xl border border-[#e2eaf0] bg-white p-4 transition-colors hover:border-[#c6ded7]">
+            <FileCheck2 className="h-5 w-5 text-[#0b725d]" aria-hidden />
+            <p className="mt-2 text-xs font-bold text-[#13263a]">1. Cobrança individual</p>
+            <p className="mt-1 text-xs text-slate-500">Valor e competência confirmados no servidor.</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
-            <CreditCard className="h-5 w-5 text-cyan-200" aria-hidden />
-            <p className="mt-2 text-xs font-bold text-white">2. Checkout seguro</p>
-            <p className="mt-1 text-xs text-slate-400">Pagamento no ambiente da InfinitePay.</p>
+          <div className="rounded-xl border border-[#e2eaf0] bg-white p-4 transition-colors hover:border-[#c6ded7]">
+            <CreditCard className="h-5 w-5 text-[#0b725d]" aria-hidden />
+            <p className="mt-2 text-xs font-bold text-[#13263a]">2. Checkout seguro</p>
+            <p className="mt-1 text-xs text-slate-500">Pagamento no ambiente da InfinitePay.</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
-            <BadgeCheck className="h-5 w-5 text-cyan-200" aria-hidden />
-            <p className="mt-2 text-xs font-bold text-white">3. Confirmação</p>
-            <p className="mt-1 text-xs text-slate-400">Conciliação pelo servidor, sem confiar apenas no retorno.</p>
+          <div className="rounded-xl border border-[#e2eaf0] bg-white p-4 transition-colors hover:border-[#c6ded7]">
+            <BadgeCheck className="h-5 w-5 text-[#0b725d]" aria-hidden />
+            <p className="mt-2 text-xs font-bold text-[#13263a]">3. Confirmação</p>
+            <p className="mt-1 text-xs text-slate-500">Conciliação pelo servidor, sem confiar apenas no retorno.</p>
           </div>
         </div>
 
@@ -267,33 +267,33 @@ export function InfinitePayReadinessPanel() {
             aria-disabled="true"
             data-testid="infinitepay-checkout-disabled"
             title="Cobranças reais ainda não foram habilitadas no EMPROVEX."
-            className="cursor-not-allowed rounded-xl border border-cyan-300/15 bg-slate-600/40 px-5 py-3 text-sm font-bold text-slate-300"
+            className="cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-500"
           >
             <LockKeyhole className="mr-2 inline h-4 w-4" aria-hidden /> Pagar com InfinitePay
           </button>
-          <p className="max-w-md text-xs text-slate-400">
+          <p className="max-w-md text-xs text-slate-500">
             Disponível após certificação de identidade, Firestore e reconciliação.
             Esta tela não utiliza sua API Key e não cria links.
           </p>
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-white/[0.08] bg-[#071225]/80 p-5 sm:p-6">
+      <section id="precos" className="scroll-mt-24 rounded-[1.65rem] border border-[#dfe8f0] bg-white p-5 shadow-[0_12px_38px_rgba(15,40,70,0.04)] sm:p-7">
         <div className="flex flex-wrap items-center gap-2">
-          <Sparkles className="h-5 w-5 text-blue-200" aria-hidden />
-          <h2 className="text-sm font-extrabold text-white">Escalonamento previsto para novos clientes</h2>
-          <span className="rounded-full bg-blue-400/[0.10] px-2.5 py-1 text-[10px] font-bold text-blue-100">Proposta R1</span>
+          <Sparkles className="h-5 w-5 text-[#236e94]" aria-hidden />
+          <h2 className="text-sm font-extrabold text-[#13263a]">Escalonamento previsto para novos clientes</h2>
+          <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#275a87]">Proposta R1</span>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-slate-400">
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">
           Cada novo cliente começa na primeira faixa após o teste gratuito de 30 dias.
           A tabela não reprecifica contas existentes, isenções ou competências já emitidas.
           Não é uma oferta ativa enquanto a integração estiver em homologação.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {PRICING.map((tier) => (
-            <div key={tier.months} className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3">
-              <p className="text-[10px] font-semibold text-slate-400">{tier.months}</p>
-              <p className="mt-2 text-base font-black text-white">{money(tier.cents)}</p>
+            <div key={tier.months} className="rounded-xl border border-slate-200 bg-[#f9fbfd] px-3 py-4">
+              <p className="text-[10px] font-semibold text-slate-500">{tier.months}</p>
+              <p className="mt-2 text-base font-black text-[#13263a]">{money(tier.cents)}</p>
               <p className="text-[10px] text-slate-500">por mês</p>
             </div>
           ))}
