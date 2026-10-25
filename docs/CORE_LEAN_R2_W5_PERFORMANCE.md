@@ -137,10 +137,10 @@ GO/NO-GO: NO-GO enquanto não houver comparativo E2E e adversarial PASS.
 **DOMAIN:** \`npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts\`.
 **RELEASE autenticado no SHA W1+W5 composto:** definir \`EMPROVEX_WAREHOUSE_ADMIN_EMULATOR=1\`, \`EMPROVEX_E2E_SERVER_AUTH=1\`, \`NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security\`, \`FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\`, \`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099\`; executar \`npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w5-transactions.mjs"\`. Falha fechada sem v3/evidence e sem Emulator local. Arquivos disparadores: WithdrawalV3Write, AtomicWrite, WithdrawalEvidence, Firestore transaction, lot/barcode/identity, alterações Authz, scripts W5. Scripts e evidências enviados aos PRs #372, #374; pedido com números enviado ao W1 #375.
 
-**ONDE ESTAMOS:** W5 técnica e quantitativamente certificada no SHA composto W1+W5; PR #377 isolado DRAFT.  
-**O QUE FOI MEDIDO:** 56 commits+56 replays reais; erros/concorrência/rollback/saturação; payload, p50/p95, RPCs, docs/writes, custos adicionais do replay.  
-**O QUE FOI OTIMIZADO:** apenas instrumentos, parser REST e fixtures/testes; motor produtivo não alterado por segurança e propriedade W1.  
-**O QUE ESTÁ COMPROVADO:** v3 é contrato mais enxuto no cliente e custa mais RPCs/tempo de servidor no Emulator; writes iguais e replay com menor mediana, sem violação de integridade nas fixtures testadas.  
-**O QUE NÃO FOI COMPROVADO:** ganho de custo ou latência real de produção; segurança de remover header/lots; integração unificada com PR #370 e PDFs; imutabilidade de códigos lógicos reutilizados.  
-**O QUE O COORDENADOR DEVE FAZER:** compor W1/W2/W3/W4/W5 com SHAs fixos; rodar gates Application/Domain/Release no SHA final; exigir parecer W4 sobre qualquer otimização W1; conferir políticas de required checks e autenticação antes de release.  
+**ONDE ESTAMOS:** W5 técnica e quantitativamente certificada no SHA composto W1+W5; PR #377 isolado DRAFT.
+**O QUE FOI MEDIDO:** 56 commits+56 replays reais; erros/concorrência/rollback/saturação; payload, p50/p95, RPCs, docs/writes, custos adicionais do replay.
+**O QUE FOI OTIMIZADO:** apenas instrumentos, parser REST e fixtures/testes; motor produtivo não alterado por segurança e propriedade W1.
+**O QUE ESTÁ COMPROVADO:** v3 é contrato mais enxuto no cliente e custa mais RPCs/tempo de servidor no Emulator; writes iguais e replay com menor mediana, sem violação de integridade nas fixtures testadas.
+**O QUE NÃO FOI COMPROVADO:** ganho de custo ou latência real de produção; segurança de remover header/lots; integração unificada com PR #370 e PDFs; imutabilidade de códigos lógicos reutilizados.
+**O QUE O COORDENADOR DEVE FAZER:** compor W1/W2/W3/W4/W5 com SHAs fixos; rodar gates Application/Domain/Release no SHA final; exigir parecer W4 sobre qualquer otimização W1; conferir políticas de required checks e autenticação antes de release.
 **GO/NO-GO:** **GO TÉCNICO para integrar benchmark e testes W5**. **NO-GO para afirmar ganho produtivo ou liberar main/deploy/Rules** sem a certificação final do conjunto. O W5 não tem regressão crítica conhecida sem proprietário; melhorias possíveis de header/lots foram explicitamente transferidas ao W1.
