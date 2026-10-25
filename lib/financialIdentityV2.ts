@@ -171,7 +171,7 @@ export function assertInvoiceItemReferences(
   }
 }
 
-export type PdfReferenceStatus = 'verified' | 'legacy-unverified';
+export type PdfReferenceStatus = 'verified' | 'legacy-unverified' | 'unattested';
 
 /**
  * The expected workspace must come from server-verified authorization,
@@ -180,18 +180,30 @@ export type PdfReferenceStatus = 'verified' | 'legacy-unverified';
  */
 export function assertInvoicePdfReferences(
   pdf: InvoicePdfDocument,
-  expected: { invoiceId: string; empenhoId: string; workspaceId: string }
+  expected: { invoiceId: string; empenhoId: string; workspaceId: string; documentId?: string; objectKey?: string }
 ): PdfReferenceStatus {
-  if (!pdf.id || !pdf.pathname || !expected.workspaceId) {
+  if (!pdf.id.trim() || !pdf.pathname.trim() || !expected.workspaceId.trim()) {
     throw new FinancialIdentityError('invalid_pdf_identity', 'Missing PDF or authoritative workspace identity.');
   }
   if (pdf.invoiceId !== expected.invoiceId || pdf.empenhoId !== expected.empenhoId) {
     throw new FinancialIdentityError('pdf_owner_mismatch', 'PDF belongs to another invoice or empenho.');
   }
+  if (expected.documentId && pdf.id !== expected.documentId) {
+    throw new FinancialIdentityError('pdf_document_id_mismatch', 'PDF ID differs from the trusted document identity.');
+  }
   if (pdf.storage?.workspaceId && pdf.storage.workspaceId !== expected.workspaceId) {
     throw new FinancialIdentityError('pdf_workspace_mismatch', 'PDF storage belongs to a different workspace.');
   }
-  return pdf.storage?.workspaceId === expected.workspaceId ? 'verified' : 'legacy-unverified';
+  if (!pdf.storage?.workspaceId) return 'legacy-unverified';
+  if (pdf.storage.provider !== 'google-drive' || !pdf.storage.objectKey?.trim()) {
+    throw new FinancialIdentityError('invalid_pdf_storage', 'Storage provider or physical file identity is invalid.');
+  }
+  if (expected.objectKey && pdf.storage.objectKey !== expected.objectKey) {
+    throw new FinancialIdentityError('pdf_object_key_mismatch', 'Physical file differs from the trusted storage identity.');
+  }
+  // Matching client-supplied metadata is not attestation. Only independent,
+  // server-resolved document and storage keys can establish verified ownership.
+  return expected.documentId && expected.objectKey ? 'verified' : 'unattested';
 }
 
 /** Reject ambiguous version references without mutating deletion schedules. */

@@ -122,7 +122,7 @@ test('invoice item references reject missing item, duplicate and warehouse misma
 });
 
 test('PDF logical ID and file storage ownership remain distinct', () => {
-  const expected = { invoiceId: '1234', empenhoId: '2026NE000001', workspaceId: 'ws-a' };
+  const expected = { invoiceId: '1234', empenhoId: '2026NE000001', workspaceId: 'ws-a', documentId: 'pdf-v1', objectKey: 'drive-file-1' };
   assert.equal(assertInvoicePdfReferences(pdf(), expected), 'verified');
   assert.equal(assertInvoicePdfReferences(pdf({ storage: undefined }), expected), 'legacy-unverified');
   assert.throws(() => assertInvoicePdfReferences(pdf(), { ...expected, workspaceId: 'ws-b' }), (e) => e?.code === 'pdf_workspace_mismatch');
@@ -197,4 +197,24 @@ test('missing PDF identification, forged ownership and ambiguous versions fail c
     pdf({ id: 'pdf-v2', pathname: 'documentos/NF-v2.pdf',
       storage: { ...pdf().storage, objectKey: 'drive-file-2' } }),
   ]));
+});
+
+
+test('PDF identity attestation distinguishes trusted IDs from matching untrusted metadata', () => {
+  const expected = { invoiceId: '1234', empenhoId: '2026NE000001',
+    workspaceId: 'ws-a', documentId: 'pdf-v1', objectKey: 'drive-file-1' };
+  assert.equal(assertInvoicePdfReferences(pdf(), expected), 'verified');
+  assert.equal(assertInvoicePdfReferences(pdf(), {
+    invoiceId: '1234', empenhoId: '2026NE000001', workspaceId: 'ws-a',
+  }), 'unattested');
+  assert.throws(() => assertInvoicePdfReferences(pdf({ id: 'forged-document-id' }), expected),
+    (e) => e?.code === 'pdf_document_id_mismatch');
+  assert.throws(() => assertInvoicePdfReferences(pdf({
+    storage: { ...pdf().storage, objectKey: 'forged-physical-file' },
+  }), expected), (e) => e?.code === 'pdf_object_key_mismatch');
+  assert.throws(() => assertInvoicePdfReferences(pdf({
+    storage: { ...pdf().storage, objectKey: '' },
+  }), expected), (e) => e?.code === 'invalid_pdf_storage');
+  assert.equal(assertInvoicePdfReferences(pdf({ storage: undefined }), expected),
+    'legacy-unverified');
 });
