@@ -19,6 +19,25 @@
 
 Guardas locais impedem execução fora do projeto fictício e host loopback. Documentos seed ficam em workspace fictício w5-benchmark dentro do Emulator. O registro conta chamadas HTTP REST, documentos pedidos e retornados; NÃO é faturamento exato do Firestore, não mede entradas no índice, nem latência da API real.
 
+## Baseline executado — 25/10/2026 (em SHA 3bca6a634ce7)
+
+CI completo específico W5 **PASS**: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40158004979. TypeScript PASS, testes das fixtures/CPU PASS, testes históricos PASS e sondas Firestore Emulator PASS. Fast CI e Core Protection PASS neste SHA; Application CI SKIPPED por ser DRAFT.
+
+Algoritmo de alocação real, 150 iterações aquecidas, milissegundos (mediana/p95): cenário pequeno 1 lote = **0,003 / 0,007**; médio 12 lotes = **0,008 / 0,011**; grande 60 lotes = **0,009 / 0,025**. CPU em runner compartilhado, não equivale à latência do navegador nem à latência da retirada E2E.
+
+Firebase Emulator demo, 94 documentos fictícios seed, 15 iterações por cenário, mediana/p95 em milissegundos:
+
+| Operação (sonda) | Pequeno | Médio | Grande | Chamadas REST por execução |
+|---|---:|---:|---:|---:|
+| Barcode material (batchGet) | 6,131 / 18,840 | 3,406 / 5,415 | 1,697 / 2,323 | 1 |
+| Material + saldo global + saldo local | 6,613 / 9,859 | 3,555 / 5,909 | 2,352 / 7,448 | 1 |
+| Leituras de pré-planejamento v3 (header, lock, runQuery lots, lock, referências) | 18,161 / 26,912 | 20,723 / 32,696 | 23,103 / 31,485 | 5 |
+| Leitura de header ausente (não é replay após commit) | 3,214 / 6,050 | 1,911 / 4,140 | 2,068 / 5,166 | 1 |
+
+Na sonda v3, foram solicitados **6 caminhos batchGet** por execução, retornando **6/17/65 documentos** (incluindo respostas da query de lotes). Os números são observações de RPCs e documentos da execução fictícia, **não representam reads cobrados**. O cenário de replay consulta um **header ausente** e NÃO valida idempotência, movements ou consumptions após commit. As 5 chamadas NÃO incluem a transação atômica; não são o custo total da retirada v3. O comportamento de runQuery depende dos índices/estado do Emulator, e pequenas variações de ordem entre sondas tornam inadequado inferir escalabilidade apenas das latências apresentadas.
+
+**Antes/depois:** há baseline observável na branch W5, mas nenhuma alteração dos motores v2/v3 foi aplicada nesta branch. **Ganho antes/depois = NÃO MEDIDO.** Comparação v2/v3 exige SHA composto W1+W4, dados operacionais equivalentes, transação real, replays e repetição controlada no Emulator. O artefato `core-lean-r2-w5-measurements` do workflow contém `w5-cpu.json` e `w5-emulator.json`.
+
 ## Mapa de caminhos (inspeção de código, não traces de produção)
 
 | Operação | Entrada → motor | Operações dominantes |
