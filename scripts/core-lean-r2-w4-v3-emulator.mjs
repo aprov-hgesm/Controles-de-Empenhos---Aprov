@@ -187,15 +187,29 @@ try{
   });
   assert.ok(barcode.id);
   const scanned=cmd(615,[{...line(1),barcodeId:barcode.id}]);
-  await finalizeWarehouseWithdrawalV3Server(access,scanned);
-  const bd=await verify(scanned,1);
-  for(const item of bd.entries){
-    assert.equal(item.m.source.barcodeId,barcode.id);
-    assert.equal(item.c.barcode,'7896305701994');
-    assert.equal(item.entry.barcodeId,barcode.id);
+  const defects=[];
+  let manifestCase=scanned;
+  try {
+    await finalizeWarehouseWithdrawalV3Server(access,scanned);
+    const bd=await verify(scanned,1);
+    for(const item of bd.entries){
+      assert.equal(item.m.source.barcodeId,barcode.id);
+      assert.equal(item.c.barcode,'7896305701994');
+      assert.equal(item.entry.barcodeId,barcode.id);
+    }
+    assert.equal(await stock(),1);
+    pass('item barcode association preserved in movement, consumption and v3 manifest');
+  }catch(error){
+    console.error('W4 V3 FAIL: item barcode, preserving error for final exit',error);
+    defects.push(error);
+    await assertAbsent(scanned);
+    assert.equal(await stock(),2);
+    const fallback=cmd(629,[line(1)]);
+    await finalizeWarehouseWithdrawalV3Server(access,fallback);
+    await verify(fallback,1);
+    assert.equal(await stock(),1);
+    manifestCase=fallback;
   }
-  assert.equal(await stock(),1);
-  pass('item barcode association preserved in movement, consumption and v3 manifest');
 
   const insufficient=cmd(616,[line(2)]);
   await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,insufficient));
@@ -249,13 +263,14 @@ try{
   // Mutating a manifest requires a full JSON-to-Firestore transformation; corrupt
   // its stored hash instead, which must fail manifest integrity without writes.
   assert.ok(await read('withdrawals',scanned.withdrawalId));
-  await mutate('withdrawals/'+scanned.withdrawalId,'PATCH',{
+  await mutate('withdrawals/'+manifestCase.withdrawalId,'PATCH',{
     effectManifestHash:{stringValue:'f'.repeat(64)},
   });
-  await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,scanned),
+  await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,manifestCase),
     /RECONCILIATION_REQUIRED/);
   assert.equal(await stock(),0);
   pass('v3 replay rejects tampered effect manifest hash');
+  if(defects.length)throw new AggregateError(defects,'W4 v3: preserved genuine domain FAIL(s)');
   console.log('W4 V3 ASSURANCE COMPLETE');
 } finally{await deleteApp(app);}
 }
