@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "pretypecheck": "node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs",
+    "pretypecheck": "node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs scripts/invoice-identity.test.mjs scripts/ns-integrity.test.mjs scripts/empenho-concurrency.test.mjs scripts/supplier-cnpj-migration.test.mjs scripts/ns-integrity-contract.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:warehouse-react-tab-navigation": "node --test scripts/warehouse-react-tab-navigation.test.mjs",
     "test:mobile-server-barcode-read": "node --test scripts/mobile-server-barcode-read.test.mjs",
