@@ -13,6 +13,7 @@ import { resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../li
 import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBillingWorkspaceContext';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
+import { InfinitePayPilotPanel, type PilotReturnParams } from './InfinitePayPilotPanel';
 
 const PRICING = [
   { months: '1º ao 3º', cents: 2990 },
@@ -92,6 +93,7 @@ export function InfinitePayReadinessPanel() {
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
   const [returnNotice, setReturnNotice] = useState(false);
+  const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
   // Local, display-only preview for the exempt test workspace.
   // This state never updates billingAccount, an invoice, Firestore, or provider checkout.
   const [simulateFirstMonth, setSimulateFirstMonth] = useState(false);
@@ -102,6 +104,15 @@ export function InfinitePayReadinessPanel() {
     // while the authenticated server-side reconciliation is not enabled.
     const result = inspectInfinitePayReturn(window.location.href);
     if (result.isReturn) {
+      // Capture opaque checkout references in ephemeral component memory only,
+      // then clear the address bar. They are NOT proof of payment.
+      const current = new URL(window.location.href);
+      const orderNsu = current.searchParams.get('order_nsu');
+      const transactionNsu = current.searchParams.get('transaction_nsu');
+      const slug = current.searchParams.get('slug');
+      if (orderNsu && transactionNsu && slug) {
+        setReturnParams({ orderNsu, transactionNsu, slug });
+      }
       setReturnNotice(true);
       window.history.replaceState(window.history.state, '', result.cleanedPath);
     }
@@ -118,8 +129,9 @@ export function InfinitePayReadinessPanel() {
             <Clock3 className="h-4 w-4" /> Retorno do checkout identificado
           </div>
           <p className="mt-2 text-sm leading-relaxed text-amber-100/80">
-            Sua volta ao EMPROVEX não confirma o pagamento. A verificação autenticada da InfinitePay e a baixa
-            automática ainda estão em homologação. Guarde seu comprovante e não realize outro Pix para o mesmo pedido.
+            Sua volta ao EMPROVEX não confirma pagamento. Quando o retorno pertencer ao piloto autorizado,
+            a validação pela API aparecerá abaixo. Outros pagamentos precisam de conciliação administrativa.
+            Não repita o Pix do mesmo pedido.
           </p>
         </div>
       )}
@@ -227,6 +239,8 @@ export function InfinitePayReadinessPanel() {
             )}
           </div>
         )}
+
+        <InfinitePayPilotPanel authorizedWorkspace={workspaceResolved && status === 'authenticated'} returnParams={returnParams} />
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Etapas do checkout InfinitePay">
           <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
