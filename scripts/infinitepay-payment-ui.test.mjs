@@ -70,11 +70,9 @@ test('payment return is displayed as unverified and URL sanitized', () => {
   assert.doesNotMatch(panel, /setAccount\(.*paid/);
 });
 
-test('trial pricing is shown as planned, not contracted or live', () => {
-  for (const amount of [2990, 3990, 4990, 5990, 6990]) {
-    assert.match(panel, new RegExp('cents: ' + amount));
-  }
-  assert.match(panel, /Não é uma oferta ativa/);
+test('unannounced pricing tiers are not disclosed in client code', () => {
+  assert.doesNotMatch(panel, /Escalonamento previsto|PRICING|1º ao 3º|4º ao 6º|7º ao 9º|10º ao 12º|13º em diante/);
+  assert.doesNotMatch(panel, /Simular novo assinante|billing-local-demo|cents: (2990|3990|4990|5990|6990)/);
   assert.match(panel, /Isenção preservada/);
 });
 
@@ -89,11 +87,9 @@ test('manual payment fallback loads on demand, not for every InfinitePay visit',
   assert.match(page, /Preço de referência legado/);
 });
 
-test('exempt test account gets a local-only payer visual simulation', () => {
-  assert.match(panel, /showLocalSimulation = process\.env\.NODE_ENV === 'development' && workspaceResolved && exempt/);
-  assert.match(panel, /data-testid="billing-local-demo-toggle"/);
-  assert.match(panel, /data-testid="billing-local-demo-result"/);
-  assert.match(panel, /Nenhuma competência, checkout ou pagamento foi criado/);
+test('subscription view preserves real account and no local tier demonstration', () => {
+  assert.match(panel, /account\?\.status === 'exempt'/);
+  assert.doesNotMatch(panel, /simulateFirstMonth|showLocalSimulation/);
   assert.doesNotMatch(panel, /updatePlatformBillingConfig\(|setDoc\(|updateDoc\(/);
 });
 
