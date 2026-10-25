@@ -37,8 +37,13 @@ export default function RegularizationPage() {
   const [info, setInfo] = useState<RegularizationInfo | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showManualMethods, setShowManualMethods] = useState(false);
 
   useEffect(() => {
+    // Manual options are legacy and optional. Do not fetch private billing settings
+    // on every visit to My Subscription or on a Pix return URL.
+    if (!showManualMethods) return;
+
     let active = true;
     void fetch('/api/billing/regularization', { cache: 'no-store' })
       .then(async (response) => {
@@ -55,7 +60,7 @@ export default function RegularizationPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [showManualMethods]);
 
   const copyPix = async () => {
     if (!info?.pixKey) return;
@@ -84,7 +89,23 @@ export default function RegularizationPage() {
 
         <InfinitePayReadinessPanel />
 
-        {error && (
+        <section data-testid="manual-payment-options" className="mt-5 rounded-2xl border border-white/[0.08] bg-[#071225]/55 p-5">
+          <button
+            type="button"
+            data-testid="manual-payment-options-toggle"
+            aria-expanded={showManualMethods}
+            onClick={() => setShowManualMethods((open) => !open)}
+            className="text-sm font-extrabold text-blue-200 underline-offset-4 hover:underline"
+          >
+            {showManualMethods ? 'Ocultar formas antigas de regularização' : 'Consultar formas antigas de regularização'}
+          </button>
+          <p className="mt-2 text-xs leading-relaxed text-slate-400">
+            Consulta opcional aos meios manuais anteriores à InfinitePay. Não realize transferências
+            com valores ou referências genéricas sem identificar sua cobrança individual.
+          </p>
+        </section>
+
+        {showManualMethods && error && (
           <section data-testid="manual-payment-config-unavailable" role="status" className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-5 text-sm text-amber-100">
             <p className="font-extrabold">Meios manuais de regularização indisponíveis</p>
             <p className="mt-2 leading-relaxed">
@@ -98,14 +119,14 @@ export default function RegularizationPage() {
           </section>
         )}
 
-        {!info && !error && (
+        {showManualMethods && !info && !error && (
           <section className="mt-5 rounded-2xl border border-white/[0.08] bg-[#071225]/70 p-8 text-center">
             <Loader2 className="mx-auto h-6 w-6 animate-spin text-blue-300" aria-hidden="true" />
             <p className="mt-3 text-sm text-slate-300">Carregando instruções de regularização…</p>
           </section>
         )}
 
-        {info && (
+        {showManualMethods && info && (
           <>
             <section className="mt-5 grid gap-4 md:grid-cols-3">
               <InfoCard label="Plano" value={info.planName} />
