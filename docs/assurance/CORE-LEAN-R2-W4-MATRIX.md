@@ -102,3 +102,42 @@ Only run scripts against their own isolated matching branch/composition; v3 serv
 ## Gate
 
 **NO-GO for final composition as of this report.** Release remains blocked until current exact SHA has complete green independent Auth+Firestore Warehouse v2/v3, central AuthZ policy, approved financial contracts, CI mutation/selector, final full release gates, and no unaddressed critical findings. The Coordinator alone manages official composition and promotion.
+
+## 25 October 2026 — W4 resumed final-HEAD evidence and cross-worker certification
+
+### Exact sources, scope and audit trail
+
+The current W1 HEAD afa0deba94905156a63bb636ae4ebcbb7452967d differs from W1 source 7a271c51f86f83a58a6b5cf149cf5e3ed8bf57fe used in the fully successful earlier composition only by a W1 documentation change. W3 contracts are at 64bd70072def5b0898ffbe57d969476ab630ad37. W4 independent suites were pinned at 5e157bec1e1592881207e99dcee3ca1d9626906f for the first five-worker execution. Latest owned W4 additions include a separate signed mobile authorization interoperability test.
+
+The new all-five-workers experimental PR is #380. Initial exact SHA 343801a53bcb0e9522df9d36504eed9b17eb0725 included W1 afa0deba, W2 12769881, W3 64bd7007, W4 5e157bec and W5 d1b5c4b9. The W4 v2/historical suite is PASS in https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40198850400; the W4 v3 Auth+Firestore and financial contracts are PASS in https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40198850378. The independent W2 selector + W5 deterministic compatibility job is PASS in run 40198850449, while the W5 real transaction job is FAIL (fixture). The W5 own historical benchmark is PASS in run 40198850404; Core Protection and Recovery are PASS. Fast CI FAIL in run 40198850352; Legal FAIL trailing whitespace; Application CI and staged Domain CI SKIPPED on DRAFT. No inherited PASS from older SHAs.
+
+The first repair SHA 20d6abe9137c0705e70beac0e85826c7581c7191 changed ONLY tests/docs/workflows: W5 synthetic seed moved to local Emulator Admin REST; W2 legacy Mobile-R1 test changed to preserve server-owned v3 derived IDs, not client-generated IDs; W1 documentation whitespace removed; current W2 workflows included. SHA 211576ebe17a49659487e0ebf3ba9450c9880ee2 corrected an escaped whitespace regex in that test. The Fast CI on that SHA found a SECOND obsolete assertion in scripts/verify-mobile-k-canonical-ops.mjs that expected a client-created lineId. The W5 true transaction probe advanced through 3 samples of multiple v2/v3 cases and failed when a concurrent scenario produced no debit; at least one failure reason was not logged by that earlier fixture. W5 owner subsequently made concurrency rejection diagnostics explicit without weakening exact-once assertions. These findings were forwarded with exact runs to PR #372 and PR #377.
+
+The subsequent composition SHA 37c4dd7a1e855b2ee780b7546eca1c1358fec6e3 incorporates W2 25ad486497aa4eb14dddf681a1f1643f8ce34f69, W5 783f1b68cc37b3a7c52ac41ca864f10771271d32 and a temporary Mobile-K contract correction. Treat its ongoing checks as unverified until GitHub reports final results, not as PASS because of ancestor commits. The official coordinator integration must use current HEADs, check them again and re-run all gates.
+
+### Authorization #370 classification — not a CORE LEAN additive blocker by itself
+
+PR #370 HEAD bc4b6592d1442dead22dd01886e165cacbcbd031 contains no MOBILE alias case, but GitHub synthetic merge db6f33ea26a35b08707fd5dca5e9fa102a5ea7cb combines it with main, which does have the alias. The resulting route calls verifyWarehouseRequest, rejects mismatched workspace, blocks LEDGER_MOVEMENT and invokes assertWarehouseAuthorization BEFORE bindWarehouseMobileTrust or any warehouse mutation. The new positive list includes WITHDRAWAL_FINALIZE but not WITHDRAWAL_FINALIZE_MOBILE; the latter is safely denied HTTP 403 even to an eligible user. The W4 signed API proof executed against Auth+Firestore Emulator is PASS in https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40199218101: canonical command authorization passes, mobile alias is denied HTTP 403, forged workspace and arbitrary ledger commands denied. Overall authorization workflow remains FAIL due to the unchanged central policy regression; owner PR #370 must correct the safe compatibility mapping and revalidate signed behavior. This is NOT an established unauthorized-access bypass. The unfinished general server-only migration must be assessed separately; do not use it to block the additive CORE LEAN if that code adds no AuthZ regression.
+
+### Exact final certification commands
+
+On the approved coordinator integration SHA, execute npm ci and npm run typecheck; then:
+
+- node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
+- node scripts/ci-lean-w1-v3.mjs contract
+- node --experimental-vm-modules --test scripts/financial-identity-v2.test.mjs scripts/core-lean-r2-w4-financial.test.mjs
+- npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts
+- node --test scripts/core-lean-r2-w5-profile.test.mjs
+- npm run test:core-lean-r2-w4-assurance
+- npm run test:core-lean-r2-w4-v3
+- npm run test:core-lean-r2-w1-emulator
+- W5 real comparison: within named demo Auth and Firestore Emulators only, use EMPROVEX_WAREHOUSE_ADMIN_EMULATOR=1 EMPROVEX_E2E_SERVER_AUTH=1 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID=demo-emprovex-security and npx --yes tsx scripts/core-lean-r2-w5-transactions.mjs
+- Check Application CI, Fast CI, staged Domain CI, Legal, Core Protection and legacy required release gates on the SAME exact SHA; SKIPPED is never PASS.
+
+The W4 v3 suite checks committed headers, movements, consumptions, global/local balances, stable IDs, barcode provenance, multiple validity records, rejection of missing movement/consumption/corrupted effect manifest, request-loss replay, one-unit contention with two IDs, same-ID concurrency, inactive location/material and no residual writes. v2/historical suite checks six interruption points, forged FINALIZED rejection and no second debit. W3 is opt-in fiscal identity, not a migration of persistent invoice/NS writers. W5 latency and RPC benchmarks never substitute for ledger/replay integrity. 450-document transactional saturation, browser location-barcode UX and actual generated PDF remain outside the executed complete E2E scope unless separately tested.
+
+### Owner handoff and decision
+
+Worker 1: Warehouse motor W1 source and replay safeguards certified in earlier exact composites; no live writes or Rules changes by W4. Worker 2: align both old mobile verifier tests with server-derived v3 IDs and ensure W4 v3 / finance / W5 deep checks are selected and EXECUTED; negative removal mutations must cause CI FAIL. Worker 3: preserve optional fiscal contracts and trusted PDF attestation without claiming writers integrated. Worker 5: certify benchmark seed and genuine contention with reasoned rejection diagnostics; never drop the debit invariants. PR370 owner: correct Mobile alias allowlist regression before mixing AuthZ migration. Coordinator: combine final SHAs, execute all active release gates and deliver official GO/NO-GO.
+
+**W4 verdict**: GO technical for historical Warehouse v1/v2/v3 and opt-in finance at the recorded successful composite SHA, but NO-GO for full five-worker closure until the current exact integration composite Fast CI + W5 true transaction + Legal and required checks are green. No merge, production deploy, real data access or Rules changes authorized.
