@@ -5,7 +5,7 @@
  * Usage:
  * node scripts/infinitepay-live-smoke.mjs dry-run --workspace usuario-teste
  * node scripts/infinitepay-live-smoke.mjs create --workspace usuario-teste --amount-cents 100 --authorize-real-pix-test
- * node scripts/infinitepay-live-smoke.mjs verify --order epx-YYYYMM-.... 
+ * node scripts/infinitepay-live-smoke.mjs verify --order epx-YYYYMM-....
  *
  * Does not read/write Firebase or change a SaaS customer's account.
  */
