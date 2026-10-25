@@ -47,10 +47,13 @@ test('query identifiers are stripped without reproducing sensitive values', () =
   assert.equal(JSON.stringify(result).includes('secret'), false);
 });
 
-test('login-derived account view has a single source of truth', () => {
+test('login-derived account view safely rehydrates after hard reload or HMR', () => {
   assert.match(panel, /onAuthStateChanged\(auth/);
-  assert.match(panel, /getResolvedWorkspaceContextForSession\(user\.uid, user\.email\)/);
+  assert.match(panel, /resolveBillingWorkspaceContext\(user\)/);
+  assert.match(panel, /currentRequest !== requestId/);
   assert.match(panel, /useWorkspaceBillingAccount\(context\)/);
+  assert.match(panel, /data-testid="billing-workspace-validation-error"/);
+  assert.doesNotMatch(panel, /getResolvedWorkspaceContextForSession/);
   assert.doesNotMatch(panel, /NEXT_PUBLIC_INFINITEPAY_API_KEY|INFINITEPAY_API_KEY|process\.env\.INFINITEPAY/);
 });
 
