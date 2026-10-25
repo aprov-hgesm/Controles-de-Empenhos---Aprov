@@ -1,0 +1,27 @@
+name: InfinitePay Payment UI Preview
+
+on:
+  pull_request:
+    paths:
+      - 'app/regularizacao/**'
+      - 'components/billing/InfinitePayReadinessPanel.tsx'
+      - 'components/layout/AppHeader.tsx'
+      - 'lib/billing/infinitepayReturnStatus.mjs'
+      - 'scripts/infinitepay-payment-ui.test.mjs'
+      - '.github/workflows/infinitepay-ui-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Certify no-live-payment preview and unverified returns
+        run: node --test scripts/infinitepay-payment-ui.test.mjs
