@@ -330,8 +330,10 @@ async function race(version,same){
   // Both competing withdrawals need 60 units; physical stock is 80.
   const modify=(cmd,newId)=>{
     if(version===2)return {...cmd,withdrawalId:newId,
-      lines:cmd.lines.map(l=>({...l,lineId:next('line','wline_'),
-        requestedQuantity:60,baseQuantity:60,lotId:null,lotCode:null}))};
+      // The source simple fixture has two allocation parts (lot+free).
+      // Concurrency compares ONE intent of 60 units, not 60 per old part.
+      lines:[{...cmd.lines.at(-1),lineId:next('line','wline_'),
+        requestedQuantity:60,baseQuantity:60,lotId:null,lotCode:null}]};
     return {...cmd,withdrawalId:newId,
       lines:cmd.lines.map(l=>({...l,requestedQuantity:60}))};
   };
@@ -443,6 +445,7 @@ try{
   const filename=process.env.W5_TRANSACTION_REPORT||'w5-transactions.json';
   writeFileSync(filename,JSON.stringify(output,null,2)+'\n');
   console.log('W5_TRANSACTION_BENCHMARK_COMPLETE '+filename);
+  console.log('W5_TRANSACTION_TABLE_FULL '+JSON.stringify(table));
   console.log('W5_TRANSACTION_TABLE '+JSON.stringify(table.map(t=>({
     scenario:t.scenario,v2_p50:t.v2.endToEndMs.medianMs,v3_p50:t.v3.endToEndMs.medianMs,
     v2_rpc:t.v2.rpc.medianMs,v3_rpc:t.v3.rpc.medianMs,
