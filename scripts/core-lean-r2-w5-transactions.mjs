@@ -10,7 +10,7 @@ import {performance} from 'node:perf_hooks';
 import {existsSync,writeFileSync} from 'node:fs';
 import {initializeApp,deleteApp} from 'firebase/app';
 import {getAuth,connectAuthEmulator,GoogleAuthProvider,signInWithCredential} from 'firebase/auth';
-import {getFirestore,connectFirestoreEmulator,doc,getDoc,setDoc} from 'firebase/firestore';
+import {getFirestore,connectFirestoreEmulator,doc,getDoc} from 'firebase/firestore';
 import {summary,parseStream} from './core-lean-r2-w5-profile.mjs';
 
 const PROJECT='demo-emprovex-security', DB='emprovex-warehouse', WS='hgesm-aprov', UG='160416';
@@ -51,18 +51,53 @@ const db=getFirestore(app,DB);
 connectFirestoreEmulator(db,'127.0.0.1',8080);
 const ref=(domain,id)=>doc(db,'warehouse',WS,domain,id);
 const read=async(domain,id)=>(await getDoc(ref(domain,id))).data()??null;
+/**
+ * Fixture-only owner seed via the local Emulator REST. Intentionally bypasses
+ * client Rules for synthetic historical data, never for measured operations.
+ * Both v2/v3 always use normal authenticated server command paths.
+ */
+function encodeField(value){
+  if(value===null)return {nullValue:'NULL_VALUE'};
+  if(typeof value==='string')return {stringValue:value};
+  if(typeof value==='number')return Number.isInteger(value)
+    ?{integerValue:String(value)}:{doubleValue:value};
+  if(typeof value==='boolean')return {booleanValue:value};
+  if(Array.isArray(value))return {arrayValue:{values:value.map(encodeField)}};
+  if(value&&typeof value==='object')return {mapValue:{fields:encodeObject(value)}};
+  throw Error('W5_SEED_VALUE_INVALID');
+}
+function encodeObject(data){
+  return Object.fromEntries(Object.entries(data).map(([key,value])=>[key,encodeField(value)]));
+}
+async function adminSeed(items){
+  if(!Array.isArray(items)||!items.length||items.length>250)
+    throw Error('W5_SEED_COUNT_INVALID');
+  const prefix='projects/'+PROJECT+'/databases/'+DB+'/documents/warehouse/'+WS+'/';
+  const body={writes:items.map(({domain,id,data})=>({
+    update:{name:prefix+domain+'/'+id,fields:encodeObject(data)},
+  }))};
+  const url='http://127.0.0.1:8080/v1/projects/'+PROJECT+
+    '/databases/'+DB+'/documents:commit';
+  const res=await fetch(url,{method:'POST',headers:{authorization:'Bearer owner',
+    'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok)throw Error('W5_DEMO_SEED_FAILED_'+res.status);
+}
 const depot='dep_'+'a'.repeat(32),locA='loc_'+'b'.repeat(32),locB='loc_'+'c'.repeat(32);
 const posA={kind:'LOCATION',depotId:depot,locationId:locA,subpositionId:null};
 const posB={kind:'LOCATION',depotId:depot,locationId:locB,subpositionId:null};
 const preseed=async()=>{
-  await setDoc(ref('depots',depot),{schemaVersion:'warehouse_depot_v1',
-    id:depot,workspaceId:WS,ug:UG,code:'W5DEP',name:'Deposito Demo W5',
-    description:null,visualType:'CONTAINER',sizeProfile:'MEDIUM',status:'active',
-    createdBy:access.uid,updatedBy:access.uid});
-  for(const [id,code] of [[locA,'W5LOC1'],[locB,'W5LOC2']])
-    await setDoc(ref('locations',id),{schemaVersion:'warehouse_location_v1',
-      id,workspaceId:WS,ug:UG,depotId:depot,kind:'LOCAL',parentLocationId:null,
-      code,name:code,description:null,status:'active',createdBy:access.uid,updatedBy:access.uid});
+  await adminSeed([
+    {domain:'depots',id:depot,data:{schemaVersion:'warehouse_depot_v1',
+      id:depot,workspaceId:WS,ug:UG,code:'W5DEP',name:'Deposito Demo W5',
+      description:null,visualType:'CONTAINER',sizeProfile:'MEDIUM',status:'active',
+      createdBy:access.uid,updatedBy:access.uid}},
+    ...[[locA,'W5LOC1'],[locB,'W5LOC2']].map(([id,code])=>({
+      domain:'locations',id,data:{schemaVersion:'warehouse_location_v1',
+        id,workspaceId:WS,ug:UG,depotId:depot,kind:'LOCAL',
+        parentLocationId:null,code,name:code,description:null,status:'active',
+        createdBy:access.uid,updatedBy:access.uid},
+    })),
+  ]);
 };
 await preseed();
 const destination=await warehouseDestinationCreateServer(access,{name:'Destino de benchmarks W5'});
@@ -160,11 +195,11 @@ async function seed(kind,version){
   }
   // Batch seed synthetic legacy references without changing physical stock.
   if(lots.length) {
-    for(let i=0;i<lots.length;i+=20)
-      await Promise.all(lots.slice(i,i+20).map(lot=>setDoc(ref('lots',lot.id),lot)));
-    await setDoc(ref('lotAttributionLocks',material.id),{
-      workspaceId:WS,ug:UG,materialId:material.id,revision:1,
-    });
+    await adminSeed([
+      ...lots.map(lot=>({domain:'lots',id:lot.id,data:lot})),
+      {domain:'lotAttributionLocks',id:material.id,
+        data:{workspaceId:WS,ug:UG,materialId:material.id,revision:1}},
+    ]);
   }
   let barcode=null;
   if(spec.boxes){
