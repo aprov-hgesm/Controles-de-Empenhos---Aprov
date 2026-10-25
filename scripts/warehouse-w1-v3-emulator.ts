@@ -376,6 +376,8 @@ async function run(){
   }
   assert.equal(dMove.source.barcodeId,desktopBarcode.id);
   assert.equal(vMove.source.barcodeId,mobileBarcode.id);
+  assert.equal(dMove.source.interface,'BARCODE_SCANNER');
+  assert.equal(vMove.source.interface,'BARCODE_SCANNER');
   assert.equal(dConsume.barcode,desktopBarcode.barcode);
   assert.equal(vConsume.barcode,mobileBarcode.barcode);
   assert.equal(vEvidence.header.effectManifest.lines[0].factorToBaseUnit,12);
