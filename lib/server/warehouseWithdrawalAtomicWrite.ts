@@ -311,7 +311,12 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           workspaceId:ws,ug:access.ug,origin:'STOCK_OUTBOUND',
           materialId:line.materialId,materialDescription:material.description,
           unitLabel:material.unit.label||material.unit.code,
-          quantity:plan.baseQuantity,requestedQuantity:plan.requestedQuantity,
+          quantity:plan.baseQuantity,
+          requestedQuantity:v3
+            ?normalizeWarehouseQuantity(plan.baseQuantity/
+              v3.originalByLine[line.lineId].factorToBaseUnit)
+              ??deny('WAREHOUSE_WITHDRAWAL_V3_CONVERSION_INVALID')
+            :plan.requestedQuantity,
           presentationLabel:v3?line.presentationLabel:
             barcode?.presentation.label||line.presentation.label||line.presentation.code,
           destinationId:input.destinationId,destinationName:destination.name,
@@ -321,6 +326,7 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           barcode:v3?line.barcode:barcode?.barcode||null,lotCode:lot?.code||null,
           ...(v3?{operatorRequestedQuantity:v3.originalByLine[line.lineId].originalRequestedQuantity,
             operatorPresentationCode:v3.originalByLine[line.lineId].originalPresentationCode,
+            operatorPresentationLabel:line.presentationLabel,
             operatorFactorToBaseUnit:v3.originalByLine[line.lineId].factorToBaseUnit,
             operatorIntentIndex:v3.originalByLine[line.lineId].intentIndex}:{}),
           positionLabel:local.name+(position.kind==='SUBPOSITION'?' / '+get(rows,
