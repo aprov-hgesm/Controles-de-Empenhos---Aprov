@@ -115,6 +115,18 @@ test('forged/malformed callback cannot invoke authenticated check', () => {
   assert.throws(() => makePixCheckFromReturn({ state, returnUrl: redirect(state), handle: 'invalid @ tag' }));
 });
 
+test('copying the original checkout URL yields an actionable error and no payment check', () => {
+  const { state } = prep();
+  assert.throws(
+    () => makePixCheckFromReturn({
+      state,
+      returnUrl: 'https://checkout.infinitepay.io/example-tag/example-token',
+      handle: 'example-tag',
+    }),
+    /link inicial do checkout.*Nao pague novamente.*Continuar/
+  );
+});
+
 test('provider must confirm exact amount, Pix method and paid status', () => {
   const valid = {
     success: true, paid: true, amount: 100, paid_amount: 100,
