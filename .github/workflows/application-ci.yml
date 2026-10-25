@@ -83,7 +83,7 @@ jobs:
           fi
 
       - name: CI LEAN R2 selector and syntax negative tests
-        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
 
       - name: Changed executable JavaScript syntax
         run: node scripts/ci-lean-syntax.mjs
@@ -149,6 +149,12 @@ jobs:
 
       - name: W1 isolated v3 concurrency, replay and withdrawal (required when composed)
         run: npm run test:core-lean-r2-w1-emulator
+
+      - name: W4 independent v3 replay, scope and concurrent transaction adversarial (when composed)
+        run: npm run test:core-lean-r2-w4-v3
+
+      - name: W4 authorization boundary and scope invariants (when AuthZ composed)
+        run: npm run test:core-lean-r2-w4-authz
 
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0
@@ -322,6 +328,9 @@ jobs:
 
       - name: W3 NF/NS historical and financial identity V2 contracts
         run: npm run test:financial-identity-v2
+
+      - name: W4 independent financial tenant, PDF and legacy identity invariants
+        run: npm run test:core-lean-r2-w4-financial
 
       - name: CI LEAN R2 G04 — 3 historical guards
         run: node scripts/ci-lean-guards.mjs --group G04

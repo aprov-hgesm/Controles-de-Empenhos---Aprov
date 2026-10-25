@@ -99,6 +99,32 @@ test('mutation 9c: v3 partial-composition is an explicit fail, not a false PASS'
     assert.throws(()=>inspectW1(root),/CI_W1_PARTIAL_COMPOSITION/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
+test('mutation 9d: W1 composition absent cannot be counted as certified when required',async()=>{
+  const { runW1 }=await import('./ci-lean-w1-v3.mjs');
+  const root=mkdtempSync(join(tmpdir(),'ci-w1-required-'));
+  const previous=process.env.CI_LEAN_REQUIRE_W1;
+  try{
+    process.env.CI_LEAN_REQUIRE_W1='1';
+    assert.throws(()=>runW1('contract',root),/CI_W1_REQUIRED_MISSING/);
+    assert.throws(()=>runW1('independent-v3',root),/CI_W1_REQUIRED_MISSING/);
+  }finally{if(previous===undefined)delete process.env.CI_LEAN_REQUIRE_W1;
+    else process.env.CI_LEAN_REQUIRE_W1=previous;
+    rmSync(root,{recursive:true,force:true});}
+});
+test('mutation 9e: AuthZ policy missing cannot be interpreted as certified in composed mode',async()=>{
+  const {inspectAuthz}=await import('./ci-lean-optional-authz.mjs');
+  const root=mkdtempSync(join(tmpdir(),'ci-w4-authz-'));
+  const before=process.env.CI_LEAN_REQUIRE_COMPOSED;
+  try{
+    mkdirSync(join(root,'scripts'),{recursive:true});
+    writeFileSync(join(root,'scripts/core-lean-r2-w4-authz.test.mjs'),'fixture');
+    assert.equal(inspectAuthz(root).status,'not_composed');
+    process.env.CI_LEAN_REQUIRE_COMPOSED='1';
+    assert.throws(()=>inspectAuthz(root),/CI_W4_AUTHZ_REQUIRED_MISSING/);
+  }finally{if(before===undefined)delete process.env.CI_LEAN_REQUIRE_COMPOSED;
+    else process.env.CI_LEAN_REQUIRE_COMPOSED=before;
+    rmSync(root,{recursive:true,force:true});}
+});
 test('mutation 10: workflow edit triggers conservative all-domain coverage',()=>{
   assert.deepEqual(classifyChanges(['.github/workflows/application-ci.yml']).domains,DOMAINS);
 });

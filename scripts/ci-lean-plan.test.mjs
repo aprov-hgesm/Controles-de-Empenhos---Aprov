@@ -106,6 +106,23 @@ test('tsconfig @/ aliases and side-effect imports extend transitive reverse impo
     has(classifyChanges(['lib/shared/financial.ts'],deps),'finance');
   } finally {rmSync(root,{recursive:true,force:true});}
 });
+test('new W4 cross-domain suites and server authorization cannot be skipped',()=>{
+  const auth=classifyChanges(['lib/server/authorizationPolicy.ts']);
+  has(auth,'auth');
+  assert.ok(auth.scripts.includes('test:core-lean-r2-w4-authz'));
+  const wt=classifyChanges(['scripts/core-lean-r2-w4-v3-emulator.mjs']);
+  has(wt,'warehouse');
+  assert.ok(wt.scripts.includes('test:core-lean-r2-w1-contract'));
+  const fi=classifyChanges(['scripts/core-lean-r2-w4-financial.test.mjs']);
+  has(fi,'finance');
+  assert.ok(fi.scripts.includes('test:core-lean-r2-w4-financial'));
+});
+test('W3 six pretypecheck suites remain selected natively for financial changes',()=>{
+  const plan=classifyChanges(['lib/financialIdentityV2.ts']);
+  for(const s of ['test:financial-identity-v2','test:invoice-identity','test:ns-integrity',
+    'test:empenho-concurrency','test:supplier-cnpj-migration','test:ns-integrity-contract'])
+    assert.ok(plan.scripts.includes(s),s);
+});
 test('W1 v3 changed paths always select its behavioral contract',()=>{
   for(const path of ['lib/server/warehouseWithdrawalV3Write.ts','lib/server/warehouseWithdrawalV3Identity.mjs',
     'lib/warehouse/withdrawalV3.ts','scripts/warehouse-withdrawal-v3-contract.test.mjs','scripts/warehouse-w1-v3-emulator.ts']) {

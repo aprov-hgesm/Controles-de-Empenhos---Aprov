@@ -31,9 +31,11 @@ jobs:
         with:
           node-version: 20
       - name: Verify domain selector negative cases
-        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-domain.test.mjs
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
       - id: plan
         name: Plan affected domains (unknown means all)
+        env:
+          CI_LEAN_FORCE_ALL: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
         shell: bash
         run: |
           matrix=$(node scripts/ci-lean-plan.mjs --matrix)

@@ -29,9 +29,11 @@ export function inspectW1(root = process.cwd()) {
 }
 
 export function runW1(mode, root=process.cwd(), spawn=spawnSync) {
-  if (!['contract','emulator'].includes(mode)) throw new Error('CI_W1_INVALID_MODE');
+  if (!['contract','emulator','independent-v3'].includes(mode)) throw new Error('CI_W1_INVALID_MODE');
   const contract=inspectW1(root);
   if(contract.status==='not_composed'){
+    if (process.env.CI_LEAN_REQUIRE_W1==='1' || process.env.CI_LEAN_REQUIRE_COMPOSED==='1')
+      throw new Error('CI_W1_REQUIRED_MISSING: composed release requires W1 v3 motor and tests');
     console.warn('[CI W1] NOT_COMPOSED — v3 is NOT certified on this isolated branch');
     return {status:'not_composed',code:0};
   }
@@ -41,7 +43,9 @@ export function runW1(mode, root=process.cwd(), spawn=spawnSync) {
         '--yes','firebase-tools','emulators:exec',
         '--config','firebase.warehouse-security-test.json',
         '--project','demo-emprovex-security','--only','auth,firestore',
-        'npx --yes tsx scripts/warehouse-w1-v3-emulator.ts'
+        mode==='independent-v3'
+          ? 'npx --yes tsx scripts/core-lean-r2-w4-v3-emulator.mjs'
+          : 'npx --yes tsx scripts/warehouse-w1-v3-emulator.ts'
       ]];
   const result=spawn(command[0],command[1],{
     cwd:root,stdio:'inherit',timeout:480000,

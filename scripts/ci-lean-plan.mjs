@@ -17,8 +17,8 @@ const TESTS = Object.freeze({
     'verify:mobile-r1-integration-3', 'test:core-lean-r2-w4-contract',
     'test:core-lean-r2-w5-profile', 'test:core-lean-r2-w1-contract',
   ],
-  finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2'],
-  auth: ['verify:multitenant-security', 'verify:emprovex-warehouse-isolation', 'verify:saas-r1-security-enforcement'],
+  finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2', 'test:invoice-identity', 'test:supplier-cnpj-migration', 'test:core-lean-r2-w4-financial'],
+  auth: ['verify:multitenant-security', 'verify:emprovex-warehouse-isolation', 'verify:saas-r1-security-enforcement', 'test:core-lean-r2-w4-authz'],
   legal: ['verify:public-oauth-legal-pages', 'verify:saas-r1-legal-acceptance'],
   visual: ['test:warehouse-isometric-camera', 'test:warehouse-3d-proportions'],
   recovery: ['test:recovery', 'verify:backup-recovery'],
@@ -32,7 +32,7 @@ const MOBILE = [
 const RULES = [
   [/^(?:app\/api\/central-depositos\/|app\/central-depositos\/|app\/operador-movel\/|features\/warehouse\/|components\/warehouse\/|lib\/warehouse\/|lib\/server\/warehouse|scripts\/(?:warehouse|mobile|verify-(?:warehouse|mobile|adm-deposito|central-depositos|emprovex-warehouse)))/, ['warehouse']],
   [/^(?:features\/empenhos\/|features\/sag\/|app\/(?:empenhos|sag)\/|lib\/(?:empenho|sag|financial|invoice|supplier|ns|operational)|scripts\/(?:financial-identity|empenho|sag|ns-|invoice|supplier|verify-(?:empenho|ns-|sag|supplier|block-1[0123])))/, ['finance']],
-  [/^(?:firestore.*\.rules$|lib\/(?:auth|firebase|session|workspace|security)|lib\/server\/(?:auth|session|workspace)|app\/api\/(?:auth|session|workspace)\/|scripts\/(?:verify-(?:uid|sector|multitenant|hybrid-auth|saas-r1-security|session-cap)|firestore-multitenancy))/, ['auth']],
+  [/^(?:firestore.*\.rules$|lib\/(?:auth|firebase|session|workspace|security)|lib\/server\/(?:authorization|auth|session|workspace)|app\/api\/(?:auth|session|workspace)\/|scripts\/(?:core-lean-r2-w4-authz|verify-(?:uid|sector|multitenant|hybrid-auth|saas-r1-security|session-cap)|firestore-multitenancy))/, ['auth']],
   [/^(?:app\/(?:privacy|terms)\/|components\/legal\/|hooks\/useLegal|lib\/legal|scripts\/(?:legal-|verify-(?:public-oauth-legal|saas-r1-legal)))/, ['legal']],
   [/^(?:components\/visual\/|components\/layout\/|app\/visual-lab\/|scripts\/(?:visual-|verify-(?:block-19|block-20|block-21)))/, ['visual']],
   [/^(?:ops\/(?:firestore-recovery|backup-recovery)|scripts\/(?:firestore-recovery|verify-(?:backup-recovery|saas-r1-ops-recovery)|workspace-backup-disaster)|app\/api\/health\/)/, ['recovery']],
@@ -54,7 +54,8 @@ function tags(path) {
   if (/^lib\/server\/warehouse(?:Access|Request|MobileTrust)/.test(p) || /^app\/api\/central-depositos\/operations\/route\.ts$/.test(p)) domains.add('auth');
   if (/^scripts\/core-lean-r2-w5-/.test(p)) domains.add('warehouse');
   if (/^scripts\/core-lean-r2-w5-historical\.test\.ts$/.test(p)) domains.add('warehouse');
-  if (/^scripts\/core-lean-r2-w4-(?:assurance-emulator|contract\.test)\.ts$/.test(p)) domains.add('warehouse');
+  if (/^scripts\/core-lean-r2-w4-(?:assurance-emulator|contract\.test)\.ts$/.test(p) || /^scripts\/core-lean-r2-w4-v3-emulator\.mjs$/.test(p)) domains.add('warehouse');
+  if (/^scripts\/core-lean-r2-w4-financial\.test\.mjs$/.test(p)) domains.add('finance');
   if (/^scripts\/.*\.(?:test\.)?mjs$/.test(p) && !domains.size)
     return { domains: [...DOMAINS], reason: 'unmapped executable test/guard' };
   if (!domains.size) return { domains: [...DOMAINS], reason: 'unclassified path (fail-safe)' };
@@ -162,7 +163,13 @@ export function discoverImporters(files, root = process.cwd()) {
 export function currentPlan(base, cwd = process.cwd()) {
   const files = changedFiles(base, cwd);
   const importers = discoverImporters(files, cwd);
-  return { files, importers, ...classifyChanges(files, importers) };
+  const planned = classifyChanges(files, importers);
+  if (process.env.CI_LEAN_FORCE_ALL === '1') {
+    const expanded = classifyChanges(['.github/workflows/emprovex-domain-ci-r2.yml']);
+    return {files, importers, ...expanded,
+      reasons:[...planned.reasons,{path:'[manual dispatch]',reason:'explicit complete domain validation',domains:DOMAINS}]};
+  }
+  return { files, importers, ...planned };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

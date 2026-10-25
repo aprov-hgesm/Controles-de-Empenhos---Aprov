@@ -273,7 +273,10 @@
     "test:core-lean-r2-w5-profile": "node --test scripts/core-lean-r2-w5-profile.test.mjs",
     "test:core-lean-r2-w5-historical": "npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts",
     "test:core-lean-r2-w1-contract": "node scripts/ci-lean-w1-v3.mjs contract",
-    "test:core-lean-r2-w1-emulator": "node scripts/ci-lean-w1-v3.mjs emulator"
+    "test:core-lean-r2-w1-emulator": "node scripts/ci-lean-w1-v3.mjs emulator",
+    "test:core-lean-r2-w4-financial": "node --experimental-vm-modules --test scripts/core-lean-r2-w4-financial.test.mjs",
+    "test:core-lean-r2-w4-authz": "node scripts/ci-lean-optional-authz.mjs",
+    "test:core-lean-r2-w4-v3": "node scripts/ci-lean-w1-v3.mjs independent-v3"
   },
   "dependencies": {
     "clsx": "^2.1.1",
