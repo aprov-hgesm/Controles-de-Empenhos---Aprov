@@ -144,7 +144,7 @@ export function describeRPCs(events) {
 }
 async function emulatorProfile(repetitions = 15) {
   const base = emulatorBase();
-  const full = p => base + '/' + p;
+  const full = p => 'projects/' + PROJECT + '/databases/' + DATABASE + '/documents/' + p;
   const events = [];
   const post = async (operation, payload, observed = true) => {
     const res = await fetch(base + operation, {
