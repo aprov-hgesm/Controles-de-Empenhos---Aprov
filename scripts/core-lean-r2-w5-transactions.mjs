@@ -445,6 +445,7 @@ try{
   const filename=process.env.W5_TRANSACTION_REPORT||'w5-transactions.json';
   writeFileSync(filename,JSON.stringify(output,null,2)+'\n');
   console.log('W5_TRANSACTION_BENCHMARK_COMPLETE '+filename);
+  console.log('W5_TRANSACTION_TABLE_FULL '+JSON.stringify(table));
   console.log('W5_TRANSACTION_TABLE '+JSON.stringify(table.map(t=>({
     scenario:t.scenario,v2_p50:t.v2.endToEndMs.medianMs,v3_p50:t.v3.endToEndMs.medianMs,
     v2_rpc:t.v2.rpc.medianMs,v3_rpc:t.v3.rpc.medianMs,

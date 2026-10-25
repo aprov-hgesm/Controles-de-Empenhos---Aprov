@@ -82,7 +82,7 @@ test('legacy validity read canonicalizer preserves NF document reference and phy
   const raw={
     schemaVersion:'warehouse_lot_v1',workspaceId:'hgesm-aprov',ug:'160416',
     materialId,code:'REF2026',expiresOn:'2027-01-09',quantity:7,position,
-    origin:{kind:'INVOICE',movementId:null,invoiceRecordKey:'legacy_nf_0001',
+    origin:{kind:'INVOICE',movementId:'mov_'+'1'.repeat(64),invoiceRecordKey:'legacy_nf_0001',
       invoiceId:'invoice-historical',supplier:'Fornecedor de teste',
       supplierCnpj:'12345678000195'},status:'active',
     createdBy:'uid-historic',updatedBy:'uid-historic',
@@ -101,4 +101,7 @@ test('legacy validity read canonicalizer preserves NF document reference and phy
   const missing=warehouseCanonicalLotReadInput(id,{...raw,origin:{
     ...(raw.origin),invoiceRecordKey:null}});
   assert.notDeepEqual(missing.origin,normalized.origin);
+  const missingValidation=validateWarehouseLot(missing,{expectedWorkspaceId:'hgesm-aprov',
+    expectedUg:'160416',expectedMaterialId:materialId});
+  assert.equal(missingValidation.ok,false,'incomplete historical invoice origin must fail closed');
 });
