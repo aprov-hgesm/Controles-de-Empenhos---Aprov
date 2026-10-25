@@ -1,0 +1,59 @@
+name: CORE LEAN R2 W5 Performance and Compatibility
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'scripts/core-lean-r2-w5-*'
+      - '.github/workflows/core-lean-r2-w5.yml'
+      - 'lib/warehouse/mobileOutboundPlan.mjs'
+      - 'lib/warehouse/locationBarcode.ts'
+      - 'lib/warehouse/barcode.ts'
+      - 'lib/server/warehouseWithdrawalV3Identity.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-lean-r2-w5-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance-and-historical:
+    name: W5 deterministic fixtures + isolated Firestore probes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm run typecheck
+      - name: CPU benchmarks and validation of fixtures
+        run: |
+          node --test scripts/core-lean-r2-w5-profile.test.mjs
+          node scripts/core-lean-r2-w5-profile.mjs --cpu --out w5-cpu.json
+      - name: Historical barcode/identity compatibility
+        run: npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts
+      - name: Firestore emulator read probes (no prod credentials)
+        env:
+          EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1'
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+          FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only firestore "node scripts/core-lean-r2-w5-profile.mjs --emulator --out w5-emulator.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: core-lean-r2-w5-measurements
+          path: |
+            w5-cpu.json
+            w5-emulator.json
+          if-no-files-found: ignore
+          retention-days: 7

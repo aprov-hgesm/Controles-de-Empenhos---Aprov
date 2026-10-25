@@ -46,9 +46,35 @@ assert.doesNotMatch(inventory, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(inventory, /\brunTransaction\s*\(/);
 
 const outbound = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
-assert.match(outbound, /finalizeWarehouseMaterialWithdrawal/);
+// MOBILE-G now submits a single authenticated server command instead of
+// calling the legacy client-side withdrawal function. Guard the active
+// client -> authenticated route -> canonical server finalizer contract.
+assert.match(outbound, /warehouseServerCommand\s*</);
+assert.match(outbound, /['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
+assert.match(outbound, /withdrawalId:\s*command\.review\.withdrawalId/);
+assert.match(outbound, /destinationId:\s*command\.destinationId/);
+assert.match(outbound, /lines:\s*command\.review\.lines/);
+assert.match(outbound, /result\.withdrawal\.status\s*!==\s*['"]FINALIZED['"]/);
+const serverRoute = read('app/api/central-depositos/operations/route.ts');
+assert.match(serverRoute, /verifyWarehouseRequest\s*\(/);
+assert.match(serverRoute, /case\s+['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
+assert.match(serverRoute, /finalizeWarehouseWithdrawalServer\s*\(/);
+assert.match(serverRoute, /withdrawnBy:\s*access\.email/);
+assert.doesNotMatch(serverRoute, /withdrawnBy:\s*body\.input\.withdrawnBy/);
+const mobileTrust = read('lib/server/warehouseMobileTrust.mjs');
+assert.match(mobileTrust, /['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
 assert.match(outbound, /createWarehouseWithdrawalId/);
-assert.match(outbound, /createWarehouseWithdrawalLineId/);
+// v3: browser MUST NOT fabricate technical line IDs; server owns their derivation.
+assert.doesNotMatch(outbound, /createWarehouseWithdrawalLineId/);
+assert.match(outbound, /schemaVersion:\s*WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+const { warehouseWithdrawalV3DerivedLineId } = await import('../lib/server/warehouseWithdrawalV3Identity.mjs');
+const wd='wd_'+'a'.repeat(32);
+const first=warehouseWithdrawalV3DerivedLineId(wd,0,0);
+assert.match(first,/^wline_[a-f0-9]{32}$/);
+assert.equal(first,warehouseWithdrawalV3DerivedLineId(wd,0,0));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId(wd,1,0));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId(wd,0,1));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId('wd_'+'b'.repeat(32),0,0));
 assert.match(outbound, /listWarehouseDestinationsCached/);
 assert.match(outbound, /createWarehouseDestination/);
 assert.match(outbound, /destinationId/);

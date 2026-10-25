@@ -31,6 +31,15 @@ jobs:
           cache: npm
       - name: Dependências
         run: npm ci
+      - name: CI LEAN planner — fail-closed selection and negative tests
+        run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
+      - name: Executable JavaScript syntax (including .mjs)
+        run: node scripts/ci-lean-syntax.mjs
+      - name: Mobile R2 authenticated operation contracts (phase 0)
+        run: |
+          npm run verify:mobile-r1-integration-3
+          npm run verify:mobile-r1-integration-final
+          npm run verify:mobile-k-canonical-ops
       - name: TypeScript sem erros
         run: npm run typecheck
       - name: Zero gravações Warehouse pelo SDK do cliente

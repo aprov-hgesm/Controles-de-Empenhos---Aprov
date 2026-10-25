@@ -894,9 +894,10 @@ requireText(
 );
 requireText(
   warehouseHome,
-  'Validade / FEFO',
-  'Meus Depósitos perdeu a leitura consultiva de validade/FEFO.'
+  'Validade',
+  'Meus Depósitos perdeu a leitura consultiva de validade.'
 );
+if (warehouseHome.includes('FEFO')) fail('Meus Depósitos voltou a exibir a priorização FEFO aposentada.');
 requireText(
   warehouseHomeStyles,
   'linear-gradient(145deg, #030714 0%, #07101f 46%, #02040b 100%)',
@@ -1851,9 +1852,10 @@ requireText(
 );
 requireText(
   materialWithdrawal,
-  'Validade / FEFO',
-  'Saída de Material voltou a expor lote em vez de validade.'
+  'Validade',
+  'Saída de Material perdeu a apresentação de validade.'
 );
+if (materialWithdrawal.includes('FEFO')) fail('Saída de Material voltou a exibir a priorização FEFO aposentada.');
 requireText(
   outboundDocuments,
   'confira quantidade/validade',
