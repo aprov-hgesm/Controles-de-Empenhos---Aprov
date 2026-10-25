@@ -310,7 +310,7 @@ try{
   const header=await read('withdrawals',multi.withdrawalId);
   const manifest=header?.effectManifest;
   assert.ok(manifest,'real v3 manifest fixture required');
-  
+
   // Use an authentic committed v3 header, but strip a record on a separate command?
   // The isolated emulator has no stock left. Replay the already committed commands:
   const missingMovement=good.entries[0];
