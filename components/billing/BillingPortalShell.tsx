@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, ArrowUpRight, CalendarClock, ChevronRight, CreditCard,
-  Home, Landmark, Menu, ShieldCheck, WalletCards, X,
+  Home, Menu, ShieldCheck, WalletCards, X,
 } from 'lucide-react';
 
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
@@ -102,10 +102,6 @@ export function BillingPortalShell({ children }: { children: ReactNode }) {
             <a href="#historico-financeiro" onClick={() => setDrawerOpen(false)}
               className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
               <CalendarClock className="h-[18px] w-[18px]" /> Histórico financeiro
-            </a>
-            <a href="#precos" onClick={() => setDrawerOpen(false)}
-              className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
-              <Landmark className="h-[18px] w-[18px]" /> Plano e valores
             </a>
             <a href="#formas-pagamento" onClick={() => setDrawerOpen(false)}
               className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
