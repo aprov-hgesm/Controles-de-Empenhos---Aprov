@@ -78,7 +78,16 @@ assert.match(outboundUi, /sessionStorage\.getItem\(pendingKey/);
 assert.match(outboundUi, /result\.withdrawal\.status!=='FINALIZED'/);
 assert.match(outboundUi, /WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED/);
 assert.match(outboundUi, /createWarehouseWithdrawalId/);
-assert.match(outboundUi, /createWarehouseWithdrawalLineId/);
+// v3 browser must NOT invent technical line IDs. The authenticated server owns
+// their deterministic derivation (contract verified by the separate W1/W4 emulator).
+assert.doesNotMatch(outboundUi, /createWarehouseWithdrawalLineId/);
+assert.match(outboundUi, /schemaVersion:\s*WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+const {warehouseWithdrawalV3DerivedLineId} = await import('../lib/server/warehouseWithdrawalV3Identity.mjs');
+const wd='wd_'+'c'.repeat(32);
+const derived=warehouseWithdrawalV3DerivedLineId(wd,0,0);
+assert.equal(derived,warehouseWithdrawalV3DerivedLineId(wd,0,0));
+assert.notEqual(derived,warehouseWithdrawalV3DerivedLineId(wd,1,0));
+assert.notEqual(derived,warehouseWithdrawalV3DerivedLineId(wd,0,1));
 assert.match(outboundUi, /listWarehouseDestinationsCached/);
 assert.match(outboundUi, /createWarehouseDestination/);
 assert.match(outboundUi, /destinationId/);
