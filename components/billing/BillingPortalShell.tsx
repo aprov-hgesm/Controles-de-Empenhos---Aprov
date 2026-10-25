@@ -16,6 +16,9 @@ import { AppShellSignature } from '../layout/chrome/AppShellSignature';
  */
 export function BillingPortalShell({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => { setHydrated(true); }, []);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -29,7 +32,7 @@ export function BillingPortalShell({ children }: { children: ReactNode }) {
   const navItem = 'flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-3 text-[13px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300';
 
   return (
-    <div data-testid="billing-platform-shell" className="min-h-screen bg-[#f6f8fc] text-[#142338]">
+    <div data-testid="billing-platform-shell" data-hydrated={hydrated ? 'true' : 'false'} className="min-h-screen bg-[#f6f8fc] text-[#142338]">
       <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-slate-800 bg-[#06162b] px-4 text-slate-100 shadow-[0_3px_20px_rgba(6,22,43,0.12)] sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
@@ -39,6 +42,7 @@ export function BillingPortalShell({ children }: { children: ReactNode }) {
             aria-label="Abrir navegação"
             aria-expanded={drawerOpen}
             aria-controls="billing-portal-sidebar"
+            disabled={!hydrated}
             onClick={() => setDrawerOpen(true)}
           >
             <Menu className="h-5 w-5" />
