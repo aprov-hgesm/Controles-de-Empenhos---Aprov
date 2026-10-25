@@ -191,6 +191,53 @@ async function run(){
   assert.equal(await balance(),snapshot-1);
   pass('perda de resposta após commit recupera operação original');
 
+  // Dois operadores competindo pelo mesmo saldo: exatamente uma retirada.
+  const raceA=v3(21,[logical(25)]),raceB=v3(22,[logical(25)]);
+  const race=await Promise.allSettled([
+    finalizeWarehouseWithdrawalV3Server(access,raceA),
+    finalizeWarehouseWithdrawalV3Server(access,raceB),
+  ]);
+  assert.equal(race.filter(x=>x.status==='fulfilled').length,1);
+  assert.equal(await balance(),snapshot-1-25);
+  pass('concorrência de duas operações diferentes preserva saldo e atomicidade');
+
+  // Mesmo comando enviado simultaneamente: um único conjunto de efeitos.
+  const identical=v3(23,[logical(1)]);
+  const duplicate=await Promise.allSettled([
+    finalizeWarehouseWithdrawalV3Server(access,identical),
+    finalizeWarehouseWithdrawalV3Server(access,identical),
+  ]);
+  assert.ok(duplicate.some(x=>x.status==='fulfilled'));
+  assert.equal((await finalizeWarehouseWithdrawalV3Server(access,identical)).movementIds.length,0);
+  assert.equal(await balance(),snapshot-1-25-1);
+  pass('concorrência com a mesma identidade jamais causa dupla baixa');
+
+  // V2 forjado com cabeçalho COMPLETO, inclusive schemaVersion: testar
+  // a ausência documental, não apenas a validação superficial de cabeçalho.
+  const v2id=ident('wd_',24);
+  const v2line:WarehouseWithdrawalLineInput={
+    lineId:ident('wline_',24),materialId:material.id,
+    materialDescription:converted.description,requestedQuantity:1,baseQuantity:1,
+    presentation:material.unit,presentationLabel:'UN',unitLabel:'UN',
+    position:pos,positionLabel:'W1LOCAL',barcodeAssociation:null,barcode:null,
+    lotId:null,lotCode:null,
+  };
+  const fakeV2={withdrawalId:v2id,destinationId:destination.id,
+    withdrawnBy:'Operador W1',lines:[v2line]};
+  await mutate('withdrawals',v2id,{
+    schemaVersion:{stringValue:'warehouse_material_withdrawal_v1'},
+    id:{stringValue:v2id},workspaceId:{stringValue:ws},ug:{stringValue:ug},
+    destinationId:{stringValue:destination.id},
+    withdrawnBy:{stringValue:fakeV2.withdrawnBy},
+    payloadHash:{stringValue:atomicWarehouseWithdrawalHash(fakeV2)},
+    expectedLineCount:{integerValue:'1'},appliedLineCount:{integerValue:'1'},
+    atomicVersion:{integerValue:'2'},status:{stringValue:'FINALIZED'},
+    createdBy:{stringValue:access.uid},
+  });
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,fakeV2),
+    /WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED/);
+  pass('v2 cabeçalho FINALIZED completo rejeitado sem movimento e consumo');
+
   // Cabeçalho v3 forjado com hash, versão e manifesto coerentes,
   // mas sem nenhum movimento ou consumo.
   const forged=v3(17,[logical(1)]);
@@ -220,11 +267,11 @@ async function run(){
     intentLineCount:{integerValue:'1'},atomicVersion:{integerValue:'3'},
     status:{stringValue:'FINALIZED'},createdBy:{stringValue:access.uid},
     effectManifestHash:{stringValue:warehouseWithdrawalManifestHash(fakeManifest)},
-    effectManifest:{mapValue:{fields:encodeObject(fakeManifest)}},
+    effectManifest:{mapValue:{fields:encodeObject(fakeManifest as unknown as Record<string,unknown>)}},
   });
   await assert.rejects(()=>finalizeWarehouseWithdrawalV3Server(access,forged),
     /WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED/);
-  assert.equal(await balance(),snapshot-1);
+  assert.equal(await balance(),snapshot-1-25-1);
   pass('v3 cabeçalho e manifesto forjados não bastam sem efeitos');
 
   await mutate('withdrawals',simple.withdrawalId,{
