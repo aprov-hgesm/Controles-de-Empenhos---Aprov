@@ -1,7 +1,7 @@
 # EMPROVEX — Portal de assinatura e pagamento InfinitePay R1
 
-**Integração:** PR #385 (composição de #382 e #384).  
-**Estado:** DRAFT, ainda sem publicação.  
+**Integração:** PR #385 (composição de #382 e #384).
+**Estado:** DRAFT, ainda sem publicação.
 **Ciclo de faturamento normal:** DESATIVADO, `billingMode='observe'`, `requirePayment=false`, `automaticSuspension=false`.
 
 ## O que a interface já faz
