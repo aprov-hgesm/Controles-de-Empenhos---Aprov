@@ -64,7 +64,17 @@ assert.doesNotMatch(serverRoute, /withdrawnBy:\s*body\.input\.withdrawnBy/);
 const mobileTrust = read('lib/server/warehouseMobileTrust.mjs');
 assert.match(mobileTrust, /['"]WITHDRAWAL_FINALIZE_MOBILE['"]/);
 assert.match(outbound, /createWarehouseWithdrawalId/);
-assert.match(outbound, /createWarehouseWithdrawalLineId/);
+// v3: browser MUST NOT fabricate technical line IDs; server owns their derivation.
+assert.doesNotMatch(outbound, /createWarehouseWithdrawalLineId/);
+assert.match(outbound, /schemaVersion:\\s*WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+const { warehouseWithdrawalV3DerivedLineId } = await import('../lib/server/warehouseWithdrawalV3Identity.mjs');
+const wd='wd_'+'a'.repeat(32);
+const first=warehouseWithdrawalV3DerivedLineId(wd,0,0);
+assert.match(first,/^wline_[a-f0-9]{32}$/);
+assert.equal(first,warehouseWithdrawalV3DerivedLineId(wd,0,0));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId(wd,1,0));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId(wd,0,1));
+assert.notEqual(first,warehouseWithdrawalV3DerivedLineId('wd_'+'b'.repeat(32),0,0));
 assert.match(outbound, /listWarehouseDestinationsCached/);
 assert.match(outbound, /createWarehouseDestination/);
 assert.match(outbound, /destinationId/);

@@ -1,5 +1,5 @@
 # EMPROVEX CORE LEAN R2 — Worker 1: identidades e comandos Warehouse
-**Data-base:** 24/10/2026 · **PR:** #375 (DRAFT) · **Branch:** `feat/core-lean-r2-w1-warehouse-identity`  
+**Data-base:** 24/10/2026 · **PR:** #375 (DRAFT) · **Branch:** `feat/core-lean-r2-w1-warehouse-identity`
 **Main consultada:** `afe163139089a1af8ffc81804464429d4d0f9528`. Não promover sem certificação independente.
 
 ## 1. Inventário das identidades (não migrar IDs históricos)
