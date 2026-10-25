@@ -12,6 +12,10 @@ export interface PilotReturnParams {
 
 interface PilotAvailability {
   pilot?: { enabled: boolean; amountCents: number };
+  history?: {
+    available: boolean;
+    cycles: Array<{ referenceMonth: string; amountCents: number; dueDate: string; status: string }>;
+  };
 }
 type CheckoutInfo = {
   mode: string;
@@ -47,6 +51,7 @@ export function InfinitePayPilotPanel({
   returnParams: PilotReturnParams | null;
 }) {
   const [available, setAvailable] = useState(false);
+  const [history, setHistory] = useState<PilotAvailability['history'] | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checkout, setCheckout] = useState<CheckoutInfo | null>(null);
@@ -57,16 +62,23 @@ export function InfinitePayPilotPanel({
   useEffect(() => {
     if (!authorizedWorkspace) {
       setAvailable(false);
+      setHistory(null);
       setCheckout(null);
       return;
     }
     let active = true;
     void authenticatedPortalFetch('/api/billing/portal')
       .then((result: PilotAvailability) => {
-        if (active) setAvailable(result.pilot?.enabled === true && result.pilot.amountCents === 100);
+        if (active) {
+          setAvailable(result.pilot?.enabled === true && result.pilot.amountCents === 100);
+          setHistory(result.history || { available: false, cycles: [] });
+        }
       })
       .catch(() => {
-        if (active) setAvailable(false);
+        if (active) {
+          setAvailable(false);
+          setHistory({ available: false, cycles: [] });
+        }
       });
     return () => { active = false; };
   }, [authorizedWorkspace]);
@@ -115,9 +127,53 @@ export function InfinitePayPilotPanel({
     }
   };
 
-  if (!authorizedWorkspace || !available) return null;
+  if (!authorizedWorkspace) return null;
 
   return (
+    <>
+      {history && (
+        <section data-testid="billing-cycle-history" className="mt-4 rounded-2xl border border-white/10 bg-slate-950/25 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-black text-white">Histórico de competências</h3>
+            <span className="text-[10px] text-slate-400">Até 24 registros materializados</span>
+          </div>
+          {!history.available ? (
+            <p className="mt-3 text-xs text-slate-400">
+              O histórico financeiro não está disponível neste ambiente. Isso não altera a situação da sua conta.
+            </p>
+          ) : history.cycles.length === 0 ? (
+            <p className="mt-3 text-xs text-slate-400">
+              Nenhuma competência faturável para apresentar neste histórico.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {history.cycles.map((cycle) => (
+                <div key={cycle.referenceMonth}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div>
+                    <p className="text-xs font-bold text-white">{cycle.referenceMonth}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {cycle.dueDate ? 'Vencimento: ' + cycle.dueDate.split('-').reverse().join('/') : 'Vencimento não definido'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-white">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cycle.amountCents / 100)}
+                    </p>
+                    <span className="text-[10px] font-semibold text-slate-300">
+                      {cycle.status === 'paid' ? 'Pago' : cycle.status === 'waived' ? 'Dispensado' : 'Pendente'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-3 text-[11px] text-slate-500">
+            Apenas registros efetivamente emitidos. Nenhuma cobrança é criada por esta consulta.
+          </p>
+        </section>
+      )}
+      {available && (
     <section data-testid="infinitepay-real-pilot" className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/[0.07] p-5">
       <div className="flex items-center gap-2 text-amber-100">
         <ShieldCheck className="h-5 w-5" aria-hidden />
@@ -179,5 +235,7 @@ export function InfinitePayPilotPanel({
         </div>
       )}
     </section>
+      )}
+    </>
   );
 }
