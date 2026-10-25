@@ -1,0 +1,592 @@
+{
+  "version": 1,
+  "policy": "No guard dropped: these scripts run in their original order; any failure aborts the group.",
+  "legacyVerifyOrder": [
+    "verify:emprovex-core-protection",
+    "verify:storage-provider",
+    "verify:workspace-drive",
+    "verify:hybrid-auth-model",
+    "verify:firestore-provider-enforcement",
+    "verify:sector-auth-provisioning",
+    "verify:sector-admin-deletion",
+    "verify:sector-password-reset",
+    "verify:saas-r1-onboarding",
+    "verify:saas-r1-security-enforcement",
+    "verify:saas-r1-integration",
+    "verify:saas-r1-final-audit",
+    "verify:empenho-class-config",
+    "verify:public-oauth-legal-pages",
+    "verify:external-sector-login",
+    "verify:uid-binding",
+    "verify:workspace-provisioning",
+    "verify:workspace-drive-onboarding",
+    "verify:sector-lifecycle",
+    "verify:multitenant-security",
+    "verify:adm-deposito-phase-0",
+    "verify:adm-deposito-phase-1",
+    "verify:adm-deposito-phase-2",
+    "verify:adm-deposito-phase-3",
+    "verify:adm-deposito-phase-4",
+    "verify:adm-deposito-phase-5",
+    "verify:adm-deposito-phase-6",
+    "verify:adm-deposito-phase-7",
+    "verify:adm-deposito-phase-8",
+    "verify:mobile-r1-platform-scanner",
+    "verify:mobile-r1-integration-1",
+    "verify:mobile-r1-physical-query",
+    "verify:mobile-r1-intake-allocation",
+    "verify:mobile-r1-integration-2",
+    "verify:mobile-r1-position-check",
+    "verify:mobile-r1-inventory",
+    "verify:mobile-r1-outbound",
+    "verify:mobile-r1-integration-3",
+    "verify:mobile-r1-integration-final",
+    "verify:central-depositos-routes",
+    "verify:mobile-k-canonical-ops",
+    "verify:adm-deposito-phase-9",
+    "verify:adm-deposito-phase-10",
+    "verify:adm-deposito-phase-11",
+    "verify:adm-deposito-phase-11-5",
+    "verify:adm-deposito-phase-13",
+    "verify:production-multitenant-readiness",
+    "verify:reporting-foundation",
+    "verify:reports-shell",
+    "verify:report-empenho-selector",
+    "verify:report-empenho-detail",
+    "verify:supplier-reports",
+    "verify:sag-ns-contract",
+    "verify:sag-import-assistant",
+    "verify:sag-ns-reconciliation",
+    "verify:sag-application-preview",
+    "verify:sag-ns-idempotent-import",
+    "verify:sag-ns-hardening",
+    "verify:sag-ux",
+    "verify:ns-integrity-contract",
+    "verify:ns-integrity-service",
+    "verify:manual-ns-integrity",
+    "verify:invoice-ns-lifecycle",
+    "verify:emprovex-warehouse-isolation",
+    "verify:invoice-mirror-document",
+    "verify:supplier-cnpj-migration",
+    "verify:global-ns-rules",
+    "verify:cnpj-validation",
+    "verify:ns-ug-identity",
+    "verify:immutable-audit",
+    "verify:block-9-e2e",
+    "verify:block-10-consistency",
+    "verify:block-11-sag-refactor",
+    "verify:block-12-empenho-deletion",
+    "verify:block-13-empenho-concurrency",
+    "verify:block-14-scalability",
+    "verify:block-15-final-hardening",
+    "verify:block-16-0-capacity-foundation",
+    "verify:block-16-1-session-enforcement",
+    "verify:block-16-2-admin-session-panel",
+    "verify:block-16-3-workspace-telemetry",
+    "verify:block-16-4-global-monitoring",
+    "verify:block-16-5-consolidated-usage",
+    "verify:block-16-6-usage-alerts",
+    "verify:admin-usage-intelligence",
+    "verify:ug-telemetry-v2",
+    "verify:block-16-7-security-concurrency",
+    "verify:block-16-8-integrated-e2e",
+    "verify:block-16-9-final-closure",
+    "verify:block-17-0-firestore-baseline",
+    "verify:block-17-1-session-lease-efficiency",
+    "verify:block-17-2-multitab-coordination",
+    "verify:block-17-3-branding-efficiency",
+    "verify:block-17-4-operational-listeners",
+    "verify:block-17-5-historical-scalability",
+    "verify:block-17-6-telemetry-fidelity",
+    "verify:block-17-7-app-check",
+    "verify:block-17-8-consumption-regression",
+    "verify:block-17-9-final-closure",
+    "verify:block-18-security-resilience",
+    "verify:backup-recovery",
+    "verify:rpnp-visual-priority",
+    "verify:tr-workspace-documents",
+    "verify:inicio-background-texture",
+    "verify:inicio-slow-planet-orbits",
+    "verify:block-22-billing",
+    "verify:block-19-home-experience",
+    "verify:block-19-2-cinematic-scene",
+    "verify:block-19-3-interactive-core",
+    "verify:block-19-4-operational-orbits",
+    "verify:block-19-5-operational-constellation",
+    "verify:block-19-6-unit-identity",
+    "verify:block-19-7-quick-actions-resume",
+    "verify:block-19-8-microinteractions",
+    "verify:block-19-9-surface-transitions",
+    "verify:block-19-10-home-snapshot-economy",
+    "verify:block-19-11-performance-gpu",
+    "verify:block-19-12-responsiveness",
+    "verify:block-19-13-visual-polish",
+    "verify:block-19-14-final-closure",
+    "verify:block-20-premium-orbital-redesign",
+    "verify:block-21-operational-stars-shooting-stars",
+    "verify:central-avisos",
+    "verify:app-shell",
+    "verify:brand-identity-foundation",
+    "verify:brand-notifications",
+    "verify:empenhos-subtabs",
+    "verify:empenho-pdf-direct-import",
+    "verify:brand-admin",
+    "verify:admin-information-architecture",
+    "verify:admin-sidebar-google-usage",
+    "verify:sped-nup-reporting",
+    "verify:brand-logo-lock",
+    "verify:experience-finalization"
+  ],
+  "groups": [
+    {
+      "id": "G01",
+      "steps": [
+        {
+          "name": "Final document storage guard",
+          "script": "verify:storage-provider"
+        },
+        {
+          "name": "Workspace Google Drive guard",
+          "script": "verify:workspace-drive"
+        },
+        {
+          "name": "Hybrid authentication model guard",
+          "script": "verify:hybrid-auth-model"
+        },
+        {
+          "name": "Firestore provider enforcement guard",
+          "script": "verify:firestore-provider-enforcement"
+        },
+        {
+          "name": "Sector auth provisioning guard",
+          "script": "verify:sector-auth-provisioning"
+        },
+        {
+          "name": "Sector admin deletion guard",
+          "script": "verify:sector-admin-deletion"
+        },
+        {
+          "name": "Sector password reset guard",
+          "script": "verify:sector-password-reset"
+        },
+        {
+          "name": "SaaS R1 onboarding and credentials guard",
+          "script": "verify:saas-r1-onboarding"
+        },
+        {
+          "name": "SAAS R1 security enforcement guard",
+          "script": "verify:saas-r1-security-enforcement"
+        },
+        {
+          "name": "SAAS R1 integrated contract guard",
+          "script": "verify:saas-r1-integration"
+        },
+        {
+          "name": "SAAS R1 final audit contract guard",
+          "script": "verify:saas-r1-final-audit"
+        },
+        {
+          "name": "Empenho class configuration guard",
+          "script": "verify:empenho-class-config"
+        },
+        {
+          "name": "Public OAuth legal pages guard",
+          "script": "verify:public-oauth-legal-pages"
+        },
+        {
+          "name": "External sector login guard",
+          "script": "verify:external-sector-login"
+        },
+        {
+          "name": "Secure UID binding guard",
+          "script": "verify:uid-binding"
+        },
+        {
+          "name": "Workspace provisioning guard",
+          "script": "verify:workspace-provisioning"
+        },
+        {
+          "name": "Workspace Drive onboarding guard",
+          "script": "verify:workspace-drive-onboarding"
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "steps": [
+        {
+          "name": "Central Móvel R1 Integration 3 guard",
+          "script": "verify:mobile-r1-integration-3"
+        },
+        {
+          "name": "Central Móvel R1 MOBILE-I integrated product guard",
+          "script": "verify:mobile-r1-integration-final"
+        },
+        {
+          "name": "Central de Depósitos canonical route and API compatibility guard",
+          "script": "verify:central-depositos-routes"
+        }
+      ]
+    },
+    {
+      "id": "G03",
+      "steps": [
+        {
+          "name": "ADM Depósito Phase 11 protected guard",
+          "script": "verify:adm-deposito-phase-11"
+        },
+        {
+          "name": "ADM Depósito Phase 11.5 visual guard",
+          "script": "verify:adm-deposito-phase-11-5"
+        },
+        {
+          "name": "ADM Depósito Module 13 hardening guard",
+          "script": "verify:adm-deposito-phase-13"
+        },
+        {
+          "name": "Production multi-tenant readiness guard",
+          "script": "verify:production-multitenant-readiness"
+        }
+      ]
+    },
+    {
+      "id": "G04",
+      "steps": [
+        {
+          "name": "Reporting foundation guard",
+          "script": "verify:reporting-foundation"
+        },
+        {
+          "name": "Reports subtabs shell guard",
+          "script": "verify:reports-shell"
+        },
+        {
+          "name": "Report empenho card selector guard",
+          "script": "verify:report-empenho-selector"
+        }
+      ]
+    },
+    {
+      "id": "G05",
+      "steps": [
+        {
+          "name": "SAG NS idempotent import guard",
+          "script": "verify:sag-ns-idempotent-import"
+        },
+        {
+          "name": "SAG NS hardening guard",
+          "script": "verify:sag-ns-hardening"
+        },
+        {
+          "name": "SAG UX guard",
+          "script": "verify:sag-ux"
+        }
+      ]
+    },
+    {
+      "id": "G06",
+      "steps": [
+        {
+          "name": "NS integrity service guard",
+          "script": "verify:ns-integrity-service"
+        },
+        {
+          "name": "Manual NS integrity guard",
+          "script": "verify:manual-ns-integrity"
+        },
+        {
+          "name": "Invoice NS lifecycle guard",
+          "script": "verify:invoice-ns-lifecycle"
+        },
+        {
+          "name": "EMPROVEX / ADM Depósito isolation guard",
+          "script": "verify:emprovex-warehouse-isolation"
+        },
+        {
+          "name": "Invoice mirror document guard",
+          "script": "verify:invoice-mirror-document"
+        }
+      ]
+    },
+    {
+      "id": "G07",
+      "steps": [
+        {
+          "name": "Supplier CNPJ migration guard",
+          "script": "verify:supplier-cnpj-migration"
+        },
+        {
+          "name": "Global NS Firestore Rules guard",
+          "script": "verify:global-ns-rules"
+        },
+        {
+          "name": "Official CNPJ validation guard",
+          "script": "verify:cnpj-validation"
+        },
+        {
+          "name": "NS UG identity guard",
+          "script": "verify:ns-ug-identity"
+        },
+        {
+          "name": "Immutable audit trail guard",
+          "script": "verify:immutable-audit"
+        },
+        {
+          "name": "Block 9 browser E2E guard",
+          "script": "verify:block-9-e2e"
+        },
+        {
+          "name": "Block 10 historical consistency guard",
+          "script": "verify:block-10-consistency"
+        },
+        {
+          "name": "Block 11 SAG conservative refactor guard",
+          "script": "verify:block-11-sag-refactor"
+        },
+        {
+          "name": "Block 12 empenho deletion integrity guard",
+          "script": "verify:block-12-empenho-deletion"
+        }
+      ]
+    },
+    {
+      "id": "G08",
+      "steps": [
+        {
+          "name": "Block 14 operational scalability guard",
+          "script": "verify:block-14-scalability"
+        },
+        {
+          "name": "Block 15 final hardening guard",
+          "script": "verify:block-15-final-hardening"
+        },
+        {
+          "name": "Block 16.0 capacity foundation guard",
+          "script": "verify:block-16-0-capacity-foundation"
+        },
+        {
+          "name": "Block 16.1 session enforcement guard",
+          "script": "verify:block-16-1-session-enforcement"
+        },
+        {
+          "name": "Block 16.2 admin session panel guard",
+          "script": "verify:block-16-2-admin-session-panel"
+        },
+        {
+          "name": "Block 16.3 workspace telemetry guard",
+          "script": "verify:block-16-3-workspace-telemetry"
+        },
+        {
+          "name": "Block 16.4 global Cloud Monitoring guard",
+          "script": "verify:block-16-4-global-monitoring"
+        },
+        {
+          "name": "Block 16.5 consolidated usage dashboard guard",
+          "script": "verify:block-16-5-consolidated-usage"
+        },
+        {
+          "name": "Block 16.6 usage alerts guard",
+          "script": "verify:block-16-6-usage-alerts"
+        },
+        {
+          "name": "Admin usage intelligence guard",
+          "script": "verify:admin-usage-intelligence"
+        },
+        {
+          "name": "UG telemetry v2 reconciliation guard",
+          "script": "verify:ug-telemetry-v2"
+        },
+        {
+          "name": "Block 16.7 security and concurrency hardening guard",
+          "script": "verify:block-16-7-security-concurrency"
+        }
+      ]
+    },
+    {
+      "id": "G09",
+      "steps": [
+        {
+          "name": "Block 16.8 integrated E2E guard",
+          "script": "verify:block-16-8-integrated-e2e"
+        },
+        {
+          "name": "Block 16.9 final audit and closure guard",
+          "script": "verify:block-16-9-final-closure"
+        },
+        {
+          "name": "Block 17.0 Firestore consumption baseline guard",
+          "script": "verify:block-17-0-firestore-baseline"
+        },
+        {
+          "name": "Block 17.1 session lease efficiency guard",
+          "script": "verify:block-17-1-session-lease-efficiency"
+        },
+        {
+          "name": "Block 17.2 multi-tab session coordination guard",
+          "script": "verify:block-17-2-multitab-coordination"
+        },
+        {
+          "name": "Block 17.3 branding efficiency guard",
+          "script": "verify:block-17-3-branding-efficiency"
+        },
+        {
+          "name": "Block 17.4 operational listeners guard",
+          "script": "verify:block-17-4-operational-listeners"
+        },
+        {
+          "name": "Block 17.5 historical scalability guard",
+          "script": "verify:block-17-5-historical-scalability"
+        },
+        {
+          "name": "Block 17.6 telemetry fidelity guard",
+          "script": "verify:block-17-6-telemetry-fidelity"
+        },
+        {
+          "name": "Block 17.7 App Check guard",
+          "script": "verify:block-17-7-app-check"
+        },
+        {
+          "name": "Block 17.8 consumption regression guard",
+          "script": "verify:block-17-8-consumption-regression"
+        },
+        {
+          "name": "Block 17.9 final closure guard",
+          "script": "verify:block-17-9-final-closure"
+        },
+        {
+          "name": "Block 18 security and resilience guard",
+          "script": "verify:block-18-security-resilience"
+        },
+        {
+          "name": "Backup and recovery architecture guard",
+          "script": "verify:backup-recovery"
+        }
+      ]
+    },
+    {
+      "id": "G10",
+      "steps": [
+        {
+          "name": "RPNP visual priority guard",
+          "script": "verify:rpnp-visual-priority"
+        },
+        {
+          "name": "TR counter and workspace document identity guard",
+          "script": "verify:tr-workspace-documents"
+        },
+        {
+          "name": "Inicio background texture guard",
+          "script": "verify:inicio-background-texture"
+        },
+        {
+          "name": "Inicio slow planet orbit guard",
+          "script": "verify:inicio-slow-planet-orbits"
+        },
+        {
+          "name": "Block 22 billing observe guard",
+          "script": "verify:block-22-billing"
+        },
+        {
+          "name": "Block 19 home experience foundation guard",
+          "script": "verify:block-19-home-experience"
+        },
+        {
+          "name": "Block 19.2 cinematic scene guard",
+          "script": "verify:block-19-2-cinematic-scene"
+        },
+        {
+          "name": "Block 19.3 interactive core guard",
+          "script": "verify:block-19-3-interactive-core"
+        },
+        {
+          "name": "Block 19.4 operational orbit guard",
+          "script": "verify:block-19-4-operational-orbits"
+        },
+        {
+          "name": "Block 19.5 operational constellation guard",
+          "script": "verify:block-19-5-operational-constellation"
+        },
+        {
+          "name": "Block 19.6 unit identity guard",
+          "script": "verify:block-19-6-unit-identity"
+        },
+        {
+          "name": "Block 19.7 quick actions and resume guard",
+          "script": "verify:block-19-7-quick-actions-resume"
+        },
+        {
+          "name": "Block 19.8 microinteraction guard",
+          "script": "verify:block-19-8-microinteractions"
+        },
+        {
+          "name": "Block 19.9 surface transition guard",
+          "script": "verify:block-19-9-surface-transitions"
+        },
+        {
+          "name": "Block 19.10 economical home snapshot guard",
+          "script": "verify:block-19-10-home-snapshot-economy"
+        },
+        {
+          "name": "Block 19.11 performance and GPU guard",
+          "script": "verify:block-19-11-performance-gpu"
+        },
+        {
+          "name": "Block 19.12 responsiveness guard",
+          "script": "verify:block-19-12-responsiveness"
+        },
+        {
+          "name": "Block 19.13 visual polish guard",
+          "script": "verify:block-19-13-visual-polish"
+        },
+        {
+          "name": "Block 19.14 final closure guard",
+          "script": "verify:block-19-14-final-closure"
+        },
+        {
+          "name": "Block 20 premium orbital redesign guard",
+          "script": "verify:block-20-premium-orbital-redesign"
+        },
+        {
+          "name": "Block 21 operational stars and shooting stars guard",
+          "script": "verify:block-21-operational-stars-shooting-stars"
+        },
+        {
+          "name": "Central de Avisos guard",
+          "script": "verify:central-avisos"
+        },
+        {
+          "name": "EMPROVEX App Shell guard",
+          "script": "verify:app-shell"
+        },
+        {
+          "name": "EMPROVEX brand identity foundation guard",
+          "script": "verify:brand-identity-foundation"
+        },
+        {
+          "name": "EMPROVEX brand notifications guard",
+          "script": "verify:brand-notifications"
+        },
+        {
+          "name": "EMPROVEX empenhos subtabs guard",
+          "script": "verify:empenhos-subtabs"
+        },
+        {
+          "name": "Empenho direct PDF import guard",
+          "script": "verify:empenho-pdf-direct-import"
+        },
+        {
+          "name": "EMPROVEX brand admin guard",
+          "script": "verify:brand-admin"
+        },
+        {
+          "name": "EMPROVEX admin information architecture guard",
+          "script": "verify:admin-information-architecture"
+        },
+        {
+          "name": "Admin sidebar and Google usage UX guard",
+          "script": "verify:admin-sidebar-google-usage"
+        }
+      ]
+    }
+  ]
+}
