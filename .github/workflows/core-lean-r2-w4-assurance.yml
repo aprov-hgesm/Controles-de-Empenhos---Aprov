@@ -1,0 +1,50 @@
+name: CORE LEAN R2 - W4 Independent Assurance
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - 'scripts/core-lean-r2-w4-*'
+      - 'lib/server/warehouseWithdrawal*.ts'
+      - 'lib/server/warehouseAccess.ts'
+      - 'lib/server/warehouseMobileTrust.mjs'
+      - 'lib/server/warehouseFirestoreTransaction.ts'
+      - 'lib/warehouse/movement.ts'
+      - 'lib/warehouse/withdrawal.ts'
+      - 'lib/warehouse/lot.ts'
+      - 'app/api/central-depositos/operations/route.ts'
+      - 'firebase.warehouse-security-test.json'
+      - '.github/workflows/core-lean-r2-w4-assurance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-lean-w4-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  independent-assurance:
+    name: W4 domain invariants + authenticated Firestore emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Stable v2 identity compatibility (public contract)
+        run: npx --yes tsx --test scripts/core-lean-r2-w4-contract.test.ts
+      - name: Historical v1 and atomic v2 recovery baseline (isolated)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+      - name: Warehouse authenticated adversarial tests (isolated)
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w4-assurance-emulator.ts"
