@@ -22,7 +22,7 @@ concurrency:
 jobs:
   validate-application:
     # PR Draft roda Fast CI e Core; PR ready executa toda a certificação.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -466,7 +466,7 @@ jobs:
 
   block-16-release-gate:
     name: Block 16 Final Release Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -479,7 +479,7 @@ jobs:
           test "${{ needs.validate-application.result }}" = "success"
   block-17-final-release-gate:
     name: Block 17 Final Release Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -494,7 +494,7 @@ jobs:
 
   block-18-final-release-gate:
     name: Block 18 Final Release Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -509,7 +509,7 @@ jobs:
 
   block-19-final-closure-gate:
     name: Block 19 Final Closure Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -524,7 +524,7 @@ jobs:
 
   block-20-final-release-gate:
     name: Block 20 Final Release Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
@@ -539,7 +539,7 @@ jobs:
 
   block-21-final-release-gate:
     name: Block 21 Final Release Gate
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci') }}
     needs:
       - validate-application
     runs-on: ubuntu-24.04
