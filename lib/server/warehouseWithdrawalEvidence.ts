@@ -4,6 +4,7 @@
  * por segunda baixa. Histórico de devoluções e SISCOFIS é permitido.
  */
 import { createHash } from 'node:crypto';
+import { warehouseWithdrawalV3DerivedLineId } from './warehouseWithdrawalV3Identity.mjs';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import {
   warehouseAdminBatchRead, WarehouseStoreError,
@@ -106,6 +107,8 @@ function parseManifest(
       ||typeof line.originalPresentationCode!=='string'
       ||!validateWarehouseStockPosition(line.position)
       ||line.position.kind==='UNASSIGNED'
+      ||line.lineId!==warehouseWithdrawalV3DerivedLineId(
+        input.withdrawalId,line.intentIndex,line.partIndex)
       ||(line.lotId!==null&&!/^lot_[a-f0-9]{32}$/.test(line.lotId))
       ||(line.barcodeId!==null&&!/^bar_[a-f0-9]{64}$/.test(line.barcodeId)))
       return reject();
@@ -166,6 +169,13 @@ export async function auditWarehouseAtomicWithdrawalReplay(
       consumptionId:'cons_'+hash(ws+'\n'+'stock:'+withdrawalId+':'+line.lineId),
     })));
   }
+  for(const line of expected){
+    const derivedMovement=await createWarehouseMovementId(ws,
+      'material-withdrawal:'+withdrawalId+':'+line.lineId);
+    const derivedConsumption='cons_'+hash(ws+'\n'+'stock:'+withdrawalId+':'+line.lineId);
+    if(line.movementId!==derivedMovement||line.consumptionId!==derivedConsumption)
+      return reject();
+  }
   const names=expected.flatMap(line=>[
     doc(ws,'movements',line.movementId),doc(ws,'consumptions',line.consumptionId)]);
   if(new Set(names).size!==names.length)return reject();
@@ -183,6 +193,7 @@ export async function auditWarehouseAtomicWithdrawalReplay(
       ||!sameNumber(s.requestedQuantity,line.requestedQuantity)
       ||s.lotId!==(line.lotId??null)
       ||s.barcodeId!==(line.barcodeId??null)
+      ||!validateWarehouseStockPosition(s.position)
       ||!warehouseStockPositionsEqual(s.position as WarehouseWithdrawalLineInput['position'],line.position)
       ||c.id!==line.consumptionId||c.workspaceId!==ws||c.ug!==access.ug
       ||c.origin!=='STOCK_OUTBOUND'||c.materialId!==line.materialId
@@ -190,7 +201,9 @@ export async function auditWarehouseAtomicWithdrawalReplay(
       ||c.movementId!==line.movementId||c.operatorUid!==h.createdBy
       ||c.destinationId!==h.destinationId||c.withdrawnBy!==h.withdrawnBy
       ||!sameNumber(c.quantity,line.baseQuantity)
-      ||!sameNumber(c.requestedQuantity,line.requestedQuantity)
+      ||!sameNumber(c.requestedQuantity,options.version===3
+        ?Math.round(line.baseQuantity/line.factorToBaseUnit*1e6)/1e6
+        :line.requestedQuantity)
       ||!['PENDING','PREPARED','POSTED'].includes(String(c.siscofisStatus)))
       return reject();
   }
