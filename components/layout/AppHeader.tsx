@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { BadgeCheck, CircleAlert, KeyRound, Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { BadgeCheck, CircleAlert, CreditCard, KeyRound, Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
@@ -158,6 +158,20 @@ export function AppHeader({
               {isFounderWorkspace ? 'Fundador / Isento' : 'VIP / Isento'}
             </span>
           </div>
+        )}
+
+        {workspaceContext.status === 'sector' && (
+          <button
+            type="button"
+            data-testid="billing-account-open"
+            onClick={() => router.push('/regularizacao')}
+            className="emprovex-header-control border-cyan-300/15 bg-cyan-400/[0.06] text-cyan-100"
+            title="Consultar minha assinatura e prévia do pagamento com InfinitePay."
+          >
+            <CreditCard className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Minha assinatura</span>
+            <span className="sm:hidden">Plano</span>
+          </button>
         )}
 
         {needsRegularization && (
