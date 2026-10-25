@@ -1,7 +1,7 @@
 # EMPROVEX — QA da interface InfinitePay com usuário de teste
 
-**PR:** #384 (interface). **Dependência:** PR #382 (motor financeiro, ainda não ligado à UI).  
-**Ambiente pretendido:** Vercel Preview isolado e autenticado, **não** a produção emprovex.com.br.  
+**PR:** #384 (interface). **Dependência:** PR #382 (motor financeiro, ainda não ligado à UI).
+**Ambiente pretendido:** Vercel Preview isolado e autenticado, **não** a produção emprovex.com.br.
 **Estado da integração:** somente leitura, sem emissão de links nem confirmação de pagamento.
 
 ## Conta de teste
