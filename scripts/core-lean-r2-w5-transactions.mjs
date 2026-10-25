@@ -330,8 +330,10 @@ async function race(version,same){
   // Both competing withdrawals need 60 units; physical stock is 80.
   const modify=(cmd,newId)=>{
     if(version===2)return {...cmd,withdrawalId:newId,
-      lines:cmd.lines.map(l=>({...l,lineId:next('line','wline_'),
-        requestedQuantity:60,baseQuantity:60,lotId:null,lotCode:null}))};
+      // The source simple fixture has two allocation parts (lot+free).
+      // Concurrency compares ONE intent of 60 units, not 60 per old part.
+      lines:[{...cmd.lines.at(-1),lineId:next('line','wline_'),
+        requestedQuantity:60,baseQuantity:60,lotId:null,lotCode:null}]};
     return {...cmd,withdrawalId:newId,
       lines:cmd.lines.map(l=>({...l,requestedQuantity:60}))};
   };
