@@ -1,0 +1,48 @@
+name: W5 Cross-Branch Transactional Warehouse v2 v3 Benchmark
+on:
+  push:
+    branches:
+      - test/core-lean-r2-w5-w1-transactional-20261025
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: w5-transactional-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  authentic-transactional-bench:
+    name: W5 real authenticated v2/v3 benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W5_TRANSACTION_SAMPLES: '4'
+      W5_ENGINE_SHA: afa0deba94905156a63bb636ae4ebcbb7452967d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test scripts/core-lean-r2-w5-profile.test.mjs
+      - run: npx --yes tsx --test scripts/core-lean-r2-w5-historical.test.ts
+      - name: Transactional v2/v3 parity, replay, races, rollback
+        run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/core-lean-r2-w5-transactions.mjs"
+      - name: Persist benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w5-authenticated-v2-v3-transactions
+          path: w5-transactions.json
+          retention-days: 14
+          if-no-files-found: ignore
