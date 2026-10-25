@@ -4,6 +4,10 @@
  * Caminhos legados FINALIZING/PARTIALLY_APPLIED são tratados pelo motor v1.
  */
 import { createHash } from 'node:crypto';
+import {
+  auditWarehouseAtomicWithdrawalReplay, buildWarehouseWithdrawalEffectManifest,
+  warehouseWithdrawalManifestHash,
+} from './warehouseWithdrawalEvidence';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { WarehouseStoreError, warehouseAdminBatchRead, warehouseAdminListByField,
   warehouseAdminTransaction, type WarehouseAdminDocument } from './warehouseFirestoreTransaction';
@@ -57,6 +61,9 @@ export interface WarehouseWithdrawalAtomicV3Options {
   snapshotVersions:Record<string,string|null>;
   /** Barcode IDs obtidos de associações lidas/validadas no servidor. */
   barcodeIdsByLine:Record<string,string|null>;
+  originalByLine:Record<string,{intentIndex:number;partIndex:number;
+    originalRequestedQuantity:number;originalPresentationCode:string;
+    factorToBaseUnit:number;barcodeId:string|null}>;
 }
 export async function finalizeWarehouseWithdrawalAtomicServer(
   access:VerifiedWarehouseRequest,input:FinalizeWarehouseMaterialWithdrawalInput,
@@ -83,7 +90,9 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       return deny('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
     if(h.status!=='FINALIZED'||h.appliedLineCount!==(v3?h.expectedLineCount:input.lines.length))
       return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
-    return {withdrawal:h as unknown as WarehouseMaterialWithdrawal,movementIds:[]};
+    return auditWarehouseAtomicWithdrawalReplay(access,token,input.withdrawalId,saved,
+      v3?{version:3,intentHash:hash,intentLineCount:v3.intentLineCount}
+        :{version:2,lines:input.lines});
   }
   const prepared:ReadLine[]=await Promise.all(input.lines.map(async line=>{
     const position=validateWarehouseStockPosition(line.position);
@@ -95,6 +104,8 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
       consumptionId:'cons_'+sha(ws+'\n'+'stock:'+input.withdrawalId+':'+line.lineId),
     };
   }));
+  const effectManifest=v3?await buildWarehouseWithdrawalEffectManifest(
+    ws,input.withdrawalId,hash,v3.intentLineCount,input.lines,v3.originalByLine):null;
   const set=new Set<string>([headerPath,destinationPath]);
   const untracked=new Set<string>();
   for(const p of prepared) {
@@ -145,7 +156,8 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
         }
         const withdrawal=h as unknown as WarehouseMaterialWithdrawal;
-        // Nenhuma segunda baixa, e sinal inequívoco de replay ao cliente.
+        // Checagem de movimentos e consumos é feita após esta transação
+        // no caminho de replay, sempre sem novas escritas.
         return {result:{withdrawal,movementIds:[]},writes:[]};
       }
       if(v3)for(const [name,updateTime] of Object.entries(v3.snapshotVersions)) {
@@ -307,6 +319,10 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
           operatorUid:access.uid,movementId:p.movementId,withdrawalId:input.withdrawalId,
           lineId:line.lineId,intakeId:null,invoiceRecordKey:null,
           barcode:v3?line.barcode:barcode?.barcode||null,lotCode:lot?.code||null,
+          ...(v3?{operatorRequestedQuantity:v3.originalByLine[line.lineId].originalRequestedQuantity,
+            operatorPresentationCode:v3.originalByLine[line.lineId].originalPresentationCode,
+            operatorFactorToBaseUnit:v3.originalByLine[line.lineId].factorToBaseUnit,
+            operatorIntentIndex:v3.originalByLine[line.lineId].intentIndex}:{}),
           positionLabel:local.name+(position.kind==='SUBPOSITION'?' / '+get(rows,
             path(ws,'locations',position.subpositionId),'WAREHOUSE_OUTBOUND_SUBPOSITION_NOT_FOUND').data.name:''),
           siscofisStatus:'PENDING',occurredAt:now,updatedAt:now,
@@ -325,12 +341,20 @@ export async function finalizeWarehouseWithdrawalAtomicServer(
         updatedAt:nowString,finalizedAt:nowString,
       };
       place(headerPath,{...withdrawal,atomicVersion:version,
-        ...(v3?{intentLineCount:v3.intentLineCount}:{})});
+        ...(v3&&effectManifest?{intentLineCount:v3.intentLineCount,
+          effectManifest,effectManifestHash:warehouseWithdrawalManifestHash(effectManifest)}:{})});
       if(writes.size>450)return deny('WAREHOUSE_WITHDRAWAL_ATOMIC_TOO_MANY_WRITES',400);
       return {result:{withdrawal,movementIds:ids},
         writes:[...writes].map(([name,data])=>({path:name,data}))};
     }
   );
+  if(committed.movementIds.length===0) {
+    const savedReplay=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
+    if(!savedReplay)return deny('WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED');
+    return auditWarehouseAtomicWithdrawalReplay(access,token,input.withdrawalId,
+      savedReplay,v3?{version:3,intentHash:hash,intentLineCount:v3.intentLineCount}
+        :{version:2,lines:input.lines});
+  }
   // Injeção estritamente no Emulator: simula perda da resposta HTTP após
   // commit remoto confirmado. O mesmo withdrawalId recupera sem nova baixa.
   if(process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
