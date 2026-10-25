@@ -22,14 +22,16 @@ import {
   type WarehouseMobilePhysicalQueryResult,
 } from '../../../lib/warehouse/mobilePhysicalQuery';
 import { prepareWarehouseMobileOutboundReview } from '../../../lib/warehouse/mobileOutbound';
-import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOutboundPlan.mjs';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import { warehouseServerCommand } from '../../../lib/warehouse/serverCommandClient';
 import {
-  createWarehouseWithdrawalId,createWarehouseWithdrawalLineId,
+  createWarehouseWithdrawalId,
   type WarehouseWithdrawalLineInput,
 } from '../../../lib/warehouse/withdrawal';
 import type { FinalizeWarehouseMaterialWithdrawalResult } from '../../../lib/warehouse/withdrawalRepository';
+import {
+  WAREHOUSE_WITHDRAWAL_COMMAND_V3, type WarehouseWithdrawalV3Line,
+} from '../../../lib/warehouse/withdrawalV3';
 import {
   createWarehouseDestination,listWarehouseDestinationsCached,
 } from '../../../lib/warehouse/mobileDestinationClient';
@@ -56,7 +58,8 @@ type Review = {
   withdrawalId:string;
   requestedQuantity:number;
   baseQuantity:number;
-  lines:WarehouseWithdrawalLineInput[];
+  schemaVersion?:typeof WAREHOUSE_WITHDRAWAL_COMMAND_V3;
+  lines:WarehouseWithdrawalLineInput[]|WarehouseWithdrawalV3Line[];
 };
 type PendingWithdrawal = {
   workspaceId:string;ug:string;uid:string;destinationId:string;review:Review;
@@ -265,26 +268,16 @@ export function WarehouseMobileOutbound() {
         position:origin.position,
         locationBalance:origin.balance,
       });
-      const positionLots=product.availability.lots.filter(lot=>
-        warehouseStockPositionsEqual(lot.position,origin.position));
-      const allocation=planMobileOutboundAutomaticLots({
-        quantity:plan.baseQuantity,physicalQuantity:origin.balance.quantity,lots:positionLots,
-      });
-      const lines:WarehouseWithdrawalLineInput[]=allocation.map(line=>({
-        lineId:createWarehouseWithdrawalLineId(),
+      // O cliente informa apenas a intenção. O servidor resolve apresentações,
+      // validades e linhas técnicas dentro da operação atômica.
+      const lines:WarehouseWithdrawalV3Line[]=[{
         materialId:product.availability.material.id,
-        materialDescription:product.availability.material.description,
-        // Base oficial: cada parte conserva fator 1, inclusive multiplos lotes.
-        requestedQuantity:line.quantity,baseQuantity:line.quantity,
-        presentation:product.availability.material.unit,
-        presentationLabel:unit(product.availability.material.unit.code,product.availability.material.unit.label),
-        unitLabel:unit(product.availability.material.unit.code,product.availability.material.unit.label),
-        position:origin.position,positionLabel:origin.label,
-        barcodeAssociation:null,barcode:product.barcode,
-        lotId:line.lotId,
-        lotCode:positionLots.find(l=>l.id===line.lotId)?.code||null,
-      }));
+        position:origin.position,
+        requestedQuantity:qty,
+        ...(product.association?{barcodeId:product.association.id}:{}),
+      }];
       setReview({
+        schemaVersion:WAREHOUSE_WITHDRAWAL_COMMAND_V3,
         withdrawalId:createWarehouseWithdrawalId(),requestedQuantity:qty,
         baseQuantity:plan.baseQuantity,lines,
       });
@@ -321,6 +314,7 @@ export function WarehouseMobileOutbound() {
         ||command.ug!==workspace.ug)throw Error('WAREHOUSE_WITHDRAWAL_AUTH_REQUIRED');
       const result=await warehouseServerCommand<FinalizeWarehouseMaterialWithdrawalResult>(
         command.workspaceId,'WITHDRAWAL_FINALIZE_MOBILE',{
+          ...(command.review.schemaVersion?{schemaVersion:command.review.schemaVersion}:{}),
           withdrawalId:command.review.withdrawalId,
           destinationId:command.destinationId,lines:command.review.lines,
         });

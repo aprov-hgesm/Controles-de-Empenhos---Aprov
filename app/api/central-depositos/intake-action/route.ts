@@ -555,6 +555,7 @@ async function performAllocation(
       ? `${root}/locations/${position.subpositionId}`
       : null,
     lot: `${root}/lots/${lotId}`,
+    lotLock: `${root}/lotAttributionLocks/${context.materialId}`,
     barcode: barcodeId ? `${root}/barcodes/${barcodeId}` : null,
   };
 
@@ -569,6 +570,7 @@ async function performAllocation(
     subpositionDocument,
     lotDocument,
     barcodeDocument,
+    lotLockDocument,
   ] = await Promise.all([
     getDocument(accessToken, WAREHOUSE_DATABASE_ID, paths.intake),
     getDocument(accessToken, WAREHOUSE_DATABASE_ID, paths.material),
@@ -584,6 +586,7 @@ async function performAllocation(
     paths.barcode
       ? getDocument(accessToken, WAREHOUSE_DATABASE_ID, paths.barcode)
       : Promise.resolve(null),
+    getDocument(accessToken, WAREHOUSE_DATABASE_ID, paths.lotLock),
   ]);
 
   if (!depotDocument || !locationDocument) {
@@ -922,8 +925,27 @@ async function performAllocation(
     }
   }
 
+  // A entrada NF cria/eleva uma referência de validade. Atualizar o mesmo
+  // mutex versionado impede que uma retirada v3 use lista secundária velha.
+  if (lotLockDocument && (
+    lotLockDocument.data.workspaceId !== access.workspaceId
+    || lotLockDocument.data.ug !== access.ug
+    || lotLockDocument.data.materialId !== context.materialId
+  )) {
+    throw new FastPathError('WAREHOUSE_INTAKE_LOT_LOCK_SCOPE_MISMATCH', 409);
+  }
+  const lotRevision = typeof lotLockDocument?.data.revision === 'number'
+    && Number.isSafeInteger(lotLockDocument.data.revision)
+    ? lotLockDocument.data.revision : 0;
+  if (lotRevision >= Number.MAX_SAFE_INTEGER) {
+    throw new FastPathError('WAREHOUSE_INTAKE_LOT_LOCK_REVISION_OVERFLOW', 409);
+  }
   const writes: FirestoreWrite[] = [
     write(WAREHOUSE_DATABASE_ID, paths.movement, movement, null),
+    write(WAREHOUSE_DATABASE_ID, paths.lotLock,{
+      workspaceId:access.workspaceId,ug:access.ug,materialId:context.materialId,
+      revision:lotRevision+1,updatedBy:access.uid,updatedAt:now,
+    },lotLockDocument),
     write(WAREHOUSE_DATABASE_ID, paths.balance, balance, balanceDocument),
     write(
       WAREHOUSE_DATABASE_ID,

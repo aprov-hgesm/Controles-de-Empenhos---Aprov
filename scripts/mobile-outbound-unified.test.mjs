@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { planMobileOutboundAutomaticLots as plan } from '../lib/warehouse/mobileOutboundPlan.mjs';
+// Executado pelo gate já existente, sem editar workflows do Worker 2.
+import './warehouse-withdrawal-v3-contract.test.mjs';
 
 const text=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const lot=(id,quantity,expiresOn='2027-02-01',status='active')=>({
@@ -48,7 +50,11 @@ test('UI: primeira leitura resolve ambos, destino sem responsavel ou lote manual
   assert.match(ui,/getWarehouseMobileBarcodeByCode/);
   assert.match(ui,/available\.length===1\?available\[0\]:null/);
   assert.match(ui,/warehouseStockPositionsEqual\(o\.position,location\.resolved\.position\)/);
-  assert.match(ui,/planMobileOutboundAutomaticLots/);
+  assert.match(ui,/WAREHOUSE_WITHDRAWAL_COMMAND_V3/);
+  const server=text('lib/server/warehouseWithdrawalV3Write.ts');
+  assert.match(server,/planMobileOutboundAutomaticLots/);
+  assert.match(server,/finalizeWarehouseWithdrawalAtomicServer/);
+  assert.match(server,/warehouseWithdrawalV3DerivedLineId/);
   assert.match(ui,/WITHDRAWAL_FINALIZE_MOBILE/);
   assert.doesNotMatch(ui,/chooseLot|setLotId|selectedLot|pickedBy|setPickedBy|onClick.*lot/);
   assert.match(ui,/1 · LER CÓDIGO DE BARRAS/);
