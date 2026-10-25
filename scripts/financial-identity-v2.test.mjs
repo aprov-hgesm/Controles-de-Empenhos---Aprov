@@ -135,3 +135,66 @@ test('scope claims cannot substitute authoritative session identity', () => {
   assert.throws(() => assertInvoicePdfReferences(pdf({ storage: { ...pdf().storage, workspaceId: 'forged-ws' } }), expected), (e) => e?.code === 'pdf_workspace_mismatch');
   assert.equal(assertInvoicePdfReferences(pdf({ storage: undefined }), expected), 'legacy-unverified');
 });
+
+
+test('NS snapshot blocks reuse inside the UG and tolerates another UG', () => {
+  const em = { id: '2026NE000001', supplierCnpj: A, items: [] };
+  const target = {
+    recordKey: 'nf_' + A + '_1234',
+    invoice: { id: '1234', recordKey: 'nf_' + A + '_1234', empenhoId: em.id, supplierCnpj: A },
+  };
+  const owner = {
+    recordKey: 'nf_' + A + '_5678',
+    invoice: { id: '5678', recordKey: 'nf_' + A + '_5678', empenhoId: em.id, supplierCnpj: A,
+      numeroNS: '2026NS000001', nsUg: '160416' },
+  };
+  const mutation = {
+    invoiceRecordKey: target.recordKey, invoiceId: target.invoice.id,
+    empenhoId: em.id, supplierCnpj: A, expectedCurrentUg: null,
+    expectedCurrentNs: null, proposedUg: '160416', proposedNs: '2026NS000001', source: 'manual',
+  };
+  const check = (other) => ns.namespace.validateNsIntegritySnapshot({
+    mutations: [mutation], targetInvoiceDocuments: [target],
+    knownOwnerInvoiceDocuments: [target, other], empenhos: [em],
+  });
+  assert.throws(() => check(owner), (e) => e?.code === 'ns_reused_in_scope');
+  assert.equal(check({ ...owner, invoice: { ...owner.invoice, nsUg: '160415' } }).writes.length, 1);
+  assert.throws(
+    () => check({ ...owner, invoice: { ...owner.invoice, nsUg: undefined } }),
+    (e) => e?.code === 'ns_reused_in_scope'
+  );
+});
+
+test('legacy NS lock is recognized and a forged owner is rejected', () => {
+  const sn = '2026NS000001';
+  const lock = { numeroNS: sn, invoiceRecordKey: 'legacy-record' };
+  assert.equal(ns.namespace.buildLegacyNsLockDocumentId(sn), 'sagNsLock_' + sn);
+  const ownership = { invoiceRecordKey: 'legacy-record' };
+  assert.doesNotThrow(
+    () => ns.namespace.assertNsLockOwnership(lock, ownership, null, sn, 'stale_lock_owner')
+  );
+  assert.throws(
+    () => ns.namespace.assertNsLockOwnership(lock, { invoiceRecordKey: 'forged-record' }, null, sn, 'stale_lock_owner'),
+    (e) => e?.code === 'stale_lock_owner'
+  );
+});
+
+test('missing PDF identification, forged ownership and ambiguous versions fail closed', () => {
+  const expected = { invoiceId: '1234', empenhoId: '2026NE000001', workspaceId: 'ws-a' };
+  assert.throws(
+    () => assertInvoicePdfReferences(pdf({ id: '' }), expected),
+    (e) => e?.code === 'invalid_pdf_identity'
+  );
+  assert.throws(
+    () => assertInvoicePdfReferences(pdf({ empenhoId: 'forged-empenho' }), expected),
+    (e) => e?.code === 'pdf_owner_mismatch'
+  );
+  assert.throws(
+    () => assertInvoicePdfReferences(pdf({ storage: { ...pdf().storage, workspaceId: 'ws-b' } }), expected),
+    (e) => e?.code === 'pdf_workspace_mismatch'
+  );
+  assert.doesNotThrow(() => assertDistinctPdfVersionIds(pdf(), [
+    pdf({ id: 'pdf-v2', pathname: 'documentos/NF-v2.pdf',
+      storage: { ...pdf().storage, objectKey: 'drive-file-2' } }),
+  ]));
+});

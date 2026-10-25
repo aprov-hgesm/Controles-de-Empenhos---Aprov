@@ -91,6 +91,29 @@ test('importer propagation includes dependent tests and their domains', () => {
   }
 });
 
+test('tsconfig @/ aliases and side-effect imports extend transitive reverse import graph', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ci-lean-alias-'));
+  try {
+    mkdirSync(join(root, 'lib/shared'), {recursive:true});
+    mkdirSync(join(root, 'features/empenhos'), {recursive:true});
+    mkdirSync(join(root, 'scripts'), {recursive:true});
+    writeFileSync(join(root,'lib/shared/financial.ts'),'export const value=1;');
+    writeFileSync(join(root,'features/empenhos/financial.ts'),"import { value } from '@/lib/shared/financial';");
+    writeFileSync(join(root,'scripts/financial-alias.test.mjs'),"import '../features/empenhos/financial';");
+    const deps=discoverImporters(['lib/shared/financial.ts'],root);
+    assert.ok(deps.includes('features/empenhos/financial.ts'), JSON.stringify(deps));
+    assert.ok(deps.includes('scripts/financial-alias.test.mjs'), JSON.stringify(deps));
+    has(classifyChanges(['lib/shared/financial.ts'],deps),'finance');
+  } finally {rmSync(root,{recursive:true,force:true});}
+});
+test('W5 performance and historical scripts remain within Warehouse domain',()=>{
+  for(const path of ['scripts/core-lean-r2-w5-profile.mjs','scripts/core-lean-r2-w5-profile.test.mjs',
+    'scripts/core-lean-r2-w5-historical.test.ts','lib/warehouse/locationBarcode.ts']) {
+    const plan=classifyChanges([path]);
+    has(plan,'warehouse');
+    assert.ok(plan.scripts.includes('test:core-lean-r2-w5-profile'),path);
+  }
+});
 test('renaming an auth or stock module cannot become docs-only', () => {
   const files = parseGitNameStatusZ('R100\0lib/server/warehouseWithdrawalWrite.ts\0docs/old-withdrawal.md\0');
   assert.deepEqual(files, ['lib/server/warehouseWithdrawalWrite.ts', 'docs/old-withdrawal.md']);

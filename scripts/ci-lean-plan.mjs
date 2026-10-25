@@ -15,6 +15,7 @@ const TESTS = Object.freeze({
     'test:adm-deposito-ledger', 'test:adm-deposito-inventory',
     'test:adm-deposito-outbound-return', 'test:mobile-outbound-unified',
     'verify:mobile-r1-integration-3', 'test:core-lean-r2-w4-contract',
+    'test:core-lean-r2-w5-profile',
   ],
   finance: ['test:ns-integrity-contract', 'test:ns-integrity', 'test:empenho-concurrency', 'test:financial-identity-v2'],
   auth: ['verify:multitenant-security', 'verify:emprovex-warehouse-isolation', 'verify:saas-r1-security-enforcement'],
@@ -51,6 +52,8 @@ function tags(path) {
     domains.add('warehouse');
   if (/^(?:features\/warehouse\/.*(?:Isometric|3D|Croqui|DepotLayout)|app\/visual-lab\/)/i.test(p)) domains.add('visual');
   if (/^lib\/server\/warehouse(?:Access|Request|MobileTrust)/.test(p) || /^app\/api\/central-depositos\/operations\/route\.ts$/.test(p)) domains.add('auth');
+  if (/^scripts\/core-lean-r2-w5-/.test(p)) domains.add('warehouse');
+  if (/^scripts\/core-lean-r2-w5-historical\.test\.ts$/.test(p)) domains.add('warehouse');
   if (/^scripts\/core-lean-r2-w4-(?:assurance-emulator|contract\.test)\.ts$/.test(p)) domains.add('warehouse');
   if (/^scripts\/.*\.(?:test\.)?mjs$/.test(p) && !domains.size)
     return { domains: [...DOMAINS], reason: 'unmapped executable test/guard' };
@@ -129,9 +132,11 @@ export function discoverImporters(files, root = process.cwd()) {
   const reverse = new Map();
   for (const filename of all) {
     const body = readFileSync(filename, 'utf8');
-    const imports = /\b(?:from\s*|import\s*\(|require\s*\()\s*['"](\.[^'"]+)['"]/g;
+    // Resolve both relative and tsconfig @/* aliases, including bare side-effect imports.
+    const imports = /\b(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)['"]((?:\.{1,2}\/|@\/)[^'"]+)['"]/g;
     for (const match of body.matchAll(imports)) {
-      const resolved = resolve(dirname(filename), match[1]);
+      const resolved = match[1].startsWith('@/')
+        ? resolve(root, match[1].slice(2)) : resolve(dirname(filename), match[1]);
       const targets = [resolved, ...extensions.map(ext => resolved + ext),
         ...extensions.map(ext => join(resolved, 'index' + ext))];
       for (const target of targets) {

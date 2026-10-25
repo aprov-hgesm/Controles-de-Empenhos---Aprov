@@ -84,6 +84,11 @@ test('mutation 9: financial and adversarial test edits select their own executio
   covers('scripts/core-lean-r2-w4-contract.test.ts','warehouse','test:core-lean-r2-w4-contract');
   covers('scripts/core-lean-r2-w4-assurance-emulator.ts','warehouse','test:core-lean-r2-w4-contract');
 });
+test('mutation 9b: W5 benchmark/compatibility fixtures remain guarded, never timing thresholds',()=>{
+  covers('scripts/core-lean-r2-w5-profile.test.mjs','warehouse','test:core-lean-r2-w5-profile');
+  assert.ok(domainTests('warehouse').includes('test:core-lean-r2-w5-historical'));
+  failingDomain('warehouse','test:core-lean-r2-w5-historical');
+});
 test('mutation 10: workflow edit triggers conservative all-domain coverage',()=>{
   assert.deepEqual(classifyChanges(['.github/workflows/application-ci.yml']).domains,DOMAINS);
 });

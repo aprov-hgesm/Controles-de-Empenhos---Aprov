@@ -130,6 +130,12 @@ jobs:
       - name: Multi-tenant Firestore security tests
         run: npm run test:security:multitenant
 
+      - name: W5 deterministic profile/candidate-saturation invariants (no timing thresholds)
+        run: npm run test:core-lean-r2-w5-profile
+
+      - name: W5 historical EPX1/EPX2/barcode/withdrawal identity compatibility
+        run: npm run test:core-lean-r2-w5-historical
+
       - name: W4 stable v2 identity compatibility
         run: npm run test:core-lean-r2-w4-contract
 
