@@ -386,6 +386,67 @@ async function lostResponse(version){
   return {scenario:'response-lost-after-commit',version,first:lost,replay:again.metric};
 }
 
+
+/** 121 candidates MUST be rejected before mutating a single stock document. */
+async function saturatedValidity(){
+  const item=await seed('scale-60',3);
+  const initial=(await read('balances',item.material.id)).quantity;
+  const extra=Array.from({length:61},(_,i)=>({
+    schemaVersion:'warehouse_lot_v1',id:next('lot','lot_'),
+    workspaceId:WS,ug:UG,materialId:item.material.id,
+    code:'W5-SAT-'+String(i).padStart(3,'0'),expiresOn:'2027-12-01',
+    quantity:0,position:posA,status:'active',
+    createdBy:access.uid,updatedBy:access.uid,
+    origin:{kind:'LEGACY',movementId:null,invoiceRecordKey:null,
+      invoiceId:null,supplier:null,supplierCnpj:null},
+  }));
+  await adminSeed([
+    ...extra.map(lot=>({domain:'lots',id:lot.id,data:lot})),
+    {domain:'lotAttributionLocks',id:item.material.id,
+      data:{workspaceId:WS,ug:UG,materialId:item.material.id,revision:2}},
+  ]);
+  let recorded;
+  try{await probe(()=>execute(item));assert.fail('W5_SATURATION_DID_NOT_REJECT')}
+  catch(e){assert.match(String(e.message),/WAREHOUSE_SERVER_QUERY_SATURATED/);recorded=e.w5Observed}
+  assert.equal((await read('balances',item.material.id)).quantity,initial);
+  assert.equal(await read('withdrawals',item.cmd.withdrawalId),null);
+  assert.equal(recorded.documentsWritten,0);
+  return {scenario:'saturation-121',version:3,metric:recorded,
+    candidates:121,committed:false};
+}
+async function invalidIdentity(version){
+  const item=await seed('simple',version);
+  const materialId='mat_'+'0'.repeat(32);
+  const forged={...item,cmd:version===2
+    ?{...item.cmd,lines:item.cmd.lines.map(line=>({...line,materialId}))}
+    :{...item.cmd,lines:item.cmd.lines.map(line=>({...line,materialId}))}};
+  const before=(await read('balances',item.material.id)).quantity;
+  let result;
+  try{await probe(()=>execute(forged));assert.fail('W5_MISSING_MATERIAL_NOT_REJECTED')}
+  catch(e){assert.match(String(e.message),/WAREHOUSE_/);result=e.w5Observed}
+  assert.equal((await read('balances',item.material.id)).quantity,before);
+  assert.equal(await read('withdrawals',item.cmd.withdrawalId),null);
+  assert.equal(result.documentsWritten,0);
+  return {scenario:'missing-material',version,metric:result,committed:false};
+}
+async function divergentReplay(version){
+  const item=await seed('simple',version);
+  const original=await probe(()=>execute(item));
+  assert.equal(original.value.withdrawal.status,'FINALIZED');
+  const divergent={...item,cmd:{...item.cmd,lines:item.cmd.lines.map((line,index)=>
+    index!==0?line:version===2
+      ?{...line,requestedQuantity:line.requestedQuantity+1,
+          baseQuantity:line.baseQuantity+1}
+      :{...line,requestedQuantity:line.requestedQuantity+1})}};
+  let rejected;
+  try{await probe(()=>execute(divergent));assert.fail('W5_DIVERGENT_REPLAY_NOT_REJECTED')}
+  catch(e){assert.match(String(e.message),/WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT/);
+    rejected=e.w5Observed}
+  assert.equal(rejected.documentsWritten,0);
+  await verify(item,true);
+  return {scenario:'divergent-replay',version,metric:rejected,committed:false};
+}
+
 const kinds=['simple','multiline','validity-mix','conversion','scale-1','scale-12','scale-60'];
 const records=[],errors=[],checks=[];
 try{
@@ -405,8 +466,12 @@ try{
     checks.push(await lostResponse(version));
     checks.push(await race(version,true));
     checks.push(await race(version,false));
+    checks.push(await invalidIdentity(version));
+    checks.push(await divergentReplay(version));
     console.log('W5 INTEGRITY PASS v'+version);
   }
+  checks.push(await saturatedValidity());
+  console.log('W5 SATURATION PASS >120');
   const table=kinds.map(kind=>{
     const versions={};
     for(const version of [2,3]){
