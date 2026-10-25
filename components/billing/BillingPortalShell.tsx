@@ -4,17 +4,24 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowLeft, ArrowUpRight, CalendarClock, ChevronRight, CreditCard,
-  Home, Menu, ShieldCheck, WalletCards, X,
+  Headphones, Home, Menu, ShieldCheck, WalletCards, X,
 } from 'lucide-react';
 
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
+import { BILLING_PORTAL_TABS, type BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 /**
  * A dedicated surface for the /regularizacao route using the EMPROVEX shell
  * proportions and navigation tokens. The operational AppSidebar is NOT mounted
  * twice (it requires home page's operational state).
  */
-export function BillingPortalShell({ children }: { children: ReactNode }) {
+export function BillingPortalShell({
+  children, activeTab, onTabChange,
+}: {
+  children: ReactNode;
+  activeTab: BillingPortalTab;
+  onTabChange: (tab: BillingPortalTab) => void;
+}) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -91,22 +98,59 @@ export function BillingPortalShell({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          <nav className="space-y-1 px-3" aria-label="Seções da assinatura">
-            <p className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Assinatura e pagamentos</p>
-            <a href="#visao-geral" onClick={() => setDrawerOpen(false)} aria-current="page"
-              className={navItem + ' border border-cyan-300/20 bg-cyan-400/10 text-cyan-100'}>
-              <CreditCard className="h-[18px] w-[18px]" />
-              <span className="flex-1">Minha assinatura</span>
-              <ChevronRight className="h-4 w-4 opacity-75" />
-            </a>
-            <a href="#historico-financeiro" onClick={() => setDrawerOpen(false)}
-              className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
-              <CalendarClock className="h-[18px] w-[18px]" /> Histórico financeiro
-            </a>
-            <a href="#formas-pagamento" onClick={() => setDrawerOpen(false)}
-              className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
-              <WalletCards className="h-[18px] w-[18px]" /> Formas de pagamento
-            </a>
+          <nav className="px-3" aria-label="Seções da assinatura">
+            <p className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+              Área do cliente
+            </p>
+            <div role="tablist" aria-orientation="vertical" aria-label="Abas da assinatura" className="space-y-1">
+              {BILLING_PORTAL_TABS.map((tab) => {
+                const Icon = tab.id === 'overview' ? CreditCard
+                  : tab.id === 'history' ? CalendarClock
+                    : tab.id === 'payments' ? WalletCards : Headphones;
+                const selected = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`billing-tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    tabIndex={selected ? 0 : -1}
+                    aria-selected={selected}
+                    aria-controls="billing-active-panel"
+                    data-testid={`billing-nav-${tab.id}`}
+                    data-active={selected ? 'true' : 'false'}
+                    onClick={() => {
+                      onTabChange(tab.id);
+                      setDrawerOpen(false);
+                    }}
+                    onKeyDown={(event) => {
+                      const index = BILLING_PORTAL_TABS.findIndex((item) => item.id === tab.id);
+                      const shift = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+                      if (!shift && event.key !== 'Home' && event.key !== 'End') return;
+                      event.preventDefault();
+                      const next = event.key === 'Home' ? 0 : event.key === 'End'
+                        ? BILLING_PORTAL_TABS.length - 1
+                        : (index + shift + BILLING_PORTAL_TABS.length) % BILLING_PORTAL_TABS.length;
+                      onTabChange(BILLING_PORTAL_TABS[next].id);
+                      const target = document.getElementById(`billing-tab-${BILLING_PORTAL_TABS[next].id}`);
+                      target?.focus();
+                    }}
+                    className={navItem + ' w-full text-left ' + (selected
+                      ? 'border border-cyan-300/20 bg-cyan-400/10 text-cyan-100'
+                      : 'text-slate-300 hover:bg-white/[0.07] hover:text-white')}
+                  >
+                    <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block">{tab.title}</span>
+                      <span className="mt-0.5 block text-[10px] font-normal leading-snug text-slate-400">
+                        {tab.description}
+                      </span>
+                    </span>
+                    {selected && <ChevronRight className="h-4 w-4 shrink-0 opacity-75" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
           </nav>
           <div className="px-3">
             <p className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Plataforma</p>
