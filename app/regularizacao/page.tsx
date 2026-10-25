@@ -85,8 +85,16 @@ export default function RegularizationPage() {
         <InfinitePayReadinessPanel />
 
         {error && (
-          <section className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-5 text-sm text-amber-100">
-            {error}
+          <section data-testid="manual-payment-config-unavailable" role="status" className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/[0.07] p-5 text-sm text-amber-100">
+            <p className="font-extrabold">Meios manuais de regularização indisponíveis</p>
+            <p className="mt-2 leading-relaxed">
+              Não foi possível consultar as instruções antigas de pagamento neste ambiente.
+              Isso não altera a situação da sua assinatura exibida acima.
+              Não faça um Pix usando dados antigos ou sem uma cobrança individual identificada.
+            </p>
+            <p className="mt-2 text-xs text-amber-100/65" data-testid="manual-payment-error-detail">
+              Detalhe da consulta: {error}
+            </p>
           </section>
         )}
 
