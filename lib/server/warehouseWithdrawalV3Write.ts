@@ -14,6 +14,7 @@ import {
 } from './warehouseFirestoreTransaction';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { finalizeWarehouseWithdrawalAtomicServer } from './warehouseWithdrawalAtomicWrite';
+import { auditWarehouseAtomicWithdrawalReplay } from './warehouseWithdrawalEvidence';
 import {
   parseWarehouseWithdrawalV3, type WarehouseWithdrawalV3Command,
 } from '../warehouse/withdrawalV3';
@@ -51,10 +52,10 @@ async function readMany(token:string,names:string[]):Promise<Map<string,Warehous
 function required(rows:ReadonlyMap<string,WarehouseAdminDocument|null>,name:string) {
   return rows.get(name)??fail('WAREHOUSE_WITHDRAWAL_V3_REFERENCE_MISSING');
 }
-function replay(
-  access:VerifiedWarehouseRequest,command:WarehouseWithdrawalV3Command,
+async function replay(
+  access:VerifiedWarehouseRequest,token:string,command:WarehouseWithdrawalV3Command,
   hash:string,row:WarehouseAdminDocument
-):FinalizeWarehouseMaterialWithdrawalResult {
+):Promise<FinalizeWarehouseMaterialWithdrawalResult> {
   const h=row.data;
   if(h.atomicVersion!==3||h.id!==command.withdrawalId
     ||h.workspaceId!==access.workspaceId||h.ug!==access.ug
@@ -65,7 +66,9 @@ function replay(
     ||typeof h.expectedLineCount!=='number'||h.expectedLineCount<1
     ||h.expectedLineCount>WAREHOUSE_WITHDRAWAL_MAX_LINES)
     return fail('WAREHOUSE_WITHDRAWAL_ATOMIC_HEADER_INVALID');
-  return {withdrawal:h as unknown as WarehouseMaterialWithdrawal,movementIds:[]};
+  return auditWarehouseAtomicWithdrawalReplay(
+    access,token,command.withdrawalId,row,
+    {version:3,intentHash:hash,intentLineCount:command.lines.length});
 }
 
 export async function finalizeWarehouseWithdrawalV3Server(
@@ -82,7 +85,7 @@ export async function finalizeWarehouseWithdrawalV3Server(
   const existing=(await warehouseAdminBatchRead(token,[headerPath])).get(headerPath);
   // Replay não consulta saldos, material, códigos nem validades: não transforma
   // alterações ocorridas após o commit em nova operação.
-  if(existing)return replay(access,command,hash,existing);
+  if(existing)return replay(access,token,command,hash,existing);
 
   const materialIds=[...new Set(command.lines.map(line=>line.materialId))];
   const mutexPaths=materialIds.map(id=>path(ws,'lotAttributionLocks',id));
@@ -144,6 +147,9 @@ export async function finalizeWarehouseWithdrawalV3Server(
   const reservedByLot=new Map<string,number>();
   const lines:WarehouseWithdrawalLineInput[]=[];
   const barcodeIdsByLine:Record<string,string|null>={};
+  const originalByLine:Record<string,{intentIndex:number;partIndex:number;
+    originalRequestedQuantity:number;originalPresentationCode:string;
+    factorToBaseUnit:number;barcodeId:string|null}>={};
   for(let index=0;index<command.lines.length;index++) {
     const line=command.lines[index],material=mats.get(line.materialId)!;
     const balance=globalBalances.get(line.materialId)!;
@@ -214,6 +220,12 @@ export async function finalizeWarehouseWithdrawalV3Server(
       // IDs de linhas repetidas não dependem de material, lote ou descrição.
       const derivedLineId=warehouseWithdrawalV3DerivedLineId(command.withdrawalId,index,part);
       barcodeIdsByLine[derivedLineId]=barcode?.id||null;
+      originalByLine[derivedLineId]={
+        intentIndex:index,partIndex:part,
+        originalRequestedQuantity:plan.requestedQuantity,
+        originalPresentationCode:presentation.code,
+        factorToBaseUnit:plan.factorToBaseUnit,barcodeId:barcode?.id||null,
+      };
       lines.push({
         lineId:derivedLineId,
         materialId:material.id,materialDescription:material.description,
@@ -235,6 +247,6 @@ export async function finalizeWarehouseWithdrawalV3Server(
     withdrawnBy:access.email,lines,
   },{
     intentHash:hash,intentLineCount:command.lines.length,snapshotVersions:snapshots,
-    barcodeIdsByLine,
+    barcodeIdsByLine,originalByLine,
   });
 }
