@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   domain-plan:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false || github.event.pull_request.head.ref == 'feat/core-lean-r2-w2-ci' }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 4
     outputs:
@@ -56,6 +56,9 @@ jobs:
       matrix: ${{ fromJSON(needs.domain-plan.outputs.matrix) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 16
+    # Manual deep certification never counts NOT_COMPOSED suites as PASS.
+    env:
+      CI_LEAN_REQUIRE_COMPOSED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -29,6 +29,17 @@ export function auditCriticalGates(yaml,domains=DEEP_DOMAIN_TESTS,scripts=pkg.sc
   }
   return true;
 }
+test('native Fast/Domain/Application financial coverage replaces transient W3 pretypecheck hook',()=>{
+  assert.equal(pkg.scripts.pretypecheck,undefined,
+    'remove W3 pretypecheck bridge only after retaining six native financial suites');
+  for(const script of ['test:financial-identity-v2','test:invoice-identity','test:ns-integrity',
+    'test:empenho-concurrency','test:supplier-cnpj-migration','test:ns-integrity-contract']) {
+    assert.ok(DEEP_DOMAIN_TESTS.finance.includes(script),'missing native financial Domain '+script);
+    assert.ok(classifyChanges(['lib/financialIdentityV2.ts']).scripts.includes(script),
+      'missing native Fast coverage '+script);
+    assert.ok(app.includes('run: npm run '+script),'missing native Release '+script);
+  }
+});
 test('all inherited release aliases and critical W1/W3/W4/W5/AuthZ gates exist',()=>{
   assert.equal(auditCriticalGates(app),true);
 });
