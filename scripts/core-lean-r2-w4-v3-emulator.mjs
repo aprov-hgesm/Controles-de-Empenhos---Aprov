@@ -115,7 +115,7 @@ try{
   const mutate=async(path,method,fields)=>{
     const uri='http://127.0.0.1:8080/v1/projects/'+project+
       '/databases/emprovex-warehouse/documents/warehouse/'+ws+'/'+path+
-      (method==='PATCH'?'?updateMask.fieldPaths=effectManifestHash':'');
+      (method==='PATCH'?'?'+Object.keys(fields??{}).map(k=>'updateMask.fieldPaths='+encodeURIComponent(k)).join('&'):'');
     const response=await fetch(uri,{method,headers:{authorization:'Bearer owner','content-type':'application/json'},
       ...(fields?{body:JSON.stringify({fields})}:{})});
     assert.equal(response.ok,true,'isolated forensic mutation '+path+':'+response.status);
@@ -286,7 +286,7 @@ try{
   });
   const locDoc=await read('locations',loc);
   assert.ok(locDoc);
-  await setDoc(ref('locations',loc),{...locDoc,status:'inactive'});
+  await mutate('locations/'+loc,'PATCH',{status:{stringValue:'inactive'}});
   const inactivePosition=cmd(643,[{
     materialId:inactiveSeed.material.id,position:pos,requestedQuantity:1,
   }]);
@@ -294,7 +294,7 @@ try{
     /WAREHOUSE_OUTBOUND_LOCATION_INACTIVE/);
   await assertAbsent(inactivePosition);
   assert.equal((await read('balances',inactiveSeed.material.id))?.quantity,2);
-  await setDoc(ref('locations',loc),{...locDoc,status:'active'});
+  await mutate('locations/'+loc,'PATCH',{status:{stringValue:'active'}});
   await saveWarehouseMaterialServer(access,{...inactiveSeed.material,status:'inactive'});
   const inactiveMaterial=cmd(644,[{
     materialId:inactiveSeed.material.id,position:pos,requestedQuantity:1,
