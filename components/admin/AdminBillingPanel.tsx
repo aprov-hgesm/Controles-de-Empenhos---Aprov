@@ -39,6 +39,7 @@ interface AdminBillingPanelProps {
   mutatingKey: string | null;
   onUpdateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   onGrantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  onOfferRamp: (workspace: Workspace) => Promise<unknown>;
   onSetExemption: (workspace: Workspace, exempt: boolean) => Promise<unknown>;
   onSetStatus: (
     workspace: Workspace,
@@ -103,6 +104,7 @@ export function AdminBillingPanel({
   mutatingKey,
   onUpdateConfig,
   onGrantTrial,
+  onOfferRamp,
   onSetExemption,
   onSetStatus,
   onSetCycleStatus,
@@ -590,6 +592,15 @@ export function AdminBillingPanel({
                         )
                       ) : (
                         <>
+                          {!account.pricingPolicyId && !workspaceCycles.length && (
+                            <ActionButton icon={<CircleDollarSign className="h-3.5 w-3.5" />}
+                              label="Oferecer plano progressivo"
+                              busy={mutatingKey === `offer-ramp:${workspace.id}`} disabled={busy}
+                              onClick={() => {
+                                if (!window.confirm('Oferecer plano progressivo a este setor sem histórico? O cliente precisará aceitar as condições antes do primeiro pagamento.')) return;
+                                void onOfferRamp(workspace);
+                              }} />
+                          )}
                           <ActionButton
                             icon={<Sparkles className="h-3.5 w-3.5" />}
                             label={account.status === 'trial' ? 'Renovar trial 30d' : 'Conceder trial'}
