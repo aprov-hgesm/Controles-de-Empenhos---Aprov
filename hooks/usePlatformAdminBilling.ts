@@ -15,6 +15,7 @@ import {
   grantBillingTrial,
   offerProgressiveBilling,
   prepareBillingEnforcement,
+  resolveBillingRefund, recoverBillingCheckout,
   setBillingCommercialStatus,
   setBillingExemption,
   setBillingCycleStatus,
@@ -144,6 +145,16 @@ export function usePlatformAdminBilling(
     return runMutation('prepare-enforcement', () => prepareBillingEnforcement(adminEmail));
   }, [adminEmail, runMutation]);
 
+  const resolveRefund = useCallback((workspace: Workspace, note: string) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    return runMutation(`refund:${workspace.id}`, () => resolveBillingRefund(workspace, note, adminEmail));
+  }, [adminEmail, runMutation]);
+  const recoverCheckout = useCallback((workspace: Workspace, month: string, note: string) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    return runMutation(`checkout:${workspace.id}:${month}`,
+      () => recoverBillingCheckout(workspace, month, note, adminEmail));
+  }, [adminEmail, runMutation]);
+
   const offerRamp = useCallback((workspace: Workspace) => {
     if (!adminEmail) throw new Error('Sessão administrativa inválida.');
     return runMutation(`offer-ramp:${workspace.id}`, () => offerProgressiveBilling(workspace, adminEmail));
@@ -207,6 +218,8 @@ export function usePlatformAdminBilling(
     updateConfig,
     grantTrial,
     offerRamp,
+    resolveRefund,
+    recoverCheckout,
     prepareEnforcement,
     setExemption,
     setStatus,
