@@ -51,16 +51,20 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="4. Cobrança externa, Mercado Pago e Pix">
+      <LegalSection title="4. Plano progressivo e pagamento pela InfinitePay">
         <p>
-          O pagamento do serviço pode ocorrer fora do EMPROVEX por meio de link do Mercado Pago, Pix ou outro meio
-          externo informado para regularização. O EMPROVEX não processa cartão diretamente e, no modelo SaaS R1, não
-          precisa armazenar número de cartão, CVV, senha, token secreto ou credencial de pagamento do cliente.
+          Para novas contratações elegíveis, o Plano Completo inicia em R$ 29,90 por mês nos três primeiros períodos
+          mensais completos de cobrança, passando a R$ 39,90 nos meses 4 a 6, R$ 49,90 nos meses 7 a 9,
+          R$ 59,90 nos meses 10 a 12 e R$ 69,90 a partir do mês 13. O início de cada período é contado
+          individualmente do término do trial, quando concedido, ou do cadastro sem trial. As condições são
+          apresentadas ao setor para aceite expresso antes da primeira cobrança. Contratos históricos e isenções
+          já concedidas não são alterados automaticamente.
         </p>
         <p>
-          A plataforma pode manter apenas metadados administrativos necessários para acompanhar trial, vencimento,
-          regularização e confirmação do pagamento. Quando o Mercado Pago for utilizado, o pagamento também estará
-          sujeito aos termos, políticas e disponibilidade do próprio provedor.
+          O pagamento é feito por checkout seguro da InfinitePay, de competência individual, mediante Pix ou cartão.
+          O EMPROVEX não processa dados de cartão diretamente. A quitação depende de confirmação no provedor
+          ou de conferência manual registrada pelo administrador. O cliente deve evitar pagamentos duplicados,
+          especialmente quando a confirmação ainda estiver pendente.
         </p>
       </LegalSection>
 
@@ -78,12 +82,21 @@ export default function TermsPage() {
       <LegalSection title="6. Suspensão e reativação">
         <p>
           O acesso pode ser suspenso por razões comerciais, administrativas, de segurança ou por uso incompatível com
-          estes Termos. Na fase inicial do SaaS, a suspensão comercial é uma ação administrativa explícita e não apaga
-          os dados operacionais do workspace.
+          estes Termos. Quando o controle financeiro estiver habilitado, mensalidades vencidas e não regularizadas podem restringir
+          o acesso operacional, sem apagar os dados do workspace. No primeiro mês sem trial, o pagamento é devido
+          desde o início; em renovações, a tolerância configurada é aplicável apenas à mensalidade anterior quitada.
         </p>
         <p>
           Quando a causa da suspensão for sanada e as condições de acesso forem restabelecidas, a conta poderá ser
           reativada sem exigir recriação do workspace ou migração dos dados preservados.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="6.1. Solicitação de 48 horas">
+        <p>
+          Após identificar ausência de quitação, o setor pode solicitar uma única liberação temporária de até 48 horas
+          por competência, enquanto o administrador confere o pagamento. Essa solicitação não constitui quitação,
+          não renova automaticamente o prazo e não substitui o pagamento devido.
         </p>
       </LegalSection>
 
