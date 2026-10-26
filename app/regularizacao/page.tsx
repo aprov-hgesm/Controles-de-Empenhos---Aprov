@@ -170,6 +170,11 @@ export default function RegularizationPage() {
 
         {activeTab === 'payments' && (
           <>
+        <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-xs leading-relaxed text-emerald-900">
+          Nenhum dado de cartão, CVV ou credencial de pagamento é solicitado pelo EMPROVEX.
+          Pagamentos autorizados são processados no ambiente externo do provedor, e o retorno
+          ao site não comprova a baixa de uma competência sem validação pelo servidor.
+        </p>
         <section id="formas-pagamento" data-testid="manual-payment-options" className="scroll-mt-24 mt-5 rounded-2xl border border-[#e2e8f1] bg-white p-5 shadow-[0_12px_36px_rgba(15,40,70,0.04)] sm:p-6">
           <button
             type="button"
