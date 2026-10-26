@@ -232,6 +232,48 @@ export function AdminBillingPanel({
 
   return (
     <div data-testid="admin-billing-panel" className="space-y-5">
+      {accounts.some((account) => account.grace48ReviewStatus === 'pending'
+        && account.grace48ReferenceMonth === new Date().toISOString().slice(0, 7)) && (
+        <section role="status" className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-5 text-amber-100">
+          <h3 className="font-extrabold">Solicitações de acesso temporário de 48 horas</h3>
+          <p className="mt-2 text-xs leading-relaxed text-amber-100/80">
+            Há setores usando ou aguardando a janela única de 48 horas sem confirmação de pagamento.
+            Verifique o valor efetivamente recebido na InfinitePay ou na conta bancária antes de clicar em
+            Confirmar pagamento. A confirmação administrativa libera a competência atual; a solicitação sozinha
+            não registra quitação.
+          </p>
+          <div className="mt-3 space-y-2">
+            {accounts.filter((account) => account.grace48ReviewStatus === 'pending'
+              && account.grace48ReferenceMonth === new Date().toISOString().slice(0, 7)).map(account => {
+              const workspace = workspaceMap.get(account.workspaceId);
+              const month = account.grace48ReferenceMonth || '';
+              const key = `cycle:${account.workspaceId}:${month}`;
+              const settled = (cyclesByWorkspace.get(account.workspaceId) || [])
+                .some(c => c.referenceMonth === month && (c.status === 'paid' || c.status === 'waived'));
+              return <div key={account.workspaceId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/15 bg-slate-950/30 px-3 py-3">
+                <div>
+                  <p className="text-sm font-bold">{workspace?.name || account.workspaceId}</p>
+                  <p className="text-[11px] text-amber-100/70">
+                    UG {account.ug} · Solicitado {dateLabel(account.grace48RequestedAt)} ·
+                    Liberação até {dateLabel(account.grace48Until)}
+                  </p>
+                </div>
+                {workspace && month && !settled && (
+                  <ActionButton icon={<BadgeCheck className="h-4 w-4"/>}
+                    label="Pagamento recebido: liberar mês"
+                    busy={mutatingKey === key} disabled={Boolean(mutatingKey)}
+                    onClick={() => {
+                      const note = window.prompt('Confirme somente após verificar o pagamento recebido. Informe referência/NSU ou comprovante:', '');
+                      if (!note?.trim()) return;
+                      void onSetCycleStatus(workspace, month, 'paid', note.trim());
+                    }}/>
+                )}
+              </div>;
+            })}
+          </div>
+        </section>
+      )}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <BillingMetric
           icon={<Sparkles className="h-5 w-5" />}
@@ -249,7 +291,7 @@ export function AdminBillingPanel({
           icon={<Clock3 className="h-5 w-5" />}
           label="Atenção financeira"
           value={String(counts.attention)}
-          detail="Sem bloqueio automático"
+          detail="Verificar pagamentos e pedidos de 48h"
         />
         <BillingMetric
           icon={<ShieldCheck className="h-5 w-5" />}
@@ -627,7 +669,7 @@ export function AdminBillingPanel({
                   ) : isVip ? (
                     <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>
                   ) : null}
-                  <span className="text-blue-300/70">Billing não suspende o acesso automaticamente; suspensão operacional é uma ação administrativa separada.</span>
+                  <span className="text-blue-300/70">Acesso operacional sujeito à situação financeira verificada no servidor, respeitando isenções e liberações temporárias.</span>
                 </div>
 
 
