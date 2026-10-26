@@ -46,9 +46,10 @@ async function authenticatedPortalFetch(path: string, options?: { body?: Record<
 }
 
 export function InfinitePayPilotPanel({
-  authorizedWorkspace, returnParams, activeTab,
+  authorizedWorkspace, workspaceId, returnParams, activeTab,
 }: {
   authorizedWorkspace: boolean;
+  workspaceId: string | null;
   returnParams: PilotReturnParams | null;
   activeTab: BillingPortalTab;
 }) {
@@ -62,32 +63,56 @@ export function InfinitePayPilotPanel({
   const [verify, setVerify] = useState<VerifyInfo | null>(null);
   const [error, setError] = useState('');
   const verifiedKeyRef = useRef('');
+  const portalCacheRef = useRef({ principal: '', historyAt: 0, pilotAt: 0 });
+  const principal = authorizedWorkspace && workspaceId && auth.currentUser?.uid
+    ? auth.currentUser.uid + ':' + workspaceId : '';
 
   useEffect(() => {
-    if (!authorizedWorkspace) {
+    if (!principal) {
+      portalCacheRef.current = { principal: '', historyAt: 0, pilotAt: 0 };
       setAvailable(false);
       setHistory(null);
       setCheckout(null);
+      setVerify(null);
+      verifiedKeyRef.current = '';
       return;
     }
-    // No financial fetch on overview or help; load only on relevant tabs.
+    // Never reuse finance data or allowlist flags across signed-in identities.
+    if (portalCacheRef.current.principal !== principal) {
+      portalCacheRef.current = { principal, historyAt: 0, pilotAt: 0 };
+      setAvailable(false);
+      setHistory(null);
+      setCheckout(null);
+      setVerify(null);
+      verifiedKeyRef.current = '';
+    }
     if (activeTab !== 'history' && activeTab !== 'payments') return;
+    const now = Date.now();
+    // 30s bounded per-principal cache only for read-only navigation. All actual
+    // payment POSTs revalidate the current token and allowlist server-side.
+    const age = activeTab === 'history'
+      ? now - portalCacheRef.current.historyAt
+      : now - portalCacheRef.current.pilotAt;
+    if (age < 30_000) return;
     let active = true;
-    void authenticatedPortalFetch('/api/billing/portal')
+    const needsHistory = activeTab === 'history';
+    void authenticatedPortalFetch('/api/billing/portal?view=' + (needsHistory ? 'history' : 'payments'))
       .then((result: PilotAvailability) => {
-        if (active) {
-          setAvailable(result.pilot?.enabled === true && result.pilot.amountCents === 100);
-          setHistory(result.history || { available: false, cycles: [] });
-        }
+        if (!active || portalCacheRef.current.principal !== principal) return;
+        setAvailable(result.pilot?.enabled === true && result.pilot.amountCents === 100);
+        if (needsHistory) setHistory(result.history || { available: false, cycles: [] });
+        const stamp = Date.now();
+        portalCacheRef.current.pilotAt = stamp;
+        if (needsHistory) portalCacheRef.current.historyAt = stamp;
       })
       .catch(() => {
-        if (active) {
-          setAvailable(false);
-          setHistory({ available: false, cycles: [] });
-        }
+        if (!active || portalCacheRef.current.principal !== principal) return;
+        setAvailable(false);
+        if (needsHistory) setHistory({ available: false, cycles: [] });
+        // Failures are not cached: retrying after a transient outage is allowed.
       });
     return () => { active = false; };
-  }, [authorizedWorkspace, activeTab]);
+  }, [principal, activeTab]);
 
   useEffect(() => {
     if (!available || !authorizedWorkspace || !returnParams) return;
