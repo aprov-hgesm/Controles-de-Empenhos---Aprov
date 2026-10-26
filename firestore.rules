@@ -130,7 +130,7 @@ service cloud.firestore {
         || boundIdentityMatchesAccount(account);
     }
 
-    function canAccessWorkspace(workspaceId) {
+    function canAccessWorkspaceIdentity(workspaceId) {
       let workspace = workspaceData(workspaceId);
       let account = workspaceAccountData(workspaceId);
       return workspaceAccountExists(workspaceId)
@@ -152,6 +152,29 @@ service cloud.firestore {
           )
         )
         && operationalIdentityMatchesAccount(workspaceId, account);
+    }
+
+    // Data-plane billing gate. Workspace identity stays readable to its owner
+    // so the user can authenticate, see the invoice and regularize.
+    // Only enforcement explicitly enabled by the platform can restrict
+    // operational records. Existing clients (no policy marker) and VIPs
+    // remain unaffected. The IAM server is solely responsible for renewing
+    // billingEntitlementUntil during trial, grace and verified settlement.
+    function canAccessWorkspace(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      return canAccessWorkspaceIdentity(workspaceId)
+        && (
+          !('billingPolicyId' in workspace)
+          || workspace.billingPolicyId != 'emprovex_individual_ramp_v1'
+          || !exists(/databases/$(database)/documents/platformBillingConfig/main)
+          || get(/databases/$(database)/documents/platformBillingConfig/main).data.billingMode != 'enforce'
+          || get(/databases/$(database)/documents/platformBillingConfig/main).data.requirePayment != true
+          || (
+            'billingEntitlementUntil' in workspace
+            && workspace.billingEntitlementUntil is string
+            && request.time < timestamp.value(workspace.billingEntitlementUntil)
+          )
+        );
     }
 
     function canReadGlobalSupplierDirectory() {
@@ -2056,7 +2079,8 @@ service cloud.firestore {
     }
 
     match /billingAccounts/{workspaceId} {
-      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
+      // A delinquent sector must still access its own account to pay.
+      allow get: if isPlatformAdmin() || canAccessWorkspaceIdentity(workspaceId);
       allow list: if isPlatformAdmin();
       allow create: if isPlatformAdmin()
         && validBillingAccount(workspaceId);
