@@ -837,6 +837,9 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
       settlementLedgerId: ledgerId, note: 'Pagamento verificado diretamente na InfinitePay' };
     const nextAccount: BillingAccount = { ...currentAccount,
       status: 'active', monthlyPriceCents: current.amountCents,
+      lastBilledReferenceMonth: !currentAccount.lastBilledReferenceMonth
+        || current.referenceMonth > currentAccount.lastBilledReferenceMonth
+          ? current.referenceMonth : currentAccount.lastBilledReferenceMonth,
       ...(current.referenceMonth === currentAccount.grace48ReferenceMonth ? { grace48ReviewStatus: 'confirmed' as const } : {}), updatedAt: now, updatedBy: 'provider:infinitepay' };
     return { result: { verified: true, code: 'BILLING_PAYMENT_CONFIRMED' }, updates: [
       { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
@@ -916,7 +919,9 @@ export async function prepareBillingEnforcement(actor: Actor) {
     const ap = 'billingAccounts/' + row.workspaceId;
     const period = paidServicePeriod(row);
     const cp = period ? 'billingCycles/' + billingCycleId(row.workspaceId, period.referenceMonth) : null;
-    await transaction(token, cp ? [wp, ap, cp] : [wp, ap], docs => {
+    const oldMonth = previousServiceReference(row);
+    const pp = oldMonth ? 'billingCycles/' + billingCycleId(row.workspaceId, oldMonth) : null;
+    await transaction(token, [wp, ap, ...(cp ? [cp] : []), ...(pp ? [pp] : [])], docs => {
       const workspace = existingWorkspace(docs.get(wp) ?? null, row.workspaceId);
       const account = existingAccount(docs.get(ap) ?? null);
       assertAccountWorkspace(account, workspace);
@@ -927,6 +932,7 @@ export async function prepareBillingEnforcement(actor: Actor) {
       if (current?.referenceMonth !== period?.referenceMonth)
         throw new BillingAdminError('BILLING_PREPARE_CONCURRENT_MONTH_CHANGE', 409);
       const cycle = cp ? docs.get(cp)?.value as BillingCycle | undefined : null;
+      const previousCycle = pp ? docs.get(pp)?.value as BillingCycle | undefined : null;
       const now = new Date().toISOString();
       let until = now;
       if (account.trialGranted && account.trialEndsAt > now) until = account.trialEndsAt;
@@ -934,6 +940,10 @@ export async function prepareBillingEnforcement(actor: Actor) {
         until = paidServiceAccessUntil(current, renewalGraceDays);
       else if (account.grace48ReferenceMonth === current?.referenceMonth
         && account.grace48Until && account.grace48Until > now) until = account.grace48Until;
+      else if (current && previousCycle && ['paid','waived'].includes(previousCycle.status)) {
+        const through = addUtcDays(current.startsAt, renewalGraceDays).toISOString();
+        if (through > now) until = through;
+      }
       const desired = { ...workspace,
         billingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID, billingEntitlementUntil: until };
       if (workspace.billingPolicyId === desired.billingPolicyId
