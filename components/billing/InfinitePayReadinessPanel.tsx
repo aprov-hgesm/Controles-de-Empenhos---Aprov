@@ -216,7 +216,7 @@ export function InfinitePayReadinessPanel({
               <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
                   account.pricingPolicyId === 'emprovex_individual_ramp_v1'
-                    ? `Plano progressivo individual: faixa atual ${money(account.monthlyPriceCents)}/mês.`
+                    ? `Valor registrado para a conta: ${money(account.monthlyPriceCents)}/mês.`
                     : `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
@@ -244,47 +244,58 @@ export function InfinitePayReadinessPanel({
         )}
 
 
-        {workspaceResolved && !billingLoading
-          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1' && (
-          <section className="mt-4 rounded-2xl border border-emerald-200 bg-white p-5" data-testid="billing-ramp-offer">
-            <h3 className="font-extrabold text-[#11664f]">Plano progressivo do seu setor</h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600">
-              Após o trial de 30 dias, a primeira competência cobrável é
-              {account.firstPaidReferenceMonth ? ' ' + account.firstPaidReferenceMonth : ' definida no cadastro'}.
-              Cada preço vigora por três competências mensais consecutivas, contadas individualmente.
-              A partir da 13ª competência, o valor permanece em R$ 69,90 por mês.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-700 sm:grid-cols-5">
-              {[['1–3', '29,90'], ['4–6', '39,90'], ['7–9', '49,90'],
-                ['10–12', '59,90'], ['13+', '69,90']].map(([meses, preco]) => (
-                <div key={meses} className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                  <p className="font-bold">Meses {meses}</p>
-                  <p>R$ {preco}/mês</p>
-                </div>
-              ))}
-            </div>
-            {account.pricingTermsAcceptedAt ? (
-              <p className="mt-3 text-xs font-extrabold text-emerald-700" data-testid="billing-ramp-accepted">
-                Condições aceitas em {account.pricingTermsAcceptedAt.slice(0, 10).split('-').reverse().join('/')}
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={rampConfirmed}
-                    onChange={(event) => setRampConfirmed(event.target.checked)}
-                    className="mt-1 accent-emerald-700" />
-                  <span>Li e aceito expressamente os cinco valores e os reajustes a cada três meses
-                    de cobrança, até R$ 69,90 mensais. O aceite não realiza pagamento.</span>
-                </label>
-                <button type="button" disabled={!rampConfirmed || rampSaving}
-                  onClick={() => void acceptPricing()}
-                  className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                  {rampSaving ? 'Registrando aceite...' : 'Confirmar condições do plano'}
-                </button>
-                {rampError && <p role="alert" className="text-xs text-rose-700">{rampError}</p>}
-                <p className="text-xs text-slate-500">Nenhuma competência progressiva será emitida antes deste aceite.</p>
+        <section className="mt-4 rounded-2xl border border-emerald-100 bg-white p-5"
+          data-testid="billing-full-plan-benefits">
+          <h3 className="text-sm font-extrabold text-emerald-800">Condições do Plano Completo EMPROVEX</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            O Plano Completo concentra ferramentas de gestão do aprovisionamento e da operação de depósitos
+            em um único ambiente, vinculado à Organização Militar e ao setor autorizado.
+          </p>
+          <div className="mt-3 grid gap-3 text-xs text-slate-700 sm:grid-cols-2">
+            {[
+              ['Gestão de empenhos', 'Acompanhamento de empenhos, saldos, fornecedores e registros relacionados.'],
+              ['Notas fiscais e NS', 'Organização de documentos, consultas e acompanhamento do fluxo financeiro.'],
+              ['Central de Depósitos', 'Visão organizada dos depósitos, estoques, locais e movimentações.'],
+              ['Operador móvel', 'Consulta de materiais, leitura de códigos e operações de estoque pelo celular.'],
+              ['Controle e rastreabilidade', 'Histórico de movimentações, conferências, inventários e pesquisas.'],
+              ['Cronogramas e acompanhamento', 'Organização das atividades, alertas e informações operacionais do setor.'],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="font-bold text-slate-900">{title}</p>
+                <p className="mt-1 leading-relaxed text-slate-600">{description}</p>
               </div>
-            )}
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] text-slate-500">
+            A cobrança é associada ao setor contratado. Isenções e período de teste são respeitados.
+            Valores devidos são apresentados na etapa de pagamento.
+          </p>
+        </section>
+
+        {workspaceResolved && !billingLoading && activeTab === 'payments'
+          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
+          && !account.pricingTermsAcceptedAt && (
+          <section className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5"
+            data-testid="billing-contract-acceptance">
+            <h3 className="font-bold text-slate-900">Condições da contratação</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-700">
+              Antes da primeira cobrança, confirme as condições financeiras:
+              meses de cobrança 1–3 R$ 29,90/mês; 4–6 R$ 39,90/mês;
+              7–9 R$ 49,90/mês; 10–12 R$ 59,90/mês;
+              a partir do mês 13 R$ 69,90/mês.
+              Os meses são contados individualmente após o período gratuito, quando concedido.
+            </p>
+            <label className="mt-3 flex items-start gap-2 text-xs font-medium text-slate-800">
+              <input type="checkbox" checked={rampConfirmed}
+                onChange={(event) => setRampConfirmed(event.target.checked)} className="mt-0.5"/>
+              <span>Concordo expressamente com os valores e condições acima. Este aceite não realiza pagamento.</span>
+            </label>
+            <button type="button" disabled={!rampConfirmed || rampSaving}
+              onClick={() => void acceptPricing()}
+              className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {rampSaving ? 'Registrando aceite...' : 'Aceitar condições para pagar'}
+            </button>
+            {rampError && <p className="mt-2 text-xs text-rose-800">{rampError}</p>}
           </section>
         )}
 
