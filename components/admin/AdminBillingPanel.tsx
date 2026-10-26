@@ -370,7 +370,7 @@ export function AdminBillingPanel({
 
         {!editingConfig ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <InfoBox label="Preço global legado" value={money(config?.monthlyPriceCents ?? 7000)} />
+            <InfoBox label="Nova mensalidade inicial" value="R$ 29,90" />
             <InfoBox label="Trial padrão" value={`${config?.defaultTrialDays ?? 30} dias`} />
             <InfoBox label="Vencimento" value="5º dia útil" />
             <InfoBox label="Tolerância" value={`${config?.gracePeriodDays ?? 10} dias`} />
@@ -380,8 +380,8 @@ export function AdminBillingPanel({
         ) : (
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <ConfigField label="Mensalidade (R$)" hint="Apenas referência histórica. Novos clientes seguem a política progressiva individual.">
-                <input value={money(config?.monthlyPriceCents ?? 7000)} readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
+              <ConfigField label="Mensalidade inicial (R$)" hint="Novos setores começam em R$ 29,90 por competência; faixas individuais progressivas.">
+                <input value="R$ 29,90" readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
               </ConfigField>
               <ConfigField label="Trial padrão (dias)">
                 <input type="number" min={1} max={365} value={trialDays} onChange={(event) => setTrialDays(event.target.value)} className={inputClass} />
