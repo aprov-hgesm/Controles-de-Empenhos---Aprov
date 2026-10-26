@@ -55,6 +55,7 @@ export interface BillingAccount {
   paymentRequired: boolean;
   pricingPolicyId?: typeof EMPROVEX_NEW_CUSTOMER_RAMP_ID;
   firstPaidReferenceMonth?: string;
+  lastBilledReferenceMonth?: string;
   pricingTermsAcceptedAt?: string;
   exemptionSource?: BillingExemptionSource;
   legacyVipCutoff?: string;
