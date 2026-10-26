@@ -252,9 +252,13 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       // Legacy R$50 stays R$50. Never change contractual/global price implicitly.
       if (input.monthlyPriceCents !== undefined && input.monthlyPriceCents !== current.monthlyPriceCents)
         throw new BillingAdminError('BILLING_PRICE_CHANGE_REQUIRES_CONTRACT_FLOW', 409);
-      if (input.billingMode !== undefined && input.billingMode !== 'observe')
-        throw new BillingAdminError('BILLING_ENFORCEMENT_NOT_ACTIVATED', 409);
-      if (input.requirePayment === true) throw new BillingAdminError('BILLING_ENFORCEMENT_NOT_ACTIVATED', 409);
+      const requestingEnforce = input.billingMode === 'enforce' || input.requirePayment === true;
+      if (requestingEnforce && (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED !== '1'
+          || process.env.INFINITEPAY_BILLING_ENABLED !== '1'))
+        throw new BillingAdminError('BILLING_ENFORCEMENT_CUTOVER_NOT_READY', 409);
+      if (input.billingMode !== undefined
+          && !['observe','enforce'].includes(input.billingMode))
+        throw new BillingAdminError('BILLING_MODE_INVALID', 400);
       if (input.defaultTrialDays !== undefined && (typeof input.defaultTrialDays !== 'number'
         || !Number.isInteger(input.defaultTrialDays) || input.defaultTrialDays < 1 || input.defaultTrialDays > 365))
         throw new BillingAdminError('BILLING_TRIAL_DAYS_INVALID', 400);
@@ -263,7 +267,9 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         throw new BillingAdminError('BILLING_GRACE_DAYS_INVALID', 400);
       const now = new Date().toISOString();
       const updated: PlatformBillingConfig = {
-        ...current, billingMode: 'observe', requirePayment: false, automaticSuspension: false,
+        ...current, billingMode: requestingEnforce ? 'enforce' : input.billingMode || current.billingMode,
+        requirePayment: requestingEnforce,
+        automaticSuspension: false,
         pixKey: input.pixKey === undefined ? current.pixKey : optionalString(input.pixKey, 300),
         pixKeyType: input.pixKeyType === undefined ? current.pixKeyType :
           ['cpf', 'cnpj', 'email', 'phone', 'random', ''].includes(optionalString(input.pixKeyType, 20))
@@ -505,7 +511,14 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   if (actor.email !== email || workspaceId === HGESM_WORKSPACE_ID)
     throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const token = await getGoogleAccessToken();
-  const accountDoc = await get(token, 'billingAccounts/' + workspaceId);
+  const [accountDoc, configDoc] = await Promise.all([
+    get(token, 'billingAccounts/' + workspaceId), get(token, CONFIG_PATH),
+  ]);
+  const billingLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
+    && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+    && configDoc?.value?.billingMode === 'enforce'
+    && configDoc?.value?.requirePayment === true;
+  if (!billingLive) throw new BillingAdminError('BILLING_GRACE_NOT_ENABLED', 409);
   const accountForPeriod = existingAccount(accountDoc);
   const month = paidServicePeriod(accountForPeriod)?.referenceMonth || getReferenceMonth();
   const wp = 'workspaces/' + workspaceId;
@@ -547,7 +560,7 @@ function requireCheckoutConfig() {
     throw new BillingAdminError('BILLING_CHECKOUT_NOT_ENABLED', 503);
   const secret = process.env.INFINITEPAY_ORDER_SECRET || '';
   if (secret.length < 32 || (process.env.INFINITEPAY_API_KEY || '').length < 16
-    || !process.env.INFINITEPAY_HANDLE)
+    || !process.env.INFINITEPAY_HANDLE || (process.env.INFINITEPAY_WEBHOOK_TOKEN || '').length < 32)
     throw new BillingAdminError('BILLING_CHECKOUT_CREDENTIALS_UNAVAILABLE', 503);
   return secret;
 }
@@ -647,6 +660,11 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     options: { single_payment: true, valid_until: prepared.validUntil,
       require_delivery_address: false,
       payment_methods_enabled: ['pix', 'credit_card'] },
+    webhook: {
+      url: 'https://emprovex.com.br/api/billing/infinitepay-webhook?token='
+        + encodeURIComponent(process.env.INFINITEPAY_WEBHOOK_TOKEN || ''),
+      events: ['paid', 'settled', 'refunded', 'canceled'],
+    },
   };
   const response = await callInfinitePay({
     operation: 'links', apiKey: process.env.INFINITEPAY_API_KEY,
@@ -694,7 +712,7 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
   assertAccountWorkspace(account, workspace);
   if (workspace.authorizedEmail !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const cycle = cycleDoc?.value as BillingCycle | undefined;
-  if (!cycle || cycle.checkoutOrderNsu !== input.orderNsu || !cycle.checkoutUrl
+  if (!cycle || cycle.checkoutOrderNsu !== input.orderNsu
     || !Number.isSafeInteger(cycle.amountCents) || cycle.amountCents <= 0)
     throw new BillingAdminError('BILLING_PAYMENT_INTENT_NOT_FOUND', 409);
   const paymentCheck = await callInfinitePay({
@@ -735,7 +753,7 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
       settlementLedgerId: ledgerId, note: 'Pagamento verificado diretamente na InfinitePay' };
     const nextAccount: BillingAccount = { ...currentAccount,
       status: 'active', monthlyPriceCents: current.amountCents,
-      grace48ReviewStatus: 'confirmed', updatedAt: now, updatedBy: 'provider:infinitepay' };
+      ...(current.referenceMonth === currentAccount.grace48ReferenceMonth ? { grace48ReviewStatus: 'confirmed' as const } : {}), updatedAt: now, updatedBy: 'provider:infinitepay' };
     return { result: { verified: true, code: 'BILLING_PAYMENT_CONFIRMED' }, updates: [
       { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
       { path: lp, data: { provider: 'infinitepay', workspaceId, cycleId: current.id,
@@ -748,4 +766,46 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
         { provider: 'infinitepay', settlementLedgerId: ledgerId }),
     ] };
   });
+}
+
+/** Webhook is not trusted: bound to a stored opaque order, then independently
+ * verified by InfinitePay payment_check. The resulting ledger is idempotent. */
+export async function reconcileInfinitePayWebhook(input: {
+  orderNsu: string; transactionNsu: string; slug: string; event: string;
+}) {
+  if (!/^epx-[0-9]{6}-[a-f0-9]{24}$/.test(input.orderNsu))
+    throw new BillingAdminError('BILLING_UNKNOWN_ORDER', 400);
+  if (!['paid','settled','refunded','canceled'].includes(input.event))
+    throw new BillingAdminError('BILLING_UNKNOWN_EVENT', 400);
+  const token = await getGoogleAccessToken();
+  const intent = await get(token, 'billingPaymentIntents/' + input.orderNsu);
+  if (!intent?.value?.workspaceId || !intent.value?.referenceMonth)
+    throw new BillingAdminError('BILLING_PAYMENT_INTENT_NOT_FOUND', 404);
+  const workspaceId = intent.value.workspaceId as string;
+  validWorkspaceId(workspaceId);
+  if (input.event === 'refunded' || input.event === 'canceled') {
+    // Do not suspend a sector based on an untrusted notification. Mark a
+    // founder-visible reconciliation occurrence only; verification is manual.
+    const account = existingAccount(await get(token, 'billingAccounts/' + workspaceId));
+    const wp = 'workspaces/' + workspaceId;
+    const ap = 'billingAccounts/' + workspaceId;
+    return transaction(token, [wp, ap], docs => {
+      const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
+      const current = existingAccount(docs.get(ap) ?? null);
+      assertAccountWorkspace(current, workspace);
+      const now = new Date().toISOString();
+      return { result: { verified: false, code: 'BILLING_REVIEW_REQUIRED' }, updates: [
+        { path: ap, data: { ...current, refundReviewReferenceMonth: intent.value.referenceMonth,
+          refundReviewStatus: 'pending', refundReviewCreatedAt: now,
+          updatedAt: now, updatedBy: 'provider:infinitepay' } },
+        audit({ uid: 'infinitepay', email: 'provider:infinitepay' }, 'billing.payment_reopen',
+          'billing_account', workspaceId, workspaceId, workspace.ug || null, {},
+          { refundReviewStatus: 'pending', referenceMonth: intent.value.referenceMonth },
+          { source: 'infinitepay_notification', event: input.event, paymentNotRevoked: true }),
+      ] };
+    });
+  }
+  const workspace = existingWorkspace(await get(token, 'workspaces/' + workspaceId), workspaceId);
+  const actor = { uid: 'infinitepay', email: workspace.authorizedEmail };
+  return reconcileSectorSubscriptionPayment(actor, workspaceId, actor.email, input);
 }
