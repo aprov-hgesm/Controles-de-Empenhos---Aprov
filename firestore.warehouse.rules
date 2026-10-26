@@ -64,6 +64,25 @@ service cloud.firestore {
         );
     }
 
+    // Warehouse is a separate database: its entitlement is mirrored by the
+    // billing server using privileged IAM and reconciled on authenticated access.
+    // Prior VIP/legacy accounts retain their existing lifecycle authorization.
+    function warehouseBillingAllowsAccess(workspaceId) {
+      return !exists(/databases/$(database)/documents/warehouseAccess/$(workspaceId))
+        || !('billingEnforcementStatus' in get(
+          /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+        ).data)
+        || get(/databases/$(database)/documents/warehouseAccess/$(workspaceId)).data.billingEnforcementStatus != 'enforce'
+        || (
+          'billingEntitlementUntil' in get(
+            /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+          ).data
+          && request.time < timestamp.value(
+            get(/databases/$(database)/documents/warehouseAccess/$(workspaceId)).data.billingEntitlementUntil
+          )
+        );
+    }
+
     function canAccessWarehouseModule(workspaceId) {
       return warehouseModuleEnabled()
         && (
@@ -71,6 +90,7 @@ service cloud.firestore {
           || (
             isExternalWarehouseSectorSession(workspaceId)
             && warehouseLifecycleAllowsAccess(workspaceId)
+            && warehouseBillingAllowsAccess(workspaceId)
           )
         );
     }
