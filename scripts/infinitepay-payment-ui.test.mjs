@@ -103,7 +103,7 @@ test('exempt clients keep their actual contract and cannot preview unpublished t
 
 test('account tab is accessible from the authenticated application header', () => {
   assert.match(header, /data-testid="billing-account-open"/);
-  assert.match(header, /router\.push\('\/regularizacao'\)/);
+  assert.match(header, /window\.location\.assign\('\/regularizacao'\)/);
   assert.match(header, /workspaceContext\.status === 'sector'/);
 });
 
