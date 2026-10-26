@@ -90,3 +90,8 @@ export async function offerProgressiveBilling(workspace: Workspace, adminEmail: 
   assertFounderActor(adminEmail);
   return billingRequest<BillingAccount>({ action: 'offer-ramp', workspaceId: workspace.id });
 }
+
+export async function prepareBillingEnforcement(adminEmail: string): Promise<{ prepared: number }> {
+  assertFounderActor(adminEmail);
+  return billingRequest<{ prepared: number }>({ action: 'prepare-enforcement' });
+}
