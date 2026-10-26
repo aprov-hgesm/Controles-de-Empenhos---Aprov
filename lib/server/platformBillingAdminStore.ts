@@ -3,7 +3,7 @@
  * Banco nomeado de produção, IAM no servidor, sessão Firebase Google fundadora.
  * Nenhum acesso direto do navegador; nenhuma migração de preço em leituras.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
@@ -15,6 +15,8 @@ import { HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import type { Workspace } from '../platformIdentity';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
+import { makeOrderNsu, assessPaymentCheck, callInfinitePay } from './payments/infinitepayCheckout.mjs';
+import { readCheckoutUrl } from './payments/infinitepaySmokeHarness.mjs';
 import { decideBillingAccess } from '../billingAccess';
 import { getReferenceMonth } from '../billing';
 
@@ -77,7 +79,8 @@ function documentName(path: string): string {
   if (/^billingAccounts\/[a-z0-9][a-z0-9-]{2,47}$/.test(path)
     || /^billingCycles\/[a-z0-9][a-z0-9-]{2,47}__\d{4}-\d{2}$/.test(path)
     || /^workspaces\/[a-z0-9][a-z0-9-]{2,47}$/.test(path)
-    || /^platformAuditEvents\/[a-f0-9-]{36}$/.test(path)) return `${DOCUMENT_ROOT}/${path}`;
+    || /^platformAuditEvents\/[a-f0-9-]{36}$/.test(path)
+    || /^billingPaymentLedger\/infinitepay_[a-f0-9]{64}$/.test(path)) return `${DOCUMENT_ROOT}/${path}`;
   throw new BillingAdminError('BILLING_PATH_REJECTED', 400);
 }
 async function rest(token: string, path: string, method: 'GET' | 'POST', body?: unknown) {
@@ -512,6 +515,204 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
         { grace48RequestedAt: account.grace48RequestedAt ?? null },
         { grace48RequestedAt: updated.grace48RequestedAt, grace48Until: until },
         { event: 'GRACE48_REQUEST_ADMIN_REVIEW', automaticPaymentConfirmation: false }),
+    ] };
+  });
+}
+
+function requireCheckoutConfig() {
+  if (process.env.INFINITEPAY_BILLING_ENABLED !== '1')
+    throw new BillingAdminError('BILLING_CHECKOUT_NOT_ENABLED', 503);
+  const secret = process.env.INFINITEPAY_ORDER_SECRET || '';
+  if (secret.length < 32 || (process.env.INFINITEPAY_API_KEY || '').length < 16
+    || !process.env.INFINITEPAY_HANDLE)
+    throw new BillingAdminError('BILLING_CHECKOUT_CREDENTIALS_UNAVAILABLE', 503);
+  return secret;
+}
+
+/**
+ * One checkout at a time for the authenticated tenant and current reference
+ * month. The frozen cycle and opaque provider order are stored before any call
+ * to InfinitePay. The browser cannot choose a price or workspace.
+ */
+export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId: string, email: string) {
+  validWorkspaceId(workspaceId);
+  if (actor.email !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+  const orderIdSecret = requireCheckoutConfig();
+  const token = await getGoogleAccessToken();
+  const month = getReferenceMonth();
+  const wp = 'workspaces/' + workspaceId;
+  const ap = 'billingAccounts/' + workspaceId;
+  const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
+  const orderNsu = makeOrderNsu({ workspaceId, referenceMonth: month, orderIdSecret });
+  const prepared = await transaction(token, [wp, ap, cp], docs => {
+    const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
+    const account = existingAccount(docs.get(ap) ?? null);
+    assertAccountWorkspace(account, workspace);
+    if (workspace.authorizedEmail !== email || workspaceId === HGESM_WORKSPACE_ID
+      || account.status === 'exempt' || account.exemptionSource
+      || !['active','pending','trial'].includes(account.status))
+      throw new BillingAdminError('BILLING_ACCOUNT_NOT_BILLABLE', 409);
+    if (account.status === 'trial' && account.trialEndsAt && Date.now() < Date.parse(account.trialEndsAt))
+      throw new BillingAdminError('BILLING_TRIAL_ACTIVE', 409);
+    if (account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
+      || !account.pricingTermsAcceptedAt)
+      throw new BillingAdminError('BILLING_PRICING_ACCEPTANCE_REQUIRED', 409);
+    const quote = quoteIndividualRamp({
+      firstPaidReferenceMonth: account.firstPaidReferenceMonth, referenceMonth: month,
+    });
+    if (!quote.allowed) throw new BillingAdminError('BILLING_REFERENCE_NOT_BILLABLE', 409);
+    const amount = quote.amountCents as number;
+    const previous = docs.get(cp)?.value as BillingCycle | undefined;
+    if (previous && (previous.status === 'paid' || previous.status === 'waived'))
+      throw new BillingAdminError('BILLING_CYCLE_ALREADY_SETTLED', 409);
+    if (previous && previous.amountCents !== amount)
+      throw new BillingAdminError('BILLING_FROZEN_AMOUNT_MISMATCH', 409);
+    if (previous?.checkoutOrderNsu && previous.checkoutOrderNsu !== orderNsu)
+      throw new BillingAdminError('BILLING_OTHER_CHECKOUT_EXISTS', 409);
+    if (previous?.checkoutUrl) return { result: {
+      orderNsu, amountCents: amount, referenceMonth: month, checkoutUrl: previous.checkoutUrl,
+      alreadyLinked: true,
+    }, updates: [] };
+    if (previous?.checkoutState === 'prepared' && previous.checkoutOrderNsu)
+      throw new BillingAdminError('BILLING_CHECKOUT_PENDING_SUPPORT', 409);
+    const now = new Date().toISOString();
+    const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
+    // No configuration fetch is required: the pricing contract is individual;
+    // the current calendar is used only to calculate due date.
+    const fallback: PlatformBillingConfig = {
+      ...buildPlatformBillingConfig(actor.email), gracePeriodDays: 10,
+    };
+    const cycle: BillingCycle = previous || buildBillingCycle(account, month, fallback, actor.email);
+    const validUntil = new Date(Date.now() + 30 * 86400000).toISOString();
+    const updated: BillingCycle = {
+      ...cycle,
+      amountCents: amount,
+      dueDate: cycle.dueDate >= now.slice(0, 10) ? cycle.dueDate : now.slice(0, 10),
+      status: 'pending',
+      checkoutOrderNsu: orderNsu, checkoutAmountCents: amount,
+      checkoutCreatedAt: now, checkoutValidUntil: validUntil,
+      checkoutState: 'prepared', updatedAt: now, updatedBy: actor.email,
+    };
+    return { result: {
+      orderNsu, amountCents: amount, referenceMonth: month, validUntil,
+      checkoutUrl: '', alreadyLinked: false,
+    }, updates: [
+      { path: cp, data: updated },
+      audit(actor, 'billing.payment_reopen', 'billing_cycle', updated.id, workspaceId, workspace.ug || null,
+        { status: previous?.status ?? null }, { status: 'pending', amountCents: amount },
+        { provider: 'infinitepay', checkoutPrepared: true, orderNsu }),
+    ] };
+  });
+  if (prepared.alreadyLinked) return prepared;
+  // Do not add a webhook without server-side authenticity and replay defenses:
+  // the verified signed-in redirect is reconciled through payment_check.
+  const payload = {
+    order_nsu: orderNsu,
+    redirect_url: 'https://emprovex.com.br/regularizacao',
+    items: [{ quantity: 1, price: prepared.amountCents,
+      description: 'EMPROVEX - Plano Completo - ' + month }],
+    options: { single_payment: true, valid_until: prepared.validUntil,
+      require_delivery_address: false,
+      payment_methods_enabled: ['pix', 'credit_card'] },
+  };
+  const response = await callInfinitePay({
+    operation: 'links', apiKey: process.env.INFINITEPAY_API_KEY,
+    payload, allowExternalCall: true,
+  });
+  const checkoutUrl = readCheckoutUrl(response);
+  const linked = await transaction(token, [cp], docs => {
+    const cycle = docs.get(cp)?.value as BillingCycle | undefined;
+    if (!cycle || cycle.checkoutOrderNsu !== orderNsu || cycle.amountCents !== prepared.amountCents
+      || cycle.status === 'paid' || cycle.status === 'waived')
+      throw new BillingAdminError('BILLING_CHECKOUT_CHANGED', 409);
+    if (cycle.checkoutUrl && cycle.checkoutUrl !== checkoutUrl)
+      throw new BillingAdminError('BILLING_CHECKOUT_LINK_CONFLICT', 409);
+    if (cycle.checkoutUrl) return { result: cycle.checkoutUrl, updates: [] };
+    return { result: checkoutUrl, updates: [{ path: cp, data: {
+      ...cycle, checkoutUrl, checkoutState: 'linked', updatedAt: new Date().toISOString(),
+    } }] };
+  });
+  return { orderNsu, amountCents: prepared.amountCents,
+    referenceMonth: month, checkoutUrl: linked, alreadyLinked: false };
+}
+
+/**
+ * Authenticated return -> official payment_check -> atomic cycle, ledger and
+ * audit. No URL or webhook parameters can mark payment on their own.
+ */
+export async function reconcileSectorSubscriptionPayment(actor: Actor, workspaceId: string, email: string,
+  input: { orderNsu: string; transactionNsu: string; slug: string }) {
+  validWorkspaceId(workspaceId);
+  if (actor.email !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+  requireCheckoutConfig();
+  if (!/^epx-[0-9]{6}-[a-f0-9]{24}$/.test(input.orderNsu)
+    || !/^[a-zA-Z0-9_.:-]{1,200}$/.test(input.transactionNsu)
+    || !/^[a-zA-Z0-9_.:-]{1,200}$/.test(input.slug))
+    throw new BillingAdminError('BILLING_INVALID_PROVIDER_RETURN', 400);
+  const month = input.orderNsu.slice(4, 8) + '-' + input.orderNsu.slice(8, 10);
+  const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
+  const token = await getGoogleAccessToken();
+  const [workspaceDoc, accountDoc, cycleDoc] = await Promise.all([
+    get(token, 'workspaces/' + workspaceId), get(token, 'billingAccounts/' + workspaceId),
+    get(token, cp),
+  ]);
+  const workspace = existingWorkspace(workspaceDoc, workspaceId);
+  const account = existingAccount(accountDoc);
+  assertAccountWorkspace(account, workspace);
+  if (workspace.authorizedEmail !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+  const cycle = cycleDoc?.value as BillingCycle | undefined;
+  if (!cycle || cycle.checkoutOrderNsu !== input.orderNsu || !cycle.checkoutUrl
+    || !Number.isSafeInteger(cycle.amountCents) || cycle.amountCents <= 0)
+    throw new BillingAdminError('BILLING_PAYMENT_INTENT_NOT_FOUND', 409);
+  const paymentCheck = await callInfinitePay({
+    operation: 'payment_check', apiKey: process.env.INFINITEPAY_API_KEY,
+    payload: { handle: process.env.INFINITEPAY_HANDLE, order_nsu: input.orderNsu,
+      transaction_nsu: input.transactionNsu, slug: input.slug },
+    allowExternalCall: true,
+  });
+  const checked = assessPaymentCheck({ amountCents: cycle.amountCents, paymentCheck });
+  if (checked.verified !== true)
+    return { verified: false, code: checked.reason };
+  const ledgerId = 'infinitepay_' + createHash('sha256')
+    .update(input.transactionNsu).digest('hex');
+  const lp = 'billingPaymentLedger/' + ledgerId;
+  return transaction(token, [cp, lp, 'billingAccounts/' + workspaceId, 'workspaces/' + workspaceId], docs => {
+    const currentWorkspace = existingWorkspace(docs.get('workspaces/' + workspaceId) ?? null, workspaceId);
+    const currentAccount = existingAccount(docs.get('billingAccounts/' + workspaceId) ?? null);
+    assertAccountWorkspace(currentAccount, currentWorkspace);
+    const current = docs.get(cp)?.value as BillingCycle | undefined;
+    const existing = docs.get(lp)?.value as Record<string, unknown> | undefined;
+    if (!current || current.checkoutOrderNsu !== input.orderNsu
+      || current.amountCents !== cycle.amountCents || current.workspaceId !== workspaceId)
+      throw new BillingAdminError('BILLING_SETTLEMENT_CHANGED', 409);
+    if (existing) {
+      if (existing.orderNsu === input.orderNsu && existing.workspaceId === workspaceId
+        && existing.cycleId === current.id && current.status === 'paid')
+        return { result: { verified: true, code: 'BILLING_PAYMENT_ALREADY_VERIFIED' }, updates: [] };
+      throw new BillingAdminError('BILLING_TRANSACTION_REUSE_CONFLICT', 409);
+    }
+    if (current.status === 'paid' || current.status === 'waived')
+      throw new BillingAdminError('BILLING_CYCLE_SETTLED_OTHER_METHOD', 409);
+    if (currentAccount.status === 'exempt' || currentAccount.exemptionSource)
+      throw new BillingAdminError('BILLING_EXEMPT_ACCOUNT_IMMUTABLE', 409);
+    const now = new Date().toISOString();
+    const settled: BillingCycle = { ...current, status: 'paid', confirmedAt: now,
+      confirmedBy: 'provider:infinitepay', updatedAt: now,
+      updatedBy: 'provider:infinitepay', checkoutState: 'settled',
+      settlementLedgerId: ledgerId, note: 'Pagamento verificado diretamente na InfinitePay' };
+    const nextAccount: BillingAccount = { ...currentAccount,
+      status: 'active', monthlyPriceCents: current.amountCents,
+      grace48ReviewStatus: 'confirmed', updatedAt: now, updatedBy: 'provider:infinitepay' };
+    return { result: { verified: true, code: 'BILLING_PAYMENT_CONFIRMED' }, updates: [
+      { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
+      { path: lp, data: { provider: 'infinitepay', workspaceId, cycleId: current.id,
+        orderNsu: input.orderNsu, transactionNsu: input.transactionNsu,
+        invoiceSlug: input.slug, amountCents: current.amountCents,
+        method: paymentCheck.capture_method, verifiedAt: now } },
+      audit(actor, 'billing.payment_confirm', 'billing_cycle', current.id,
+        workspaceId, currentWorkspace.ug || null,
+        { status: current.status }, { status: 'paid', amountCents: current.amountCents },
+        { provider: 'infinitepay', settlementLedgerId: ledgerId }),
     ] };
   });
 }
