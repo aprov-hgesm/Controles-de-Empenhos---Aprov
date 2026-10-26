@@ -217,7 +217,7 @@ export default function RegularizationPage() {
           <>
             <section className="mt-5 grid gap-4 md:grid-cols-3">
               <InfoCard label="Plano" value={info.planName} />
-              <InfoCard label="Preço de referência legado" value={`${money(info.monthlyPriceCents)} / mês`} />
+              <InfoCard label="Condição" value="Preço definido individualmente na competência" />
               <InfoCard label="Vencimento" value={`${info.dueBusinessDay}º dia útil · ${info.gracePeriodDays} dias de tolerância`} />
             </section>
 
