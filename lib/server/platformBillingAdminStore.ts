@@ -43,6 +43,7 @@ type Mutation =
   | { action: 'config'; input: Record<string, unknown> }
   | { action: 'trial'; workspaceId: string; days?: number }
   | { action: 'offer-ramp'; workspaceId: string }
+  | { action: 'prepare-enforcement' }
   | { action: 'exemption'; workspaceId: string; exempt: boolean }
   | { action: 'status'; workspaceId: string; status: BillingAccountStatus }
   | { action: 'cycle'; workspaceId: string; month: string; status: BillingCycleStatus; note?: string };
@@ -241,6 +242,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
     throw new BillingAdminError('BILLING_MUTATIONS_DISABLED', 503);
   if (!command || typeof command !== 'object') throw new BillingAdminError('BILLING_INVALID_INPUT', 400);
   const token = await getGoogleAccessToken();
+  if (command.action === 'prepare-enforcement') return prepareBillingEnforcement(actor);
   if (command.action === 'config') {
     const input = command.input;
     if (!input || typeof input !== 'object' || Array.isArray(input))
@@ -254,6 +256,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       if (input.monthlyPriceCents !== undefined && input.monthlyPriceCents !== current.monthlyPriceCents)
         throw new BillingAdminError('BILLING_PRICE_CHANGE_REQUIRES_CONTRACT_FLOW', 409);
       const requestingEnforce = input.billingMode === 'enforce' || input.requirePayment === true;
+      if (requestingEnforce && !current.billingCutoverPreparedAt)
+        throw new BillingAdminError('BILLING_ENTITLEMENTS_NOT_PREPARED', 409);
       if (requestingEnforce && (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED !== '1'
           || process.env.INFINITEPAY_BILLING_ENABLED !== '1'))
         throw new BillingAdminError('BILLING_ENFORCEMENT_CUTOVER_NOT_READY', 409);
@@ -868,4 +872,58 @@ export async function reconcileInfinitePayWebhook(input: {
   const workspace = existingWorkspace(await get(token, 'workspaces/' + workspaceId), workspaceId);
   const actor = { uid: 'infinitepay', email: workspace.authorizedEmail };
   return reconcileSectorSubscriptionPayment(actor, workspaceId, actor.email, input);
+}
+
+/** Founder-only, resumable dry cutoff of workspace entitlement documents.
+ * Updates no price, billing cycle or VIP; safe to rerun after interruption.
+ * Full Rules certification and go-live remain separate operator actions.
+ */
+export async function prepareBillingEnforcement(actor: Actor) {
+  const token = await getGoogleAccessToken();
+  const accounts = (await list(token, 'billingAccounts')) as BillingAccount[];
+  const eligible = accounts.filter(a => a.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+    && a.status !== 'exempt' && !a.exemptionSource);
+  let prepared = 0;
+  for (const row of eligible) {
+    validWorkspaceId(row.workspaceId);
+    const wp = 'workspaces/' + row.workspaceId;
+    const ap = 'billingAccounts/' + row.workspaceId;
+    const period = paidServicePeriod(row);
+    const cp = period ? 'billingCycles/' + billingCycleId(row.workspaceId, period.referenceMonth) : null;
+    await transaction(token, cp ? [wp, ap, cp] : [wp, ap], docs => {
+      const workspace = existingWorkspace(docs.get(wp) ?? null, row.workspaceId);
+      const account = existingAccount(docs.get(ap) ?? null);
+      assertAccountWorkspace(account, workspace);
+      if (account.status === 'exempt' || account.exemptionSource
+        || account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID)
+        return { result: true, updates: [] };
+      const current = paidServicePeriod(account);
+      if (current?.referenceMonth !== period?.referenceMonth)
+        throw new BillingAdminError('BILLING_PREPARE_CONCURRENT_MONTH_CHANGE', 409);
+      const cycle = cp ? docs.get(cp)?.value as BillingCycle | undefined : null;
+      const now = new Date().toISOString();
+      let until = now;
+      if (account.trialGranted && account.trialEndsAt > now) until = account.trialEndsAt;
+      else if (current && cycle && ['paid','waived'].includes(cycle.status)) until = current.endsAt;
+      else if (account.grace48ReferenceMonth === current?.referenceMonth
+        && account.grace48Until && account.grace48Until > now) until = account.grace48Until;
+      const desired = { ...workspace,
+        billingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID, billingEntitlementUntil: until };
+      if (workspace.billingPolicyId === desired.billingPolicyId
+        && workspace.billingEntitlementUntil === desired.billingEntitlementUntil)
+        return { result: true, updates: [] };
+      return { result: true, updates: [{ path: wp, data: desired }] };
+    });
+    prepared++;
+  }
+  await transaction(token, [CONFIG_PATH], docs => {
+    const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
+    if (!config) throw new BillingAdminError('BILLING_CONFIG_NOT_PROVISIONED', 409);
+    const now = new Date().toISOString();
+    return { result: true, updates: [{
+      path: CONFIG_PATH, data: { ...config, billingCutoverPreparedAt: now,
+        updatedAt: now, updatedBy: actor.email },
+    }] };
+  });
+  return { prepared, policy: EMPROVEX_NEW_CUSTOMER_RAMP_ID, certified: false };
 }
