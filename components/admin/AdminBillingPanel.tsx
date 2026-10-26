@@ -41,6 +41,8 @@ interface AdminBillingPanelProps {
   onPrepareEnforcement: () => Promise<unknown>;
   onGrantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
   onOfferRamp: (workspace: Workspace) => Promise<unknown>;
+  onResolveRefund: (workspace: Workspace, note: string) => Promise<unknown>;
+  onRecoverCheckout: (workspace: Workspace, month: string, note: string) => Promise<unknown>;
   onSetExemption: (workspace: Workspace, exempt: boolean) => Promise<unknown>;
   onSetStatus: (
     workspace: Workspace,
@@ -107,6 +109,8 @@ export function AdminBillingPanel({
   onPrepareEnforcement,
   onGrantTrial,
   onOfferRamp,
+  onResolveRefund,
+  onRecoverCheckout,
   onSetExemption,
   onSetStatus,
   onSetCycleStatus,
@@ -261,6 +265,16 @@ export function AdminBillingPanel({
                     Liberação até {dateLabel(account.grace48Until)}
                   </p>
                 </div>
+                {workspace && account.refundReviewStatus === 'pending' && (
+                  <ActionButton icon={<ShieldCheck className="h-4 w-4" />}
+                    label="Concluir revisão de estorno"
+                    busy={mutatingKey === `refund:${workspace.id}`} disabled={Boolean(mutatingKey)}
+                    onClick={() => {
+                      const note = window.prompt('Registre a análise e a referência do estorno ou contestação:', '');
+                      if (!note || note.trim().length < 5) return;
+                      void onResolveRefund(workspace, note.trim());
+                    }} />
+                )}
                 {workspace && month && !settled && (
                   <ActionButton icon={<BadgeCheck className="h-4 w-4"/>}
                     label="Pagamento recebido: liberar mês"
@@ -609,6 +623,17 @@ export function AdminBillingPanel({
                             disabled={busy}
                             onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
                           />
+                          {currentCycle?.checkoutState === 'prepared' && !currentCycle.checkoutUrl && (
+                            <ActionButton icon={<Clock3 className="h-3.5 w-3.5" />}
+                              label="Recuperar checkout pendente"
+                              busy={mutatingKey === `checkout:${workspace.id}:${attention.referenceMonth}`}
+                              disabled={busy}
+                              onClick={() => {
+                                const note = window.prompt('Confirme que verificou o pedido na InfinitePay e que NÃO houve pagamento. Informe a referência da conferência:', '');
+                                if (!note || note.trim().length < 5) return;
+                                void onRecoverCheckout(workspace, attention.referenceMonth, note.trim());
+                              }} />
+                          )}
                           {currentCycle?.status === 'paid' ? (
                             <ActionButton
                               icon={<Clock3 className="h-3.5 w-3.5" />}
