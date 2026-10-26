@@ -570,7 +570,7 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       throw new BillingAdminError('BILLING_OTHER_CHECKOUT_EXISTS', 409);
     if (previous?.checkoutUrl) return { result: {
       orderNsu, amountCents: amount, referenceMonth: month, checkoutUrl: previous.checkoutUrl,
-      alreadyLinked: true,
+      validUntil: previous.checkoutValidUntil || '', alreadyLinked: true,
     }, updates: [] };
     if (previous?.checkoutState === 'prepared' && previous.checkoutOrderNsu)
       throw new BillingAdminError('BILLING_CHECKOUT_PENDING_SUPPORT', 409);
