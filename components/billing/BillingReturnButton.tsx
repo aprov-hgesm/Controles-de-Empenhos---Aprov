@@ -64,11 +64,12 @@ export function BillingReturnButton({ className, children }: {
         role="dialog" aria-modal="true" aria-labelledby="billing-return-warning">
         <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-slate-900 shadow-2xl">
           <h2 id="billing-return-warning" className="text-lg font-black">
-            Mensalidade não identificada
+            {decision ? 'Mensalidade não identificada' : 'Verificação de assinatura indisponível'}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-700">
-            O pagamento da mensalidade deste setor ainda não foi identificado.
-            Para continuar utilizando a plataforma, efetue o pagamento na aba Formas de pagamento.
+            {decision
+              ? 'O pagamento da mensalidade deste setor ainda não foi identificado. Para continuar utilizando a plataforma, efetue o pagamento na aba Formas de pagamento.'
+              : 'Não foi possível consultar o servidor financeiro neste momento. Isso não significa que a mensalidade esteja em atraso. Tente novamente ou consulte o suporte.'}
           </p>
           <p className="mt-3 text-sm text-slate-600">
             Se já pagou, evite realizar outro Pix: aguarde a conciliação ou solicite acesso temporário.
