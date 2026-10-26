@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
-  paidServicePeriod,
+  paidServicePeriod, paidServiceAccessUntil, billingAnniversary,
   EMPROVEX_NEW_CUSTOMER_RAMP_ID,
   buildPlatformBillingConfig, type BillingAccount, type BillingAccountStatus,
   type BillingCycle, type BillingCycleStatus, type PlatformBillingConfig,
@@ -522,6 +522,15 @@ export async function acceptNewCustomerRamp(
   });
 }
 
+
+function previousServiceReference(account: BillingAccount): string | null {
+  const period = paidServicePeriod(account);
+  if (!period || period.periodNumber <= 1) return null;
+  const first = account.firstPaidAt
+    || (account.firstPaidReferenceMonth ? account.firstPaidReferenceMonth + '-01T00:00:00Z' : '');
+  return first ? getReferenceMonth(billingAnniversary(first, period.periodNumber - 2)) : null;
+}
+
 /** An entitlement check is never a write or a client-chosen month/amount. */
 export async function readSectorBillingAccess(workspaceId: string, email: string) {
   validWorkspaceId(workspaceId);
@@ -542,9 +551,16 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
     && configDoc?.value?.requirePayment === true;
   const period = account ? paidServicePeriod(account) : null;
   const month = period?.referenceMonth || getReferenceMonth();
-  const cycleDoc = account && live
-    ? await get(token, 'billingCycles/' + billingCycleId(workspaceId, month)) : null;
-  const decision = decideBillingAccess(account || null, (cycleDoc?.value as BillingCycle | undefined) ?? null);
+  const previousReference = account && live ? previousServiceReference(account) : null;
+  const [cycleDoc, previousCycleDoc] = await Promise.all([
+    account && live ? get(token, 'billingCycles/' + billingCycleId(workspaceId, month)) : Promise.resolve(null),
+    previousReference ? get(token, 'billingCycles/' + billingCycleId(workspaceId, previousReference))
+      : Promise.resolve(null),
+  ]);
+  const decision = decideBillingAccess(account || null,
+    (cycleDoc?.value as BillingCycle | undefined) ?? null, new Date(),
+    (previousCycleDoc?.value as BillingCycle | undefined) ?? null,
+    configDoc?.value?.gracePeriodDays || 0);
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
         referenceMonth: period.referenceMonth }) : null;
@@ -582,14 +598,20 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   const wp = 'workspaces/' + workspaceId;
   const ap = 'billingAccounts/' + workspaceId;
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
-  return transaction(token, [wp, ap, cp], docs => {
+  const previous = previousServiceReference(accountForPeriod);
+  const pp = previous ? 'billingCycles/' + billingCycleId(workspaceId, previous) : null;
+  return transaction(token, pp ? [wp, ap, cp, pp] : [wp, ap, cp], docs => {
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const account = existingAccount(docs.get(ap) ?? null);
     assertAccountWorkspace(account, workspace);
     if (workspace.authorizedEmail !== email)
       throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
-    const decision = decideBillingAccess(account, cycle ?? null);
+    if (paidServicePeriod(account)?.referenceMonth !== month)
+      throw new BillingAdminError('BILLING_PERIOD_CHANGED_RETRY', 409);
+    const previousCycle = pp ? docs.get(pp)?.value as BillingCycle | undefined : null;
+    const decision = decideBillingAccess(account, cycle ?? null, new Date(),
+      previousCycle ?? null, configDoc?.value?.gracePeriodDays || 0);
     if (decision.allowed) {
       if (decision.reason === 'grace48') return { result: { ...decision }, updates: [] };
       throw new BillingAdminError('BILLING_GRACE_NOT_REQUIRED', 409);
