@@ -28,8 +28,6 @@ export class BillingAdminError extends Error {
     this.name = 'BillingAdminError';
   }
 }
-type Scalar = null | boolean | number | string;
-type Data = { [key: string]: Scalar | Data | Array<Scalar | Data | unknown> | undefined };
 type FireValue = Record<string, any>;
 type RawDoc = { name: string; fields?: Record<string, FireValue>; updateTime?: string };
 type ReadDoc = { value: Record<string, any>; updateTime: string } | null;
@@ -43,6 +41,7 @@ type Mutation =
 
 function encode(v: unknown): FireValue {
   if (v === undefined || v === null) return { nullValue: 'NULL_VALUE' };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v === 'string') return { stringValue: v };
   if (typeof v === 'boolean') return { booleanValue: v };
   if (typeof v === 'number' && Number.isSafeInteger(v)) return { integerValue: String(v) };
@@ -124,7 +123,7 @@ function streamRows(text: string): Record<string, any>[] {
 }
 async function transaction<T>(
   token: string, paths: string[],
-  calculate: (docs: ReadonlyMap<string, ReadDoc>) => { result: T; updates: Array<{ path: string; data: Record<string, unknown> }> }
+  calculate: (docs: ReadonlyMap<string, ReadDoc>) => { result: T; updates: Array<{ path: string; data: object }> }
 ): Promise<T> {
   const names = paths.map(documentName);
   if (new Set(names).size !== names.length) throw new BillingAdminError('BILLING_DUPLICATE_PATH', 400);
@@ -151,7 +150,7 @@ async function transaction<T>(
         throw new BillingAdminError('BILLING_TRANSACTION_UNREAD_WRITE', 503);
       const current = docs.get(path);
       return {
-        update: { name: documentName(path), fields: fields(data) },
+        update: { name: documentName(path), fields: fields(data as Record<string, unknown>) },
         currentDocument: current ? { updateTime: current.updateTime } : { exists: false },
       };
     });
@@ -173,7 +172,7 @@ function audit(actor: Actor, operation: string, entityType: string, entityId: st
       eventVersion: 'emprovex_audit_v1', eventId: id, workspaceId, ug, operation,
       source: 'admin', entityType, entityId, correlationId: randomUUID(),
       actorUid: actor.uid, actorEmail: actor.email,
-      before, after, metadata, createdAt: new Date().toISOString(),
+      before, after, metadata, createdAt: new Date(),
     },
   };
 }
@@ -257,7 +256,10 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const updated: PlatformBillingConfig = {
         ...current, billingMode: 'observe', requirePayment: false, automaticSuspension: false,
         pixKey: input.pixKey === undefined ? current.pixKey : optionalString(input.pixKey, 300),
-        pixKeyType: input.pixKeyType === undefined ? current.pixKeyType : optionalString(input.pixKeyType, 20) as PlatformBillingConfig['pixKeyType'],
+        pixKeyType: input.pixKeyType === undefined ? current.pixKeyType :
+          ['cpf', 'cnpj', 'email', 'phone', 'random', ''].includes(optionalString(input.pixKeyType, 20))
+            ? input.pixKeyType as PlatformBillingConfig['pixKeyType']
+            : (() => { throw new BillingAdminError('BILLING_INVALID_PIX_KEY_TYPE', 400); })(),
         pixRecipientName: input.pixRecipientName === undefined ? current.pixRecipientName : optionalString(input.pixRecipientName, 160),
         paymentLinkUrl: input.paymentLinkUrl === undefined ? current.paymentLinkUrl : validateUrl(optionalString(input.paymentLinkUrl, 2048)),
         supportContact: input.supportContact === undefined ? current.supportContact : optionalString(input.supportContact, 240),
@@ -354,7 +356,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const status = command.status === 'paid' || command.status === 'waived' ? 'active' : 'pending';
       const nextAccount = { ...account, status, updatedAt: now, updatedBy: actor.email, paymentRequired: false };
       const accountChanged = account.status !== status || account.paymentRequired !== false;
-      const updates = [{ path: cyclePath, data: transition.cycle }];
+      const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
         ? 'billing.payment_confirm' : 'billing.payment_reopen',
