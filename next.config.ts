@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
     '/api/install-icon/*': ['./public/emprovex-logo.png'],
   },
   // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
+  // A raiz pública apresenta o institucional sem alterar o URL canônico.
+  // O shell operacional original permanece preservado para guardas históricos.
+  async rewrites() {
+    return [{ source: '/', destination: '/institucional' }];
+  },
   async redirects() {
     return [
       { source: '/adm-deposito', destination: '/central-depositos', permanent: true },
