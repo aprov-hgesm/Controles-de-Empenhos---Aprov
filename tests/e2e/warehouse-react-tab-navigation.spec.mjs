@@ -4,7 +4,8 @@ import { test, expect } from '@playwright/test';
 // Valida clique no menu, render real, URL, histórico e recarga de rota direta.
 test('Central de Depósitos: seis abas via React com conteúdo e histórico', async ({ page }) => {
   test.setTimeout(300_000);
-  await page.goto('/');
+  // A raiz '/' agora é institucional; autenticação operacional inicia em /login.
+  await page.goto('/login');
   await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
   const principal = page.getByRole('navigation', { name: 'Navegação principal' });
