@@ -1,0 +1,36 @@
+name: InfinitePay Portal Integration R1
+
+on:
+  pull_request:
+    paths:
+      - 'app/api/billing/portal/**'
+      - 'components/billing/**'
+      - 'lib/server/billingPortalIdentity.ts'
+      - 'lib/server/payments/infinitepay*.mjs'
+      - 'lib/server/payments/emprovexRampPricing.mjs'
+      - 'lib/billing/**'
+      - 'scripts/infinitepay-*.test.mjs'
+      - 'scripts/billing-workspace-rehydration.test.mjs'
+      - '.github/workflows/infinitepay-portal-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify checkout, progressive prices, isolation and pilot ownership
+        run: |
+          node --test scripts/infinitepay-checkout.test.mjs scripts/infinitepay-billing-bridge.test.mjs scripts/infinitepay-ramp-pricing.test.mjs scripts/infinitepay-transactional-settlement.test.mjs scripts/infinitepay-live-smoke.test.mjs scripts/infinitepay-payment-ui.test.mjs scripts/billing-workspace-rehydration.test.mjs scripts/infinitepay-portal-pilot.test.mjs
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript validation
+        run: npm run typecheck
