@@ -3,26 +3,23 @@ import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import type { BillingCycle } from '../billing';
 
 /**
- * A bounded, tenant-specific list of recent materialized monthly cycles.
- * Canonical document IDs are workspaceId__YYYY-MM; sort the document names
- * descending BEFORE limit, not the limited results afterward. A single
- * __name__ range avoids requiring a compound billing index deployment.
- * The caller must already have verified the user's workspace.
- * This function never widens Firestore Rules or changes documents.
+ * Latest 24 materialized cycles, ordered on the canonical YYYY-MM field
+ * before applying limit. Requires a scoped composite Firestore index on
+ * workspaceId ASC + referenceMonth DESC. Until the index exists in the target
+ * database, history fails closed as unavailable; NEVER widen the query.
+ * Caller must have verified the workspace. No write operations.
  */
-export function buildBillingHistoryQuery(workspaceId: string, projectId: string, databaseId: string) {
+export function buildBillingHistoryQuery(workspaceId: string, _projectId: string, _databaseId: string) {
   if (!/^[a-z0-9-]{3,48}$/.test(workspaceId)) throw new Error('INVALID_HISTORY_WORKSPACE');
-  const prefix = `projects/${projectId}/databases/${databaseId}/documents/billingCycles/${workspaceId}__`;
   return {
     structuredQuery: {
       from: [{ collectionId: 'billingCycles' }],
-      where: { compositeFilter: { op: 'AND', filters: [
-        { fieldFilter: { field: { fieldPath: '__name__' }, op: 'GREATER_THAN_OR_EQUAL',
-          value: { referenceValue: prefix + '0000-00' } } },
-        { fieldFilter: { field: { fieldPath: '__name__' }, op: 'LESS_THAN_OR_EQUAL',
-          value: { referenceValue: prefix + '9999-12' } } },
-      ] } },
-      orderBy: [{ field: { fieldPath: '__name__' }, direction: 'DESCENDING' }],
+      where: { fieldFilter: {
+        field: { fieldPath: 'workspaceId' },
+        op: 'EQUAL',
+        value: { stringValue: workspaceId },
+      } },
+      orderBy: [{ field: { fieldPath: 'referenceMonth' }, direction: 'DESCENDING' }],
       limit: 24,
     },
   };
