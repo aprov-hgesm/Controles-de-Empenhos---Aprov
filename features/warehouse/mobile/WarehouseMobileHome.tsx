@@ -11,7 +11,6 @@ import {
   Warehouse,
   ArrowLeftRight,
 } from 'lucide-react';
-import Link from 'next/link';
 
 interface OperatorAction {
   label: string;
@@ -87,7 +86,7 @@ function OperatorActionCard({ action }: { action: OperatorAction }) {
   const Icon = action.Icon;
 
   return (
-    <Link
+    <a
       href={action.href}
       aria-label={'Abrir operação: ' + action.label}
       data-testid={'operator-mobile-action-' + action.number}
@@ -116,7 +115,7 @@ function OperatorActionCard({ action }: { action: OperatorAction }) {
           aria-hidden="true"
         />
       </div>
-    </Link>
+    </a
   );
 }
 
@@ -189,14 +188,14 @@ export function WarehouseMobileHome() {
               Posição física
             </span>
           </div>
-          <Link
+          <a
             href="/login"
             data-testid="operator-mobile-back-emprovex"
             className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-100/25 bg-white/10 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             Voltar ao EMPROVEX
-          </Link>
+          </a
         </div>
       </section>
 

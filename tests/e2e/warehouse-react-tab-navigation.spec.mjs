@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Navegação da Central sob autenticação/Firestore emuladores, sem produção.
 // Valida clique no menu, render real, URL, histórico e recarga de rota direta.
 test('Central de Depósitos: seis abas via React com conteúdo e histórico', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
   await page.goto('/');
   await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
@@ -17,6 +17,22 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
     await page.getByRole('button', { name: 'Aceitar e continuar' }).click();
   }
   await expect(principal).toBeVisible({ timeout: 30_000 });
+
+  // P0: trocar de perfil não pode deixar a URL em /admin com a tela de /login.
+  const adminButton = page.getByRole('button', { name: 'Abrir Administração EMPROVEX' });
+  await expect(adminButton).toBeVisible({ timeout: 30_000 });
+  await adminButton.click();
+  await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 30_000 });
+  await expect(page.getByTestId('admin-visual-shell')).toBeVisible({ timeout: 45_000 });
+  await page.getByRole('button', { name: 'Voltar ao HGeSM' }).click();
+  await expect(page).toHaveURL(/\/login\/?$/, { timeout: 30_000 });
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' }))
+    .toBeVisible({ timeout: 45_000 });
+
+  // Entrada na Central também deve abrir conteúdo real no primeiro clique.
+  await page.getByTestId('nav-central-depositos').click();
+  await expect(page).toHaveURL(/\/central-depositos\/?$/, { timeout: 30_000 });
+  await expect(page.getByTestId('warehouse-landing-operational')).toBeVisible({ timeout: 45_000 });
 
   await page.goto('/central-depositos');
   const shell = page.getByTestId('warehouse-module-shell');
