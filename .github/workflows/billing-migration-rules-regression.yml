@@ -1,0 +1,33 @@
+name: Billing Migration Rules Regression
+
+on:
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'scripts/billing-price-migration-emulator.test.mjs'
+      - '.github/workflows/billing-migration-rules-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECT_MIGRATION_ALLOWED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Billing founder and audit atomicity (isolated emulators)
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-billing-migration --only auth,firestore "node scripts/billing-price-migration-emulator.test.mjs"
