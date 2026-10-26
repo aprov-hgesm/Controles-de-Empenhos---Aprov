@@ -1,8 +1,8 @@
 import type { BillingAccount, BillingCycle } from './billing';
-import { getReferenceMonth } from './billing';
+import { getReferenceMonth, paidServicePeriod } from './billing';
 import { EMPROVEX_NEW_CUSTOMER_RAMP_ID } from './billing';
 
-export type BillingAccessReason = 'vip' | 'trial' | 'paid' | 'grace48' | 'payment_required' | 'trial_ended' | 'suspended' | 'canceled' | 'account_missing' | 'legacy_contract';
+export type BillingAccessReason = 'vip' | 'trial' | 'paid' | 'grace48' | 'payment_required' | 'trial_ended' | 'suspended' | 'canceled' | 'account_missing' | 'legacy_contract' | 'observe' | 'due_grace';
 export interface BillingAccessDecision {
   allowed: boolean;
   reason: BillingAccessReason;
@@ -20,7 +20,9 @@ export function decideBillingAccess(
   cycle: BillingCycle | null,
   now: Date = new Date(),
 ): BillingAccessDecision {
-  const month = getReferenceMonth(now);
+  const period = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+    ? paidServicePeriod(account, now) : null;
+  const month = period?.referenceMonth || getReferenceMonth(now);
   const base = {
     referenceMonth: month,
     amountCents: account?.monthlyPriceCents ?? null,
@@ -42,7 +44,7 @@ export function decideBillingAccess(
   if (account.trialGranted && account.trialEndsAt
     && now.getTime() < Date.parse(account.trialEndsAt)) return allow('trial');
   const first = account.firstPaidReferenceMonth;
-  if (!first || month < first) return allow('trial');
+  if (!first || !period) return allow('trial');
   if (cycle && cycle.workspaceId === account.workspaceId
     && cycle.referenceMonth === month && (cycle.status === 'paid' || cycle.status === 'waived')) return allow('paid');
   if (base.graceUntil && now.getTime() < Date.parse(base.graceUntil)) return allow('grace48');
