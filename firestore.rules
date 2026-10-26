@@ -2072,9 +2072,7 @@ service cloud.firestore {
     // acesso operacional depende destes documentos nesta fase.
     match /platformBillingConfig/{configId} {
       allow get, list: if isPlatformAdmin();
-      allow create, update: if isPlatformAdmin()
-        && configId == 'main'
-        && validPlatformBillingConfig();
+      allow create, update: if false;
       allow delete: if false;
     }
 
@@ -2082,19 +2080,15 @@ service cloud.firestore {
       // A delinquent sector must still access its own account to pay.
       allow get: if isPlatformAdmin() || canAccessWorkspaceIdentity(workspaceId);
       allow list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validBillingAccount(workspaceId);
-      allow update: if isPlatformAdmin()
-        && validBillingAccountUpdate(workspaceId);
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
 
     match /billingCycles/{cycleId} {
       allow get, list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validBillingCycle(cycleId);
-      allow update: if isPlatformAdmin()
-        && validBillingCycleUpdate(cycleId);
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
 
