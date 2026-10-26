@@ -58,7 +58,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
 
-  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey);
+  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed');
   const {
     user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
