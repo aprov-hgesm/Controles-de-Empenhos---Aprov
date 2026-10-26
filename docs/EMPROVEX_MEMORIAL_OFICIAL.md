@@ -3710,3 +3710,27 @@ A rota `/api/install-icon/[size]` agora usa exclusivamente essa imagem local ver
 O endpoint devolve apenas imagens, indicador de imagem institucional/fallback, cache controlado; não há leitura ou gravação de dados do usuário. A publicação é independente da R362 estética. Novo teste valida presença, cabeçalho PNG, tamanho mínimo, tipos de ícone e inexistência de Firestore no caminho de instalação.
 
 **Gate de homologação:** depois do prebuild/deploy manual, acessar `/emprovex-logo.png`, `/manifest.webmanifest`, `/api/install-icon/192` e `/api/install-icon/512?maskable=1`. Confirmar HTTP 200, PNG real, cabeçalho `X-Emprovex-Icon-Source: institutional`, ícone visual correto e login instalado no smartphone/desktop antes do promote. Não publicar automaticamente na Vercel.
+
+
+## R16 INSTITUCIONAL — Publicação confirmada em 25/10/2026 (22h29 BRT)
+
+**PUBLICADO EM PRODUÇÃO (promoção Vercel comprovada pelo Fundador).** A página institucional R16 passou a responder em `https://emprovex.com.br/`, mantendo `/login` para autenticação operacional. A publicação preservou as Firestore Rules e usou somente o CLI PowerShell proprietário, conforme `docs/EMPROVEX_RELEASE_POWERSHELL.md`, sem promoção automática pelo GitHub.
+
+### Identidade imutável da publicação
+
+- **Deployment promovido:** `dpl_35c7tma5Ft1aCkSojztJYNjVRkM2` — `https://controles-de-empenhos-aprov-kgygwbklw-aprov-hgesms-projects.vercel.app`.
+- **Comprovação:** `vercel.cmd promote <URL> --yes --scope aprov-hgesms-projects` retornou `Success!` e o `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` confirmou `target=production`, `status=Ready` e o **mesmo ID** do staged; não houve novo build na promoção.
+- **Commit exato da fonte implantada:** `7744e064bf7ac77be18a821cab008a5e496d4039`, branch `fix/institucional-r16-root-beforefiles`, baseada no R16 original `54607877d992a977db659c60aa0c1b4246890f24`.
+- **Importante — main versus produção:** o PR #386 R16 foi squash-merged em `main@54607877`; posteriormente o PR #385 de cobrança/InfinitePay foi integrado em `main@cb751fc1`; o hotfix R16 PR #387 passou CI 5/5 e foi squash-merged em `main@87cbc83076e449c28ff66f21d622600c2527274e`. **A versão implantada é deliberadamente a fonte isolada `7744e064`, SEM as alterações InfinitePay do PR #385. Não presumir que o HEAD da main corresponda aos artefatos da produção.** O merge na main não provocou deploy automático (`vercel.json` desativa a integração).
+- **Deployment anterior do domínio:** `dpl_8auoDLRb6nxz9QZwZdWBXfiwJ5Qc` (referência para eventual rollback Vercel; dados e Rules são independentes).
+
+### Incidente de roteamento encontrado e corrigido antes da promoção
+
+O primeiro staged `dpl_GaTzU9GH9FoRyiF5iqaZDN8obH2X` apresentou `/` com HTTP 200, porém sem conteúdo institucional. A causa foi a precedência do `app/page.tsx` sobre um `rewrites()` padrão. PR #387 alterou `next.config.ts` para `beforeFiles: [{source:'/', destination:'/institucional'}]`, preservou a autenticação em `/login`, corrigiu a abertura do PWA (`start_url:'/login'`) e o botão de retorno da Administração HGeSM. O primeiro staged **NÃO foi promovido**.
+
+### Evidências observadas e pendências reais
+
+- Cinco workflows do hotfix `7744e064` PASS: Application CI (inclusive build de produção), Fast CI, Core Protection, Domain CI R2 e W4.
+- No staged corrigido `dpl_35c7...`: `GET /api/health` retornou `status=ok`; `GET /` continha o elemento `hero-title`, formulário `Solicitar acesso para testar`, classe `brand-seal` e palavra `APROVISIONAMENTO`; `GET /login` retornou HTTP 200; `/manifest.webmanifest` retornou `start_url:'/login'`; acesso anônimo ao endpoint de administração do staged anterior retornou HTTP 401.
+- **Por decisão explícita do Fundador, a promoção foi realizada sem os testes funcionais autenticados.** Permanecem **NÃO HOMOLOGADOS**: envio real do `POST /api/public/access-requests` ao Firestore; leitura/atualização pelo fundador na aba Interessados (`GET/PATCH /api/admin/access-requests`); login real do usuário na versão publicada; equivalência das operações do Warehouse e Central 3D após troca da home. Não registrar tais provas como PASS até executá-las.
+- **Próxima ação:** testes de produção controlados com dados de teste, sem compartilhar credenciais, validando o formulário e a aba Interessados da Administração HGeSM e acesso operacional por `/login`. Registrar falhas antes de realizar novo deploy. Não reconstruir nem repetir promoção se o ID do domínio já estiver correto.
