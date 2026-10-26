@@ -413,7 +413,7 @@ export function PlatformAdminView({
 
   const returnToHgesm = () => {
     setActiveProfileMode('sector');
-    router.replace('/');
+    router.replace('/login');
   };
 
   const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];
