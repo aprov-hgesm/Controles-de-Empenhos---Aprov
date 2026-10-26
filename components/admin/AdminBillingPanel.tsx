@@ -312,7 +312,7 @@ export function AdminBillingPanel({
             </div>
             <h3 className="mt-1 text-lg font-extrabold text-white">Plano Completo EMPROVEX</h3>
             <p className="mt-1 text-xs text-slate-400">
-              R$ 70,00 por workspace, com pagamento externo por Link de Pagamento e/ou Pix. O EMPROVEX não processa dados financeiros.
+              Mensalidade configurada: {money(config?.monthlyPriceCents ?? 7000)} por workspace. Contratos anteriores e isenções são preservados; a contratação de novos preços exige aceite.
             </p>
           </div>
           {!editingConfig && (
@@ -338,8 +338,8 @@ export function AdminBillingPanel({
         ) : (
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <ConfigField label="Mensalidade (R$)" hint="Preço fixo do Plano Completo na R1.">
-                <input value="70,00" readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
+              <ConfigField label="Mensalidade (R$)" hint="Valor vigente protegido; mudança de preço exige fluxo contratual.">
+                <input value={money(config?.monthlyPriceCents ?? 7000)} readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
               </ConfigField>
               <ConfigField label="Trial padrão (dias)">
                 <input type="number" min={1} max={365} value={trialDays} onChange={(event) => setTrialDays(event.target.value)} className={inputClass} />
