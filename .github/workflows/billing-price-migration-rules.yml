@@ -27,6 +27,6 @@ jobs:
           java-version: '21'
       - run: npm ci
       - name: Founder-only atomic billing migration with Auth and Firestore emulators
-        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-billing-migration --only auth,firestore "node --test scripts/billing-price-migration-rules-emulator.test.mjs"
+        run: GCLOUD_PROJECT=demo-emprovex-billing-migration npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-billing-migration --only auth,firestore "node --test scripts/billing-price-migration-rules-emulator.test.mjs"
       - name: Existing billing domain regression
         run: node --test scripts/saas-r1-billing.test.mjs
