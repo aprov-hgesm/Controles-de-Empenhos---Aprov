@@ -3734,3 +3734,35 @@ O primeiro staged `dpl_GaTzU9GH9FoRyiF5iqaZDN8obH2X` apresentou `/` com HTTP 200
 - No staged corrigido `dpl_35c7...`: `GET /api/health` retornou `status=ok`; `GET /` continha o elemento `hero-title`, formulário `Solicitar acesso para testar`, classe `brand-seal` e palavra `APROVISIONAMENTO`; `GET /login` retornou HTTP 200; `/manifest.webmanifest` retornou `start_url:'/login'`; acesso anônimo ao endpoint de administração do staged anterior retornou HTTP 401.
 - **Por decisão explícita do Fundador, a promoção foi realizada sem os testes funcionais autenticados.** Permanecem **NÃO HOMOLOGADOS**: envio real do `POST /api/public/access-requests` ao Firestore; leitura/atualização pelo fundador na aba Interessados (`GET/PATCH /api/admin/access-requests`); login real do usuário na versão publicada; equivalência das operações do Warehouse e Central 3D após troca da home. Não registrar tais provas como PASS até executá-las.
 - **Próxima ação:** testes de produção controlados com dados de teste, sem compartilhar credenciais, validando o formulário e a aba Interessados da Administração HGeSM e acesso operacional por `/login`. Registrar falhas antes de realizar novo deploy. Não reconstruir nem repetir promoção se o ID do domínio já estiver correto.
+
+
+## EMPROVEX — ESCALONAMENTO COMERCIAL TRIMESTRAL PARA NOVOS CLIENTES (26/10/2026)
+
+**DECISÃO COMERCIAL EXPRESSA DO FUNDADOR.** Todo **novo cliente/assinante** EMPROVEX elegível deve ingressar pela mensalidade promocional de **R$ 29,90** e seguir uma progressão de **R$ 10,00 por trimestre pago**, até o teto permanente de **R$ 69,90/mês**. Cada novo workspace inicia seu próprio relógio de preços: a adesão posterior de outra OM/setor não muda o trimestre dos clientes existentes. O plano é associado à assinatura do cliente/workspace e não equivale a uma tarifa cobrada individualmente de cada integrante do setor.
+
+| Competência após o teste gratuito | Mensalidade do novo cliente | Regra |
+|---|---:|---|
+| 1º ao 3º mês pago | **R$ 29,90** | Valor de entrada |
+| 4º ao 6º mês pago | **R$ 39,90** | Primeiro aumento trimestral |
+| 7º ao 9º mês pago | **R$ 49,90** | Segundo aumento trimestral |
+| 10º ao 12º mês pago | **R$ 59,90** | Terceiro aumento trimestral |
+| Do 13º mês pago em diante | **R$ 69,90** | Teto da política; não aumentar automaticamente além dele |
+
+### Cômputo, elegibilidade e aceitação obrigatória
+
+1. **Teste de 30 dias:** gratuito e acompanhado; não conta como trimestre nem como competência paga. O **mês 1** é a primeira competência de faturamento **após** o teste, não a data de cadastro ou do formulário.
+2. **Individualização do cliente:** `firstPaidReferenceMonth` é fixado no primeiro mês cobrável de cada nova assinatura elegível; o escalonamento decorre da diferença entre competências mensais, não de reajuste global sincronizado a todos os clientes.
+3. **Aceitação prévia:** apresentar ao novo cliente os **cinco patamares, seus marcos temporais e o teto** antes da contratação; registrar o aceite inequívoco e a política atribuída. A vitrine pública pode destacar o valor inicial, mas **não deve levar o consumidor a interpretar R$ 29,90 como preço fixo para sempre**. Não ocultar a progressão durante a contratação.
+4. **Legado protegido:** assinantes atuais com preço/contrato previamente pactuado não migram automaticamente; fundador e VIPs isentos conservam `exempt` e valor R$ 0 enquanto vigente a isenção. Não reescrever competências históricas já materializadas nem cobrar retrospectivamente.
+5. **Segurança e governança:** movimentos de preço de um ciclo precisam de persistência **atômica no servidor**, idempotência e rastreabilidade; evitar reprecificação por concorrência ou mudança casual no navegador; nenhuma alteração de Firestore Rules, cobrança produtiva, status de workspace ou privilégios operacionais apenas por esta anotação.
+6. **Não confundir usuários e assinaturas:** esta política é para **novo cliente contratante**, não para cada login adicional na equipe. O limite de usuários autorizados por workspace deve ser confirmado no contrato e no motor de identidades; este escalonamento não define por si só um número de assentos.
+
+### Contrato técnico atual versus ativação real
+
+O contrato de **cálculo e proposta offline** já está versionado em `lib/server/payments/emprovexRampPricing.mjs` como `emprovex_individual_ramp_v1`, com `RAMP_TIERS` de **2990 → 3990 → 4990 → 5990 → 6990 centavos** nos mesmos períodos acima. As funções `quoteIndividualRamp`, `proposeNewCustomerEnrollment` e `evaluateBillableCyclePrice` calculam e validam a política, mas **não integram automaticamente o fluxo produtivo de inscrição/faturamento**.
+
+**Divergência conhecida e intencionalmente não encoberta:** `lib/billing.ts` mantém `EMPROVEX_FULL_PLAN_PRICE_CENTS=7000`, ou **R$ 70,00/mês**, para o domínio legado. Essa constante não autoriza cobrar R$ 70 dos novos clientes que contrataram a política progressiva, nem autoriza reprecificar clientes antigos. A integração futura deve atribuir a política no provisionamento elegível após aceite e materializar cada competência pelo valor individual correto, sem afetar o billing histórico. Não declarar a automação como já ativa em produção.
+
+**Comunicação comercial:** na seção institucional, o valor inicial é **R$ 29,90/mês**, e o período de 30 dias é de teste acompanhado gratuito. Ao fornecer proposta/checkout/termos comerciais ao novo contratante, explicitar a progressão trimestral completa até **R$ 69,90**. Preservar contratos/isenções anteriores e assegurar que o valor final apresentado no checkout corresponda ao ciclo daquele workspace.
+
+**Responsáveis e próximos passos:** Fundador define e aprova a política (decisão acima); executor de engenharia integra o motor de preço individual a onboarding e billing, sob testes e autorização próprios; o fundador aprova os termos e o rollout antes de qualquer cobrança. **Esta atualização é apenas documental: sem deploy, sem atualização do Firestore e sem modificação de faturamento vigente.**
