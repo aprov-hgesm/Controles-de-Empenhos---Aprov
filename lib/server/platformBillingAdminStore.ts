@@ -42,6 +42,7 @@ type Actor = { uid: string; email: string };
 type Mutation = 
   | { action: 'config'; input: Record<string, unknown> }
   | { action: 'trial'; workspaceId: string; days?: number }
+  | { action: 'offer-ramp'; workspaceId: string }
   | { action: 'exemption'; workspaceId: string; exempt: boolean }
   | { action: 'status'; workspaceId: string; status: BillingAccountStatus }
   | { action: 'cycle'; workspaceId: string; month: string; status: BillingCycleStatus; note?: string };
@@ -297,15 +298,47 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
   if (!('workspaceId' in command)) throw new BillingAdminError('BILLING_INVALID_WORKSPACE', 400);
   validWorkspaceId(command.workspaceId);
   const workspaceId = command.workspaceId;
-  if (command.action !== 'trial' && command.action !== 'exemption' && command.action !== 'status' && command.action !== 'cycle')
+  if (command.action !== 'trial' && command.action !== 'exemption' && command.action !== 'status' && command.action !== 'cycle' && command.action !== 'offer-ramp')
     throw new BillingAdminError('BILLING_UNKNOWN_ACTION', 400);
-  if (command.action === 'trial' && workspaceId === HGESM_WORKSPACE_ID)
+  if ((command.action === 'trial' || command.action === 'offer-ramp') && workspaceId === HGESM_WORKSPACE_ID)
     throw new BillingAdminError('BILLING_FOUNDER_PERMANENTLY_EXEMPT', 409);
   if ((command.action === 'status' || command.action === 'exemption') && workspaceId === HGESM_WORKSPACE_ID)
     throw new BillingAdminError('BILLING_FOUNDER_PERMANENTLY_EXEMPT', 409);
   const accountPath = 'billingAccounts/' + workspaceId;
   const workspacePath = 'workspaces/' + workspaceId;
   const paths = [accountPath, workspacePath];
+  // A previously provisioned, not-yet-billed sector may opt in only through an
+  // explicit founder offer and a SEPARATE customer acceptance. Never enroll
+  // a historical payer or VIP silently.
+  if (command.action === 'offer-ramp') {
+    const existingCycles = await list(token, 'billingCycles');
+    if (existingCycles.some(cycle => cycle.workspaceId === workspaceId))
+      throw new BillingAdminError('BILLING_HISTORICAL_CYCLES_PROTECTED', 409);
+    return transaction(token, paths, docs => {
+      const workspace = existingWorkspace(docs.get(workspacePath) ?? null, workspaceId);
+      const account = existingAccount(docs.get(accountPath) ?? null);
+      assertAccountWorkspace(account, workspace);
+      requireNonExempt(account);
+      if (account.pricingPolicyId || account.lastBilledReferenceMonth
+        || !['active','trial','pending'].includes(account.status))
+        throw new BillingAdminError('BILLING_OLD_CONTRACT_PROTECTED', 409);
+      const now = new Date().toISOString();
+      const start = account.trialGranted && account.trialEndsAt
+        && account.trialEndsAt > now ? account.trialEndsAt : now;
+      const updated: BillingAccount = { ...account,
+        pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
+        pricingTermsAcceptedAt: '',
+        firstPaidAt: start, firstPaidReferenceMonth: getReferenceMonth(start),
+        monthlyPriceCents: 2990, updatedAt: now, updatedBy: actor.email };
+      return { result: updated, updates: [
+        { path: accountPath, data: updated },
+        audit(actor, 'billing.status_change', 'billing_account', workspaceId,
+          workspaceId, workspace.ug || null, { policy: 'legacy' },
+          { policy: EMPROVEX_NEW_CUSTOMER_RAMP_ID, firstPaidAt: start },
+          { explicitFounderOffer: true, requiresCustomerAcceptance: true }),
+      ] };
+    });
+  }
   let cyclePath = '';
   if (command.action === 'cycle') {
     if (typeof command.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(command.month)
@@ -445,7 +478,7 @@ export async function acceptNewCustomerRamp(
       throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
     if (account.status === 'exempt' || account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
       || !account.firstPaidReferenceMonth
-      || !['trial','active'].includes(account.status))
+      || !['trial','active','pending'].includes(account.status))
       throw new BillingAdminError('BILLING_PRICING_NOT_OFFERED', 409);
     const result = {
       accepted: true as const,
@@ -455,7 +488,9 @@ export async function acceptNewCustomerRamp(
     if (account.pricingTermsAcceptedAt) return { result, updates: [] };
     const now = new Date().toISOString();
     return { result, updates: [
-      { path: ap, data: { ...account, pricingTermsAcceptedAt: now, updatedAt: now, updatedBy: actor.email } },
+      { path: ap, data: { ...account, pricingTermsAcceptedAt: now,
+        pricingTermsVersion: 'emprovex_individual_ramp_v1_20261026',
+        updatedAt: now, updatedBy: actor.email } },
       audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
         { pricingTermsAcceptedAt: null },
         { pricingTermsAcceptedAt: now, pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID },
