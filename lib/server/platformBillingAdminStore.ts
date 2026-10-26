@@ -461,7 +461,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       if (ramp && command.status === 'paid' || ramp && command.status === 'waived') {
         const active = paidServicePeriod(account);
         if (active?.referenceMonth === command.month) updates.push({
-          path: workspacePath, data: { ...workspace, billingEntitlementUntil: active.endsAt },
+          path: workspacePath, data: { ...workspace,
+            billingEntitlementUntil: paidServiceAccessUntil(active, config.gracePeriodDays) },
         });
       }
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
@@ -810,7 +811,7 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
   const ledgerId = 'infinitepay_' + createHash('sha256')
     .update(input.transactionNsu).digest('hex');
   const lp = 'billingPaymentLedger/' + ledgerId;
-  return transaction(token, [cp, lp, 'billingAccounts/' + workspaceId, 'workspaces/' + workspaceId], docs => {
+  return transaction(token, [cp, lp, 'billingAccounts/' + workspaceId, 'workspaces/' + workspaceId, CONFIG_PATH], docs => {
     const currentWorkspace = existingWorkspace(docs.get('workspaces/' + workspaceId) ?? null, workspaceId);
     const currentAccount = existingAccount(docs.get('billingAccounts/' + workspaceId) ?? null);
     assertAccountWorkspace(currentAccount, currentWorkspace);
@@ -841,7 +842,8 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
       { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
       ...(paidServicePeriod(currentAccount)?.referenceMonth === current.referenceMonth
         ? [{ path: 'workspaces/' + workspaceId, data: { ...currentWorkspace,
-            billingEntitlementUntil: paidServicePeriod(currentAccount)!.endsAt } }] : []),
+            billingEntitlementUntil: paidServiceAccessUntil(paidServicePeriod(currentAccount)!,
+              (docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined)?.gracePeriodDays || 0) } }] : []),
       { path: lp, data: { provider: 'infinitepay', workspaceId, cycleId: current.id,
         orderNsu: input.orderNsu, transactionNsu: input.transactionNsu,
         invoiceSlug: input.slug, amountCents: current.amountCents,
@@ -903,6 +905,8 @@ export async function reconcileInfinitePayWebhook(input: {
 export async function prepareBillingEnforcement(actor: Actor) {
   const token = await getGoogleAccessToken();
   const accounts = (await list(token, 'billingAccounts')) as BillingAccount[];
+  const configDoc = await get(token, CONFIG_PATH);
+  const renewalGraceDays = (configDoc?.value as PlatformBillingConfig | undefined)?.gracePeriodDays || 0;
   const eligible = accounts.filter(a => a.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
     && a.status !== 'exempt' && !a.exemptionSource);
   let prepared = 0;
@@ -926,7 +930,8 @@ export async function prepareBillingEnforcement(actor: Actor) {
       const now = new Date().toISOString();
       let until = now;
       if (account.trialGranted && account.trialEndsAt > now) until = account.trialEndsAt;
-      else if (current && cycle && ['paid','waived'].includes(cycle.status)) until = current.endsAt;
+      else if (current && cycle && ['paid','waived'].includes(cycle.status))
+        until = paidServiceAccessUntil(current, renewalGraceDays);
       else if (account.grace48ReferenceMonth === current?.referenceMonth
         && account.grace48Until && account.grace48Until > now) until = account.grace48Until;
       const desired = { ...workspace,
