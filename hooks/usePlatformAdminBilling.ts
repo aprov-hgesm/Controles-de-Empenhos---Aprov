@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 
 import type {
@@ -12,7 +12,6 @@ import type {
 } from '../lib/billing';
 import type { Workspace } from '../lib/platformIdentity';
 import {
-  ensurePlatformBillingFoundation,
   grantBillingTrial,
   setBillingCommercialStatus,
   setBillingExemption,
@@ -38,8 +37,8 @@ function describeBillingError(error: unknown): string {
 
 export function usePlatformAdminBilling(
   adminUser: User | null,
-  workspaces: Workspace[],
-  directoryReady: boolean
+  _workspaces: Workspace[],
+  _directoryReady: boolean
 ) {
   const adminEmail = adminUser?.email || null;
   const [config, setConfig] = useState<PlatformBillingConfig | null>(null);
@@ -48,7 +47,6 @@ export function usePlatformAdminBilling(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mutatingKey, setMutatingKey] = useState<string | null>(null);
-  const foundationSignatureRef = useRef<string>('');
 
   useEffect(() => {
     if (!adminEmail) {
@@ -94,21 +92,10 @@ export function usePlatformAdminBilling(
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [adminEmail]);
 
-  useEffect(() => {
-    if (!adminEmail || !directoryReady || workspaces.length === 0) return;
-
-    const signature = workspaces
-      .map((workspace) => `${workspace.id}:${workspace.updatedAt}`)
-      .sort()
-      .join('|');
-    if (foundationSignatureRef.current === signature) return;
-    foundationSignatureRef.current = signature;
-
-    void ensurePlatformBillingFoundation(workspaces, adminEmail).catch((foundationError) => {
-      foundationSignatureRef.current = '';
-      setError(describeBillingError(foundationError));
-    });
-  }, [adminEmail, directoryReady, workspaces]);
+  // Opening the billing dashboard is read-only. Never migrate contractual
+  // prices or create billing accounts implicitly on a page visit.
+  // The pricing/onboarding flow must provision eligible accounts explicitly
+  // after consent, preserving legacy prices and VIP exemptions.
 
   const accountsByWorkspace = useMemo(
     () => new Map(accounts.map((account) => [account.workspaceId, account])),
