@@ -39,6 +39,7 @@ const get = p => structuredClone(docs.get(p)?.value);
 const fields = obj => Object.fromEntries(Object.entries(obj).filter(([,v])=>v!==undefined).map(([k,v])=>[k,encode(v)]));
 function encode(v) {
   if (v===null) return { nullValue: 'NULL_VALUE' };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
   if (typeof v==='string') return { stringValue:v };
   if (typeof v==='number') return { integerValue:String(v) };
   if (typeof v==='boolean') return { booleanValue:v };
@@ -47,6 +48,7 @@ function encode(v) {
 }
 function decode(v) {
   if ('stringValue' in v) return v.stringValue;
+  if ('timestampValue' in v) return v.timestampValue;
   if ('integerValue' in v) return Number(v.integerValue);
   if ('booleanValue' in v) return v.booleanValue;
   if ('nullValue' in v) return null;
@@ -90,6 +92,9 @@ function firestoreFetch(url, init={}) {
           return Promise.resolve(json({error:'missing precondition'},409));
       }
       for(const w of body.writes) {
+        if (w.update.name.includes('/platformAuditEvents/')) {
+          assert.equal(typeof w.update.fields.createdAt.timestampValue, 'string', 'audit timestamp must be native Firestore timestamp');
+        }
         store(w.update.name.slice(prefix.length),Object.fromEntries(Object.entries(w.update.fields).map(([k,v])=>[k,decode(v)])));
         writeCount++;
       }
