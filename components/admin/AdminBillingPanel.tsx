@@ -301,7 +301,7 @@ export function AdminBillingPanel({
           icon={<ShieldCheck className="h-5 w-5" />}
           label="Modo de cobrança"
           value={(config?.billingMode || 'observe').toUpperCase()}
-          detail="OBSERVE não interfere no acesso"
+          detail={config?.billingMode === "enforce" ? "Pagamento exigido nos setores elegíveis" : "OBSERVE não interfere no acesso"}
         />
       </section>
 
@@ -311,39 +311,40 @@ export function AdminBillingPanel({
         </section>
       )}
 
-      <section className="rounded-[2rem] border border-blue-300/15 bg-blue-500/[0.055] p-5 backdrop-blur-xl sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-blue-200">
-              <ShieldCheck className="h-5 w-5" />
-              <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em]">
-                Proteção de testes
-              </p>
-            </div>
-            <h3 className="mt-2 text-xl font-extrabold text-white">Cobrança em modo de observação</h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Trial, vencimentos, competências e situações comerciais são acompanhados, mas não participam
-              da autorização operacional. Mesmo uma assinatura marcada como suspensa comercialmente continua
-              sem bloquear login, sessões, empenhos, notas fiscais ou documentos enquanto o enforcement não for ativado em desenvolvimento futuro.
-            </p>
-          </div>
-          <div className="min-w-[250px] rounded-2xl border border-white/[0.08] bg-slate-950/25 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Exigir pagamento</p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-sm font-extrabold text-emerald-200">DESATIVADO</span>
-              <button
-                type="button"
-                disabled
-                title="Será liberado somente após a fase de testes dos usuários externos."
-                className="cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600"
-              >
-                Ativar
-              </button>
-            </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-              Suspensão automática também permanece permanentemente desativada nesta fase.
-            </p>
-          </div>
+      <section className="rounded-[2rem] border border-blue-300/15 bg-blue-500/[0.055] p-5 sm:p-6">
+        <h3 className="text-lg font-extrabold text-white">Proteção financeira dos setores</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          A proteção de dados e a cobrança real devem ser certificadas antes de ativar.
+          Em observação, as assinaturas continuam acessíveis sem bloqueio financeiro.
+          Em modo ativo, os novos setores seguem trial, pagamento confirmado e janela de 48 horas.
+        </p>
+        <p className="mt-2 text-xs font-semibold text-slate-300">
+          Situação: {config?.billingMode === 'enforce' && config.requirePayment
+            ? 'EXIGINDO PAGAMENTO' : 'SOMENTE OBSERVAÇÃO'} ·
+          Entitlements: {config?.billingCutoverPreparedAt ? 'preparados' : 'pendentes de preparação'}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" disabled={Boolean(mutatingKey)}
+            onClick={() => void onPrepareEnforcement()}
+            className="rounded-xl border border-blue-200/30 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">
+            Preparar autorizações dos setores
+          </button>
+          {config?.billingMode !== 'enforce' ? (
+            <button type="button" disabled={Boolean(mutatingKey) || !config?.billingCutoverPreparedAt}
+              onClick={() => {
+                if (!window.confirm('ATIVAR controle financeiro? Confirme somente depois que InfinitePay, Firestore Rules e testes reais forem certificados.')) return;
+                void onUpdateConfig({ billingMode: 'enforce', requirePayment: true });
+              }}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">
+              Ativar controle financeiro
+            </button>
+          ) : (
+            <button type="button" disabled={Boolean(mutatingKey)}
+              onClick={() => void onUpdateConfig({ billingMode: 'observe', requirePayment: false })}
+              className="rounded-xl border border-amber-200/35 px-4 py-2 text-xs font-extrabold text-amber-100">
+              Voltar para observação
+            </button>
+          )}
         </div>
       </section>
 
