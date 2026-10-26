@@ -124,7 +124,7 @@ export function WarehouseSidebar({
             >
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
               <span>Voltar ao EMPROVEX</span>
-            </a
+            </a>
 
             <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
 
@@ -161,7 +161,7 @@ export function WarehouseSidebar({
                   >
                     <Smartphone className="h-5 w-5" aria-hidden="true" />
                     <span>Operador Móvel</span>
-                  </a
+                  </a>
                 </div>
               </div>
             )}

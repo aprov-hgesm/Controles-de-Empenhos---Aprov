@@ -64,7 +64,7 @@ export function BillingPortalShell({
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Voltar à plataforma</span>
           <span className="sm:hidden">Voltar</span>
-        </a
+        </a>
       </header>
 
       {drawerOpen && (
@@ -157,7 +157,7 @@ export function BillingPortalShell({
             <a href="/login" className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
               <Home className="h-[18px] w-[18px]" /> Voltar ao EMPROVEX
               <ArrowUpRight className="ml-auto h-4 w-4" />
-            </a
+            </a>
           </div>
         </div>
         <div className="relative z-[2] mt-8 border-t border-white/10 px-6 pt-5">

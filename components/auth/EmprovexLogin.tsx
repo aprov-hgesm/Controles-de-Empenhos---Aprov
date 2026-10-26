@@ -490,10 +490,10 @@ export function EmprovexLogin({
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start">
                 <a href="/privacy" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Política de Privacidade
-                </a
+                </a>
                 <a href="/terms" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Termos de Serviço
-                </a
+                </a>
                 <a href="mailto:aprov1hgesm@gmail.com" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Suporte
                 </a>

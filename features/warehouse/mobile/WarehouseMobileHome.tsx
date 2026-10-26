@@ -115,7 +115,7 @@ function OperatorActionCard({ action }: { action: OperatorAction }) {
           aria-hidden="true"
         />
       </div>
-    </a
+    </a>
   );
 }
 
@@ -195,7 +195,7 @@ export function WarehouseMobileHome() {
           >
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             Voltar ao EMPROVEX
-          </a
+          </a>
         </div>
       </section>
 

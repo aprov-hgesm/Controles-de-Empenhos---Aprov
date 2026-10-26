@@ -24,6 +24,7 @@ test('P0: links entre áreas são navegações de documento, não transições t
     assert.doesNotMatch(source, /from ['"]next\/link['"]/);
     assert.doesNotMatch(source, /<Link(?:\s|>)/);
     assert.match(source, /<a(?:\s|>)/);
+    assert.doesNotMatch(source, /<\/a(?=\r?\n)/, 'Âncoras devem fechar com >.');
   }
   assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/login"/);
   assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/operador-movel"/);

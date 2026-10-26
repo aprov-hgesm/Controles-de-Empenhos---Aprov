@@ -63,7 +63,7 @@ export function WarehouseMobileShell({
             className="mt-6 inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#00288e] px-5 text-sm font-black text-white"
           >
             Ir para a Central de Depósitos
-          </a
+          </a>
         </div>
       </div>
 
@@ -89,7 +89,7 @@ export function WarehouseMobileShell({
                 <span className="text-[10px] font-semibold leading-4 text-blue-100">Menu do Operador Móvel</span>
               </span>
               <LayoutGrid className="ml-auto h-5 w-5 shrink-0 text-blue-100" aria-hidden="true" />
-            </a
+            </a>
           </div>
         </nav>
       )}

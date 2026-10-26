@@ -295,10 +295,10 @@ export default function RegularizationPage() {
         </div>
 
         <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
-          <a href="/" className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</a
+          <a href="/" className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</a>
           <div className="flex gap-4">
-            <a href="/terms" className="hover:text-slate-800">Termos de Serviço</a
-            <a href="/privacy" className="hover:text-slate-300">Privacidade</a
+            <a href="/terms" className="hover:text-slate-800">Termos de Serviço</a>
+            <a href="/privacy" className="hover:text-slate-300">Privacidade</a>
           </div>
         </footer>
       </div>
