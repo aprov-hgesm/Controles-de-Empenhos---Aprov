@@ -180,6 +180,7 @@ async function transaction<T>(
         const config = await get(token, CONFIG_PATH);
         const active = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
           && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
           && config?.value?.billingMode === 'enforce'
           && config?.value?.requirePayment === true;
         await syncWarehouseBillingMirror(token, workspace, active);
@@ -273,15 +274,20 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       // Legacy R$50 stays R$50. Never change contractual/global price implicitly.
       if (input.monthlyPriceCents !== undefined && input.monthlyPriceCents !== current.monthlyPriceCents)
         throw new BillingAdminError('BILLING_PRICE_CHANGE_REQUIRES_CONTRACT_FLOW', 409);
-      const requestingEnforce = input.billingMode === 'enforce' || input.requirePayment === true;
+      const nextMode = input.billingMode === undefined ? current.billingMode : input.billingMode;
+      const nextRequire = input.requirePayment === undefined ? current.requirePayment : input.requirePayment;
+      if (!['observe','enforce'].includes(String(nextMode))
+        || typeof nextRequire !== 'boolean'
+        || (nextMode === 'enforce') !== nextRequire)
+        throw new BillingAdminError('BILLING_MODE_INCONSISTENT', 400);
+      const requestingEnforce = nextMode === 'enforce' && nextRequire === true;
       if (requestingEnforce && !current.billingCutoverPreparedAt)
         throw new BillingAdminError('BILLING_ENTITLEMENTS_NOT_PREPARED', 409);
       if (requestingEnforce && (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED !== '1'
-          || process.env.INFINITEPAY_BILLING_ENABLED !== '1'))
+          || process.env.INFINITEPAY_BILLING_ENABLED !== '1'
+          || process.env.EMPROVEX_BILLING_RULES_CERTIFIED !== '1'))
         throw new BillingAdminError('BILLING_ENFORCEMENT_CUTOVER_NOT_READY', 409);
-      if (input.billingMode !== undefined
-          && !['observe','enforce'].includes(input.billingMode))
-        throw new BillingAdminError('BILLING_MODE_INVALID', 400);
+      if (requestingEnforce) requireCheckoutConfig();
       if (input.defaultTrialDays !== undefined && (typeof input.defaultTrialDays !== 'number'
         || !Number.isInteger(input.defaultTrialDays) || input.defaultTrialDays < 1 || input.defaultTrialDays > 365))
         throw new BillingAdminError('BILLING_TRIAL_DAYS_INVALID', 400);
@@ -290,8 +296,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         throw new BillingAdminError('BILLING_GRACE_DAYS_INVALID', 400);
       const now = new Date().toISOString();
       const updated: PlatformBillingConfig = {
-        ...current, billingMode: requestingEnforce ? 'enforce' : input.billingMode || current.billingMode,
-        requirePayment: requestingEnforce,
+        ...current, billingMode: nextMode as PlatformBillingConfig['billingMode'],
+        requirePayment: nextRequire as boolean,
         automaticSuspension: false,
         pixKey: input.pixKey === undefined ? current.pixKey : optionalString(input.pixKey, 300),
         pixKeyType: input.pixKeyType === undefined ? current.pixKeyType :
@@ -581,6 +587,7 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   if (account) assertAccountWorkspace(account, workspace);
   const live = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   const period = account ? paidServicePeriod(account) : null;
@@ -628,6 +635,7 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   ]);
   const billingLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   if (!billingLive) throw new BillingAdminError('BILLING_GRACE_NOT_ENABLED', 409);
