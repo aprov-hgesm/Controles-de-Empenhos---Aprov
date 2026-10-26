@@ -14,6 +14,8 @@ function forbidText(source, text, message) {
 
 const domain = read('lib/billing.ts');
 const store = read('lib/platformBillingStore.ts');
+const adminServer = read('lib/server/platformBillingAdminStore.ts');
+const adminRoute = read('app/api/admin/billing/route.ts');
 const rules = read('firestore.rules');
 const provisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const sharedProvisioning = read('lib/sectorProvisioning.ts');
@@ -47,12 +49,21 @@ requireText(domain, 'paymentLinkUrl', 'Configuração não possui Link de Pagame
 requireText(domain, 'supportContact', 'Configuração não possui canal de suporte.');
 requireText(domain, 'getFifthBusinessDay', 'Domínio não possui cálculo centralizado do 5º dia útil.');
 
-requireText(store, 'setBillingExemption', 'Store não possui ação administrativa de VIP/isento.');
-requireText(store, "persistedAccount.status === 'exempt'", 'Store permite competência financeira para conta isenta.');
-requireText(store, 'sanitizeHttpsUrl', 'Link de Pagamento não exige HTTPS.');
-requireText(store, "saas_r1_full_plan_70_brl", 'Migração de preço não registra motivo auditável.');
-requireText(store, 'idempotentDocumentId', 'Confirmação manual não registra identidade determinística.');
-forbidText(store, 'monthly_price_reduced_to_50_brl', 'Migração legada 70 -> 50 ainda está ativa.');
+
+requireText(store, 'setBillingExemption', 'Bridge do cliente não possui ação VIP.');
+requireText(store, "billingRequest", 'Bridge do cliente não usa API de cobrança.');
+requireText(store, "'/api/admin/billing'", 'Bridge do cliente não aponta à API do servidor.');
+forbidText(store, "from 'firebase/firestore'", 'Billing administrativo voltou a acessar Firestore diretamente no cliente.');
+forbidText(store, 'runTransaction(', 'Billing administrativo voltou a executar transações no navegador.');
+requireText(adminRoute, 'verifyFounderFirebaseRequest', 'Rota financeira não verifica fundador Google.');
+requireText(adminServer, 'getGoogleAccessToken', 'Motor financeiro não usa credenciais IAM servidor.');
+requireText(adminServer, "BILLING_EXEMPT_ACCOUNT_IMMUTABLE", 'Motor permite cobrança de VIP.');
+requireText(adminServer, 'validateUrl', 'Motor não exige HTTPS no link.');
+requireText(adminServer, 'idempotentDocumentId', 'Motor não preserva identidade de competência auditada.');
+requireText(adminServer, 'BILLING_PRICE_CHANGE_REQUIRES_CONTRACT_FLOW', 'Motor ainda permite reprecificação silenciosa.');
+requireText(adminServer, "BILLING_EXEMPTION_REMOVAL_REQUIRES_CONTRACT", 'Motor remove VIP sem contrato.');
+forbidText(store.toLowerCase(), 'woovi', 'Billing R1 não deve depender da Woovi.');
+forbidText(store.toLowerCase(), 'asaas', 'Billing R1 não deve depender do Asaas.');
 
 requireText(sharedProvisioning, 'grantTrial: boolean', 'Provisionamento não possui opção explícita de trial.');
 requireText(modal + primaryCreatePanel, 'Período de teste', 'Cadastro de setor não expõe a opção de trial.');
