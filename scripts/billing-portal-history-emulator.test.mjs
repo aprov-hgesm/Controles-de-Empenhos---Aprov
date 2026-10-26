@@ -53,7 +53,7 @@ async function queryHistory(id) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(query),
   });
-  assert.equal(response.ok, true, 'Firestore emulator rejected the structured query: ' + (await response.text()));
+  if (!response.ok) throw new Error('Firestore emulator rejected the structured query: ' + (await response.text()));
   const rows = await response.json();
   return rows.filter((row) => row.document).map((row) => ({
     name: decodeURIComponent(row.document.name.split('/').at(-1)),
