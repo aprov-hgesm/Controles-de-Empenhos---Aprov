@@ -54,8 +54,8 @@ function listClientSources(directory) {
 }
 
 test('P0: varredura completa do frontend bloqueia navegação RSC vulnerável', () => {
-  const files = ['app', 'components', 'features', 'hooks'].flatMap(listClientSources);
-  assert.ok(files.length >= 200, 'A cobertura de fontes não pode regredir silenciosamente.');
+  const files = ['app', 'components', 'features', 'hooks', 'lib'].flatMap(listClientSources);
+  assert.ok(files.length >= 350, 'A cobertura de fontes não pode regredir silenciosamente.');
   for (const file of files) {
     const content = read(file);
     assert.doesNotMatch(content, /router\.(?:push|replace)\s*\(/, file + ': use transição de documento entre rotas.');
