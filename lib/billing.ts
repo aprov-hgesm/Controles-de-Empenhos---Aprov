@@ -79,6 +79,14 @@ export interface BillingCycle {
   amountCents: number;
   dueDate: string;
   status: BillingCycleStatus;
+  /** Deterministic provider intent persisted before the outbound checkout call. */
+  checkoutOrderNsu?: string;
+  checkoutUrl?: string;
+  checkoutValidUntil?: string;
+  checkoutCreatedAt?: string;
+  checkoutAmountCents?: number;
+  checkoutState?: 'prepared' | 'linked' | 'settled';
+  settlementLedgerId?: string;
   confirmedAt: string;
   confirmedBy: string;
   note: string;
