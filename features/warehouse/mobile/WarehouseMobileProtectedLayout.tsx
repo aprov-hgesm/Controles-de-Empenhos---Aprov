@@ -21,7 +21,7 @@ function FounderOnlyMobileSurface({
 
   useEffect(() => {
     if (!allowed) {
-      window.location.replace('/');
+      window.location.replace('/login');
     }
   }, [allowed]);
 

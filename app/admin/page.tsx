@@ -66,13 +66,13 @@ export default function PlatformAdminPage() {
 
     if (!user) {
       resetActiveProfileMode();
-      window.location.replace('/');
+      window.location.replace('/login');
       return;
     }
 
     if (context.status !== 'platformAdmin') {
       setActiveProfileMode('sector');
-      window.location.replace('/');
+      window.location.replace('/login');
     }
   }, [context.status, loading, user]);
 
@@ -102,7 +102,7 @@ export default function PlatformAdminPage() {
   const handleLogout = async () => {
     resetActiveProfileMode();
     await signOut(auth);
-    window.location.replace('/');
+    window.location.replace('/login');
   };
 
   return (
