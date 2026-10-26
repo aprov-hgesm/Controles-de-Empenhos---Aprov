@@ -13,6 +13,7 @@ import type {
 import type { Workspace } from '../lib/platformIdentity';
 import {
   grantBillingTrial,
+  offerProgressiveBilling,
   setBillingCommercialStatus,
   setBillingExemption,
   setBillingCycleStatus,
@@ -74,6 +75,13 @@ export function usePlatformAdminBilling(
     return () => { active = false; };
   }, [adminEmail]);
 
+  // Passive inbox refresh: no automatic mutations, client data is not cached indefinitely.
+  useEffect(() => {
+    if (!adminEmail) return;
+    const id = setInterval(() => { void refresh().catch(() => undefined); }, 60_000);
+    return () => clearInterval(id);
+  }, [adminEmail, refresh]);
+
   const accountsByWorkspace = useMemo(
     () => new Map(accounts.map((account) => [account.workspaceId, account])),
     [accounts]
@@ -128,6 +136,11 @@ export function usePlatformAdminBilling(
       `trial:${workspace.id}`,
       () => grantBillingTrial(workspace, adminEmail, trialDays)
     );
+  }, [adminEmail, runMutation]);
+
+  const offerRamp = useCallback((workspace: Workspace) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    return runMutation(`offer-ramp:${workspace.id}`, () => offerProgressiveBilling(workspace, adminEmail));
   }, [adminEmail, runMutation]);
 
   const setExemption = useCallback((
@@ -187,6 +200,7 @@ export function usePlatformAdminBilling(
     mutatingKey,
     updateConfig,
     grantTrial,
+    offerRamp,
     setExemption,
     setStatus,
     setCycleStatus,
