@@ -38,6 +38,7 @@ interface AdminBillingPanelProps {
   error: string | null;
   mutatingKey: string | null;
   onUpdateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
+  onPrepareEnforcement: () => Promise<unknown>;
   onGrantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
   onOfferRamp: (workspace: Workspace) => Promise<unknown>;
   onSetExemption: (workspace: Workspace, exempt: boolean) => Promise<unknown>;
@@ -103,6 +104,7 @@ export function AdminBillingPanel({
   error,
   mutatingKey,
   onUpdateConfig,
+  onPrepareEnforcement,
   onGrantTrial,
   onOfferRamp,
   onSetExemption,
@@ -217,8 +219,8 @@ export function AdminBillingPanel({
       paymentLinkUrl,
       supportContact,
       holidayDates: parsedHolidays,
-      billingMode: 'observe',
-      requirePayment: false,
+      billingMode: config.billingMode,
+      requirePayment: config.requirePayment,
     });
     setEditingConfig(false);
   };
