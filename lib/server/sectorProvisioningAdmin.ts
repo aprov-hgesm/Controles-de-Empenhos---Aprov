@@ -921,10 +921,15 @@ async function createSectorDirectory(
   }
   const ugIndexPath = `platformUgIndex/${ug}`;
   const billingPath = `billingAccounts/${result.workspace.id}`;
+  // Only newly provisioned customers enter the individual progressive offer.
+  // The sector must accept the complete schedule before any cycle is issued.
   const billingAccount = buildInitialBillingAccount(
     result.workspace,
     founder.email,
-    grantTrial
+    grantTrial,
+    undefined,
+    undefined,
+    true
   );
 
   try {
