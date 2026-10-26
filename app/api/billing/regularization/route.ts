@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 
 import firebaseConfig from '../../../../firebase-applet-config.json';
-import { EMPROVEX_FULL_PLAN_PRICE_CENTS } from '../../../../lib/billing';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
 
 export const runtime = 'nodejs';
@@ -21,7 +20,6 @@ interface FirestoreDocumentPayload {
 
 interface PublicRegularizationConfig {
   planName: 'Plano Completo EMPROVEX';
-  monthlyPriceCents: number;
   currency: 'BRL';
   dueBusinessDay: 5;
   gracePeriodDays: number;
@@ -80,7 +78,6 @@ async function loadPublicRegularizationConfig(): Promise<PublicRegularizationCon
   const fields = payload.fields;
   const value: PublicRegularizationConfig = {
     planName: 'Plano Completo EMPROVEX',
-    monthlyPriceCents: integerField(fields, 'monthlyPriceCents', EMPROVEX_FULL_PLAN_PRICE_CENTS),
     currency: 'BRL',
     dueBusinessDay: 5,
     gracePeriodDays: integerField(fields, 'gracePeriodDays', 10),
