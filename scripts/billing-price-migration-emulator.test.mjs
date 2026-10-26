@@ -82,6 +82,10 @@ async function main() {
   const passwordUser = (await signInWithEmailAndPassword(password.auth, OWNER, PASSWORD)).user;
   assert.equal((await passwordUser.getIdTokenResult(true)).signInProvider, 'password');
   await linkWithCredential(passwordUser, google('owner', OWNER));
+  // Linking Google switches the active sign-in provider. Sign in with the password
+  // again so this session actually exercises firebase.sign_in_provider=password.
+  await signInWithEmailAndPassword(password.auth, OWNER, PASSWORD);
+  assert.equal((await password.auth.currentUser.getIdTokenResult(true)).signInProvider, 'password');
   const founder = makeSession('founder-google');
   const founderUser = (await signInWithCredential(founder.auth, google('owner', OWNER))).user;
   const token = await founderUser.getIdTokenResult(true);
