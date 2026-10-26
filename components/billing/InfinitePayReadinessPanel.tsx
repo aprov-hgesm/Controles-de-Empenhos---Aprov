@@ -96,10 +96,34 @@ export function InfinitePayReadinessPanel({
   const [rampError, setRampError] = useState('');
   const [realCheckoutUrl, setRealCheckoutUrl] = useState('');
   const [realCheckoutAmount, setRealCheckoutAmount] = useState<number | null>(null);
+  const [currentQuotedCents, setCurrentQuotedCents] = useState<number | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
+  // Live individual quote, not the last persisted account amount or the
+  // historical R$50 global configuration. Only the tenant's own Firebase
+  // token can request this figure; future tiers remain in contract consent.
+  useEffect(() => {
+    if (context.status !== 'sector' || !auth.currentUser) {
+      setCurrentQuotedCents(null);
+      return;
+    }
+    let active = true;
+    void auth.currentUser.getIdToken().then(token =>
+      fetch('/api/billing/portal?view=access', {
+        headers: { authorization: 'Bearer ' + token }, cache: 'no-store',
+      }),
+    ).then(async response => {
+      if (!response.ok) return;
+      const data = await response.json() as { amountCents?: number };
+      if (active && Number.isSafeInteger(data.amountCents) && (data.amountCents ?? 0) >= 0)
+        setCurrentQuotedCents(data.amountCents!);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [context.status, context.status === 'sector' ? context.workspaceId : null,
+      account?.monthlyPriceCents, activeTab]);
+
 
   useEffect(() => {
     // The InfinitePay redirect alone is NEVER proof of payment.
@@ -276,7 +300,7 @@ export function InfinitePayReadinessPanel({
               <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
                   account.pricingPolicyId === 'emprovex_individual_ramp_v1'
-                    ? `Valor registrado para a conta: ${money(account.monthlyPriceCents)}/mês.`
+                    ? `Valor registrado para a conta: ${money(currentQuotedCents ?? account.monthlyPriceCents)}/mês.`
                     : `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
