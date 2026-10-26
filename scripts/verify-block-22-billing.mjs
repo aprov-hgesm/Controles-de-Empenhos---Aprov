@@ -24,6 +24,9 @@ const adminView = read('components/admin/PlatformAdminView.tsx');
 const adminPanel = read('components/admin/AdminBillingPanel.tsx');
 const header = read('components/layout/AppHeader.tsx');
 const regularizationPage = read('app/regularizacao/page.tsx');
+const regularizationTabs = read('lib/billing/billingPortalTabs.ts');
+const regularizationPanel = read('components/billing/InfinitePayReadinessPanel.tsx');
+const regularizationShell = read('components/billing/BillingPortalShell.tsx');
 const regularizationRoute = read('app/api/billing/regularization/route.ts');
 const platformAccess = read('lib/platformAccess.ts');
 const workspaceContext = read('lib/workspaceContext.ts');
@@ -71,7 +74,18 @@ requireText(header, 'billing-trial-badge', 'Usuário externo não recebe indica�
 requireText(header, 'billing-active-badge', 'Usuário regular não recebe indicação comercial compreensível.');
 requireText(header, 'billing-exempt-badge', 'VIP/isento não recebe indicação comercial compreensível.');
 requireText(header, 'billing-regularization-link', 'Usuário pendente não recebe caminho simples de regularização.');
-requireText(regularizationPage, 'Regularização da assinatura', 'Página pública de regularização não existe.');
+// The R1 portal renders a selected tab title instead of a static legacy heading.
+// Protect actual navigability, workspace-scoped content and contract privacy.
+requireText(regularizationPage, '<BillingPortalShell activeTab=', 'Regularização não utiliza o shell de assinaturas autenticado.');
+requireText(regularizationPage, 'data-testid="billing-active-panel"', 'Regularização não possui um painel de aba independente.');
+requireText(regularizationTabs, 'Minha assinatura', 'A aba pública Minha assinatura não existe.');
+requireText(regularizationTabs, 'Formas de pagamento', 'A aba Formas de pagamento não existe.');
+requireText(regularizationShell, 'role="tab"', 'Navegação do portal não oferece abas reais.');
+requireText(regularizationPanel, 'useWorkspaceBillingAccount(context)', 'Painel não consulta apenas o workspace autenticado.');
+for (const source of [regularizationPage, regularizationTabs, regularizationPanel, regularizationShell]) {
+  forbidText(source, 'Escalonamento previsto para novos clientes', 'Escalonamento futuro não pode aparecer na área do cliente.');
+  forbidText(source, '13º em diante', 'Faixas de reajuste futuro não podem aparecer no bundle cliente.');
+}
 requireText(regularizationPage, 'Nenhum dado de cartão', 'Página de regularização não explica o processamento externo.');
 requireText(regularizationRoute, 'EMPROVEX_FULL_PLAN_PRICE_CENTS', 'API pública não fixa o preço canônico do Plano Completo.');
 requireText(regularizationRoute, 'publicHttpsUrl', 'API pública não filtra Link de Pagamento para HTTPS.');
