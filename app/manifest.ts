@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'EMPROVEX',
     description: 'Plataforma integrada de gestão de empenhos, provimento logístico e execução financeira.',
     lang: 'pt-BR',
-    start_url: '/',
+    start_url: '/login',
     scope: '/',
     display: 'standalone',
     background_color: '#f8f9ff',
