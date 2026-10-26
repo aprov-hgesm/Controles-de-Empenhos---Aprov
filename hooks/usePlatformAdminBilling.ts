@@ -14,6 +14,7 @@ import type { Workspace } from '../lib/platformIdentity';
 import {
   grantBillingTrial,
   offerProgressiveBilling,
+  prepareBillingEnforcement,
   setBillingCommercialStatus,
   setBillingExemption,
   setBillingCycleStatus,
@@ -138,6 +139,11 @@ export function usePlatformAdminBilling(
     );
   }, [adminEmail, runMutation]);
 
+  const prepareEnforcement = useCallback(() => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    return runMutation('prepare-enforcement', () => prepareBillingEnforcement(adminEmail));
+  }, [adminEmail, runMutation]);
+
   const offerRamp = useCallback((workspace: Workspace) => {
     if (!adminEmail) throw new Error('Sessão administrativa inválida.');
     return runMutation(`offer-ramp:${workspace.id}`, () => offerProgressiveBilling(workspace, adminEmail));
@@ -201,6 +207,7 @@ export function usePlatformAdminBilling(
     updateConfig,
     grantTrial,
     offerRamp,
+    prepareEnforcement,
     setExemption,
     setStatus,
     setCycleStatus,
