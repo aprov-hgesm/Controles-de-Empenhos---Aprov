@@ -168,6 +168,7 @@ interface AdminBillingViewState {
   updateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   grantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
   offerRamp: (workspace: Workspace) => Promise<unknown>;
+  prepareEnforcement: () => Promise<unknown>;
   setExemption: (
     workspace: Workspace,
     exempt: boolean
@@ -917,6 +918,7 @@ export function PlatformAdminView({
             error={billing.error}
             mutatingKey={billing.mutatingKey}
             onUpdateConfig={billing.updateConfig}
+            onPrepareEnforcement={billing.prepareEnforcement}
             onGrantTrial={billing.grantTrial}
             onSetExemption={billing.setExemption}
             onSetStatus={billing.setStatus}
