@@ -21,13 +21,6 @@ interface RegularizationInfo {
   supportContact: string;
 }
 
-function money(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(cents / 100);
-}
-
 const PIX_KEY_LABEL: Record<string, string> = {
   cpf: 'CPF',
   cnpj: 'CNPJ',
