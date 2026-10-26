@@ -22,6 +22,7 @@ import { LegalAcceptanceGate } from '../../components/legal/LegalAcceptanceGate'
 import type { OperationalActiveTab } from '../../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
+import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
 const OperationalWorkspace = lazy(() =>
   import('../../features/operational/components/OperationalWorkspace').then((module) => ({
@@ -33,6 +34,7 @@ export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [billingAccessState, setBillingAccessState] = useState<'checking' | 'allowed'>('checking');
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -67,6 +69,29 @@ export default function Home() {
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = operationalData;
+
+  useEffect(() => {
+    let active = true;
+    if (!user || loadingAuth) {
+      setBillingAccessState('checking');
+      return () => { active = false; };
+    }
+    if (workspaceContext.status !== 'sector') {
+      setBillingAccessState('allowed');
+      return () => { active = false; };
+    }
+    setBillingAccessState('checking');
+    void checkSectorBillingAccess(user, workspaceContext)
+      .then((decision) => {
+        if (!active) return;
+        if (!decision.allowed) { showBillingRequired(); return; }
+        setBillingAccessState('allowed');
+      })
+      .catch(() => {
+        if (active) showBillingRequired();
+      });
+    return () => { active = false; };
+  }, [user, loadingAuth, workspaceContext.status, workspaceContext.workspaceId]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
@@ -203,6 +228,11 @@ export default function Home() {
         onFounderLogin={handleFounderLogin}
       />
     );
+  }
+
+  // No operational surface may render before a server billing decision.
+  if (billingAccessState !== 'allowed') {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
   const operationalSurface = (
