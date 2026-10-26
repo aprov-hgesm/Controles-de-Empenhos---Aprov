@@ -267,7 +267,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       throw new BillingAdminError('BILLING_INVALID_INPUT', 400);
     const allowed = ['billingMode','requirePayment','monthlyPriceCents','defaultTrialDays','gracePeriodDays','pixKey','pixKeyType','pixRecipientName','paymentLinkUrl','supportContact','holidayDates'];
     if (Object.keys(input).some(k => !allowed.includes(k))) throw new BillingAdminError('BILLING_INVALID_INPUT', 400);
-    return transaction(token, [CONFIG_PATH], docs => {
+    const result = await transaction(token, [CONFIG_PATH], docs => {
       const current = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
       if (!current) throw new BillingAdminError('BILLING_CONFIG_NOT_PROVISIONED', 409);
       // Legacy R$50 stays R$50. Never change contractual/global price implicitly.
@@ -316,6 +316,21 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
           { monthlyPriceCents: current.monthlyPriceCents }, { monthlyPriceCents: updated.monthlyPriceCents }),
       ] };
     });
+    if ((result as PlatformBillingConfig).billingMode === 'enforce'
+      && (result as PlatformBillingConfig).requirePayment === true) {
+      // Cutover is recoverable: repeatable IAM mirror writes for every enrolled
+      // sector, without modifying VIPs, existing contracts or Firestore prices.
+      const enrolled = (await list(token, 'billingAccounts') as BillingAccount[])
+        .filter(a => a.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+          && a.status !== 'exempt' && !a.exemptionSource);
+      for (const account of enrolled) {
+        const workspace = existingWorkspace(await get(token, 'workspaces/' + account.workspaceId), account.workspaceId);
+        if (workspace.billingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID)
+          throw new BillingAdminError('BILLING_WORKSPACE_NOT_PREPARED', 409);
+        await syncWarehouseBillingMirror(token, workspace, true);
+      }
+    }
+    return result;
   }
   if (!('workspaceId' in command)) throw new BillingAdminError('BILLING_INVALID_WORKSPACE', 400);
   validWorkspaceId(command.workspaceId);
