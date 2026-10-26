@@ -64,6 +64,10 @@ export interface BillingAccount {
   grace48Until?: string;
   grace48ReviewStatus?: 'pending' | 'confirmed';
   pricingTermsAcceptedAt?: string;
+  pricingTermsVersion?: string;
+  refundReviewReferenceMonth?: string;
+  refundReviewStatus?: 'pending' | 'resolved';
+  refundReviewCreatedAt?: string;
   exemptionSource?: BillingExemptionSource;
   legacyVipCutoff?: string;
   createdAt: string;
