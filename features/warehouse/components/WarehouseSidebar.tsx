@@ -118,7 +118,7 @@ export function WarehouseSidebar({
             </div>
 
             <Link
-              href="/"
+              href="/login"
               className="emprovex-sidebar-nav-item"
               onClick={onClose}
               data-testid="warehouse-back-emprovex"

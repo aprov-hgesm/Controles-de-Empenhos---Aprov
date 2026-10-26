@@ -125,7 +125,7 @@ export function WarehouseModuleShell({
     resetActiveProfileMode();
     clearResolvedWorkspaceContext();
     await signOut(auth);
-    window.location.assign('/');
+    window.location.assign('/login');
   };
 
   return (

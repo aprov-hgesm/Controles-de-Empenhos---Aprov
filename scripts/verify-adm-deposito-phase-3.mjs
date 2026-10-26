@@ -70,7 +70,7 @@ for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
   'canAccessWarehouseModule(context)',
   "fetch('/api/central-depositos/status'",
-  "window.location.replace('/')",
+  "window.location.replace('/login')",
 ]) {
   requireText(gate, marker, `Gate multi-tenant não preservado no layout: ${marker}`);
 }

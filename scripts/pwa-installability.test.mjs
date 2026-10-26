@@ -71,3 +71,46 @@ test('R16: a vitrine substitui a rota raiz antes dos arquivos sem quebrar login 
   assert.match(institucional, /public\/institucional\/content\.html/);
   assert.match(adminPanel, /router\.replace\('\/login'\)/);
 });
+
+
+test('R16.1: retornos de admin, deposito, mobile e assinaturas abrem plataforma, nao vitrine', () => {
+  const files = [
+    'features/warehouse/components/WarehouseSidebar.tsx',
+    'features/warehouse/components/WarehouseModuleShell.tsx',
+    'features/warehouse/components/WarehouseProtectedSurface.tsx',
+    'features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx',
+    'app/admin/page.tsx',
+    'components/billing/BillingPortalShell.tsx',
+  ];
+  for (const file of files) {
+    const content = source(file);
+    assert.doesNotMatch(content, /href=["']\/["']|window\.location\.(?:assign|replace)\(["']\/["']\)/, file);
+    assert.match(content, /\/login/, file);
+  }
+  assert.match(source('components/admin/PlatformAdminView.tsx'), /router\.replace\('\/login'\)/);
+  const mobileHome = source('features/warehouse/mobile/WarehouseMobileHome.tsx');
+  assert.match(mobileHome, /data-testid="operator-mobile-back-emprovex"/);
+  assert.match(mobileHome, /href="\/login"/);
+  assert.match(source('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/operador-movel"/);
+});
+
+test('R16.1: o site explica teste, preco por setor e contratacao sem cartao', () => {
+  const html = source('public/institucional/content.html');
+  const css = source('public/institucional/site.css');
+  assert.match(html, /R\$ 29,90/);
+  assert.match(html, /setor \(workspace\)/);
+  assert.match(html, /O teste de 30 dias é gratuito\?/);
+  assert.match(html, /Preciso cadastrar cartão\?/);
+  assert.match(html, /E ao final dos 30 dias\?/);
+  assert.match(html, /Quantas pessoas do setor podem usar\?/);
+  assert.match(html, /depósitos em 3D/);
+  assert.match(html, /value-trial-callout/);
+  for (const tier of ['29,90', '39,90', '49,90', '59,90', '69,90']) {
+    assert.match(html, new RegExp('R\\$ ' + tier.replace(',', '\\,')));
+  }
+  assert.match(html, /três meses de assinatura paga/);
+  assert.match(html, /30 dias de teste não entram nessa contagem/);
+  assert.match(html, /href="#acesso">Solicitar meu teste acompanhado/);
+  assert.match(css, /\.value-faq-item/);
+  assert.match(css, /prefers-reduced-motion/);
+});
