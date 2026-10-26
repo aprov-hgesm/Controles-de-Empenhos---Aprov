@@ -7,6 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
+  paidServicePeriod,
   EMPROVEX_NEW_CUSTOMER_RAMP_ID,
   buildPlatformBillingConfig, type BillingAccount, type BillingAccountStatus,
   type BillingCycle, type BillingCycleStatus, type PlatformBillingConfig,
@@ -80,7 +81,8 @@ function documentName(path: string): string {
     || /^billingCycles\/[a-z0-9][a-z0-9-]{2,47}__\d{4}-\d{2}$/.test(path)
     || /^workspaces\/[a-z0-9][a-z0-9-]{2,47}$/.test(path)
     || /^platformAuditEvents\/[a-f0-9-]{36}$/.test(path)
-    || /^billingPaymentLedger\/infinitepay_[a-f0-9]{64}$/.test(path)) return `${DOCUMENT_ROOT}/${path}`;
+    || /^billingPaymentLedger\/infinitepay_[a-f0-9]{64}$/.test(path)
+    || /^billingPaymentIntents\/epx-[0-9]{6}-[a-f0-9]{24}$/.test(path)) return `${DOCUMENT_ROOT}/${path}`;
   throw new BillingAdminError('BILLING_PATH_REJECTED', 400);
 }
 async function rest(token: string, path: string, method: 'GET' | 'POST', body?: unknown) {
@@ -316,6 +318,11 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const days = clampedDays(command.days, 30);
       const updated: BillingAccount = { ...account, status: 'trial', trialGranted: true,
         trialStartedAt: now, trialEndsAt: addUtcDays(now, days).toISOString(),
+        ...(account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+          && !account.lastBilledReferenceMonth ? {
+            firstPaidAt: addUtcDays(now, days).toISOString(),
+            firstPaidReferenceMonth: getReferenceMonth(addUtcDays(now, days)),
+          } : {}),
         paymentRequired: false, updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
@@ -383,7 +390,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         || command.month >= account.lastBilledReferenceMonth);
       const nextAccount: BillingAccount = { ...account, status,
         ...(command.status === 'paid' || command.status === 'waived'
-          ? { grace48ReviewStatus: 'confirmed' as const }
+          ? (command.month === account.grace48ReferenceMonth
+            ? { grace48ReviewStatus: 'confirmed' as const } : {})
           : {}),
         monthlyPriceCents: advancesRamp ? priceCents : account.monthlyPriceCents,
         ...(advancesRamp ? { lastBilledReferenceMonth: command.month } : {}),
@@ -454,24 +462,38 @@ export async function acceptNewCustomerRamp(
 export async function readSectorBillingAccess(workspaceId: string, email: string) {
   validWorkspaceId(workspaceId);
   const token = await getGoogleAccessToken();
-  const [workspaceDoc, accountDoc] = await Promise.all([
+  const [workspaceDoc, accountDoc, configDoc] = await Promise.all([
     get(token, 'workspaces/' + workspaceId),
     get(token, 'billingAccounts/' + workspaceId),
+    get(token, CONFIG_PATH),
   ]);
   const workspace = existingWorkspace(workspaceDoc, workspaceId);
-  const account = existingAccount(accountDoc);
-  assertAccountWorkspace(account, workspace);
   if (workspace.authorizedEmail !== email)
     throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
-  const month = getReferenceMonth();
-  const cycleDoc = await get(token, 'billingCycles/' + billingCycleId(workspaceId, month));
-  const cycle = cycleDoc?.value as BillingCycle | undefined;
-  const decision = decideBillingAccess(account, cycle ?? null);
-  // Do not disclose future commercial tiers to the sector.
-  return { ...decision, amountCents: account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
-    ? (quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
-        referenceMonth: month }).amountCents ?? null)
-    : decision.amountCents };
+  const account = accountDoc?.value as BillingAccount | undefined;
+  if (account) assertAccountWorkspace(account, workspace);
+  const live = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
+    && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+    && configDoc?.value?.billingMode === 'enforce'
+    && configDoc?.value?.requirePayment === true;
+  const period = account ? paidServicePeriod(account) : null;
+  const month = period?.referenceMonth || getReferenceMonth();
+  const cycleDoc = account && live
+    ? await get(token, 'billingCycles/' + billingCycleId(workspaceId, month)) : null;
+  const decision = decideBillingAccess(account || null, (cycleDoc?.value as BillingCycle | undefined) ?? null);
+  const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
+    ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
+        referenceMonth: period.referenceMonth }) : null;
+  return {
+    ...decision,
+    allowed: live ? decision.allowed : true,
+    reason: live ? decision.reason : 'observe',
+    requiresPayment: live ? decision.requiresPayment : false,
+    canRequestGrace48: live ? decision.canRequestGrace48 : false,
+    enforcementEnabled: live,
+    periodEndsAt: period?.endsAt || null,
+    amountCents: quote?.allowed ? quote.amountCents : decision.amountCents,
+  };
 }
 
 /**
@@ -483,7 +505,9 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   if (actor.email !== email || workspaceId === HGESM_WORKSPACE_ID)
     throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const token = await getGoogleAccessToken();
-  const month = getReferenceMonth();
+  const accountDoc = await get(token, 'billingAccounts/' + workspaceId);
+  const accountForPeriod = existingAccount(accountDoc);
+  const month = paidServicePeriod(accountForPeriod)?.referenceMonth || getReferenceMonth();
   const wp = 'workspaces/' + workspaceId;
   const ap = 'billingAccounts/' + workspaceId;
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
@@ -538,12 +562,16 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   if (actor.email !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const orderIdSecret = requireCheckoutConfig();
   const token = await getGoogleAccessToken();
-  const month = getReferenceMonth();
+  const persisted = existingAccount(await get(token, 'billingAccounts/' + workspaceId));
+  const period = paidServicePeriod(persisted);
+  if (!period) throw new BillingAdminError('BILLING_TRIAL_ACTIVE', 409);
+  const month = period.referenceMonth;
   const wp = 'workspaces/' + workspaceId;
   const ap = 'billingAccounts/' + workspaceId;
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
   const orderNsu = makeOrderNsu({ workspaceId, referenceMonth: month, orderIdSecret });
-  const prepared = await transaction(token, [wp, ap, cp], docs => {
+  const intentPath = 'billingPaymentIntents/' + orderNsu;
+  const prepared = await transaction(token, [wp, ap, cp, intentPath], docs => {
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const account = existingAccount(docs.get(ap) ?? null);
     assertAccountWorkspace(account, workspace);
@@ -562,6 +590,10 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     if (!quote.allowed) throw new BillingAdminError('BILLING_REFERENCE_NOT_BILLABLE', 409);
     const amount = quote.amountCents as number;
     const previous = docs.get(cp)?.value as BillingCycle | undefined;
+    const previousIntent = docs.get(intentPath)?.value as Record<string, unknown> | undefined;
+    if (previousIntent && (previousIntent.workspaceId !== workspaceId
+      || previousIntent.referenceMonth !== month))
+      throw new BillingAdminError('BILLING_PROVIDER_ORDER_REUSED', 409);
     if (previous && (previous.status === 'paid' || previous.status === 'waived'))
       throw new BillingAdminError('BILLING_CYCLE_ALREADY_SETTLED', 409);
     if (previous && previous.amountCents !== amount)
@@ -597,6 +629,8 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       checkoutUrl: '', alreadyLinked: false,
     }, updates: [
       { path: cp, data: updated },
+      { path: intentPath, data: { orderNsu, workspaceId, referenceMonth: month,
+        amountCents: amount, createdAt: now, status: 'prepared' } },
       audit(actor, 'billing.payment_reopen', 'billing_cycle', updated.id, workspaceId, workspace.ug || null,
         { status: previous?.status ?? null }, { status: 'pending', amountCents: amount },
         { provider: 'infinitepay', checkoutPrepared: true, orderNsu }),
