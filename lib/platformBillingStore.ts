@@ -85,3 +85,8 @@ export async function setBillingCycleStatus(
   assertFounderActor(adminEmail);
   return billingRequest<BillingCycle>({ action: 'cycle', workspaceId: workspace.id, month: referenceMonth, status, note });
 }
+
+export async function offerProgressiveBilling(workspace: Workspace, adminEmail: string): Promise<BillingAccount> {
+  assertFounderActor(adminEmail);
+  return billingRequest<BillingAccount>({ action: 'offer-ramp', workspaceId: workspace.id });
+}
