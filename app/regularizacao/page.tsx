@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, Copy, ExternalLink, Loader2, ShieldCheck, WalletCards } from 'lucide-react';
 import { InfinitePayReadinessPanel } from '../../components/billing/InfinitePayReadinessPanel';
 import { BillingPortalShell } from '../../components/billing/BillingPortalShell';
+import { BillingReturnButton } from '../../components/billing/BillingReturnButton';
 import { BILLING_PORTAL_TABS, type BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 interface RegularizationInfo {
@@ -296,7 +297,7 @@ export default function RegularizationPage() {
         </div>
 
         <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
-          <Link href="/" className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</Link>
+          <BillingReturnButton className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</BillingReturnButton>
           <div className="flex gap-4">
             <Link href="/terms" className="hover:text-slate-800">Termos de Serviço</Link>
             <Link href="/privacy" className="hover:text-slate-300">Privacidade</Link>
