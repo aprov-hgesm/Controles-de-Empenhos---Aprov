@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { getIdToken, onAuthStateChanged } from 'firebase/auth';
 import {
   ArrowUpRight, BadgeCheck, Clock3, CreditCard,
-  FileCheck2, LockKeyhole, ShieldCheck, UserRound,
+  FileCheck2, ShieldCheck, UserRound,
 } from 'lucide-react';
 
 import { auth } from '../../lib/firebase';
