@@ -236,19 +236,17 @@ export function AdminBillingPanel({
 
   return (
     <div data-testid="admin-billing-panel" className="space-y-5">
-      {accounts.some((account) => account.grace48ReviewStatus === 'pending'
-        && account.grace48ReferenceMonth === new Date().toISOString().slice(0, 7)) && (
+      {accounts.some((account) => account.grace48ReviewStatus === 'pending' || account.refundReviewStatus === 'pending') && (
         <section role="status" className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-5 text-amber-100">
           <h3 className="font-extrabold">Solicitações de acesso temporário de 48 horas</h3>
           <p className="mt-2 text-xs leading-relaxed text-amber-100/80">
-            Há setores usando ou aguardando a janela única de 48 horas sem confirmação de pagamento.
+            Há setores usando ou aguardando a janela de 48 horas, ou pagamentos com estorno/cancelamento sinalizados para revisão.
             Verifique o valor efetivamente recebido na InfinitePay ou na conta bancária antes de clicar em
             Confirmar pagamento. A confirmação administrativa libera a competência atual; a solicitação sozinha
             não registra quitação.
           </p>
           <div className="mt-3 space-y-2">
-            {accounts.filter((account) => account.grace48ReviewStatus === 'pending'
-              && account.grace48ReferenceMonth === new Date().toISOString().slice(0, 7)).map(account => {
+            {accounts.filter((account) => account.grace48ReviewStatus === 'pending' || account.refundReviewStatus === 'pending').map(account => {
               const workspace = workspaceMap.get(account.workspaceId);
               const month = account.grace48ReferenceMonth || '';
               const key = `cycle:${account.workspaceId}:${month}`;
@@ -259,7 +257,7 @@ export function AdminBillingPanel({
                 <div>
                   <p className="text-sm font-bold">{workspace?.name || account.workspaceId}</p>
                   <p className="text-[11px] text-amber-100/70">
-                    UG {account.ug} · Solicitado {dateLabel(account.grace48RequestedAt)} ·
+                    UG {account.ug} · {account.refundReviewStatus === 'pending' ? `Revisar pagamento ou estorno ${account.refundReviewReferenceMonth || ''} · ` : ''}Competência {month} · Solicitado {dateLabel(account.grace48RequestedAt)} ·
                     Liberação até {dateLabel(account.grace48Until)}
                   </p>
                 </div>
