@@ -423,4 +423,3 @@ body{background:#031127;font-size:15px}
 .value-faq-item dd{margin:5px 0 0;font-size:12px;line-height:1.65;color:#516b7f}
 @media(max-width:760px){.value{padding:75px 0}.value-trial-callout{padding:17px 18px}.value-faq-item{padding:13px 0}.value-trial-callout a{width:100%;justify-content:center;text-align:center}}
 @media(prefers-reduced-motion:reduce){.value-trial-callout a{transition:none}}
-
