@@ -5,6 +5,9 @@ import {
   verifyFirebaseRequest,
 } from '../../../../lib/server/firebaseFounderAuth';
 import { parseEmpenhoPdfBytes } from '../../../../lib/server/empenhoPdfParser';
+import { HGESM_SECTOR_EMAIL } from '../../../../lib/hgesmWorkspace';
+import { resolveBillingPortalSession } from '../../../../lib/server/billingPortalIdentity';
+import { readSectorBillingAccess } from '../../../../lib/server/platformBillingAdminStore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +16,14 @@ const MAX_FILE_SIZE = 12 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
-    await verifyFirebaseRequest(request.headers.get('authorization'));
+    const identity = await verifyFirebaseRequest(request.headers.get('authorization'));
+    if (identity.email !== HGESM_SECTOR_EMAIL) {
+      const sector = await resolveBillingPortalSession(request);
+      const entitlement = await readSectorBillingAccess(sector.workspace.id, sector.email);
+      if (!entitlement.allowed) {
+        return NextResponse.json({ error: 'BILLING_PAYMENT_REQUIRED' }, { status: 403 });
+      }
+    }
 
     const formData = await request.formData();
     const file = formData.get('file');
