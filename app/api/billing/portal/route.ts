@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveBillingPortalSession, BillingPortalFailure } from '../../../../lib/server/billingPortalIdentity';
 import { pilotEnabledFor } from '../../../../lib/server/payments/infinitepayPortalPilot.mjs';
 import { readBillingCycleHistory } from '../../../../lib/server/billingRecentCycles';
+import { acceptNewCustomerRamp, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
 
 import { callInfinitePay } from '../../../../lib/server/payments/infinitepayCheckout.mjs';
 import {
@@ -30,6 +31,9 @@ export async function GET(request: Request) {
       accountExempt: account?.status === 'exempt',
       accountMonthlyCents: account?.monthlyPriceCents ?? null,
       trialEndsAt: account?.trialEndsAt || null,
+      pricingPolicyId: account?.pricingPolicyId || null,
+      firstPaidReferenceMonth: account?.firstPaidReferenceMonth || null,
+      pricingTermsAcceptedAt: account?.pricingTermsAcceptedAt || null,
       history,
       pilot: {
         enabled: Boolean(pilotEnabledFor({ email, workspaceId: workspace.id, env: process.env })),
@@ -125,8 +129,38 @@ async function verifyPilotCheckout(request: Request) {
 }
 
 
+
+/**
+ * Authenticated explicit agreement of the sector to all 5 price tiers.
+ * No checkout, charge, legacy migration, or cross-workspace selection.
+ */
+async function acceptRampTerms(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    if (request.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/json')
+      return NextResponse.json({ code: 'BILLING_ACCEPTANCE_JSON_REQUIRED' }, { status: 400 });
+    const raw = await request.text();
+    if (raw.length > 300) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let data: Record<string, unknown>;
+    try { data = JSON.parse(raw); }
+    catch { return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 }); }
+    if (data.acceptFullPricingSchedule !== true
+      || data.policyId !== 'emprovex_individual_ramp_v1')
+      return NextResponse.json({ code: 'BILLING_EXPLICIT_CONSENT_REQUIRED' }, { status: 400 });
+    const result = await acceptNewCustomerRamp({ uid, email }, workspace.id, email);
+    return NextResponse.json({ ok: true, ...result }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_ACCEPTANCE_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
 export async function POST(request: Request) {
   const action = new URL(request.url).searchParams.get('action');
+  if (action === 'accept-pricing') return acceptRampTerms(request);
   if (action === 'create-pilot') return createPilotCheckout(request);
   if (action === 'verify-pilot') return verifyPilotCheckout(request);
   return NextResponse.json({ code: 'BILLING_OPERATION_UNKNOWN' }, {
