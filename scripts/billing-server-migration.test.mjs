@@ -199,3 +199,55 @@ test('no implicit client Firestore traffic or auto migration code',()=>{
   assert.doesNotMatch(hook,/ensurePlatformBillingFoundation|subscribePlatformBilling/);
   assert.match(bridge,/\/api\/admin\/billing/);
 });
+
+const mockFounderError = class FounderAuthError extends Error {
+  constructor(status) { super('mocked founder auth rejected'); this.status=status; }
+};
+const route = loadTs('app/api/admin/billing/route.ts', {
+  'next/server': { NextResponse: { json: (data, opts={}) => Response.json(data,opts) } },
+  '../../../../lib/server/firebaseFounderAuth': {
+    FounderAuthError: mockFounderError,
+    verifyFounderFirebaseRequest: async authorization => {
+      if (authorization !== 'Bearer founder-token') throw new mockFounderError(403);
+      return founder;
+    },
+  },
+  '../../../../lib/server/platformBillingAdminStore': engine,
+});
+test('unauthenticated and outsider API requests never touch billing IAM or write',async()=>{
+  fixture();
+  for(const token of ['Bearer outsider','Bearer password-founder','Bearer ']){
+    const request=new Request('https://emprovex.com.br/api/admin/billing', {
+      method:'POST',headers:{authorization:token,'content-type':'application/json'},
+      body:JSON.stringify({action:'config',input:{supportContact:'hacked'}}),
+    });
+    const answer=await route.POST(request);
+    assert.equal(answer.status,403);
+  }
+  assert.equal(readCount,0);assert.equal(writeCount,0);
+});
+test('founder API authorizes read and explicit save only',async()=>{
+  fixture();
+  const readReq=new Request('https://emprovex.com.br/api/admin/billing',{headers:{authorization:'Bearer founder-token'}});
+  const rd=await route.GET(readReq);
+  assert.equal(rd.status,200);
+  assert.equal((await rd.json()).accounts.length,3);
+  assert.equal(writeCount,0);
+  const writeReq=new Request('https://emprovex.com.br/api/admin/billing',{
+    method:'POST',headers:{authorization:'Bearer founder-token','content-type':'application/json'},
+    body:JSON.stringify({action:'config',input:{supportContact:'https://emprovex.com.br/ajuda'}}),
+  });
+  const wr=await route.POST(writeReq);
+  assert.equal(wr.status,200);
+  assert.equal(writeCount,2);
+  assert.equal(get('platformBillingConfig/main').monthlyPriceCents,5000);
+});
+test('oversized POST fails before calling server IAM',async()=>{
+  fixture();
+  const raw=JSON.stringify({action:'config',input:{supportContact:'X'.repeat(9000)}});
+  const resp=await route.POST(new Request('https://emprovex.com.br/api/admin/billing',{
+    method:'POST',headers:{authorization:'Bearer founder-token','content-type':'application/json'},body:raw,
+  }));
+  assert.equal(resp.status,413);
+  assert.equal(readCount,0);assert.equal(writeCount,0);
+});
