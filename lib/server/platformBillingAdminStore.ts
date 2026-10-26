@@ -14,7 +14,8 @@ import { HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import type { Workspace } from '../platformIdentity';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 
-const ROOT = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(firebaseConfig.projectId)}/databases/${encodeURIComponent(firebaseConfig.firestoreDatabaseId)}/documents`;
+const DOCUMENT_ROOT = `projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents`;
+const ROOT = `https://firestore.googleapis.com/v1/${DOCUMENT_ROOT}`;
 const CONFIG_PATH = 'platformBillingConfig/main';
 const MAX_ROWS = 2000;
 const ID = /^[a-z0-9][a-z0-9-]{2,47}$/;
@@ -69,11 +70,11 @@ function decodeFields(v: Record<string, FireValue>): Record<string, any> {
   return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, decode(x)]));
 }
 function documentName(path: string): string {
-  if (path === CONFIG_PATH) return `${ROOT}/${path}`;
+  if (path === CONFIG_PATH) return `${DOCUMENT_ROOT}/${path}`;
   if (/^billingAccounts\/[a-z0-9][a-z0-9-]{2,47}$/.test(path)
     || /^billingCycles\/[a-z0-9][a-z0-9-]{2,47}__\d{4}-\d{2}$/.test(path)
     || /^workspaces\/[a-z0-9][a-z0-9-]{2,47}$/.test(path)
-    || /^platformAuditEvents\/[a-f0-9-]{36}$/.test(path)) return `${ROOT}/${path}`;
+    || /^platformAuditEvents\/[a-f0-9-]{36}$/.test(path)) return `${DOCUMENT_ROOT}/${path}`;
   throw new BillingAdminError('BILLING_PATH_REJECTED', 400);
 }
 async function rest(token: string, path: string, method: 'GET' | 'POST', body?: unknown) {
@@ -90,7 +91,7 @@ async function rest(token: string, path: string, method: 'GET' | 'POST', body?: 
   return response;
 }
 async function get(token: string, path: string): Promise<ReadDoc> {
-  const response = await fetch(documentName(path), {
+  const response = await fetch('https://firestore.googleapis.com/v1/' + documentName(path), {
     headers: { authorization: 'Bearer ' + token }, cache: 'no-store',
   });
   if (response.status === 404) return null;
@@ -107,7 +108,7 @@ async function list(token: string, collection: 'billingAccounts' | 'billingCycle
     const response = await rest(token, '/' + collection + '?' + params, 'GET');
     const page = await response.json() as { documents?: RawDoc[]; nextPageToken?: string };
     for (const entry of page.documents ?? []) {
-      if (!entry.name?.startsWith(ROOT + '/' + collection + '/')) throw new BillingAdminError('BILLING_READ_SCOPE_INVALID', 503);
+      if (!entry.name?.startsWith(DOCUMENT_ROOT + '/' + collection + '/')) throw new BillingAdminError('BILLING_READ_SCOPE_INVALID', 503);
       result.push(decodeFields(entry.fields ?? {}));
       if (result.length > MAX_ROWS) throw new BillingAdminError('BILLING_DIRECTORY_TOO_LARGE', 503);
     }
