@@ -105,11 +105,12 @@ test('R16.1: o site explica teste, preco por setor e contratacao sem cartao', ()
   assert.match(html, /Quantas pessoas do setor podem usar\?/);
   assert.match(html, /depósitos em 3D/);
   assert.match(html, /value-trial-callout/);
-  for (const tier of ['29,90', '39,90', '49,90', '59,90', '69,90']) {
-    assert.match(html, new RegExp('R\\$ ' + tier.replace(',', '\\,')));
+  for (const hiddenPrice of ['39,90', '49,90', '59,90', '69,90']) {
+    assert.doesNotMatch(html, new RegExp('R\\$ ' + hiddenPrice));
   }
-  assert.match(html, /três meses de assinatura paga/);
-  assert.match(html, /30 dias de teste não entram nessa contagem/);
+  assert.doesNotMatch(html, /value-ramp|value-commercial-note|evolução da mensalidade|evolução trimestral/i);
+  assert.doesNotMatch(html, /valor progride|três meses de assinatura paga|13º mês pago/i);
+  assert.doesNotMatch(css, /\\.value-ramp|\\.value-commercial-note/);
   assert.match(html, /href="#acesso">Solicitar meu teste acompanhado/);
   assert.match(css, /\.value-faq-item/);
   assert.match(css, /prefers-reduced-motion/);

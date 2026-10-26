@@ -421,14 +421,6 @@ body{background:#031127;font-size:15px}
 .value-faq-item{padding:13px 0 12px;border-bottom:1px solid #d4e0eb}
 .value-faq-item dt{font-size:12px;line-height:1.5;font-weight:750;color:#173c62}
 .value-faq-item dd{margin:5px 0 0;font-size:12px;line-height:1.65;color:#516b7f}
-.value-economy .value-commercial-note{font-size:10px;line-height:1.6;color:#72869a;margin:17px 0 0}
 @media(max-width:760px){.value{padding:75px 0}.value-trial-callout{padding:17px 18px}.value-faq-item{padding:13px 0}.value-trial-callout a{width:100%;justify-content:center;text-align:center}}
 @media(prefers-reduced-motion:reduce){.value-trial-callout a{transition:none}}
 
-/* R16.1 — Cronograma de preco transparente no institucional */
-.value-ramp{margin:14px 0 0;border:1px solid #c6d8ea;border-radius:13px;overflow:hidden;background:#f8fbfe}
-.value-ramp-heading{margin:0!important;padding:13px 16px!important;border-bottom:1px solid #dbe5f0;font-size:12px!important;font-weight:800;color:#1d416a!important;line-height:1.5!important}
-.value-ramp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #e1eaf2;font-size:12px;line-height:1.5;color:#4e647d}
-.value-ramp-row:first-of-type{border-top:0}
-.value-ramp-row strong{white-space:nowrap;font-weight:800;color:#143d75}
-@media(max-width:420px){.value-ramp-row{padding:12px;gap:8px;font-size:11px}.value-ramp-row strong{font-size:11px}}
