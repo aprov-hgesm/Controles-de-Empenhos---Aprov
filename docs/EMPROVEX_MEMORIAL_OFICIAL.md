@@ -3869,3 +3869,18 @@ O fundador executou \`C:\Users\marco\Downloads\publicar_emprovex_main_f024529.ps
 - **Produção inalterada pela PR:** último deployment confirmado é `dpl_35c7tma5Ft1aCkSojztJYNjVRkM2` (R16), até que `inspect https://emprovex.com.br` prove novo ID.
 - **Billing progressivo:** exibição e documentação corrigidas; cálculo offline está em `lib/server/payments/emprovexRampPricing.mjs` na main mas **integração do escalonamento à cobrança produtiva ainda não foi feita**. Não declarar o reajuste automático como ativo nem reprecificar usuários legados/VIP.
 - Handoff: onde estamos = código GitHub pronto, release isolada congelada, não publicada; o que estamos fazendo = preparar único staged remoto; quem = Fundador executa PowerShell no time Vercel proprietário; próximo passo = executar script R16.1 e capturar URL/ID, então verificar e promover o mesmo deployment.
+
+
+### R16.1 — Promocao real confirmada em 26/10/2026 (BRT)
+
+**PRODUÇÃO = PASS (deploy/promoção, não homologação funcional).** O Fundador executou o método homologado do memorial, utilizando Windows PowerShell e Vercel CLI 64.0.2 no time externo `aprov-hgesms-projects`, projeto `controles-de-empenhos-aprov`. Um único build remoto a partir da fonte isolada R16.1 `7169a5b3bde0cddd8e5056c1c1a5dcd0de58d62c` foi concluído `Ready`, sem incluir o PR #385/InfinitePay; em seguida, o mesmo deployment foi promovido **sem rebuild**.
+
+- **Domínio oficial:** `https://emprovex.com.br`.
+- **Deployment imutável promovido:** `dpl_5dKvjdh1QkhxjEszX53U5QBx8AHw`; URL `https://controles-de-empenhos-aprov-da1060ujo-aprov-hgesms-projects.vercel.app`.
+- **Prova de publicação:** CLI `vercel.cmd promote <URL> --yes --scope aprov-hgesms-projects` retornou `Success!`; `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` confirmou exatamente `id=dpl_5dKvjdh1QkhxjEszX53U5QBx8AHw`, `target=production`, `status=Ready`.
+- **Snapshot anterior:** R16 `dpl_35c7tma5Ft1aCkSojztJYNjVRkM2`, referência de eventual rollback caso necessário.
+- **Conteúdo implantado:** seção de investimento com 30 dias de teste acompanhado, apoio 3D, FAQ (workspace/setor, gratuidade, cartão, fim do teste, integrantes) e progressão transparente R$ 29,90 / 39,90 / 49,90 / 59,90 / 69,90 por trimestres pagos; retornos de administração, Central de Depósitos e Operador Móvel para `/login` (não mais `/` institucional).
+- **Certificação do PR #391:** Application CI e seis outros workflows PASS no HEAD principal `0a8e9d4caf4243656e077239de149cc87985e4cd`, squash merge na main `5324b88d2c6e880b27553626c0e10502caf00da1`. Publicação utilizou a variante isolada `7169a5b3...`; não confundir `main` atual com fonte implantada.
+- **Não alegar testes funcionais autenticados pós-publicação:** Fundador optou por publicar primeiro. Validar depois em produção login do fundador/setor, retornos da Administração/Central/Operador Móvel, formulário de interesse `/api/public/access-requests`, aba Interessados e apresentação mobile do bloco comercial. Não enviar solicitações fictícias sem consentimento e governança de dados.
+- **Billing:** a tabela comercial foi divulgada e o algoritmo offline existe; ativação automática do escalonamento por cliente no faturamento produtivo ainda não foi certificada/implantada. Preservar contratos antigos e VIPs, não alegar que o escalonamento de cobrança está operante.
+- **Regras:** não executar outro build/deploy/promote por causa deste registro; `409` ou identificação idêntica no inspect significa publicação já atual; não confundir deploy imutável com alias.
