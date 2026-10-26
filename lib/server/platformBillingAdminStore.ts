@@ -7,12 +7,14 @@ import { randomUUID } from 'node:crypto';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
+  EMPROVEX_NEW_CUSTOMER_RAMP_ID,
   buildPlatformBillingConfig, type BillingAccount, type BillingAccountStatus,
   type BillingCycle, type BillingCycleStatus, type PlatformBillingConfig,
 } from '../billing';
 import { HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import type { Workspace } from '../platformIdentity';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
+import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
 
 const DOCUMENT_ROOT = `projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents`;
 const ROOT = `https://firestore.googleapis.com/v1/${DOCUMENT_ROOT}`;
@@ -346,7 +348,26 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
       if (!config) throw new BillingAdminError('BILLING_CONFIG_UNAVAILABLE', 409);
       const previous = docs.get(cyclePath)?.value as BillingCycle | undefined;
-      const base = previous ?? buildBillingCycle(account, command.month, config, actor.email);
+      const ramp = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID;
+      if (account.pricingPolicyId && !ramp)
+        throw new BillingAdminError('BILLING_UNKNOWN_PRICING_POLICY', 409);
+      if (ramp && !account.pricingTermsAcceptedAt)
+        throw new BillingAdminError('BILLING_PRICING_ACCEPTANCE_REQUIRED', 409);
+      const quote = ramp
+        ? quoteIndividualRamp({
+            firstPaidReferenceMonth: account.firstPaidReferenceMonth,
+            referenceMonth: command.month,
+          })
+        : null;
+      if (quote && !quote.allowed)
+        throw new BillingAdminError('BILLING_REFERENCE_BEFORE_RAMP_START', 409);
+      const priceCents = quote?.allowed ? quote.amountCents : account.monthlyPriceCents;
+      const base = previous ?? {
+        ...buildBillingCycle(account, command.month, config, actor.email),
+        amountCents: priceCents,
+      };
+      if (previous && ramp && previous.amountCents !== priceCents)
+        throw new BillingAdminError('BILLING_EXISTING_CYCLE_PRICE_MISMATCH', 409);
       if (base.workspaceId !== workspaceId || base.ug !== (workspace.ug || '')
         || base.id !== billingCycleId(workspaceId, command.month))
         throw new BillingAdminError('BILLING_CYCLE_MISMATCH', 409);
@@ -354,8 +375,11 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const transition = buildBillingCycleStatusTransition(base, command.status, actor.email, noteValue(command.note), now);
       if (!transition.changed && previous) return { result: previous, updates: [] };
       const status = command.status === 'paid' || command.status === 'waived' ? 'active' : 'pending';
-      const nextAccount = { ...account, status, updatedAt: now, updatedBy: actor.email, paymentRequired: false };
-      const accountChanged = account.status !== status || account.paymentRequired !== false;
+      const nextAccount: BillingAccount = { ...account, status,
+        monthlyPriceCents: ramp ? priceCents : account.monthlyPriceCents,
+        updatedAt: now, updatedBy: actor.email, paymentRequired: false };
+      const accountChanged = account.status !== status || account.paymentRequired !== false
+        || account.monthlyPriceCents !== nextAccount.monthlyPriceCents;
       const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
@@ -363,9 +387,53 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         'billing_cycle', transition.cycle.id, workspaceId, workspace.ug || null,
         { status: base.status, amountCents: base.amountCents },
         { status: transition.cycle.status, amountCents: transition.cycle.amountCents },
-        { idempotentDocumentId: transition.cycle.id, manualConfirmation: true }));
+        { idempotentDocumentId: transition.cycle.id, manualConfirmation: true,
+          pricingPolicy: account.pricingPolicyId || 'legacy', paidMonthNumber: quote?.allowed ? quote.paidMonthNumber : null }));
       return { result: transition.cycle, updates };
     }
     throw new BillingAdminError('BILLING_UNKNOWN_ACTION', 400);
+  });
+}
+
+
+/**
+ * The authenticated sector explicitly accepts all future price tiers.
+ * Portal verification binds the caller to workspace and email BEFORE this
+ * IAM transaction; the persisted workspace/account are revalidated inside it.
+ * No existing customer can be silently enrolled or repriced.
+ */
+export async function acceptNewCustomerRamp(
+  actor: Actor, workspaceId: string, authorizedEmail: string,
+): Promise<{ accepted: true; pricingPolicyId: string; firstPaidReferenceMonth: string }> {
+  validWorkspaceId(workspaceId);
+  if (workspaceId === HGESM_WORKSPACE_ID)
+    throw new BillingAdminError('BILLING_FOUNDER_PERMANENTLY_EXEMPT', 403);
+  const token = await getGoogleAccessToken();
+  const wp = 'workspaces/' + workspaceId;
+  const ap = 'billingAccounts/' + workspaceId;
+  return transaction(token, [wp, ap], docs => {
+    const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
+    const account = existingAccount(docs.get(ap) ?? null);
+    assertAccountWorkspace(account, workspace);
+    if (workspace.authorizedEmail !== authorizedEmail || actor.email !== authorizedEmail)
+      throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+    if (account.status === 'exempt' || account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
+      || !account.firstPaidReferenceMonth
+      || !['trial','active'].includes(account.status))
+      throw new BillingAdminError('BILLING_PRICING_NOT_OFFERED', 409);
+    const result = {
+      accepted: true as const,
+      pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
+      firstPaidReferenceMonth: account.firstPaidReferenceMonth,
+    };
+    if (account.pricingTermsAcceptedAt) return { result, updates: [] };
+    const now = new Date().toISOString();
+    return { result, updates: [
+      { path: ap, data: { ...account, pricingTermsAcceptedAt: now, updatedAt: now, updatedBy: actor.email } },
+      audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
+        { pricingTermsAcceptedAt: null },
+        { pricingTermsAcceptedAt: now, pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID },
+        { pricingConsent: true, allFiveTiersDisclosed: true }),
+    ] };
   });
 }
