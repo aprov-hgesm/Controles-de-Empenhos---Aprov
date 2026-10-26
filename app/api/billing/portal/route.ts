@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveBillingPortalSession, BillingPortalFailure } from '../../../../lib/server/billingPortalIdentity';
 import { pilotEnabledFor } from '../../../../lib/server/payments/infinitepayPortalPilot.mjs';
 import { readBillingCycleHistory } from '../../../../lib/server/billingRecentCycles';
-import { acceptNewCustomerRamp, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
+import { acceptNewCustomerRamp, readSectorBillingAccess, requestSectorGrace48, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
 
 import { callInfinitePay } from '../../../../lib/server/payments/infinitepayCheckout.mjs';
 import {
@@ -16,9 +16,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { workspace, account, email } = await resolveBillingPortalSession(request);
+    const view = new URL(request.url).searchParams.get('view');
+    if (view === 'access') {
+      const decision = await readSectorBillingAccess(workspace.id, email);
+      return NextResponse.json(decision, { headers: { 'Cache-Control': 'private, no-store' } });
+    }
     // The payment tab needs the pilot allowlist, not the financial ledger.
     // Preserve the historical default (no view param returns history) for callers.
-    const view = new URL(request.url).searchParams.get('view');
     const needsHistory = view !== 'payments';
     const history = !needsHistory
       ? { available: false, cycles: [] }
@@ -158,8 +162,31 @@ async function acceptRampTerms(request: Request) {
   }
 }
 
+
+async function requestGrace48(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    const data = await request.text();
+    if (data.length > 100) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let body: { confirm?: boolean } = {};
+    try { body = JSON.parse(data) as { confirm?: boolean }; } catch {
+      return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    }
+    if (body.confirm !== true) return NextResponse.json({ code: 'BILLING_EXPLICIT_GRACE_REQUEST_REQUIRED' }, { status: 400 });
+    const result = await requestSectorGrace48({ uid, email }, workspace.id, email);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_GRACE_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
 export async function POST(request: Request) {
   const action = new URL(request.url).searchParams.get('action');
+  if (action === 'request-grace48') return requestGrace48(request);
   if (action === 'accept-pricing') return acceptRampTerms(request);
   if (action === 'create-pilot') return createPilotCheckout(request);
   if (action === 'verify-pilot') return verifyPilotCheckout(request);
