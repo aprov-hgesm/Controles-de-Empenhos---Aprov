@@ -91,7 +91,7 @@ export default function Home() {
         if (active) showBillingRequired();
       });
     return () => { active = false; };
-  }, [user, loadingAuth, workspaceContext.status, workspaceContext.workspaceId]);
+  }, [user, loadingAuth, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
