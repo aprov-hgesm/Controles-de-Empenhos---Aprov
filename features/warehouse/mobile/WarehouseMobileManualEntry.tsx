@@ -1,7 +1,6 @@
 'use client';
 
 import { ArrowLeft, CheckCircle2, LoaderCircle, PackagePlus, TriangleAlert } from 'lucide-react';
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
@@ -261,9 +260,9 @@ export function WarehouseMobileManualEntry() {
   return (
     <div className="space-y-4" data-testid="warehouse-mobile-manual-entry">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
-        <Link href="/operador-movel" className="inline-flex min-h-10 items-center gap-2 text-xs font-black text-blue-100">
+        <a href="/operador-movel" className="inline-flex min-h-10 items-center gap-2 text-xs font-black text-blue-100">
           <ArrowLeft className="h-4 w-4" /> Operador Móvel
-        </Link>
+        </a>
         <p className="mt-3 font-mono text-[10px] font-black uppercase tracking-widest text-blue-200">Entrada avulsa · Sem NF</p>
         <h1 className="mt-1 text-2xl font-black">Cadastrar material</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-blue-100">

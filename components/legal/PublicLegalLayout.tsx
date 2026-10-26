@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
@@ -23,13 +22,13 @@ export function PublicLegalLayout({
     <main className="min-h-screen bg-gradient-to-br from-[#f4f7fb] via-white to-[#eef3fb] text-[#0b1c30]">
       <header className="border-b border-slate-200/80 bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <Link
+          <a
             href="/"
             className="inline-flex items-center gap-2 text-sm font-extrabold text-[#00288e] transition hover:text-[#001e6a]"
           >
             <ArrowLeft className="h-4 w-4" />
             EMPROVEX
-          </Link>
+          </a>
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#00288e]">
             <ShieldCheck className="h-4 w-4" />
             Documento público
@@ -55,8 +54,8 @@ export function PublicLegalLayout({
         <footer className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500 sm:flex-row">
           <span>EMPROVEX — Gestão Logística e Financeira</span>
           <nav className="flex items-center gap-4 font-bold">
-            <Link href="/privacy" className="hover:text-[#00288e]">Privacidade</Link>
-            <Link href="/terms" className="hover:text-[#00288e]">Termos de Serviço</Link>
+            <a href="/privacy" className="hover:text-[#00288e]">Privacidade</a>
+            <a href="/terms" className="hover:text-[#00288e]">Termos de Serviço</a>
           </nav>
         </footer>
       </section>

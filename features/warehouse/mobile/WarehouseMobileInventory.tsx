@@ -13,7 +13,6 @@ import {
   TriangleAlert,
   XCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 import {
   useCallback,
   useEffect,
@@ -543,13 +542,13 @@ export function WarehouseMobileInventory() {
   return (
     <div className="space-y-5" data-testid="warehouse-mobile-inventory">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
-        <Link
+        <a
           href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Operador Móvel
-        </Link>
+        </a>
         <h1 className="mt-4 text-2xl font-black">Inventário móvel</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-blue-100">
           Posição → esperado → material → contado → revisão → confirmação humana.

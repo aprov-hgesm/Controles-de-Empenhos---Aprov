@@ -8,7 +8,6 @@ import {
   RefreshCw,
   TriangleAlert,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { getWarehouseMobileBarcodeByCode } from '../../../lib/warehouse/mobileBarcodeReadClient';
@@ -189,13 +188,13 @@ export function WarehouseMobileItemQuery() {
       data-query-listeners={0}
     >
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
-        <Link
+        <a
           href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Operador Móvel
-        </Link>
+        </a>
         <p className="mt-4 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-blue-200">
           CONSULTA · SOMENTE LEITURA
         </p>
