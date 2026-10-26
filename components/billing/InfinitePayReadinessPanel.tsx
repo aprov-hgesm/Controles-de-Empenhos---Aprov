@@ -139,7 +139,9 @@ export function InfinitePayReadinessPanel({
       });
       const result = await response.json() as { code?: string };
       if (!response.ok) throw new Error(result.code || 'Não foi possível registrar o aceite.');
-      window.location.reload();
+      setRampConfirmed(false);
+      setRampSaving(false);
+      // Firestore subscription updates the accepted account without an F5.
     } catch (error) {
       setRampError(error instanceof Error ? error.message : 'Não foi possível registrar o aceite.');
       setRampSaving(false);
@@ -330,33 +332,6 @@ export function InfinitePayReadinessPanel({
           </p>
         </section>
 
-        {workspaceResolved && !billingLoading && activeTab === 'payments'
-          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
-          && !account.pricingTermsAcceptedAt && (
-          <section className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5"
-            data-testid="billing-contract-acceptance">
-            <h3 className="font-bold text-slate-900">Condições da contratação</h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-700">
-              Antes da primeira cobrança, confirme as condições financeiras:
-              meses de cobrança 1–3 R$ 29,90/mês; 4–6 R$ 39,90/mês;
-              7–9 R$ 49,90/mês; 10–12 R$ 59,90/mês;
-              a partir do mês 13 R$ 69,90/mês.
-              Os meses são contados individualmente após o período gratuito, quando concedido.
-            </p>
-            <label className="mt-3 flex items-start gap-2 text-xs font-medium text-slate-800">
-              <input type="checkbox" checked={rampConfirmed}
-                onChange={(event) => setRampConfirmed(event.target.checked)} className="mt-0.5"/>
-              <span>Concordo expressamente com os valores e condições acima. Este aceite não realiza pagamento.</span>
-            </label>
-            <button type="button" disabled={!rampConfirmed || rampSaving}
-              onClick={() => void acceptPricing()}
-              className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">
-              {rampSaving ? 'Registrando aceite...' : 'Aceitar condições para pagar'}
-            </button>
-            {rampError && <p className="mt-2 text-xs text-rose-800">{rampError}</p>}
-          </section>
-        )}
-
         <div className="mt-5 grid gap-3 md:grid-cols-3" aria-label="Acessos da assinatura">
           <button type="button" onClick={() => onNavigate('history')}
             data-testid="billing-overview-history"
@@ -393,6 +368,34 @@ export function InfinitePayReadinessPanel({
             'Entre novamente com sua conta de setor para consultar os registros financeiros.'}
         </div>
       )}
+
+      {workspaceResolved && !billingLoading && activeTab === 'payments'
+          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
+          && !account.pricingTermsAcceptedAt && (
+          <section className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5"
+            data-testid="billing-contract-acceptance">
+            <h3 className="font-bold text-slate-900">Condições da contratação</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-700">
+              Antes da primeira cobrança, confirme as condições financeiras:
+              meses de cobrança 1–3 R$ 29,90/mês; 4–6 R$ 39,90/mês;
+              7–9 R$ 49,90/mês; 10–12 R$ 59,90/mês;
+              a partir do mês 13 R$ 69,90/mês.
+              Os meses são contados individualmente após o período gratuito, quando concedido.
+            </p>
+            <label className="mt-3 flex items-start gap-2 text-xs font-medium text-slate-800">
+              <input type="checkbox" checked={rampConfirmed}
+                onChange={(event) => setRampConfirmed(event.target.checked)} className="mt-0.5"/>
+              <span>Concordo expressamente com os valores e condições acima. Este aceite não realiza pagamento.</span>
+            </label>
+            <button type="button" disabled={!rampConfirmed || rampSaving}
+              onClick={() => void acceptPricing()}
+              className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {rampSaving ? 'Registrando aceite...' : 'Aceitar condições para pagar'}
+            </button>
+            {rampError && <p className="mt-2 text-xs text-rose-800">{rampError}</p>}
+          </section>
+        )}
+
 
       {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt' && (
         <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
