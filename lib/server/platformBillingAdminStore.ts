@@ -505,7 +505,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
     }
     if (command.action === 'cycle') {
       requireNonExempt(account);
-        if (!config) throw new BillingAdminError('BILLING_CONFIG_UNAVAILABLE', 409);
+      const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
+      if (!config) throw new BillingAdminError('BILLING_CONFIG_UNAVAILABLE', 409);
       const previous = docs.get(cyclePath)?.value as BillingCycle | undefined;
       const ramp = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID;
       if (account.pricingPolicyId && !ramp)
