@@ -937,7 +937,11 @@ async function createSectorDirectory(
       {
         update: {
           name: firestoreDocumentName(workspacePath),
-          fields: toFirestoreFields(result.workspace as unknown as Record<string, unknown>),
+          fields: toFirestoreFields({
+            ...result.workspace,
+            billingPolicyId: billingAccount.pricingPolicyId || '',
+            billingEntitlementUntil: grantTrial ? billingAccount.trialEndsAt : billingAccount.createdAt,
+          } as Record<string, unknown>),
         },
         currentDocument: { exists: false },
       },
