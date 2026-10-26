@@ -38,7 +38,6 @@ function walkFiles(relativePath) {
 
 const protectedCoreFiles = [
   'app/page.tsx',
-  'app/login/page.tsx',
   'lib/firebaseSync.ts',
   'lib/nsIntegrityService.ts',
   'lib/empenhoConcurrencyService.ts',
@@ -193,9 +192,7 @@ requireText(
   'Telemetria perdeu o tratamento best-effort e pode voltar a afetar o fluxo operacional.'
 );
 
-// A aplicação operacional foi transferida integralmente para /login.
-// A proteção continua verificando a implementação real, não a vitrine pública.
-const appPage = read('app/login/page.tsx');
+const appPage = read('app/page.tsx');
 forbidText(
   appPage,
   /from\s+['"][^'"]*\/warehouse\//,
@@ -203,7 +200,7 @@ forbidText(
 );
 requireText(
   appPage,
-  "from '../../lib/platformModuleAccess'",
+  "from '../lib/platformModuleAccess'",
   'Shell principal não utiliza a camada neutra de acesso a módulos opcionais.'
 );
 
