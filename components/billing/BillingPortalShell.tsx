@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
+import { BillingReturnButton } from './BillingReturnButton';
 import { BILLING_PORTAL_TABS, type BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 /**
@@ -61,11 +62,11 @@ export function BillingPortalShell({
           <span className="hidden h-5 w-px bg-white/15 sm:block" />
           <span className="hidden text-xs font-semibold text-slate-300 sm:block">Central de assinaturas</span>
         </div>
-        <Link href="/login" className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10">
+        <BillingReturnButton className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10">
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Voltar à plataforma</span>
           <span className="sm:hidden">Voltar</span>
-        </Link>
+        </BillingReturnButton>
       </header>
 
       {drawerOpen && (
@@ -155,10 +156,10 @@ export function BillingPortalShell({
           </nav>
           <div className="px-3">
             <p className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Plataforma</p>
-            <Link href="/login" className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
+            <BillingReturnButton className={navItem + ' w-full text-left text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
               <Home className="h-[18px] w-[18px]" /> Voltar ao EMPROVEX
               <ArrowUpRight className="ml-auto h-4 w-4" />
-            </Link>
+            </BillingReturnButton>
           </div>
         </div>
         <div className="relative z-[2] mt-8 border-t border-white/10 px-6 pt-5">
