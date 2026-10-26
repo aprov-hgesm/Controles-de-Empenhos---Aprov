@@ -83,6 +83,9 @@ export interface Workspace {
   authorizedEmail: string;
   /** Marca temporária para o workspace fundador migrado da arquitetura pré-multi-tenant. */
   legacyWorkspace?: boolean;
+  /** Server-owned billing entitlement; Firestore Rules can deny operational reads. */
+  billingPolicyId?: string;
+  billingEntitlementUntil?: string;
   institutionalProfile: WorkspaceInstitutionalProfile;
   createdAt: string;
   updatedAt: string;
