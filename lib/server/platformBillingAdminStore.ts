@@ -745,7 +745,7 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       require_delivery_address: false,
       payment_methods_enabled: ['pix', 'credit_card'] },
     webhook: {
-      url: 'https://emprovex.com.br/api/billing/infinitepay-webhook?token='
+      url: 'https://emprovex.com.br/api/billing/portal?action=infinitepay-webhook&token='
         + encodeURIComponent(process.env.INFINITEPAY_WEBHOOK_TOKEN || ''),
       events: ['paid', 'settled', 'refunded', 'canceled'],
     },
