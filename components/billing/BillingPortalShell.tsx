@@ -61,7 +61,7 @@ export function BillingPortalShell({
           <span className="hidden h-5 w-px bg-white/15 sm:block" />
           <span className="hidden text-xs font-semibold text-slate-300 sm:block">Central de assinaturas</span>
         </div>
-        <Link href="/" className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10">
+        <Link href="/login" className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/10">
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Voltar à plataforma</span>
           <span className="sm:hidden">Voltar</span>
@@ -155,7 +155,7 @@ export function BillingPortalShell({
           </nav>
           <div className="px-3">
             <p className="px-3 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Plataforma</p>
-            <Link href="/" className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
+            <Link href="/login" className={navItem + ' text-slate-300 hover:bg-white/[0.07] hover:text-white'}>
               <Home className="h-[18px] w-[18px]" /> Voltar ao EMPROVEX
               <ArrowUpRight className="ml-auto h-4 w-4" />
             </Link>
