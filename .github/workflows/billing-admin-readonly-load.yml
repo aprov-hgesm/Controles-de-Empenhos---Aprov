@@ -1,0 +1,29 @@
+name: Billing Admin Readonly Load Guard
+
+on:
+  pull_request:
+    paths:
+      - 'hooks/usePlatformAdminBilling.ts'
+      - 'scripts/billing-admin-load-no-autowrite.test.mjs'
+      - '.github/workflows/billing-admin-readonly-load.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: No writes during initial admin dashboard load
+        run: node --test scripts/billing-admin-load-no-autowrite.test.mjs
+      - name: TypeScript typecheck
+        run: npm run typecheck
