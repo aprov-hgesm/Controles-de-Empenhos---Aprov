@@ -342,6 +342,9 @@ export function PlatformAdminView({
     usageError ? 'Telemetria estimada por UG requer atenção.' : null,
     globalUsageError ? 'Telemetria global do Firebase requer atenção.' : null,
     billing.error ? 'Controle administrativo de assinaturas requer atenção.' : null,
+    billing.accounts.some(account => account.grace48ReviewStatus === 'pending'
+      && account.grace48ReferenceMonth === new Date().toISOString().slice(0, 7))
+      ? 'Há solicitação de acesso temporário de 48 horas aguardando conferência financeira.' : null,
     disabledWorkspaceCount > 0
       ? disabledWorkspaceCount + ' setor(es) está(ão) suspenso(s).'
       : null,
