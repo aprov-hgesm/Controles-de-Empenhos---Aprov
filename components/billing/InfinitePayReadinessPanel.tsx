@@ -94,6 +94,11 @@ export function InfinitePayReadinessPanel({
   const [rampConfirmed, setRampConfirmed] = useState(false);
   const [rampSaving, setRampSaving] = useState(false);
   const [rampError, setRampError] = useState('');
+  const [realCheckoutUrl, setRealCheckoutUrl] = useState('');
+  const [realCheckoutAmount, setRealCheckoutAmount] = useState<number | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
 
   useEffect(() => {
@@ -140,6 +145,59 @@ export function InfinitePayReadinessPanel({
       setRampSaving(false);
     }
   };
+
+
+  const createSubscriptionCheckout = async () => {
+    if (checkoutBusy || !auth.currentUser) return;
+    setCheckoutBusy(true); setCheckoutError('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/billing/portal?action=subscription-checkout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmRealPayment: true }), cache: 'no-store',
+      });
+      const data = await response.json() as { code?: string; checkoutUrl?: string; amountCents?: number };
+      if (!response.ok || !data.checkoutUrl)
+        throw new Error(data.code || 'Não foi possível gerar o checkout.');
+      const url = new URL(data.checkoutUrl);
+      if (url.protocol !== 'https:' || !(url.hostname === 'infinitepay.io'
+        || url.hostname.endsWith('.infinitepay.io')
+        || url.hostname === 'infinitepay.com.br'
+        || url.hostname.endsWith('.infinitepay.com.br')))
+        throw new Error('Checkout não pertence à InfinitePay.');
+      setRealCheckoutAmount(data.amountCents ?? null);
+      setRealCheckoutUrl(url.href);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Checkout temporariamente indisponível.');
+    } finally { setCheckoutBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!returnParams || !auth.currentUser || !(status === 'authenticated' && context.status === 'sector')) return;
+    let active = true;
+    const verify = async () => {
+      try {
+        const token = await auth.currentUser!.getIdToken();
+        const response = await fetch('/api/billing/portal?action=verify-subscription', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+          body: JSON.stringify(returnParams), cache: 'no-store',
+        });
+        const data = await response.json() as { verified?: boolean; code?: string };
+        if (!active) return;
+        if (!response.ok || !data.verified) {
+          setCheckoutError('Pagamento ainda não confirmado pelo servidor. Confira a InfinitePay e evite pagar duas vezes.');
+          return;
+        }
+        setCheckoutConfirmed(true);
+      } catch {
+        if (active) setCheckoutError('Não foi possível confirmar o pagamento. Não faça outro Pix até conferir a transação.');
+      }
+    };
+    void verify();
+    return () => { active = false; };
+  }, [returnParams, status, context.status, context.workspaceId]);
 
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
@@ -336,13 +394,55 @@ export function InfinitePayReadinessPanel({
         </div>
       )}
 
+      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt' && (
+        <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
+          data-testid="billing-real-checkout">
+          <h3 className="font-extrabold text-slate-900">Pagar minha mensalidade</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            O valor será calculado no servidor conforme a competência e as condições
+            aceitas na contratação. Confira o valor e o favorecido antes de concluir
+            o pagamento no ambiente seguro da InfinitePay.
+          </p>
+          {account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
+            && !account.pricingTermsAcceptedAt ? (
+            <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+              Leia e aceite as condições da contratação apresentadas acima antes de gerar a cobrança.
+            </p>
+          ) : (
+            <button type="button" disabled={checkoutBusy}
+              onClick={() => void createSubscriptionCheckout()}
+              className="mt-3 min-h-11 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+              {checkoutBusy ? 'Gerando cobrança...' : 'Gerar pagamento da mensalidade'}
+            </button>
+          )}
+          {realCheckoutUrl && (
+            <div className="mt-3 space-y-2 rounded-xl bg-emerald-50 p-4">
+              {realCheckoutAmount !== null && (
+                <p className="text-sm font-black text-emerald-900">Valor da competência: {money(realCheckoutAmount)}</p>
+              )}
+              <a href={realCheckoutUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center rounded-lg bg-emerald-800 px-4 text-xs font-extrabold text-white">
+                Abrir pagamento seguro na InfinitePay
+              </a>
+              <p className="text-[11px] text-emerald-900">
+                Não pague duas vezes o mesmo pedido. Após pagar, clique em Continuar no checkout para confirmar pelo servidor.
+              </p>
+            </div>
+          )}
+          {checkoutConfirmed && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-900">
+            Pagamento confirmado no servidor. O acesso do setor foi liberado para a competência quitada.
+          </p>}
+          {checkoutError && <p role="alert" className="mt-3 text-xs text-rose-800">{checkoutError}</p>}
+        </section>
+      )}
+
       {activeTab === 'payments' && (
       <section data-testid="billing-payment-journey" className="mt-5 rounded-[1.65rem] border border-[#dfe8f0] bg-white p-5 shadow-[0_12px_35px_rgba(15,40,70,0.04)] sm:p-7">
         <div>
           <h2 className="text-lg font-extrabold text-[#13263a]">Como funciona a confirmação de pagamento</h2>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
             Confira a competência e o valor efetivamente emitidos antes de abrir o checkout.
-            Não há pagamento automático de mensalidades habilitado nesta etapa.
+            A mensalidade é paga em checkout individual. A confirmação é verificada pelo servidor; não há débito recorrente automático.
           </p>
         </div>
 
