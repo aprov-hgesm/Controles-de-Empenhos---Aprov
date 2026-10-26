@@ -670,6 +670,10 @@ async function setWarehouseLifecycle(
         updatedBy: normalizePlatformEmail(actor.email),
       }),
     },
+    // Preserve billing entitlement fields managed by the billing engine.
+    updateMask: { fieldPaths: [
+      'schemaVersion','workspaceId','ug','status','updatedAt','updatedBy',
+    ] },
   }]);
 }
 
