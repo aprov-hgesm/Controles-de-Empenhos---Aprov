@@ -279,7 +279,7 @@ export default function RegularizationPage() {
                   : 'Utilize o canal de atendimento que foi fornecido no seu cadastro.'}
               </p>
               <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                Esta página é apenas informativa e permanece separada do processamento financeiro do EMPROVEX.
+                A contratação do Plano Completo e a confirmação financeira são processadas em rotas autenticadas do EMPROVEX; os links antigos de Pix e pagamento exibidos nesta seção são somente referências manuais.
               </p>
             </section>
           </>
