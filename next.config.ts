@@ -12,7 +12,13 @@ const nextConfig: NextConfig = {
   // A raiz pública apresenta o institucional sem alterar o URL canônico.
   // O shell operacional original permanece preservado para guardas históricos.
   async rewrites() {
-    return [{ source: '/', destination: '/institucional' }];
+    return {
+      // A vitrine substitui a rota '/' existente, preservando app/page.tsx
+      // intacto para os contratos operacionais e o acesso em /login.
+      beforeFiles: [
+        { source: '/', destination: '/institucional' },
+      ],
+    };
   },
   async redirects() {
     return [
