@@ -299,7 +299,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
     cyclePath = 'billingCycles/' + billingCycleId(workspaceId, command.month);
     paths.push(cyclePath, CONFIG_PATH);
   }
-  return transaction(token, paths, docs => {
+  return transaction<BillingAccount | BillingCycle>(token, paths, docs => {
     const workspace = existingWorkspace(docs.get(workspacePath) ?? null, workspaceId);
     const account = existingAccount(docs.get(accountPath) ?? null);
     assertAccountWorkspace(account, workspace);
