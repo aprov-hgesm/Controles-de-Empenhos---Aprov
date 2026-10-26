@@ -472,7 +472,7 @@ export function AdminBillingPanel({
             </div>
             <h3 className="mt-1 text-lg font-extrabold text-white">Controle por workspace</h3>
             <p className="mt-1 text-xs text-slate-400">
-              Confirmação de pagamento e suspensão são exclusivamente administrativas.
+              O acesso é verificado pelo servidor; baixas automáticas só ocorrem após verificação do provedor. A confirmação manual exige conferência do recebimento.
             </p>
           </div>
 
@@ -517,7 +517,10 @@ export function AdminBillingPanel({
               ? isFounder
                 ? 'Fundador / Isento'
                 : isLegacyVip ? 'VIP legado / Isento' : 'VIP / Isento'
-              : STATUS_LABEL[account.status];
+              : account.pricingPolicyId === 'emprovex_individual_ramp_v1'
+                && (account.status !== 'trial' || attention.trialExpired)
+                && currentCycle?.status !== 'paid' && currentCycle?.status !== 'waived'
+                  ? 'Aguardando pagamento' : STATUS_LABEL[account.status];
 
             return (
               <article
