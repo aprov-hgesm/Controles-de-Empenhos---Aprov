@@ -80,7 +80,7 @@ async function loadPublicRegularizationConfig(): Promise<PublicRegularizationCon
   const fields = payload.fields;
   const value: PublicRegularizationConfig = {
     planName: 'Plano Completo EMPROVEX',
-    monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+    monthlyPriceCents: integerField(fields, 'monthlyPriceCents', EMPROVEX_FULL_PLAN_PRICE_CENTS),
     currency: 'BRL',
     dueBusinessDay: 5,
     gracePeriodDays: integerField(fields, 'gracePeriodDays', 10),
