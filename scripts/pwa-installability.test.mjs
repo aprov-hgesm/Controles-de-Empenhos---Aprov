@@ -13,7 +13,7 @@ const nextConfig = source('next.config.ts');
 
 test('R363: manifest standalone e icones Android, iOS e Windows', () => {
   assert.match(manifest, /short_name: 'EMPROVEX'/);
-  assert.match(manifest, /start_url: '\/'/);
+  assert.match(manifest, /start_url: '\/login'/);
   assert.match(manifest, /scope: '\/'/);
   assert.match(manifest, /display: 'standalone'/);
   assert.match(manifest, /192x192/);
@@ -57,4 +57,17 @@ test('R363: manifest nao instala armazenamento offline de dados sensiveis', () =
   assert.doesNotMatch(layout, /serviceWorker\.register/);
   assert.doesNotMatch(route, /caches\.open\(|indexedDB|localStorage/);
   assert.doesNotMatch(manifest, /^\s*related_applications:/m);
+});
+
+test('R16: a vitrine substitui a rota raiz antes dos arquivos sem quebrar login ou retorno administrativo', () => {
+  const config = source('next.config.ts');
+  const loginPage = source('app/login/page.tsx');
+  const institucional = source('app/institucional/page.tsx');
+  const adminPanel = source('components/admin/PlatformAdminView.tsx');
+  assert.match(config, /beforeFiles:\s*\[/);
+  assert.match(config, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
+  assert.doesNotMatch(config, /return\s*\[\s*\{\s*source:\s*'\/'/);
+  assert.match(loginPage, /<EmprovexLogin/);
+  assert.match(institucional, /public\/institucional\/content\.html/);
+  assert.match(adminPanel, /router\.replace\('\/login'\)/);
 });
