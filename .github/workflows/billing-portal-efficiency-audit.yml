@@ -33,6 +33,10 @@ jobs:
         run: |
           node --test scripts/billing-portal-efficiency-audit.test.mjs scripts/billing-portal-identity-concurrency.test.mjs
           node --test scripts/infinitepay-portal-pilot.test.mjs scripts/billing-workspace-rehydration.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Firestore emulator chronological history and tenant isolation
         run: |
           npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-billing-efficiency --only firestore "node --test scripts/billing-portal-history-emulator.test.mjs"
