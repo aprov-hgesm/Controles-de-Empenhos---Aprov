@@ -3,6 +3,8 @@ import type { Workspace } from './platformIdentity';
 export const EMPROVEX_BILLING_VERSION = 'emprovex_billing_v1' as const;
 export const EMPROVEX_BILLING_CONFIG_ID = 'main' as const;
 export const EMPROVEX_FULL_PLAN_PRICE_CENTS = 7000 as const;
+export const EMPROVEX_NEW_CUSTOMER_RAMP_ID = 'emprovex_individual_ramp_v1' as const;
+export const EMPROVEX_NEW_CUSTOMER_START_CENTS = 2990 as const;
 
 export type BillingMode = 'off' | 'observe' | 'enforce';
 export type BillingAccountStatus =
@@ -51,6 +53,9 @@ export interface BillingAccount {
   trialStartedAt: string;
   trialEndsAt: string;
   paymentRequired: boolean;
+  pricingPolicyId?: typeof EMPROVEX_NEW_CUSTOMER_RAMP_ID;
+  firstPaidReferenceMonth?: string;
+  pricingTermsAcceptedAt?: string;
   exemptionSource?: BillingExemptionSource;
   legacyVipCutoff?: string;
   createdAt: string;
@@ -246,7 +251,8 @@ export function buildInitialBillingAccount(
   createdBy: string,
   grantTrial: boolean,
   trialDays: number = DEFAULT_PLATFORM_BILLING_CONFIG.defaultTrialDays,
-  now: string = new Date().toISOString()
+  now: string = new Date().toISOString(),
+  newCustomerRamp: boolean = false
 ): BillingAccount {
   const isFounder = workspace.id === 'hgesm-aprov';
   const normalizedTrialDays = Math.max(1, Math.min(365, Math.trunc(trialDays || 30)));
@@ -254,13 +260,27 @@ export function buildInitialBillingAccount(
     ? addUtcDays(now, normalizedTrialDays).toISOString()
     : '';
 
+  // The first billable reference month starts after the trial is over.
+  // No charge is emitted until the sector explicitly accepts the full schedule.
+  const trialEndDate = grantTrial && trialEndsAt ? new Date(trialEndsAt) : new Date(now);
+  const referenceStart = grantTrial
+    ? new Date(Date.UTC(trialEndDate.getUTCFullYear(), trialEndDate.getUTCMonth() + 1, 1))
+    : trialEndDate;
+  const rampForNewCustomer = newCustomerRamp && !isFounder;
+
   return {
     version: EMPROVEX_BILLING_VERSION,
     workspaceId: workspace.id,
     ug: workspace.ug || '',
     authorizedEmail: workspace.authorizedEmail,
     status: isFounder ? 'exempt' : grantTrial ? 'trial' : 'active',
-    monthlyPriceCents: isFounder ? 0 : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+    monthlyPriceCents: isFounder ? 0 : rampForNewCustomer
+      ? EMPROVEX_NEW_CUSTOMER_START_CENTS : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+    ...(rampForNewCustomer ? {
+      pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
+      firstPaidReferenceMonth: getReferenceMonth(referenceStart),
+      pricingTermsAcceptedAt: '',
+    } : {}),
     currency: 'BRL',
     trialGranted: Boolean(grantTrial && !isFounder),
     trialStartedAt: grantTrial && !isFounder ? now : '',
