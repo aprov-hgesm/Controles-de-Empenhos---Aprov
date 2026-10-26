@@ -375,11 +375,15 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const transition = buildBillingCycleStatusTransition(base, command.status, actor.email, noteValue(command.note), now);
       if (!transition.changed && previous) return { result: previous, updates: [] };
       const status = command.status === 'paid' || command.status === 'waived' ? 'active' : 'pending';
+      const advancesRamp = ramp && (!account.lastBilledReferenceMonth
+        || command.month >= account.lastBilledReferenceMonth);
       const nextAccount: BillingAccount = { ...account, status,
-        monthlyPriceCents: ramp ? priceCents : account.monthlyPriceCents,
+        monthlyPriceCents: advancesRamp ? priceCents : account.monthlyPriceCents,
+        ...(advancesRamp ? { lastBilledReferenceMonth: command.month } : {}),
         updatedAt: now, updatedBy: actor.email, paymentRequired: false };
       const accountChanged = account.status !== status || account.paymentRequired !== false
-        || account.monthlyPriceCents !== nextAccount.monthlyPriceCents;
+        || account.monthlyPriceCents !== nextAccount.monthlyPriceCents
+        || account.lastBilledReferenceMonth !== nextAccount.lastBilledReferenceMonth;
       const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
@@ -388,7 +392,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         { status: base.status, amountCents: base.amountCents },
         { status: transition.cycle.status, amountCents: transition.cycle.amountCents },
         { idempotentDocumentId: transition.cycle.id, manualConfirmation: true,
-          pricingPolicy: account.pricingPolicyId || 'legacy', paidMonthNumber: quote?.allowed ? quote.paidMonthNumber : null }));
+          pricingPolicy: account.pricingPolicyId || 'legacy', paidMonthNumber: quote && 'paidMonthNumber' in quote ? quote.paidMonthNumber : null }));
       return { result: transition.cycle, updates };
     }
     throw new BillingAdminError('BILLING_UNKNOWN_ACTION', 400);
