@@ -921,6 +921,9 @@ export function PlatformAdminView({
             onUpdateConfig={billing.updateConfig}
             onPrepareEnforcement={billing.prepareEnforcement}
             onGrantTrial={billing.grantTrial}
+            onOfferRamp={billing.offerRamp}
+            onResolveRefund={billing.resolveRefund}
+            onRecoverCheckout={billing.recoverCheckout}
             onSetExemption={billing.setExemption}
             onSetStatus={billing.setStatus}
             onSetCycleStatus={billing.setCycleStatus}
