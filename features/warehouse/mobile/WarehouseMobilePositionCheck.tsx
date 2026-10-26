@@ -8,7 +8,6 @@ import {
   RefreshCw,
   TriangleAlert,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useCallback, useRef, useState } from 'react';
 
 import {
@@ -219,6 +218,16 @@ export function WarehouseMobilePositionCheck() {
       }
     : null;
 
+  // Mantém os parâmetros do fluxo de transferência também após um carregamento completo.
+  const transferHref = transferQuery
+    ? '/operador-movel/transferir?' + new URLSearchParams({
+        contexto: transferQuery.contexto,
+        material: transferQuery.material,
+        destino: transferQuery.destino,
+        ...(transferQuery.origem ? { origem: transferQuery.origem } : {}),
+      }).toString()
+    : null;
+
   return (
     <div
       className="space-y-5"
@@ -227,13 +236,13 @@ export function WarehouseMobilePositionCheck() {
       data-check-listeners={result?.metrics.listeners ?? 0}
     >
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
-        <Link
+        <a
           href="/operador-movel"
           className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Operador Móvel
-        </Link>
+        </a>
         <p className="mt-4 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-blue-200">
           MOBILE-H · CONFERÊNCIA FÍSICA/DIGITAL
         </p>
@@ -432,17 +441,14 @@ export function WarehouseMobilePositionCheck() {
             </p>
           )}
 
-          {transferQuery && (
-            <Link
-              href={{
-                pathname: '/operador-movel/transferir',
-                query: transferQuery,
-              }}
+          {transferHref && (
+            <a
+              href={transferHref}
               className="mt-5 flex min-h-12 items-center justify-center rounded-2xl bg-[#00288e] px-4 text-sm font-black text-white"
               data-testid="warehouse-mobile-position-check-transfer-link"
             >
               Transferir material
-            </Link>
+            </a>
           )}
 
           <p className="mt-3 text-[11px] font-semibold leading-5 text-red-700">

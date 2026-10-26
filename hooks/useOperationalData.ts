@@ -16,7 +16,6 @@ import {
   updatePassword,
   type User,
 } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import { resolveAuthenticatedWorkspaceContext } from '../lib/platformAccess';
@@ -109,7 +108,6 @@ export function useOperationalData(
   activeTab: OperationalActiveTab,
   acceptedLegalIdentityKey: string | null = null
 ) {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -260,9 +258,10 @@ export function useOperationalData(
   useEffect(() => {
     if (user && workspaceContext.status === 'platformAdmin') {
       clearOperationalState();
-      router.replace('/admin');
+      // Sessão fundadora: a troca de superfície exige documento novo, não RSC pendente.
+      window.location.replace('/admin');
     }
-  }, [router, user, workspaceContext.status]);
+  }, [user, workspaceContext.status]);
 
   const sessionControlIdentityKey = (
     user

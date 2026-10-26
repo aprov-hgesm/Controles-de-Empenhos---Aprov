@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
-import Link from 'next/link';
 import {
   useCallback,
   useEffect,
@@ -443,13 +442,13 @@ export function WarehouseMobileIntakeAllocation() {
               NF → item → quantidade → material → validade → local → revisão.
             </p>
           </div>
-          <Link
+          <a
             href="/operador-movel"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10"
             aria-label="Voltar ao início da Operador Móvel"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </Link>
+          </a>
         </div>
       </section>
 

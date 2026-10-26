@@ -16,7 +16,6 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { AppShellSignature } from '../../../components/layout/chrome/AppShellSignature';
 import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
@@ -117,7 +116,7 @@ export function WarehouseSidebar({
               Central de Depósitos
             </div>
 
-            <Link
+            <a
               href="/login"
               className="emprovex-sidebar-nav-item"
               onClick={onClose}
@@ -125,7 +124,7 @@ export function WarehouseSidebar({
             >
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
               <span>Voltar ao EMPROVEX</span>
-            </Link>
+            </a>
 
             <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
 
@@ -154,7 +153,7 @@ export function WarehouseSidebar({
                   Operações no depósito
                 </p>
                 <div className="ml-3 border-l border-white/[0.12] pl-2">
-                  <Link
+                  <a
                     href="/operador-movel"
                     className="emprovex-sidebar-nav-item"
                     onClick={onClose}
@@ -162,7 +161,7 @@ export function WarehouseSidebar({
                   >
                     <Smartphone className="h-5 w-5" aria-hidden="true" />
                     <span>Operador Móvel</span>
-                  </Link>
+                  </a>
                 </div>
               </div>
             )}
