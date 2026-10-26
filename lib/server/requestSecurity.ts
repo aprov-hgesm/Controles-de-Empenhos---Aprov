@@ -6,6 +6,7 @@ export const SECURITY_BURST_BUCKET_LIMIT = 512;
 
 export type AdminSecurityOperation =
   | 'sector-provision'
+  | 'public-access-request'
   | 'sector-delete'
   | 'sector-password-reset'
   | 'sector-lifecycle'
