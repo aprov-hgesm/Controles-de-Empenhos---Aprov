@@ -312,7 +312,7 @@ export function AdminBillingPanel({
             </div>
             <h3 className="mt-1 text-lg font-extrabold text-white">Plano Completo EMPROVEX</h3>
             <p className="mt-1 text-xs text-slate-400">
-              Mensalidade configurada: {money(config?.monthlyPriceCents ?? 7000)} por workspace. Contratos anteriores e isenções são preservados; a contratação de novos preços exige aceite.
+              Novas contratações: 30 dias gratuitos, depois R$ 29,90 por 3 meses; R$ 39,90, R$ 49,90, R$ 59,90 a cada 3 meses e R$ 69,90 a partir do mês 13. Contratos anteriores e isenções preservados.
             </p>
           </div>
           {!editingConfig && (
@@ -328,7 +328,7 @@ export function AdminBillingPanel({
 
         {!editingConfig ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 7000)} />
+            <InfoBox label="Preço global legado" value={money(config?.monthlyPriceCents ?? 7000)} />
             <InfoBox label="Trial padrão" value={`${config?.defaultTrialDays ?? 30} dias`} />
             <InfoBox label="Vencimento" value="5º dia útil" />
             <InfoBox label="Tolerância" value={`${config?.gracePeriodDays ?? 10} dias`} />
@@ -338,7 +338,7 @@ export function AdminBillingPanel({
         ) : (
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <ConfigField label="Mensalidade (R$)" hint="Valor vigente protegido; mudança de preço exige fluxo contratual.">
+              <ConfigField label="Mensalidade (R$)" hint="Apenas referência histórica. Novos clientes seguem a política progressiva individual.">
                 <input value={money(config?.monthlyPriceCents ?? 7000)} readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
               </ConfigField>
               <ConfigField label="Trial padrão (dias)">
