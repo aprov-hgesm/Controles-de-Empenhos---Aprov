@@ -18,6 +18,7 @@ import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
 import { makeOrderNsu, assessPaymentCheck, callInfinitePay } from './payments/infinitepayCheckout.mjs';
 import { readCheckoutUrl } from './payments/infinitepaySmokeHarness.mjs';
+import { syncWarehouseBillingMirror } from './warehouseBillingMirror';
 import { decideBillingAccess } from '../billingAccess';
 import { getReferenceMonth } from '../billing';
 
@@ -169,6 +170,23 @@ async function transaction<T>(
       throw new BillingAdminError('BILLING_DUPLICATE_WRITE', 503);
     await rest(token, ':commit', 'POST', { transaction: begun.transaction, writes });
     committed = true;
+    // Cross-database delivery is intentionally non-atomic. The update is
+    // replayed on the next authenticated access if Warehouse was unavailable.
+    for (const change of updates) {
+      if (!change.path.startsWith('workspaces/')) continue;
+      const workspace = change.data as Workspace;
+      if (!workspace.billingPolicyId && !workspace.billingEntitlementUntil) continue;
+      try {
+        const config = await get(token, CONFIG_PATH);
+        const active = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
+          && process.env.INFINITEPAY_BILLING_ENABLED === '1'
+          && config?.value?.billingMode === 'enforce'
+          && config?.value?.requirePayment === true;
+        await syncWarehouseBillingMirror(token, workspace, active);
+      } catch {
+        console.warn('BILLING_WAREHOUSE_MIRROR_RETRY_REQUIRED');
+      }
+    }
     return result;
   } finally {
     if (!committed) await rest(token, ':rollback', 'POST', { transaction: begun.transaction }).catch(() => undefined);
@@ -565,6 +583,10 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
         referenceMonth: period.referenceMonth }) : null;
+  if (live && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
+    // Repair previous interrupted mirror writes before claiming permission.
+    await syncWarehouseBillingMirror(token, workspace, true);
+  }
   return {
     ...decision,
     allowed: live ? decision.allowed : true,
@@ -951,6 +973,8 @@ export async function prepareBillingEnforcement(actor: Actor) {
         return { result: true, updates: [] };
       return { result: true, updates: [{ path: wp, data: desired }] };
     });
+    const preparedWorkspace = existingWorkspace(await get(token, wp), row.workspaceId);
+    await syncWarehouseBillingMirror(token, preparedWorkspace, false);
     prepared++;
   }
   await transaction(token, [CONFIG_PATH], docs => {
