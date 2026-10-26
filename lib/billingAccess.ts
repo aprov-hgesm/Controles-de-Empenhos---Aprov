@@ -1,5 +1,5 @@
 import type { BillingAccount, BillingCycle } from './billing';
-import { getReferenceMonth, paidServicePeriod } from './billing';
+import { addUtcDays, getReferenceMonth, paidServicePeriod } from './billing';
 import { EMPROVEX_NEW_CUSTOMER_RAMP_ID } from './billing';
 
 export type BillingAccessReason = 'vip' | 'trial' | 'paid' | 'grace48' | 'payment_required' | 'trial_ended' | 'suspended' | 'canceled' | 'account_missing' | 'legacy_contract' | 'observe' | 'due_grace';
@@ -19,6 +19,8 @@ export function decideBillingAccess(
   account: BillingAccount | null,
   cycle: BillingCycle | null,
   now: Date = new Date(),
+  previousCycle: BillingCycle | null = null,
+  renewalGraceDays = 0,
 ): BillingAccessDecision {
   const period = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
     ? paidServicePeriod(account, now) : null;
@@ -48,6 +50,11 @@ export function decideBillingAccess(
   if (cycle && cycle.workspaceId === account.workspaceId
     && cycle.referenceMonth === month && (cycle.status === 'paid' || cycle.status === 'waived')) return allow('paid');
   if (base.graceUntil && now.getTime() < Date.parse(base.graceUntil)) return allow('grace48');
+  if (period && period.periodNumber > 1 && previousCycle
+    && previousCycle.workspaceId === account.workspaceId
+    && (previousCycle.status === 'paid' || previousCycle.status === 'waived')
+    && now.getTime() < addUtcDays(period.startsAt, renewalGraceDays).getTime())
+    return allow('due_grace');
   const canRequest = account.grace48ReferenceMonth !== month;
   return deny(account.trialGranted ? 'trial_ended' : 'payment_required', canRequest);
 }
