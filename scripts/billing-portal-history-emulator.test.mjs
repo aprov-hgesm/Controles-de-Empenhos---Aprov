@@ -35,7 +35,7 @@ async function writeCycle(workspaceId, month) {
   const name = `${workspaceId}__${month}`;
   const response = await fetch(`${root}/billingCycles/${name}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
     body: JSON.stringify({ fields: {
       workspaceId: { stringValue: workspaceId },
       referenceMonth: { stringValue: month },
@@ -50,7 +50,7 @@ async function writeCycle(workspaceId, month) {
 async function queryHistory(id) {
   const query = buildBillingHistoryQuery(id, projectId, databaseId);
   const response = await fetch(root + ':runQuery', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
     body: JSON.stringify(query),
   });
   if (!response.ok) throw new Error('Firestore emulator rejected the structured query: ' + (await response.text()));
