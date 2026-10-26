@@ -19,6 +19,7 @@ import {
   Pencil,
   Plus,
   Search,
+  ClipboardList,
   ShieldAlert,
   ShieldCheck,
   Trash2,
@@ -36,6 +37,7 @@ import { AdminWorldHomePanel } from './AdminWorldHomePanel';
 import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
 import { AdminSecurityPanel } from './AdminSecurityPanel';
 import { AdminBillingPanel } from './AdminBillingPanel';
+import { AdminAccessRequestsPanel } from './AdminAccessRequestsPanel';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
@@ -70,6 +72,7 @@ type AdminTabId =
   | 'overview'
   | 'setores'
   | 'novo-setor'
+  | 'interessados'
   | 'consumo'
   | 'sessoes'
   | 'assinaturas'
@@ -100,6 +103,12 @@ const ADMIN_TABS = [
     label: 'Cadastrar Setor',
     description: 'Provisionamento completo de uma nova unidade operacional.',
     icon: Plus,
+  },
+  {
+    id: 'interessados',
+    label: 'Interessados',
+    description: 'Solicitações de acesso recebidas pelo site institucional.',
+    icon: ClipboardList,
   },
   {
     id: 'consumo',
@@ -144,7 +153,7 @@ const ADMIN_TABS = [
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
   { label: 'Central', tabs: ['inicio', 'overview'] },
-  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'assinaturas'] },
+  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'interessados', 'assinaturas'] },
   { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
   { label: 'Governança', tabs: ['seguranca'] },
 ];
@@ -909,6 +918,10 @@ export function PlatformAdminView({
             onSetStatus={billing.setStatus}
             onSetCycleStatus={billing.setCycleStatus}
           />
+        )}
+
+        {activeTab === 'interessados' && (
+          <AdminAccessRequestsPanel adminUser={adminUser} />
         )}
 
         {activeTab === 'backups' && (
