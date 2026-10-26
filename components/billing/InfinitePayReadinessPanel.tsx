@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { getIdToken, onAuthStateChanged } from 'firebase/auth';
 import {
   ArrowUpRight, BadgeCheck, Clock3, CreditCard,
   FileCheck2, LockKeyhole, ShieldCheck, UserRound,
@@ -91,6 +91,9 @@ export function InfinitePayReadinessPanel({
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
   const [returnNotice, setReturnNotice] = useState(false);
+  const [rampConfirmed, setRampConfirmed] = useState(false);
+  const [rampSaving, setRampSaving] = useState(false);
+  const [rampError, setRampError] = useState('');
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
 
   useEffect(() => {
@@ -113,6 +116,30 @@ export function InfinitePayReadinessPanel({
       window.history.replaceState(window.history.state, '', result.cleanedPath);
     }
   }, [onNavigate]);
+
+  const acceptPricing = async () => {
+    if (!rampConfirmed || !auth.currentUser || rampSaving) return;
+    setRampSaving(true);
+    setRampError('');
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const response = await fetch('/api/billing/portal?action=accept-pricing', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          policyId: 'emprovex_individual_ramp_v1',
+          acceptFullPricingSchedule: true,
+        }),
+        cache: 'no-store',
+      });
+      const result = await response.json() as { code?: string };
+      if (!response.ok) throw new Error(result.code || 'Não foi possível registrar o aceite.');
+      window.location.reload();
+    } catch (error) {
+      setRampError(error instanceof Error ? error.message : 'Não foi possível registrar o aceite.');
+      setRampSaving(false);
+    }
+  };
 
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
@@ -188,7 +215,9 @@ export function InfinitePayReadinessPanel({
             {workspaceResolved && !billingLoading && account && (
               <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
-                  `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
+                  account.pricingPolicyId === 'emprovex_individual_ramp_v1'
+                    ? `Plano progressivo individual: faixa atual ${money(account.monthlyPriceCents)}/mês.`
+                    : `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
             {workspaceResolved && !billingLoading && !account && (
@@ -212,6 +241,51 @@ export function InfinitePayReadinessPanel({
               Não há cobrança por esta consulta.
             </p>
           </div>
+        )}
+
+
+        {workspaceResolved && !billingLoading
+          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1' && (
+          <section className="mt-4 rounded-2xl border border-emerald-200 bg-white p-5" data-testid="billing-ramp-offer">
+            <h3 className="font-extrabold text-[#11664f]">Plano progressivo do seu setor</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600">
+              Após o trial de 30 dias, a primeira competência cobrável é
+              {account.firstPaidReferenceMonth ? ' ' + account.firstPaidReferenceMonth : ' definida no cadastro'}.
+              Cada preço vigora por três competências mensais consecutivas, contadas individualmente.
+              A partir da 13ª competência, o valor permanece em R$ 69,90 por mês.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-700 sm:grid-cols-5">
+              {[['1–3', '29,90'], ['4–6', '39,90'], ['7–9', '49,90'],
+                ['10–12', '59,90'], ['13+', '69,90']].map(([meses, preco]) => (
+                <div key={meses} className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                  <p className="font-bold">Meses {meses}</p>
+                  <p>R$ {preco}/mês</p>
+                </div>
+              ))}
+            </div>
+            {account.pricingTermsAcceptedAt ? (
+              <p className="mt-3 text-xs font-extrabold text-emerald-700" data-testid="billing-ramp-accepted">
+                Condições aceitas em {account.pricingTermsAcceptedAt.slice(0, 10).split('-').reverse().join('/')}
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={rampConfirmed}
+                    onChange={(event) => setRampConfirmed(event.target.checked)}
+                    className="mt-1 accent-emerald-700" />
+                  <span>Li e aceito expressamente os cinco valores e os reajustes a cada três meses
+                    de cobrança, até R$ 69,90 mensais. O aceite não realiza pagamento.</span>
+                </label>
+                <button type="button" disabled={!rampConfirmed || rampSaving}
+                  onClick={() => void acceptPricing()}
+                  className="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                  {rampSaving ? 'Registrando aceite...' : 'Confirmar condições do plano'}
+                </button>
+                {rampError && <p role="alert" className="text-xs text-rose-700">{rampError}</p>}
+                <p className="text-xs text-slate-500">Nenhuma competência progressiva será emitida antes deste aceite.</p>
+              </div>
+            )}
+          </section>
         )}
 
         <div className="mt-5 grid gap-3 md:grid-cols-3" aria-label="Acessos da assinatura">
