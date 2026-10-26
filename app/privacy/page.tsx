@@ -94,16 +94,16 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Pagamentos externos e Mercado Pago">
+      <LegalSection title="6. Pagamentos pela InfinitePay e regularização">
         <p>
-          No SaaS R1, o pagamento pode ser realizado fora do EMPROVEX por link do Mercado Pago, Pix ou outro meio
-          externo informado. O EMPROVEX não precisa armazenar credenciais de cartão, CVV, senha ou token secreto de
-          pagamento para esse modelo.
+          O EMPROVEX disponibiliza checkout externo pela InfinitePay para mensalidades individuais, com Pix ou cartão,
+          quando habilitado. O EMPROVEX não armazena números de cartão, CVV ou credenciais de pagamento do cliente.
         </p>
         <p>
           Quando o usuário acessa um provedor externo de pagamento, os dados fornecidos diretamente naquele ambiente
           são tratados pelo respectivo provedor conforme seus próprios termos e políticas. O EMPROVEX pode conservar
-          apenas metadados administrativos mínimos necessários para registrar a regularização comercial.
+          metadados necessários para conciliação, incluindo referência do pedido, competência, valor, método de pagamento,
+          identificação técnica de transação, data de confirmação e histórico de solicitações de acesso temporário.
         </p>
       </LegalSection>
 
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
           integrações correspondentes forem autorizadas pelo usuário.
         </p>
         <p>
-          O Mercado Pago pode ser utilizado como provedor externo de pagamento. Esses fornecedores tratam dados
+          A InfinitePay é o provedor externo de checkout de mensalidades quando a função está habilitada. Esses fornecedores tratam dados
           necessários à prestação de seus serviços conforme os contratos, termos e políticas aplicáveis a cada
           plataforma.
         </p>
