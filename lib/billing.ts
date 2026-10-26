@@ -56,6 +56,11 @@ export interface BillingAccount {
   pricingPolicyId?: typeof EMPROVEX_NEW_CUSTOMER_RAMP_ID;
   firstPaidReferenceMonth?: string;
   lastBilledReferenceMonth?: string;
+  /** One temporary 48h return to operations per reference month. */
+  grace48ReferenceMonth?: string;
+  grace48RequestedAt?: string;
+  grace48Until?: string;
+  grace48ReviewStatus?: 'pending' | 'confirmed';
   pricingTermsAcceptedAt?: string;
   exemptionSource?: BillingExemptionSource;
   legacyVipCutoff?: string;
@@ -261,12 +266,10 @@ export function buildInitialBillingAccount(
     ? addUtcDays(now, normalizedTrialDays).toISOString()
     : '';
 
-  // The first billable reference month starts after the trial is over.
+  // The first billable reference month is the month in which trial ends (or onboarding month).
   // No charge is emitted until the sector explicitly accepts the full schedule.
   const trialEndDate = grantTrial && trialEndsAt ? new Date(trialEndsAt) : new Date(now);
-  const referenceStart = grantTrial
-    ? new Date(Date.UTC(trialEndDate.getUTCFullYear(), trialEndDate.getUTCMonth() + 1, 1))
-    : trialEndDate;
+  const referenceStart = trialEndDate;
   const rampForNewCustomer = newCustomerRamp && !isFounder;
 
   return {
