@@ -195,6 +195,13 @@ export function paidServicePeriod(
   };
 }
 
+/** A paid renewal remains accessible for the configured grace days after
+ * its service anniversary. The initial unpaid period has no free grace.
+ */
+export function paidServiceAccessUntil(period: PaidServicePeriod, renewalGraceDays: number): string {
+  return addUtcDays(period.endsAt, Math.max(0, Math.min(90, renewalGraceDays))).toISOString();
+}
+
 export function getBrazilFixedNationalHolidays(year: number): string[] {
   return [
     `${year}-01-01`,
@@ -533,8 +540,11 @@ export function getBillingAttention(
   needsAttention: boolean;
   overdueDays: number;
 } {
-  const referenceMonth = getReferenceMonth(now);
-  const dueDate = getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const period = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+    ? paidServicePeriod(account, new Date(now)) : null;
+  const referenceMonth = period?.referenceMonth || getReferenceMonth(now);
+  const dueDate = period?.startsAt.slice(0, 10)
+    || getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   const graceEndsAt = getGraceEndsAt(dueDate, config.gracePeriodDays);
   const today = formatUtcDateOnly(now);
   const currentCycle = cycles.find(
