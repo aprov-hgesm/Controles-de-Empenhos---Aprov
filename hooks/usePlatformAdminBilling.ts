@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 
 import type {
@@ -12,14 +12,11 @@ import type {
 } from '../lib/billing';
 import type { Workspace } from '../lib/platformIdentity';
 import {
-  ensurePlatformBillingFoundation,
   grantBillingTrial,
   setBillingCommercialStatus,
   setBillingExemption,
   setBillingCycleStatus,
-  subscribePlatformBillingAccounts,
-  subscribePlatformBillingConfig,
-  subscribePlatformBillingCycles,
+  getPlatformBillingDirectory,
   updatePlatformBillingConfig,
   type UpdatePlatformBillingConfigInput,
 } from '../lib/platformBillingStore';
@@ -38,8 +35,8 @@ function describeBillingError(error: unknown): string {
 
 export function usePlatformAdminBilling(
   adminUser: User | null,
-  workspaces: Workspace[],
-  directoryReady: boolean
+  _workspaces: Workspace[],
+  _directoryReady: boolean
 ) {
   const adminEmail = adminUser?.email || null;
   const [config, setConfig] = useState<PlatformBillingConfig | null>(null);
@@ -48,67 +45,34 @@ export function usePlatformAdminBilling(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mutatingKey, setMutatingKey] = useState<string | null>(null);
-  const foundationSignatureRef = useRef<string>('');
+
+  // No Firestore listener and no implicit price migration on page load.
+  const refresh = useCallback(async (): Promise<void> => {
+    const directory = await getPlatformBillingDirectory();
+    setConfig(directory.config);
+    setAccounts(directory.accounts);
+    setCycles(directory.cycles);
+  }, []);
 
   useEffect(() => {
     if (!adminEmail) {
-      setConfig(null);
-      setAccounts([]);
-      setCycles([]);
-      setLoading(false);
+      setConfig(null); setAccounts([]); setCycles([]); setLoading(false);
       return;
     }
-
-    let configReady = false;
-    let accountsReady = false;
-    let cyclesReady = false;
-    const settle = () => {
-      if (configReady && accountsReady && cyclesReady) setLoading(false);
-    };
-    const fail = (subscriptionError: unknown) => {
-      setError(describeBillingError(subscriptionError));
-      setLoading(false);
-    };
-
+    let active = true;
     setLoading(true);
     setError(null);
-
-    const unsubscribers = [
-      subscribePlatformBillingConfig((next) => {
-        configReady = true;
-        setConfig(next);
-        settle();
-      }, fail),
-      subscribePlatformBillingAccounts((next) => {
-        accountsReady = true;
-        setAccounts(next);
-        settle();
-      }, fail),
-      subscribePlatformBillingCycles((next) => {
-        cyclesReady = true;
-        setCycles(next);
-        settle();
-      }, fail),
-    ];
-
-    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+    void getPlatformBillingDirectory()
+      .then((directory) => {
+        if (!active) return;
+        setConfig(directory.config);
+        setAccounts(directory.accounts);
+        setCycles(directory.cycles);
+      })
+      .catch((reason) => { if (active) setError(describeBillingError(reason)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [adminEmail]);
-
-  useEffect(() => {
-    if (!adminEmail || !directoryReady || workspaces.length === 0) return;
-
-    const signature = workspaces
-      .map((workspace) => `${workspace.id}:${workspace.updatedAt}`)
-      .sort()
-      .join('|');
-    if (foundationSignatureRef.current === signature) return;
-    foundationSignatureRef.current = signature;
-
-    void ensurePlatformBillingFoundation(workspaces, adminEmail).catch((foundationError) => {
-      foundationSignatureRef.current = '';
-      setError(describeBillingError(foundationError));
-    });
-  }, [adminEmail, directoryReady, workspaces]);
 
   const accountsByWorkspace = useMemo(
     () => new Map(accounts.map((account) => [account.workspaceId, account])),
@@ -135,7 +99,10 @@ export function usePlatformAdminBilling(
     setMutatingKey(key);
     setError(null);
     try {
-      return await mutation();
+      const result = await mutation();
+      // Refresh is read-only; don't disguise a successful commit if it fails.
+      await refresh().catch((reason) => setError(describeBillingError(reason)));
+      return result;
     } catch (mutationError) {
       const message = describeBillingError(mutationError);
       setError(message);
@@ -143,7 +110,7 @@ export function usePlatformAdminBilling(
     } finally {
       setMutatingKey(null);
     }
-  }, []);
+  }, [refresh]);
 
   const updateConfig = useCallback((
     input: UpdatePlatformBillingConfigInput
