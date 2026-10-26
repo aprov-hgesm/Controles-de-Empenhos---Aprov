@@ -19,13 +19,35 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
   }
   await expect(principal).toBeVisible({ timeout: 30_000 });
 
+  // P0: cada aba operacional altera efetivamente a superfície React ao primeiro clique.
+  const operationalTabs = [
+    ['Início', 'inicio'], ['Painel', 'painel'], ['Empenhos', 'empenhos'],
+    ['Notas Fiscais', 'nova_nf'], ['Consulta de Itens', 'itens'],
+    ['Fornecedores', 'fornecedores'], ['Cronogramas', 'cronogramas'],
+    ['Relatórios', 'relatorios'], ['Central de Avisos', 'avisos'],
+  ];
+  for (const [label, id] of operationalTabs) {
+    const button = principal.getByRole('button', { name: label, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute('data-active', 'true');
+    await expect(page.getByTestId('operational-active-content')).toHaveAttribute('data-operational-tab', id);
+  }
+
   // P0: trocar de perfil não pode deixar a URL em /admin com a tela de /login.
   const adminButton = page.getByRole('button', { name: 'Abrir Administração EMPROVEX' });
   await expect(adminButton).toBeVisible({ timeout: 30_000 });
   await adminButton.click();
   await expect(page).toHaveURL(/\/admin\/?$/, { timeout: 30_000 });
   await expect(page.getByTestId('admin-visual-shell')).toBeVisible({ timeout: 45_000 });
-  await page.getByRole('button', { name: 'Voltar ao HGeSM' }).click();
+  // Existem dois atalhos (desktop/mobile) com o mesmo nome.
+  const adminTabs = ['overview', 'setores', 'novo-setor', 'interessados', 'consumo', 'sessoes', 'assinaturas', 'backups', 'seguranca', 'inicio'];
+  for (const id of adminTabs) {
+    const tab = page.locator('[data-testid="admin-tab-' + id + '"]:visible').first();
+    await tab.click();
+    await expect(tab).toHaveAttribute('data-active', 'true');
+    await expect(page.getByTestId('admin-light-content')).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Voltar ao HGeSM' }).first().click();
   await expect(page).toHaveURL(/\/login\/?$/, { timeout: 30_000 });
   await expect(page.getByRole('navigation', { name: 'Navegação principal' }))
     .toBeVisible({ timeout: 45_000 });

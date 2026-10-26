@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 
@@ -38,4 +38,36 @@ test('P0: navegação das abas da Central permanece local e sincronizada', () =>
   assert.match(shell, /window\.history\.pushState\(/);
   assert.match(shell, /<WarehouseTabContent/);
   assert.match(read('features/warehouse/components/WarehouseProtectedSurface.tsx'), /requestWarehouseStatus/);
+});
+
+function listClientSources(directory) {
+  const output = [];
+  for (const entry of readdirSync(resolve(process.cwd(), directory), { withFileTypes: true })) {
+    const nestedPath = directory + '/' + entry.name;
+    if (entry.isDirectory()) {
+      output.push(...listClientSources(nestedPath));
+    } else if (/\\.(?:jsx?|tsx?)$/.test(entry.name)) {
+      output.push(nestedPath);
+    }
+  }
+  return output;
+}
+
+test('P0: varredura de todos os componentes, hooks, páginas e módulos bloqueia navegação RSC vulnerável', () => {
+  const files = ['app', 'components', 'features', 'hooks'].flatMap(listClientSources);
+  assert.ok(files.length >= 200, 'A cobertura de fontes não pode regredir silenciosamente.');
+  for (const file of files) {
+    const content = read(file);
+    assert.doesNotMatch(content, /router\\.(?:push|replace)\\s*\\(/, file + ': use transição de documento entre rotas.');
+    assert.doesNotMatch(content, /from\\s*['"]next\\/link['"]|<Link(?:\\s|>)/, file + ': links internos devem preservar render real ao primeiro clique.');
+  }
+  const session = read('hooks/useOperationalData.ts');
+  assert.match(session, /window\\.location\\.replace\\('\/admin'\)/);
+  const delivery = read('features/warehouse/components/WarehouseDeliveriesOperational.tsx');
+  assert.match(delivery, /href="\/login\\?tab=cronogramas"/);
+  const login = read('app/login/page.tsx');
+  assert.match(login, /if \\(tab === 'cronogramas'\\) setActiveTab\\('cronogramas'\\)/);
+  const mobile = read('features/warehouse/mobile/WarehouseMobilePositionCheck.tsx');
+  assert.match(mobile, /new URLSearchParams\\(/);
+  assert.match(mobile, /href=\\{transferHref\\}/);
 });
