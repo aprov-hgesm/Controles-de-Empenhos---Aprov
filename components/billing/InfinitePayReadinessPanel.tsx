@@ -239,6 +239,7 @@ export function InfinitePayReadinessPanel({
 
       <InfinitePayPilotPanel
         authorizedWorkspace={workspaceResolved && status === 'authenticated'}
+        workspaceId={workspaceResolved ? context.workspaceId : null}
         returnParams={returnParams}
         activeTab={activeTab}
       />

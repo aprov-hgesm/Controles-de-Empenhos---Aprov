@@ -15,9 +15,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { workspace, account, email } = await resolveBillingPortalSession(request);
-    const history = account?.status === 'exempt'
-      ? { available: true, cycles: [] }
-      : await readBillingCycleHistory(workspace.id);
+    // The payment tab needs the pilot allowlist, not the financial ledger.
+    // Preserve the historical default (no view param returns history) for callers.
+    const view = new URL(request.url).searchParams.get('view');
+    const needsHistory = view !== 'payments';
+    const history = !needsHistory
+      ? { available: false, cycles: [] }
+      : account?.status === 'exempt'
+        ? { available: true, cycles: [] }
+        : await readBillingCycleHistory(workspace.id);
     return NextResponse.json({
       workspaceName: workspace.name,
       accountStatus: account?.status ?? 'unavailable',

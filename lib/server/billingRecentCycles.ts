@@ -3,11 +3,28 @@ import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import type { BillingCycle } from '../billing';
 
 /**
- * Read latest 24 materialized cycles only AFTER a verified Firebase session
- * has selected its own workspace. Single equality query, no global listing.
- * If the server lacks privileged Firebase config, portal still works without
- * history rather than leaking information or widening Firestore Rules.
+ * Latest 24 materialized cycles, ordered on the canonical YYYY-MM field
+ * before applying limit. Requires a scoped composite Firestore index on
+ * workspaceId ASC + referenceMonth DESC. Until the index exists in the target
+ * database, history fails closed as unavailable; NEVER widen the query.
+ * Caller must have verified the workspace. No write operations.
  */
+export function buildBillingHistoryQuery(workspaceId: string, _projectId: string, _databaseId: string) {
+  if (!/^[a-z0-9-]{3,48}$/.test(workspaceId)) throw new Error('INVALID_HISTORY_WORKSPACE');
+  return {
+    structuredQuery: {
+      from: [{ collectionId: 'billingCycles' }],
+      where: { fieldFilter: {
+        field: { fieldPath: 'workspaceId' },
+        op: 'EQUAL',
+        value: { stringValue: workspaceId },
+      } },
+      orderBy: [{ field: { fieldPath: 'referenceMonth' }, direction: 'DESCENDING' }],
+      limit: 24,
+    },
+  };
+}
+
 export async function readBillingCycleHistory(workspaceId: string): Promise<{
   available: boolean;
   cycles: Array<Pick<BillingCycle, 'referenceMonth' | 'amountCents' | 'dueDate' | 'status' | 'confirmedAt'>>;
@@ -21,19 +38,9 @@ export async function readBillingCycleHistory(workspaceId: string): Promise<{
   const response = await fetch(parent, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      structuredQuery: {
-        from: [{ collectionId: 'billingCycles' }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: 'workspaceId' },
-            op: 'EQUAL',
-            value: { stringValue: workspaceId },
-          },
-        },
-        limit: 24,
-      },
-    }),
+    body: JSON.stringify(buildBillingHistoryQuery(
+      workspaceId, firebaseConfig.projectId, firebaseConfig.firestoreDatabaseId,
+    )),
     cache: 'no-store',
   });
   if (!response.ok) return { available: false, cycles: [] };

@@ -109,7 +109,13 @@ export async function resolveBillingPortalSession(
     || !/^[a-z0-9-]{3,48}$/.test(platformAccount.workspaceId)) {
     throw new BillingPortalFailure('BILLING_ACCOUNT_NOT_AUTHORIZED');
   }
-  const workspaceData = await firestoreGet(token, 'workspaces', platformAccount.workspaceId, fetchImpl);
+  // Two independent read-only documents for the same account-linked tenant.
+  // Fetch concurrently to remove one remote round-trip. Both requests use the
+  // caller's token (Firestore Rules), never a privileged server token.
+  const [workspaceData, billingData] = await Promise.all([
+    firestoreGet(token, 'workspaces', platformAccount.workspaceId, fetchImpl),
+    firestoreGet(token, 'billingAccounts', platformAccount.workspaceId, fetchImpl),
+  ]);
   if (!workspaceData) throw new BillingPortalFailure('BILLING_WORKSPACE_NOT_FOUND');
   const workspace = workspaceData as Workspace;
   if (!validateBillingIdentity({
@@ -117,7 +123,6 @@ export async function resolveBillingPortalSession(
     provider, account: platformAccount, workspace,
   })) throw new BillingPortalFailure('BILLING_IDENTITY_MISMATCH');
 
-  const billingData = await firestoreGet(token, 'billingAccounts', workspace.id, fetchImpl);
   const account = billingData as BillingAccount | null;
   if (account && (
     account.workspaceId !== workspace.id

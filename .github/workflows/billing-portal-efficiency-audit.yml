@@ -1,0 +1,44 @@
+name: Billing Portal Efficiency Audit R1
+
+on:
+  pull_request:
+    paths:
+      - 'app/api/billing/portal/route.ts'
+      - 'lib/server/billingPortalIdentity.ts'
+      - 'lib/server/billingRecentCycles.ts'
+      - 'components/billing/InfinitePayPilotPanel.tsx'
+      - 'components/billing/InfinitePayReadinessPanel.tsx'
+      - 'scripts/billing-portal-efficiency-audit.test.mjs'
+      - 'scripts/billing-portal-identity-concurrency.test.mjs'
+      - 'scripts/billing-portal-history-emulator.test.mjs'
+      - '.github/workflows/billing-portal-efficiency-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  efficiency:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Functional, performance-call-count and isolation tests
+        run: |
+          node --test scripts/billing-portal-efficiency-audit.test.mjs scripts/billing-portal-identity-concurrency.test.mjs
+          node --test scripts/infinitepay-portal-pilot.test.mjs scripts/billing-workspace-rehydration.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Firestore emulator chronological history and tenant isolation
+        run: |
+          npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-billing-efficiency --only firestore "node --test scripts/billing-portal-history-emulator.test.mjs"
+      - name: TypeScript compatibility
+        run: npm run typecheck
