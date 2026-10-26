@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { resolveBillingPortalSession, BillingPortalFailure } from '../../../../lib/server/billingPortalIdentity';
 import { pilotEnabledFor } from '../../../../lib/server/payments/infinitepayPortalPilot.mjs';
 import { readBillingCycleHistory } from '../../../../lib/server/billingRecentCycles';
-import { acceptNewCustomerRamp, readSectorBillingAccess, requestSectorGrace48, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
+import { acceptNewCustomerRamp, readSectorBillingAccess, requestSectorGrace48,
+  createSectorSubscriptionCheckout, reconcileSectorSubscriptionPayment, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
 
 import { callInfinitePay } from '../../../../lib/server/payments/infinitepayCheckout.mjs';
 import {
@@ -184,8 +185,55 @@ async function requestGrace48(request: Request) {
   }
 }
 
+
+async function subscriptionCheckout(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    const raw = await request.text();
+    if (raw.length > 128) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let body: { confirmRealPayment?: boolean } = {};
+    try { body = JSON.parse(raw) as { confirmRealPayment?: boolean }; } catch {
+      return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    }
+    if (body.confirmRealPayment !== true)
+      return NextResponse.json({ code: 'BILLING_EXPLICIT_PAYMENT_INTENT_REQUIRED' }, { status: 400 });
+    const result = await createSectorSubscriptionCheckout({ uid, email }, workspace.id, email);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_CHECKOUT_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
+async function verifySubscription(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    const raw = await request.text();
+    if (raw.length > 800) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let body: { orderNsu?: string; transactionNsu?: string; slug?: string };
+    try { body = JSON.parse(raw); } catch {
+      return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    }
+    const result = await reconcileSectorSubscriptionPayment({ uid, email }, workspace.id, email, {
+      orderNsu: body.orderNsu || '', transactionNsu: body.transactionNsu || '', slug: body.slug || '',
+    });
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_RECONCILIATION_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
 export async function POST(request: Request) {
   const action = new URL(request.url).searchParams.get('action');
+  if (action === 'subscription-checkout') return subscriptionCheckout(request);
+  if (action === 'verify-subscription') return verifySubscription(request);
   if (action === 'request-grace48') return requestGrace48(request);
   if (action === 'accept-pricing') return acceptRampTerms(request);
   if (action === 'create-pilot') return createPilotCheckout(request);
