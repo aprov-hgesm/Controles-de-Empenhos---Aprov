@@ -55,6 +55,8 @@ export interface BillingAccount {
   paymentRequired: boolean;
   pricingPolicyId?: typeof EMPROVEX_NEW_CUSTOMER_RAMP_ID;
   firstPaidReferenceMonth?: string;
+  /** Anniversary timestamp for each complete monthly service period. */
+  firstPaidAt?: string;
   lastBilledReferenceMonth?: string;
   /** One temporary 48h return to operations per reference month. */
   grace48ReferenceMonth?: string;
@@ -85,7 +87,7 @@ export interface BillingCycle {
   checkoutValidUntil?: string;
   checkoutCreatedAt?: string;
   checkoutAmountCents?: number;
-  checkoutState?: 'prepared' | 'linked' | 'settled';
+  checkoutState?: 'prepared' | 'linked' | 'settled' | 'failed' | 'expired';
   settlementLedgerId?: string;
   confirmedAt: string;
   confirmedBy: string;
@@ -142,6 +144,50 @@ export function formatUtcDateOnly(value: string | Date): string {
 
 export function getReferenceMonth(value: string | Date = new Date()): string {
   return formatUtcDateOnly(value).slice(0, 7);
+}
+
+/** Monthly service anniversaries clamp at month end (Jan 31 -> Feb 28).
+ * The reference month belongs to the PERIOD START, not the calendar month of access.
+ * Never moves a customer's first paid month earlier on a trial extension.
+ */
+export function billingAnniversary(start: string | Date, months: number): Date {
+  const date = new Date(start);
+  if (!Number.isFinite(date.getTime()) || !Number.isSafeInteger(months) || months < 0 || months > 600)
+    throw new Error('BILLING_ANNIVERSARY_INVALID');
+  const base = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1,
+    date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()));
+  const lastDay = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
+  base.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return base;
+}
+
+export interface PaidServicePeriod {
+  referenceMonth: string;
+  periodNumber: number;
+  startsAt: string;
+  endsAt: string;
+}
+export function paidServicePeriod(
+  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>,
+  now: Date = new Date(),
+): PaidServicePeriod | null {
+  const start = account.firstPaidAt
+    || (account.firstPaidReferenceMonth ? account.firstPaidReferenceMonth + '-01T00:00:00.000Z' : '');
+  if (!start) return null;
+  const first = new Date(start);
+  if (!Number.isFinite(first.getTime()) || now < first) return null;
+  const monthsApart = (now.getUTCFullYear() - first.getUTCFullYear()) * 12
+    + now.getUTCMonth() - first.getUTCMonth();
+  let periodIndex = Math.max(0, monthsApart);
+  if (billingAnniversary(first, periodIndex) > now) periodIndex -= 1;
+  if (periodIndex < 0) return null;
+  const begin = billingAnniversary(first, periodIndex);
+  return {
+    referenceMonth: getReferenceMonth(begin),
+    periodNumber: periodIndex + 1,
+    startsAt: begin.toISOString(),
+    endsAt: billingAnniversary(first, periodIndex + 1).toISOString(),
+  };
 }
 
 export function getBrazilFixedNationalHolidays(year: number): string[] {
@@ -291,6 +337,7 @@ export function buildInitialBillingAccount(
     ...(rampForNewCustomer ? {
       pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
       firstPaidReferenceMonth: getReferenceMonth(referenceStart),
+      firstPaidAt: referenceStart.toISOString(),
       pricingTermsAcceptedAt: '',
     } : {}),
     currency: 'BRL',
