@@ -15,6 +15,8 @@ import { HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import type { Workspace } from '../platformIdentity';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
+import { decideBillingAccess } from '../billingAccess';
+import { getReferenceMonth } from '../billing';
 
 const DOCUMENT_ROOT = `projects/${firebaseConfig.projectId}/databases/${firebaseConfig.firestoreDatabaseId}/documents`;
 const ROOT = `https://firestore.googleapis.com/v1/${DOCUMENT_ROOT}`;
@@ -378,12 +380,16 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const advancesRamp = ramp && (!account.lastBilledReferenceMonth
         || command.month >= account.lastBilledReferenceMonth);
       const nextAccount: BillingAccount = { ...account, status,
+        ...(command.status === 'paid' || command.status === 'waived'
+          ? { grace48ReviewStatus: 'confirmed' as const }
+          : {}),
         monthlyPriceCents: advancesRamp ? priceCents : account.monthlyPriceCents,
         ...(advancesRamp ? { lastBilledReferenceMonth: command.month } : {}),
         updatedAt: now, updatedBy: actor.email, paymentRequired: false };
       const accountChanged = account.status !== status || account.paymentRequired !== false
         || account.monthlyPriceCents !== nextAccount.monthlyPriceCents
-        || account.lastBilledReferenceMonth !== nextAccount.lastBilledReferenceMonth;
+        || account.lastBilledReferenceMonth !== nextAccount.lastBilledReferenceMonth
+        || account.grace48ReviewStatus !== nextAccount.grace48ReviewStatus;
       const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
@@ -438,6 +444,74 @@ export async function acceptNewCustomerRamp(
         { pricingTermsAcceptedAt: null },
         { pricingTermsAcceptedAt: now, pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID },
         { pricingConsent: true, allFiveTiersDisclosed: true }),
+    ] };
+  });
+}
+
+/** An entitlement check is never a write or a client-chosen month/amount. */
+export async function readSectorBillingAccess(workspaceId: string, email: string) {
+  validWorkspaceId(workspaceId);
+  const token = await getGoogleAccessToken();
+  const [workspaceDoc, accountDoc] = await Promise.all([
+    get(token, 'workspaces/' + workspaceId),
+    get(token, 'billingAccounts/' + workspaceId),
+  ]);
+  const workspace = existingWorkspace(workspaceDoc, workspaceId);
+  const account = existingAccount(accountDoc);
+  assertAccountWorkspace(account, workspace);
+  if (workspace.authorizedEmail !== email)
+    throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+  const month = getReferenceMonth();
+  const cycleDoc = await get(token, 'billingCycles/' + billingCycleId(workspaceId, month));
+  const cycle = cycleDoc?.value as BillingCycle | undefined;
+  const decision = decideBillingAccess(account, cycle ?? null);
+  // Do not disclose future commercial tiers to the sector.
+  return { ...decision, amountCents: account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+    ? (quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
+        referenceMonth: month }).amountCents ?? null)
+    : decision.amountCents };
+}
+
+/**
+ * Immediate one-time access for 48h; founder notified by pending flag on the
+ * billing account, visible in the existing admin directory. Never marks paid.
+ */
+export async function requestSectorGrace48(actor: Actor, workspaceId: string, email: string) {
+  validWorkspaceId(workspaceId);
+  if (actor.email !== email || workspaceId === HGESM_WORKSPACE_ID)
+    throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+  const token = await getGoogleAccessToken();
+  const month = getReferenceMonth();
+  const wp = 'workspaces/' + workspaceId;
+  const ap = 'billingAccounts/' + workspaceId;
+  const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
+  return transaction(token, [wp, ap, cp], docs => {
+    const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
+    const account = existingAccount(docs.get(ap) ?? null);
+    assertAccountWorkspace(account, workspace);
+    if (workspace.authorizedEmail !== email)
+      throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
+    const cycle = docs.get(cp)?.value as BillingCycle | undefined;
+    const decision = decideBillingAccess(account, cycle ?? null);
+    if (decision.allowed) {
+      if (decision.reason === 'grace48') return { result: { ...decision }, updates: [] };
+      throw new BillingAdminError('BILLING_GRACE_NOT_REQUIRED', 409);
+    }
+    if (!decision.canRequestGrace48)
+      throw new BillingAdminError('BILLING_GRACE_ALREADY_USED', 409);
+    const now = new Date();
+    const until = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+    const updated: BillingAccount = { ...account,
+      grace48ReferenceMonth: month, grace48RequestedAt: now.toISOString(),
+      grace48Until: until, grace48ReviewStatus: 'pending',
+      updatedAt: now.toISOString(), updatedBy: actor.email };
+    const result = decideBillingAccess(updated, cycle ?? null, now);
+    return { result, updates: [
+      { path: ap, data: updated },
+      audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
+        { grace48RequestedAt: account.grace48RequestedAt ?? null },
+        { grace48RequestedAt: updated.grace48RequestedAt, grace48Until: until },
+        { event: 'GRACE48_REQUEST_ADMIN_REVIEW', automaticPaymentConfirmation: false }),
     ] };
   });
 }
