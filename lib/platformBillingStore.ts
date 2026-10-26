@@ -95,3 +95,13 @@ export async function prepareBillingEnforcement(adminEmail: string): Promise<{ p
   assertFounderActor(adminEmail);
   return billingRequest<{ prepared: number }>({ action: 'prepare-enforcement' });
 }
+
+export async function resolveBillingRefund(workspace: Workspace, evidence: string, adminEmail: string): Promise<BillingAccount> {
+  assertFounderActor(adminEmail);
+  return billingRequest<BillingAccount>({ action: 'resolve-refund', workspaceId: workspace.id, note: evidence });
+}
+export async function recoverBillingCheckout(workspace: Workspace, month: string, evidence: string,
+  adminEmail: string): Promise<BillingCycle> {
+  assertFounderActor(adminEmail);
+  return billingRequest<BillingCycle>({ action: 'recover-checkout', workspaceId: workspace.id, month, note: evidence });
+}
