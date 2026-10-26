@@ -107,7 +107,8 @@ function describeSectorAuthorizationFailure(code: string): string {
  */
 export function useOperationalData(
   activeTab: OperationalActiveTab,
-  acceptedLegalIdentityKey: string | null = null
+  acceptedLegalIdentityKey: string | null = null,
+  billingAccessGranted: boolean = false
 ) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -137,6 +138,7 @@ export function useOperationalData(
   const operationalAccessEnabled = Boolean(
     legalIdentityKey
     && acceptedLegalIdentityKey === legalIdentityKey
+    && billingAccessGranted
   );
 
   const {
