@@ -3766,3 +3766,92 @@ O contrato de **cálculo e proposta offline** já está versionado em `lib/serve
 **Comunicação comercial:** na seção institucional, o valor inicial é **R$ 29,90/mês**, e o período de 30 dias é de teste acompanhado gratuito. Ao fornecer proposta/checkout/termos comerciais ao novo contratante, explicitar a progressão trimestral completa até **R$ 69,90**. Preservar contratos/isenções anteriores e assegurar que o valor final apresentado no checkout corresponda ao ciclo daquele workspace.
 
 **Responsáveis e próximos passos:** Fundador define e aprova a política (decisão acima); executor de engenharia integra o motor de preço individual a onboarding e billing, sob testes e autorização próprios; o fundador aprova os termos e o rollout antes de qualquer cobrança. **Esta atualização é apenas documental: sem deploy, sem atualização do Firestore e sem modificação de faturamento vigente.**
+
+
+---
+
+## HANDOFF DEFINITIVO — PUBLICAÇÃO FINANCEIRA R1 + INCIDENTE ADMINISTRATIVO + ESCALONAMENTO 29,90→69,90 (25/10/2026 BRT / 26/10/2026 UTC)
+
+> **Esta seção SUPERA o estado de produção descrito em "R16 INSTITUCIONAL — Publicação confirmada" acima.** Preservar os registros anteriores como histórico, mas NÃO confundir a publicação R16 isolada com a versão financeira que está servindo o domínio agora. Fonte: resultados literais dos comandos do proprietário no PowerShell, inspeção do GitHub e contratos do código. GOV-SIMP-01: máximo possível, segurança suficiente, sem burocracia repetitiva.
+
+### 1. Onde estamos e quem fez o quê
+
+- **Projeto:** EMPROVEX; GitHub \`aprov-hgesm/Controles-de-Empenhos---Aprov\`; plataforma \`https://emprovex.com.br/\`; projeto Vercel \`aprov-hgesms-projects/controles-de-empenhos-aprov\`, ID \`prj_DZ2y10DUaXrcHoRMaZ58FkTCvOHB\`.
+- **Versão funcional da main publicada:** \`f0245298fc5cc90c6352d21ecfef70534df6318f\` — squash do PR #389 \`perf(billing): otimizar portal de assinaturas sem alterar indices ou regras\`. Integra a vitrine institucional R16, hotfix de rewrite/PWA/login, o portal InfinitePay R1 do PR #385 e otimizações seguras do PR #389. A consulta cronológica dependente de índice do PR #388 **NÃO** foi integrada; PR #388 continua em DRAFT.
+- **Certificação pré-release:** 8/8 workflows PASS no HEAD da PR #389: Application CI, Core Protection, Fast CI, Domain CI R2, InfinitePay Portal Integration, InfinitePay Payment UI Preview, Billing Portal Efficiency Safe Release e W4 Evidence. Isso não substitui homologação autenticada em produção.
+- **Responsável pelo código/CI e diagnóstico:** ChatGPT com conector GitHub. **Responsável pelo deployment:** o fundador em sessão PowerShell Windows autenticada na equipe Vercel correta. A integração Vercel do chat não possui acesso a essa equipe; **NÃO** repetir tentativas de Vercel por connector, não pedir chaves, não usar WSL.
+- **Contrato do método:** \`docs/EMPROVEX_RELEASE_POWERSHELL.md\`; apenas release de código novo recebe um deploy remoto único \`vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects\`, depois \`inspect\`, smoke, \`promote\` do mesmo ID. Git push **não** publica: \`vercel.json\` define \`git.deploymentEnabled=false\`. Não usar scripts antigos, \`--prebuilt\`, build duplo ou \`--no-color\` em \`vercel curl\`.
+
+### 2. Publicação COMPLETA E CONFIRMADA no domínio — NÃO repetir build/deploy/promote
+
+O fundador executou \`C:\Users\marco\Downloads\publicar_emprovex_main_f024529.ps1\` com \`-Action Stage\`, SHA imutável \`f0245298fc5cc90c6352d21ecfef70534df6318f\`, clone/export limpo em \`D:\EMPROVEX-RELEASE-f0245298fc5c\`, \`vercel link\` no projeto correto e listagem de NOMES de 3 variáveis Production (incluindo \`FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON\`); sem divulgar valores. Digitou \`AMBIENTE-OK\`.
+
+- **Deployment real:** \`dpl_81EG7fDPfrajZ8HFZ1ZGaGPAGvM2\`.
+- **URL imutável:** \`https://controles-de-empenhos-aprov-1wvvq76yz-aprov-hgesms-projects.vercel.app\`.
+- **Inspect:** \`target production\`, \`status Ready\`, Node.js 24.x. Um único build remoto; duração build 1m21s, post-build 57s, 6 CPU-minutos cobrados (2 vCPU × 3 minutos).
+- **Health PASS** via \`vercel.cmd curl /api/health --deployment <URL> --scope aprov-hgesms-projects\`: JSON \`{"status":"ok",...}\`.
+- **Smoke público staged:** \`/\` conteúdo "Quanto custa" PASS; \`/login\` HTML PASS; \`/regularizacao\` texto "Minha assinatura" PASS; \`/privacy\` retornou ~36 KB mas procura literal com acentuação indicou "REVISAR" (pode ser codificação/HTML — **não** homologado, nem falha de renderização comprovada); \`/api/admin/access-requests\` sem autenticação devolveu \`{"ok":false,"error":"Acesso administrativo não autorizado."}\`, como esperado.
+- **Promoção:** \`-Action Promote\` inspecionou o mesmo deployment, health novamente PASS e recebeu \`GO-PROMOVER\`; \`vercel promote\` respondeu HTTP 409 \`The provided deploymentId (dpl_81EG7fDPfrajZ8HFZ1ZGaGPAGvM2) is already the current production deployment.\` **Não** interpretar 409 como falha da aplicação ou motivo para novo deploy; o alias já apontava para essa versão.
+- **PROVA FINAL:** o fundador executou \`vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects\`, que retornou **exatamente** \`id dpl_81EG7fDPfrajZ8HFZ1ZGaGPAGvM2\`, \`target production\`, \`status Ready\`. Assim, **DOMÍNIO OFICIAL ESTÁ PUBLICADO** na versão \`f024529\`. Não repetir \`Stage\`, \`Verify\` nem \`Promote\` por causa do 409. Para versão futura, aplicar método com novo SHA apenas após correção/testes.
+- **Ainda não homologado:** formulários públicos persistindo leads no Firestore, leitura/PATCH administrativa real, login fundador externo real, pagamentos reais, IAM de escrita, Warehouse com fluxos autenticados e Central 3D após a publicação. Não marcar como PASS o que não foi executado.
+
+### 3. Incidente aberto APÓS a publicação — Firestore recusou operação administrativa de cobrança
+
+**Mensagem exata na interface:** \`O Firestore recusou a operação de cobrança. Verifique as Rules publicadas e a sessão administrativa.\`
+
+**Rastreamento confirmado no código da main, sem acesso às Rules efetivamente implantadas:**
+
+1. \`hooks/usePlatformAdminBilling.ts\` apresenta essa mensagem quando um erro Firebase contém \`permission-denied\`. O hook abre \`onSnapshot\` para \`platformBillingConfig\`, \`billingAccounts\`, \`billingCycles\` e chama \`ensurePlatformBillingFoundation(workspaces, adminEmail)\` quando o diretório administrativo está pronto. Logo, o aviso pode ser originado na assinatura de leitura **ou** em uma transação de escrita; a tela pode mostrar erro genérico para ambos.
+2. \`lib/platformBillingStore.ts\`, em \`ensurePlatformBillingFoundation\`, migra configuração/contas legadas para o contrato de R$70 e, quando o preço muda, inclui no mesmo \`runTransaction\` um registro auditável \`billing.price_migration\` em \`platformAuditEvents\` (além da alteração principal). O evento é gerado com \`appendPlatformAuditEvent\` de \`lib/auditTrail.ts\`. Se o evento for negado, a transação inteira falha — **não** remover auditoria, não escrever sem trilha.
+3. \`firestore.rules\` VERSIONADO na \`main\` possui whitelist \`isValidAuditOperation\` (por volta da linha 1738) e \`validPlatformAuditEvent\` (por volta da linha 1900): ambas aceitam outras operações \`billing.*\`, **mas NÃO incluem \`billing.price_migration\`**. Essa inconsistência código/Rules é uma **causa plausível CONCRETA** para recusa na migração, sobretudo se existir preço legado a ajustar. Não foi provado que é o único motivo do erro em produção. Ajustar qualquer uma isoladamente é insuficiente: precisam concordar e passar testes de emulador.
+4. \`firestore.rules\` autoriza \`platformBillingConfig\`, listagem/escrita de \`billingAccounts\`, \`billingCycles\` somente para \`isPlatformAdmin()\` (conta fundadora autenticada por Google, e-mail Firebase verificado, \`firebase.sign_in_provider = google.com\`; email fundador coincide com perfil oficial). Uma sessão por senha, anônima, com provedor errado, expirada ou sem e-mail validado falha corretamente. Não relaxar para \`allow write: if true\` nem dar acesso financeiro a usuários do setor.
+5. O banco operacional é **Firestore nomeado** \`firebaseConfig.firestoreDatabaseId\` no projeto \`gen-lang-client-0982077967\`; \`lib/firebase.ts\` chama \`getFirestore(app, firebaseConfig.firestoreDatabaseId)\`. Não comparar nem publicar Rules na instância \`(default)\` ou \`emprovex-warehouse\` por engano. O nome do banco consta em \`firebase-applet-config.json\`; a implantação efetiva das Rules **NÃO** foi inspecionada nesta conversa.
+6. As regras versionadas \`validPlatformBillingConfig\`/contas têm contrato **legado estrito R$70 (7000 centavos)**. O plano novo progressivo R$29,90–69,90 tem motor de cálculo offline e requer projeto de integração de Schema, Rules, persistência e Termos sem interferir nos VIPs. **Não** resolver a recusa da cobrança criando writes de 2990 centavos sob as Rules antigas nem mudando preços reais às cegas.
+7. Há um risco adicional de dependência externa: \`FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON\` foi confirmado presente no projeto Vercel, **mas isso não demonstra permissões do usuário Firebase no cliente**, nem comprova que as Rules do database nomeado estejam atualizadas. O backend do portal usa outros contratos de autenticação; não misturar tokens administrativos OAuth do servidor com permissões do SDK cliente.
+
+**Status preciso:** BUG/REGRESSÃO DE BILLING ADMIN **ABERTO**; causa raiz definitiva da operação específica ainda não provada. Nenhuma Rule foi implantada, nenhum dado de produção foi alterado e nenhum hotfix publicado durante a auditoria.
+
+### 4. Plano executivo sem burocracia para o próximo chat — incidente de cobrança
+
+**Quem executa:** próximo ChatGPT/Worker diagnóstico via GitHub; fundador só quando precisar verificar console Firebase ou realizar etapa de publicação explicitamente autorizada.
+
+1. Identificar a ação real que disparou o erro (abrir aba Assinaturas, salvar configuração, alterar conta, confirmar competência) por inspeção de UI/logs **sem solicitar segredos**; distinguir \`onSnapshot\` de \`runTransaction\` e identificar a coleção/caminho recusado.
+2. Comparar Rules REALMENTE PUBLICADAS do database **nomeado correto** no projeto Firebase com \`firestore.rules\` da main. Usar acesso de leitura autenticado do fundador no console Firebase/Cloud ou CLI apropriada, nunca inferir do arquivo Git. Não fazer deploy.
+3. Reproduzir no Firestore Emulator, incluindo **sessão Google fundadora** simulada e cenário de preço legado que dispara \`billing.price_migration\` mais evento de auditoria. Adicionar guard de regressão: evento permitido pelo administrador válido, negado a cliente externo; persistência da conta e auditoria atômicas, VIP/isentos preservados.
+4. Se confirmado, elaborar hotfix **mínimo** das duas whitelists para \`billing.price_migration\` e quaisquer outras diferenças comprovadas; manter validadores estritos, logs, idempotência e prevenção de escrita cruzada. Não criar permissões gerais nem desativar auditoria. Rodar suites Firestore e CI.
+5. Somente com prova e aprovação do fundador: publicar **Rules** no database certo por procedimento separado; se houver alteração de código, fazer novo release por SHA e Vercel staged+promoção UMA vez. Não republicar \`f024529\` só por conta do 409 de promoção.
+6. Se Rules já corretas, rever autenticação Google fundadora, \`email_verified\`, claims, campo \`ug\`/workspace e contratos rígidos de cobrança sem supor falha de Rules. Validar escrita administrativa com alteração controlada e reversível **somente quando autorizada**.
+
+### 5. Plano comercial APROVADO — escalonamento mensal individual de R$29,90 até R$69,90
+
+**A decisão comercial é DEFINITIVA como especificação; a ativação de cobrança REAL NÃO ESTÁ IMPLEMENTADA/COMPROVADA no ambiente de produção.** O cálculo já existe em \`lib/server/payments/emprovexRampPricing.mjs\`, export \`RAMP_POLICY_ID = emprovex_individual_ramp_v1\`; testes \`scripts/infinitepay-ramp-pricing.test.mjs\`. O código explicitamente se declara \`offline and not connected to production onboarding/Firestore\`.
+
+| Mês da assinatura PAGA do cliente, após o trial | Valor mensal por workspace |
+| --- | ---: |
+| Meses 1–3 | **R$ 29,90** |
+| Meses 4–6 | **R$ 39,90** |
+| Meses 7–9 | **R$ 49,90** |
+| Meses 10–12 | **R$ 59,90** |
+| Mês 13 em diante | **R$ 69,90** |
+
+**Regras comerciais obrigatórias:**
+- Escalonamento **POR CLIENTE/WORKSPACE**, nunca por usuário individual, por usuário conectado ou calendário global. Um setor/workspace pode ter diversos integrantes; não afirmar um limite de usuários sem validar contrato. Cliente A e cliente B começam no mês 1 após **suas próprias** datas de início pago.
+- Trial padrão **30 dias**; não contar dias nem meses do teste no índice de escalonamento. O primeiro mês de cobrança após o trial é mês 1 (R$29,90), desde que a elegibilidade/aceite seja comprovada.
+- Clientes já existentes de R$70/mês, contas antigas e competências já materializadas **não são migrados ou reprecificados automaticamente**. Valores históricos são imutáveis, nenhum pagamento confirmado pode ser refeito silenciosamente.
+- Workspaces VIP legados e fundador **R$0**, isentos permanentemente segundo seus contratos; não colocá-los no escalonamento nem interromper isenção. Dados operacionais e contas antigas preservados.
+- Antes da contratação, **Termos/condições e aceite** devem apresentar todas as faixas de valor, calendário da progressão e unidade de cobrança de forma transparente; a comunicação inicial do site deve destacar **R$29,90 como PREÇO INICIAL**, **sem publicar tabela/simulador/caminho promocional do escalonamento na vitrine ou expor previsão futura em abas para usuários já existentes**. Ocultar marketing público NÃO significa esconder termos materiais do cliente na contratação. A política já foi solicitada nos Termos.
+- O motor só pode inscrever novos clientes com \`pricingTermsAcceptedAt\` e sem ciclos antigos; campo \`firstPaidReferenceMonth\` determina os valores por competência, \`pricingPolicyId\` registra a regra, e o montante \`billingCycles.amountCents\` da competência é fonte congelada para checkout e conciliação.
+- Integração futura deve verificar identidade/workspace, preço exato da competência, consentimento, status, referência, pagamentos verificados, idempotência e auditoria em transação no servidor. Não criar liquidação pelo simples retorno do checkout.
+- **Situação R1 publicada:** \`lib/billing.ts\` usa \`EMPROVEX_FULL_PLAN_PRICE_CENTS=7000\` e \`firestore.rules\` exige 7000 em contas não isentas. \`app/api/billing/portal/route.ts\` é portal de **consulta**; piloto Pix R$1 requer \`INFINITEPAY_PILOT_ENABLED=1\` e allowlist por email/workspace, não concede assinatura nem marca competências pagas. Nenhuma ativação automática, suspensão por atraso ou liquidação automática de mensalidades está autorizada.
+
+### 6. Handoff curto, o que fazer e o que NÃO fazer
+
+**Onde estamos:** release publicado e confirmado \`dpl_81EG7fDPfrajZ8HFZ1ZGaGPAGvM2\` em \`emprovex.com.br\`; incidente administrativo de cobrança com \`permission-denied\` aberto; contrato de preços escalonados registrado e motor offline testado, mas não ativado. Rules efetivamente implantadas **não verificadas**.
+
+**O que estamos fazendo:** diagnosticar causa do erro financeiro com foco na divergência \`billing.price_migration\`, validar Rules reais e sessão fundadora, criar correção estrita e teste antes de autorização para qualquer mudança produtiva. Preservar a exigência de privacidade, confiança, baixa leitura Firestore e GOV-SIMP-01.
+
+**Quem está fazendo:** ChatGPT assume investigação, documentação, código, testes e PR; fundador verifica sessão/Console Firebase ou executa deploy manual quando necessário/autorizado.
+
+**A seguir:** confirmar Rules efetivas do banco nomeado; reproduzir e consertar whitelists com testes, sem desativar proteções; separadamente planejar ativação comercial segura do escalonamento e Termos. **NÃO** recriar deployment, **NÃO** repetir \`promote\`, **NÃO** expor segredos, **NÃO** mudar base financeira sem comprovação e autorização. Para o próximo chat, ler primeiramente ESTA seção, \`docs/EMPROVEX_RELEASE_POWERSHELL.md\`, \`hooks/usePlatformAdminBilling.ts\`, \`lib/platformBillingStore.ts\`, \`lib/auditTrail.ts\`, \`firestore.rules\`, \`lib/server/payments/emprovexRampPricing.mjs\`, \`scripts/infinitepay-ramp-pricing.test.mjs\` e \`firebase-applet-config.json\`.
+
+**Data do registro:** 25/10/2026 BRT; cronologia de comandos e commits pode aparecer como 26/10/2026 UTC.
