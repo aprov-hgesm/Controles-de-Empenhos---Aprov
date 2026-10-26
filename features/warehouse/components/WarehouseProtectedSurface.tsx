@@ -76,7 +76,7 @@ export function WarehouseAccessBoundary({
       setWorkspaceContext(null);
       clearResolvedWorkspaceContext();
       resetActiveProfileMode();
-      window.location.replace('/');
+      window.location.replace('/login');
     };
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -169,7 +169,7 @@ export function WarehouseAccessBoundary({
       setWorkspaceContext(null);
 
       void signOut(auth).finally(() => {
-        window.location.replace('/');
+        window.location.replace('/login');
       });
     };
 
