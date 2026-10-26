@@ -209,8 +209,8 @@ export function InfinitePayReadinessPanel({
             <Clock3 className="h-4 w-4" /> Retorno do checkout identificado
           </div>
           <p className="mt-2 text-sm leading-relaxed text-amber-900/80">
-            Sua volta ao EMPROVEX não confirma pagamento. Quando o retorno pertencer ao piloto autorizado,
-            a validação pela API aparecerá abaixo. Outros pagamentos precisam de conciliação administrativa.
+            O retorno do checkout não comprova a quitação. O EMPROVEX consultará diretamente a InfinitePay
+            e registrará a baixa apenas após confirmar o pedido, a transação e o valor.
             Não repita o Pix do mesmo pedido.
           </p>
         </div>
@@ -465,22 +465,6 @@ export function InfinitePayReadinessPanel({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            data-testid="infinitepay-checkout-disabled"
-            title="Cobranças reais ainda não foram habilitadas no EMPROVEX."
-            className="cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-500"
-          >
-            <LockKeyhole className="mr-2 inline h-4 w-4" aria-hidden /> Pagar com InfinitePay
-          </button>
-          <p className="max-w-md text-xs text-slate-500">
-            Disponível após certificação de identidade, Firestore e reconciliação.
-            Esta tela não utiliza sua API Key e não cria links.
-          </p>
-        </div>
       </section>
       )}
 
