@@ -45,6 +45,8 @@ type Mutation =
   | { action: 'trial'; workspaceId: string; days?: number }
   | { action: 'offer-ramp'; workspaceId: string }
   | { action: 'prepare-enforcement' }
+  | { action: 'resolve-refund'; workspaceId: string; note: string }
+  | { action: 'recover-checkout'; workspaceId: string; month: string; note: string }
   | { action: 'exemption'; workspaceId: string; exempt: boolean }
   | { action: 'status'; workspaceId: string; status: BillingAccountStatus }
   | { action: 'cycle'; workspaceId: string; month: string; status: BillingCycleStatus; note?: string };
@@ -341,7 +343,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
   if (!('workspaceId' in command)) throw new BillingAdminError('BILLING_INVALID_WORKSPACE', 400);
   validWorkspaceId(command.workspaceId);
   const workspaceId = command.workspaceId;
-  if (command.action !== 'trial' && command.action !== 'exemption' && command.action !== 'status' && command.action !== 'cycle' && command.action !== 'offer-ramp')
+  if (command.action !== 'trial' && command.action !== 'exemption' && command.action !== 'status' && command.action !== 'cycle' && command.action !== 'offer-ramp' && command.action !== 'resolve-refund' && command.action !== 'recover-checkout')
     throw new BillingAdminError('BILLING_UNKNOWN_ACTION', 400);
   if ((command.action === 'trial' || command.action === 'offer-ramp') && workspaceId === HGESM_WORKSPACE_ID)
     throw new BillingAdminError('BILLING_FOUNDER_PERMANENTLY_EXEMPT', 409);
@@ -350,6 +352,55 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
   const accountPath = 'billingAccounts/' + workspaceId;
   const workspacePath = 'workspaces/' + workspaceId;
   const paths = [accountPath, workspacePath];
+  if (command.action === 'resolve-refund') {
+    if (noteValue(command.note).length < 5)
+      throw new BillingAdminError('BILLING_REFUND_REVIEW_EVIDENCE_REQUIRED', 400);
+    return transaction(token, paths, docs => {
+      const workspace = existingWorkspace(docs.get(workspacePath) ?? null, workspaceId);
+      const account = existingAccount(docs.get(accountPath) ?? null);
+      assertAccountWorkspace(account, workspace);
+      if (account.refundReviewStatus !== 'pending')
+        throw new BillingAdminError('BILLING_REFUND_REVIEW_NOT_PENDING', 409);
+      const now = new Date().toISOString();
+      const updated: BillingAccount = { ...account, refundReviewStatus: 'resolved',
+        updatedAt: now, updatedBy: actor.email };
+      return { result: updated, updates: [
+        { path: accountPath, data: updated },
+        audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId,
+          workspace.ug || null, { refundReviewStatus: 'pending' },
+          { refundReviewStatus: 'resolved' },
+          { event: 'REFUND_REVIEW_RESOLVED', evidence: noteValue(command.note) }),
+      ] };
+    });
+  }
+  if (command.action === 'recover-checkout') {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(command.month)
+      || noteValue(command.note).length < 5)
+      throw new BillingAdminError('BILLING_CHECKOUT_RECOVERY_EVIDENCE_REQUIRED', 400);
+    const cp = 'billingCycles/' + billingCycleId(workspaceId, command.month);
+    return transaction(token, [...paths, cp], docs => {
+      const workspace = existingWorkspace(docs.get(workspacePath) ?? null, workspaceId);
+      const account = existingAccount(docs.get(accountPath) ?? null);
+      assertAccountWorkspace(account, workspace);
+      const cycle = docs.get(cp)?.value as BillingCycle | undefined;
+      if (!cycle || cycle.checkoutState !== 'prepared' || cycle.checkoutUrl
+        || cycle.status === 'paid' || cycle.status === 'waived'
+        || !cycle.checkoutCreatedAt
+        || Date.now() - Date.parse(cycle.checkoutCreatedAt) < 10 * 60_000)
+        throw new BillingAdminError('BILLING_CHECKOUT_RECOVERY_NOT_ELIGIBLE', 409);
+      const now = new Date().toISOString();
+      const updated: BillingCycle = { ...cycle, checkoutState: 'failed',
+        updatedAt: now, updatedBy: actor.email,
+        note: 'Recuperação administrativa do checkout após conferência externa: ' + noteValue(command.note) };
+      return { result: updated, updates: [
+        { path: cp, data: updated },
+        audit(actor, 'billing.payment_reopen', 'billing_cycle', cycle.id,
+          workspaceId, workspace.ug || null,
+          { checkoutState: 'prepared' }, { checkoutState: 'failed' },
+          { event: 'PROVIDER_ORDER_CHECKED_UNPAID', evidence: noteValue(command.note) }),
+      ] };
+    });
+  }
   // A previously provisioned, not-yet-billed sector may opt in only through an
   // explicit founder offer and a SEPARATE customer acceptance. Never enroll
   // a historical payer or VIP silently.
