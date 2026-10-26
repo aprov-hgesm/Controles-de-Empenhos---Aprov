@@ -625,10 +625,10 @@ export function AdminBillingPanel({
                               disabled={busy}
                               onClick={() => {
                                 const note = window.prompt(
-                                  'Referência ou observação administrativa do pagamento (opcional):',
+                                  'Referência obrigatória do pagamento recebido (NSU ou comprovante conferido):',
                                   ''
                                 );
-                                if (note === null) return;
+                                if (!note || note.trim().length < 5) return;
                                 void onSetCycleStatus(
                                   workspace,
                                   attention.referenceMonth,
