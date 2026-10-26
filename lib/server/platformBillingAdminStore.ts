@@ -332,6 +332,10 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         monthlyPriceCents: 2990, updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
+        { path: workspacePath, data: { ...workspace,
+          billingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
+          billingEntitlementUntil: account.trialGranted && account.trialEndsAt > now
+            ? account.trialEndsAt : now } },
         audit(actor, 'billing.status_change', 'billing_account', workspaceId,
           workspaceId, workspace.ug || null, { policy: 'legacy' },
           { policy: EMPROVEX_NEW_CUSTOMER_RAMP_ID, firstPaidAt: start },
@@ -365,6 +369,9 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         paymentRequired: false, updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
+        ...(account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+          ? [{ path: workspacePath, data: { ...workspace,
+              billingEntitlementUntil: updated.trialEndsAt } }] : []),
         audit(actor, 'billing.trial_grant', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
           { status: account.status, trialEndsAt: account.trialEndsAt }, { status: updated.status, trialEndsAt: updated.trialEndsAt }, { trialDays: days }),
       ] };
@@ -377,6 +384,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         exemptionSource: 'manual', paymentRequired: false, updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
+        { path: workspacePath, data: { ...workspace,
+          billingPolicyId: '', billingEntitlementUntil: '2099-12-31T23:59:59.000Z' } },
         audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
           { status: account.status, monthlyPriceCents: account.monthlyPriceCents },
           { status: updated.status, monthlyPriceCents: 0 }, { commercialExemption: true }),
@@ -390,6 +399,10 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
+        ...(account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+          && ['suspended','canceled'].includes(updated.status)
+          ? [{ path: workspacePath, data: { ...workspace,
+              billingEntitlementUntil: now } }] : []),
         audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
           { status: account.status }, { status: updated.status }),
       ] };
@@ -441,6 +454,12 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         || account.grace48ReviewStatus !== nextAccount.grace48ReviewStatus;
       const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
+      if (ramp && command.status === 'paid' || ramp && command.status === 'waived') {
+        const active = paidServicePeriod(account);
+        if (active?.referenceMonth === command.month) updates.push({
+          path: workspacePath, data: { ...workspace, billingEntitlementUntil: active.endsAt },
+        });
+      }
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
         ? 'billing.payment_confirm' : 'billing.payment_reopen',
         'billing_cycle', transition.cycle.id, workspaceId, workspace.ug || null,
@@ -582,6 +601,9 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
     const result = decideBillingAccess(updated, cycle ?? null, now);
     return { result, updates: [
       { path: ap, data: updated },
+      { path: wp, data: { ...workspace,
+        billingEntitlementUntil: workspace.billingEntitlementUntil &&
+          workspace.billingEntitlementUntil > until ? workspace.billingEntitlementUntil : until } },
       audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
         { grace48RequestedAt: account.grace48RequestedAt ?? null },
         { grace48RequestedAt: updated.grace48RequestedAt, grace48Until: until },
@@ -791,6 +813,9 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
       ...(current.referenceMonth === currentAccount.grace48ReferenceMonth ? { grace48ReviewStatus: 'confirmed' as const } : {}), updatedAt: now, updatedBy: 'provider:infinitepay' };
     return { result: { verified: true, code: 'BILLING_PAYMENT_CONFIRMED' }, updates: [
       { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
+      ...(paidServicePeriod(currentAccount)?.referenceMonth === current.referenceMonth
+        ? [{ path: 'workspaces/' + workspaceId, data: { ...currentWorkspace,
+            billingEntitlementUntil: paidServicePeriod(currentAccount)!.endsAt } }] : []),
       { path: lp, data: { provider: 'infinitepay', workspaceId, cycleId: current.id,
         orderNsu: input.orderNsu, transactionNsu: input.transactionNsu,
         invoiceSlug: input.slug, amountCents: current.amountCents,
