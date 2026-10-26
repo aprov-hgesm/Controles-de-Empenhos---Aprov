@@ -391,6 +391,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
     if (typeof command.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(command.month)
       || !VALID_CYCLE_STATUSES.has(command.status))
       throw new BillingAdminError('BILLING_INVALID_CYCLE', 400);
+    if (command.status === 'paid' && noteValue(command.note).length < 5)
+      throw new BillingAdminError('BILLING_MANUAL_PAYMENT_REFERENCE_REQUIRED', 400);
     cyclePath = 'billingCycles/' + billingCycleId(workspaceId, command.month);
     paths.push(cyclePath, CONFIG_PATH);
   }
@@ -472,6 +474,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         ...buildBillingCycle(account, command.month, config, actor.email),
         amountCents: priceCents,
       };
+      if (previous?.checkoutState === 'settled' && command.status !== 'paid')
+        throw new BillingAdminError('BILLING_PROVIDER_SETTLEMENT_IMMUTABLE', 409);
       if (previous && ramp && previous.amountCents !== priceCents)
         throw new BillingAdminError('BILLING_EXISTING_CYCLE_PRICE_MISMATCH', 409);
       if (base.workspaceId !== workspaceId || base.ug !== (workspace.ug || '')
