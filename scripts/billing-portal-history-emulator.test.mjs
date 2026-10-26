@@ -82,11 +82,12 @@ test('query rejects malformed or cross-tenant workspace identifiers before netwo
   }
 });
 
-test('query orders by indexed document identity before limit; no compound filter on workspace fields', () => {
+test('query sorts within a single verified workspace; composite index must be provisioned independently', () => {
   const query = buildBillingHistoryQuery('workspace-a', projectId, databaseId).structuredQuery;
   assert.equal(query.limit, 24);
-  assert.equal(query.orderBy[0].field.fieldPath, '__name__');
+  assert.equal(query.orderBy[0].field.fieldPath, 'referenceMonth');
   assert.equal(query.orderBy[0].direction, 'DESCENDING');
-  assert.equal(query.where.compositeFilter.filters.length, 2);
-  assert.ok(query.where.compositeFilter.filters.every((f) => f.fieldFilter.field.fieldPath === '__name__'));
+  assert.equal(query.where.fieldFilter.field.fieldPath, 'workspaceId');
+  assert.equal(query.where.fieldFilter.op, 'EQUAL');
+  assert.equal(query.where.fieldFilter.value.stringValue, 'workspace-a');
 });
