@@ -167,6 +167,7 @@ interface AdminBillingViewState {
   mutatingKey: string | null;
   updateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   grantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  offerRamp: (workspace: Workspace) => Promise<unknown>;
   setExemption: (
     workspace: Workspace,
     exempt: boolean
