@@ -23,6 +23,7 @@ export interface PlatformBillingConfig {
   version: typeof EMPROVEX_BILLING_VERSION;
   billingMode: BillingMode;
   requirePayment: boolean;
+  billingCutoverPreparedAt?: string;
   automaticSuspension: boolean;
   monthlyPriceCents: number;
   currency: 'BRL';
