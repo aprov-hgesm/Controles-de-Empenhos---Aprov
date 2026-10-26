@@ -168,6 +168,8 @@ interface AdminBillingViewState {
   updateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   grantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
   offerRamp: (workspace: Workspace) => Promise<unknown>;
+  resolveRefund: (workspace: Workspace, note: string) => Promise<unknown>;
+  recoverCheckout: (workspace: Workspace, month: string, note: string) => Promise<unknown>;
   prepareEnforcement: () => Promise<unknown>;
   setExemption: (
     workspace: Workspace,
