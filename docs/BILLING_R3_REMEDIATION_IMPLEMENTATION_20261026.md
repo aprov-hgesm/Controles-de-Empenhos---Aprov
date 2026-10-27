@@ -61,3 +61,29 @@ Arquivos alterados: `lib/server/platformBillingAdminStore.ts`, `lib/billing.ts`,
 8. Recuperação administrativa com link potencialmente válido e não cancelado: rejeição; somente depois de vencido/cancelado e com conferência.
 
 **Status:** implementação commitada no PR #398 Draft. As provas executáveis e a integração real continuam reservadas à certificação de release. **Sem merge, promoção Vercel, alteração de Rules ou operação real com a InfinitePay.**
+
+
+## Pré-piloto Pix R$ 29,90 — isolamento e responsabilidades (27/10/2026)
+
+**Alteração aplicada no PR #398, sem deploy:** a criação de links pela InfinitePay agora exige, além de `INFINITEPAY_BILLING_ENABLED=1`, um escopo explícito:
+- `INFINITEPAY_BILLING_SCOPE=pilot` com `INFINITEPAY_BILLING_PILOT_WORKSPACE_ID=<workspace ID>`: **somente** este setor autenticado pode emitir link real;
+- `INFINITEPAY_BILLING_SCOPE=all`: somente quando o fundador aprovar a abertura comercial integral;
+- variável ausente ou valor diferente: checkout negado mesmo que haja API Key configurada.
+
+`EMPROVEX_BILLING_PUBLIC_ORIGIN` agora define a origem HTTPS canônica do `redirect_url` e da URL de webhook. Não se usam cabeçalhos Host/X-Forwarded-Host controláveis pelo cliente. **Exemplo para piloto em produção com domínio real:** `https://emprovex.com.br`. Se um staging tiver proteção de acesso Vercel, a InfinitePay pode não conseguir enviar eventos àquela origem; a URL deve ser publicamente alcançável e roteada para a versão do servidor que entende o pedido. Não assumir que URL de preview protegido serve como webhook.
+
+**Configuração exclusiva do operador da conta (sem passar segredos no chat):**
+1. Em sua conta InfinitePay, habilitar Checkout Integrado, ativar Pix e gerar API Key server-only vinculada ao recebedor correto. Confirmar favorecido e tarifas no app. A API Key aparece apenas na criação.
+2. No projeto Vercel `aprov-hgesms-projects/controles-de-empenhos-aprov`, cadastrar/revisar com privilégio do proprietário: `INFINITEPAY_API_KEY`, `INFINITEPAY_HANDLE`, `INFINITEPAY_ORDER_SECRET` (mín. 32 caracteres), `INFINITEPAY_WEBHOOK_TOKEN` (mín. 32 caracteres), `INFINITEPAY_BILLING_ENABLED=1`, `INFINITEPAY_BILLING_SCOPE=pilot`, `INFINITEPAY_BILLING_PILOT_WORKSPACE_ID`, `EMPROVEX_BILLING_PUBLIC_ORIGIN`. Não usar prefixo `NEXT_PUBLIC_` nem colar valores aqui.
+3. Não ativar `EMPROVEX_BILLING_ENFORCEMENT_ENABLED=1`, `EMPROVEX_BILLING_RULES_CERTIFIED=1` ou `billingMode=enforce` como pré-requisito de um **checkout Pix isolado**: o teste de cobrança funciona em `observe`, sem bloquear os demais usuários.
+4. Autorizar o pagamento Pix real de R$29,90, conferir valor e recebedor antes da transferência e comprovar no app InfinitePay o registro da venda e o crédito conforme o plano da conta.
+
+**Tarefas de desenvolvimento que antecedem a autorização do teste real:**
+- Integrar o PR #398 sobre o release efetivamente publicado (não substituir hotfixes de navegação), fazer typecheck e certificação focalizada de checkout/refund/reconciliação sem dinheiro;
+- Verificar que o endpoint do webhook é realmente alcançável pelo provedor e recebe o payload esperado; um redirect apenas não garante baixa;
+- Garantir criação da competência em Firestore nomeado, ledger de quitação, não duplicação e resultado `paid` de forma auditável;
+- Publicar primeiro uma única versão coerente com o domínio e com a origem configurada, mantendo `billingMode=observe`.
+
+**Limite de acesso do assistente nesta conversa:** a conexão Vercel atualmente disponibilizada não expõe o team `aprov-hgesms-projects`; o usuário pode autorizar a equipe à conexão, ou executar as alterações de variáveis e o deploy com a Vercel CLI autenticada, pelo método memorial. Nenhum segredo deve ser impresso no console.
+
+Documentação oficial: https://ajuda.infinitepay.io/pt-BR/articles/10766888-como-usar-o-checkout-integrado-da-infinitepay
