@@ -134,6 +134,49 @@ const engine = loadTs('lib/server/platformBillingAdminStore.ts', {
   './warehouseBillingMirror': { syncWarehouseBillingMirror: async () => undefined },
   '../billingAccess': billingAccess,
 });
+test('pilot-only server access: unpaid deny, paid allow, other sectors/VIPs unaffected', async () => {
+  fixture();
+  const ws = { id:'aprovisionamento-teste-3', ug:'160777', status:'active',
+    authorizedEmail:'test3@example.com', billingPolicyId:'emprovex_individual_ramp_v1',
+    billingEntitlementUntil:new Date().toISOString() };
+  const account = domain.buildInitialBillingAccount(ws, founder.email, false);
+  store('workspaces/'+ws.id, ws);
+  store('billingAccounts/'+ws.id, account);
+  const vars = ['EMPROVEX_BILLING_QA_WORKSPACE_ID','INFINITEPAY_BILLING_ENABLED',
+    'INFINITEPAY_BILLING_SCOPE','INFINITEPAY_BILLING_PILOT_WORKSPACE_ID'];
+  const previous = Object.fromEntries(vars.map(k => [k, process.env[k]]));
+  try {
+    Object.assign(process.env, {
+      EMPROVEX_BILLING_QA_WORKSPACE_ID:ws.id,
+      INFINITEPAY_BILLING_ENABLED:'1', INFINITEPAY_BILLING_SCOPE:'pilot',
+      INFINITEPAY_BILLING_PILOT_WORKSPACE_ID:ws.id,
+    });
+    const unpaid = await engine.readSectorBillingAccess(ws.id, ws.authorizedEmail);
+    assert.equal(unpaid.enforcementEnabled, true);
+    assert.equal(unpaid.allowed, false);
+    assert.equal(unpaid.reason, 'payment_required');
+    assert.equal(unpaid.requiresPayment, true);
+
+    const vip = await engine.readSectorBillingAccess('vip-legacy-a','vip1@example.com');
+    assert.equal(vip.allowed, true);
+    assert.equal(vip.enforcementEnabled, false);
+    assert.equal(vip.reason, 'observe');
+
+    const referenceMonth = domain.paidServicePeriod(account).referenceMonth;
+    store('billingCycles/'+ws.id+'__'+referenceMonth,
+      {workspaceId:ws.id,referenceMonth,status:'paid'});
+    const paid = await engine.readSectorBillingAccess(ws.id, ws.authorizedEmail);
+    assert.equal(paid.allowed, true);
+    assert.equal(paid.reason, 'paid');
+    assert.equal(writeCount, 0, 'read-only QA does not mutate Firestore');
+  } finally {
+    for (const k of vars) {
+      if (previous[k] === undefined) delete process.env[k];
+      else process.env[k] = previous[k];
+    }
+  }
+});
+
 test('read-only dashboard: R$50 config and three VIPs retained, no writes',async()=>{
   fixture();
   const data=await engine.readBillingAdminDirectory();
