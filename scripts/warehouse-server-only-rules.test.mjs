@@ -60,13 +60,14 @@ async function founder(email,label){
   await signInWithCredential(session.auth,credential);
   return session;
 }
-async function lifecycle(status,ug=UG){
+async function lifecycle(status,ug=UG,billingFields={}){
   const response=await fetch(
     FIRESTORE+'/v1/projects/'+PROJECT+'/databases/emprovex-warehouse/documents/warehouseAccess/'+WS,
     {method:'PATCH',headers:{'Content-Type':'application/json',authorization:'Bearer owner'},
     body:JSON.stringify({fields:{
       schemaVersion:{stringValue:'warehouse_workspace_access_v1'},
-      workspaceId:{stringValue:WS},ug:{stringValue:ug},status:{stringValue:status}
+      workspaceId:{stringValue:WS},ug:{stringValue:ug},status:{stringValue:status},
+      ...billingFields
     }})}
   );
   if(!response.ok)throw new Error('Lifecycle seed: '+await response.text());
@@ -118,6 +119,27 @@ async function main(){
   await denied('UG diferente no lifecycle revoga leitura',()=>getDoc(materialPath(sector.db)));
   await lifecycle('active',UG);
   await allowed('reativação restaura leitura',()=>getDoc(materialPath(sector.db)));
+
+  // A paid sector is admitted, while an unpaid sector is blocked at the
+  // database Rules layer (not merely redirected by the React login gate).
+  const past={billingEnforcementStatus:{stringValue:'enforce'},
+    billingEntitlementUntil:{stringValue:'2000-01-01T00:00:00.000Z'}};
+  await lifecycle('active',UG,past);
+  await denied('mensalidade vencida bloqueia leitura direta SDK',()=>getDoc(materialPath(sector.db)));
+  await denied('mensalidade vencida bloqueia listagem direta SDK',()=>getDocs(collection(sector.db,'warehouse',WS,'materials')));
+
+  const future={billingEnforcementStatus:{stringValue:'enforce'},
+    billingEntitlementUntil:{stringValue:'2099-12-31T23:59:59.000Z'}};
+  await lifecycle('active',UG,future);
+  await allowed('pagamento confirmado restaura leitura SDK',()=>getDoc(materialPath(sector.db)));
+
+  // VIP/legacy/observe policy must remain outside the payment restriction.
+  await lifecycle('active',UG,{billingEnforcementStatus:{stringValue:'observe'},
+    billingEntitlementUntil:{stringValue:'2000-01-01T00:00:00.000Z'}});
+  await allowed('VIP e observação não exigem pagamento',()=>getDoc(materialPath(sector.db)));
+
+  await lifecycle('active',UG);
+  await allowed('legado sem marcador de cobrança continua com acesso',()=>getDoc(materialPath(sector.db)));
   console.log('WAREHOUSE SERVER-ONLY RULES EMULATOR PASS');
 }
 try {await main();}
