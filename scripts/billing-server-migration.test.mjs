@@ -139,7 +139,7 @@ test('pilot-only server access: unpaid deny, paid allow, other sectors/VIPs unaf
   const ws = { id:'aprovisionamento-teste-3', ug:'160777', status:'active',
     authorizedEmail:'test3@example.com', billingPolicyId:'emprovex_individual_ramp_v1',
     billingEntitlementUntil:new Date().toISOString() };
-  const account = domain.buildInitialBillingAccount(ws, founder.email, false);
+  const account = domain.buildInitialBillingAccount(ws, founder.email, false, undefined, undefined, true);
   store('workspaces/'+ws.id, ws);
   store('billingAccounts/'+ws.id, account);
   const vars = ['EMPROVEX_BILLING_QA_WORKSPACE_ID','INFINITEPAY_BILLING_ENABLED',
