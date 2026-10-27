@@ -45,7 +45,7 @@ assertContains(gate, 'não significa que todo tratamento de dados pessoais depen
 
 assertContains(terms, 'Plano Completo', 'Termos comerciais');
 assertContains(terms, '30 dias', 'Trial');
-assertContains(terms, 'Mercado Pago', 'Cobrança externa');
+assertContains(terms, 'InfinitePay', 'Checkout externo vigente');
 assertContains(terms, 'Pix', 'Pix');
 assertContains(terms, 'Cancelamento comercial e exclusão de dados são procedimentos diferentes.', 'Cancelamento separado de exclusão');
 assertContains(terms, 'não há promessa de', 'Disponibilidade sem garantia absoluta');
@@ -53,8 +53,8 @@ assertContains(terms, 'version={CURRENT_LEGAL_BUNDLE.termsVersion}', 'Versão p�
 
 assertContains(privacy, 'Firebase e Google Cloud', 'Infraestrutura Google');
 assertContains(privacy, 'Vercel', 'Infraestrutura Vercel');
-assertContains(privacy, 'Mercado Pago', 'Provedor de pagamento');
-assertContains(privacy, 'não precisa armazenar credenciais de cartão', 'Minimização de dados de pagamento');
+assertContains(privacy, 'InfinitePay', 'Provedor de pagamento');
+assertContains(privacy, 'não armazena números de cartão, CVV ou credenciais de pagamento', 'Minimização de dados de pagamento');
 assertContains(privacy, 'Logs, eventos de auditoria', 'Logs e auditoria');
 assertContains(privacy, 'Backups podem conter', 'Backup');
 assertContains(privacy, 'Direitos do titular', 'Direitos do titular');
