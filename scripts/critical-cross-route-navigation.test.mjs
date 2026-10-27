@@ -19,7 +19,7 @@ test('P0: Administração e assinatura carregam a rota ao primeiro clique', () =
 });
 
 test('P0: links entre áreas são navegações de documento, não transições travadas', () => {
-  for (const path of ["features/warehouse/components/WarehouseSidebar.tsx","features/warehouse/mobile/WarehouseMobileShell.tsx","features/warehouse/mobile/WarehouseMobileHome.tsx","components/billing/BillingPortalShell.tsx","components/auth/EmprovexLogin.tsx","app/regularizacao/page.tsx"]) {
+  for (const path of ["features/warehouse/components/WarehouseSidebar.tsx","features/warehouse/mobile/WarehouseMobileShell.tsx","features/warehouse/mobile/WarehouseMobileHome.tsx","components/auth/EmprovexLogin.tsx","app/regularizacao/page.tsx"]) {
     const source = read(path);
     assert.doesNotMatch(source, /from ['"]next\/link['"]/);
     assert.doesNotMatch(source, /<Link(?:\s|>)/);
@@ -29,7 +29,14 @@ test('P0: links entre áreas são navegações de documento, não transições t
   assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/login"/);
   assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/operador-movel"/);
   assert.match(read('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/operador-movel"/);
-  assert.match(read('components/billing/BillingPortalShell.tsx'), /href="\/login"/);
+  const billingShell = read('components/billing/BillingPortalShell.tsx');
+  const returnButton = read('components/billing/BillingReturnButton.tsx');
+  assert.match(billingShell, /<BillingReturnButton(?:\\s|>)/,
+    'Assinaturas devem manter retorno condicionado ao entitlement.');
+  assert.match(returnButton, /window\\.location\\.assign\\('\\/login'\\)/,
+    'Retorno autorizado deve carregar /login como documento.');
+  assert.match(returnButton, /\\/api\\/billing\\/portal\\?view=access/,
+    'O botão não pode contornar o gate financeiro.');
 });
 
 test('P0: navegação das abas da Central permanece local e sincronizada', () => {
