@@ -187,7 +187,7 @@ test('non-exempt historical prices remain unchanged across status and cycle tran
   store(p,{...domain.buildInitialBillingAccount(ws,founder.email,false),monthlyPriceCents:3990,status:'active'});
   await engine.mutateBillingAdmin(founder,{action:'status',workspaceId:'billing-client',status:'pending'});
   assert.equal(get(p).monthlyPriceCents,3990);
-  const cycle=await engine.mutateBillingAdmin(founder,{action:'cycle',workspaceId:'billing-client',month:'2026-10',status:'paid'});
+  const cycle=await engine.mutateBillingAdmin(founder,{action:'cycle',workspaceId:'billing-client',month:'2026-10',status:'paid',note:'Transferência verificada: COMPROVANTE-TESTE-2026-10'});
   assert.equal(cycle.amountCents,3990);
   assert.equal(get(p).monthlyPriceCents,3990);
   await engine.mutateBillingAdmin(founder,{action:'cycle',workspaceId:'billing-client',month:'2026-10',status:'waived'});
