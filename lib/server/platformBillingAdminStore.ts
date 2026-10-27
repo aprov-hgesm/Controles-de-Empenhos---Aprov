@@ -391,7 +391,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       // /links is not documented as idempotent. Do not create a new link
       // while the unknown earlier one might still accept payment.
       if (cycle.checkoutValidUntil && Date.now() < Date.parse(cycle.checkoutValidUntil)
-        && !/(?:^|\\s)LINK_CANCELADO(?:\\s|$)/i.test(noteValue(command.note)))
+        && !/(?:^|\s)LINK_CANCELADO(?:\s|$)/i.test(noteValue(command.note)))
         throw new BillingAdminError('BILLING_CANCEL_OR_EXPIRE_OLD_LINK_FIRST', 409);
       const now = new Date().toISOString();
       const updated: BillingCycle = { ...cycle, checkoutState: 'failed',
