@@ -383,7 +383,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const account = existingAccount(docs.get(accountPath) ?? null);
       assertAccountWorkspace(account, workspace);
       const cycle = docs.get(cp)?.value as BillingCycle | undefined;
-      if (!cycle || cycle.checkoutState !== 'prepared' || cycle.checkoutUrl
+      if (!cycle || !['prepared','dispatching'].includes(cycle.checkoutState || '') || cycle.checkoutUrl
         || cycle.status === 'paid' || cycle.status === 'waived'
         || !cycle.checkoutCreatedAt
         || Date.now() - Date.parse(cycle.checkoutCreatedAt) < 10 * 60_000)
