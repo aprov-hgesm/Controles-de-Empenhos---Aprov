@@ -183,7 +183,6 @@ async function transaction<T>(
         const config = await get(token, CONFIG_PATH);
         const active = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
           && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
           && config?.value?.billingMode === 'enforce'
           && config?.value?.requirePayment === true;
         await syncWarehouseBillingMirror(token, workspace, active);
@@ -288,7 +287,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         throw new BillingAdminError('BILLING_ENTITLEMENTS_NOT_PREPARED', 409);
       if (requestingEnforce && (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED !== '1'
           || process.env.INFINITEPAY_BILLING_ENABLED !== '1'
-          || process.env.EMPROVEX_BILLING_RULES_CERTIFIED !== '1'))
+))
         throw new BillingAdminError('BILLING_ENFORCEMENT_CUTOVER_NOT_READY', 409);
       if (requestingEnforce) requireCheckoutConfig();
       if (input.defaultTrialDays !== undefined && (typeof input.defaultTrialDays !== 'number'
@@ -649,7 +648,6 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   if (account) assertAccountWorkspace(account, workspace);
   const globalLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   // Functional QA only. Does not claim SDK data-plane security certification.
@@ -701,7 +699,6 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   ]);
   const billingLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   if (!billingLive) throw new BillingAdminError('BILLING_GRACE_NOT_ENABLED', 409);
@@ -1136,7 +1133,7 @@ export async function reconcileInfinitePayWebhook(input: {
 
 /** Founder-only, resumable dry cutoff of workspace entitlement documents.
  * Updates no price, billing cycle or VIP; safe to rerun after interruption.
- * Full Rules certification and go-live remain separate operator actions.
+ * Full server-side commercial rollout and go-live remain separate operator actions.
  */
 export async function prepareBillingEnforcement(actor: Actor) {
   const token = await getGoogleAccessToken();
