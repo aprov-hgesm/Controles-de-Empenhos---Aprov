@@ -40,8 +40,23 @@ requireText(
 );
 requireText(
   server,
-  'fields: toFirestoreFields(result.workspace',
+  'name: firestoreDocumentName(workspacePath)',
   'Workspace deixou de ser criado pelo provisionamento privilegiado.'
+);
+requireText(
+  server,
+  '...result.workspace,',
+  'Provisionamento não preserva os campos originais do workspace.'
+);
+requireText(
+  server,
+  'billingPolicyId: billingAccount.pricingPolicyId',
+  'Provisionamento não vincula a política comercial do novo workspace.'
+);
+requireText(
+  server,
+  'billingEntitlementUntil: grantTrial ? billingAccount.trialEndsAt : billingAccount.createdAt',
+  'Provisionamento não materializa a validade inicial do acesso comercial.'
 );
 requireText(
   server,
