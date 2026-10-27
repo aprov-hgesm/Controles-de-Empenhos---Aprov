@@ -326,9 +326,9 @@ export function AdminBillingPanel({
       <section className="rounded-[2rem] border border-blue-300/15 bg-blue-500/[0.055] p-5 sm:p-6">
         <h3 className="text-lg font-extrabold text-white">Proteção financeira dos setores</h3>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
-          A proteção de dados e a cobrança real devem ser certificadas antes de ativar.
-          Em observação, as assinaturas continuam acessíveis sem bloqueio financeiro.
-          Em modo ativo, os novos setores seguem trial, pagamento confirmado e janela de 48 horas.
+          A cobrança e a liberação de acesso são decididas pelo motor financeiro no servidor.
+          Em observação, o EMPROVEX não exige pagamento para entrar.
+          Em modo ativo, novos setores seguem teste, pagamento confirmado e janela de 48 horas; VIPs permanecem isentos.
         </p>
         <p className="mt-2 text-xs font-semibold text-slate-300">
           Situação: {config?.billingMode === 'enforce' && config.requirePayment
@@ -344,7 +344,7 @@ export function AdminBillingPanel({
           {config?.billingMode !== 'enforce' ? (
             <button type="button" disabled={Boolean(mutatingKey) || !config?.billingCutoverPreparedAt}
               onClick={() => {
-                if (!window.confirm('ATIVAR controle financeiro? Confirme somente depois que InfinitePay, Firestore Rules e testes reais forem certificados.')) return;
+                if (!window.confirm('ATIVAR controle financeiro para clientes com contrato novo? A cobrança e o acesso serão controlados pelo servidor. VIPs e contratos antigos não serão cobrados.')) return;
                 void onUpdateConfig({ billingMode: 'enforce', requirePayment: true });
               }}
               className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">
