@@ -926,7 +926,9 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     // payment, and do not retry an unknown outbound POST automatically.
     return { ...prepared, status: 'pending_review' as const, checkoutUrl: '' };
   }
-  const linked = await transaction(token, [cp, intentPath], docs => {
+  let linked: { status: 'ready' | 'paid' | 'pending_review'; checkoutUrl: string };
+  try {
+    linked = await transaction(token, [cp, intentPath], docs => {
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
     const intent = docs.get(intentPath)?.value as Record<string, unknown> | undefined;
     if (!cycle || cycle.checkoutOrderNsu !== orderNsu
@@ -950,7 +952,19 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       { path: intentPath, data: { ...intent, status: 'linked',
         checkoutUrl, updatedAt: new Date().toISOString() } },
     ] };
-  });
+    });
+  } catch {
+    // The provider may already have accepted the order even if Firestore
+    // was briefly unavailable. Read the local state; never repeat /links.
+    const latest = await get(token, cp).catch(() => null);
+    const cycle = latest?.value as BillingCycle | undefined;
+    if (cycle?.checkoutOrderNsu === orderNsu
+      && (cycle.status === 'paid' || cycle.status === 'waived'))
+      return { ...prepared, status: 'paid' as const, checkoutUrl: '' };
+    if (cycle?.checkoutOrderNsu === orderNsu && cycle.checkoutUrl === checkoutUrl)
+      return { ...prepared, status: 'ready' as const, checkoutUrl };
+    return { ...prepared, status: 'pending_review' as const, checkoutUrl: '' };
+  }
   return { ...prepared, ...linked, alreadyLinked: false };
 }
 
