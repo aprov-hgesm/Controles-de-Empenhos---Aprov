@@ -40,7 +40,7 @@ type FireValue = Record<string, any>;
 type RawDoc = { name: string; fields?: Record<string, FireValue>; updateTime?: string };
 type ReadDoc = { value: Record<string, any>; updateTime: string } | null;
 type Actor = { uid: string; email: string };
-type Mutation = 
+type Mutation =
   | { action: 'config'; input: Record<string, unknown> }
   | { action: 'trial'; workspaceId: string; days?: number }
   | { action: 'offer-ramp'; workspaceId: string }
