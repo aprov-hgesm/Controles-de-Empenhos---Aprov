@@ -240,7 +240,7 @@ export function InfinitePayReadinessPanel({
     };
     void verify();
     return () => { active = false; };
-  }, [returnParams, status, context.status, context.workspaceId]);
+  }, [returnParams, status, context.status, context.status === 'sector' ? context.workspaceId : null]);
 
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
