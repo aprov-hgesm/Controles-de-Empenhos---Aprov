@@ -23,6 +23,10 @@ function loadTs(path, dependencies = {}) {
 }
 const requireCrypto = await import('node:crypto');
 const domain = loadTs('lib/billing.ts');
+const billingAccess = loadTs('lib/billingAccess.ts', { './billing': domain });
+const rampPricing = await import('../lib/server/payments/emprovexRampPricing.mjs');
+const infiniteCheckout = await import('../lib/server/payments/infinitepayCheckout.mjs');
+const smokeHarness = await import('../lib/server/payments/infinitepaySmokeHarness.mjs');
 const projectId = 'demo-billing-server-regression';
 const database = '(default)';
 const prefix = 'projects/' + projectId + '/databases/' + database + '/documents/';
@@ -122,6 +126,11 @@ const engine = loadTs('lib/server/platformBillingAdminStore.ts', {
   '../billing':domain,
   '../hgesmWorkspace':{HGESM_UG:'160416',HGESM_WORKSPACE_ID:'hgesm-aprov'},
   './sectorProvisioningAdmin':{getGoogleAccessToken: async()=> 'server-test-token'},
+  './payments/emprovexRampPricing.mjs': rampPricing,
+  './payments/infinitepayCheckout.mjs': infiniteCheckout,
+  './payments/infinitepaySmokeHarness.mjs': smokeHarness,
+  './warehouseBillingMirror': { syncWarehouseBillingMirror: async () => undefined },
+  '../billingAccess': billingAccess,
 });
 test('read-only dashboard: R$50 config and three VIPs retained, no writes',async()=>{
   fixture();
