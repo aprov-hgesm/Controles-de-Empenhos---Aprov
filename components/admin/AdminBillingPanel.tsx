@@ -38,7 +38,11 @@ interface AdminBillingPanelProps {
   error: string | null;
   mutatingKey: string | null;
   onUpdateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
+  onPrepareEnforcement: () => Promise<unknown>;
   onGrantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  onOfferRamp: (workspace: Workspace) => Promise<unknown>;
+  onResolveRefund: (workspace: Workspace, note: string) => Promise<unknown>;
+  onRecoverCheckout: (workspace: Workspace, month: string, note: string) => Promise<unknown>;
   onSetExemption: (workspace: Workspace, exempt: boolean) => Promise<unknown>;
   onSetStatus: (
     workspace: Workspace,
@@ -102,7 +106,11 @@ export function AdminBillingPanel({
   error,
   mutatingKey,
   onUpdateConfig,
+  onPrepareEnforcement,
   onGrantTrial,
+  onOfferRamp,
+  onResolveRefund,
+  onRecoverCheckout,
   onSetExemption,
   onSetStatus,
   onSetCycleStatus,
@@ -215,8 +223,8 @@ export function AdminBillingPanel({
       paymentLinkUrl,
       supportContact,
       holidayDates: parsedHolidays,
-      billingMode: 'observe',
-      requirePayment: false,
+      billingMode: config.billingMode,
+      requirePayment: config.requirePayment,
     });
     setEditingConfig(false);
   };
@@ -232,6 +240,56 @@ export function AdminBillingPanel({
 
   return (
     <div data-testid="admin-billing-panel" className="space-y-5">
+      {accounts.some((account) => account.grace48ReviewStatus === 'pending' || account.refundReviewStatus === 'pending') && (
+        <section role="status" className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.07] p-5 text-amber-100">
+          <h3 className="font-extrabold">Solicitações de acesso temporário de 48 horas</h3>
+          <p className="mt-2 text-xs leading-relaxed text-amber-100/80">
+            Há setores usando ou aguardando a janela de 48 horas, ou pagamentos com estorno/cancelamento sinalizados para revisão.
+            Verifique o valor efetivamente recebido na InfinitePay ou na conta bancária antes de clicar em
+            Confirmar pagamento. A confirmação administrativa libera a competência atual; a solicitação sozinha
+            não registra quitação.
+          </p>
+          <div className="mt-3 space-y-2">
+            {accounts.filter((account) => account.grace48ReviewStatus === 'pending' || account.refundReviewStatus === 'pending').map(account => {
+              const workspace = workspaceMap.get(account.workspaceId);
+              const month = account.grace48ReferenceMonth || '';
+              const key = `cycle:${account.workspaceId}:${month}`;
+              const settled = (cyclesByWorkspace.get(account.workspaceId) || [])
+                .some(c => c.referenceMonth === month && (c.status === 'paid' || c.status === 'waived'));
+              return <div key={account.workspaceId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/15 bg-slate-950/30 px-3 py-3">
+                <div>
+                  <p className="text-sm font-bold">{workspace?.name || account.workspaceId}</p>
+                  <p className="text-[11px] text-amber-100/70">
+                    UG {account.ug} · {account.refundReviewStatus === 'pending' ? `Revisar pagamento ou estorno ${account.refundReviewReferenceMonth || ''} · ` : ''}Competência {month} · Solicitado {dateLabel(account.grace48RequestedAt)} ·
+                    Liberação até {dateLabel(account.grace48Until)}
+                  </p>
+                </div>
+                {workspace && account.refundReviewStatus === 'pending' && (
+                  <ActionButton icon={<ShieldCheck className="h-4 w-4" />}
+                    label="Concluir revisão de estorno"
+                    busy={mutatingKey === `refund:${workspace.id}`} disabled={Boolean(mutatingKey)}
+                    onClick={() => {
+                      const note = window.prompt('Registre a análise e a referência do estorno ou contestação:', '');
+                      if (!note || note.trim().length < 5) return;
+                      void onResolveRefund(workspace, note.trim());
+                    }} />
+                )}
+                {workspace && month && !settled && (
+                  <ActionButton icon={<BadgeCheck className="h-4 w-4"/>}
+                    label="Pagamento recebido: liberar mês"
+                    busy={mutatingKey === key} disabled={Boolean(mutatingKey)}
+                    onClick={() => {
+                      const note = window.prompt('Confirme somente após verificar o pagamento recebido. Informe referência/NSU ou comprovante:', '');
+                      if (!note?.trim()) return;
+                      void onSetCycleStatus(workspace, month, 'paid', note.trim());
+                    }}/>
+                )}
+              </div>;
+            })}
+          </div>
+        </section>
+      )}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <BillingMetric
           icon={<Sparkles className="h-5 w-5" />}
@@ -249,13 +307,13 @@ export function AdminBillingPanel({
           icon={<Clock3 className="h-5 w-5" />}
           label="Atenção financeira"
           value={String(counts.attention)}
-          detail="Sem bloqueio automático"
+          detail="Verificar pagamentos e pedidos de 48h"
         />
         <BillingMetric
           icon={<ShieldCheck className="h-5 w-5" />}
           label="Modo de cobrança"
           value={(config?.billingMode || 'observe').toUpperCase()}
-          detail="OBSERVE não interfere no acesso"
+          detail={config?.billingMode === "enforce" ? "Pagamento exigido nos setores elegíveis" : "OBSERVE não interfere no acesso"}
         />
       </section>
 
@@ -265,39 +323,40 @@ export function AdminBillingPanel({
         </section>
       )}
 
-      <section className="rounded-[2rem] border border-blue-300/15 bg-blue-500/[0.055] p-5 backdrop-blur-xl sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-blue-200">
-              <ShieldCheck className="h-5 w-5" />
-              <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em]">
-                Proteção de testes
-              </p>
-            </div>
-            <h3 className="mt-2 text-xl font-extrabold text-white">Cobrança em modo de observação</h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300">
-              Trial, vencimentos, competências e situações comerciais são acompanhados, mas não participam
-              da autorização operacional. Mesmo uma assinatura marcada como suspensa comercialmente continua
-              sem bloquear login, sessões, empenhos, notas fiscais ou documentos enquanto o enforcement não for ativado em desenvolvimento futuro.
-            </p>
-          </div>
-          <div className="min-w-[250px] rounded-2xl border border-white/[0.08] bg-slate-950/25 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">Exigir pagamento</p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-sm font-extrabold text-emerald-200">DESATIVADO</span>
-              <button
-                type="button"
-                disabled
-                title="Será liberado somente após a fase de testes dos usuários externos."
-                className="cursor-not-allowed rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600"
-              >
-                Ativar
-              </button>
-            </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-              Suspensão automática também permanece permanentemente desativada nesta fase.
-            </p>
-          </div>
+      <section className="rounded-[2rem] border border-blue-300/15 bg-blue-500/[0.055] p-5 sm:p-6">
+        <h3 className="text-lg font-extrabold text-white">Proteção financeira dos setores</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          A proteção de dados e a cobrança real devem ser certificadas antes de ativar.
+          Em observação, as assinaturas continuam acessíveis sem bloqueio financeiro.
+          Em modo ativo, os novos setores seguem trial, pagamento confirmado e janela de 48 horas.
+        </p>
+        <p className="mt-2 text-xs font-semibold text-slate-300">
+          Situação: {config?.billingMode === 'enforce' && config.requirePayment
+            ? 'EXIGINDO PAGAMENTO' : 'SOMENTE OBSERVAÇÃO'} ·
+          Entitlements: {config?.billingCutoverPreparedAt ? 'preparados' : 'pendentes de preparação'}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" disabled={Boolean(mutatingKey)}
+            onClick={() => void onPrepareEnforcement()}
+            className="rounded-xl border border-blue-200/30 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">
+            Preparar autorizações dos setores
+          </button>
+          {config?.billingMode !== 'enforce' ? (
+            <button type="button" disabled={Boolean(mutatingKey) || !config?.billingCutoverPreparedAt}
+              onClick={() => {
+                if (!window.confirm('ATIVAR controle financeiro? Confirme somente depois que InfinitePay, Firestore Rules e testes reais forem certificados.')) return;
+                void onUpdateConfig({ billingMode: 'enforce', requirePayment: true });
+              }}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white disabled:opacity-50">
+              Ativar controle financeiro
+            </button>
+          ) : (
+            <button type="button" disabled={Boolean(mutatingKey)}
+              onClick={() => void onUpdateConfig({ billingMode: 'observe', requirePayment: false })}
+              className="rounded-xl border border-amber-200/35 px-4 py-2 text-xs font-extrabold text-amber-100">
+              Voltar para observação
+            </button>
+          )}
         </div>
       </section>
 
@@ -312,7 +371,7 @@ export function AdminBillingPanel({
             </div>
             <h3 className="mt-1 text-lg font-extrabold text-white">Plano Completo EMPROVEX</h3>
             <p className="mt-1 text-xs text-slate-400">
-              R$ 70,00 por workspace, com pagamento externo por Link de Pagamento e/ou Pix. O EMPROVEX não processa dados financeiros.
+              Novas contratações: 30 dias gratuitos, depois R$ 29,90 por 3 meses; R$ 39,90, R$ 49,90, R$ 59,90 a cada 3 meses e R$ 69,90 a partir do mês 13. Contratos anteriores e isenções preservados.
             </p>
           </div>
           {!editingConfig && (
@@ -328,7 +387,7 @@ export function AdminBillingPanel({
 
         {!editingConfig ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 7000)} />
+            <InfoBox label="Nova mensalidade inicial" value="R$ 29,90" />
             <InfoBox label="Trial padrão" value={`${config?.defaultTrialDays ?? 30} dias`} />
             <InfoBox label="Vencimento" value="5º dia útil" />
             <InfoBox label="Tolerância" value={`${config?.gracePeriodDays ?? 10} dias`} />
@@ -338,8 +397,8 @@ export function AdminBillingPanel({
         ) : (
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <ConfigField label="Mensalidade (R$)" hint="Preço fixo do Plano Completo na R1.">
-                <input value="70,00" readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
+              <ConfigField label="Mensalidade inicial (R$)" hint="Novos setores começam em R$ 29,90 por competência; faixas individuais progressivas.">
+                <input value="R$ 29,90" readOnly disabled className={`${inputClass} cursor-not-allowed opacity-70`} />
               </ConfigField>
               <ConfigField label="Trial padrão (dias)">
                 <input type="number" min={1} max={365} value={trialDays} onChange={(event) => setTrialDays(event.target.value)} className={inputClass} />
@@ -430,7 +489,7 @@ export function AdminBillingPanel({
             </div>
             <h3 className="mt-1 text-lg font-extrabold text-white">Controle por workspace</h3>
             <p className="mt-1 text-xs text-slate-400">
-              Confirmação de pagamento e suspensão são exclusivamente administrativas.
+              O acesso é verificado pelo servidor; baixas automáticas só ocorrem após verificação do provedor. A confirmação manual exige conferência do recebimento.
             </p>
           </div>
 
@@ -475,7 +534,10 @@ export function AdminBillingPanel({
               ? isFounder
                 ? 'Fundador / Isento'
                 : isLegacyVip ? 'VIP legado / Isento' : 'VIP / Isento'
-              : STATUS_LABEL[account.status];
+              : account.pricingPolicyId === 'emprovex_individual_ramp_v1'
+                && (account.status !== 'trial' || attention.trialExpired)
+                && currentCycle?.status !== 'paid' && currentCycle?.status !== 'waived'
+                  ? 'Aguardando pagamento' : STATUS_LABEL[account.status];
 
             return (
               <article
@@ -545,6 +607,15 @@ export function AdminBillingPanel({
                         )
                       ) : (
                         <>
+                          {!account.pricingPolicyId && !workspaceCycles.length && (
+                            <ActionButton icon={<CircleDollarSign className="h-3.5 w-3.5" />}
+                              label="Oferecer plano progressivo"
+                              busy={mutatingKey === `offer-ramp:${workspace.id}`} disabled={busy}
+                              onClick={() => {
+                                if (!window.confirm('Oferecer plano progressivo a este setor sem histórico? O cliente precisará aceitar as condições antes do primeiro pagamento.')) return;
+                                void onOfferRamp(workspace);
+                              }} />
+                          )}
                           <ActionButton
                             icon={<Sparkles className="h-3.5 w-3.5" />}
                             label={account.status === 'trial' ? 'Renovar trial 30d' : 'Conceder trial'}
@@ -552,6 +623,23 @@ export function AdminBillingPanel({
                             disabled={busy}
                             onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
                           />
+                          {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '')
+                            && !currentCycle?.checkoutUrl && currentCycle?.checkoutOrderNsu && (
+                            <span className="break-all text-[10px] text-amber-200/80">
+                              Pedido InfinitePay: {currentCycle?.checkoutOrderNsu}
+                            </span>
+                          )}
+                          {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '') && !currentCycle?.checkoutUrl && (
+                            <ActionButton icon={<Clock3 className="h-3.5 w-3.5" />}
+                              label="Recuperar checkout pendente"
+                              busy={mutatingKey === `checkout:${workspace.id}:${attention.referenceMonth}`}
+                              disabled={busy}
+                              onClick={() => {
+                                const note = window.prompt('Verifique o pedido na InfinitePay. Se ainda estiver válido, CANCELE o link antes de recuperar e registre LINK_CANCELADO + referência da conferência. Se o link já expirou, informe a referência de não pagamento:', '');
+                                if (!note || note.trim().length < 5) return;
+                                void onRecoverCheckout(workspace, attention.referenceMonth, note.trim());
+                              }} />
+                          )}
                           {currentCycle?.status === 'paid' ? (
                             <ActionButton
                               icon={<Clock3 className="h-3.5 w-3.5" />}
@@ -568,10 +656,10 @@ export function AdminBillingPanel({
                               disabled={busy}
                               onClick={() => {
                                 const note = window.prompt(
-                                  'Referência ou observação administrativa do pagamento (opcional):',
+                                  'Referência obrigatória do pagamento recebido (NSU ou comprovante conferido):',
                                   ''
                                 );
-                                if (note === null) return;
+                                if (!note || note.trim().length < 5) return;
                                 void onSetCycleStatus(
                                   workspace,
                                   attention.referenceMonth,
@@ -627,7 +715,7 @@ export function AdminBillingPanel({
                   ) : isVip ? (
                     <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>
                   ) : null}
-                  <span className="text-blue-300/70">Billing não suspende o acesso automaticamente; suspensão operacional é uma ação administrativa separada.</span>
+                  <span className="text-blue-300/70">Acesso operacional sujeito à situação financeira verificada no servidor, respeitando isenções e liberações temporárias.</span>
                 </div>
 
 

@@ -34,10 +34,10 @@ test('overview has its own content and switches to payment view without reload',
   await page.getByTestId('billing-nav-payments').click();
   await expect(page.getByTestId('billing-active-panel')).toHaveAttribute('data-tab', 'payments');
   await expect(page.getByTestId('billing-payment-journey')).toBeVisible();
-  await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  await expect(page.getByTestId('billing-real-checkout')).toHaveCount(0); // anonymous users cannot emit real invoices
   await expect(page.getByTestId('manual-payment-options-toggle')).toBeVisible();
   await page.getByTestId('manual-payment-options-toggle').click();
-  await expect(page.getByText('Preço de referência legado')).toBeVisible();
+  await expect(page.getByTestId('billing-active-panel')).toHaveAttribute('data-tab', 'payments');
   await page.getByTestId('billing-nav-overview').click();
   await expect(page.getByTestId('manual-payment-options-toggle')).toHaveCount(0);
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -53,7 +53,7 @@ test('InfinitePay return selects payments tab but never grants subscription', as
   });
   await expect(page.getByTestId('billing-active-panel')).toHaveAttribute('data-tab', 'payments');
   await expect(page.getByTestId('infinitepay-unverified-return')).toBeVisible();
-  await expect(page.getByTestId('infinitepay-checkout-disabled')).toBeDisabled();
+  await expect(page.getByTestId('billing-real-checkout')).toHaveCount(0); // no authenticated workspace
   await expect.poll(() => new URL(page.url()).search).toBe('');
   expect(crashes).toEqual([]);
 });

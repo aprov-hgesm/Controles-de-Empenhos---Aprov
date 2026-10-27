@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, Copy, ExternalLink, Loader2, ShieldCheck, WalletCards } from 'lucide-react';
 import { InfinitePayReadinessPanel } from '../../components/billing/InfinitePayReadinessPanel';
 import { BillingPortalShell } from '../../components/billing/BillingPortalShell';
+import { BillingReturnButton } from '../../components/billing/BillingReturnButton';
 import { BILLING_PORTAL_TABS, type BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 interface RegularizationInfo {
@@ -17,13 +18,6 @@ interface RegularizationInfo {
   pixKeyType: string;
   pixRecipientName: string;
   supportContact: string;
-}
-
-function money(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(cents / 100);
 }
 
 const PIX_KEY_LABEL: Record<string, string> = {
@@ -215,7 +209,7 @@ export default function RegularizationPage() {
           <>
             <section className="mt-5 grid gap-4 md:grid-cols-3">
               <InfoCard label="Plano" value={info.planName} />
-              <InfoCard label="Preço de referência legado" value={`${money(info.monthlyPriceCents)} / mês`} />
+              <InfoCard label="Condição" value="Preço definido individualmente na competência" />
               <InfoCard label="Vencimento" value={`${info.dueBusinessDay}º dia útil · ${info.gracePeriodDays} dias de tolerância`} />
             </section>
 
@@ -284,7 +278,7 @@ export default function RegularizationPage() {
                   : 'Utilize o canal de atendimento que foi fornecido no seu cadastro.'}
               </p>
               <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                Esta página é apenas informativa e permanece separada do processamento financeiro do EMPROVEX.
+                A contratação do Plano Completo e a confirmação financeira são processadas em rotas autenticadas do EMPROVEX; os links antigos de Pix e pagamento exibidos nesta seção são somente referências manuais.
               </p>
             </section>
           </>
@@ -295,7 +289,7 @@ export default function RegularizationPage() {
         </div>
 
         <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
-          <a href="/" className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</a>
+          <BillingReturnButton className="font-bold text-[#0b735f] hover:text-[#064c3f]">Voltar ao EMPROVEX</BillingReturnButton>
           <div className="flex gap-4">
             <a href="/terms" className="hover:text-slate-800">Termos de Serviço</a>
             <a href="/privacy" className="hover:text-slate-300">Privacidade</a>

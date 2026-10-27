@@ -61,16 +61,22 @@ test('login-derived account view safely rehydrates after hard reload or HMR', ()
   assert.doesNotMatch(panel, /NEXT_PUBLIC_INFINITEPAY_API_KEY|INFINITEPAY_API_KEY|process\.env\.INFINITEPAY/);
 });
 
-test('InfinitePay checkout is visibly disabled until backend homologation', () => {
-  assert.match(panel, /data-testid="infinitepay-checkout-disabled"/);
-  assert.match(panel, /disabled\s+aria-disabled="true"/);
-  assert.doesNotMatch(panel, /callInfinitePay\(|\/api\/payments\/.*create|fetch\([^)]*infinitepay\.io/);
+test('real checkout requires explicit consent and server-only pilot gates', () => {
+  const server = fs.readFileSync('lib/server/platformBillingAdminStore.ts', 'utf8');
+  assert.match(panel, /data-testid="billing-real-checkout"/);
+  assert.match(panel, /confirmRealPayment:\s*true/);
+  assert.match(panel, /\/api\/billing\/portal\?action=subscription-checkout/);
+  assert.match(server, /INFINITEPAY_BILLING_ENABLED\s*!==\s*'1'/);
+  assert.match(server, /INFINITEPAY_BILLING_SCOPE/);
+  assert.match(server, /INFINITEPAY_BILLING_PILOT_WORKSPACE_ID/);
+  assert.doesNotMatch(panel, /callInfinitePay\(|fetch\([^)]*infinitepay\.io/);
 });
 
 test('payment return is displayed as unverified and URL sanitized', () => {
   assert.match(panel, /setReturnNotice\(true\)/);
   assert.match(panel, /window\.history\.replaceState/);
-  assert.match(panel, /a validação pela API aparecerá abaixo/);
+  assert.match(panel, /O retorno do checkout não comprova a quitação/);
+  assert.match(panel, /\/api\/billing\/portal\?action=verify-subscription/);
   assert.doesNotMatch(panel, /setAccount\(.*paid/);
 });
 
@@ -91,7 +97,7 @@ test('manual payment fallback loads on demand, not for every InfinitePay visit',
   assert.match(page, /showManualMethods && info/);
   assert.match(page, /Abrir Link de Pagamento/);
   assert.match(page, /Copiar chave Pix/);
-  assert.match(page, /Preço de referência legado/);
+  assert.doesNotMatch(page, /Preço de referência legado/);
 });
 
 test('exempt clients keep their actual contract and cannot preview unpublished tiers', () => {
@@ -136,9 +142,11 @@ test('mobile subscription navigation is accessible and functional', () => {
   assert.match(page, /id="formas-pagamento"/);
 });
 
-test('visual-only restyle does not activate subscription billing', () => {
-  assert.match(panel, /data-testid="infinitepay-checkout-disabled"/);
-  assert.match(panel, /disabled\s+aria-disabled="true"/);
+test('visual restyle cannot bypass server-side billing activation', () => {
+  const server = fs.readFileSync('lib/server/platformBillingAdminStore.ts', 'utf8');
+  assert.match(panel, /data-testid="billing-real-checkout"/);
+  assert.match(server, /INFINITEPAY_BILLING_ENABLED\s*!==\s*'1'/);
+  assert.match(server, /scope === 'pilot'/);
   assert.match(pilot, /data-testid="infinitepay-pilot-consent"/);
   assert.match(panel, /resolveBillingWorkspaceContext\(user\)/);
   assert.doesNotMatch(shell + page, /INFINITEPAY_API_KEY|NEXT_PUBLIC_INFINITEPAY/);

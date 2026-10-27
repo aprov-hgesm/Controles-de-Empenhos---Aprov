@@ -210,6 +210,8 @@ async function resolveExternalWarehouseAccess(
  * emprovex-warehouse usa essas claims para isolar cada setor sem depender de
  * dados de autorização armazenados no próprio namespace logístico.
  */
+const billingAuthorizedCache = new Map<string, number>();
+
 export async function verifyWarehouseRequest(
   authorization: string | null
 ): Promise<VerifiedWarehouseRequest> {
@@ -232,7 +234,25 @@ export async function verifyWarehouseRequest(
     };
   }
 
-  return resolveExternalWarehouseAccess(verified);
+  const access = await resolveExternalWarehouseAccess(verified);
+  // Additional server-side gate for every Warehouse endpoint that uses this
+  // verifier. Fail closed for non-exempt tenants when enabled at cutover.
+  // Short-lived positive cache avoids three Firestore reads per scanner action.
+  if (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1') {
+    const cacheKey = access.uid + ':' + access.workspaceId;
+    const now = Date.now();
+    const cached = billingAuthorizedCache.get(cacheKey) || 0;
+    if (cached <= now) {
+      const { readSectorBillingAccess } = await import('./platformBillingAdminStore');
+      const decision = await readSectorBillingAccess(access.workspaceId, access.email);
+      if (!decision.allowed) {
+        billingAuthorizedCache.delete(cacheKey);
+        throw new WarehouseAccessError('BILLING_PAYMENT_REQUIRED', 403);
+      }
+      billingAuthorizedCache.set(cacheKey, now + 30_000);
+    }
+  }
+  return access;
 }
 
 /**

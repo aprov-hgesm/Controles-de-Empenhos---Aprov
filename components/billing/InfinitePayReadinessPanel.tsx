@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { getIdToken, onAuthStateChanged } from 'firebase/auth';
 import {
   ArrowUpRight, BadgeCheck, Clock3, CreditCard,
-  FileCheck2, LockKeyhole, ShieldCheck, UserRound,
+  FileCheck2, ShieldCheck, UserRound,
 } from 'lucide-react';
 
 import { auth } from '../../lib/firebase';
@@ -90,7 +90,40 @@ export function InfinitePayReadinessPanel({
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
   const [returnNotice, setReturnNotice] = useState(false);
+  const [rampConfirmed, setRampConfirmed] = useState(false);
+  const [rampSaving, setRampSaving] = useState(false);
+  const [rampError, setRampError] = useState('');
+  const [realCheckoutUrl, setRealCheckoutUrl] = useState('');
+  const [realCheckoutAmount, setRealCheckoutAmount] = useState<number | null>(null);
+  const [currentQuotedCents, setCurrentQuotedCents] = useState<number | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
+  const [checkoutPendingReview, setCheckoutPendingReview] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
+  // Live individual quote, not the last persisted account amount or the
+  // historical R$50 global configuration. Only the tenant's own Firebase
+  // token can request this figure; future tiers remain in contract consent.
+  useEffect(() => {
+    if (context.status !== 'sector' || !auth.currentUser) {
+      setCurrentQuotedCents(null);
+      return;
+    }
+    let active = true;
+    void auth.currentUser.getIdToken().then(token =>
+      fetch('/api/billing/portal?view=access', {
+        headers: { authorization: 'Bearer ' + token }, cache: 'no-store',
+      }),
+    ).then(async response => {
+      if (!response.ok) return;
+      const data = await response.json() as { amountCents?: number };
+      if (active && Number.isSafeInteger(data.amountCents) && (data.amountCents ?? 0) >= 0)
+        setCurrentQuotedCents(data.amountCents!);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [context.status, context.status === 'sector' ? context.workspaceId : null,
+      account?.monthlyPriceCents, activeTab]);
+
 
   useEffect(() => {
     // The InfinitePay redirect alone is NEVER proof of payment.
@@ -113,6 +146,102 @@ export function InfinitePayReadinessPanel({
     }
   }, [onNavigate]);
 
+  const acceptPricing = async () => {
+    if (!rampConfirmed || !auth.currentUser || rampSaving) return;
+    setRampSaving(true);
+    setRampError('');
+    try {
+      const token = await getIdToken(auth.currentUser);
+      const response = await fetch('/api/billing/portal?action=accept-pricing', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          policyId: 'emprovex_individual_ramp_v1',
+          acceptFullPricingSchedule: true,
+        }),
+        cache: 'no-store',
+      });
+      const result = await response.json() as { code?: string };
+      if (!response.ok) throw new Error(result.code || 'Não foi possível registrar o aceite.');
+      setRampConfirmed(false);
+      setRampSaving(false);
+      // Firestore subscription updates the accepted account without an F5.
+    } catch (error) {
+      setRampError(error instanceof Error ? error.message : 'Não foi possível registrar o aceite.');
+      setRampSaving(false);
+    }
+  };
+
+
+  const createSubscriptionCheckout = async () => {
+    if (checkoutBusy || !auth.currentUser) return;
+    setCheckoutBusy(true); setCheckoutError('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/billing/portal?action=subscription-checkout', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmRealPayment: true }), cache: 'no-store',
+      });
+      const data = await response.json() as {
+        code?: string; status?: 'ready' | 'paid' | 'pending_review' | 'reserved';
+        checkoutUrl?: string; amountCents?: number;
+      };
+      if (!response.ok) throw new Error(data.code || 'Não foi possível consultar a cobrança.');
+      if (data.status === 'paid') {
+        setCheckoutPendingReview(false);
+        setRealCheckoutUrl('');
+        setCheckoutConfirmed(true);
+        return;
+      }
+      if (data.status === 'pending_review') {
+        // Rechecking this state never launches another /links POST.
+        setRealCheckoutUrl('');
+        setCheckoutPendingReview(true);
+        return;
+      }
+      if (data.status !== 'ready' || !data.checkoutUrl)
+        throw new Error('O link ainda não está disponível. Confira a situação antes de tentar novamente.');
+      const url = new URL(data.checkoutUrl);
+      if (url.protocol !== 'https:' || !(url.hostname === 'infinitepay.io'
+        || url.hostname.endsWith('.infinitepay.io')
+        || url.hostname === 'infinitepay.com.br'
+        || url.hostname.endsWith('.infinitepay.com.br')))
+        throw new Error('Checkout não pertence à InfinitePay.');
+      setCheckoutPendingReview(false);
+      setRealCheckoutAmount(data.amountCents ?? null);
+      setRealCheckoutUrl(url.href);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : 'Consulta temporariamente indisponível.');
+    } finally { setCheckoutBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!returnParams || !auth.currentUser || !(status === 'authenticated' && context.status === 'sector')) return;
+    let active = true;
+    const verify = async () => {
+      try {
+        const token = await auth.currentUser!.getIdToken();
+        const response = await fetch('/api/billing/portal?action=verify-subscription', {
+          method: 'POST',
+          headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+          body: JSON.stringify(returnParams), cache: 'no-store',
+        });
+        const data = await response.json() as { verified?: boolean; code?: string };
+        if (!active) return;
+        if (!response.ok || !data.verified) {
+          setCheckoutError('Pagamento ainda não confirmado pelo servidor. Confira a InfinitePay e evite pagar duas vezes.');
+          return;
+        }
+        setCheckoutConfirmed(true);
+      } catch {
+        if (active) setCheckoutError('Não foi possível confirmar o pagamento. Não faça outro Pix até conferir a transação.');
+      }
+    };
+    void verify();
+    return () => { active = false; };
+  }, [returnParams, status, context.status, context.status === 'sector' ? context.workspaceId : null]);
+
   const workspaceResolved = context.status === 'sector';
   const exempt = account?.status === 'exempt';
   return (
@@ -123,8 +252,8 @@ export function InfinitePayReadinessPanel({
             <Clock3 className="h-4 w-4" /> Retorno do checkout identificado
           </div>
           <p className="mt-2 text-sm leading-relaxed text-amber-900/80">
-            Sua volta ao EMPROVEX não confirma pagamento. Quando o retorno pertencer ao piloto autorizado,
-            a validação pela API aparecerá abaixo. Outros pagamentos precisam de conciliação administrativa.
+            O retorno do checkout não comprova a quitação. O EMPROVEX consultará diretamente a InfinitePay
+            e registrará a baixa apenas após confirmar o pedido, a transação e o valor.
             Não repita o Pix do mesmo pedido.
           </p>
         </div>
@@ -187,7 +316,9 @@ export function InfinitePayReadinessPanel({
             {workspaceResolved && !billingLoading && account && (
               <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
-                  `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
+                  account.pricingPolicyId === 'emprovex_individual_ramp_v1'
+                    ? `Valor registrado para a conta: ${money(currentQuotedCents ?? account.monthlyPriceCents)}/mês.`
+                    : `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
             {workspaceResolved && !billingLoading && !account && (
@@ -212,6 +343,35 @@ export function InfinitePayReadinessPanel({
             </p>
           </div>
         )}
+
+
+        <section className="mt-4 rounded-2xl border border-emerald-100 bg-white p-5"
+          data-testid="billing-full-plan-benefits">
+          <h3 className="text-sm font-extrabold text-emerald-800">Condições do Plano Completo EMPROVEX</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            O Plano Completo concentra ferramentas de gestão do aprovisionamento e da operação de depósitos
+            em um único ambiente, vinculado à Organização Militar e ao setor autorizado.
+          </p>
+          <div className="mt-3 grid gap-3 text-xs text-slate-700 sm:grid-cols-2">
+            {[
+              ['Gestão de empenhos', 'Acompanhamento de empenhos, saldos, fornecedores e registros relacionados.'],
+              ['Notas fiscais e NS', 'Organização de documentos, consultas e acompanhamento do fluxo financeiro.'],
+              ['Central de Depósitos', 'Visão organizada dos depósitos, estoques, locais e movimentações.'],
+              ['Operador móvel', 'Consulta de materiais, leitura de códigos e operações de estoque pelo celular.'],
+              ['Controle e rastreabilidade', 'Histórico de movimentações, conferências, inventários e pesquisas.'],
+              ['Cronogramas e acompanhamento', 'Organização das atividades, alertas e informações operacionais do setor.'],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="font-bold text-slate-900">{title}</p>
+                <p className="mt-1 leading-relaxed text-slate-600">{description}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] text-slate-500">
+            A cobrança é associada ao setor contratado. Isenções e período de teste são respeitados.
+            Valores devidos são apresentados na etapa de pagamento.
+          </p>
+        </section>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3" aria-label="Acessos da assinatura">
           <button type="button" onClick={() => onNavigate('history')}
@@ -250,13 +410,91 @@ export function InfinitePayReadinessPanel({
         </div>
       )}
 
+      {workspaceResolved && !billingLoading && activeTab === 'payments'
+          && account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
+          && !account.pricingTermsAcceptedAt && (
+          <section className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5"
+            data-testid="billing-contract-acceptance">
+            <h3 className="font-bold text-slate-900">Condições da contratação</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-700">
+              Antes da primeira cobrança, confirme as condições financeiras:
+              meses de cobrança 1–3 R$ 29,90/mês; 4–6 R$ 39,90/mês;
+              7–9 R$ 49,90/mês; 10–12 R$ 59,90/mês;
+              a partir do mês 13 R$ 69,90/mês.
+              Os meses são contados individualmente após o período gratuito, quando concedido.
+            </p>
+            <label className="mt-3 flex items-start gap-2 text-xs font-medium text-slate-800">
+              <input type="checkbox" checked={rampConfirmed}
+                onChange={(event) => setRampConfirmed(event.target.checked)} className="mt-0.5"/>
+              <span>Concordo expressamente com os valores e condições acima. Este aceite não realiza pagamento.</span>
+            </label>
+            <button type="button" disabled={!rampConfirmed || rampSaving}
+              onClick={() => void acceptPricing()}
+              className="mt-3 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {rampSaving ? 'Registrando aceite...' : 'Aceitar condições para pagar'}
+            </button>
+            {rampError && <p className="mt-2 text-xs text-rose-800">{rampError}</p>}
+          </section>
+        )}
+
+
+      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt' && (
+        <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
+          data-testid="billing-real-checkout">
+          <h3 className="font-extrabold text-slate-900">Pagar minha mensalidade</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            O valor será calculado no servidor conforme a competência e as condições
+            aceitas na contratação. Confira o valor e o favorecido antes de concluir
+            o pagamento no ambiente seguro da InfinitePay.
+          </p>
+          {account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
+            && !account.pricingTermsAcceptedAt ? (
+            <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+              Leia e aceite as condições da contratação apresentadas acima antes de gerar a cobrança.
+            </p>
+          ) : (
+            <button type="button" disabled={checkoutBusy}
+              onClick={() => void createSubscriptionCheckout()}
+              className="mt-3 min-h-11 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+              {checkoutBusy ? 'Consultando cobrança...' : checkoutPendingReview ? 'Verificar situação da cobrança' : 'Gerar pagamento da mensalidade'}
+            </button>
+          )}
+          {checkoutPendingReview && !checkoutConfirmed && (
+            <p role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+              Uma cobrança desta competência já foi iniciada e está em conferência.
+              Não é necessário tentar pagar novamente. Você pode verificar a situação
+              pelo botão acima; caso o link não seja recuperável, o suporte poderá
+              conferir o pedido na InfinitePay sem gerar outro automaticamente.
+            </p>
+          )}
+          {realCheckoutUrl && (
+            <div className="mt-3 space-y-2 rounded-xl bg-emerald-50 p-4">
+              {realCheckoutAmount !== null && (
+                <p className="text-sm font-black text-emerald-900">Valor da competência: {money(realCheckoutAmount)}</p>
+              )}
+              <a href={realCheckoutUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center rounded-lg bg-emerald-800 px-4 text-xs font-extrabold text-white">
+                Abrir pagamento seguro na InfinitePay
+              </a>
+              <p className="text-[11px] text-emerald-900">
+                Não pague duas vezes o mesmo pedido. Após pagar, clique em Continuar no checkout para confirmar pelo servidor.
+              </p>
+            </div>
+          )}
+          {checkoutConfirmed && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-900">
+            Pagamento confirmado no servidor. O acesso do setor foi liberado para a competência quitada.
+          </p>}
+          {checkoutError && <p role="alert" className="mt-3 text-xs text-rose-800">{checkoutError}</p>}
+        </section>
+      )}
+
       {activeTab === 'payments' && (
       <section data-testid="billing-payment-journey" className="mt-5 rounded-[1.65rem] border border-[#dfe8f0] bg-white p-5 shadow-[0_12px_35px_rgba(15,40,70,0.04)] sm:p-7">
         <div>
           <h2 className="text-lg font-extrabold text-[#13263a]">Como funciona a confirmação de pagamento</h2>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
             Confira a competência e o valor efetivamente emitidos antes de abrir o checkout.
-            Não há pagamento automático de mensalidades habilitado nesta etapa.
+            A mensalidade é paga em checkout individual. A confirmação é verificada pelo servidor; não há débito recorrente automático.
           </p>
         </div>
 
@@ -279,22 +517,6 @@ export function InfinitePayReadinessPanel({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            data-testid="infinitepay-checkout-disabled"
-            title="Cobranças reais ainda não foram habilitadas no EMPROVEX."
-            className="cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-500"
-          >
-            <LockKeyhole className="mr-2 inline h-4 w-4" aria-hidden /> Pagar com InfinitePay
-          </button>
-          <p className="max-w-md text-xs text-slate-500">
-            Disponível após certificação de identidade, Firestore e reconciliação.
-            Esta tela não utiliza sua API Key e não cria links.
-          </p>
-        </div>
       </section>
       )}
 

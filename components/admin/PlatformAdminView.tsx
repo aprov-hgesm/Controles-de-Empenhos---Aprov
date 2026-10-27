@@ -166,6 +166,10 @@ interface AdminBillingViewState {
   mutatingKey: string | null;
   updateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
   grantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  offerRamp: (workspace: Workspace) => Promise<unknown>;
+  resolveRefund: (workspace: Workspace, note: string) => Promise<unknown>;
+  recoverCheckout: (workspace: Workspace, month: string, note: string) => Promise<unknown>;
+  prepareEnforcement: () => Promise<unknown>;
   setExemption: (
     workspace: Workspace,
     exempt: boolean
@@ -340,6 +344,8 @@ export function PlatformAdminView({
     usageError ? 'Telemetria estimada por UG requer atenção.' : null,
     globalUsageError ? 'Telemetria global do Firebase requer atenção.' : null,
     billing.error ? 'Controle administrativo de assinaturas requer atenção.' : null,
+    billing.accounts.some(account => account.grace48ReviewStatus === 'pending' || account.refundReviewStatus === 'pending')
+      ? 'Há solicitação de acesso temporário de 48 horas aguardando conferência financeira.' : null,
     disabledWorkspaceCount > 0
       ? disabledWorkspaceCount + ' setor(es) está(ão) suspenso(s).'
       : null,
@@ -411,7 +417,7 @@ export function PlatformAdminView({
 
   const returnToHgesm = () => {
     setActiveProfileMode('sector');
-    // Recarrega a sessão operacional já com o perfil 'sector' aplicado.
+    // Troca de perfil exige uma nova navegação sem reutilizar RSC antiga.
     window.location.replace('/login');
   };
 
@@ -912,7 +918,11 @@ export function PlatformAdminView({
             error={billing.error}
             mutatingKey={billing.mutatingKey}
             onUpdateConfig={billing.updateConfig}
+            onPrepareEnforcement={billing.prepareEnforcement}
             onGrantTrial={billing.grantTrial}
+            onOfferRamp={billing.offerRamp}
+            onResolveRefund={billing.resolveRefund}
+            onRecoverCheckout={billing.recoverCheckout}
             onSetExemption={billing.setExemption}
             onSetStatus={billing.setStatus}
             onSetCycleStatus={billing.setCycleStatus}

@@ -66,7 +66,9 @@ requireText(multitenantSecurity, 'Setor recupera acesso após reativação', 'Te
 
 requireText(view, 'as sessões ativas serão revogadas e nenhum dado será apagado', 'UX de suspensão deixou de explicar revogação e preservação de dados.');
 requireText(view, 'Sessões revogadas não voltam a ser válidas', 'UX de reativação deixou de explicar que sessões antigas não retornam.');
-requireText(billingPanel, 'Billing não suspende o acesso automaticamente', 'UI de billing deixou de separar cobrança de enforcement.');
+requireText(billingPanel, 'OBSERVE não interfere no acesso', 'UI não explica que cobrança em OBSERVE não bloqueia usuários.');
+requireText(billingPanel, "billingMode: 'observe', requirePayment: false", 'Painel não permite desligar enforcement preservando acesso operacional.');
+requireText(billingPanel, "billingMode: 'enforce', requirePayment: true", 'Painel não distingue enforcement de simples observação.');
 
 requireText(packageJson, '"verify:saas-r1-security-enforcement"', 'package.json não expõe o guard SAAS-DS.');
 requireText(ci, 'SAAS R1 security enforcement guard', 'Application CI não executa o guard SAAS-DS.');

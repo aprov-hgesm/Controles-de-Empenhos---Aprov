@@ -3,6 +3,8 @@ import type { Workspace } from './platformIdentity';
 export const EMPROVEX_BILLING_VERSION = 'emprovex_billing_v1' as const;
 export const EMPROVEX_BILLING_CONFIG_ID = 'main' as const;
 export const EMPROVEX_FULL_PLAN_PRICE_CENTS = 7000 as const;
+export const EMPROVEX_NEW_CUSTOMER_RAMP_ID = 'emprovex_individual_ramp_v1' as const;
+export const EMPROVEX_NEW_CUSTOMER_START_CENTS = 2990 as const;
 
 export type BillingMode = 'off' | 'observe' | 'enforce';
 export type BillingAccountStatus =
@@ -21,6 +23,7 @@ export interface PlatformBillingConfig {
   version: typeof EMPROVEX_BILLING_VERSION;
   billingMode: BillingMode;
   requirePayment: boolean;
+  billingCutoverPreparedAt?: string;
   automaticSuspension: boolean;
   monthlyPriceCents: number;
   currency: 'BRL';
@@ -51,6 +54,21 @@ export interface BillingAccount {
   trialStartedAt: string;
   trialEndsAt: string;
   paymentRequired: boolean;
+  pricingPolicyId?: typeof EMPROVEX_NEW_CUSTOMER_RAMP_ID;
+  firstPaidReferenceMonth?: string;
+  /** Anniversary timestamp for each complete monthly service period. */
+  firstPaidAt?: string;
+  lastBilledReferenceMonth?: string;
+  /** One temporary 48h return to operations per reference month. */
+  grace48ReferenceMonth?: string;
+  grace48RequestedAt?: string;
+  grace48Until?: string;
+  grace48ReviewStatus?: 'pending' | 'confirmed';
+  pricingTermsAcceptedAt?: string;
+  pricingTermsVersion?: string;
+  refundReviewReferenceMonth?: string;
+  refundReviewStatus?: 'pending' | 'resolved';
+  refundReviewCreatedAt?: string;
   exemptionSource?: BillingExemptionSource;
   legacyVipCutoff?: string;
   createdAt: string;
@@ -68,6 +86,17 @@ export interface BillingCycle {
   amountCents: number;
   dueDate: string;
   status: BillingCycleStatus;
+  /** Deterministic provider intent persisted before the outbound checkout call. */
+  checkoutOrderNsu?: string;
+  checkoutUrl?: string;
+  checkoutValidUntil?: string;
+  checkoutCreatedAt?: string;
+  checkoutAmountCents?: number;
+  checkoutState?: 'prepared' | 'dispatching' | 'linked' | 'settled' | 'failed' | 'expired';
+  /** Version 2 differentiates a reservation from an outbound provider call. */
+  checkoutAttemptVersion?: number;
+  checkoutDispatchStartedAt?: string;
+  settlementLedgerId?: string;
   confirmedAt: string;
   confirmedBy: string;
   note: string;
@@ -123,6 +152,57 @@ export function formatUtcDateOnly(value: string | Date): string {
 
 export function getReferenceMonth(value: string | Date = new Date()): string {
   return formatUtcDateOnly(value).slice(0, 7);
+}
+
+/** Monthly service anniversaries clamp at month end (Jan 31 -> Feb 28).
+ * The reference month belongs to the PERIOD START, not the calendar month of access.
+ * Never moves a customer's first paid month earlier on a trial extension.
+ */
+export function billingAnniversary(start: string | Date, months: number): Date {
+  const date = new Date(start);
+  if (!Number.isFinite(date.getTime()) || !Number.isSafeInteger(months) || months < 0 || months > 600)
+    throw new Error('BILLING_ANNIVERSARY_INVALID');
+  const base = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1,
+    date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()));
+  const lastDay = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
+  base.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return base;
+}
+
+export interface PaidServicePeriod {
+  referenceMonth: string;
+  periodNumber: number;
+  startsAt: string;
+  endsAt: string;
+}
+export function paidServicePeriod(
+  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>,
+  now: Date = new Date(),
+): PaidServicePeriod | null {
+  const start = account.firstPaidAt
+    || (account.firstPaidReferenceMonth ? account.firstPaidReferenceMonth + '-01T00:00:00.000Z' : '');
+  if (!start) return null;
+  const first = new Date(start);
+  if (!Number.isFinite(first.getTime()) || now < first) return null;
+  const monthsApart = (now.getUTCFullYear() - first.getUTCFullYear()) * 12
+    + now.getUTCMonth() - first.getUTCMonth();
+  let periodIndex = Math.max(0, monthsApart);
+  if (billingAnniversary(first, periodIndex) > now) periodIndex -= 1;
+  if (periodIndex < 0) return null;
+  const begin = billingAnniversary(first, periodIndex);
+  return {
+    referenceMonth: getReferenceMonth(begin),
+    periodNumber: periodIndex + 1,
+    startsAt: begin.toISOString(),
+    endsAt: billingAnniversary(first, periodIndex + 1).toISOString(),
+  };
+}
+
+/** A paid renewal remains accessible for the configured grace days after
+ * its service anniversary. The initial unpaid period has no free grace.
+ */
+export function paidServiceAccessUntil(period: PaidServicePeriod, renewalGraceDays: number): string {
+  return addUtcDays(period.endsAt, Math.max(0, Math.min(90, renewalGraceDays))).toISOString();
 }
 
 export function getBrazilFixedNationalHolidays(year: number): string[] {
@@ -246,7 +326,8 @@ export function buildInitialBillingAccount(
   createdBy: string,
   grantTrial: boolean,
   trialDays: number = DEFAULT_PLATFORM_BILLING_CONFIG.defaultTrialDays,
-  now: string = new Date().toISOString()
+  now: string = new Date().toISOString(),
+  newCustomerRamp: boolean = false
 ): BillingAccount {
   const isFounder = workspace.id === 'hgesm-aprov';
   const normalizedTrialDays = Math.max(1, Math.min(365, Math.trunc(trialDays || 30)));
@@ -254,13 +335,26 @@ export function buildInitialBillingAccount(
     ? addUtcDays(now, normalizedTrialDays).toISOString()
     : '';
 
+  // The first billable reference month is the month in which trial ends (or onboarding month).
+  // No charge is emitted until the sector explicitly accepts the full schedule.
+  const trialEndDate = grantTrial && trialEndsAt ? new Date(trialEndsAt) : new Date(now);
+  const referenceStart = trialEndDate;
+  const rampForNewCustomer = newCustomerRamp && !isFounder;
+
   return {
     version: EMPROVEX_BILLING_VERSION,
     workspaceId: workspace.id,
     ug: workspace.ug || '',
     authorizedEmail: workspace.authorizedEmail,
     status: isFounder ? 'exempt' : grantTrial ? 'trial' : 'active',
-    monthlyPriceCents: isFounder ? 0 : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+    monthlyPriceCents: isFounder ? 0 : rampForNewCustomer
+      ? EMPROVEX_NEW_CUSTOMER_START_CENTS : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+    ...(rampForNewCustomer ? {
+      pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
+      firstPaidReferenceMonth: getReferenceMonth(referenceStart),
+      firstPaidAt: referenceStart.toISOString(),
+      pricingTermsAcceptedAt: '',
+    } : {}),
     currency: 'BRL',
     trialGranted: Boolean(grantTrial && !isFounder),
     trialStartedAt: grantTrial && !isFounder ? now : '',
@@ -449,8 +543,11 @@ export function getBillingAttention(
   needsAttention: boolean;
   overdueDays: number;
 } {
-  const referenceMonth = getReferenceMonth(now);
-  const dueDate = getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const period = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
+    ? paidServicePeriod(account, new Date(now)) : null;
+  const referenceMonth = period?.referenceMonth || getReferenceMonth(now);
+  const dueDate = period?.startsAt.slice(0, 10)
+    || getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   const graceEndsAt = getGraceEndsAt(dueDate, config.gracePeriodDays);
   const today = formatUtcDateOnly(now);
   const currentCycle = cycles.find(

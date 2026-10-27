@@ -14,6 +14,8 @@ function forbidText(source, text, message) {
 
 const domain = read('lib/billing.ts');
 const store = read('lib/platformBillingStore.ts');
+const adminServer = read('lib/server/platformBillingAdminStore.ts');
+const adminRoute = read('app/api/admin/billing/route.ts');
 const rules = read('firestore.rules');
 const provisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const sharedProvisioning = read('lib/sectorProvisioning.ts');
@@ -47,12 +49,21 @@ requireText(domain, 'paymentLinkUrl', 'Configuração não possui Link de Pagame
 requireText(domain, 'supportContact', 'Configuração não possui canal de suporte.');
 requireText(domain, 'getFifthBusinessDay', 'Domínio não possui cálculo centralizado do 5º dia útil.');
 
-requireText(store, 'setBillingExemption', 'Store não possui ação administrativa de VIP/isento.');
-requireText(store, "persistedAccount.status === 'exempt'", 'Store permite competência financeira para conta isenta.');
-requireText(store, 'sanitizeHttpsUrl', 'Link de Pagamento não exige HTTPS.');
-requireText(store, "saas_r1_full_plan_70_brl", 'Migração de preço não registra motivo auditável.');
-requireText(store, 'idempotentDocumentId', 'Confirmação manual não registra identidade determinística.');
-forbidText(store, 'monthly_price_reduced_to_50_brl', 'Migração legada 70 -> 50 ainda está ativa.');
+
+requireText(store, 'setBillingExemption', 'Bridge do cliente não possui ação VIP.');
+requireText(store, "billingRequest", 'Bridge do cliente não usa API de cobrança.');
+requireText(store, "'/api/admin/billing'", 'Bridge do cliente não aponta à API do servidor.');
+forbidText(store, "from 'firebase/firestore'", 'Billing administrativo voltou a acessar Firestore diretamente no cliente.');
+forbidText(store, 'runTransaction(', 'Billing administrativo voltou a executar transações no navegador.');
+requireText(adminRoute, 'verifyFounderFirebaseRequest', 'Rota financeira não verifica fundador Google.');
+requireText(adminServer, 'getGoogleAccessToken', 'Motor financeiro não usa credenciais IAM servidor.');
+requireText(adminServer, "BILLING_EXEMPT_ACCOUNT_IMMUTABLE", 'Motor permite cobrança de VIP.');
+requireText(adminServer, 'validateUrl', 'Motor não exige HTTPS no link.');
+requireText(adminServer, 'idempotentDocumentId', 'Motor não preserva identidade de competência auditada.');
+requireText(adminServer, 'BILLING_PRICE_CHANGE_REQUIRES_CONTRACT_FLOW', 'Motor ainda permite reprecificação silenciosa.');
+requireText(adminServer, "BILLING_EXEMPTION_REMOVAL_REQUIRES_CONTRACT", 'Motor remove VIP sem contrato.');
+forbidText(store.toLowerCase(), 'woovi', 'Billing R1 não deve depender da Woovi.');
+forbidText(store.toLowerCase(), 'asaas', 'Billing R1 não deve depender do Asaas.');
 
 requireText(sharedProvisioning, 'grantTrial: boolean', 'Provisionamento não possui opção explícita de trial.');
 requireText(modal + primaryCreatePanel, 'Período de teste', 'Cadastro de setor não expõe a opção de trial.');
@@ -65,9 +76,13 @@ requireText(adminView, "id: 'assinaturas'", 'Administração não possui aba Ass
 requireText(adminPanel, 'Plano Completo EMPROVEX', 'Painel não apresenta o plano comercial único.');
 requireText(adminPanel, 'Tornar VIP / Isento', 'Painel não permite conceder VIP/isento.');
 requireText(adminPanel, 'Remover VIP', 'Painel não permite remover VIP.');
-requireText(adminPanel, 'Referência ou observação administrativa', 'Confirmação não aceita referência administrativa opcional.');
+requireText(adminPanel, 'Referência obrigatória do pagamento recebido', 'Confirmação manual não exige referência de pagamento conferido.');
+requireText(adminPanel, "'paid',", 'Confirmação manual não encaminha status paid ao motor financeiro.');
 requireText(adminPanel, 'Link de Pagamento', 'Painel não configura regularização por link.');
-requireText(adminPanel, 'Exigir pagamento', 'Painel não preserva indicação de enforcement desativado.');
+requireText(adminPanel, 'SOMENTE OBSERVAÇÃO', 'Painel não informa o modo de observação.');
+requireText(adminPanel, "billingMode: 'observe', requirePayment: false", 'Painel não permite retornar à observação sem bloqueio.');
+requireText(adminPanel, "billingMode: 'enforce', requirePayment: true", 'Painel não exige ativação explícita do enforcement.');
+requireText(adminPanel, 'Ativar controle financeiro', 'Painel não expõe ativação deliberada ao fundador.');
 requireText(adminPanel, 'disabled', 'Ativação de pagamento não está protegida na SAAS-B.');
 
 requireText(header, 'billing-trial-badge', 'Usuário externo não recebe indicação visual do período de teste.');
@@ -87,7 +102,9 @@ for (const source of [regularizationPage, regularizationTabs, regularizationPane
   forbidText(source, '13º em diante', 'Faixas de reajuste futuro não podem aparecer no bundle cliente.');
 }
 requireText(regularizationPage, 'Nenhum dado de cartão', 'Página de regularização não explica o processamento externo.');
-requireText(regularizationRoute, 'EMPROVEX_FULL_PLAN_PRICE_CENTS', 'API pública não fixa o preço canônico do Plano Completo.');
+forbidText(regularizationRoute, 'EMPROVEX_FULL_PLAN_PRICE_CENTS', 'API pública não pode usar o preço legado como valor de novas assinaturas.');
+forbidText(regularizationRoute, 'monthlyPriceCents', 'API pública não pode expor preço global como cotação individual.');
+requireText(regularizationPanel, '/api/billing/portal?view=access', 'Cotação da competência não usa o endpoint autenticado do próprio setor.');
 requireText(regularizationRoute, 'publicHttpsUrl', 'API pública não filtra Link de Pagamento para HTTPS.');
 
 forbidText(platformAccess, 'billingAccounts', 'platformAccess não pode impor billing na SAAS-B.');

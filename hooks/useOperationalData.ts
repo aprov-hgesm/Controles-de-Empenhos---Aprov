@@ -106,7 +106,8 @@ function describeSectorAuthorizationFailure(code: string): string {
  */
 export function useOperationalData(
   activeTab: OperationalActiveTab,
-  acceptedLegalIdentityKey: string | null = null
+  acceptedLegalIdentityKey: string | null = null,
+  billingAccessGranted: boolean = false
 ) {
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
@@ -135,6 +136,7 @@ export function useOperationalData(
   const operationalAccessEnabled = Boolean(
     legalIdentityKey
     && acceptedLegalIdentityKey === legalIdentityKey
+    && billingAccessGranted
   );
 
   const {
@@ -258,7 +260,7 @@ export function useOperationalData(
   useEffect(() => {
     if (user && workspaceContext.status === 'platformAdmin') {
       clearOperationalState();
-      // Sessão fundadora: a troca de superfície exige documento novo, não RSC pendente.
+      // Sessão fundadora: recarregar documento ao trocar de superfície.
       window.location.replace('/admin');
     }
   }, [user, workspaceContext.status]);

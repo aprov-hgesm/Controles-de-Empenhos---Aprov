@@ -1,0 +1,34 @@
+name: Billing Server Migration Assurance
+
+on:
+  pull_request:
+    paths:
+      - 'lib/server/platformBillingAdminStore.ts'
+      - 'app/api/admin/billing/route.ts'
+      - 'lib/platformBillingStore.ts'
+      - 'hooks/usePlatformAdminBilling.ts'
+      - 'scripts/billing-server-migration.test.mjs'
+      - 'scripts/verify-block-22-billing.mjs'
+      - '.github/workflows/billing-server-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  billing-server-migration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Atomicity, legacy prices, and VIP protections (actual TS server engine)
+        run: node --test scripts/billing-server-migration.test.mjs
+      - name: Billing block 22 compat
+        run: node scripts/verify-block-22-billing.mjs
+      - name: TypeScript project
+        run: npm run typecheck

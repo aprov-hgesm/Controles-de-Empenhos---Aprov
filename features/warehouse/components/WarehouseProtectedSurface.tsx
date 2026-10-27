@@ -15,6 +15,7 @@ import { startWorkspaceSessionControl } from '../../../lib/platformSessionContro
 import { clearLocalWorkspaceSessionLease } from '../../../lib/platformSessionLease';
 import { resetActiveProfileMode } from '../../../lib/profileMode';
 import { canAccessWarehouseModule } from '../../../lib/warehouse/featureFlag';
+import { checkSectorBillingAccess, showBillingRequired } from '../../../lib/sectorBillingGate';
 import {
   clearResolvedWorkspaceContext,
   type SectorWorkspaceContext,
@@ -93,6 +94,15 @@ export function WarehouseAccessBoundary({
 
         if (!canAccessWarehouseModule(context) || context.status !== 'sector') {
           denyAccess();
+          return;
+        }
+
+        // Protected direct routes must not bypass the billing gate.
+        const billing = await checkSectorBillingAccess(currentUser, context);
+        if (!active) return;
+        if (!billing.allowed) {
+          setGateState('denied');
+          showBillingRequired();
           return;
         }
 

@@ -22,6 +22,7 @@ import { LegalAcceptanceGate } from '../../components/legal/LegalAcceptanceGate'
 import type { OperationalActiveTab } from '../../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
+import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
 const OperationalWorkspace = lazy(() =>
   import('../../features/operational/components/OperationalWorkspace').then((module) => ({
@@ -33,6 +34,7 @@ export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [billingAccessState, setBillingAccessState] = useState<'checking' | 'allowed'>('checking');
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -54,8 +56,7 @@ export default function Home() {
   // Navigation drives the realtime subscription profile (Block 14).
   const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
 
-  // Links de outros módulos usam /login?tab=cronogramas, nunca a vitrine '/'.
-  // A aba é ativada após hidratação, preservando o mesmo motor React do menu.
+  // Navegação entre módulos: /login?tab=cronogramas ativa a aba correta.
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab === 'cronogramas') setActiveTab('cronogramas');
@@ -63,7 +64,7 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
 
-  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey);
+  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed');
   const {
     user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
@@ -74,6 +75,29 @@ export default function Home() {
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = operationalData;
+
+  useEffect(() => {
+    let active = true;
+    if (!user || loadingAuth) {
+      setBillingAccessState('checking');
+      return () => { active = false; };
+    }
+    if (workspaceContext.status !== 'sector') {
+      setBillingAccessState('allowed');
+      return () => { active = false; };
+    }
+    setBillingAccessState('checking');
+    void checkSectorBillingAccess(user, workspaceContext)
+      .then((decision) => {
+        if (!active) return;
+        if (!decision.allowed) { showBillingRequired(); return; }
+        setBillingAccessState('allowed');
+      })
+      .catch(() => {
+        if (active) showBillingRequired();
+      });
+    return () => { active = false; };
+  }, [user, loadingAuth, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
@@ -210,6 +234,11 @@ export default function Home() {
         onFounderLogin={handleFounderLogin}
       />
     );
+  }
+
+  // No operational surface may render before a server billing decision.
+  if (billingAccessState !== 'allowed') {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
   const operationalSurface = (
