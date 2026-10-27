@@ -19,6 +19,8 @@ const lifecycle = read('lib/server/sectorLifecycleAdmin.ts');
 const hook = read('hooks/usePlatformAdminDirectory.ts');
 const coreRules = read('firestore.rules');
 const warehouseRules = read('firestore.warehouse.rules');
+const serverOnlyRules = read('firestore.warehouse.server-only.rules');
+const firebaseConfig = read('firebase.json');
 const view = read('components/admin/PlatformAdminView.tsx');
 const billingPanel = read('components/admin/AdminBillingPanel.tsx');
 const warehouseSecurity = read('scripts/warehouse-external-access-security.test.mjs');
@@ -57,6 +59,14 @@ requireText(warehouseRules, 'function warehouseLifecycleAllowsAccess(workspaceId
 requireText(warehouseRules, "/documents/warehouseAccess/$(workspaceId)", 'Rules da Central perderam o documento de lifecycle.');
 requireText(warehouseRules, ".data.status == 'active'", 'Rules da Central deixaram de exigir lifecycle ativo.');
 forbidText(warehouseRules, 'billingAccounts', 'Billing foi acoplado às Rules da Central.');
+
+// Always check the exact Rules file deployed by firebase.json. An obsolete
+// warehouse Rules file must never be mistaken for the active data-plane gate.
+requireText(firebaseConfig, '"rules": "firestore.warehouse.server-only.rules"', 'Firebase nao seleciona as Rules server-only certificadas da Central.');
+requireText(serverOnlyRules, 'function sectorBillingAllowsAccess(workspaceId)', 'Rules server-only nao tem gate de assinatura.');
+requireText(serverOnlyRules, '&& sectorBillingAllowsAccess(workspaceId)', 'Leituras SDK podem contornar a cobranca no Warehouse.');
+requireText(serverOnlyRules, "mirror.billingEnforcementStatus != 'enforce'", 'Rules server-only nao preservam modo OBSERVE/VIP.');
+requireText(serverOnlyRules, 'request.time < timestamp.value(mirror.billingEntitlementUntil)', 'Rules server-only nao aplicam vencimento no backend de dados.');
 
 requireText(warehouseSecurity, 'workspace suspenso perde acesso à Central com a sessão já aberta', 'Emulator da Central não cobre suspensão de sessão existente.');
 requireText(warehouseSecurity, 'reativação restaura a Central sem reutilizar billing', 'Emulator da Central não cobre reativação.');
