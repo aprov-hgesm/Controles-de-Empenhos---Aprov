@@ -92,7 +92,10 @@ export interface BillingCycle {
   checkoutValidUntil?: string;
   checkoutCreatedAt?: string;
   checkoutAmountCents?: number;
-  checkoutState?: 'prepared' | 'linked' | 'settled' | 'failed' | 'expired';
+  checkoutState?: 'prepared' | 'dispatching' | 'linked' | 'settled' | 'failed' | 'expired';
+  /** Version 2 differentiates a reservation from an outbound provider call. */
+  checkoutAttemptVersion?: number;
+  checkoutDispatchStartedAt?: string;
   settlementLedgerId?: string;
   confirmedAt: string;
   confirmedBy: string;
