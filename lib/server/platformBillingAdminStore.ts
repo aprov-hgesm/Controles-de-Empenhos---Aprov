@@ -19,6 +19,7 @@ import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
 import { makeOrderNsu, assessPaymentCheck, callInfinitePay } from './payments/infinitepayCheckout.mjs';
 import { readCheckoutUrl } from './payments/infinitepaySmokeHarness.mjs';
 import { syncWarehouseBillingMirror } from './warehouseBillingMirror';
+import { billingQaPilotEnabledFor } from './payments/billingAccessQaPilot.mjs';
 import { decideBillingAccess } from '../billingAccess';
 import { getReferenceMonth } from '../billing';
 
@@ -646,11 +647,15 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
     throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const account = accountDoc?.value as BillingAccount | undefined;
   if (account) assertAccountWorkspace(account, workspace);
-  const live = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
+  const globalLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
     && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
+  // Functional QA only. Does not claim SDK data-plane security certification.
+  // Never enables billing enforcement for any other workspace or changes VIPs.
+  const qaLive = billingQaPilotEnabledFor({ workspaceId, env: process.env });
+  const live = globalLive || qaLive;
   const period = account ? paidServicePeriod(account) : null;
   const month = period?.referenceMonth || getReferenceMonth();
   const previousReference = account && live ? previousServiceReference(account) : null;
@@ -666,7 +671,7 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
         referenceMonth: period.referenceMonth }) : null;
-  if (live && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
+  if (globalLive && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
     // Repair previous interrupted mirror writes before claiming permission.
     await syncWarehouseBillingMirror(token, workspace, true);
   }
