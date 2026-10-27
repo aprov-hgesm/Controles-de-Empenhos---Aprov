@@ -31,11 +31,11 @@ test('P0: links entre áreas são navegações de documento, não transições t
   assert.match(read('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/operador-movel"/);
   const billingShell = read('components/billing/BillingPortalShell.tsx');
   const returnButton = read('components/billing/BillingReturnButton.tsx');
-  assert.match(billingShell, /<BillingReturnButton(?:\\s|>)/,
+  assert.ok(billingShell.includes('<BillingReturnButton'),
     'Assinaturas devem manter retorno condicionado ao entitlement.');
-  assert.match(returnButton, /window\\.location\\.assign\\('\\/login'\\)/,
+  assert.ok(returnButton.includes("window.location.assign('/login')"),
     'Retorno autorizado deve carregar /login como documento.');
-  assert.match(returnButton, /\\/api\\/billing\\/portal\\?view=access/,
+  assert.ok(returnButton.includes('/api/billing/portal?view=access'),
     'O botão não pode contornar o gate financeiro.');
 });
 
