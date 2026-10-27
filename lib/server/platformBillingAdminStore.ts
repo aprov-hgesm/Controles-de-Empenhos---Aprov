@@ -755,6 +755,18 @@ function requireCheckoutConfig() {
  * month. The frozen cycle and opaque provider order are stored before any call
  * to InfinitePay. The browser cannot choose a price or workspace.
  */
+type CheckoutResponse = {
+  status: 'reserved' | 'ready' | 'paid' | 'pending_review';
+  orderNsu: string;
+  amountCents: number;
+  referenceMonth: string;
+  checkoutUrl: string;
+  validUntil?: string;
+  alreadyLinked?: boolean;
+};
+
+/** Exactly one outbound dispatch per reserved order; stale dispatches are
+ * resolved from provider evidence, never by an unsafe automatic retry. */
 export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId: string, email: string) {
   validWorkspaceId(workspaceId);
   if (actor.email !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
@@ -769,7 +781,7 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
   const orderNsu = makeOrderNsu({ workspaceId, referenceMonth: month, orderIdSecret });
   const intentPath = 'billingPaymentIntents/' + orderNsu;
-  const prepared = await transaction(token, [wp, ap, cp, intentPath], docs => {
+  const prepared = await transaction<CheckoutResponse>(token, [wp, ap, cp, intentPath], docs => {
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const account = existingAccount(docs.get(ap) ?? null);
     assertAccountWorkspace(account, workspace);
@@ -811,9 +823,11 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     // Legacy "prepared" may already have reached InfinitePay. Do not
     // replay these older requests without confirming whether a link exists.
     if (previous?.checkoutState === 'prepared') {
+      if (!previous.checkoutValidUntil || Date.parse(previous.checkoutValidUntil) <= Date.now())
+        return { result: { ...common, status: 'pending_review' as const, checkoutUrl: '' }, updates: [] };
       return { result: { ...common,
         status: previous.checkoutAttemptVersion === 2 ? 'reserved' as const : 'pending_review' as const,
-        checkoutUrl: '' }, updates: [] };
+        checkoutUrl: '', validUntil: previous.checkoutValidUntil }, updates: [] };
     }
     if (previous?.checkoutState === 'dispatching' || previous?.checkoutState === 'linked')
       return { result: { ...common, status: 'pending_review' as const,
@@ -849,6 +863,8 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     ] };
   });
   if (prepared.status !== 'reserved') return prepared;
+  if (!prepared.validUntil || Date.parse(prepared.validUntil) <= Date.now())
+    return { ...prepared, status: 'pending_review' as const };
   // The reservation has no external side effects. It can be resumed safely
   // after a crash. Exactly one concurrent request may claim outbound dispatch.
   const claimed = await transaction(token, [cp, intentPath], docs => {
