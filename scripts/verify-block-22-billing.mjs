@@ -76,9 +76,13 @@ requireText(adminView, "id: 'assinaturas'", 'Administração não possui aba Ass
 requireText(adminPanel, 'Plano Completo EMPROVEX', 'Painel não apresenta o plano comercial único.');
 requireText(adminPanel, 'Tornar VIP / Isento', 'Painel não permite conceder VIP/isento.');
 requireText(adminPanel, 'Remover VIP', 'Painel não permite remover VIP.');
-requireText(adminPanel, 'Referência ou observação administrativa', 'Confirmação não aceita referência administrativa opcional.');
+requireText(adminPanel, 'Referência obrigatória do pagamento recebido', 'Confirmação manual não exige referência de pagamento conferido.');
+requireText(adminPanel, "'paid',", 'Confirmação manual não encaminha status paid ao motor financeiro.');
 requireText(adminPanel, 'Link de Pagamento', 'Painel não configura regularização por link.');
-requireText(adminPanel, 'Exigir pagamento', 'Painel não preserva indicação de enforcement desativado.');
+requireText(adminPanel, 'SOMENTE OBSERVAÇÃO', 'Painel não informa o modo de observação.');
+requireText(adminPanel, "billingMode: 'observe', requirePayment: false", 'Painel não permite retornar à observação sem bloqueio.');
+requireText(adminPanel, "billingMode: 'enforce', requirePayment: true", 'Painel não exige ativação explícita do enforcement.');
+requireText(adminPanel, 'Ativar controle financeiro', 'Painel não expõe ativação deliberada ao fundador.');
 requireText(adminPanel, 'disabled', 'Ativação de pagamento não está protegida na SAAS-B.');
 
 requireText(header, 'billing-trial-badge', 'Usuário externo não recebe indicação visual do período de teste.');
@@ -98,7 +102,9 @@ for (const source of [regularizationPage, regularizationTabs, regularizationPane
   forbidText(source, '13º em diante', 'Faixas de reajuste futuro não podem aparecer no bundle cliente.');
 }
 requireText(regularizationPage, 'Nenhum dado de cartão', 'Página de regularização não explica o processamento externo.');
-requireText(regularizationRoute, 'EMPROVEX_FULL_PLAN_PRICE_CENTS', 'API pública não fixa o preço canônico do Plano Completo.');
+forbidText(regularizationRoute, 'EMPROVEX_FULL_PLAN_PRICE_CENTS', 'API pública não pode usar o preço legado como valor de novas assinaturas.');
+forbidText(regularizationRoute, 'monthlyPriceCents', 'API pública não pode expor preço global como cotação individual.');
+requireText(regularizationPanel, '/api/billing/portal?view=access', 'Cotação da competência não usa o endpoint autenticado do próprio setor.');
 requireText(regularizationRoute, 'publicHttpsUrl', 'API pública não filtra Link de Pagamento para HTTPS.');
 
 forbidText(platformAccess, 'billingAccounts', 'platformAccess não pode impor billing na SAAS-B.');
