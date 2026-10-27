@@ -54,11 +54,34 @@ service cloud.firestore {
       ) || sectorLifecycleActive(workspaceId);
     }
 
+    // Billing is enforced only when IAM explicitly activates the mirror for
+    // this workspace. VIP/legacy records without an enforce marker stay exempt.
+    // The data-plane guard is needed even for direct SDK reads (3D/reports).
+    function sectorBillingMirrorAllowsAccess(workspaceId) {
+      let mirror = get(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ).data;
+      return !('billingEnforcementStatus' in mirror)
+        || mirror.billingEnforcementStatus != 'enforce'
+        || (
+          'billingEntitlementUntil' in mirror
+          && mirror.billingEntitlementUntil is string
+          && request.time < timestamp.value(mirror.billingEntitlementUntil)
+        );
+    }
+
+    function sectorBillingAllowsAccess(workspaceId) {
+      return !exists(
+        /databases/$(database)/documents/warehouseAccess/$(workspaceId)
+      ) || sectorBillingMirrorAllowsAccess(workspaceId);
+    }
+
     function canReadWorkspace(workspaceId) {
       return isFounderWorkspace(workspaceId)
         || (
           isBoundSector(workspaceId)
           && sectorLifecycleAllowsAccess(workspaceId)
+          && sectorBillingAllowsAccess(workspaceId)
         );
     }
 
