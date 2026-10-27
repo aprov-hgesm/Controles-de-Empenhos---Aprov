@@ -656,8 +656,11 @@ async function main() {
     updatedBy: founderEmail,
   };
 
-  await allowed('Administrador configura regularização pública sem segredo', () =>
+  await denied('SDK do fundador não grava configuração financeira diretamente', () =>
     setDoc(doc(admin.db, 'platformBillingConfig', 'main'), billingConfigSeed)
+  );
+  await allowed('Servidor IAM configura regularização pública sem segredo', () =>
+    ownerSet('platformBillingConfig/main', billingConfigSeed)
   );
   await denied('Setor não lê a configuração administrativa completa de cobrança', () =>
     getDoc(doc(sessionA.db, 'platformBillingConfig', 'main'))
@@ -706,18 +709,23 @@ async function main() {
       updatedBy: founderEmail,
     })
   );
-  await allowed('Administrador concede VIP usando exempt e valor zero', () =>
+  await denied('SDK do fundador não concede VIP diretamente', () =>
     updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
-      status: 'exempt',
-      monthlyPriceCents: 0,
-      updatedAt: '2026-10-01T02:00:00.000Z',
-      updatedBy: founderEmail,
+      status: 'exempt', monthlyPriceCents: 0,
+      updatedAt: '2026-10-01T02:00:00.000Z', updatedBy: founderEmail,
+    })
+  );
+  await allowed('Administrador concede VIP usando exempt e valor zero', () =>
+    ownerSet('billingAccounts/workspace-a', {
+      ...billingAccountSeed('workspace-a', identities.a.email, '160416'),
+      status: 'exempt', monthlyPriceCents: 0,
+      updatedAt: '2026-10-01T02:00:00.000Z', updatedBy: founderEmail,
     })
   );
   const vipAccount = await getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'));
   assert.equal(vipAccount.data()?.status, 'exempt');
   assert.equal(vipAccount.data()?.monthlyPriceCents, 0);
-  await allowed('Administrador remove VIP e restaura Plano Completo de R$ 70', () =>
+  await denied('SDK do fundador não remove VIP nem restaura preço antigo diretamente', () =>
     updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
       status: 'active',
       monthlyPriceCents: 7000,
@@ -726,9 +734,19 @@ async function main() {
     })
   );
 
+  // Restore an ordinary account only as a controlled emulator fixture. The
+  // real administrative server refuses removal of protected legacy VIPs.
+  await ownerSet('billingAccounts/workspace-a',
+    billingAccountSeed('workspace-a', identities.a.email, '160416'));
+
   const historicalCycleId = 'workspace-a__2026-09';
-  await allowed('Administrador preserva competência histórica materializada', () =>
+  await denied('SDK do fundador não cria competência financeira diretamente', () =>
     setDoc(doc(admin.db, 'billingCycles', historicalCycleId), {
+      workspaceId: 'workspace-a', amountCents: 5000,
+    })
+  );
+  await allowed('Administrador preserva competência histórica materializada', () =>
+    ownerSet('billingCycles/' + historicalCycleId, {
       version: 'emprovex_billing_v1',
       id: historicalCycleId,
       workspaceId: 'workspace-a',
@@ -753,13 +771,19 @@ async function main() {
     })
   );
 
-  await allowed('Administrador lista assinaturas comerciais', () =>
+  await denied('SDK do fundador não lista assinaturas comerciais globalmente', () =>
     getDocs(collection(admin.db, 'billingAccounts'))
   );
-  await allowed('Administrador atualiza situação comercial sem tocar no workspace', () =>
+  await denied('SDK do fundador não atualiza situação comercial diretamente', () =>
     updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
-      status: 'pending',
-      updatedAt: '2026-09-22T00:00:00.000Z',
+      status: 'pending', updatedAt: '2026-09-22T00:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await allowed('Servidor IAM atualiza situação comercial sem tocar no workspace', () =>
+    ownerSet('billingAccounts/workspace-a', {
+      ...billingAccountSeed('workspace-a', identities.a.email, '160416'),
+      status: 'pending', updatedAt: '2026-09-22T00:00:00.000Z',
       updatedBy: founderEmail,
     })
   );
