@@ -175,6 +175,10 @@ async function transaction<T>(
     committed = true;
     // Cross-database delivery is intentionally non-atomic. The update is
     // replayed on the next authenticated access if Warehouse was unavailable.
+    // GOV-SIMP-01: the billing decision lives on the server. Mirror to the
+    // secondary DB only if its optional billing Rules have been certified.
+    // Avoid two reads and one write on every payment/login without that need.
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1') {
     for (const change of updates) {
       if (!change.path.startsWith('workspaces/')) continue;
       const workspace = change.data as Workspace;
@@ -189,6 +193,7 @@ async function transaction<T>(
       } catch {
         console.warn('BILLING_WAREHOUSE_MIRROR_RETRY_REQUIRED');
       }
+    }
     }
     return result;
   } finally {
@@ -324,7 +329,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
           { monthlyPriceCents: current.monthlyPriceCents }, { monthlyPriceCents: updated.monthlyPriceCents }),
       ] };
     });
-    if ((result as PlatformBillingConfig).billingMode === 'enforce'
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
+      && (result as PlatformBillingConfig).billingMode === 'enforce'
       && (result as PlatformBillingConfig).requirePayment === true) {
       // Cutover is recoverable: repeatable IAM mirror writes for every enrolled
       // sector, without modifying VIPs, existing contracts or Firestore prices.
@@ -669,7 +675,8 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
         referenceMonth: period.referenceMonth }) : null;
-  if (globalLive && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
+  if (globalLive && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
+    && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
     // Repair previous interrupted mirror writes before claiming permission.
     await syncWarehouseBillingMirror(token, workspace, true);
   }
@@ -1182,7 +1189,9 @@ export async function prepareBillingEnforcement(actor: Actor) {
       return { result: true, updates: [{ path: wp, data: desired }] };
     });
     const preparedWorkspace = existingWorkspace(await get(token, wp), row.workspaceId);
-    await syncWarehouseBillingMirror(token, preparedWorkspace, false);
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1') {
+      await syncWarehouseBillingMirror(token, preparedWorkspace, false);
+    }
     prepared++;
   }
   await transaction(token, [CONFIG_PATH], docs => {
