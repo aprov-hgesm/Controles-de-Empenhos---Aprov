@@ -175,6 +175,10 @@ async function transaction<T>(
     committed = true;
     // Cross-database delivery is intentionally non-atomic. The update is
     // replayed on the next authenticated access if Warehouse was unavailable.
+    // GOV-SIMP-01: the billing decision lives on the server. Mirror to the
+    // secondary DB only if its optional billing Rules have been certified.
+    // Avoid two reads and one write on every payment/login without that need.
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1') {
     for (const change of updates) {
       if (!change.path.startsWith('workspaces/')) continue;
       const workspace = change.data as Workspace;
@@ -183,13 +187,13 @@ async function transaction<T>(
         const config = await get(token, CONFIG_PATH);
         const active = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
           && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
           && config?.value?.billingMode === 'enforce'
           && config?.value?.requirePayment === true;
         await syncWarehouseBillingMirror(token, workspace, active);
       } catch {
         console.warn('BILLING_WAREHOUSE_MIRROR_RETRY_REQUIRED');
       }
+    }
     }
     return result;
   } finally {
@@ -288,7 +292,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         throw new BillingAdminError('BILLING_ENTITLEMENTS_NOT_PREPARED', 409);
       if (requestingEnforce && (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED !== '1'
           || process.env.INFINITEPAY_BILLING_ENABLED !== '1'
-          || process.env.EMPROVEX_BILLING_RULES_CERTIFIED !== '1'))
+))
         throw new BillingAdminError('BILLING_ENFORCEMENT_CUTOVER_NOT_READY', 409);
       if (requestingEnforce) requireCheckoutConfig();
       if (input.defaultTrialDays !== undefined && (typeof input.defaultTrialDays !== 'number'
@@ -325,7 +329,8 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
           { monthlyPriceCents: current.monthlyPriceCents }, { monthlyPriceCents: updated.monthlyPriceCents }),
       ] };
     });
-    if ((result as PlatformBillingConfig).billingMode === 'enforce'
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
+      && (result as PlatformBillingConfig).billingMode === 'enforce'
       && (result as PlatformBillingConfig).requirePayment === true) {
       // Cutover is recoverable: repeatable IAM mirror writes for every enrolled
       // sector, without modifying VIPs, existing contracts or Firestore prices.
@@ -649,7 +654,6 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   if (account) assertAccountWorkspace(account, workspace);
   const globalLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   // Functional QA only. Does not claim SDK data-plane security certification.
@@ -671,7 +675,8 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth,
         referenceMonth: period.referenceMonth }) : null;
-  if (globalLive && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
+  if (globalLive && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
+    && workspace.billingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID) {
     // Repair previous interrupted mirror writes before claiming permission.
     await syncWarehouseBillingMirror(token, workspace, true);
   }
@@ -701,7 +706,6 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   ]);
   const billingLive = process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1'
     && process.env.INFINITEPAY_BILLING_ENABLED === '1'
-    && process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1'
     && configDoc?.value?.billingMode === 'enforce'
     && configDoc?.value?.requirePayment === true;
   if (!billingLive) throw new BillingAdminError('BILLING_GRACE_NOT_ENABLED', 409);
@@ -1136,7 +1140,7 @@ export async function reconcileInfinitePayWebhook(input: {
 
 /** Founder-only, resumable dry cutoff of workspace entitlement documents.
  * Updates no price, billing cycle or VIP; safe to rerun after interruption.
- * Full Rules certification and go-live remain separate operator actions.
+ * Full server-side commercial rollout and go-live remain separate operator actions.
  */
 export async function prepareBillingEnforcement(actor: Actor) {
   const token = await getGoogleAccessToken();
@@ -1185,7 +1189,9 @@ export async function prepareBillingEnforcement(actor: Actor) {
       return { result: true, updates: [{ path: wp, data: desired }] };
     });
     const preparedWorkspace = existingWorkspace(await get(token, wp), row.workspaceId);
-    await syncWarehouseBillingMirror(token, preparedWorkspace, false);
+    if (process.env.EMPROVEX_BILLING_RULES_CERTIFIED === '1') {
+      await syncWarehouseBillingMirror(token, preparedWorkspace, false);
+    }
     prepared++;
   }
   await transaction(token, [CONFIG_PATH], docs => {

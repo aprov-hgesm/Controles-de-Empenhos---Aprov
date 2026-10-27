@@ -177,6 +177,53 @@ test('pilot-only server access: unpaid deny, paid allow, other sectors/VIPs unaf
   }
 });
 
+test('commercial launch: server denies unpaid, admits paid, preserves VIP and legacy without Rules flag', async () => {
+  fixture();
+  const cfg = get('platformBillingConfig/main');
+  store('platformBillingConfig/main', { ...cfg, billingMode: 'enforce', requirePayment: true,
+    billingCutoverPreparedAt: '2026-10-27T20:00:00.000Z' });
+  const id = 'novo-aprovisionamento', email = 'novo@example.com';
+  const ws = { id, ug: '161555', status: 'active', authorizedEmail: email,
+    billingPolicyId: 'emprovex_individual_ramp_v1', billingEntitlementUntil: new Date().toISOString() };
+  const account = domain.buildInitialBillingAccount(ws, founder.email, false, 30,
+    new Date().toISOString(), true);
+  store('workspaces/' + id, ws);
+  store('billingAccounts/' + id, account);
+  const oldId = 'setor-antigo', oldEmail = 'antigo@example.com';
+  const oldWorkspace = { id: oldId, ug:'161556', status:'active', authorizedEmail:oldEmail };
+  store('workspaces/' + oldId, oldWorkspace);
+  store('billingAccounts/' + oldId, domain.buildInitialBillingAccount(oldWorkspace,founder.email,false));
+  const keys = ['EMPROVEX_BILLING_ENFORCEMENT_ENABLED','INFINITEPAY_BILLING_ENABLED',
+    'EMPROVEX_BILLING_RULES_CERTIFIED','INFINITEPAY_BILLING_SCOPE',
+    'EMPROVEX_BILLING_QA_WORKSPACE_ID'];
+  const previous = Object.fromEntries(keys.map(k => [k,process.env[k]]));
+  try {
+    Object.assign(process.env, {
+      EMPROVEX_BILLING_ENFORCEMENT_ENABLED:'1',INFINITEPAY_BILLING_ENABLED:'1',
+      EMPROVEX_BILLING_RULES_CERTIFIED:'0',INFINITEPAY_BILLING_SCOPE:'all',
+      EMPROVEX_BILLING_QA_WORKSPACE_ID:'',
+    });
+    const denied = await engine.readSectorBillingAccess(id,email);
+    assert.equal(denied.enforcementEnabled, true);
+    assert.equal(denied.allowed, false);
+    assert.equal(denied.reason, 'payment_required');
+    assert.equal(denied.amountCents, 2990);
+    const paidMonth = domain.paidServicePeriod(account).referenceMonth;
+    store('billingCycles/' + id + '__' + paidMonth,
+      { workspaceId:id, referenceMonth:paidMonth, status:'paid' });
+    const accepted = await engine.readSectorBillingAccess(id,email);
+    assert.equal(accepted.allowed,true);
+    assert.equal(accepted.reason,'paid');
+    assert.equal((await engine.readSectorBillingAccess('vip-legacy-a','vip1@example.com')).reason,'vip');
+    assert.equal((await engine.readSectorBillingAccess(oldId,oldEmail)).reason,'legacy_contract');
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+});
+
 test('read-only dashboard: R$50 config and three VIPs retained, no writes',async()=>{
   fixture();
   const data=await engine.readBillingAdminDirectory();
