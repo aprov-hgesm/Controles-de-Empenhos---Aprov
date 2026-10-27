@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import Link from 'next/link';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
@@ -489,12 +488,12 @@ export function EmprovexLogin({
 
             <footer className="mt-5 flex flex-col items-center justify-between gap-3 px-1 text-[10px] font-semibold text-slate-500 sm:flex-row">
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start">
-                <Link href="/privacy" className="emprovex-login-footer-link transition hover:text-blue-200">
+                <a href="/privacy" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Política de Privacidade
-                </Link>
-                <Link href="/terms" className="emprovex-login-footer-link transition hover:text-blue-200">
+                </a>
+                <a href="/terms" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Termos de Serviço
-                </Link>
+                </a>
                 <a href="mailto:aprov1hgesm@gmail.com" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Suporte
                 </a>

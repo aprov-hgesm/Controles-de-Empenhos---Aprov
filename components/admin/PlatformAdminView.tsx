@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { motion, useReducedMotion } from 'motion/react';
-import { useRouter } from 'next/navigation';
 
 import { EditSectorModal } from './EditSectorModal';
 import { AdminBackupPanel } from './AdminBackupPanel';
@@ -266,7 +265,6 @@ export function PlatformAdminView({
   onRefreshGlobalUsage,
   onLogout,
 }: PlatformAdminViewProps) {
-  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<AdminTabId>('inicio');
   const [sectorQuery, setSectorQuery] = useState('');
@@ -419,7 +417,8 @@ export function PlatformAdminView({
 
   const returnToHgesm = () => {
     setActiveProfileMode('sector');
-    router.replace('/login');
+    // Troca de perfil exige uma nova navegação sem reutilizar RSC antiga.
+    window.location.replace('/login');
   };
 
   const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];

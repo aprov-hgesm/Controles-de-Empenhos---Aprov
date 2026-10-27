@@ -2,7 +2,6 @@
 
 import { type ReactNode } from 'react';
 import { BadgeCheck, CircleAlert, CreditCard, KeyRound, Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
 import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMode';
@@ -33,7 +32,6 @@ export function AppHeader({
   onOpenSidebar,
   onOpenAccount,
 }: AppHeaderProps) {
-  const router = useRouter();
   const currentUser = auth.currentUser;
   const currentEmail = currentUser?.email || null;
   const canSwitchProfile = hasDualProfileAccess(currentEmail);
@@ -65,7 +63,9 @@ export function AppHeader({
   const openAdministration = () => {
     if (!canSwitchProfile) return;
     setActiveProfileMode('platformAdmin');
-    router.push('/admin');
+    // Transição de perfil exige carregar o documento /admin, sem depender do RSC client router.
+    // A autorização continua sendo verificada na página administrativa.
+    window.location.assign('/admin');
   };
 
   return (
@@ -164,7 +164,7 @@ export function AppHeader({
           <button
             type="button"
             data-testid="billing-account-open"
-            onClick={() => router.push('/regularizacao')}
+            onClick={() => window.location.assign('/regularizacao')}
             className="emprovex-header-control border-cyan-300/15 bg-cyan-400/[0.06] text-cyan-100"
             title="Consultar minha assinatura e prévia do pagamento com InfinitePay."
           >
@@ -178,7 +178,7 @@ export function AppHeader({
           <button
             type="button"
             data-testid="billing-regularization-link"
-            onClick={() => router.push('/regularizacao')}
+            onClick={() => window.location.assign('/regularizacao')}
             className="emprovex-header-control border-amber-300/15 bg-amber-400/[0.07] text-amber-100"
             title="Ver instruções para regularizar a assinatura."
           >

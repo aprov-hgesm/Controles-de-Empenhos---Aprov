@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
@@ -69,11 +68,11 @@ export default function PlatformBackupAdminPage() {
   useEffect(() => {
     if (loadingAuth) return;
     if (!user) {
-      window.location.replace('/');
+      window.location.replace('/login');
       return;
     }
     if (context.status !== 'platformAdmin') {
-      window.location.replace('/');
+      window.location.replace('/login');
     }
   }, [context.status, loadingAuth, user]);
 
@@ -135,12 +134,12 @@ export default function PlatformBackupAdminPage() {
               <h1 className="text-base font-extrabold tracking-[0.08em] sm:text-lg">BACKUP E RECUPERAÇÃO</h1>
             </div>
           </div>
-          <Link
+          <a
             href="/admin"
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.10] bg-white/[0.04] px-3.5 text-xs font-bold text-slate-300 hover:bg-white/[0.08] hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" /> Administração
-          </Link>
+          </a>
         </div>
       </header>
 

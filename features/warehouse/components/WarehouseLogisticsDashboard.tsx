@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Boxes, CalendarClock, ClipboardCheck, MapPin, RefreshCw, ShieldAlert, TriangleAlert } from 'lucide-react';
 
@@ -18,11 +17,11 @@ function MetricCard({ label, value, detail, href, testId }: {
   testId: string;
 }) {
   return (
-    <Link href={href} data-testid={testId} className="rounded-2xl border border-white/[0.07] bg-black/10 p-4 transition hover:border-blue-300/15 hover:bg-blue-400/[0.035]">
+    <a href={href} data-testid={testId} className="rounded-2xl border border-white/[0.07] bg-black/10 p-4 transition hover:border-blue-300/15 hover:bg-blue-400/[0.035]">
       <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">{label}</p>
       <p className="mt-2 text-2xl font-black text-white">{value}</p>
       <p className="mt-2 text-[10px] leading-4 text-slate-600">{detail}</p>
-    </Link>
+    </a>
   );
 }
 

@@ -55,6 +55,12 @@ export default function Home() {
 
   // Navigation drives the realtime subscription profile (Block 14).
   const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
+
+  // Navegação entre módulos: /login?tab=cronogramas ativa a aba correta.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'cronogramas') setActiveTab('cronogramas');
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
 
@@ -316,6 +322,8 @@ export default function Home() {
 
         {/* Content Container Area */}
         <main
+          data-testid="operational-active-content"
+          data-operational-tab={activeTab}
           className={`flex-1 w-full overflow-hidden ${activeTab === 'inicio'
             ? 'p-0 pb-20 md:pb-0 max-w-none'
             : 'lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto'

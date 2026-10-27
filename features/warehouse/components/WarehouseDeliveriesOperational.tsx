@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, CheckCircle2, FileText, PackageCheck, RefreshCw, TriangleAlert, Warehouse } from 'lucide-react';
 
@@ -81,9 +80,9 @@ export function WarehouseDeliveriesOperational({ workspaceId }: { workspaceId: s
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/?tab=cronogramas" className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/[0.04]">
+            <a href="/login?tab=cronogramas" className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/[0.04]">
               Abrir Cronogramas
-            </Link>
+            </a>
             <button type="button" onClick={() => void refresh()} disabled={loading} className="rounded-xl border border-white/[0.08] p-2.5 text-slate-300" aria-label="Atualizar Entregas">
               <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
             </button>
