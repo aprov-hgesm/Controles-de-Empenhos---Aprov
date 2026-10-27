@@ -629,7 +629,7 @@ export function AdminBillingPanel({
                               busy={mutatingKey === `checkout:${workspace.id}:${attention.referenceMonth}`}
                               disabled={busy}
                               onClick={() => {
-                                const note = window.prompt('Confirme que verificou o pedido na InfinitePay e que NÃO houve pagamento. Informe a referência da conferência:', '');
+                                const note = window.prompt('Verifique o pedido na InfinitePay. Se ainda estiver válido, CANCELE o link antes de recuperar e registre LINK_CANCELADO + referência da conferência. Se o link já expirou, informe a referência de não pagamento:', '');
                                 if (!note || note.trim().length < 5) return;
                                 void onRecoverCheckout(workspace, attention.referenceMonth, note.trim());
                               }} />
