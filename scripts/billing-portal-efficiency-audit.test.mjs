@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
+import { timingSafeEqual } from 'node:crypto';
 import ts from 'typescript';
 
 // Exercise the ACTUAL Next.js GET/POST handler, with external services replaced
@@ -15,6 +16,16 @@ function harness({ status = 'active', authorized = true, delayMs = 0 } = {}) {
   const stats = { directoryResolutions: 0, privilegedHistoryQueries: 0, providerCalls: 0 };
   const ledger = [{ referenceMonth: '2026-10', amountCents: 7000, dueDate: '2026-10-30', status: 'pending' }];
   const dependencies = {
+    'node:crypto': { timingSafeEqual },
+    '../../../../lib/server/platformBillingAdminStore': {
+      BillingAdminError: class BillingAdminError extends Error { constructor(code, status = 403) { super(code); this.code = code; this.status = status; } },
+      acceptNewCustomerRamp() { throw Error('not expected in billing portal efficiency GET test'); },
+      readSectorBillingAccess() { throw Error('access engine not under test here'); },
+      requestSectorGrace48() { throw Error('grace engine not under test here'); },
+      createSectorSubscriptionCheckout() { throw Error('checkout must not run in this test'); },
+      reconcileSectorSubscriptionPayment() { throw Error('payment must not run in this test'); },
+      reconcileInfinitePayWebhook() { throw Error('webhook must not run in this test'); },
+    },
     'next/server': {
       NextResponse: {
         json(value, options = {}) {
@@ -67,7 +78,7 @@ function harness({ status = 'active', authorized = true, delayMs = 0 } = {}) {
       if (!Object.hasOwn(dependencies, name)) throw Error('Unexpected import: ' + name);
       return dependencies[name];
     },
-    URL, process: { env: {} }, setTimeout,
+    URL, Buffer, process: { env: {} }, setTimeout,
   }, { filename: 'app/api/billing/portal/route.ts' });
   return { handler: exports, stats };
 }
