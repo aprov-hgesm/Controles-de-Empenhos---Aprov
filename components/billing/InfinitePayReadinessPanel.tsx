@@ -100,6 +100,7 @@ export function InfinitePayReadinessPanel({
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
+  const [checkoutPendingReview, setCheckoutPendingReview] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
   // Live individual quote, not the last persisted account amount or the
   // historical R$50 global configuration. Only the tenant's own Firebase
@@ -183,19 +184,36 @@ export function InfinitePayReadinessPanel({
         headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
         body: JSON.stringify({ confirmRealPayment: true }), cache: 'no-store',
       });
-      const data = await response.json() as { code?: string; checkoutUrl?: string; amountCents?: number };
-      if (!response.ok || !data.checkoutUrl)
-        throw new Error(data.code || 'Não foi possível gerar o checkout.');
+      const data = await response.json() as {
+        code?: string; status?: 'ready' | 'paid' | 'pending_review' | 'reserved';
+        checkoutUrl?: string; amountCents?: number;
+      };
+      if (!response.ok) throw new Error(data.code || 'Não foi possível consultar a cobrança.');
+      if (data.status === 'paid') {
+        setCheckoutPendingReview(false);
+        setRealCheckoutUrl('');
+        setCheckoutConfirmed(true);
+        return;
+      }
+      if (data.status === 'pending_review') {
+        // Rechecking this state never launches another /links POST.
+        setRealCheckoutUrl('');
+        setCheckoutPendingReview(true);
+        return;
+      }
+      if (data.status !== 'ready' || !data.checkoutUrl)
+        throw new Error('O link ainda não está disponível. Confira a situação antes de tentar novamente.');
       const url = new URL(data.checkoutUrl);
       if (url.protocol !== 'https:' || !(url.hostname === 'infinitepay.io'
         || url.hostname.endsWith('.infinitepay.io')
         || url.hostname === 'infinitepay.com.br'
         || url.hostname.endsWith('.infinitepay.com.br')))
         throw new Error('Checkout não pertence à InfinitePay.');
+      setCheckoutPendingReview(false);
       setRealCheckoutAmount(data.amountCents ?? null);
       setRealCheckoutUrl(url.href);
     } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : 'Checkout temporariamente indisponível.');
+      setCheckoutError(error instanceof Error ? error.message : 'Consulta temporariamente indisponível.');
     } finally { setCheckoutBusy(false); }
   };
 
@@ -439,8 +457,16 @@ export function InfinitePayReadinessPanel({
             <button type="button" disabled={checkoutBusy}
               onClick={() => void createSubscriptionCheckout()}
               className="mt-3 min-h-11 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-              {checkoutBusy ? 'Gerando cobrança...' : 'Gerar pagamento da mensalidade'}
+              {checkoutBusy ? 'Consultando cobrança...' : checkoutPendingReview ? 'Verificar situação da cobrança' : 'Gerar pagamento da mensalidade'}
             </button>
+          )}
+          {checkoutPendingReview && !checkoutConfirmed && (
+            <p role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+              Uma cobrança desta competência já foi iniciada e está em conferência.
+              Não é necessário tentar pagar novamente. Você pode verificar a situação
+              pelo botão acima; caso o link não seja recuperável, o suporte poderá
+              conferir o pedido na InfinitePay sem gerar outro automaticamente.
+            </p>
           )}
           {realCheckoutUrl && (
             <div className="mt-3 space-y-2 rounded-xl bg-emerald-50 p-4">
