@@ -27,6 +27,7 @@ const billingAccess = loadTs('lib/billingAccess.ts', { './billing': domain });
 const rampPricing = await import('../lib/server/payments/emprovexRampPricing.mjs');
 const infiniteCheckout = await import('../lib/server/payments/infinitepayCheckout.mjs');
 const smokeHarness = await import('../lib/server/payments/infinitepaySmokeHarness.mjs');
+const billingQaPilot = await import('../lib/server/payments/billingAccessQaPilot.mjs');
 const projectId = 'demo-billing-server-regression';
 const database = '(default)';
 const prefix = 'projects/' + projectId + '/databases/' + database + '/documents/';
@@ -129,6 +130,7 @@ const engine = loadTs('lib/server/platformBillingAdminStore.ts', {
   './payments/emprovexRampPricing.mjs': rampPricing,
   './payments/infinitepayCheckout.mjs': infiniteCheckout,
   './payments/infinitepaySmokeHarness.mjs': smokeHarness,
+  './payments/billingAccessQaPilot.mjs': billingQaPilot,
   './warehouseBillingMirror': { syncWarehouseBillingMirror: async () => undefined },
   '../billingAccess': billingAccess,
 });
