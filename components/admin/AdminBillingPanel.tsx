@@ -624,9 +624,9 @@ export function AdminBillingPanel({
                             onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
                           />
                           {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '')
-                            && !currentCycle?.checkoutUrl && currentCycle.checkoutOrderNsu && (
+                            && !currentCycle?.checkoutUrl && currentCycle?.checkoutOrderNsu && (
                             <span className="break-all text-[10px] text-amber-200/80">
-                              Pedido InfinitePay: {currentCycle.checkoutOrderNsu}
+                              Pedido InfinitePay: {currentCycle?.checkoutOrderNsu}
                             </span>
                           )}
                           {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '') && !currentCycle?.checkoutUrl && (
