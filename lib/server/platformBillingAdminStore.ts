@@ -959,7 +959,7 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   }
   let linked: { status: 'ready' | 'paid' | 'pending_review'; checkoutUrl: string };
   try {
-    linked = await transaction(token, [cp, intentPath], docs => {
+    linked = await transaction<{ status: 'ready' | 'paid' | 'pending_review'; checkoutUrl: string }>(token, [cp, intentPath], docs => {
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
     const intent = docs.get(intentPath)?.value as Record<string, unknown> | undefined;
     if (!cycle || cycle.checkoutOrderNsu !== orderNsu
