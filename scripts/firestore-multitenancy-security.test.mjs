@@ -771,7 +771,7 @@ async function main() {
     })
   );
 
-  await denied('SDK do fundador não lista assinaturas comerciais globalmente', () =>
+  await allowed('Fundador pode consultar assinaturas comerciais em modo somente leitura', () =>
     getDocs(collection(admin.db, 'billingAccounts'))
   );
   await denied('SDK do fundador não atualiza situação comercial diretamente', () =>
