@@ -792,21 +792,34 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     if (previousIntent && (previousIntent.workspaceId !== workspaceId
       || previousIntent.referenceMonth !== month))
       throw new BillingAdminError('BILLING_PROVIDER_ORDER_REUSED', 409);
-    if (previous && (previous.status === 'paid' || previous.status === 'waived'))
-      throw new BillingAdminError('BILLING_CYCLE_ALREADY_SETTLED', 409);
     if (previous && previous.amountCents !== amount)
       throw new BillingAdminError('BILLING_FROZEN_AMOUNT_MISMATCH', 409);
     if (previous?.checkoutOrderNsu && previous.checkoutOrderNsu !== orderNsu)
       throw new BillingAdminError('BILLING_OTHER_CHECKOUT_EXISTS', 409);
-    if (previous?.checkoutUrl) return { result: {
-      orderNsu, amountCents: amount, referenceMonth: month, checkoutUrl: previous.checkoutUrl,
-      validUntil: previous.checkoutValidUntil || '', alreadyLinked: true,
-    }, updates: [] };
-    if (previous?.checkoutState === 'prepared' && previous.checkoutOrderNsu)
-      throw new BillingAdminError('BILLING_CHECKOUT_PENDING_SUPPORT', 409);
+    // A webhook can settle the invoice before the browser receives its URL.
+    if (previous && (previous.status === 'paid' || previous.status === 'waived'))
+      return { result: { status: 'paid' as const, orderNsu, amountCents: amount,
+        referenceMonth: month, checkoutUrl: '' }, updates: [] };
+    const common = { orderNsu, amountCents: amount, referenceMonth: month };
+    if (previous?.checkoutUrl) {
+      if (previous.checkoutValidUntil && Date.parse(previous.checkoutValidUntil) <= Date.now())
+        return { result: { ...common, status: 'pending_review' as const, checkoutUrl: '' }, updates: [] };
+      return { result: { ...common, status: 'ready' as const,
+        checkoutUrl: previous.checkoutUrl, validUntil: previous.checkoutValidUntil || '',
+        alreadyLinked: true }, updates: [] };
+    }
+    // Legacy "prepared" may already have reached InfinitePay. Do not
+    // replay these older requests without confirming whether a link exists.
+    if (previous?.checkoutState === 'prepared') {
+      return { result: { ...common,
+        status: previous.checkoutAttemptVersion === 2 ? 'reserved' as const : 'pending_review' as const,
+        checkoutUrl: '' }, updates: [] };
+    }
+    if (previous?.checkoutState === 'dispatching' || previous?.checkoutState === 'linked')
+      return { result: { ...common, status: 'pending_review' as const,
+        checkoutUrl: '' }, updates: [] };
     const now = new Date().toISOString();
-    const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
-    // No configuration fetch is required: the pricing contract is individual;
+    // Price follows the sector's accepted schedule, not the global legacy setting.
     // the current calendar is used only to calculate due date.
     const fallback: PlatformBillingConfig = {
       ...buildPlatformBillingConfig(actor.email), gracePeriodDays: 10,
@@ -820,23 +833,57 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       status: 'pending',
       checkoutOrderNsu: orderNsu, checkoutAmountCents: amount,
       checkoutCreatedAt: now, checkoutValidUntil: validUntil,
-      checkoutState: 'prepared', updatedAt: now, updatedBy: actor.email,
+      checkoutState: 'prepared', checkoutAttemptVersion: 2,
+      checkoutDispatchStartedAt: '', updatedAt: now, updatedBy: actor.email,
     };
     return { result: {
-      orderNsu, amountCents: amount, referenceMonth: month, validUntil,
-      checkoutUrl: '', alreadyLinked: false,
+      status: 'reserved' as const, orderNsu, amountCents: amount, referenceMonth: month,
+      validUntil, checkoutUrl: '', alreadyLinked: false,
     }, updates: [
       { path: cp, data: updated },
       { path: intentPath, data: { orderNsu, workspaceId, referenceMonth: month,
-        amountCents: amount, createdAt: now, status: 'prepared' } },
+        amountCents: amount, createdAt: now, status: 'prepared', attemptVersion: 2 } },
       audit(actor, 'billing.payment_reopen', 'billing_cycle', updated.id, workspaceId, workspace.ug || null,
         { status: previous?.status ?? null }, { status: 'pending', amountCents: amount },
         { provider: 'infinitepay', checkoutPrepared: true, orderNsu }),
     ] };
   });
-  if (prepared.alreadyLinked) return prepared;
-  // Do not add a webhook without server-side authenticity and replay defenses:
-  // the verified signed-in redirect is reconciled through payment_check.
+  if (prepared.status !== 'reserved') return prepared;
+  // The reservation has no external side effects. It can be resumed safely
+  // after a crash. Exactly one concurrent request may claim outbound dispatch.
+  const claimed = await transaction(token, [cp, intentPath], docs => {
+    const cycle = docs.get(cp)?.value as BillingCycle | undefined;
+    const intent = docs.get(intentPath)?.value as Record<string, unknown> | undefined;
+    if (!cycle || cycle.checkoutOrderNsu !== orderNsu
+      || cycle.amountCents !== prepared.amountCents
+      || !intent || intent.workspaceId !== workspaceId
+      || intent.amountCents !== prepared.amountCents)
+      throw new BillingAdminError('BILLING_CHECKOUT_INTENT_CHANGED', 409);
+    if (cycle.status === 'paid' || cycle.status === 'waived')
+      return { result: 'paid' as const, updates: [] };
+    if (cycle.checkoutUrl) return { result: 'ready' as const, updates: [] };
+    if (cycle.checkoutState !== 'prepared' || cycle.checkoutAttemptVersion !== 2)
+      return { result: 'pending_review' as const, updates: [] };
+    const now = new Date().toISOString();
+    return { result: 'claimed' as const, updates: [
+      { path: cp, data: { ...cycle, checkoutState: 'dispatching',
+        checkoutDispatchStartedAt: now, updatedAt: now, updatedBy: actor.email } },
+      { path: intentPath, data: { ...intent, status: 'dispatching', dispatchedAt: now } },
+    ] };
+  });
+  if (claimed !== 'claimed') {
+    if (claimed === 'paid') return { ...prepared, status: 'paid' as const, checkoutUrl: '' };
+    if (claimed === 'ready') {
+      const updatedCycle = (await get(token, cp))?.value as BillingCycle | undefined;
+      return updatedCycle?.checkoutUrl ? { ...prepared, status: 'ready' as const,
+        checkoutUrl: updatedCycle.checkoutUrl }
+        : { ...prepared, status: 'pending_review' as const };
+    }
+    return { ...prepared, status: 'pending_review' as const };
+  }
+  // The API does not document an idempotency guarantee for repeated /links
+  // calls. After this marker, any timeout/connection loss is ambiguous; never
+  // issue another automatic provider request for the same invoice.
   const payload = {
     order_nsu: orderNsu,
     redirect_url: 'https://emprovex.com.br/regularizacao',
@@ -851,25 +898,44 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       events: ['paid', 'settled', 'refunded', 'canceled'],
     },
   };
-  const response = await callInfinitePay({
-    operation: 'links', apiKey: process.env.INFINITEPAY_API_KEY,
-    payload, allowExternalCall: true,
-  });
-  const checkoutUrl = readCheckoutUrl(response);
-  const linked = await transaction(token, [cp], docs => {
+  let checkoutUrl: string;
+  try {
+    const response = await callInfinitePay({
+      operation: 'links', apiKey: process.env.INFINITEPAY_API_KEY,
+      payload, allowExternalCall: true,
+    });
+    checkoutUrl = readCheckoutUrl(response);
+  } catch {
+    // Callback may still arrive. Do not claim that the provider rejected a
+    // payment, and do not retry an unknown outbound POST automatically.
+    return { ...prepared, status: 'pending_review' as const, checkoutUrl: '' };
+  }
+  const linked = await transaction(token, [cp, intentPath], docs => {
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
-    if (!cycle || cycle.checkoutOrderNsu !== orderNsu || cycle.amountCents !== prepared.amountCents
-      || cycle.status === 'paid' || cycle.status === 'waived')
+    const intent = docs.get(intentPath)?.value as Record<string, unknown> | undefined;
+    if (!cycle || cycle.checkoutOrderNsu !== orderNsu
+      || cycle.amountCents !== prepared.amountCents || !intent
+      || intent.workspaceId !== workspaceId)
       throw new BillingAdminError('BILLING_CHECKOUT_CHANGED', 409);
-    if (cycle.checkoutUrl && cycle.checkoutUrl !== checkoutUrl)
-      throw new BillingAdminError('BILLING_CHECKOUT_LINK_CONFLICT', 409);
-    if (cycle.checkoutUrl) return { result: cycle.checkoutUrl, updates: [] };
-    return { result: checkoutUrl, updates: [{ path: cp, data: {
-      ...cycle, checkoutUrl, checkoutState: 'linked', updatedAt: new Date().toISOString(),
-    } }] };
+    // A verified webhook may have settled the period while /links was still
+    // returning. Never roll a paid cycle back to "linked".
+    if (cycle.status === 'paid' || cycle.status === 'waived')
+      return { result: { status: 'paid' as const, checkoutUrl: '' }, updates: [] };
+    if (cycle.checkoutUrl) {
+      if (cycle.checkoutUrl !== checkoutUrl)
+        return { result: { status: 'pending_review' as const, checkoutUrl: '' }, updates: [] };
+      return { result: { status: 'ready' as const, checkoutUrl }, updates: [] };
+    }
+    if (cycle.checkoutState !== 'dispatching')
+      return { result: { status: 'pending_review' as const, checkoutUrl: '' }, updates: [] };
+    return { result: { status: 'ready' as const, checkoutUrl }, updates: [
+      { path: cp, data: { ...cycle, checkoutUrl, checkoutState: 'linked',
+        updatedAt: new Date().toISOString() } },
+      { path: intentPath, data: { ...intent, status: 'linked',
+        checkoutUrl, updatedAt: new Date().toISOString() } },
+    ] };
   });
-  return { orderNsu, amountCents: prepared.amountCents,
-    referenceMonth: month, checkoutUrl: linked, alreadyLinked: false };
+  return { ...prepared, ...linked, alreadyLinked: false };
 }
 
 /**
