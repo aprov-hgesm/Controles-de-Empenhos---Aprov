@@ -760,6 +760,30 @@ function requireCheckoutConfig() {
  * month. The frozen cycle and opaque provider order are stored before any call
  * to InfinitePay. The browser cannot choose a price or workspace.
  */
+/**
+ * A live checkout is explicitly isolated to one approved workspace until
+ * the founder opts into public rollout. Never derive its callback host from
+ * untrusted Host / X-Forwarded-* request headers.
+ */
+function requireCheckoutWorkspace(workspaceId: string): void {
+  const scope = process.env.INFINITEPAY_BILLING_SCOPE || 'disabled';
+  if (scope === 'all') return;
+  if (scope === 'pilot' && process.env.INFINITEPAY_BILLING_PILOT_WORKSPACE_ID === workspaceId)
+    return;
+  throw new BillingAdminError('BILLING_CHECKOUT_NOT_AVAILABLE_FOR_SECTOR', 403);
+}
+function configuredBillingOrigin(): string {
+  const raw = process.env.EMPROVEX_BILLING_PUBLIC_ORIGIN || '';
+  let url: URL;
+  try { url = new URL(raw); }
+  catch { throw new BillingAdminError('BILLING_PUBLIC_ORIGIN_NOT_CONFIGURED', 503); }
+  if (url.protocol !== 'https:' || url.username || url.password
+    || url.pathname !== '/' || url.search || url.hash || !url.hostname
+    || !raw.startsWith('https://'))
+    throw new BillingAdminError('BILLING_PUBLIC_ORIGIN_INVALID', 503);
+  return url.origin;
+}
+
 type CheckoutResponse = {
   status: 'reserved' | 'ready' | 'paid' | 'pending_review';
   orderNsu: string;
@@ -776,6 +800,8 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   validWorkspaceId(workspaceId);
   if (actor.email !== email) throw new BillingAdminError('BILLING_CUSTOMER_IDENTITY_MISMATCH', 403);
   const orderIdSecret = requireCheckoutConfig();
+  requireCheckoutWorkspace(workspaceId);
+  const checkoutOrigin = configuredBillingOrigin();
   const token = await getGoogleAccessToken();
   const persisted = existingAccount(await get(token, 'billingAccounts/' + workspaceId));
   const period = paidServicePeriod(persisted);
@@ -907,14 +933,14 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   // issue another automatic provider request for the same invoice.
   const payload = {
     order_nsu: orderNsu,
-    redirect_url: 'https://emprovex.com.br/regularizacao',
+    redirect_url: checkoutOrigin + '/regularizacao',
     items: [{ quantity: 1, price: prepared.amountCents,
       description: 'EMPROVEX - Plano Completo - ' + month }],
     options: { single_payment: true, valid_until: prepared.validUntil,
       require_delivery_address: false,
       payment_methods_enabled: ['pix', 'credit_card'] },
     webhook: {
-      url: 'https://emprovex.com.br/api/billing/portal?action=infinitepay-webhook&token='
+      url: checkoutOrigin + '/api/billing/portal?action=infinitepay-webhook&token='
         + encodeURIComponent(process.env.INFINITEPAY_WEBHOOK_TOKEN || ''),
       events: ['paid', 'settled', 'refunded', 'canceled'],
     },
