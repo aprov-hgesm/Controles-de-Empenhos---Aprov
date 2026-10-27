@@ -623,6 +623,12 @@ export function AdminBillingPanel({
                             disabled={busy}
                             onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
                           />
+                          {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '')
+                            && !currentCycle?.checkoutUrl && currentCycle.checkoutOrderNsu && (
+                            <span className="break-all text-[10px] text-amber-200/80">
+                              Pedido InfinitePay: {currentCycle.checkoutOrderNsu}
+                            </span>
+                          )}
                           {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '') && !currentCycle?.checkoutUrl && (
                             <ActionButton icon={<Clock3 className="h-3.5 w-3.5" />}
                               label="Recuperar checkout pendente"
