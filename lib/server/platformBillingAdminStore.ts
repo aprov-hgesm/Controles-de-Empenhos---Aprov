@@ -388,6 +388,11 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         || !cycle.checkoutCreatedAt
         || Date.now() - Date.parse(cycle.checkoutCreatedAt) < 10 * 60_000)
         throw new BillingAdminError('BILLING_CHECKOUT_RECOVERY_NOT_ELIGIBLE', 409);
+      // /links is not documented as idempotent. Do not create a new link
+      // while the unknown earlier one might still accept payment.
+      if (cycle.checkoutValidUntil && Date.now() < Date.parse(cycle.checkoutValidUntil)
+        && !/(?:^|\\s)LINK_CANCELADO(?:\\s|$)/i.test(noteValue(command.note)))
+        throw new BillingAdminError('BILLING_CANCEL_OR_EXPIRE_OLD_LINK_FIRST', 409);
       const now = new Date().toISOString();
       const updated: BillingCycle = { ...cycle, checkoutState: 'failed',
         updatedAt: now, updatedBy: actor.email,
