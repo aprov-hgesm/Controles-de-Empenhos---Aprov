@@ -1,6 +1,6 @@
 # EMPROVEX — Implementação após Auditoria Billing R3 (26/10/2026)
 
-**Branch:** `feat/billing-enforcement-grace48-r3` — **PR #398 DRAFT**.  
+**Branch:** `feat/billing-enforcement-grace48-r3` — **PR #398 DRAFT**.
 **Estado:** Correções implementadas no GitHub, **SEM merge, deploy, modificação de Firestore de produção ou publicação de Rules**. A pedido do fundador, CI, Emulator, typecheck, autenticação real, testes financeiros e release foram reservados à certificação final. **O código não tem GO técnico sem essa certificação.**
 
 ## Objetivos agora endereçados no código
