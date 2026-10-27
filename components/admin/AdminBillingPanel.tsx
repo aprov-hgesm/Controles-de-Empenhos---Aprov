@@ -623,7 +623,7 @@ export function AdminBillingPanel({
                             disabled={busy}
                             onClick={() => void onGrantTrial(workspace, config.defaultTrialDays)}
                           />
-                          {currentCycle?.checkoutState === 'prepared' && !currentCycle.checkoutUrl && (
+                          {['prepared', 'dispatching'].includes(currentCycle?.checkoutState || '') && !currentCycle?.checkoutUrl && (
                             <ActionButton icon={<Clock3 className="h-3.5 w-3.5" />}
                               label="Recuperar checkout pendente"
                               busy={mutatingKey === `checkout:${workspace.id}:${attention.referenceMonth}`}
