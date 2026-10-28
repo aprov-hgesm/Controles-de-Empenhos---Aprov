@@ -27,7 +27,7 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
 import { warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer, warehouseDepotDeleteToReceivingServer } from '../../../../lib/server/warehouseLedgerAndArchive';
-import { listWarehouseDepotReturnsServer, allocateWarehouseDepotReturnServer } from '../../../../lib/server/warehouseDepotReturnReadAndAllocate';
+import { listWarehouseDepotReturnsServer, allocateWarehouseDepotReturnServer, bulkWarehouseDepotReturnQueueServer } from '../../../../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseCroquiReadServer } from '../../../../lib/server/warehouseCroquiRead';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
@@ -187,7 +187,10 @@ export async function POST(request: NextRequest) {
         result=await warehouseDepotDeleteToReceivingServer(access,body.input);
         break;
       case 'DEPOT_RETURNS_LIST':
-        result=await listWarehouseDepotReturnsServer(access);
+        result=await listWarehouseDepotReturnsServer(access,body.input);
+        break;
+      case 'DEPOT_RETURNS_QUEUE_BULK':
+        result=await bulkWarehouseDepotReturnQueueServer(access,body.input);
         break;
       case 'DEPOT_RETURN_ALLOCATE':
         result=await allocateWarehouseDepotReturnServer(access,body.input);

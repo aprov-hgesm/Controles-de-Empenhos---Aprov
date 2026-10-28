@@ -29,14 +29,21 @@ interface ReturnLot {id:string;quantity:number;code:string;expiresOn:string|null
 export interface WarehouseDepotReturnPending {
   id:string;materialId:string;depotId:string;depotCode:string;depotName:string;
   quantity:number;pendingQuantity:number;sourcePosition:PhysicalPosition;
-  lotReferences:ReturnLot[];status:'PENDING';
+  lotReferences:ReturnLot[];status:'PENDING'|'ARCHIVED';
 }
 export async function listWarehouseDepotReturnsServer(
-  access:VerifiedWarehouseRequest
+  access:VerifiedWarehouseRequest,raw:unknown={}
 ):Promise<WarehouseDepotReturnPending[]>{
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))
+    return fail('WAREHOUSE_DEPOT_RETURNS_LIST_INVALID',400);
+  const input=raw as Record<string,unknown>;
+  if(input.includeArchived!==undefined&&typeof input.includeArchived!=='boolean')
+    return fail('WAREHOUSE_DEPOT_RETURNS_LIST_INVALID',400);
+  const includeArchived=input.includeArchived===true;
   const rows=await warehouseAdminListCollection(await token(),access.workspaceId,'depotReturns',500);
   if(rows.length===500)return fail('WAREHOUSE_DEPOT_RETURNS_CATALOG_LIMIT');
-  return rows.filter(row=>row.data.status==='PENDING').map(row=>{
+  return rows.filter(row=>row.data.status==='PENDING'
+    ||(includeArchived&&row.data.status==='ARCHIVED')).map(row=>{
     const d=row.data;
     if(d.workspaceId!==access.workspaceId||d.ug!==access.ug
       ||d.schemaVersion!=='warehouse_depot_return_v1')
@@ -51,10 +58,65 @@ export async function listWarehouseDepotReturnsServer(
       depotCode:String(d.depotCode),depotName:String(d.depotName),
       quantity:d.quantity,pendingQuantity:Number(d.pendingQuantity),
       sourcePosition:position as PhysicalPosition,
-      lotReferences:d.lotReferences as ReturnLot[],status:'PENDING' as const,
+      lotReferences:d.lotReferences as ReturnLot[],
+      status:d.status as 'PENDING'|'ARCHIVED',
     };
   });
 }
+
+/**
+ * Ação administrativa sobre a VISIBILIDADE da fila, não sobre estoque.
+ * Preserva o UNASSIGNED, movimentos, lote original, retorno e auditoria.
+ * ARCHIVE somente oculta da fila ativa; RESTORE permite realocar depois.
+ * O grupo inteiro é confirmado numa única transação com preconditions.
+ */
+export async function bulkWarehouseDepotReturnQueueServer(
+  access:VerifiedWarehouseRequest,raw:unknown
+):Promise<{ok:true;changed:number;unchanged:number;action:'ARCHIVE'|'RESTORE'}>{
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))
+    return fail('WAREHOUSE_DEPOT_RETURNS_BULK_INVALID',400);
+  const input=raw as Record<string,unknown>;
+  const action=input.action;
+  const ids=input.returnIds;
+  if((action!=='ARCHIVE'&&action!=='RESTORE')||!Array.isArray(ids)
+    ||ids.length===0||ids.length>400
+    ||ids.some(id=>typeof id!=='string'||!/^dr_[a-f0-9]{32}$/.test(id))
+    ||new Set(ids).size!==ids.length)
+    return fail('WAREHOUSE_DEPOT_RETURNS_BULK_INVALID',400);
+  const ws=access.workspaceId;
+  const paths=ids.map(id=>root(ws,'depotReturns',id as string));
+  const now=new Date();
+  const target=action==='ARCHIVE'?'ARCHIVED':'PENDING';
+  const expected=action==='ARCHIVE'?'PENDING':'ARCHIVED';
+  return warehouseAdminTransaction<{
+    ok:true;changed:number;unchanged:number;action:'ARCHIVE'|'RESTORE'
+  }>(await token(),paths,rows=>{
+    const writes:Array<{path:string;data:Record<string,unknown>}>=[];
+    let unchanged=0;
+    for(const path of paths){
+      const row=rows.get(path);
+      if(!row)return fail('WAREHOUSE_DEPOT_RETURN_NOT_FOUND',404);
+      const d=row.data;
+      if(d.workspaceId!==ws||d.ug!==access.ug
+        ||d.schemaVersion!=='warehouse_depot_return_v1')
+        return fail('WAREHOUSE_DEPOT_RETURN_SCOPE_MISMATCH',403);
+      if(typeof d.pendingQuantity!=='number'||d.pendingQuantity<=0
+        ||typeof d.quantity!=='number'||d.quantity<d.pendingQuantity)
+        return fail('WAREHOUSE_DEPOT_RETURNS_BULK_QUANTITY_MISMATCH');
+      if(d.status===target){unchanged++;continue;}
+      if(d.status!==expected)return fail('WAREHOUSE_DEPOT_RETURNS_BULK_STATE_CONFLICT');
+      writes.push({path,data:{
+        ...d,status:target,
+        archivedAt:action==='ARCHIVE'?now:null,
+        archivedBy:action==='ARCHIVE'?access.uid:null,
+        updatedAt:now,updatedBy:access.uid,
+      }});
+    }
+    return {result:{ok:true,changed:writes.length,unchanged,
+      action:action as 'ARCHIVE'|'RESTORE'},writes};
+  });
+}
+
 export async function allocateWarehouseDepotReturnServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<{ok:true;applied:boolean;quantity:number;materialId:string}> {

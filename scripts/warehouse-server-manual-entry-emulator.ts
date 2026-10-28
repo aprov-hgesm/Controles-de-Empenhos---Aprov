@@ -33,7 +33,7 @@ import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateSe
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
 import { warehouseLedgerMovementServer,warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer,warehouseDepotDeleteToReceivingServer } from '../lib/server/warehouseLedgerAndArchive';
-import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
+import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer,bulkWarehouseDepotReturnQueueServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
@@ -946,14 +946,21 @@ try {
     position:returnPosition,expiresOn:'2027-10-20',
     lotCode:'RETQA-LOTE-1',barcode:null,
   });
+  const returnEntryTwo=await registerWarehouseManualEntryServer(access,{
+    operationId:'return-to-receiving-test-002',existingMaterialId:null,
+    description:'Açúcar para retorno em grupo',unitLabel:'KG',quantity:5,
+    provenance:'Teste estoque',reference:'Exclusão com retorno em grupo',
+    position:returnPosition,expiresOn:null,barcode:null,
+  });
+  assert.equal(returnEntryTwo.locationBalance.quantity,5);
   const returnBefore=(await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity;
   assert.equal(returnBefore,27);
   const depotReturned=await warehouseDepotDeleteToReceivingServer(access,{
     kind:'DEPOT',id:returnDepot.id,mode:'DELETE',confirmCode:'RETQA',
   });
   assert.equal(depotReturned.ok,true);
-  assert.equal(depotReturned.returnedItems,1);
-  assert.equal(depotReturned.returnedQuantity,27);
+  assert.equal(depotReturned.returnedItems,2);
+  assert.equal(depotReturned.returnedQuantity,32);
   assert.equal((await getDoc(ref('depots',returnDepot.id))).data()?.status,'inactive');
   assert.ok(await readDeletionTombstone(returnDepot.id));
   assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
@@ -964,6 +971,42 @@ try {
   assert.equal(pending.pendingQuantity,27);
   assert.equal(pending.lotReferences.length,1);
   assert.equal(pending.lotReferences[0].expiresOn,'2027-10-20');
+  const group= (await listWarehouseDepotReturnsServer(access))
+    .filter(item=>item.depotId===returnDepot.id);
+  assert.equal(group.length,2);
+  const groupIds=group.map(item=>item.id);
+  await assert.rejects(()=>bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:[groupIds[0],groupIds[0]],
+  }),/WAREHOUSE_DEPOT_RETURNS_BULK_INVALID/);
+  const archivedGroup=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:groupIds,
+  });
+  assert.equal(archivedGroup.changed,2);
+  const replayArchive=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:groupIds,
+  });
+  assert.equal(replayArchive.changed,0);
+  assert.equal(replayArchive.unchanged,2);
+  assert.equal((await listWarehouseDepotReturnsServer(access))
+    .filter(item=>groupIds.includes(item.id)).length,0);
+  assert.equal((await listWarehouseDepotReturnsServer(access,{includeArchived:true}))
+    .filter(item=>groupIds.includes(item.id)&&item.status==='ARCHIVED').length,2);
+  await assert.rejects(()=>allocateWarehouseDepotReturnServer(access,{
+    returnId:pending.id,position,
+  }),/WAREHOUSE_DEPOT_RETURN_CHANGED/);
+  await assert.rejects(()=>bulkWarehouseDepotReturnQueueServer(
+    {...access,ug:'999999'},{
+      action:'RESTORE',returnIds:groupIds,
+    }),/WAREHOUSE_DEPOT_RETURN_SCOPE_MISMATCH/);
+  assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,27);
+  assert.equal((await getDoc(ref('balances',returnEntryTwo.material.id))).data()?.quantity,5);
+  const restoredGroup=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'RESTORE',returnIds:groupIds,
+  });
+  assert.equal(restoredGroup.changed,2);
+  assert.equal((await listWarehouseDepotReturnsServer(access))
+    .filter(item=>groupIds.includes(item.id)).length,2);
+  console.log('PASS: remoção em grupo reversível, replay e isolamento UG sem alterar estoque');
   const allocation=await allocateWarehouseDepotReturnServer(access,{
     returnId:pending.id,position,
   });

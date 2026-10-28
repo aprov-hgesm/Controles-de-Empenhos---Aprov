@@ -15,6 +15,9 @@ const emptyCatalog:Catalog={depots:[],locations:[],names:{}};
 
 export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string}){
   const [rows,setRows]=useState<WarehouseDepotReturnPending[]>([]);
+  const [archived,setArchived]=useState<WarehouseDepotReturnPending[]>([]);
+  const [selectedIds,setSelectedIds]=useState<string[]>([]);
+  const [showArchived,setShowArchived]=useState(false);
   const [catalog,setCatalog]=useState<Catalog>(emptyCatalog);
   const [selected,setSelected]=useState<Record<string,string>>({});
   const [loading,setLoading]=useState(true);
@@ -27,12 +30,15 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     try{
       const [pending,depots,locations,materials]=await Promise.all([
         warehouseServerCommand<WarehouseDepotReturnPending[]>(
-          workspaceId,'DEPOT_RETURNS_LIST',{}),
+          workspaceId,'DEPOT_RETURNS_LIST',{includeArchived:true}),
         listWarehouseDepots(workspaceId),
         listWarehouseLocations(workspaceId),
         listWarehouseMaterials(workspaceId),
       ]);
-      setRows(pending);
+      const live=pending.filter(item=>item.status==='PENDING');
+      setRows(live);
+      setArchived(pending.filter(item=>item.status==='ARCHIVED'));
+      setSelectedIds(current=>current.filter(id=>live.some(item=>item.id===id)));
       setCatalog({depots,locations,names:Object.fromEntries(
         materials.map(item=>[item.id,item.description]))});
       setError(null);
@@ -87,6 +93,33 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     }finally{setWorking(null);}
   };
 
+
+  const groups=useMemo(()=>{
+    const grouped=new Map<string,WarehouseDepotReturnPending[]>();
+    for(const item of rows)grouped.set(item.depotId,[...(grouped.get(item.depotId)||[]),item]);
+    return [...grouped].map(([id,items])=>({id,items,
+      label:items[0].depotCode+' · '+items[0].depotName}));
+  },[rows]);
+  const toggleIds=(ids:string[],checked:boolean)=>setSelectedIds(current=>
+    checked?[...new Set([...current,...ids])]:current.filter(id=>!ids.includes(id)));
+  const bulkQueue=async(ids:string[],action:'ARCHIVE'|'RESTORE')=>{
+    if(working||!ids.length)return;
+    if(ids.length>400){setError('Selecione no máximo 400 registros por operação.');return;}
+    const prompt=action==='ARCHIVE'
+      ?'Retirar '+ids.length+' registro(s) da fila? Os materiais continuarão no recebimento, sem baixa ou exclusão do estoque. A ação é reversível.'
+      :'Restaurar '+ids.length+' registro(s) à fila de recebimento?';
+    if(!window.confirm(prompt))return;
+    setWorking('bulk');setMessage(null);setError(null);
+    try{
+      const result=await warehouseServerCommand<{changed:number}>(
+        workspaceId,'DEPOT_RETURNS_QUEUE_BULK',{action,returnIds:ids});
+      await reload();
+      setMessage(result.changed+' registro(s) '+(action==='ARCHIVE'
+        ?'retirados da fila. Estoque preservado.':'restaurados para realocação.'));
+    }catch(error){setError(error instanceof Error?error.message:'Erro ao atualizar a fila.');}
+    finally{setWorking(null);}
+  };
+
   if(loading)return <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
     Consultando retornos de depósitos ao recebimento…
   </div>;
@@ -104,9 +137,51 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     </div>
     {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs font-bold text-red-800">{error}</p>}
     {message&&<p role="status" className="rounded-lg border border-green-200 bg-green-50 p-2 text-xs font-semibold">{message}</p>}
+    {rows.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-100 bg-white p-3">
+      <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700">
+        <input type="checkbox" disabled={!!working}
+          checked={rows.every(item=>selectedIds.includes(item.id))}
+          onChange={event=>toggleIds(rows.map(item=>item.id),event.target.checked)}
+          className="h-4 w-4" />
+        Selecionar todos ({rows.length})
+      </label>
+      <span className="text-xs text-slate-500">{selectedIds.length} selecionado(s)</span>
+      <button type="button" disabled={!!working||selectedIds.length===0}
+        onClick={()=>void bulkQueue(selectedIds,'ARCHIVE')}
+        className="ml-auto rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
+        Remover selecionados
+      </button>
+      <button type="button" disabled={!!working||rows.length>400}
+        onClick={()=>void bulkQueue(rows.map(item=>item.id),'ARCHIVE')}
+        className="rounded-lg bg-[#00288e] px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+        Remover todos da fila
+      </button>
+    </div>}
     {rows.length===0&&!error
       ?<p className="text-xs text-slate-500">Não há retornos de depósito aguardando alocação.</p>
-      :rows.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+      :groups.map(group=><div key={group.id} className="space-y-2 rounded-xl border border-blue-100 bg-white/70 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-black text-blue-900">
+            <input type="checkbox" disabled={!!working}
+              checked={group.items.every(item=>selectedIds.includes(item.id))}
+              onChange={event=>toggleIds(group.items.map(item=>item.id),event.target.checked)}
+              className="h-4 w-4" />
+            {group.label} · {group.items.length} material(is)
+          </label>
+          <button type="button" disabled={!!working||group.items.length>400}
+            onClick={()=>void bulkQueue(group.items.map(item=>item.id),'ARCHIVE')}
+            className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
+            Remover grupo
+          </button>
+        </div>
+        {group.items.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+        <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" disabled={!!working}
+            checked={selectedIds.includes(row.id)}
+            onChange={event=>toggleIds([row.id],event.target.checked)}
+            className="h-4 w-4" />
+          Selecionar material
+        </label>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-bold text-slate-800">{catalog.names[row.materialId]||row.materialId}</p>
@@ -136,5 +211,34 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
           </div>
         </div>
       </div>)}
+      </div>)}
+    <div className="border-t border-blue-100 pt-3">
+      <button type="button" onClick={()=>setShowArchived(current=>!current)}
+        className="text-xs font-bold text-blue-800 underline underline-offset-2">
+        {showArchived?'Ocultar':'Ver'} retirados da fila ({archived.length})
+      </button>
+      {showArchived&&<div className="mt-3 space-y-2 rounded-xl bg-white p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-slate-600">Pendências preservadas. O saldo continua no recebimento.</p>
+          <button type="button" disabled={!!working||archived.length===0||archived.length>400}
+            onClick={()=>void bulkQueue(archived.map(item=>item.id),'RESTORE')}
+            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">
+            Restaurar todos
+          </button>
+        </div>
+        {archived.map(item=><div key={item.id}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-2">
+          <p className="text-xs font-semibold text-slate-700">
+            {catalog.names[item.materialId]||item.materialId}
+            {' · '}{item.pendingQuantity.toLocaleString('pt-BR')}{' · '}{item.depotCode}
+          </p>
+          <button type="button" disabled={!!working}
+            onClick={()=>void bulkQueue([item.id],'RESTORE')}
+            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">
+            Restaurar
+          </button>
+        </div>)}
+      </div>}
+    </div>
   </section>;
 }
