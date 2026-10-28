@@ -33,7 +33,7 @@ import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateSe
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
 import { warehouseLedgerMovementServer,warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer,warehouseDepotDeleteToReceivingServer } from '../lib/server/warehouseLedgerAndArchive';
-import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer,bulkWarehouseDepotReturnQueueServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
+import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer,bulkWarehouseDepotReturnQueueServer,updateWarehouseDepotReturnExpiryServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
@@ -971,6 +971,27 @@ try {
   assert.equal(pending.pendingQuantity,27);
   assert.equal(pending.lotReferences.length,1);
   assert.equal(pending.lotReferences[0].expiresOn,'2027-10-20');
+  await assert.rejects(()=>updateWarehouseDepotReturnExpiryServer(access,{
+    returnId:pending.id,lotId:pending.lotReferences[0].id,
+    expiresOn:'2027-02-31',reason:'Verificação documental',
+  }),/WAREHOUSE_DEPOT_RETURN_EXPIRY_INPUT_INVALID/);
+  await assert.rejects(()=>updateWarehouseDepotReturnExpiryServer(access,{
+    returnId:pending.id,lotId:pending.lotReferences[0].id,
+    expiresOn:'2027-11-01',reason:'X',
+  }),/WAREHOUSE_DEPOT_RETURN_EXPIRY_INPUT_INVALID/);
+  const validityCorrection=await updateWarehouseDepotReturnExpiryServer(access,{
+    returnId:pending.id,lotId:pending.lotReferences[0].id,
+    expiresOn:'2027-11-01',reason:'Correção documental QA',
+  });
+  assert.equal(validityCorrection.ok,true);
+  assert.equal(validityCorrection.expiresOn,'2027-11-01');
+  const correctionRows=await listWarehouseDepotReturnsServer(access);
+  const corrected=correctionRows.find(x=>x.id===pending.id);
+  assert.equal(corrected?.lotReferences[0].expiresOn,'2027-11-01');
+  assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,27);
+  assert.equal((await getDoc(ref('lots',returnEntry.validity!.id))).data()?.expiresOn,'2027-10-20');
+  console.log('PASS: correção da validade devolvida preserva saldo e lote histórico');
+
   const group= (await listWarehouseDepotReturnsServer(access))
     .filter(item=>item.depotId===returnDepot.id);
   assert.equal(group.length,2);
