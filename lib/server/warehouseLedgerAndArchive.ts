@@ -25,7 +25,7 @@ import {
 } from '../warehouse/readCompatibility';
 import { createHash } from 'node:crypto';
 import { planDepotReturnToReceiving, DepotReturnPlanError } from '../warehouse/depotReturnToReceivingPlan';
-import { warehouseStockPositionsEqual, applyWarehouseLocationDelta } from '../warehouse/location';
+import { warehouseStockPositionsEqual } from '../warehouse/location';
 import type { ApplyWarehouseMovementInput,ApplyWarehouseMovementResult } from '../warehouse/ledgerRepository';
 
 const fail=(s:string,code=409):never=>{throw new WarehouseStoreError(s,code)};
