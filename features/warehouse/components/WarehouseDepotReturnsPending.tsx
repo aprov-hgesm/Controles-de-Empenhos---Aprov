@@ -137,6 +137,26 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     </div>
     {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs font-bold text-red-800">{error}</p>}
     {message&&<p role="status" className="rounded-lg border border-green-200 bg-green-50 p-2 text-xs font-semibold">{message}</p>}
+    {rows.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-100 bg-white p-3">
+      <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-slate-700">
+        <input type="checkbox" disabled={!!working}
+          checked={rows.every(item=>selectedIds.includes(item.id))}
+          onChange={event=>toggleIds(rows.map(item=>item.id),event.target.checked)}
+          className="h-4 w-4" />
+        Selecionar todos ({rows.length})
+      </label>
+      <span className="text-xs text-slate-500">{selectedIds.length} selecionado(s)</span>
+      <button type="button" disabled={!!working||selectedIds.length===0}
+        onClick={()=>void bulkQueue(selectedIds,'ARCHIVE')}
+        className="ml-auto rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
+        Remover selecionados
+      </button>
+      <button type="button" disabled={!!working||rows.length>400}
+        onClick={()=>void bulkQueue(rows.map(item=>item.id),'ARCHIVE')}
+        className="rounded-lg bg-[#00288e] px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+        Remover todos da fila
+      </button>
+    </div>}
     {rows.length===0&&!error
       ?<p className="text-xs text-slate-500">Não há retornos de depósito aguardando alocação.</p>
       :rows.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
