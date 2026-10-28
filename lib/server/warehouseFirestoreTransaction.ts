@@ -343,6 +343,57 @@ export async function warehouseAdminReadScopedQuery(
  * navegador escolher collectionPath, filtros ou consultas arbitrárias.
  * A saturação aborta inventários para evitar snapshots incompletos.
  */
+/**
+ * Catalogos da importacao Excel: IAM-only, com paginação real, sem depender das
+ * Rules do SDK. Aborta quando atinge o teto, evitando identidade incompleta.
+ */
+export async function warehouseAdminListFullStockCatalog(
+  accessToken:string, workspaceId:string,
+  domain:'materials'|'depots'|'locations',
+  maxResults=5000
+):Promise<WarehouseAdminDocument[]> {
+  if(!/^[a-z0-9_-]{2,90}$/.test(workspaceId)
+    ||!Number.isInteger(maxResults)||maxResults<1||maxResults>5000)
+    throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_INVALID',400);
+  const root='warehouse/'+workspaceId+'/'+domain;
+  const prefix=fullName(root+'/probe').slice(0,-'probe'.length);
+  const docs:WarehouseAdminDocument[]=[];
+  let pageToken='';
+  const tokens=new Set<string>();
+  do {
+    if(pageToken) {
+      if(tokens.has(pageToken))throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_PAGINATION_INVALID',503);
+      tokens.add(pageToken);
+    }
+    const params=new URLSearchParams({pageSize:String(Math.min(250,maxResults-docs.length+1))});
+    if(pageToken)params.set('pageToken',pageToken);
+    const emulator=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1';
+    const response=await fetch(firestoreBase()+'/'+root+'?'+params.toString(),{
+      cache:'no-store',
+      headers:{authorization:'Bearer '+(emulator?'owner':accessToken)},
+    });
+    if(!response.ok)throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_UNAVAILABLE',503);
+    const body=await response.json() as {
+      documents?:Array<{name?:string;fields?:Record<string,Encoded>;updateTime?:string}>;
+      nextPageToken?:string;
+    };
+    if(!Array.isArray(body.documents)&&body.documents!==undefined)
+      throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_INVALID_RESPONSE',503);
+    for(const doc of body.documents||[]){
+      if(!doc.name?.startsWith(prefix)||!doc.updateTime)
+        throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_SCOPE_MISMATCH',503);
+      const id=doc.name.slice(prefix.length);
+      if(!/^[A-Za-z0-9_-]+$/.test(id))
+        throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_INVALID_ID',503);
+      docs.push({path:root+'/'+id,data:decodeFields(doc.fields||{}),updateTime:doc.updateTime});
+      if(docs.length>maxResults)
+        throw new WarehouseStoreError('WAREHOUSE_STOCK_CATALOG_TOO_LARGE',409);
+    }
+    pageToken=body.nextPageToken||'';
+  } while(pageToken);
+  return docs;
+}
+
 export async function warehouseAdminListCollection(
   accessToken: string,
   workspaceId: string,

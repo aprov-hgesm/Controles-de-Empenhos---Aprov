@@ -35,6 +35,12 @@ const groups = [
   [/mobile/i, ['test:mobile-k-canonical-ops']],
 ];
 const warehouseFiles = files.filter((p) => warehouse.test(p));
+if (files.some((p) => /^(?:lib\/warehouse\/bulkStockMaterialMatcher\.ts|features\/warehouse\/components\/Warehouse(?:BulkManualEntryOperational|ManualEntryOperational)\.tsx|lib\/warehouse\/materialRepository\.ts|scripts\/warehouse-bulk-material-identity\.test\.ts)$/.test(p))) {
+  add('test:warehouse-bulk-material-identity');
+}
+if (files.some(p => /^(?:lib\/warehouse\/bulkStockResolve\.ts|lib\/server\/warehouse(?:BulkStockWorkbook|BulkStockPreflight|FirestoreTransaction)\.ts|app\/api\/central-depositos\/bulk-stock\/route\.ts|features\/warehouse\/components\/WarehouseBulkManualEntryOperational\.tsx|scripts\/warehouse-bulk-(?:resolution|stock-r1)\.test\.ts)$/.test(p))) {
+  add('test:warehouse-bulk-resolution');
+}
 for (const path of warehouseFiles) {
   for (const [pattern, scripts] of groups) {
     if (pattern.test(path)) scripts.forEach(add);

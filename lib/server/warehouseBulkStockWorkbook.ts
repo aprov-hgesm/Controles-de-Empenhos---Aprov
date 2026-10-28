@@ -164,6 +164,13 @@ function field(v:unknown,max:number):string{
   if(result.length>max)fail('STOCK_IMPORT_FIELD_TOO_LONG');
   return result;
 }
+export function normalizeBulkStockSubposition(raw:string|null|undefined):string|null {
+  const value=String(raw??'').trim();
+  // Nao impedir entrada em geladeira/freezer devido a marcador de celula vazia.
+  const normalized=value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return !value||/^(?:[-–—]+|n\s*\/?\s*a|nao\s+se\s+aplica|sem\s+subposicao)$/.test(normalized)
+    ? null : value;
+}
 function date(value:string):string|null{
   if(!value)return null;
   let y=0,m=0,d=0;
@@ -217,7 +224,7 @@ export function parseBulkStockWorkbook(buffer:Buffer):BulkStockRow[]{
     try{expiresOn=date(field(v[3],24));}
     catch{throw new StockImportError('STOCK_IMPORT_DATE_ROW_'+row.line);}
     result.push({line:row.line,material,quantity,unit,expiresOn,localType,localNumber,
-      barcode:field(v[4],128)||null,subposition:field(v[7],80)||null,
+      barcode:field(v[4],128)||null,subposition:normalizeBulkStockSubposition(field(v[7],80)),
       lot:legacyFormat?field(v[8],80)||null:null,
       provenance:field(v[legacyFormat?9:8],180)||null,
       reference:field(v[legacyFormat?10:9],160)||null});
