@@ -33,7 +33,7 @@ import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateSe
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
 import { warehouseLedgerMovementServer,warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer,warehouseDepotDeleteToReceivingServer } from '../lib/server/warehouseLedgerAndArchive';
-import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
+import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer,bulkWarehouseDepotReturnQueueServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
@@ -946,14 +946,21 @@ try {
     position:returnPosition,expiresOn:'2027-10-20',
     lotCode:'RETQA-LOTE-1',barcode:null,
   });
+  const returnEntryTwo=await registerWarehouseManualEntryServer(access,{
+    operationId:'return-to-receiving-test-002',existingMaterialId:null,
+    description:'Açúcar para retorno em grupo',unitLabel:'KG',quantity:5,
+    provenance:'Teste estoque',reference:'Exclusão com retorno em grupo',
+    position:returnPosition,expiresOn:null,barcode:null,
+  });
+  assert.equal(returnEntryTwo.locationBalance.quantity,5);
   const returnBefore=(await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity;
   assert.equal(returnBefore,27);
   const depotReturned=await warehouseDepotDeleteToReceivingServer(access,{
     kind:'DEPOT',id:returnDepot.id,mode:'DELETE',confirmCode:'RETQA',
   });
   assert.equal(depotReturned.ok,true);
-  assert.equal(depotReturned.returnedItems,1);
-  assert.equal(depotReturned.returnedQuantity,27);
+  assert.equal(depotReturned.returnedItems,2);
+  assert.equal(depotReturned.returnedQuantity,32);
   assert.equal((await getDoc(ref('depots',returnDepot.id))).data()?.status,'inactive');
   assert.ok(await readDeletionTombstone(returnDepot.id));
   assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
