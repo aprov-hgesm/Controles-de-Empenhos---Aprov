@@ -212,5 +212,33 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
         </div>
       </div>)}
       </div>)}
+    <div className="border-t border-blue-100 pt-3">
+      <button type="button" onClick={()=>setShowArchived(current=>!current)}
+        className="text-xs font-bold text-blue-800 underline underline-offset-2">
+        {showArchived?'Ocultar':'Ver'} retirados da fila ({archived.length})
+      </button>
+      {showArchived&&<div className="mt-3 space-y-2 rounded-xl bg-white p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-slate-600">Pendências preservadas. O saldo continua no recebimento.</p>
+          <button type="button" disabled={!!working||archived.length===0||archived.length>400}
+            onClick={()=>void bulkQueue(archived.map(item=>item.id),'RESTORE')}
+            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">
+            Restaurar todos
+          </button>
+        </div>
+        {archived.map(item=><div key={item.id}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-2">
+          <p className="text-xs font-semibold text-slate-700">
+            {catalog.names[item.materialId]||item.materialId}
+            {' · '}{item.pendingQuantity.toLocaleString('pt-BR')}{' · '}{item.depotCode}
+          </p>
+          <button type="button" disabled={!!working}
+            onClick={()=>void bulkQueue([item.id],'RESTORE')}
+            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-800 disabled:opacity-40">
+            Restaurar
+          </button>
+        </div>)}
+      </div>}
+    </div>
   </section>;
 }
