@@ -133,7 +133,8 @@ export async function updateWarehouseDepotReturnExpiryServer(
   if(typeof returnId!=='string'||!/^dr_[a-f0-9]{32}$/.test(returnId)
     ||typeof lotId!=='string'||!/^lot_[a-f0-9]{32}$/.test(lotId)
     ||typeof expiresOn!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(expiresOn)
-    ||new Date(expiresOn+'T00:00:00Z').toISOString().slice(0,10)!==expiresOn
+    ||!(Number.isFinite(Date.parse(expiresOn+'T00:00:00Z'))
+      &&new Date(expiresOn+'T00:00:00Z').toISOString().slice(0,10)===expiresOn)
     ||typeof reason!=='string'||reason.trim().length<5||reason.length>180)
     return fail('WAREHOUSE_DEPOT_RETURN_EXPIRY_INPUT_INVALID',400);
   const ws=access.workspaceId,authToken=await token();
