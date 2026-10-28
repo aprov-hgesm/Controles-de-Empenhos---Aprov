@@ -100,17 +100,26 @@ export async function warehouseStructureLayoutApplyServer(
   const data=raw as CroquiStructureApplyInput;
   if(typeof data.depotId!=='string'||!/^dep_[a-f0-9]{32}$/.test(data.depotId)
     ||typeof data.operationId!=='string'||!/^[a-f0-9-]{32,40}$/.test(data.operationId)
-    ||!nonempty(data.name)||!Array.isArray(data.objects)||data.objects.length>160
-    ||!Array.isArray(data.createLocals)||data.createLocals.length>12
-    ||!Array.isArray(data.createSubpositions)||data.createSubpositions.length>20
-    ||!Array.isArray(data.editLocals)||data.editLocals.length>30
-    ||!Array.isArray(data.archiveLocationIds)||data.archiveLocationIds.length>12
-    ||!Array.isArray(data.archiveSubpositionIds)||data.archiveSubpositionIds.length>20
+    ||!nonempty(data.name)||!Array.isArray(data.objects)
+    ||!Array.isArray(data.createLocals)
+    ||!Array.isArray(data.createSubpositions)
+    ||!Array.isArray(data.editLocals)
+    ||!Array.isArray(data.archiveLocationIds)
+    ||!Array.isArray(data.archiveSubpositionIds)
     ||!Object.prototype.hasOwnProperty.call(data,'expectedVersion')
     ||!Object.prototype.hasOwnProperty.call(data,'baseLayoutId')
     ||!(data.expectedVersion===null||(typeof data.expectedVersion==='number'&&Number.isInteger(data.expectedVersion)&&data.expectedVersion>=1))
     ||!(data.baseLayoutId===null||(typeof data.baseLayoutId==='string'&&/^lay_[a-f0-9]{32}$/.test(data.baseLayoutId)))
   )return fail('WAREHOUSE_CROQUI_INPUT',400);
+  // Limites de criação/edição têm mensagens próprias. A inativação de locais
+  // legados não deve ser barrada pelo antigo teto de 12 locais/20 subposições:
+  // o orçamento transacional real é verificado depois de expandir os filhos.
+  if(data.objects.length>160)return fail('WAREHOUSE_CROQUI_OBJECT_LIMIT',400);
+  if(data.createLocals.length>12)return fail('WAREHOUSE_CROQUI_CREATE_LIMIT',400);
+  if(data.createSubpositions.length>20)return fail('WAREHOUSE_CROQUI_SUBPOSITION_LIMIT',400);
+  if(data.editLocals.length>30)return fail('WAREHOUSE_CROQUI_EDIT_LIMIT',400);
+  if(data.archiveLocationIds.length>430||data.archiveSubpositionIds.length>430)
+    return fail('WAREHOUSE_CROQUI_TOO_LARGE',400);
   const {workspaceId:ws,ug}=access,depotId=data.depotId;
   const authToken=await token();
   // Uma consulta por deposito, nunca varrer todos os layouts e locais do workspace.
@@ -118,6 +127,9 @@ export async function warehouseStructureLayoutApplyServer(
     warehouseAdminListByField(authToken,ws,'layouts','depotId',depotId,500),
     warehouseAdminListByField(authToken,ws,'locations','depotId',depotId,500),
   ]);
+  // Nunca aplicar alteração baseada em consulta truncada.
+  if(all[0].length===500||all[1].length===500)
+    return fail('WAREHOUSE_CROQUI_CATALOG_LIMIT',409);
   const previous=all[0].map(row=>({row,layout:existingLayout(access,row)}))
     .filter(entry=>entry.layout.depotId===depotId && entry.layout.status==='active');
   if(previous.length>1)return fail('WAREHOUSE_CROQUI_MULTIPLE_ACTIVE');
@@ -315,6 +327,8 @@ export async function warehouseStructureLayoutApplyServer(
     await warehouseAdminListCollection(authToken,ws,'locationBalances',500):[];
   const archiveLots=archives.size?
     await warehouseAdminListCollection(authToken,ws,'lots',500):[];
+  if(archives.size&&(archiveBalances.length===500||archiveLots.length===500))
+    return fail('WAREHOUSE_CROQUI_CATALOG_LIMIT',409);
   const affectedPosition=(position:unknown):boolean=>{
     if(!position||typeof position!=='object')return false;
     const p=position as {locationId?:unknown;subpositionId?:unknown};
