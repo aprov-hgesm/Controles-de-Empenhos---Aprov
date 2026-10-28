@@ -1,10 +1,10 @@
 # EMPROVEX — SAAS MATURITY R1 / WORKER 2
 ## Engenharia de Backup e Recuperação — entrega de preparação
 
-Data: 27/10/2026 (BRT)  
-Repositório: aprov-hgesm/Controles-de-Empenhos---Aprov  
-Branch exclusiva: feat/saas-maturity-w2-backup-recovery-r1  
-Base congelada da main: 86a775485d4e0761d5baed02dbb275f1a4d132a6  
+Data: 27/10/2026 (BRT)
+Repositório: aprov-hgesm/Controles-de-Empenhos---Aprov
+Branch exclusiva: feat/saas-maturity-w2-backup-recovery-r1
+Base congelada da main: 86a775485d4e0761d5baed02dbb275f1a4d132a6
 **Status: IMPLEMENTADO EM BRANCH / COMPROVAÇÃO REAL PENDENTE.** Nenhum teste, lint, typecheck, CI, consulta à produção ou restore executado. Main e Vercel intocadas.
 
 ## 1. Diagnóstico estático e decisões
