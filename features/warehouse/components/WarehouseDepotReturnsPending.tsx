@@ -6,12 +6,14 @@ import {listWarehouseDepots,listWarehouseLocations} from '../../../lib/warehouse
 import {listWarehouseMaterials} from '../../../lib/warehouse/materialRepository';
 import type {WarehouseDepotReturnPending} from '../../../lib/server/warehouseDepotReturnReadAndAllocate';
 import type {WarehouseStockPosition} from '../../../lib/warehouse/location';
+import {downloadWarehouseExpiredRequest} from '../pdf/WarehouseExpiredMaterialRequest';
 
 type Target={key:string;label:string;position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>};
 type Catalog={depots:Awaited<ReturnType<typeof listWarehouseDepots>>;
   locations:Awaited<ReturnType<typeof listWarehouseLocations>>;
-  names:Record<string,string>};
-const emptyCatalog:Catalog={depots:[],locations:[],names:{}};
+  names:Record<string,string>;
+  units:Record<string,string>};
+const emptyCatalog:Catalog={depots:[],locations:[],names:{},units:{}};
 
 export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string}){
   const [rows,setRows]=useState<WarehouseDepotReturnPending[]>([]);
@@ -43,7 +45,9 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
       setArchived(pending.filter(item=>item.status==='ARCHIVED'));
       setSelectedIds(current=>current.filter(id=>live.some(item=>item.id===id)));
       setCatalog({depots,locations,names:Object.fromEntries(
-        materials.map(item=>[item.id,item.description]))});
+        materials.map(item=>[item.id,item.description])),
+        units:Object.fromEntries(materials.map(item=>[item.id,
+          item.unit.label||item.unit.code]))});
       setError(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:'Não foi possível consultar devoluções ao recebimento.');
