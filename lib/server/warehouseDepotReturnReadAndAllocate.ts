@@ -100,7 +100,7 @@ export async function allocateWarehouseDepotReturnServer(
     ...lotIds.map(id=>root(ws,'lots',id)),
     ...(lotIds.length?[root(ws,'lotAttributionLocks',materialId)]:[]),
   ];
-  return warehouseAdminTransaction(authToken,[...new Set(paths)],rows=>{
+  return warehouseAdminTransaction<{ok:true;applied:boolean;quantity:number;materialId:string}>(authToken,[...new Set(paths)],rows=>{
     const entry=rows.get(receiptPath);
     if(!entry)return fail('WAREHOUSE_DEPOT_RETURN_NOT_FOUND',404);
     if(entry.data.workspaceId!==ws||entry.data.ug!==access.ug)
