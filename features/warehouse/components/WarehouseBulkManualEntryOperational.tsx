@@ -9,6 +9,7 @@ import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 import { matchBulkStockLocal, matchBulkStockSubposition } from '../../../lib/warehouse/bulkStockLocationMatcher';
+import { bulkMaterialCandidates, bulkMaterialGroupKey } from '../../../lib/warehouse/bulkStockMaterialMatcher';
 
 interface UploadLine {
   line:number;material:string;quantity:number;unit:string;expiresOn:string|null;
@@ -19,27 +20,15 @@ interface ResolvedLine extends UploadLine {
   position:WarehouseStockPosition|null;
   materialId:string|null;
   group:string;
+  candidates:WarehouseMaterial[];
   errors:string[];
   matchedLocation:string|null;
 }
 interface Checkpoint {completed:Record<string,string>}
 
-const norm=(value:string)=>value.normalize('NFKD')
-  .replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'').trim();
-function unitKey(raw:string):string {
-  const unit=norm(raw);
-  if(['und','un','unidade','unit'].includes(unit))return 'unit';
-  if(['pct','pacote','package'].includes(unit))return 'package';
-  if(['cx','caixa','caixacx','box'].includes(unit))return 'box';
-  if(['kg','quilo','quilos','quilograma','quilogramas'].includes(unit))return 'kg';
-  if(['g','grama'].includes(unit))return 'g';
-  if(['l','litro'].includes(unit))return 'l';
-  if(['ml','mililitro'].includes(unit))return 'ml';
-  return unit;
-}
 function resolveRows(
   items:UploadLine[],depotId:string,materials:WarehouseMaterial[],
-  locations:WarehouseLocationListItem[]
+  locations:WarehouseLocationListItem[],selectedMaterialIds:Record<string,string>
 ):ResolvedLine[]{
   const locals=locations.filter(item=>item.location.kind==='LOCAL'
     && item.location.depotId===depotId).map(item=>item.location);
@@ -68,16 +57,16 @@ function resolveRows(
         }
       }
     }
-    const group=norm(item.material)+'|'+unitKey(item.unit);
-    const named=materials.filter(material=>norm(material.description)===norm(item.material));
-    const same=named.filter(material=>unitKey(material.unit.code)===unitKey(item.unit)
-      || (material.unit.label && unitKey(material.unit.label)===unitKey(item.unit)));
-    if(same.length>1)errors.push('Material duplicado no cadastro; escolha uma identificação antes de importar');
-    if(!same.length && named.length)errors.push('O material já existe com unidade diferente');
-    const materialId=same.length===1?same[0].id:null;
-    if(materials.length>=500)errors.push('Limite da lista de materiais atingido; verifique a cobertura do cadastro');
+    const group=bulkMaterialGroupKey(item.material,item.unit);
+    const candidates=bulkMaterialCandidates(materials,item.material,item.unit);
+    const choice=candidates.find(material=>material.id===selectedMaterialIds[group]);
+    const materialId=candidates.length===1?candidates[0].id:choice?.id||null;
+    // Nomes semelhantes ou unidades diferentes não impedem criar um material distinto.
+    // Múltiplas identidades existentes exigem uma escolha explícita, sem editar o Excel.
+    if(candidates.length>1&&!materialId)
+      errors.push('Selecione o cadastro do material na prévia');
     if(item.barcode && item.barcode.length>128)errors.push('Código de barras inválido');
-    return {...item,position,materialId,group,errors,matchedLocation};
+    return {...item,position,materialId,group,candidates,errors,matchedLocation};
   });
 }
 async function token():Promise<string>{
@@ -112,14 +101,18 @@ export function WarehouseBulkManualEntryOperational({
   const [digest,setDigest]=useState('');
   const [filename,setFilename]=useState('');
   const [rows,setRows]=useState<UploadLine[]>([]);
+  const [selectedMaterialIds,setSelectedMaterialIds]=useState<Record<string,string>>({});
   const [errors,setErrors]=useState<string|null>(null);
   const [working,setWorking]=useState(false);
   const [progress,setProgress]=useState(0);
   const [confirm,setConfirm]=useState(false);
   const [report,setReport]=useState('');
-  const resolved=useMemo(()=>resolveRows(rows,depotId,materials,locations),
-    [rows,depotId,materials,locations]);
+  const resolved=useMemo(()=>resolveRows(rows,depotId,materials,locations,selectedMaterialIds),
+    [rows,depotId,materials,locations,selectedMaterialIds]);
   const invalid=resolved.filter(row=>row.errors.length);
+  const previewRows=invalid.length
+    ? [...invalid.slice(0,70),...resolved.filter(row=>!row.errors.length).slice(0,Math.max(0,70-invalid.length))]
+    : resolved.slice(0,70);
   const depot=depots.find(item=>item.depot.id===depotId)?.depot;
   const canSend=Boolean(depot&&rows.length&&digest&&!invalid.length&&confirm&&!working);
 
@@ -137,7 +130,7 @@ export function WarehouseBulkManualEntryOperational({
     }catch(err){setErrors(err instanceof Error?err.message:String(err));}
   }
   async function upload(file:File|null){
-    setRows([]);setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
+    setRows([]);setSelectedMaterialIds({});setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
     if(!file)return;
     if(!file.name.toLowerCase().endsWith('.xlsx')){
       setErrors('Salve a planilha em formato Excel (.xlsx) antes de enviar.');return;
@@ -175,7 +168,10 @@ export function WarehouseBulkManualEntryOperational({
     let completed=0;
     try{
       for(const row of resolved) {
-        if(checkpoint.completed[String(row.line)]){completed++;setProgress(completed);continue;}
+        const priorMaterialId=checkpoint.completed[String(row.line)];
+        if(priorMaterialId && row.materialId && priorMaterialId!==row.materialId)
+          throw new Error('Linha '+row.line+': a identidade selecionada difere daquela já confirmada nesta carga.');
+        if(priorMaterialId){completed++;setProgress(completed);continue;}
         if(!row.position||row.errors.length)throw new Error('Linha '+row.line+': validação incompleta.');
         const materialId=materialsByGroup.get(row.group)||null;
         const result=await registerWarehouseManualEntry(workspaceId,{
@@ -242,14 +238,14 @@ export function WarehouseBulkManualEntryOperational({
     {rows.length>0&&<div className="mt-4 space-y-3">
       <div className="rounded-xl bg-blue-50 p-3 text-xs text-blue-900">
         <b>{filename}</b> · {rows.length} linhas · {invalid.length} pendências de validação.
-        {invalid.length>0&&<span> Corrija os nomes/códigos no Excel e reenvie antes de gravar.</span>}
+        {invalid.length>0&&<span> Resolva as pendências indicadas: escolha diretamente abaixo o cadastro dos materiais ambíguos. Somente erros de dados exigem corrigir o Excel.</span>}
       </div>
       <div className="max-h-64 overflow-auto rounded-xl border border-slate-200">
         <table className="w-full min-w-[720px] text-left text-[11px]">
           <thead className="sticky top-0 bg-slate-100 text-slate-600">
             <tr>{['Linha','Material','Quantidade','Posição','Resultado'].map(h=><th key={h} className="px-3 py-2">{h}</th>)}</tr>
           </thead>
-          <tbody>{resolved.slice(0,70).map(row=><tr key={row.line} className="border-t border-slate-100">
+          <tbody>{previewRows.map(row=><tr key={row.line} className="border-t border-slate-100">
             <td className="px-3 py-2">{row.line}</td><td className="px-3 py-2">{row.material}</td>
             <td className="px-3 py-2">{row.quantity} {row.unit}</td>
             <td className="px-3 py-2">
@@ -261,12 +257,24 @@ export function WarehouseBulkManualEntryOperational({
                 : <span>{row.localType} {row.localNumber}{row.subposition?' / '+row.subposition:''}</span>}
             </td>
             <td className={'px-3 py-2 '+(row.errors.length?'text-red-700':'text-emerald-700')}>
+              {row.candidates.length>1&&<label className="mb-1 block text-xs font-medium">
+                Identificação do material
+                <select value={selectedMaterialIds[row.group]||''}
+                  onChange={event=>{setSelectedMaterialIds(current=>({...current,[row.group]:event.target.value}));setConfirm(false);}}
+                  disabled={working} aria-label={'Identificação do material '+row.material}
+                  className="mt-1 block w-full rounded-md border border-slate-300 bg-white p-1.5 text-xs text-slate-800">
+                  <option value="">Selecione o cadastro existente</option>
+                  {row.candidates.map(candidate=><option key={candidate.id} value={candidate.id}>
+                    {candidate.description} · {candidate.unit.label||candidate.unit.code} · {candidate.id}
+                  </option>)}
+                </select>
+              </label>}
               {row.errors.length?row.errors.join('; '):row.materialId?'Material existente':'Novo material'}
             </td>
           </tr>)}</tbody>
         </table>
       </div>
-      {rows.length>70&&<p className="text-xs text-slate-500">Prévia das primeiras 70 linhas; todas as {rows.length} linhas são validadas.</p>}
+      {rows.length>70&&<p className="text-xs text-slate-500">Prévia de até 70 linhas, priorizando pendências ({invalid.length} no total). Todas as {rows.length} linhas são validadas.</p>}
       <label className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
         <input type="checkbox" checked={confirm} disabled={working||Boolean(invalid.length)}
           onChange={event=>setConfirm(event.target.checked)} className="mt-1"/>
