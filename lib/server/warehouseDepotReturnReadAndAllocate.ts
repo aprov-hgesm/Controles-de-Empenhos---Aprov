@@ -107,13 +107,21 @@ export async function allocateWarehouseDepotReturnServer(
       return fail('WAREHOUSE_DEPOT_RETURN_SCOPE_MISMATCH',403);
     const state=entry.data.status;
     if(state==='ALLOCATED'){
-      if(JSON.stringify(entry.data.allocatedPosition)!==JSON.stringify(dest))
+      const prior=validateWarehouseStockPosition(entry.data.allocatedPosition);
+      if(!prior||!warehouseStockPositionsEqual(prior,dest))
         return fail('WAREHOUSE_DEPOT_RETURN_ALREADY_ALLOCATED');
       return {result:{ok:true as const,applied:false,quantity:qty,materialId},writes:[]};
     }
     if(state!=='PENDING'||entry.data.pendingQuantity!==qty
       ||entry.data.materialId!==materialId
-      ||JSON.stringify(entry.data.lotReferences)!==JSON.stringify(lotReferences))
+      ||!Array.isArray(entry.data.lotReferences)
+      ||entry.data.lotReferences.length!==lotReferences.length
+      ||entry.data.lotReferences.some((raw,index)=>{
+        const item=raw as Record<string,unknown>;
+        const expected=lotReferences[index];
+        return !item||item.id!==expected.id||item.quantity!==expected.quantity
+          ||item.code!==expected.code||item.expiresOn!==expected.expiresOn;
+      }))
       return fail('WAREHOUSE_DEPOT_RETURN_CHANGED');
     const materialRow=rows.get(root(ws,'materials',materialId));
     if(!materialRow)return fail('WAREHOUSE_MATERIAL_NOT_FOUND');
