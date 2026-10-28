@@ -17,6 +17,22 @@ import { resolveBulkStockRows, type BulkStockPreflightLine } from '../warehouse/
 const invalid=(code:string):never=>{throw new WarehouseStoreError(code,409);};
 const idOf=(path:string)=>path.split('/').at(-1)||'';
 
+/** Depósitos para o seletor Excel, via IAM, sem depender de Rules de leitura SDK. */
+export async function listWarehouseBulkStockDepots(access:VerifiedWarehouseRequest) {
+  const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
+    ?'emulator':await getGoogleAccessToken();
+  const docs=await warehouseAdminListFullStockCatalog(token,access.workspaceId,'depots',250);
+  return docs.map(row=>{
+    const result=validateWarehouseDepot(
+      warehouseCanonicalDepotReadInput(idOf(row.path),row.data),
+      {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug});
+    if(!result.ok)return invalid('STOCK_IMPORT_DEPOT_CATALOG_INVALID');
+    return result.data;
+  }).filter(depot=>depot.status==='active')
+    .map(depot=>({id:depot.id,name:depot.name,code:depot.code}))
+    .sort((a,b)=>a.code.localeCompare(b.code,'pt-BR',{numeric:true}));
+}
+
 export async function preflightWarehouseBulkStock(
   access:VerifiedWarehouseRequest,depotId:string,rows:BulkStockRow[],
 ):Promise<BulkStockPreflightLine[]> {
