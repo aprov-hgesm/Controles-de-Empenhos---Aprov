@@ -452,7 +452,7 @@ function printPostRestoreCommands(request) {
 function printRestorePlan(databasePolicy) {
   const request = parseRestoreRequest(databasePolicy);
 
-  console.log("Plano OFFLINE de restauracao (nenhuma alteracao executada)\n");
+  console.log("Plano OFFLINE de restauracao (nenhuma alteração executada)\n");
   console.log("Origem DECLARADA, ainda nao conferida: " + databasePolicy.id);
   console.log("Backup DECLARADO, estado/origem/expiracao NAO VERIFICADOS: " + request.backup);
   console.log("Destino proposto: " + request.target);
