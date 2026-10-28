@@ -161,7 +161,13 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
       ?<p className="text-xs text-slate-500">Não há retornos de depósito aguardando alocação.</p>
       :groups.map(group=><div key={group.id} className="space-y-2 rounded-xl border border-blue-100 bg-white/70 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <strong className="text-xs text-blue-900">{group.label} · {group.items.length} material(is)</strong>
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-black text-blue-900">
+            <input type="checkbox" disabled={!!working}
+              checked={group.items.every(item=>selectedIds.includes(item.id))}
+              onChange={event=>toggleIds(group.items.map(item=>item.id),event.target.checked)}
+              className="h-4 w-4" />
+            {group.label} · {group.items.length} material(is)
+          </label>
           <button type="button" disabled={!!working||group.items.length>400}
             onClick={()=>void bulkQueue(group.items.map(item=>item.id),'ARCHIVE')}
             className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
@@ -169,6 +175,13 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
           </button>
         </div>
         {group.items.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+        <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
+          <input type="checkbox" disabled={!!working}
+            checked={selectedIds.includes(row.id)}
+            onChange={event=>toggleIds([row.id],event.target.checked)}
+            className="h-4 w-4" />
+          Selecionar material
+        </label>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-bold text-slate-800">{catalog.names[row.materialId]||row.materialId}</p>
