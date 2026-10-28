@@ -42,3 +42,16 @@ export function bulkMaterialCandidates(
     return presentation === inputUnit;
   });
 }
+
+/** Índice para planilhas grandes: prepara os materiais uma vez, não por linha. */
+export function indexBulkStockMaterials(materials: WarehouseMaterial[]):Map<string,WarehouseMaterial[]> {
+  const index=new Map<string,WarehouseMaterial[]>();
+  for(const material of materials) {
+    if(material.status!=='active')continue;
+    const key=bulkMaterialGroupKey(material.description,material.unit.label||material.unit.code);
+    const existing=index.get(key)||[];
+    existing.push(material);
+    index.set(key,existing);
+  }
+  return index;
+}
