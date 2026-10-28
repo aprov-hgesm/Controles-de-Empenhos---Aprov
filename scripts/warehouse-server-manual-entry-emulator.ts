@@ -948,12 +948,12 @@ try {
   });
   const returnBefore=(await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity;
   assert.equal(returnBefore,27);
-  const returned=await warehouseDepotDeleteToReceivingServer(access,{
+  const depotReturned=await warehouseDepotDeleteToReceivingServer(access,{
     kind:'DEPOT',id:returnDepot.id,mode:'DELETE',confirmCode:'RETQA',
   });
-  assert.equal(returned.ok,true);
-  assert.equal(returned.returnedItems,1);
-  assert.equal(returned.returnedQuantity,27);
+  assert.equal(depotReturned.ok,true);
+  assert.equal(depotReturned.returnedItems,1);
+  assert.equal(depotReturned.returnedQuantity,27);
   assert.equal((await getDoc(ref('depots',returnDepot.id))).data()?.status,'inactive');
   assert.ok(await readDeletionTombstone(returnDepot.id));
   assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
