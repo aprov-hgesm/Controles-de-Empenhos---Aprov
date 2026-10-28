@@ -858,6 +858,12 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       || cartIssues.length > 0
     ) return;
 
+    if(cart.some(line=>line.lotId&&state.lots.some(row=>row.lot.id===line.lotId
+      &&warehouseLotExpiryState(row.lot)==='EXPIRED'))){
+      setMessageKind('error');
+      setMessage('Material vencido exige pedido administrativo de recolhimento, não saída para consumo. Use o botão de pedido de material vencido.');
+      return;
+    }
     const cartSnapshot = cart.map((line) => ({ ...line }));
     const destinationName =
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
@@ -969,6 +975,59 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     if (!line.lotId) return null;
     return state.lots.find((item) => item.lot.id === line.lotId)?.lot.expiresOn || null;
   };
+  const expiredCartLines=cart.filter(line=>line.lotId
+    &&state.lots.some(row=>row.lot.id===line.lotId
+      &&warehouseLotExpiryState(row.lot)==='EXPIRED'));
+
+  const saveExpiryCorrection=async()=>{
+    if(!editingExpiryId||working||retryRequired)return;
+    if(!expiryDraft||!/^\\d{4}-\\d{2}-\\d{2}$/.test(expiryDraft)
+      ||expiryReason.trim().length<5){
+      setMessageKind('error');
+      setMessage('Informe uma data válida e uma justificativa de pelo menos 5 caracteres.');
+      return;
+    }
+    setWorking(true);setMessage(null);
+    try{
+      await updateWarehouseLot(workspaceId,editingExpiryId,{
+        expiresOn:expiryDraft,changeReason:expiryReason.trim(),
+      });
+      const updated=await getWarehouseLot(workspaceId,editingExpiryId);
+      if(!updated)throw new Error('Validade gravada, mas consulta de atualização falhou. Atualize a página.');
+      setState(current=>({...current,lots:current.lots.map(row=>
+        row.lot.id===editingExpiryId?{...row,lot:updated}:row)}));
+      setEditingExpiryId('');setExpiryDraft('');setExpiryReason('');
+      setReviewing(false);
+      setMessageKind('success');
+      setMessage('Data de validade atualizada com histórico de auditoria. O estoque não foi modificado.');
+    }catch(error){
+      setMessageKind('error');setMessage(errorMessage(error));
+    }finally{setWorking(false);}
+  };
+
+  const exportExpiredRequest=async()=>{
+    if(working||expiredCartLines.length===0)return;
+    setWorking(true);setMessage(null);
+    try{
+      const result=await resolveOutboundDocumentLines(workspaceId,expiredCartLines,state.lots);
+      const lines=result.filter(line=>line.expiresOn).map(line=>({
+        description:line.materialDescription,quantity:line.quantity,
+        unitLabel:line.unitLabel,expiry:line.expiresOn!,
+        position:line.positionLabel,lotId:expiredCartLines.find(
+          cartLine=>cartLine.lineId===line.lineId)?.lotId||'',
+      }));
+      await downloadWarehouseExpiredRequest({
+        workspaceId,ug:state.depots[0]?.depot.ug||'',
+        requestId:withdrawalId,operatorName:auth.currentUser?.displayName||auth.currentUser?.email||'',
+        destinationName:activeDestinations.find(item=>item.destination.id===destinationId)?.destination.name||'A definir',
+        lines,
+      });
+      setMessageKind('success');
+      setMessage('Pedido administrativo de material vencido gerado. Nenhuma baixa foi realizada.');
+    }catch(error){setMessageKind('error');setMessage(errorMessage(error));}
+    finally{setWorking(false);}
+  };
+
 
   if (state.loading) {
     return (
