@@ -94,7 +94,7 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 56%;
+  width: 68%;
   aspect-ratio: 1;
   animation: float 8s ease-in-out infinite;
 }
