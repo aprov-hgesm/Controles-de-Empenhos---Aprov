@@ -3,70 +3,22 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Download, FileSpreadsheet, RefreshCw, TriangleAlert, Upload } from 'lucide-react';
 import { auth } from '../../../lib/firebase';
-import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import type { WarehouseDepotListItem, WarehouseLocationListItem } from '../../../lib/warehouse/locationRepository';
-import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
+import type { BulkStockPreflightLine } from '../../../lib/server/warehouseBulkStockPreflight';
+import type { WarehouseDepotListItem } from '../../../lib/warehouse/locationRepository';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
-import { matchBulkStockLocal, matchBulkStockSubposition } from '../../../lib/warehouse/bulkStockLocationMatcher';
-import { bulkMaterialCandidates, bulkMaterialGroupKey } from '../../../lib/warehouse/bulkStockMaterialMatcher';
 
-interface UploadLine {
-  line:number;material:string;quantity:number;unit:string;expiresOn:string|null;
-  barcode:string|null;localType:string;localNumber:string;subposition:string|null;
-  lot:string|null;provenance:string|null;reference:string|null;
-}
-interface ResolvedLine extends UploadLine {
-  position:WarehouseStockPosition|null;
-  materialId:string|null;
-  group:string;
-  candidates:WarehouseMaterial[];
-  errors:string[];
-  matchedLocation:string|null;
-}
+type ResolvedLine=BulkStockPreflightLine;
 interface Checkpoint {completed:Record<string,string>}
+const AMBIGUOUS='Selecione o cadastro do material na prévia';
 
-function resolveRows(
-  items:UploadLine[],depotId:string,materials:WarehouseMaterial[],
-  locations:WarehouseLocationListItem[],selectedMaterialIds:Record<string,string>
-):ResolvedLine[]{
-  const locals=locations.filter(item=>item.location.kind==='LOCAL'
-    && item.location.depotId===depotId).map(item=>item.location);
-  const subpositions=locations.filter(item=>item.location.kind==='SUBPOSITION'
-    && item.location.depotId===depotId).map(item=>item.location);
+function resolveRows(items:ResolvedLine[],selectedMaterialIds:Record<string,string>):ResolvedLine[] {
   return items.map(item=>{
-    const errors:string[]=[];
-    // Excel "Estante 9" deve reconhecer o cadastro "Estante 09" / "EST-09".
-    const matches=matchBulkStockLocal(locals,depotId,item.localType,item.localNumber);
-    if(matches.length!==1){
-      errors.push(matches.length?'Localização ambígua':'Local não cadastrado');
-    }
-    const local=matches[0];
-    let matchedLocation:string|null=local && matches.length===1?local.name:null;
-    let position:WarehouseStockPosition|null=null;
-    if(local && matches.length===1){
-      if(!item.subposition){
-        position={kind:'LOCATION',depotId,locationId:local.id,subpositionId:null};
-      }else{
-        // Excel "1" corresponde à "Prateleira 01" / "PRT-01" do local pai.
-        const subs=matchBulkStockSubposition(subpositions,depotId,local.id,item.subposition);
-        if(subs.length!==1)errors.push(subs.length?'Subposição ambígua':'Subposição não cadastrada');
-        else {
-          position={kind:'SUBPOSITION',depotId,locationId:local.id,subpositionId:subs[0].id};
-          matchedLocation=local.name+' / '+subs[0].name;
-        }
-      }
-    }
-    const group=bulkMaterialGroupKey(item.material,item.unit);
-    const candidates=bulkMaterialCandidates(materials,item.material,item.unit);
-    const choice=candidates.find(material=>material.id===selectedMaterialIds[group]);
-    const materialId=candidates.length===1?candidates[0].id:choice?.id||null;
-    // Nomes semelhantes ou unidades diferentes não impedem criar um material distinto.
-    // Múltiplas identidades existentes exigem uma escolha explícita, sem editar o Excel.
-    if(candidates.length>1&&!materialId)
-      errors.push('Selecione o cadastro do material na prévia');
-    if(item.barcode && item.barcode.length>128)errors.push('Código de barras inválido');
-    return {...item,position,materialId,group,candidates,errors,matchedLocation};
+    if(item.candidates.length<=1)return item;
+    const choice=item.candidates.find(m=>m.id===selectedMaterialIds[item.group]);
+    const errors=item.errors.filter(error=>error!==AMBIGUOUS);
+    if(!choice)errors.push(AMBIGUOUS);
+    return {...item,materialId:choice?.id||null,errors};
   });
 }
 async function token():Promise<string>{
@@ -89,30 +41,33 @@ function readCheckpoint(key:string):Checkpoint {
 }
 
 export function WarehouseBulkManualEntryOperational({
-  workspaceId,materials,depots,locations,onImported,
+  workspaceId,depots,onImported,
 }:{
   workspaceId:string;
-  materials:WarehouseMaterial[];
   depots:WarehouseDepotListItem[];
-  locations:WarehouseLocationListItem[];
   onImported:()=>Promise<void>|void;
 }){
   const [depotId,setDepotId]=useState('');
   const [digest,setDigest]=useState('');
   const [filename,setFilename]=useState('');
-  const [rows,setRows]=useState<UploadLine[]>([]);
+  const [rows,setRows]=useState<ResolvedLine[]>([]);
   const [selectedMaterialIds,setSelectedMaterialIds]=useState<Record<string,string>>({});
+  const [previewPage,setPreviewPage]=useState(0);
   const [errors,setErrors]=useState<string|null>(null);
   const [working,setWorking]=useState(false);
   const [progress,setProgress]=useState(0);
   const [confirm,setConfirm]=useState(false);
   const [report,setReport]=useState('');
-  const resolved=useMemo(()=>resolveRows(rows,depotId,materials,locations,selectedMaterialIds),
-    [rows,depotId,materials,locations,selectedMaterialIds]);
+  const resolved=useMemo(()=>resolveRows(rows,selectedMaterialIds),
+    [rows,selectedMaterialIds]);
   const invalid=resolved.filter(row=>row.errors.length);
-  const previewRows=invalid.length
-    ? [...invalid.slice(0,70),...resolved.filter(row=>!row.errors.length).slice(0,Math.max(0,70-invalid.length))]
-    : resolved.slice(0,70);
+  const previewOrdered=useMemo(()=>[
+    ...resolved.filter(row=>row.errors.length),
+    ...resolved.filter(row=>!row.errors.length),
+  ],[resolved]);
+  const lastPage=Math.max(0,Math.ceil(previewOrdered.length/70)-1);
+  const page=Math.min(previewPage,lastPage);
+  const previewRows=previewOrdered.slice(page*70,page*70+70);
   const depot=depots.find(item=>item.depot.id===depotId)?.depot;
   const canSend=Boolean(depot&&rows.length&&digest&&!invalid.length&&confirm&&!working);
 
@@ -130,8 +85,9 @@ export function WarehouseBulkManualEntryOperational({
     }catch(err){setErrors(err instanceof Error?err.message:String(err));}
   }
   async function upload(file:File|null){
-    setRows([]);setSelectedMaterialIds({});setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
+    setRows([]);setSelectedMaterialIds({});setPreviewPage(0);setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
     if(!file)return;
+    if(!depotId){setErrors('Selecione o depósito antes de importar a planilha.');return;}
     if(!file.name.toLowerCase().endsWith('.xlsx')){
       setErrors('Salve a planilha em formato Excel (.xlsx) antes de enviar.');return;
     }
@@ -141,13 +97,13 @@ export function WarehouseBulkManualEntryOperational({
       const bytes=await file.arrayBuffer();
       const fingerprint=await crypto.subtle.digest('SHA-256',bytes);
       const hash=Array.from(new Uint8Array(fingerprint),n=>n.toString(16).padStart(2,'0')).join('');
-      const form=new FormData();form.set('file',file);
+      const form=new FormData();form.set('file',file);form.set('depotId',depotId);
       const response=await fetch('/api/central-depositos/bulk-stock',{
         method:'POST',headers:{authorization:'Bearer '+await token()},
         body:form,cache:'no-store',
       });
       const body=await response.json().catch(()=>null) as
-        {ok?:boolean;error?:string;rows?:UploadLine[]}|null;
+        {ok?:boolean;error?:string;rows?:ResolvedLine[]}|null;
       if(!response.ok||!body?.ok||!body.rows)
         throw new Error('Falha ao validar Excel: '+(body?.error||response.status));
       setRows(body.rows);setDigest(hash);setFilename(file.name);
@@ -160,44 +116,55 @@ export function WarehouseBulkManualEntryOperational({
     const key=checkpointKey(workspaceId,depotId,digest);
     const checkpoint=readCheckpoint(key);
     const materialsByGroup=new Map<string,string>();
-    for(const line of resolved)if(line.materialId)materialsByGroup.set(line.group,line.materialId);
-    for(const line of resolved){
-      const prior=checkpoint.completed[String(line.line)];
-      if(prior)materialsByGroup.set(line.group,prior);
-    }
-    let completed=0;
-    try{
-      for(const row of resolved) {
-        const priorMaterialId=checkpoint.completed[String(row.line)];
-        if(priorMaterialId && row.materialId && priorMaterialId!==row.materialId)
-          throw new Error('Linha '+row.line+': a identidade selecionada difere daquela já confirmada nesta carga.');
-        if(priorMaterialId){completed++;setProgress(completed);continue;}
+    // Identidades persistidas têm precedência apenas se compatíveis com a escolha atual.
+    try {
+      for(const line of resolved) {
+        if(!line.materialId)continue;
+        const existing=materialsByGroup.get(line.group);
+        if(existing&&existing!==line.materialId)
+          throw new Error('Identidade conflitante entre linhas do mesmo material.');
+        materialsByGroup.set(line.group,line.materialId);
+      }
+      for(const line of resolved){
+        const prior=checkpoint.completed[String(line.line)];
+        if(!prior)continue;
+        const existing=materialsByGroup.get(line.group);
+        if(existing&&existing!==prior)
+          throw new Error('Linha '+line.line+': já foi importada com outra identificação.');
+        materialsByGroup.set(line.group,prior);
+      }
+      let completed=0;
+      for(const row of resolved){
         if(!row.position||row.errors.length)throw new Error('Linha '+row.line+': validação incompleta.');
         const materialId=materialsByGroup.get(row.group)||null;
+        // O depósito integra a chave: arquivos iguais em depósitos diferentes não colidem.
+        const operationId='bulk_'+depotId+'_'+digest.slice(0,28)+'_'+row.line;
+        // Reexecutar no servidor mesmo quando localStorage indica conclusão:
+        // o ledger é a fonte de verdade, não o armazenamento do navegador.
         const result=await registerWarehouseManualEntry(workspaceId,{
-          operationId:'bulk_'+digest.slice(0,28)+'_'+row.line,
+          operationId,
           existingMaterialId:materialId,
           description:row.material,
           unitLabel:row.unit,
           quantity:row.quantity,
           position:row.position,
           provenance:row.provenance||'Contagem física inicial',
-          reference:row.reference||('Planilha '+filename+' — linha '+row.line).slice(0,160),
+          reference:row.reference||('Planilha '+digest.slice(0,28)+' — linha '+row.line).slice(0,160),
           expiresOn:row.expiresOn,
-          lotCode:null, // A referência técnica é criada pelo servidor a partir da validade.
+          lotCode:null,
           barcode:row.barcode,
         });
         materialsByGroup.set(row.group,result.material.id);
         checkpoint.completed[String(row.line)]=result.material.id;
-        window.localStorage.setItem(key,JSON.stringify(checkpoint));
+        try{window.localStorage.setItem(key,JSON.stringify(checkpoint));}catch{/* ledger server-side prevalece */}
         completed++;setProgress(completed);
       }
-      setReport('Importação concluída: '+completed+' linhas confirmadas no motor de estoque. Faça a conferência física e documental.');
+      setReport('Importação concluída: '+completed+' linhas verificadas no motor de estoque. A repetição do mesmo arquivo não duplica saldos.');
       await onImported();
-    }catch(err){
-      setErrors('Importação parcial ('+completed+'/'+resolved.length+'). Linhas confirmadas já integram o estoque; selecione o MESMO arquivo e retome. '+warehouseManualEntryErrorMessage(err));
+    } catch(err){
+      setErrors('Importação interrompida ('+Object.keys(checkpoint.completed).length+'/'+resolved.length+' linhas registradas neste navegador). Reenvie o MESMO arquivo: o servidor protege contra duplicação de movimentos. '+warehouseManualEntryErrorMessage(err));
       await onImported();
-    }finally{setWorking(false);}
+    } finally {setWorking(false);}
   }
   return <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm" data-testid="warehouse-bulk-stock-import">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -219,7 +186,10 @@ export function WarehouseBulkManualEntryOperational({
     <div className="mt-4 grid gap-3 md:grid-cols-2">
       <label className="text-xs font-bold text-slate-700">
         Depósito de destino
-        <select value={depotId} onChange={event=>{setDepotId(event.target.value);setConfirm(false);}}
+        <select value={depotId} onChange={event=>{
+            setDepotId(event.target.value);setConfirm(false);setRows([]);setDigest('');
+            setPreviewPage(0);setSelectedMaterialIds({});setErrors(null);setReport('');
+          }}
           disabled={working}
           className="mt-1 block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs">
           <option value="">Selecione o depósito</option>
@@ -274,7 +244,16 @@ export function WarehouseBulkManualEntryOperational({
           </tr>)}</tbody>
         </table>
       </div>
-      {rows.length>70&&<p className="text-xs text-slate-500">Prévia de até 70 linhas, priorizando pendências ({invalid.length} no total). Todas as {rows.length} linhas são validadas.</p>}
+      {rows.length>70&&<div className="flex items-center justify-between gap-2 text-xs text-slate-600">
+        <span>Exibindo {page*70+1}–{Math.min((page+1)*70,rows.length)} de {rows.length} linhas, com pendências primeiro.</span>
+        <span className="flex items-center gap-2">
+          <button type="button" disabled={page===0||working} onClick={()=>setPreviewPage(page-1)}
+            className="rounded border px-2 py-1 disabled:opacity-40">Anterior</button>
+          <span>{page+1}/{lastPage+1}</span>
+          <button type="button" disabled={page>=lastPage||working} onClick={()=>setPreviewPage(page+1)}
+            className="rounded border px-2 py-1 disabled:opacity-40">Próxima</button>
+        </span>
+      </div>}
       <label className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
         <input type="checkbox" checked={confirm} disabled={working||Boolean(invalid.length)}
           onChange={event=>setConfirm(event.target.checked)} className="mt-1"/>
