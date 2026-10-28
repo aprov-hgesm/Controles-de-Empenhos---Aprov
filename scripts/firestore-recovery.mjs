@@ -46,9 +46,16 @@ async function main() {
     case "restore-plan":
       printRestorePlan(resolveDatabasePolicies({ requireExplicit: true })[0]);
       return;
+    case "restore-inspect": {
+      const selected = resolveDatabasePolicies({ requireExplicit: true })[0];
+      const request = parseRestoreRequest(selected, { requireProject: true });
+      ensureGcloud();
+      inspectRestoreRequest(selected, request);
+      return;
+    }
     default:
       throw new Error(
-        "Comando desconhecido: " + command + ". Use plan, status, verify, apply ou restore-plan.",
+        "Comando desconhecido: " + command + ". Use plan, status, verify, apply, restore-plan ou restore-inspect.",
       );
   }
 }
@@ -389,54 +396,141 @@ async function applyRecoveryControls(databasePolicy) {
   }
 }
 
-function printRestorePlan(databasePolicy) {
+/**
+ * Planejamento offline: bloqueia destinos conhecidos, mas NAO comprova a
+ * existencia, origem ou estado do backup. Nao executa gcloud.
+ */
+function parseRestoreRequest(databasePolicy, { requireProject = false } = {}) {
   const backup = String(flags.backup || "").trim();
   const target = String(flags.target || "").trim();
+  const suppliedProject = String(flags.project || "").trim();
 
   if (!backup || !target) {
     throw new Error(
       "Informe --database=<origem> --backup=projects/.../locations/.../backups/... e --target=emprovex-restore-AAAA-MM-DD.",
     );
   }
-
-  const backupPrefix = "projects/" + policy.projectId + "/locations/";
-  if (
-    !backup.startsWith(backupPrefix) ||
-    !/\/backups\/[^/]+$/.test(backup)
-  ) {
-    throw new Error("O backup precisa pertencer ao projeto " + policy.projectId + ".");
+  if ((requireProject && suppliedProject !== policy.projectId) ||
+      (suppliedProject && suppliedProject !== policy.projectId)) {
+    throw new Error("Informe --project=" + policy.projectId + " exatamente; outro projeto e bloqueado.");
   }
 
-  if (!/^[a-z][a-z0-9-]{2,61}[a-z0-9]$/.test(target)) {
-    throw new Error("ID do banco de restauração inválido.");
+  const match = backup.match(/^projects\/([a-z][a-z0-9-]*)\/locations\/([a-z0-9-]+)\/backups\/([A-Za-z0-9_-]+)$/);
+  if (!match || match[1] !== policy.projectId) {
+    throw new Error("O backup precisa ter resource name valido no projeto " + policy.projectId + ".");
   }
 
-  const protectedIds = new Set(policy.databases.map((item) => item.id));
-  if (protectedIds.has(target) || target === "(default)") {
+  const protectedIds = new Set([...policy.databases.map((item) => item.id), "(default)"]);
+  if (protectedIds.has(target)) {
+    throw new Error("A restauracao exige um banco novo e isolado; bancos de producao sao bloqueados.");
+  }
+  if (!/^[a-z][a-z0-9-]{2,61}[a-z0-9]$/.test(target) ||
+      !target.startsWith("emprovex-restore-")) {
+    throw new Error("Destino invalido: use um ID novo com prefixo emprovex-restore-.");
+  }
+
+  return { backup, target, location: match[2], backupId: match[3] };
+}
+
+function restoreCommand(request) {
+  return "gcloud firestore databases restore --project=" + policy.projectId +
+    " --source-backup=" + request.backup +
+    " --destination-database=" + request.target;
+}
+
+function printPostRestoreCommands(request) {
+  console.log("\nLeituras posteriores a uma restauracao AUTORIZADA:");
+  console.log("gcloud firestore operations list --project=" + policy.projectId +
+    " --database=" + request.target + " --format=json");
+  console.log("gcloud firestore databases describe --project=" + policy.projectId +
+    " --database=" + request.target + " --format=json");
+  console.log(
+    "\nA conclusao da operacao nao equivale a recuperacao certificada. Conferir dados por workspace, auditoria, IAM, Rules e TTL; nunca habilitar acesso de clientes antes da aprovacao.",
+  );
+}
+
+function printRestorePlan(databasePolicy) {
+  const request = parseRestoreRequest(databasePolicy);
+
+  console.log("Plano OFFLINE de restauracao (nenhuma alteracao executada)\n");
+  console.log("Origem DECLARADA, ainda nao conferida: " + databasePolicy.id);
+  console.log("Backup DECLARADO, estado/origem/expiracao NAO VERIFICADOS: " + request.backup);
+  console.log("Destino proposto: " + request.target);
+  console.log("\nCOMANDO APENAS DE REFERENCIA - NAO EXECUTAR AINDA:");
+  console.log(restoreCommand(request));
+  console.log("\nAntes de qualquer restore, realizar a inspeção autenticada somente leitura:");
+  console.log("node scripts/firestore-recovery.mjs restore-inspect" +
+    " --project=" + policy.projectId +
+    " --database=" + databasePolicy.id +
+    " --backup=" + request.backup +
+    " --target=" + request.target);
+  printPostRestoreCommands(request);
+}
+
+/**
+ * Executado SOMENTE em etapa posterior pelo Coordenador.
+ * Consulta metadata dos recursos sem escrever ou restaurar qualquer dado.
+ * Falha fechada se a origem estiver divergente, backup nao READY, vencido
+ * ou o destino estiver presente (inclusive listado como deletado).
+ */
+function inspectRestoreRequest(databasePolicy, request) {
+  const backup = runJson([
+    "firestore", "backups", "describe",
+    "--project=" + policy.projectId,
+    "--location=" + request.location,
+    "--backup=" + request.backupId,
+  ]);
+  const expectedSource = expectedResource(databasePolicy);
+  if (!backup || backup.name !== request.backup ||
+      backup.database !== expectedSource) {
     throw new Error(
-      "A restauração deve usar um banco novo e isolado; bancos de produção são bloqueados.",
+      "Backup nao corresponde exatamente ao recurso declarado e ao banco de origem " + expectedSource + ".",
     );
   }
+  if (String(backup.state || "").toUpperCase() !== "READY") {
+    throw new Error("Backup nao esta READY. Nenhum restore autorizado.");
+  }
 
-  console.log("Plano de restauração (nenhuma alteração executada)\n");
-  console.log("Origem declarada: " + databasePolicy.id + " (" + databasePolicy.role + ")");
-  console.log("Backup: " + backup);
-  console.log("Destino isolado: " + target + "\n");
-  console.log(
-    "gcloud firestore databases restore --project=" + policy.projectId +
-      " --source-backup=" + backup +
-      " --destination-database=" + target,
-  );
-  console.log("\nVerificação pós-restore, somente leitura:");
-  console.log(
-    "gcloud firestore databases describe --project=" + policy.projectId +
-      " --database=" + target,
-  );
-  console.log(
-    "gcloud firestore operations list --project=" + policy.projectId +
-      " --database=" + target,
-  );
-  console.log(
-    "\nDepois valide IAM, Rules, TTL e amostras de dados antes de qualquer decisão sobre o banco restaurado.",
-  );
+  const snapshotTime = String(backup.snapshotTime || "");
+  const expireTime = String(backup.expireTime || "");
+  const snapshotMs = Date.parse(snapshotTime);
+  const expirationMs = Date.parse(expireTime);
+  const now = Date.now();
+  if (!Number.isFinite(snapshotMs) || !Number.isFinite(expirationMs) ||
+      snapshotMs > now || expirationMs <= now || expirationMs <= snapshotMs) {
+    throw new Error("Snapshot/expiracao ausente, invalido ou backup expirado. Operacao bloqueada.");
+  }
+
+  const databases = runJson([
+    "firestore", "databases", "list",
+    "--project=" + policy.projectId,
+    "--show-deleted",
+  ]);
+  if (!Array.isArray(databases)) {
+    throw new Error("Nao foi possivel determinar com seguranca os IDs de bancos ja utilizados.");
+  }
+  const destinationResource = "projects/" + policy.projectId + "/databases/" + request.target;
+  if (databases.some((db) => db?.name === destinationResource)) {
+    throw new Error("Destino ja existe ou foi utilizado antes; escolha outro ID inequivocamente novo.");
+  }
+
+  console.log("INSPECAO SOMENTE LEITURA: BACKUP E DESTINO ELEGIVEIS (restore NAO executado)\n");
+  console.log(JSON.stringify({
+    projectId: policy.projectId,
+    sourceDatabase: databasePolicy.id,
+    backup: backup.name,
+    state: backup.state,
+    location: request.location,
+    snapshotTime,
+    expireTime,
+    destinationDatabase: request.target,
+    destinationAbsentFromActiveAndDeletedList: true,
+    restoreExecuted: false,
+    dataIntegrityVerified: false,
+    rpoObserved: "NAO EXECUTADO",
+    rtoObserved: "NAO EXECUTADO",
+  }, null, 2));
+  console.log("\nComando preparado PARA REVISAO E AUTORIZACAO EXPLICITA do Coordenador:");
+  console.log(restoreCommand(request));
+  printPostRestoreCommands(request);
 }
