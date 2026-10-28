@@ -901,11 +901,15 @@ try {
     locationId:'loc_'+'d'.repeat(32),subpositionId:null};
   const orphanId=await createWarehouseLocationBalanceId(
     workspaceId,first.material.id,orphanPosition);
-  await setDoc(ref('locationBalances',orphanId),{
-    schemaVersion:'warehouse_location_balance_v1',id:orphanId,
-    workspaceId,ug,materialId:first.material.id,
-    position:orphanPosition,quantity:1,revision:1,
-    lastMovementId:first.entry.movement.id,
+  const orphanPath='warehouse/'+workspaceId+'/locationBalances/'+orphanId;
+  await warehouseAdminTransaction('emulator',[orphanPath],rows=>{
+    assert.equal(rows.get(orphanPath),null);
+    return {result:true,writes:[{path:orphanPath,data:{
+      schemaVersion:'warehouse_location_balance_v1',id:orphanId,
+      workspaceId,ug,materialId:first.material.id,
+      position:orphanPosition,quantity:1,revision:1,
+      lastMovementId:first.entry.movement.id,
+    }}]};
   });
   const diagnosis=await diagnoseWarehouseDepotArchiveServer(access,{depotId:dep});
   assert.ok(diagnosis.positiveBalanceCount>0);
