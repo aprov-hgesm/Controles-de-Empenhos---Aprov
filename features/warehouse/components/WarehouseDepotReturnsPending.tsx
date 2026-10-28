@@ -93,6 +93,33 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     }finally{setWorking(null);}
   };
 
+
+  const groups=useMemo(()=>{
+    const grouped=new Map<string,WarehouseDepotReturnPending[]>();
+    for(const item of rows)grouped.set(item.depotId,[...(grouped.get(item.depotId)||[]),item]);
+    return [...grouped].map(([id,items])=>({id,items,
+      label:items[0].depotCode+' · '+items[0].depotName}));
+  },[rows]);
+  const toggleIds=(ids:string[],checked:boolean)=>setSelectedIds(current=>
+    checked?[...new Set([...current,...ids])]:current.filter(id=>!ids.includes(id)));
+  const bulkQueue=async(ids:string[],action:'ARCHIVE'|'RESTORE')=>{
+    if(working||!ids.length)return;
+    if(ids.length>400){setError('Selecione no máximo 400 registros por operação.');return;}
+    const prompt=action==='ARCHIVE'
+      ?'Retirar '+ids.length+' registro(s) da fila? Os materiais continuarão no recebimento, sem baixa ou exclusão do estoque. A ação é reversível.'
+      :'Restaurar '+ids.length+' registro(s) à fila de recebimento?';
+    if(!window.confirm(prompt))return;
+    setWorking('bulk');setMessage(null);setError(null);
+    try{
+      const result=await warehouseServerCommand<{changed:number}>(
+        workspaceId,'DEPOT_RETURNS_QUEUE_BULK',{action,returnIds:ids});
+      await reload();
+      setMessage(result.changed+' registro(s) '+(action==='ARCHIVE'
+        ?'retirados da fila. Estoque preservado.':'restaurados para realocação.'));
+    }catch(error){setError(error instanceof Error?error.message:'Erro ao atualizar a fila.');}
+    finally{setWorking(null);}
+  };
+
   if(loading)return <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
     Consultando retornos de depósitos ao recebimento…
   </div>;
