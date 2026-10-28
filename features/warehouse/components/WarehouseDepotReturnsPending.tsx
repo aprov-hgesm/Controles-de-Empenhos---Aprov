@@ -220,6 +220,11 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
             className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
             Remover grupo
           </button>
+          <button type="button" disabled={!!working}
+            onClick={()=>void exportExpiredGroup(group)}
+            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-900 disabled:opacity-40">
+            Pedido de vencidos (PDF)
+          </button>
         </div>
         {group.items.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
         <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
