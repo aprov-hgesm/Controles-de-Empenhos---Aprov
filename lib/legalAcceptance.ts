@@ -6,7 +6,7 @@ import {
   type DocumentReference,
 } from 'firebase/firestore';
 
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import {
   normalizePlatformEmail,
   normalizeUnitUg,
@@ -60,6 +60,42 @@ function normalizedIdentity(identity: LegalAcceptanceIdentity): LegalAcceptanceI
   };
 }
 
+/**
+ * R4 records are written by an authenticated server endpoint with a
+ * Firestore create-only precondition; the legacy client transaction stays
+ * available for the historical R1 bundle without changing Firestore Rules.
+ */
+const isServerLegalBundle = String(CURRENT_LEGAL_BUNDLE.legalBundleVersion) !== 'saas-r1-2026-10-01';
+
+async function serverLegalRequest(identity: LegalAcceptanceIdentity, accept: boolean) {
+  const user = auth.currentUser;
+  const normalized = normalizedIdentity(identity);
+  if (!user || user.uid !== normalized.uid || !user.email
+    || normalizePlatformEmail(user.email) !== normalized.email) {
+    throw new Error('A identidade de aceite não corresponde à sessão autenticada.');
+  }
+  const idToken = await user.getIdToken();
+  const url = '/api/legal-acceptance' + (accept ? '' :
+    '?workspaceId=' + encodeURIComponent(normalized.workspaceId));
+  const response = await fetch(url, {
+    method: accept ? 'POST' : 'GET',
+    headers: {
+      authorization: 'Bearer ' + idToken,
+      ...(accept ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(accept ? { body: JSON.stringify({
+      workspaceId: normalized.workspaceId,
+      confirm: true,
+    }) } : {}),
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error('Não foi possível verificar ou registrar o aceite jurídico (HTTP '
+      + response.status + ').');
+  }
+  return await response.json() as { accepted: boolean; created?: boolean };
+}
+
 function acceptanceRef(identity: LegalAcceptanceIdentity): DocumentReference {
   const normalized = normalizedIdentity(identity);
   return doc(
@@ -93,6 +129,9 @@ export async function hasAcceptedCurrentLegalBundle(
   identity: LegalAcceptanceIdentity
 ): Promise<boolean> {
   const normalized = normalizedIdentity(identity);
+  if (isServerLegalBundle) {
+    return (await serverLegalRequest(normalized, false)).accepted === true;
+  }
   const snapshot = await getDoc(acceptanceRef(normalized));
 
   if (!snapshot.exists()) return false;
@@ -104,6 +143,15 @@ export async function acceptCurrentLegalBundle(
   identity: LegalAcceptanceIdentity
 ): Promise<LegalAcceptanceResult> {
   const normalized = normalizedIdentity(identity);
+  if (isServerLegalBundle) {
+    const result = await serverLegalRequest(normalized, true);
+    if (!result.accepted) throw new Error('Registro jurídico não confirmado.');
+    return {
+      created: result.created === true,
+      documentId: legalAcceptanceDocumentId(normalized.uid),
+      versions: CURRENT_LEGAL_BUNDLE,
+    };
+  }
   const reference = acceptanceRef(normalized);
   const documentId = reference.id;
 

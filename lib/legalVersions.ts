@@ -1,9 +1,23 @@
 export const LEGAL_ACCEPTANCE_SCHEMA_VERSION = 'emprovex_legal_acceptance_v1';
 
-export const CURRENT_LEGAL_BUNDLE = Object.freeze({
+/**
+ * Historical immutable bundle. Already accepted records and current Rules are
+ * preserved; neither is rewritten or reinterpreted.
+ */
+export const LEGACY_LEGAL_BUNDLE = Object.freeze({
   legalBundleVersion: 'saas-r1-2026-10-01',
   termsVersion: 'terms-2026-10-01-r1',
   privacyVersion: 'privacy-2026-10-01-r1',
+});
+
+/**
+ * R4 agreement uses an authenticated, create-only server endpoint.
+ * The published Firestore Rules remain unchanged and continue to protect R1.
+ */
+export const CURRENT_LEGAL_BUNDLE = Object.freeze({
+  legalBundleVersion: 'saas-r4-2026-10-27',
+  termsVersion: 'terms-2026-10-27-r2',
+  privacyVersion: 'privacy-2026-10-27-r2',
 });
 
 export type LegalBundleVersions = typeof CURRENT_LEGAL_BUNDLE;

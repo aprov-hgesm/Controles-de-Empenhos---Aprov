@@ -421,7 +421,12 @@ export function InfinitePayReadinessPanel({
               meses de cobrança 1–3 R$ 29,90/mês; 4–6 R$ 39,90/mês;
               7–9 R$ 49,90/mês; 10–12 R$ 59,90/mês;
               a partir do mês 13 R$ 69,90/mês.
-              Os meses são contados individualmente após o período gratuito, quando concedido.
+              A contagem é por competência do setor, a partir do primeiro mês pago após o período
+              gratuito, quando concedido. Não há débito recorrente automático.
+              Consulte os <a href="/terms" target="_blank" rel="noreferrer" className="font-bold underline">
+              Termos de Serviço</a> e a <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold underline">
+              Política de Privacidade</a> antes de confirmar. Este aceite financeiro não substitui o
+              aceite legal da plataforma e não realiza pagamento.
             </p>
             <label className="mt-3 flex items-start gap-2 text-xs font-medium text-slate-800">
               <input type="checkbox" checked={rampConfirmed}
