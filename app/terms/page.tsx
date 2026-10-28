@@ -5,7 +5,7 @@ import { CURRENT_LEGAL_BUNDLE } from '../../lib/legalVersions';
 
 export const metadata: Metadata = {
   title: 'Termos de Serviço | EMPROVEX',
-  description: 'Termos de Serviço do EMPROVEX para utilização do SaaS, trial, Plano Completo e serviços integrados.',
+  description: 'Condições de contratação por setor, pagamentos, uso das funcionalidades e direitos sobre dados operacionais do EMPROVEX.',
 };
 
 export default function TermsPage() {
@@ -14,7 +14,7 @@ export default function TermsPage() {
       eyebrow="Condições de utilização"
       title="Termos de Serviço"
       description="Estes Termos estabelecem as condições para utilização do EMPROVEX como serviço por usuários e workspaces previamente autorizados."
-      updatedAt="1º de outubro de 2026"
+      updatedAt="27 de outubro de 2026"
       version={CURRENT_LEGAL_BUNDLE.termsVersion}
     >
       <LegalSection title="1. Aceitação e versão dos Termos">
@@ -32,71 +32,106 @@ export default function TermsPage() {
 
       <LegalSection title="2. Serviço EMPROVEX e Plano Completo">
         <p>
-          O EMPROVEX é um serviço de apoio à gestão logística e financeira, com ferramentas para empenhos, itens, notas
-          fiscais, recebimentos, liquidação, cronogramas, relatórios, documentos, Central de Depósitos e demais
-          funcionalidades disponibilizadas ao respectivo workspace.
+          O EMPROVEX é uma plataforma SaaS de apoio à gestão logística e financeira dos Setores de Aprovisionamento
+          de Organizações Militares, com recursos para empenhos, fornecedores, itens, notas fiscais,
+          recebimento, cronogramas, relatórios, documentos, Central de Depósitos, controle de materiais
+          e operação móvel, conforme as funcionalidades disponibilizadas ao setor.
         </p>
         <p>
-          Na modalidade comercial inicial, o EMPROVEX utiliza um plano único denominado <strong>Plano Completo</strong>.
-          O acesso às funcionalidades depende das permissões operacionais, do estado da conta e das condições comerciais
-          aplicáveis ao workspace, sem diferenciação jurídica entre usuários pagantes e workspaces VIP/isentos.
+          A oferta comercial vigente utiliza o <strong>Plano Completo</strong>. A assinatura remunera as
+          funcionalidades e os serviços do EMPROVEX para o <strong>workspace/setor contratado</strong>, e não
+          uma assinatura individual para cada militar. A disponibilização de recursos depende da autorização
+          dos usuários, do estado da assinatura e das condições específicas de cada contrato.
+          Isenções VIP e condições históricas válidas são preservadas.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="2.1. Natureza do apoio administrativo">
+        <p>
+          O EMPROVEX não é sistema oficial de execução orçamentária, financeira ou patrimonial da Administração
+          Pública e não substitui SIAFI, SISCOFIS ou outros controles exigidos pela Organização Militar.
+          Conferências, autorizações, assinaturas, aprovações e responsabilidades funcionais continuam a cargo
+          dos agentes e órgãos competentes.
         </p>
       </LegalSection>
 
       <LegalSection title="3. Trial e início da utilização">
         <p>
-          O EMPROVEX pode conceder período de teste antes do início da cobrança. Na configuração comercial do SaaS R1,
-          o período padrão é de 30 dias, salvo ajuste administrativo informado ao cliente. O encerramento do trial não
-          implica exclusão automática dos dados do workspace.
+          O EMPROVEX pode conceder um período gratuito de teste, cujo prazo padrão é de 30 dias quando
+          autorizado. O prazo efetivamente concedido é informado ao setor. O trial não conta como mês pago
+          na progressão de preços, não gera cobrança automática e seu encerramento não elimina dados do workspace.
         </p>
       </LegalSection>
 
       <LegalSection title="4. Plano progressivo e pagamento pela InfinitePay">
         <p>
-          Para novas contratações elegíveis, o Plano Completo inicia em R$ 29,90 por mês nos três primeiros períodos
-          mensais completos de cobrança, passando a R$ 39,90 nos meses 4 a 6, R$ 49,90 nos meses 7 a 9,
-          R$ 59,90 nos meses 10 a 12 e R$ 69,90 a partir do mês 13. O início de cada período é contado
-          individualmente do término do trial, quando concedido, ou do cadastro sem trial. As condições são
-          apresentadas ao setor para aceite expresso antes da primeira cobrança. Contratos históricos e isenções
-          já concedidas não são alterados automaticamente.
+          Para <strong>novas contratações elegíveis</strong> sujeitas à política progressiva vigente,
+          a mensalidade do setor é de <strong>R$ 29,90 nos meses pagos 1 a 3</strong>,
+          <strong>R$ 39,90 nos meses 4 a 6</strong>, <strong>R$ 49,90 nos meses 7 a 9</strong>,
+          <strong>R$ 59,90 nos meses 10 a 12</strong> e <strong>R$ 69,90 a partir do mês 13</strong>.
+          A contagem acompanha a primeira competência mensal paga após eventual trial; o período gratuito
+          não integra os meses pagos. O cronograma integral de valores é apresentado ao responsável do setor
+          <strong>antes do aceite financeiro expresso</strong>. O aceite desses preços é distinto do
+          aceite geral dos Termos e não realiza pagamento. Contratos anteriores e isenções VIP
+          não são reenquadrados nem reajustados retroativamente por esta política.
         </p>
         <p>
-          O pagamento é feito por checkout seguro da InfinitePay, de competência individual, mediante Pix ou cartão.
-          O EMPROVEX não processa dados de cartão diretamente. A quitação depende de confirmação no provedor
-          ou de conferência manual registrada pelo administrador. O cliente deve evitar pagamentos duplicados,
-          especialmente quando a confirmação ainda estiver pendente.
+          Cada mensalidade exigível é cobrada por competência, mediante checkout externo da
+          <strong>InfinitePay</strong>, com os meios de pagamento habilitados no checkout. Não existe
+          débito recorrente automático pela simples assinatura dos Termos. O EMPROVEX não coleta
+          diretamente o número completo nem o código de segurança de cartão. Um checkout iniciado ou
+          o retorno do navegador não equivalem a quitação: a liberação financeira depende da confirmação
+          efetiva da transação por verificação do servidor ou procedimento administrativo autorizado.
+          Enquanto houver pagamento pendente de confirmação, não repita a mesma cobrança; consulte
+          primeiro o histórico da InfinitePay e o suporte.
+        </p>
+        <p>
+          Suspeitas de pagamento duplicado, divergência de valor, cancelamento ou pedido de reembolso
+          devem ser comunicados ao suporte com a identificação da cobrança, para apuração conforme
+          a transação efetiva, as condições contratadas e a legislação aplicável. Não há promessa de
+          estorno automático nem de liberação imediata baseada somente em comprovante ou redirecionamento.
         </p>
       </LegalSection>
 
       <LegalSection title="5. Contas, credenciais e acesso">
         <p>
-          O acesso é restrito a usuários cadastrados ou expressamente autorizados. Cada usuário deve manter suas
-          credenciais sob controle e não deve compartilhar senhas, tokens ou outros meios de autenticação.
+          A Organização Militar é a entidade institucional a que o setor está vinculado; o
+          <strong>workspace</strong> é o ambiente lógico de dados e funcionalidades do setor; a
+          <strong>conta contratante</strong> representa a contratação e suas obrigações financeiras;
+          e o <strong>usuário autorizado</strong> é a pessoa credenciada a atuar no ambiente, segundo
+          o perfil e o vínculo institucional aplicáveis. Esses conceitos não são intercambiáveis.
+          Cada usuário deve proteger suas credenciais e não compartilhar senhas ou tokens.
         </p>
         <p>
-          O usuário deve utilizar somente o workspace e a Unidade Gestora associados à sua identidade. Tentativas de
-          contornar controles de acesso ou acessar dados de outro tenant são proibidas.
+          Cada usuário deve atuar somente no workspace e na Unidade Gestora a que estiver autorizado.
+          É proibido utilizar credenciais alheias, explorar falhas de autorização, alterar registros sem
+          permissão ou consultar dados de outro setor. Direitos sobre dados próprios não afastam
+          autenticação, sigilo, integridade ou segregação entre organizações.
         </p>
       </LegalSection>
 
       <LegalSection title="6. Suspensão e reativação">
         <p>
-          O acesso pode ser suspenso por razões comerciais, administrativas, de segurança ou por uso incompatível com
-          estes Termos. Quando o controle financeiro estiver habilitado, mensalidades vencidas e não regularizadas podem restringir
-          o acesso operacional, sem apagar os dados do workspace. No primeiro mês sem trial, o pagamento é devido
-          desde o início; em renovações, a tolerância configurada é aplicável apenas à mensalidade anterior quitada.
+          O controle financeiro vigente pode restringir <strong>as funcionalidades operacionais</strong>
+          por mensalidade vencida e não regularizada, observadas as regras de vencimento e eventual tolerância
+          aplicáveis ao contrato. Essa medida é distinta de restrições motivadas por segurança, fraude,
+          uso indevido ou exigência institucional. A inadimplência, por si só, não transfere ao EMPROVEX
+          os dados cadastrados nem autoriza seu bloqueio coercitivo para impedir recuperação legítima.
         </p>
         <p>
-          Quando a causa da suspensão for sanada e as condições de acesso forem restabelecidas, a conta poderá ser
-          reativada sem exigir recriação do workspace ou migração dos dados preservados.
+          Após a regularização e a <strong>confirmação adequada</strong> do pagamento, as funções
+          contratadas poderão ser reativadas, respeitadas outras restrições de segurança ou autorização
+          eventualmente incidentes. O histórico operacional preservado não precisa ser recadastrado
+          apenas pela regularização comercial.
         </p>
       </LegalSection>
 
       <LegalSection title="6.1. Solicitação de 48 horas">
         <p>
-          Após identificar ausência de quitação, o setor pode solicitar uma única liberação temporária de até 48 horas
-          por competência, enquanto o administrador confere o pagamento. Essa solicitação não constitui quitação,
-          não renova automaticamente o prazo e não substitui o pagamento devido.
+          Conforme a política em vigor e a elegibilidade da competência, o setor poderá solicitar
+          uma liberação extraordinária temporária de até <strong>48 horas</strong>, limitada pelas
+          regras operacionais do portal. A concessão não constitui quitação, não se renova automaticamente
+          e não afasta a necessidade de regularização. Solicitar não significa obter aprovação irrestrita.
         </p>
       </LegalSection>
 
@@ -109,6 +144,30 @@ export default function TermsPage() {
           A preservação e eventual exclusão de dados serão tratadas conforme a finalidade, as obrigações legais ou
           institucionais aplicáveis, as necessidades de rastreabilidade e as solicitações válidas do titular ou do
           responsável pelo workspace.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="7.1. Direitos sobre dados e recuperação legítima">
+        <p>
+          <strong>A assinatura remunera o software e os serviços, não a propriedade dos dados operacionais
+          cadastrados pelo setor.</strong> O armazenamento no EMPROVEX não converte informações
+          institucionais em ativos comerciais do fornecedor. A titularidade, a guarda e a destinação
+          de registros institucionais observam a legislação e as normas da Organização Militar;
+          dados pessoais também preservam os direitos de seus respectivos titulares.
+        </p>
+        <p>
+          O encerramento ou a suspensão financeira não autorizam reter dados do próprio setor
+          como meio de pressionar pelo pagamento. O responsável legitimamente autorizado poderá
+          solicitar a disponibilização das informações operacionais pertinentes <strong>sem cobrança
+          adicional apenas pelo fornecimento dos dados</strong>, observadas identificação,
+          autorização institucional, sigilo e privacidade. O formato e a forma de entrega serão
+          acordados segundo as capacidades técnicas disponíveis e a segurança necessária;
+          não se promete ferramenta automática de exportação.
+        </p>
+        <p>
+          Essa recuperação não concede acesso a dados de outros workspaces, direito de alterar
+          registros sem permissão nem licença sobre o código do EMPROVEX. Documentos públicos
+          e registros administrativos podem estar sujeitos a obrigações próprias de conservação.
         </p>
       </LegalSection>
 
@@ -147,8 +206,9 @@ export default function TermsPage() {
       <LegalSection title="11. Serviços de terceiros">
         <p>
           O funcionamento do EMPROVEX depende de serviços de terceiros, incluindo Firebase/Google Cloud, Vercel e,
-          quando escolhidas pelo usuário, integrações Google e meios externos de pagamento como Mercado Pago e Pix.
-          Cada serviço de terceiro possui termos, políticas e condições próprias.
+          quando autorizadas pelo usuário, integrações Google Drive e Gmail, além do checkout da
+          InfinitePay. O Pix e o cartão são meios de pagamento do provedor, não provedores contratados
+          pelo EMPROVEX. Cada serviço de terceiro possui termos e políticas próprios.
         </p>
       </LegalSection>
 
@@ -179,8 +239,10 @@ export default function TermsPage() {
 
       <LegalSection title="15. Privacidade e proteção de dados">
         <p>
-          O tratamento de dados pessoais, dados operacionais, registros de auditoria e dados provenientes de serviços
-          integrados é descrito na Política de Privacidade do EMPROVEX, disponível publicamente no mesmo domínio.
+          O tratamento de dados pessoais, informações operacionais institucionais e registros técnicos
+          de segurança é descrito na <a href="/privacy" className="font-bold text-[#00288e] underline">Política
+          de Privacidade</a>. A solicitação de dados institucionais por responsável autorizado
+          não se confunde com o exercício individual dos direitos previstos na LGPD.
         </p>
       </LegalSection>
 

@@ -5,7 +5,7 @@ import { CURRENT_LEGAL_BUNDLE } from '../../lib/legalVersions';
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade | EMPROVEX',
-  description: 'Política de Privacidade do EMPROVEX para o SaaS, dados operacionais, billing, logs e integrações opcionais.',
+  description: 'Tratamento de dados pessoais, informações institucionais, pagamentos, segurança e integrações do EMPROVEX.',
 };
 
 export default function PrivacyPage() {
@@ -14,45 +14,52 @@ export default function PrivacyPage() {
       eyebrow="Privacidade e proteção de dados"
       title="Política de Privacidade"
       description="Esta Política explica como o EMPROVEX trata dados de usuários, dados operacionais, registros técnicos e dados autorizados por serviços integrados."
-      updatedAt="1º de outubro de 2026"
+      updatedAt="27 de outubro de 2026"
       version={CURRENT_LEGAL_BUNDLE.privacyVersion}
     >
       <LegalSection title="1. Sobre o EMPROVEX e esta Política">
         <p>
-          O EMPROVEX é uma plataforma oferecida como serviço para gestão logística e financeira de workspaces
-          previamente autorizados. Esta Política descreve as categorias de dados tratadas, as finalidades principais,
-          os fornecedores técnicos utilizados e os canais disponíveis para questões de privacidade.
+          O EMPROVEX é uma plataforma de gestão logística e financeira para Setores de Aprovisionamento
+          de Organizações Militares. Esta Política distingue dados pessoais dos usuários, informações
+          operacionais de caráter institucional e registros técnicos necessários à execução e
+          proteção do serviço, identificando finalidades, serviços externos e canais de solicitação.
         </p>
         <p>
-          O enquadramento jurídico de cada tratamento depende da finalidade, do contexto e da base legal aplicável. O
-          aceite dos Termos de Serviço não significa que todo tratamento de dados pessoais dependa de consentimento.
+          Os papéis de controlador e operador de dados e a base legal variam conforme a operação e
+          a relação institucional aplicável. Não se presume que cada militar seja proprietário
+          dos registros da Organização Militar, nem que o aceite contratual constitua consentimento
+          para todos os tratamentos pessoais.
         </p>
       </LegalSection>
 
       <LegalSection title="2. Dados de conta, workspace e operação">
         <p>
-          Conforme a funcionalidade utilizada, o EMPROVEX pode tratar e-mail, identificador técnico do Firebase,
-          vínculo com workspace e Unidade Gestora, estado da conta, registros de acesso, sessão e informações
-          necessárias para autenticação e isolamento entre tenants.
+          Conforme a funcionalidade utilizada, o EMPROVEX pode tratar nome, e-mail,
+          identificação funcional informada, identificador técnico do Firebase Authentication,
+          vínculo com workspace e Unidade Gestora, estado da conta, registros de sessão e acesso
+          e dados necessários à autenticação, autorização e separação dos ambientes.
         </p>
         <p>
-          Também podem ser tratados dados operacionais inseridos pelos usuários, incluindo informações de empenhos,
-          fornecedores, itens, notas fiscais, comissões de recebimento, cronogramas, relatórios, configurações do
-          setor, movimentações logísticas e documentos anexados à plataforma.
+          Os registros institucionais podem abranger empenhos, fornecedores, itens, notas fiscais,
+          comissões de recebimento, cronogramas, relatórios, configurações, controle de materiais,
+          operações da Central de Depósitos, movimentações móveis e documentos anexados ou gerados.
+          O armazenamento desses dados não transfere ao EMPROVEX sua titularidade institucional.
         </p>
       </LegalSection>
 
       <LegalSection title="3. Dados comerciais, logs, auditoria e backup">
         <p>
-          No contexto comercial, o EMPROVEX pode tratar metadados administrativos como situação de trial, estado da
-          assinatura, vencimento, confirmação de regularização, referência textual de pagamento quando necessária e
-          histórico de ações administrativas.
+          Na administração da assinatura por workspace, o EMPROVEX pode tratar situação de trial,
+          condição contratual, competências e valores devidos, referências de pedidos e transações,
+          estado de pagamento, conferências de regularização, exceções financeiras,
+          isenções e histórico administrativo pertinente.
         </p>
         <p>
-          Logs, eventos de auditoria, telemetria técnica, registros de segurança, status de backup e informações de
-          recuperação podem ser tratados para rastreabilidade, prevenção de abuso, diagnóstico, continuidade do serviço
-          e suporte. Backups podem conter dados já existentes no workspace e são protegidos segundo a arquitetura de
-          recuperação adotada.
+          Logs, trilhas de auditoria, telemetria técnica, registros de segurança e informações de
+          backup e recuperação podem ser utilizados para rastreabilidade, prevenção de abuso,
+          diagnóstico, suporte e continuidade. Cópias de segurança, quando mantidas, podem conter
+          registros operacionais e pessoais e obedecem às limitações e controles efetivamente
+          implementados; esta Política não constitui garantia de recuperação integral ou prazo fixo.
         </p>
       </LegalSection>
 
@@ -96,14 +103,17 @@ export default function PrivacyPage() {
 
       <LegalSection title="6. Pagamentos pela InfinitePay e regularização">
         <p>
-          O EMPROVEX disponibiliza checkout externo pela InfinitePay para mensalidades individuais, com Pix ou cartão,
-          quando habilitado. O EMPROVEX não armazena números de cartão, CVV ou credenciais de pagamento do cliente.
+          O EMPROVEX oferece checkout externo pela InfinitePay para mensalidades vinculadas
+          ao <strong>workspace/setor</strong>, com os meios habilitados pelo provedor, como Pix
+          ou cartão. O EMPROVEX não coleta diretamente número completo de cartão ou CVV,
+          nem utiliza o retorno do checkout como prova suficiente de quitação.
         </p>
         <p>
-          Quando o usuário acessa um provedor externo de pagamento, os dados fornecidos diretamente naquele ambiente
-          são tratados pelo respectivo provedor conforme seus próprios termos e políticas. O EMPROVEX pode conservar
-          metadados necessários para conciliação, incluindo referência do pedido, competência, valor, método de pagamento,
-          identificação técnica de transação, data de confirmação e histórico de solicitações de acesso temporário.
+          As informações informadas diretamente no checkout são tratadas pelo provedor
+          conforme sua política. O EMPROVEX pode conservar metadados de conciliação,
+          como pedido, competência, valor, meio utilizado, identificador técnico e momento
+          de confirmação, além de registros das solicitações de acesso temporário e
+          de tratamento de divergências ou cobranças duplicadas.
         </p>
       </LegalSection>
 
@@ -122,10 +132,11 @@ export default function PrivacyPage() {
 
       <LegalSection title="8. Segurança, isolamento e acesso">
         <p>
-          A plataforma aplica autenticação, vínculo de identidade, isolamento por workspace, regras de acesso no
-          Firestore e registros de auditoria compatíveis com os fluxos implementados. Contas externas utilizam
-          autenticação por e-mail e senha; o acesso fundador institucional utiliza Google conforme a configuração
-          vigente.
+          O serviço utiliza Firebase Authentication, isolamento lógico no Firestore por
+          workspace, verificação de permissões e registros de auditoria nos fluxos aplicáveis.
+          Contas externas usam e-mail e senha; o acesso fundador utiliza autenticação Google
+          segundo a configuração vigente. A autenticação não autoriza acesso aos dados
+          de outra Organização Militar ou Unidade Gestora.
         </p>
         <p>
           Nenhum mecanismo elimina completamente riscos de segurança. Incidentes relevantes são tratados conforme os
@@ -140,9 +151,11 @@ export default function PrivacyPage() {
           Prazos específicos podem variar conforme a categoria do dado e a finalidade.
         </p>
         <p>
-          Cancelamento comercial ou suspensão de acesso não significam exclusão automática de dados. Solicitações de
-          exclusão serão avaliadas separadamente, considerando direitos do titular e hipóteses legítimas ou obrigatórias
-          de conservação.
+          Suspensão financeira, cancelamento e exclusão são procedimentos distintos: a falta
+          de pagamento não autoriza reter coercitivamente informações do próprio setor nem
+          determina exclusão automática. Pedidos de exclusão são examinados segundo a LGPD,
+          as atribuições da instituição, as necessidades de auditoria e os deveres de
+          guarda, inclusive de documentos públicos e de cópias de segurança.
         </p>
         <p>
           Arquivos mantidos no Google Drive permanecem sujeitos à conta e às permissões do usuário, podendo exigir ação
@@ -159,6 +172,23 @@ export default function PrivacyPage() {
         <p>
           Alguns pedidos podem não resultar em exclusão imediata quando houver obrigação legal, necessidade de
           conservação ou outra hipótese legítima aplicável. O pedido será analisado conforme o contexto do tratamento.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="10.1. Recuperação de dados institucionais">
+        <p>
+          O responsável devidamente autorizado pela Organização Militar poderá solicitar a
+          disponibilização dos dados operacionais do próprio setor, inclusive após suspensão
+          ou encerramento comercial, sem cobrança adicional apenas por seu fornecimento.
+          A solicitação depende de comprovação adequada da identidade e da autorização,
+          respeita o sigilo, a privacidade e o isolamento entre workspaces e não implica
+          acesso às informações de outros setores.
+        </p>
+        <p>
+          A disponibilização seguirá procedimento e formato compatíveis com os recursos
+          existentes e as obrigações institucionais; não se declara a existência de exportação
+          automática. Os direitos pessoais de titulares, previstos na LGPD, são avaliados
+          separadamente dos pedidos administrativos sobre registros do setor.
         </p>
       </LegalSection>
 
