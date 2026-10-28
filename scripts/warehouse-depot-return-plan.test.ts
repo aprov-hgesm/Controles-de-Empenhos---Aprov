@@ -12,10 +12,10 @@ const rice='mat_'+'2'.repeat(32);
 const loc='loc_'+'3'.repeat(32);
 const sub='sub_'+'4'.repeat(32);
 const position={kind:'SUBPOSITION' as const,depotId:depot,locationId:loc,subpositionId:sub};
-const balance=(id='f',quantity=172,materialId=beans,at=position):DepotReturnBalance=>({
+const balance=(id='f',quantity=172,materialId=beans,at:DepotReturnBalance['position']=position):DepotReturnBalance=>({
   id:'locbal_'+id.repeat(64),materialId,quantity,position:at,
 });
-const lot=(id='c',quantity=150,materialId=beans,at=position):DepotReturnLot=>({
+const lot=(id='c',quantity=150,materialId=beans,at:DepotReturnLot['position']=position):DepotReturnLot=>({
   id:'lot_'+id.repeat(32),materialId,quantity,position:at,
   status:'active',code:'L-2026',expiresOn:'2027-10-20',
 });
