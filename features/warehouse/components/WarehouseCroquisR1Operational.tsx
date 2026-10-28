@@ -127,6 +127,10 @@ function depotArchiveError(error: unknown): string {
     WAREHOUSE_ARCHIVE_ACTIVE_LOT: 'Há referências de validade ativas neste depósito. Transfira o estoque vinculado antes de inativar ou excluir. Nenhuma alteração foi feita.',
     WAREHOUSE_ARCHIVE_CATALOG_LIMIT: 'O volume de registros exige uma operação assistida. O depósito não foi alterado.',
     WAREHOUSE_ARCHIVE_TOO_LARGE: 'Este depósito excede o limite de uma única transação. Nenhum registro foi alterado.',
+    WAREHOUSE_DEPOT_RETURN_LOT_EXCEEDS_STOCK: 'Há lotes cuja soma excede o estoque da posição. Nenhum dado foi alterado; é necessária reconciliação.',
+    WAREHOUSE_DEPOT_RETURN_LOT_WITHOUT_STOCK: 'Há referência de validade ativa sem saldo físico correspondente. Nenhum dado foi alterado; é necessária reconciliação.',
+    WAREHOUSE_DEPOT_RETURN_AGGREGATE_MISMATCH: 'O saldo agregado é menor do que o estoque que seria devolvido. Nenhum dado foi alterado.',
+    WAREHOUSE_DEPOT_RETURN_AGGREGATE_MISSING: 'Há saldo físico sem projeção agregada correspondente. Nenhum dado foi alterado.',
     WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE: 'Os dados mudaram durante a operação. Recarregue o depósito e tente novamente.',
     WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND: 'O depósito não foi encontrado. Atualize a página.',
     WAREHOUSE_SERVER_AUTH_REQUIRED: 'A sessão expirou. Faça login novamente para continuar.',
@@ -533,37 +537,42 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     finally {setDepotWorking(false);}
   }
 
-  async function deleteEmptyDepot() {
+  async function deleteDepotToReceiving() {
     if (!selectedDepot || depotWorking || saving) return;
     const hasUncommitted = pendingRemovedLocationIds.length > 0
       || Object.keys(pendingDuplicatedLocals).length > 0
       || newSubpositions.length > 0 || removedSubpositionIds.length > 0
       || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
-    // O rascunho não é dado persistido: é permitido descartá-lo ao excluir
-    // o depósito inteiro. A API decide de forma transacional se ele está vazio.
+    // O rascunho visual pode ser descartado. Saldos e lotes são primeiro
+    // devolvidos ao recebimento atomicamente pela API, depois o depósito sai.
     const discardNotice = hasUncommitted
       ? 'Há mudanças não salvas no croqui. Salve ou descarte as alterações. '
         + 'Se confirmar a exclusão agora, o rascunho será descartado (sem salvá-lo). '
       : '';
     if (!window.confirm(discardNotice
       + 'Excluir definitivamente o depósito ' + selectedDepot.code + '? '
-      + 'Esta opção só funciona se não houver saldo ou referência de validade ativa. '
-      + 'Locais e croquis sairão das telas operacionais, mas o histórico permanecerá para auditoria. '
-      + 'Não movimenta materiais automaticamente.')) return;
+      + 'Se houver materiais, serão devolvidos automaticamente à área de recebimento '
+      + 'para realocação posterior, preservando IDs, quantidades e validade. '
+      + 'Locais e croquis sairão das telas; o histórico permanecerá para auditoria.')) return;
     setDepotWorking(true);
     setMessage(null);
     try {
-      await archiveWarehouseStructure(workspaceId, {
+      const result=await warehouseServerCommand<{
+        ok:true;returnedItems:number;returnedQuantity:number
+      }>(workspaceId,'STRUCTURE_DELETE_TO_RECEIVING',{
         kind: 'DEPOT', id: selectedDepot.id, mode: 'DELETE', confirmCode: selectedDepot.code,
       });
       setShowDepotSettings(false);
       setDepotEdit(null);
       setSelectedDepotId('');
       await reloadBase();
-      setMessage('Depósito excluído do cadastro operacional. Estruturas ocultadas e histórico preservado; nome e código podem ser reutilizados.');
+      setMessage('Depósito excluído. '+result.returnedItems+' posição(ões), com '
+        +result.returnedQuantity+' unidade(s), devolvidas ao recebimento em Materiais pendentes. '
+        +'Histórico e IDs preservados; nome e código podem ser reutilizados.');
     } catch (error) {
       const code=messageFrom(error);
-      if(code==='WAREHOUSE_ARCHIVE_OCCUPIED'||code==='WAREHOUSE_ARCHIVE_ACTIVE_LOT'){
+      if(code==='WAREHOUSE_ARCHIVE_OCCUPIED'||code==='WAREHOUSE_ARCHIVE_ACTIVE_LOT'
+        ||code.startsWith('WAREHOUSE_DEPOT_RETURN_')){
         try {
           const diagnostic=await warehouseServerCommand<WarehouseDepotArchiveDiagnostic>(
             workspaceId,'STRUCTURE_ARCHIVE_DIAGNOSTICS',{depotId:selectedDepot.id});
@@ -1189,7 +1198,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </button>
             <button type="button" disabled={depotWorking || saving}
               data-testid="warehouse-croqui-delete-empty-depot"
-              onClick={()=>void deleteEmptyDepot()}
+              onClick={()=>void deleteDepotToReceiving()}
               className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-white px-4 py-2 text-xs font-extrabold text-rose-800 disabled:opacity-40">
               Excluir depósito vazio
             </button>
