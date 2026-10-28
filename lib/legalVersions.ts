@@ -1,23 +1,20 @@
 export const LEGAL_ACCEPTANCE_SCHEMA_VERSION = 'emprovex_legal_acceptance_v1';
 
-export const CURRENT_LEGAL_BUNDLE = Object.freeze({
+/**
+ * Historical immutable bundle. Already accepted records and current Rules are
+ * preserved; neither is rewritten or reinterpreted.
+ */
+export const LEGACY_LEGAL_BUNDLE = Object.freeze({
   legalBundleVersion: 'saas-r1-2026-10-01',
   termsVersion: 'terms-2026-10-01-r1',
   privacyVersion: 'privacy-2026-10-01-r1',
 });
 
 /**
- * PROPOSTA R4 — NÃO ATIVAR NESTA BRANCH.
- * As Firestore Rules em produção aceitam somente saas-r1-2026-10-01 e
- * seus termos/privacidade associados. A ativação de uma nova versão
- * exige coordenação expressa entre Rules, CURRENT_LEGAL_BUNDLE, gate
- * e tratamento do aceite dos usuários já cadastrados.
- *
- * Este objeto é uma proposta documental inerte. A fonte de verdade
- * do runtime continua sendo CURRENT_LEGAL_BUNDLE até a publicação
- * coordenada que for aprovada pelo Coordenador.
+ * R4 agreement uses an authenticated, create-only server endpoint.
+ * The published Firestore Rules remain unchanged and continue to protect R1.
  */
-export const PROPOSED_LEGAL_BUNDLE_R4 = Object.freeze({
+export const CURRENT_LEGAL_BUNDLE = Object.freeze({
   legalBundleVersion: 'saas-r4-2026-10-27',
   termsVersion: 'terms-2026-10-27-r2',
   privacyVersion: 'privacy-2026-10-27-r2',
