@@ -18,6 +18,9 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
   const [archived,setArchived]=useState<WarehouseDepotReturnPending[]>([]);
   const [selectedIds,setSelectedIds]=useState<string[]>([]);
   const [showArchived,setShowArchived]=useState(false);
+  const [expiryEdit,setExpiryEdit]=useState<{
+    returnId:string;lotId:string;expiresOn:string;reason:string
+  }|null>(null);
   const [catalog,setCatalog]=useState<Catalog>(emptyCatalog);
   const [selected,setSelected]=useState<Record<string,string>>({});
   const [loading,setLoading]=useState(true);
@@ -117,6 +120,21 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
       setMessage(result.changed+' registro(s) '+(action==='ARCHIVE'
         ?'retirados da fila. Estoque preservado.':'restaurados para realocação.'));
     }catch(error){setError(error instanceof Error?error.message:'Erro ao atualizar a fila.');}
+    finally{setWorking(null);}
+  };
+
+  const saveReturnExpiry=async()=>{
+    if(!expiryEdit||working||!expiryEdit.expiresOn||expiryEdit.reason.trim().length<5)return;
+    setWorking('expiry');setError(null);setMessage(null);
+    try{
+      await warehouseServerCommand(workspaceId,'DEPOT_RETURN_EXPIRY_UPDATE',{
+        returnId:expiryEdit.returnId,lotId:expiryEdit.lotId,
+        expiresOn:expiryEdit.expiresOn,reason:expiryEdit.reason.trim(),
+      });
+      setExpiryEdit(null);
+      await reload();
+      setMessage('Validade corrigida. A nova data acompanhará o material na realocação, e a alteração foi auditada.');
+    }catch(error){setError(error instanceof Error?error.message:'Falha ao corrigir validade.');}
     finally{setWorking(null);}
   };
 
