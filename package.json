@@ -248,7 +248,7 @@
     "test:mobile-outbound-unified": "node --test scripts/mobile-outbound-unified.test.mjs",
     "test:warehouse-validity-only": "node --test scripts/warehouse-validity-only-r2.test.mjs",
     "test:warehouse-bulk-material-identity": "npx --yes tsx --test scripts/warehouse-bulk-material-identity.test.ts",
-    "test:warehouse-bulk-resolution": "npx --yes tsx --test scripts/warehouse-bulk-resolution.test.ts scripts/warehouse-bulk-stock-r1.test.ts",
+    "test:warehouse-bulk-resolution": "npx --yes tsx --test scripts/warehouse-bulk-resolution.test.ts scripts/warehouse-bulk-stock-r1.test.ts scripts/warehouse-bulk-iam-read.test.ts",
     "verify:mobile-r1-outbound": "node scripts/verify-mobile-r1-outbound.mjs",
     "test:mobile-r1-position-check": "node --test scripts/mobile-r1-position-check.test.mjs",
     "verify:mobile-r1-position-check": "node scripts/verify-mobile-r1-position-check.mjs",
