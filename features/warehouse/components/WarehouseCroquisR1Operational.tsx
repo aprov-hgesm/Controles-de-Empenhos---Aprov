@@ -133,6 +133,23 @@ function depotArchiveError(error: unknown): string {
   return mapped[code] || code;
 }
 
+function croquiSaveError(error: unknown): string {
+  const code = messageFrom(error);
+  const mapped: Record<string, string> = {
+    WAREHOUSE_CROQUI_INPUT: 'Dados do croqui inconsistentes. Atualize o depósito e tente novamente. Se persistir, registre o código WAREHOUSE_CROQUI_INPUT.',
+    WAREHOUSE_CROQUI_OBJECT_LIMIT: 'O croqui excede o limite de 160 objetos. Divida a operação antes de salvar.',
+    WAREHOUSE_CROQUI_CREATE_LIMIT: 'Há mais de 12 locais novos no mesmo salvamento. Salve a criação em etapas.',
+    WAREHOUSE_CROQUI_SUBPOSITION_LIMIT: 'Há mais de 20 novas subposições. Salve a criação em etapas.',
+    WAREHOUSE_CROQUI_EDIT_LIMIT: 'Há mais de 30 edições de nome ou descrição. Salve em etapas.',
+    WAREHOUSE_CROQUI_TOO_LARGE: 'O número total de operações excede a capacidade de uma transação. Salve em etapas menores; nenhuma alteração foi aplicada.',
+    WAREHOUSE_CROQUI_CATALOG_LIMIT: 'Há registros demais para verificar a exclusão com segurança. Nenhuma alteração foi aplicada; é necessária uma operação assistida.',
+    WAREHOUSE_CROQUI_LOCATION_OCCUPIED: 'O local possui materiais em estoque. Transfira o saldo antes de inativar. Nenhuma alteração foi aplicada.',
+    WAREHOUSE_CROQUI_LOCATION_HAS_ACTIVE_LOT: 'O local possui referências de validade ativas. Resolva-as antes de inativar; nenhuma alteração foi aplicada.',
+    WAREHOUSE_CROQUI_VERSION_CONFLICT: 'O croqui foi atualizado por outra sessão. Recarregue o depósito antes de salvar.',
+  };
+  return mapped[code] || code;
+}
+
 function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayoutObject[] {
   return objects.map((item) => ({ ...item }));
 }
@@ -497,11 +514,14 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       || Object.keys(pendingDuplicatedLocals).length > 0
       || newSubpositions.length > 0 || removedSubpositionIds.length > 0
       || Object.keys(localEdits).length > 0 || draftHistory.past.length > 0;
-    if (hasUncommitted) {
-      setMessage('Salve ou descarte as alterações do croqui antes de excluir o depósito.');
-      return;
-    }
-    if (!window.confirm('Excluir definitivamente o depósito ' + selectedDepot.code + '? '
+    // O rascunho não é dado persistido: é permitido descartá-lo ao excluir
+    // o depósito inteiro. A API decide de forma transacional se ele está vazio.
+    const discardNotice = hasUncommitted
+      ? 'Há mudanças não salvas no croqui. Salve ou descarte as alterações. '
+        + 'Se confirmar a exclusão agora, o rascunho será descartado (sem salvá-lo). '
+      : '';
+    if (!window.confirm(discardNotice
+      + 'Excluir definitivamente o depósito ' + selectedDepot.code + '? '
       + 'Esta opção só funciona se não houver saldo ou referência de validade ativa. '
       + 'Locais e croquis sairão das telas operacionais, mas o histórico permanecerá para auditoria. '
       + 'Não movimenta materiais automaticamente.')) return;
@@ -1023,7 +1043,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       await reloadBase();
     }catch(error){
       setMessage('Salvamento não concluído. Nenhuma edição parcial deve ser aplicada. '
-        +messageFrom(error));
+        +croquiSaveError(error));
     }finally{setSaving(false);}
   }
 
@@ -1518,6 +1538,22 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                       if(selected)addLocalToCroqui(selected);
                     }}>
                     Recuperar cadastro antigo
+                  </button>
+                  <button type="button"
+                    data-testid="warehouse-croqui-archive-unmapped-legacy"
+                    className="rounded-lg border border-rose-300 bg-white px-3 py-2 font-bold text-rose-800"
+                    onClick={()=>{
+                      const selected=legacyUnmappedLocals.find(item=>item.location.id===legacyLocationId)
+                        ||legacyUnmappedLocals[0];
+                      if(!selected)return;
+                      if(!window.confirm('Inativar o local legado '+selected.location.code
+                        +' e suas subposições ao salvar? O servidor bloqueará a operação '
+                        +'se houver saldo ou referências de validade ativas.'))return;
+                      setPendingRemovedLocationIds(current=>[...new Set([...current,selected.location.id])]);
+                      setMessage(selected.location.code
+                        +' marcado para inativação. Salve o croqui para aplicar a mudança.');
+                    }}>
+                    Inativar local legado
                   </button>
                 </div>
               )}
