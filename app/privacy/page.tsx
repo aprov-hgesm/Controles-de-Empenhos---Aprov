@@ -27,8 +27,7 @@ export default function PrivacyPage() {
         <p>
           Os papéis de controlador e operador de dados e a base legal variam conforme a operação e
           a relação institucional aplicável. Não se presume que cada militar seja proprietário
-          dos registros da Organização Militar, nem que o aceite contratual constitua consentimento
-          para todos os tratamentos pessoais.
+          dos registros da Organização Militar, e o aceite dos Termos não significa que todo tratamento de dados pessoais dependa de consentimento.
         </p>
       </LegalSection>
 
@@ -55,11 +54,10 @@ export default function PrivacyPage() {
           isenções e histórico administrativo pertinente.
         </p>
         <p>
-          Logs, trilhas de auditoria, telemetria técnica, registros de segurança e informações de
-          backup e recuperação podem ser utilizados para rastreabilidade, prevenção de abuso,
-          diagnóstico, suporte e continuidade. Cópias de segurança, quando mantidas, podem conter
-          registros operacionais e pessoais e obedecem às limitações e controles efetivamente
-          implementados; esta Política não constitui garantia de recuperação integral ou prazo fixo.
+          Logs, eventos de auditoria, trilhas técnicas, telemetria e registros de segurança podem ser utilizados
+          para rastreabilidade, prevenção de abuso, diagnóstico, suporte e continuidade.
+          Backups podem conter registros operacionais e pessoais e obedecem às limitações e controles
+          efetivamente implementados; esta Política não constitui garantia de recuperação integral ou prazo fixo.
         </p>
       </LegalSection>
 
