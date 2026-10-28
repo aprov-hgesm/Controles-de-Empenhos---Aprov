@@ -44,4 +44,16 @@ expectReject(generateBulkStockTemplate([['Arroz integral','','Kg','','','Estante
 expectReject(Buffer.from('not an xlsx'),'STOCK_IMPORT_NOT_XLSX');
 expectReject(Buffer.alloc(STOCK_MAX_FILE_BYTES+1),'STOCK_IMPORT_TOO_LARGE');
 console.log('PASS: cabeçalho vazio, linha inválida, formato inválido e limite de upload');
+const absent=generateBulkStockTemplate([
+  ['Feijão vermelho','330','Kg','2027-05-12','','Estante','12','2','',''],
+  ['Feijão preto','172','Kg','2027-05-06','','Estante','12','2','',''],
+  ['Peixe congelado','15','Kg','2027-05-06','','Freezer','1','—','',''],
+  ['Polpa congelada','15','Kg','2027-05-06','','Freezer','1','N/A','',''],
+  ['Iogurte','10','Un','2027-05-06','','Geladeira','1','-','',''],
+]);
+const parsedAbsent=parseBulkStockWorkbook(absent);
+assert.deepEqual(parsedAbsent.map(row=>row.subposition),['2','2',null,null,null]);
+assert.equal(parsedAbsent[0].material,'Feijão vermelho');
+assert.equal(parsedAbsent[1].material,'Feijão preto');
+console.log('PASS: feijões distintos na mesma prateleira e marcadores de ausência em freezer/geladeira');
 console.log('WAREHOUSE BULK STOCK XLSX R1 PASS');
