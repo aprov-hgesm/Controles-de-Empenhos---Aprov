@@ -8,9 +8,9 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const config = JSON.parse(read('vercel.json'));
 
-test('Vercel desativa deploy automático em todas as branches', () => {
-  assert.equal(config.git?.deploymentEnabled, false,
-    'Deployments automáticos GitHub → Vercel devem permanecer desativados (D-127).');
+test('Vercel publica apenas main, sem autorizar outras branches', () => {
+  assert.deepEqual(config.git?.deploymentEnabled, {main:true,'*':false},
+    'Somente main pode disparar deployment Git para produção.');
   assert.equal(config.$schema, 'https://openapi.vercel.sh/vercel.json');
 });
 
@@ -32,5 +32,5 @@ test('GitHub Actions continua funcionando em PR, main e execução manual', () =
 test('Proteção por origem Git não recorre a ignored build step que consumiria cota', () => {
   assert.equal(config.ignoreCommand, undefined);
   assert.equal(config.buildCommand, undefined);
-  assert.equal(config.git?.deploymentEnabled, false);
+  assert.deepEqual(config.git?.deploymentEnabled, {main:true,'*':false});
 });
