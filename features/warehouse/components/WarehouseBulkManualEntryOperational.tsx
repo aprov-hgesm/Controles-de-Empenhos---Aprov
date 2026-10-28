@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Download, FileSpreadsheet, RefreshCw, TriangleAlert, Upload } from 'lucide-react';
 import { auth } from '../../../lib/firebase';
 import { bulkStockOperationId, type BulkStockPreflightLine } from '../../../lib/warehouse/bulkStockResolve';
-import type { WarehouseDepotListItem } from '../../../lib/warehouse/locationRepository';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
 
@@ -41,13 +40,13 @@ function readCheckpoint(key:string):Checkpoint {
 }
 
 export function WarehouseBulkManualEntryOperational({
-  workspaceId,depots,onImported,
+  workspaceId,onImported,
 }:{
   workspaceId:string;
-  depots:WarehouseDepotListItem[];
   onImported:()=>Promise<void>|void;
 }){
   const [depotId,setDepotId]=useState('');
+  const [depots,setDepots]=useState<Array<{id:string;name:string;code:string}>>([]);
   const [digest,setDigest]=useState('');
   const [filename,setFilename]=useState('');
   const [rows,setRows]=useState<ResolvedLine[]>([]);
@@ -68,8 +67,28 @@ export function WarehouseBulkManualEntryOperational({
   const lastPage=Math.max(0,Math.ceil(previewOrdered.length/70)-1);
   const page=Math.min(previewPage,lastPage);
   const previewRows=previewOrdered.slice(page*70,page*70+70);
-  const depot=depots.find(item=>item.depot.id===depotId)?.depot;
+  const depot=depots.find(item=>item.id===depotId);
   const canSend=Boolean(depot&&rows.length&&digest&&!invalid.length&&confirm&&!working);
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const response=await fetch('/api/central-depositos/bulk-stock?list=depots',{
+          headers:{authorization:'Bearer '+await token()},cache:'no-store',
+        });
+        const result=await response.json().catch(()=>null) as
+          {ok?:boolean;depots?:Array<{id:string;name:string;code:string}>;error?:string}|null;
+        if(!response.ok||!result?.ok||!Array.isArray(result.depots))
+          throw new Error(result?.error||'Não foi possível consultar os depósitos.');
+        if(!cancelled)setDepots(result.depots);
+      }catch(error){
+        if(!cancelled)setErrors('Falha ao consultar depósitos pelo servidor: '+
+          (error instanceof Error?error.message:String(error)));
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[workspaceId]);
+
 
   async function downloadTemplate(){
     setErrors(null);
@@ -193,7 +212,7 @@ export function WarehouseBulkManualEntryOperational({
           disabled={working}
           className="mt-1 block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs">
           <option value="">Selecione o depósito</option>
-          {depots.map(({depot:entry})=><option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}
+          {depots.map(entry=><option key={entry.id} value={entry.id}>{entry.code} · {entry.name}</option>)}
         </select>
       </label>
       <label className="text-xs font-bold text-slate-700">
