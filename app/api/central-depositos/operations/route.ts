@@ -27,7 +27,7 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
 import { warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer, warehouseDepotDeleteToReceivingServer } from '../../../../lib/server/warehouseLedgerAndArchive';
-import { listWarehouseDepotReturnsServer, allocateWarehouseDepotReturnServer, bulkWarehouseDepotReturnQueueServer } from '../../../../lib/server/warehouseDepotReturnReadAndAllocate';
+import { listWarehouseDepotReturnsServer, allocateWarehouseDepotReturnServer, bulkWarehouseDepotReturnQueueServer, updateWarehouseDepotReturnExpiryServer } from '../../../../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseCroquiReadServer } from '../../../../lib/server/warehouseCroquiRead';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
@@ -194,6 +194,9 @@ export async function POST(request: NextRequest) {
         break;
       case 'DEPOT_RETURN_ALLOCATE':
         result=await allocateWarehouseDepotReturnServer(access,body.input);
+        break;
+      case 'DEPOT_RETURN_EXPIRY_UPDATE':
+        result=await updateWarehouseDepotReturnExpiryServer(access,body.input);
         break;
       case 'QUEUE_INDEX_UPSERT':
         result=await warehouseQueueIndexServer(access,'UPSERT',body.input);
