@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, limit, query, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, setDoc, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
 
@@ -39,24 +39,40 @@ export async function listWarehouseMaterials(
   maxResults = 250
 ): Promise<WarehouseMaterial[]> {
   const path = warehouseDomainPath(workspaceId, 'materials');
+  const max = Math.max(1, Math.min(maxResults, 5000));
 
   try {
-    const snapshot = await getDocs(
-      query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
-    );
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return snapshot.docs.map((item) =>
-      validateForWorkspace(
-        workspaceId,
-        warehouseCanonicalMaterialReadInput(
-          item.id,
-          item.data() as Record<string, unknown>
-        )
-      )
-    );
+    const materials: WarehouseMaterial[] = [];
+    let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
+    while (materials.length < max) {
+      const pageSize = Math.min(500, max - materials.length);
+      const base = collection(db, path);
+      const snapshot = await getDocs(cursor
+        ? query(base, startAfter(cursor), limit(pageSize))
+        : query(base, limit(pageSize)));
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      for (const item of snapshot.docs) {
+        materials.push(validateForWorkspace(workspaceId,
+          warehouseCanonicalMaterialReadInput(
+            item.id, item.data() as Record<string, unknown>
+          )
+        ));
+      }
+      if (snapshot.size < pageSize) return materials;
+      cursor = snapshot.docs[snapshot.docs.length - 1];
+    }
+    // Somente a leitura ampliada do importador precisa garantir cobertura total.
+    if (maxResults > 500 && cursor) {
+      const additional = await getDocs(query(collection(db, path), startAfter(cursor), limit(1)));
+      recordWarehouseDocumentReads(workspaceId, additional.size);
+      if (!additional.empty) throw new Error('WAREHOUSE_MATERIAL_CATALOG_INCOMPLETE');
+    }
+    return materials;
   } catch (error) {
+    if (error instanceof Error && error.message === 'WAREHOUSE_MATERIAL_CATALOG_INCOMPLETE')
+      throw error;
     handleFirestoreError(error, OperationType.LIST, path);
-    return [];
+    throw error;
   }
 }
 
