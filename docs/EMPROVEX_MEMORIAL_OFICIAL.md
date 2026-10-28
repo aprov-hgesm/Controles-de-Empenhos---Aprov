@@ -1,6 +1,20 @@
 # EMPROVEX — Memorial Oficial
 
 
+## ESTADO VIGENTE — SAAS MATURITY R1 FINALIZADO EM CÓDIGO (27/10/2026, BRT)
+
+> **Este checkpoint prevalece sobre o registro anterior “WORKERS 1/2” que descrevia W1 em DRAFT e a certificação de backups ainda não comprovada.** Integração no GitHub não equivale a nova publicação. **A produção do domínio continua na versão Comercial R4 anteriormente confirmada até uma promoção manual do fundador.**
+
+- **Worker 1 concluído e INTEGRADO**: [PR #402](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/402), squash **`cc1909d2a84a652ccbb849298668569df733459d`**. Termos e Privacidade atualizados para Comercial R4, política de dados do cliente, links institucionais e aceite jurídico por versão R4 (`saas-r4-2026-10-27`). O aceite R4 é realizado pela API autenticada `/api/legal-acceptance` com token Firebase verificado, vínculo de workspace/identidade e criação imutável no Firestore via credencial administrativa do backend existente. Aceites R1 permanecem históricos; o aceite financeiro progressivo é independente. **`firestore.rules` NÃO foi alterado; não publicar/reaplicar Rules.** Verificações SAAS-DL Legal Validation (incluindo build e testes legados de Rules), Fast CI, Core Protection, W4 e InfinitePay Portal Integration: SUCCESS no SHA do PR.
+- **Worker 2 concluído e INTEGRADO**: [PR #403](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/403), squash **`4f8c7a2ef1b51af70f2b7928085862e8ab3b1bbe`**, com proteção do `restore-inspect` e runbooks; validações de código da frente PASS.
+- **Evidência Google Cloud fornecida pelo fundador em 27/10**: ambos os bancos (`ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1` e `emprovex-warehouse`) em `us-east1`, com PITR e delete protection ativos, agendamentos diários de retenção 14 semanas. Listagem real retornou **25 backups READY por banco (50 no total)**. Últimos snapshots READY de 27/10/2026 às 11:03:04Z no principal (`ccd1adc6-a15a-4a4a-adab-c0fbf2e88d32`) e 20:11:53Z no Warehouse (`352c3b02-2b70-45bc-b401-83b77af29ec6`).
+- **Restauração real histórica DO WAREHOUSE comprovada no plano técnico**: operação Google Cloud `VBGHTglagY-cTVmjSXHn4RAqMXRzYWUtc3UIIgoQHho`, banco isolado `emprovex-restore-warehouse-2026-10-04`, backup snapshot 03/10/2026, iniciou 04/10 às 05:16:14Z, terminou às 05:25:24Z, `SUCCESSFUL` / `COMPLETED`; durou cerca de 9min10s. **Não confundir com RTO medido nem com certificação de integridade dos dados; recuperação isolada do banco principal também não foi executada neste ciclo.** Aplicar GOV-SIMP-01: sem nova restauração desnecessária agora.
+- **Release futuro**: publicar o código jurídico R4 e sua API no MESMO deployment, **sem alterações em Rules, IAM, preços, billing ou bancos**, usando `docs/EMPROVEX_RELEASE_POWERSHELL.md`. Não tentar ativar apenas `CURRENT_LEGAL_BUNDLE` isoladamente. Git deployment está desabilitado; publicação Vercel depende de procedimento manual do proprietário, com smoke do novo aceite R4 e decisão de promoção. Não existe prova de deployment deste SHA neste checkpoint.
+
+---
+
+
+
 ## CHECKPOINT SAAS MATURITY R1 — WORKERS 1/2 (27/10/2026, após Comercial R4)
 
 > **Atualização de engenharia, SEM publicação no domínio**. A versão de produção confirmada permanece Comercial R4 `dpl_7f1s17cuDKevJYA5DLHd2EhqW7G8` até nova promoção explícita pelo fundador. Alterações GitHub `main` não fazem deploy automaticamente.
