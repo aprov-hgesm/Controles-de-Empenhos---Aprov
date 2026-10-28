@@ -32,10 +32,11 @@ import { adjustWarehouseInventoryServer } from '../lib/server/warehouseInventory
 import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateServer } from '../lib/server/warehouseRemainingWrites';
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
-import { warehouseLedgerMovementServer,warehouseStructureArchiveServer } from '../lib/server/warehouseLedgerAndArchive';
+import { warehouseLedgerMovementServer,warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer } from '../lib/server/warehouseLedgerAndArchive';
 import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
+import { createWarehouseLocationBalanceId } from '../lib/warehouse/location';
 
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
@@ -893,6 +894,31 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,balanceBeforeBulk,
     'entrada antiga não deve receber saldo da importação');
   console.log('PASS: Excel gera material novo por arquivo, compartilha dentro dele e rejeita ID antigo');
+
+  // Diagnóstico de exclusão: local legado órfão com saldo positivo não pode
+  // sumir silenciosamente por não aparecer no Croqui.
+  const orphanPosition={kind:'LOCATION' as const,depotId:dep,
+    locationId:'loc_'+'d'.repeat(32),subpositionId:null};
+  const orphanId=await createWarehouseLocationBalanceId(
+    workspaceId,first.material.id,orphanPosition);
+  await setDoc(ref('locationBalances',orphanId),{
+    schemaVersion:'warehouse_location_balance_v1',id:orphanId,
+    workspaceId,ug,materialId:first.material.id,
+    position:orphanPosition,quantity:1,revision:1,
+    lastMovementId:first.entry.movement.id,
+  });
+  const diagnosis=await diagnoseWarehouseDepotArchiveServer(access,{depotId:dep});
+  assert.ok(diagnosis.positiveBalanceCount>0);
+  assert.ok(diagnosis.activeLotCount>0);
+  assert.ok(diagnosis.blockers.some(row=>row.kind==='BALANCE'
+    &&row.recordId===orphanId&&row.positionStatus==='MISSING'&&row.quantity===1));
+  assert.ok(diagnosis.blockers.some(row=>row.kind==='BALANCE'
+    &&row.materialId===first.material.id&&row.positionStatus==='ACTIVE'));
+  await assert.rejects(()=>warehouseStructureArchiveServer(access,{
+    kind:'DEPOT',id:dep,mode:'DELETE',confirmCode:'DEP-MANUAL',
+  }),/WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.equal((await getDoc(ref('locationBalances',orphanId))).data()?.quantity,1);
+  console.log('PASS: exclusão segura mantém saldo órfão e identifica bloqueadores legados sem escrita');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
