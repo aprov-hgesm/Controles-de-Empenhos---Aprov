@@ -86,7 +86,8 @@ function documentName(identity: { workspaceId: string; uid: string }) {
     + '/legalAcceptances/' + encodeURIComponent(legalAcceptanceDocumentId(identity.uid));
 }
 
-async function readAcceptance(token: string, document: string) {
+async function readAcceptance(token: string, document: string,
+  identity: { workspaceId: string; uid: string; email: string; ug: string }) {
   const response = await fetch(document, {
     headers: { Authorization: 'Bearer ' + token }, cache: 'no-store',
   });
@@ -95,7 +96,11 @@ async function readAcceptance(token: string, document: string) {
 
   const payload = await response.json() as { fields?: Record<string, { stringValue?: string }> };
   const fields = payload.fields;
-  return valueOf(fields, 'legalBundleVersion') === CURRENT_LEGAL_BUNDLE.legalBundleVersion
+  return valueOf(fields, 'uid') === identity.uid
+    && valueOf(fields, 'email') === identity.email
+    && valueOf(fields, 'workspaceId') === identity.workspaceId
+    && valueOf(fields, 'ug') === identity.ug
+    && valueOf(fields, 'legalBundleVersion') === CURRENT_LEGAL_BUNDLE.legalBundleVersion
     && valueOf(fields, 'termsVersion') === CURRENT_LEGAL_BUNDLE.termsVersion
     && valueOf(fields, 'privacyVersion') === CURRENT_LEGAL_BUNDLE.privacyVersion
     && valueOf(fields, 'schemaVersion') === LEGAL_ACCEPTANCE_SCHEMA_VERSION;
@@ -144,7 +149,7 @@ async function handler(request: Request, write: boolean) {
     const identity = await authorize(request, workspaceId);
     const adminToken = await getGoogleAccessToken();
     const document = documentName(identity);
-    if (await readAcceptance(adminToken, document)) {
+    if (await readAcceptance(adminToken, document, identity)) {
       return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
     }
     if (!write) return answer({ accepted: false });
@@ -166,7 +171,7 @@ async function handler(request: Request, write: boolean) {
     if (!response.ok) {
       // Two browser tabs may accept simultaneously; accept only the matching
       // immutable document, never overwrite it.
-      if ([400, 409, 412].includes(response.status) && await readAcceptance(adminToken, document)) {
+      if ([400, 409, 412].includes(response.status) && await readAcceptance(adminToken, document, identity)) {
         return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
       }
       throw new LegalFailure('LEGAL_ACCEPTANCE_SAVE_FAILED', 503);
