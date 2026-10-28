@@ -211,6 +211,39 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
                 ?row.lotReferences.length+' referência(s) de lote/validade preservada(s)'
                 :'Material sem lote de validade vinculado'}
             </p>
+            {row.lotReferences.map(lot=><div key={lot.id}
+              className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>Validade: <strong>{lot.expiresOn?lot.expiresOn.split('-').reverse().join('/'):'Não informada'}</strong></span>
+                <button type="button" disabled={!!working}
+                  onClick={()=>setExpiryEdit({returnId:row.id,lotId:lot.id,
+                    expiresOn:lot.expiresOn||'',reason:''})}
+                  className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-[10px] font-bold text-blue-900 disabled:opacity-40">
+                  Editar validade
+                </button>
+              </div>
+              {expiryEdit?.returnId===row.id&&expiryEdit?.lotId===lot.id&&
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="date" value={expiryEdit.expiresOn} disabled={!!working}
+                    onChange={event=>setExpiryEdit(current=>current?{
+                      ...current,expiresOn:event.target.value}:null)}
+                    aria-label="Nova validade do material devolvido"
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1" />
+                  <input value={expiryEdit.reason} maxLength={180} disabled={!!working}
+                    placeholder="Justificativa documental"
+                    onChange={event=>setExpiryEdit(current=>current?{
+                      ...current,reason:event.target.value}:null)}
+                    aria-label="Justificativa da nova validade"
+                    className="min-w-44 rounded-lg border border-slate-300 bg-white px-2 py-1" />
+                  <button type="button" onClick={()=>void saveReturnExpiry()}
+                    disabled={!!working||!expiryEdit.expiresOn||expiryEdit.reason.trim().length<5}
+                    className="rounded-lg bg-blue-900 px-2 py-1 text-xs font-bold text-white disabled:opacity-40">
+                    Salvar
+                  </button>
+                  <button type="button" onClick={()=>setExpiryEdit(null)}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs">Cancelar</button>
+                </div>}
+            </div>)}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Destino
