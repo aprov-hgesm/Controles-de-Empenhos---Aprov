@@ -78,14 +78,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 function getSize(value: number, maxValue: number): number {
   if (value <= 0 || maxValue <= 0) return 4.8;
   const normalized = Math.log10(value + 1) / Math.log10(maxValue + 1);
@@ -461,37 +453,6 @@ export function InicioConstellation({
     );
   }, [hoveredNode, nodes]);
 
-  const counts = useMemo(
-    () => ({
-      regular: nodes.filter(
-        (node) =>
-          (node.invoicePendingStage ?? 'none') === 'none'
-          && node.severity === 'normal'
-          && node.stage !== 'closed'
-      ).length,
-      attention: nodes.filter(
-        (node) =>
-          (node.invoicePendingStage ?? 'none') === 'none'
-          && node.severity === 'attention'
-      ).length,
-      critical: nodes.filter(
-        (node) =>
-          (node.invoicePendingStage ?? 'none') === 'none'
-          && node.severity === 'critical'
-      ).length,
-      commissionPending: nodes.filter((node) => node.invoicePendingStage === 'commission').length,
-      treasuryPending: nodes.filter((node) => node.invoicePendingStage === 'treasury').length,
-      closed: nodes.filter(
-        (node) =>
-          (node.invoicePendingStage ?? 'none') === 'none'
-          && node.stage === 'closed'
-      ).length,
-    }),
-    [nodes]
-  );
-
-  const totalEmpenhos = snapshot?.metrics.totalEmpenhos ?? 0;
-
   return (
     <div
       ref={rootRef}
@@ -597,20 +558,6 @@ export function InicioConstellation({
                 </span>
               )}
               <span className={styles.tooltipSupplier}>{node.supplier}</span>
-              <span className={styles.metrics}>
-                <span>
-                  <small>Valor</small>
-                  <b>{formatCurrency(node.value)}</b>
-                </span>
-                <span>
-                  <small>Saldo</small>
-                  <b>{formatCurrency(node.balance)}</b>
-                </span>
-                <span>
-                  <small>Execução</small>
-                  <b>{node.receivedPct}%</b>
-                </span>
-              </span>
               {relatedNodes.length > 0 && isHovered && (
                 <em>{relatedNodes.length} outro(s) empenho(s) deste fornecedor</em>
               )}
@@ -620,23 +567,6 @@ export function InicioConstellation({
         );
       })}
 
-      <div
-        className={styles.legend}
-        data-testid="inicio-constellation-legend"
-        aria-label="Legenda da constelação"
-      >
-        <span><i data-invoice-pending="commission" /> NF → Comissão <b>{counts.commissionPending}</b></span>
-        <span><i data-invoice-pending="treasury" /> NF → Tesouraria <b>{counts.treasuryPending}</b></span>
-        <span><i data-severity="normal" /> Regular <b>{counts.regular}</b></span>
-        <span><i data-severity="attention" /> Atenção <b>{counts.attention}</b></span>
-        <span><i data-severity="critical" /> Crítico <b>{counts.critical}</b></span>
-        <span><i data-stage="closed" /> Encerrado <b>{counts.closed}</b></span>
-        {totalEmpenhos > nodes.length && (
-          <span className={styles.densityNote}>
-            {nodes.length} de {totalEmpenhos} estrelas em primeiro plano
-          </span>
-        )}
-      </div>
     </div>
   );
 }
