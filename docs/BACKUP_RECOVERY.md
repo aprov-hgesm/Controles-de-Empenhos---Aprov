@@ -330,3 +330,20 @@ Runbooks:
 - `docs/RECUPERACAO_FIRESTORE.md`;
 - `docs/SAAS_R1_OPERACAO_RECUPERACAO.md`;
 - `docs/SAAS_R1_UPTIME_MONITORING.md`.
+
+
+---
+
+## SAAS MATURITY R1 — Quatro incidentes e propriedade dos dados (27/10/2026)
+
+**Status:** procedimentos elaborados estaticamente, sem testes, restore ou verificação real de backups.
+
+**1. Exclusão isolada de uma UG:** se foram perdidos empenhos, invoices, comissoes, cronogramas, alerts ou settings restauráveis, o responsável autenticado da própria UG conecta seu Drive, seleciona backup com SHA-256, executa simulação e restaura apenas registros ausentes. Não sobrescrever existentes, não oferecer bypass administrativo para ler dados de outra UG. Se o backup lógico não existir, estudar backup nativo em banco novo e reconciliação do workspace específico, sem substituir dados de todas as OMs; arquivos PDF são responsabilidade do Drive original.
+
+**2. Perda/corrupção do banco principal:** localizar backup nativo READY do banco ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1, inspecionar, restaurar em banco isolado somente com autorização e confrontar diretório global, empenhos, notas, comissões, cronogramas, alertas e vínculos. Recriar Rules, TTL, IAM e integrações quando necessário. Não conectar diretamente banco isolado a clientes nem destruir/reutilizar banco produtivo. Sem READY, avaliar PITR disponível, backups lógicos dos setores e suporte Google Cloud, sem garantia de RPO/RTO.
+
+**3. Perda/corrupção da Central:** a árvore warehouse/{workspaceId} do banco emprovex-warehouse não integra o backup lógico do Drive. Buscar backup nativo READY próprio, restaurar isoladamente e confrontar materiais, saldos, saldos locais, movimentações/ledger, entradas, saídas, retiradas, consumos, devoluções, inventários, validade e layouts persistidos 2D/3D. Proibido escrever diretamente saldo/movimento ou mesclar OMs para fazer reparo. Sem READY, preservar evidências e verificar PITR e fontes institucionais autorizadas.
+
+**4. Firebase Authentication/identidades:** o backup manual de Auth da conta fundadora salva apenas metadados (UID, e-mail, providers, vínculos, índice UG e diretório), não hashes de senha, tokens ou segredos. Reconstruir contas sob autenticação/controle administrativo e exigir reset de senha onde cabível. Backup do banco Firestore não recria por si só Firebase Auth. Sem arquivo Auth íntegro, reconciliar inventário com registros institucionais e procedimento oficial; nunca conceder acesso entre workspaces.
+
+**Regras gerais:** interromper a causa do incidente, preservar registros, identificar origem e impacto, usar fonte com integridade verificada, fazer recuperação não destrutiva, validar dados reais após a operação e registrar evidências saneadas. Consultar docs/RECUPERACAO_FIRESTORE.md e docs/saas-maturity/W2_RECOVERY_EVIDENCE_TEMPLATE.md. Os dados próprios do setor são recuperáveis por representante legitimamente autorizado mesmo após vencimento da assinatura, sem cobrança adicional pela entrega legítima, respeitando autenticação, isolamento e confidencialidade. Isso não habilita funcionalidades pagas nem uso de credenciais de terceiros. RPO 24 horas e RTO 4 horas são metas internas NÃO comprovadas. Não ampliar infraestrutura de backup por preferência técnica.
