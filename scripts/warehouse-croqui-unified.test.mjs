@@ -342,3 +342,64 @@ test('subposição pode ser criada, renomeada e inativada em versões posteriore
   assert.equal(store.rowsOf('locations').find(x=>x.data.id===parent).data.name,'Estante reformada');
   assert.equal(store.rowsOf('locations').filter(x=>x.data.code==='EST-01-03').length,1);
 });
+
+
+test('inativa mais de 12 locais legados vazios numa única transação',async()=>{
+  const store=createStore();
+  const ids=Array.from({length:13},(_,i)=>'loc_'+(i+1).toString(16).padStart(32,'0'));
+  for(const [index,id] of ids.entries())store.docs.set(key('locations',id),{
+    id,workspaceId:access.workspaceId,ug:access.ug,depotId,
+    kind:'LOCAL',parentLocationId:null,code:'EST-'+String(index+1).padStart(2,'0'),
+    name:'Legado '+(index+1),description:null,status:'active',createdBy:'operator',updatedBy:'operator',
+  });
+  const result=await store.apply(access,input({
+    objects:[],createLocals:[],archiveLocationIds:ids,
+  }));
+  assert.equal(result.layout.version,1);
+  assert.equal(result.archivedLocationIds.length,13);
+  assert.ok(ids.every(id=>store.docs.get(key('locations',id)).status==='inactive'));
+});
+
+test('inativa mais de 20 subposições legadas sem barrar pelo antigo teto',async()=>{
+  const store=createStore();
+  const ids=Array.from({length:21},(_,i)=>'sub_'+(i+1).toString(16).padStart(32,'0'));
+  for(const [index,id] of ids.entries())store.docs.set(key('locations',id),{
+    id,workspaceId:access.workspaceId,ug:access.ug,depotId,
+    kind:'SUBPOSITION',parentLocationId:localId,code:'EST-01-'+String(index+1).padStart(2,'0'),
+    name:'Subposição legada '+(index+1),description:null,status:'active',
+    createdBy:'operator',updatedBy:'operator',
+  });
+  const result=await store.apply(access,input({
+    objects:[],createLocals:[],archiveSubpositionIds:ids,
+  }));
+  assert.equal(result.archivedLocationIds.length,21);
+  assert.ok(ids.every(id=>store.docs.get(key('locations',id)).status==='inactive'));
+});
+
+test('inativação em lote com saldo bloqueia tudo mesmo acima do limite antigo',async()=>{
+  const store=createStore();
+  const ids=Array.from({length:13},(_,i)=>'loc_'+(i+1).toString(16).padStart(32,'0'));
+  for(const [index,id] of ids.entries())store.docs.set(key('locations',id),{
+    id,workspaceId:access.workspaceId,ug:access.ug,depotId,
+    kind:'LOCAL',parentLocationId:null,code:'EST-'+String(index+1).padStart(2,'0'),
+    name:'Legado '+(index+1),description:null,status:'active',
+    createdBy:'operator',updatedBy:'operator',
+  });
+  store.docs.set(key('locationBalances',fixed('lb_','e')),{
+    id:fixed('lb_','e'),workspaceId:access.workspaceId,ug:access.ug,quantity:1,
+    position:{kind:'LOCATION',depotId,locationId:ids[12],subpositionId:null},
+  });
+  await assert.rejects(()=>store.apply(access,input({
+    objects:[],createLocals:[],archiveLocationIds:ids,
+  })),/WAREHOUSE_CROQUI_LOCATION_OCCUPIED/);
+  assert.equal(store.rowsOf('layouts').length,0);
+  assert.ok(ids.every(id=>store.docs.get(key('locations',id)).status==='active'));
+});
+
+test('o usuário pode inativar local sem desenho e descartar rascunho ao excluir depósito',()=>{
+  assert.match(uiSource,/warehouse-croqui-archive-unmapped-legacy/);
+  assert.match(uiSource,/setPendingRemovedLocationIds\(current=>/);
+  assert.match(uiSource,/const discardNotice = hasUncommitted/);
+  assert.match(uiSource,/rascunho será descartado/);
+  assert.match(uiSource,/WAREHOUSE_CROQUI_CATALOG_LIMIT/);
+});
