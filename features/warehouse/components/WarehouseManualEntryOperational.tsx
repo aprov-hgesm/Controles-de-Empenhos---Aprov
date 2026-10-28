@@ -553,7 +553,6 @@ export function WarehouseManualEntryOperational({
 
       <WarehouseBulkManualEntryOperational
         workspaceId={workspaceId}
-        depots={depots}
         onImported={load}
       />
 
