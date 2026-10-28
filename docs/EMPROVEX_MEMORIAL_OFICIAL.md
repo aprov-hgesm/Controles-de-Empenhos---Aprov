@@ -1,6 +1,23 @@
 # EMPROVEX — Memorial Oficial
 
 
+## PUBLICAÇÃO CONFIRMADA — NOVO NÚCLEO INÍCIO + SAAS MATURITY R1 (27/10/2026 23h46 BRT / 28/10/2026 02h46 UTC)
+
+> **ESTE É O ESTADO PRODUTIVO MAIS RECENTE COMPROVADO NESTE REGISTRO.** Prevalece sobre os checkpoints abaixo que afirmam que a produção ainda serve apenas a release Comercial R4 anterior, ou que o jurídico R4 ainda não foi publicado. **Não repetir build, deploy ou promoção deste SHA/deployment.** A criação deste registro na `main` é somente documental, pois `vercel.json` desabilita Git deployment.
+
+- **PR visual integrado:** [#404](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/404), squash e **SHA exato da fonte publicada** `1e3dd437dbaeb3c039e0b6f8e1fd77545fa7114b`. Na aba Início, Orb antigo substituído pelo logotipo original `public/emprovex-logo (2).png`, apresentado com máscara transparente `public/emprovex-logo-core-mask.svg`, órbitas/animações CSS leves e resumo de pendências/avisos sob hover ou foco. Sem novos listeners/consultas ao Firestore; remove componentes orbitais legados. Essa mesma `main` incorpora o jurídico Comercial R4 do PR #402 e a proteção de recuperação do PR #403, além das demais funcionalidades vigentes.
+- **Projeto/equipe:** `aprov-hgesms-projects/controles-de-empenhos-aprov`, ID `prj_DZ2y10DUaXrcHoRMaZ58FkTCvOHB`. Runtime de projeto Node.js 24.x, Next.js, equipe Vercel autenticada pelo fundador via PowerShell; conector Vercel do chat sem autorização ao escopo. O GitHub não publica automaticamente (`git.deploymentEnabled=false`).
+- **Deployment anterior verificado imediatamente antes:** `dpl_Ff7WZwrmsJgA1CRF6nzAPydcye1A`, URL `https://controles-de-empenhos-aprov-9ssw5rjyc-aprov-hgesms-projects.vercel.app`, domínio `https://emprovex.com.br` em `Ready` antes desta promoção.
+- **Novo deployment imutável:** `dpl_68MA69rfotu5GGLomvodHExG9S4L`, URL `https://controles-de-empenhos-aprov-ddrsmtqlm-aprov-hgesms-projects.vercel.app`; `target production`, `status Ready`. Build remoto: 1m18s; pós-build: 49s; consumo exibido: 6 CPU-minutos em 2 vCPU. Fonte exportada por `git archive` da `main` no SHA acima para `D:\EMPROVEX-RELEASE-1e3dd437dbae\deploy`; publicação por `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`. **Um único deploy deste SHA**.
+- **Evidência antes da promoção:** `vercel.cmd inspect <URL_NOVA> --scope aprov-hgesms-projects` confirmou ID, `production` e `Ready`. `vercel.cmd curl /api/health --deployment <URL_NOVA> --scope aprov-hgesms-projects` retornou `{"status":"ok","timestamp":"2026-10-28T02:45:13.786Z"}`. A versão anterior também estava saudável, mas não confundir esse health antigo com a nova release.
+- **PROMOÇÃO REAL E PROVA DEFINITIVA:** `vercel.cmd promote <URL_NOVA> --yes --scope aprov-hgesms-projects` retornou **`Success!`** para exatamente `dpl_68MA69rfotu5GGLomvodHExG9S4L`. Depois, `vercel.cmd inspect https://emprovex.com.br --scope aprov-hgesms-projects` retornou **exatamente o mesmo ID**, `target production`, `status Ready` e a URL individual nova. **PUBLICAÇÃO DO DOMÍNIO = CONFIRMADA**. Não repetir `promote` nem criar outro deployment para esta release.
+- **Certificação conhecida / limites:** Fast CI, Core Protection e Domain CI R2 do head do PR #404 concluíram `success`; TypeScript no Application CI passou. Application CI desse HEAD **falhou** no grupo legado G10: `verify:inicio-slow-planet-orbits` ainda tentava abrir o arquivo removido `InicioOrbitSystem.module.css`; outros gates legados foram consequência e o build do workflow ficou `skipped`. A compilação da Vercel, entretanto, terminou em `Ready`, e o fundador já havia aprovado a aparência no localhost. **Não registrar Application CI PASS nem declarar smoke autenticado integral, aceite jurídico R4 real, fluxos de cobrança, operações Warehouse ou backup/restauração testados em produção com base apenas no health básico.**
+- **Escopo e continuidade:** deploy de código não publicou `firestore.rules`, não alterou IAM, dados, preços nem configurações de bancos. Para uma próxima release, usar `docs/EMPROVEX_RELEASE_POWERSHELL.md`: um SHA novo certificado, um novo staged, verificação, promoção do mesmo ID; inspecionar domínio antes de qualquer retry. Se houver erro do núcleo ou das áreas jurídicas, fazer correção em novo PR/SHA, nunca redeploy desnecessário do SHA já promovido.
+
+---
+
+
+
 ## ESTADO VIGENTE — SAAS MATURITY R1 FINALIZADO EM CÓDIGO (27/10/2026, BRT)
 
 > **Este checkpoint prevalece sobre o registro anterior “WORKERS 1/2” que descrevia W1 em DRAFT e a certificação de backups ainda não comprovada.** Integração no GitHub não equivale a nova publicação. **A produção do domínio continua na versão Comercial R4 anteriormente confirmada até uma promoção manual do fundador.**
