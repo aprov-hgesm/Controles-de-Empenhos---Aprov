@@ -47,6 +47,8 @@ import type { WarehouseInspectionLotState } from './WarehouseLocationInspection'
 import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { applyWarehouseCroquiStructure } from '../../../lib/warehouse/croquiStructureRepository';
+import { warehouseServerCommand } from '../../../lib/warehouse/serverCommandClient';
+import type { WarehouseDepotArchiveDiagnostic } from '../../../lib/server/warehouseLedgerAndArchive';
 import { readWarehouseCroquiCatalog, readWarehouseCroquiLayouts } from '../../../lib/warehouse/croquiReadRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
@@ -131,6 +133,29 @@ function depotArchiveError(error: unknown): string {
     WAREHOUSE_SERVER_CONFIGURATION: 'O servidor não está configurado. Verifique o ambiente local antes de tentar novamente.',
   };
   return mapped[code] || code;
+}
+
+function depotArchiveDiagnosticMessage(
+  result:WarehouseDepotArchiveDiagnostic,materials:WarehouseMaterial[]
+):string {
+  const names=new Map(materials.map(item=>[item.id,item.description]));
+  const totals='Registros bloqueadores: '+result.positiveBalanceCount
+    +' saldo(s) positivo(s), '+result.activeLotCount+' lote(s) ativo(s).';
+  if(!result.blockers.length)return totals+' Não foram encontrados registros exibíveis; faça uma reconciliação assistida.';
+  const state:Record<string,string>={
+    ACTIVE:'local ativo',INACTIVE:'LOCAL INATIVO',MISSING:'LOCAL AUSENTE / ÓRFÃO',
+  };
+  const rows=result.blockers.slice(0,12).map(item=>{
+    const kind=item.kind==='BALANCE'?'Saldo':'Lote';
+    return kind+' '+item.quantity+' · '
+      +(names.get(item.materialId)||item.materialId)+' · '+item.location
+      +' ('+(state[item.positionStatus]||item.positionStatus)+')'
+      +' · '+item.recordId;
+  });
+  const omitted=result.positiveBalanceCount+result.activeLotCount-rows.length;
+  return [totals,...rows,
+    ...(omitted>0?['Mais '+omitted+' registro(s) não exibido(s).']:[]),
+    'Nenhum dado foi apagado. Saldos reais precisam ser movimentados; projeções legadas devem ser reconciliadas com o ledger.'].join('\n');
 }
 
 function croquiSaveError(error: unknown): string {
@@ -537,7 +562,18 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       await reloadBase();
       setMessage('Depósito excluído do cadastro operacional. Estruturas ocultadas e histórico preservado; nome e código podem ser reutilizados.');
     } catch (error) {
-      setMessage('Exclusão não realizada: ' + depotArchiveError(error));
+      const code=messageFrom(error);
+      if(code==='WAREHOUSE_ARCHIVE_OCCUPIED'||code==='WAREHOUSE_ARCHIVE_ACTIVE_LOT'){
+        try {
+          const diagnostic=await warehouseServerCommand<WarehouseDepotArchiveDiagnostic>(
+            workspaceId,'STRUCTURE_ARCHIVE_DIAGNOSTICS',{depotId:selectedDepot.id});
+          setMessage('Exclusão não realizada: '+depotArchiveError(error)+'\n'
+            +depotArchiveDiagnosticMessage(diagnostic,previewMaterials));
+        }catch(diagnosticError){
+          setMessage('Exclusão não realizada: '+depotArchiveError(error)
+            +' Diagnóstico indisponível: '+messageFrom(diagnosticError));
+        }
+      }else setMessage('Exclusão não realizada: '+depotArchiveError(error));
     } finally { setDepotWorking(false); }
   }
 
@@ -1095,7 +1131,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       </div>
       {message && (
         <div role="alert" aria-live="polite" data-testid="warehouse-croqui-operation-message"
-          className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-slate-900">
+          className="whitespace-pre-wrap break-words rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-slate-900">
           {message}
         </div>
       )}
