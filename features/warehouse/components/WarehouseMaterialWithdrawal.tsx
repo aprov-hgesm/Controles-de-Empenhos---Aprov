@@ -1379,7 +1379,35 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                          {line.lotId===editingExpiryId && (
+                             <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                               <p className="text-xs font-black text-amber-900">Correção da validade com auditoria</p>
+                               <p className="text-[10px] text-amber-900">
+                                 Informe a data documental correta. Data anterior, nova data e operador serão registrados.
+                               </p>
+                               <div className="flex flex-wrap items-center gap-2">
+                                 <input type="date" value={expiryDraft} disabled={working}
+                                   onChange={event=>setExpiryDraft(event.target.value)}
+                                   aria-label="Nova data de validade"
+                                   className="rounded-lg border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                                 <input value={expiryReason} disabled={working} maxLength={180}
+                                   onChange={event=>setExpiryReason(event.target.value)}
+                                   placeholder="Motivo da correção documental"
+                                   aria-label="Justificativa da correção"
+                                   className="min-w-48 flex-1 rounded-lg border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                                 <button type="button" onClick={()=>void saveExpiryCorrection()}
+                                   disabled={working||!expiryDraft||expiryReason.trim().length<5}
+                                   className="rounded-lg bg-blue-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">
+                                   Salvar validade
+                                 </button>
+                                 <button type="button" onClick={()=>setEditingExpiryId('')}
+                                   className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-bold text-slate-700">
+                                   Cancelar
+                                 </button>
+                               </div>
+                             </div>
+                           )}
+                           <div className="mt-3 grid gap-2 sm:grid-cols-3">
                             <label className="text-[9px] uppercase tracking-wide text-slate-600">
                               Quantidade
                               <p className="mt-1 text-xs font-black text-slate-800">{formatWarehouseNumber(line.requestedQuantity)}</p>
