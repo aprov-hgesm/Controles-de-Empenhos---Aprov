@@ -5,6 +5,7 @@ import { warehouseAdminTransaction, WarehouseStoreError } from './warehouseFires
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { createWarehouseMaterial, validateWarehouseMaterial, type WarehouseMaterial } from '../warehouse/material';
 import { warehouseUnitFromOperationalLabel } from '../warehouse/invoiceIntegration';
+import { bulkMaterialGroupKey } from '../warehouse/bulkStockMaterialMatcher';
 import {
   createWarehouseMovementId, applyWarehouseMovementToBalance,
   validateWarehouseBalance, validateWarehouseMovement, warehouseMovementMatchesReplay,
@@ -99,6 +100,14 @@ export async function registerWarehouseManualEntryServer(
   const input = raw as Record<string, unknown>;
   const operationId = string(input.operationId, 96);
   if (!/^[a-zA-Z0-9_-]{8,96}$/.test(operationId)) bad('WAREHOUSE_MANUAL_ENTRY_INVALID_OPERATION_ID');
+  // "bulk_" identifica exclusivamente a carga Excel da Entrada Avulsa.
+  // O arquivo e o depósito fazem parte da identidade; linhas distintas de um
+  // mesmo material dentro do arquivo compartilham UM novo ID.
+  const bulk = operationId.startsWith('bulk_')
+    ? /^bulk_(dep_[a-f0-9]{32})_([a-f0-9]{28})_([0-9]{1,6})$/.exec(operationId)
+    : null;
+  if (operationId.startsWith('bulk_') && (!bulk || Number(bulk[3]) < 2))
+    bad('WAREHOUSE_MANUAL_ENTRY_INVALID_OPERATION_ID');
   const description = string(input.description, 240, false);
   const unitLabel = string(input.unitLabel, 80, false);
   const provenance = string(input.provenance, 180);
@@ -126,8 +135,17 @@ export async function registerWarehouseManualEntryServer(
   const existingId = string(input.existingMaterialId, 80, false).toLowerCase();
   if (existingId && !/^mat_[a-f0-9]{32}$/.test(existingId)) bad('WAREHOUSE_MANUAL_ENTRY_MATERIAL_NOT_FOUND', 404);
   if (!existingId && (!description || !unitLabel)) bad('WAREHOUSE_MANUAL_ENTRY_INVALID_DESCRIPTION');
+  if (bulk && position.depotId !== bulk[1]) bad('WAREHOUSE_BULK_IMPORT_DEPOT_MISMATCH',409);
+  // Nunca procurar um material do catálogo para uma NOVA carga por Excel.
+  // O ID é determinístico por arquivo, depósito, workspace e descrição/unidade
+  // (normalizadas). Retentativas do mesmo arquivo não duplicam o material.
+  // existingId só é aceito para replay transacional de linha já registrada
+  // antes desta correção; nunca para uma movimentação nova.
   const materialId = existingId || 'mat_' + digest(
-    [access.workspaceId, 'MANUAL_ENTRY_MATERIAL', operationId].join('\n')
+    bulk
+      ? [access.workspaceId, 'BULK_IMPORT_MATERIAL_V2', bulk[1], bulk[2],
+          bulkMaterialGroupKey(description,unitLabel)].join('\n')
+      : [access.workspaceId, 'MANUAL_ENTRY_MATERIAL', operationId].join('\n')
   ).slice(0,32);
   const created = !existingId ? requireValid(
     createWarehouseMaterial({
@@ -190,14 +208,19 @@ export async function registerWarehouseManualEntryServer(
   return warehouseAdminTransaction<RegisterWarehouseManualEntryResult>(token, reads, (rows) => {
     const read = (path: string | null) => path ? rows.get(path) : null;
     assertPosition(access,position,read(paths.depot),read(paths.local),read(paths.sub));
+    if (bulk && existingId && !read(paths.movement))
+      bad('WAREHOUSE_BULK_EXISTING_MATERIAL_FORBIDDEN',409);
 
     let material = parse(read(paths.material),
       data=>validateWarehouseMaterial(warehouseCanonicalMaterialReadInput(materialId,data),
         {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug}),
       'WAREHOUSE_MANUAL_ENTRY_MATERIAL_INVALID');
     if (!material && !created) bad('WAREHOUSE_MANUAL_ENTRY_MATERIAL_NOT_FOUND',404);
-    if (material && created && (material.description !== created.description
-      || JSON.stringify(material.unit) !== JSON.stringify(created.unit))) {
+    if (material && created && (bulk
+      ? bulkMaterialGroupKey(material.description,material.unit.label||material.unit.code)
+        !== bulkMaterialGroupKey(description,unitLabel)
+      : material.description !== created.description
+        || JSON.stringify(material.unit) !== JSON.stringify(created.unit))) {
       bad('WAREHOUSE_MANUAL_ENTRY_MATERIAL_CONFLICT',409);
     }
     const materialNew = !material;

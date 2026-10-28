@@ -9,17 +9,6 @@ import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualE
 
 type ResolvedLine=BulkStockPreflightLine;
 interface Checkpoint {completed:Record<string,string>}
-const AMBIGUOUS='Selecione o cadastro do material na prévia';
-
-function resolveRows(items:ResolvedLine[],selectedMaterialIds:Record<string,string>):ResolvedLine[] {
-  return items.map(item=>{
-    if(item.candidates.length<=1)return item;
-    const choice=item.candidates.find(m=>m.id===selectedMaterialIds[item.group]);
-    const errors=item.errors.filter(error=>error!==AMBIGUOUS);
-    if(!choice)errors.push(AMBIGUOUS);
-    return {...item,materialId:choice?.id||null,errors};
-  });
-}
 async function token():Promise<string>{
   const user=auth.currentUser;
   if(!user)throw new Error('Sessão não autenticada.');
@@ -50,20 +39,17 @@ export function WarehouseBulkManualEntryOperational({
   const [digest,setDigest]=useState('');
   const [filename,setFilename]=useState('');
   const [rows,setRows]=useState<ResolvedLine[]>([]);
-  const [selectedMaterialIds,setSelectedMaterialIds]=useState<Record<string,string>>({});
   const [previewPage,setPreviewPage]=useState(0);
   const [errors,setErrors]=useState<string|null>(null);
   const [working,setWorking]=useState(false);
   const [progress,setProgress]=useState(0);
   const [confirm,setConfirm]=useState(false);
   const [report,setReport]=useState('');
-  const resolved=useMemo(()=>resolveRows(rows,selectedMaterialIds),
-    [rows,selectedMaterialIds]);
-  const invalid=resolved.filter(row=>row.errors.length);
+  const invalid=rows.filter(row=>row.errors.length);
   const previewOrdered=useMemo(()=>[
-    ...resolved.filter(row=>row.errors.length),
-    ...resolved.filter(row=>!row.errors.length),
-  ],[resolved]);
+    ...rows.filter(row=>row.errors.length),
+    ...rows.filter(row=>!row.errors.length),
+  ],[rows]);
   const lastPage=Math.max(0,Math.ceil(previewOrdered.length/70)-1);
   const page=Math.min(previewPage,lastPage);
   const previewRows=previewOrdered.slice(page*70,page*70+70);
@@ -104,7 +90,7 @@ export function WarehouseBulkManualEntryOperational({
     }catch(err){setErrors(err instanceof Error?err.message:String(err));}
   }
   async function upload(file:File|null){
-    setRows([]);setSelectedMaterialIds({});setPreviewPage(0);setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
+    setRows([]);setPreviewPage(0);setDigest('');setProgress(0);setConfirm(false);setReport('');setErrors(null);
     if(!file)return;
     if(!depotId){setErrors('Selecione o depósito antes de importar a planilha.');return;}
     if(!file.name.toLowerCase().endsWith('.xlsx')){
@@ -134,35 +120,20 @@ export function WarehouseBulkManualEntryOperational({
     setWorking(true);setErrors(null);setReport('');
     const key=checkpointKey(workspaceId,depotId,digest);
     const checkpoint=readCheckpoint(key);
-    const materialsByGroup=new Map<string,string>();
-    // Identidades persistidas têm precedência apenas se compatíveis com a escolha atual.
     try {
-      for(const line of resolved) {
-        if(!line.materialId)continue;
-        const existing=materialsByGroup.get(line.group);
-        if(existing&&existing!==line.materialId)
-          throw new Error('Identidade conflitante entre linhas do mesmo material.');
-        materialsByGroup.set(line.group,line.materialId);
-      }
-      for(const line of resolved){
-        const prior=checkpoint.completed[String(line.line)];
-        if(!prior)continue;
-        const existing=materialsByGroup.get(line.group);
-        if(existing&&existing!==prior)
-          throw new Error('Linha '+line.line+': já foi importada com outra identificação.');
-        materialsByGroup.set(line.group,prior);
-      }
       let completed=0;
-      for(const row of resolved){
+      for(const row of rows){
         if(!row.position||row.errors.length)throw new Error('Linha '+row.line+': validação incompleta.');
-        const materialId=materialsByGroup.get(row.group)||null;
+        // Apenas um retry da MESMA linha pode apontar para identidade antiga.
+        // Novas linhas sempre recebem novo material determinado pelo servidor.
+        const replayMaterialId=checkpoint.completed[String(row.line)]||null;
         // O depósito integra a chave: arquivos iguais em depósitos diferentes não colidem.
         const operationId=bulkStockOperationId(depotId,digest,row.line);
         // Reexecutar no servidor mesmo quando localStorage indica conclusão:
         // o ledger é a fonte de verdade, não o armazenamento do navegador.
         const result=await registerWarehouseManualEntry(workspaceId,{
           operationId,
-          existingMaterialId:materialId,
+          existingMaterialId:replayMaterialId,
           description:row.material,
           unitLabel:row.unit,
           quantity:row.quantity,
@@ -173,7 +144,6 @@ export function WarehouseBulkManualEntryOperational({
           lotCode:null,
           barcode:row.barcode,
         });
-        materialsByGroup.set(row.group,result.material.id);
         checkpoint.completed[String(row.line)]=result.material.id;
         try{window.localStorage.setItem(key,JSON.stringify(checkpoint));}catch{/* ledger server-side prevalece */}
         completed++;setProgress(completed);
@@ -181,7 +151,7 @@ export function WarehouseBulkManualEntryOperational({
       setReport('Importação concluída: '+completed+' linhas verificadas no motor de estoque. A repetição do mesmo arquivo não duplica saldos.');
       await onImported();
     } catch(err){
-      setErrors('Importação interrompida ('+Object.keys(checkpoint.completed).length+'/'+resolved.length+' linhas registradas neste navegador). Reenvie o MESMO arquivo: o servidor protege contra duplicação de movimentos. '+warehouseManualEntryErrorMessage(err));
+      setErrors('Importação interrompida ('+Object.keys(checkpoint.completed).length+'/'+rows.length+' linhas registradas neste navegador). Reenvie o MESMO arquivo: o servidor protege contra duplicação de movimentos. '+warehouseManualEntryErrorMessage(err));
       await onImported();
     } finally {setWorking(false);}
   }
@@ -207,7 +177,7 @@ export function WarehouseBulkManualEntryOperational({
         Depósito de destino
         <select value={depotId} onChange={event=>{
             setDepotId(event.target.value);setConfirm(false);setRows([]);setDigest('');
-            setPreviewPage(0);setSelectedMaterialIds({});setErrors(null);setReport('');
+            setPreviewPage(0);setErrors(null);setReport('');
           }}
           disabled={working}
           className="mt-1 block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs">
@@ -227,7 +197,7 @@ export function WarehouseBulkManualEntryOperational({
     {rows.length>0&&<div className="mt-4 space-y-3">
       <div className="rounded-xl bg-blue-50 p-3 text-xs text-blue-900">
         <b>{filename}</b> · {rows.length} linhas · {invalid.length} pendências de validação.
-        {invalid.length>0&&<span> Resolva as pendências indicadas: escolha diretamente abaixo o cadastro dos materiais ambíguos. Somente erros de dados exigem corrigir o Excel.</span>}
+        {invalid.length>0&&<span> Corrija as posições ou os dados indicados na planilha antes de continuar.</span>}
       </div>
       <div className="max-h-64 overflow-auto rounded-xl border border-slate-200">
         <table className="w-full min-w-[720px] text-left text-[11px]">
@@ -246,19 +216,7 @@ export function WarehouseBulkManualEntryOperational({
                 : <span>{row.localType} {row.localNumber}{row.subposition?' / '+row.subposition:''}</span>}
             </td>
             <td className={'px-3 py-2 '+(row.errors.length?'text-red-700':'text-emerald-700')}>
-              {row.candidates.length>1&&<label className="mb-1 block text-xs font-medium">
-                Identificação do material
-                <select value={selectedMaterialIds[row.group]||''}
-                  onChange={event=>{setSelectedMaterialIds(current=>({...current,[row.group]:event.target.value}));setConfirm(false);}}
-                  disabled={working} aria-label={'Identificação do material '+row.material}
-                  className="mt-1 block w-full rounded-md border border-slate-300 bg-white p-1.5 text-xs text-slate-800">
-                  <option value="">Selecione o cadastro existente</option>
-                  {row.candidates.map(candidate=><option key={candidate.id} value={candidate.id}>
-                    {candidate.description} · {candidate.unit.label||candidate.unit.code} · {candidate.id}
-                  </option>)}
-                </select>
-              </label>}
-              {row.errors.length?row.errors.join('; '):row.materialId?'Material existente':'Novo material'}
+              {row.errors.length?row.errors.join('; '):'Novo material'}
             </td>
           </tr>)}</tbody>
         </table>

@@ -6,11 +6,9 @@ import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { WarehouseStoreError, warehouseAdminListFullStockCatalog } from './warehouseFirestoreTransaction';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import type { BulkStockRow } from './warehouseBulkStockWorkbook';
-import { validateWarehouseMaterial } from '../warehouse/material';
 import { validateWarehouseDepot, validateWarehouseLocation, type WarehouseLocation } from '../warehouse/location';
 import {
   warehouseCanonicalDepotReadInput, warehouseCanonicalLocationReadInput,
-  warehouseCanonicalMaterialReadInput,
 } from '../warehouse/readCompatibility';
 import { resolveBulkStockRows, type BulkStockPreflightLine } from '../warehouse/bulkStockResolve';
 
@@ -40,18 +38,12 @@ export async function preflightWarehouseBulkStock(
     throw new WarehouseStoreError('STOCK_IMPORT_DESTINATION_INVALID',400);
   const token=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1'
     ? 'emulator' : await getGoogleAccessToken();
-  const [materialDocs,depotDocs,locationDocs]=await Promise.all([
-    warehouseAdminListFullStockCatalog(token,access.workspaceId,'materials'),
+  // Evita leitura global de materiais: Entrada Avulsa sempre cria identidade
+  // própria por lote de importação, independente de cadastros anteriores.
+  const [depotDocs,locationDocs]=await Promise.all([
     warehouseAdminListFullStockCatalog(token,access.workspaceId,'depots',250),
     warehouseAdminListFullStockCatalog(token,access.workspaceId,'locations'),
   ]);
-  const materials=materialDocs.map(row=>{
-    const result=validateWarehouseMaterial(
-      warehouseCanonicalMaterialReadInput(idOf(row.path),row.data),
-      {expectedWorkspaceId:access.workspaceId,expectedUg:access.ug});
-    if(!result.ok)return invalid('STOCK_IMPORT_MATERIAL_CATALOG_INVALID');
-    return result.data;
-  });
   const depots=depotDocs.map(row=>{
     const result=validateWarehouseDepot(
       warehouseCanonicalDepotReadInput(idOf(row.path),row.data),
@@ -68,5 +60,5 @@ export async function preflightWarehouseBulkStock(
     if(!result.ok)return invalid('STOCK_IMPORT_LOCATION_CATALOG_INVALID');
     return result.data;
   });
-  return resolveBulkStockRows(rows,depotId,materials,locations);
+  return resolveBulkStockRows(rows,depotId,locations);
 }
