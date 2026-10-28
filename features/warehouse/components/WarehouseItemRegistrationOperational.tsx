@@ -63,6 +63,9 @@ const WarehouseSiscofisOperational = dynamic(
 const WarehouseSiscofisPendingAllocation = dynamic(
   () => import('./WarehouseSiscofisPendingAllocation').then((module) => module.WarehouseSiscofisPendingAllocation)
 );
+const WarehouseDepotReturnsPending = dynamic(
+  () => import('./WarehouseDepotReturnsPending').then((module) => module.WarehouseDepotReturnsPending)
+);
 const WarehouseImmediateConsumptionPanel = dynamic(
   () => import('./WarehouseImmediateConsumptionPanel').then((module) => module.WarehouseImmediateConsumptionPanel)
 );
@@ -2671,6 +2674,7 @@ export function WarehouseItemRegistrationOperational({
 
       {tab === 'invoices' && (
         <div className="space-y-5">
+          <WarehouseDepotReturnsPending workspaceId={workspaceId} />
           <WarehouseSiscofisPendingAllocation workspaceId={workspaceId} />
           <InvoiceRegistrationQueue
             workspaceId={workspaceId}
