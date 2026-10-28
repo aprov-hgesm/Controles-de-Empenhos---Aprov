@@ -6,6 +6,23 @@ export const CURRENT_LEGAL_BUNDLE = Object.freeze({
   privacyVersion: 'privacy-2026-10-01-r1',
 });
 
+/**
+ * PROPOSTA R4 — NÃO ATIVAR NESTA BRANCH.
+ * As Firestore Rules em produção aceitam somente saas-r1-2026-10-01 e
+ * seus termos/privacidade associados. A ativação de uma nova versão
+ * exige coordenação expressa entre Rules, CURRENT_LEGAL_BUNDLE, gate
+ * e tratamento do aceite dos usuários já cadastrados.
+ *
+ * Este objeto é uma proposta documental inerte. A fonte de verdade
+ * do runtime continua sendo CURRENT_LEGAL_BUNDLE até a publicação
+ * coordenada que for aprovada pelo Coordenador.
+ */
+export const PROPOSED_LEGAL_BUNDLE_R4 = Object.freeze({
+  legalBundleVersion: 'saas-r4-2026-10-27',
+  termsVersion: 'terms-2026-10-27-r2',
+  privacyVersion: 'privacy-2026-10-27-r2',
+});
+
 export type LegalBundleVersions = typeof CURRENT_LEGAL_BUNDLE;
 
 function assertSafeDocumentToken(value: string, field: string): string {
