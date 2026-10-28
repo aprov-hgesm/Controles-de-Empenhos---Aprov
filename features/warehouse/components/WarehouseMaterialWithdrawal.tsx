@@ -1428,7 +1428,25 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 </div>
               )}
 
-              {cartIssues.length > 0 && (
+              {expiredCartLines.length>0 && (
+                 <div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 p-4">
+                   <p className="text-xs font-black text-rose-800">
+                     {expiredCartLines.length} linha(s) de material com validade vencida
+                   </p>
+                   <p className="mt-1 text-xs text-rose-800">
+                     Você pode emitir uma solicitação administrativa de recolhimento ou destinação.
+                     Não há baixa automática de estoque nem autorização para consumo.
+                   </p>
+                   <button type="button" disabled={working||retryRequired}
+                     onClick={()=>void exportExpiredRequest()}
+                     data-testid="warehouse-expired-request-download"
+                     className="mt-3 rounded-lg bg-rose-800 px-4 py-2 text-xs font-black text-white disabled:opacity-40">
+                     Gerar pedido de material vencido (PDF)
+                   </button>
+                 </div>
+               )}
+
+               {cartIssues.length > 0 && (
                 <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[10px] leading-5 text-rose-700">
                   {cartIssues.join(' ')}
                 </div>
@@ -1510,7 +1528,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
               {!reviewing ? (
                 <button type="button" onClick={() => setReviewing(true)}
-                  disabled={cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0}
+                  disabled={cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0 || expiredCartLines.length > 0}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                   Revisar saída <ChevronRight className="h-4 w-4" />
                 </button>
