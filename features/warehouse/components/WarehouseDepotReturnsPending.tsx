@@ -34,7 +34,7 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
       ]);
       setRows(pending);
       setCatalog({depots,locations,names:Object.fromEntries(
-        materials.map(item=>[item.material.id,item.material.description]))});
+        materials.map(item=>[item.id,item.description]))});
       setError(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:'Não foi possível consultar devoluções ao recebimento.');
