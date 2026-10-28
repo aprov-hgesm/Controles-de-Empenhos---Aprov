@@ -127,6 +127,31 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     finally{setWorking(null);}
   };
 
+  const exportExpiredGroup=async(group:{
+    id:string;items:WarehouseDepotReturnPending[]
+  })=>{
+    const today=new Date().toISOString().slice(0,10);
+    const lines=group.items.flatMap(item=>item.lotReferences
+      .filter(lot=>lot.expiresOn&&lot.expiresOn<today&&lot.quantity>0)
+      .map(lot=>({
+        description:catalog.names[item.materialId]||item.materialId,
+        quantity:lot.quantity,unitLabel:catalog.units[item.materialId]||'un.',
+        expiry:lot.expiresOn!,position:'Recebimento · origem '+item.depotCode,
+        lotId:lot.id,
+      })));
+    if(!lines.length){setError('Não há material vencido neste grupo.');return;}
+    setWorking('expired-pdf');setError(null);
+    try{
+      await downloadWarehouseExpiredRequest({
+        ug:catalog.depots[0]?.depot.ug||'',workspaceId,
+        requestId:'recebimento-'+group.id,operatorName:'Operador autenticado',
+        destinationName:'Destinação administrativa a definir',lines,
+      });
+      setMessage('Pedido administrativo de material vencido gerado, sem baixa de estoque.');
+    }catch(error){setError(error instanceof Error?error.message:'Falha ao gerar pedido.');}
+    finally{setWorking(null);}
+  };
+
   const saveReturnExpiry=async()=>{
     if(!expiryEdit||working||!expiryEdit.expiresOn||expiryEdit.reason.trim().length<5)return;
     setWorking('expiry');setError(null);setMessage(null);
