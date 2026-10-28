@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+
+## ESTADO VIGENTE — LIBERAÇÃO COMERCIAL R4 E DIRETRIZ DE DADOS DO CLIENTE (27/10/2026, BRT)
+
+> **ESTE REGISTRO É O ESTADO OPERACIONAL MAIS RECENTE e prevalece sobre afirmações históricas de que a cobrança InfinitePay está apenas em piloto, que o modo é OBSERVE ou que a release R16/R2 é a versão corrente do domínio.** Histórico anterior permanece para rastreabilidade. Detalhamento, evidências, limitações e nova política permanente estão no capítulo **“COMERCIAL R4 — LIBERAÇÃO E DIRETRIZ DE PROPRIEDADE/PORTABILIDADE DOS DADOS”**, ao final deste memorial.
+
+- **Produção confirmada pelo fundador:** `https://emprovex.com.br` → Vercel `dpl_7f1s17cuDKevJYA5DLHd2EhqW7G8`, URL individual `https://controles-de-empenhos-aprov-fa2kg1jn0-aprov-hgesms-projects.vercel.app`, `Ready`, `production`, após promoção e `vercel.cmd inspect`. Fonte de código PR #401 (squash `a34bec2d86af23b45b8f31eff40ebc449ec8925d`).
+- **Cobrança comercial ATIVA:** painel Admin → Assinaturas mostra `ENFORCE`, `EXIGINDO PAGAMENTO` e `Entitlements preparados`; pagamento pela InfinitePay e liberação pós-Pix efetivamente verificados pelo fundador em perfil de teste. Controle financeiro por workspace elegível, não por usuário avulso. VIPs/contratos legados preservados.
+- **Decisão comercial e técnica permanente — GOV-SIMP-01:** **a assinatura remunera as funcionalidades e os serviços do EMPROVEX, NÃO a propriedade dos dados do cliente.** A inadimplência suspende a experiência operacional contratada, mas não deve impedir a recuperação legítima dos dados do próprio setor por responsável autorizado. **Não criar uma nova camada de bloqueio financeiro nas Firestore Rules apenas para dificultar essa recuperação** nem promover migração massiva para APIs por esse motivo isolado. **Preservar integralmente isolamento entre workspaces/UGs, autenticação, integridade, confidencialidade, autorização de operações sensíveis e proteção contra acesso indevido.** O acesso a dados de outras OMs jamais é permitido por esta diretriz.
+- **Separação de evidências:** testes reais comprovam o bloqueio e a liberação pela interface/API, **não** uma certificação universal do acesso direto via SDK/Firestore; Rules efetivamente publicadas não foram alteradas nesta release nem certificadas nesta sequência. Permissão de consulta/exportação de dados próprios não equivale à concessão irrestrita de alterações ou execução de funcionalidades.
+- **Operação:** **não refazer** build, deploy ou `promote` da R4; documentos podem ser atualizados na `main` sem publicar novamente (deploy Git desabilitado). Rollback comercial: Admin → Assinaturas → `Voltar para observação`, sem redeploy.
+
+---
+
+
 ## ESTADO VIGENTE — EMPROVEX R2 PUBLICADO E MÉTODO DE PUBLICAÇÃO VERCEL (24/10/2026)
 
 > **Atualização que prevalece sobre os checkpoints anteriores de release.** Os registros antigos abaixo permanecem históricos, inclusive instruções com `--prebuilt`, PR #371 ainda aberto ou publicação bloqueada. A fonte operacional atual é o [runbook revisado](./EMPROVEX_RELEASE_POWERSHELL.md).
@@ -3918,3 +3932,86 @@ O fundador executou \`C:\Users\marco\Downloads\publicar_emprovex_main_f024529.ps
 - **Incidente de publicação resolvido:** o script original interpretava erroneamente o resultado do `inspect` porque a CLI imprimia a tabela no stderr; na retomada, um segundo script falhou ao declarar `$home` (variável reservada/readonly no PowerShell). A falha ocorreu depois do build staged, mas **antes da promoção**. O Fundador concluiu o processo com PowerShell manual, verificando o HTML e promovendo o **mesmo deployment**, sem rebuild adicional.
 - **Regra daqui em diante:** escalonamento e preços futuros não devem ser exibidos na landing ou em conteúdo público. Em momento de contratação, comunicar os termos comerciais legalmente necessários e obter aceite de forma privada. O hotfix não certifica ativação automática da cobrança progressiva.
 - **Não repetir publicação:** domínio já aponta para o deployment correto. Testes funcionais autenticados e recebimento de interessados continuam independentes e não foram comprovados neste hotfix.
+
+---
+
+## COMERCIAL R4 — LIBERAÇÃO E DIRETRIZ DE PROPRIEDADE/PORTABILIDADE DOS DADOS (27/10/2026, BRT)
+
+### 1. Decisão executiva, estado de produção e alcance
+
+**DECISÃO DO FUNDADOR: EMPROVEX LIBERADO PARA OPERAÇÃO COMERCIAL.** Comercialização das funcionalidades da plataforma para Setores de Aprovisionamento/Organizações Militares, com cobrança por setor/workspace e fluxo de trial, regularização e pagamento real. Não acrescentar gates burocráticos sem risco material; princípio **GOV-SIMP-01**. A aceitação de risco comercial moderado inclui atendimento e eventual restituição de Pix ou concessão administrativa de período gratuito em caso de falha concreta — **isso é uma contingência aprovada, não uma restituição executada nem autorização para enfraquecer o isolamento de dados**.
+
+**Estado comprovado em 27/10/2026 pelo fundador (PowerShell + captura do Admin):**
+
+| Item | Estado confirmado |
+| --- | --- |
+| Domínio | `https://emprovex.com.br`, produção |
+| Equipe / projeto Vercel | `aprov-hgesms-projects` / `controles-de-empenhos-aprov` |
+| PR de comercialização geral | [#401](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/401), squash na `main` `a34bec2d86af23b45b8f31eff40ebc449ec8925d` |
+| Deployment promovido e identificado pelo `inspect` | `dpl_7f1s17cuDKevJYA5DLHd2EhqW7G8` |
+| URL individual imutável | `https://controles-de-empenhos-aprov-fa2kg1jn0-aprov-hgesms-projects.vercel.app` |
+| Status Vercel | `production`, `Ready`; criação exibida como 27/10/2026 20:24:16 BRT |
+| Estado de cobrança no Admin → Assinaturas | **`ENFORCE`**; texto **`EXIGINDO PAGAMENTO`**; **`Entitlements preparados`** |
+| Números exibidos no painel no instante da evidência | 6 setores ativos, 2 em dia, 0 em trial, 0 em atenção financeira; são **snapshot visual**, não contagem contratual permanente |
+| Conexão Google Cloud | Painel exibiu `Conectado` |
+| Firestore Rules | **Nenhuma publicação/alteração de Rules nesta operação comercial R4** |
+
+**Fórmula de habilitação geral no código:** `EMPROVEX_BILLING_ENFORCEMENT_ENABLED=1` + `INFINITEPAY_BILLING_ENABLED=1` + `platformBillingConfig/main.billingMode=enforce` + `requirePayment=true`. A configuração `INFINITEPAY_BILLING_SCOPE=all` permite checkout dos workspaces elegíveis. `EMPROVEX_BILLING_RULES_CERTIFIED` **NÃO é exigido** no motor de cobrança do servidor; sua utilização posterior é restrita a sincronizações opcionais com Warehouse quando Rules financeiras separadas estiverem efetivamente certificadas. Não configurar esse indicador como `1` sem certificação real. Preservar segredos da InfinitePay e do Google Cloud; nunca registrá-los no memorial.
+
+**Observação de governança:** a captura do painel comprova o `ENFORCE` e a configuração preparada; não constitui teste adversarial de todos os caminhos de leitura e escrita. Não afirmar homologação de segurança de SDK/Rules em função dessa captura. A apresentação de valores/trial depende da política comercial individual aceita e dos registros do workspace; não reprecificar contratos existentes.
+
+### 2. Cronologia factual — piloto #400, pagamentos reais e corte #401
+
+**Piloto funcional isolado — PR [#400](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/400), squash `3ba0c4ecaf95b91153f7d587548db8513d1a30e5`:**
+
+- Inclusão de `lib/server/payments/billingAccessQaPilot.mjs`, gate funcional de um único workspace `aprovisionamento-teste-3` para `readSectorBillingAccess`, somente quando `EMPROVEX_BILLING_QA_WORKSPACE_ID`, `INFINITEPAY_BILLING_PILOT_WORKSPACE_ID`, `INFINITEPAY_BILLING_SCOPE=pilot` e `INFINITEPAY_BILLING_ENABLED=1` coincidiam.
+- A política global permanecia `observe` / `requirePayment=false`, sem bloquear VIPs e outros setores. Testes automatizados exercitaram motor TypeScript real (inadimplente negado, pago liberado, VIP inalterado) e Fast CI/segurança na branch.
+- Primeiro deployment imutável `dpl_3EfUFmvRJZT5QUio3QdvpcrPXyEf` / `75wprnk48` foi promovido **antes** de assegurar as variáveis QA no novo ambiente. O fundador entrou no Teste 3 sem bloqueio; não era prova de falha do motor.
+- O fundador definiu corretamente as quatro variáveis da Vercel Production, todas confirmadas pela CLI como `Overrode`; valores armazenados como `Secret`, sem exposição posterior do conteúdo. Feito novo deploy `acn1rdkh5` (`Ready`). Houve **segunda falha de verificação** porque `emprovex.com.br` ainda apontava para `75wprnk48`; `vercel.cmd inspect` identificou a origem, e a promoção da URL nova corrigiu o problema. **Regra permanente:** sempre confirmar com `inspect https://emprovex.com.br` o deployment ID efetivamente ativo antes de diagnosticar lógica/variáveis ou repetir deploy.
+- **Teste manual real reportado pelo fundador no Teste 3:** login sem pagamento → redirecionamento a Minha Assinatura/regularização; tentativa de retorno → aviso para pagar ou solicitar 48 horas; Pix real efetuado → plataforma liberada automaticamente; Central de Depósitos testada antes e depois, com bloqueio no estado inadimplente e acesso funcional depois do pagamento nos dois modos de uso. **PASS funcional por observação humana**. A opção de solicitar 48h foi exibida; **não confundir exibição do botão com concessão das 48h efetivamente ensaiada**.
+- O Teste 2 já tinha pagamento real InfinitePay validado anteriormente; não duplicar Pix nem tomar os dois testes como prova de inexistência de bypass no Firestore.
+
+**Corte comercial geral — PR [#401](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/401), squash `a34bec2d86af23b45b8f31eff40ebc449ec8925d`:**
+
+- `lib/server/platformBillingAdminStore.ts`: decisão financeira global no servidor sem depender de `EMPROVEX_BILLING_RULES_CERTIFIED` para login, painel/configuração administrativa e concessão de 48h; sincronização de `warehouseAccess` com billing desligada por padrão quando essa certificação separada não existe, evitando round-trips/escritas desnecessárias.
+- `components/admin/AdminBillingPanel.tsx`: clareza sobre controle financeiro server-side e preservação das contas isentas e legadas.
+- `scripts/billing-server-migration.test.mjs`: cenário de cobrança global com flag de Rules `0`; inadimplente negado, pagante liberado e preservação de VIP/contrato antigo; Billing Server Migration Assurance **PASS** incluindo typecheck; Core Protection, Fast CI e W4 **PASS** no HEAD da branch. Não alegar que Application CI integral ou Domain CI R2 ficaram todos aprovados sem evidência adicional específica.
+- Publicação pelo fundador: fonte isolada exportada do SHA imutável via `git archive` em `D:\EMPROVEX-COMERCIAL-R4\deploy`, `vercel.cmd link` no time correto, atualização de Production `INFINITEPAY_BILLING_SCOPE=all` e `EMPROVEX_BILLING_ENFORCEMENT_ENABLED=1`, `vercel.cmd deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`; deployment `fa2kg1jn0` `Ready`. Em seguida, `vercel.cmd promote` e `vercel.cmd inspect https://emprovex.com.br` confirmaram **`dpl_7f1s17cuDKevJYA5DLHd2EhqW7G8` no domínio**. Finalmente, fundador acionou **Ativar controle financeiro** e forneceu captura de `ENFORCE` / `EXIGINDO PAGAMENTO`.
+- **NÃO** recriar clone, build, deploy nem promoção para registrar a conclusão. O site já estava no release correto; mudanças só documentais não geram deploy (`vercel.json`, `git.deploymentEnabled=false`).
+
+### 3. Contrato financeiro operacional, compatibilidade e rollback
+
+1. **Unidade contratada:** workspace/Setor de Aprovisionamento, não cobrança separada por sessão/operador. Os usuários autorizados compartilham o estado de assinatura do setor.
+2. **Novos clientes elegíveis:** trial padrão de **30 dias** quando concedido; após o período, pagamento da competência individual, confirmação por servidor/InfinitePay e liberação. Nunca marcar `paid` só pelo retorno da URL de checkout; preservar conciliação/idempotência.
+3. **Preço inicial:** **R$ 29,90/mês** após trial, com progressão individual aprovada por meses **pagos**: meses 1–3 R$29,90; 4–6 R$39,90; 7–9 R$49,90; 10–12 R$59,90; 13+ R$69,90. Conservar `firstPaidReferenceMonth`, `pricingTermsAcceptedAt` e valor congelado do ciclo como fonte de verdade. A vitrine pública divulga o valor inicial; **termos privados antes do aceite** apresentam todas as condições materiais. Não afirmar que meses futuros foram pagos/testados em produção.
+4. **VIPs e clientes antigos:** fundador e VIPs isentos (3 contas no teste histórico) preservados; contratos antigos não migram silenciosamente ao escalonamento. Não retirar histórico, acesso ou dados por alteração automática de preços.
+5. **Carência de 48 horas:** fluxo administrável pelo servidor, próprio da política de assinatura e sem marcar Pix como pago; o botão foi verificado visualmente, não o exercício integral de concessão/expiração no teste descrito.
+6. **Operação/rollback:** para suspender exigência financeira imediatamente, Administração → Assinaturas → **Voltar para observação** (`billingMode=observe`, `requirePayment=false`), sem novo deploy ou mudança das Rules. Rollback comercial é diferente de rollback de código. Em eventual problema de cobrança, atendimento poderá avaliar reembolso ou concessão administrativa gratuita sem ocultar histórico financeiro/auditoria.
+
+### 4. DIRETRIZ PERMANENTE — o cliente paga pelos recursos, não pela propriedade dos seus dados
+
+**Diretriz expressamente aprovada pelo fundador (27/10/2026):**
+
+> **“A assinatura remunera o acesso às funcionalidades e aos serviços do EMPROVEX, não a propriedade dos dados cadastrados pelo cliente. A inadimplência pode suspender a operação da plataforma, mas não deve impedir a recuperação legítima das informações do próprio setor por seus responsáveis autorizados.”**
+
+**Fundamentos e interpretação obrigatória para próximos chats, Workers, PRs e auditorias:**
+
+- O valor vendido é a **plataforma de gestão do Setor de Aprovisionamento** — interface, organização de empenhos, NFs e cronogramas, Central de Depósitos 2D/3D, operações móveis, automações, geração de documentos, relatórios, pesquisa e suporte. A mera leitura de documentos brutos no Firestore não concede automaticamente essas funcionalidades, embora consultas/escritas diretas possam permitir que um usuário técnico reproduza parte de rotinas por meios próprios; não prometer inviolabilidade comercial inexistente.
+- Os dados alimentados pelo cliente **não são patrimônio comercial apropriado pelo EMPROVEX**. O titular/gestor legitimado deve poder obter seus registros sem nova cobrança, inclusive após encerramento/atraso, por exportação, backup autorizado ou atendimento; o fundador declara que os forneceria gratuitamente. Existem backups/integrações com o **Google Drive do usuário**, sob o controle e permissões desse usuário; **não presumir que todos os documentos e versões estejam integralmente cobertos por esses backups**.
+- **Contexto institucional:** nos Setores de Aprovisionamento das OMs, o responsável legal pelos registros e pelas autorizações pode ser a **Organização Militar/Administração Pública**, e não necessariamente a pessoa física que efetuou o cadastro. Respeitar sigilo, guarda documental, legislação aplicável, dados pessoais e cadeia administrativa. “Seus próprios dados” significa dados do setor **a que a identidade tem legítima autorização**, jamais de outra OM.
+- **Decisão de escopo GOV-SIMP-01:** **NÃO implantar novos bloqueios financeiros nas Firestore Rules apenas para impedir que inadimplentes leiam/exportem seus próprios registros**, porque isso não agrega valor comercial proporcional e contraria a política de recuperação gratuita. **NÃO realizar migração em massa de SDK para APIs motivada somente por esse cenário de inadimplência.** A ausência de tal bloqueio **não equivale a falha comercial prioritária** segundo a política de produto vigente. Uma eventual funcionalidade “Exportar meus dados” acessível mesmo com assinatura vencida é melhoria **opcional**, não condição de lançamento; não afirmar que já existe.
+- **Limites inegociáveis:** manter autenticação, autorização por workspace e UG, isolamento entre clientes, proteção contra cross-tenant, restrição a administradores, verificação de integridade de operações críticas (incluindo estoque e movimentações), antifraude, confidencialidade, auditoria e defesa contra abuso/custos. A diretriz de portabilidade **não autoriza** escrita arbitrária, alteração de documentos oficiais, acesso entre workspaces, uso de credenciais alheias, desativar Rules protetivas ou abrir acesso público.
+- **Diferença técnica:** `readSectorBillingAccess` no servidor governa o acesso às telas e APIs que o invocam; o navegador ainda pode ter leituras diretas por Firebase SDK (`onSnapshot` etc.), cuja permissão é determinada pelas Rules efetivamente publicadas. O repositório contém checks financeiros em `firestore.rules` e `firestore.warehouse.rules`, mas **não assumir que as Rules publicadas correspondem aos arquivos do repositório**. Não foi comprovado bypass efetivo da produção nem acesso entre workspaces, e **o teste comercial por Pix não certifica esse plano de dados**.
+- **Política de segurança continua independente de faturamento:** se for encontrada falha real de isolamento entre clientes, escrita indevida, vazamento, acesso sem autenticação ou abuso de operações, **corrigir prontamente no servidor e/ou nas Rules**, conforme o caminho de acesso. A decisão de não endurecer Rules **somente para cobrança** não proíbe atualizações de segurança necessárias.
+- Se uma regra financeira já publicada bloquear exportação legítima, **não desabilitar proteções cegamente**; preferir um caminho autenticado e auditável de recuperação/entrega de dados do próprio setor, sem acesso operacional às funcionalidades pagas. Negar pagamento ≠ apagar dados ou bloquear a portabilidade.
+
+### 5. Referências técnicas e handoff sem burocracia
+
+**Fontes de código principais:** `app/login/page.tsx`, `lib/sectorBillingGate.ts`, `lib/server/platformBillingAdminStore.ts`, `lib/server/payments/billingAccessQaPilot.mjs`, `lib/server/warehouseAccess.ts`, `lib/server/warehouseBillingMirror.ts`, `hooks/useOperationalRealtimeCollections.ts`, `firestore.rules`, `firestore.warehouse.rules`, `scripts/billing-server-migration.test.mjs`, `components/admin/AdminBillingPanel.tsx`, `docs/EMPROVEX_RELEASE_POWERSHELL.md`.
+
+**Estado:** R4 comercial publicado, promovido e cobrança ativada no painel; testes reais de login, regularização, Pix e Central de Depósitos aprovados no piloto; código `main` inclui #400/#401. Operação comercial autorizada. **NÃO há tarefa pendente obrigatória de Rules ou migração de SDK apenas por inadimplência.**
+
+**Próximos trabalhos, somente quando fizerem diferença prática:** acompanhar clientes reais, atendimento, conciliação Pix e concessão/expiração de 48h; investigar erro concreto antes de novo deploy; criar exportação self-service dos dados próprios quando desejável; manter segurança de isolamento/integridade. Não gerar trabalho recorrente ou auditoria abstrata sem nova necessidade do fundador.
+
+**Quem faz o quê:** ChatGPT/GitHub registra decisões, corrige código e executa CI quando solicitado; fundador executa publicações na equipe Vercel proprietária via PowerShell e atua no Admin. **Não solicitar chaves secretas, não publicar Rules por inércia e não repetir deploy/promote da R4.**
+
