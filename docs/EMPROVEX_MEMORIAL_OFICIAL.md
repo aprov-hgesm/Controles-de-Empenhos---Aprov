@@ -1,6 +1,21 @@
 # EMPROVEX — Memorial Oficial
 
 
+## CHECKPOINT SAAS MATURITY R1 — WORKERS 1/2 (27/10/2026, após Comercial R4)
+
+> **Atualização de engenharia, SEM publicação no domínio**. A versão de produção confirmada permanece Comercial R4 `dpl_7f1s17cuDKevJYA5DLHd2EhqW7G8` até nova promoção explícita pelo fundador. Alterações GitHub `main` não fazem deploy automaticamente.
+
+- **Worker 2 / Recuperação — CONCLUÍDO E INTEGRADO**: branch `feat/saas-maturity-w2-backup-recovery-r1`; PR [#403](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/403), squash na `main` **`4f8c7a2ef1b51af70f2b7928085862e8ab3b1bbe`**. Código `scripts/firestore-recovery.mjs`: novo `restore-inspect` *somente leitura* para conferir `backup.database`, `READY`, snapshot, expiração, identificador de backup e destino novo não utilizado; `restore-plan` explicitamente offline e NÃO verificado. Protege os bancos principal, Warehouse e `(default)` como destino de restore. Runbooks e template de evidência em `docs/RECUPERACAO_FIRESTORE.md`, `docs/BACKUP_RECOVERY.md` e `docs/saas-maturity/`.
+- **Certificação de código do W2, NÃO de infraestrutura**: o coordenador corrigiu dois contratos textuais de regressão e acrescentou testes offline com gcloud simulado, cobrindo sucesso e falhas por backup de origem errada, estado não-READY, expiração, destino preexistente e erro de API; **14/14 testes de recuperação PASS**, além de `Recovery guardrails`, `EMPROVEX Fast CI` e `EMPROVEX Core Protection` **SUCCESS** no commit W2 antes do merge. A suíte W4 estava em execução no momento do merge, sem alegar PASS dessa suíte.
+- **RECUPERAÇÃO REAL — PENDENTE DE EVIDÊNCIA EXTERNA**: nenhum `recovery:status` / `recovery:verify` real foi executado pelo coordenador nesta etapa, nenhuma confirmação atual de backup nativo `READY` dos dois bancos, nenhum restore isolado nem reconciliação de dados, nenhum RPO/RTO medido. Para certificar: obter resultado autorizado de leitura dos backups no Google Cloud e, em ação separada, autorização específica de restauração real em banco isolado, com avaliação de custos. **Não afirmar backup/restauração comprovados só por CI ou PR.**
+- **Worker 1 / Jurídico — EM REVISÃO, SEM MERGE**: branch `feat/saas-maturity-w1-commercial-legal-r1`; PR [#402](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/402) em DRAFT. Documentos comerciais R4 e política de dados próprios preparados; bundle R4 proposto permanece INATIVO. O `CURRENT_LEGAL_BUNDLE` e as Firestore Rules existentes referem-se a `saas-r1-2026-10-01`: não publicar textos jurídicos materialmente alterados com aceite antigo e não ativar novo bundle sem alinhar leitura/criação autorizada de registro de aceite. O coordenador iniciou os checks e corrigiu contratos de texto sem tocar produção. Revisão jurídica humana e estratégia controlada de nova versão permanecem pendentes.
+- **GOV-SIMP-01**: nenhuma Firestore Rule financeira extra será implementada para impedir extração dos próprios dados de cliente inadimplente. A eventual adequação de Rules para **aceite legal versionado** é assunto distinto e deverá preservar autenticação, imutabilidade e isolamento entre workspaces.
+- **Handoff operacional**: nenhum redeploy da R4, nenhuma criação de banco, nenhuma alteração de IAM, billing/PITR, Rules, segredo ou cobrança foi executada neste checkpoint.
+
+---
+
+
+
 ## ESTADO VIGENTE — LIBERAÇÃO COMERCIAL R4 E DIRETRIZ DE DADOS DO CLIENTE (27/10/2026, BRT)
 
 > **ESTE REGISTRO É O ESTADO OPERACIONAL MAIS RECENTE e prevalece sobre afirmações históricas de que a cobrança InfinitePay está apenas em piloto, que o modo é OBSERVE ou que a release R16/R2 é a versão corrente do domínio.** Histórico anterior permanece para rastreabilidade. Detalhamento, evidências, limitações e nova política permanente estão no capítulo **“COMERCIAL R4 — LIBERAÇÃO E DIRETRIZ DE PROPRIEDADE/PORTABILIDADE DOS DADOS”**, ao final deste memorial.
