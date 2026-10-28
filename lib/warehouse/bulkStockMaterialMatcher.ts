@@ -12,13 +12,14 @@ export function bulkMaterialDescriptionKey(value: string): string {
 export function bulkMaterialUnitKey(value: string): string {
   const key = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '');
-  if (['und', 'un', 'unidade', 'unidades', 'unit'].includes(key)) return 'unit';
-  if (['pct', 'pacote', 'pacotes', 'package'].includes(key)) return 'package';
+  if (['und', 'un', 'unid', 'unidade', 'unidades', 'unit'].includes(key)) return 'unit';
+  if (['pct', 'pc', 'pac', 'pacote', 'pacotes', 'package'].includes(key)) return 'package';
   if (['cx', 'caixa', 'caixas', 'box'].includes(key)) return 'box';
   if (['kg', 'quilo', 'quilos', 'quilograma', 'quilogramas'].includes(key)) return 'kg';
-  if (['g', 'grama', 'gramas'].includes(key)) return 'g';
-  if (['l', 'litro', 'litros'].includes(key)) return 'l';
+  if (['g', 'gr', 'grama', 'gramas'].includes(key)) return 'g';
+  if (['l', 'lt', 'litro', 'litros'].includes(key)) return 'l';
   if (['ml', 'mililitro', 'mililitros'].includes(key)) return 'ml';
+  if (['fd', 'fardo', 'fardos', 'bundle'].includes(key)) return 'bundle';
   return key;
 }
 
