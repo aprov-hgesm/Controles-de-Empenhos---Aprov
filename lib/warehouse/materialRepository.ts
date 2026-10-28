@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, limit, query, setDoc, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, setDoc, startAfter, type DocumentData, type QueryDocumentSnapshot, type QuerySnapshot } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
 
@@ -47,7 +47,7 @@ export async function listWarehouseMaterials(
     while (materials.length < max) {
       const pageSize = Math.min(500, max - materials.length);
       const base = collection(db, path);
-      const snapshot = await getDocs(cursor
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(cursor
         ? query(base, startAfter(cursor), limit(pageSize))
         : query(base, limit(pageSize)));
       recordWarehouseDocumentReads(workspaceId, snapshot.size);
