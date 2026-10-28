@@ -45,6 +45,7 @@ import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOu
 import {
   getWarehouseLot,
   listWarehouseLots,
+  updateWarehouseLot,
   type WarehouseLotListItem,
 } from '../../../lib/warehouse/lotRepository';
 import {
@@ -82,6 +83,7 @@ import {
   type WarehouseOutboundDocumentsInput,
 } from '../pdf/WarehouseOutboundDocuments';
 import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
+import {downloadWarehouseExpiredRequest} from '../pdf/WarehouseExpiredMaterialRequest';
 import {
   formatWarehouseDateOnly,
   formatWarehouseNumber,
@@ -301,6 +303,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [selectedBarcodeId, setSelectedBarcodeId] = useState('');
   const [selectedPresentationKey, setSelectedPresentationKey] = useState('');
   const [requestedQuantity, setRequestedQuantity] = useState('');
+  const [editingExpiryId,setEditingExpiryId]=useState('');
+  const [expiryDraft,setExpiryDraft]=useState('');
+  const [expiryReason,setExpiryReason]=useState('');
   const [positionKey, setPositionKey] = useState('');
   const [newDestinationName, setNewDestinationName] = useState('');
   const [manageDestinations, setManageDestinations] = useState(false);
@@ -704,6 +709,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         quantity:baseQuantity,
         physicalQuantity:normalizedQuantity(selectedPosition.quantity-reserved),
         lots:remainingLots,
+        // Pedido/documento: o lote vencido continua identificado no carrinho.
+        // A baixa física permanece vedada pelo motor servidor.
+        includeExpired:true,
       });
     }catch(error){
       setMessageKind('error');
@@ -850,6 +858,12 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       || cartIssues.length > 0
     ) return;
 
+    if(cart.some(line=>line.lotId&&state.lots.some(row=>row.lot.id===line.lotId
+      &&warehouseLotExpiryState(row.lot)==='EXPIRED'))){
+      setMessageKind('error');
+      setMessage('Material vencido exige pedido administrativo de recolhimento, não saída para consumo. Use o botão de pedido de material vencido.');
+      return;
+    }
     const cartSnapshot = cart.map((line) => ({ ...line }));
     const destinationName =
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
@@ -961,6 +975,59 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     if (!line.lotId) return null;
     return state.lots.find((item) => item.lot.id === line.lotId)?.lot.expiresOn || null;
   };
+  const expiredCartLines=cart.filter(line=>line.lotId
+    &&state.lots.some(row=>row.lot.id===line.lotId
+      &&warehouseLotExpiryState(row.lot)==='EXPIRED'));
+
+  const saveExpiryCorrection=async()=>{
+    if(!editingExpiryId||working||retryRequired)return;
+    if(!expiryDraft||!/^\d{4}-\d{2}-\d{2}$/.test(expiryDraft)
+      ||expiryReason.trim().length<5){
+      setMessageKind('error');
+      setMessage('Informe uma data válida e uma justificativa de pelo menos 5 caracteres.');
+      return;
+    }
+    setWorking(true);setMessage(null);
+    try{
+      await updateWarehouseLot(workspaceId,editingExpiryId,{
+        expiresOn:expiryDraft,changeReason:expiryReason.trim(),
+      });
+      const updated=await getWarehouseLot(workspaceId,editingExpiryId);
+      if(!updated)throw new Error('Validade gravada, mas consulta de atualização falhou. Atualize a página.');
+      setState(current=>({...current,lots:current.lots.map(row=>
+        row.lot.id===editingExpiryId?{...row,lot:updated}:row)}));
+      setEditingExpiryId('');setExpiryDraft('');setExpiryReason('');
+      setReviewing(false);
+      setMessageKind('success');
+      setMessage('Data de validade atualizada com histórico de auditoria. O estoque não foi modificado.');
+    }catch(error){
+      setMessageKind('error');setMessage(errorMessage(error));
+    }finally{setWorking(false);}
+  };
+
+  const exportExpiredRequest=async()=>{
+    if(working||expiredCartLines.length===0)return;
+    setWorking(true);setMessage(null);
+    try{
+      const result=await resolveOutboundDocumentLines(workspaceId,expiredCartLines,state.lots);
+      const lines=result.filter(line=>line.expiresOn).map(line=>({
+        description:line.materialDescription,quantity:line.quantity,
+        unitLabel:line.unitLabel,expiry:line.expiresOn!,
+        position:line.positionLabel,lotId:expiredCartLines.find(
+          cartLine=>cartLine.lineId===line.lineId)?.lotId||'',
+      }));
+      await downloadWarehouseExpiredRequest({
+        workspaceId,ug:state.depots[0]?.depot.ug||'',
+        requestId:withdrawalId,operatorName:auth.currentUser?.displayName||auth.currentUser?.email||'',
+        destinationName:activeDestinations.find(item=>item.destination.id===destinationId)?.destination.name||'A definir',
+        lines,
+      });
+      setMessageKind('success');
+      setMessage('Pedido administrativo de material vencido gerado. Nenhuma baixa foi realizada.');
+    }catch(error){setMessageKind('error');setMessage(errorMessage(error));}
+    finally{setWorking(false);}
+  };
+
 
   if (state.loading) {
     return (
@@ -1292,6 +1359,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                                 </p>
                               )}
                               <p className="mt-1 text-[10px] text-slate-600">{line.positionLabel}</p>
+                               {line.lotId && !retryRequired && <button type="button"
+                                 onClick={()=>{setEditingExpiryId(line.lotId!);
+                                   setExpiryDraft(lotExpiryForLine(line)||'');setExpiryReason('');}}
+                                 disabled={working}
+                                 className="mt-2 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-[10px] font-bold text-blue-900 disabled:opacity-40">
+                                 Editar data de validade
+                               </button>}
                             </div>
                             <button type="button"
                               onClick={() => {
@@ -1305,7 +1379,35 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                          {line.lotId===editingExpiryId && (
+                             <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                               <p className="text-xs font-black text-amber-900">Correção da validade com auditoria</p>
+                               <p className="text-[10px] text-amber-900">
+                                 Informe a data documental correta. Data anterior, nova data e operador serão registrados.
+                               </p>
+                               <div className="flex flex-wrap items-center gap-2">
+                                 <input type="date" value={expiryDraft} disabled={working}
+                                   onChange={event=>setExpiryDraft(event.target.value)}
+                                   aria-label="Nova data de validade"
+                                   className="rounded-lg border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                                 <input value={expiryReason} disabled={working} maxLength={180}
+                                   onChange={event=>setExpiryReason(event.target.value)}
+                                   placeholder="Motivo da correção documental"
+                                   aria-label="Justificativa da correção"
+                                   className="min-w-48 flex-1 rounded-lg border border-amber-300 bg-white px-2 py-1.5 text-xs" />
+                                 <button type="button" onClick={()=>void saveExpiryCorrection()}
+                                   disabled={working||!expiryDraft||expiryReason.trim().length<5}
+                                   className="rounded-lg bg-blue-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-40">
+                                   Salvar validade
+                                 </button>
+                                 <button type="button" onClick={()=>setEditingExpiryId('')}
+                                   className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-bold text-slate-700">
+                                   Cancelar
+                                 </button>
+                               </div>
+                             </div>
+                           )}
+                           <div className="mt-3 grid gap-2 sm:grid-cols-3">
                             <label className="text-[9px] uppercase tracking-wide text-slate-600">
                               Quantidade
                               <p className="mt-1 text-xs font-black text-slate-800">{formatWarehouseNumber(line.requestedQuantity)}</p>
@@ -1326,7 +1428,25 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 </div>
               )}
 
-              {cartIssues.length > 0 && (
+              {expiredCartLines.length>0 && (
+                 <div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 p-4">
+                   <p className="text-xs font-black text-rose-800">
+                     {expiredCartLines.length} linha(s) de material com validade vencida
+                   </p>
+                   <p className="mt-1 text-xs text-rose-800">
+                     Você pode emitir uma solicitação administrativa de recolhimento ou destinação.
+                     Não há baixa automática de estoque nem autorização para consumo.
+                   </p>
+                   <button type="button" disabled={working||retryRequired}
+                     onClick={()=>void exportExpiredRequest()}
+                     data-testid="warehouse-expired-request-download"
+                     className="mt-3 rounded-lg bg-rose-800 px-4 py-2 text-xs font-black text-white disabled:opacity-40">
+                     Gerar pedido de material vencido (PDF)
+                   </button>
+                 </div>
+               )}
+
+               {cartIssues.length > 0 && (
                 <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[10px] leading-5 text-rose-700">
                   {cartIssues.join(' ')}
                 </div>
@@ -1408,7 +1528,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
               {!reviewing ? (
                 <button type="button" onClick={() => setReviewing(true)}
-                  disabled={cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0}
+                  disabled={cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0 || expiredCartLines.length > 0}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                   Revisar saída <ChevronRight className="h-4 w-4" />
                 </button>

@@ -37,6 +37,20 @@ test('Lotes vencidos, inativos ou atribuidos em excesso nao sao baixados implici
   assert.throws(()=>plan({quantity:0,physicalQuantity:10,lots:[]}),/INVALID_QUANTITY/);
   assert.throws(()=>plan({quantity:11,physicalQuantity:10,lots:[]}),/INVALID_QUANTITY/);
 });
+test('pedido administrativo inclui material vencido explicitamente; baixa física continua bloqueada',()=>{
+  const expired=lot('e',7,'2025-12-01');
+  const input={quantity:4,physicalQuantity:7,today:new Date('2026-10-28'),lots:[expired]};
+  assert.throws(()=>plan(input),/LOTS_NOT_ELIGIBLE/);
+  assert.deepEqual(plan({...input,includeExpired:true}),
+    [{lotId:expired.id,quantity:4}]);
+  assert.throws(()=>plan({...input,includeExpired:true,quantity:8}),/INVALID_QUANTITY/);
+  const write=text('lib/server/warehouseWithdrawalAtomicWrite.ts');
+  assert.match(write,/warehouseLotExpiryState\(lot\)==='EXPIRED'/);
+  assert.match(write,/WAREHOUSE_OUTBOUND_LOT_EXPIRED/);
+  const ui=text('features/warehouse/components/WarehouseMaterialWithdrawal.tsx');
+  assert.match(ui,/warehouse-expired-request-download/);
+  assert.match(ui,/updateWarehouseLot/);
+});
 test('Scanner aceita item e local apenas no modo de saida, sem relaxar outras telas',()=>{
   const src=text('lib/warehouse/mobileScanner.ts');
   assert.match(src,/'EXPECT_PRODUCT_OR_LOCATION'/);

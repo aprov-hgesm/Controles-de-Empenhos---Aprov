@@ -1,4 +1,4 @@
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import type {VerifiedWarehouseRequest} from './warehouseAccess';
 import {getGoogleAccessToken} from './sectorProvisioningAdmin';
 import {
@@ -115,6 +115,64 @@ export async function bulkWarehouseDepotReturnQueueServer(
     return {result:{ok:true,changed:writes.length,unchanged,
       action:action as 'ARCHIVE'|'RESTORE'},writes};
   });
+}
+
+/**
+ * Corrige a validade documental de uma referência devolvida ao recebimento.
+ * O documento de retorno é a fonte para futura realocação. Não reativa lotes
+ * arquivados e mantém auditoria imutável da correção.
+ */
+export async function updateWarehouseDepotReturnExpiryServer(
+  access:VerifiedWarehouseRequest,raw:unknown
+):Promise<{ok:true;returnId:string;lotId:string;expiresOn:string|null}>{
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))
+    return fail('WAREHOUSE_DEPOT_RETURN_EXPIRY_INPUT_INVALID',400);
+  const input=raw as Record<string,unknown>;
+  const returnId=input.returnId,lotId=input.lotId,expiresOn=input.expiresOn,
+    reason=input.reason;
+  if(typeof returnId!=='string'||!/^dr_[a-f0-9]{32}$/.test(returnId)
+    ||typeof lotId!=='string'||!/^lot_[a-f0-9]{32}$/.test(lotId)
+    ||typeof expiresOn!=='string'||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(expiresOn)
+    ||!(Number.isFinite(Date.parse(expiresOn+'T00:00:00Z'))
+      &&new Date(expiresOn+'T00:00:00Z').toISOString().slice(0,10)===expiresOn)
+    ||typeof reason!=='string'||reason.trim().length<5||reason.length>180)
+    return fail('WAREHOUSE_DEPOT_RETURN_EXPIRY_INPUT_INVALID',400);
+  const ws=access.workspaceId,authToken=await token();
+  const returnPath=root(ws,'depotReturns',returnId);
+  const auditId='expreturn_'+randomUUID().replace(/-/g,'');
+  const auditPath=root(ws,'depotReturnExpiryAudits',auditId);
+  return warehouseAdminTransaction<{ok:true;returnId:string;lotId:string;expiresOn:string|null}>(
+    authToken,[returnPath,auditPath],rows=>{
+      const row=rows.get(returnPath);
+      if(!row)return fail('WAREHOUSE_DEPOT_RETURN_NOT_FOUND',404);
+      const d=row.data;
+      if(d.workspaceId!==ws||d.ug!==access.ug||d.schemaVersion!=='warehouse_depot_return_v1')
+        return fail('WAREHOUSE_DEPOT_RETURN_SCOPE_MISMATCH',403);
+      if(d.status!=='PENDING'&&d.status!=='ARCHIVED')
+        return fail('WAREHOUSE_DEPOT_RETURN_EXPIRY_ALREADY_ALLOCATED');
+      if(!Array.isArray(d.lotReferences))
+        return fail('WAREHOUSE_DEPOT_RETURN_LOT_INVALID');
+      const index=(d.lotReferences as Array<Record<string,unknown>>)
+        .findIndex(item=>item.id===lotId);
+      if(index<0)return fail('WAREHOUSE_DEPOT_RETURN_LOT_NOT_FOUND',404);
+      const original=d.lotReferences as Array<Record<string,unknown>>;
+      const previous=original[index].expiresOn??null;
+      if(previous===expiresOn)
+        return {result:{ok:true,returnId,lotId,expiresOn},writes:[]};
+      if(rows.get(auditPath))return fail('WAREHOUSE_DEPOT_RETURN_EXPIRY_AUDIT_CONFLICT');
+      const next=original.map((item,i)=>i===index?{...item,expiresOn}:item);
+      const now=new Date();
+      return {result:{ok:true,returnId,lotId,expiresOn},writes:[
+        {path:returnPath,data:{...d,lotReferences:next,updatedBy:access.uid,updatedAt:now}},
+        {path:auditPath,data:{
+          schemaVersion:'warehouse_depot_return_expiry_audit_v1',id:auditId,
+          workspaceId:ws,ug:access.ug,returnId,lotId,materialId:d.materialId,
+          previousExpiresOn:previous,nextExpiresOn:expiresOn,
+          reason:reason.trim(),changedBy:access.uid,changedAt:now,
+        }},
+      ]};
+    }
+  );
 }
 
 export async function allocateWarehouseDepotReturnServer(

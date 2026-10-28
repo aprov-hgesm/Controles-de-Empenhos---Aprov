@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { VerifiedWarehouseRequest } from './warehouseAccess';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import {
@@ -95,11 +96,15 @@ export async function writeWarehouseLotServer(
   const destPath=docPath(access.workspaceId,'locationBalances',destBalanceId);
   const sourcePath=fromBalanceId?docPath(access.workspaceId,'locationBalances',fromBalanceId):null;
   const mutexPath=docPath(access.workspaceId,'lotAttributionLocks',materialId);
+  // Uma trilha imutável por alteração, escrita na mesma transação do lote.
+  const expiryAuditId='expiry_'+randomUUID().replace(/-/g,'');
+  const expiryAuditPath=docPath(access.workspaceId,'lotExpiryAudits',expiryAuditId);
   const candidates=await warehouseAdminListByField(
     token,access.workspaceId,'lots','materialId',materialId,100
   );
   const paths=[...new Set([
     selectedPath,materialPath,balancePath,destPath,mutexPath,
+    ...(!isCreate?[expiryAuditPath]:[]),
     ...(sourcePath?[sourcePath]:[]),
     ...candidates.map(row=>row.path),
   ])];
@@ -199,12 +204,25 @@ export async function writeWarehouseLotServer(
     const createdAt=typeof oldRow?.data.createdAt==='string'
       && !Number.isNaN(Date.parse(oldRow.data.createdAt))?
       new Date(oldRow.data.createdAt):now;
+    const expiryChanged=!isCreate&&(old?.expiresOn??null)!==(proposed.expiresOn??null);
+    if(expiryChanged&&rows.get(expiryAuditPath))
+      return fail('WAREHOUSE_LOT_EXPIRY_AUDIT_CONFLICT');
     return {result:proposed,writes:[
       {path:selectedPath,data:{...proposed,createdAt,updatedAt:now}},
       {path:mutexPath,data:{
         workspaceId:access.workspaceId,ug:access.ug,materialId,
         revision:nextRevision,updatedBy:access.uid,updatedAt:now,
       }},
+      ...(expiryChanged?[{path:expiryAuditPath,data:{
+        schemaVersion:'warehouse_lot_expiry_audit_v1',id:expiryAuditId,
+        workspaceId:access.workspaceId,ug:access.ug,materialId,
+        lotId:preliminaryId,oldExpiresOn:old?.expiresOn??null,
+        newExpiresOn:proposed.expiresOn??null,
+        updatedBy:access.uid,changedAt:now,
+        reason:typeof payload.changeReason==='string'&&payload.changeReason.trim()
+          ?payload.changeReason.trim().slice(0,180)
+          :'Correção administrativa de validade',
+      }}]:[]),
     ]};
   });
 }

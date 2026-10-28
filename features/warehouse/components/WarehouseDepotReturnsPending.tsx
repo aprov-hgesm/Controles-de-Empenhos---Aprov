@@ -6,18 +6,23 @@ import {listWarehouseDepots,listWarehouseLocations} from '../../../lib/warehouse
 import {listWarehouseMaterials} from '../../../lib/warehouse/materialRepository';
 import type {WarehouseDepotReturnPending} from '../../../lib/server/warehouseDepotReturnReadAndAllocate';
 import type {WarehouseStockPosition} from '../../../lib/warehouse/location';
+import {downloadWarehouseExpiredRequest} from '../pdf/WarehouseExpiredMaterialRequest';
 
 type Target={key:string;label:string;position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>};
 type Catalog={depots:Awaited<ReturnType<typeof listWarehouseDepots>>;
   locations:Awaited<ReturnType<typeof listWarehouseLocations>>;
-  names:Record<string,string>};
-const emptyCatalog:Catalog={depots:[],locations:[],names:{}};
+  names:Record<string,string>;
+  units:Record<string,string>};
+const emptyCatalog:Catalog={depots:[],locations:[],names:{},units:{}};
 
 export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string}){
   const [rows,setRows]=useState<WarehouseDepotReturnPending[]>([]);
   const [archived,setArchived]=useState<WarehouseDepotReturnPending[]>([]);
   const [selectedIds,setSelectedIds]=useState<string[]>([]);
   const [showArchived,setShowArchived]=useState(false);
+  const [expiryEdit,setExpiryEdit]=useState<{
+    returnId:string;lotId:string;expiresOn:string;reason:string
+  }|null>(null);
   const [catalog,setCatalog]=useState<Catalog>(emptyCatalog);
   const [selected,setSelected]=useState<Record<string,string>>({});
   const [loading,setLoading]=useState(true);
@@ -40,7 +45,9 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
       setArchived(pending.filter(item=>item.status==='ARCHIVED'));
       setSelectedIds(current=>current.filter(id=>live.some(item=>item.id===id)));
       setCatalog({depots,locations,names:Object.fromEntries(
-        materials.map(item=>[item.id,item.description]))});
+        materials.map(item=>[item.id,item.description])),
+        units:Object.fromEntries(materials.map(item=>[item.id,
+          item.unit.label||item.unit.code]))});
       setError(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:'Não foi possível consultar devoluções ao recebimento.');
@@ -120,6 +127,46 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     finally{setWorking(null);}
   };
 
+  const exportExpiredGroup=async(group:{
+    id:string;items:WarehouseDepotReturnPending[]
+  })=>{
+    const today=new Date().toISOString().slice(0,10);
+    const lines=group.items.flatMap(item=>item.lotReferences
+      .filter(lot=>lot.expiresOn&&lot.expiresOn<today&&lot.quantity>0)
+      .map(lot=>({
+        description:catalog.names[item.materialId]||item.materialId,
+        quantity:lot.quantity,unitLabel:catalog.units[item.materialId]||'un.',
+        expiry:lot.expiresOn!,position:'Recebimento · origem '+item.depotCode,
+        lotId:lot.id,
+      })));
+    if(!lines.length){setError('Não há material vencido neste grupo.');return;}
+    setWorking('expired-pdf');setError(null);
+    try{
+      await downloadWarehouseExpiredRequest({
+        ug:catalog.depots[0]?.depot.ug||'',workspaceId,
+        requestId:'recebimento-'+group.id,operatorName:'Operador autenticado',
+        destinationName:'Destinação administrativa a definir',lines,
+      });
+      setMessage('Pedido administrativo de material vencido gerado, sem baixa de estoque.');
+    }catch(error){setError(error instanceof Error?error.message:'Falha ao gerar pedido.');}
+    finally{setWorking(null);}
+  };
+
+  const saveReturnExpiry=async()=>{
+    if(!expiryEdit||working||!expiryEdit.expiresOn||expiryEdit.reason.trim().length<5)return;
+    setWorking('expiry');setError(null);setMessage(null);
+    try{
+      await warehouseServerCommand(workspaceId,'DEPOT_RETURN_EXPIRY_UPDATE',{
+        returnId:expiryEdit.returnId,lotId:expiryEdit.lotId,
+        expiresOn:expiryEdit.expiresOn,reason:expiryEdit.reason.trim(),
+      });
+      setExpiryEdit(null);
+      await reload();
+      setMessage('Validade corrigida. A nova data acompanhará o material na realocação, e a alteração foi auditada.');
+    }catch(error){setError(error instanceof Error?error.message:'Falha ao corrigir validade.');}
+    finally{setWorking(null);}
+  };
+
   if(loading)return <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
     Consultando retornos de depósitos ao recebimento…
   </div>;
@@ -173,6 +220,11 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
             className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-900 disabled:opacity-40">
             Remover grupo
           </button>
+          <button type="button" disabled={!!working}
+            onClick={()=>void exportExpiredGroup(group)}
+            className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-900 disabled:opacity-40">
+            Pedido de vencidos (PDF)
+          </button>
         </div>
         {group.items.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
         <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
@@ -193,6 +245,39 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
                 ?row.lotReferences.length+' referência(s) de lote/validade preservada(s)'
                 :'Material sem lote de validade vinculado'}
             </p>
+            {row.lotReferences.map(lot=><div key={lot.id}
+              className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">
+              <div className="flex flex-wrap items-center gap-2">
+                <span>Validade: <strong>{lot.expiresOn?lot.expiresOn.split('-').reverse().join('/'):'Não informada'}</strong></span>
+                <button type="button" disabled={!!working}
+                  onClick={()=>setExpiryEdit({returnId:row.id,lotId:lot.id,
+                    expiresOn:lot.expiresOn||'',reason:''})}
+                  className="rounded-lg border border-blue-200 bg-white px-2 py-1 text-[10px] font-bold text-blue-900 disabled:opacity-40">
+                  Editar validade
+                </button>
+              </div>
+              {expiryEdit?.returnId===row.id&&expiryEdit?.lotId===lot.id&&
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="date" value={expiryEdit.expiresOn} disabled={!!working}
+                    onChange={event=>setExpiryEdit(current=>current?{
+                      ...current,expiresOn:event.target.value}:null)}
+                    aria-label="Nova validade do material devolvido"
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1" />
+                  <input value={expiryEdit.reason} maxLength={180} disabled={!!working}
+                    placeholder="Justificativa documental"
+                    onChange={event=>setExpiryEdit(current=>current?{
+                      ...current,reason:event.target.value}:null)}
+                    aria-label="Justificativa da nova validade"
+                    className="min-w-44 rounded-lg border border-slate-300 bg-white px-2 py-1" />
+                  <button type="button" onClick={()=>void saveReturnExpiry()}
+                    disabled={!!working||!expiryEdit.expiresOn||expiryEdit.reason.trim().length<5}
+                    className="rounded-lg bg-blue-900 px-2 py-1 text-xs font-bold text-white disabled:opacity-40">
+                    Salvar
+                  </button>
+                  <button type="button" onClick={()=>setExpiryEdit(null)}
+                    className="rounded-lg border border-slate-300 px-2 py-1 text-xs">Cancelar</button>
+                </div>}
+            </div>)}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Destino

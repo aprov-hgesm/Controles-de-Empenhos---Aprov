@@ -52,6 +52,8 @@ export interface CreateWarehouseLotInput {
 }
 
 export interface UpdateWarehouseLotInput {
+  /** Justificativa registrada com a alteração da validade. */
+  changeReason?: string;
   code?: string;
   expiresOn?: string | null;
   quantity?: number;
