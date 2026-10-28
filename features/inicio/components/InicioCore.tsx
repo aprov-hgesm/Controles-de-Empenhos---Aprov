@@ -55,12 +55,13 @@ export function InicioCore({ snapshot, performanceMode, ambientPaused }: InicioC
         </span>
         <span className={styles.float}>
           <Image
-            src="/emprovex-logo%20(2).png"
+            src="/emprovex-logo-core.svg"
             alt=""
-            width={2048}
-            height={2048}
+            width={500}
+            height={500}
             sizes="(max-width: 640px) 150px, 178px"
             className={styles.logo}
+            unoptimized
             priority
           />
         </span>
