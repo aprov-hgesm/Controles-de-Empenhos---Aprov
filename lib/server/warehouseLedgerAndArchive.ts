@@ -23,6 +23,9 @@ import {
   warehouseCanonicalLotReadInput,warehouseCanonicalDepotReadInput,
   warehouseCanonicalLocationReadInput,
 } from '../warehouse/readCompatibility';
+import { createHash } from 'node:crypto';
+import { planDepotReturnToReceiving, DepotReturnPlanError } from '../warehouse/depotReturnToReceivingPlan';
+import { warehouseStockPositionsEqual } from '../warehouse/location';
 import type { ApplyWarehouseMovementInput,ApplyWarehouseMovementResult } from '../warehouse/ledgerRepository';
 
 const fail=(s:string,code=409):never=>{throw new WarehouseStoreError(s,code)};
@@ -160,6 +163,108 @@ function sameScope(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument,ki
   if(!r.ok)return fail('WAREHOUSE_ARCHIVE_DEPOT_INVALID');
   return r.data;
 }
+/**
+ * Diagnóstico operacional READ-ONLY do bloqueio de exclusão de depósito.
+ * Não infere estoque a partir do croqui nem autoriza ignorar saldos legados.
+ * O mesmo workspace/UG do usuário já foi verificado na API de operações.
+ */
+export interface WarehouseDepotArchiveDiagnostic {
+  depotId:string;
+  positiveBalanceCount:number;
+  activeLotCount:number;
+  blockers:Array<{
+    kind:'BALANCE'|'LOT';
+    recordId:string;
+    materialId:string;
+    quantity:number;
+    location:string;
+    positionStatus:'ACTIVE'|'INACTIVE'|'MISSING';
+  }>;
+  truncated:boolean;
+}
+export async function diagnoseWarehouseDepotArchiveServer(
+  access:VerifiedWarehouseRequest,raw:unknown
+):Promise<WarehouseDepotArchiveDiagnostic> {
+  const input=obj(raw);
+  const depotId=input.depotId;
+  if(typeof depotId!=='string'||!/^dep_[a-f0-9]{32}$/.test(depotId))
+    return fail('WAREHOUSE_ARCHIVE_INVALID_TARGET',400);
+  const ws=access.workspaceId,authToken=await token();
+  const depotPath=path(ws,'depots',depotId);
+  const [locations,balances,lots]=await Promise.all([
+    warehouseAdminListCollection(authToken,ws,'locations',500),
+    warehouseAdminListCollection(authToken,ws,'locationBalances',500),
+    warehouseAdminListCollection(authToken,ws,'lots',500),
+  ]);
+  // A consulta incompleta jamais pode produzir um falso diagnóstico "vazio".
+  if(locations.length===500||balances.length===500||lots.length===500)
+    return fail('WAREHOUSE_ARCHIVE_CATALOG_LIMIT');
+  await warehouseAdminTransaction(authToken,[depotPath],rows=>{
+    const depot=rows.get(depotPath);
+    if(!depot)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND',404);
+    sameScope(access,depot,'depot');
+    return {result:true,writes:[]};
+  });
+  const byId=new Map(locations.map(row=>[row.path.split('/').at(-1)||'',row]));
+  const statusFor=(position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>):'ACTIVE'|'INACTIVE'|'MISSING'=> {
+    const loc=byId.get(String(position.locationId||''));
+    if(!loc||loc.data.kind!=='LOCAL'||loc.data.depotId!==depotId)return 'MISSING';
+    if(loc.data.status!=='active')return 'INACTIVE';
+    if(position.kind==='SUBPOSITION'){
+      const sub=byId.get(String(position.subpositionId||''));
+      if(!sub||sub.data.kind!=='SUBPOSITION'||sub.data.depotId!==depotId
+        ||sub.data.parentLocationId!==loc.data.id)return 'MISSING';
+      if(sub.data.status!=='active')return 'INACTIVE';
+    }
+    return 'ACTIVE';
+  };
+  const labelFor=(position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>):string=>{
+    const loc=byId.get(String(position.locationId||''));
+    const sub=position.kind==='SUBPOSITION'?byId.get(String(position.subpositionId||'')):null;
+    return [loc?.data.code||String(position.locationId||'LOCAL AUSENTE'),
+      ...(position.kind==='SUBPOSITION'?[sub?.data.code||String(position.subpositionId||'SUBPOSIÇÃO AUSENTE')]:[])].join(' / ');
+  };
+  const affects=(row:WarehouseAdminDocument):boolean=>{
+    const p=row.data.position;
+    return !!p&&typeof p==='object'&&!Array.isArray(p)
+      &&(p as Record<string,unknown>).kind!=='UNASSIGNED'
+      &&(p as Record<string,unknown>).depotId===depotId;
+  };
+  const found:Array<WarehouseDepotArchiveDiagnostic['blockers'][number]>=[];
+  let positiveBalanceCount=0,activeLotCount=0;
+  for(const row of balances.filter(affects)){
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLocationBalance(
+      warehouseCanonicalLocationBalanceReadInput(id,row.data),{expectedWorkspaceId:ws});
+    if(!validated.ok||validated.data.ug!==access.ug)
+      return fail('WAREHOUSE_ARCHIVE_INVALID_BALANCE');
+    if(validated.data.quantity<=0)continue;
+    positiveBalanceCount++;
+    const p=validated.data.position;
+    if(p.kind==='UNASSIGNED')continue;
+    found.push({kind:'BALANCE',recordId:id,materialId:validated.data.materialId,
+      quantity:validated.data.quantity,location:labelFor(p),
+      positionStatus:statusFor(p)});
+  }
+  for(const row of lots.filter(affects)){
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLot(warehouseCanonicalLotReadInput(id,row.data),{
+      expectedWorkspaceId:ws,expectedUg:access.ug});
+    if(!validated.ok)return fail('WAREHOUSE_ARCHIVE_INVALID_LOT');
+    if(validated.data.status!=='active'||validated.data.quantity<=0)continue;
+    activeLotCount++;
+    const p=validated.data.position;
+    if(p.kind==='UNASSIGNED')continue;
+    found.push({kind:'LOT',recordId:id,materialId:validated.data.materialId,
+      quantity:validated.data.quantity,location:labelFor(p),
+      positionStatus:statusFor(p)});
+  }
+  found.sort((a,b)=>(a.positionStatus==='ACTIVE'?1:0)-(b.positionStatus==='ACTIVE'?1:0)
+    ||a.location.localeCompare(b.location)||a.materialId.localeCompare(b.materialId));
+  return {depotId,positiveBalanceCount,activeLotCount,
+    blockers:found.slice(0,30),truncated:found.length>30};
+}
+
 export async function warehouseStructureArchiveServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<{ok:true}>{
@@ -300,5 +405,227 @@ export async function warehouseStructureArchiveServer(
       }});
     }
     return {result:{ok:true as const},writes};
+  });
+}
+
+/**
+ * Exclusão COM devolução ao recebimento. Nunca apaga estoque: em um único commit
+ * os saldos físicos passam à posição UNASSIGNED e são criadas pendências
+ * exclusivas para realocação (não constituem NF/intake).
+ * A camada de validade mantém os lotes originais como históricos inativos;
+ * sua atribuição é restituída apenas ao alocar a pendência.
+ */
+export async function warehouseDepotDeleteToReceivingServer(
+  access:VerifiedWarehouseRequest,raw:unknown
+):Promise<{ok:true;returnedItems:number;returnedQuantity:number}> {
+  const v=obj(raw);
+  if(v.kind!=='DEPOT'||v.mode!=='DELETE'
+    ||typeof v.id!=='string'||!/^dep_[a-f0-9]{32}$/.test(v.id)
+    ||typeof v.confirmCode!=='string')
+    return fail('WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION',400);
+  const ws=access.workspaceId,depotId=v.id as string,authToken=await token();
+  const [depots,locations,balances,lots,layouts]=await Promise.all([
+    warehouseAdminListCollection(authToken,ws,'depots',500),
+    warehouseAdminListCollection(authToken,ws,'locations',500),
+    warehouseAdminListCollection(authToken,ws,'locationBalances',500),
+    warehouseAdminListCollection(authToken,ws,'lots',500),
+    warehouseAdminListByField(authToken,ws,'layouts','depotId',depotId,500),
+  ]);
+  if([depots,locations,balances,lots,layouts].some(rows=>rows.length===500))
+    return fail('WAREHOUSE_ARCHIVE_CATALOG_LIMIT');
+  const dp=path(ws,'depots',depotId),deleted=path(ws,'depotDeletions',depotId);
+  const depotRow=depots.find(row=>row.path===dp);
+  if(!depotRow)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND',404);
+  const checkedDepot=sameScope(access,depotRow,'depot');
+  if(checkedDepot.status!=='active')return fail('WAREHOUSE_DEPOT_DELETE_NOT_ACTIVE');
+  if(v.confirmCode!==checkedDepot.code)return fail('WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION',400);
+  const inDepot=locations.filter(row=>row.data.depotId===depotId);
+  const affected=(row:WarehouseAdminDocument):boolean=>{
+    const p=row.data.position;
+    return !!p&&typeof p==='object'&&!Array.isArray(p)
+      &&(p as Record<string,unknown>).kind!=='UNASSIGNED'
+      &&(p as Record<string,unknown>).depotId===depotId;
+  };
+  const relevantBalances=balances.filter(affected),relevantLots=lots.filter(affected);
+  const normalizedBalances=relevantBalances.map(row=>{
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLocationBalance(
+      warehouseCanonicalLocationBalanceReadInput(id,row.data),{expectedWorkspaceId:ws});
+    if(!validated.ok||validated.data.ug!==access.ug)
+      return fail('WAREHOUSE_ARCHIVE_INVALID_BALANCE');
+    return validated.data;
+  });
+  const normalizedLots=relevantLots.map(row=>{
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLot(warehouseCanonicalLotReadInput(id,row.data),{
+      expectedWorkspaceId:ws,expectedUg:access.ug});
+    if(!validated.ok)return fail('WAREHOUSE_ARCHIVE_INVALID_LOT');
+    return validated.data;
+  });
+  let plan:ReturnType<typeof planDepotReturnToReceiving>;
+  try{plan=planDepotReturnToReceiving(depotId,normalizedBalances,normalizedLots);}
+  catch(error){
+    if(error instanceof DepotReturnPlanError)return fail(error.code);
+    throw error;
+  }
+  const byMaterial=new Map<string,typeof plan>();
+  for(const item of plan)byMaterial.set(item.materialId,[...(byMaterial.get(item.materialId)||[]),item]);
+  const unassigned={kind:'UNASSIGNED' as const};
+  const receiveIds=new Map<string,string>();
+  const movementIds=new Map<string,string>();
+  const returnIds=new Map<string,string>();
+  for(const item of plan){
+    const movementId=await createWarehouseMovementId(ws,
+      'depot-delete-return:'+depotId+':'+item.sourceBalanceId);
+    movementIds.set(item.sourceBalanceId,movementId);
+    returnIds.set(item.sourceBalanceId,'dr_'+createHash('sha256').update(
+      ws+'\n'+depotId+'\n'+item.sourceBalanceId).digest('hex').slice(0,32));
+  }
+  for(const materialId of byMaterial.keys())
+    receiveIds.set(materialId,await createWarehouseLocationBalanceId(ws,materialId,unassigned));
+  const activeLayouts=layouts.filter(row=>row.data.status==='active');
+  const toArchive=inDepot.filter(row=>row.data.status==='active');
+  const paths=[dp,deleted,
+    ...inDepot.map(row=>row.path),
+    ...relevantBalances.map(row=>row.path),
+    ...relevantLots.map(row=>row.path),
+    ...layouts.map(row=>row.path),
+    ...[...byMaterial.keys()].flatMap(materialId=>[
+      path(ws,'materials',materialId),path(ws,'balances',materialId),
+      path(ws,'locationBalances',receiveIds.get(materialId)!),
+    ]),
+    ...plan.flatMap(item=>[
+      path(ws,'movements',movementIds.get(item.sourceBalanceId)!),
+      path(ws,'depotReturns',returnIds.get(item.sourceBalanceId)!),
+    ]),
+  ];
+  const readset=[...new Set(paths)];
+  const estimatedWrites=toArchive.length+activeLayouts.length+2
+    +normalizedLots.filter(x=>x.status==='active').length+plan.length*3+byMaterial.size;
+  if(readset.length>450||estimatedWrites>430)return fail('WAREHOUSE_ARCHIVE_TOO_LARGE');
+  return warehouseAdminTransaction(authToken,readset,rows=>{
+    const original=rows.get(dp);
+    if(!original)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND');
+    const depot=sameScope(access,original,'depot');
+    if(depot.status!=='active')return fail('WAREHOUSE_DEPOT_DELETE_NOT_ACTIVE');
+    if(depot.code!==v.confirmCode)return fail('WAREHOUSE_DEPOT_DELETE_INVALID_CONFIRMATION',400);
+    if(rows.get(deleted))return fail('WAREHOUSE_DEPOT_ALREADY_DELETED');
+    const now=new Date();
+    const writes:Array<{path:string;data:Record<string,unknown>}>=[];
+    for(const [materialId,items] of byMaterial){
+      const materialRow=rows.get(path(ws,'materials',materialId));
+      if(!materialRow)return fail('WAREHOUSE_MATERIAL_NOT_FOUND');
+      const material=validateWarehouseMaterial(
+        warehouseCanonicalMaterialReadInput(materialId,materialRow.data),{
+          expectedWorkspaceId:ws,expectedUg:access.ug});
+      if(!material.ok)return fail('WAREHOUSE_MATERIAL_INVALID');
+      const aggregateRow=rows.get(path(ws,'balances',materialId));
+      if(!aggregateRow)return fail('WAREHOUSE_DEPOT_RETURN_AGGREGATE_MISSING');
+      const aggregate=balance(access,aggregateRow,materialId);
+      const returning=items.reduce((sum,item)=>sum+item.quantity,0);
+      if(aggregate.quantity+0.000001<returning)
+        return fail('WAREHOUSE_DEPOT_RETURN_AGGREGATE_MISMATCH');
+      const receiveId=receiveIds.get(materialId)!;
+      const receivePath=path(ws,'locationBalances',receiveId);
+      const existing=rows.get(receivePath);
+      const parsed=existing?validateWarehouseLocationBalance(
+        warehouseCanonicalLocationBalanceReadInput(receiveId,existing.data),
+        {expectedWorkspaceId:ws}):null;
+      if(parsed&&!parsed.ok)return fail('WAREHOUSE_DEPOT_RETURN_RECEIVING_INVALID');
+      if(parsed?.ok&&(parsed.data.ug!==access.ug
+        ||!warehouseStockPositionsEqual(parsed.data.position,unassigned)))
+        return fail('WAREHOUSE_DEPOT_RETURN_RECEIVING_INVALID');
+      const lastMovement=movementIds.get(items[items.length-1].sourceBalanceId)!;
+      const next=applyWarehouseLocationDelta(parsed?.ok?parsed.data:null,{
+        id:receiveId,workspaceId:ws,ug:access.ug,materialId,position:unassigned,
+        quantityDelta:returning,movementId:lastMovement});
+      writes.push({path:receivePath,data:{...next,updatedAt:now}});
+    }
+    for(const item of plan){
+      const fromPath=path(ws,'locationBalances',item.sourceBalanceId);
+      const old=rows.get(fromPath);
+      if(!old)return fail('WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE');
+      const parsed=validateWarehouseLocationBalance(
+        warehouseCanonicalLocationBalanceReadInput(item.sourceBalanceId,old.data),
+        {expectedWorkspaceId:ws});
+      if(!parsed.ok||parsed.data.ug!==access.ug
+        ||parsed.data.quantity!==item.quantity
+        ||parsed.data.materialId!==item.materialId
+        ||!warehouseStockPositionsEqual(parsed.data.position,item.sourcePosition))
+        return fail('WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE');
+      const movementId=movementIds.get(item.sourceBalanceId)!;
+      const movementPath=path(ws,'movements',movementId);
+      const returnPath=path(ws,'depotReturns',returnIds.get(item.sourceBalanceId)!);
+      if(rows.get(movementPath)||rows.get(returnPath))return fail('WAREHOUSE_DEPOT_RETURN_IDEMPOTENCY_CONFLICT');
+      const toId=receiveIds.get(item.materialId)!;
+      const candidate=validateWarehouseMovement({
+        schemaVersion:WAREHOUSE_MOVEMENT_SCHEMA_VERSION,id:movementId,
+        workspaceId:ws,ug:access.ug,materialId:item.materialId,
+        type:'TRANSFER',quantityDelta:0,idempotencyKeyHash:movementId.slice(4),
+        reversesMovementId:null,note:'Retorno ao recebimento ao excluir depósito '+depot.code,
+        source:{kind:'LOCATION_TRANSFER',actorUid:access.uid,
+          quantity:item.quantity,from:item.sourcePosition,to:unassigned,
+          fromBalanceId:item.sourceBalanceId,toBalanceId:toId},
+      },{expectedWorkspaceId:ws,expectedUg:access.ug,expectedMaterialId:item.materialId});
+      if(!candidate.ok)return fail('WAREHOUSE_DEPOT_RETURN_MOVEMENT_INVALID');
+      const nextFrom=applyWarehouseLocationDelta(parsed.data,{
+        id:item.sourceBalanceId,workspaceId:ws,ug:access.ug,
+        materialId:item.materialId,position:item.sourcePosition,
+        quantityDelta:-item.quantity,movementId});
+      writes.push(
+        {path:fromPath,data:{...nextFrom,updatedAt:now}},
+        {path:movementPath,data:{...candidate.data,createdAt:now}},
+        {path:returnPath,data:{
+          schemaVersion:'warehouse_depot_return_v1',id:returnIds.get(item.sourceBalanceId)!,
+          workspaceId:ws,ug:access.ug,
+          depotId,depotCode:depot.code,depotName:depot.name,
+          materialId:item.materialId,
+          sourceBalanceId:item.sourceBalanceId,sourcePosition:item.sourcePosition,
+          quantity:item.quantity,pendingQuantity:item.quantity,status:'PENDING',
+          lotReferences:item.lotReferences.map(ref=>{
+            const actual=normalizedLots.find(lot=>lot.id===ref.id);
+            if(!actual)return fail('WAREHOUSE_DEPOT_RETURN_LOT_MISSING');
+            return {id:ref.id,quantity:ref.quantity,code:ref.code,
+              expiresOn:ref.expiresOn,origin:actual.origin};
+          }),
+          createdBy:access.uid,updatedBy:access.uid,createdAt:now,updatedAt:now,
+        }},
+      );
+    }
+    for(const row of relevantLots){
+      const stored=rows.get(row.path);
+      if(!stored)return fail('WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE');
+      const id=row.path.split('/').at(-1)||'';
+      const validated=validateWarehouseLot(warehouseCanonicalLotReadInput(id,stored.data),{
+        expectedWorkspaceId:ws,expectedUg:access.ug});
+      if(!validated.ok)return fail('WAREHOUSE_ARCHIVE_INVALID_LOT');
+      if(validated.data.status==='active')
+        writes.push({path:row.path,data:{...stored.data,status:'inactive',
+          updatedBy:access.uid,updatedAt:now}});
+    }
+    for(const row of toArchive){
+      const current=rows.get(row.path);
+      if(!current)return fail('WAREHOUSE_ARCHIVE_CONCURRENT_CHANGE');
+      sameScope(access,current,'location');
+      if(current.data.status==='active')
+        writes.push({path:row.path,data:{...current.data,status:'inactive',
+          updatedBy:access.uid,updatedAt:now}});
+    }
+    for(const row of activeLayouts){
+      const current=rows.get(row.path);
+      if(!current||current.data.depotId!==depotId||current.data.status!=='active')
+        return fail('WAREHOUSE_ARCHIVE_INVALID_LAYOUT');
+      writes.push({path:row.path,data:{...current.data,status:'archived',
+        updatedBy:access.uid,updatedAt:now}});
+    }
+    writes.push(
+      {path:dp,data:{...original.data,status:'inactive',
+        updatedBy:access.uid,updatedAt:now}},
+      {path:deleted,data:{workspaceId:ws,ug:access.ug,depotId,code:depot.code,
+        name:depot.name,returnedItems:plan.length,
+        deletedBy:access.uid,deletedAt:now}},
+    );
+    return {result:{ok:true as const,returnedItems:plan.length,
+      returnedQuantity:plan.reduce((sum,row)=>sum+row.quantity,0)},writes};
   });
 }

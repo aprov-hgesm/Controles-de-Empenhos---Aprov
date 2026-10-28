@@ -1,0 +1,140 @@
+'use client';
+
+import {useCallback,useEffect,useMemo,useState} from 'react';
+import {warehouseServerCommand} from '../../../lib/warehouse/serverCommandClient';
+import {listWarehouseDepots,listWarehouseLocations} from '../../../lib/warehouse/locationRepository';
+import {listWarehouseMaterials} from '../../../lib/warehouse/materialRepository';
+import type {WarehouseDepotReturnPending} from '../../../lib/server/warehouseDepotReturnReadAndAllocate';
+import type {WarehouseStockPosition} from '../../../lib/warehouse/location';
+
+type Target={key:string;label:string;position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>};
+type Catalog={depots:Awaited<ReturnType<typeof listWarehouseDepots>>;
+  locations:Awaited<ReturnType<typeof listWarehouseLocations>>;
+  names:Record<string,string>};
+const emptyCatalog:Catalog={depots:[],locations:[],names:{}};
+
+export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string}){
+  const [rows,setRows]=useState<WarehouseDepotReturnPending[]>([]);
+  const [catalog,setCatalog]=useState<Catalog>(emptyCatalog);
+  const [selected,setSelected]=useState<Record<string,string>>({});
+  const [loading,setLoading]=useState(true);
+  const [working,setWorking]=useState<string|null>(null);
+  const [error,setError]=useState<string|null>(null);
+  const [message,setMessage]=useState<string|null>(null);
+
+  const reload=useCallback(async()=>{
+    setLoading(true);
+    try{
+      const [pending,depots,locations,materials]=await Promise.all([
+        warehouseServerCommand<WarehouseDepotReturnPending[]>(
+          workspaceId,'DEPOT_RETURNS_LIST',{}),
+        listWarehouseDepots(workspaceId),
+        listWarehouseLocations(workspaceId),
+        listWarehouseMaterials(workspaceId),
+      ]);
+      setRows(pending);
+      setCatalog({depots,locations,names:Object.fromEntries(
+        materials.map(item=>[item.id,item.description]))});
+      setError(null);
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'Não foi possível consultar devoluções ao recebimento.');
+    }finally{setLoading(false);}
+  },[workspaceId]);
+  useEffect(()=>{void reload();},[reload]);
+
+  const targets=useMemo<Target[]>(()=>{
+    const active=new Map(catalog.depots.filter(x=>x.depot.status==='active')
+      .map(item=>[item.depot.id,item.depot]));
+    const locals=catalog.locations.filter(item=>
+      item.location.status==='active'&&item.location.kind==='LOCAL'
+      &&active.has(item.location.depotId));
+    const byId=new Map(locals.map(item=>[item.location.id,item.location]));
+    const choices:Target[]=[];
+    for(const {location} of catalog.locations){
+      if(location.status!=='active'||!active.has(location.depotId))continue;
+      const depot=active.get(location.depotId)!;
+      if(location.kind==='LOCAL'){
+        choices.push({key:'L:'+location.id,label:depot.code+' · '+location.code+' · '+location.name,
+          position:{kind:'LOCATION',depotId:location.depotId,
+            locationId:location.id,subpositionId:null}});
+      }else if(location.kind==='SUBPOSITION'){
+        const parent=byId.get(location.parentLocationId||'');
+        if(!parent||parent.depotId!==location.depotId)continue;
+        choices.push({key:'S:'+location.id,
+          label:depot.code+' · '+parent.code+' / '+location.code+' · '+location.name,
+          position:{kind:'SUBPOSITION',depotId:location.depotId,
+            locationId:parent.id,subpositionId:location.id}});
+      }
+    }
+    return choices.sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+  },[catalog]);
+
+  const allocate=async(row:WarehouseDepotReturnPending)=>{
+    const destination=targets.find(item=>item.key===selected[row.id]);
+    if(!destination){setError('Selecione o depósito e o local de destino.');return;}
+    if(!window.confirm('Realocar '+row.pendingQuantity+' unidade(s) de '
+      +(catalog.names[row.materialId]||row.materialId)+' do recebimento para '
+      +destination.label+'? Os saldos e lotes serão transferidos em uma transação.'))return;
+    setWorking(row.id);setError(null);setMessage(null);
+    try{
+      await warehouseServerCommand(workspaceId,'DEPOT_RETURN_ALLOCATE',{
+        returnId:row.id,position:destination.position,
+      });
+      setMessage('Material realocado com sucesso. ID preservado e movimentação registrada.');
+      await reload();
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'Falha ao realocar material.');
+    }finally{setWorking(null);}
+  };
+
+  if(loading)return <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
+    Consultando retornos de depósitos ao recebimento…
+  </div>;
+  return <section data-testid="warehouse-depot-returns-receiving"
+    className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h3 className="text-sm font-black text-[#00288e]">Recebimento · Materiais devolvidos de depósitos excluídos</h3>
+        <p className="text-xs text-slate-600">São retornos internos para realocação, sem gerar Nota Fiscal ou uma nova entrada no estoque.</p>
+      </div>
+      <button type="button" onClick={()=>void reload()} disabled={!!working}
+        className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-blue-800">
+        Atualizar
+      </button>
+    </div>
+    {error&&<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs font-bold text-red-800">{error}</p>}
+    {message&&<p role="status" className="rounded-lg border border-green-200 bg-green-50 p-2 text-xs font-semibold">{message}</p>}
+    {rows.length===0&&!error
+      ?<p className="text-xs text-slate-500">Não há retornos de depósito aguardando alocação.</p>
+      :rows.map(row=><div key={row.id} className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-bold text-slate-800">{catalog.names[row.materialId]||row.materialId}</p>
+            <p className="text-xs text-slate-600">
+              {row.pendingQuantity.toLocaleString('pt-BR')} em recebimento · Origem: {row.depotCode} ({row.depotName})
+            </p>
+            <p className="text-[10px] text-slate-500">
+              {row.lotReferences.length>0
+                ?row.lotReferences.length+' referência(s) de lote/validade preservada(s)'
+                :'Material sem lote de validade vinculado'}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-semibold text-slate-700">Destino
+              <select value={selected[row.id]||''} disabled={!!working}
+                onChange={event=>setSelected(prev=>({...prev,[row.id]:event.target.value}))}
+                className="ml-2 max-w-72 rounded-lg border border-slate-300 bg-white p-2 text-xs">
+                <option value="">Selecione local ativo</option>
+                {targets.map(t=><option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            </label>
+            <button type="button" disabled={!!working||!selected[row.id]}
+              onClick={()=>void allocate(row)}
+              className="rounded-xl bg-[#00288e] px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+              {working===row.id?'Alocando…':'Alocar'}
+            </button>
+          </div>
+        </div>
+      </div>)}
+  </section>;
+}

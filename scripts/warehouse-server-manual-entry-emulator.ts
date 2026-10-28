@@ -32,10 +32,12 @@ import { adjustWarehouseInventoryServer } from '../lib/server/warehouseInventory
 import { warehouseBarcodeServer,warehouseLayoutSaveServer,warehouseIntakeStateServer } from '../lib/server/warehouseRemainingWrites';
 import { warehouseQueueIndexServer } from '../lib/server/warehouseQueueIndexWrite';
 import { warehouseLogisticsAlertsServer } from '../lib/server/warehouseLogisticsAlertWrite';
-import { warehouseLedgerMovementServer,warehouseStructureArchiveServer } from '../lib/server/warehouseLedgerAndArchive';
+import { warehouseLedgerMovementServer,warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer,warehouseDepotDeleteToReceivingServer } from '../lib/server/warehouseLedgerAndArchive';
+import {listWarehouseDepotReturnsServer,allocateWarehouseDepotReturnServer} from '../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseAdminTransaction } from '../lib/server/warehouseFirestoreTransaction';
 import { createWarehouseItemIntakeId } from '../lib/warehouse/intake';
 import { createWarehouseInventoryItemId } from '../lib/warehouse/inventory';
+import { createWarehouseLocationBalanceId } from '../lib/warehouse/location';
 
 
 process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR = '1';
@@ -893,6 +895,92 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,balanceBeforeBulk,
     'entrada antiga não deve receber saldo da importação');
   console.log('PASS: Excel gera material novo por arquivo, compartilha dentro dele e rejeita ID antigo');
+
+  // Diagnóstico de exclusão: local legado órfão com saldo positivo não pode
+  // sumir silenciosamente por não aparecer no Croqui.
+  const orphanPosition={kind:'LOCATION' as const,depotId:dep,
+    locationId:'loc_'+'d'.repeat(32),subpositionId:null};
+  const orphanId=await createWarehouseLocationBalanceId(
+    workspaceId,first.material.id,orphanPosition);
+  const orphanPath='warehouse/'+workspaceId+'/locationBalances/'+orphanId;
+  await warehouseAdminTransaction('emulator',[orphanPath],rows=>{
+    assert.equal(rows.get(orphanPath),null);
+    return {result:true,writes:[{path:orphanPath,data:{
+      schemaVersion:'warehouse_location_balance_v1',id:orphanId,
+      workspaceId,ug,materialId:first.material.id,
+      position:orphanPosition,quantity:1,revision:1,
+      lastMovementId:first.entry.movement.id,
+    }}]};
+  });
+  const diagnosis=await diagnoseWarehouseDepotArchiveServer(access,{depotId:dep});
+  assert.ok(diagnosis.positiveBalanceCount>0);
+  assert.ok(diagnosis.activeLotCount>0);
+  assert.ok(diagnosis.blockers.some(row=>row.kind==='BALANCE'
+    &&row.recordId===orphanId&&row.positionStatus==='MISSING'&&row.quantity===1));
+  assert.ok(diagnosis.blockers.some(row=>row.kind==='BALANCE'
+    &&row.materialId===first.material.id&&row.positionStatus==='ACTIVE'));
+  await assert.rejects(()=>warehouseStructureArchiveServer(access,{
+    kind:'DEPOT',id:dep,mode:'DELETE',confirmCode:'DEP-MANUAL',
+  }),/WAREHOUSE_ARCHIVE_OCCUPIED/);
+  assert.equal((await getDoc(ref('locationBalances',orphanId))).data()?.quantity,1);
+  console.log('PASS: exclusão segura mantém saldo órfão e identifica bloqueadores legados sem escrita');
+
+
+  // Exclusão com estoque: o recebimento recebe saldo e validade sem criar
+  // NF fictícia. A realocação posterior preserva agregado e é idempotente.
+  const returnDepot=await warehouseStructureServer(access,{
+    kind:'DEPOT_CREATE',input:{code:'RETQA',name:'Depósito para retorno QA'},
+  });
+  if(!('id' in returnDepot))throw Error('RETURN_DEPOT_RESULT_INVALID');
+  const returnLocal=await warehouseStructureServer(access,{
+    kind:'LOCATION_CREATE',input:{depotId:returnDepot.id,
+      kind:'LOCAL',code:'LOCRETQA',name:'Local de retorno QA'},
+  });
+  if(!('id' in returnLocal))throw Error('RETURN_LOCAL_RESULT_INVALID');
+  const returnPosition={kind:'LOCATION' as const,depotId:returnDepot.id,
+    locationId:returnLocal.id,subpositionId:null};
+  const returnEntry=await registerWarehouseManualEntryServer(access,{
+    operationId:'return-to-receiving-test-001',existingMaterialId:null,
+    description:'Feijão preto para retorno',unitLabel:'KG',quantity:27,
+    provenance:'Teste estoque',reference:'Exclusão com retorno',
+    position:returnPosition,expiresOn:'2027-10-20',
+    lotCode:'RETQA-LOTE-1',barcode:null,
+  });
+  const returnBefore=(await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity;
+  assert.equal(returnBefore,27);
+  const depotReturned=await warehouseDepotDeleteToReceivingServer(access,{
+    kind:'DEPOT',id:returnDepot.id,mode:'DELETE',confirmCode:'RETQA',
+  });
+  assert.equal(depotReturned.ok,true);
+  assert.equal(depotReturned.returnedItems,1);
+  assert.equal(depotReturned.returnedQuantity,27);
+  assert.equal((await getDoc(ref('depots',returnDepot.id))).data()?.status,'inactive');
+  assert.ok(await readDeletionTombstone(returnDepot.id));
+  assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
+  assert.equal((await getDoc(ref('lots',returnEntry.validity!.id))).data()?.status,'inactive');
+  const pendingReturns=await listWarehouseDepotReturnsServer(access);
+  const pending=pendingReturns.find(x=>x.depotId===returnDepot.id);
+  assert.ok(pending);
+  assert.equal(pending.pendingQuantity,27);
+  assert.equal(pending.lotReferences.length,1);
+  assert.equal(pending.lotReferences[0].expiresOn,'2027-10-20');
+  const allocation=await allocateWarehouseDepotReturnServer(access,{
+    returnId:pending.id,position,
+  });
+  assert.equal(allocation.applied,true);
+  assert.equal(allocation.quantity,27);
+  const allocationReplay=await allocateWarehouseDepotReturnServer(access,{
+    returnId:pending.id,position,
+  });
+  assert.equal(allocationReplay.applied,false);
+  assert.equal((await listWarehouseDepotReturnsServer(access))
+    .some(x=>x.id===pending.id),false);
+  assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
+  assert.equal((await getDoc(ref('locationBalances',
+    await createWarehouseLocationBalanceId(workspaceId,returnEntry.material.id,returnPosition)))).data()?.quantity,0);
+  assert.equal((await getDoc(ref('locationBalances',
+    await createWarehouseLocationBalanceId(workspaceId,returnEntry.material.id,position)))).data()?.quantity,27);
+  console.log('PASS: exclusão com material devolve saldo e lote ao recebimento; alocação idempotente preserva agregado');
 
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
