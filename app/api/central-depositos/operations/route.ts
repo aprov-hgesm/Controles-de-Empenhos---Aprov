@@ -26,7 +26,7 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
-import { warehouseStructureArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+import { warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
 import { warehouseCroquiReadServer } from '../../../../lib/server/warehouseCroquiRead';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
@@ -177,6 +177,10 @@ export async function POST(request: NextRequest) {
         return reject('WAREHOUSE_LEDGER_DIRECT_COMMAND_DISABLED',403);
       case 'STRUCTURE_ARCHIVE':
         result=await warehouseStructureArchiveServer(access,body.input);
+        break;
+      case 'STRUCTURE_ARCHIVE_DIAGNOSTICS':
+        // Autenticado e estritamente somente leitura: nenhum movimento ou ajuste.
+        result=await diagnoseWarehouseDepotArchiveServer(access,body.input);
         break;
       case 'QUEUE_INDEX_UPSERT':
         result=await warehouseQueueIndexServer(access,'UPSERT',body.input);
