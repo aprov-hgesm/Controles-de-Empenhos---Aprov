@@ -160,6 +160,108 @@ function sameScope(access:VerifiedWarehouseRequest,row:WarehouseAdminDocument,ki
   if(!r.ok)return fail('WAREHOUSE_ARCHIVE_DEPOT_INVALID');
   return r.data;
 }
+/**
+ * Diagnóstico operacional READ-ONLY do bloqueio de exclusão de depósito.
+ * Não infere estoque a partir do croqui nem autoriza ignorar saldos legados.
+ * O mesmo workspace/UG do usuário já foi verificado na API de operações.
+ */
+export interface WarehouseDepotArchiveDiagnostic {
+  depotId:string;
+  positiveBalanceCount:number;
+  activeLotCount:number;
+  blockers:Array<{
+    kind:'BALANCE'|'LOT';
+    recordId:string;
+    materialId:string;
+    quantity:number;
+    location:string;
+    positionStatus:'ACTIVE'|'INACTIVE'|'MISSING';
+  }>;
+  truncated:boolean;
+}
+export async function diagnoseWarehouseDepotArchiveServer(
+  access:VerifiedWarehouseRequest,raw:unknown
+):Promise<WarehouseDepotArchiveDiagnostic> {
+  const input=obj(raw);
+  const depotId=input.depotId;
+  if(typeof depotId!=='string'||!/^dep_[a-f0-9]{32}$/.test(depotId))
+    return fail('WAREHOUSE_ARCHIVE_INVALID_TARGET',400);
+  const ws=access.workspaceId,authToken=await token();
+  const depotPath=path(ws,'depots',depotId);
+  const [locations,balances,lots]=await Promise.all([
+    warehouseAdminListByField(authToken,ws,'locations','depotId',depotId,500),
+    warehouseAdminListCollection(authToken,ws,'locationBalances',500),
+    warehouseAdminListCollection(authToken,ws,'lots',500),
+  ]);
+  // A consulta incompleta jamais pode produzir um falso diagnóstico "vazio".
+  if(locations.length===500||balances.length===500||lots.length===500)
+    return fail('WAREHOUSE_ARCHIVE_CATALOG_LIMIT');
+  await warehouseAdminTransaction(authToken,[depotPath],rows=>{
+    const depot=rows.get(depotPath);
+    if(!depot)return fail('WAREHOUSE_ARCHIVE_DEPOT_NOT_FOUND',404);
+    sameScope(access,depot,'depot');
+    return {result:true,writes:[]};
+  });
+  const byId=new Map(locations.map(row=>[row.path.split('/').at(-1)||'',row]));
+  const statusFor=(position:Record<string,unknown>):'ACTIVE'|'INACTIVE'|'MISSING'=> {
+    const loc=byId.get(String(position.locationId||''));
+    if(!loc||loc.data.kind!=='LOCAL'||loc.data.depotId!==depotId)return 'MISSING';
+    if(loc.data.status!=='active')return 'INACTIVE';
+    if(position.kind==='SUBPOSITION'){
+      const sub=byId.get(String(position.subpositionId||''));
+      if(!sub||sub.data.kind!=='SUBPOSITION'||sub.data.depotId!==depotId
+        ||sub.data.parentLocationId!==loc.data.id)return 'MISSING';
+      if(sub.data.status!=='active')return 'INACTIVE';
+    }
+    return 'ACTIVE';
+  };
+  const labelFor=(position:Record<string,unknown>):string=>{
+    const loc=byId.get(String(position.locationId||''));
+    const sub=position.kind==='SUBPOSITION'?byId.get(String(position.subpositionId||'')):null;
+    return [loc?.data.code||String(position.locationId||'LOCAL AUSENTE'),
+      ...(position.kind==='SUBPOSITION'?[sub?.data.code||String(position.subpositionId||'SUBPOSIÇÃO AUSENTE')]:[])].join(' / ');
+  };
+  const affects=(row:WarehouseAdminDocument):boolean=>{
+    const p=row.data.position;
+    return !!p&&typeof p==='object'&&!Array.isArray(p)
+      &&(p as Record<string,unknown>).kind!=='UNASSIGNED'
+      &&(p as Record<string,unknown>).depotId===depotId;
+  };
+  const found:Array<WarehouseDepotArchiveDiagnostic['blockers'][number]>=[];
+  let positiveBalanceCount=0,activeLotCount=0;
+  for(const row of balances.filter(affects)){
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLocationBalance(
+      warehouseCanonicalLocationBalanceReadInput(id,row.data),{expectedWorkspaceId:ws});
+    if(!validated.ok||validated.data.ug!==access.ug)
+      return fail('WAREHOUSE_ARCHIVE_INVALID_BALANCE');
+    if(validated.data.quantity<=0)continue;
+    positiveBalanceCount++;
+    const p=validated.data.position;
+    if(p.kind==='UNASSIGNED')continue;
+    found.push({kind:'BALANCE',recordId:id,materialId:validated.data.materialId,
+      quantity:validated.data.quantity,location:labelFor(p),
+      positionStatus:statusFor(p)});
+  }
+  for(const row of lots.filter(affects)){
+    const id=row.path.split('/').at(-1)||'';
+    const validated=validateWarehouseLot(warehouseCanonicalLotReadInput(id,row.data),{
+      expectedWorkspaceId:ws,expectedUg:access.ug});
+    if(!validated.ok)return fail('WAREHOUSE_ARCHIVE_INVALID_LOT');
+    if(validated.data.status!=='active'||validated.data.quantity<=0)continue;
+    activeLotCount++;
+    const p=validated.data.position;
+    if(p.kind==='UNASSIGNED')continue;
+    found.push({kind:'LOT',recordId:id,materialId:validated.data.materialId,
+      quantity:validated.data.quantity,location:labelFor(p),
+      positionStatus:statusFor(p)});
+  }
+  found.sort((a,b)=>(a.positionStatus==='ACTIVE'?1:0)-(b.positionStatus==='ACTIVE'?1:0)
+    ||a.location.localeCompare(b.location)||a.materialId.localeCompare(b.materialId));
+  return {depotId,positiveBalanceCount,activeLotCount,
+    blockers:found.slice(0,30),truncated:found.length>30};
+}
+
 export async function warehouseStructureArchiveServer(
   access:VerifiedWarehouseRequest,raw:unknown
 ):Promise<{ok:true}>{
