@@ -65,7 +65,7 @@ function normalizedIdentity(identity: LegalAcceptanceIdentity): LegalAcceptanceI
  * Firestore create-only precondition; the legacy client transaction stays
  * available for the historical R1 bundle without changing Firestore Rules.
  */
-const isServerLegalBundle = CURRENT_LEGAL_BUNDLE.legalBundleVersion !== 'saas-r1-2026-10-01';
+const isServerLegalBundle = String(CURRENT_LEGAL_BUNDLE.legalBundleVersion) !== 'saas-r1-2026-10-01';
 
 async function serverLegalRequest(identity: LegalAcceptanceIdentity, accept: boolean) {
   const user = auth.currentUser;
