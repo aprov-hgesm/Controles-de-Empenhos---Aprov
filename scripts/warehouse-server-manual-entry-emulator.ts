@@ -108,6 +108,43 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,80);
   console.log('PASS: replay divergente negado sem mexer no estoque');
 
+  // Excel / Entrada Avulsa: o nome já existir no cadastro NÃO autoriza
+  // vincular ao ID antigo. O servidor gera ID estável por arquivo+produto.
+  const bulkOperation=(digest:string,line:number)=>'bulk_'+dep+'_'+digest.repeat(28)+'_'+line;
+  const bulkInput={
+    operationId:bulkOperation('a',68),existingMaterialId:null,
+    description:'Arroz integral',unitLabel:'KG',quantity:10,
+    provenance:'Carga Excel',reference:'Excel teste · linha 68',
+    position:subposition,expiresOn:null,lotCode:null,barcode:null,
+  };
+  const bulkFirst=await registerWarehouseManualEntryServer(access,bulkInput);
+  assert.equal(bulkFirst.entry.applied,true);
+  assert.notEqual(bulkFirst.material.id,first.material.id,
+    'a carga não pode reaproveitar material da Entrada Avulsa anterior');
+  const bulkSecond=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',69),quantity:5,
+    reference:'Excel teste · linha 69',position,
+  });
+  assert.equal(bulkSecond.material.id,bulkFirst.material.id,
+    'duas posições do mesmo produto e do mesmo arquivo devem compartilhar apenas o ID novo');
+  assert.equal(bulkSecond.entry.balance.quantity,15);
+  const bulkReplay=await registerWarehouseManualEntryServer(access,bulkInput);
+  assert.equal(bulkReplay.entry.applied,false);
+  assert.equal(bulkReplay.material.id,bulkFirst.material.id);
+  assert.equal(bulkReplay.entry.balance.quantity,15);
+  const bulkDifferentFile=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('b',68),
+  });
+  assert.notEqual(bulkDifferentFile.material.id,bulkFirst.material.id,
+    'outro arquivo deve criar novo cadastro mesmo com descrição idêntica');
+  await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',70),
+    existingMaterialId:first.material.id,
+  }),/WAREHOUSE_BULK_EXISTING_MATERIAL_FORBIDDEN/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,80,
+    'entrada antiga não deve receber saldo da importação');
+  console.log('PASS: Excel gera material novo por arquivo, compartilha dentro dele e rejeita ID antigo');
+
   const second=await registerWarehouseManualEntryServer(access,{
     operationId:'manual-server-entry-002',
     existingMaterialId:first.material.id,
