@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Download, FileSpreadsheet, RefreshCw, TriangleAlert, Upload } from 'lucide-react';
 import { auth } from '../../../lib/firebase';
-import type { BulkStockPreflightLine } from '../../../lib/server/warehouseBulkStockPreflight';
+import { bulkStockOperationId, type BulkStockPreflightLine } from '../../../lib/warehouse/bulkStockResolve';
 import type { WarehouseDepotListItem } from '../../../lib/warehouse/locationRepository';
 import { registerWarehouseManualEntry } from '../../../lib/warehouse/manualEntryRepository';
 import { warehouseManualEntryErrorMessage } from '../../../lib/warehouse/manualEntryMessages';
@@ -138,7 +138,7 @@ export function WarehouseBulkManualEntryOperational({
         if(!row.position||row.errors.length)throw new Error('Linha '+row.line+': validação incompleta.');
         const materialId=materialsByGroup.get(row.group)||null;
         // O depósito integra a chave: arquivos iguais em depósitos diferentes não colidem.
-        const operationId='bulk_'+depotId+'_'+digest.slice(0,28)+'_'+row.line;
+        const operationId=bulkStockOperationId(depotId,digest,row.line);
         // Reexecutar no servidor mesmo quando localStorage indica conclusão:
         // o ledger é a fonte de verdade, não o armazenamento do navegador.
         const result=await registerWarehouseManualEntry(workspaceId,{
