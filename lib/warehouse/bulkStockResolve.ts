@@ -1,22 +1,18 @@
 import type { BulkStockRow } from '../server/warehouseBulkStockWorkbook';
-import type { WarehouseMaterial } from './material';
 import type { WarehouseLocation, WarehouseStockPosition } from './location';
 import { matchBulkStockLocal, matchBulkStockSubposition } from './bulkStockLocationMatcher';
-import { indexBulkStockMaterials, bulkMaterialGroupKey } from './bulkStockMaterialMatcher';
-
-export interface BulkStockCandidate {
-  id:string;description:string;unit:WarehouseMaterial['unit'];
-}
 export interface BulkStockPreflightLine extends BulkStockRow {
-  position:WarehouseStockPosition|null;materialId:string|null;group:string;
-  candidates:BulkStockCandidate[];errors:string[];matchedLocation:string|null;
+  position:WarehouseStockPosition|null;errors:string[];matchedLocation:string|null;
 }
 
-/** Deterministic domain resolution, independent of Firestore Rules / client SDK. */
+/**
+ * A carga por Entrada Avulsa nunca resolve identidades no catálogo existente.
+ * Somente destinos físicos são validados; IDs de materiais novos são derivados
+ * pelo servidor no momento da entrada, sem permitir seleção de ID no browser.
+ */
 export function resolveBulkStockRows(
-  rows:BulkStockRow[],depotId:string,materials:WarehouseMaterial[],locations:WarehouseLocation[],
+  rows:BulkStockRow[],depotId:string,locations:WarehouseLocation[],
 ):BulkStockPreflightLine[] {
-  const materialIndex=indexBulkStockMaterials(materials);
   const locals=locations.filter(l=>l.kind==='LOCAL'&&l.depotId===depotId);
   const subs=locations.filter(l=>l.kind==='SUBPOSITION'&&l.depotId===depotId);
   return rows.map(item=>{
@@ -39,12 +35,7 @@ export function resolveBulkStockRows(
         }
       }
     }
-    const group=bulkMaterialGroupKey(item.material,item.unit);
-    const candidates=(materialIndex.get(group)||[])
-      .map(m=>({id:m.id,description:m.description,unit:m.unit}));
-    const materialId=candidates.length===1?candidates[0].id:null;
-    if(candidates.length>1)errors.push('Selecione o cadastro do material na prévia');
-    return {...item,position,materialId,group,candidates,errors,matchedLocation};
+    return {...item,position,errors,matchedLocation};
   });
 }
 
