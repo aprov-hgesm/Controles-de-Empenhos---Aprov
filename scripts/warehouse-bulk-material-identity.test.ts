@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import {
   bulkMaterialCandidates, bulkMaterialDescriptionKey,
-  bulkMaterialGroupKey, bulkMaterialUnitKey,
+  bulkMaterialGroupKey, bulkMaterialUnitKey, indexBulkStockMaterials,
 } from '../lib/warehouse/bulkStockMaterialMatcher';
 import type { WarehouseMaterial } from '../lib/warehouse/material';
 
@@ -68,4 +68,19 @@ test('materiais inativos não são reutilizados na importação',()=>{
 test('mesmo material em validades e prateleiras diferentes compartilha identidade',()=>{
   assert.equal(bulkMaterialGroupKey('Vinagre 740 ml','und'),bulkMaterialGroupKey('VINAGRE 740 ML','unidade'));
   assert.notEqual(bulkMaterialGroupKey('Vinagre 740 ml','und'),bulkMaterialGroupKey('Vinagre 2 L','und'));
+});
+
+test('indice de identidades é consistente com a busca linear e não mistura apresentações',()=>{
+  const materials=[
+    make('preto','Feijão preto','kg'),
+    make('vermelho','Feijão vermelho','kg'),
+    make('suco12','Suco','box','caixa (12 und)'),
+    make('suco24','Suco','box','caixa (24 und)'),
+    make('inativo','Suco','box','caixa (24 und)','inactive'),
+  ];
+  const index=indexBulkStockMaterials(materials);
+  for(const [name,unit] of [['Feijão preto','kg'],['Feijão vermelho','kg'],['Suco','caixa (12 und)'],['Suco','caixa (24 und)'],['Suco','caixa']]) {
+    assert.deepEqual((index.get(bulkMaterialGroupKey(name,unit))||[]).map(m=>m.id),
+      bulkMaterialCandidates(materials,name,unit).map(m=>m.id));
+  }
 });
