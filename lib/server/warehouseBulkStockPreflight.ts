@@ -13,7 +13,7 @@ import {
   warehouseCanonicalMaterialReadInput,
 } from '../warehouse/readCompatibility';
 import { matchBulkStockLocal, matchBulkStockSubposition } from '../warehouse/bulkStockLocationMatcher';
-import { bulkMaterialCandidates, bulkMaterialGroupKey } from '../warehouse/bulkStockMaterialMatcher';
+import { indexBulkStockMaterials, bulkMaterialGroupKey } from '../warehouse/bulkStockMaterialMatcher';
 
 export interface BulkStockCandidate {
   id:string;description:string;unit:WarehouseMaterial['unit'];
@@ -45,6 +45,7 @@ export async function preflightWarehouseBulkStock(
     if(!result.ok)return invalid('STOCK_IMPORT_MATERIAL_CATALOG_INVALID');
     return result.data;
   });
+  const materialIndex=indexBulkStockMaterials(materials);
   const depots=depotDocs.map(row=>{
     const result=validateWarehouseDepot(
       warehouseCanonicalDepotReadInput(idOf(row.path),row.data),
@@ -84,7 +85,7 @@ export async function preflightWarehouseBulkStock(
       }
     }
     const group=bulkMaterialGroupKey(item.material,item.unit);
-    const candidates=bulkMaterialCandidates(materials,item.material,item.unit)
+    const candidates=(materialIndex.get(group)||[])
       .map(m=>({id:m.id,description:m.description,unit:m.unit}));
     const materialId=candidates.length===1?candidates[0].id:null;
     if(candidates.length>1)errors.push('Selecione o cadastro do material na prévia');
