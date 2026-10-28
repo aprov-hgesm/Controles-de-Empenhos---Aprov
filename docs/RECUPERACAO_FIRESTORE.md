@@ -139,7 +139,7 @@ node scripts/firestore-recovery.mjs restore-plan \
   --target=emprovex-restore-warehouse-20261027
 ~~~
 
-O restore-plan valida apenas a sintaxe e a escolha do destino: **não comprova origem real, estado READY ou expiração**. O comando de restore impresso nesse modo é APENAS REFERÊNCIA, não autorização.
+O restore-plan valida apenas a sintaxe e a escolha de um **banco novo e isolado** como destino: **não comprova origem real, estado READY ou expiração**. O comando de restore impresso nesse modo é APENAS REFERÊNCIA, não autorização.
 
 Para o principal, substituir o ID de origem por ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 e escolher outro destino novo, por exemplo emprovex-restore-main-20261027.
 
