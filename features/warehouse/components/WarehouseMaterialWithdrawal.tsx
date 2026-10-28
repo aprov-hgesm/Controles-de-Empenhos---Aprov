@@ -45,6 +45,7 @@ import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOu
 import {
   getWarehouseLot,
   listWarehouseLots,
+  updateWarehouseLot,
   type WarehouseLotListItem,
 } from '../../../lib/warehouse/lotRepository';
 import {
@@ -82,6 +83,7 @@ import {
   type WarehouseOutboundDocumentsInput,
 } from '../pdf/WarehouseOutboundDocuments';
 import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
+import {downloadWarehouseExpiredRequest} from '../pdf/WarehouseExpiredMaterialRequest';
 import {
   formatWarehouseDateOnly,
   formatWarehouseNumber,
@@ -301,6 +303,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [selectedBarcodeId, setSelectedBarcodeId] = useState('');
   const [selectedPresentationKey, setSelectedPresentationKey] = useState('');
   const [requestedQuantity, setRequestedQuantity] = useState('');
+  const [editingExpiryId,setEditingExpiryId]=useState('');
+  const [expiryDraft,setExpiryDraft]=useState('');
+  const [expiryReason,setExpiryReason]=useState('');
   const [positionKey, setPositionKey] = useState('');
   const [newDestinationName, setNewDestinationName] = useState('');
   const [manageDestinations, setManageDestinations] = useState(false);
@@ -704,6 +709,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         quantity:baseQuantity,
         physicalQuantity:normalizedQuantity(selectedPosition.quantity-reserved),
         lots:remainingLots,
+        // Pedido/documento: o lote vencido continua identificado no carrinho.
+        // A baixa física permanece vedada pelo motor servidor.
+        includeExpired:true,
       });
     }catch(error){
       setMessageKind('error');
