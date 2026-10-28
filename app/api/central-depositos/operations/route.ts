@@ -26,7 +26,8 @@ import { setWarehouseConsumptionSiscofisStatusServer } from '../../../../lib/ser
 
 import { warehouseBarcodeServer, warehouseLayoutSaveServer, warehouseIntakeStateServer } from '../../../../lib/server/warehouseRemainingWrites';
 
-import { warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+import { warehouseStructureArchiveServer, diagnoseWarehouseDepotArchiveServer, warehouseDepotDeleteToReceivingServer } from '../../../../lib/server/warehouseLedgerAndArchive';
+import { listWarehouseDepotReturnsServer, allocateWarehouseDepotReturnServer } from '../../../../lib/server/warehouseDepotReturnReadAndAllocate';
 import { warehouseCroquiReadServer } from '../../../../lib/server/warehouseCroquiRead';
 
 import { warehouseQueueIndexServer } from '../../../../lib/server/warehouseQueueIndexWrite';
@@ -181,6 +182,15 @@ export async function POST(request: NextRequest) {
       case 'STRUCTURE_ARCHIVE_DIAGNOSTICS':
         // Autenticado e estritamente somente leitura: nenhum movimento ou ajuste.
         result=await diagnoseWarehouseDepotArchiveServer(access,body.input);
+        break;
+      case 'STRUCTURE_DELETE_TO_RECEIVING':
+        result=await warehouseDepotDeleteToReceivingServer(access,body.input);
+        break;
+      case 'DEPOT_RETURNS_LIST':
+        result=await listWarehouseDepotReturnsServer(access);
+        break;
+      case 'DEPOT_RETURN_ALLOCATE':
+        result=await allocateWarehouseDepotReturnServer(access,body.input);
         break;
       case 'QUEUE_INDEX_UPSERT':
         result=await warehouseQueueIndexServer(access,'UPSERT',body.input);
