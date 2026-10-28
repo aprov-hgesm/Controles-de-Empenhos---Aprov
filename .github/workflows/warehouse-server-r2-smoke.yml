@@ -7,6 +7,8 @@ on:
       - 'lib/server/warehouse*.ts'
       - 'lib/warehouse/*Repository.ts'
       - 'lib/warehouse/serverCommandClient.ts'
+      - 'lib/warehouse/depotReturnToReceivingPlan.ts'
+      - 'scripts/warehouse-depot-return-plan.test.ts'
       - 'app/api/central-depositos/**'
       - 'scripts/warehouse-server-manual-entry-emulator.ts'
       - 'scripts/warehouse-read-r1-emulator.ts'
@@ -52,6 +54,8 @@ jobs:
       - run: npm ci
       - name: Server R2 smoke (demo project only)
         run: npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore "npx --yes tsx scripts/warehouse-server-manual-entry-emulator.ts"
+      - name: Warehouse Depot Return — lossless receiving preflight
+        run: npx --yes tsx --test scripts/warehouse-depot-return-plan.test.ts
       - name: Warehouse Bulk Stock — Excel parser and template guards
         run: npx --yes tsx scripts/warehouse-bulk-stock-r1.test.ts
       - name: Warehouse Bulk Stock — existing depot location aliases
