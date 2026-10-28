@@ -105,8 +105,8 @@ export default function PrivacyPage() {
         <p>
           O EMPROVEX oferece checkout externo pela InfinitePay para mensalidades vinculadas
           ao <strong>workspace/setor</strong>, com os meios habilitados pelo provedor, como Pix
-          ou cartão. O EMPROVEX não coleta diretamente número completo de cartão ou CVV,
-          nem utiliza o retorno do checkout como prova suficiente de quitação.
+          ou cartão. O EMPROVEX não armazena números de cartão, CVV ou credenciais de pagamento.
+          Também não utiliza o retorno do checkout como prova suficiente de quitação.
         </p>
         <p>
           As informações informadas diretamente no checkout são tratadas pelo provedor
