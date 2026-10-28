@@ -189,7 +189,7 @@ export async function diagnoseWarehouseDepotArchiveServer(
   const ws=access.workspaceId,authToken=await token();
   const depotPath=path(ws,'depots',depotId);
   const [locations,balances,lots]=await Promise.all([
-    warehouseAdminListByField(authToken,ws,'locations','depotId',depotId,500),
+    warehouseAdminListCollection(authToken,ws,'locations',500),
     warehouseAdminListCollection(authToken,ws,'locationBalances',500),
     warehouseAdminListCollection(authToken,ws,'lots',500),
   ]);
@@ -203,7 +203,7 @@ export async function diagnoseWarehouseDepotArchiveServer(
     return {result:true,writes:[]};
   });
   const byId=new Map(locations.map(row=>[row.path.split('/').at(-1)||'',row]));
-  const statusFor=(position:Record<string,unknown>):'ACTIVE'|'INACTIVE'|'MISSING'=> {
+  const statusFor=(position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>):'ACTIVE'|'INACTIVE'|'MISSING'=> {
     const loc=byId.get(String(position.locationId||''));
     if(!loc||loc.data.kind!=='LOCAL'||loc.data.depotId!==depotId)return 'MISSING';
     if(loc.data.status!=='active')return 'INACTIVE';
@@ -215,7 +215,7 @@ export async function diagnoseWarehouseDepotArchiveServer(
     }
     return 'ACTIVE';
   };
-  const labelFor=(position:Record<string,unknown>):string=>{
+  const labelFor=(position:Exclude<WarehouseStockPosition,{kind:'UNASSIGNED'}>):string=>{
     const loc=byId.get(String(position.locationId||''));
     const sub=position.kind==='SUBPOSITION'?byId.get(String(position.subpositionId||'')):null;
     return [loc?.data.code||String(position.locationId||'LOCAL AUSENTE'),
