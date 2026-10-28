@@ -15,6 +15,9 @@ const emptyCatalog:Catalog={depots:[],locations:[],names:{}};
 
 export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string}){
   const [rows,setRows]=useState<WarehouseDepotReturnPending[]>([]);
+  const [archived,setArchived]=useState<WarehouseDepotReturnPending[]>([]);
+  const [selectedIds,setSelectedIds]=useState<string[]>([]);
+  const [showArchived,setShowArchived]=useState(false);
   const [catalog,setCatalog]=useState<Catalog>(emptyCatalog);
   const [selected,setSelected]=useState<Record<string,string>>({});
   const [loading,setLoading]=useState(true);
@@ -27,12 +30,15 @@ export function WarehouseDepotReturnsPending({workspaceId}:{workspaceId:string})
     try{
       const [pending,depots,locations,materials]=await Promise.all([
         warehouseServerCommand<WarehouseDepotReturnPending[]>(
-          workspaceId,'DEPOT_RETURNS_LIST',{}),
+          workspaceId,'DEPOT_RETURNS_LIST',{includeArchived:true}),
         listWarehouseDepots(workspaceId),
         listWarehouseLocations(workspaceId),
         listWarehouseMaterials(workspaceId),
       ]);
-      setRows(pending);
+      const live=pending.filter(item=>item.status==='PENDING');
+      setRows(live);
+      setArchived(pending.filter(item=>item.status==='ARCHIVED'));
+      setSelectedIds(current=>current.filter(id=>live.some(item=>item.id===id)));
       setCatalog({depots,locations,names:Object.fromEntries(
         materials.map(item=>[item.id,item.description]))});
       setError(null);
