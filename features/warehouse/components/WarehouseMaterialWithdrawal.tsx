@@ -981,7 +981,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
   const saveExpiryCorrection=async()=>{
     if(!editingExpiryId||working||retryRequired)return;
-    if(!expiryDraft||!/^\\d{4}-\\d{2}-\\d{2}$/.test(expiryDraft)
+    if(!expiryDraft||!/^\d{4}-\d{2}-\d{2}$/.test(expiryDraft)
       ||expiryReason.trim().length<5){
       setMessageKind('error');
       setMessage('Informe uma data válida e uma justificativa de pelo menos 5 caracteres.');
@@ -1359,6 +1359,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                                 </p>
                               )}
                               <p className="mt-1 text-[10px] text-slate-600">{line.positionLabel}</p>
+                               {line.lotId && !retryRequired && <button type="button"
+                                 onClick={()=>{setEditingExpiryId(line.lotId!);
+                                   setExpiryDraft(lotExpiryForLine(line)||'');setExpiryReason('');}}
+                                 disabled={working}
+                                 className="mt-2 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-[10px] font-bold text-blue-900 disabled:opacity-40">
+                                 Editar data de validade
+                               </button>}
                             </div>
                             <button type="button"
                               onClick={() => {
