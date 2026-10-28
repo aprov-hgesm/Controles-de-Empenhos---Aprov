@@ -966,7 +966,8 @@ try {
   assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,returnBefore);
   assert.equal((await getDoc(ref('lots',returnEntry.validity!.id))).data()?.status,'inactive');
   const pendingReturns=await listWarehouseDepotReturnsServer(access);
-  const pending=pendingReturns.find(x=>x.depotId===returnDepot.id);
+  const pending=pendingReturns.find(x=>x.depotId===returnDepot.id
+    &&x.materialId===returnEntry.material.id);
   assert.ok(pending);
   assert.equal(pending.pendingQuantity,27);
   assert.equal(pending.lotReferences.length,1);
