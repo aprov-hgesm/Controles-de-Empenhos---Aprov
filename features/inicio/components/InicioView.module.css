@@ -155,10 +155,10 @@
 .system {
   position: absolute;
   left: 50%;
-  /* Center the R2 hero on the scene's geometric midpoint. */
+  /* Logotipo discreto no centro geométrico da cena. */
   top: 50%;
   z-index: 5;
-  width: min(610px, 68vw);
+  width: min(288px, 42vw);
   aspect-ratio: 1;
   transform: translate3d(-50%, -50%, 0);
   transition: none;
@@ -249,7 +249,7 @@
 
 @media (max-width: 1100px) {
   .system {
-    width: min(590px, 78vw);
+    width: min(284px, 54vw);
   }
 }
 
@@ -265,7 +265,7 @@
 
   .system {
     top: 50%;
-    width: min(570px, 84vw);
+    width: min(280px, 66vw);
   }
 
   .interactionHint {
@@ -285,7 +285,7 @@
 
   .system {
     top: 50%;
-    width: min(520px, 94vw);
+    width: min(260px, 76vw);
   }
 
   .snapshotNotice {
@@ -307,7 +307,7 @@
 
   .system {
     top: 50%;
-    width: min(500px, 98vw);
+    width: min(244px, 78vw);
   }
 
   .snapshotNotice {
@@ -322,7 +322,7 @@
 
   .system {
     top: 50%;
-    width: min(560px, 70vw);
+    width: min(260px, 56vw);
   }
 
   .snapshotNotice {

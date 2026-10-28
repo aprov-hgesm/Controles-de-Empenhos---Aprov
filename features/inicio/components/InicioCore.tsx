@@ -1,280 +1,129 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import Image from 'next/image';
 
-import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
-import { EmprovexThinkingOrb } from '@/features/visual-orbs/components/EmprovexThinkingOrb';
+import type { InicioOperationalSnapshot, InicioSnapshotStar } from '../domain/homeOperationalSnapshot';
 import styles from './InicioCore.module.css';
 
 interface InicioCoreProps {
   snapshot: InicioOperationalSnapshot | null;
-  totalEmpenhos: number;
-  totalValueLabel: string;
-  activeAlertCount: number;
-  interactiveMotion: boolean;
-  /** Preview-only rollout option; 'legacy' keeps the previous reactor for rollback. */
-  visualMode?: 'legacy' | 'thinking-orbs';
-  performanceMode?: 'full' | 'balanced' | 'static';
-  ambientPaused?: boolean;
+  performanceMode: 'full' | 'balanced' | 'static';
+  ambientPaused: boolean;
 }
 
-export function InicioCore({
-  snapshot,
-  totalEmpenhos,
-  totalValueLabel,
-  activeAlertCount,
-  interactiveMotion,
-  visualMode = 'legacy',
-  performanceMode = 'balanced',
-  ambientPaused = false,
-}: InicioCoreProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
+function isPriority(star: InicioSnapshotStar): boolean {
+  return star.invoicePendingStage !== 'none'
+    || star.severity === 'attention'
+    || star.severity === 'critical';
+}
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || reduceMotion || !interactiveMotion) return;
-
-    const finePointer = window.matchMedia('(pointer: fine)');
-    if (!finePointer.matches) return;
-
-    let frame = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const apply = () => {
-      root.style.setProperty('--core-shift-x', `${(currentX * 5.5).toFixed(2)}px`);
-      root.style.setProperty('--core-shift-y', `${(currentY * 4.2).toFixed(2)}px`);
-      root.style.setProperty('--core-rotate-x', `${(currentY * -5.2).toFixed(2)}deg`);
-      root.style.setProperty('--core-rotate-y', `${(currentX * 6.4).toFixed(2)}deg`);
-      root.style.setProperty('--core-light-x', `${(50 + currentX * 18).toFixed(1)}%`);
-      root.style.setProperty('--core-light-y', `${(42 + currentY * 15).toFixed(1)}%`);
-    };
-
-    const render = () => {
-      currentX += (targetX - currentX) * 0.11;
-      currentY += (targetY - currentY) * 0.11;
-      apply();
-
-      const settled =
-        Math.abs(targetX - currentX) < 0.001
-        && Math.abs(targetY - currentY) < 0.001;
-
-      if (settled) {
-        currentX = targetX;
-        currentY = targetY;
-        apply();
-        frame = 0;
-        return;
-      }
-
-      frame = window.requestAnimationFrame(render);
-    };
-
-    const scheduleFrame = () => {
-      if (!frame && document.visibilityState === 'visible') {
-        frame = window.requestAnimationFrame(render);
-      }
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const rect = root.getBoundingClientRect();
-      const normalizedX = ((event.clientX - rect.left) / Math.max(rect.width, 1) - 0.5) * 2;
-      const normalizedY = ((event.clientY - rect.top) / Math.max(rect.height, 1) - 0.5) * 2;
-      targetX = Math.max(-1, Math.min(1, normalizedX));
-      targetY = Math.max(-1, Math.min(1, normalizedY));
-      scheduleFrame();
-    };
-
-    const reset = () => {
-      targetX = 0;
-      targetY = 0;
-      scheduleFrame();
-    };
-
-    root.addEventListener('pointermove', handlePointerMove, { passive: true });
-    root.addEventListener('pointerleave', reset);
-    root.addEventListener('blur', reset);
-
-    return () => {
-      root.removeEventListener('pointermove', handlePointerMove);
-      root.removeEventListener('pointerleave', reset);
-      root.removeEventListener('blur', reset);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [interactiveMotion, reduceMotion]);
-
-  const density = useMemo(
-    () => Math.min(1, Math.log10(Math.max(totalEmpenhos, 1) + 1) / 2.3),
-    [totalEmpenhos]
-  );
-
-  const alertSeverity = snapshot?.alerts ?? {
-    total: 0,
-    critical: 0,
-    attention: 0,
-  };
-  const receiving = snapshot?.receiving ?? {
-    pendingEmpenhos: 0,
-    pendingItems: 0,
-    balance: 0,
-  };
-  const execution = snapshot?.execution ?? {
-    committed: 0,
-    received: 0,
-    percentage: 0,
-  };
-  const classStats = ['QR', 'CALI', 'PASA', 'FUNADOM'].map((code) =>
-    snapshot?.classStats.find((item) => item.code === code) ?? {
-      code,
-      count: 0,
-      value: 0,
-    }
-  );
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 2,
-    }).format(value);
+export function InicioCore({ snapshot, performanceMode, ambientPaused }: InicioCoreProps) {
+  // Reaproveita o snapshot econômico existente, sem novas consultas.
+  const stars = snapshot?.stars ?? [];
+  const commission = stars.filter((star) => star.invoicePendingStage === 'commission');
+  const treasury = stars.filter((star) => star.invoicePendingStage === 'treasury');
+  const highlights = stars.filter(isPriority).slice(0, 3);
+  const noticeCount = snapshot?.alerts.total ?? 0;
+  const hasPending = commission.length > 0 || treasury.length > 0 || noticeCount > 0;
+  const alertsLabel = snapshot
+    ? noticeCount === 0
+      ? 'Nenhum aviso pendente'
+      : [
+          snapshot.alerts.critical && snapshot.alerts.critical + ' crítico(s)',
+          snapshot.alerts.attention && snapshot.alerts.attention + ' atenção',
+        ].filter(Boolean).join(' · ') || 'Verificar na Central de Avisos'
+    : 'Carregando informações operacionais';
 
   return (
-    <motion.div
-      ref={rootRef}
+    <div
       className={styles.root}
-      data-alert={activeAlertCount > 0 ? 'true' : 'false'}
-      data-static-core="true"
+      data-testid="inicio-logo-core"
       data-inicio-star-exclusion="core"
-      data-visual-core={visualMode}
+      data-performance={performanceMode}
+      data-ambient-paused={ambientPaused ? 'true' : 'false'}
       tabIndex={0}
       role="group"
-      aria-label={`Núcleo EMPROVEX. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}
-      initial={false}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.78, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-      style={{
-        ['--core-density' as string]: density.toFixed(3),
-      }}
+      aria-label="EMPROVEX. Passe o cursor ou pressione Tab para consultar pendências e avisos operacionais."
     >
-      {visualMode === 'thinking-orbs' ? (
-        <span className={styles.thinkingOrbStage} aria-hidden="true">
-          <span className={styles.homeOrbCoreGlow} />
-          <span className={styles.homeOrbBoost}>
-            <EmprovexThinkingOrb
-              size="hero"
-              animation="working"
-              palette="colored"
-              refinement="r2"
-              surface="dark"
-              roundness={0.72}
-              sparkle={0.76}
-              performance={performanceMode}
-              paused={ambientPaused}
-              interactive={false}
-              state="decorative"
-            />
-          </span>
+      <div className={styles.visual} aria-hidden="true">
+        <span className={styles.aura} />
+        <span className={styles.orbitOuter} />
+        <span className={styles.orbitInner} />
+        <span className={styles.orbitGold}>
+          <i className={styles.satelliteOne} />
+          <i className={styles.satelliteTwo} />
         </span>
-      ) : (
-        <>
-      <span className={styles.corona} aria-hidden="true" />
-      <span className={styles.commandHalo} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-      <span className={styles.field} aria-hidden="true">
-        <span className={`${styles.orbit} ${styles.orbitA}`}><i /></span>
-        <span className={`${styles.orbit} ${styles.orbitB}`}><i /></span>
-        <span className={`${styles.orbit} ${styles.orbitC}`}><i /></span>
-        <span className={styles.pulseRing} />
-        <span className={styles.telemetryArc} />
-        <span className={styles.commandArcA} />
-        <span className={styles.commandArcB} />
-      </span>
-
-      <span className={styles.reactor}>
-        <span className={styles.reactorGrid} aria-hidden="true" />
-        <span className={styles.reactorShell} aria-hidden="true" />
-        <span className={styles.reactorGlow} aria-hidden="true" />
-        <span className={styles.energyFilaments} aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
+        <span className={styles.float}>
+          <Image
+            src="/emprovex-logo%20(2).png"
+            alt=""
+            width={3375}
+            height={3375}
+            sizes="(max-width: 640px) 150px, 178px"
+            className={styles.logo}
+            unoptimized
+            priority
+          />
         </span>
-        <span className={styles.logoPlate} aria-hidden="true">
-          <span className={styles.apertureRing} />
-          <span className={styles.energyCore} />
-        </span>
-        <span className={styles.specular} aria-hidden="true" />
-        <span className={styles.centerPulse} aria-hidden="true" />
-      </span>
+        <span className={styles.reflection} />
+      </div>
 
-      <span className={styles.statusRing} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </span>
+      <div className={styles.tooltip} role="tooltip">
+        <div className={styles.heading}>
+          <span className={styles.eyebrow}>CENTRAL OPERACIONAL</span>
+          <strong>Pendências e avisos</strong>
+          <span className={styles.subheading}>Resumo dos empenhos em destaque</span>
+        </div>
 
-        </>
-      )}
+        {!snapshot ? (
+          <p className={styles.empty}>Os avisos serão exibidos quando o resumo do setor estiver disponível.</p>
+        ) : (
+          <>
+            <div className={styles.summary}>
+              <div className={styles.summaryRow}>
+                <i className={styles.goldDot} />
+                <span>NFs para Comissão</span>
+                <strong>{commission.length} <small>empenho(s)</small></strong>
+              </div>
+              <div className={styles.summaryRow}>
+                <i className={styles.blueDot} />
+                <span>NFs para Tesouraria</span>
+                <strong>{treasury.length} <small>empenho(s)</small></strong>
+              </div>
+              <div className={styles.summaryRow}>
+                <i className={styles.alertDot} />
+                <span>Avisos pendentes</span>
+                <strong>{noticeCount}</strong>
+              </div>
+            </div>
 
-      <span className={styles.tooltip}>
-        <span className={styles.telemetryHeader}>
-          <strong>Núcleo EMPROVEX</strong>
-          <small>{totalEmpenhos} empenhos · {totalValueLabel}</small>
-        </span>
+            {noticeCount > 0 && <p className={styles.alertNote}>{alertsLabel}</p>}
 
-        <span className={styles.telemetryGrid}>
-          <span className={styles.telemetryCard}>
-            <b>Avisos</b>
-            <strong>{alertSeverity.total}</strong>
-            <small>
-              {alertSeverity.critical} crítico(s) · {alertSeverity.attention} atenção
-            </small>
-          </span>
-
-          <span className={styles.telemetryCard}>
-            <b>Recebimentos</b>
-            <strong>{receiving.pendingEmpenhos} empenho(s)</strong>
-            <small>
-              {receiving.pendingItems} item(ns) · {formatCurrency(receiving.balance)}
-            </small>
-          </span>
-
-          <span className={styles.telemetryCard}>
-            <b>Execução</b>
-            <strong>{execution.percentage}%</strong>
-            <small>
-              {formatCurrency(execution.received)} de {formatCurrency(execution.committed)}
-            </small>
-          </span>
-
-          <span className={styles.telemetryCard}>
-            <b>Painel</b>
-            <strong>Visão analítica</strong>
-            <small>Saldos, filtros e indicadores detalhados</small>
-          </span>
-        </span>
-
-        <span className={styles.classTelemetry}>
-          <b>Classes de empenho</b>
-          <span className={styles.classTelemetryGrid}>
-            {classStats.map((item) => (
-              <span key={item.code}>
-                <strong>{item.code}</strong>
-                <small>{item.count} empenho(s)</small>
-                <em>{formatCurrency(item.value)}</em>
-              </span>
-            ))}
-          </span>
-        </span>
-      </span>
-    </motion.div>
+            {highlights.length > 0 ? (
+              <div className={styles.highlights}>
+                <span className={styles.highlightsTitle}>Sinais prioritários</span>
+                {highlights.map((star) => (
+                  <div className={styles.highlight} key={star.id}>
+                    <span className={styles.reference}>{star.id}</span>
+                    <span className={styles.message}>
+                      {star.invoicePendingStage !== 'none'
+                        ? star.invoicePendingMessage
+                        : star.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.empty}>
+                {hasPending
+                  ? 'Consulte a Central de Avisos para os demais registros.'
+                  : 'Nenhuma pendência em destaque no momento.'}
+              </p>
+            )}
+            <span className={styles.hint}>Consulte as estrelas ou a Central de Avisos para detalhes.</span>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

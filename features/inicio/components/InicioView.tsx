@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-
 import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import { useInicioPerformanceProfile } from '../hooks/useInicioPerformanceProfile';
 import { InicioAtmosphere } from './InicioAtmosphere';
@@ -9,8 +7,6 @@ import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
 import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioIdentityPanel } from './InicioIdentityPanel';
-import { InicioInteractionLayer } from './InicioInteractionLayer';
-import { InicioOrbitSystem } from './InicioOrbitSystem';
 import { InicioSceneChrome } from './InicioSceneChrome';
 import styles from './InicioView.module.css';
 
@@ -20,100 +16,11 @@ interface InicioViewProps {
   onSelectEmpenho: (empenhoId: string) => void;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-export function InicioView({
-  snapshot,
-  userDisplayName,
-  onSelectEmpenho,
-}: InicioViewProps) {
-  const rootRef = useRef<HTMLElement>(null);
+export function InicioView({ snapshot, userDisplayName, onSelectEmpenho }: InicioViewProps) {
   const { mode: performanceMode, ambientPaused } = useInicioPerformanceProfile();
-  // Home enxuta: a cena permanece espacial, mas sem parallax contínuo.
-  const allowSceneParallax = false;
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!allowSceneParallax || !root || performanceMode !== 'full' || ambientPaused) return;
-
-    const finePointer = window.matchMedia('(pointer: fine)');
-    if (!finePointer.matches) return;
-
-    let frame = 0;
-    let targetX = 0;
-    let targetY = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const apply = () => {
-      root.style.setProperty('--home-shift-x', `${(currentX * 10).toFixed(2)}px`);
-      root.style.setProperty('--home-shift-y', `${(currentY * 8).toFixed(2)}px`);
-      root.style.setProperty('--home-shift-x-inverse', `${(currentX * -6).toFixed(2)}px`);
-      root.style.setProperty('--home-shift-y-inverse', `${(currentY * -5).toFixed(2)}px`);
-    };
-
-    const render = () => {
-      currentX += (targetX - currentX) * 0.075;
-      currentY += (targetY - currentY) * 0.075;
-      apply();
-
-      const settled =
-        Math.abs(targetX - currentX) < 0.001
-        && Math.abs(targetY - currentY) < 0.001;
-
-      if (settled) {
-        currentX = targetX;
-        currentY = targetY;
-        apply();
-        frame = 0;
-        return;
-      }
-
-      frame = window.requestAnimationFrame(render);
-    };
-
-    const scheduleFrame = () => {
-      if (!frame && document.visibilityState === 'visible') {
-        frame = window.requestAnimationFrame(render);
-      }
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      targetX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 2;
-      targetY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 2;
-      scheduleFrame();
-    };
-
-    const handlePointerLeave = () => {
-      targetX = 0;
-      targetY = 0;
-      scheduleFrame();
-    };
-
-    window.addEventListener('pointermove', handlePointerMove, { passive: true });
-    document.documentElement.addEventListener('mouseleave', handlePointerLeave);
-
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      document.documentElement.removeEventListener('mouseleave', handlePointerLeave);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [ambientPaused, performanceMode]);
-
-  const totalEmpenhos = snapshot?.metrics.totalEmpenhos ?? 0;
-  const totalValue = snapshot?.metrics.totalValue ?? 0;
-  const activeAlertCount = snapshot?.alerts.total ?? 0;
-  const enableFineMotion = false;
 
   return (
     <section
-      ref={rootRef}
       className={styles.scene}
       data-testid="inicio-scene"
       data-ready="true"
@@ -126,10 +33,6 @@ export function InicioView({
       <InicioEntrySequence />
       <InicioAtmosphere />
       <InicioSceneChrome />
-      <InicioInteractionLayer
-        sceneRef={rootRef}
-        enabled={enableFineMotion}
-      />
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.texture} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
@@ -141,20 +44,9 @@ export function InicioView({
 
       <InicioIdentityPanel userDisplayName={userDisplayName} />
 
-      <div
-        className={styles.system}
-        data-testid="inicio-system"
-        aria-label="Núcleo operacional EMPROVEX"
-      >
-        {false && <InicioOrbitSystem snapshot={snapshot} />}
-
+      <div className={styles.system} data-testid="inicio-system">
         <InicioCore
           snapshot={snapshot}
-          totalEmpenhos={totalEmpenhos}
-          totalValueLabel={formatCurrency(totalValue)}
-          activeAlertCount={activeAlertCount}
-          interactiveMotion={false}
-          visualMode="thinking-orbs"
           performanceMode={performanceMode}
           ambientPaused={ambientPaused}
         />
@@ -164,12 +56,11 @@ export function InicioView({
         <div className={styles.snapshotNotice} role="status">
           <strong>Seu painel está pronto para começar</strong>
           <span>
-            À medida que o setor cadastrar empenhos e notas fiscais, os indicadores
-            serão exibidos aqui automaticamente.
+            À medida que o setor cadastrar empenhos e notas fiscais, os avisos
+            operacionais aparecerão ao passar o cursor sobre o logotipo.
           </span>
         </div>
       )}
-
     </section>
   );
 }
