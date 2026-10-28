@@ -108,52 +108,6 @@ try {
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,80);
   console.log('PASS: replay divergente negado sem mexer no estoque');
 
-  // Excel / Entrada Avulsa: o nome já existir no cadastro NÃO autoriza
-  // vincular ao ID antigo. O servidor gera ID estável por arquivo+produto.
-  const bulkOperation=(digest:string,line:number)=>'bulk_'+dep+'_'+digest.repeat(28)+'_'+line;
-  const bulkInput={
-    operationId:bulkOperation('a',68),existingMaterialId:null,
-    description:'Arroz integral',unitLabel:'KG',quantity:10,
-    provenance:'Carga Excel',reference:'Excel teste · linha 68',
-    position:subposition,expiresOn:null,lotCode:null,barcode:null,
-  };
-  const bulkFirst=await registerWarehouseManualEntryServer(access,bulkInput);
-  assert.equal(bulkFirst.entry.applied,true);
-  assert.notEqual(bulkFirst.material.id,first.material.id,
-    'a carga não pode reaproveitar material da Entrada Avulsa anterior');
-  const bulkSecond=await registerWarehouseManualEntryServer(access,{
-    ...bulkInput,operationId:bulkOperation('a',69),quantity:5,
-    reference:'Excel teste · linha 69',position,
-  });
-  assert.equal(bulkSecond.material.id,bulkFirst.material.id,
-    'duas posições do mesmo produto e do mesmo arquivo devem compartilhar apenas o ID novo');
-  assert.equal(bulkSecond.entry.balance.quantity,15);
-  const bulkReplay=await registerWarehouseManualEntryServer(access,bulkInput);
-  assert.equal(bulkReplay.entry.applied,false);
-  assert.equal(bulkReplay.material.id,bulkFirst.material.id);
-  assert.equal(bulkReplay.entry.balance.quantity,15);
-  const bulkDifferentFile=await registerWarehouseManualEntryServer(access,{
-    ...bulkInput,operationId:bulkOperation('b',68),
-  });
-  assert.notEqual(bulkDifferentFile.material.id,bulkFirst.material.id,
-    'outro arquivo deve criar novo cadastro mesmo com descrição idêntica');
-  const blackBeans=await registerWarehouseManualEntryServer(access,{
-    ...bulkInput,operationId:bulkOperation('a',70),
-    description:'Feijão preto',quantity:172,unitLabel:'kg',
-  });
-  const redBeans=await registerWarehouseManualEntryServer(access,{
-    ...bulkInput,operationId:bulkOperation('a',71),
-    description:'Feijão vermelho',quantity:330,unitLabel:'kg',
-  });
-  assert.notEqual(blackBeans.material.id,redBeans.material.id,
-    'feijão preto e vermelho devem ter IDs independentes na mesma prateleira');
-  await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
-    ...bulkInput,operationId:bulkOperation('a',72),
-    existingMaterialId:first.material.id,
-  }),/WAREHOUSE_BULK_EXISTING_MATERIAL_FORBIDDEN/);
-  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,80,
-    'entrada antiga não deve receber saldo da importação');
-  console.log('PASS: Excel gera material novo por arquivo, compartilha dentro dele e rejeita ID antigo');
 
   const second=await registerWarehouseManualEntryServer(access,{
     operationId:'manual-server-entry-002',
@@ -892,6 +846,54 @@ try {
   assert.ok(legacyAudit.findings.some(item=>item.id===phantomId
     &&item.reason==='CONSUMPTION_COUNT_MISMATCH'));
   console.log('PASS: auditor v1 somente leitura detecta falso FINALIZED e valida replays reais');
+  // Excel / Entrada Avulsa: o nome já existir no cadastro NÃO autoriza
+  // vincular ao ID antigo. O servidor gera ID estável por arquivo+produto.
+  const balanceBeforeBulk=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
+  const bulkOperation=(digest:string,line:number)=>'bulk_'+dep+'_'+digest.repeat(28)+'_'+line;
+  const bulkInput={
+    operationId:bulkOperation('a',68),existingMaterialId:null,
+    description:'Arroz integral',unitLabel:'KG',quantity:10,
+    provenance:'Carga Excel',reference:'Excel teste · linha 68',
+    position:subposition,expiresOn:null,lotCode:null,barcode:null,
+  };
+  const bulkFirst=await registerWarehouseManualEntryServer(access,bulkInput);
+  assert.equal(bulkFirst.entry.applied,true);
+  assert.notEqual(bulkFirst.material.id,first.material.id,
+    'a carga não pode reaproveitar material da Entrada Avulsa anterior');
+  const bulkSecond=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',69),quantity:5,
+    reference:'Excel teste · linha 69',position,
+  });
+  assert.equal(bulkSecond.material.id,bulkFirst.material.id,
+    'duas posições do mesmo produto e do mesmo arquivo devem compartilhar apenas o ID novo');
+  assert.equal(bulkSecond.entry.balance.quantity,15);
+  const bulkReplay=await registerWarehouseManualEntryServer(access,bulkInput);
+  assert.equal(bulkReplay.entry.applied,false);
+  assert.equal(bulkReplay.material.id,bulkFirst.material.id);
+  assert.equal(bulkReplay.entry.balance.quantity,15);
+  const bulkDifferentFile=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('b',68),
+  });
+  assert.notEqual(bulkDifferentFile.material.id,bulkFirst.material.id,
+    'outro arquivo deve criar novo cadastro mesmo com descrição idêntica');
+  const blackBeans=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',70),
+    description:'Feijão preto',quantity:172,unitLabel:'kg',
+  });
+  const redBeans=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',71),
+    description:'Feijão vermelho',quantity:330,unitLabel:'kg',
+  });
+  assert.notEqual(blackBeans.material.id,redBeans.material.id,
+    'feijão preto e vermelho devem ter IDs independentes na mesma prateleira');
+  await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',72),
+    existingMaterialId:first.material.id,
+  }),/WAREHOUSE_BULK_EXISTING_MATERIAL_FORBIDDEN/);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,balanceBeforeBulk,
+    'entrada antiga não deve receber saldo da importação');
+  console.log('PASS: Excel gera material novo por arquivo, compartilha dentro dele e rejeita ID antigo');
+
   await assert.rejects(()=>verifyWarehouseRequest(null));
   console.log('PASS: API gate sem token rejeita a solicitação');
   console.log('SERVER MANUAL ENTRY EMULATOR PASS');
