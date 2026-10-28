@@ -32,10 +32,16 @@ test('importação completa identifica feijões diferentes na mesma prateleira e
   ],locations);
   assert.deepEqual(resolved.map(row=>row.errors),[[],[],[]]);
   assert.deepEqual(resolved.map(row=>row.materialId),[id('1'),id('2'),id('3')]);
-  assert.equal(resolved[0].position?.subpositionId,'sub_2');
-  assert.equal(resolved[1].position?.subpositionId,'sub_2');
-  assert.equal(resolved[2].position?.subpositionId,null);
-  assert.equal(resolved[0].position?.depotId,depot);
+  const first=resolved[0].position,second=resolved[1].position,freezer=resolved[2].position;
+  assert.equal(first?.kind,'SUBPOSITION');
+  assert.equal(second?.kind,'SUBPOSITION');
+  assert.equal(freezer?.kind,'LOCATION');
+  if(first?.kind!=='SUBPOSITION'||second?.kind!=='SUBPOSITION'||freezer?.kind!=='LOCATION')
+    throw new Error('STOCK_IMPORT_POSITION_UNEXPECTED');
+  assert.equal(first.subpositionId,'sub_2');
+  assert.equal(second.subpositionId,'sub_2');
+  assert.equal(freezer.subpositionId,null);
+  assert.equal(first.depotId,depot);
   assert.equal(resolved[1].quantity,172);
   assert.equal(resolved[2].expiresOn,'2027-05-06');
 });
