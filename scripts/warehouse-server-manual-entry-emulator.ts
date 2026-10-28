@@ -971,6 +971,42 @@ try {
   assert.equal(pending.pendingQuantity,27);
   assert.equal(pending.lotReferences.length,1);
   assert.equal(pending.lotReferences[0].expiresOn,'2027-10-20');
+  const group= (await listWarehouseDepotReturnsServer(access))
+    .filter(item=>item.depotId===returnDepot.id);
+  assert.equal(group.length,2);
+  const groupIds=group.map(item=>item.id);
+  await assert.rejects(()=>bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:[groupIds[0],groupIds[0]],
+  }),/WAREHOUSE_DEPOT_RETURNS_BULK_INVALID/);
+  const archivedGroup=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:groupIds,
+  });
+  assert.equal(archivedGroup.changed,2);
+  const replayArchive=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'ARCHIVE',returnIds:groupIds,
+  });
+  assert.equal(replayArchive.changed,0);
+  assert.equal(replayArchive.unchanged,2);
+  assert.equal((await listWarehouseDepotReturnsServer(access))
+    .filter(item=>groupIds.includes(item.id)).length,0);
+  assert.equal((await listWarehouseDepotReturnsServer(access,{includeArchived:true}))
+    .filter(item=>groupIds.includes(item.id)&&item.status==='ARCHIVED').length,2);
+  await assert.rejects(()=>allocateWarehouseDepotReturnServer(access,{
+    returnId:pending.id,position,
+  }),/WAREHOUSE_DEPOT_RETURN_CHANGED/);
+  await assert.rejects(()=>bulkWarehouseDepotReturnQueueServer(
+    {...access,ug:'999999'},{
+      action:'RESTORE',returnIds:groupIds,
+    }),/WAREHOUSE_DEPOT_RETURN_SCOPE_MISMATCH/);
+  assert.equal((await getDoc(ref('balances',returnEntry.material.id))).data()?.quantity,27);
+  assert.equal((await getDoc(ref('balances',returnEntryTwo.material.id))).data()?.quantity,5);
+  const restoredGroup=await bulkWarehouseDepotReturnQueueServer(access,{
+    action:'RESTORE',returnIds:groupIds,
+  });
+  assert.equal(restoredGroup.changed,2);
+  assert.equal((await listWarehouseDepotReturnsServer(access))
+    .filter(item=>groupIds.includes(item.id)).length,2);
+  console.log('PASS: remoção em grupo reversível, replay e isolamento UG sem alterar estoque');
   const allocation=await allocateWarehouseDepotReturnServer(access,{
     returnId:pending.id,position,
   });
