@@ -72,7 +72,7 @@ export function WarehouseManualEntryOperational({
     setError(null);
     try {
       const [materialItems, depotItems, locationItems] = await Promise.all([
-        listWarehouseMaterials(workspaceId, 5000),
+        listWarehouseMaterials(workspaceId, 500),
         listWarehouseDepots(workspaceId, 250),
         listWarehouseLocations(workspaceId, 500),
       ]);
@@ -553,9 +553,7 @@ export function WarehouseManualEntryOperational({
 
       <WarehouseBulkManualEntryOperational
         workspaceId={workspaceId}
-        materials={materials}
         depots={depots}
-        locations={locations}
         onImported={load}
       />
 
