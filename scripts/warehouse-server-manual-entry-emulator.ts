@@ -137,8 +137,18 @@ try {
   });
   assert.notEqual(bulkDifferentFile.material.id,bulkFirst.material.id,
     'outro arquivo deve criar novo cadastro mesmo com descrição idêntica');
-  await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
+  const blackBeans=await registerWarehouseManualEntryServer(access,{
     ...bulkInput,operationId:bulkOperation('a',70),
+    description:'Feijão preto',quantity:172,unitLabel:'kg',
+  });
+  const redBeans=await registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',71),
+    description:'Feijão vermelho',quantity:330,unitLabel:'kg',
+  });
+  assert.notEqual(blackBeans.material.id,redBeans.material.id,
+    'feijão preto e vermelho devem ter IDs independentes na mesma prateleira');
+  await assert.rejects(()=>registerWarehouseManualEntryServer(access,{
+    ...bulkInput,operationId:bulkOperation('a',72),
     existingMaterialId:first.material.id,
   }),/WAREHOUSE_BULK_EXISTING_MATERIAL_FORBIDDEN/);
   assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,80,
