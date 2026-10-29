@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { planMobileOutboundAutomaticLots } from '../lib/warehouse/mobileOutboundPlan.mjs';
+import { replanDesktopWithdrawalCart } from '../lib/warehouse/desktopWithdrawalReplan.mjs';
 import ts from 'typescript';
 import { runInNewContext } from 'node:vm';
 
@@ -107,4 +108,67 @@ test('GOV-SIMP: erro de saldo preserva reinicio seguro apos recarregar a pagina'
   assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,true);
   api.clearWarehouseWithdrawalRecovery(workspaceId);
   assert.equal(api.readWarehouseWithdrawalDraft(workspaceId),null);
+});
+
+test('GOV-SIMP: preflight desktop redistribui validade obsoleta sem alterar saldo',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const oldLine={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:3,requestedQuantity:3,lotId:null,lotCode:null,
+    availableAtPosition:10,availableBalance:10};
+  const validLot={id:'lot_'+'f'.repeat(32),position,
+    code:'VALIDO',status:'active',expiresOn:'2027-10-31',quantity:10};
+  const stock={
+    [mat]:{globalQuantity:10,positions:[{position,quantity:10}],lots:[validLot]},
+  };
+  let sequence=0;
+  const id=()=> 'wline_'+String(++sequence).padStart(32,'0');
+  const recalculated=replanDesktopWithdrawalCart([oldLine],stock,id);
+  assert.equal(recalculated.changed,true);
+  assert.equal(recalculated.lines[0].lotId,validLot.id);
+  assert.equal(recalculated.lines[0].baseQuantity,3);
+  assert.equal(recalculated.lines[0].availableAtPosition,10);
+  assert.equal(recalculated.lines[0].lineId!==oldLine.lineId,true);
+  assert.equal(stock[mat].positions[0].quantity,10);
+  assert.equal(stock[mat].lots[0].quantity,10);
+  const stable=replanDesktopWithdrawalCart(recalculated.lines,stock,id);
+  assert.equal(stable.changed,false);
+  assert.equal(stable.lines[0].lineId,recalculated.lines[0].lineId);
+});
+
+test('GOV-SIMP: saldo zero e local sem estoque nao viram disponibilidade fantasma',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const line={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:2,requestedQuantity:2,lotId:null,lotCode:null};
+  const id=()=> 'wline_'+'e'.repeat(32);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:0,positions:[{position,quantity:0}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:0,positions:[{position,quantity:9}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+});
+
+test('GOV-SIMP: divergencia, vencimento e carrinho repetido falham sem nova baixa',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const line={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:3,requestedQuantity:3,lotId:null,lotCode:null};
+  const expired={id:'lot_'+'e'.repeat(32),position,code:'VENCIDO',
+    status:'active',expiresOn:'2024-01-01',quantity:5};
+  const id=()=> 'wline_'+'f'.repeat(32);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],lots:[expired]},
+  },id),/WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],
+      lots:[{...expired,expiresOn:'2027-12-01',quantity:7}]},
+  },id),/WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line,line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
 });
