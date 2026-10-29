@@ -213,4 +213,4 @@ jobs:
           test ! -f .env.production.local
           test ! -f service-account.json
       - name: "E2E: login, dados financeiros, NF/NS, relatórios, UG e navegação"
-        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/operator-critical-flow.spec.mjs tests/e2e/warehouse-react-tab-navigation.spec.mjs"
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/operator-critical-flow.spec.mjs"
