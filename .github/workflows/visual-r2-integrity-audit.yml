@@ -1,0 +1,154 @@
+name: VISUAL-R2 Integrity Audit (non-destructive)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/visual-r2-integrity-audit.yml'
+      - 'app/login/page.tsx'
+      - 'app/page.tsx'
+      - 'components/**'
+      - 'features/**'
+      - 'hooks/**'
+      - 'scripts/visual-r2-*.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-r2-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documents-and-reports:
+    name: "Documentos, NF, TR, Drive e Relatórios"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: "Verificações de documentos: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            verify:tr-workspace-documents \
+            verify:workspace-drive \
+            verify:workspace-drive-onboarding \
+            verify:invoice-mirror-document \
+            verify:reporting-foundation \
+            verify:reports-shell \
+            verify:report-empenho-selector \
+            verify:report-empenho-detail \
+            verify:supplier-reports \
+            verify:invoice-ns-lifecycle \
+            verify:empenho-pdf-direct-import \
+            verify:sped-nup-reporting \
+            verify:central-avisos \
+            test:reporting-period \
+            test:supplier-reporting \
+            test:sag-ns-contract \
+            test:sag-ns-reconciliation \
+            test:sag-ns-persistence \
+            test:invoice-identity \
+            test:cronograma-email \
+            test:ns-integrity \
+            test:ns-integrity-contract \
+            test:harden-a1-pdf; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=Regression contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT DOCUMENT FAILURES=${failed}"
+          test "${failed}" -eq 0
+
+  auth-and-integrity:
+    name: "Auth, tenant, assinatura, dados e proteção"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: TypeScript real
+        run: npm run typecheck
+      - name: "Verificações de segurança: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            verify:external-sector-login \
+            verify:hybrid-auth-model \
+            verify:firestore-provider-enforcement \
+            verify:sector-auth-provisioning \
+            verify:block-16-1-session-enforcement \
+            verify:saas-r1-security-enforcement \
+            verify:rc-rules-audit \
+            verify:backup-recovery \
+            test:operational-subscription-plan \
+            test:empenho-concurrency \
+            test:financial-identity-v2 \
+            test:recovery; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=Security contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT SECURITY FAILURES=${failed}"
+          test "${failed}" -eq 0
+
+  warehouse-and-ui:
+    name: "Warehouse, modos, 3D e navegação"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: "Verificações de interface: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            test:warehouse-react-tab-navigation \
+            test:warehouse-isometric-camera \
+            test:warehouse-3d-stock \
+            test:warehouse-croqui-unified \
+            test:warehouse-croqui-collision \
+            test:warehouse-stock-report-ux \
+            test:adm-deposito-nf-stock \
+            test:adm-deposito-inventory \
+            test:adm-deposito-outbound-return \
+            test:mobile-outbound-unified \
+            verify:central-depositos-routes \
+            verify:performance-r3-central-shell \
+            test:pwa-installability; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=UI/3D contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT UI FAILURES=${failed}"
+          test "${failed}" -eq 0
