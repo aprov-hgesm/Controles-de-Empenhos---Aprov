@@ -607,7 +607,7 @@ export function PlatformAdminView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void onLogout()}
+                    onClick={() => { clearVisualMode(); void onLogout(); }}
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 text-[10px] font-extrabold text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
                   >
                     <LogOut className="h-4 w-4" />
