@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
 import type { CronogramaEntregaColuna, Invoice } from '../lib/types';
 
 /**
@@ -60,7 +60,16 @@ export function useOperationalViewState() {
   const [nfQuantities, setNfQuantities] = useState<{ [itemId: string]: number }>({});
   // Arquivo selecionado não deve desaparecer ao alternar abas ou modos.
   // Apenas memória local: nunca envia o PDF antes da confirmação de cadastro.
-  const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
+  const [nfPdfFilesByCommitment, setNfPdfFilesByCommitment] = useState<Record<string, File | null>>({});
+  const nfPdfFile = nfPdfFilesByCommitment[selectedNFCommitmentId] ?? null;
+  const setNfPdfFile: Dispatch<SetStateAction<File | null>> = useCallback((nextValue) => {
+    setNfPdfFilesByCommitment((current) => {
+      const currentFile = current[selectedNFCommitmentId] ?? null;
+      const nextFile = typeof nextValue === 'function' ? nextValue(currentFile) : nextValue;
+      return { ...current, [selectedNFCommitmentId]: nextFile };
+    });
+  }, [selectedNFCommitmentId]);
+  const clearNfPdfDrafts = useCallback(() => setNfPdfFilesByCommitment({}), []);
   const [nfSearch, setNfSearch] = useState('');
   const [nfSubTab, setNfSubTab] = useState<'acompanhar' | 'cadastrar' | 'comissao'>('acompanhar');
   const [nfMonthFilter, setNfMonthFilter] = useState('Todos');
@@ -131,7 +140,7 @@ export function useOperationalViewState() {
     showConfirmSaveModal, setShowConfirmSaveModal, empenhoToDelete, setEmpenhoToDelete, isDeletingEmpenho, setIsDeletingEmpenho,
     newEmpenhoForm, setNewEmpenhoForm, itensSearch, setItensSearch, itensSaldoFilter, setItensSaldoFilter,
     expandedConsultaItem, setExpandedConsultaItem, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber,
-    nfDate, setNfDate, nfQuantities, setNfQuantities, nfPdfFile, setNfPdfFile, nfSearch, setNfSearch,
+    nfDate, setNfDate, nfQuantities, setNfQuantities, nfPdfFile, setNfPdfFile, clearNfPdfDrafts, nfSearch, setNfSearch,
     nfSubTab, setNfSubTab, nfMonthFilter, setNfMonthFilter, nfEmpenhoFilter, setNfEmpenhoFilter,
     nfTramitacaoFilter, setNfTramitacaoFilter, nfSortOrder, setNfSortOrder, editingInvoice, setEditingInvoice,
     comissaoMes, setComissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate,
