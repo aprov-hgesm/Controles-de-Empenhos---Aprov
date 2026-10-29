@@ -12,7 +12,13 @@ const actions = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
 const view = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 const component = read('components/InvoiceMirrorDocumentActions.tsx');
 const documents = read('features/relatorios/hooks/useDocumentActions.ts');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
+if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
+  throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
+}
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 for (const expected of [
@@ -73,7 +79,7 @@ requireText(
 
 requireText(
   page,
-  "import('../features/operational/components/OperationalWorkspace')",
+  "import('../../features/operational/components/OperationalWorkspace')",
   'A composição principal não conecta o host operacional sob demanda.'
 );
 requireText(
