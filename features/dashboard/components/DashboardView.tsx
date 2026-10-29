@@ -208,7 +208,7 @@ export function DashboardView({
               : classesConfig.filter((item) => item.key === effectiveDashboardClassFilter);
 
             return (
-              <div className="space-y-6">
+              <div data-testid="dashboard-surface" className="space-y-6">
                 
                 {/* Header do Painel */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
