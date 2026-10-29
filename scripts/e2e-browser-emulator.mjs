@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { warehouseEmulatorLaunch } from './warehouse-emulator-launch.mjs';
 
 const root = process.cwd();
@@ -65,7 +65,19 @@ function signalChildTree(child, signal) {
 }
 
 async function stopChild(child) {
-  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  if (!child || !child.pid || child.exitCode !== null || child.signalCode !== null) return;
+
+  // O cmd.exe inicia npx.cmd -> Node -> Java. No Windows, kill() encerra
+  // somente o cmd.exe e deixa o Firestore vivo em 8081. Encerrar toda a
+  // árvore evita portas ocupadas na próxima execução do usuário.
+  if (process.platform === 'win32') {
+    const killed = spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+      windowsHide: true,
+      stdio: 'ignore',
+      timeout: 10_000,
+    });
+    if (killed.status === 0) return;
+  }
 
   signalChildTree(child, 'SIGTERM');
 
