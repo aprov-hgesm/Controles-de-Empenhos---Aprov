@@ -918,9 +918,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           setMessage('O estoque mudou desde a leitura. Carrinho recalculado com os saldos e validades atuais; confira e revise novamente. Nenhuma baixa foi realizada.');
           return;
         }
-        // Atualiza somente os valores exibidos; a identidade da retirada
-        // permanece a mesma quando material, linha e quantidade não mudaram.
-        setCart(next.lines as CartLine[]);
+        // Payload v2 e ID devem permanecer IMUTAVEIS inclusive no retry.
+        // Nao atualizar o draft quando o planejamento coincide.
       } catch (error) {
         setReviewing(false);
         setMessageKind('error');
