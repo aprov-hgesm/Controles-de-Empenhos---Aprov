@@ -370,6 +370,18 @@ try {
   assert.equal((await getDoc(ref('consumptions',rejectedConsumption))).exists(),false);
   console.log('PASS: untracked sem saldo livre -> safe restart, sem baixa/cabecalho/consumo, retry idem');
 
+  // Saldo insuficiente também é rejeição determinística, sem baixa.
+  const insufficientRequest={...withdrawalRequest,
+    withdrawalId:'wd_'+'6'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],requestedQuantity:999,
+      baseQuantity:999}],
+  };
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,insufficientRequest),
+    /WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK_SAFE_TO_RESTART/);
+  assert.equal((await getDoc(ref('withdrawals',insufficientRequest.withdrawalId))).exists(),false);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeRejectBalance);
+  console.log('PASS: falta de estoque rejeitada antes de qualquer escrita e carrinho recuperável');
+
   const beforeForged=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
   await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
     ...withdrawalRequest,withdrawalId:'wd_'+'d'.repeat(32),
