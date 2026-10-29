@@ -158,7 +158,7 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOT_POSITION_MISMATCH', 'A validade vinculada foi movida para outra posição. Atualize o carrinho.'],
     ['WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED', 'A distribuição por validades mudou. Atualize o carrinho.'],
 
-    ['WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED', 'Não foi possível atualizar o saldo do material.'], 
+    ['WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED', 'Não foi possível atualizar o saldo do material.'],
     ['WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE', 'Há estoque registrado, mas nenhuma quantidade apta para consumo nesta posição. Verifique validades.'],
     ['WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED', 'A quantidade vinculada às validades excede o saldo físico. O estoque precisa de conciliação.'],
     ['WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK', 'Os vínculos de validade excedem o saldo físico. O estoque precisa de conciliação.'],
