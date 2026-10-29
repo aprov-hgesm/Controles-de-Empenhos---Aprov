@@ -132,7 +132,7 @@ warehouseEmulator.stderr.on(
 let server = null;
 
 try {
-  await waitForEndpoint(warehouseEmulatorBase);
+  await waitForEndpoint(warehouseEmulatorBase, process.argv.includes('--preview') ? 180_000 : 60_000);
 
   await run(
     process.execPath,
@@ -169,7 +169,7 @@ try {
   server.stdout.on('data', (chunk) => process.stdout.write(`[next] ${chunk}`));
   server.stderr.on('data', (chunk) => process.stderr.write(`[next] ${chunk}`));
 
-  await waitForEndpoint(appBase);
+  await waitForEndpoint(appBase, process.argv.includes('--preview') ? 180_000 : 60_000);
   process.stdout.write('Next.js E2E: READY\n');
 
   if (process.argv.includes('--preview')) {
