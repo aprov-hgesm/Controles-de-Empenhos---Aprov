@@ -90,6 +90,9 @@ async function stopChild(child) {
 
 // Seed do EMPROVEX principal no Firestore padrão (8080).
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
+// O teste multi-tenant restaura a conta de trial vencido. Para o browser E2E
+// usar contas fictícias isentas; cobrança real e Rules continuam intactas.
+await run(process.execPath, ['scripts/e2e-billing-fixture.mjs']);
 
 // A versão atual do Firestore Emulator não suporta Rules de múltiplos bancos
 // no mesmo processo. A Central usa uma segunda instância dedicada em 8081.
