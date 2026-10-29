@@ -294,7 +294,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [destinationId, setDestinationId] = useState(initialDraft?.destinationId || '');
   const [withdrawnBy, setWithdrawnBy] = useState(initialDraft?.withdrawnBy || '');
   const [retryRequired, setRetryRequired] = useState(initialDraft?.retryRequired || false);
-  const [safeRestartAvailable, setSafeRestartAvailable] = useState(false);
+  const [safeRestartAvailable, setSafeRestartAvailable] = useState(
+    initialDraft?.safeRestartAvailable === true && initialDraft?.retryRequired === true
+  );
   const [reviewing, setReviewing] = useState(Boolean(initialDraft?.retryRequired));
   const [working, setWorking] = useState(false);
   const [scannerCode, setScannerCode] = useState('');
@@ -324,9 +326,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       destinationId,
       withdrawnBy,
       retryRequired,
+      safeRestartAvailable,
     };
     persistWarehouseWithdrawalDraft(workspaceId, draft);
-  }, [cart, destinationId, retryRequired, withdrawalId, withdrawnBy, workspaceId]);
+  }, [cart, destinationId, retryRequired, safeRestartAvailable, withdrawalId, withdrawnBy, workspaceId]);
 
   const rememberBarcode = useCallback((
     rawBarcode: string,
@@ -957,6 +960,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       const safeToRestart = raw.includes(
         'WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART'
       );
+      if (safeToRestart) {
+        // Salvar a confirmacao antes de expor o botao, inclusive em recargas.
+        persistWarehouseWithdrawalRecovery(workspaceId, {
+          withdrawalId, cart: cartSnapshot, destinationId, withdrawnBy,
+          retryRequired: true, safeRestartAvailable: true,
+        });
+      }
       setRetryRequired(true);
       setSafeRestartAvailable(safeToRestart);
       setReviewing(true);
@@ -1560,11 +1570,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       <p key={line.lineId}>{line.materialDescription} · {formatWarehouseNumber(line.baseQuantity)} {line.unitLabel}</p>
                     ))}
                   </div>
-                  <button type="button" onClick={() => void finalize()} disabled={working}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">
-                    {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
-                  </button>
+                  {!safeRestartAvailable && (
+                    <button type="button" onClick={() => void finalize()} disabled={working}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">
+                      {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
+                    </button>
+                  )}
                   {retryRequired && safeRestartAvailable && (
                     <button type="button" disabled={working}
                       onClick={() => {
