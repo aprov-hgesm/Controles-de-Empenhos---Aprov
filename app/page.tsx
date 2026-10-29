@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { usePlatformBranding } from '../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../hooks/useOperationalViewState';
@@ -11,7 +11,7 @@ import { AppSidebar } from '../components/layout/AppSidebar';
 import { ToastNotification } from '../components/layout/ToastNotification';
 import { OperationalSurfaceTransition } from '../components/layout/OperationalSurfaceTransition';
 import { OperationalSurfaceLoading } from '../components/layout/OperationalSurfaceLoading';
-import { InicioView } from '../features/inicio/components/InicioView';
+import { useVisualMode } from '../components/visual-mode/VisualModeProvider';
 import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
@@ -23,6 +23,10 @@ import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
 
+const InicioView = lazy(() =>
+  import('../features/inicio/components/InicioView').then((module) => ({ default: module.InicioView }))
+);
+
 const OperationalWorkspace = lazy(() =>
   import('../features/operational/components/OperationalWorkspace').then((module) => ({
     default: module.OperationalWorkspace,
@@ -30,6 +34,7 @@ const OperationalWorkspace = lazy(() =>
 );
 
 export default function Home() {
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -52,7 +57,21 @@ export default function Home() {
   }, []);
 
   // Navigation drives the realtime subscription profile (Block 14).
-  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
+  const [requestedTab, setRequestedTab] = useState<OperationalActiveTab>('inicio');
+  // A tela Início nunca chega a montar no Essencial, mesmo na primeira hidratação.
+  const activeTab: OperationalActiveTab =
+    mode === 'essencial' && requestedTab === 'inicio' ? 'painel' : requestedTab;
+  const setActiveTab: Dispatch<SetStateAction<OperationalActiveTab>> = useCallback((update) => {
+    setRequestedTab((previous) => {
+      const next = typeof update === 'function' ? update(previous) : update;
+      return mode === 'essencial' && next === 'inicio' ? 'painel' : next;
+    });
+  }, [mode]);
+  useEffect(() => {
+    if (visualModeReady && mode === 'essencial' && requestedTab === 'inicio') {
+      setRequestedTab('painel');
+    }
+  }, [visualModeReady, mode, requestedTab]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
 
@@ -67,6 +86,17 @@ export default function Home() {
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = operationalData;
+
+  // Uma troca de identidade autenticada não herda a preferência da anterior.
+  const previousIdentityRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingAuth) return;
+    const uid = user?.uid ?? null;
+    if (previousIdentityRef.current && previousIdentityRef.current !== uid) {
+      clearVisualMode();
+    }
+    previousIdentityRef.current = uid;
+  }, [loadingAuth, user?.uid, clearVisualMode]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
@@ -111,9 +141,9 @@ export default function Home() {
   } = viewState;
 
   const pendingNoticeCount =
-    activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
+    mode === 'essencial' || activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
       ? countPendingNotices(alerts)
-      : inicioSnapshot?.alerts.total ?? 0;
+      : inicioSnapshot?.alerts.total ?? countPendingNotices(alerts);
 
   useEffect(() => {
     if (activeTab !== 'inicio') {
@@ -144,7 +174,7 @@ export default function Home() {
 
 
 
-  if (loadingAuth) {
+  if (loadingAuth || !visualModeReady) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
   }
 
@@ -271,6 +301,7 @@ export default function Home() {
           onLogout={async () => {
             try {
               setShowLoginSuccessTransition(false);
+              clearVisualMode();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
@@ -280,7 +311,9 @@ export default function Home() {
           }}
           warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
           onOpenWarehouse={() => {
-            window.location.assign('/central-depositos');
+            window.location.assign(
+              mode === 'essencial' ? '/central-depositos/controle-de-itens' : '/central-depositos'
+            );
           }}
         />
 
@@ -295,6 +328,7 @@ export default function Home() {
 
           {activeOperationalDataReady && activeTab === 'inicio' && (
             <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
+              <Suspense fallback={<OperationalSurfaceLoading />}>
               <InicioView
                 snapshot={inicioSnapshot}
                 userDisplayName={user?.displayName || 'Operador EMPROVEX'}
@@ -303,6 +337,7 @@ export default function Home() {
                   setActiveTab('empenhos');
                 }}
               />
+              </Suspense>
             </OperationalSurfaceTransition>
           )}
 
