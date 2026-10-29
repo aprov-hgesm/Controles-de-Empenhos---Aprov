@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   CheckCircle2,
@@ -15,7 +15,9 @@ import {
 } from 'lucide-react';
 
 import { useWorkspaceDriveStorage } from '../../hooks/useWorkspaceDriveStorage';
-import { WorkspaceBackupSection } from './WorkspaceBackupSection';
+const WorkspaceBackupSection = lazy(() =>
+  import('./WorkspaceBackupSection').then((module) => ({ default: module.WorkspaceBackupSection }))
+);
 import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -180,13 +182,15 @@ export function WorkspaceDriveControl({
             </div>
           )}
 
-          <WorkspaceBackupSection
-            user={user}
-            workspaceContext={workspaceContext}
-            session={session}
-            settings={settings}
-            onNotify={notify}
-          />
+          <Suspense fallback={<p role="status" className="mt-3 text-xs text-slate-500">Carregando opções de backup...</p>}>
+            <WorkspaceBackupSection
+              user={user}
+              workspaceContext={workspaceContext}
+              session={session}
+              settings={settings}
+              onNotify={notify}
+            />
+          </Suspense>
 
           {error && (
             <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
