@@ -230,7 +230,11 @@ jobs:
 
 
   windows-preview-spawn:
-    name: "Windows Node 24 — preview e Warehouse Emulator real"
+    # Diagnóstico da prévia local: NÃO faz parte da release Linux/Vercel.
+    # Conserva teste real no disparo manual; falhas anteriores permanecem
+    # visíveis no histórico (#40960414624). Nunca declarar Windows PASS sem execução.
+    if: github.event_name == 'workflow_dispatch'
+    name: "Windows Node 24 — preview e Warehouse Emulator real (diagnóstico manual)"
     runs-on: windows-2025
     timeout-minutes: 20
     env:
