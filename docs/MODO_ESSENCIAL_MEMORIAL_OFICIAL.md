@@ -1,5 +1,35 @@
 # EMPROVEX — MODO ESSENCIAL / MODO NORMAL — MEMORIAL OFICIAL R1
 
+## ATUALIZAÇÃO CANÔNICA — IMPLEMENTAÇÃO, E2E E NOVA FRENTE RAM (29/10/2026)
+
+**Status vigente substitui exclusivamente os checkpoints antigos de "somente documentação" nesta página.** Implementação em [PR #411 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/411) sobre branch `feat/visual-mode-r1-session-navigation`. Nenhum merge ou deploy autorizado.
+
+| Frente | Verificação atual |
+| --- | --- |
+| Normal/Essencial por sessão | Implementado em `sessionStorage` com selector, rotas de Painel e Central, sem alterar banco por modo |
+| R2-A/B | Lazy de painéis/backup, acabamento visual econômico, agregados financeiros memoizados e tabela progressiva; totais/filtros preservam o conjunto completo |
+| R2-C | Segmentação inicial segura; a decomposição dos hooks transacionais **não** está concluída |
+| Recuperação automática | Boundary React + falha de chunk detectável retornam ao Normal, sem logout/reload, bloqueiam Essencial até fim da sessão; **não mascarar cobrança ou permissão** |
+| Regressões e segurança | 5/5 jobs da matriz #40951319841 PASS; 11/11 Playwright autenticado no emulador (2 de fallback, 9 fluxos operacionais). Contratos críticos de TR, Drive, NF/NS, relatórios, 3D e Warehouse PASS no âmbito dos testes automatizados, mas **não houve transação externa real com Drive/InfinitePay** |
+| Windows localhost | CI #40956724787: 5/5 checagens sintáticas/segurança PASS, **smoke Windows do emulador Warehouse FAIL por timeout de 8081**; a prévia Windows não está certificada |
+| RAM real do EMPROVEX | **Não medida de modo isolado.** Capturas do Windows total: Essencial 6,8/7,8 GB e Normal 7,6/7,8 GB; delta global 0,8 GB, não atribuído à aplicação; CPU capturada 5%/81% sem controle de tempo |
+
+### /goal — próximo ciclo: memória RAM com paridade funcional integral
+
+**Achados de código, sem atribuição quantitativa:** listeners onSnapshot são desligados ao trocar abas, mas arrays operacionais do React mantêm registros; o `OperationalWorkspace` e seus hooks de ações permanecem montados depois da primeira visita a qualquer aba transacional; o Painel Essencial limita nós DOM mas não libera os dados usados em totais/relatórios; 3D SVG tem custo proporcional às estruturas, porém **é intangível**; `pdfToolkit` importa bibliotecas somente ao emitir PDFs.
+
+**Plano de execução autorizado para desenvolvimento:**
+1. Medir JS heap/RSS, nós DOM e retenção após visitas a Painel, Empenhos, NF, Relatórios e 3D em ambos os modos com dataset/conta iguais, sem dados de produção. Registrar baseline e processos Node/Java separadamente. Não projetar economia de MB sem prova.
+2. Priorizar alocação temporária e caches de **leitura** que não causem perda; definir política explícita de retenção e reidratação antes de descarte. Não desligar em lote estados `invoices`/históricos: Relatórios pode depender deles mesmo sem listener em `relatorios`. Preservar rascunho digitado, arquivo PDF selecionado por NE, operações assíncronas e identidade UID/UG.
+3. Garantir testes de equivalência monetária, listas/consultas completas, geração de TR/PDF, Drive, cronograma, backup, concorrência, saída Warehouse e 3D intacto; mecanismos de licença, aceite e Firestore Rules não podem sofrer mudanças.
+4. Aplicar apenas melhorias isoladas comprovadas com ganhos medidos e testes de contrato + E2E em emulador; manter em PR DRAFT sem deploy até aprovação do fundador.
+
+**Controles explícitos:** não confundir `npm run dev`/emuladores no Windows 8 GB com memória de um navegador de cliente em produção; não fazer `setInvoices([])` simplesmente por sair da aba de NF; não remover hooks de criação/termo/upload com operações em andamento; não reduzir detalhes/FPS/resolução do 3D. GOV-SIMP-01 proporcional a risco.
+
+**Evidências:** [E2E completo #40951319841](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40951319841), [Windows CI incompleto #40956724787](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40956724787), [memorial mãe](./EMPROVEX_MEMORIAL_OFICIAL.md). As seções históricas abaixo preservam as decisões anteriores, mas não são o checkpoint atual de execução.
+
+---
+
 > **Registro canônico da frente de desempenho visual.** Criado em **29/10/2026** a partir da auditoria e do plano executivo integrais de 24/10/2026. Este memorial registra decisões de projeto, não certificação de implementação, benchmark ou publicação.
 >
 > **Estado na criação:** planejamento aprovado; implementação específica, testes comparativos e deploy do Modo Essencial **não comprovados**. Criar este memorial **não altera** a aplicação, a Vercel, o banco, o Firebase ou as Rules. Nenhuma atualização de produção está autorizada por este registro.
