@@ -2229,7 +2229,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 </h4>
                                 <p className="mt-1 text-xs font-medium leading-5 text-slate-600">
                                   Selecione a Nota de Empenho do SIAFI em PDF. O EMPROVEX lê o documento sem IA externa,
-                                  identifica fornecedor, itens, NC e contratação e abre uma prévia editável antes do cadastro.
+                                  identifica fornecedor, itens, NC e contratação e abre uma prévia editável. Ao confirmar, o PDF original será salvo no Google Drive do setor.
                                 </p>
                               </div>
                             </div>
@@ -2248,7 +2248,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 {isParsingEmpenhoPdf ? 'Lendo Nota de Empenho…' : 'Selecionar PDF da Nota de Empenho'}
                               </span>
                               <span className="mt-1 text-[10px] font-semibold text-slate-400">
-                                SIAFI · Impressão Completa · até 12 MB
+                                SIAFI · Impressão Completa · até 10 MB · PDF salvo no Drive após confirmação
                               </span>
                               <input
                                 type="file"
@@ -2619,6 +2619,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 setReviewEmpenho(null);
                                 setJsonError(null);
                               }}
+                              disabled={isSavingReview}
                               className="px-4 py-2.5 bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
                             >
                               <ArrowLeft className="w-4 h-4" /> Voltar
@@ -2653,7 +2654,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </h3>
                         <button 
                           onClick={() => setShowConfirmSaveModal(false)}
-                          className="text-emerald-100 hover:text-white transition-all p-1"
+                          disabled={isSavingReview}
+                          className="text-emerald-100 hover:text-white transition-all p-1 disabled:opacity-60"
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -2688,7 +2690,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </div>
 
                         <p className="text-xs text-gray-400 leading-relaxed font-semibold">
-                          Deseja confirmar o cadastro desta Nota de Empenho com as especificações acima? Esta ação persistirá os dados e atualizará o painel de faturamentos de forma definitiva.
+                          Deseja confirmar o cadastro desta Nota de Empenho? O PDF original será salvo e verificado no Google Drive do setor antes do registro no Firebase. Você poderá visualizá-lo, imprimi-lo ou baixá-lo nos detalhes do empenho. O Google Drive precisa estar conectado.
                         </p>
                       </div>
 
@@ -2696,7 +2698,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         <button
                           type="button"
                           onClick={() => setShowConfirmSaveModal(false)}
-                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-xl font-bold text-xs transition-all"
+                          disabled={isSavingReview}
+                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-xl font-bold text-xs transition-all disabled:opacity-60"
                         >
                           Cancelar
                         </button>
@@ -2708,7 +2711,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
                         >
                           {isSavingReview && <Loader2 className="w-4 h-4 animate-spin" />}
-                          {isSavingReview ? 'Salvando…' : 'Salvar Empenho'}
+                          {isSavingReview ? 'Salvando PDF e empenho…' : 'Salvar Empenho e PDF'}
                         </button>
                       </div>
                     </motion.div>
