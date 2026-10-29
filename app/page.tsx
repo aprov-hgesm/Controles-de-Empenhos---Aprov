@@ -242,7 +242,7 @@ export default function Home() {
       data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
-      <AppBackground immersive={activeTab === 'inicio'} />
+      <AppBackground immersive={activeTab === 'inicio'} essential={mode === 'essencial'} />
 
       {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
         <LoginSuccessTransition
