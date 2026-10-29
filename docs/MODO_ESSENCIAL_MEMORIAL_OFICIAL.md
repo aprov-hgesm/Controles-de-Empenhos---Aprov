@@ -1,5 +1,21 @@
 # EMPROVEX — MODO ESSENCIAL / MODO NORMAL — MEMORIAL OFICIAL R1
 
+## RELEASE PUBLICADA — NORMAL/ESSENCIAL R3 (29/10/2026)
+
+> **STATUS ATUAL:** versão em produção, confirmada pelos comandos `vercel promote` e `vercel inspect https://emprovex.com.br` do proprietário. Este checkpoint **substitui as marcações antigas de DRAFT / NÃO PUBLICADO, que permanecem abaixo como histórico**.
+
+- **PR #411 MERGED (squash)** em `main@b3a7d764fd645303c4aa5e204143cf9dc56d5566` com seletor Normal/Essencial por `sessionStorage`, navegação enxuta, redução de efeitos fora do 3D, fallback ao Normal e projeção de linhas do Painel que mantém totais integrais ao renderizar inicialmente 60 linhas por classificação.
+- **Vercel anterior para referência de rollback:** `dpl_5JqtJf5gEpcCTv6pXKYPM1WtV1Yr`, `https://controles-de-empenhos-aprov-atdvtofri-aprov-hgesms-projects.vercel.app`.
+- **Deployment vigente do domínio:** `dpl_86m6g6i3Qc3j6zedvmUEYqYYVofW`, `https://controles-de-empenhos-aprov-89zn41p93-aprov-hgesms-projects.vercel.app`. Um único `vercel.cmd deploy --prod --skip-domain --archive=tgz` com build remoto, `production / Ready`, health `{"status":"ok","timestamp":"2026-10-29T22:23:53.365Z"}`, seguido de `vercel.cmd promote ... --yes` com resposta `Success!`. Inspeção final de `https://emprovex.com.br` confirmou exatamente o mesmo deployment, `production / Ready`. **NÃO refazer deploy/promote.**
+- **Certificação pré-release:** Fast CI, TypeScript, Core Protection, Recovery, SAAS-DL Legal, W4 Visual, W4 Evidence, InfinitePay UI e [Auditoria VISUAL-R2 #40963203483](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40963203483) com cinco trabalhos Linux PASS e browser E2E autenticado em Firebase Emulator. A falha anterior de inicialização do emulador Windows 8081 foi conservada como diagnóstico local não aprovado, distinto da release Linux da Vercel.
+- **Validação humana e limites:** prévia visual examinada pelo fundador e considerada satisfatória; `/api/health` no staged verificado. **Não consta comprovação do smoke completo autenticado no staged ou em produção** para ações reais de NF/TR/Drive, estoque, 3D, cobranças, ou `/api/central-depositos/health` com sessão fundadora. Testar só com workspace QA e sem operações destrutivas em dados reais. A economia de RAM ainda não tem benchmark isolado, portanto **não anunciar 800 MB de redução do EMPROVEX**.
+- **Segurança:** nenhuma publicação de Firestore Rules, migração ou alteração financeira solicitada por esta release; modo Essencial não deve mudar isolamento por UID/UG, billing, aceite legal ou renderer 3D. A referência do commit funcional permanece `b3a7d764...` mesmo após commits **somente documentais** na `main`, pois `git.deploymentEnabled=false`.
+- **Próximo passo:** smoke operacional autenticado pós-release e observação de incidentes; rollback Vercel anterior somente se necessário, distinguindo aplicação de banco/Rules.
+
+[Memorial Oficial](./EMPROVEX_MEMORIAL_OFICIAL.md) · [Runbook canônico PowerShell](./EMPROVEX_RELEASE_POWERSHELL.md) · [Release R3](./releases/EMPROVEX_ESSENCIAL_R3_RELEASE_20261029.md).
+
+---
+
 ## ATUALIZAÇÃO CANÔNICA — IMPLEMENTAÇÃO, E2E E NOVA FRENTE RAM (29/10/2026)
 
 **Status vigente substitui exclusivamente os checkpoints antigos de "somente documentação" nesta página.** Implementação em [PR #411 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/411) sobre branch `feat/visual-mode-r1-session-navigation`. Nenhum merge ou deploy autorizado.
