@@ -1040,7 +1040,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setMessage(
         errorMessage(error)
         + (safeToRestart
-          ? ' Nenhuma baixa foi feita nesta tentativa. Reinicie o carrinho para consultar saldos atualizados.'
+          ? ' Nenhuma baixa foi feita nesta tentativa. Atualize o carrinho para consultar os saldos atuais.'
           : ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.')
       );
     } finally {
