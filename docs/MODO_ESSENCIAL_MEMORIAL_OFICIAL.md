@@ -401,3 +401,40 @@ A segunda auditoria estática dirigida identificou trabalho de processamento ain
 **Contrato inegociável:** nenhum modo concede direitos, altera assinatura, renova lease, grava Firestore, desliga validação, altera valores financeiros, elimina funcionalidades ou recria a cena 3D. Segurança e isolamento devem permanecer iguais, e alteração visual deve preservar drafts em curso. `firestore.rules` e backend nunca serão relaxados para ganhar desempenho.
 
 **Próxima execução:** correções AS-01 + AS-02 primeiro, depois proteção AS-03; só então retomar R2-A e demais fases, com verificações curtas e auditoria completa antes da publicação.
+
+
+---
+
+## CHECKPOINT DE IMPLEMENTAÇÃO — HARDENING P0/NF E R2-A/B/C (29/10/2026)
+
+**Estado:** alterações em desenvolvimento exclusivamente na branch `feat/visual-mode-r1-session-navigation`; nenhuma publicação na Vercel, migração Firestore, alteração de Rules, API, motor de estoque, câmera ou visualizador Warehouse 3D.
+
+**P0-A — Entrada canônica:** `app/page.tsx` deixa de manter uma aplicação operacional divergente e reexporta `app/login/page.tsx`. `next.config.ts` continua reescrevendo `/` para a vitrine `/institucional`. A rota operacional `/login` permanece a fonte única da verificação `checkSectorBillingAccess` + identidade + aceite legal, **sem nunca passar acesso `true` fixo**.
+
+**P0-B — Modo Essencial na rota real:** `app/login/page.tsx` usa `useVisualMode`, faz `inicio -> painel`, `InicioView` lazy apenas no Normal, preserva `?tab=cronogramas` e envia operador Essencial a `/central-depositos/controle-de-itens`. A liberação de cobrança exibida foi vinculada a UID/workspace/UG para impedir utilização visual de resposta antiga em troca de identidade. Não houve alteração em `sectorBillingGate`, regras de acesso, IAM ou servidor.
+
+**NF — Rascunhos:** `app/login/page.tsx` armazena as quantidades **em memória por NE** e as recupera quando o operador retorna à NE; removeu o efeito que zerava valores a cada mudança do array `empenhos`. Limpa drafts em logout/mudança de identidade. Demais estados de NF continuam na `useOperationalViewState`. Atenção: o estado é **efêmero**, não um backup persistente contra fechamento abrupto do navegador; não criar gravações automáticas de NF.
+
+**R2-A — Carregamento e minimalismo seguros:**
+- `PlatformAdminView.tsx`: oito subpainéis (backup, consumo, assinaturas, sessões, segurança, interessados, criar setor e modal de edição) via `React.lazy + Suspense`, sem alterar callbacks, permissões ou hooks administrativos responsáveis pelos dados.
+- `WorkspaceDriveControl.tsx`: `WorkspaceBackupSection` lazy dentro do diálogo; sessão OAuth, indicador, conexão e expiração seguem com o hook já existente.
+- `DashboardView.tsx` + `visual-mode-essential.css`: superfície escopada para reduzir vidro, sombras grandes e transições caras **somente no Essencial**, sem esconder indicadores nem afetar Central 3D.
+
+**R2-B — CPU e linhas:**
+- `DashboardView.tsx` usa `useMemo([empenhos])` para acumulados financeiros, contagem/segmentos RPNP/regular e valores por NE, evitando varrer a base repetidamente por cartão e tabela. Somas e regras financeiras preservadas na forma existente (`quantity * unitPrice`, `received * unitPrice`, `Math.max(0, ...)`).
+- No Essencial, tabelas detalhadas mostram inicialmente até 60 linhas por classe, com botão `Mostrar mais 60`. **Pesquisa, contagem e totais continuam sobre o conjunto completo filtrado**; Normal continua exibindo a tabela completa. Nenhuma exportação foi modificada.
+
+**R2-C — Carregamento de código por estágio, sem desmontar operações:**
+- Novo `OperationalDashboardEntry.tsx` monta apenas o Painel e `useEmpenhoClasses`, **sem os hooks de escrita** de Empenhos, NFs, SAG/NS, relatórios ou Cronogramas.
+- `app/login/page.tsx` mantém o painel leve até o operador abrir a primeira aba operacional/transacional; depois carrega `OperationalWorkspace` completo e **não o desmonta ao voltar ao Painel**, evitando perder estado interno de hooks, callbacks, confirmações de e-mail e ações em andamento.
+- Trata-se da **primeira segmentação segura** da R2-C; a divisão de cada motor transacional em chunks distintos continua condicionada a testes de fluxo/estado e **não** foi feita cegamente.
+
+**Verificação rápida de contratos:** 17/17 inspeções estáticas PASS no GitHub para canonicalidade, gate, `/login?tab=cronogramas`, drafts, lazy/exports de painéis, agregação, tabela progressiva, R2-C e escopo do CSS. Também foi removida uma referência órfã `rpnpEmpenhos.length` após a agregação (substituída por contagem memoizada). **Não** foi realizado compilação Next/TypeScript local, teste autenticado, emulador, browser real ou benchmark. `next.config.ts` do projeto contém `typescript.ignoreBuildErrors`: um build Next `Ready` sozinho **não** equivale à prova de typecheck.
+
+**Pendências para GO de integração e publicação:**
+1. Validar typecheck real (`tsc --noEmit`) e o conjunto mínimo de rotas de login, admin, NF, Painel e Central, incluindo autorização VIP, trial, vencida e revogada.
+2. Exercitar fluxo de NF (quantidades em rascunho, snapshot em tempo real, voltar à NE, salvar/cancelar, alternar modos, logoff), cronograma com email e workflows de administração.
+3. Comparar números financeiros/RPNP de base controlada antes/depois, testar paginação/busca/teclado em massa grande, acompanhar `onSnapshot`, uso de memória/CPU e preservar 3D.
+4. Certificar alterações no CI e só então propor merge/promoção via método Vercel do memorial; autorização expressa de publicação é obrigatória.
+
+**Regra:** é permitido continuar desenvolvimento da R2 em branch; **NO-GO de merge/produção** enquanto essa matriz não for executada. A implementação não reduz proteções do Firestore ou acesso por assinatura.
