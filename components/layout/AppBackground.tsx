@@ -1,8 +1,19 @@
 interface AppBackgroundProps {
   immersive?: boolean;
+  essential?: boolean;
 }
 
-export function AppBackground({ immersive = false }: AppBackgroundProps) {
+export function AppBackground({ immersive = false, essential = false }: AppBackgroundProps) {
+  // Apenas superfícies operacionais externas ao Warehouse 3D usam o fundo leve.
+  if (essential && !immersive) {
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none z-0 bg-[linear-gradient(140deg,#f5f8fc_0%,#eaf0f8_55%,#f8fafc_100%)]"
+        aria-hidden="true"
+      />
+    );
+  }
+
   if (immersive) {
     return (
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#02040b]">
