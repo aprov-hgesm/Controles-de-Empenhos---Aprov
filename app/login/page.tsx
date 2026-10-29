@@ -30,6 +30,12 @@ const InicioView = lazy(() =>
   }))
 );
 
+const OperationalDashboardEntry = lazy(() =>
+  import('../../features/operational/components/OperationalDashboardEntry').then((module) => ({
+    default: module.OperationalDashboardEntry,
+  }))
+);
+
 const OperationalWorkspace = lazy(() =>
   import('../../features/operational/components/OperationalWorkspace').then((module) => ({
     default: module.OperationalWorkspace,
@@ -83,6 +89,9 @@ export default function Home() {
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
+  // Ao entrar pela primeira vez numa tela transacional, preservar os hooks
+  // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
+  const [hasOpenedTransactionalSurface, setHasOpenedTransactionalSurface] = useState(false);
 
   const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed');
   const {
@@ -170,6 +179,9 @@ export default function Home() {
   useEffect(() => {
     if (activeTab !== 'inicio') {
       setHasOpenedOperationalSurface(true);
+    }
+    if (activeTab !== 'inicio' && activeTab !== 'painel') {
+      setHasOpenedTransactionalSurface(true);
     }
   }, [activeTab]);
 
@@ -390,6 +402,13 @@ export default function Home() {
               key="operational-workspace"
               fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
             >
+              {activeTab === 'painel' && !hasOpenedTransactionalSurface ? (
+                <OperationalDashboardEntry
+                  operationalData={operationalData}
+                  viewState={viewState}
+                  setActiveTab={setActiveTab}
+                />
+              ) : (activeTab !== 'inicio' || hasOpenedTransactionalSurface) ? (
               <OperationalWorkspace
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -402,6 +421,7 @@ export default function Home() {
                 showToast={showToast}
                 surfaceReady={activeOperationalDataReady}
               />
+              ) : null}
             </Suspense>
           )}
         </main>
