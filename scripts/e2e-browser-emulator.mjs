@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
+import { warehouseEmulatorLaunch } from './warehouse-emulator-launch.mjs';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
 const warehouseEmulatorBase = 'http://127.0.0.1:8081';
 const playwrightCli = 'node_modules/@playwright/test/cli.js';
-const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const warehouseLaunch = warehouseEmulatorLaunch();
 const supportsProcessGroups = process.platform !== 'win32';
 
 async function waitForEndpoint(url, timeoutMs = 60_000) {
@@ -100,25 +101,22 @@ const warehouseEnv = { ...process.env };
 delete warehouseEnv.FIRESTORE_EMULATOR_HOST;
 
 const warehouseEmulator = spawn(
-  npxCommand,
-  [
-    '--yes',
-    'firebase-tools',
-    'emulators:start',
-    '--config',
-    'firebase.warehouse-e2e-test.json',
-    '--project',
-    'demo-emprovex-security',
-    '--only',
-    'firestore',
-  ],
+  warehouseLaunch.command,
+  warehouseLaunch.args,
   {
     cwd: root,
     env: warehouseEnv,
     detached: supportsProcessGroups,
+    windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   }
 );
+// Windows spawn failures must be captured rather than crashing Node with EINVAL.
+let warehouseStartError = null;
+warehouseEmulator.on('error', (error) => {
+  warehouseStartError = error;
+  console.error('Não foi possível iniciar o Warehouse Emulator:', error);
+});
 
 warehouseEmulator.stdout.on(
   'data',
@@ -132,7 +130,9 @@ warehouseEmulator.stderr.on(
 let server = null;
 
 try {
+  if (warehouseStartError) throw warehouseStartError;
   await waitForEndpoint(warehouseEmulatorBase, process.argv.includes('--preview') ? 180_000 : 60_000);
+  if (warehouseStartError) throw warehouseStartError;
 
   await run(
     process.execPath,
