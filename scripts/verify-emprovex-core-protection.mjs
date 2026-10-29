@@ -38,6 +38,7 @@ function walkFiles(relativePath) {
 
 const protectedCoreFiles = [
   'app/page.tsx',
+  'app/login/page.tsx',
   'lib/firebaseSync.ts',
   'lib/nsIntegrityService.ts',
   'lib/empenhoConcurrencyService.ts',
@@ -198,11 +199,27 @@ forbidText(
   /from\s+['"][^'"]*\/warehouse\//,
   'Shell principal voltou a importar implementação do ADM Depósito.'
 );
-requireText(
-  appPage,
-  "from '../lib/platformModuleAccess'",
-  'Shell principal não utiliza a camada neutra de acesso a módulos opcionais.'
-);
+const canonicalLogin = read('app/login/page.tsx');
+// A raiz é institucional via next.config.ts e reexporta o shell de /login.
+// Inspecionar o destino real: o firewall não pode ser contornado por wrapper.
+const rootReexportsLogin = appPage.includes("export { default } from './login/page'");
+const rootAccessIsNeutral = appPage.includes("from '../lib/platformModuleAccess'");
+const loginAccessIsNeutral = canonicalLogin.includes("from '../../lib/platformModuleAccess'");
+if (!(rootReexportsLogin ? loginAccessIsNeutral : rootAccessIsNeutral)) {
+  findings.push('Shell principal não utiliza a camada neutra de acesso a módulos opcionais.');
+}
+if (rootReexportsLogin) {
+  requireText(
+    canonicalLogin,
+    'checkSectorBillingAccess',
+    'Shell canônico de /login perdeu a verificação de assinatura.'
+  );
+  requireText(
+    canonicalLogin,
+    "billingAccessState === 'allowed'",
+    'Shell canônico de /login perdeu o gate de acesso por assinatura.'
+  );
+}
 
 if (findings.length) {
   console.error('EMPROVEX CORE PROTECTION: FALHOU');
