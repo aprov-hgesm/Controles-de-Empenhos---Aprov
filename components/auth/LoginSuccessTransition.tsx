@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 interface LoginSuccessTransitionProps {
   customLogo: string | null;
@@ -14,8 +15,9 @@ export function LoginSuccessTransition({
   onComplete,
 }: LoginSuccessTransitionProps) {
   const reduceMotion = useReducedMotion();
+  const { mode } = useVisualMode();
 
-  if (reduceMotion) {
+  if (reduceMotion || mode === 'essencial') {
     return (
       <motion.div
         aria-hidden="true"
