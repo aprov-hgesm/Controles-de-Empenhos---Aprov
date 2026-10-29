@@ -8,6 +8,7 @@ on:
       - 'features/**'
       - 'components/**'
       - 'scripts/**'
+      - 'tests/e2e/**'
       - '.github/workflows/visual-r2-integrity-audit.yml'
   workflow_dispatch:
 
