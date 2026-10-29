@@ -1,0 +1,129 @@
+/*
+ * EMPROVEX VISUAL-MODE R1 — ACABAMENTO ESSENCIAL
+ * Somente cascas administrativas, navegação, login e superfícies operacionais
+ * explicitamente identificadas. NUNCA estilizar warehouse-emprovex-content,
+ * WarehouseIsometricPreview ou qualquer descendente do renderizador 3D.
+ *
+ * Sem seletor universal, sem bloqueio de spinners, validações, focus-visible,
+ * indicadores de progresso e estados de erro. O modo Normal permanece intacto.
+ */
+
+html[data-visual-mode='essencial'] .emprovex-app-header,
+html[data-visual-mode='essencial'] .emprovex-app-sidebar {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: linear-gradient(160deg, #061426 0%, #071b31 100%);
+  box-shadow: 0 5px 18px rgb(2 8 23 / 0.16);
+}
+
+html[data-visual-mode='essencial'] .emprovex-app-sidebar {
+  box-shadow: 5px 0 16px rgb(2 8 23 / 0.13);
+}
+
+html[data-visual-mode='essencial'] .emprovex-app-header::before,
+html[data-visual-mode='essencial'] .emprovex-app-sidebar::before,
+html[data-visual-mode='essencial'] .emprovex-shell-signature::after {
+  opacity: 0;
+}
+
+html[data-visual-mode='essencial'] .emprovex-sidebar-operator,
+html[data-visual-mode='essencial'] .emprovex-header-control,
+html[data-visual-mode='essencial'] .emprovex-sidebar-backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-visual-mode='essencial'] .emprovex-sidebar-operator {
+  background: #0a213b;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.04);
+}
+
+html[data-visual-mode='essencial'] .emprovex-header-control {
+  background: rgb(255 255 255 / 0.045);
+  box-shadow: none;
+}
+
+html[data-visual-mode='essencial'] .emprovex-sidebar-backdrop {
+  background: rgb(1 6 18 / 0.72);
+}
+
+/* Interrompe exclusivamente peças decorativas contínuas. O contorno da
+ * navegação, estado ativo e foco por teclado permanecem disponíveis. */
+html[data-visual-mode='essencial'] .emprovex-header-logo-core__ring,
+html[data-visual-mode='essencial'] .emprovex-header-energy-line__beam,
+html[data-visual-mode='essencial'] .emprovex-shell-signature__network circle,
+html[data-visual-mode='essencial'] .emprovex-sidebar-system__live-dot,
+html[data-visual-mode='essencial'] .emprovex-app-sidebar .emprovex-sidebar-nav-item[data-active='true'] > svg {
+  animation: none !important;
+  -webkit-filter: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+
+html[data-visual-mode='essencial'] .emprovex-header-energy-line__beam {
+  opacity: 0;
+}
+
+html[data-visual-mode='essencial'] .emprovex-header-logo-core__halo {
+  -webkit-filter: none !important;
+  filter: none !important;
+  opacity: 0.22;
+}
+
+/* Evita animações repetidas em cards e fundos nas áreas de trabalho comuns.
+ * Este escopo NÃO existe na Central de Depósitos 3D. */
+html[data-visual-mode='essencial'] main[data-visual-surface='operational'] > div:not(.fixed),
+html[data-visual-mode='essencial'] main[data-visual-surface='operational'] .grid > [class*='rounded-2xl'],
+html[data-visual-mode='essencial'] main[data-visual-surface='operational'] button[class*='bg-[#00288e]']:not(:hover):not(:active) {
+  animation: none !important;
+  will-change: auto !important;
+}
+
+/* Login: legibilidade e feedback de autenticação mantidos; sem aura, beams,
+ * espelho dinâmico, filtros de vidro ou layers de cenário. */
+html[data-visual-mode='essencial'] .emprovex-login-shell {
+  background: linear-gradient(135deg, #030d1c 0%, #071a2e 60%, #071425 100%);
+}
+
+html[data-visual-mode='essencial'] .emprovex-login-panel {
+  background: #0b1e35 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 16px 42px rgb(0 6 18 / 0.28);
+}
+
+html[data-visual-mode='essencial'] .emprovex-login-panel__reflection,
+html[data-visual-mode='essencial'] .emprovex-login-panel__refraction,
+html[data-visual-mode='essencial'] .emprovex-login-panel__beam,
+html[data-visual-mode='essencial'] .emprovex-login-field__glow,
+html[data-visual-mode='essencial'] .emprovex-signature-intro,
+html[data-visual-mode='essencial'] .emprovex-signature-conduit {
+  display: none !important;
+}
+
+html[data-visual-mode='essencial'] .emprovex-login-panel__edge {
+  opacity: 0.35;
+}
+
+html[data-visual-mode='essencial'] .emprovex-login-primary__sheen,
+html[data-visual-mode='essencial'] .emprovex-google-button__sheen {
+  animation: none !important;
+}
+
+/* Admin: não toca no bairro visual do modo Normal nem nos controles de
+ * segurança. O cenário 3D administrativo não é montado no Essencial. */
+html[data-visual-mode='essencial'] [data-testid='admin-visual-shell'] > [aria-hidden='true'] {
+  display: none;
+}
+
+html[data-visual-mode='essencial'] [data-testid='admin-light-main'] > div {
+  animation: none !important;
+}
+
+html[data-visual-mode='essencial'] [data-testid='admin-visual-shell'] .emprovex-app-header,
+html[data-visual-mode='essencial'] [data-testid='admin-visual-shell'] .emprovex-app-sidebar {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Acessibilidade: nenhuma remoção de outline, spinner, aviso ou estado busy. */
