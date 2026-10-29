@@ -11,7 +11,10 @@ const driveSettings = read('lib/workspaceDriveSettings.ts');
 const driveHook = read('hooks/useWorkspaceDriveStorage.ts');
 const driveControl = read('components/layout/WorkspaceDriveControl.tsx');
 const appHeader = read('components/layout/AppHeader.tsx');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
 const rules = read('firestore.rules');
 
 requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Onboarding externo não separa autorização Drive da sessão Firebase.');
