@@ -291,3 +291,39 @@ Não atualizar React/Next/Firebase indiscriminadamente; não trocar biblioteca 3
 ## Anexo B — Consulta da auditoria completa
 
 A auditoria de arquitetura, baseline histórico, evidências e oportunidades **DV-01 a DV-20** está preservada integralmente em [MODO_ESSENCIAL_AUDITORIA_2026-10-24.md](./MODO_ESSENCIAL_AUDITORIA_2026-10-24.md). Seus trechos preliminares sobre `localStorage` e Início estático foram expressamente superados pelas decisões canônicas da seção 0 deste documento.
+
+
+---
+
+## Checkpoint de implementação — 29/10/2026 — R1 núcleo visual/navegação
+
+> **Estado:** código inicial em desenvolvimento na branch `feat/visual-mode-r1-session-navigation`, **não integrado à main nem publicado**. O usuário autorizou desenvolvimento incremental com **somente verificações estáticas básicas nesta fase**; testes automatizados extensivos, benchmark real, auditoria e certificação ficam para a conclusão da configuração do Modo Essencial. **Não declarar PASS ou release pronta por este registro.**
+
+### Implementação já gravada na branch
+
+1. `components/visual-mode/VisualModeProvider.tsx`: um único provider React do modo `premium | essencial`, preferência versionada `emprovex:visual-mode:v1` em `sessionStorage`, bootstrap seguro, modo Normal padrão, API de limpar e atributo `data-visual-mode`.
+2. `components/visual-mode/VisualModeControl.tsx` e `components/layout/AppHeader.tsx`: seletor acessível e compacto Normal/Essencial no cabeçalho compartilhado do EMPROVEX e da Central; não realiza chamadas Firestore.
+3. `app/layout.tsx`: provider global, preservando o mesmo modo através das duas áreas da aplicação naquela sessão.
+4. `app/page.tsx` e `components/layout/AppSidebar.tsx`: remove Início do menu no Essencial, redireciona a aba ativa para Painel, blinda `setActiveTab('inicio')`, carrega Início com `React.lazy` somente quando necessário e envia o operador diretamente ao Controle de Materiais da Central.
+5. `features/warehouse/components/WarehouseSidebar.tsx` e `WarehouseModuleShell.tsx`: filtro de navegação, `home -> control` com `replaceState` em rotas diretas/histórico e renderização local do Controle para impedir que o conteúdo da landing seja montado no Essencial.
+6. `components/layout/OperationalSurfaceTransition.tsx`: no Essencial, a transição operacional é estática, sem `motion`, blur ou feixes decorativos; no Normal permanece intacta.
+7. Logout e invalidação de sessão: limpar preferência em `app/page.tsx`, `WarehouseModuleShell.tsx` e `WarehouseProtectedSurface.tsx`; mudança de identidade observada na página principal também limpa a preferência.
+
+### Escopo preservado
+
+- **3D intocado:** não editar `WarehouseHomeOperational`, `WarehouseIsometricPreview`, geometria, câmeras, materiais, etiquetas, interações, renderizador 2D/3D, cenas nem suas regras CSS.
+- **Backend e domínio intactos:** nenhum endpoint, Firestore Rule, IAM, autenticador, ledger, saldo, NF, NS, faturamento ou persistência do workspace alterado nesta entrega.
+- O modo visual não dá ou revoga autorização; o guard de acesso Warehouse existente segue obrigatório.
+- **Sem Vercel:** não executar deploy, promote ou mudança no domínio nesta fase.
+
+### Verificação básica disponível
+
+- Comparação `main...feat/visual-mode-r1-session-navigation` consultada via GitHub: branch à frente, sem alterações em arquivos 3D ou backend.
+- Inspeção estática pontual de hooks, imports, rotas, JSX e condições de renderização; **não equivale a `tsc`, build, smoke autenticado, teste de navegador, CI ou aceite visual**.
+
+### Pendências para o desenvolvimento contínuo, antes da fase formal de testes
+
+- Refinar superfícies decorativas restantes **fora** do 3D (blur, partículas, beams, animação contínua), com variantes visuais Essenciais sem CSS global de risco.
+- Investigar melhorias pontuais de CPU/bundles por medição, sem refatorar lógica financeira/logística apenas por suposição.
+- Validar ao fim da configuração toda a matriz VF-01 a VF-16, comparar hardware modesto e de referência, confirmar carregamento efetivo dos chunks e certificação de CI, integridade e ausência de regressão 3D.
+- Só então preparar composição/merge e publicação manual mediante aprovação expressa do fundador.
