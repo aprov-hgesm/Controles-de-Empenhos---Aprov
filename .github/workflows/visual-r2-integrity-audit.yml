@@ -216,7 +216,16 @@ jobs:
           test ! -f .env.production.local
           test ! -f service-account.json
       - name: "E2E: login, dados financeiros, NF/NS, relatórios, UG e navegação"
-        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/visual-mode-auto-recovery.spec.mjs tests/e2e/operator-critical-flow.spec.mjs"
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/visual-mode-auto-recovery.spec.mjs tests/e2e/operator-critical-flow.spec.mjs tests/e2e/essential-memory-baseline.spec.mjs"
+      - name: "Publicar amostras sintéticas de heap para comparação"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: essential-memory-synthetic-baseline
+          path: artifacts/memory/essential-baseline.json
+          if-no-files-found: warn
+          retention-days: 14
+
 
   windows-preview-spawn:
     name: "Windows Node 24 — preview e Warehouse Emulator real"
