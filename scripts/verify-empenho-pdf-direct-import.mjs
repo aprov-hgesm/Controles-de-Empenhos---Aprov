@@ -21,7 +21,13 @@ const view = read('features/empenhos/components/EmpenhosView.tsx');
 const actions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const state = read('hooks/useOperationalViewState.ts');
 const types = read('lib/types.ts');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
+if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
+  throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
+}
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 for (const marker of [
@@ -91,7 +97,7 @@ requireText(actions, "reviewEmpenho.importSource !== 'pdf'", 'Salvamento da revi
 requireText(view, "newEmpenhoMode === 'manual'", 'Cadastro manual ausente.');
 forbidText(state, "'manual' | 'pdf' | 'json'", 'Modo JSON permanece autorizado no estado.');
 
-requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
+requireText(page, "import('../../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
 requireText(operationalWorkspace, 'handleProcessEmpenhoPdf', 'Host operacional não expõe importação direta por PDF.');
 requireText(operationalWorkspace, 'handleUpdateEmpenhoNotaCredito', 'Host operacional não expõe edição manual da NC.');
 
