@@ -309,6 +309,9 @@ A auditoria de arquitetura, baseline histórico, evidências e oportunidades **D
 6. `components/layout/OperationalSurfaceTransition.tsx`: no Essencial, a transição operacional é estática, sem `motion`, blur ou feixes decorativos; no Normal permanece intacta.
 7. Logout e invalidação de sessão: limpar preferência em `app/page.tsx`, `WarehouseModuleShell.tsx` e `WarehouseProtectedSurface.tsx`; mudança de identidade observada na página principal também limpa a preferência.
 
+8. `components/layout/AppBackground.tsx` + `app/page.tsx`: modo Essencial utiliza fundo estático de gradiente leve **somente nas superfícies principais**, removendo os quatro círculos com blur de 120–150px. O Warehouse continua utilizando seu fundo/visual originais.
+9. `components/layout/OperationalNavigationBeam.module.css`: suspende a animação contínua de feixe nas navegações do EMPROVEX em Essencial; contorno e estados ativos permanecem visíveis.
+
 ### Escopo preservado
 
 - **3D intocado:** não editar `WarehouseHomeOperational`, `WarehouseIsometricPreview`, geometria, câmeras, materiais, etiquetas, interações, renderizador 2D/3D, cenas nem suas regras CSS.
