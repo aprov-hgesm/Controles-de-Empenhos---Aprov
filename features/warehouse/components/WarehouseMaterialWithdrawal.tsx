@@ -868,6 +868,31 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     }));
   };
 
+  const reconcileFromCurrentStock = async (snapshot: CartLine[]) => {
+    const materialIds = [...new Set(snapshot.map(line => line.materialId))];
+    const refreshed = await Promise.all(materialIds.map(async materialId => {
+      const [balance, locationBalances, lots] = await Promise.all([
+        getWarehouseBalance(workspaceId, materialId),
+        listWarehouseLocationBalances(workspaceId, 500, materialId),
+        listWarehouseLots(workspaceId, 500, materialId),
+      ]);
+      if (!balance) throw new Error('WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED');
+      return {materialId, balance, locationBalances, lots};
+    }));
+    const snapshots = Object.fromEntries(refreshed.map(item => [
+      item.materialId, {
+        globalQuantity: item.balance.quantity,
+        positions: item.locationBalances.map(row => ({
+          position: row.balance.position, quantity: row.balance.quantity,
+        })),
+        lots: item.lots.map(row => row.lot),
+      },
+    ]));
+    const next = replanDesktopWithdrawalCart(cartSnapshot, snapshots,
+      createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
+    return next;
+  };
+
   const finalize = async () => {
     if (
       working
@@ -885,46 +910,26 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     }
     const cartSnapshot = cart.map((line) => ({ ...line }));
     // Apenas retiradas NOVAS podem ser recalculadas. Uma retirada em retry
-    // mantém payload/identidade originais para evitar qualquer baixa duplicada.
+    // conserva payload e identidade originais para impedir baixa duplicada.
     if (!retryRequired) {
       setWorking(true);
       try {
-        const materialIds = [...new Set(cartSnapshot.map(line => line.materialId))];
-        const refreshed = await Promise.all(materialIds.map(async materialId => {
-          const [balance, locationBalances, lots] = await Promise.all([
-            getWarehouseBalance(workspaceId, materialId),
-            listWarehouseLocationBalances(workspaceId, 500, materialId),
-            listWarehouseLots(workspaceId, 500, materialId),
-          ]);
-          if (!balance) throw new Error('WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED');
-          return {materialId, balance, locationBalances, lots};
-        }));
-        const snapshots = Object.fromEntries(refreshed.map(item => [
-          item.materialId, {
-            globalQuantity: item.balance.quantity,
-            positions: item.locationBalances.map(row => ({
-              position: row.balance.position, quantity: row.balance.quantity,
-            })),
-            lots: item.lots.map(row => row.lot),
-          },
-        ]));
-        const next = replanDesktopWithdrawalCart(cartSnapshot, snapshots,
-          createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
+        const next = await reconcileFromCurrentStock(cartSnapshot);
         if (next.changed) {
           setCart(next.lines as CartLine[]);
           setWithdrawalId(createWarehouseWithdrawalId());
           setReviewing(false);
           setMessageKind('info');
-          setMessage('O estoque mudou desde a leitura. Carrinho recalculado com os saldos e validades atuais; confira e revise novamente. Nenhuma baixa foi realizada.');
+          setMessage('O estoque mudou desde a leitura. Carrinho recalculado com saldos e validades atuais; revise novamente. Nenhuma baixa foi realizada.');
           return;
         }
-        // Payload v2 e ID devem permanecer IMUTAVEIS inclusive no retry.
-        // Nao atualizar o draft quando o planejamento coincide.
+        // O hash da retirada v2 abrange todos os campos: não reescrever
+        // a identidade e nem atualizar o draft quando as linhas coincidem.
       } catch (error) {
         setReviewing(false);
         setMessageKind('error');
         setMessage(errorMessage(error)
-          + ' O estoque mudou ou não pôde ser conciliado. Leia novamente o material ou ajuste o carrinho; nenhuma baixa foi realizada.');
+          + ' Leia o material novamente ou ajuste o carrinho. Nenhuma baixa foi realizada.');
         return;
       } finally {
         setWorking(false);
@@ -1638,13 +1643,31 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   {retryRequired && safeRestartAvailable && (
                     <button type="button" disabled={working}
                       onClick={() => {
-                        resetAfterSuccess();
-                        clearCurrentLine();
-                        setMessageKind('info');
-                        setMessage('Carrinho reiniciado sem baixa. Leia o material novamente para consultar o saldo atual.');
+                        // Este botão só existe quando o servidor confirmou
+                        // rejeição sem commit na retirada v2 NOVA.
+                        setWorking(true);
+                        void (async () => {
+                          try {
+                            const fresh = await reconcileFromCurrentStock(cart);
+                            setCart(fresh.lines as CartLine[]);
+                            setMessageKind('info');
+                            setMessage('Carrinho atualizado sem baixa. Confira as quantidades e revise novamente.');
+                          } catch (error) {
+                            setMessageKind('error');
+                            setMessage(errorMessage(error)
+                              + ' Ajuste ou remova as linhas indisponíveis; nenhuma baixa foi realizada.');
+                          } finally {
+                            setWithdrawalId(createWarehouseWithdrawalId());
+                            setRetryRequired(false);
+                            setSafeRestartAvailable(false);
+                            setReviewing(false);
+                            clearWarehouseWithdrawalRecovery(workspaceId);
+                            setWorking(false);
+                          }
+                        })();
                       }}
                       className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-900 disabled:opacity-50">
-                      Reiniciar carrinho sem baixa
+                      Atualizar carrinho sem baixa
                     </button>
                   )}
                   {!retryRequired && (
