@@ -319,6 +319,7 @@ export default function Home() {
 
         {/* Content Container Area */}
         <main
+          data-visual-surface="operational"
           className={`flex-1 w-full overflow-hidden ${activeTab === 'inicio'
             ? 'p-0 pb-20 md:pb-0 max-w-none'
             : 'lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto'
