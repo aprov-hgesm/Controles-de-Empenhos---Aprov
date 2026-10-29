@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import Script from 'next/script';
 import { Inter, JetBrains_Mono, Montserrat } from 'next/font/google';
 import './globals.css'; // Global styles
+import './visual-mode-essential.css'; // Escopo exclusivo do modo Essencial
 import { VisualModeProvider } from '../components/visual-mode/VisualModeProvider';
 
 const inter = Inter({
