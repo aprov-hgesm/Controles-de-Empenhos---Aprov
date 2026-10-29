@@ -365,7 +365,7 @@ try {
     assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,beforeRejectLot);
   }
   const rejectedConsumption='cons_'+createHash('sha256').update(
-    workspaceId+'\\n'+'stock:'+rejectedId+':'+rejectedLine.lineId
+    workspaceId+'\n'+'stock:'+rejectedId+':'+rejectedLine.lineId
   ).digest('hex');
   assert.equal((await getDoc(ref('consumptions',rejectedConsumption))).exists(),false);
   console.log('PASS: untracked sem saldo livre -> safe restart, sem baixa/cabecalho/consumo, retry idem');
