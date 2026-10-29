@@ -4,6 +4,8 @@ export interface WarehouseWithdrawalPersistedDraft<TLine> {
   destinationId: string;
   withdrawnBy: string;
   retryRequired: boolean;
+  /** Liberacao local exibida somente apos resposta conclusiva do servidor. */
+  safeRestartAvailable?: boolean;
 }
 
 function draftStorageKey(workspaceId: string): string {
@@ -27,6 +29,8 @@ function parsePersistedDraft<TLine>(
       || typeof parsed.destinationId !== 'string'
       || typeof parsed.withdrawnBy !== 'string'
       || typeof parsed.retryRequired !== 'boolean'
+      || (parsed.safeRestartAvailable !== undefined
+        && typeof parsed.safeRestartAvailable !== 'boolean')
     ) return null;
     return parsed;
   } catch {
@@ -41,11 +45,17 @@ export function readWarehouseWithdrawalDraft<TLine>(
   const sessionDraft = parsePersistedDraft<TLine>(
     window.sessionStorage.getItem(draftStorageKey(workspaceId))
   );
-  if (sessionDraft) return sessionDraft;
-
   const recoveryDraft = parsePersistedDraft<TLine>(
     window.localStorage.getItem(recoveryStorageKey(workspaceId))
   );
+  if (sessionDraft) {
+    // Uma resposta conclusiva de rejeicao pode ter sido salva no recovery
+    // imediatamente antes do reload. Nunca herdar sinal de outra retirada.
+    return recoveryDraft?.withdrawalId === sessionDraft.withdrawalId
+      && recoveryDraft.safeRestartAvailable === true
+      ? { ...sessionDraft, safeRestartAvailable: true }
+      : sessionDraft;
+  }
   return recoveryDraft
     ? { ...recoveryDraft, retryRequired: true }
     : null;
