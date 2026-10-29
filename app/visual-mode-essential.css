@@ -127,3 +127,22 @@ html[data-visual-mode='essencial'] [data-testid='admin-visual-shell'] .emprovex-
 }
 
 /* Acessibilidade: nenhuma remoção de outline, spinner, aviso ou estado busy. */
+
+/* A barra inferior móvel é funcional, porém dispensa vidro/desfoque contínuo. */
+html[data-visual-mode='essencial'] nav[aria-label='Navegação rápida'] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgb(249 251 255 / 0.97);
+  box-shadow: 0 -3px 16px rgb(14 37 67 / 0.09);
+}
+
+/* Apenas o cabeçalho externo da Central não imersiva.
+ * Meus Depósitos 3D e todos os seus descendentes ficam completamente fora. */
+html[data-visual-mode='essencial']
+[data-testid='warehouse-module-shell']:not([data-warehouse-section='overview'])
+.warehouse-emprovex-surface > div:first-child {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: #fff !important;
+  box-shadow: 0 6px 16px rgb(15 33 61 / 0.08);
+}
