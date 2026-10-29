@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../../hooks/useOperationalViewState';
@@ -11,7 +11,7 @@ import { AppSidebar } from '../../components/layout/AppSidebar';
 import { ToastNotification } from '../../components/layout/ToastNotification';
 import { OperationalSurfaceTransition } from '../../components/layout/OperationalSurfaceTransition';
 import { OperationalSurfaceLoading } from '../../components/layout/OperationalSurfaceLoading';
-import { InicioView } from '../../features/inicio/components/InicioView';
+import { useVisualMode } from '../../components/visual-mode/VisualModeProvider';
 import { MobileNavigation } from '../../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
@@ -24,6 +24,12 @@ import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycl
 import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
 import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
+const InicioView = lazy(() =>
+  import('../../features/inicio/components/InicioView').then((module) => ({
+    default: module.InicioView,
+  }))
+);
+
 const OperationalWorkspace = lazy(() =>
   import('../../features/operational/components/OperationalWorkspace').then((module) => ({
     default: module.OperationalWorkspace,
@@ -31,6 +37,7 @@ const OperationalWorkspace = lazy(() =>
 );
 
 export default function Home() {
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -54,7 +61,20 @@ export default function Home() {
   }, []);
 
   // Navigation drives the realtime subscription profile (Block 14).
-  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
+  const [requestedTab, setRequestedTab] = useState<OperationalActiveTab>('inicio');
+  const activeTab: OperationalActiveTab =
+    mode === 'essencial' && requestedTab === 'inicio' ? 'painel' : requestedTab;
+  const setActiveTab: Dispatch<SetStateAction<OperationalActiveTab>> = useCallback((update) => {
+    setRequestedTab((previous) => {
+      const requested = typeof update === 'function' ? update(previous) : update;
+      return mode === 'essencial' && requested === 'inicio' ? 'painel' : requested;
+    });
+  }, [mode]);
+  useEffect(() => {
+    if (visualModeReady && mode === 'essencial' && requestedTab === 'inicio') {
+      setRequestedTab('painel');
+    }
+  }, [mode, requestedTab, visualModeReady]);
 
   // Navegação entre módulos: /login?tab=cronogramas ativa a aba correta.
   useEffect(() => {
@@ -138,6 +158,7 @@ export default function Home() {
     selectedEmpenhoDetailId,
     setSelectedEmpenhoDetailId,
     selectedNFCommitmentId,
+    nfQuantities,
     setNfQuantities,
   } = viewState;
 
@@ -152,17 +173,31 @@ export default function Home() {
     }
   }, [activeTab]);
 
-  // Reset NF inputs when changing target empenho
+  // Draft de quantidades por NE. Snapshot, troca de modo e re-render NAO
+  // reinicializam o que foi digitado; apenas troca explicita de NE restaura draft.
+  const nfDraftsByEmpenhoRef = useRef<Map<string, Record<string, number>>>(new Map());
+  const lastNfCommitmentRef = useRef(selectedNFCommitmentId);
   useEffect(() => {
-    const target = empenhos.find(e => e.id === selectedNFCommitmentId);
-    if (target) {
-      const initialQtys: { [itemId: string]: number } = {};
-      target.items.forEach(item => {
-        initialQtys[item.id] = 0;
-      });
-      setNfQuantities(initialQtys);
+    nfDraftsByEmpenhoRef.current.set(lastNfCommitmentRef.current, nfQuantities);
+  }, [nfQuantities]);
+  useEffect(() => {
+    if (lastNfCommitmentRef.current === selectedNFCommitmentId) return;
+    lastNfCommitmentRef.current = selectedNFCommitmentId;
+    setNfQuantities(nfDraftsByEmpenhoRef.current.get(selectedNFCommitmentId) ?? {});
+  }, [selectedNFCommitmentId, setNfQuantities]);
+
+  // Evita reutilizar drafts ou preferencia visual de outra identidade na aba.
+  const lastIdentityRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingAuth) return;
+    const identity = user?.uid ?? null;
+    if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
+      nfDraftsByEmpenhoRef.current.clear();
+      setNfQuantities({});
+      clearVisualMode();
     }
-  }, [selectedNFCommitmentId, empenhos]);
+    lastIdentityRef.current = identity;
+  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities]);
 
 
 
@@ -175,7 +210,7 @@ export default function Home() {
 
 
 
-  if (loadingAuth) {
+  if (loadingAuth || !visualModeReady) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
   }
 
@@ -248,7 +283,7 @@ export default function Home() {
       data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
-      <AppBackground immersive={activeTab === 'inicio'} />
+      <AppBackground immersive={activeTab === 'inicio'} essential={mode === 'essencial'} />
 
       {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
         <LoginSuccessTransition
@@ -307,6 +342,8 @@ export default function Home() {
           onLogout={async () => {
             try {
               setShowLoginSuccessTransition(false);
+              nfDraftsByEmpenhoRef.current.clear();
+              clearVisualMode();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
@@ -316,7 +353,9 @@ export default function Home() {
           }}
           warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
           onOpenWarehouse={() => {
-            window.location.assign('/central-depositos');
+            window.location.assign(
+              mode === 'essencial' ? '/central-depositos/controle-de-itens' : '/central-depositos'
+            );
           }}
         />
 
@@ -333,6 +372,7 @@ export default function Home() {
 
           {activeOperationalDataReady && activeTab === 'inicio' && (
             <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
+              <Suspense fallback={<OperationalSurfaceLoading />}>
               <InicioView
                 snapshot={inicioSnapshot}
                 userDisplayName={user?.displayName || 'Operador EMPROVEX'}
@@ -341,6 +381,7 @@ export default function Home() {
                   setActiveTab('empenhos');
                 }}
               />
+              </Suspense>
             </OperationalSurfaceTransition>
           )}
 
