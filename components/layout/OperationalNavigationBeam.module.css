@@ -114,3 +114,11 @@
     display: none !important;
   }
 }
+
+/* O modo Essencial mantém a borda indicativa, mas não a animação infinita.
+ * Este módulo é usado pela navegação, nunca pelo renderizador Warehouse 3D. */
+:global(html[data-visual-mode='essencial']) .beam,
+:global(html[data-visual-mode='essencial']) .mobileItem .beam {
+  animation: none !important;
+  transition: none;
+}
