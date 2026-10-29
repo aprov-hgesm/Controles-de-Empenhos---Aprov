@@ -361,3 +361,22 @@ A auditoria de arquitetura, baseline histórico, evidências e oportunidades **D
 ### Próxima continuidade
 
 R1 tem núcleo do modo, navegação e simplificação ampla de decorativos. Reavaliar eventuais problemas detectados durante montagem final e, somente ao terminar as configurações, executar a matriz VF-01 a VF-16 e benchmark comparativo em PC modesto. Não alterar o 3D protegido para obter ganho de CPU. Não editar `main` nem chamar Vercel sem autorização posterior.
+
+
+---
+
+## Auditoria R2 — simplificação funcional, CPU e minimalismo (29/10/2026)
+
+A segunda auditoria estática dirigida identificou trabalho de processamento ainda otimizable além dos efeitos visuais. **Documento técnico completo:** [MODO_ESSENCIAL_AUDITORIA_R2_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_R2_2026-10-29.md).
+
+**Achados priorizados:**
+- **R2-A, baixo/moderado:** carregar Administração e painel de backup/Drive sob demanda; reduzir vidro e cartões redundantes somente em superfícies não 3D.
+- **R2-B, moderado:** pré-agregação/memoização financeira no Dashboard e renderização gradual de linhas, **sem qualquer diferença em valores, contagem, filtros, pesquisa, edição ou exportações**.
+- **R2-C, moderado/alto:** segregar hooks de operações por aba e retirar o Motion do caminho base do login Essencial, sem duplicar autenticação nem alterar motores transacionais.
+- **R2-D, condicional:** particionar CSS enorme/recursos compartilhados apenas após demonstrar ganho; manter o que já está otimizado (listeners por aba, PDF lazy, branding cache e Warehouse dynamic).
+
+**Risco de integração a acompanhar:** navegação da Central usa `usePathname` + histórico manual + estado local; na certificação final, conferir F5, voltar/avançar, links diretos e troca de modo. **3D intocável**.
+
+**Estado da auditoria:** arquivo criado e vinculado na branch de desenvolvimento. Não foram executados build, CI, benchmark ou navegador real; **não confundir inspeção estática com certificado de desempenho/funcionalidade**. Nenhuma mudança adicional de código nesta auditoria e nenhum deploy/merge.
+
+**Próximo marco recomendado:** iniciar implementação R2-A em branch atual, com verificações curtas e sem burocracia; testar cenários abrangentes no fechamento, observando os guardas críticos financeiros e de segurança.
