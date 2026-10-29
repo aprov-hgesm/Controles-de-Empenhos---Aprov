@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import Script from 'next/script';
 import { Inter, JetBrains_Mono, Montserrat } from 'next/font/google';
 import './globals.css'; // Global styles
+import { VisualModeProvider } from '../components/visual-mode/VisualModeProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -44,7 +45,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           src="https://accounts.google.com/gsi/client"
           strategy="afterInteractive"
         />
-        {children}
+        <VisualModeProvider>{children}</VisualModeProvider>
       </body>
     </html>
   );
