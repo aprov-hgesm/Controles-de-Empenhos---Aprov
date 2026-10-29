@@ -107,7 +107,8 @@ function describeSectorAuthorizationFailure(code: string): string {
 export function useOperationalData(
   activeTab: OperationalActiveTab,
   acceptedLegalIdentityKey: string | null = null,
-  billingAccessGranted: boolean = false
+  billingAccessGranted: boolean = false,
+  billingAccessIdentityKey: string | null = null
 ) {
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
@@ -133,10 +134,19 @@ export function useOperationalData(
         workspaceContext.ug || '',
       ].join('|')
     : null;
+  // Uma resposta de cobrança de outra UID/UG jamais libera subscriptions,
+  // nem durante a renderização antes do efeito de revalidação de identidade.
+  const scopedBillingIdentity = user
+    ? user.uid + ':' + (workspaceContext.status === 'sector'
+        ? workspaceContext.workspaceId + ':' + (workspaceContext.ug ?? '')
+        : workspaceContext.status)
+    : null;
   const operationalAccessEnabled = Boolean(
     legalIdentityKey
     && acceptedLegalIdentityKey === legalIdentityKey
     && billingAccessGranted
+    && billingAccessIdentityKey !== null
+    && billingAccessIdentityKey === scopedBillingIdentity
   );
 
   const {
