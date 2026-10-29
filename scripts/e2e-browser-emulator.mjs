@@ -172,14 +172,42 @@ try {
   await waitForEndpoint(appBase);
   process.stdout.write('Next.js E2E: READY\n');
 
-  await run(
-    process.execPath,
-    [playwrightCli, 'test', ...process.argv.slice(2), '--config=playwright.e2e.config.mjs'],
-    {
-      ...process.env,
-      EMPROVEX_E2E_BASE_URL: appBase,
+  if (process.argv.includes('--preview')) {
+    if (process.env.GOOGLE_CLOUD_PROJECT !== 'demo-emprovex-security'
+      || process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8080'
+      || !['127.0.0.1:9099', 'localhost:9099'].includes(process.env.FIREBASE_AUTH_EMULATOR_HOST || '')) {
+      throw new Error('PREVIEW_REQUIRES_DEMO_AUTH_AND_FIRESTORE_EMULATORS');
     }
-  );
+    process.env.EMPROVEX_E2E_BASE_URL = appBase;
+    const { chromium } = await import('@playwright/test');
+    const { registerEmulatedBillingPortal } = await import('../tests/e2e/emulatedBillingPortal.mjs');
+    const { registerEmulatedLegalAcceptance } = await import('../tests/e2e/emulatedLegalAcceptance.mjs');
+    const browser = await chromium.launch({ headless: false });
+    try {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      await registerEmulatedBillingPortal(context);
+      await registerEmulatedLegalAcceptance(context);
+      const page = await context.newPage();
+      console.log('EMPROVEX PREVIEW: Chromium aberto em ' + appBase + '/login');
+      console.log('LOGIN: sector-lifecycle@example.test / Emprovex-Teste!2026');
+      console.log('Feche o Chromium para encerrar a prévia; não é necessário alterar a aplicação.');
+      await page.goto(appBase + '/login', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+      await new Promise((resolve) => {
+        browser.once('disconnected', resolve);
+      });
+    } finally {
+      if (browser.isConnected()) await browser.close();
+    }
+  } else {
+    await run(
+      process.execPath,
+      [playwrightCli, 'test', ...process.argv.slice(2), '--config=playwright.e2e.config.mjs'],
+      {
+        ...process.env,
+        EMPROVEX_E2E_BASE_URL: appBase,
+      }
+    );
+  }
 } finally {
   await stopChild(server);
   await stopChild(warehouseEmulator);
