@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono, Montserrat } from 'next/font/google';
 import './globals.css'; // Global styles
 import './visual-mode-essential.css'; // Escopo exclusivo do modo Essencial
 import { VisualModeProvider } from '../components/visual-mode/VisualModeProvider';
+import { VisualModeSafetyBoundary } from '../components/visual-mode/VisualModeSafetyBoundary';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -46,7 +47,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           src="https://accounts.google.com/gsi/client"
           strategy="afterInteractive"
         />
-        <VisualModeProvider>{children}</VisualModeProvider>
+        <VisualModeProvider><VisualModeSafetyBoundary>{children}</VisualModeSafetyBoundary></VisualModeProvider>
       </body>
     </html>
   );
