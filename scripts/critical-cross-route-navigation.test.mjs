@@ -14,7 +14,10 @@ test('P0: Administração e assinatura carregam a rota ao primeiro clique', () =
   const admin = read('components/admin/PlatformAdminView.tsx');
   assert.match(admin, /setActiveProfileMode\('sector'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.replace\('\/login'\)/);
   assert.doesNotMatch(admin, /router\.(?:push|replace)\(/);
-  assert.match(admin, /setActiveTab\(tab\)/, 'As abas administrativas continuam locais.');
+  // A opção Essencial introduziu um destino local efetivo (inicio -> overview).
+  // Continuar exigindo setState local, sem router RSC para cada aba.
+  assert.match(admin, /setRequestedAdminTab\(nextTab\)/, 'As abas administrativas continuam locais.');
+  assert.match(admin, /window\.history\.replaceState\(/, 'URL administrativa permanece sincronizada sem rota RSC.');
   assert.match(read('app/admin/page.tsx'), /context\.status !== 'platformAdmin'/, 'Guarda administrativa preservada.');
 });
 
