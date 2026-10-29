@@ -10,7 +10,13 @@ const assert = (condition, message) => {
 const firebaseSync = read('lib/firebaseSync.ts');
 const documentActions = read('features/relatorios/hooks/useDocumentActions.ts');
 const cronogramaActions = read('features/cronogramas/hooks/useCronogramaActions.ts');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
+if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
+  throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
+}
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 const identity = read('lib/institutionalDocumentProfile.ts');
 
@@ -40,7 +46,7 @@ assert(cronogramaActions.includes('defaultDeliveryLocation'), 'Cronograma deve u
 assert(cronogramaActions.includes('defaultResponsibleRole'), 'Cronograma deve usar cargo padrão do workspace.');
 
 assert(
-  page.includes("import('../features/operational/components/OperationalWorkspace')"),
+  page.includes("import('../../features/operational/components/OperationalWorkspace')"),
   'Página operacional deve conectar o host operacional sob demanda.'
 );
 const profileWiringCount = (operationalWorkspace.match(/institutionalProfile: workspaceContext\.status === 'sector'/g) || []).length;
