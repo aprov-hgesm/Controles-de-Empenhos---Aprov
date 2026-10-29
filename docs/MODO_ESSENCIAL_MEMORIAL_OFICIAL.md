@@ -438,3 +438,18 @@ A segunda auditoria estática dirigida identificou trabalho de processamento ain
 4. Certificar alterações no CI e só então propor merge/promoção via método Vercel do memorial; autorização expressa de publicação é obrigatória.
 
 **Regra:** é permitido continuar desenvolvimento da R2 em branch; **NO-GO de merge/produção** enquanto essa matriz não for executada. A implementação não reduz proteções do Firestore ou acesso por assinatura.
+
+
+---
+
+## Auditoria funcional integral — resultado NO-GO (29/10/2026)
+
+**Documento:** [MODO_ESSENCIAL_AUDITORIA_FUNCIONAL_INTEGRAL_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_FUNCIONAL_INTEGRAL_2026-10-29.md).
+
+**Certificação:** não concedida. O CI principal apresentou typecheck, Core Protection, guard de writes Warehouse, W4 browser inicial e evidências de integração com PASS, mas Fast CI FAIL. A auditoria não destrutiva GitHub Actions `40818642040`, executada uma única vez e disponibilizada depois apenas por `workflow_dispatch`, rodou **48 verificações (36 PASS e 12 FAIL)**. A maioria das falhas é de scripts antigos buscando a implementação em `app/page.tsx` (agora reexport da real `/login`) ou exigindo padrão antigo de navegação; não são prova de falha do TR/Drive/PDF, mas invalidam certificação. Uma nova execução visual/InfinitePay ainda encontrou erro externo de download npm `@types/estree@1.0.10` (404), não erro de interface.
+
+**Achados que exigem tratamento antes do GO:** AF-01 badge de avisos potencialmente 0 no Painel Essencial por plano sem `alerts` e snapshot restrito ao Início; AF-02 dados ainda habilitados por flag antiga `billingAccessState` em transição UID/UG apesar de guarda de render já vinculada; AF-03 drafts NF e arquivo PDF local sem E2E; AF-04 logout admin sidebar sem `clearVisualMode`; AF-05 regras CSS `main[data-visual-surface]` sem alvo no shell canônico `/login`; AF-06 navegação local Warehouse/URL sem teste browser autenticado; AF-07 valores financeiros/RPNP sem comparação de paridade; AF-08 sinalização stale/offline; AF-09 falta de E2E TR/upload/relatórios.
+
+**Preservação estrutural demonstrada:** serviços de TR, emissão/mescla PDFs, upload/verificação Drive, lifecycle NF/NS/NE, cronograma e email, Firebase Rules, APIs, Warehouse/Operador Móvel e renderizador 3D não foram alterados no diff da PR. O `OperationalWorkspace` continua com todos os callbacks documentais conectados. Isso **não comprova operação real**.
+
+**Decisão:** PR #411 DRAFT, sem merge, sem deploy. Para avançar: corrigir indicadores e gate por identidade, confirmar rascunhos/URL sem regressão, tornar testes legacy compatíveis com rota canônica preservando garantias de segurança, executar E2E autenticado em sandbox com termos, downloads, upload, relatórios, cobrança/tenant e 3D e comparação financeira antes de GO técnico.
