@@ -302,7 +302,8 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expectRealtimeProfile(page, 1);
 
     await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
-    await expectRealtimeProfile(page, 1);
+    // Painel: empenhos mais o resumo de avisos; a coleção de avisos não é assinada.
+    await expectRealtimeProfile(page, 2);
   });
 
   test('Início permanece responsivo em celular, tablet e landscape sem overflow horizontal', async ({ page }) => {
