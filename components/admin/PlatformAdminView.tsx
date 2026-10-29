@@ -271,7 +271,7 @@ export function PlatformAdminView({
   onLogout,
 }: PlatformAdminViewProps) {
   const reducedMotionPreference = useReducedMotion();
-  const { mode, hydrated: visualModeReady } = useVisualMode();
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   const shouldReduceMotion = Boolean(reducedMotionPreference) || mode === 'essencial';
   const [requestedAdminTab, setRequestedAdminTab] = useState<AdminTabId>('inicio');
   const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
@@ -498,7 +498,7 @@ export function PlatformAdminView({
 
             <button
               type="button"
-              onClick={() => void onLogout()}
+              onClick={() => { clearVisualMode(); void onLogout(); }}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 text-xs font-bold text-slate-300 transition hover:border-white/[0.14] hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50"
             >
               <LogOut className="w-4 h-4" />
