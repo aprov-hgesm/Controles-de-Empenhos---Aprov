@@ -184,3 +184,33 @@ jobs:
         run: npm run test:central-depositos-external-security
       - name: "Testar regras Warehouse apenas no servidor"
         run: npm run test:warehouse-server-only-rules
+
+  authenticated-browser-e2e:
+    name: "Browser E2E — login real no Firebase Emulator e tarefas operacionais"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: "Instalar runner Playwright sem alterar lockfile"
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: "Instalar Chromium isolado"
+        run: npx playwright install --with-deps chromium
+      - name: "Impedir uso de credenciais/ambientes reais"
+        run: |
+          test "$GOOGLE_CLOUD_PROJECT" = "demo-emprovex-security"
+          test ! -f .env.production.local
+          test ! -f service-account.json
+      - name: "E2E: login, dados financeiros, NF/NS, relatórios, UG e navegação"
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/operator-critical-flow.spec.mjs tests/e2e/warehouse-react-tab-navigation.spec.mjs"
