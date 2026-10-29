@@ -178,7 +178,7 @@ export function WarehouseModuleShell({
       data-testid="warehouse-module-shell"
       data-warehouse-section={section}
     >
-      <AppBackground immersive={isImmersive} />
+      <AppBackground immersive={isImmersive} essential={mode === 'essencial'} />
 
       <AppHeader
         customLogo={customLogo}
