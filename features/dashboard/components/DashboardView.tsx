@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
+import { projectDashboardRows } from '../domain/dashboardRowsProjection';
 import { CheckCircle2, Clock3, Coins, Filter, Layers, Search, X } from 'lucide-react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Empenho } from '../../../lib/types';
@@ -501,22 +502,25 @@ export function DashboardView({
                   {displayedClasses.map((cls) => {
                     const rawClassEmpenhos = getSegment(cls.key)?.records ?? [];
                     
-                    const filteredClassEmpenhos = rawClassEmpenhos.filter(emp => {
-                      const matchesPregao = dashboardPregaoFilter === 'Todos' || emp.pregao === dashboardPregaoFilter;
-                      const matchesSearch = !dashboardSearch || 
-                        emp.id.toLowerCase().includes(dashboardSearch.toLowerCase()) || 
-                        emp.supplier.toLowerCase().includes(dashboardSearch.toLowerCase()) ||
-                        emp.description.toLowerCase().includes(dashboardSearch.toLowerCase());
-                      return matchesPregao && matchesSearch;
-                    });
-
-                    const subtotalEmpenhado = filteredClassEmpenhos.reduce((sum, emp) =>
-                      sum + (aggregates.amounts.get(emp)?.committed ?? 0), 0);
-                    const subtotalLiquidado = filteredClassEmpenhos.reduce((sum, emp) =>
-                      sum + (aggregates.amounts.get(emp)?.received ?? 0), 0);
-                    const visibleClassEmpenhos = mode === 'essencial'
-                      ? filteredClassEmpenhos.slice(0, visibleRowsByClass[cls.key] ?? 60)
-                      : filteredClassEmpenhos;
+                    const search = dashboardSearch.toLowerCase();
+                    // Todos os registros participam dos totais/contagens, inclusive
+                    // os que não possuem linha DOM no modo Essencial. É apenas UI.
+                    // A projeção evita criar o array filtrado completo + slice duplicado.
+                    const projected = projectDashboardRows(
+                      rawClassEmpenhos,
+                      (emp) => {
+                        const matchesPregao = dashboardPregaoFilter === 'Todos' || emp.pregao === dashboardPregaoFilter;
+                        const matchesSearch = !dashboardSearch ||
+                          emp.id.toLowerCase().includes(search) ||
+                          emp.supplier.toLowerCase().includes(search) ||
+                          emp.description.toLowerCase().includes(search);
+                        return matchesPregao && matchesSearch;
+                      },
+                      (emp) => aggregates.amounts.get(emp),
+                      mode === 'essencial' ? (visibleRowsByClass[cls.key] ?? 60) : Number.POSITIVE_INFINITY
+                    );
+                    const { matchedCount: filteredClassCount, visibleRows: visibleClassEmpenhos,
+                      committed: subtotalEmpenhado, received: subtotalLiquidado } = projected;
 
                     const subtotalSaldo = Math.max(0, subtotalEmpenhado - subtotalLiquidado);
                     const subtotalPct = subtotalEmpenhado > 0 ? Math.round((subtotalLiquidado / subtotalEmpenhado) * 100) : 0;
@@ -535,7 +539,7 @@ export function DashboardView({
                             <div>
                               <h4 className="font-bold text-sm text-gray-800">{cls.description}</h4>
                               <p className="text-xs text-gray-400 font-medium">
-                                {filteredClassEmpenhos.length} {filteredClassEmpenhos.length === 1 ? 'empenho listado' : 'empenhos listados'}
+                                {filteredClassCount} {filteredClassCount === 1 ? 'empenho listado' : 'empenhos listados'}
                               </p>
                             </div>
                           </div>
@@ -560,7 +564,7 @@ export function DashboardView({
                         </div>
 
                         {/* Tabela de Empenhos da Classe */}
-                        {filteredClassEmpenhos.length === 0 ? (
+                        {filteredClassCount === 0 ? (
                           <div className="text-center py-6 text-xs text-gray-500 font-medium bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
                             Nenhum empenho encontrado para {cls.name} com os filtros aplicados.
                           </div>
@@ -680,7 +684,7 @@ export function DashboardView({
                               <tfoot>
                                 <tr className="bg-gray-50/90 font-bold text-xs border-t border-gray-200">
                                   <td colSpan={2} className="py-2.5 px-3.5 text-gray-600">
-                                    Subtotal {cls.name} ({filteredClassEmpenhos.length} empenhos)
+                                    Subtotal {cls.name} ({filteredClassCount} empenhos)
                                   </td>
                                   <td className="py-2.5 px-3 text-right text-gray-800">
                                     R$ {subtotalEmpenhado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -702,7 +706,7 @@ export function DashboardView({
                             </table>
                           </div>
                         )}
-                        {mode === 'essencial' && visibleClassEmpenhos.length < filteredClassEmpenhos.length && (
+                        {mode === 'essencial' && visibleClassEmpenhos.length < filteredClassCount && (
                           <button
                             type="button"
                             onClick={() => setVisibleRowsByClass((current) => ({
@@ -711,7 +715,7 @@ export function DashboardView({
                             }))}
                             className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-[#00288e] hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
                           >
-                            Mostrar mais 60 ({visibleClassEmpenhos.length} de {filteredClassEmpenhos.length} empenhos)
+                            Mostrar mais 60 ({visibleClassEmpenhos.length} de {filteredClassCount} empenhos)
                           </button>
                         )}
                       </div>
