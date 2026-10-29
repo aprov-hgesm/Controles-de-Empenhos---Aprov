@@ -1,9 +1,9 @@
 # EMPROVEX — Auditoria preventiva de segurança e continuidade — Modo Essencial R1
 
-**Data:** 29/10/2026  
-**Branch examinada:** `feat/visual-mode-r1-session-navigation`  
-**Escopo:** navegação e alternância Normal/Essencial; rotas `/` e `/login`; autenticação e perfil fundador/setor; aceite legal; controle de assinatura e pagamentos; regras e listeners Firestore; sessão/lease; administração; Central de Depósitos e 3D; ações financeiras, drafts e documentação da R2.  
-**Natureza:** inspeção estática dirigida de arquivos atuais do GitHub. **Não** é pentest, auditoria de todas as APIs, execução de CI, emuladores, testes E2E, medição de leituras reais, prova de regra efetivamente implantada ou certificação de integridade em produção. Não houve acesso à configuração ativa Vercel/Firebase Console.  
+**Data:** 29/10/2026
+**Branch examinada:** `feat/visual-mode-r1-session-navigation`
+**Escopo:** navegação e alternância Normal/Essencial; rotas `/` e `/login`; autenticação e perfil fundador/setor; aceite legal; controle de assinatura e pagamentos; regras e listeners Firestore; sessão/lease; administração; Central de Depósitos e 3D; ações financeiras, drafts e documentação da R2.
+**Natureza:** inspeção estática dirigida de arquivos atuais do GitHub. **Não** é pentest, auditoria de todas as APIs, execução de CI, emuladores, testes E2E, medição de leituras reais, prova de regra efetivamente implantada ou certificação de integridade em produção. Não houve acesso à configuração ativa Vercel/Firebase Console.
 **Ação realizada:** apenas auditoria, verificação de contratos e documentação; **nenhuma alteração de código de aplicação, Firestore, Rules, API, produção ou deploy**.
 
 > **Decisão:** **GO CONDICIONAL** para correções de compatibilidade/gates antes da R2-A. **NO-GO** para merge, deploy ou refatoração mais invasiva R2-B/R2-C enquanto os bloqueadores AS-01 e AS-02 não estiverem corrigidos e inspecionados. Não há evidência nesta auditoria de corrupção persistida ou de exploração de acesso causada pelo seletor; isso **não** comprova ausência de regressões.
