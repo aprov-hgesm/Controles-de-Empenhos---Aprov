@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { registerEmulatedBillingPortal } from './emulatedBillingPortal.mjs';
 
 const PASSWORD = 'Emprovex-Teste!2026';
 const OPERATOR_A = 'sector-lifecycle@example.test';
@@ -22,6 +23,7 @@ async function acceptLegalIfRequired(page) {
 }
 
 async function loginSector(page, email) {
+  await registerEmulatedBillingPortal(page.context());
   await page.getByTestId('sector-login-email').fill(email);
   await page.getByTestId('sector-login-password').fill(PASSWORD);
   await page.getByTestId('sector-login-submit').click();
