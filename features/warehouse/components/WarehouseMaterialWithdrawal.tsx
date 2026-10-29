@@ -153,6 +153,8 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
     ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A quantidade vinculada à validade mudou antes da confirmação.'],
+    ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART', 'O saldo sem vinculo a validade nesta posicao nao e suficiente para a quantidade solicitada.'],
+    ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE', 'O saldo sem vinculo a validade nesta posicao nao e suficiente para a quantidade solicitada.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
     ['WAREHOUSE_WITHDRAWAL_LINE_LIMIT', 'A retirada excede o limite operacional de linhas. Finalize esta operação e inicie outra.'],
@@ -292,6 +294,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [destinationId, setDestinationId] = useState(initialDraft?.destinationId || '');
   const [withdrawnBy, setWithdrawnBy] = useState(initialDraft?.withdrawnBy || '');
   const [retryRequired, setRetryRequired] = useState(initialDraft?.retryRequired || false);
+  const [safeRestartAvailable, setSafeRestartAvailable] = useState(false);
   const [reviewing, setReviewing] = useState(Boolean(initialDraft?.retryRequired));
   const [working, setWorking] = useState(false);
   const [scannerCode, setScannerCode] = useState('');
@@ -835,6 +838,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setCart([]);
     setWithdrawnBy('');
     setRetryRequired(false);
+    setSafeRestartAvailable(false);
     setReviewing(false);
     setWithdrawalId(createWarehouseWithdrawalId());
     clearWarehouseWithdrawalDraft(workspaceId);
@@ -949,12 +953,19 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       resetAfterSuccess();
       setTimeout(() => scannerRef.current?.focus(), 0);
     } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error || '');
+      const safeToRestart = raw.includes(
+        'WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART'
+      );
       setRetryRequired(true);
+      setSafeRestartAvailable(safeToRestart);
       setReviewing(true);
       setMessageKind('error');
       setMessage(
         errorMessage(error)
-        + ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.'
+        + (safeToRestart
+          ? ' Nenhuma baixa foi feita nesta tentativa. Reinicie o carrinho para consultar saldos atualizados.'
+          : ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.')
       );
     } finally {
       setWorking(false);
@@ -1554,6 +1565,18 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                     {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
                   </button>
+                  {retryRequired && safeRestartAvailable && (
+                    <button type="button" disabled={working}
+                      onClick={() => {
+                        resetAfterSuccess();
+                        clearCurrentLine();
+                        setMessageKind('info');
+                        setMessage('Carrinho reiniciado sem baixa. Leia o material novamente para consultar o saldo atual.');
+                      }}
+                      className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-900 disabled:opacity-50">
+                      Reiniciar carrinho sem baixa
+                    </button>
+                  )}
                   {!retryRequired && (
                     <button type="button" onClick={() => setReviewing(false)}
                       className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600 hover:text-[#00288e]">
