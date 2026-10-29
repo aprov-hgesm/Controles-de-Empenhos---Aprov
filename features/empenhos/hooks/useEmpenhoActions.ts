@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
 import type {
@@ -11,6 +12,8 @@ import type {
   Item,
 } from '../../../lib/types';
 import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
+import { MAX_EMPENHO_PDF_BYTES, uploadEmpenhoPdf } from '../../../lib/empenhoDocuments';
+import { assertWorkspacePdfIsSafeForStorage } from '../../../lib/pdfSecurity';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
@@ -53,6 +56,22 @@ interface EmpenhoActionsContext {
 /** Ações do domínio de empenhos; estado e persistência continuam injetados pelo orquestrador. */
 export function useEmpenhoActions(context: EmpenhoActionsContext) {
   const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, newEmpenhoForm, setNewEmpenhoForm, setShowNewEmpenhoModal, setEditingEmpenhoId, setSelectedEmpenhoDetailId, setActiveTab, showToast, setJsonError, setReviewEmpenho, reviewEmpenho, setShowConfirmSaveModal, newItemForm, setNewItemForm, editingEmpenhoId, setIsDeletingEmpenho, setEmpenhoToDelete, activeTab } = context;
+
+  // O PDF original permanece apenas em memória até a confirmação do cadastro.
+  const pendingImportedPdfRef = useRef<File | null>(null);
+  // Reutiliza o mesmo upload quando o Firestore não confirma uma tentativa anterior.
+  const pendingDriveUploadRef = useRef<{
+    sourceFile: File;
+    empenhoId: string;
+    document: EmpenhoPdfDocument;
+  } | null>(null);
+
+  // Descartar revisão também libera o PDF local da memória da sessão.
+  useEffect(() => {
+    if (reviewEmpenho) return;
+    pendingImportedPdfRef.current = null;
+    pendingDriveUploadRef.current = null;
+  }, [reviewEmpenho]);
 
   const handleEmpenhoDocumentUploaded = async (
     empenhoId: string,
@@ -481,6 +500,8 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   };
 
   const handleProcessEmpenhoPdf = async (file: File): Promise<void> => {
+    pendingImportedPdfRef.current = null;
+    pendingDriveUploadRef.current = null;
     if (!user) {
       showToast('Sua sessão expirou. Entre novamente antes de importar a Nota de Empenho.', 'error');
       return;
@@ -492,13 +513,14 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       setJsonError('Selecione um arquivo PDF de Nota de Empenho.');
       return;
     }
-    if (file.size <= 0 || file.size > 12 * 1024 * 1024) {
-      setJsonError('O PDF da Nota de Empenho deve ter até 12 MB.');
+    if (file.size <= 0 || file.size > MAX_EMPENHO_PDF_BYTES) {
+      setJsonError('O PDF da Nota de Empenho deve ter até 10 MB para ser salvo no Google Drive.');
       return;
     }
 
     setJsonError(null);
     try {
+      await assertWorkspacePdfIsSafeForStorage(file, { maxBytes: MAX_EMPENHO_PDF_BYTES });
       const token = await user.getIdToken();
       const formData = new FormData();
       formData.set('file', file);
@@ -552,6 +574,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       }
 
       const result = payload.result;
+      pendingImportedPdfRef.current = file;
       setReviewEmpenho({
         id: result.id.toUpperCase(),
         supplier: result.supplier,
@@ -596,6 +619,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         'success'
       );
     } catch (error) {
+      pendingImportedPdfRef.current = null;
       console.error('Erro ao ler Nota de Empenho diretamente do PDF:', error);
       setJsonError(
         error instanceof Error
@@ -679,18 +703,65 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast('Sua sessão expirou. Entre novamente antes de cadastrar o empenho.', 'error');
       return;
     }
+    const sourceFile = pendingImportedPdfRef.current;
+    if (!sourceFile) {
+      showToast('O PDF original não está mais disponível. Selecione novamente a Nota de Empenho.', 'error');
+      return;
+    }
+
+    // Primeiro confirma o arquivo no Drive; depois cadastra a NE já vinculada ao PDF.
+    // Um erro de upload nunca produz um empenho sem seu documento.
+    let uploadedDocument: EmpenhoPdfDocument;
+    const previousUpload = pendingDriveUploadRef.current;
+    if (previousUpload?.sourceFile === sourceFile && previousUpload.empenhoId === finalEmp.id) {
+      uploadedDocument = previousUpload.document;
+    } else {
+      try {
+        // Alguns navegadores fornecem PDFs com MIME vazio; a assinatura já foi validada.
+        const pdfToStore = sourceFile.type === 'application/pdf'
+          ? sourceFile
+          : new File([sourceFile], sourceFile.name, {
+              type: 'application/pdf',
+              lastModified: sourceFile.lastModified,
+            });
+        uploadedDocument = await uploadEmpenhoPdf(user, finalEmp.id, pdfToStore);
+        pendingDriveUploadRef.current = {
+          sourceFile,
+          empenhoId: finalEmp.id,
+          document: uploadedDocument,
+        };
+      } catch (error) {
+        showToast(
+          error instanceof Error
+            ? `PDF não salvo no Google Drive: ${error.message} O empenho não foi cadastrado.`
+            : 'Falha ao salvar o PDF no Google Drive. O empenho não foi cadastrado.',
+          'error'
+        );
+        return;
+      }
+    }
+
+    finalEmp.notaEmpenhoPdf = uploadedDocument;
+    finalEmp.notaEmpenhoPdfVersions = [uploadedDocument];
+
     let committedEmpenho: Empenho;
     try {
       committedEmpenho = await createEmpenho(user.uid, finalEmp);
     } catch (error) {
+      // Firestore pode ter confirmado a transação antes de uma falha de rede.
+      // Preservar o PDF evita apagar o documento de um empenho potencialmente gravado.
       showToast(
-        error instanceof Error ? error.message : 'Erro ao salvar no Firebase.',
+        error instanceof Error
+          ? `Cadastro não confirmado no Firebase: ${error.message} O PDF foi preservado no Drive. Atualize a lista antes de tentar novamente.`
+          : 'Cadastro não confirmado no Firebase. O PDF foi preservado no Drive. Atualize a lista antes de tentar novamente.',
         'error'
       );
       return;
     }
     setEmpenhos((current) => [committedEmpenho, ...current.filter((emp) => emp.id !== committedEmpenho.id)]);
-     showToast(`Empenho ${committedEmpenho.id} cadastrado com sucesso! ${committedEmpenho.items.length} itens importados.`, 'success');
+    pendingImportedPdfRef.current = null;
+    pendingDriveUploadRef.current = null;
+    showToast(`Empenho ${committedEmpenho.id} cadastrado com sucesso! ${committedEmpenho.items.length} itens importados e PDF salvo no Google Drive.`, 'success');
 
     // Clean states
     setReviewEmpenho(null);
