@@ -219,7 +219,7 @@ export default function Home() {
   const lastIdentityRef = useRef<string | null>(null);
   useEffect(() => {
     if (loadingAuth) return;
-    const identity = user?.uid ?? null;
+    const identity = currentBillingIdentity;
     if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
       nfDraftsByEmpenhoRef.current.clear();
       setNfQuantities({});
@@ -227,7 +227,7 @@ export default function Home() {
       clearVisualMode();
     }
     lastIdentityRef.current = identity;
-  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities, clearNfPdfDrafts]);
+  }, [loadingAuth, currentBillingIdentity, clearVisualMode, setNfQuantities, clearNfPdfDrafts]);
 
 
 
