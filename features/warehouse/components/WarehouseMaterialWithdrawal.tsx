@@ -153,6 +153,11 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
+    ['WAREHOUSE_OUTBOUND_LOT_EXPIRED', 'O material vinculado a esta validade venceu. Emita o pedido de recolhimento ou escolha material apto.'],
+    ['WAREHOUSE_OUTBOUND_LOCATION_INACTIVE', 'A posição foi desativada antes da saída. Atualize o carrinho.'],
+    ['WAREHOUSE_OUTBOUND_LOT_POSITION_MISMATCH', 'A validade vinculada foi movida para outra posição. Atualize o carrinho.'],
+    ['WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED', 'A distribuição por validades mudou. Atualize o carrinho.'],
+
     ['WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED', 'Não foi possível atualizar o saldo do material.'], 
     ['WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE', 'Há estoque registrado, mas nenhuma quantidade apta para consumo nesta posição. Verifique validades.'],
     ['WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED', 'A quantidade vinculada às validades excede o saldo físico. O estoque precisa de conciliação.'],
@@ -1020,9 +1025,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setTimeout(() => scannerRef.current?.focus(), 0);
     } catch (error) {
       const raw = error instanceof Error ? error.message : String(error || '');
-      const safeToRestart = raw.includes(
-        'WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART'
-      );
+      const safeToRestart = raw.endsWith('_SAFE_TO_RESTART');
       if (safeToRestart) {
         // Salvar a confirmacao antes de expor o botao, inclusive em recargas.
         persistWarehouseWithdrawalRecovery(workspaceId, {
