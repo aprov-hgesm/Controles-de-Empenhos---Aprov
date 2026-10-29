@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { planMobileOutboundAutomaticLots } from '../lib/warehouse/mobileOutboundPlan.mjs';
+import ts from 'typescript';
+import { runInNewContext } from 'node:vm';
 
 const read=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const active=[
@@ -63,4 +65,46 @@ test('retirada Desktop e Movel reutilizam o mesmo planejamento e autorizacao',()
   assert.doesNotMatch(mobile,/chooseLot/);
   assert.match(route,/withdrawnBy:access\.email/);
   assert.match(route,/verifyWarehouseRequest/);
+});
+
+
+test('GOV-SIMP: erro de saldo preserva reinicio seguro apos recarregar a pagina',()=>{
+  const source=read('features/warehouse/components/warehouseWithdrawalDraft.ts');
+  const code=ts.transpileModule(source,{
+    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020},
+  }).outputText;
+  const storage=()=> {
+    const memory=new Map();
+    return {
+      getItem:(k)=>memory.has(k)?memory.get(k):null,
+      setItem:(k,v)=>memory.set(k,v),
+      removeItem:(k)=>memory.delete(k),
+    };
+  };
+  const context={exports:{},module:{exports:{}},window:{
+    sessionStorage:storage(),localStorage:storage(),
+  }};
+  context.exports=context.module.exports;
+  runInNewContext(code,context);
+  const api=context.module.exports;
+  const workspaceId='hgesm-aprov';
+  const draft={withdrawalId:'wd_'+'1'.repeat(32),cart:[{lineId:'teste'}],
+    destinationId:'dest_'+'2'.repeat(32),withdrawnBy:'QA',
+    retryRequired:true,safeRestartAvailable:false};
+  api.persistWarehouseWithdrawalDraft(workspaceId,draft);
+  api.persistWarehouseWithdrawalRecovery(workspaceId,{
+    ...draft,safeRestartAvailable:true,
+  });
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,true);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).retryRequired,true);
+  assert.equal(api.readWarehouseWithdrawalDraft('outro-workspace'),null);
+  // Um sinal de recuperacao de identidade antiga nao pode liberar a nova.
+  api.persistWarehouseWithdrawalDraft(workspaceId,{
+    ...draft,withdrawalId:'wd_'+'3'.repeat(32),
+  });
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,false);
+  api.clearWarehouseWithdrawalDraft(workspaceId);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,true);
+  api.clearWarehouseWithdrawalRecovery(workspaceId);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId),null);
 });
