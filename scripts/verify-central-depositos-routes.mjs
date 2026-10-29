@@ -77,7 +77,13 @@ assert.match(metadata, /WarehouseProtectedLayout/);
 const nav = read('features/warehouse/navigation.ts');
 assert.match(nav, /href: '\/central-depositos'/);
 assert.doesNotMatch(nav, /\/adm-deposito/);
-assert.match(read('app/page.tsx'), /window\.location\.assign\('\/central-depositos'\)/);
+const rootEntry = read('app/page.tsx');
+const operationalEntry = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx') : rootEntry;
+assert.match(operationalEntry, /window\.location\.assign\(/, 'Atalho para Central perdido.');
+assert.match(operationalEntry, /\/central-depositos\/controle-de-itens/, 'Modo Essencial perdeu acesso à Central.');
+assert.match(operationalEntry, /: '\/central-depositos'/, 'Modo Normal perdeu acesso à Central.');
+assert.match(operationalEntry, /canAccessWarehouseModule\(workspaceContext\)/, 'Gate de módulo Warehouse removido.');
 assert.match(read('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/central-depositos"/);
 assert.match(read('features/warehouse/components/WarehouseLandingOperational.tsx'), /\/central-depositos\/meus-depositos/);
 assert.match(read('components/layout/AppSidebar.tsx'), /data-testid="nav-central-depositos"/);

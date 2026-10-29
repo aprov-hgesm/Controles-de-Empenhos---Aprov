@@ -19,6 +19,7 @@ import {
 
 import { AppShellSignature } from '../../../components/layout/chrome/AppShellSignature';
 import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
 const SECTION_ICONS: Record<WarehouseSectionId, LucideIcon> = {
   home: House,
@@ -48,6 +49,8 @@ export function WarehouseSidebar({
   onNavigate,
   onLogout,
 }: WarehouseSidebarProps) {
+  const { mode } = useVisualMode();
+
   return (
     <>
       {open && (
@@ -128,7 +131,7 @@ export function WarehouseSidebar({
 
             <div className="mx-4 my-3 h-px bg-white/[0.06]" aria-hidden="true" />
 
-            {WAREHOUSE_SECTIONS.map((item) => {
+            {WAREHOUSE_SECTIONS.filter((item) => mode === 'premium' || item.id !== 'home').map((item) => {
               const Icon = SECTION_ICONS[item.id];
               const active = item.id === activeSection;
               return (

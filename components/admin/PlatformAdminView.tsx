@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -29,15 +29,36 @@ import {
 import type { User } from 'firebase/auth';
 import { motion, useReducedMotion } from 'motion/react';
 
-import { EditSectorModal } from './EditSectorModal';
-import { AdminBackupPanel } from './AdminBackupPanel';
-import { AdminConsumptionHub } from './AdminConsumptionHub';
-import { AdminWorldHomePanel } from './AdminWorldHomePanel';
-import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
-import { AdminSecurityPanel } from './AdminSecurityPanel';
-import { AdminBillingPanel } from './AdminBillingPanel';
-import { AdminAccessRequestsPanel } from './AdminAccessRequestsPanel';
-import { AdminSessionsPanel } from './AdminSessionsPanel';
+const EditSectorModal = lazy(() =>
+  import('./EditSectorModal').then((module) => ({ default: module.EditSectorModal }))
+);
+const AdminBackupPanel = lazy(() =>
+  import('./AdminBackupPanel').then((module) => ({ default: module.AdminBackupPanel }))
+);
+const AdminConsumptionHub = lazy(() =>
+  import('./AdminConsumptionHub').then((module) => ({ default: module.AdminConsumptionHub }))
+);
+import { VisualModeControl } from '../visual-mode/VisualModeControl';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
+
+const AdminWorldHomePanel = lazy(() =>
+  import('./AdminWorldHomePanel').then((module) => ({ default: module.AdminWorldHomePanel }))
+);
+const AdminCreateSectorPanel = lazy(() =>
+  import('./AdminCreateSectorPanel').then((module) => ({ default: module.AdminCreateSectorPanel }))
+);
+const AdminSecurityPanel = lazy(() =>
+  import('./AdminSecurityPanel').then((module) => ({ default: module.AdminSecurityPanel }))
+);
+const AdminBillingPanel = lazy(() =>
+  import('./AdminBillingPanel').then((module) => ({ default: module.AdminBillingPanel }))
+);
+const AdminAccessRequestsPanel = lazy(() =>
+  import('./AdminAccessRequestsPanel').then((module) => ({ default: module.AdminAccessRequestsPanel }))
+);
+const AdminSessionsPanel = lazy(() =>
+  import('./AdminSessionsPanel').then((module) => ({ default: module.AdminSessionsPanel }))
+);
 import { ToastNotification } from '../layout/ToastNotification';
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
 import navigationBeamStyles from '../layout/OperationalNavigationBeam.module.css';
@@ -265,8 +286,13 @@ export function PlatformAdminView({
   onRefreshGlobalUsage,
   onLogout,
 }: PlatformAdminViewProps) {
-  const shouldReduceMotion = useReducedMotion();
-  const [activeTab, setActiveTab] = useState<AdminTabId>('inicio');
+  const reducedMotionPreference = useReducedMotion();
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
+  const shouldReduceMotion = Boolean(reducedMotionPreference) || mode === 'essencial';
+  const [requestedAdminTab, setRequestedAdminTab] = useState<AdminTabId>('inicio');
+  const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
+    ? 'overview'
+    : requestedAdminTab;
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -292,20 +318,29 @@ export function PlatformAdminView({
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get('tab') as AdminTabId | null;
     if (requestedTab && ADMIN_TABS.some((tab) => tab.id === requestedTab)) {
-      setActiveTab(requestedTab);
+      setRequestedAdminTab(requestedTab);
     }
   }, []);
 
-  const changeAdminTab = useCallback((tab: AdminTabId) => {
-    setActiveTab(tab);
+  useEffect(() => {
+    if (!visualModeReady || mode !== 'essencial' || requestedAdminTab !== 'inicio') return;
+    setRequestedAdminTab('overview');
     const url = new URL(window.location.href);
-    if (tab === 'inicio') {
+    url.searchParams.set('tab', 'overview');
+    window.history.replaceState(window.history.state, '', url);
+  }, [mode, requestedAdminTab, visualModeReady]);
+
+  const changeAdminTab = useCallback((tab: AdminTabId) => {
+    const nextTab = mode === 'essencial' && tab === 'inicio' ? 'overview' : tab;
+    setRequestedAdminTab(nextTab);
+    const url = new URL(window.location.href);
+    if (nextTab === 'inicio') {
       url.searchParams.delete('tab');
     } else {
-      url.searchParams.set('tab', tab);
+      url.searchParams.set('tab', nextTab);
     }
     window.history.replaceState(window.history.state, '', url);
-  }, []);
+  }, [mode]);
 
   const visibleWorkspaces = useMemo(
     () => workspaces.length > 0 ? workspaces : [createHgesmFoundingWorkspace('')],
@@ -424,6 +459,12 @@ export function PlatformAdminView({
   const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];
   const ActiveTabIcon = activeTabConfig.icon;
 
+  if (!visualModeReady) {
+    return <div role="status" className="grid min-h-screen place-items-center bg-[#edf3fb] text-slate-700">
+      Preparando Administração EMPROVEX...
+    </div>;
+  }
+
   return (
     <div className={'relative min-h-screen overflow-x-hidden bg-[#edf3fb] font-montserrat text-[#183456] selection:bg-blue-200 ' + adminVisualStyles.root} data-testid="admin-visual-shell">
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
@@ -460,6 +501,7 @@ export function PlatformAdminView({
           </div>
 
           <div className="flex items-center gap-2">
+            <VisualModeControl />
             <button
               type="button"
               onClick={returnToHgesm}
@@ -472,7 +514,7 @@ export function PlatformAdminView({
 
             <button
               type="button"
-              onClick={() => void onLogout()}
+              onClick={() => { clearVisualMode(); void onLogout(); }}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 text-xs font-bold text-slate-300 transition hover:border-white/[0.14] hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50"
             >
               <LogOut className="w-4 h-4" />
@@ -515,7 +557,7 @@ export function PlatformAdminView({
                 {ADMIN_TAB_GROUPS.map((group) => (
                   <div key={group.label} className="min-w-0 space-y-1">
                     <p className="emprovex-sidebar-nav__label px-3 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em]">{group.label}</p>
-                    {group.tabs.map((id) => {
+                    {group.tabs.filter((id) => mode === 'premium' || id !== 'inicio').map((id) => {
                       const tab = ADMIN_TABS.find((item) => item.id === id)!;
                       const Icon = tab.icon;
                       const selected = activeTab === tab.id;
@@ -565,7 +607,7 @@ export function PlatformAdminView({
                   </button>
                   <button
                     type="button"
-                    onClick={() => void onLogout()}
+                    onClick={() => { clearVisualMode(); void onLogout(); }}
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 text-[10px] font-extrabold text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
                   >
                     <LogOut className="h-4 w-4" />
@@ -651,7 +693,8 @@ export function PlatformAdminView({
           </section>
         )}
 
-        {activeTab === 'inicio' && (
+        {activeTab === 'inicio' && mode === 'premium' && (
+          <Suspense fallback={<div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">Abrindo visão administrativa...</div>}>
           <AdminWorldHomePanel
             accounts={accounts}
             sessions={sessions}
@@ -663,6 +706,7 @@ export function PlatformAdminView({
             globalUsageDataThrough={globalUsageDataThrough}
             loadingGlobalUsage={loadingGlobalUsage}
           />
+          </Suspense>
         )}
 
         {activeTab === 'overview' && (
@@ -867,6 +911,7 @@ export function PlatformAdminView({
           </section>
         )}
 
+        <Suspense fallback={<section role="status" className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-700">Carregando área administrativa...</section>}>
         {activeTab === 'novo-setor' && (
           <AdminCreateSectorPanel
             creating={creatingSector}
@@ -949,10 +994,12 @@ export function PlatformAdminView({
             globalUsageConfigured={globalUsageConfigured}
           />
         )}
+        </Suspense>
           </div>
         </div>
       </main>
 
+      {editingWorkspace && <Suspense fallback={<div role="status" className="sr-only">Carregando edição do setor...</div>}>
       <EditSectorModal
         workspace={editingWorkspace}
         saving={Boolean(editingWorkspace && updatingWorkspaceId === editingWorkspace.id)}
@@ -961,6 +1008,7 @@ export function PlatformAdminView({
         onSave={handleUpdateSector}
         onResetPassword={onResetSectorPassword}
       />
+      </Suspense>}
 
       {statusCandidate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-xl">

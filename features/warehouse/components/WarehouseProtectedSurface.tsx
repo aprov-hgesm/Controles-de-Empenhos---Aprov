@@ -22,6 +22,7 @@ import {
 } from '../../../lib/workspaceContext';
 import { WarehouseWorkspaceProvider } from './WarehouseModuleContext';
 import { WarehouseModuleShell } from './WarehouseModuleShell';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
 type GateState = 'checking' | 'allowed' | 'denied';
 
@@ -62,6 +63,7 @@ export function WarehouseAccessBoundary({
 }: {
   children: (workspaceContext: SectorWorkspaceContext) => ReactNode;
 }) {
+  const { clear: clearVisualMode } = useVisualMode();
   const [gateState, setGateState] = useState<GateState>('checking');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [workspaceContext, setWorkspaceContext] =
@@ -77,6 +79,7 @@ export function WarehouseAccessBoundary({
       setWorkspaceContext(null);
       clearResolvedWorkspaceContext();
       resetActiveProfileMode();
+      clearVisualMode();
       window.location.replace('/login');
     };
 
@@ -136,7 +139,7 @@ export function WarehouseAccessBoundary({
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [clearVisualMode]);
 
   const sessionIdentityKey = (
     currentUser
@@ -173,6 +176,7 @@ export function WarehouseAccessBoundary({
       );
       clearResolvedWorkspaceContext();
       resetActiveProfileMode();
+      clearVisualMode();
 
       setGateState('denied');
       setCurrentUser(null);
@@ -201,7 +205,7 @@ export function WarehouseAccessBoundary({
       active = false;
       sessionControl.stop();
     };
-  }, [sessionIdentityKey, currentUser, workspaceContext]);
+  }, [sessionIdentityKey, currentUser, workspaceContext, clearVisualMode]);
 
   if (gateState !== 'allowed' || !workspaceContext) {
     return (

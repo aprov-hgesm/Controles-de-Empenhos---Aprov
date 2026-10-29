@@ -1,0 +1,259 @@
+name: VISUAL-R2 Integrity Audit (non-destructive)
+# Auditoria pesada sob demanda; não aumenta custo de CI em cada PR comum.
+on:
+  pull_request:
+    paths:
+      - 'app/login/page.tsx'
+      - 'hooks/**'
+      - 'features/**'
+      - 'components/**'
+      - 'scripts/**'
+      - 'tests/e2e/**'
+      - '.github/workflows/visual-r2-integrity-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-r2-integrity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documents-and-reports:
+    name: "Documentos, NF, TR, Drive e Relatórios"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: "Verificações de documentos: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            verify:tr-workspace-documents \
+            verify:workspace-drive \
+            verify:workspace-drive-onboarding \
+            verify:invoice-mirror-document \
+            verify:reporting-foundation \
+            verify:reports-shell \
+            verify:report-empenho-selector \
+            verify:report-empenho-detail \
+            verify:supplier-reports \
+            verify:invoice-ns-lifecycle \
+            verify:empenho-pdf-direct-import \
+            verify:sped-nup-reporting \
+            verify:central-avisos \
+            test:reporting-period \
+            test:supplier-reporting \
+            test:sag-ns-contract \
+            test:sag-ns-reconciliation \
+            test:sag-ns-persistence \
+            test:invoice-identity \
+            test:cronograma-email \
+            test:ns-integrity \
+            test:ns-integrity-contract \
+            test:harden-a1-pdf; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=Regression contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT DOCUMENT FAILURES=${failed}"
+          test "${failed}" -eq 0
+
+  auth-and-integrity:
+    name: "Auth, tenant, assinatura, dados e proteção"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: TypeScript real
+        run: npm run typecheck
+      - name: "Verificações de segurança: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            verify:external-sector-login \
+            verify:hybrid-auth-model \
+            verify:firestore-provider-enforcement \
+            verify:sector-auth-provisioning \
+            verify:block-16-1-session-enforcement \
+            verify:saas-r1-security-enforcement \
+            verify:rc-rules-audit \
+            verify:backup-recovery \
+            test:operational-subscription-plan \
+            test:empenho-concurrency \
+            test:financial-identity-v2 \
+            test:recovery; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=Security contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT SECURITY FAILURES=${failed}"
+          test "${failed}" -eq 0
+
+  warehouse-and-ui:
+    name: "Warehouse, modos, 3D e navegação"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: "Verificar isolamento e sintaxe da prévia local"
+        run: node --test scripts/preview-local-safety.test.mjs
+      - name: "Paridade financeira e memória limitada do Painel"
+        run: node --test scripts/dashboard-rows-projection.test.mjs
+      - name: "Verificações de interface: executar todas, consolidar falhas"
+        shell: bash
+        run: |
+          failed=0
+          for task in \
+            test:warehouse-react-tab-navigation \
+            test:warehouse-isometric-camera \
+            test:warehouse-3d-stock \
+            test:warehouse-croqui-unified \
+            test:warehouse-croqui-collision \
+            test:warehouse-stock-report-ux \
+            test:adm-deposito-nf-stock \
+            test:adm-deposito-inventory \
+            test:adm-deposito-outbound-return \
+            test:mobile-outbound-unified \
+            verify:central-depositos-routes \
+            verify:performance-r3-central-shell \
+            test:pwa-installability; do
+            echo "::group::${task}"
+            if npm run "${task}"; then
+              echo "AUDIT-PASS ${task}"
+            else
+              echo "::error title=UI/3D contract failure::AUDIT-FAIL ${task}"
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "AUDIT UI FAILURES=${failed}"
+          test "${failed}" -eq 0
+
+  authenticated-emulator:
+    name: "Firebase Auth + Firestore — contas e tenants de teste"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: "Não usar credenciais ou project ID de produção"
+        run: |
+          test "$GOOGLE_CLOUD_PROJECT" = "demo-emprovex-security"
+          test ! -f .env.production.local
+          test ! -f service-account.json
+      - name: "Testar contas e tenants autenticamente no Auth/Firestore Emulator"
+        run: npm run test:security:multitenant
+      - name: "Testar aceites legais com identidades reais do Auth Emulator"
+        run: npm run test:saas-r1-legal-acceptance
+      - name: "Testar proteção Warehouse para setores externos"
+        run: npm run test:central-depositos-external-security
+      - name: "Testar regras Warehouse apenas no servidor"
+        run: npm run test:warehouse-server-only-rules
+
+  authenticated-browser-e2e:
+    name: "Browser E2E — login real no Firebase Emulator e tarefas operacionais"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: "Instalar runner Playwright sem alterar lockfile"
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: "Instalar Chromium isolado"
+        run: npx playwright install --with-deps chromium
+      - name: "Impedir uso de credenciais/ambientes reais"
+        run: |
+          test "$GOOGLE_CLOUD_PROJECT" = "demo-emprovex-security"
+          test ! -f .env.production.local
+          test ! -f service-account.json
+      - name: "E2E: login, dados financeiros, NF/NS, relatórios, UG e navegação"
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/visual-mode-auto-recovery.spec.mjs tests/e2e/operator-critical-flow.spec.mjs tests/e2e/essential-memory-baseline.spec.mjs"
+      - name: "Publicar amostras sintéticas de heap para comparação"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: essential-memory-synthetic-baseline
+          path: artifacts/memory/essential-baseline.json
+          if-no-files-found: warn
+          retention-days: 14
+
+
+  windows-preview-spawn:
+    # Diagnóstico da prévia local: NÃO faz parte da release Linux/Vercel.
+    # Conserva teste real no disparo manual; falhas anteriores permanecem
+    # visíveis no histórico (#40960414624). Nunca declarar Windows PASS sem execução.
+    if: github.event_name == 'workflow_dispatch'
+    name: "Windows Node 24 — preview e Warehouse Emulator real (diagnóstico manual)"
+    runs-on: windows-2025
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: "Instalar dependências sem executar scripts PowerShell"
+        run: npm.cmd ci
+        shell: pwsh
+      - name: "Verificar compatibilidade do launcher e proteções demo"
+        run: node --test scripts/preview-local-safety.test.mjs
+      - name: "Abrir Warehouse Firestore Emulator em 8081 no Node 24 Windows"
+        run: node scripts/warehouse-emulator-windows-smoke.mjs

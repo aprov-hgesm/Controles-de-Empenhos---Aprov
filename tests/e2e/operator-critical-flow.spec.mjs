@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { registerEmulatedBillingPortal } from './emulatedBillingPortal.mjs';
+import { registerEmulatedLegalAcceptance } from './emulatedLegalAcceptance.mjs';
 
 const PASSWORD = 'Emprovex-Teste!2026';
 const OPERATOR_A = 'sector-lifecycle@example.test';
@@ -22,6 +24,8 @@ async function acceptLegalIfRequired(page) {
 }
 
 async function loginSector(page, email) {
+  await registerEmulatedBillingPortal(page.context());
+  await registerEmulatedLegalAcceptance(page.context());
   await page.getByTestId('sector-login-email').fill(email);
   await page.getByTestId('sector-login-password').fill(PASSWORD);
   await page.getByTestId('sector-login-submit').click();
@@ -115,7 +119,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('login -> relatório -> NS automática por UG -> persistência após reload', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
     await openSampleReport(page);
 
@@ -149,7 +153,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('usuário externo autenticado vê a Central de Depósitos', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
 
     const warehouseEntry = page.getByTestId('nav-central-depositos');
@@ -158,7 +162,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('segundo workspace não enxerga a NS nem o fornecedor do primeiro', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_B);
     await openSampleReport(page);
 
@@ -168,7 +172,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('diagnóstico histórico -> reparo seguro -> persistência após reload', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
 
     await page.getByTestId('nav-relatorios').click();
@@ -216,7 +220,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('assistente SAG refatorado preserva progresso, fornecedor, prompt e UG', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
 
     await page.getByTestId('nav-relatorios').click();
@@ -238,7 +242,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByText(UG, { exact: true })).toBeVisible();
   });
   test('exclusão protegida remove empenho, NF e NS lock sem estado parcial', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
 
     await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
@@ -267,7 +271,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('perfil realtime acompanha a seção ativa sem manter coleções ociosas', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
     await expectRealtimeProfile(page, 1);
 
@@ -298,11 +302,12 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expectRealtimeProfile(page, 1);
 
     await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
-    await expectRealtimeProfile(page, 1);
+    // Painel: empenhos mais o resumo de avisos; a coleção de avisos não é assinada.
+    await expectRealtimeProfile(page, 2);
   });
 
   test('Início permanece responsivo em celular, tablet e landscape sem overflow horizontal', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await loginSector(page, OPERATOR_A);
 
     await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
@@ -349,20 +354,20 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     const pageD = await contextD.newPage();
 
     try {
-      await pageA1.goto('/');
+      await pageA1.goto('/login');
       await loginSector(pageA1, OPERATOR_A);
 
       // Mesma instância de navegador reutiliza browserInstanceId + sessionId e
       // continua representando uma única sessão lógica.
       const pageA2 = await contextA.newPage();
-      await pageA2.goto('/');
+      await pageA2.goto('/login');
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
 
       // Navegadores/contextos independentes deixam de disputar um teto fixo.
       for (const page of [pageB, pageC, pageD]) {
-        await page.goto('/');
+        await page.goto('/login');
         await loginSector(page, OPERATOR_A);
         await expect(
           page.getByText('Limite de acessos simultâneos atingido.', { exact: false })

@@ -6,7 +6,9 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx') : rootEntry;
 const login = read('components/auth/EmprovexLogin.tsx');
 const privacy = read('app/privacy/page.tsx');
 const terms = read('app/terms/page.tsx');

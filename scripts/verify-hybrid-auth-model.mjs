@@ -9,7 +9,10 @@ const findings = [];
 const identity = read('lib/platformIdentity.ts');
 const access = read('lib/platformAccess.ts');
 const operationalData = read('hooks/useOperationalData.ts');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
 const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
 const driveClient = read('lib/googleDriveWorkspace.ts');

@@ -112,16 +112,19 @@ for (const component of [
 }
 
 const sidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
-assert.match(sidebar, /from ['"]next\/link['"]/);
+assert.match(sidebar, /onNavigate\(item\.href\)/, 'A sidebar deve usar o estado local sem recarregar página.');
+assert.match(sidebar, /<button/, 'As abas locais continuam interativas.');
 assert.equal(
-  /window\.location\.(?:assign|replace)|window\.location\.href|<a\s+[^>]*href=/.test(sidebar),
+  /window\.location\.(?:assign|replace)|window\.location\.href|href=\{item\.href\}/.test(sidebar),
   false,
   'Sidebar da Central reintroduziu navegação com reload completo.'
 );
 
+assert.match(sidebar, /href="\/login"/, 'Retorno ao EMPROVEX deve seguir /login.');
+assert.match(sidebar, /href="\/operador-movel"/, 'Acesso externo ao operador móvel deve continuar disponível.');
 console.log('PERFORMANCE R3 CENTRAL SHELL: PASS');
 console.log('- layout compartilhado mantém gate + shell fora das páginas');
 console.log('- páginas principais entregam somente a superfície operacional ativa');
 console.log('- boundaries dynamic() da PERF-B permanecem protegidos');
-console.log('- navegação principal da sidebar continua em Next Link');
+console.log('- navegação local preservada sem recarregar página');
 console.log('- invalidação contínua de sessão/workspace permanece fail-closed');

@@ -12,6 +12,7 @@ import { AppShellSignature } from './chrome/AppShellSignature';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { calculateTrialDaysRemaining, isTrialExpired } from '../../lib/billing';
 import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
+import { VisualModeControl } from '../visual-mode/VisualModeControl';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -113,6 +114,7 @@ export function AppHeader({
         )}
 
         {resolvedDriveControl}
+        <VisualModeControl />
 
         {billingAccount?.status === 'trial' && (
           <div

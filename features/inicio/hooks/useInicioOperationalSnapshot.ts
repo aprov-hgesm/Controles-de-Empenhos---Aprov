@@ -104,7 +104,7 @@ export function useInicioOperationalSnapshot({
   useEffect(() => {
     if (
       !enabled
-      || activeTab !== 'inicio'
+      || (activeTab !== 'inicio' && activeTab !== 'painel')
       || !user
       || !isOperationalSectorContext(workspaceContext)
     ) {
