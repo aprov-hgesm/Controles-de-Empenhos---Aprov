@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import styles from './EmprovexBorderBeam.module.css';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 export type EmprovexBeamVariant = 'travel' | 'focus' | 'static';
 export type EmprovexBeamIntensity = 'low' | 'medium' | 'high';
@@ -66,12 +67,15 @@ export function EmprovexBorderBeam({
   style,
   testId,
 }: EmprovexBorderBeamProps) {
+  const { mode } = useVisualMode();
+  const effectiveVariant: EmprovexBeamVariant = mode === 'essencial' ? 'static' : variant;
+  const needsTracking = active && effectiveVariant === 'travel' && !reducedMotion;
   const rootRef = useRef<HTMLDivElement>(null);
   const [inViewport, setInViewport] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);
 
   useEffect(() => {
-    if (!pauseWhenOffscreen || !active || variant !== 'travel' || typeof IntersectionObserver === 'undefined') {
+    if (!pauseWhenOffscreen || !needsTracking || typeof IntersectionObserver === 'undefined') {
       return;
     }
 
@@ -82,17 +86,21 @@ export function EmprovexBorderBeam({
     });
     observer.observe(root);
     return () => observer.disconnect();
-  }, [active, pauseWhenOffscreen, variant]);
+  }, [needsTracking, pauseWhenOffscreen]);
 
   useEffect(() => {
+    if (!needsTracking) {
+      setPageVisible(true);
+      return;
+    }
     const syncVisibility = () => setPageVisible(document.visibilityState === 'visible');
     syncVisibility();
     document.addEventListener('visibilitychange', syncVisibility);
     return () => document.removeEventListener('visibilitychange', syncVisibility);
-  }, []);
+  }, [needsTracking]);
 
-  const visible = active && (variant !== 'travel' || !pauseWhenOffscreen || inViewport);
-  const playing = visible && pageVisible && variant === 'travel' && !reducedMotion;
+  const visible = active && (effectiveVariant !== 'travel' || !pauseWhenOffscreen || inViewport);
+  const playing = visible && pageVisible && needsTracking;
   const beamStyle: BeamStyle = {
     ...style,
     '--emprovex-beam-radius': `${clamp(borderRadius, 0, 64, 16)}px`,
@@ -107,7 +115,7 @@ export function EmprovexBorderBeam({
       style={beamStyle}
       data-emprovex-beam="true"
       data-beam-theme={theme}
-      data-beam-variant={variant}
+      data-beam-variant={effectiveVariant}
       data-beam-active={active ? 'true' : 'false'}
       data-beam-visible={visible ? 'true' : 'false'}
       data-beam-playing={playing ? 'true' : 'false'}
