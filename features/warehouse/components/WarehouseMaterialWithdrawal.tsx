@@ -42,6 +42,7 @@ import {
 } from '../../../lib/warehouse/locationRepository';
 import { warehouseLotExpiryState } from '../../../lib/warehouse/lot';
 import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOutboundPlan.mjs';
+import { replanDesktopWithdrawalCart } from '../../../lib/warehouse/desktopWithdrawalReplan.mjs';
 import {
   getWarehouseLot,
   listWarehouseLots,
@@ -152,6 +153,10 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
+    ['WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED', 'Não foi possível atualizar o saldo do material.'], 
+    ['WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE', 'Há estoque registrado, mas nenhuma quantidade apta para consumo nesta posição. Verifique validades.'],
+    ['WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED', 'A quantidade vinculada às validades excede o saldo físico. O estoque precisa de conciliação.'],
+    ['WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK', 'Os vínculos de validade excedem o saldo físico. O estoque precisa de conciliação.'],
     ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A quantidade vinculada à validade mudou antes da confirmação.'],
     ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART', 'O saldo sem vínculo de validade nesta posição não é suficiente para a quantidade solicitada.'],
     ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE', 'O saldo sem vínculo de validade nesta posição não é suficiente para a quantidade solicitada.'],
@@ -200,6 +205,13 @@ function positionOptionsFor(
       item.balance.materialId === material.id
       && item.balance.quantity > 0
       && item.balance.position.kind !== 'UNASSIGNED'
+      && state.depots.some(({ depot }) =>
+        depot.id === item.balance.position.depotId && depot.status === 'active')
+      && state.locations.some(({ location }) =>
+        location.id === item.balance.position.locationId && location.status === 'active')
+      && (item.balance.position.kind !== 'SUBPOSITION'
+        || state.locations.some(({ location }) =>
+          location.id === item.balance.position.subpositionId && location.status === 'active'))
     )
     .map((item) => ({
       key: warehouseStockPositionKey(item.balance.position),
@@ -872,6 +884,53 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       return;
     }
     const cartSnapshot = cart.map((line) => ({ ...line }));
+    // Apenas retiradas NOVAS podem ser recalculadas. Uma retirada em retry
+    // mantém payload/identidade originais para evitar qualquer baixa duplicada.
+    if (!retryRequired) {
+      setWorking(true);
+      try {
+        const materialIds = [...new Set(cartSnapshot.map(line => line.materialId))];
+        const refreshed = await Promise.all(materialIds.map(async materialId => {
+          const [balance, locationBalances, lots] = await Promise.all([
+            getWarehouseBalance(workspaceId, materialId),
+            listWarehouseLocationBalances(workspaceId, 500, materialId),
+            listWarehouseLots(workspaceId, 500, materialId),
+          ]);
+          if (!balance) throw new Error('WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED');
+          return {materialId, balance, locationBalances, lots};
+        }));
+        const snapshots = Object.fromEntries(refreshed.map(item => [
+          item.materialId, {
+            globalQuantity: item.balance.quantity,
+            positions: item.locationBalances.map(row => ({
+              position: row.balance.position, quantity: row.balance.quantity,
+            })),
+            lots: item.lots.map(row => row.lot),
+          },
+        ]));
+        const next = replanDesktopWithdrawalCart(cartSnapshot, snapshots,
+          createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
+        if (next.changed) {
+          setCart(next.lines as CartLine[]);
+          setWithdrawalId(createWarehouseWithdrawalId());
+          setReviewing(false);
+          setMessageKind('info');
+          setMessage('O estoque mudou desde a leitura. Carrinho recalculado com os saldos e validades atuais; confira e revise novamente. Nenhuma baixa foi realizada.');
+          return;
+        }
+        // Atualiza somente os valores exibidos; a identidade da retirada
+        // permanece a mesma quando material, linha e quantidade não mudaram.
+        setCart(next.lines as CartLine[]);
+      } catch (error) {
+        setReviewing(false);
+        setMessageKind('error');
+        setMessage(errorMessage(error)
+          + ' O estoque mudou ou não pôde ser conciliado. Leia novamente o material ou ajuste o carrinho; nenhuma baixa foi realizada.');
+        return;
+      } finally {
+        setWorking(false);
+      }
+    }
     const destinationName =
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
       || 'Destino não identificado';
