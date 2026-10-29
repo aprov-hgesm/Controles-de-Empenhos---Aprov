@@ -72,9 +72,9 @@ html[data-visual-mode='essencial'] .emprovex-header-logo-core__halo {
 
 /* Evita animações repetidas em cards e fundos nas áreas de trabalho comuns.
  * Este escopo NÃO existe na Central de Depósitos 3D. */
-html[data-visual-mode='essencial'] main[data-visual-surface='operational'] > div:not(.fixed),
-html[data-visual-mode='essencial'] main[data-visual-surface='operational'] .grid > [class*='rounded-2xl'],
-html[data-visual-mode='essencial'] main[data-visual-surface='operational'] button[class*='bg-[#00288e]']:not(:hover):not(:active) {
+html[data-visual-mode='essencial'] main[data-testid='operational-active-content'] > div:not(.fixed),
+html[data-visual-mode='essencial'] main[data-testid='operational-active-content'] .grid > [class*='rounded-2xl'],
+html[data-visual-mode='essencial'] main[data-testid='operational-active-content'] button[class*='bg-[#00288e]']:not(:hover):not(:active) {
   animation: none !important;
   will-change: auto !important;
 }
