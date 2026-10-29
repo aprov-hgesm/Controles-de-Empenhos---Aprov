@@ -69,7 +69,7 @@ test('R16: a vitrine substitui a rota raiz antes dos arquivos sem quebrar login 
   assert.doesNotMatch(config, /return\s*\[\s*\{\s*source:\s*'\/'/);
   assert.match(loginPage, /<EmprovexLogin/);
   assert.match(institucional, /public\/institucional\/content\.html/);
-  assert.match(adminPanel, /router\.replace\('\/login'\)/);
+assert.match(adminPanel, /window\.location\.replace\('\/login'\)/, 'Retorno administrativo deve ir ao login, não à vitrine.');
 });
 
 
@@ -87,7 +87,7 @@ test('R16.1: retornos de admin, deposito, mobile e assinaturas abrem plataforma,
     assert.doesNotMatch(content, /href=["']\/["']|window\.location\.(?:assign|replace)\(["']\/["']\)/, file);
     assert.match(content, /\/login/, file);
   }
-  assert.match(source('components/admin/PlatformAdminView.tsx'), /router\.replace\('\/login'\)/);
+  assert.match(source('components/admin/PlatformAdminView.tsx'), /window\.location\.replace\('\/login'\)/);
   const mobileHome = source('features/warehouse/mobile/WarehouseMobileHome.tsx');
   assert.match(mobileHome, /data-testid="operator-mobile-back-emprovex"/);
   assert.match(mobileHome, /href="\/login"/);
