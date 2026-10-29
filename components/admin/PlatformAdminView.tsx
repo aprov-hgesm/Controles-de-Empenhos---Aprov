@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -32,7 +32,12 @@ import { motion, useReducedMotion } from 'motion/react';
 import { EditSectorModal } from './EditSectorModal';
 import { AdminBackupPanel } from './AdminBackupPanel';
 import { AdminConsumptionHub } from './AdminConsumptionHub';
-import { AdminWorldHomePanel } from './AdminWorldHomePanel';
+import { VisualModeControl } from '../visual-mode/VisualModeControl';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
+
+const AdminWorldHomePanel = lazy(() =>
+  import('./AdminWorldHomePanel').then((module) => ({ default: module.AdminWorldHomePanel }))
+);
 import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
 import { AdminSecurityPanel } from './AdminSecurityPanel';
 import { AdminBillingPanel } from './AdminBillingPanel';
@@ -265,8 +270,13 @@ export function PlatformAdminView({
   onRefreshGlobalUsage,
   onLogout,
 }: PlatformAdminViewProps) {
-  const shouldReduceMotion = useReducedMotion();
-  const [activeTab, setActiveTab] = useState<AdminTabId>('inicio');
+  const reducedMotionPreference = useReducedMotion();
+  const { mode, hydrated: visualModeReady } = useVisualMode();
+  const shouldReduceMotion = Boolean(reducedMotionPreference) || mode === 'essencial';
+  const [requestedAdminTab, setRequestedAdminTab] = useState<AdminTabId>('inicio');
+  const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
+    ? 'overview'
+    : requestedAdminTab;
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -292,20 +302,29 @@ export function PlatformAdminView({
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get('tab') as AdminTabId | null;
     if (requestedTab && ADMIN_TABS.some((tab) => tab.id === requestedTab)) {
-      setActiveTab(requestedTab);
+      setRequestedAdminTab(requestedTab);
     }
   }, []);
 
-  const changeAdminTab = useCallback((tab: AdminTabId) => {
-    setActiveTab(tab);
+  useEffect(() => {
+    if (!visualModeReady || mode !== 'essencial' || requestedAdminTab !== 'inicio') return;
+    setRequestedAdminTab('overview');
     const url = new URL(window.location.href);
-    if (tab === 'inicio') {
+    url.searchParams.set('tab', 'overview');
+    window.history.replaceState(window.history.state, '', url);
+  }, [mode, requestedAdminTab, visualModeReady]);
+
+  const changeAdminTab = useCallback((tab: AdminTabId) => {
+    const nextTab = mode === 'essencial' && tab === 'inicio' ? 'overview' : tab;
+    setRequestedAdminTab(nextTab);
+    const url = new URL(window.location.href);
+    if (nextTab === 'inicio') {
       url.searchParams.delete('tab');
     } else {
-      url.searchParams.set('tab', tab);
+      url.searchParams.set('tab', nextTab);
     }
     window.history.replaceState(window.history.state, '', url);
-  }, []);
+  }, [mode]);
 
   const visibleWorkspaces = useMemo(
     () => workspaces.length > 0 ? workspaces : [createHgesmFoundingWorkspace('')],
@@ -424,6 +443,12 @@ export function PlatformAdminView({
   const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];
   const ActiveTabIcon = activeTabConfig.icon;
 
+  if (!visualModeReady) {
+    return <div role="status" className="grid min-h-screen place-items-center bg-[#edf3fb] text-slate-700">
+      Preparando Administração EMPROVEX...
+    </div>;
+  }
+
   return (
     <div className={'relative min-h-screen overflow-x-hidden bg-[#edf3fb] font-montserrat text-[#183456] selection:bg-blue-200 ' + adminVisualStyles.root} data-testid="admin-visual-shell">
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
@@ -460,6 +485,7 @@ export function PlatformAdminView({
           </div>
 
           <div className="flex items-center gap-2">
+            <VisualModeControl />
             <button
               type="button"
               onClick={returnToHgesm}
@@ -515,7 +541,7 @@ export function PlatformAdminView({
                 {ADMIN_TAB_GROUPS.map((group) => (
                   <div key={group.label} className="min-w-0 space-y-1">
                     <p className="emprovex-sidebar-nav__label px-3 pb-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em]">{group.label}</p>
-                    {group.tabs.map((id) => {
+                    {group.tabs.filter((id) => mode === 'premium' || id !== 'inicio').map((id) => {
                       const tab = ADMIN_TABS.find((item) => item.id === id)!;
                       const Icon = tab.icon;
                       const selected = activeTab === tab.id;
@@ -651,7 +677,8 @@ export function PlatformAdminView({
           </section>
         )}
 
-        {activeTab === 'inicio' && (
+        {activeTab === 'inicio' && mode === 'premium' && (
+          <Suspense fallback={<div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">Abrindo visão administrativa...</div>}>
           <AdminWorldHomePanel
             accounts={accounts}
             sessions={sessions}
@@ -663,6 +690,7 @@ export function PlatformAdminView({
             globalUsageDataThrough={globalUsageDataThrough}
             loadingGlobalUsage={loadingGlobalUsage}
           />
+          </Suspense>
         )}
 
         {activeTab === 'overview' && (
