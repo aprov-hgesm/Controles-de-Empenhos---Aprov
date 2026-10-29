@@ -888,7 +888,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         lots: item.lots.map(row => row.lot),
       },
     ]));
-    const next = replanDesktopWithdrawalCart(cartSnapshot, snapshots,
+    const next = replanDesktopWithdrawalCart(snapshot, snapshots,
       createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
     return next;
   };
