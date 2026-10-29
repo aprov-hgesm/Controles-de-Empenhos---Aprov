@@ -32,11 +32,17 @@ const env = {
 console.log('EMPROVEX PREVIEW: ambiente 100% de teste — Firebase Auth/Firestore Emulator.');
 console.log('Credencial fictícia: sector-lifecycle@example.test / Emprovex-Teste!2026');
 console.log('A janela do Chromium será aberta automaticamente. Feche-a para encerrar.');
+const previewCommand = 'node scripts/e2e-browser-emulator.mjs --preview';
+// Em cmd.exe, firebase emulators:exec exige que o comando filho seja um
+// único argumento; aspas explícitas evitam perder o flag --preview.
+const execArgument = process.platform === 'win32'
+  ? '"' + previewCommand + '"'
+  : previewCommand;
 const child = spawn(npx, [
   '--yes', 'firebase-tools', 'emulators:exec',
   '--config', 'firebase.security-test.json',
   '--project', projectId, '--only', 'auth,firestore',
-  'node scripts/e2e-browser-emulator.mjs --preview',
+  execArgument,
 ], { stdio: 'inherit', env, shell: process.platform === 'win32' });
 child.once('error', (error) => {
   console.error('Falha ao iniciar os emuladores:', error.message);
