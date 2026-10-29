@@ -189,7 +189,7 @@ export function useOperationalData(
   const activeRealtimeCollectionCount =
     operationalCollectionCount
     + (
-      activeTab === 'inicio'
+      (activeTab === 'inicio' || activeTab === 'painel')
       && operationalAccessEnabled
       && user
       && isOperationalSectorContext(workspaceContext)
