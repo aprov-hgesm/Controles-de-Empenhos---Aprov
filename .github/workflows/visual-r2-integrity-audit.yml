@@ -217,3 +217,28 @@ jobs:
           test ! -f service-account.json
       - name: "E2E: login, dados financeiros, NF/NS, relatórios, UG e navegação"
         run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/visual-mode-auto-recovery.spec.mjs tests/e2e/operator-critical-flow.spec.mjs"
+
+  windows-preview-spawn:
+    name: "Windows Node 24 — preview e Warehouse Emulator real"
+    runs-on: windows-2025
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: "Instalar dependências sem executar scripts PowerShell"
+        run: npm.cmd ci
+        shell: pwsh
+      - name: "Verificar compatibilidade do launcher e proteções demo"
+        run: node --test scripts/preview-local-safety.test.mjs
+      - name: "Abrir Warehouse Firestore Emulator em 8081 no Node 24 Windows"
+        run: node scripts/warehouse-emulator-windows-smoke.mjs
