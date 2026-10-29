@@ -380,3 +380,24 @@ A segunda auditoria estática dirigida identificou trabalho de processamento ain
 **Estado da auditoria:** arquivo criado e vinculado na branch de desenvolvimento. Não foram executados build, CI, benchmark ou navegador real; **não confundir inspeção estática com certificado de desempenho/funcionalidade**. Nenhuma mudança adicional de código nesta auditoria e nenhum deploy/merge.
 
 **Próximo marco recomendado:** iniciar implementação R2-A em branch atual, com verificações curtas e sem burocracia; testar cenários abrangentes no fechamento, observando os guardas críticos financeiros e de segurança.
+
+
+---
+
+## BLOQUEIO PREVENTIVO DE SEGURANÇA — AUDITORIA AS-R1 (29/10/2026)
+
+**Documento:** [MODO_ESSENCIAL_AUDITORIA_SEGURANCA_R1_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_SEGURANCA_R1_2026-10-29.md).
+
+**Decisão em 29/10:** **GO somente para corrigir compatibilidade e gates em branch de desenvolvimento; NO-GO de R2-A/R2-B/R2-C, merge, deploy ou publicação até resolver AS-01 + AS-02.** A inspeção foi estática (14 contratos verificados, 9 salvaguardas presentes e 5 lacunas de integração), sem emulador, build ou browser autenticado. Não foi verificada corrupção persistente nem exploração, mas não existe certificação de segurança.
+
+**P0 de disponibilidade:** `app/page.tsx` omite o terceiro parâmetro obrigatório de `useOperationalData`, que tem `billingAccessGranted=false` como padrão; `app/login/page.tsx` implementa corretamente gate de assinatura. Divergência preexistente na `main` — falha de disponibilidade potencial e **não** prova de bypass. Resolver com uma única entrada/gate canônico, nunca com `true` fixo.
+
+**P0 de experiência visual:** `app/login/page.tsx` não usa `useVisualMode` no `activeTab` e continua montando Início apesar da preferência Essencial; o menu compartilhado já o oculta. Unificar as duas rotas sem perder `/login?tab=cronogramas` ou cobrança.
+
+**P1 de integridade do usuário:** `setNfQuantities` zera o draft em `useEffect` dependente de `empenhos`, inclusive possíveis snapshots. Proteger dados não salvos antes de refatorar hooks, abas ou processamento financeiro.
+
+**P1/P2 adicionais:** fonte dupla de estado URL/aba Warehouse, sinalização de dados stale quando listener falha, consistência de entitlement durante a sessão, limpeza de modo no logout em todas as rotas, ausência de mutações por troca de aparência, proteção absoluta da Central 3D.
+
+**Contrato inegociável:** nenhum modo concede direitos, altera assinatura, renova lease, grava Firestore, desliga validação, altera valores financeiros, elimina funcionalidades ou recria a cena 3D. Segurança e isolamento devem permanecer iguais, e alteração visual deve preservar drafts em curso. `firestore.rules` e backend nunca serão relaxados para ganhar desempenho.
+
+**Próxima execução:** correções AS-01 + AS-02 primeiro, depois proteção AS-03; só então retomar R2-A e demais fases, com verificações curtas e auditoria completa antes da publicação.
