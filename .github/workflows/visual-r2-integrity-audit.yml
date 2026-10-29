@@ -1,14 +1,6 @@
 name: VISUAL-R2 Integrity Audit (non-destructive)
+# Auditoria pesada sob demanda; não aumenta custo de CI em cada PR comum.
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/visual-r2-integrity-audit.yml'
-      - 'app/login/page.tsx'
-      - 'app/page.tsx'
-      - 'components/**'
-      - 'features/**'
-      - 'hooks/**'
-      - 'scripts/visual-r2-*.mjs'
   workflow_dispatch:
 
 permissions:
