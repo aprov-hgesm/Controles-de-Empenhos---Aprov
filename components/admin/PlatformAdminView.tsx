@@ -29,20 +29,36 @@ import {
 import type { User } from 'firebase/auth';
 import { motion, useReducedMotion } from 'motion/react';
 
-import { EditSectorModal } from './EditSectorModal';
-import { AdminBackupPanel } from './AdminBackupPanel';
-import { AdminConsumptionHub } from './AdminConsumptionHub';
+const EditSectorModal = lazy(() =>
+  import('./EditSectorModal').then((module) => ({ default: module.EditSectorModal }))
+);
+const AdminBackupPanel = lazy(() =>
+  import('./AdminBackupPanel').then((module) => ({ default: module.AdminBackupPanel }))
+);
+const AdminConsumptionHub = lazy(() =>
+  import('./AdminConsumptionHub').then((module) => ({ default: module.AdminConsumptionHub }))
+);
 import { VisualModeControl } from '../visual-mode/VisualModeControl';
 import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 const AdminWorldHomePanel = lazy(() =>
   import('./AdminWorldHomePanel').then((module) => ({ default: module.AdminWorldHomePanel }))
 );
-import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
-import { AdminSecurityPanel } from './AdminSecurityPanel';
-import { AdminBillingPanel } from './AdminBillingPanel';
-import { AdminAccessRequestsPanel } from './AdminAccessRequestsPanel';
-import { AdminSessionsPanel } from './AdminSessionsPanel';
+const AdminCreateSectorPanel = lazy(() =>
+  import('./AdminCreateSectorPanel').then((module) => ({ default: module.AdminCreateSectorPanel }))
+);
+const AdminSecurityPanel = lazy(() =>
+  import('./AdminSecurityPanel').then((module) => ({ default: module.AdminSecurityPanel }))
+);
+const AdminBillingPanel = lazy(() =>
+  import('./AdminBillingPanel').then((module) => ({ default: module.AdminBillingPanel }))
+);
+const AdminAccessRequestsPanel = lazy(() =>
+  import('./AdminAccessRequestsPanel').then((module) => ({ default: module.AdminAccessRequestsPanel }))
+);
+const AdminSessionsPanel = lazy(() =>
+  import('./AdminSessionsPanel').then((module) => ({ default: module.AdminSessionsPanel }))
+);
 import { ToastNotification } from '../layout/ToastNotification';
 import { AppShellSignature } from '../layout/chrome/AppShellSignature';
 import navigationBeamStyles from '../layout/OperationalNavigationBeam.module.css';
@@ -895,6 +911,7 @@ export function PlatformAdminView({
           </section>
         )}
 
+        <Suspense fallback={<section role="status" className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-700">Carregando área administrativa...</section>}>
         {activeTab === 'novo-setor' && (
           <AdminCreateSectorPanel
             creating={creatingSector}
@@ -977,10 +994,12 @@ export function PlatformAdminView({
             globalUsageConfigured={globalUsageConfigured}
           />
         )}
+        </Suspense>
           </div>
         </div>
       </main>
 
+      {editingWorkspace && <Suspense fallback={<div role="status" className="sr-only">Carregando edição do setor...</div>}>
       <EditSectorModal
         workspace={editingWorkspace}
         saving={Boolean(editingWorkspace && updatingWorkspaceId === editingWorkspace.id)}
@@ -989,6 +1008,7 @@ export function PlatformAdminView({
         onSave={handleUpdateSector}
         onResetPassword={onResetSectorPassword}
       />
+      </Suspense>}
 
       {statusCandidate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-xl">
