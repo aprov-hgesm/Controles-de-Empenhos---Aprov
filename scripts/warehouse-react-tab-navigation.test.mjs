@@ -16,7 +16,8 @@ const routes = read('features/warehouse/navigation.ts');
 
 assert.match(shell, /useState<WarehouseSectionId>/, 'As abas devem ter estado local.');
 assert.match(shell, /setActiveSectionId\(target\.id\)/, 'Navegação precisa trocar estado sem aguardar fetch.');
-assert.match(shell, /hasLocalTabNavigation \?/, 'Render inicial direto deve manter a página original até ocorrer navegação local.');
+assert.match(shell, /renderLocalSection = isPrimaryRoute &&/, 'Apenas rotas principais são interceptadas pelo shell.');
+assert.match(shell, /hasLocalTabNavigation \|\| activeSection\.id !== routeSection\.id/, 'Navegação local e redirecionamento Essencial preservam a seção ativa.');
 assert.match(shell, /setHasLocalTabNavigation\(true\)/, 'Troca de abas ativa a superfície local persistente.');
 assert.match(shell, /window\.history\.pushState\(/, 'URLs precisam acompanhar o estado local.');
 assert.match(shell, /addEventListener\('popstate'/, 'Voltar/avançar deve restaurar aba.');
