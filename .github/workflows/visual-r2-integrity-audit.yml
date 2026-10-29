@@ -1,6 +1,14 @@
 name: VISUAL-R2 Integrity Audit (non-destructive)
 # Auditoria pesada sob demanda; não aumenta custo de CI em cada PR comum.
 on:
+  pull_request:
+    paths:
+      - 'app/login/page.tsx'
+      - 'hooks/**'
+      - 'features/**'
+      - 'components/**'
+      - 'scripts/**'
+      - '.github/workflows/visual-r2-integrity-audit.yml'
   workflow_dispatch:
 
 permissions:
@@ -144,3 +152,35 @@ jobs:
           done
           echo "AUDIT UI FAILURES=${failed}"
           test "${failed}" -eq 0
+
+  authenticated-emulator:
+    name: "Firebase Auth + Firestore — contas e tenants de teste"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: "Não usar credenciais ou project ID de produção"
+        run: |
+          test "$GOOGLE_CLOUD_PROJECT" = "demo-emprovex-security"
+          test ! -f .env.production.local
+          test ! -f service-account.json
+      - name: "Testar contas e tenants autenticamente no Auth/Firestore Emulator"
+        run: npm run test:security:multitenant
+      - name: "Testar aceites legais com identidades reais do Auth Emulator"
+        run: npm run test:saas-r1-legal-acceptance
+      - name: "Testar proteção Warehouse para setores externos"
+        run: npm run test:central-depositos-external-security
+      - name: "Testar regras Warehouse apenas no servidor"
+        run: npm run test:warehouse-server-only-rules
