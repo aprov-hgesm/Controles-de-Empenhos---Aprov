@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
 import type {
@@ -65,6 +65,13 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     empenhoId: string;
     document: EmpenhoPdfDocument;
   } | null>(null);
+
+  // Descartar revisão também libera o PDF local da memória da sessão.
+  useEffect(() => {
+    if (reviewEmpenho) return;
+    pendingImportedPdfRef.current = null;
+    pendingDriveUploadRef.current = null;
+  }, [reviewEmpenho]);
 
   const handleEmpenhoDocumentUploaded = async (
     empenhoId: string,
