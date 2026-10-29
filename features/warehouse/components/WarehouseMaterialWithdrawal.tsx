@@ -201,18 +201,18 @@ function positionOptionsFor(
 ): PositionOption[] {
   if (!balance || balance.quantity <= 0) return [];
   return state.locationBalances
-    .filter((item) =>
-      item.balance.materialId === material.id
-      && item.balance.quantity > 0
-      && item.balance.position.kind !== 'UNASSIGNED'
-      && state.depots.some(({ depot }) =>
-        depot.id === item.balance.position.depotId && depot.status === 'active')
-      && state.locations.some(({ location }) =>
-        location.id === item.balance.position.locationId && location.status === 'active')
-      && (item.balance.position.kind !== 'SUBPOSITION'
-        || state.locations.some(({ location }) =>
-          location.id === item.balance.position.subpositionId && location.status === 'active'))
-    )
+    .filter((item) => {
+      const position = item.balance.position;
+      if (item.balance.materialId !== material.id
+        || item.balance.quantity <= 0 || position.kind === 'UNASSIGNED') return false;
+      return state.depots.some(({ depot }) =>
+        depot.id === position.depotId && depot.status === 'active')
+        && state.locations.some(({ location }) =>
+          location.id === position.locationId && location.status === 'active')
+        && (position.kind !== 'SUBPOSITION'
+          || state.locations.some(({ location }) =>
+            location.id === position.subpositionId && location.status === 'active'));
+    })
     .map((item) => ({
       key: warehouseStockPositionKey(item.balance.position),
       position: item.balance.position,
