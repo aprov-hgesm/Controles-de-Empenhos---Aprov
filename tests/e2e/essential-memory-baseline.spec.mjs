@@ -26,7 +26,11 @@ async function signInWithFakeWorkspace(page) {
 }
 
 async function visitTab(page, tab) {
-  await page.getByTestId('nav-' + tab).click();
+  const labels = { painel: 'Painel', empenhos: 'Empenhos', nova_nf: 'Notas Fiscais' };
+  const name = labels[tab];
+  if (!name) throw new Error('MEMORY_PROFILE_TAB_NOT_SUPPORTED: ' + tab);
+  await page.getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('button', { name, exact: true }).click();
   await expect(page.locator('[data-operational-tab]')).toHaveAttribute('data-operational-tab', tab);
   await expect(page.getByTestId('operational-section-loading')).toHaveCount(0, { timeout: 20_000 });
 }
