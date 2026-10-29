@@ -48,6 +48,9 @@ export default function Home() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [billingAccessState, setBillingAccessState] = useState<'checking' | 'allowed'>('checking');
+  // A decisão anterior de assinatura nunca autoriza outra identidade/UG
+  // nem durante o render anterior à nova verificação assíncrona.
+  const [billingAccessIdentity, setBillingAccessIdentity] = useState<string | null>(null);
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -105,28 +108,41 @@ export default function Home() {
     formatDateTime, formatDateOnly
   } = operationalData;
 
+  const currentBillingIdentity = user && !loadingAuth
+    ? user.uid + ':' + (workspaceContext.status === 'sector'
+        ? workspaceContext.workspaceId + ':' + (workspaceContext.ug ?? '')
+        : workspaceContext.status)
+    : null;
+  const billingIdentityAllowed = billingAccessState === 'allowed'
+    && currentBillingIdentity !== null
+    && billingAccessIdentity === currentBillingIdentity;
+
   useEffect(() => {
     let active = true;
     if (!user || loadingAuth) {
+      setBillingAccessIdentity(null);
       setBillingAccessState('checking');
       return () => { active = false; };
     }
     if (workspaceContext.status !== 'sector') {
+      setBillingAccessIdentity(currentBillingIdentity);
       setBillingAccessState('allowed');
       return () => { active = false; };
     }
+    setBillingAccessIdentity(null);
     setBillingAccessState('checking');
     void checkSectorBillingAccess(user, workspaceContext)
       .then((decision) => {
         if (!active) return;
         if (!decision.allowed) { showBillingRequired(); return; }
+        setBillingAccessIdentity(currentBillingIdentity);
         setBillingAccessState('allowed');
       })
       .catch(() => {
         if (active) showBillingRequired();
       });
     return () => { active = false; };
-  }, [user, loadingAuth, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
+  }, [user, loadingAuth, currentBillingIdentity, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
@@ -284,7 +300,7 @@ export default function Home() {
   }
 
   // No operational surface may render before a server billing decision.
-  if (billingAccessState !== 'allowed') {
+  if (!billingIdentityAllowed) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
