@@ -172,3 +172,19 @@ test('GOV-SIMP: divergencia, vencimento e carrinho repetido falham sem nova baix
     [mat]:{globalQuantity:5,positions:[{position,quantity:5}],lots:[]},
   },id),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
 });
+
+test('GOV-SIMP: desktop valida disponibilidade antes do commit e preserva documentos',()=>{
+  const desktop=read('features/warehouse/components/WarehouseMaterialWithdrawal.tsx');
+  assert.match(desktop,/if \(!retryRequired\) \{[\s\S]*?await reconcileFromCurrentStock\(cartSnapshot\)/);
+  assert.match(desktop,/if \(next.changed\) \{[\s\S]*?setCart\(next.lines as CartLine\[\]\);[\s\S]*?setWithdrawalId\(createWarehouseWithdrawalId\(\)\)/);
+  assert.match(desktop,/const safeToRestart = raw.endsWith\('_SAFE_TO_RESTART'\)/);
+  assert.match(desktop,/Atualizar carrinho sem baixa/);
+  assert.match(desktop,/resolveOutboundDocumentLines\(/);
+  assert.match(desktop,/downloadWarehouseOutboundDocuments\(finalizedInput\)/);
+  assert.match(desktop,/depot.status === 'active'/);
+  assert.match(desktop,/location.status === 'active'/);
+  const atomic=read('lib/server/warehouseWithdrawalWrite.ts');
+  assert.match(atomic,/!previous && error instanceof WarehouseStoreError/);
+  assert.match(atomic,/return fail\(error.code\+'_SAFE_TO_RESTART'\)/);
+  assert.doesNotMatch(atomic,/WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED_SAFE_TO_RESTART/);
+});
