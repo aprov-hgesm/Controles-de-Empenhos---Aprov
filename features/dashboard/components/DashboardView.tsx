@@ -68,6 +68,7 @@ export function DashboardView({
     let allReceived = 0;
     let rpnpCommitted = 0;
     let rpnpReceived = 0;
+    let rpnpCount = 0;
     let activeCount = 0;
     for (const emp of empenhos) {
       const committed = emp.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
@@ -79,6 +80,7 @@ export function DashboardView({
       if (emp.status === 'Ativo') activeCount++;
       const rpnp = isRpnpEmpenho(emp);
       if (rpnp) {
+        rpnpCount++;
         rpnpCommitted += committed;
         rpnpReceived += received;
       }
@@ -94,7 +96,7 @@ export function DashboardView({
       entry.unspent += balance;
       if (emp.status === 'Ativo') entry.active++;
     }
-    return { amounts, bySegment, allCommitted, allReceived, rpnpCommitted, rpnpReceived, activeCount };
+    return { amounts, bySegment, allCommitted, allReceived, rpnpCommitted, rpnpReceived, rpnpCount, activeCount };
   }, [empenhos]);
 
   return (() => {
@@ -367,7 +369,7 @@ export function DashboardView({
                         R$ {totalRpnpSaldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-amber-800/70 font-medium">
-                        {rpnpEmpenhos.length} {rpnpEmpenhos.length === 1 ? 'empenho com prioridade de liquidação' : 'empenhos com prioridade de liquidação'}
+                        {aggregates.rpnpCount} {aggregates.rpnpCount === 1 ? 'empenho com prioridade de liquidação' : 'empenhos com prioridade de liquidação'}
                       </p>
                     </div>
                     <div className="mt-2 pt-2 border-t border-amber-200/70 text-xs text-amber-800 font-semibold flex items-center gap-1">
