@@ -69,7 +69,15 @@ test('sidebar navigation follows operational workflow, preserving the ten native
 });
 
 test('external sectors regain warehouse shortcut without bypassing authorization', () => {
-  const page = read('app/page.tsx');
+  const root = read('app/page.tsx');
+  // A raiz institucional reexporta /login, que é o shell operacional real.
+  const page = root.includes("export { default } from './login/page'")
+    ? read('app/login/page.tsx')
+    : root;
+  if (root.includes("export { default } from './login/page'")) {
+    assert.match(page, /checkSectorBillingAccess/);
+    assert.match(page, /billingIdentityAllowed/);
+  }
   const access = read('lib/platformModuleAccess.ts');
   const boundary = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
   assert.match(page, /warehouseModuleEnabled=\{canAccessWarehouseModule\(workspaceContext\)\}/);
