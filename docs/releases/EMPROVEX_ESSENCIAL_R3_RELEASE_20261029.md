@@ -1,5 +1,29 @@
 # EMPROVEX — Release Normal/Essencial R3 — preparação da main e Vercel
 
+## FECHAMENTO DE PUBLICAÇÃO — 29/10/2026 (BRT)
+
+> **PUBLICADO / CONFIRMADO:** esta seção prevalece sobre o checklist histórico pré-release abaixo, que permanece para auditoria. **NÃO executar novamente clone, archive, deploy ou promote deste release.**
+
+| Campo | Evidência |
+| --- | --- |
+| Código publicado | PR #411 squash-merged em `main@b3a7d764fd645303c4aa5e204143cf9dc56d5566` |
+| Deployment anterior para referência de rollback | `dpl_5JqtJf5gEpcCTv6pXKYPM1WtV1Yr` |
+| Deployment novo e vigente | `dpl_86m6g6i3Qc3j6zedvmUEYqYYVofW` |
+| URL imutável | `https://controles-de-empenhos-aprov-89zn41p93-aprov-hgesms-projects.vercel.app` |
+| Build staged | `vercel deploy --prod --skip-domain --archive=tgz` efetuado uma vez; inspect `production / Ready` |
+| Health do staged | `{"status":"ok","timestamp":"2026-10-29T22:23:53.365Z"}` |
+| Domínio antes da promoção | `https://emprovex.com.br` apontava para deployment anterior |
+| Promoção | `vercel promote` retornou `Success!` para o mesmo `dpl_86m6g6i3Qc3j6zedvmUEYqYYVofW` |
+| Confirmação final | `vercel inspect https://emprovex.com.br`: mesmo ID, `target production`, `status Ready` |
+
+**Pré-release automatizado:** Fast CI, Recovery, Core Protection, Legal, W4 QA e integração, InfinitePay Payment UI PASS; auditoria VISUAL-R2 final [#40963203483](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40963203483) teve **5/5 jobs Linux PASS**, incluindo navegador Chromium autenticado em Firebase Emulator. Preview Windows permanece com histórico de falha no smoke de inicialização 8081, não certificado e isolado como diagnóstico manual.
+
+**Limites de GO:** o fundador aprovou visualmente a prévia local e comprovou saúde `/api/health` no staged; **não constam resultados de smoke autenticado completo no staged nem pós-promoção** para login externo real, NF/TR, Drive, assinaturas/InfinitePay, Warehouse 3D e movimentações. O endpoint de saúde Warehouse exclusivo do fundador `/api/central-depositos/health` não foi demonstrado. Validar com contas de QA, sem movimentações reais de estoque. Ganho de RAM não foi quantificado por processo.
+
+**Governança:** nenhuma Firestore Rule ou migração produtiva foi publicada por esta sequência de comandos. Os commits documentais posteriores em `main` **não foram implantados na Vercel** e não alteram a referência do código funcional publicado `b3a7d764fd645303c4aa5e204143cf9dc56d5566`. Rollback da aplicação não desfaz dados ou Firestore Rules.
+
+---
+
 **Data:** 29/10/2026 · **Estado:** CHECKLIST PRÉ-RELEASE, SEM PROMOÇÃO AUTOMÁTICA
 **PR:** [#411](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/411) · **branch:** `feat/visual-mode-r1-session-navigation`
 **Método obrigatório:** [EMPROVEX_RELEASE_POWERSHELL.md](../EMPROVEX_RELEASE_POWERSHELL.md)
