@@ -330,3 +330,34 @@ A auditoria de arquitetura, baseline histórico, evidências e oportunidades **D
 - Investigar melhorias pontuais de CPU/bundles por medição, sem refatorar lógica financeira/logística apenas por suposição.
 - Validar ao fim da configuração toda a matriz VF-01 a VF-16, comparar hardware modesto e de referência, confirmar carregamento efetivo dos chunks e certificação de CI, integridade e ausência de regressão 3D.
 - Só então preparar composição/merge e publicação manual mediante aprovação expressa do fundador.
+
+
+---
+
+## Checkpoint de desenvolvimento — simplificação visual ampliada (29/10/2026)
+
+**Autorização:** finalizar simplificação visual agressiva fora da Central 3D, preservando estética profissional; realizar só pequenos testes de funcionamento, postergando testes/auditorias complexos.
+
+**Status:** modificações gravadas **somente** em `feat/visual-mode-r1-session-navigation`. Nenhuma modificação na `main`, produção Vercel, Firestore, IAM, Rules, APIs, saldos ou componentes do renderizador 3D. Este checkpoint é de desenvolvimento, **não** uma certificação nem aceite de publicação.
+
+### Entregas desta etapa
+
+1. **CSS Essencial independente e escopado** — `app/visual-mode-essential.css`, importado depois de `app/globals.css`: remove `backdrop-filter` e sombras caras apenas do cabeçalho, menu, cartão de operador, backdrop mobile e do cabeçalho operacional não imersivo da Central. Mantém cores sólidas/gradientes estáticos, foco e contraste; não afeta `warehouse-emprovex-content` nem qualquer descendente de `WarehouseIsometricPreview`.
+2. **Loops puramente visuais desligados** — anéis do cabeçalho, energia decorativa, nós SVG da assinatura, brilho pulsante do item de navegação e dot decorativo estáticos no Essencial, mantendo indicadores funcionais; sem CSS universal ou supressão de `animate-spin`/`animate-pulse` de operação.
+3. **Transições e entrada de cards** — CSS de entrada/carregamento decorativo suspenso apenas no `main[data-visual-surface='operational']` do EMPROVEX. Navegação móvel com fundo opaco estático; transições operacionais do Essencial já eram estáticas no checkpoint anterior.
+4. **Central sem blur de fundo** — `WarehouseModuleShell` passa `essential` ao componente `AppBackground`, que só escolhe fundo leve quando `!immersive`. Na seção `overview` (Meus Depósitos 3D), `immersive=true` prevalece e a cena/fundo original continua intocada. O cabeçalho de Controle/Alocação/Saída é simplificado sem tocar no conteúdo 2D/3D.
+5. **Login operacional Essencial** — `EmprovexLogin` tem seletor antes da autenticação, mantém e-mail/senha, Google, recuperação e mensagens. Em Essencial não monta `LoginAtmosphere` (RAF, pointermove, rede decorativa), cenas/signatures ou `LoginBrandStage` cinematográfico; usa `LoginBrandStageEssential` estático. Em Normal, os visuais originais são lazy sob demanda; preserva efeito de login Normal e feedbacks de erro/loading.
+6. **Sucesso de autenticação** — `LoginSuccessTransition` usa transição curta e simples no Essencial; callback `onComplete` continua obrigatório.
+7. **Administração** — `PlatformAdminView` no Essencial abre `overview`/Visão Geral, sem montar a cena 3D puramente decorativa do bairro. A aba Início fica oculta só no Essencial, mas permanece no Normal com lazy import de `AdminWorldHomePanel`; demais setores, sessões, consumo, cobrança, backup e segurança preservados. Seletor acessível no cabeçalho da Administração, modo por sessão e limpeza no logout.
+8. **Border Beam** — `EmprovexBorderBeam` muda a variante efetiva para `static` no Essencial e deixa de cadastrar `IntersectionObserver`/`visibilitychange` por cartão enquanto o modo leve estiver ativo; o contorno permanece visível.
+
+### Verificações mínimas executadas — limites de prova
+
+- **16/16 verificações estáticas PASS** no conteúdo da branch via GitHub: CSS balanceado, ordem de import, escopos, ausência de regra universal e de seletores 3D, indicadores busy preservados, login (e-mail/senha/Google/recuperação) e controles presentes, cena removida da montagem no Essencial, Admin lazy e navegação, observers desativados, preferências por sessão, seletor compartilhado e fundo Warehouse condicionado a `!immersive`.
+- **Não executados nesta etapa:** build Next.js, `tsc`, testes de unidade automatizados, GitHub CI, browser/E2E, smoke autenticado, perfil CPU/GPU/RAM, Lighthouse, regressão fotográfica 3D e publicação. Os 16 checks são inspeção de contratos e guardas no código; **não provam interação real ou ausência de regressões em navegador**.
+- **Ambiente:** não foi possível obter checkout Git via acesso externo do container, então não há prova de compilação local nesta execução. Evitar usar a palavra `PASS` para rotas funcionais ainda não rodadas.
+- **GO parcial:** desenvolvimento pode continuar na branch. **NO-GO de publicação** até build básico e smoke autenticado ao encerrar a configuração.
+
+### Próxima continuidade
+
+R1 tem núcleo do modo, navegação e simplificação ampla de decorativos. Reavaliar eventuais problemas detectados durante montagem final e, somente ao terminar as configurações, executar a matriz VF-01 a VF-16 e benchmark comparativo em PC modesto. Não alterar o 3D protegido para obter ganho de CPU. Não editar `main` nem chamar Vercel sem autorização posterior.
