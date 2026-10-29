@@ -8,7 +8,10 @@ function read(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
 const operationalData = read('hooks/useOperationalData.ts');
 const realtime = read('hooks/useOperationalRealtimeCollections.ts');
 const inicioSnapshot = read('features/inicio/hooks/useInicioOperationalSnapshot.ts');
@@ -31,7 +34,8 @@ assert.match(page, /<LegalAcceptanceGate/);
 assert.match(page, /acceptedLegalIdentityKey/);
 assert.match(operationalData, /acceptedLegalIdentityKey === legalIdentityKey/);
 assert.match(realtime, /enabled: enabled && plan\.empenhos/);
-assert.match(inicioSnapshot, /!enabled\s*\|\| activeTab !== 'inicio'/);
+assert.match(inicioSnapshot, /activeTab !== 'inicio' && activeTab !== 'painel'/);
+assert.match(inicioSnapshot, /!enabled/);
 assert.match(warehouse, /<LegalAcceptanceGate/);
 assert.doesNotMatch(rootLayout, /LegalAcceptanceGate/);
 assert.doesNotMatch(regularization, /LegalAcceptanceGate/);
