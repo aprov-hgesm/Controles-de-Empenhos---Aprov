@@ -85,7 +85,16 @@ test('R16.1: retornos de admin, deposito, mobile e assinaturas abrem plataforma,
   for (const file of files) {
     const content = source(file);
     assert.doesNotMatch(content, /href=["']\/["']|window\.location\.(?:assign|replace)\(["']\/["']\)/, file);
-    assert.match(content, /\/login/, file);
+    if (file === 'components/billing/BillingPortalShell.tsx') {
+      const returnButton = source('components/billing/BillingReturnButton.tsx');
+      assert.match(content, /<BillingReturnButton/, 'Portal precisa delegar o retorno seguro.');
+      assert.match(returnButton, /window\.location\.assign\('\/login'\)/,
+        'Retorno financeiro nunca pode redirecionar à vitrine institucional.');
+      assert.match(returnButton, /\/api\/billing\/portal\?view=access/,
+        'Retorno financeiro deve manter gate de autorização.');
+    } else {
+      assert.match(content, /\/login/, file);
+    }
   }
   assert.match(source('components/admin/PlatformAdminView.tsx'), /window\.location\.replace\('\/login'\)/);
   const mobileHome = source('features/warehouse/mobile/WarehouseMobileHome.tsx');
