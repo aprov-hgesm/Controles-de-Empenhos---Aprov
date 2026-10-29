@@ -895,7 +895,34 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     ]));
     const next = replanDesktopWithdrawalCart(snapshot, snapshots,
       createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
-    return next;
+    return {...next, refreshed};
+  };
+
+  // Um novo vínculo de validade pode não existir na leitura anterior.
+  // Sincronizar os snapshots com o carrinho evita um falso bloqueio no
+  // cartIssues e preserva a origem documental usada na ficha de saída.
+  const syncRefreshedStock = (refreshed: Array<{
+    materialId: string;
+    balance: WarehouseBalance;
+    locationBalances: WarehouseLocationBalanceListItem[];
+    lots: WarehouseLotListItem[];
+  }>) => {
+    const ids = new Set(refreshed.map(item => item.materialId));
+    setState(current => ({
+      ...current,
+      balances: [
+        ...current.balances.filter(row => !ids.has(row.materialId)),
+        ...refreshed.map(item => item.balance),
+      ],
+      locationBalances: [
+        ...current.locationBalances.filter(row => !ids.has(row.balance.materialId)),
+        ...refreshed.flatMap(item => item.locationBalances),
+      ],
+      lots: [
+        ...current.lots.filter(row => !ids.has(row.lot.materialId)),
+        ...refreshed.flatMap(item => item.lots),
+      ],
+    }));
   };
 
   const finalize = async () => {
@@ -920,6 +947,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setWorking(true);
       try {
         const next = await reconcileFromCurrentStock(cartSnapshot);
+        syncRefreshedStock(next.refreshed);
         if (next.changed) {
           setCart(next.lines as CartLine[]);
           setWithdrawalId(createWarehouseWithdrawalId());
@@ -1652,6 +1680,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                         void (async () => {
                           try {
                             const fresh = await reconcileFromCurrentStock(cart);
+                            syncRefreshedStock(fresh.refreshed);
                             setCart(fresh.lines as CartLine[]);
                             setMessageKind('info');
                             setMessage('Carrinho atualizado sem baixa. Confira as quantidades e revise novamente.');
