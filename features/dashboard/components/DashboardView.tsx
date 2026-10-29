@@ -1,6 +1,7 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 import { CheckCircle2, Clock3, Coins, Filter, Layers, Search, X } from 'lucide-react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Empenho } from '../../../lib/types';
@@ -50,26 +51,62 @@ export function DashboardView({
   setSelectedNFCommitmentId,
   uniquePregaos,
 }: DashboardViewProps) {
+  const { mode } = useVisualMode();
+  const [visibleRowsByClass, setVisibleRowsByClass] = useState<Record<string, number>>({});
+  // Somente projecao de leitura. Nao modifica itens, saldo, filtros nem Firestore.
+  // O mesmo valor consolidado de cada NE e reaproveitado pelos cartoes, totais e tabela.
+  const aggregates = useMemo(() => {
+    const amounts = new Map<Empenho, { committed: number; received: number; balance: number }>();
+    const bySegment = new Map<string, {
+      records: Empenho[];
+      committed: number;
+      received: number;
+      unspent: number;
+      active: number;
+    }>();
+    let allCommitted = 0;
+    let allReceived = 0;
+    let rpnpCommitted = 0;
+    let rpnpReceived = 0;
+    let activeCount = 0;
+    for (const emp of empenhos) {
+      const committed = emp.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+      const received = emp.items.reduce((sum, it) => sum + it.received * it.unitPrice, 0);
+      const balance = Math.max(0, committed - received);
+      amounts.set(emp, { committed, received, balance });
+      allCommitted += committed;
+      allReceived += received;
+      if (emp.status === 'Ativo') activeCount++;
+      const rpnp = isRpnpEmpenho(emp);
+      if (rpnp) {
+        rpnpCommitted += committed;
+        rpnpReceived += received;
+      }
+      const segment = getEmpenhoBaseClassification(emp) + (rpnp ? '::RPNP' : '');
+      let entry = bySegment.get(segment);
+      if (!entry) {
+        entry = { records: [], committed: 0, received: 0, unspent: 0, active: 0 };
+        bySegment.set(segment, entry);
+      }
+      entry.records.push(emp);
+      entry.committed += committed;
+      entry.received += received;
+      entry.unspent += balance;
+      if (emp.status === 'Ativo') entry.active++;
+    }
+    return { amounts, bySegment, allCommitted, allReceived, rpnpCommitted, rpnpReceived, activeCount };
+  }, [empenhos]);
+
   return (() => {
             // Compute macro totals
-            const totalGeralEmpenhado = empenhos.reduce((sum, emp) => {
-              return sum + emp.items.reduce((iSum, it) => iSum + it.quantity * it.unitPrice, 0);
-            }, 0);
-
-            const totalGeralLiquidado = empenhos.reduce((sum, emp) => {
-              return sum + emp.items.reduce((iSum, it) => iSum + it.received * it.unitPrice, 0);
-            }, 0);
+            const totalGeralEmpenhado = aggregates.allCommitted;
+            const totalGeralLiquidado = aggregates.allReceived;
 
             const totalGeralSaldo = Math.max(0, totalGeralEmpenhado - totalGeralLiquidado);
             const totalGeralPctExec = totalGeralEmpenhado > 0 ? Math.round((totalGeralLiquidado / totalGeralEmpenhado) * 100) : 0;
 
-            const rpnpEmpenhos = empenhos.filter((emp) => isRpnpEmpenho(emp));
-            const totalRpnpEmpenhado = rpnpEmpenhos.reduce((sum, emp) => (
-              sum + emp.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitPrice, 0)
-            ), 0);
-            const totalRpnpLiquidado = rpnpEmpenhos.reduce((sum, emp) => (
-              sum + emp.items.reduce((itemSum, item) => itemSum + item.received * item.unitPrice, 0)
-            ), 0);
+            const totalRpnpEmpenhado = aggregates.rpnpCommitted;
+            const totalRpnpLiquidado = aggregates.rpnpReceived;
             const totalRpnpSaldo = Math.max(0, totalRpnpEmpenhado - totalRpnpLiquidado);
 
             // Classes aparecem no Dashboard somente quando possuem ao menos um empenho.
@@ -120,11 +157,8 @@ export function DashboardView({
               .filter((definition) => activeClassCodes.has(definition.code))
               .flatMap((definition, index) => {
                 const basePalette = classPalette[index % classPalette.length];
-                const baseEmpenhos = empenhos.filter(
-                  (emp) => getEmpenhoBaseClassification(emp) === definition.code
-                );
-                const hasRpnp = baseEmpenhos.some((emp) => isRpnpEmpenho(emp));
-                const hasRegular = baseEmpenhos.some((emp) => !isRpnpEmpenho(emp));
+                const hasRpnp = aggregates.bySegment.has(definition.code + '::RPNP');
+                const hasRegular = aggregates.bySegment.has(definition.code);
                 const segments = [];
 
                 if (hasRpnp) {
@@ -158,23 +192,10 @@ export function DashboardView({
                 return segments;
               });
 
-            const matchesClassSegment = (
-              emp: Empenho,
-              cls: (typeof classesConfig)[number]
-            ) => (
-              getEmpenhoBaseClassification(emp) === cls.classification
-              && isRpnpEmpenho(emp) === cls.isRpnp
-            );
+            const getSegment = (key: string) => aggregates.bySegment.get(key);
 
-            const getBalanceBySegment = (cls: (typeof classesConfig)[number]) => (
-              empenhos
-                .filter((emp) => matchesClassSegment(emp, cls))
-                .reduce((total, emp) => {
-                  const committed = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                  const liquidated = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
-                  return total + Math.max(0, committed - liquidated);
-                }, 0)
-            );
+            const getBalanceBySegment = (cls: (typeof classesConfig)[number]) =>
+              getSegment(cls.key)?.unspent ?? 0;
 
             const effectiveDashboardClassFilter =
               dashboardClassFilter === 'TODAS'
@@ -288,7 +309,7 @@ export function DashboardView({
                     </div>
                     <div className="mt-3 pt-3 border-t border-white/15 flex justify-between text-xs text-blue-100">
                       <span>Total de Empenhos: <strong>{empenhos.length}</strong></span>
-                      <span>Ativos: <strong>{empenhos.filter(e => e.status === 'Ativo').length}</strong></span>
+                      <span>Ativos: <strong>{aggregates.activeCount}</strong></span>
                     </div>
                     </div>
                   </EmprovexBorderBeam>
@@ -366,16 +387,13 @@ export function DashboardView({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {classesConfig.map((cls) => {
-                      const classEmpenhos = empenhos.filter((emp) => matchesClassSegment(emp, cls));
-                      const classCommitted = classEmpenhos.reduce((sum, emp) => {
-                        return sum + emp.items.reduce((iSum, it) => iSum + it.quantity * it.unitPrice, 0);
-                      }, 0);
-                      const classReceived = classEmpenhos.reduce((sum, emp) => {
-                        return sum + emp.items.reduce((iSum, it) => iSum + it.received * it.unitPrice, 0);
-                      }, 0);
+                      const segment = getSegment(cls.key);
+                      const classEmpenhos = segment?.records ?? [];
+                      const classCommitted = segment?.committed ?? 0;
+                      const classReceived = segment?.received ?? 0;
                       const classBalance = Math.max(0, classCommitted - classReceived);
                       const classPct = classCommitted > 0 ? Math.round((classReceived / classCommitted) * 100) : 0;
-                      const activeCount = classEmpenhos.filter(e => e.status === 'Ativo').length;
+                      const activeCount = segment?.active ?? 0;
 
                       const isSelected = effectiveDashboardClassFilter === cls.key;
 
@@ -479,7 +497,7 @@ export function DashboardView({
 
                   {/* Itera sobre as classes a exibir */}
                   {displayedClasses.map((cls) => {
-                    const rawClassEmpenhos = empenhos.filter((emp) => matchesClassSegment(emp, cls));
+                    const rawClassEmpenhos = getSegment(cls.key)?.records ?? [];
                     
                     const filteredClassEmpenhos = rawClassEmpenhos.filter(emp => {
                       const matchesPregao = dashboardPregaoFilter === 'Todos' || emp.pregao === dashboardPregaoFilter;
@@ -490,13 +508,13 @@ export function DashboardView({
                       return matchesPregao && matchesSearch;
                     });
 
-                    const subtotalEmpenhado = filteredClassEmpenhos.reduce((sum, emp) => {
-                      return sum + emp.items.reduce((iSum, it) => iSum + it.quantity * it.unitPrice, 0);
-                    }, 0);
-
-                    const subtotalLiquidado = filteredClassEmpenhos.reduce((sum, emp) => {
-                      return sum + emp.items.reduce((iSum, it) => iSum + it.received * it.unitPrice, 0);
-                    }, 0);
+                    const subtotalEmpenhado = filteredClassEmpenhos.reduce((sum, emp) =>
+                      sum + (aggregates.amounts.get(emp)?.committed ?? 0), 0);
+                    const subtotalLiquidado = filteredClassEmpenhos.reduce((sum, emp) =>
+                      sum + (aggregates.amounts.get(emp)?.received ?? 0), 0);
+                    const visibleClassEmpenhos = mode === 'essencial'
+                      ? filteredClassEmpenhos.slice(0, visibleRowsByClass[cls.key] ?? 60)
+                      : filteredClassEmpenhos;
 
                     const subtotalSaldo = Math.max(0, subtotalEmpenhado - subtotalLiquidado);
                     const subtotalPct = subtotalEmpenhado > 0 ? Math.round((subtotalLiquidado / subtotalEmpenhado) * 100) : 0;
@@ -560,9 +578,9 @@ export function DashboardView({
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-50">
-                                {filteredClassEmpenhos.map((emp) => {
-                                  const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                                  const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
+                                {visibleClassEmpenhos.map((emp) => {
+                                  const totalCommitted = aggregates.amounts.get(emp)?.committed ?? 0;
+                                  const totalReceived = aggregates.amounts.get(emp)?.received ?? 0;
                                   const balance = Math.max(0, totalCommitted - totalReceived);
                                   const pct = totalCommitted > 0 ? Math.round((totalReceived / totalCommitted) * 100) : 0;
 
@@ -681,6 +699,18 @@ export function DashboardView({
                               </tfoot>
                             </table>
                           </div>
+                        )}
+                        {mode === 'essencial' && visibleClassEmpenhos.length < filteredClassEmpenhos.length && (
+                          <button
+                            type="button"
+                            onClick={() => setVisibleRowsByClass((current) => ({
+                              ...current,
+                              [cls.key]: (current[cls.key] ?? 60) + 60,
+                            }))}
+                            className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-xs font-bold text-[#00288e] hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+                          >
+                            Mostrar mais 60 ({visibleClassEmpenhos.length} de {filteredClassEmpenhos.length} empenhos)
+                          </button>
                         )}
                       </div>
                     );
