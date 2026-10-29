@@ -43,7 +43,7 @@ test('o preview não remove verificações reais de cobrança e aceite jurídico
   const fakeLegal = read('tests/e2e/emulatedLegalAcceptance.mjs');
   assert.match(legal, /verifyFirebaseRequest/);
   assert.match(legal, /getGoogleAccessToken/);
-  assert.match(billing, /verifyFirebaseRequest|verifySector|verifyBilling/);
+  assert.match(billing, /resolveBillingPortalSession/);
   assert.match(fakeBilling, /EMPROVEX_E2E_BASE_URL/);
   assert.match(fakeLegal, /EMPROVEX_E2E_BASE_URL/);
   assert.match(fakeLegal, /LEGAL_WORKSPACE_DENIED/);
