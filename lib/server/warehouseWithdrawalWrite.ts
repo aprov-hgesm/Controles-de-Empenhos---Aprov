@@ -174,8 +174,21 @@ export async function finalizeWarehouseWithdrawalServer(
       // GOV-SIMP-01: permitir recomecar apenas se uma retirada NOVA e atomica
       // foi rejeitada antes do commit. O legado pode ter baixas parciais.
       if(!previous && error instanceof WarehouseStoreError
-        && error.code==='WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE') {
-        return fail('WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART');
+        && [
+          'WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE',
+          'WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK',
+          'WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK',
+          'WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION',
+          'WAREHOUSE_OUTBOUND_LOT_EXPIRED',
+          'WAREHOUSE_OUTBOUND_LOT_POSITION_MISMATCH',
+          'WAREHOUSE_OUTBOUND_LOCATION_INACTIVE',
+          'WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED',
+          'WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK',
+          'WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED',
+        ].includes(error.code)) {
+        // Rejeicoes deterministicas do planejamento/validacao transacional.
+        // Nunca aplicar em replay, erro de transporte ou falha de commit.
+        return fail(error.code+'_SAFE_TO_RESTART');
       }
       throw error;
     }
