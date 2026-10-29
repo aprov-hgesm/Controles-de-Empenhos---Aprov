@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "preview:local": "node scripts/dev-preview-emulator.mjs",
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "test:warehouse-react-tab-navigation": "node --test scripts/warehouse-react-tab-navigation.test.mjs",
