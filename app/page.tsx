@@ -141,9 +141,9 @@ export default function Home() {
   } = viewState;
 
   const pendingNoticeCount =
-    mode === 'essencial' || activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
+    activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
       ? countPendingNotices(alerts)
-      : inicioSnapshot?.alerts.total ?? countPendingNotices(alerts);
+      : inicioSnapshot?.alerts.total;
 
   useEffect(() => {
     if (activeTab !== 'inicio') {
@@ -329,14 +329,14 @@ export default function Home() {
           {activeOperationalDataReady && activeTab === 'inicio' && (
             <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
               <Suspense fallback={<OperationalSurfaceLoading />}>
-              <InicioView
+                <InicioView
                 snapshot={inicioSnapshot}
                 userDisplayName={user?.displayName || 'Operador EMPROVEX'}
                 onSelectEmpenho={(empenhoId) => {
                   setSelectedEmpenhoDetailId(empenhoId);
                   setActiveTab('empenhos');
                 }}
-              />
+                />
               </Suspense>
             </OperationalSurfaceTransition>
           )}
