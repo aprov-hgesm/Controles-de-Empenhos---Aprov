@@ -1,5 +1,16 @@
 # EMPROVEX — Memorial Oficial
 
+## FRENTE VINCULADA — MODO NORMAL/ESSENCIAL R1 (29/10/2026)
+
+- **Memorial canônico do projeto:** [MODO_ESSENCIAL_MEMORIAL_OFICIAL.md](./MODO_ESSENCIAL_MEMORIAL_OFICIAL.md) — decisões irrenunciáveis, plano executivo integral de 24/10, arquitetura, Workers, VF-01 a VF-16, metas, riscos e GO/NO-GO.
+- **Auditoria original e evidências históricas:** [MODO_ESSENCIAL_AUDITORIA_2026-10-24.md](./MODO_ESSENCIAL_AUDITORIA_2026-10-24.md) — diagnóstico estático, baseline histórico e oportunidades DV-01 a DV-20.
+- **Estado:** DOCUMENTAÇÃO CRIADA; implementação, benchmark real, certificação e deploy específicos do Modo Essencial **não comprovados** neste registro.
+- **Contrato superior:** um só sistema com Normal/Premium e Essencial; escolha **por sessão em `sessionStorage`**, nunca por UG/workspace; no Essencial, ocultar e não montar as abas Início do EMPROVEX e Início da Central; **preservar integralmente toda a Central de Depósitos 3D em ambos os modos**; manter operações e segurança; sem alteração de produção por esta documentação.
+- **Governança:** GOV-SIMP-01; branch/PR isolados, validação proporcional a risco e publicação somente mediante aprovação expressa, pelo procedimento manual de release vigente.
+
+---
+
+
 
 ## PUBLICAÇÃO CONFIRMADA — NOVO NÚCLEO INÍCIO + SAAS MATURITY R1 (27/10/2026 23h46 BRT / 28/10/2026 02h46 UTC)
 
