@@ -126,6 +126,8 @@ jobs:
       - run: npm ci
       - name: "Verificar isolamento e sintaxe da prévia local"
         run: node --test scripts/preview-local-safety.test.mjs
+      - name: "Paridade financeira e memória limitada do Painel"
+        run: node --test scripts/dashboard-rows-projection.test.mjs
       - name: "Verificações de interface: executar todas, consolidar falhas"
         shell: bash
         run: |
