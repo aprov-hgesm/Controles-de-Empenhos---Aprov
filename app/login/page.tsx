@@ -185,7 +185,7 @@ export default function Home() {
     selectedNFCommitmentId,
     nfQuantities,
     setNfQuantities,
-    setNfPdfFile,
+    clearNfPdfDrafts,
   } = viewState;
 
   const pendingNoticeCount =
@@ -223,11 +223,11 @@ export default function Home() {
     if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
       nfDraftsByEmpenhoRef.current.clear();
       setNfQuantities({});
-      setNfPdfFile(null);
+      clearNfPdfDrafts();
       clearVisualMode();
     }
     lastIdentityRef.current = identity;
-  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities, setNfPdfFile]);
+  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities, clearNfPdfDrafts]);
 
 
 
@@ -373,6 +373,7 @@ export default function Home() {
             try {
               setShowLoginSuccessTransition(false);
               nfDraftsByEmpenhoRef.current.clear();
+              clearNfPdfDrafts();
               clearVisualMode();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
