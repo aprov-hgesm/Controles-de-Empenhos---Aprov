@@ -96,7 +96,7 @@ export default function Home() {
   // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
   const [hasOpenedTransactionalSurface, setHasOpenedTransactionalSurface] = useState(false);
 
-  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed');
+  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed', billingAccessIdentity);
   const {
     user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
@@ -185,12 +185,13 @@ export default function Home() {
     selectedNFCommitmentId,
     nfQuantities,
     setNfQuantities,
+    setNfPdfFile,
   } = viewState;
 
   const pendingNoticeCount =
     activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
       ? countPendingNotices(alerts)
-      : inicioSnapshot?.alerts.total ?? 0;
+      : inicioSnapshot?.alerts.total ?? null;
 
   useEffect(() => {
     if (activeTab !== 'inicio') {
@@ -222,10 +223,11 @@ export default function Home() {
     if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
       nfDraftsByEmpenhoRef.current.clear();
       setNfQuantities({});
+      setNfPdfFile(null);
       clearVisualMode();
     }
     lastIdentityRef.current = identity;
-  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities]);
+  }, [loadingAuth, user?.uid, clearVisualMode, setNfQuantities, setNfPdfFile]);
 
 
 
