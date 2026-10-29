@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { warehouseEmulatorLaunch } from './warehouse-emulator-launch.mjs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
@@ -47,4 +48,24 @@ test('o preview não remove verificações reais de cobrança e aceite jurídico
   assert.match(fakeBilling, /EMPROVEX_E2E_BASE_URL/);
   assert.match(fakeLegal, /EMPROVEX_E2E_BASE_URL/);
   assert.match(fakeLegal, /LEGAL_WORKSPACE_DENIED/);
+});
+
+test('Node 24 Windows abre npx.cmd via cmd.exe (evita spawn EINVAL)', () => {
+  const launch = warehouseEmulatorLaunch('win32', 'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(launch.command, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(launch.args.slice(0, 3), ['/d', '/s', '/c']);
+  assert.match(launch.args[3], /^npx\.cmd --yes firebase-tools emulators:start /);
+  assert.match(launch.args[3], /--only firestore$/);
+  assert.doesNotMatch(launch.args[3], /[&|<>%]/);
+  const linux = warehouseEmulatorLaunch('linux');
+  assert.equal(linux.command, 'npx');
+  assert.deepEqual(linux.args.slice(0, 3), ['--yes', 'firebase-tools', 'emulators:start']);
+});
+
+test('runner de emuladores usa o launch compatível com Windows', () => {
+  const runner = read('scripts/e2e-browser-emulator.mjs');
+  assert.match(runner, /warehouseEmulatorLaunch\(\)/);
+  assert.match(runner, /warehouseLaunch\.command/);
+  assert.match(runner, /warehouseLaunch\.args/);
+  assert.match(runner, /spawnSync\('taskkill'/);
 });
