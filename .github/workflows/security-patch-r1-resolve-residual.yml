@@ -40,7 +40,8 @@ jobs:
             console.log(path+' -> '+p.version);
           }
           for(const [k,v] of Object.entries(x)){
-            if((k.endsWith('/postcss')&&v.version!=='8.5.28')||(k.endsWith('/source-map-js')&&v.version!=='1.2.2')||(k.endsWith('/@grpc/grpc-js')&&v.version!=='1.13.6'))throw Error('Unexpected nested dependency: '+k+'@'+v.version);
+            const name=k.split('node_modules/').pop();
+            if((name==='postcss'&&v.version!=='8.5.28')||(name==='source-map-js'&&v.version!=='1.2.2')||(name==='@grpc/grpc-js'&&v.version!=='1.13.6'))throw Error('Unexpected nested dependency: '+k+'@'+v.version);
           }
           NODE
       - name: Deterministic installation with scripts
