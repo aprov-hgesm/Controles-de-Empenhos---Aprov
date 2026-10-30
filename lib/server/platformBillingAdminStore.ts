@@ -9,7 +9,7 @@ import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
   paidServicePeriod, paidServiceAccessUntil, billingAnniversary,
   billingFirstPaymentPending, billingCycleReferenceForPeriod, billingRampStartMonth,
-  settleFirstPaymentAnniversary, formatUtcDateOnly, PAYMENT_ANNIVERSARY_POLICY,
+  settleFirstPaymentAnniversary, billingBrazilDateOnly, PAYMENT_ANNIVERSARY_POLICY,
   renewalGraceDaysForAccount,
   EMPROVEX_NEW_CUSTOMER_RAMP_ID,
   buildPlatformBillingConfig, type BillingAccount, type BillingAccountStatus,
@@ -1120,7 +1120,7 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
       confirmedBy: 'provider:infinitepay', updatedAt: now,
       updatedBy: 'provider:infinitepay', checkoutState: 'settled',
       settlementLedgerId: ledgerId, note: 'Pagamento verificado diretamente na InfinitePay',
-      ...(newlyActivated ? { dueDate: formatUtcDateOnly(now) } : {}) };
+      ...(newlyActivated ? { dueDate: billingBrazilDateOnly(now) } : {}) };
     const anchoredAccount = settleFirstPaymentAnniversary(currentAccount, current.referenceMonth, now);
     const nextAccount: BillingAccount = { ...anchoredAccount,
       status: 'active', monthlyPriceCents: current.amountCents,
