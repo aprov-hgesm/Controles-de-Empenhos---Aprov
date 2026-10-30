@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowRight,
@@ -15,8 +15,16 @@ import {
 } from 'lucide-react';
 
 import { ToastNotification } from '../layout/ToastNotification';
-import { LoginAtmosphere, type LoginAmbientState } from './LoginAtmosphere';
-import { LoginBrandStage } from './LoginBrandStage';
+import type { LoginAmbientState } from './LoginAtmosphere';
+import { LoginBrandStageEssential } from './LoginBrandStageEssential';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
+
+const LoginAtmosphere = lazy(() =>
+  import('./LoginAtmosphere').then((module) => ({ default: module.LoginAtmosphere }))
+);
+const LoginBrandStage = lazy(() =>
+  import('./LoginBrandStage').then((module) => ({ default: module.LoginBrandStage }))
+);
 import type { LoginLogoVisualState } from './LoginLogoCore';
 import { LoginStatusRail, type LoginNarrativePhase } from './LoginStatusRail';
 
@@ -55,6 +63,7 @@ export function EmprovexLogin({
   onRequestPasswordReset,
   onFounderLogin,
 }: EmprovexLoginProps) {
+  const { mode, setMode } = useVisualMode();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -162,15 +171,19 @@ export function EmprovexLogin({
   return (
     <div className="emprovex-login-shell relative min-h-[100svh] overflow-x-hidden bg-[#020817] font-sans text-white selection:bg-blue-500 selection:text-white">
       <ToastNotification toast={toast} onClose={onCloseToast} />
-      <LoginAtmosphere focus={focusedField} state={panelVisualState} />
+      {mode === 'premium' && (
+        <Suspense fallback={null}>
+          <LoginAtmosphere focus={focusedField} state={panelVisualState} />
+        </Suspense>
+      )}
 
-      <div className="emprovex-signature-intro pointer-events-none fixed inset-0 z-[4]" aria-hidden="true">
+      {mode === 'premium' && <div className="emprovex-signature-intro pointer-events-none fixed inset-0 z-[4]" aria-hidden="true">
         <span className="emprovex-signature-intro__aperture" />
         <span className="emprovex-signature-intro__line emprovex-signature-intro__line--h" />
         <span className="emprovex-signature-intro__line emprovex-signature-intro__line--v" />
-      </div>
+      </div>}
 
-      <div
+      {mode === 'premium' && <div
         className="emprovex-signature-conduit pointer-events-none fixed inset-0 z-[6] hidden lg:block"
         data-state={panelVisualState}
         data-focus={focusedField ?? 'none'}
@@ -178,17 +191,23 @@ export function EmprovexLogin({
       >
         <span className="emprovex-signature-conduit__track" />
         <span className="emprovex-signature-conduit__pulse" />
-      </div>
+      </div>}
 
       <div className="relative z-10 mx-auto grid min-h-[100svh] w-full max-w-[1600px] lg:grid-cols-[minmax(0,1.12fr)_minmax(460px,0.88fr)]">
         <div className="border-b border-white/[0.07] lg:border-b-0 lg:border-r">
-          <LoginBrandStage customLogo={customLogo} visualState={logoVisualState} />
+          {mode === 'essencial' ? (
+            <LoginBrandStageEssential customLogo={customLogo} />
+          ) : (
+            <Suspense fallback={<LoginBrandStageEssential customLogo={customLogo} />}>
+              <LoginBrandStage customLogo={customLogo} visualState={logoVisualState} />
+            </Suspense>
+          )}
         </div>
 
         <motion.main
-          initial={{ opacity: 0, x: 20 }}
+          initial={mode === 'essencial' ? false : { opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.72, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          transition={mode === 'essencial' ? { duration: 0 } : { duration: 0.72, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
           className="relative flex items-center justify-center px-4 py-8 sm:px-8 sm:py-10 lg:px-10 xl:px-14"
         >
           <div className="w-full max-w-[540px]">
@@ -196,8 +215,8 @@ export function EmprovexLogin({
               className="emprovex-login-panel relative overflow-hidden rounded-[2rem] border border-white/[0.10] bg-[#071225]/78 p-5 backdrop-blur-2xl sm:p-8 lg:p-9"
               data-state={panelVisualState}
               data-focus={focusedField ?? 'none'}
-              onPointerMove={handlePanelPointerMove}
-              onPointerLeave={resetPanelPointer}
+              onPointerMove={mode === 'essencial' ? undefined : handlePanelPointerMove}
+              onPointerLeave={mode === 'essencial' ? undefined : resetPanelPointer}
               aria-labelledby="emprovex-login-heading"
             >
               <div className="emprovex-login-panel__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
@@ -221,9 +240,21 @@ export function EmprovexLogin({
                       Identidade e acesso
                     </span>
                   </div>
-                  <div className="hidden items-center gap-2 text-[10px] font-medium text-slate-500 sm:flex">
-                    <span className="emprovex-panel-status-dot h-1.5 w-1.5 rounded-full bg-blue-400/80" />
-                    EMPROVEX
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="emprovex-login-visual-mode" className="sr-only">
+                      Modo de visualização nesta sessão
+                    </label>
+                    <select
+                      id="emprovex-login-visual-mode"
+                      data-testid="login-visual-mode-select"
+                      value={mode}
+                      onChange={(event) => setMode(event.target.value === 'essencial' ? 'essencial' : 'premium')}
+                      title="Modo de visualização somente nesta sessão"
+                      className="max-w-28 rounded-lg border border-blue-200/20 bg-[#102943] px-2 py-1.5 text-[11px] font-bold text-slate-100 outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
+                    >
+                      <option value="premium">Normal</option>
+                      <option value="essencial">Essencial</option>
+                    </select>
                   </div>
                 </div>
 

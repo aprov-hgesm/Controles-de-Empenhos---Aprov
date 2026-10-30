@@ -21,8 +21,15 @@ const view = read('features/empenhos/components/EmpenhosView.tsx');
 const actions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const state = read('hooks/useOperationalViewState.ts');
 const types = read('lib/types.ts');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
+if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
+  throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
+}
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
+const empenhoDocuments = read('lib/empenhoDocuments.ts');
 
 for (const marker of [
   "parseEmpenhoPdfBytes",
@@ -88,10 +95,42 @@ for (const forbidden of ['const handleProcessJson', 'PROMPT_EXTRACAO_EMPENHO', '
   forbidText(actions, forbidden, 'Rotina JSON de NE ainda ativa: ' + forbidden);
 }
 requireText(actions, "reviewEmpenho.importSource !== 'pdf'", 'Salvamento da revisão deve exigir origem PDF.');
+
+// O PDF de origem não pode ser descartado após a extração: a revisão confirma
+// um único cadastro com documento físico já verificado no Drive do setor.
+for (const marker of [
+  'pendingImportedPdfRef = useRef<File | null>(null)',
+  'pendingImportedPdfRef.current = file',
+  'await assertWorkspacePdfIsSafeForStorage(file, { maxBytes: MAX_EMPENHO_PDF_BYTES })',
+  'pendingDriveUploadRef.current',
+  'await uploadEmpenhoPdf(user, finalEmp.id, pdfToStore)',
+  'finalEmp.notaEmpenhoPdf = uploadedDocument',
+  'finalEmp.notaEmpenhoPdfVersions = [uploadedDocument]',
+]) {
+  requireText(actions, marker, `Cadastro por PDF perdeu integração com o Drive: ${marker}`);
+}
+requireText(empenhoDocuments, 'uploadAndVerifyWorkspacePdf', 'Upload de NE deve usar integridade SHA-256 no Drive.');
+requireText(view, 'Salvar Empenho e PDF', 'Confirmação precisa informar o anexo automático.');
+requireText(view, 'até 10 MB', 'Limite exibido precisa coincidir com o armazenamento documental.');
+
+const reviewSave = actions.split('// Save the NE reviewed after direct PDF extraction')[1]?.split('// Handler to add item to the editing commitment')[0] || '';
+const uploadPosition = reviewSave.indexOf('await uploadEmpenhoPdf(user, finalEmp.id, pdfToStore)');
+const createPosition = reviewSave.indexOf('await createEmpenho(user.uid, finalEmp)');
+if (uploadPosition < 0 || createPosition < 0 || uploadPosition > createPosition) {
+  findings.push('PDF deve ser verificado no Drive ANTES da transação de criação do empenho.');
+}
+const uploadCatch = reviewSave.indexOf('PDF não salvo no Google Drive');
+if (uploadCatch < 0 || uploadCatch > createPosition || !reviewSave.slice(uploadCatch, createPosition).includes('return;')) {
+  findings.push('Falha no Drive deve interromper o cadastro antes de escrever no Firestore.');
+}
+if (!reviewSave.includes('O PDF foi preservado no Drive')) {
+  findings.push('Falha incerta do Firestore não pode apagar o PDF possivelmente vinculado.');
+}
+
 requireText(view, "newEmpenhoMode === 'manual'", 'Cadastro manual ausente.');
 forbidText(state, "'manual' | 'pdf' | 'json'", 'Modo JSON permanece autorizado no estado.');
 
-requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
+requireText(page, "import('../../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
 requireText(operationalWorkspace, 'handleProcessEmpenhoPdf', 'Host operacional não expõe importação direta por PDF.');
 requireText(operationalWorkspace, 'handleUpdateEmpenhoNotaCredito', 'Host operacional não expõe edição manual da NC.');
 

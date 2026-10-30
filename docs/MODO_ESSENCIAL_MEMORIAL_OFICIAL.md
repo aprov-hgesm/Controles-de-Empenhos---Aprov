@@ -1,5 +1,51 @@
 # EMPROVEX — MODO ESSENCIAL / MODO NORMAL — MEMORIAL OFICIAL R1
 
+## RELEASE PUBLICADA — NORMAL/ESSENCIAL R3 (29/10/2026)
+
+> **STATUS ATUAL:** versão em produção, confirmada pelos comandos `vercel promote` e `vercel inspect https://emprovex.com.br` do proprietário. Este checkpoint **substitui as marcações antigas de DRAFT / NÃO PUBLICADO, que permanecem abaixo como histórico**.
+
+- **PR #411 MERGED (squash)** em `main@b3a7d764fd645303c4aa5e204143cf9dc56d5566` com seletor Normal/Essencial por `sessionStorage`, navegação enxuta, redução de efeitos fora do 3D, fallback ao Normal e projeção de linhas do Painel que mantém totais integrais ao renderizar inicialmente 60 linhas por classificação.
+- **Vercel anterior para referência de rollback:** `dpl_5JqtJf5gEpcCTv6pXKYPM1WtV1Yr`, `https://controles-de-empenhos-aprov-atdvtofri-aprov-hgesms-projects.vercel.app`.
+- **Deployment vigente do domínio:** `dpl_86m6g6i3Qc3j6zedvmUEYqYYVofW`, `https://controles-de-empenhos-aprov-89zn41p93-aprov-hgesms-projects.vercel.app`. Um único `vercel.cmd deploy --prod --skip-domain --archive=tgz` com build remoto, `production / Ready`, health `{"status":"ok","timestamp":"2026-10-29T22:23:53.365Z"}`, seguido de `vercel.cmd promote ... --yes` com resposta `Success!`. Inspeção final de `https://emprovex.com.br` confirmou exatamente o mesmo deployment, `production / Ready`. **NÃO refazer deploy/promote.**
+- **Certificação pré-release:** Fast CI, TypeScript, Core Protection, Recovery, SAAS-DL Legal, W4 Visual, W4 Evidence, InfinitePay UI e [Auditoria VISUAL-R2 #40963203483](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40963203483) com cinco trabalhos Linux PASS e browser E2E autenticado em Firebase Emulator. A falha anterior de inicialização do emulador Windows 8081 foi conservada como diagnóstico local não aprovado, distinto da release Linux da Vercel.
+- **Validação humana e limites:** prévia visual examinada pelo fundador e considerada satisfatória; `/api/health` no staged verificado. **Não consta comprovação do smoke completo autenticado no staged ou em produção** para ações reais de NF/TR/Drive, estoque, 3D, cobranças, ou `/api/central-depositos/health` com sessão fundadora. Testar só com workspace QA e sem operações destrutivas em dados reais. A economia de RAM ainda não tem benchmark isolado, portanto **não anunciar 800 MB de redução do EMPROVEX**.
+- **Segurança:** nenhuma publicação de Firestore Rules, migração ou alteração financeira solicitada por esta release; modo Essencial não deve mudar isolamento por UID/UG, billing, aceite legal ou renderer 3D. A referência do commit funcional permanece `b3a7d764...` mesmo após commits **somente documentais** na `main`, pois `git.deploymentEnabled=false`.
+- **Próximo passo:** smoke operacional autenticado pós-release e observação de incidentes; rollback Vercel anterior somente se necessário, distinguindo aplicação de banco/Rules.
+
+[Memorial Oficial](./EMPROVEX_MEMORIAL_OFICIAL.md) · [Runbook canônico PowerShell](./EMPROVEX_RELEASE_POWERSHELL.md) · [Release R3](./releases/EMPROVEX_ESSENCIAL_R3_RELEASE_20261029.md).
+
+---
+
+## ATUALIZAÇÃO CANÔNICA — IMPLEMENTAÇÃO, E2E E NOVA FRENTE RAM (29/10/2026)
+
+**Status vigente substitui exclusivamente os checkpoints antigos de "somente documentação" nesta página.** Implementação em [PR #411 DRAFT](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/411) sobre branch `feat/visual-mode-r1-session-navigation`. Nenhum merge ou deploy autorizado.
+
+| Frente | Verificação atual |
+| --- | --- |
+| Normal/Essencial por sessão | Implementado em `sessionStorage` com selector, rotas de Painel e Central, sem alterar banco por modo |
+| R2-A/B | Lazy de painéis/backup, acabamento visual econômico, agregados financeiros memoizados e tabela progressiva; totais/filtros preservam o conjunto completo |
+| R2-C | Segmentação inicial segura; a decomposição dos hooks transacionais **não** está concluída |
+| Recuperação automática | Boundary React + falha de chunk detectável retornam ao Normal, sem logout/reload, bloqueiam Essencial até fim da sessão; **não mascarar cobrança ou permissão** |
+| Regressões e segurança | 5/5 jobs da matriz #40951319841 PASS; 11/11 Playwright autenticado no emulador (2 de fallback, 9 fluxos operacionais). Contratos críticos de TR, Drive, NF/NS, relatórios, 3D e Warehouse PASS no âmbito dos testes automatizados, mas **não houve transação externa real com Drive/InfinitePay** |
+| Windows localhost | CI #40956724787: 5/5 checagens sintáticas/segurança PASS, **smoke Windows do emulador Warehouse FAIL por timeout de 8081**; a prévia Windows não está certificada |
+| RAM real do EMPROVEX | **Não medida de modo isolado.** Capturas do Windows total: Essencial 6,8/7,8 GB e Normal 7,6/7,8 GB; delta global 0,8 GB, não atribuído à aplicação; CPU capturada 5%/81% sem controle de tempo |
+
+### /goal — próximo ciclo: memória RAM com paridade funcional integral
+
+**Achados de código, sem atribuição quantitativa:** listeners onSnapshot são desligados ao trocar abas, mas arrays operacionais do React mantêm registros; o `OperationalWorkspace` e seus hooks de ações permanecem montados depois da primeira visita a qualquer aba transacional; o Painel Essencial limita nós DOM mas não libera os dados usados em totais/relatórios; 3D SVG tem custo proporcional às estruturas, porém **é intangível**; `pdfToolkit` importa bibliotecas somente ao emitir PDFs.
+
+**Plano de execução autorizado para desenvolvimento:**
+1. Medir JS heap/RSS, nós DOM e retenção após visitas a Painel, Empenhos, NF, Relatórios e 3D em ambos os modos com dataset/conta iguais, sem dados de produção. Registrar baseline e processos Node/Java separadamente. Não projetar economia de MB sem prova.
+2. Priorizar alocação temporária e caches de **leitura** que não causem perda; definir política explícita de retenção e reidratação antes de descarte. Não desligar em lote estados `invoices`/históricos: Relatórios pode depender deles mesmo sem listener em `relatorios`. Preservar rascunho digitado, arquivo PDF selecionado por NE, operações assíncronas e identidade UID/UG.
+3. Garantir testes de equivalência monetária, listas/consultas completas, geração de TR/PDF, Drive, cronograma, backup, concorrência, saída Warehouse e 3D intacto; mecanismos de licença, aceite e Firestore Rules não podem sofrer mudanças.
+4. Aplicar apenas melhorias isoladas comprovadas com ganhos medidos e testes de contrato + E2E em emulador; manter em PR DRAFT sem deploy até aprovação do fundador.
+
+**Controles explícitos:** não confundir `npm run dev`/emuladores no Windows 8 GB com memória de um navegador de cliente em produção; não fazer `setInvoices([])` simplesmente por sair da aba de NF; não remover hooks de criação/termo/upload com operações em andamento; não reduzir detalhes/FPS/resolução do 3D. GOV-SIMP-01 proporcional a risco.
+
+**Evidências:** [E2E completo #40951319841](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40951319841), [Windows CI incompleto #40956724787](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40956724787), [memorial mãe](./EMPROVEX_MEMORIAL_OFICIAL.md). As seções históricas abaixo preservam as decisões anteriores, mas não são o checkpoint atual de execução.
+
+---
+
 > **Registro canônico da frente de desempenho visual.** Criado em **29/10/2026** a partir da auditoria e do plano executivo integrais de 24/10/2026. Este memorial registra decisões de projeto, não certificação de implementação, benchmark ou publicação.
 >
 > **Estado na criação:** planejamento aprovado; implementação específica, testes comparativos e deploy do Modo Essencial **não comprovados**. Criar este memorial **não altera** a aplicação, a Vercel, o banco, o Firebase ou as Rules. Nenhuma atualização de produção está autorizada por este registro.
@@ -291,3 +337,165 @@ Não atualizar React/Next/Firebase indiscriminadamente; não trocar biblioteca 3
 ## Anexo B — Consulta da auditoria completa
 
 A auditoria de arquitetura, baseline histórico, evidências e oportunidades **DV-01 a DV-20** está preservada integralmente em [MODO_ESSENCIAL_AUDITORIA_2026-10-24.md](./MODO_ESSENCIAL_AUDITORIA_2026-10-24.md). Seus trechos preliminares sobre `localStorage` e Início estático foram expressamente superados pelas decisões canônicas da seção 0 deste documento.
+
+
+---
+
+## Checkpoint de implementação — 29/10/2026 — R1 núcleo visual/navegação
+
+> **Estado:** código inicial em desenvolvimento na branch `feat/visual-mode-r1-session-navigation`, **não integrado à main nem publicado**. O usuário autorizou desenvolvimento incremental com **somente verificações estáticas básicas nesta fase**; testes automatizados extensivos, benchmark real, auditoria e certificação ficam para a conclusão da configuração do Modo Essencial. **Não declarar PASS ou release pronta por este registro.**
+
+### Implementação já gravada na branch
+
+1. `components/visual-mode/VisualModeProvider.tsx`: um único provider React do modo `premium | essencial`, preferência versionada `emprovex:visual-mode:v1` em `sessionStorage`, bootstrap seguro, modo Normal padrão, API de limpar e atributo `data-visual-mode`.
+2. `components/visual-mode/VisualModeControl.tsx` e `components/layout/AppHeader.tsx`: seletor acessível e compacto Normal/Essencial no cabeçalho compartilhado do EMPROVEX e da Central; não realiza chamadas Firestore.
+3. `app/layout.tsx`: provider global, preservando o mesmo modo através das duas áreas da aplicação naquela sessão.
+4. `app/page.tsx` e `components/layout/AppSidebar.tsx`: remove Início do menu no Essencial, redireciona a aba ativa para Painel, blinda `setActiveTab('inicio')`, carrega Início com `React.lazy` somente quando necessário e envia o operador diretamente ao Controle de Materiais da Central.
+5. `features/warehouse/components/WarehouseSidebar.tsx` e `WarehouseModuleShell.tsx`: filtro de navegação, `home -> control` com `replaceState` em rotas diretas/histórico e renderização local do Controle para impedir que o conteúdo da landing seja montado no Essencial.
+6. `components/layout/OperationalSurfaceTransition.tsx`: no Essencial, a transição operacional é estática, sem `motion`, blur ou feixes decorativos; no Normal permanece intacta.
+7. Logout e invalidação de sessão: limpar preferência em `app/page.tsx`, `WarehouseModuleShell.tsx` e `WarehouseProtectedSurface.tsx`; mudança de identidade observada na página principal também limpa a preferência.
+
+8. `components/layout/AppBackground.tsx` + `app/page.tsx`: modo Essencial utiliza fundo estático de gradiente leve **somente nas superfícies principais**, removendo os quatro círculos com blur de 120–150px. O Warehouse continua utilizando seu fundo/visual originais.
+9. `components/layout/OperationalNavigationBeam.module.css`: suspende a animação contínua de feixe nas navegações do EMPROVEX em Essencial; contorno e estados ativos permanecem visíveis.
+
+### Escopo preservado
+
+- **3D intocado:** não editar `WarehouseHomeOperational`, `WarehouseIsometricPreview`, geometria, câmeras, materiais, etiquetas, interações, renderizador 2D/3D, cenas nem suas regras CSS.
+- **Backend e domínio intactos:** nenhum endpoint, Firestore Rule, IAM, autenticador, ledger, saldo, NF, NS, faturamento ou persistência do workspace alterado nesta entrega.
+- O modo visual não dá ou revoga autorização; o guard de acesso Warehouse existente segue obrigatório.
+- **Sem Vercel:** não executar deploy, promote ou mudança no domínio nesta fase.
+
+### Verificação básica disponível
+
+- Comparação `main...feat/visual-mode-r1-session-navigation` consultada via GitHub: branch à frente, sem alterações em arquivos 3D ou backend.
+- Inspeção estática pontual de hooks, imports, rotas, JSX e condições de renderização; **não equivale a `tsc`, build, smoke autenticado, teste de navegador, CI ou aceite visual**.
+
+### Pendências para o desenvolvimento contínuo, antes da fase formal de testes
+
+- Refinar superfícies decorativas restantes **fora** do 3D (blur, partículas, beams, animação contínua), com variantes visuais Essenciais sem CSS global de risco.
+- Investigar melhorias pontuais de CPU/bundles por medição, sem refatorar lógica financeira/logística apenas por suposição.
+- Validar ao fim da configuração toda a matriz VF-01 a VF-16, comparar hardware modesto e de referência, confirmar carregamento efetivo dos chunks e certificação de CI, integridade e ausência de regressão 3D.
+- Só então preparar composição/merge e publicação manual mediante aprovação expressa do fundador.
+
+
+---
+
+## Checkpoint de desenvolvimento — simplificação visual ampliada (29/10/2026)
+
+**Autorização:** finalizar simplificação visual agressiva fora da Central 3D, preservando estética profissional; realizar só pequenos testes de funcionamento, postergando testes/auditorias complexos.
+
+**Status:** modificações gravadas **somente** em `feat/visual-mode-r1-session-navigation`. Nenhuma modificação na `main`, produção Vercel, Firestore, IAM, Rules, APIs, saldos ou componentes do renderizador 3D. Este checkpoint é de desenvolvimento, **não** uma certificação nem aceite de publicação.
+
+### Entregas desta etapa
+
+1. **CSS Essencial independente e escopado** — `app/visual-mode-essential.css`, importado depois de `app/globals.css`: remove `backdrop-filter` e sombras caras apenas do cabeçalho, menu, cartão de operador, backdrop mobile e do cabeçalho operacional não imersivo da Central. Mantém cores sólidas/gradientes estáticos, foco e contraste; não afeta `warehouse-emprovex-content` nem qualquer descendente de `WarehouseIsometricPreview`.
+2. **Loops puramente visuais desligados** — anéis do cabeçalho, energia decorativa, nós SVG da assinatura, brilho pulsante do item de navegação e dot decorativo estáticos no Essencial, mantendo indicadores funcionais; sem CSS universal ou supressão de `animate-spin`/`animate-pulse` de operação.
+3. **Transições e entrada de cards** — CSS de entrada/carregamento decorativo suspenso apenas no `main[data-visual-surface='operational']` do EMPROVEX. Navegação móvel com fundo opaco estático; transições operacionais do Essencial já eram estáticas no checkpoint anterior.
+4. **Central sem blur de fundo** — `WarehouseModuleShell` passa `essential` ao componente `AppBackground`, que só escolhe fundo leve quando `!immersive`. Na seção `overview` (Meus Depósitos 3D), `immersive=true` prevalece e a cena/fundo original continua intocada. O cabeçalho de Controle/Alocação/Saída é simplificado sem tocar no conteúdo 2D/3D.
+5. **Login operacional Essencial** — `EmprovexLogin` tem seletor antes da autenticação, mantém e-mail/senha, Google, recuperação e mensagens. Em Essencial não monta `LoginAtmosphere` (RAF, pointermove, rede decorativa), cenas/signatures ou `LoginBrandStage` cinematográfico; usa `LoginBrandStageEssential` estático. Em Normal, os visuais originais são lazy sob demanda; preserva efeito de login Normal e feedbacks de erro/loading.
+6. **Sucesso de autenticação** — `LoginSuccessTransition` usa transição curta e simples no Essencial; callback `onComplete` continua obrigatório.
+7. **Administração** — `PlatformAdminView` no Essencial abre `overview`/Visão Geral, sem montar a cena 3D puramente decorativa do bairro. A aba Início fica oculta só no Essencial, mas permanece no Normal com lazy import de `AdminWorldHomePanel`; demais setores, sessões, consumo, cobrança, backup e segurança preservados. Seletor acessível no cabeçalho da Administração, modo por sessão e limpeza no logout.
+8. **Border Beam** — `EmprovexBorderBeam` muda a variante efetiva para `static` no Essencial e deixa de cadastrar `IntersectionObserver`/`visibilitychange` por cartão enquanto o modo leve estiver ativo; o contorno permanece visível.
+
+### Verificações mínimas executadas — limites de prova
+
+- **16/16 verificações estáticas PASS** no conteúdo da branch via GitHub: CSS balanceado, ordem de import, escopos, ausência de regra universal e de seletores 3D, indicadores busy preservados, login (e-mail/senha/Google/recuperação) e controles presentes, cena removida da montagem no Essencial, Admin lazy e navegação, observers desativados, preferências por sessão, seletor compartilhado e fundo Warehouse condicionado a `!immersive`.
+- **Não executados nesta etapa:** build Next.js, `tsc`, testes de unidade automatizados, GitHub CI, browser/E2E, smoke autenticado, perfil CPU/GPU/RAM, Lighthouse, regressão fotográfica 3D e publicação. Os 16 checks são inspeção de contratos e guardas no código; **não provam interação real ou ausência de regressões em navegador**.
+- **Ambiente:** não foi possível obter checkout Git via acesso externo do container, então não há prova de compilação local nesta execução. Evitar usar a palavra `PASS` para rotas funcionais ainda não rodadas.
+- **GO parcial:** desenvolvimento pode continuar na branch. **NO-GO de publicação** até build básico e smoke autenticado ao encerrar a configuração.
+
+### Próxima continuidade
+
+R1 tem núcleo do modo, navegação e simplificação ampla de decorativos. Reavaliar eventuais problemas detectados durante montagem final e, somente ao terminar as configurações, executar a matriz VF-01 a VF-16 e benchmark comparativo em PC modesto. Não alterar o 3D protegido para obter ganho de CPU. Não editar `main` nem chamar Vercel sem autorização posterior.
+
+
+---
+
+## Auditoria R2 — simplificação funcional, CPU e minimalismo (29/10/2026)
+
+A segunda auditoria estática dirigida identificou trabalho de processamento ainda otimizable além dos efeitos visuais. **Documento técnico completo:** [MODO_ESSENCIAL_AUDITORIA_R2_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_R2_2026-10-29.md).
+
+**Achados priorizados:**
+- **R2-A, baixo/moderado:** carregar Administração e painel de backup/Drive sob demanda; reduzir vidro e cartões redundantes somente em superfícies não 3D.
+- **R2-B, moderado:** pré-agregação/memoização financeira no Dashboard e renderização gradual de linhas, **sem qualquer diferença em valores, contagem, filtros, pesquisa, edição ou exportações**.
+- **R2-C, moderado/alto:** segregar hooks de operações por aba e retirar o Motion do caminho base do login Essencial, sem duplicar autenticação nem alterar motores transacionais.
+- **R2-D, condicional:** particionar CSS enorme/recursos compartilhados apenas após demonstrar ganho; manter o que já está otimizado (listeners por aba, PDF lazy, branding cache e Warehouse dynamic).
+
+**Risco de integração a acompanhar:** navegação da Central usa `usePathname` + histórico manual + estado local; na certificação final, conferir F5, voltar/avançar, links diretos e troca de modo. **3D intocável**.
+
+**Estado da auditoria:** arquivo criado e vinculado na branch de desenvolvimento. Não foram executados build, CI, benchmark ou navegador real; **não confundir inspeção estática com certificado de desempenho/funcionalidade**. Nenhuma mudança adicional de código nesta auditoria e nenhum deploy/merge.
+
+**Próximo marco recomendado:** iniciar implementação R2-A em branch atual, com verificações curtas e sem burocracia; testar cenários abrangentes no fechamento, observando os guardas críticos financeiros e de segurança.
+
+
+---
+
+## BLOQUEIO PREVENTIVO DE SEGURANÇA — AUDITORIA AS-R1 (29/10/2026)
+
+**Documento:** [MODO_ESSENCIAL_AUDITORIA_SEGURANCA_R1_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_SEGURANCA_R1_2026-10-29.md).
+
+**Decisão em 29/10:** **GO somente para corrigir compatibilidade e gates em branch de desenvolvimento; NO-GO de R2-A/R2-B/R2-C, merge, deploy ou publicação até resolver AS-01 + AS-02.** A inspeção foi estática (14 contratos verificados, 9 salvaguardas presentes e 5 lacunas de integração), sem emulador, build ou browser autenticado. Não foi verificada corrupção persistente nem exploração, mas não existe certificação de segurança.
+
+**P0 de disponibilidade:** `app/page.tsx` omite o terceiro parâmetro obrigatório de `useOperationalData`, que tem `billingAccessGranted=false` como padrão; `app/login/page.tsx` implementa corretamente gate de assinatura. Divergência preexistente na `main` — falha de disponibilidade potencial e **não** prova de bypass. Resolver com uma única entrada/gate canônico, nunca com `true` fixo.
+
+**P0 de experiência visual:** `app/login/page.tsx` não usa `useVisualMode` no `activeTab` e continua montando Início apesar da preferência Essencial; o menu compartilhado já o oculta. Unificar as duas rotas sem perder `/login?tab=cronogramas` ou cobrança.
+
+**P1 de integridade do usuário:** `setNfQuantities` zera o draft em `useEffect` dependente de `empenhos`, inclusive possíveis snapshots. Proteger dados não salvos antes de refatorar hooks, abas ou processamento financeiro.
+
+**P1/P2 adicionais:** fonte dupla de estado URL/aba Warehouse, sinalização de dados stale quando listener falha, consistência de entitlement durante a sessão, limpeza de modo no logout em todas as rotas, ausência de mutações por troca de aparência, proteção absoluta da Central 3D.
+
+**Contrato inegociável:** nenhum modo concede direitos, altera assinatura, renova lease, grava Firestore, desliga validação, altera valores financeiros, elimina funcionalidades ou recria a cena 3D. Segurança e isolamento devem permanecer iguais, e alteração visual deve preservar drafts em curso. `firestore.rules` e backend nunca serão relaxados para ganhar desempenho.
+
+**Próxima execução:** correções AS-01 + AS-02 primeiro, depois proteção AS-03; só então retomar R2-A e demais fases, com verificações curtas e auditoria completa antes da publicação.
+
+
+---
+
+## CHECKPOINT DE IMPLEMENTAÇÃO — HARDENING P0/NF E R2-A/B/C (29/10/2026)
+
+**Estado:** alterações em desenvolvimento exclusivamente na branch `feat/visual-mode-r1-session-navigation`; nenhuma publicação na Vercel, migração Firestore, alteração de Rules, API, motor de estoque, câmera ou visualizador Warehouse 3D.
+
+**P0-A — Entrada canônica:** `app/page.tsx` deixa de manter uma aplicação operacional divergente e reexporta `app/login/page.tsx`. `next.config.ts` continua reescrevendo `/` para a vitrine `/institucional`. A rota operacional `/login` permanece a fonte única da verificação `checkSectorBillingAccess` + identidade + aceite legal, **sem nunca passar acesso `true` fixo**.
+
+**P0-B — Modo Essencial na rota real:** `app/login/page.tsx` usa `useVisualMode`, faz `inicio -> painel`, `InicioView` lazy apenas no Normal, preserva `?tab=cronogramas` e envia operador Essencial a `/central-depositos/controle-de-itens`. A liberação de cobrança exibida foi vinculada a UID/workspace/UG para impedir utilização visual de resposta antiga em troca de identidade. Não houve alteração em `sectorBillingGate`, regras de acesso, IAM ou servidor.
+
+**NF — Rascunhos:** `app/login/page.tsx` armazena as quantidades **em memória por NE** e as recupera quando o operador retorna à NE; removeu o efeito que zerava valores a cada mudança do array `empenhos`. Limpa drafts em logout/mudança de identidade. Demais estados de NF continuam na `useOperationalViewState`. Atenção: o estado é **efêmero**, não um backup persistente contra fechamento abrupto do navegador; não criar gravações automáticas de NF.
+
+**R2-A — Carregamento e minimalismo seguros:**
+- `PlatformAdminView.tsx`: oito subpainéis (backup, consumo, assinaturas, sessões, segurança, interessados, criar setor e modal de edição) via `React.lazy + Suspense`, sem alterar callbacks, permissões ou hooks administrativos responsáveis pelos dados.
+- `WorkspaceDriveControl.tsx`: `WorkspaceBackupSection` lazy dentro do diálogo; sessão OAuth, indicador, conexão e expiração seguem com o hook já existente.
+- `DashboardView.tsx` + `visual-mode-essential.css`: superfície escopada para reduzir vidro, sombras grandes e transições caras **somente no Essencial**, sem esconder indicadores nem afetar Central 3D.
+
+**R2-B — CPU e linhas:**
+- `DashboardView.tsx` usa `useMemo([empenhos])` para acumulados financeiros, contagem/segmentos RPNP/regular e valores por NE, evitando varrer a base repetidamente por cartão e tabela. Somas e regras financeiras preservadas na forma existente (`quantity * unitPrice`, `received * unitPrice`, `Math.max(0, ...)`).
+- No Essencial, tabelas detalhadas mostram inicialmente até 60 linhas por classe, com botão `Mostrar mais 60`. **Pesquisa, contagem e totais continuam sobre o conjunto completo filtrado**; Normal continua exibindo a tabela completa. Nenhuma exportação foi modificada.
+
+**R2-C — Carregamento de código por estágio, sem desmontar operações:**
+- Novo `OperationalDashboardEntry.tsx` monta apenas o Painel e `useEmpenhoClasses`, **sem os hooks de escrita** de Empenhos, NFs, SAG/NS, relatórios ou Cronogramas.
+- `app/login/page.tsx` mantém o painel leve até o operador abrir a primeira aba operacional/transacional; depois carrega `OperationalWorkspace` completo e **não o desmonta ao voltar ao Painel**, evitando perder estado interno de hooks, callbacks, confirmações de e-mail e ações em andamento.
+- Trata-se da **primeira segmentação segura** da R2-C; a divisão de cada motor transacional em chunks distintos continua condicionada a testes de fluxo/estado e **não** foi feita cegamente.
+
+**Verificação rápida de contratos:** 17/17 inspeções estáticas PASS no GitHub para canonicalidade, gate, `/login?tab=cronogramas`, drafts, lazy/exports de painéis, agregação, tabela progressiva, R2-C e escopo do CSS. Também foi removida uma referência órfã `rpnpEmpenhos.length` após a agregação (substituída por contagem memoizada). **Não** foi realizado compilação Next/TypeScript local, teste autenticado, emulador, browser real ou benchmark. `next.config.ts` do projeto contém `typescript.ignoreBuildErrors`: um build Next `Ready` sozinho **não** equivale à prova de typecheck.
+
+**Pendências para GO de integração e publicação:**
+1. Validar typecheck real (`tsc --noEmit`) e o conjunto mínimo de rotas de login, admin, NF, Painel e Central, incluindo autorização VIP, trial, vencida e revogada.
+2. Exercitar fluxo de NF (quantidades em rascunho, snapshot em tempo real, voltar à NE, salvar/cancelar, alternar modos, logoff), cronograma com email e workflows de administração.
+3. Comparar números financeiros/RPNP de base controlada antes/depois, testar paginação/busca/teclado em massa grande, acompanhar `onSnapshot`, uso de memória/CPU e preservar 3D.
+4. Certificar alterações no CI e só então propor merge/promoção via método Vercel do memorial; autorização expressa de publicação é obrigatória.
+
+**Regra:** é permitido continuar desenvolvimento da R2 em branch; **NO-GO de merge/produção** enquanto essa matriz não for executada. A implementação não reduz proteções do Firestore ou acesso por assinatura.
+
+
+---
+
+## Auditoria funcional integral — resultado NO-GO (29/10/2026)
+
+**Documento:** [MODO_ESSENCIAL_AUDITORIA_FUNCIONAL_INTEGRAL_2026-10-29.md](./MODO_ESSENCIAL_AUDITORIA_FUNCIONAL_INTEGRAL_2026-10-29.md).
+
+**Certificação:** não concedida. O CI principal apresentou typecheck, Core Protection, guard de writes Warehouse, W4 browser inicial e evidências de integração com PASS, mas Fast CI FAIL. A auditoria não destrutiva GitHub Actions `40818642040`, executada uma única vez e disponibilizada depois apenas por `workflow_dispatch`, rodou **48 verificações (36 PASS e 12 FAIL)**. A maioria das falhas é de scripts antigos buscando a implementação em `app/page.tsx` (agora reexport da real `/login`) ou exigindo padrão antigo de navegação; não são prova de falha do TR/Drive/PDF, mas invalidam certificação. Uma nova execução visual/InfinitePay ainda encontrou erro externo de download npm `@types/estree@1.0.10` (404), não erro de interface.
+
+**Achados que exigem tratamento antes do GO:** AF-01 badge de avisos potencialmente 0 no Painel Essencial por plano sem `alerts` e snapshot restrito ao Início; AF-02 dados ainda habilitados por flag antiga `billingAccessState` em transição UID/UG apesar de guarda de render já vinculada; AF-03 drafts NF e arquivo PDF local sem E2E; AF-04 logout admin sidebar sem `clearVisualMode`; AF-05 regras CSS `main[data-visual-surface]` sem alvo no shell canônico `/login`; AF-06 navegação local Warehouse/URL sem teste browser autenticado; AF-07 valores financeiros/RPNP sem comparação de paridade; AF-08 sinalização stale/offline; AF-09 falta de E2E TR/upload/relatórios.
+
+**Preservação estrutural demonstrada:** serviços de TR, emissão/mescla PDFs, upload/verificação Drive, lifecycle NF/NS/NE, cronograma e email, Firebase Rules, APIs, Warehouse/Operador Móvel e renderizador 3D não foram alterados no diff da PR. O `OperationalWorkspace` continua com todos os callbacks documentais conectados. Isso **não comprova operação real**.
+
+**Decisão:** PR #411 DRAFT, sem merge, sem deploy. Para avançar: corrigir indicadores e gate por identidade, confirmar rascunhos/URL sem regressão, tornar testes legacy compatíveis com rota canônica preservando garantias de segurança, executar E2E autenticado em sandbox com termos, downloads, upload, relatórios, cobrança/tenant e 3D e comparação financeira antes de GO técnico.

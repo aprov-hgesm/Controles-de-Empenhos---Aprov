@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react';
 
 import type { OperationalActiveTab } from '../../lib/operationalSubscriptionPlan';
 import styles from './OperationalSurfaceTransition.module.css';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 interface OperationalSurfaceTransitionProps {
   surfaceKey: OperationalActiveTab;
@@ -29,6 +30,22 @@ export function OperationalSurfaceTransition({
   children,
 }: OperationalSurfaceTransitionProps) {
   const reduceMotion = useReducedMotion();
+  const { mode } = useVisualMode();
+
+  // Essencial: sem motion, filtros, blur, feixe ou labels animados.
+  // Não envolve qualquer renderizador da Central 3D.
+  if (mode === 'essencial') {
+    return (
+      <section
+        className={styles.root}
+        data-surface={surfaceKey}
+        data-visual-mode="essencial"
+        aria-label={`Superfície operacional: ${SURFACE_LABELS[surfaceKey]}`}
+      >
+        <div className={styles.content}>{children}</div>
+      </section>
+    );
+  }
 
   return (
     <motion.section

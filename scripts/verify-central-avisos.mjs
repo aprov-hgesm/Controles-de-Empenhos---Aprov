@@ -17,12 +17,15 @@ const types = read('lib/types.ts');
 const domain = read('features/avisos/domain/noticeLifecycle.ts');
 const actions = read('features/avisos/hooks/useAvisosActions.ts');
 const view = read('features/avisos/components/CentralAvisosView.tsx');
-const page = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const page = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
 const sidebar = read('components/layout/AppSidebar.tsx');
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const snapshot = read('features/inicio/domain/homeOperationalSnapshot.ts');
 const snapshotHook = read('features/inicio/hooks/useInicioOperationalSnapshot.ts');
-const orbit = read('features/inicio/components/InicioOrbitSystem.tsx');
+const orbit = read('features/inicio/components/InicioCore.tsx');
 const empenhoActions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const invoiceActions = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
 const rules = read('firestore.rules');

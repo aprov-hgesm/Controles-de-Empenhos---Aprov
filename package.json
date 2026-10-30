@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "preview:local": "node scripts/dev-preview-emulator.mjs",
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",

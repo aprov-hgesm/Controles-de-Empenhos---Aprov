@@ -13,7 +13,13 @@ const actions = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
 const invoicesView = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 const reportView = read('features/relatorios/components/RelatorioPorEmpenhoView.tsx');
 const documents = read('features/relatorios/hooks/useDocumentActions.ts');
-const app = read('app/page.tsx');
+const rootEntry = read('app/page.tsx');
+const app = rootEntry.includes("export { default } from './login/page'")
+  ? read('app/login/page.tsx')
+  : rootEntry;
+if (rootEntry.includes("export { default } from './login/page'") && !app.includes("import('../../features/operational/components/OperationalWorkspace')")) {
+  throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
+}
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 requireText(types, 'spedNup?: string', 'Invoice não possui campo opcional spedNup.');
@@ -43,7 +49,7 @@ requireText(documents, 'formattedNup', 'PDF do relatório não prepara o NUP.');
 requireText(documents, "'NUP SPED'", 'PDF do relatório não possui coluna de NUP.');
 requireText(documents, 'inv.spedNup', 'PDF do relatório não lê o NUP da NF.');
 
-requireText(app, "import('../features/operational/components/OperationalWorkspace')", 'O shell principal não conecta o host operacional sob demanda.');
+requireText(app, "import('../../features/operational/components/OperationalWorkspace')", 'O shell principal não conecta o host operacional sob demanda.');
 requireText(operationalWorkspace, 'handleSaveSpedNup', 'A ação de salvar NUP não foi conectada à tela.');
 
 if (findings.length) {

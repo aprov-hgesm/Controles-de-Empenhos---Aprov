@@ -20,10 +20,12 @@ import {
 } from '../../../lib/platformSessionLease';
 import { flushWorkspaceUsageTelemetry } from '../../../lib/workspaceUsageTelemetry';
 import { usePlatformBranding } from '../../../hooks/usePlatformBranding';
-import { getWarehouseSectionForPathname, WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
+import { getWarehouseSection, getWarehouseSectionForPathname, WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 import { WarehouseSidebar } from './WarehouseSidebar';
 import { WarehouseTabNavigationProvider } from './WarehouseTabNavigation';
 import { WarehouseTabContent } from './WarehouseTabContent';
+import { WarehouseSectionLoading } from './WarehouseSectionLoading';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
 export function WarehouseModuleShell({
   children,
@@ -33,6 +35,7 @@ export function WarehouseModuleShell({
   workspaceContext: SectorWorkspaceContext;
 }) {
   const pathname = usePathname();
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<WarehouseSectionId>(
     () => getWarehouseSectionForPathname(pathname).id
@@ -50,21 +53,48 @@ export function WarehouseModuleShell({
   ));
 
   useEffect(() => {
-    setActiveSectionId(routeSection.id);
-  }, [routeSection.id]);
+    if (!visualModeReady) return;
+    const redirectHome = mode === 'essencial' && isPrimaryRoute && routeSection.id === 'home';
+    setActiveSectionId(redirectHome ? 'control' : routeSection.id);
+    if (redirectHome) {
+      // O acesso já passou pela autorização do WarehouseProtectedLayout.
+      setHasLocalTabNavigation(true);
+      const url = new URL(window.location.href);
+      url.pathname = getWarehouseSection('control').href;
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  }, [routeSection.id, isPrimaryRoute, mode, visualModeReady]);
 
   useEffect(() => {
     const restoreTab = () => {
-      setActiveSectionId(getWarehouseSectionForPathname(window.location.pathname).id);
+      const currentPath = window.location.pathname;
+      const redirectHome = mode === 'essencial' && (
+        currentPath === '/central-depositos' || currentPath === '/central-depositos/'
+      );
+      const restoredSection = redirectHome
+        ? getWarehouseSection('control')
+        : getWarehouseSectionForPathname(currentPath);
+      setActiveSectionId(restoredSection.id);
+      if (redirectHome) {
+        setHasLocalTabNavigation(true);
+        window.history.replaceState(
+          null,
+          '',
+          restoredSection.href + window.location.search + window.location.hash
+        );
+      }
       setSidebarOpen(false);
     };
     window.addEventListener('popstate', restoreTab);
     return () => window.removeEventListener('popstate', restoreTab);
-  }, []);
+  }, [mode]);
 
   const navigateWarehouseTab = useCallback((href: string) => {
     const targetUrl = new URL(href, window.location.origin);
-    const target = WAREHOUSE_SECTIONS.find((item) => item.href === targetUrl.pathname);
+    const requestedTarget = WAREHOUSE_SECTIONS.find((item) => item.href === targetUrl.pathname);
+    const target = mode === 'essencial' && requestedTarget?.id === 'home'
+      ? getWarehouseSection('control')
+      : requestedTarget;
 
     if (!href.startsWith('/') || href.startsWith('//') || targetUrl.origin !== window.location.origin) {
       // URLs externas não devem ser aceitas neste mecanismo interno.
@@ -76,7 +106,7 @@ export function WarehouseModuleShell({
       return;
     }
 
-    const nextUrl = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+    const nextUrl = target.href + targetUrl.search + targetUrl.hash;
     const currentUrl = window.location.pathname + window.location.search + window.location.hash;
     if (target.id !== activeSectionId) {
       setHasLocalTabNavigation(true);
@@ -88,9 +118,16 @@ export function WarehouseModuleShell({
       // Next App Router; não dispara fetch de nova rota nem desmonta o shell.
       window.history.pushState(null, '', nextUrl);
     }
-  }, [activeSectionId]);
+  }, [activeSectionId, mode]);
 
-  const activeSection = WAREHOUSE_SECTIONS.find((item) => item.id === activeSectionId) || routeSection;
+  const effectiveSectionId = mode === 'essencial' && activeSectionId === 'home'
+    ? 'control'
+    : activeSectionId;
+  const activeSection = WAREHOUSE_SECTIONS.find((item) => item.id === effectiveSectionId) || routeSection;
+  // Uma rota direta /central-depositos no Essencial nunca renderiza a landing.
+  const renderLocalSection = isPrimaryRoute && (
+    hasLocalTabNavigation || activeSection.id !== routeSection.id
+  );
   const section = activeSection.id;
   const isImmersive = section === 'home' || section === 'overview';
   const currentUser = auth.currentUser;
@@ -124,9 +161,12 @@ export function WarehouseModuleShell({
 
     resetActiveProfileMode();
     clearResolvedWorkspaceContext();
+    clearVisualMode();
     await signOut(auth);
     window.location.assign('/login');
   };
+
+  if (!visualModeReady) return <WarehouseSectionLoading />;
 
   return (
     <WarehouseTabNavigationProvider navigate={navigateWarehouseTab}>
@@ -138,7 +178,7 @@ export function WarehouseModuleShell({
       data-testid="warehouse-module-shell"
       data-warehouse-section={section}
     >
-      <AppBackground immersive={isImmersive} />
+      <AppBackground immersive={isImmersive} essential={mode === 'essencial'} />
 
       <AppHeader
         customLogo={customLogo}
@@ -170,7 +210,7 @@ export function WarehouseModuleShell({
               data-testid="warehouse-surface"
               className="warehouse-emprovex-content min-w-0"
             >
-              {isPrimaryRoute && hasLocalTabNavigation ? (
+              {renderLocalSection ? (
                 <WarehouseTabContent section={section} workspaceId={workspaceContext.workspaceId} />
               ) : (
                 <>{children}</>
@@ -205,7 +245,7 @@ export function WarehouseModuleShell({
               </div>
 
               <div className="warehouse-emprovex-content min-w-0">
-                {isPrimaryRoute && hasLocalTabNavigation ? (
+                {renderLocalSection ? (
                   <WarehouseTabContent section={section} workspaceId={workspaceContext.workspaceId} />
                 ) : (
                   <>{children}</>

@@ -20,6 +20,7 @@ import {
 
 import { AppShellSignature } from './chrome/AppShellSignature';
 import beamStyles from './OperationalNavigationBeam.module.css';
+import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 export type AppTab =
   | 'inicio'
@@ -37,7 +38,7 @@ interface AppSidebarProps {
   activeTab: AppTab;
   open: boolean;
   userDisplayName: string;
-  noticeCount?: number;
+  noticeCount?: number | null;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
   onLogout: () => void | Promise<void>;
@@ -56,6 +57,8 @@ export function AppSidebar({
   warehouseModuleEnabled = false,
   onOpenWarehouse,
 }: AppSidebarProps) {
+  const { mode } = useVisualMode();
+
   return (
     <>
       {open && (
@@ -129,7 +132,7 @@ export function AppSidebar({
               <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
                 <span>Visão geral</span>
               </div>
-              <button
+              {mode === 'premium' && <button
                 onClick={() => onNavigate('inicio')}
                 className="emprovex-sidebar-nav-item"
                 data-active={activeTab === 'inicio' ? 'true' : 'false'}
@@ -138,7 +141,7 @@ export function AppSidebar({
                 <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
                 <Home className="w-5 h-5" aria-hidden="true" />
                 <span>Início</span>
-              </button>
+              </button>}
 
               <button
                 onClick={() => onNavigate('painel')}
@@ -240,7 +243,7 @@ export function AppSidebar({
                 <BellRing className="w-5 h-5" aria-hidden="true" />
                 <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
                   <span>Central de Avisos</span>
-                  {noticeCount > 0 && (
+                  {noticeCount !== null && noticeCount > 0 && (
                     <span
                       className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white"
                       aria-label={`${noticeCount} aviso(s) pendente(s)`}

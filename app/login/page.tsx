@@ -1,6 +1,6 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../../hooks/useOperationalViewState';
@@ -11,7 +11,7 @@ import { AppSidebar } from '../../components/layout/AppSidebar';
 import { ToastNotification } from '../../components/layout/ToastNotification';
 import { OperationalSurfaceTransition } from '../../components/layout/OperationalSurfaceTransition';
 import { OperationalSurfaceLoading } from '../../components/layout/OperationalSurfaceLoading';
-import { InicioView } from '../../features/inicio/components/InicioView';
+import { useVisualMode } from '../../components/visual-mode/VisualModeProvider';
 import { MobileNavigation } from '../../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
@@ -24,6 +24,18 @@ import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycl
 import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
 import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
+const InicioView = lazy(() =>
+  import('../../features/inicio/components/InicioView').then((module) => ({
+    default: module.InicioView,
+  }))
+);
+
+const OperationalDashboardEntry = lazy(() =>
+  import('../../features/operational/components/OperationalDashboardEntry').then((module) => ({
+    default: module.OperationalDashboardEntry,
+  }))
+);
+
 const OperationalWorkspace = lazy(() =>
   import('../../features/operational/components/OperationalWorkspace').then((module) => ({
     default: module.OperationalWorkspace,
@@ -31,10 +43,14 @@ const OperationalWorkspace = lazy(() =>
 );
 
 export default function Home() {
+  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [billingAccessState, setBillingAccessState] = useState<'checking' | 'allowed'>('checking');
+  // A decisão anterior de assinatura nunca autoriza outra identidade/UG
+  // nem durante o render anterior à nova verificação assíncrona.
+  const [billingAccessIdentity, setBillingAccessIdentity] = useState<string | null>(null);
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -54,7 +70,20 @@ export default function Home() {
   }, []);
 
   // Navigation drives the realtime subscription profile (Block 14).
-  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
+  const [requestedTab, setRequestedTab] = useState<OperationalActiveTab>('inicio');
+  const activeTab: OperationalActiveTab =
+    mode === 'essencial' && requestedTab === 'inicio' ? 'painel' : requestedTab;
+  const setActiveTab: Dispatch<SetStateAction<OperationalActiveTab>> = useCallback((update) => {
+    setRequestedTab((previous) => {
+      const requested = typeof update === 'function' ? update(previous) : update;
+      return mode === 'essencial' && requested === 'inicio' ? 'painel' : requested;
+    });
+  }, [mode]);
+  useEffect(() => {
+    if (visualModeReady && mode === 'essencial' && requestedTab === 'inicio') {
+      setRequestedTab('painel');
+    }
+  }, [mode, requestedTab, visualModeReady]);
 
   // Navegação entre módulos: /login?tab=cronogramas ativa a aba correta.
   useEffect(() => {
@@ -63,8 +92,11 @@ export default function Home() {
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
+  // Ao entrar pela primeira vez numa tela transacional, preservar os hooks
+  // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
+  const [hasOpenedTransactionalSurface, setHasOpenedTransactionalSurface] = useState(false);
 
-  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed');
+  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed', billingAccessIdentity);
   const {
     user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
@@ -76,28 +108,41 @@ export default function Home() {
     formatDateTime, formatDateOnly
   } = operationalData;
 
+  const currentBillingIdentity = user && !loadingAuth
+    ? user.uid + ':' + (workspaceContext.status === 'sector'
+        ? workspaceContext.workspaceId + ':' + (workspaceContext.ug ?? '')
+        : workspaceContext.status)
+    : null;
+  const billingIdentityAllowed = billingAccessState === 'allowed'
+    && currentBillingIdentity !== null
+    && billingAccessIdentity === currentBillingIdentity;
+
   useEffect(() => {
     let active = true;
     if (!user || loadingAuth) {
+      setBillingAccessIdentity(null);
       setBillingAccessState('checking');
       return () => { active = false; };
     }
     if (workspaceContext.status !== 'sector') {
+      setBillingAccessIdentity(currentBillingIdentity);
       setBillingAccessState('allowed');
       return () => { active = false; };
     }
+    setBillingAccessIdentity(null);
     setBillingAccessState('checking');
     void checkSectorBillingAccess(user, workspaceContext)
       .then((decision) => {
         if (!active) return;
         if (!decision.allowed) { showBillingRequired(); return; }
+        setBillingAccessIdentity(currentBillingIdentity);
         setBillingAccessState('allowed');
       })
       .catch(() => {
         if (active) showBillingRequired();
       });
     return () => { active = false; };
-  }, [user, loadingAuth, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
+  }, [user, loadingAuth, currentBillingIdentity, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
 
   const isExternalSectorUser = (
     workspaceContext.status === 'sector'
@@ -138,31 +183,51 @@ export default function Home() {
     selectedEmpenhoDetailId,
     setSelectedEmpenhoDetailId,
     selectedNFCommitmentId,
+    nfQuantities,
     setNfQuantities,
+    clearNfPdfDrafts,
   } = viewState;
 
   const pendingNoticeCount =
     activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
       ? countPendingNotices(alerts)
-      : inicioSnapshot?.alerts.total ?? 0;
+      : inicioSnapshot?.alerts.total ?? null;
 
   useEffect(() => {
     if (activeTab !== 'inicio') {
       setHasOpenedOperationalSurface(true);
     }
+    if (activeTab !== 'inicio' && activeTab !== 'painel') {
+      setHasOpenedTransactionalSurface(true);
+    }
   }, [activeTab]);
 
-  // Reset NF inputs when changing target empenho
+  // Draft de quantidades por NE. Snapshot, troca de modo e re-render NAO
+  // reinicializam o que foi digitado; apenas troca explicita de NE restaura draft.
+  const nfDraftsByEmpenhoRef = useRef<Map<string, Record<string, number>>>(new Map());
+  const lastNfCommitmentRef = useRef(selectedNFCommitmentId);
   useEffect(() => {
-    const target = empenhos.find(e => e.id === selectedNFCommitmentId);
-    if (target) {
-      const initialQtys: { [itemId: string]: number } = {};
-      target.items.forEach(item => {
-        initialQtys[item.id] = 0;
-      });
-      setNfQuantities(initialQtys);
+    nfDraftsByEmpenhoRef.current.set(lastNfCommitmentRef.current, nfQuantities);
+  }, [nfQuantities]);
+  useEffect(() => {
+    if (lastNfCommitmentRef.current === selectedNFCommitmentId) return;
+    lastNfCommitmentRef.current = selectedNFCommitmentId;
+    setNfQuantities(nfDraftsByEmpenhoRef.current.get(selectedNFCommitmentId) ?? {});
+  }, [selectedNFCommitmentId, setNfQuantities]);
+
+  // Evita reutilizar drafts ou preferencia visual de outra identidade na aba.
+  const lastIdentityRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loadingAuth) return;
+    const identity = currentBillingIdentity;
+    if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
+      nfDraftsByEmpenhoRef.current.clear();
+      setNfQuantities({});
+      clearNfPdfDrafts();
+      clearVisualMode();
     }
-  }, [selectedNFCommitmentId, empenhos]);
+    lastIdentityRef.current = identity;
+  }, [loadingAuth, currentBillingIdentity, clearVisualMode, setNfQuantities, clearNfPdfDrafts]);
 
 
 
@@ -175,7 +240,7 @@ export default function Home() {
 
 
 
-  if (loadingAuth) {
+  if (loadingAuth || !visualModeReady) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
   }
 
@@ -237,7 +302,7 @@ export default function Home() {
   }
 
   // No operational surface may render before a server billing decision.
-  if (billingAccessState !== 'allowed') {
+  if (!billingIdentityAllowed) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
@@ -248,7 +313,7 @@ export default function Home() {
       data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
-      <AppBackground immersive={activeTab === 'inicio'} />
+      <AppBackground immersive={activeTab === 'inicio'} essential={mode === 'essencial'} />
 
       {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
         <LoginSuccessTransition
@@ -307,6 +372,9 @@ export default function Home() {
           onLogout={async () => {
             try {
               setShowLoginSuccessTransition(false);
+              nfDraftsByEmpenhoRef.current.clear();
+              clearNfPdfDrafts();
+              clearVisualMode();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
@@ -316,7 +384,9 @@ export default function Home() {
           }}
           warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
           onOpenWarehouse={() => {
-            window.location.assign('/central-depositos');
+            window.location.assign(
+              mode === 'essencial' ? '/central-depositos/controle-de-itens' : '/central-depositos'
+            );
           }}
         />
 
@@ -333,6 +403,7 @@ export default function Home() {
 
           {activeOperationalDataReady && activeTab === 'inicio' && (
             <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
+              <Suspense fallback={<OperationalSurfaceLoading />}>
               <InicioView
                 snapshot={inicioSnapshot}
                 userDisplayName={user?.displayName || 'Operador EMPROVEX'}
@@ -341,6 +412,7 @@ export default function Home() {
                   setActiveTab('empenhos');
                 }}
               />
+              </Suspense>
             </OperationalSurfaceTransition>
           )}
 
@@ -349,6 +421,13 @@ export default function Home() {
               key="operational-workspace"
               fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
             >
+              {activeTab === 'painel' && !hasOpenedTransactionalSurface ? (
+                <OperationalDashboardEntry
+                  operationalData={operationalData}
+                  viewState={viewState}
+                  setActiveTab={setActiveTab}
+                />
+              ) : (activeTab !== 'inicio' || hasOpenedTransactionalSurface) ? (
               <OperationalWorkspace
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -361,6 +440,7 @@ export default function Home() {
                 showToast={showToast}
                 surfaceReady={activeOperationalDataReady}
               />
+              ) : null}
             </Suspense>
           )}
         </main>
