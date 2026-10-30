@@ -39,7 +39,7 @@ assert.match(provisioning, /platformUgIndex\/\$\{ug\}/);
 assert.match(provisioning, /billingAccounts\/\$\{result\.workspace\.id\}/);
 assert.match(provisioning, /currentDocument:\s*\{ exists: false \}/);
 assert.match(provisioning, /emailVerified:\s*true/);
-assert.match(access, /signInProvider !== FOUNDER_AUTH_PROVIDER/);
+assert.match(access, /isFounderSignInProvider\(signInProvider\)/, 'Fundador deve preservar apenas os providers Google/password autorizados.');
 assert.match(access, /signInProvider !== SECTOR_AUTH_PROVIDER/);
 assert.match(access, /account\.firebaseUid && account\.firebaseUid !== user\.uid/);
 assert.match(access, /workspace\.status !== 'active'/);
@@ -78,7 +78,7 @@ assert.equal(pkg.dependencies['jspdf-autotable'], '^5.0.8');
 
 console.log('SAAS R1 FINAL AUDIT CONTRACT GUARD: READY');
 console.log('Commercial contract: legacy R$70 preserved, new R$29.90 ramp / 30d trial / 5th business day / 10d grace');
-console.log('Identity: founder Google-only / external password-only / UID+workspace+UG fail-closed');
+console.log('Identity: founder password UI + Google Firebase preserved / external password-only / UID+workspace+UG fail-closed');
 console.log('Legal: versioned gate active on main and Warehouse surfaces');
 console.log('Lifecycle: billing-decoupled / session revocation / warehouseAccess sync');
 console.log('Sessions: unlimited external capacity / 30m lease / 15m heartbeat / legacy slot compatibility');
