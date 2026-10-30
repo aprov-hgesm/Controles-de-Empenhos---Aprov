@@ -215,7 +215,7 @@ const operationalLogin = hasOperationalExtraction && gatewayImportsOperational &
 if (hasOperationalExtraction) {
   forbidText(
     operationalLogin,
-    /from\\s+['"][^'"]*(?:\\/warehouse\\/|features\\/warehouse|adm-deposito)[^'"]*['"]/,
+    /from\s+['"][^'"]*(?:\/warehouse\/|features\/warehouse|adm-deposito)[^'"]*['"]/,
     'Shell operacional extraído passou a importar implementação ADM Depósito.'
   );
 }
