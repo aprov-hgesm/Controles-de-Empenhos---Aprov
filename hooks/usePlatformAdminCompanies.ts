@@ -50,26 +50,30 @@ const pick = (...values: unknown[]): string =>
 /** Normaliza somente campos permitidos para exibição; nunca transporta senha, hash ou tokens. */
 function normalizeCompany(value: unknown): AdminCompany | null {
   if (!isObject(value)) return null;
-  const responsible = isObject(value.responsible) ? value.responsible : {};
-  const access = isObject(value.access) ? value.access : {};
-  const location = isObject(value.location) ? value.location : {};
+  // W1 devolve CompanyDirectoryEntry = { workspace, account }; também aceita registros achatados.
+  const workspace = isObject(value.workspace) ? value.workspace : value;
+  const profile = isObject(workspace.companyProfile) ? workspace.companyProfile : workspace;
+  const account = isObject(value.account) ? value.account : {};
+  const responsible = isObject(profile.responsible) ? profile.responsible : {};
+  const access = isObject(profile.access) ? profile.access : {};
+  const location = isObject(profile.location) ? profile.location : {};
   return {
-    workspaceId: pick(value.workspaceId, value.id, value.companyId),
-    legalName: pick(value.legalName, value.corporateName, value.razaoSocial),
-    tradeName: pick(value.tradeName, value.fantasyName, value.nomeFantasia),
-    cnpj: pick(value.cnpj),
-    responsibleName: pick(value.responsibleName, responsible.name),
-    responsiblePhone: pick(value.responsiblePhone, responsible.phone, responsible.whatsapp),
-    companyEmail: pick(value.companyEmail, value.primaryEmail, responsible.email),
-    loginEmail: pick(value.loginEmail, value.accessEmail, access.email, value.authorizedEmail),
-    status: pick(value.status, value.accountStatus),
-    createdAt: value.createdAt ?? value.created_at ?? null,
-    postalCode: pick(value.postalCode, value.cep, location.postalCode, location.cep),
-    address: pick(value.address, location.address, location.street),
-    addressNumber: pick(value.addressNumber, location.number),
-    addressComplement: pick(value.addressComplement, location.complement),
-    city: pick(value.city, location.city),
-    state: pick(value.state, value.uf, location.state, location.uf),
+    workspaceId: pick(workspace.id, workspace.workspaceId, value.workspaceId, value.companyId),
+    legalName: pick(profile.legalName, profile.corporateName, profile.razaoSocial),
+    tradeName: pick(profile.tradeName, profile.fantasyName, profile.nomeFantasia),
+    cnpj: pick(profile.cnpj),
+    responsibleName: pick(profile.responsibleName, responsible.name),
+    responsiblePhone: pick(profile.responsiblePhone, profile.phone, profile.whatsapp, responsible.phone),
+    companyEmail: pick(profile.companyEmail, profile.primaryEmail, responsible.email),
+    loginEmail: pick(account.email, profile.loginEmail, profile.accessEmail, access.email, workspace.authorizedEmail),
+    status: pick(workspace.status, account.status, profile.registrationStatus),
+    createdAt: workspace.createdAt ?? profile.createdAt ?? null,
+    postalCode: pick(profile.postalCode, profile.cep, location.postalCode, location.cep),
+    address: pick(profile.address, location.address, location.street),
+    addressNumber: pick(profile.addressNumber, location.number),
+    addressComplement: pick(profile.addressComplement, location.complement),
+    city: pick(profile.city, location.city),
+    state: pick(profile.state, profile.uf, location.state, location.uf),
   };
 }
 
@@ -147,7 +151,19 @@ export function usePlatformAdminCompanies(adminUser: User | null, enabled: boole
           authorization: `Bearer ${token}`,
           'content-type': 'application/json',
         },
-        body: JSON.stringify(input),
+        // Campos exigidos pelo W1 atual, preservando campos extras para evolução do contrato.
+        // O modelo inicial W1 guarda endereço em texto e possui um e-mail autorizado único.
+        body: JSON.stringify({
+          ...input,
+          authorizedEmail: input.loginEmail,
+          phone: input.responsiblePhone,
+          whatsapp: input.responsiblePhone,
+          address: [
+            [input.address, input.addressNumber].filter(Boolean).join(', '),
+            input.addressComplement,
+            input.postalCode ? 'CEP ' + input.postalCode : '',
+          ].filter(Boolean).join(' - '),
+        }),
       });
       const payload = await readPayload(response);
       if (!response.ok || (isObject(payload) && payload.ok === false)) {
