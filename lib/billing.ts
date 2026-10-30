@@ -232,7 +232,7 @@ export function settleFirstPaymentAnniversary(
   account: BillingAccount, cycleReferenceMonth: string, verifiedAt: string,
 ): BillingAccount {
   if (!billingFirstPaymentPending(account)) return account;
-  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(cycleReferenceMonth)
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(cycleReferenceMonth)
     || !Number.isFinite(Date.parse(verifiedAt))) throw new Error('BILLING_ANNIVERSARY_INVALID');
   return {
     ...account,
