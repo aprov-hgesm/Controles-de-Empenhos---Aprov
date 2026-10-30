@@ -24,6 +24,9 @@ test('P0: Administração e assinatura carregam a rota ao primeiro clique', () =
   assert.match(header, /setActiveProfileMode\('platformAdmin'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.assign\('\/admin'\)/);
   assert.match(header, /window\.location\.assign\('\/regularizacao'\)/);
   assert.doesNotMatch(header, /router\.(?:push|replace)\(/);
+  const backupAdmin = read('app/admin/backups/page.tsx');
+  assert.match(backupAdmin, /window\.location\.replace\('\/central-empenhos'\)/, 'Backups devem preservar o retorno operacional.');
+  assert.doesNotMatch(backupAdmin, /window\.location\.replace\('\/login'\)/);
   const admin = read('components/admin/PlatformAdminView.tsx');
   assert.match(admin, /setActiveProfileMode\('sector'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.replace\('\/central-empenhos'\)/);
   assert.doesNotMatch(admin, /router\.(?:push|replace)\(/);
