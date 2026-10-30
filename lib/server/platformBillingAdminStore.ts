@@ -10,6 +10,7 @@ import {
   paidServicePeriod, paidServiceAccessUntil, billingAnniversary,
   billingFirstPaymentPending, billingCycleReferenceForPeriod, billingRampStartMonth,
   settleFirstPaymentAnniversary, formatUtcDateOnly, PAYMENT_ANNIVERSARY_POLICY,
+  renewalGraceDaysForAccount,
   EMPROVEX_NEW_CUSTOMER_RAMP_ID,
   buildPlatformBillingConfig, type BillingAccount, type BillingAccountStatus,
   type BillingCycle, type BillingCycleStatus, type PlatformBillingConfig,
@@ -529,7 +530,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         throw new BillingAdminError('BILLING_PRICING_ACCEPTANCE_REQUIRED', 409);
       const quote = ramp
         ? quoteIndividualRamp({
-            firstPaidReferenceMonth: account.firstPaidReferenceMonth,
+            firstPaidReferenceMonth: billingRampStartMonth(account, command.month),
             referenceMonth: command.month,
           })
         : null;
@@ -540,6 +541,9 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         ...buildBillingCycle(account, command.month, config, actor.email),
         amountCents: priceCents,
       };
+      if (previous?.sharedPayment && !previous.sharedPayment.fullyPaid
+        && ['paid','waived'].includes(command.status))
+        throw new BillingAdminError('BILLING_SHARED_SETTLEMENT_REQUIRED', 409);
       if (previous?.checkoutState === 'settled' && command.status !== 'paid')
         throw new BillingAdminError('BILLING_PROVIDER_SETTLEMENT_IMMUTABLE', 409);
       if (previous && ramp && previous.amountCents !== priceCents)
@@ -553,25 +557,32 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
       const status = command.status === 'paid' || command.status === 'waived' ? 'active' : 'pending';
       const advancesRamp = ramp && (!account.lastBilledReferenceMonth
         || command.month >= account.lastBilledReferenceMonth);
-      const nextAccount: BillingAccount = { ...account, status,
+      const manuallyActivated = command.status === 'paid' && billingFirstPaymentPending(account);
+      const anchored = manuallyActivated
+        ? settleFirstPaymentAnniversary(account, command.month, now) : account;
+      const nextAccount: BillingAccount = { ...anchored, status,
+        ...(manuallyActivated ? { pendingInitialCycleReferenceMonth: '' } : {}),
         ...(command.status === 'paid' || command.status === 'waived'
           ? (command.month === account.grace48ReferenceMonth
             ? { grace48ReviewStatus: 'confirmed' as const } : {})
           : {}),
         monthlyPriceCents: advancesRamp ? priceCents : account.monthlyPriceCents,
-        ...(advancesRamp ? { lastBilledReferenceMonth: command.month } : {}),
+        ...(advancesRamp ? { lastBilledReferenceMonth:
+          manuallyActivated ? anchored.firstPaidReferenceMonth! : command.month } : {}),
         updatedAt: now, updatedBy: actor.email, paymentRequired: false };
       const accountChanged = account.status !== status || account.paymentRequired !== false
         || account.monthlyPriceCents !== nextAccount.monthlyPriceCents
         || account.lastBilledReferenceMonth !== nextAccount.lastBilledReferenceMonth
-        || account.grace48ReviewStatus !== nextAccount.grace48ReviewStatus;
+        || account.grace48ReviewStatus !== nextAccount.grace48ReviewStatus
+        || account.firstPaymentConfirmedAt !== nextAccount.firstPaymentConfirmedAt
+        || account.firstPaidAt !== nextAccount.firstPaidAt;
       const updates: Array<{ path: string; data: object }> = [{ path: cyclePath, data: transition.cycle }];
       if (accountChanged) updates.push({ path: accountPath, data: nextAccount });
       if (ramp && command.status === 'paid' || ramp && command.status === 'waived') {
         const active = paidServicePeriod(nextAccount);
-        if (active?.referenceMonth === command.month) updates.push({
+        if (active && billingCycleReferenceForPeriod(nextAccount, active) === command.month) updates.push({
           path: workspacePath, data: { ...workspace,
-            billingEntitlementUntil: paidServiceAccessUntil(active, config.gracePeriodDays) },
+            billingEntitlementUntil: paidServiceAccessUntil(active, renewalGraceDaysForAccount(nextAccount, config.gracePeriodDays)) },
         });
       }
       updates.push(audit(actor, command.status === 'paid' || command.status === 'waived'
@@ -677,7 +688,7 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
   const decision = decideBillingAccess(account || null,
     (cycleDoc?.value as BillingCycle | undefined) ?? null, new Date(),
     (previousCycleDoc?.value as BillingCycle | undefined) ?? null,
-    configDoc?.value?.gracePeriodDays || 0);
+    account ? renewalGraceDaysForAccount(account, configDoc?.value?.gracePeriodDays || 0) : 0);
   const quote = account?.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID && period
     ? quoteIndividualRamp({ firstPaidReferenceMonth: billingRampStartMonth(account, period.referenceMonth),
         referenceMonth: period.referenceMonth }) : null;
@@ -695,10 +706,14 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
     enforcementEnabled: live,
     periodStartsAt: account && period && !billingFirstPaymentPending(account) ? period.startsAt : null,
     periodEndsAt: account && period && !billingFirstPaymentPending(account) ? period.endsAt : null,
-    nextRenewalAt: account && period && !billingFirstPaymentPending(account) ? period.endsAt : null,
+    nextRenewalAt: account && period && !billingFirstPaymentPending(account)
+      ? ((cycleDoc?.value as BillingCycle | undefined)?.status === 'paid'
+        || (cycleDoc?.value as BillingCycle | undefined)?.status === 'waived')
+        ? period.endsAt : period.startsAt : null,
     renewalGraceUntil: account && period && period.periodNumber > 1
+      && previousCycleDoc && ['paid','waived'].includes((previousCycleDoc.value as BillingCycle).status)
       ? new Date(new Date(period.startsAt).getTime() +
-          (configDoc?.value?.gracePeriodDays || 0) * 86400000).toISOString() : null,
+          renewalGraceDaysForAccount(account, configDoc?.value?.gracePeriodDays || 0) * 86400000).toISOString() : null,
     initialActivationPending: Boolean(account && billingFirstPaymentPending(account)),
     billingPeriodPolicy: account?.billingPeriodPolicy || 'legacy',
     amountCents: quote?.allowed ? quote.amountCents : decision.amountCents,
@@ -1119,7 +1134,8 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
         && billingCycleReferenceForPeriod(nextAccount, paidServicePeriod(nextAccount)!) === current.referenceMonth
         ? [{ path: 'workspaces/' + workspaceId, data: { ...currentWorkspace,
             billingEntitlementUntil: paidServiceAccessUntil(paidServicePeriod(nextAccount)!,
-              (docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined)?.gracePeriodDays || 0) } }] : []),
+              renewalGraceDaysForAccount(nextAccount,
+                (docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined)?.gracePeriodDays || 0)) } }] : []),
       { path: lp, data: { provider: 'infinitepay', workspaceId, cycleId: current.id,
         orderNsu: input.orderNsu, transactionNsu: input.transactionNsu,
         invoiceSlug: input.slug, amountCents: current.amountCents,
@@ -1211,11 +1227,11 @@ export async function prepareBillingEnforcement(actor: Actor) {
       let until = now;
       if (account.trialGranted && account.trialEndsAt > now) until = account.trialEndsAt;
       else if (current && cycle && ['paid','waived'].includes(cycle.status))
-        until = paidServiceAccessUntil(current, renewalGraceDays);
+        until = paidServiceAccessUntil(current, renewalGraceDaysForAccount(account, renewalGraceDays));
       else if (account.grace48ReferenceMonth === current?.referenceMonth
         && account.grace48Until && account.grace48Until > now) until = account.grace48Until;
       else if (current && previousCycle && ['paid','waived'].includes(previousCycle.status)) {
-        const through = addUtcDays(current.startsAt, renewalGraceDays).toISOString();
+        const through = addUtcDays(current.startsAt, renewalGraceDaysForAccount(account, renewalGraceDays)).toISOString();
         if (through > now) until = through;
       }
       const desired = { ...workspace,
