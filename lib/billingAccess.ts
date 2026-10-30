@@ -1,5 +1,5 @@
 import type { BillingAccount, BillingCycle } from './billing';
-import { addUtcDays, getReferenceMonth, paidServicePeriod } from './billing';
+import { addUtcDays, getReferenceMonth, paidServicePeriod, billingCycleReferenceForPeriod } from './billing';
 import { EMPROVEX_NEW_CUSTOMER_RAMP_ID } from './billing';
 
 export type BillingAccessReason = 'vip' | 'trial' | 'paid' | 'grace48' | 'payment_required' | 'trial_ended' | 'suspended' | 'canceled' | 'account_missing' | 'legacy_contract' | 'observe' | 'due_grace';
@@ -48,7 +48,8 @@ export function decideBillingAccess(
   const first = account.firstPaidReferenceMonth;
   if (!first || !period) return allow('trial');
   if (cycle && cycle.workspaceId === account.workspaceId
-    && cycle.referenceMonth === month && (cycle.status === 'paid' || cycle.status === 'waived')) return allow('paid');
+    && cycle.referenceMonth === (period ? billingCycleReferenceForPeriod(account, period) : month)
+    && (cycle.status === 'paid' || cycle.status === 'waived')) return allow('paid');
   if (base.graceUntil && now.getTime() < Date.parse(base.graceUntil)) return allow('grace48');
   if (period && period.periodNumber > 1 && previousCycle
     && previousCycle.workspaceId === account.workspaceId
