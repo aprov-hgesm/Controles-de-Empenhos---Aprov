@@ -77,6 +77,33 @@ export interface BillingAccount {
   updatedBy: string;
 }
 
+export interface SharedBillingPart {
+  number: number;
+  name: string;
+  amountCents: number;
+  status: 'open' | 'paid';
+  orderNsu?: string;
+  checkoutState?: 'prepared' | 'dispatching' | 'linked' | 'settled';
+  checkoutUrl?: string;
+  checkoutValidUntil?: string;
+  paidAt?: string;
+  ledgerId?: string;
+}
+export interface SharedBillingPayment {
+  version: 'shared_v1';
+  termsVersion: string;
+  acceptedAt: string;
+  amountCents: number;
+  count: number;
+  partAmountCents: number;
+  totalCents: number;
+  feeCents: number;
+  paidCount?: number;
+  paidCents?: number;
+  fullyPaid?: boolean;
+  parts: SharedBillingPart[];
+}
+
 export interface BillingCycle {
   version: typeof EMPROVEX_BILLING_VERSION;
   id: string;
@@ -87,6 +114,7 @@ export interface BillingCycle {
   dueDate: string;
   status: BillingCycleStatus;
   /** Deterministic provider intent persisted before the outbound checkout call. */
+  sharedPayment?: SharedBillingPayment;
   checkoutOrderNsu?: string;
   checkoutUrl?: string;
   checkoutValidUntil?: string;
