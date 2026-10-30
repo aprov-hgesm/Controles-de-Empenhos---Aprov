@@ -102,7 +102,7 @@ export interface Workspace {
   createdBy: string;
 }
 
-/** Cadastro privado de uma empresa cliente. CNPJ é a chave fiscal única, sem pontuação. */
+/** Cadastro privado de uma empresa cliente. CNPJ é a chave fiscal única, sem pontuação (numérico ou alfanumérico). */
 export interface CompanyProfile {
   legalName: string;
   tradeName?: string;
@@ -299,7 +299,7 @@ export function validateCompanyWorkspace(workspace: CompanyWorkspace): string[] 
   if (!workspace.name.trim() || !p.legalName.trim() || !p.responsibleName.trim()) {
     errors.push('Razão social, nome e responsável são obrigatórios.');
   }
-  if (!/^\d{14}$/.test(p.cnpj)) errors.push('CNPJ deve conter 14 dígitos.');
+  if (!/^[A-Z0-9]{12}\d{2}$/.test(p.cnpj)) errors.push('CNPJ deve conter 14 caracteres válidos.');
   if (!isValidPlatformEmail(workspace.authorizedEmail)
       || p.accessEmail !== workspace.authorizedEmail) {
     errors.push('E-mail empresarial inconsistente.');
