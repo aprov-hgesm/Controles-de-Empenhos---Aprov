@@ -195,6 +195,17 @@ export function getReferenceMonth(value: string | Date = new Date()): string {
   return formatUtcDateOnly(value).slice(0, 7);
 }
 
+/** Legal billing dates shown to Brazilian clients follow Sao Paulo local time. */
+export function billingBrazilDateOnly(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error('BILLING_DATE_INVALID');
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const getPart = (name: string) => parts.find(part => part.type === name)?.value || '';
+  return getPart('year') + '-' + getPart('month') + '-' + getPart('day');
+}
+
 /** Monthly service anniversaries clamp at month end (Jan 31 -> Feb 28).
  * The reference month belongs to the PERIOD START, not the calendar month of access.
  * Never moves a customer's first paid month earlier on a trial extension.
@@ -596,7 +607,7 @@ export function buildBillingCycle(
   const provisionalPeriod = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
     ? paidServicePeriod(account, new Date(now)) : null;
   const dueDate = provisionalPeriod?.referenceMonth === referenceMonth
-    ? formatUtcDateOnly(billingFirstPaymentPending(account) ? now : provisionalPeriod.startsAt)
+    ? billingBrazilDateOnly(billingFirstPaymentPending(account) ? now : provisionalPeriod.startsAt)
     : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   return {
     version: EMPROVEX_BILLING_VERSION,
