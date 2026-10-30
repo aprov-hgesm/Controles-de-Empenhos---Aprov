@@ -133,7 +133,7 @@ export default function TermsPage() {
           As renovações seguintes ocorrem a cada mês na data de aniversário fixada na
           primeira quitação. Em meses sem o mesmo dia, o aniversário ocorre no último
           dia do mês correspondente. A cobrança de renovação não muda o aniversário
-          caso o cliente pague antecipadamente ou durante o prazo de tolerância.
+          caso o cliente pague durante o prazo de tolerância.
         </p>
         <p>
           Para as renovações de períodos anteriormente quitados, aplica-se
