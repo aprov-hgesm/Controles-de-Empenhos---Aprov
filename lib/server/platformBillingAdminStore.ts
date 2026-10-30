@@ -633,7 +633,9 @@ export async function acceptNewCustomerRamp(
     const now = new Date().toISOString();
     return { result, updates: [
       { path: ap, data: { ...account, pricingTermsAcceptedAt: now,
-        pricingTermsVersion: 'emprovex_individual_ramp_v1_20261026',
+        pricingTermsVersion: account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+          ? 'emprovex_individual_ramp_v1_20261029_anniversary'
+          : 'emprovex_individual_ramp_v1_20261026',
         updatedAt: now, updatedBy: actor.email } },
       audit(actor, 'billing.status_change', 'billing_account', workspaceId, workspaceId, workspace.ug || null,
         { pricingTermsAcceptedAt: null },
