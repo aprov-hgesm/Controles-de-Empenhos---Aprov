@@ -22,8 +22,12 @@ const actions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const state = read('hooks/useOperationalViewState.ts');
 const types = read('lib/types.ts');
 const rootEntry = read('app/page.tsx');
+const loginGateway = read('app/login/page.tsx');
+const extracted = loginGateway.includes("import('./OperationalEntry')")
+  && loginGateway.includes("stage === 'operational'")
+  && loginGateway.includes('resolveCompanySession');
 const page = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx')
+  ? (extracted ? read('app/login/OperationalEntry.tsx') : loginGateway)
   : rootEntry;
 if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
   throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');
