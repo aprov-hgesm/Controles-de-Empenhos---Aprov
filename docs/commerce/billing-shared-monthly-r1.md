@@ -39,3 +39,17 @@ Uma única conta compartilhada, um workspace e uma única assinatura por setor. 
 - A configuração é feita por competência; não há reaproveitamento automático do grupo no mês seguinte.
 - O piloto só pode ser ativado mediante flag e escopo da InfinitePay. Não fazer Pix em produção apenas para testar sem supervisão.
 - Não há gateway split ou distribuição do dinheiro para diferentes recebedores.
+
+## R2 — Aniversário mensal de pagamento (decisão aprovada 29/10/2026)
+- Novos setores no plano progressivo passam a ter a política `payment_anniversary_v2`. Os workspaces existentes sem esse campo mantêm suas datas anteriores: **sem migração retroativa**.
+- `firstPaidAt` e `firstPaidReferenceMonth` são provisórios durante o trial ou enquanto a primeira mensalidade está pendente. O primeiro pagamento real verificado pelo servidor (Integral) ou a **última cota** verificada (Compartilhado) fixa o primeiro aniversário mensal.
+- O instante de confirmação é gravado em `firstPaymentConfirmedAt`, preservando a transação verificável e o histórico. Quando o pagamento inicial cruza o mês, `firstPaymentCycleReferenceMonth` aponta ao ID imutável da fatura original; o acesso consulta essa fatura sem duplicar cobranças.
+- Uma fatura integral inicial já emitida fica pinada em `pendingInitialCycleReferenceMonth`. Um rateio pendente fica pinado em `pendingSharedCycleReferenceMonth` até a quitação de todas as cotas, inclusive quando o mês muda.
+- O vencimento das **renovações** passa a coincidir com o aniversário mensal, não com o 5º dia útil. Uma cobrança gerada durante o prazo de tolerância **não adia a data de vencimento**.
+- São **dez dias corridos** de tolerância a partir do aniversário, somente após uma competência anterior efetivamente paga. O primeiro pagamento não recebe essa tolerância de renovação.
+- Pagamento em qualquer dia durante a tolerância cobre o período iniciado no aniversário original (não reinicia os próximos períodos).
+- Todos os vencimentos mostrados ao cliente usam o dia civil em **America/Sao_Paulo**. O período é um mês de calendário, com aniversário ajustado ao último dia quando necessário (31/01 → 28/02, quando não for ano bissexto).
+- A área Minha Assinatura mostra período de uso, próxima renovação e tolerância; quando o primeiro pagamento ainda não existe, informa expressamente que a ativação depende da quitação integral.
+- Texto contratual: `app/terms/page.tsx` §4.2; aceite progressivo específico `emprovex_individual_ramp_v1_20261029_anniversary`; o pacote legal geral legado continua versionado e preservado.
+- Testes de domínio: `scripts/billing-payment-anniversary.test.mjs`, incluído no CI do portal. Nenhuma alteração necessária nas Rules do Firestore nem em credenciais/sessões.
+- Antes de ativar cobrança compartilhada em produção: conferir **dois Pix reais de homologação** com valores pequenos em workspace autorizado, conciliação, ledger, telas, histórico e aceite; não efetuar pagamentos involuntários nem promover a PR sem homologação.
