@@ -47,6 +47,9 @@ function authorize(actor: Actor, workspaceId: string, email: string): void {
 function verifyCustomer(workspace: { id: string; authorizedEmail: string }, account: BillingAccount, email: string,
   allowSuspended = false) {
   assertAccountWorkspace(account, workspace as Parameters<typeof assertAccountWorkspace>[1]);
+  if (account.status === 'trial' && account.trialEndsAt
+    && Date.now() < Date.parse(account.trialEndsAt))
+    throw new BillingAdminError('BILLING_TRIAL_ACTIVE', 409);
   if (workspace.authorizedEmail !== email
     || account.status === 'exempt' || account.exemptionSource
     || !['active','pending','trial','suspended'].includes(account.status)
