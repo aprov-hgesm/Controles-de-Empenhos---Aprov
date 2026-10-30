@@ -438,6 +438,11 @@ export function InfinitePayReadinessPanel({
               a partir do mês 13 R$ 69,90/mês.
               A contagem é por competência do setor, a partir do primeiro mês pago após o período
               gratuito, quando concedido. Não há débito recorrente automático.
+              Para novas contratações, o primeiro mês pago começa com a confirmação
+              do pagamento integral pela InfinitePay ou da última cota no rateio.
+              A renovação ocorre no mesmo aniversário a cada mês de calendário,
+              com tolerância de 10 dias corridos apenas nas renovações de meses
+              anteriores quitados. Pagar na tolerância não altera o aniversário.
               Consulte os <a href="/terms" target="_blank" rel="noreferrer" className="font-bold underline">
               Termos de Serviço</a> e a <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold underline">
               Política de Privacidade</a> antes de confirmar. Este aceite financeiro não substitui o
