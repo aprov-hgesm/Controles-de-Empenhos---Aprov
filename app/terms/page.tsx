@@ -120,6 +120,40 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="4.2. Início do período pago, aniversário e renovação">
+        <p>
+          Nos novos contratos sujeitos à modalidade de <strong>aniversário mensal por pagamento
+          confirmado</strong>, o primeiro período pago começa na data e hora em que o
+          EMPROVEX confirmar a primeira mensalidade integral. No pagamento compartilhado,
+          a ativação começa apenas depois de verificada a última cota. O período coberto
+          corresponde a <strong>um mês de calendário</strong>, não necessariamente a
+          trinta dias exatos.
+        </p>
+        <p>
+          As renovações seguintes ocorrem a cada mês na data de aniversário fixada na
+          primeira quitação. Em meses sem o mesmo dia, o aniversário ocorre no último
+          dia do mês correspondente. A cobrança de renovação não muda o aniversário
+          caso o cliente pague antecipadamente ou durante o prazo de tolerância.
+        </p>
+        <p>
+          Para as renovações de períodos anteriormente quitados, aplica-se
+          <strong>tolerância de dez dias corridos após o aniversário</strong> para
+          regularizar a nova competência. Essa tolerância não constitui um mês
+          gratuito adicional e não se aplica à primeira ativação paga. Após seu
+          encerramento sem quitação, as funcionalidades operacionais sujeitas ao
+          controle financeiro poderão ser restringidas; os dados permanecem
+          preservados conforme estes Termos.
+        </p>
+        <p>
+          Quando uma primeira mensalidade for quitada depois da data inicialmente
+          estimada no cadastro, o aniversário será fixado pela confirmação real do
+          pagamento, sem perda dos dias anteriores à ativação. Contratos preexistentes
+          mantêm suas datas e condições anteriores, sem reancoragem retroativa.
+          A plataforma informará em Minha Assinatura as datas de uso, renovação
+          e eventual tolerância aplicáveis.
+        </p>
+      </LegalSection>
+
       <LegalSection title="5. Contas, credenciais e acesso">
         <p>
           A Organização Militar é a entidade institucional a que o setor está vinculado; o
