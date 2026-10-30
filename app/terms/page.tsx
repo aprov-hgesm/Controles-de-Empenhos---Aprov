@@ -14,7 +14,7 @@ export default function TermsPage() {
       eyebrow="Condições de utilização"
       title="Termos de Serviço"
       description="Estes Termos estabelecem as condições para utilização do EMPROVEX como serviço por usuários e workspaces previamente autorizados."
-      updatedAt="27 de outubro de 2026"
+      updatedAt="29 de outubro de 2026"
       version={CURRENT_LEGAL_BUNDLE.termsVersion}
     >
       <LegalSection title="1. Aceitação e versão dos Termos">
@@ -90,6 +90,33 @@ export default function TermsPage() {
           devem ser comunicados ao suporte com a identificação da cobrança, para apuração conforme
           a transação efetiva, as condições contratadas e a legislação aplicável. Não há promessa de
           estorno automático nem de liberação imediata baseada somente em comprovante ou redirecionamento.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="4.1. Pagamento compartilhado e taxa de divisão">
+        <p>
+          Opcionalmente, o setor poderá dividir o pagamento de uma mesma competência entre
+          dois ou mais participantes identificados pelo responsável pela conta. A modalidade
+          não cria contas, perfis, workspaces, licenças ou assinaturas adicionais: o acesso
+          ao EMPROVEX continua vinculado à mesma conta e ao mesmo setor contratado.
+        </p>
+        <p>
+          Todas as cotas terão o mesmo valor, calculado pela divisão da mensalidade pela
+          quantidade de participantes e <strong>arredondamento de cada cota para cima,
+          até o próximo centavo</strong>. A eventual diferença entre a soma das cotas e
+          a mensalidade original constitui uma <strong>taxa de divisão por arredondamento</strong>
+          do EMPROVEX, não uma tarifa bancária ou taxa cobrada pela InfinitePay.
+          O valor da taxa, o valor individual, o total a pagar e a quantidade de cotas
+          serão exibidos antes do aceite e da emissão das cobranças.
+        </p>
+        <p>
+          O rateio fica fixado para a competência e cada cota é cobrada uma única vez
+          por link próprio. Os links podem ser encaminhados aos integrantes sem compartilhar
+          credenciais de acesso. Qualquer integrante poderá assumir voluntariamente uma
+          cota ainda pendente. O setor é responsável pela quitação de todas as cotas;
+          pagamentos parciais não constituem quitação integral da mensalidade.
+          Continuam aplicáveis as regras de vencimento e tolerância do contrato,
+          sem bloqueio antecipado exclusivamente pela opção de rateio.
         </p>
       </LegalSection>
 
