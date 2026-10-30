@@ -1,5 +1,5 @@
 import type { SectorAccount, Workspace, WorkspaceInstitutionalProfile } from './platformIdentity';
-import { normalizePlatformEmail, normalizeWorkspaceId } from './platformIdentity';
+import { FOUNDER_AUTH_PROVIDER, normalizePlatformEmail, normalizeWorkspaceId } from './platformIdentity';
 
 /**
  * Identidade estável do workspace fundador do EMPROVEX.
@@ -65,6 +65,7 @@ export function createHgesmSectorAccount(
 ): SectorAccount {
   return {
     email: HGESM_SECTOR_EMAIL,
+    authProvider: FOUNDER_AUTH_PROVIDER,
     accountType: 'sector',
     workspaceId: HGESM_WORKSPACE_ID,
     ug: HGESM_UG,
