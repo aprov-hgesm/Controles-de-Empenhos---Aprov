@@ -1,20 +1,32 @@
 #!/usr/bin/env node
 
+// Compatibilidade com as duas geracoes da Home. A orbit antiga foi
+// substituida por logo discreto e modo Essencial: os guards devem proteger
+// a UI ativa, nao exigir um componente removido intencionalmente.
 import fs from 'node:fs';
 
-const css = fs.readFileSync('features/inicio/components/InicioOrbitSystem.module.css', 'utf8');
-const docs = fs.readFileSync('docs/block-19-home-experience.md', 'utf8');
+const read = (path) => fs.readFileSync(path, 'utf8');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
-assert(css.includes('--orbit-duration: 136s;'), 'Órbita externa precisa permanecer lenta.');
-assert(css.includes('--orbit-duration: 112s;'), 'Órbita média precisa permanecer lenta.');
-assert(css.includes('--orbit-duration: 88s;'), 'Órbita interna precisa permanecer lenta.');
-assert(css.includes('animation: planetOrbit var(--orbit-duration) linear infinite;'), 'Órbita precisa permanecer linear e contínua.');
-assert(css.includes('animation: planetCounterOrbit var(--orbit-duration) linear infinite;'), 'Contrarrotação precisa acompanhar a órbita.');
-assert(!css.includes('.orbitSlot:hover,\n.orbitSlot:focus-within {\n  animation-play-state: paused;'), 'Hover/focus não deve pausar a órbita.');
-assert(css.includes("[data-performance='balanced'] .orbitSlot"), 'Perfil balanced precisa preservar a órbita principal.');
-assert(css.includes("[data-performance='static'] .orbitSlot"), 'Perfil static precisa continuar desativando movimento.');
-assert(css.includes('@media (prefers-reduced-motion: reduce)'), 'Movimento reduzido precisa continuar respeitado.');
-assert(docs.includes('órbita planetária lenta e contínua'), 'Documentação precisa registrar o refinamento orbital.');
-
-console.log('Inicio slow planet orbit guard: OK');
+if (fs.existsSync('features/inicio/components/InicioOrbitSystem.module.css')) {
+  const css = read('features/inicio/components/InicioOrbitSystem.module.css');
+  assert(css.includes('--orbit-duration: 136s;'), 'Orbita externa precisa permanecer lenta.');
+  assert(css.includes('--orbit-duration: 112s;'), 'Orbita media precisa permanecer lenta.');
+  assert(css.includes('--orbit-duration: 88s;'), 'Orbita interna precisa permanecer lenta.');
+  assert(css.includes('animation: planetOrbit var(--orbit-duration) linear infinite;'), 'Orbita precisa permanecer continua.');
+  assert(css.includes('animation: planetCounterOrbit var(--orbit-duration) linear infinite;'), 'Contrarrotacao precisa acompanhar a orbita.');
+  assert(css.includes('@media (prefers-reduced-motion: reduce)'), 'Movimento reduzido deve ser respeitado.');
+  console.log('Inicio legacy planet orbit guard: OK');
+} else {
+  const view = read('features/inicio/components/InicioView.tsx');
+  const css = read('features/inicio/components/InicioView.module.css');
+  const core = read('features/inicio/components/InicioCore.tsx');
+  assert(view.includes('data-lean-home="true"'), 'Início simplificado não está ativo.');
+  assert(view.includes('<InicioCore'), 'O nucleo da Home deve estar presente.');
+  assert(!view.includes('InicioOrbitSystem'), 'Não reintroduzir componente orbital pesado.');
+  assert(core.includes('data-testid="inicio-logo-core"'), 'Nucleo/logo nao localizado.');
+  assert(css.includes("[data-performance='balanced']"), 'Modo balanceado precisa ser preservado.');
+  assert(css.includes("[data-performance='static']"), 'Modo estatico precisa ser preservado.');
+  assert(css.includes('@media (prefers-reduced-motion: reduce)'), 'Movimento reduzido precisa ser respeitado.');
+  console.log('Inicio lean home guard: OK (orbita legada removida)');
+}
