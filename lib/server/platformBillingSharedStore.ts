@@ -9,7 +9,7 @@ import type { BillingAccount, BillingCycle, PlatformBillingConfig, SharedBilling
 import { billingCycleId, buildBillingCycle, buildPlatformBillingConfig,
   paidServicePeriod, paidServiceAccessUntil, billingFirstPaymentPending,
   billingCycleReferenceForPeriod, billingRampStartMonth, settleFirstPaymentAnniversary,
-  formatUtcDateOnly, renewalGraceDaysForAccount, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
+  billingBrazilDateOnly, renewalGraceDaysForAccount, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
 import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
@@ -380,7 +380,7 @@ export async function reconcileSectorSharedPayment(
     const newlyActivated = fullyPaid && billingFirstPaymentPending(account);
     const nextCycle: BillingCycle = {
       ...cycle, sharedPayment: nextShared,
-      ...(newlyActivated ? { dueDate: formatUtcDateOnly(now) } : {}),
+      ...(newlyActivated ? { dueDate: billingBrazilDateOnly(now) } : {}),
       status: fullyPaid ? 'paid' : 'pending',
       ...(fullyPaid ? { confirmedAt: now, confirmedBy: 'provider:infinitepay',
         checkoutState: 'settled' as const,
