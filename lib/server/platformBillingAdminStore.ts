@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   addUtcDays, billingCycleId, buildBillingCycle, buildBillingCycleStatusTransition,
-  paidServicePeriod, paidServiceAccessUntil, billingAnniversary,
+  paidServicePeriod, paidServiceAccessUntil, billingAnniversary, billingBrazilAnniversary,
   billingFirstPaymentPending, billingCycleReferenceForPeriod, billingRampStartMonth,
   settleFirstPaymentAnniversary, billingBrazilDateOnly, PAYMENT_ANNIVERSARY_POLICY,
   renewalGraceDaysForAccount,
@@ -654,7 +654,9 @@ function previousServiceReference(account: BillingAccount): string | null {
   if (period.periodNumber === 2 && account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
     && account.firstPaymentCycleReferenceMonth) return account.firstPaymentCycleReferenceMonth;
   if (!first) return null;
-  const priorStart = billingAnniversary(first, period.periodNumber - 2);
+  const priorStart = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? billingBrazilAnniversary(first, period.periodNumber - 2)
+    : billingAnniversary(first, period.periodNumber - 2);
   return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
     ? billingBrazilDateOnly(priorStart).slice(0, 7) : getReferenceMonth(priorStart);
 }
