@@ -1,5 +1,21 @@
 # EMPROVEX EMPRESAS — MEMORIAL OFICIAL
 
+## CHECKPOINT R0 — W1/W2/W3 em integração (30/10/2026 UTC)
+
+> **PRECEDÊNCIA DE STATUS:** este checkpoint reflete a execução inicial da R0; prevalece sobre a indicação histórica "NÃO IMPLEMENTADO" do plano mestre abaixo. **Código em PR de integração, não homologado, não mesclado à main e não publicado em produção.**
+
+- **W1 (identidade, CNPJ, provisionamento e APIs):** [PR #417](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/417), branch `feat/empresas-r0-w1-identity`, SHA `352a7f4af92f2d55c20b08beb2b4289afbfbe1f6`.
+- **W2 (cadastro e diretório no Admin):** [PR #416](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/416), branch `feat/empresas-r0-w2-admin`, SHA `6e09759a380d737c757d2a72a006b328f8c0ed42`.
+- **W3 (login, resolução de sessão e portal `/empresa`):** [PR #418](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/418), branch `feat/empresas-r0-w3-portal`, SHA `202cab0e0e8ac00918709f4fc44d418a5e6377b0`.
+- **Integração:** [PR #419](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/419), branch `integration/empresas-r0-wave-20261029`, Draft. Reúne os 24 arquivos entregues pelos três Workers e correções de contratos.
+- **Correções já introduzidas na integração:** persistência de `companyEmail`, `postalCode`, `addressNumber`, `addressComplement`; validação única de CNPJ entre formulário e servidor; filtragem de workspaces `company` do diretório militar legado; navegação empresarial por transição de documento, em respeito ao incidente P0 de rotas; adaptação dos testes de núcleo para examinar o shell militar extraído, sem remover os gates de assinatura.
+- **Gates:** revisão e CI em andamento. A primeira execução da PR #419 identificou falhas no Core Protection e na navegação P0 devido à extração do shell e ao uso de links RSC; alterações corretivas já foram feitas na PR de integração. Uma execução posterior do Core Protection registrou sucesso, mas isto não certifica o conjunto, e o estado final dos demais testes precisa ser observado.
+- **Sem mudanças de infraestrutura:** nenhum deploy/promote Vercel, nenhuma Firestore Rules publicada, nenhuma migração ou escrita de dados empresariais reais, nenhuma alteração de política de cobrança.
+- **GO/NO-GO de produção:** **NO-GO** até CI, regressão do Aprovisionamento, teste de provisionamento e login real em workspace QA, verificação de isolamento e autorização explícita de publicação. O ambiente `/empresa` desta R0 contém shell/navegação e módulos vazios, ainda não funcionalidades logísticas/financeiras.
+
+---
+
+
 > **Documento canônico do produto EMPROVEX Empresas — Planejamento V2 (29/10/2026).**
 > **STATUS: PLANEJADO / NÃO IMPLEMENTADO.** Este documento define a direção do produto e o backlog, não autoriza deploy, ativação comercial, alterações de regras ou migrações.
 > O EMPROVEX Aprovisionamento continua independente. Todos os futuros recursos de fornecedores exigem isolamento de workspaces, revisão de permissões e testes proporcionais ao risco.
