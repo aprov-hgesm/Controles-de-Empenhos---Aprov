@@ -19,7 +19,7 @@ const access = read('lib/platformAccess.ts');
 
 requireText(operationalData, 'sendPasswordResetEmail', 'Recuperação self-service não usa Firebase Auth.');
 requireText(operationalData, 'PASSWORD_RESET_CONFIRMATION', 'Recuperação não possui resposta neutra contra enumeração de contas.');
-requireText(operationalData, "normalizedEmail === HGESM_SECTOR_EMAIL", 'Fluxo de senha não protege a conta fundadora Google-only.');
+requireText(operationalData, 'await sendPasswordResetEmail(auth, normalizedEmail)', 'Recuperacao de senha deve permanecer disponivel para a conta fundadora.');
 requireText(operationalData, 'reauthenticateWithCredential', 'Troca de senha não reautentica o usuário externo.');
 requireText(operationalData, 'updatePassword(currentUser, newPassword)', 'Troca de senha não usa Firebase Auth.');
 requireText(operationalData, "tokenResult.signInProvider !== 'password'", 'Troca de senha não valida provider password.');
@@ -49,7 +49,7 @@ requireText(provisioningModal, 'Entregue a credencial inicial ao operador por um
 requireText(provisioningModal, 'A conexão com o Google Drive é opcional', 'Provisionamento ainda trata Drive como etapa obrigatória.');
 forbidText(provisioning, 'password:', 'Senha não pode ser persistida nos registros do workspace/platformAccount.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo deixou de exigir provider password.');
-requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador deixou de exigir provider Google.');
+requireText(access, 'isFounderSignInProvider(signInProvider)', 'Fundador deve validar apenas os dois providers ja vinculados e autorizados.');
 
 if (findings.length) {
   console.error('SAAS-C — onboarding e credenciais\n');
@@ -61,7 +61,7 @@ if (findings.length) {
   console.log('Onboarding: assistido, sem signup público');
   console.log('Recuperação de senha: Firebase Auth self-service com resposta neutra');
   console.log('Troca de senha: reautenticação + Firebase Auth');
-  console.log('Fundador: Google-only preservado');
+  console.log('Fundador: senha na interface; Google Firebase preservado');
   console.log('Primeiro acesso: checklist curto, local e não bloqueante');
   console.log('Google Drive: opcional');
   console.log('Códigos técnicos: mantidos fora da UX');
