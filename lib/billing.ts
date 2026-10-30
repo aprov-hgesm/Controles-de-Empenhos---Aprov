@@ -67,6 +67,10 @@ export interface BillingAccount {
   firstPaymentConfirmedAt?: string;
   /** Original provider order month; can differ if first payment is late across months. */
   firstPaymentCycleReferenceMonth?: string;
+  /** Prevents generating another initial invoice when the original link crosses a month. */
+  pendingInitialCycleReferenceMonth?: string;
+  /** Pending shared instalments remain bound to their original frozen cycle. */
+  pendingSharedCycleReferenceMonth?: string;
   lastBilledReferenceMonth?: string;
   /** One temporary 48h return to operations per reference month. */
   grace48ReferenceMonth?: string;
