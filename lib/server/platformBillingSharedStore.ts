@@ -7,7 +7,9 @@
 import { createHash } from 'node:crypto';
 import type { BillingAccount, BillingCycle, PlatformBillingConfig, SharedBillingPart, SharedBillingPayment } from '../billing';
 import { billingCycleId, buildBillingCycle, buildPlatformBillingConfig,
-  paidServicePeriod, paidServiceAccessUntil, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
+  paidServicePeriod, paidServiceAccessUntil, billingFirstPaymentPending,
+  billingCycleReferenceForPeriod, billingRampStartMonth, settleFirstPaymentAnniversary,
+  formatUtcDateOnly, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
 import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
@@ -56,10 +58,11 @@ function verifyCustomer(workspace: { id: string; authorizedEmail: string }, acco
 function activeMonth(account: BillingAccount): string {
   const period = paidServicePeriod(account);
   if (!period) throw new BillingAdminError('BILLING_TRIAL_ACTIVE', 409);
-  return period.referenceMonth;
+  return account.pendingSharedCycleReferenceMonth
+    || billingCycleReferenceForPeriod(account, period);
 }
 function quoteFor(account: BillingAccount, month: string): number {
-  const quote = quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth, referenceMonth: month });
+  const quote = quoteIndividualRamp({ firstPaidReferenceMonth: billingRampStartMonth(account, month), referenceMonth: month });
   if (!quote.allowed || !Number.isSafeInteger(quote.amountCents) || quote.amountCents <= 0)
     throw new BillingAdminError('BILLING_SHARED_QUOTE_INVALID', 409);
   return quote.amountCents as number;
@@ -102,10 +105,10 @@ export async function readSectorSharedPayment(workspaceId: string, email: string
   const period = paidServicePeriod(account);
   if (!period) return { enabled: process.env.EMPROVEX_SHARED_BILLING_ENABLED === '1',
     eligible: false, shared: null, amountCents: 0, referenceMonth: null };
-  const month = period.referenceMonth;
+  const month = activeMonth(account);
   const cycleDoc = await get(token, 'billingCycles/' + billingCycleId(workspaceId, month));
   const cycle = cycleDoc?.value as BillingCycle | undefined;
-  const amountCents = quoteFor(account, month);
+  const amountCents = cycle?.amountCents || quoteFor(account, month);
   // Return persisted split even when the feature flag is subsequently disabled,
   // so confirmed charges never disappear from the customer's view.
   return {
@@ -136,6 +139,8 @@ export async function configureSectorSharedPayment(
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const currentAccount = existingAccount(docs.get(ap) ?? null);
     verifyCustomer(workspace, currentAccount, email);
+    if (currentAccount.pendingInitialCycleReferenceMonth)
+      throw new BillingAdminError('BILLING_FULL_CHECKOUT_ACTIVE', 409);
     if (activeMonth(currentAccount) !== month) throw new BillingAdminError('BILLING_SHARED_PERIOD_CHANGED', 409);
     const amount = quoteFor(currentAccount, month);
     let shared: SharedBillingPayment;
@@ -163,6 +168,8 @@ export async function configureSectorSharedPayment(
       updates: [
         { path: cp, data: { ...cycle, amountCents: amount, sharedPayment: shared, status: 'pending',
           updatedAt: now, updatedBy: actor.email } },
+        { path: ap, data: { ...currentAccount,
+          pendingSharedCycleReferenceMonth: month, updatedAt: now, updatedBy: actor.email } },
         audit(actor, 'billing.shared_configured', 'billing_cycle', cycle.id, workspaceId, workspace.ug || null,
           { shared: false }, { shared: true, count: shared.count, feeCents: shared.feeCents },
           { consentVersion: shared.termsVersion, acceptedAt: shared.acceptedAt }),
@@ -196,7 +203,9 @@ export async function createSectorSharedCheckout(
     if (activeMonth(currentAccount) !== month) throw new BillingAdminError('BILLING_SHARED_PERIOD_CHANGED', 409);
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
     if (!cycle) throw new BillingAdminError('BILLING_SHARED_NOT_CONFIGURED', 409);
-    const shared = checkShared(cycle, month, quoteFor(currentAccount, month));
+    const shared = checkShared(cycle, month, cycle.amountCents);
+    if (cycle.status !== 'paid' && quoteFor(currentAccount, month) !== cycle.amountCents)
+      throw new BillingAdminError('BILLING_SHARED_FROZEN_AMOUNT_MISMATCH', 409);
     const part = shared.parts[number-1];
     if (!part || part.number !== number || part.amountCents !== shared.partAmountCents
       || (part.orderNsu && part.orderNsu !== orderNsu))
@@ -368,8 +377,10 @@ export async function reconcileSectorSharedPayment(
     const now = new Date().toISOString();
     const nextShared = applySharedPayment(shared, number, lp.slice('billingPaymentLedger/'.length), now) as SharedBillingPayment;
     const fullyPaid = nextShared.fullyPaid === true;
+    const newlyActivated = fullyPaid && billingFirstPaymentPending(account);
     const nextCycle: BillingCycle = {
       ...cycle, sharedPayment: nextShared,
+      ...(newlyActivated ? { dueDate: formatUtcDateOnly(now) } : {}),
       status: fullyPaid ? 'paid' : 'pending',
       ...(fullyPaid ? { confirmedAt: now, confirmedBy: 'provider:infinitepay',
         checkoutState: 'settled' as const,
@@ -389,16 +400,20 @@ export async function reconcileSectorSharedPayment(
         { provider: 'infinitepay', sharedPartNumber: number, ledgerId: lp }),
     ];
     if (fullyPaid) {
-      const nextAccount: BillingAccount = { ...account, status: 'active', monthlyPriceCents: cycle.amountCents,
+      const anchoredAccount = settleFirstPaymentAnniversary(account, cycle.referenceMonth, now);
+      const nextAccount: BillingAccount = { ...anchoredAccount,
+        status: 'active', monthlyPriceCents: cycle.amountCents,
+        pendingSharedCycleReferenceMonth: '',
         lastBilledReferenceMonth: !account.lastBilledReferenceMonth
           || cycle.referenceMonth > account.lastBilledReferenceMonth
-          ? cycle.referenceMonth : account.lastBilledReferenceMonth,
+          ? (newlyActivated ? anchoredAccount.firstPaidReferenceMonth! : cycle.referenceMonth)
+          : account.lastBilledReferenceMonth,
         ...(cycle.referenceMonth === account.grace48ReferenceMonth
           ? { grace48ReviewStatus: 'confirmed' as const } : {}),
         updatedAt: now, updatedBy: 'provider:infinitepay' };
       updates.push({ path: ap, data: nextAccount });
-      const period = paidServicePeriod(account);
-      if (period?.referenceMonth === cycle.referenceMonth) {
+      const period = paidServicePeriod(nextAccount);
+      if (period && billingCycleReferenceForPeriod(nextAccount, period) === cycle.referenceMonth) {
         const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
         updates.push({ path: wp, data: { ...workspace,
           billingEntitlementUntil: paidServiceAccessUntil(period, config?.gracePeriodDays || 0) } });
