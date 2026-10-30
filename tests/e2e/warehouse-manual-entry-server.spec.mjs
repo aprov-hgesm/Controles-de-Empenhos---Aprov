@@ -35,8 +35,8 @@ test('entrada avulsa desktop: formulário -> API server -> 6 gravações atômic
   page, request,
 }) => {
   test.setTimeout(210_000);
-  // '/' exibe o institucional; o login autenticado fica em /login.
-  await page.goto('/login');
+  // '/' exibe o institucional; o login autenticado fica em /central-empenhos.
+  await page.goto('/central-empenhos');
   await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
   await acceptance(page);
 

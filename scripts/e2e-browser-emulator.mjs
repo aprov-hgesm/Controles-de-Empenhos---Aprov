@@ -200,10 +200,10 @@ try {
       await registerEmulatedBillingPortal(context);
       await registerEmulatedLegalAcceptance(context);
       const page = await context.newPage();
-      console.log('EMPROVEX PREVIEW: Chromium aberto em ' + appBase + '/login');
+      console.log('EMPROVEX PREVIEW: Chromium aberto em ' + appBase + '/central-empenhos');
       console.log('LOGIN: sector-lifecycle@example.test / Emprovex-Teste!2026');
       console.log('Feche o Chromium para encerrar a prévia; não é necessário alterar a aplicação.');
-      await page.goto(appBase + '/login', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+      await page.goto(appBase + '/central-empenhos', { waitUntil: 'domcontentloaded', timeout: 120_000 });
       await new Promise((resolve) => {
         browser.once('disconnected', resolve);
       });
