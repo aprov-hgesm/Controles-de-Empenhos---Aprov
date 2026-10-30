@@ -13,7 +13,7 @@ import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
 import { makeOrderNsu, assessPaymentCheck, callInfinitePay } from './payments/infinitepayCheckout.mjs';
 import { readCheckoutUrl } from './payments/infinitepaySmokeHarness.mjs';
-import { createSharedPayment, applySharedPayment, quoteSharedPayment } from './payments/sharedBilling.mjs';
+import { createSharedPayment, applySharedPayment } from './payments/sharedBilling.mjs';
 import {
   BillingAdminError, get, transaction, audit, validWorkspaceId, existingWorkspace,
   existingAccount, assertAccountWorkspace, requireCheckoutConfig,
@@ -35,11 +35,12 @@ function authorize(actor: Actor, workspaceId: string, email: string): void {
   if (workspaceId === HGESM_WORKSPACE_ID || actor.email !== email)
     throw new BillingAdminError('BILLING_SHARED_NOT_AUTHORIZED', 403);
 }
-function verifyCustomer(workspace: { id: string; authorizedEmail: string }, account: BillingAccount, email: string) {
+function verifyCustomer(workspace: { id: string; authorizedEmail: string }, account: BillingAccount, email: string,
+  allowSuspended = false) {
   assertAccountWorkspace(account, workspace as Parameters<typeof assertAccountWorkspace>[1]);
   if (workspace.authorizedEmail !== email
     || account.status === 'exempt' || account.exemptionSource
-    || !['active','pending','trial'].includes(account.status)
+    || !['active','pending','trial', ...(allowSuspended ? ['suspended'] : [])].includes(account.status)
     || account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
     || !account.pricingTermsAcceptedAt) {
     throw new BillingAdminError('BILLING_SHARED_NOT_ELIGIBLE', 409);
@@ -54,7 +55,7 @@ function quoteFor(account: BillingAccount, month: string): number {
   const quote = quoteIndividualRamp({ firstPaidReferenceMonth: account.firstPaidReferenceMonth, referenceMonth: month });
   if (!quote.allowed || !Number.isSafeInteger(quote.amountCents) || quote.amountCents <= 0)
     throw new BillingAdminError('BILLING_SHARED_QUOTE_INVALID', 409);
-  return quote.amountCents;
+  return quote.amountCents as number;
 }
 function checkShared(cycle: BillingCycle, month: string, amount: number): SharedBillingPayment {
   if (cycle.referenceMonth !== month || cycle.amountCents !== amount || cycle.workspaceId === ''
@@ -88,6 +89,8 @@ export async function readSectorSharedPayment(workspaceId: string, email: string
   assertAccountWorkspace(account, workspace);
   if (workspace.authorizedEmail !== email) throw new BillingAdminError('BILLING_SHARED_NOT_AUTHORIZED', 403);
   if (account.status === 'exempt' || account.exemptionSource || workspaceId === HGESM_WORKSPACE_ID)
+    return { enabled: false, eligible: false, shared: null, amountCents: 0, referenceMonth: null };
+  if (account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID || !account.firstPaidReferenceMonth)
     return { enabled: false, eligible: false, shared: null, amountCents: 0, referenceMonth: null };
   const period = paidServicePeriod(account);
   if (!period) return { enabled: process.env.EMPROVEX_SHARED_BILLING_ENABLED === '1',
@@ -336,7 +339,7 @@ export async function reconcileSectorSharedPayment(
   return transaction(token, [wp, ap, cp, lp, CONFIG_PATH], docs => {
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const account = existingAccount(docs.get(ap) ?? null);
-    verifyCustomer(workspace, account, email);
+    verifyCustomer(workspace, account, email, true);
     const cycle = docs.get(cp)?.value as BillingCycle | undefined;
     if (!cycle || cycle.workspaceId !== workspaceId || cycle.sharedPayment?.version !== 'shared_v1'
         || cycle.sharedPayment.amountCents !== cycle.amountCents)
