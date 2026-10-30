@@ -3521,7 +3521,7 @@ async function main() {
     id: 'legacy-hardening',
     marker: 'legacy-read-only',
   });
-  await allowed('Fundador Google pode consultar legado raiz somente leitura', () =>
+  await allowed('Fundador por senha pode consultar legado raiz somente leitura', () =>
     getDoc(doc(admin.db, 'empenhos', 'legacy-hardening'))
   );
   await denied('Fundador não pode voltar a gravar no legado raiz', () =>
@@ -3529,7 +3529,7 @@ async function main() {
       id: 'legacy-hardening-write',
     })
   );
-  await denied('Fundador autenticado por senha não acessa o legado raiz', () =>
+  await denied('Fundador autenticado via Google não acessa o legado raiz', () =>
     getDoc(doc(founderGoogle.db, 'empenhos', 'legacy-hardening'))
   );
 
