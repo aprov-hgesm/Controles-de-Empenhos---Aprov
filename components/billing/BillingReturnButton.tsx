@@ -15,7 +15,7 @@ export function BillingReturnButton({ className, children }: {
   const [error, setError] = useState('');
   const request = async (path: string, body?: Record<string, unknown>) => {
     const user = auth.currentUser;
-    if (!user) { window.location.assign('/login'); return null; }
+    if (!user) { window.location.assign('/central-empenhos'); return null; }
     const token = await user.getIdToken();
     const response = await fetch(path, {
       method: body ? 'POST' : 'GET',
@@ -33,11 +33,11 @@ export function BillingReturnButton({ className, children }: {
     setBusy(true); setError('');
     try {
       if (auth.currentUser?.email?.toLowerCase() === HGESM_SECTOR_EMAIL.toLowerCase()) {
-        window.location.assign('/login'); return;
+        window.location.assign('/central-empenhos'); return;
       }
       const result = await request('/api/billing/portal?view=access');
       if (!result) return;
-      if (result.allowed) { window.location.assign('/login'); return; }
+      if (result.allowed) { window.location.assign('/central-empenhos'); return; }
       setDecision(result); setModal(true);
     } catch {
       setError('Não foi possível verificar sua assinatura. Você pode consultar os pagamentos ou tentar novamente.');
@@ -50,7 +50,7 @@ export function BillingReturnButton({ className, children }: {
     try {
       const result = await request('/api/billing/portal?action=request-grace48', { confirm: true });
       if (!result?.allowed) throw new Error('Acesso temporário indisponível.');
-      window.location.assign('/login');
+      window.location.assign('/central-empenhos');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível solicitar as 48 horas.');
     } finally { setBusy(false); }

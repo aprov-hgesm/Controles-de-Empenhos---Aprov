@@ -21,7 +21,7 @@ function FounderOnlyMobileSurface({
 
   useEffect(() => {
     if (!allowed) {
-      window.location.replace('/login');
+      window.location.replace('/central-empenhos');
     }
   }, [allowed]);
 

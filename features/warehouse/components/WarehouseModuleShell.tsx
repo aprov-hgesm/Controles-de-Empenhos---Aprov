@@ -163,7 +163,7 @@ export function WarehouseModuleShell({
     clearResolvedWorkspaceContext();
     clearVisualMode();
     await signOut(auth);
-    window.location.assign('/login');
+    window.location.assign('/central-empenhos');
   };
 
   if (!visualModeReady) return <WarehouseSectionLoading />;

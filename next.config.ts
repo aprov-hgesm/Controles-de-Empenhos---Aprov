@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       // A vitrine substitui a rota '/' existente, preservando app/page.tsx
-      // intacto para os contratos operacionais e o acesso em /login.
+      // intacto para os contratos operacionais e o acesso em /central-empenhos.
       beforeFiles: [
         { source: '/', destination: '/institucional' },
       ],
@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Alias temporario: favoritos antigos continuam funcionando e mantem a query string.
+      { source: '/login', destination: '/central-empenhos', permanent: false },
       { source: '/adm-deposito', destination: '/central-depositos', permanent: true },
       { source: '/adm-deposito/:path*', destination: '/central-depositos/:path*', permanent: true },
       { source: '/central-mobile', destination: '/operador-movel', permanent: true },
