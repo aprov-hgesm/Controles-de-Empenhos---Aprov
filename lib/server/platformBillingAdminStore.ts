@@ -723,7 +723,9 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
     && configDoc?.value?.requirePayment === true;
   if (!billingLive) throw new BillingAdminError('BILLING_GRACE_NOT_ENABLED', 409);
   const accountForPeriod = existingAccount(accountDoc);
-  const month = paidServicePeriod(accountForPeriod)?.referenceMonth || getReferenceMonth();
+  const gracePeriod = paidServicePeriod(accountForPeriod);
+  const month = gracePeriod
+    ? billingCycleReferenceForPeriod(accountForPeriod, gracePeriod) : getReferenceMonth();
   const wp = 'workspaces/' + workspaceId;
   const ap = 'billingAccounts/' + workspaceId;
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
@@ -828,7 +830,9 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
   const persisted = existingAccount(await get(token, 'billingAccounts/' + workspaceId));
   const period = paidServicePeriod(persisted);
   if (!period) throw new BillingAdminError('BILLING_TRIAL_ACTIVE', 409);
-  const month = period.referenceMonth;
+  const month = persisted.pendingInitialCycleReferenceMonth && billingFirstPaymentPending(persisted)
+    ? persisted.pendingInitialCycleReferenceMonth
+    : billingCycleReferenceForPeriod(persisted, period);
   const wp = 'workspaces/' + workspaceId;
   const ap = 'billingAccounts/' + workspaceId;
   const cp = 'billingCycles/' + billingCycleId(workspaceId, month);
@@ -847,6 +851,15 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     if (account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
       || !account.pricingTermsAcceptedAt)
       throw new BillingAdminError('BILLING_PRICING_ACCEPTANCE_REQUIRED', 409);
+    if (account.pendingSharedCycleReferenceMonth)
+      throw new BillingAdminError('BILLING_SHARED_CYCLE_ACTIVE', 409);
+    if (billingFirstPaymentPending(account) && account.pendingInitialCycleReferenceMonth
+      && account.pendingInitialCycleReferenceMonth !== month)
+      throw new BillingAdminError('BILLING_FIRST_CHECKOUT_FROZEN', 409);
+    const alreadyPaid = docs.get(cp)?.value as BillingCycle | undefined;
+    if (alreadyPaid && alreadyPaid.status === 'paid' && alreadyPaid.checkoutOrderNsu === orderNsu)
+      return { result: { status: 'paid' as const, orderNsu,
+        amountCents: alreadyPaid.amountCents, referenceMonth: month, checkoutUrl: '' }, updates: [] };
     const quote = quoteIndividualRamp({
       firstPaidReferenceMonth: billingRampStartMonth(account, month), referenceMonth: month,
     });
@@ -911,6 +924,8 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       { path: cp, data: updated },
       { path: intentPath, data: { orderNsu, workspaceId, referenceMonth: month,
         amountCents: amount, createdAt: now, status: 'prepared', attemptVersion: 2 } },
+      ...(billingFirstPaymentPending(account)
+        ? [{ path: ap, data: { ...account, pendingInitialCycleReferenceMonth: month } }] : []),
       audit(actor, 'billing.payment_reopen', 'billing_cycle', updated.id, workspaceId, workspace.ug || null,
         { status: previous?.status ?? null }, { status: 'pending', amountCents: amount },
         { provider: 'infinitepay', checkoutPrepared: true, orderNsu }),
@@ -1091,9 +1106,12 @@ export async function reconcileSectorSubscriptionPayment(actor: Actor, workspace
     const anchoredAccount = settleFirstPaymentAnniversary(currentAccount, current.referenceMonth, now);
     const nextAccount: BillingAccount = { ...anchoredAccount,
       status: 'active', monthlyPriceCents: current.amountCents,
+      ...(newlyActivated ? { pendingInitialCycleReferenceMonth: '' } : {}),
       lastBilledReferenceMonth: !currentAccount.lastBilledReferenceMonth
-        || current.referenceMonth > currentAccount.lastBilledReferenceMonth
-          ? current.referenceMonth : currentAccount.lastBilledReferenceMonth,
+        || (newlyActivated ? anchoredAccount.firstPaidReferenceMonth! : current.referenceMonth)
+          > currentAccount.lastBilledReferenceMonth
+          ? (newlyActivated ? anchoredAccount.firstPaidReferenceMonth! : current.referenceMonth)
+          : currentAccount.lastBilledReferenceMonth,
       ...(current.referenceMonth === currentAccount.grace48ReferenceMonth ? { grace48ReviewStatus: 'confirmed' as const } : {}), updatedAt: now, updatedBy: 'provider:infinitepay' };
     return { result: { verified: true, code: 'BILLING_PAYMENT_CONFIRMED' }, updates: [
       { path: cp, data: settled }, { path: 'billingAccounts/' + workspaceId, data: nextAccount },
