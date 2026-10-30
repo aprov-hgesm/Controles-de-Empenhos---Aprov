@@ -8,6 +8,8 @@ import { getTrustedServerNowMs } from './serverClock';
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
+  FOUNDER_GOOGLE_AUTH_PROVIDER,
+  isFounderSignInProvider,
   SECTOR_AUTH_PROVIDER,
   normalizePlatformEmail,
   normalizeUnitUg,
@@ -70,7 +72,7 @@ async function resolveSessionAuthProvider(
   const tokenResult = await user.getIdTokenResult();
   const provider = tokenResult.signInProvider;
 
-  if (provider === FOUNDER_AUTH_PROVIDER || provider === SECTOR_AUTH_PROVIDER) {
+  if (provider === FOUNDER_AUTH_PROVIDER || provider === FOUNDER_GOOGLE_AUTH_PROVIDER || provider === SECTOR_AUTH_PROVIDER) {
     return provider;
   }
 
@@ -181,7 +183,7 @@ async function resolveAndBindExternalIdentity(
  * Resolve uma sessão Firebase para um contexto operacional EMPROVEX.
  *
  * Modelo híbrido:
- * - fundador HGeSM: exclusivamente e-mail e senha (password);
+ * - fundador HGeSM: formulário e-mail/senha; Google permanece elegível no Firebase;
  * - setores externos: exclusivamente e-mail/senha (password).
  *
  * A conta fundadora preserva a lógica multiperfil consolidada. Setores externos
@@ -207,8 +209,9 @@ export async function resolveAuthenticatedWorkspaceContext(
   }
 
   if (normalizedEmail === HGESM_SECTOR_EMAIL) {
-    // O perfil fundador usa exclusivamente e-mail e senha.
-    if (signInProvider !== FOUNDER_AUTH_PROVIDER) {
+    // A tela publica usa senha, mas a identidade fundadora mantem Google como provider
+    // valido no Firebase para compatibilidade, sem botao federado na interface.
+    if (!isFounderSignInProvider(signInProvider)) {
       return unauthorized(normalizedEmail);
     }
 

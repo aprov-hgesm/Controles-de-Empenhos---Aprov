@@ -56,8 +56,8 @@ requireText(
 );
 requireText(
   access,
-  'signInProvider !== FOUNDER_AUTH_PROVIDER',
-  'Fundador não está restrito a sessão Google.'
+  'isFounderSignInProvider(signInProvider)',
+  'Fundador não reconhece ambos os provedores previamente vinculados.'
 );
 requireText(
   access,
@@ -123,7 +123,7 @@ requireText(
 requireText(
   rules,
   'function isPasswordFounderSession()',
-  'Firestore Rules não restringem o fundador ao provider password.'
+  'Firestore Rules não reconhecem senha no fundador.'
 );
 requireText(
   rules,
@@ -173,7 +173,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Nova autenticação — Bloco 1: modelo híbrido\n');
-  console.log('Fundador: password');
+  console.log('Fundador: senha na tela, Google mantido no Firebase');
   console.log('Setores externos: password');
   console.log('Provider real: validado pelo ID token Firebase');
   console.log('Conta externa por Google: bloqueada no runtime');

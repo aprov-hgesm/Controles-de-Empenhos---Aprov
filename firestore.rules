@@ -22,10 +22,14 @@ service cloud.firestore {
       return hasSignInProvider('password');
     }
 
+    function isGoogleFounderSession() {
+      return hasSignInProvider('google.com');
+    }
+
     function isHgesmFounder() {
       return isVerifiedUser()
         && request.auth.token.email == 'aprov1hgesm@gmail.com'
-        && isPasswordFounderSession();
+        && (isPasswordFounderSession() || isGoogleFounderSession());
     }
 
     function isPlatformAdmin() {

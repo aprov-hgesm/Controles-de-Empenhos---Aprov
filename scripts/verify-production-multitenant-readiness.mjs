@@ -128,7 +128,7 @@ requireText(sectorProvisioning, 'deleteAuthUser', 'Provisionamento não possui r
 requireText(access, 'resolveAndBindExternalIdentity', 'Login externo não mantém resolução/vínculo de identidade.');
 requireText(access, 'firebaseUid', 'Login externo perdeu vínculo de UID.');
 requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o provider real da sessão.');
-requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
+requireText(access, 'isFounderSignInProvider(signInProvider)', 'Fundador não valida providers vinculados.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
 requireText(drive, 'initTokenClient', 'OAuth independente do Drive externo não usa Google Identity Services.');
 requireText(drive, "GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'", 'OAuth Drive externo não preserva seleção explícita da Conta Google.');

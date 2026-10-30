@@ -1,25 +1,29 @@
-# EMPROVEX — Corte controlado para autenticação por e-mail e senha
+# EMPROVEX — Login visual por e-mail e senha; Google Firebase preservado
 
-## Decisão
-Todas as contas usam Firebase Authentication com sign_in_provider=password. Endereços `@gmail.com` continuam sendo e-mails válidos. O login social Google deixa de existir na tela e nas barreiras administrativas. A integração documental Google Drive permanece OAuth independente e não troca a sessão Firebase.
+## Decisão definitiva — 30/10/2026
+- Na interface de login do EMPROVEX, apresentar somente e-mail e senha para fundador, setores e futuras empresas.
+- **Manter Email/Password e Google habilitados em Firebase Authentication.** Não executar a etapa de desabilitar Google.
+- Para a identidade fundadora existente, permitir sessões Firebase previamente vinculadas com `sign_in_provider=password` **ou** `google.com`; os endpoints e Firestore Rules verificam o provider real. Não apresentar botão Google nem implementar novo botão de autenticação federada.
+- Setores externos permanecem vinculados exclusivamente ao provider `password`; nenhuma abertura de login social para contas externas.
+- O fluxo de Google Drive/GIS continua independente, com validação do e-mail esperado, sem reautenticar a sessão Firebase.
+- Ocultar o botão não revoga o provedor: autenticação Google continuará tecnicamente possível por outros clientes Firebase autorizados e pela conta vinculada. Não anunciar bloqueio de Google.
 
-## Estado de produção
-NÃO fazer merge, publicar Rules ou desabilitar o provedor Google do Firebase antes do corte controlado. A alteração deste PR é somente código-fonte e testes, não uma migração de identidade executada.
+## Identidade fundadora — evidência operacional confirmada pelo administrador
+- E-mail: `aprov1hgesm@gmail.com`
+- Projeto: `gen-lang-client-0982077967`
+- UID atual: `r1wkq9WSbGRj0A9Xhwxhp35UaPn2` (não é segredo; não usar como substituto de verificação de token).
+- Senha foi configurada no mesmo usuário pelo endpoint administrativo do Firebase; o teste REST de `accounts:signInWithPassword` retornou `password`, UID original, e-mail verificado e projeto correto. Nunca versionar ou registrar senha/tokens.
 
-## Procedimento obrigatório (ambiente administrativo seguro)
-1. Obter a identidade Firebase Authentication atual de `aprov1hgesm@gmail.com`, registrar o UID existente e confirmar que o e-mail está verificado. Não criar uma nova conta e nunca excluir a conta fundadora.
-2. Verificar backup recente de Auth/Firestore e as permissões existentes do workspace `hgesm-aprov`. Salvar o UID de referência em um registro operacional privado (nunca em Git).
-3. Habilitar `Email/Password` no Firebase Authentication. **Não desabilitar Google ainda.**
-4. Via Firebase Admin SDK em ambiente confiável, definir uma senha forte na identidade EXISTENTE usando `getUserByEmail` e `updateUser(existing.uid, { password: senhaInformadaForaDoRepositorio })`. Não imprimir, versionar nem registrar a senha no shell/history/logs. Exigir confirmação de UID inalterado. Se o UID divergir, abortar.
-5. Validar a autenticação por senha no Auth Emulator e, no projeto real, com uma solicitação controlada ao Firebase Authentication, confirmando UID, email_verified e `sign_in_provider=password`. A produção antiga ainda rejeitará essa sessão até o corte completo.
-6. Inspecionar `platformAccounts/aprov1hgesm@gmail.com` e migrar, via IAM/serviço administrativo, `authProvider` para `password` e `firebaseUid` para o UID já existente, se aplicável, preservando os outros campos e dados. Registrar auditoria administrativa.
-7. Homologar simultaneamente as novas Firestore Rules, o código/rotas do servidor e a interface em ambiente de teste, inclusive alternância fundador (Operacional/Admin), acesso ao HGeSM, gerenciamento de setores, cobrança e OAuth independente do Drive. Não fazer deploy do cliente sem Rules compatíveis nem de Rules novas sem uma senha de fundador funcional.
-8. Efetuar o corte coordenado de produção, validar login real de fundador por senha, acesso administrativo, acesso a depósitos, dados e Drive e login por senha de uma conta externa.
-9. Somente após PASS dos cenários acima, desabilitar o provedor Google **no Firebase Authentication** (configuração global), mantendo habilitadas as credenciais OAuth Google Cloud necessárias ao Drive. Revogar sessões antigas no Firebase Admin e renovar login; validar falha de acesso pelo Google e êxito do acesso por senha.
-10. Caso qualquer verificação falhe, reverter código e Rules para conjunto COMPATÍVEL com método de acesso ainda operacional; nunca remover a última via de autenticação válida.
+## Homologação e publicação
+1. Não modificar Firebase Auth providers no console: preservar Google e Email/Password.
+2. Antes do merge/deploy, comparar regras atualmente PUBLICADAS com as regras do repositório (há histórico de divergências), executar testes no Auth/Firestore Emulator, CI e build.
+3. Exigir PASS nos cenários: login de fundador por senha e navegação admin/HGeSM, login de setor externo por senha, founder Google legado autorizado no servidor/Rules (sem botão), setor externo Google negado, isolamento por UID/tenant, depósito, cobrança, Drive.
+4. Planejar corte coordenado de código e Firestore Rules para permitir founder password sem impedir acesso aos clientes. Não publicar UI nova com Rules ainda Google-only, nem Rules novas sem servidor compatível.
+5. Na produção, verificar acesso fundador por senha, acesso administrativo e operacional, Drive independente, cliente externo e ausência do botão Google. Se falhar, reverter código/Rules em conjunto sem desativar nenhum provider Firebase.
 
-## Cuidados
-- O mesmo UID e o mesmo e-mail são invariantes da migração; dados e workspaces não são recriados.
-- Firebase login e OAuth do Drive são serviços independentes; não remover OAuth Consent Screen nem credenciais Drive.
-- O corte depende de validação manual/operacional; este PR não executa mudanças no Firebase Authentication nem publica Rules.
-- Verificar a compatibilidade das Rules atualmente publicadas antes de qualquer deploy; sua versão pode diferir da do repositório.
+## NÃO executar
+- Não desabilitar Google no Firebase Authentication.
+- Não desvincular Google da conta fundadora.
+- Não excluir/recriar a conta, nem migrar UID ou dados.
+- Não revogar tokens de forma generalizada por causa dessa alteração.
+- Não tornar login Google visível na interface EMPROVEX.

@@ -911,7 +911,7 @@ async function main() {
         { marker: 'forbidden' }
       )
     );
-    await denied('Sessão fundadora via Google não acessa ADM Depósito', () =>
+    await allowed('Sessão fundadora via Google mantém acesso ADM Depósito', () =>
       getDoc(
         doc(
           founderGoogle.db,
@@ -1018,7 +1018,7 @@ async function main() {
       )
     );
 
-    await denied('Sessão fundadora via Google não lê materiais da FASE 1', () =>
+    await allowed('Sessão fundadora via Google mantém leitura de materiais da FASE 1', () =>
       getDoc(
         doc(
           founderGoogle.db,
@@ -1196,7 +1196,7 @@ async function main() {
       )
     );
 
-    await denied('Sessão fundadora via Google não lê ledger da FASE 2', () =>
+    await allowed('Sessão fundadora via Google mantém leitura de ledger da FASE 2', () =>
       getDoc(
         doc(
           founderGoogle.db,
@@ -3334,7 +3334,7 @@ async function main() {
       )
     )
   );
-  await denied('Fundador com mesmo e-mail e UID via Google não acessa dados operacionais HGeSM', () =>
+  await allowed('Fundador com mesmo e-mail e UID via Google mantém dados operacionais HGeSM', () =>
     getDoc(
       doc(
         founderGoogle.db,
@@ -3345,7 +3345,7 @@ async function main() {
       )
     )
   );
-  await denied('Fundador com mesmo e-mail e UID via Google não obtém metadados administrativos', () =>
+  await allowed('Fundador com mesmo e-mail e UID via Google mantém metadados administrativos', () =>
     getDoc(
       doc(
         founderGoogle.db,
@@ -3544,7 +3544,7 @@ async function main() {
       id: 'legacy-hardening-write',
     })
   );
-  await denied('Fundador autenticado via Google não acessa o legado raiz', () =>
+  await allowed('Fundador autenticado via Google mantém leitura do legado raiz', () =>
     getDoc(doc(founderGoogle.db, 'empenhos', 'legacy-hardening'))
   );
 

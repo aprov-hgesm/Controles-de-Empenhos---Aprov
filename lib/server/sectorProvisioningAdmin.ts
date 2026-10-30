@@ -6,7 +6,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { buildInitialBillingAccount } from '../billing';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
-  FOUNDER_AUTH_PROVIDER,
+  isFounderSignInProvider,
   isValidPlatformEmail,
   isValidUnitUg,
   isValidWorkspaceId,
@@ -301,7 +301,7 @@ export async function verifyFounderSession(idToken: string): Promise<FounderSess
     || normalizedEmail !== HGESM_SECTOR_EMAIL
     || user.emailVerified !== true
     || user.disabled === true
-    || firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER
+    || !isFounderSignInProvider(firebaseClaim?.sign_in_provider)
   ) {
     throw new SectorProvisioningFailure(
       'A sessão atual não possui permissão administrativa para provisionar setores.',

@@ -26,7 +26,7 @@ if (
   findings.push('Rota não valida o formato do payload antes de provisionar.');
 }
 requireText(route, 'provisionSectorWorkspaceWithAuth(input, founder)', 'Rota não delega o provisionamento ao serviço privilegiado.');
-requireText(server, "firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER", 'Sessão administrativa não exige provider password.');
+requireText(server, "isFounderSignInProvider(firebaseClaim?.sign_in_provider)", 'Sessão administrativa não valida os providers vinculados autorizados.');
 requireText(server, 'user.disabled === true', 'Conta fundadora desativada ainda poderia provisionar setores.');
 requireText(server, "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON", 'Servidor não usa credencial administrativa protegida.');
 requireText(server, 'lookupAuthUserByEmail', 'Provisionamento não detecta usuário Firebase já existente.');

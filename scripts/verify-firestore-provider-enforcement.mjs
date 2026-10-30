@@ -37,7 +37,12 @@ requireText(
 requireText(
   rules,
   "return hasSignInProvider('password')",
-  'Fundador não está fixado no provider password.'
+  'Fundador não tem verificacao password.'
+);
+requireText(
+  rules,
+  "function isGoogleFounderSession()",
+  'Founder perdeu a compatibilidade com o provider Google.'
 );
 requireText(
   rules,
@@ -49,9 +54,11 @@ requireText(
   'isPasswordSectorSession()',
   'Fluxos self-service do setor não exigem provider password.'
 );
-if (rules.includes("hasSignInProvider('google.com')")) {
-  findings.push('As Rules ainda admitem login Google na autenticação EMPROVEX.');
-}
+requireText(
+  rules,
+  "hasSignInProvider('google.com')",
+  'Firebase Google deve permanecer habilitado para a identidade fundadora.'
+);
 requireText(
   securityTest,
   'Setor com mesmo e-mail e UID via Google não acessa dados operacionais',
@@ -59,8 +66,8 @@ requireText(
 );
 requireText(
   securityTest,
-  'Fundador com mesmo e-mail e UID via Google não acessa dados operacionais HGeSM',
-  'Teste multi-tenant não cobre fundador tentando usar Google.'
+  'Fundador com mesmo e-mail e UID via Google mantém dados operacionais HGeSM',
+  'Teste multi-tenant não cobre o acesso preservado do fundador via Google.'
 );
 requireText(
   securityTest,
@@ -79,7 +86,7 @@ if (findings.length > 0) {
   process.exitCode = 2;
 } else {
   console.log('FIRESTORE PROVIDER ENFORCEMENT: READY');
-  console.log('Fundador: password');
+  console.log('Fundador: password na interface, Google Firebase preservado');
   console.log('Setores externos: password');
   console.log('Provider é validado no token e novamente nas Firestore Rules.');
 }
