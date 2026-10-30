@@ -26,7 +26,7 @@ if (
   findings.push('Rota não valida o formato do payload antes de provisionar.');
 }
 requireText(route, 'provisionSectorWorkspaceWithAuth(input, founder)', 'Rota não delega o provisionamento ao serviço privilegiado.');
-requireText(server, "firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER", 'Sessão administrativa não exige provider Google.');
+requireText(server, "firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER", 'Sessão administrativa não exige provider password.');
 requireText(server, 'user.disabled === true', 'Conta fundadora desativada ainda poderia provisionar setores.');
 requireText(server, "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON", 'Servidor não usa credencial administrativa protegida.');
 requireText(server, 'lookupAuthUserByEmail', 'Provisionamento não detecta usuário Firebase já existente.');
@@ -61,7 +61,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Nova autenticação — Bloco 2: provisionamento seguro pelo administrador\n');
-  console.log('Fundador: sessão Google validada no servidor');
+  console.log('Fundador: sessão por senha validada no servidor');
   console.log('Firebase Auth: criação/reatribuição de senha server-side');
   console.log('Senha: nunca persistida no Firestore');
   console.log('platformAccount: provider=password + firebaseUid + UG no provisionamento');

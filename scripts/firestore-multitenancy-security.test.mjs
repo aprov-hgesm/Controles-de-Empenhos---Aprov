@@ -371,7 +371,8 @@ async function main() {
   }
 
   const founderEmail = 'aprov1hgesm@gmail.com';
-  const admin = await createSession('admin-google', founderEmail, 'google.com');
+  await createVerifiedUser(founderEmail);
+  const admin = await createSession('admin-password', founderEmail, 'password');
   identities.founder = {
     email: founderEmail,
     uid: admin.user.uid,
@@ -445,7 +446,7 @@ async function main() {
       'hgesm-aprov',
       null,
       'active',
-      'google.com'
+      'password'
     )
   );
   await ownerSet('workspaces/hgesm-aprov/empenhos/sample', {
@@ -823,18 +824,15 @@ async function main() {
     'A sessão legítima do setor deve continuar usando o mesmo UID após o vínculo Google.'
   );
 
-  await authPost('accounts:update', {
-    idToken: await admin.user.getIdToken(),
-    password: PASSWORD,
-    returnSecureToken: true,
-  });
-  const founderPassword = await createSession(
-    'founder-password',
+  await linkWithCredential(admin.user, mockGoogleCredential('founder-linked', identities.founder.email));
+  await admin.user.getIdToken(true);
+  const founderGoogle = await createSession(
+    'founder-google',
     identities.founder.email,
-    'password'
+    'google.com'
   );
   assert.equal(
-    founderPassword.user.uid,
+    founderGoogle.user.uid,
     identities.founder.uid,
     'O teste do fundador precisa manter o mesmo UID entre providers.'
   );
@@ -898,10 +896,10 @@ async function main() {
         { marker: 'forbidden' }
       )
     );
-    await denied('Sessão fundadora por senha não acessa ADM Depósito', () =>
+    await denied('Sessão fundadora via Google não acessa ADM Depósito', () =>
       getDoc(
         doc(
-          founderPassword.db,
+          founderGoogle.db,
           'warehouse',
           'hgesm-aprov',
           'depots',
@@ -1005,10 +1003,10 @@ async function main() {
       )
     );
 
-    await denied('Sessão fundadora por senha não lê materiais da FASE 1', () =>
+    await denied('Sessão fundadora via Google não lê materiais da FASE 1', () =>
       getDoc(
         doc(
-          founderPassword.db,
+          founderGoogle.db,
           'warehouse',
           'hgesm-aprov',
           'materials',
@@ -1183,10 +1181,10 @@ async function main() {
       )
     );
 
-    await denied('Sessão fundadora por senha não lê ledger da FASE 2', () =>
+    await denied('Sessão fundadora via Google não lê ledger da FASE 2', () =>
       getDoc(
         doc(
-          founderPassword.db,
+          founderGoogle.db,
           'warehouse',
           'hgesm-aprov',
           'movements',
@@ -3321,10 +3319,10 @@ async function main() {
       )
     )
   );
-  await denied('Fundador com mesmo e-mail e UID via senha não acessa dados operacionais HGeSM', () =>
+  await denied('Fundador com mesmo e-mail e UID via Google não acessa dados operacionais HGeSM', () =>
     getDoc(
       doc(
-        founderPassword.db,
+        founderGoogle.db,
         'workspaces',
         'hgesm-aprov',
         'empenhos',
@@ -3332,10 +3330,10 @@ async function main() {
       )
     )
   );
-  await denied('Fundador com mesmo e-mail e UID via senha não obtém metadados administrativos', () =>
+  await denied('Fundador com mesmo e-mail e UID via Google não obtém metadados administrativos', () =>
     getDoc(
       doc(
-        founderPassword.db,
+        founderGoogle.db,
         'workspaces',
         'hgesm-aprov'
       )
@@ -3532,7 +3530,7 @@ async function main() {
     })
   );
   await denied('Fundador autenticado por senha não acessa o legado raiz', () =>
-    getDoc(doc(founderPassword.db, 'empenhos', 'legacy-hardening'))
+    getDoc(doc(founderGoogle.db, 'empenhos', 'legacy-hardening'))
   );
 
   console.log('\nTrilha de auditoria imutável');

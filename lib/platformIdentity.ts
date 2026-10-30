@@ -4,7 +4,7 @@ export type PlatformAccountStatus = 'active' | 'disabled';
 
 export type PlatformAuthProvider = 'google.com' | 'password';
 
-export const FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'google.com';
+export const FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'password';
 export const SECTOR_AUTH_PROVIDER: PlatformAuthProvider = 'password';
 
 export type WorkspaceStatus = 'active' | 'disabled';

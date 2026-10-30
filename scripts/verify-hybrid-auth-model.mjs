@@ -30,8 +30,8 @@ requireText(
 );
 requireText(
   identity,
-  "FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'google.com'",
-  'Provedor do fundador não está fixado em Google.'
+  "FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'password'",
+  'Provedor do fundador não está fixado em e-mail/senha.'
 );
 requireText(
   identity,
@@ -96,11 +96,6 @@ requireText(
   'Tela principal não delega credenciais de setor ao fluxo seguro existente.'
 );
 requireText(
-  page,
-  'await signInUser()',
-  'Tela principal não preserva a delegação do acesso institucional Google.'
-);
-requireText(
   login,
   'Entrar com e-mail e senha',
   'Componente público não oferece o login por senha dos setores.'
@@ -111,24 +106,14 @@ requireText(
   'Componente público não delega o login setorial para a camada de sessão.'
 );
 requireText(
-  login,
-  'Entrar com Google — HGeSM',
-  'Componente público não preserva o acesso Google exclusivo do fundador.'
-);
-requireText(
-  login,
-  'onFounderLogin()',
-  'Componente público não delega o acesso institucional para a camada de sessão.'
-);
-requireText(
   rules,
   "request.auth.token.firebase.sign_in_provider == provider",
   'Firestore Rules não validam o sign_in_provider real do token.'
 );
 requireText(
   rules,
-  "hasSignInProvider('google.com')",
-  'Firestore Rules não restringem o fundador ao provider Google.'
+  'function isPasswordFounderSession()',
+  'Firestore Rules não restringem o fundador ao provider password.'
 );
 requireText(
   rules,
@@ -178,15 +163,15 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Nova autenticação — Bloco 1: modelo híbrido\n');
-  console.log('Fundador: google.com');
+  console.log('Fundador: password');
   console.log('Setores externos: password');
   console.log('Provider real: validado pelo ID token Firebase');
   console.log('Conta externa por Google: bloqueada no runtime');
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
-  console.log('Login Google: preservado exclusivamente para o fundador');
+  console.log('Login Google Firebase: removido da interface');
   console.log('Enforcement nas Rules: ativo para Google/password');
-  console.log('Drive externo: OAuth Google independente sem trocar o provider Firebase');
+  console.log('Drive: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
 }
 

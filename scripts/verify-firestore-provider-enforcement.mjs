@@ -31,13 +31,13 @@ requireText(
 );
 requireText(
   rules,
-  "function isGoogleFounderSession()",
+  "function isPasswordFounderSession()",
   'Rules não definem a sessão Google do fundador.'
 );
 requireText(
   rules,
   "return hasSignInProvider('google.com')",
-  'Fundador não está fixado no provider google.com.'
+  'Fundador não está fixado no provider password.'
 );
 requireText(
   rules,
@@ -56,7 +56,7 @@ requireText(
 );
 requireText(
   securityTest,
-  'Fundador com mesmo e-mail e UID via senha não acessa dados operacionais HGeSM',
+  'Fundador com mesmo e-mail e UID via Google não acessa dados operacionais HGeSM',
   'Teste multi-tenant não cobre fundador tentando usar password.'
 );
 requireText(
@@ -76,7 +76,7 @@ if (findings.length > 0) {
   process.exitCode = 2;
 } else {
   console.log('FIRESTORE PROVIDER ENFORCEMENT: READY');
-  console.log('Fundador: google.com');
+  console.log('Fundador: password');
   console.log('Setores externos: password');
   console.log('Provider é validado no token e novamente nas Firestore Rules.');
 }

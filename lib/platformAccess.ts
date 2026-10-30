@@ -181,7 +181,7 @@ async function resolveAndBindExternalIdentity(
  * Resolve uma sessão Firebase para um contexto operacional EMPROVEX.
  *
  * Modelo híbrido:
- * - fundador HGeSM: exclusivamente Google (google.com);
+ * - fundador HGeSM: exclusivamente e-mail e senha (password);
  * - setores externos: exclusivamente e-mail/senha (password).
  *
  * A conta fundadora preserva a lógica multiperfil consolidada. Setores externos
@@ -207,7 +207,7 @@ export async function resolveAuthenticatedWorkspaceContext(
   }
 
   if (normalizedEmail === HGESM_SECTOR_EMAIL) {
-    // O perfil fundador preserva exclusivamente o login federado Google.
+    // O perfil fundador usa exclusivamente e-mail e senha.
     if (signInProvider !== FOUNDER_AUTH_PROVIDER) {
       return unauthorized(normalizedEmail);
     }

@@ -149,8 +149,8 @@ if (!externalDriveBlock) {
 }
 if (!founderDriveBlock) {
   findings.push('Não foi possível isolar o fluxo Drive do fundador.');
-} else if (!founderDriveBlock.includes('reauthenticateWithPopup')) {
-  findings.push('Fluxo Drive do fundador perdeu a reautenticação Google/Firebase consolidada.');
+} else if (founderDriveBlock.includes('reauthenticateWithPopup')) {
+  findings.push('Fluxo Drive do fundador não pode reautenticar via Google/Firebase.');
 }
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
@@ -185,7 +185,7 @@ if (!productionRulesTarget) {
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Rules não exigem UID vinculado para operação externa.');
 requireText(rules, 'request.auth.token.firebase.sign_in_provider == provider', 'Rules não validam o provider real do token.');
-requireText(rules, "hasSignInProvider('google.com')", 'Fundador não está restrito ao provider Google nas Rules.');
+requireText(rules, 'function isPasswordFounderSession()', 'Fundador não está restrito ao provider password nas Rules.');
 requireText(rules, "hasSignInProvider('password')", 'Setores externos não estão restritos ao provider password nas Rules.');
 requireText(rules, "workspaceId != 'hgesm-aprov'", 'Workspace fundador não está protegido.');
 requireText(rules, "match /workspaces/{workspaceId}/settings/documentStorage", 'documentStorage não possui regra dedicada.');

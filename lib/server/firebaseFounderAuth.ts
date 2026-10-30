@@ -156,7 +156,7 @@ export async function verifyFounderFirebaseRequest(
   }
 
   if (verified.signInProvider !== FOUNDER_AUTH_PROVIDER) {
-    throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
+    throw new FounderAuthError('A conta fundadora exige autenticação por e-mail e senha.', 403);
   }
 
   return {

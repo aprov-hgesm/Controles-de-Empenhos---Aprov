@@ -34,7 +34,7 @@ type LoginToast = {
 } | null;
 
 type FocusedField = 'email' | 'password' | null;
-type AuthMode = 'sector' | 'founder' | null;
+type AuthMode = 'sector' | null;
 
 interface EmprovexLoginProps {
   customLogo: string | null;
@@ -43,7 +43,6 @@ interface EmprovexLoginProps {
   onCloseToast: () => void;
   onSectorLogin: (email: string, password: string) => Promise<boolean>;
   onRequestPasswordReset: (email: string) => Promise<string>;
-  onFounderLogin: () => Promise<void>;
 }
 
 /**
@@ -61,7 +60,6 @@ export function EmprovexLogin({
   onCloseToast,
   onSectorLogin,
   onRequestPasswordReset,
-  onFounderLogin,
 }: EmprovexLoginProps) {
   const { mode, setMode } = useVisualMode();
   const [loginEmail, setLoginEmail] = useState('');
@@ -107,17 +105,6 @@ export function EmprovexLogin({
     try {
       const authenticated = await onSectorLogin(loginEmail, loginPassword);
       if (authenticated) setLoginPassword('');
-    } finally {
-      setAuthMode(null);
-    }
-  };
-
-  const handleFounderSubmit = async () => {
-    if (isSigningIn) return;
-
-    setAuthMode('founder');
-    try {
-      await onFounderLogin();
     } finally {
       setAuthMode(null);
     }
@@ -260,7 +247,7 @@ export function EmprovexLogin({
 
                 <div className="mt-7">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/80">
-                    Acesso do setor
+                    Acesso à plataforma
                   </p>
                   <h2
                     id="emprovex-login-heading"
@@ -310,7 +297,7 @@ export function EmprovexLogin({
                         inputMode="email"
                         required
                         disabled={isSigningIn}
-                        placeholder="setor@exemplo.mil.br"
+                        placeholder="seu-email@exemplo.com"
                         className="emprovex-login-input relative z-[1] h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-4 text-sm font-medium text-white outline-none placeholder:text-slate-600 disabled:opacity-60"
                       />
                       <span className="emprovex-login-field__line pointer-events-none absolute inset-x-4 bottom-0 z-[3] h-px origin-center" />
@@ -405,7 +392,7 @@ export function EmprovexLogin({
                             inputMode="email"
                             required
                             disabled={recoverySending}
-                            placeholder="setor@exemplo.mil.br"
+                            placeholder="seu-email@exemplo.com"
                             className="h-11 w-full rounded-xl border border-white/[0.09] bg-slate-950/35 pl-10 pr-3 text-xs font-medium text-white outline-none placeholder:text-slate-600 focus:border-blue-400/40 disabled:opacity-60"
                           />
                         </div>
@@ -464,41 +451,6 @@ export function EmprovexLogin({
                   </button>
                 </form>
 
-                <div className="my-7 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/[0.10]" />
-                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500/80">
-                    Acesso institucional
-                  </span>
-                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/[0.10]" />
-                </div>
-
-                <div className="emprovex-institutional-card rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="emprovex-institutional-card__icon mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.045]">
-                      <ShieldCheck className="h-4 w-4 text-slate-300" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-200">Conta fundadora HGeSM</p>
-                      <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                        A conta fundadora do HGeSM continua utilizando exclusivamente o Google.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleFounderSubmit()}
-                    disabled={isSigningIn}
-                    aria-busy={isSigningIn && authMode === 'founder'}
-                    data-state={isSigningIn && authMode === 'founder' ? 'authenticating' : 'idle'}
-                    className="emprovex-google-button group relative mt-4 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-slate-200 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    <span className="emprovex-google-button__sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3" />
-                    {isSigningIn && authMode === 'founder'
-                      ? <Loader2 className="relative h-4 w-4 animate-spin" />
-                      : <LogIn className="relative h-4 w-4" />}
-                    <span className="relative">Entrar com Google — HGeSM</span>
-                  </button>
-                </div>
               </div>
             </section>
 

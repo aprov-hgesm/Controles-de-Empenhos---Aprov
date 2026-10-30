@@ -102,7 +102,7 @@ export default function Home() {
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
-    signInUser, signInSectorUser, requestSectorPasswordReset,
+    signInSectorUser, requestSectorPasswordReset,
     changeSectorPassword, signOutUser,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
@@ -270,24 +270,6 @@ export default function Home() {
       }
     };
 
-    const handleFounderLogin = async () => {
-      if (isSigningIn) return;
-
-      setIsSigningIn(true);
-      try {
-        const resolvedContext = await signInUser();
-        showToast('Acesso institucional autorizado!', 'success');
-        if (resolvedContext.status === 'sector') {
-          setShowLoginSuccessTransition(true);
-        }
-      } catch (error) {
-        console.error('Erro na autenticação institucional:', error);
-        showToast('Falha no acesso institucional com Google.', 'error');
-      } finally {
-        setIsSigningIn(false);
-      }
-    };
-
     return (
       <EmprovexLogin
         customLogo={customLogo}
@@ -296,7 +278,6 @@ export default function Home() {
         onCloseToast={() => setToast(null)}
         onSectorLogin={handleSectorLogin}
         onRequestPasswordReset={requestSectorPasswordReset}
-        onFounderLogin={handleFounderLogin}
       />
     );
   }

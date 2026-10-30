@@ -65,7 +65,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Bloco 15 — login de setores externos\n');
-  console.log('Fundador: Google Auth exclusivo');
+  console.log('Fundador: password exclusivo');
   console.log('Setores externos: provider password obrigatório e UI disponível');
   console.log('Diretório de contas: platformAccounts');
   console.log('Resolução de workspace: obrigatória');

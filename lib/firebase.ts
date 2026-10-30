@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
-import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -56,9 +56,6 @@ if (useE2eEmulators) {
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectFirestoreEmulator(warehouseDb, '127.0.0.1', e2eWarehouseFirestorePort);
 }
-
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 export enum OperationType {
   CREATE = 'create',

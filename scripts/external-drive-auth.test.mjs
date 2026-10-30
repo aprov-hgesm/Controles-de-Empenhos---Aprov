@@ -460,10 +460,9 @@ test('Firebase user/workspace email mismatch stops before OAuth and preserves th
   assert.equal(harness.state.fetches.length, 0);
 });
 
-test('founder path keeps the consolidated Firebase Google reauthentication flow', async () => {
+test('founder Drive OAuth does not change the Firebase password session', async () => {
   const founderEmail = 'aprov1hgesm@gmail.com';
-  const harness = await createHarness();
-
+  const harness = await createHarness({ driveEmail: founderEmail });
   const session = await harness.connectGoogleDriveForWorkspace(
     Object.freeze({ uid: 'founder-uid', email: founderEmail }),
     Object.freeze({
@@ -473,17 +472,10 @@ test('founder path keeps the consolidated Firebase Google reauthentication flow'
       resolutionSource: 'legacy-hgesm-bootstrap',
     })
   );
-
   assert.equal(session.email, founderEmail);
-  assert.equal(session.accessToken, 'founder-drive-token');
-  assert.deepEqual(harness.state.firebaseMutations, ['reauthenticateWithPopup']);
-  assert.equal(harness.state.initCalls, 0);
-  assert.equal(harness.state.founderProvider.scopes.includes(DRIVE_SCOPE), true);
-  assert.equal(harness.state.founderProvider.customParameters.prompt, 'select_account');
-  assert.equal(
-    String(harness.state.founderProvider.customParameters.prompt).includes('consent'),
-    false
-  );
+  assert.equal(session.accessToken, 'external-drive-token');
+  assert.deepEqual(harness.state.firebaseMutations, []);
+  assert.equal(harness.state.initCalls, 1);
 });
 
 test('Drive runtime clears an external token when its usable lifetime expires', async () => {
