@@ -221,6 +221,46 @@ export function billingAnniversary(start: string | Date, months: number): Date {
   return base;
 }
 
+/**
+ * Calendar-month anniversary in Brazilian civil time. UTC instants near midnight
+ * can belong to the preceding Brazilian day; never derive the billing day from UTC.
+ * Legacy billingAnniversary deliberately remains untouched.
+ */
+export function billingBrazilAnniversary(start: string | Date, months: number): Date {
+  const initial = new Date(start);
+  if (!Number.isFinite(initial.getTime()) || !Number.isSafeInteger(months)
+    || months < 0 || months > 600) throw new Error('BILLING_ANNIVERSARY_INVALID');
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = (date: Date) => {
+    const tokens = formatter.formatToParts(date);
+    const number = (type: string) => Number(tokens.find(part => part.type === type)?.value);
+    return { year: number('year'), month: number('month'), day: number('day'),
+      hour: number('hour'), minute: number('minute'), second: number('second') };
+  };
+  const origin = parts(initial);
+  const first = new Date(Date.UTC(origin.year, origin.month - 1 + months, 1));
+  const targetYear = first.getUTCFullYear();
+  const targetMonth = first.getUTCMonth();
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const localUtc = Date.UTC(targetYear, targetMonth, Math.min(origin.day, lastDay),
+    origin.hour, origin.minute, origin.second, initial.getUTCMilliseconds());
+  // Iteratively convert the requested local wall clock to an absolute instant.
+  let candidate = new Date(localUtc);
+  for (let i = 0; i < 3; i += 1) {
+    const local = parts(candidate);
+    const observed = Date.UTC(local.year, local.month - 1, local.day,
+      local.hour, local.minute, local.second, candidate.getUTCMilliseconds());
+    const shift = localUtc - observed;
+    if (shift === 0) break;
+    candidate = new Date(candidate.getTime() + shift);
+  }
+  return candidate;
+}
+
 /** Preserve historical cycle IDs when an initial payment is made in a later month. */
 export function billingCycleReferenceForPeriod(
   account: BillingAccount, period: PaidServicePeriod,
@@ -279,18 +319,25 @@ export function paidServicePeriod(
   if (!start) return null;
   const first = new Date(start);
   if (!Number.isFinite(first.getTime()) || now < first) return null;
-  const monthsApart = (now.getUTCFullYear() - first.getUTCFullYear()) * 12
-    + now.getUTCMonth() - first.getUTCMonth();
-  let periodIndex = Math.max(0, monthsApart);
-  if (billingAnniversary(first, periodIndex) > now) periodIndex -= 1;
+  const brazil = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY;
+  const firstMonth = brazil ? billingBrazilDateOnly(first).slice(0, 7)
+    : getReferenceMonth(first);
+  const currentMonth = brazil ? billingBrazilDateOnly(now).slice(0, 7)
+    : getReferenceMonth(now);
+  const [firstYear, firstM] = firstMonth.split('-').map(Number);
+  const [currentYear, currentM] = currentMonth.split('-').map(Number);
+  let periodIndex = Math.max(0, (currentYear - firstYear) * 12 + currentM - firstM);
+  const anniversary = (index: number) => brazil
+    ? billingBrazilAnniversary(first, index) : billingAnniversary(first, index);
+  if (anniversary(periodIndex) > now) periodIndex -= 1;
   if (periodIndex < 0) return null;
-  const begin = billingAnniversary(first, periodIndex);
+  const begin = anniversary(periodIndex);
   return {
-    referenceMonth: account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
-      ? billingBrazilDateOnly(begin).slice(0, 7) : getReferenceMonth(begin),
+    referenceMonth: brazil ? billingBrazilDateOnly(begin).slice(0, 7)
+      : getReferenceMonth(begin),
     periodNumber: periodIndex + 1,
     startsAt: begin.toISOString(),
-    endsAt: billingAnniversary(first, periodIndex + 1).toISOString(),
+    endsAt: anniversary(periodIndex + 1).toISOString(),
   };
 }
 
