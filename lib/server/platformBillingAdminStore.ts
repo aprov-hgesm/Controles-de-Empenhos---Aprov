@@ -931,7 +931,9 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
     const updated: BillingCycle = {
       ...cycle,
       amountCents: amount,
-      dueDate: cycle.dueDate >= now.slice(0, 10) ? cycle.dueDate : now.slice(0, 10),
+      // Renewal due date is the fixed anniversary, NOT the date the link is opened late.
+      dueDate: account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+        ? cycle.dueDate : (cycle.dueDate >= now.slice(0, 10) ? cycle.dueDate : now.slice(0, 10)),
       status: 'pending',
       checkoutOrderNsu: orderNsu, checkoutAmountCents: amount,
       checkoutCreatedAt: now, checkoutValidUntil: validUntil,
