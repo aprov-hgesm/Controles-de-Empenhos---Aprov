@@ -109,6 +109,10 @@ export interface CompanyProfile {
   cnpj: string;
   responsibleName: string;
   accessEmail: string;
+  companyEmail?: string;
+  postalCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
   phone?: string;
   whatsapp?: string;
   address?: string;
@@ -303,6 +307,12 @@ export function validateCompanyWorkspace(workspace: CompanyWorkspace): string[] 
   if (!isValidPlatformEmail(workspace.authorizedEmail)
       || p.accessEmail !== workspace.authorizedEmail) {
     errors.push('E-mail empresarial inconsistente.');
+  }
+  if (p.companyEmail && !isValidPlatformEmail(p.companyEmail)) {
+    errors.push('E-mail comercial inválido.');
+  }
+  if (p.postalCode && !/^\d{8}$/.test(p.postalCode)) {
+    errors.push('CEP empresarial inválido.');
   }
   if (!p.city.trim() || !/^[A-Z]{2}$/.test(p.state)) {
     errors.push('Cidade ou UF inválida.');
