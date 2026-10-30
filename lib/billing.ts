@@ -42,6 +42,9 @@ export interface PlatformBillingConfig {
   updatedBy: string;
 }
 
+/** New contracts use actual payment confirmation as their first paid anniversary. */
+export const PAYMENT_ANNIVERSARY_POLICY = 'payment_anniversary_v2' as const;
+
 export interface BillingAccount {
   version: typeof EMPROVEX_BILLING_VERSION;
   workspaceId: string;
@@ -58,6 +61,12 @@ export interface BillingAccount {
   firstPaidReferenceMonth?: string;
   /** Anniversary timestamp for each complete monthly service period. */
   firstPaidAt?: string;
+  /** Opt-in by NEW contract creation only; historical contract dates remain immutable. */
+  billingPeriodPolicy?: typeof PAYMENT_ANNIVERSARY_POLICY;
+  /** Filled only on first verified FULL payment or last verified shared share. */
+  firstPaymentConfirmedAt?: string;
+  /** Original provider order month; can differ if first payment is late across months. */
+  firstPaymentCycleReferenceMonth?: string;
   lastBilledReferenceMonth?: string;
   /** One temporary 48h return to operations per reference month. */
   grace48ReferenceMonth?: string;
@@ -195,6 +204,43 @@ export function billingAnniversary(start: string | Date, months: number): Date {
   const lastDay = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
   base.setUTCDate(Math.min(date.getUTCDate(), lastDay));
   return base;
+}
+
+/** Preserve historical cycle IDs when an initial payment is made in a later month. */
+export function billingCycleReferenceForPeriod(
+  account: BillingAccount, period: PaidServicePeriod,
+): string {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    && account.firstPaymentConfirmedAt && period.periodNumber === 1
+    && account.firstPaymentCycleReferenceMonth
+    ? account.firstPaymentCycleReferenceMonth : period.referenceMonth;
+}
+
+export function billingFirstPaymentPending(account: BillingAccount): boolean {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    && !account.firstPaymentConfirmedAt;
+}
+
+/** First invoice remains month ONE even if the customer pays months after trial. */
+export function billingRampStartMonth(account: BillingAccount, referenceMonth: string): string {
+  return billingFirstPaymentPending(account) ? referenceMonth
+    : account.firstPaidReferenceMonth || referenceMonth;
+}
+
+/** Idempotent; does not reanchor renewals or modify older contracts. */
+export function settleFirstPaymentAnniversary(
+  account: BillingAccount, cycleReferenceMonth: string, verifiedAt: string,
+): BillingAccount {
+  if (!billingFirstPaymentPending(account)) return account;
+  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(cycleReferenceMonth)
+    || !Number.isFinite(Date.parse(verifiedAt))) throw new Error('BILLING_ANNIVERSARY_INVALID');
+  return {
+    ...account,
+    firstPaidAt: verifiedAt,
+    firstPaidReferenceMonth: getReferenceMonth(verifiedAt),
+    firstPaymentCycleReferenceMonth: cycleReferenceMonth,
+    firstPaymentConfirmedAt: verifiedAt,
+  };
 }
 
 export interface PaidServicePeriod {
@@ -378,6 +424,7 @@ export function buildInitialBillingAccount(
     monthlyPriceCents: isFounder ? 0 : rampForNewCustomer
       ? EMPROVEX_NEW_CUSTOMER_START_CENTS : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
     ...(rampForNewCustomer ? {
+      billingPeriodPolicy: PAYMENT_ANNIVERSARY_POLICY,
       pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
       firstPaidReferenceMonth: getReferenceMonth(referenceStart),
       firstPaidAt: referenceStart.toISOString(),
@@ -537,7 +584,11 @@ export function buildBillingCycle(
   actorEmail: string,
   now: string = new Date().toISOString()
 ): BillingCycle {
-  const dueDate = getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const provisionalPeriod = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? paidServicePeriod(account, new Date(now)) : null;
+  const dueDate = provisionalPeriod?.referenceMonth === referenceMonth
+    ? formatUtcDateOnly(billingFirstPaymentPending(account) ? now : provisionalPeriod.startsAt)
+    : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   return {
     version: EMPROVEX_BILLING_VERSION,
     id: billingCycleId(account.workspaceId, referenceMonth),
@@ -580,7 +631,7 @@ export function getBillingAttention(
   const today = formatUtcDateOnly(now);
   const currentCycle = cycles.find(
     (cycle) => cycle.workspaceId === account.workspaceId
-      && cycle.referenceMonth === referenceMonth
+      && cycle.referenceMonth === (period ? billingCycleReferenceForPeriod(account, period) : referenceMonth)
   ) || null;
   const trialExpired = isTrialExpired(account, now);
   const trialDaysRemaining = calculateTrialDaysRemaining(account, now);
