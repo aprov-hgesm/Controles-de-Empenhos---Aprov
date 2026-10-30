@@ -34,7 +34,7 @@ test('a prévia nunca usa o Firebase real nem importa credenciais administrativa
   assert.match(runner, /registerEmulatedBillingPortal\(context\)/);
   assert.match(runner, /registerEmulatedLegalAcceptance\(context\)/);
   assert.match(runner, /browser\.once\('disconnected'/);
-  assert.match(runner, /page\.goto\(appBase \+ '\/login'/);
+  assert.match(runner, /page\.goto\(appBase \+ '\/central-empenhos'/);
 });
 
 test('o preview não remove verificações reais de cobrança e aceite jurídico', () => {

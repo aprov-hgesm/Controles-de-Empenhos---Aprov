@@ -120,7 +120,7 @@ assert.equal(
   'Sidebar da Central reintroduziu navegação com reload completo.'
 );
 
-assert.match(sidebar, /href="\/login"/, 'Retorno ao EMPROVEX deve seguir /login.');
+assert.match(sidebar, /href="\/central-empenhos"/, 'Retorno ao EMPROVEX deve seguir /central-empenhos.');
 assert.match(sidebar, /href="\/operador-movel"/, 'Acesso externo ao operador móvel deve continuar disponível.');
 console.log('PERFORMANCE R3 CENTRAL SHELL: PASS');
 console.log('- layout compartilhado mantém gate + shell fora das páginas');

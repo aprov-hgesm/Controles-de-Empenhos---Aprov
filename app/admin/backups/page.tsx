@@ -68,11 +68,11 @@ export default function PlatformBackupAdminPage() {
   useEffect(() => {
     if (loadingAuth) return;
     if (!user) {
-      window.location.replace('/login');
+      window.location.replace('/central-empenhos');
       return;
     }
     if (context.status !== 'platformAdmin') {
-      window.location.replace('/login');
+      window.location.replace('/central-empenhos');
     }
   }, [context.status, loadingAuth, user]);
 

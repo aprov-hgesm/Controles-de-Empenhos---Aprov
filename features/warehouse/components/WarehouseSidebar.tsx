@@ -120,7 +120,7 @@ export function WarehouseSidebar({
             </div>
 
             <a
-              href="/login"
+              href="/central-empenhos"
               className="emprovex-sidebar-nav-item"
               onClick={onClose}
               data-testid="warehouse-back-emprovex"

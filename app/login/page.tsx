@@ -85,7 +85,7 @@ export default function Home() {
     }
   }, [mode, requestedTab, visualModeReady]);
 
-  // Navegação entre módulos: /login?tab=cronogramas ativa a aba correta.
+  // Navegação entre módulos: /central-empenhos?tab=cronogramas ativa a aba correta.
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab === 'cronogramas') setActiveTab('cronogramas');

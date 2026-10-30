@@ -9,7 +9,7 @@ const PASSWORD = 'Emprovex-Teste!2026';
 async function signInWithFakeWorkspace(page) {
   await registerEmulatedBillingPortal(page.context());
   await registerEmulatedLegalAcceptance(page.context());
-  await page.goto('/login');
+  await page.goto('/central-empenhos');
   await page.getByTestId('sector-login-email').fill(FAKE_OPERATOR);
   await page.getByTestId('sector-login-password').fill(PASSWORD);
   await page.getByTestId('sector-login-submit').click();

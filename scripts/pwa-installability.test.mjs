@@ -13,7 +13,7 @@ const nextConfig = source('next.config.ts');
 
 test('R363: manifest standalone e icones Android, iOS e Windows', () => {
   assert.match(manifest, /short_name: 'EMPROVEX'/);
-  assert.match(manifest, /start_url: '\/login'/);
+  assert.match(manifest, /start_url: '\/central-empenhos'/);
   assert.match(manifest, /scope: '\/'/);
   assert.match(manifest, /display: 'standalone'/);
   assert.match(manifest, /192x192/);
@@ -69,7 +69,7 @@ test('R16: a vitrine substitui a rota raiz antes dos arquivos sem quebrar login 
   assert.doesNotMatch(config, /return\s*\[\s*\{\s*source:\s*'\/'/);
   assert.match(loginPage, /<EmprovexLogin/);
   assert.match(institucional, /public\/institucional\/content\.html/);
-assert.match(adminPanel, /window\.location\.replace\('\/login'\)/, 'Retorno administrativo deve ir ao login, não à vitrine.');
+assert.match(adminPanel, /window\.location\.replace\('\/central-empenhos'\)/, 'Retorno administrativo deve ir ao login, não à vitrine.');
 });
 
 
@@ -88,18 +88,18 @@ test('R16.1: retornos de admin, deposito, mobile e assinaturas abrem plataforma,
     if (file === 'components/billing/BillingPortalShell.tsx') {
       const returnButton = source('components/billing/BillingReturnButton.tsx');
       assert.match(content, /<BillingReturnButton/, 'Portal precisa delegar o retorno seguro.');
-      assert.match(returnButton, /window\.location\.assign\('\/login'\)/,
+      assert.match(returnButton, /window\.location\.assign\('\/central-empenhos'\)/,
         'Retorno financeiro nunca pode redirecionar à vitrine institucional.');
       assert.match(returnButton, /\/api\/billing\/portal\?view=access/,
         'Retorno financeiro deve manter gate de autorização.');
     } else {
-      assert.match(content, /\/login/, file);
+      assert.match(content, /\/central-empenhos/, file);
     }
   }
-  assert.match(source('components/admin/PlatformAdminView.tsx'), /window\.location\.replace\('\/login'\)/);
+  assert.match(source('components/admin/PlatformAdminView.tsx'), /window\.location\.replace\('\/central-empenhos'\)/);
   const mobileHome = source('features/warehouse/mobile/WarehouseMobileHome.tsx');
   assert.match(mobileHome, /data-testid="operator-mobile-back-emprovex"/);
-  assert.match(mobileHome, /href="\/login"/);
+  assert.match(mobileHome, /href="\/central-empenhos"/);
   assert.match(source('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/operador-movel"/);
 });
 

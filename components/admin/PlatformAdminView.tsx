@@ -453,7 +453,7 @@ export function PlatformAdminView({
   const returnToHgesm = () => {
     setActiveProfileMode('sector');
     // Troca de perfil exige uma nova navegação sem reutilizar RSC antiga.
-    window.location.replace('/login');
+    window.location.replace('/central-empenhos');
   };
 
   const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];

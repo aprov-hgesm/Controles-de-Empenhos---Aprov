@@ -284,7 +284,7 @@ export function InfinitePayReadinessPanel({
             {status === 'anonymous' && (
               <div className="mt-3 space-y-2">
                 <p className="text-sm text-amber-900">Entre no EMPROVEX para identificar seu setor.</p>
-                <a href="/login" className="inline-flex items-center gap-1 text-sm font-bold text-[#0b725d] hover:text-cyan-100">
+                <a href="/central-empenhos" className="inline-flex items-center gap-1 text-sm font-bold text-[#0b725d] hover:text-cyan-100">
                   Ir para o login <ArrowUpRight className="h-4 w-4" />
                 </a>
               </div>

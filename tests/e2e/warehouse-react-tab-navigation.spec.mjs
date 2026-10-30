@@ -4,8 +4,8 @@ import { test, expect } from '@playwright/test';
 // Valida clique no menu, render real, URL, histórico e recarga de rota direta.
 test('Central de Depósitos: seis abas via React com conteúdo e histórico', async ({ page }) => {
   test.setTimeout(300_000);
-  // A raiz '/' agora é institucional; autenticação operacional inicia em /login.
-  await page.goto('/login');
+  // A raiz '/' agora é institucional; autenticação operacional inicia em /central-empenhos.
+  await page.goto('/central-empenhos');
   await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
   const principal = page.getByRole('navigation', { name: 'Navegação principal' });
@@ -33,7 +33,7 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
     await expect(page.getByTestId('operational-active-content')).toHaveAttribute('data-operational-tab', id);
   }
 
-  // P0: trocar de perfil não pode deixar a URL em /admin com a tela de /login.
+  // P0: trocar de perfil não pode deixar a URL em /admin com a tela de /central-empenhos.
   const adminButton = page.getByRole('button', { name: 'Abrir Administração EMPROVEX' });
   await expect(adminButton).toBeVisible({ timeout: 30_000 });
   await adminButton.click();
@@ -48,7 +48,7 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
     await expect(page.getByTestId('admin-light-content')).toBeVisible();
   }
   await page.getByRole('button', { name: 'Voltar ao HGeSM' }).first().click();
-  await expect(page).toHaveURL(/\/login\/?$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/central-empenhos\/?$/, { timeout: 30_000 });
   await expect(page.getByRole('navigation', { name: 'Navegação principal' }))
     .toBeVisible({ timeout: 45_000 });
 

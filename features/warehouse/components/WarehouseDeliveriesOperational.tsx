@@ -80,7 +80,7 @@ export function WarehouseDeliveriesOperational({ workspaceId }: { workspaceId: s
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href="/login?tab=cronogramas" className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/[0.04]">
+            <a href="/central-empenhos?tab=cronogramas" className="rounded-xl border border-white/[0.08] px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/[0.04]">
               Abrir Cronogramas
             </a>
             <button type="button" onClick={() => void refresh()} disabled={loading} className="rounded-xl border border-white/[0.08] p-2.5 text-slate-300" aria-label="Atualizar Entregas">
