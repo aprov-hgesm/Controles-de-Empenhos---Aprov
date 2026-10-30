@@ -220,6 +220,11 @@ export function billingCycleReferenceForPeriod(
     ? account.firstPaymentCycleReferenceMonth : period.referenceMonth;
 }
 
+/** The new payment-anniversary contract has exactly ten calendar grace days on renewal. */
+export function renewalGraceDaysForAccount(account: BillingAccount, configuredDays: number): number {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY ? 10 : configuredDays;
+}
+
 export function billingFirstPaymentPending(account: BillingAccount): boolean {
   return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
     && !account.firstPaymentConfirmedAt;
