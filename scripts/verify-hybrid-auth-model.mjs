@@ -180,7 +180,7 @@ if (findings.length) {
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
   console.log('Login Google Firebase: removido da interface');
-  console.log('Enforcement nas Rules: ativo para Google/password');
+  console.log('Founder: Google e senha autorizados; setores externos: password');
   console.log('Drive: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
 }

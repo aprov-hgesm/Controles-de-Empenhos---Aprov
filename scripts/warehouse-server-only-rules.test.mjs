@@ -90,6 +90,16 @@ async function main(){
   const sector=await verifiedSector('sector-r2@example.test',boundClaims);
   const outsider=await verifiedSector('outsider-r2@example.test',null);
   const admin=await founder('aprov1hgesm@gmail.com','founder');
+  const founderEmail='aprov1hgesm@gmail.com';
+  const adminUser=admin.auth.currentUser;
+  if(!adminUser)throw Error('FOUNDER_EMULATOR_USER_MISSING');
+  await authApi('projects/'+PROJECT+'/accounts:update',{
+    localId:adminUser.uid,password:PASSWORD
+  },true);
+  const passwordFounder=app('founder-password');
+  await signInWithEmailAndPassword(passwordFounder.auth,founderEmail,PASSWORD);
+  assert.equal(passwordFounder.auth.currentUser.uid,adminUser.uid);
+  assert.equal((await passwordFounder.auth.currentUser.getIdTokenResult()).signInProvider,'password');
   const otherGoogle=await founder('not-founder@example.test','outsider-google');
   const anonymous=app('anonymous');
 
@@ -99,8 +109,10 @@ async function main(){
   await denied('setor sem claims não lê',()=>getDoc(materialPath(outsider.db)));
   await denied('não autenticado não lê',()=>getDoc(materialPath(anonymous.db)));
   await denied('Google não fundador não lê',()=>getDoc(materialPath(otherGoogle.db)));
-  await allowed('fundador lê workspace fundador',()=>getDoc(materialPath(admin.db,'hgesm-aprov')));
-  await denied('fundador não lê outro workspace pelo SDK',()=>getDoc(materialPath(admin.db)));
+  await allowed('fundador Google lê workspace fundador',()=>getDoc(materialPath(admin.db,'hgesm-aprov')));
+  await allowed('fundador password lê workspace fundador',()=>getDoc(materialPath(passwordFounder.db,'hgesm-aprov')));
+  await denied('fundador Google não lê outro workspace pelo SDK',()=>getDoc(materialPath(admin.db)));
+  await denied('fundador password não lê outro workspace pelo SDK',()=>getDoc(materialPath(passwordFounder.db)));
 
   await denied('setor não cria material',()=>setDoc(materialPath(sector.db),{workspaceId:WS,ug:UG}));
   await denied('setor não altera saldo',()=>updateDoc(doc(sector.db,'warehouse',WS,'balances',materialId),{quantity:99}));
@@ -110,7 +122,8 @@ async function main(){
     batch.set(doc(sector.db,'warehouse',WS,'intakes','intake_'+'c'.repeat(64)),{workspaceId:WS});
     return batch.commit();
   });
-  await denied('fundador não grava diretamente',()=>setDoc(materialPath(admin.db,'hgesm-aprov'),{workspaceId:'hgesm-aprov'}));
+  await denied('fundador Google não grava diretamente',()=>setDoc(materialPath(admin.db,'hgesm-aprov'),{workspaceId:'hgesm-aprov'}));
+  await denied('fundador password não grava diretamente',()=>setDoc(materialPath(passwordFounder.db,'hgesm-aprov'),{workspaceId:'hgesm-aprov'}));
 
   await lifecycle('disabled');
   await denied('workspace desativado revoga leitura na sessão existente',()=>getDoc(materialPath(sector.db)));
