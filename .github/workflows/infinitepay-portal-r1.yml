@@ -8,6 +8,12 @@ on:
       - 'lib/server/billingPortalIdentity.ts'
       - 'lib/server/payments/infinitepay*.mjs'
       - 'lib/server/payments/emprovexRampPricing.mjs'
+      - 'lib/server/payments/sharedBilling.mjs'
+      - 'lib/server/platformBillingSharedStore.ts'
+      - 'lib/server/platformBillingAdminStore.ts'
+      - 'lib/billing.ts'
+      - 'app/terms/page.tsx'
+      - 'scripts/billing-shared-monthly.test.mjs'
       - 'lib/billing/**'
       - 'scripts/infinitepay-*.test.mjs'
       - 'scripts/billing-workspace-rehydration.test.mjs'
@@ -30,6 +36,8 @@ jobs:
       - name: Verify checkout, progressive prices, isolation and pilot ownership
         run: |
           node --test scripts/infinitepay-checkout.test.mjs scripts/infinitepay-billing-bridge.test.mjs scripts/infinitepay-ramp-pricing.test.mjs scripts/infinitepay-transactional-settlement.test.mjs scripts/infinitepay-live-smoke.test.mjs scripts/infinitepay-payment-ui.test.mjs scripts/billing-workspace-rehydration.test.mjs scripts/infinitepay-portal-pilot.test.mjs
+      - name: Verify shared monthly fee and individual settlement invariants
+        run: node --test scripts/billing-shared-monthly.test.mjs
       - name: Install locked dependencies
         run: npm ci
       - name: TypeScript validation
