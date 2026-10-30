@@ -1,5 +1,20 @@
 # EMPROVEX EMPRESAS — MEMORIAL OFICIAL
 
+## CHECKPOINT R0 — Decisão de integração e estratégia de branches (30/10/2026)
+
+> **GO/NO-GO do integrador: NO-GO para merge da PR #419 e para produção até resolver regressão E2E de login setorial, reconciliar os contratos de verificação legados e demonstrar cadastro/login empresarial QA.** É autorizado continuar desenvolvimento em branches isoladas.
+
+**Situação comprovada da PR #419**, commit `2281ac7deddc5271354e1f1faef441bc17246472`:
+- Fast CI **PASS** — run [40996011454](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40996011454).
+- Core Protection **PASS** — run [40996011604](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40996011604).
+- W4 Five-Worker Integration Evidence **PASS** — run [40996011446](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40996011446).
+- VISUAL-R2 Integrity Audit **FAIL** — run [40996011641](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/40996011641): testes estáticos antigos referenciam o shell que foi extraído de `app/login/page.tsx` para `app/login/OperationalEntry.tsx` (documentos, Drive, avisos, auth híbrida, SaaS, rotas); o Browser E2E também **falhou funcionalmente**, com resposta `401` de `/api/company/session` para sessão setorial no emulador e falta de renderização da navegação principal. Não presumir falso positivo sem validar a transição de login.
+- O ambiente `/empresa` R0 ainda não foi validado em ponta a ponta com conta empresarial real de QA.
+
+**Decisão de versionamento:** integrar na `main` por marcos `R0`, `R1`, `R2` após homologação de cada um, **sem manter toda a expansão em uma branch longa**. Usar branches de Worker e PRs por onda; não mesclar PR #419 enquanto os bloqueios de R0 persistirem. Permanecem desativados os deploys automáticos por Git (`vercel.json: git.deploymentEnabled=false` no estado inspecionado), mas merge não constitui aprovação de deploy nem ativação comercial. Publicação na Vercel depende de autorização separada e smoke test prévio.
+
+---
+
 ## CHECKPOINT R0 — W1/W2/W3 em integração (30/10/2026 UTC)
 
 > **PRECEDÊNCIA DE STATUS:** este checkpoint reflete a execução inicial da R0; prevalece sobre a indicação histórica "NÃO IMPLEMENTADO" do plano mestre abaixo. **Código em PR de integração, não homologado, não mesclado à main e não publicado em produção.**
