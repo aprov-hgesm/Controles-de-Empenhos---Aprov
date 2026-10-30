@@ -115,3 +115,22 @@ test('renovação de contrato antigo mantém dia útil registrado ao emitir cicl
     billing.buildPlatformBillingConfig('admin'),'admin');
   assert.equal(reference.dueDate,billing.getFifthBusinessDay(2026,11));
 });
+
+test('data civil brasileira permanece 31/10 para Pix confirmado à noite antes da meia-noite local', () => {
+  const endOfDay='2026-11-01T01:30:00.000Z'; // 31/10 às 22:30 em Brasília
+  assert.equal(billing.billingBrazilDateOnly(endOfDay),'2026-10-31');
+  const first=account('2026-10-31T15:00:00Z');
+  const cy=billing.buildBillingCycle(first,'2026-10',
+    billing.buildPlatformBillingConfig('admin'),'admin',endOfDay);
+  assert.equal(cy.dueDate,'2026-10-31');
+  const active=billing.settleFirstPaymentAnniversary(first,'2026-10',endOfDay);
+  assert.equal(active.firstPaidReferenceMonth,'2026-10');
+  assert.equal(billing.paidServicePeriod(active,new Date('2026-11-02T12:00:00Z')).referenceMonth,'2026-10');
+});
+test('geração tardia da fatura de renovação preserva vencimento do aniversário', () => {
+  const active=billing.settleFirstPaymentAnniversary(account(),'2026-10','2026-10-05T15:00:00Z');
+  const cy=billing.buildBillingCycle(active,'2026-11',
+    billing.buildPlatformBillingConfig('admin'),'admin','2026-11-12T15:00:00Z');
+  assert.equal(cy.dueDate,'2026-11-05');
+  assert.equal(billing.renewalGraceDaysForAccount(active,0),10);
+});
