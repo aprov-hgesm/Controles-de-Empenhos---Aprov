@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { planMobileOutboundAutomaticLots } from '../lib/warehouse/mobileOutboundPlan.mjs';
+import { replanDesktopWithdrawalCart } from '../lib/warehouse/desktopWithdrawalReplan.mjs';
+import ts from 'typescript';
+import { runInNewContext } from 'node:vm';
 
 const read=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const active=[
@@ -63,4 +66,125 @@ test('retirada Desktop e Movel reutilizam o mesmo planejamento e autorizacao',()
   assert.doesNotMatch(mobile,/chooseLot/);
   assert.match(route,/withdrawnBy:access\.email/);
   assert.match(route,/verifyWarehouseRequest/);
+});
+
+
+test('GOV-SIMP: erro de saldo preserva reinicio seguro apos recarregar a pagina',()=>{
+  const source=read('features/warehouse/components/warehouseWithdrawalDraft.ts');
+  const code=ts.transpileModule(source,{
+    compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020},
+  }).outputText;
+  const storage=()=> {
+    const memory=new Map();
+    return {
+      getItem:(k)=>memory.has(k)?memory.get(k):null,
+      setItem:(k,v)=>memory.set(k,v),
+      removeItem:(k)=>memory.delete(k),
+    };
+  };
+  const context={exports:{},module:{exports:{}},window:{
+    sessionStorage:storage(),localStorage:storage(),
+  }};
+  context.exports=context.module.exports;
+  runInNewContext(code,context);
+  const api=context.module.exports;
+  const workspaceId='hgesm-aprov';
+  const draft={withdrawalId:'wd_'+'1'.repeat(32),cart:[{lineId:'teste'}],
+    destinationId:'dest_'+'2'.repeat(32),withdrawnBy:'QA',
+    retryRequired:true,safeRestartAvailable:false};
+  api.persistWarehouseWithdrawalDraft(workspaceId,draft);
+  api.persistWarehouseWithdrawalRecovery(workspaceId,{
+    ...draft,safeRestartAvailable:true,
+  });
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,true);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).retryRequired,true);
+  assert.equal(api.readWarehouseWithdrawalDraft('outro-workspace'),null);
+  // Um sinal de recuperacao de identidade antiga nao pode liberar a nova.
+  api.persistWarehouseWithdrawalDraft(workspaceId,{
+    ...draft,withdrawalId:'wd_'+'3'.repeat(32),
+  });
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,false);
+  api.clearWarehouseWithdrawalDraft(workspaceId);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId).safeRestartAvailable,true);
+  api.clearWarehouseWithdrawalRecovery(workspaceId);
+  assert.equal(api.readWarehouseWithdrawalDraft(workspaceId),null);
+});
+
+test('GOV-SIMP: preflight desktop redistribui validade obsoleta sem alterar saldo',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const oldLine={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:3,requestedQuantity:3,lotId:null,lotCode:null,
+    availableAtPosition:10,availableBalance:10};
+  const validLot={id:'lot_'+'f'.repeat(32),position,
+    code:'VALIDO',status:'active',expiresOn:'2027-10-31',quantity:10};
+  const stock={
+    [mat]:{globalQuantity:10,positions:[{position,quantity:10}],lots:[validLot]},
+  };
+  let sequence=0;
+  const id=()=> 'wline_'+String(++sequence).padStart(32,'0');
+  const recalculated=replanDesktopWithdrawalCart([oldLine],stock,id);
+  assert.equal(recalculated.changed,true);
+  assert.equal(recalculated.lines[0].lotId,validLot.id);
+  assert.equal(recalculated.lines[0].baseQuantity,3);
+  assert.equal(recalculated.lines[0].availableAtPosition,10);
+  assert.equal(recalculated.lines[0].lineId!==oldLine.lineId,true);
+  assert.equal(stock[mat].positions[0].quantity,10);
+  assert.equal(stock[mat].lots[0].quantity,10);
+  const stable=replanDesktopWithdrawalCart(recalculated.lines,stock,id);
+  assert.equal(stable.changed,false);
+  assert.equal(stable.lines[0].lineId,recalculated.lines[0].lineId);
+});
+
+test('GOV-SIMP: saldo zero e local sem estoque nao viram disponibilidade fantasma',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const line={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:2,requestedQuantity:2,lotId:null,lotCode:null};
+  const id=()=> 'wline_'+'e'.repeat(32);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:0,positions:[{position,quantity:0}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:0,positions:[{position,quantity:9}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+});
+
+test('GOV-SIMP: divergencia, vencimento e carrinho repetido falham sem nova baixa',()=>{
+  const mat='mat_'+'a'.repeat(32);
+  const position={kind:'LOCATION',depotId:'dep_'+'b'.repeat(32),
+    locationId:'loc_'+'c'.repeat(32),subpositionId:null};
+  const line={lineId:'wline_'+'d'.repeat(32),materialId:mat,
+    position,baseQuantity:3,requestedQuantity:3,lotId:null,lotCode:null};
+  const expired={id:'lot_'+'e'.repeat(32),position,code:'VENCIDO',
+    status:'active',expiresOn:'2024-01-01',quantity:5};
+  const id=()=> 'wline_'+'f'.repeat(32);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],lots:[expired]},
+  },id),/WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],
+      lots:[{...expired,expiresOn:'2027-12-01',quantity:7}]},
+  },id),/WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED/);
+  assert.throws(()=>replanDesktopWithdrawalCart([line,line],{
+    [mat]:{globalQuantity:5,positions:[{position,quantity:5}],lots:[]},
+  },id),/WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK/);
+});
+
+test('GOV-SIMP: desktop valida disponibilidade antes do commit e preserva documentos',()=>{
+  const desktop=read('features/warehouse/components/WarehouseMaterialWithdrawal.tsx');
+  assert.match(desktop,/if \(!retryRequired\) \{[\s\S]*?await reconcileFromCurrentStock\(cartSnapshot\)/);
+  assert.match(desktop,/if \(next.changed\) \{[\s\S]*?setCart\(next.lines as CartLine\[\]\);[\s\S]*?setWithdrawalId\(createWarehouseWithdrawalId\(\)\)/);
+  assert.match(desktop,/const safeToRestart = raw.endsWith\('_SAFE_TO_RESTART'\)/);
+  assert.match(desktop,/Atualizar carrinho sem baixa/);
+  assert.match(desktop,/resolveOutboundDocumentLines\(/);
+  assert.match(desktop,/downloadWarehouseOutboundDocuments\(finalizedInput\)/);
+  assert.match(desktop,/depot.status === 'active'/);
+  assert.match(desktop,/location.status === 'active'/);
+  const atomic=read('lib/server/warehouseWithdrawalWrite.ts');
+  assert.match(atomic,/!previous && error instanceof WarehouseStoreError/);
+  assert.match(atomic,/return fail\(error.code\+'_SAFE_TO_RESTART'\)/);
+  assert.doesNotMatch(atomic,/WAREHOUSE_WITHDRAWAL_RECONCILIATION_REQUIRED_SAFE_TO_RESTART/);
 });

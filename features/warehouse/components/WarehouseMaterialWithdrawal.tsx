@@ -42,6 +42,7 @@ import {
 } from '../../../lib/warehouse/locationRepository';
 import { warehouseLotExpiryState } from '../../../lib/warehouse/lot';
 import { planMobileOutboundAutomaticLots } from '../../../lib/warehouse/mobileOutboundPlan.mjs';
+import { replanDesktopWithdrawalCart } from '../../../lib/warehouse/desktopWithdrawalReplan.mjs';
 import {
   getWarehouseLot,
   listWarehouseLots,
@@ -152,7 +153,18 @@ function errorMessage(error: unknown): string {
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
     ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
+    ['WAREHOUSE_OUTBOUND_LOT_EXPIRED', 'O material vinculado a esta validade venceu. Emita o pedido de recolhimento ou escolha material apto.'],
+    ['WAREHOUSE_OUTBOUND_LOCATION_INACTIVE', 'A posição foi desativada antes da saída. Atualize o carrinho.'],
+    ['WAREHOUSE_OUTBOUND_LOT_POSITION_MISMATCH', 'A validade vinculada foi movida para outra posição. Atualize o carrinho.'],
+    ['WAREHOUSE_OUTBOUND_ATTRIBUTION_CHANGED', 'A distribuição por validades mudou. Atualize o carrinho.'],
+
+    ['WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED', 'Não foi possível atualizar o saldo do material.'],
+    ['WAREHOUSE_MOBILE_OUTBOUND_LOTS_NOT_ELIGIBLE', 'Há estoque registrado, mas nenhuma quantidade apta para consumo nesta posição. Verifique validades.'],
+    ['WAREHOUSE_MOBILE_OUTBOUND_LOT_OVERATTRIBUTED', 'A quantidade vinculada às validades excede o saldo físico. O estoque precisa de conciliação.'],
+    ['WAREHOUSE_OUTBOUND_ATTRIBUTION_EXCEEDS_STOCK', 'Os vínculos de validade excedem o saldo físico. O estoque precisa de conciliação.'],
     ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A quantidade vinculada à validade mudou antes da confirmação.'],
+    ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART', 'O saldo sem vínculo de validade nesta posição não é suficiente para a quantidade solicitada.'],
+    ['WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE', 'O saldo sem vínculo de validade nesta posição não é suficiente para a quantidade solicitada.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
     ['WAREHOUSE_WITHDRAWAL_LINE_LIMIT', 'A retirada excede o limite operacional de linhas. Finalize esta operação e inicie outra.'],
@@ -194,11 +206,18 @@ function positionOptionsFor(
 ): PositionOption[] {
   if (!balance || balance.quantity <= 0) return [];
   return state.locationBalances
-    .filter((item) =>
-      item.balance.materialId === material.id
-      && item.balance.quantity > 0
-      && item.balance.position.kind !== 'UNASSIGNED'
-    )
+    .filter((item) => {
+      const position = item.balance.position;
+      if (item.balance.materialId !== material.id
+        || item.balance.quantity <= 0 || position.kind === 'UNASSIGNED') return false;
+      return state.depots.some(({ depot }) =>
+        depot.id === position.depotId && depot.status === 'active')
+        && state.locations.some(({ location }) =>
+          location.id === position.locationId && location.status === 'active')
+        && (position.kind !== 'SUBPOSITION'
+          || state.locations.some(({ location }) =>
+            location.id === position.subpositionId && location.status === 'active'));
+    })
     .map((item) => ({
       key: warehouseStockPositionKey(item.balance.position),
       position: item.balance.position,
@@ -292,6 +311,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [destinationId, setDestinationId] = useState(initialDraft?.destinationId || '');
   const [withdrawnBy, setWithdrawnBy] = useState(initialDraft?.withdrawnBy || '');
   const [retryRequired, setRetryRequired] = useState(initialDraft?.retryRequired || false);
+  const [safeRestartAvailable, setSafeRestartAvailable] = useState(
+    initialDraft?.safeRestartAvailable === true && initialDraft?.retryRequired === true
+  );
   const [reviewing, setReviewing] = useState(Boolean(initialDraft?.retryRequired));
   const [working, setWorking] = useState(false);
   const [scannerCode, setScannerCode] = useState('');
@@ -321,9 +343,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       destinationId,
       withdrawnBy,
       retryRequired,
+      safeRestartAvailable,
     };
     persistWarehouseWithdrawalDraft(workspaceId, draft);
-  }, [cart, destinationId, retryRequired, withdrawalId, withdrawnBy, workspaceId]);
+  }, [cart, destinationId, retryRequired, safeRestartAvailable, withdrawalId, withdrawnBy, workspaceId]);
 
   const rememberBarcode = useCallback((
     rawBarcode: string,
@@ -835,6 +858,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setCart([]);
     setWithdrawnBy('');
     setRetryRequired(false);
+    setSafeRestartAvailable(false);
     setReviewing(false);
     setWithdrawalId(createWarehouseWithdrawalId());
     clearWarehouseWithdrawalDraft(workspaceId);
@@ -846,6 +870,58 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       locations: [],
       locationBalances: [],
       lots: [],
+    }));
+  };
+
+  const reconcileFromCurrentStock = async (snapshot: CartLine[]) => {
+    const materialIds = [...new Set(snapshot.map(line => line.materialId))];
+    const refreshed = await Promise.all(materialIds.map(async materialId => {
+      const [balance, locationBalances, lots] = await Promise.all([
+        getWarehouseBalance(workspaceId, materialId),
+        listWarehouseLocationBalances(workspaceId, 500, materialId),
+        listWarehouseLots(workspaceId, 500, materialId),
+      ]);
+      if (!balance) throw new Error('WAREHOUSE_WITHDRAWAL_STOCK_REFRESH_REQUIRED');
+      return {materialId, balance, locationBalances, lots};
+    }));
+    const snapshots = Object.fromEntries(refreshed.map(item => [
+      item.materialId, {
+        globalQuantity: item.balance.quantity,
+        positions: item.locationBalances.map(row => ({
+          position: row.balance.position, quantity: row.balance.quantity,
+        })),
+        lots: item.lots.map(row => row.lot),
+      },
+    ]));
+    const next = replanDesktopWithdrawalCart(snapshot, snapshots,
+      createWarehouseWithdrawalLineId, WAREHOUSE_WITHDRAWAL_MAX_LINES);
+    return {...next, refreshed};
+  };
+
+  // Um novo vínculo de validade pode não existir na leitura anterior.
+  // Sincronizar os snapshots com o carrinho evita um falso bloqueio no
+  // cartIssues e preserva a origem documental usada na ficha de saída.
+  const syncRefreshedStock = (refreshed: Array<{
+    materialId: string;
+    balance: WarehouseBalance;
+    locationBalances: WarehouseLocationBalanceListItem[];
+    lots: WarehouseLotListItem[];
+  }>) => {
+    const ids = new Set(refreshed.map(item => item.materialId));
+    setState(current => ({
+      ...current,
+      balances: [
+        ...current.balances.filter(row => !ids.has(row.materialId)),
+        ...refreshed.map(item => item.balance),
+      ],
+      locationBalances: [
+        ...current.locationBalances.filter(row => !ids.has(row.balance.materialId)),
+        ...refreshed.flatMap(item => item.locationBalances),
+      ],
+      lots: [
+        ...current.lots.filter(row => !ids.has(row.lot.materialId)),
+        ...refreshed.flatMap(item => item.lots),
+      ],
     }));
   };
 
@@ -865,6 +941,33 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       return;
     }
     const cartSnapshot = cart.map((line) => ({ ...line }));
+    // Apenas retiradas NOVAS podem ser recalculadas. Uma retirada em retry
+    // conserva payload e identidade originais para impedir baixa duplicada.
+    if (!retryRequired) {
+      setWorking(true);
+      try {
+        const next = await reconcileFromCurrentStock(cartSnapshot);
+        syncRefreshedStock(next.refreshed);
+        if (next.changed) {
+          setCart(next.lines as CartLine[]);
+          setWithdrawalId(createWarehouseWithdrawalId());
+          setReviewing(false);
+          setMessageKind('info');
+          setMessage('O estoque mudou desde a leitura. Carrinho recalculado com saldos e validades atuais; revise novamente. Nenhuma baixa foi realizada.');
+          return;
+        }
+        // O hash da retirada v2 abrange todos os campos: não reescrever
+        // a identidade e nem atualizar o draft quando as linhas coincidem.
+      } catch (error) {
+        setReviewing(false);
+        setMessageKind('error');
+        setMessage(errorMessage(error)
+          + ' Leia o material novamente ou ajuste o carrinho. Nenhuma baixa foi realizada.');
+        return;
+      } finally {
+        setWorking(false);
+      }
+    }
     const destinationName =
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
       || 'Destino não identificado';
@@ -949,12 +1052,24 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       resetAfterSuccess();
       setTimeout(() => scannerRef.current?.focus(), 0);
     } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error || '');
+      const safeToRestart = raw.endsWith('_SAFE_TO_RESTART');
+      if (safeToRestart) {
+        // Salvar a confirmacao antes de expor o botao, inclusive em recargas.
+        persistWarehouseWithdrawalRecovery(workspaceId, {
+          withdrawalId, cart: cartSnapshot, destinationId, withdrawnBy,
+          retryRequired: true, safeRestartAvailable: true,
+        });
+      }
       setRetryRequired(true);
+      setSafeRestartAvailable(safeToRestart);
       setReviewing(true);
       setMessageKind('error');
       setMessage(
         errorMessage(error)
-        + ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.'
+        + (safeToRestart
+          ? ' Nenhuma baixa foi feita nesta tentativa. Atualize o carrinho para consultar os saldos atuais.'
+          : ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.')
       );
     } finally {
       setWorking(false);
@@ -1549,11 +1664,44 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       <p key={line.lineId}>{line.materialDescription} · {formatWarehouseNumber(line.baseQuantity)} {line.unitLabel}</p>
                     ))}
                   </div>
-                  <button type="button" onClick={() => void finalize()} disabled={working}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">
-                    {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
-                  </button>
+                  {!safeRestartAvailable && (
+                    <button type="button" onClick={() => void finalize()} disabled={working}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">
+                      {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
+                    </button>
+                  )}
+                  {retryRequired && safeRestartAvailable && (
+                    <button type="button" disabled={working}
+                      onClick={() => {
+                        // Este botão só existe quando o servidor confirmou
+                        // rejeição sem commit na retirada v2 NOVA.
+                        setWorking(true);
+                        void (async () => {
+                          try {
+                            const fresh = await reconcileFromCurrentStock(cart);
+                            syncRefreshedStock(fresh.refreshed);
+                            setCart(fresh.lines as CartLine[]);
+                            setMessageKind('info');
+                            setMessage('Carrinho atualizado sem baixa. Confira as quantidades e revise novamente.');
+                          } catch (error) {
+                            setMessageKind('error');
+                            setMessage(errorMessage(error)
+                              + ' Ajuste ou remova as linhas indisponíveis; nenhuma baixa foi realizada.');
+                          } finally {
+                            setWithdrawalId(createWarehouseWithdrawalId());
+                            setRetryRequired(false);
+                            setSafeRestartAvailable(false);
+                            setReviewing(false);
+                            clearWarehouseWithdrawalRecovery(workspaceId);
+                            setWorking(false);
+                          }
+                        })();
+                      }}
+                      className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-900 disabled:opacity-50">
+                      Atualizar carrinho sem baixa
+                    </button>
+                  )}
                   {!retryRequired && (
                     <button type="button" onClick={() => setReviewing(false)}
                       className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600 hover:text-[#00288e]">

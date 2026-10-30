@@ -8,7 +8,7 @@ const findings = [];
 
 const toast = read('components/layout/ToastNotification.tsx');
 const login = read('components/auth/EmprovexLogin.tsx');
-const page = read('app/page.tsx');
+const page = read('app/login/page.tsx');
 const contract = read('ops/brand-identity-contract.json');
 const doc = read('docs/BRAND_NOTIFICATIONS_BLOCK_1.md');
 const pkg = read('package.json');

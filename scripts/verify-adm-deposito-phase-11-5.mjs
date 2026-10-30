@@ -9,7 +9,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const sidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
 const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
-const appShell = read('app/page.tsx');
+const appShell = read('app/login/page.tsx');
 const appSidebar = read('components/layout/AppSidebar.tsx');
 const appHeader = read('components/layout/AppHeader.tsx');
 

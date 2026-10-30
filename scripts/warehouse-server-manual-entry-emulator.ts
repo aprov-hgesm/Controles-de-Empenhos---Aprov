@@ -345,6 +345,43 @@ try {
       lotCode:first.validity!.code,
     }],
   };
+  // GOV-SIMP-01: rejeicao sem saldo livre e sem commit pode reiniciar
+  // o carrinho com uma NOVA identidade, preservando saldo e historico.
+  const rejectedId='wd_'+'b'.repeat(32);
+  const rejectedLine={...withdrawalRequest.lines[0],
+    lineId:'wline_'+'b'.repeat(32),
+    requestedQuantity:1,baseQuantity:1,lotId:null,lotCode:null,
+  };
+  const rejectedRequest={...withdrawalRequest,
+    withdrawalId:rejectedId,lines:[rejectedLine],
+  };
+  const beforeRejectBalance=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
+  const beforeRejectLot=(await getDoc(ref('lots',first.validity!.id))).data()?.quantity;
+  for(let attempt=0;attempt<2;attempt++) {
+    await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,rejectedRequest),
+      /WAREHOUSE_OUTBOUND_UNTRACKED_QUANTITY_NOT_AVAILABLE_SAFE_TO_RESTART/);
+    assert.equal((await getDoc(ref('withdrawals',rejectedId))).exists(),false);
+    assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeRejectBalance);
+    assert.equal((await getDoc(ref('lots',first.validity!.id))).data()?.quantity,beforeRejectLot);
+  }
+  const rejectedConsumption='cons_'+createHash('sha256').update(
+    workspaceId+'\n'+'stock:'+rejectedId+':'+rejectedLine.lineId
+  ).digest('hex');
+  assert.equal((await getDoc(ref('consumptions',rejectedConsumption))).exists(),false);
+  console.log('PASS: untracked sem saldo livre -> safe restart, sem baixa/cabecalho/consumo, retry idem');
+
+  // Saldo insuficiente também é rejeição determinística, sem baixa.
+  const insufficientRequest={...withdrawalRequest,
+    withdrawalId:'wd_'+'6'.repeat(32),
+    lines:[{...withdrawalRequest.lines[0],requestedQuantity:999,
+      baseQuantity:999}],
+  };
+  await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,insufficientRequest),
+    /WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK_SAFE_TO_RESTART/);
+  assert.equal((await getDoc(ref('withdrawals',insufficientRequest.withdrawalId))).exists(),false);
+  assert.equal((await getDoc(ref('balances',first.material.id))).data()?.quantity,beforeRejectBalance);
+  console.log('PASS: falta de estoque rejeitada antes de qualquer escrita e carrinho recuperável');
+
   const beforeForged=(await getDoc(ref('balances',first.material.id))).data()?.quantity;
   await assert.rejects(()=>finalizeWarehouseWithdrawalServer(access,{
     ...withdrawalRequest,withdrawalId:'wd_'+'d'.repeat(32),

@@ -16,7 +16,7 @@ const forbidText = (source, forbidden, message) => {
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const realtime = read('hooks/useOperationalRealtimeCollections.ts');
 const dataHook = read('hooks/useOperationalData.ts');
-const page = read('app/page.tsx');
+const page = read('app/login/page.tsx');
 const surfaceLoading = read('components/layout/OperationalSurfaceLoading.tsx');
 const pdfToolkit = read('lib/pdfToolkit.ts');
 const empenhoActions = read('features/empenhos/hooks/useEmpenhoActions.ts');
