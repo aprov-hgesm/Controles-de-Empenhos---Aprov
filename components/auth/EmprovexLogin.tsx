@@ -260,7 +260,7 @@ export function EmprovexLogin({
 
                 <div className="mt-7">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/80">
-                    Acesso do setor
+                    Acesso à plataforma
                   </p>
                   <h2
                     id="emprovex-login-heading"
@@ -290,7 +290,7 @@ export function EmprovexLogin({
                   >
                     <span className="mb-2 flex items-center justify-between gap-3">
                       <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
-                        E-mail institucional
+                        E-mail cadastrado
                       </span>
                       <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-500/70">
                         01
@@ -310,7 +310,7 @@ export function EmprovexLogin({
                         inputMode="email"
                         required
                         disabled={isSigningIn}
-                        placeholder="setor@exemplo.mil.br"
+                        placeholder="seu@email.com"
                         className="emprovex-login-input relative z-[1] h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-4 text-sm font-medium text-white outline-none placeholder:text-slate-600 disabled:opacity-60"
                       />
                       <span className="emprovex-login-field__line pointer-events-none absolute inset-x-4 bottom-0 z-[3] h-px origin-center" />

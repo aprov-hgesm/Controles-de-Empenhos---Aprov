@@ -1,479 +1,154 @@
 'use client';
 
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  browserLocalPersistence,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  setPersistence,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth';
 
+import { auth, googleProvider } from '../../lib/firebase';
+import { normalizePlatformEmail } from '../../lib/platformIdentity';
+import { setActiveProfileMode } from '../../lib/profileMode';
+import { resolveCompanySession } from '../../lib/company/companySessionClient';
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
-import { useOperationalViewState } from '../../hooks/useOperationalViewState';
-import { useOperationalData } from '../../hooks/useOperationalData';
-import { AppBackground } from '../../components/layout/AppBackground';
-import { AppHeader } from '../../components/layout/AppHeader';
-import { AppSidebar } from '../../components/layout/AppSidebar';
-import { ToastNotification } from '../../components/layout/ToastNotification';
-import { OperationalSurfaceTransition } from '../../components/layout/OperationalSurfaceTransition';
-import { OperationalSurfaceLoading } from '../../components/layout/OperationalSurfaceLoading';
-import { useVisualMode } from '../../components/visual-mode/VisualModeProvider';
-import { MobileNavigation } from '../../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
-import { LoginSuccessTransition } from '../../components/auth/LoginSuccessTransition';
-import { SectorCredentialModal } from '../../components/auth/SectorCredentialModal';
-import { SectorFirstAccessChecklist } from '../../components/auth/SectorFirstAccessChecklist';
-import { LegalAcceptanceGate } from '../../components/legal/LegalAcceptanceGate';
-import type { OperationalActiveTab } from '../../lib/operationalSubscriptionPlan';
-import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycle';
-import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
-import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
-const InicioView = lazy(() =>
-  import('../../features/inicio/components/InicioView').then((module) => ({
-    default: module.InicioView,
-  }))
-);
+// The operational tree (including Firestore listeners, sector leases and billing
+// gates) is not imported/mounted for company sessions.
+const OperationalEntry = lazy(() => import('./OperationalEntry'));
+type Stage = 'checking' | 'login' | 'operational' | 'unavailable';
+type Toast = { message: string; type: 'success' | 'error' | 'info' } | null;
 
-const OperationalDashboardEntry = lazy(() =>
-  import('../../features/operational/components/OperationalDashboardEntry').then((module) => ({
-    default: module.OperationalDashboardEntry,
-  }))
-);
-
-const OperationalWorkspace = lazy(() =>
-  import('../../features/operational/components/OperationalWorkspace').then((module) => ({
-    default: module.OperationalWorkspace,
-  }))
-);
-
-export default function Home() {
-  const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
-  // Toast / Notifications helper
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [billingAccessState, setBillingAccessState] = useState<'checking' | 'allowed'>('checking');
-  // A decisão anterior de assinatura nunca autoriza outra identidade/UG
-  // nem durante o render anterior à nova verificação assíncrona.
-  const [billingAccessIdentity, setBillingAccessIdentity] = useState<string | null>(null);
-  const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
-  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [acceptedLegalIdentityKey, setAcceptedLegalIdentityKey] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => {
-      setToast(null);
-      toastTimerRef.current = null;
-    }, 4000);
-  }, []);
-
-  useEffect(() => () => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-  }, []);
-
-  // Navigation drives the realtime subscription profile (Block 14).
-  const [requestedTab, setRequestedTab] = useState<OperationalActiveTab>('inicio');
-  const activeTab: OperationalActiveTab =
-    mode === 'essencial' && requestedTab === 'inicio' ? 'painel' : requestedTab;
-  const setActiveTab: Dispatch<SetStateAction<OperationalActiveTab>> = useCallback((update) => {
-    setRequestedTab((previous) => {
-      const requested = typeof update === 'function' ? update(previous) : update;
-      return mode === 'essencial' && requested === 'inicio' ? 'painel' : requested;
-    });
-  }, [mode]);
-  useEffect(() => {
-    if (visualModeReady && mode === 'essencial' && requestedTab === 'inicio') {
-      setRequestedTab('painel');
-    }
-  }, [mode, requestedTab, visualModeReady]);
-
-  // Navegação entre módulos: /central-empenhos?tab=cronogramas ativa a aba correta.
-  useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
-    if (tab === 'cronogramas') setActiveTab('cronogramas');
-  }, []);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
-  // Ao entrar pela primeira vez numa tela transacional, preservar os hooks
-  // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
-  const [hasOpenedTransactionalSurface, setHasOpenedTransactionalSurface] = useState(false);
-
-  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed', billingAccessIdentity);
-  const {
-    user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
-    activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
-    empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
-    comissoes, setComissoes, cronogramas, setCronogramas,
-    signInUser, signInSectorUser, requestSectorPasswordReset,
-    changeSectorPassword, signOutUser,
-    uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
-    formatDateTime, formatDateOnly
-  } = operationalData;
-
-  const currentBillingIdentity = user && !loadingAuth
-    ? user.uid + ':' + (workspaceContext.status === 'sector'
-        ? workspaceContext.workspaceId + ':' + (workspaceContext.ug ?? '')
-        : workspaceContext.status)
-    : null;
-  const billingIdentityAllowed = billingAccessState === 'allowed'
-    && currentBillingIdentity !== null
-    && billingAccessIdentity === currentBillingIdentity;
-
-  useEffect(() => {
-    let active = true;
-    if (!user || loadingAuth) {
-      setBillingAccessIdentity(null);
-      setBillingAccessState('checking');
-      return () => { active = false; };
-    }
-    if (workspaceContext.status !== 'sector') {
-      setBillingAccessIdentity(currentBillingIdentity);
-      setBillingAccessState('allowed');
-      return () => { active = false; };
-    }
-    setBillingAccessIdentity(null);
-    setBillingAccessState('checking');
-    void checkSectorBillingAccess(user, workspaceContext)
-      .then((decision) => {
-        if (!active) return;
-        if (!decision.allowed) { showBillingRequired(); return; }
-        setBillingAccessIdentity(currentBillingIdentity);
-        setBillingAccessState('allowed');
-      })
-      .catch(() => {
-        if (active) showBillingRequired();
-      });
-    return () => { active = false; };
-  }, [user, loadingAuth, currentBillingIdentity, workspaceContext.status, workspaceContext.status === 'sector' ? workspaceContext.workspaceId : null]);
-
-  const isExternalSectorUser = (
-    workspaceContext.status === 'sector'
-    && workspaceContext.resolutionSource === 'platform-directory'
-  );
-
-  const handleLegalAccepted = useCallback(() => {
-    if (legalIdentityKey) {
-      setAcceptedLegalIdentityKey(legalIdentityKey);
-    }
-  }, [legalIdentityKey]);
-
-  const handleChangeSectorPassword = async (
-    currentPassword: string,
-    newPassword: string
-  ) => {
-    if (changingPassword) return;
-
-    setChangingPassword(true);
-    try {
-      await changeSectorPassword(currentPassword, newPassword);
-      showToast('Senha alterada com sucesso.', 'success');
-    } catch (error) {
-      throw error;
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
+export default function LoginEntryPage() {
+  const [stage, setStage] = useState<Stage>('checking');
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<Toast>(null);
+  const resolutionSequence = useRef(0);
   const { customLogo } = usePlatformBranding();
 
-  // State for inline editing of Número da NS in Empenho Report
-  const [editingNSId, setEditingNSId] = useState<string | null>(null);
-  const [tempNSValue, setTempNSValue] = useState<string>('');
-
-  const viewState = useOperationalViewState();
-  const {
-    selectedEmpenhoDetailId,
-    setSelectedEmpenhoDetailId,
-    selectedNFCommitmentId,
-    nfQuantities,
-    setNfQuantities,
-    clearNfPdfDrafts,
-  } = viewState;
-
-  const pendingNoticeCount =
-    activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
-      ? countPendingNotices(alerts)
-      : inicioSnapshot?.alerts.total ?? null;
-
   useEffect(() => {
-    if (activeTab !== 'inicio') {
-      setHasOpenedOperationalSurface(true);
-    }
-    if (activeTab !== 'inicio' && activeTab !== 'painel') {
-      setHasOpenedTransactionalSurface(true);
-    }
-  }, [activeTab]);
-
-  // Draft de quantidades por NE. Snapshot, troca de modo e re-render NAO
-  // reinicializam o que foi digitado; apenas troca explicita de NE restaura draft.
-  const nfDraftsByEmpenhoRef = useRef<Map<string, Record<string, number>>>(new Map());
-  const lastNfCommitmentRef = useRef(selectedNFCommitmentId);
-  useEffect(() => {
-    nfDraftsByEmpenhoRef.current.set(lastNfCommitmentRef.current, nfQuantities);
-  }, [nfQuantities]);
-  useEffect(() => {
-    if (lastNfCommitmentRef.current === selectedNFCommitmentId) return;
-    lastNfCommitmentRef.current = selectedNFCommitmentId;
-    setNfQuantities(nfDraftsByEmpenhoRef.current.get(selectedNFCommitmentId) ?? {});
-  }, [selectedNFCommitmentId, setNfQuantities]);
-
-  // Evita reutilizar drafts ou preferencia visual de outra identidade na aba.
-  const lastIdentityRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (loadingAuth) return;
-    const identity = currentBillingIdentity;
-    if (lastIdentityRef.current && lastIdentityRef.current !== identity) {
-      nfDraftsByEmpenhoRef.current.clear();
-      setNfQuantities({});
-      clearNfPdfDrafts();
-      clearVisualMode();
-    }
-    lastIdentityRef.current = identity;
-  }, [loadingAuth, currentBillingIdentity, clearVisualMode, setNfQuantities, clearNfPdfDrafts]);
-
-
-
-
-
-
-
-
-
-
-
-
-  if (loadingAuth || !visualModeReady) {
-    return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
-  }
-
-  if (!user) {
-    const handleSectorLogin = async (email: string, password: string) => {
-      if (isSigningIn) return false;
-
-      setIsSigningIn(true);
-      try {
-        const resolvedContext = await signInSectorUser(email, password);
-        showToast('Acesso autorizado com sucesso!', 'success');
-        if (resolvedContext.status === 'sector') {
-          setShowLoginSuccessTransition(true);
-        }
-        return true;
-      } catch (error) {
-        console.error('Erro na autenticação do setor:', error);
-        showToast(
-          error instanceof Error
-            ? error.message
-            : 'Não foi possível entrar no EMPROVEX.',
-          'error'
-        );
-        return false;
-      } finally {
-        setIsSigningIn(false);
+    let alive = true;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const sequence = ++resolutionSequence.current;
+      if (!user) {
+        setStage('login');
+        return;
       }
-    };
-
-    const handleFounderLogin = async () => {
-      if (isSigningIn) return;
-
-      setIsSigningIn(true);
-      try {
-        const resolvedContext = await signInUser();
-        showToast('Acesso institucional autorizado!', 'success');
-        if (resolvedContext.status === 'sector') {
-          setShowLoginSuccessTransition(true);
+      setStage('checking');
+      void resolveCompanySession(user).then(async (result) => {
+        if (!alive || sequence !== resolutionSequence.current) return;
+        if (result.kind === 'company') {
+          window.location.replace('/empresa');
+        } else if (result.kind === 'invalid-auth') {
+          await signOut(auth);
+        } else {
+          setStage('operational');
         }
-      } catch (error) {
-        console.error('Erro na autenticação institucional:', error);
-        showToast('Falha no acesso institucional com Google.', 'error');
-      } finally {
-        setIsSigningIn(false);
-      }
+      }).catch(() => {
+        if (alive && sequence === resolutionSequence.current) setStage('unavailable');
+      });
+    });
+    return () => {
+      alive = false;
+      resolutionSequence.current += 1;
+      unsubscribe();
     };
+  }, []);
 
+  const onCredentials = useCallback(async (email: string, password: string): Promise<boolean> => {
+    if (busy) return false;
+    setBusy(true);
+    setToast(null);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      const credential = await signInWithEmailAndPassword(auth, normalizePlatformEmail(email), password);
+      if (!credential.user.emailVerified) {
+        await signOut(auth);
+        throw new Error('Confirme seu e-mail antes de entrar. Contate a Administração EMPROVEX se precisar de ajuda.');
+      }
+      return true; // onAuthStateChanged resolves the account on the trusted server.
+    } catch (error) {
+      await signOut(auth).catch(() => undefined);
+      setToast({
+        message: error instanceof Error && !('code' in error)
+          ? error.message
+          : 'Não foi possível autenticar as credenciais. Confira e-mail e senha.',
+        type: 'error',
+      });
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }, [busy]);
+
+  const onFounder = useCallback(async (): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+    setToast(null);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      setActiveProfileMode('sector');
+      if (process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1') {
+        await signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({
+          sub: 'google-admin-google', email: 'aprov1hgesm@gmail.com', email_verified: true,
+        })));
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
+    } catch {
+      setToast({ message: 'Falha no acesso institucional com Google.', type: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [busy]);
+
+  const onReset = useCallback(async (email: string) => {
+    const normalized = normalizePlatformEmail(email);
+    if (!normalized) throw new Error('Informe seu e-mail cadastrado.');
+    await sendPasswordResetEmail(auth, normalized);
+    return 'Se o e-mail estiver cadastrado para acesso por senha, você receberá as instruções de redefinição.';
+  }, []);
+
+  if (stage === 'operational') {
     return (
-      <EmprovexLogin
-        customLogo={customLogo}
-        isSigningIn={isSigningIn}
-        toast={toast}
-        onCloseToast={() => setToast(null)}
-        onSectorLogin={handleSectorLogin}
-        onRequestPasswordReset={requestSectorPasswordReset}
-        onFounderLogin={handleFounderLogin}
-      />
+      <Suspense fallback={<EmprovexAuthLoading hasAuthenticatedIdentity />}>
+        <OperationalEntry />
+      </Suspense>
     );
   }
 
-  // No operational surface may render before a server billing decision.
-  if (!billingIdentityAllowed) {
-    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
+  if (stage === 'checking') {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(auth.currentUser)} />;
   }
 
-  const operationalSurface = (
-    <div
-      className={`min-h-screen ${activeTab === 'inicio' ? 'bg-[#02040b] text-white' : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'} flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
-      data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
-      data-active-realtime-collections={activeRealtimeCollectionCount}
-    >
+  if (stage === 'unavailable') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-slate-950 p-6 text-center text-white">
+        <h1 className="text-xl font-bold">Não foi possível verificar sua sessão.</h1>
+        <p className="max-w-md text-sm text-slate-300">Por segurança, nenhum ambiente foi aberto. Verifique sua conexão e tente novamente.</p>
+        <button className="rounded-xl bg-blue-600 px-5 py-3 font-semibold" onClick={() => window.location.reload()}>Tentar novamente</button>
+        <button className="text-sm underline" onClick={() => void signOut(auth)}>Sair desta conta</button>
+      </main>
+    );
+  }
 
-      <AppBackground immersive={activeTab === 'inicio'} essential={mode === 'essencial'} />
-
-      {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
-        <LoginSuccessTransition
-          customLogo={customLogo}
-          onComplete={() => setShowLoginSuccessTransition(false)}
-        />
-      )}
-
-      <ToastNotification toast={toast} onClose={() => setToast(null)} />
-
-      {isExternalSectorUser && user && workspaceContext.status === 'sector' && (
-        <>
-          <SectorCredentialModal
-            open={credentialModalOpen}
-            email={user.email || workspaceContext.email}
-            saving={changingPassword}
-            onClose={() => setCredentialModalOpen(false)}
-            onChangePassword={handleChangeSectorPassword}
-          />
-          <SectorFirstAccessChecklist
-            userUid={user.uid}
-            workspaceName={workspaceContext.workspaceName}
-            ug={workspaceContext.ug}
-            onOpenCredentials={() => setCredentialModalOpen(true)}
-          />
-        </>
-      )}
-
-      <AppHeader
-        customLogo={customLogo}
-        syncing={syncing || !activeOperationalDataReady}
-        userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
-        workspaceContext={workspaceContext}
-        onOpenSidebar={() => setSidebarOpen(true)}
-        onOpenAccount={
-          isExternalSectorUser
-            ? () => setCredentialModalOpen(true)
-            : undefined
-        }
-      />
-
-      {/* Main Framework Wrapper */}
-      <div className="flex flex-1 pt-16 min-h-screen z-10 relative lg:pl-72">
-
-        <AppSidebar
-          activeTab={activeTab}
-          open={sidebarOpen}
-          userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
-          noticeCount={pendingNoticeCount}
-          onClose={() => setSidebarOpen(false)}
-          onNavigate={(tab) => {
-            setActiveTab(tab);
-            if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
-            setSidebarOpen(false);
-          }}
-          onLogout={async () => {
-            try {
-              setShowLoginSuccessTransition(false);
-              nfDraftsByEmpenhoRef.current.clear();
-              clearNfPdfDrafts();
-              clearVisualMode();
-              await signOutUser();
-              showToast('Você saiu do sistema.', 'info');
-            } catch (err: any) {
-              console.error(err);
-              showToast('Erro ao sair do sistema', 'error');
-            }
-          }}
-          warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
-          onOpenWarehouse={() => {
-            window.location.assign(
-              mode === 'essencial' ? '/central-depositos/controle-de-itens' : '/central-depositos'
-            );
-          }}
-        />
-
-        {/* Content Container Area */}
-        <main
-          data-testid="operational-active-content"
-          data-operational-tab={activeTab}
-          className={`flex-1 w-full overflow-hidden ${activeTab === 'inicio'
-            ? 'p-0 pb-20 md:pb-0 max-w-none'
-            : 'lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto'
-          }`}
-        >
-          {!activeOperationalDataReady && <OperationalSurfaceLoading />}
-
-          {activeOperationalDataReady && activeTab === 'inicio' && (
-            <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
-              <Suspense fallback={<OperationalSurfaceLoading />}>
-              <InicioView
-                snapshot={inicioSnapshot}
-                userDisplayName={user?.displayName || 'Operador EMPROVEX'}
-                onSelectEmpenho={(empenhoId) => {
-                  setSelectedEmpenhoDetailId(empenhoId);
-                  setActiveTab('empenhos');
-                }}
-              />
-              </Suspense>
-            </OperationalSurfaceTransition>
-          )}
-
-          {(activeTab !== 'inicio' || hasOpenedOperationalSurface) && (
-            <Suspense
-              key="operational-workspace"
-              fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
-            >
-              {activeTab === 'painel' && !hasOpenedTransactionalSurface ? (
-                <OperationalDashboardEntry
-                  operationalData={operationalData}
-                  viewState={viewState}
-                  setActiveTab={setActiveTab}
-                />
-              ) : (activeTab !== 'inicio' || hasOpenedTransactionalSurface) ? (
-              <OperationalWorkspace
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                operationalData={operationalData}
-                viewState={viewState}
-                editingNSId={editingNSId}
-                setEditingNSId={setEditingNSId}
-                tempNSValue={tempNSValue}
-                setTempNSValue={setTempNSValue}
-                showToast={showToast}
-                surfaceReady={activeOperationalDataReady}
-              />
-              ) : null}
-            </Suspense>
-          )}
-        </main>
-      </div>
-
-      <MobileNavigation
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        setSelectedEmpenhoDetailId={setSelectedEmpenhoDetailId}
-      />
-
-    </div>
+  return (
+    <EmprovexLogin
+      customLogo={customLogo}
+      isSigningIn={busy}
+      toast={toast}
+      onCloseToast={() => setToast(null)}
+      onSectorLogin={onCredentials}
+      onFounderLogin={onFounder}
+      onRequestPasswordReset={onReset}
+    />
   );
-
-  if (
-    workspaceContext.status === 'sector'
-    && user
-    && legalIdentityKey
-  ) {
-    return (
-      <LegalAcceptanceGate
-        identity={{
-          workspaceId: workspaceContext.workspaceId,
-          uid: user.uid,
-          email: user.email || workspaceContext.email,
-          ug: workspaceContext.ug,
-        }}
-        onAccepted={handleLegalAccepted}
-      >
-        {operationalSurface}
-      </LegalAcceptanceGate>
-    );
-  }
-
-  return operationalSurface;
 }
