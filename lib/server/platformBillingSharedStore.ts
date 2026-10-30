@@ -9,7 +9,7 @@ import type { BillingAccount, BillingCycle, PlatformBillingConfig, SharedBilling
 import { billingCycleId, buildBillingCycle, buildPlatformBillingConfig,
   paidServicePeriod, paidServiceAccessUntil, billingFirstPaymentPending,
   billingCycleReferenceForPeriod, billingRampStartMonth, settleFirstPaymentAnniversary,
-  formatUtcDateOnly, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
+  formatUtcDateOnly, renewalGraceDaysForAccount, EMPROVEX_NEW_CUSTOMER_RAMP_ID } from '../billing';
 import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { quoteIndividualRamp } from './payments/emprovexRampPricing.mjs';
@@ -49,7 +49,7 @@ function verifyCustomer(workspace: { id: string; authorizedEmail: string }, acco
   assertAccountWorkspace(account, workspace as Parameters<typeof assertAccountWorkspace>[1]);
   if (workspace.authorizedEmail !== email
     || account.status === 'exempt' || account.exemptionSource
-    || !['active','pending','trial', ...(allowSuspended ? ['suspended'] : [])].includes(account.status)
+    || !['active','pending','trial','suspended'].includes(account.status)
     || account.pricingPolicyId !== EMPROVEX_NEW_CUSTOMER_RAMP_ID
     || !account.pricingTermsAcceptedAt) {
     throw new BillingAdminError('BILLING_SHARED_NOT_ELIGIBLE', 409);
@@ -404,10 +404,9 @@ export async function reconcileSectorSharedPayment(
       const nextAccount: BillingAccount = { ...anchoredAccount,
         status: 'active', monthlyPriceCents: cycle.amountCents,
         pendingSharedCycleReferenceMonth: '',
-        lastBilledReferenceMonth: !account.lastBilledReferenceMonth
-          || cycle.referenceMonth > account.lastBilledReferenceMonth
-          ? (newlyActivated ? anchoredAccount.firstPaidReferenceMonth! : cycle.referenceMonth)
-          : account.lastBilledReferenceMonth,
+        lastBilledReferenceMonth: newlyActivated ? anchoredAccount.firstPaidReferenceMonth!
+          : !account.lastBilledReferenceMonth || cycle.referenceMonth > account.lastBilledReferenceMonth
+            ? cycle.referenceMonth : account.lastBilledReferenceMonth,
         ...(cycle.referenceMonth === account.grace48ReferenceMonth
           ? { grace48ReviewStatus: 'confirmed' as const } : {}),
         updatedAt: now, updatedBy: 'provider:infinitepay' };
@@ -416,7 +415,8 @@ export async function reconcileSectorSharedPayment(
       if (period && billingCycleReferenceForPeriod(nextAccount, period) === cycle.referenceMonth) {
         const config = docs.get(CONFIG_PATH)?.value as PlatformBillingConfig | undefined;
         updates.push({ path: wp, data: { ...workspace,
-          billingEntitlementUntil: paidServiceAccessUntil(period, config?.gracePeriodDays || 0) } });
+          billingEntitlementUntil: paidServiceAccessUntil(period,
+            renewalGraceDaysForAccount(nextAccount, config?.gracePeriodDays || 0)) } });
       }
     }
     return { result: { verified: true, code: fullyPaid ? 'BILLING_SHARED_CYCLE_PAID'
