@@ -60,8 +60,8 @@ requireText(dataHook, 'useCallback(', 'Cálculo por classe não está memoizado.
 
 requireText(
   page,
-  'useOperationalData(activeTab, acceptedLegalIdentityKey)',
-  'Página não informa aba ativa + aceite legal ao plano realtime.'
+  "useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed', billingAccessIdentity)",
+  'Página não informa aba ativa, aceite legal e autorização de assinatura vinculada à identidade ao plano realtime.'
 );
 requireText(page, 'data-active-realtime-collections={activeRealtimeCollectionCount}', 'Shell não expõe contagem realtime para E2E.');
 requireText(page, '<OperationalSurfaceLoading', 'Página não bloqueia interação antes da sincronização requerida.');
