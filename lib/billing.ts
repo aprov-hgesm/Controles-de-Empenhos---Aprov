@@ -270,7 +270,8 @@ export interface PaidServicePeriod {
   endsAt: string;
 }
 export function paidServicePeriod(
-  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'|'billingPeriodPolicy'>,
+  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>
+    & Partial<Pick<BillingAccount,'billingPeriodPolicy'>>,
   now: Date = new Date(),
 ): PaidServicePeriod | null {
   const start = account.firstPaidAt
@@ -651,7 +652,8 @@ export function getBillingAttention(
       ? billingBrazilDateOnly(period.startsAt) : period.startsAt.slice(0, 10)
     : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   const graceEndsAt = getGraceEndsAt(dueDate, config.gracePeriodDays);
-  const today = formatUtcDateOnly(now);
+  const today = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? billingBrazilDateOnly(now) : formatUtcDateOnly(now);
   const currentCycle = cycles.find(
     (cycle) => cycle.workspaceId === account.workspaceId
       && cycle.referenceMonth === (period ? billingCycleReferenceForPeriod(account, period) : referenceMonth)
