@@ -11,6 +11,7 @@ import {
   type AuthorizedCompanySession,
 } from '../../lib/company/companySessionClient';
 import { CompanyNavigation } from './CompanyNavigation';
+import { CompanySessionContext } from './CompanySessionContext';
 
 type CompanyGateState =
   | { stage: 'checking' }
@@ -99,6 +100,7 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
   }
 
   return (
+    <CompanySessionContext.Provider value={gate.session}>
     <div className="min-h-screen bg-[#f2f5fa] text-[#10243c] lg:flex">
       <CompanyNavigation
         companyName={gate.session.companyName}
@@ -122,5 +124,6 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
         <div className="mx-auto w-full max-w-7xl px-5 py-8 lg:px-10 lg:py-10">{children}</div>
       </div>
     </div>
+    </CompanySessionContext.Provider>
   );
 }

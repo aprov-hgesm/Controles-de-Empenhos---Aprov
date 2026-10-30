@@ -149,7 +149,9 @@ export async function verifyCompanySession(authorization: string | null): Promis
     readString(workspace, 'id') !== workspaceId ||
     readString(workspace, 'workspaceType') !== 'company' ||
     readString(workspace, 'status') !== 'active' ||
-    workspaceEmail !== verified.email
+    workspaceEmail !== verified.email ||
+    readNestedString(workspace, 'companyProfile', 'accessEmail') !== verified.email ||
+    readNestedString(workspace, 'companyProfile', 'registrationStatus') !== 'active'
   ) {
     throw new CompanyAccessError('COMPANY_WORKSPACE_FORBIDDEN', 403);
   }

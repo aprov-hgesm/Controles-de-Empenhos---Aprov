@@ -45,6 +45,7 @@ export async function resolveCompanySession(
     (payload as Record<string, unknown>).workspaceType !== 'company' ||
     typeof (payload as Record<string, unknown>).workspaceId !== 'string' ||
     typeof (payload as Record<string, unknown>).companyName !== 'string' ||
+    typeof (payload as Record<string, unknown>).authorizedEmail !== 'string' ||
     (payload as Record<string, unknown>).firebaseUid !== user.uid
   ) {
     throw new Error('COMPANY_SESSION_INVALID');

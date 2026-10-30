@@ -1,9 +1,13 @@
+'use client';
+
+import { useCompanySession } from './CompanySessionContext';
 import { CircleCheck, Clock3 } from 'lucide-react';
 import type { CompanyModuleSlug } from '../../features/company/modules';
 import { companyModuleBySlug } from '../../features/company/modules';
 
 export function CompanyModulePlaceholder({ slug }: { slug: CompanyModuleSlug }) {
   const module = companyModuleBySlug(slug);
+  const session = useCompanySession();
   if (!module) return null;
 
   return (
@@ -25,6 +29,14 @@ export function CompanyModulePlaceholder({ slug }: { slug: CompanyModuleSlug }) 
             ? 'Identidade e acesso são validados pelo servidor. As preferências empresariais estarão disponíveis em uma próxima etapa.'
             : 'Estamos preparando as funcionalidades deste módulo. Não existem dados operacionais simulados nesta tela.'}
         </p>
+        {slug === 'configuracoes' && session && (
+          <dl className="mt-7 grid gap-4 border-t border-slate-100 pt-7 sm:grid-cols-2">
+            <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Empresa</dt><dd className="mt-1 break-words text-sm font-semibold text-slate-800">{session.companyName}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">E-mail autorizado</dt><dd className="mt-1 break-words text-sm font-semibold text-slate-800">{session.authorizedEmail}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Identificador do workspace</dt><dd className="mt-1 break-words font-mono text-xs text-slate-800">{session.workspaceId}</dd></div>
+            <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Situação</dt><dd className="mt-1 text-sm font-semibold text-emerald-700">Acesso ativo</dd></div>
+          </dl>
+        )}
       </section>
     </>
   );
