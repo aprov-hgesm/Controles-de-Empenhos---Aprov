@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { Menu, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
 
 import { auth } from '../../lib/firebase';
 import {
@@ -89,7 +88,7 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
                 ? 'Entre com uma conta empresarial ativa e vinculada ao workspace cadastrado.'
                 : 'Por segurança, nenhuma informação empresarial foi carregada.'}
             </p>
-            <Link href="/login" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold">Ir para o login</Link>
+            <a href="/login" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold">Ir para o login</a>
             {gate.stage === 'unavailable' && (
               <button type="button" onClick={() => void validate()} className="text-sm underline">Tentar novamente</button>
             )}
