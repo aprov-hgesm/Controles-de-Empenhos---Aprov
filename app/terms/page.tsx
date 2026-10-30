@@ -161,12 +161,16 @@ export default function TermsPage() {
           <strong>conta contratante</strong> representa a contratação e suas obrigações financeiras;
           e o <strong>usuário autorizado</strong> é a pessoa credenciada a atuar no ambiente, segundo
           o perfil e o vínculo institucional aplicáveis. Esses conceitos não são intercambiáveis.
-          Cada usuário deve proteger suas credenciais e não compartilhar senhas ou tokens.
+          Quando a contratação adotar uma conta setorial compartilhada, seu uso fica
+          restrito aos integrantes expressamente autorizados pelo mesmo setor, observados
+          os limites de sessões e as regras de segurança da plataforma. A conta e suas
+          credenciais não podem ser entregues a pessoas externas ou não autorizadas.
         </p>
         <p>
-          Cada usuário deve atuar somente no workspace e na Unidade Gestora a que estiver autorizado.
-          É proibido utilizar credenciais alheias, explorar falhas de autorização, alterar registros sem
-          permissão ou consultar dados de outro setor. Direitos sobre dados próprios não afastam
+          Cada integrante autorizado deve atuar somente no workspace e na Unidade Gestora
+          a que estiver vinculado. É proibido utilizar credenciais de outros setores sem
+          autorização, explorar falhas de autorização, alterar registros sem permissão ou
+          consultar dados de outra Organização Militar. Direitos sobre dados próprios não afastam
           autenticação, sigilo, integridade ou segregação entre organizações.
         </p>
       </LegalSection>
