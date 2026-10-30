@@ -98,7 +98,17 @@ requireText(
 requireText(
   login,
   'Entrar com e-mail e senha',
-  'Componente público não oferece o login por senha dos setores.'
+  'Componente público não oferece o login por senha.'
+);
+forbidText(
+  login,
+  'Entrar com Google',
+  'A interface não pode oferecer login social pelo Google.'
+);
+forbidText(
+  operationalData,
+  'signInWithPopup',
+  'O fluxo de autenticação não pode oferecer popup Google.'
 );
 requireText(
   login,
@@ -138,7 +148,7 @@ requireText(
 requireText(
   driveClient,
   'connectFounderDriveSession',
-  'Fluxo Google do fundador não foi preservado.'
+  'OAuth independente do Drive fundador não foi preservado.'
 );
 if (!externalDriveBlock) {
   findings.push('Não foi possível isolar estaticamente o bloco OAuth do setor externo.');
