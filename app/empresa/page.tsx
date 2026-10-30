@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { ArrowUpRight, Building2, PackageCheck, Truck } from 'lucide-react';
 
 export default function CompanyHomePage() {
@@ -20,7 +19,7 @@ export default function CompanyHomePage() {
           { href: '/empresa/fornecedores', name: 'Fornecedores', detail: 'Sua cadeia de abastecimento', Icon: PackageCheck },
           { href: '/empresa/logistica', name: 'Logística', detail: 'Preparação e entregas', Icon: Truck },
         ].map(({ href, name, detail, Icon }) => (
-          <Link href={href} key={href}
+          <a href={href} key={href}
             className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-300 hover:shadow-md">
             <div className="flex items-start justify-between">
               <span className="rounded-xl bg-blue-50 p-3 text-blue-700"><Icon size={22} /></span>
@@ -29,7 +28,7 @@ export default function CompanyHomePage() {
             <h2 className="mt-5 text-lg font-bold">{name}</h2>
             <p className="mt-1 text-sm text-slate-500">{detail}</p>
             <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-blue-700">Em preparação</p>
-          </Link>
+          </a>
         ))}
       </div>
       <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
