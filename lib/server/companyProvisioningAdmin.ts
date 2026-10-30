@@ -60,6 +60,7 @@ interface FirestoreWrite {
   update?: { name: string; fields: Record<string, FirestoreValue> };
   delete?: string;
   currentDocument?: { exists: boolean };
+  updateMask?: { fieldPaths: string[] };
 }
 interface FirestoreDocument {
   name?: string;
@@ -232,10 +233,16 @@ export async function provisionCompanyWorkspaceWithAuth(
 
     // Não reutilizamos contas Auth preexistentes: isso evita apropriação de UID,
     // senha ou sessão de um setor/fundador mesmo quando faltam índices legados.
-    const lookup = await authAdmin<{ users?: Array<{ localId: string }> }>(
-      token, ':lookup', { email: [email] }
-    );
-    if (lookup.users?.length) throw new CompanyProvisioningFailure(
+    let existingUsers: Array<{ localId: string }> = [];
+    try {
+      const lookup = await authAdmin<{ users?: Array<{ localId: string }> }>(
+        token, ':lookup', { email: [email] }
+      );
+      existingUsers = lookup.users || [];
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('USER_NOT_FOUND')) throw error;
+    }
+    if (existingUsers.length) throw new CompanyProvisioningFailure(
       'O e-mail já possui uma identidade Firebase. Escolha outro e-mail.',
       'CONFLICT', 409
     );
@@ -314,6 +321,26 @@ export async function provisionCompanyWorkspaceWithAuth(
         authEnabled = false;
       } catch {
         recoveryRequired = true;
+      }
+    }
+
+    if (directoryCommitted && recoveryRequired) {
+      // Defesa adicional: desabilitar autorização do diretório quando o Auth
+      // não pôde ser recuperado, mesmo que o rollback completo seja impossível.
+      try {
+        await firestoreCommit(token, [
+          `workspaces/${workspaceId}`,
+          `platformAccounts/${email}`,
+        ].map(path => ({
+          update: {
+            name: documentName(path),
+            fields: encodeFirestoreFields({ status: 'disabled', updatedAt: new Date().toISOString() }),
+          },
+          updateMask: { fieldPaths: ['status', 'updatedAt'] },
+          currentDocument: { exists: true },
+        })));
+      } catch (disableError) {
+        console.error('EMPROVEX company recovery status disable failed.', { operationId, disableError });
       }
     }
 
