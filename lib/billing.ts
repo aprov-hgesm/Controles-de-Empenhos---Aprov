@@ -257,7 +257,7 @@ export function settleFirstPaymentAnniversary(
   return {
     ...account,
     firstPaidAt: verifiedAt,
-    firstPaidReferenceMonth: getReferenceMonth(verifiedAt),
+    firstPaidReferenceMonth: billingBrazilDateOnly(verifiedAt).slice(0, 7),
     firstPaymentCycleReferenceMonth: cycleReferenceMonth,
     firstPaymentConfirmedAt: verifiedAt,
   };
@@ -270,7 +270,7 @@ export interface PaidServicePeriod {
   endsAt: string;
 }
 export function paidServicePeriod(
-  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>,
+  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'|'billingPeriodPolicy'>,
   now: Date = new Date(),
 ): PaidServicePeriod | null {
   const start = account.firstPaidAt
@@ -285,7 +285,8 @@ export function paidServicePeriod(
   if (periodIndex < 0) return null;
   const begin = billingAnniversary(first, periodIndex);
   return {
-    referenceMonth: getReferenceMonth(begin),
+    referenceMonth: account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+      ? billingBrazilDateOnly(begin).slice(0, 7) : getReferenceMonth(begin),
     periodNumber: periodIndex + 1,
     startsAt: begin.toISOString(),
     endsAt: billingAnniversary(first, periodIndex + 1).toISOString(),
@@ -446,7 +447,7 @@ export function buildInitialBillingAccount(
     ...(rampForNewCustomer ? {
       billingPeriodPolicy: PAYMENT_ANNIVERSARY_POLICY,
       pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
-      firstPaidReferenceMonth: getReferenceMonth(referenceStart),
+      firstPaidReferenceMonth: billingBrazilDateOnly(referenceStart).slice(0, 7),
       firstPaidAt: referenceStart.toISOString(),
       pricingTermsAcceptedAt: '',
     } : {}),
@@ -645,8 +646,10 @@ export function getBillingAttention(
   const period = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
     ? paidServicePeriod(account, new Date(now)) : null;
   const referenceMonth = period?.referenceMonth || getReferenceMonth(now);
-  const dueDate = period?.startsAt.slice(0, 10)
-    || getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const dueDate = period
+    ? account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+      ? billingBrazilDateOnly(period.startsAt) : period.startsAt.slice(0, 10)
+    : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   const graceEndsAt = getGraceEndsAt(dueDate, config.gracePeriodDays);
   const today = formatUtcDateOnly(now);
   const currentCycle = cycles.find(
