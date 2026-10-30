@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2, CalendarDays, CircleDollarSign, ClipboardList, Home,
@@ -51,11 +50,11 @@ export function CompanyNavigation({
             const active = pathname === href;
             const Icon = ICONS[index];
             return (
-              <Link key={item.slug || 'inicio'} href={href} onClick={onClose}
+              <a key={item.slug || 'inicio'} href={href} onClick={onClose}
                 aria-current={active ? 'page' : undefined}
                 className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
                 <Icon size={18} aria-hidden="true" /> {item.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
