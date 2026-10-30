@@ -1,4 +1,4 @@
-# One-time targeted security dependency resolver; self-removing after all gates pass
+# One-time targeted security dependency resolver; retry after aligning direct postcss
 name: Security Patch R1 residual remediation (temporary)
 on:
   push:
