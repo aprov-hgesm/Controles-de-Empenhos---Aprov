@@ -49,6 +49,9 @@ requireText(
   'isPasswordSectorSession()',
   'Fluxos self-service do setor não exigem provider password.'
 );
+if (rules.includes("hasSignInProvider('google.com')")) {
+  findings.push('As Rules ainda admitem login Google na autenticação EMPROVEX.');
+}
 requireText(
   securityTest,
   'Setor com mesmo e-mail e UID via Google não acessa dados operacionais',
@@ -57,7 +60,7 @@ requireText(
 requireText(
   securityTest,
   'Fundador com mesmo e-mail e UID via Google não acessa dados operacionais HGeSM',
-  'Teste multi-tenant não cobre fundador tentando usar password.'
+  'Teste multi-tenant não cobre fundador tentando usar Google.'
 );
 requireText(
   securityTest,
