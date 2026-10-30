@@ -14,6 +14,9 @@ on:
       - 'lib/billing.ts'
       - 'app/terms/page.tsx'
       - 'scripts/billing-shared-monthly.test.mjs'
+      - 'scripts/billing-payment-anniversary.test.mjs'
+      - 'components/billing/BillingAnniversaryCard.tsx'
+      - 'lib/billingAccess.ts'
       - 'lib/billing/**'
       - 'scripts/infinitepay-*.test.mjs'
       - 'scripts/billing-workspace-rehydration.test.mjs'
@@ -40,5 +43,7 @@ jobs:
         run: node --test scripts/billing-shared-monthly.test.mjs
       - name: Install locked dependencies
         run: npm ci
+      - name: Verify payment anniversary, renewal grace and shared first activation
+        run: node --test scripts/billing-payment-anniversary.test.mjs
       - name: TypeScript validation
         run: npm run typecheck
