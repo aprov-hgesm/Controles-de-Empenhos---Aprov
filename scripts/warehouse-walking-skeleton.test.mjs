@@ -76,7 +76,7 @@ test('layout compartilhado preserva gate multi-tenant em todas as rotas principa
   assert.ok(gate.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
   assert.ok(gate.includes('canAccessWarehouseModule(context)'));
   assert.ok(gate.includes("fetch('/api/central-depositos/status'"));
-  assert.ok(gate.includes("window.location.replace('/login')"));
+  assert.ok(gate.includes("window.location.replace('/central-empenhos')"));
 });
 
 test('walking skeleton preserva contratos canônicos sem persistência paralela no shell', () => {
