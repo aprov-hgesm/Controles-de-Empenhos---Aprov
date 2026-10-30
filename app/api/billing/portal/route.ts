@@ -4,10 +4,11 @@ import { resolveBillingPortalSession, BillingPortalFailure } from '../../../../l
 import { pilotEnabledFor } from '../../../../lib/server/payments/infinitepayPortalPilot.mjs';
 import { readBillingCycleHistory } from '../../../../lib/server/billingRecentCycles';
 import { acceptNewCustomerRamp, readSectorBillingAccess, requestSectorGrace48,
-  createSectorSubscriptionCheckout, reconcileSectorSubscriptionPayment,
-  reconcileInfinitePayWebhook, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
+  createSectorSubscriptionCheckout, BillingAdminError } from '../../../../lib/server/platformBillingAdminStore';
 
 import { callInfinitePay } from '../../../../lib/server/payments/infinitepayCheckout.mjs';
+import { readSectorSharedPayment, configureSectorSharedPayment, createSectorSharedCheckout,
+  reconcileSharedOrFullReturn, reconcileSharedOrFullWebhook } from '../../../../lib/server/platformBillingSharedStore';
 import {
   pilotOrderForDate, pilotCheckoutRequest, readCheckoutUrl,
   pilotReturnBelongsToSession, verifyPilotResponse,
@@ -20,6 +21,10 @@ export async function GET(request: Request) {
   try {
     const { workspace, account, email } = await resolveBillingPortalSession(request);
     const view = new URL(request.url).searchParams.get('view');
+    if (view === 'shared') {
+      const status = await readSectorSharedPayment(workspace.id, email);
+      return NextResponse.json(status, { headers: { 'Cache-Control': 'private, no-store' } });
+    }
     if (view === 'access') {
       const decision = await readSectorBillingAccess(workspace.id, email);
       return NextResponse.json(decision, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -210,6 +215,49 @@ async function subscriptionCheckout(request: Request) {
   }
 }
 
+async function configureShared(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    const raw = await request.text();
+    if (raw.length > 2200) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let body: { participantNames?: string[]; acceptDivisionFee?: boolean };
+    try { body = JSON.parse(raw); } catch {
+      return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    }
+    const result = await configureSectorSharedPayment(
+      { uid, email }, workspace.id, email, body.participantNames || [], body.acceptDivisionFee === true);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_SHARED_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
+async function sharedCheckout(request: Request) {
+  try {
+    const { uid, email, workspace } = await resolveBillingPortalSession(request);
+    const raw = await request.text();
+    if (raw.length > 160) return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    let body: { number?: number; confirmRealPayment?: boolean };
+    try { body = JSON.parse(raw); } catch {
+      return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
+    }
+    if (body.confirmRealPayment !== true)
+      return NextResponse.json({ code: 'BILLING_EXPLICIT_PAYMENT_INTENT_REQUIRED' }, { status: 400 });
+    const result = await createSectorSharedCheckout({ uid, email }, workspace.id, email, body.number || 0);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) {
+    const code = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.code : 'BILLING_SHARED_CHECKOUT_UNAVAILABLE';
+    const status = error instanceof BillingPortalFailure || error instanceof BillingAdminError
+      ? error.status : 503;
+    return NextResponse.json({ code }, { status, headers: { 'Cache-Control': 'no-store' } });
+  }
+}
+
 async function verifySubscription(request: Request) {
   try {
     const { uid, email, workspace } = await resolveBillingPortalSession(request);
@@ -219,7 +267,7 @@ async function verifySubscription(request: Request) {
     try { body = JSON.parse(raw); } catch {
       return NextResponse.json({ code: 'BILLING_INVALID_REQUEST' }, { status: 400 });
     }
-    const result = await reconcileSectorSubscriptionPayment({ uid, email }, workspace.id, email, {
+    const result = await reconcileSharedOrFullReturn({ uid, email }, workspace.id, email, {
       orderNsu: body.orderNsu || '', transactionNsu: body.transactionNsu || '', slug: body.slug || '',
     });
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -252,7 +300,7 @@ async function handleInfinitePayWebhook(request: Request) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('INVALID_BODY');
     const event = typeof payload.event === 'string' ? payload.event
       : typeof payload.type === 'string' ? payload.type : 'paid';
-    const result = await reconcileInfinitePayWebhook({
+    const result = await reconcileSharedOrFullWebhook({
       orderNsu: typeof payload.order_nsu === 'string' ? payload.order_nsu : '',
       transactionNsu: typeof payload.transaction_nsu === 'string' ? payload.transaction_nsu : '',
       slug: typeof payload.slug === 'string' ? payload.slug
@@ -269,6 +317,8 @@ async function handleInfinitePayWebhook(request: Request) {
 export async function POST(request: Request) {
   const action = new URL(request.url).searchParams.get('action');
   if (action === 'infinitepay-webhook') return handleInfinitePayWebhook(request);
+  if (action === 'configure-shared') return configureShared(request);
+  if (action === 'shared-checkout') return sharedCheckout(request);
   if (action === 'subscription-checkout') return subscriptionCheckout(request);
   if (action === 'verify-subscription') return verifySubscription(request);
   if (action === 'request-grace48') return requestGrace48(request);
