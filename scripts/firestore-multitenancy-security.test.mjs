@@ -824,8 +824,23 @@ async function main() {
     'A sessão legítima do setor deve continuar usando o mesmo UID após o vínculo Google.'
   );
 
-  await linkWithCredential(admin.user, mockGoogleCredential('founder-linked', identities.founder.email));
-  await admin.user.getIdToken(true);
+  // Vincular o Google em uma sessao separada evita mudar o provider
+  // do admin em uso, que deve permanecer 'password' em todos os testes.
+  const founderLinker = await createSession(
+    'founder-linker',
+    identities.founder.email,
+    'password'
+  );
+  await linkWithCredential(
+    founderLinker.user,
+    mockGoogleCredential('founder-linked', identities.founder.email)
+  );
+  const founderAdminProvider = await admin.user.getIdTokenResult(true);
+  assert.equal(
+    founderAdminProvider.signInProvider,
+    'password',
+    'O vinculo Google nao deve mudar o provider da sessao administrativa.'
+  );
   const founderGoogle = await createSession(
     'founder-google',
     identities.founder.email,
