@@ -58,7 +58,7 @@ forbidText(view, 'updateDoc(', 'A interface SAG não deve chamar updateDoc diret
 forbidText(view, 'addDoc(', 'A interface SAG não deve chamar addDoc diretamente.');
 
 requireText(reportsView, 'onApplySagNsImport={context.handleApplySagNsImport}', 'Relatórios não repassam a ação SAG.');
-requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
+requireText(page, "import('../../features/operational/components/OperationalWorkspace')", 'Página de login não conecta o host operacional sob demanda.');
 requireText(operationalWorkspace, 'useSagNsImportActions', 'Host operacional não inicializa o hook de importação SAG.');
 requireText(operationalWorkspace, 'handleApplySagNsImport', 'Host operacional não injeta a ação SAG no contexto de Relatórios.');
 
