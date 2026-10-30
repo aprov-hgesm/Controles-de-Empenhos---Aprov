@@ -72,7 +72,11 @@ requireText(rules, "id != 'documentStorage'", 'documentStorage voltou a cair na 
 
 requireText(driveClient, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas pelo workspaceId.');
 requireText(driveClient, 'normalizePlatformEmail(context.email)', 'Drive não vincula autorização ao e-mail do workspace.');
-requireText(driveClient, 'result.user.uid !== user.uid', 'Drive não valida que a sessão reautenticada preserva o UID.');
+requireText(driveClient, 'returnedEmail !== expectedEmail', 'Drive não valida o e-mail Google autorizado do workspace.');
+requireText(driveClient, 'return connectExternalWorkspaceDrive(context, expectedEmail)', 'Drive não usa OAuth independente da sessão Firebase.');
+if (driveClient.includes('reauthenticateWithPopup')) {
+  findings.push('Drive não deve reautenticar a sessão Firebase via Google.');
+}
 
 if (findings.length) {
   console.error('Bloco 20 — integridade da suíte de segurança multi-tenant\n');

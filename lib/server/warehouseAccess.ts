@@ -204,7 +204,7 @@ async function resolveExternalWarehouseAccess(
 /**
  * Gate server-side da Central de Depósitos.
  *
- * O fundador mantém o acesso Google ao workspace HGeSM. Setores externos são
+ * O fundador mantém o acesso por e-mail e senha ao workspace HGeSM. Setores externos são
  * validados novamente contra o diretório operacional do Firestore principal e,
  * depois disso, recebem claims Firebase assinadas com workspace + UG. O banco
  * emprovex-warehouse usa essas claims para isolar cada setor sem depender de
