@@ -15,7 +15,8 @@ const capacity = read('lib/platformCapacity.ts');
 const sessionControl = read('lib/platformSessionControl.ts');
 const legalVersions = read('lib/legalVersions.ts');
 const legalAcceptance = read('lib/legalAcceptance.ts');
-const page = read('app/page.tsx');
+// A rota historica / reexporta a UI operacional de /login.
+const page = read('app/login/page.tsx');
 const warehouseSurface = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const health = read('app/api/health/route.ts');
 const login = read('components/auth/EmprovexLogin.tsx');
