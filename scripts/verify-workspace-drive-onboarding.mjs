@@ -11,7 +11,8 @@ const driveSettings = read('lib/workspaceDriveSettings.ts');
 const driveHook = read('hooks/useWorkspaceDriveStorage.ts');
 const driveControl = read('components/layout/WorkspaceDriveControl.tsx');
 const appHeader = read('components/layout/AppHeader.tsx');
-const page = read('app/page.tsx');
+// O operacional é /login. A raiz pública exibe o site institucional.
+const page = read('app/login/page.tsx');
 const rules = read('firestore.rules');
 
 requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Onboarding externo não separa autorização Drive da sessão Firebase.');
