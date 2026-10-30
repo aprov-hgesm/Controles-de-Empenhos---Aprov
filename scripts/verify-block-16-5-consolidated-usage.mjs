@@ -56,8 +56,8 @@ for (const forbidden of [
 
 requireText(
   adminView,
-  "import { AdminConsumptionHub } from './AdminConsumptionHub';",
-  'PlatformAdminView não importa o hub de consumo.'
+  "import('./AdminConsumptionHub').then((module) => ({ default: module.AdminConsumptionHub }))",
+  'PlatformAdminView não carrega o hub de consumo por import dinâmico.'
 );
 requireText(
   adminView,
