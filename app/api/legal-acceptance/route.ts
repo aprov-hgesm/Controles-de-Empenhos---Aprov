@@ -10,9 +10,18 @@ import { getGoogleAccessToken } from '../../../lib/server/sectorProvisioningAdmi
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ROOT = 'https://firestore.googleapis.com/v1/projects/'
-  + encodeURIComponent(firebaseConfig.projectId)
-  + '/databases/' + encodeURIComponent(firebaseConfig.firestoreDatabaseId) + '/documents';
+// O aceite R4 deve consultar o MESMO Firestore usado pela sessão.
+// Em E2E, nunca buscar o projeto real. O desvio exige quatro marcadores
+// locais simultâneos e não aceita host arbitrário (proteção de produção).
+const LEGAL_E2E_EMULATOR = process.env.EMPROVEX_E2E_SERVER_AUTH === '1'
+  && process.env.FIREBASE_AUTH_EMULATOR_HOST === '127.0.0.1:9099'
+  && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:8080'
+  && process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID === 'demo-emprovex-security';
+const ROOT = LEGAL_E2E_EMULATOR
+  ? 'http://127.0.0.1:8080/v1/projects/demo-emprovex-security/databases/(default)/documents'
+  : 'https://firestore.googleapis.com/v1/projects/'
+    + encodeURIComponent(firebaseConfig.projectId)
+    + '/databases/' + encodeURIComponent(firebaseConfig.firestoreDatabaseId) + '/documents';
 
 type FirebaseIdentity = Awaited<ReturnType<typeof verifyFirebaseRequest>>;
 
@@ -147,7 +156,7 @@ async function handler(request: Request, write: boolean) {
       workspaceId = new URL(request.url).searchParams.get('workspaceId') || '';
     }
     const identity = await authorize(request, workspaceId);
-    const adminToken = await getGoogleAccessToken();
+    const adminToken = LEGAL_E2E_EMULATOR ? 'owner' : await getGoogleAccessToken();
     const document = documentName(identity);
     if (await readAcceptance(adminToken, document, identity)) {
       return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
@@ -161,7 +170,7 @@ async function handler(request: Request, write: boolean) {
       headers: { Authorization: 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         writes: [{
-          update: { name: document.replace('https://firestore.googleapis.com/v1/', ''), fields: fields(identity) },
+          update: { name: document.slice(document.indexOf('/v1/') + '/v1/'.length), fields: fields(identity) },
           currentDocument: { exists: false },
           updateTransforms: [{ fieldPath: 'acceptedAt', setToServerValue: 'REQUEST_TIME' }],
         }],
