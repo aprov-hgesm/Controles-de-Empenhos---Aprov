@@ -200,24 +200,42 @@ forbidText(
   'Shell principal voltou a importar implementação do ADM Depósito.'
 );
 const canonicalLogin = read('app/login/page.tsx');
-// A raiz é institucional via next.config.ts e reexporta o shell de /login.
-// Inspecionar o destino real: o firewall não pode ser contornado por wrapper.
+// O gateway empresarial pode carregar o shell militar por importação lazy.
+// Validar ambos, sem aceitar um wrapper que suprima a proteção de assinatura.
+const operationalEntryPath = 'app/login/OperationalEntry.tsx';
+const hasOperationalExtraction = existsSync(resolve(root, operationalEntryPath));
+const gatewayImportsOperational = canonicalLogin.includes("import('./OperationalEntry')");
+const gatewayGatesOperational = canonicalLogin.includes("stage === 'operational'");
+if (hasOperationalExtraction && !(gatewayImportsOperational && gatewayGatesOperational)) {
+  findings.push('Gateway /login não protege a montagem do shell operacional extraído.');
+}
+const operationalLogin = hasOperationalExtraction && gatewayImportsOperational && gatewayGatesOperational
+  ? read(operationalEntryPath)
+  : canonicalLogin;
+if (hasOperationalExtraction) {
+  forbidText(
+    operationalLogin,
+    /from\\s+['"][^'"]*(?:\\/warehouse\\/|features\\/warehouse|adm-deposito)[^'"]*['"]/,
+    'Shell operacional extraído passou a importar implementação ADM Depósito.'
+  );
+}
+// A raiz é institucional via next.config.ts e reexporta /login.
 const rootReexportsLogin = appPage.includes("export { default } from './login/page'");
 const rootAccessIsNeutral = appPage.includes("from '../lib/platformModuleAccess'");
-const loginAccessIsNeutral = canonicalLogin.includes("from '../../lib/platformModuleAccess'");
+const loginAccessIsNeutral = operationalLogin.includes("from '../../lib/platformModuleAccess'");
 if (!(rootReexportsLogin ? loginAccessIsNeutral : rootAccessIsNeutral)) {
   findings.push('Shell principal não utiliza a camada neutra de acesso a módulos opcionais.');
 }
 if (rootReexportsLogin) {
   requireText(
-    canonicalLogin,
+    operationalLogin,
     'checkSectorBillingAccess',
-    'Shell canônico de /login perdeu a verificação de assinatura.'
+    'Shell operacional de /login perdeu a verificação de assinatura.'
   );
   requireText(
-    canonicalLogin,
+    operationalLogin,
     "billingAccessState === 'allowed'",
-    'Shell canônico de /login perdeu o gate de acesso por assinatura.'
+    'Shell operacional de /login perdeu o gate de acesso por assinatura.'
   );
 }
 
