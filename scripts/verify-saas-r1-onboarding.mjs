@@ -8,7 +8,8 @@ const findings = [];
 
 const operationalData = read('hooks/useOperationalData.ts');
 const login = read('components/auth/EmprovexLogin.tsx');
-const page = read('app/page.tsx');
+// A página raiz agora é institucional; a aplicação autenticada vive em /login.
+const page = read('app/login/page.tsx');
 const header = read('components/layout/AppHeader.tsx');
 const credentials = read('components/auth/SectorCredentialModal.tsx');
 const checklist = read('components/auth/SectorFirstAccessChecklist.tsx');
