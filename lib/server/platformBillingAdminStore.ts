@@ -39,8 +39,8 @@ export class BillingAdminError extends Error {
 }
 type FireValue = Record<string, any>;
 type RawDoc = { name: string; fields?: Record<string, FireValue>; updateTime?: string };
-type ReadDoc = { value: Record<string, any>; updateTime: string } | null;
-type Actor = { uid: string; email: string };
+export type ReadDoc = { value: Record<string, any>; updateTime: string } | null;
+export type Actor = { uid: string; email: string };
 type Mutation =
   | { action: 'config'; input: Record<string, unknown> }
   | { action: 'trial'; workspaceId: string; days?: number }
@@ -104,7 +104,7 @@ async function rest(token: string, path: string, method: 'GET' | 'POST', body?: 
   }
   return response;
 }
-async function get(token: string, path: string): Promise<ReadDoc> {
+export async function get(token: string, path: string): Promise<ReadDoc> {
   const response = await fetch('https://firestore.googleapis.com/v1/' + documentName(path), {
     headers: { authorization: 'Bearer ' + token }, cache: 'no-store',
   });
@@ -136,7 +136,7 @@ function streamRows(text: string): Record<string, any>[] {
   if (data[0] === '[') return JSON.parse(data);
   return data.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
 }
-async function transaction<T>(
+export async function transaction<T>(
   token: string, paths: string[],
   calculate: (docs: ReadonlyMap<string, ReadDoc>) => { result: T; updates: Array<{ path: string; data: object }> }
 ): Promise<T> {
@@ -200,7 +200,7 @@ async function transaction<T>(
     if (!committed) await rest(token, ':rollback', 'POST', { transaction: begun.transaction }).catch(() => undefined);
   }
 }
-function audit(actor: Actor, operation: string, entityType: string, entityId: string, workspaceId: string, ug: string | null,
+export function audit(actor: Actor, operation: string, entityType: string, entityId: string, workspaceId: string, ug: string | null,
   before: Record<string, unknown>, after: Record<string, unknown>, metadata: Record<string, unknown> = {}) {
   const id = randomUUID();
   return {
@@ -213,19 +213,19 @@ function audit(actor: Actor, operation: string, entityType: string, entityId: st
     },
   };
 }
-function validWorkspaceId(id: unknown): asserts id is string {
+export function validWorkspaceId(id: unknown): asserts id is string {
   if (typeof id !== 'string' || !ID.test(id)) throw new BillingAdminError('BILLING_INVALID_WORKSPACE', 400);
 }
-function existingAccount(data: ReadDoc): BillingAccount {
+export function existingAccount(data: ReadDoc): BillingAccount {
   if (!data) throw new BillingAdminError('BILLING_ACCOUNT_NOT_PROVISIONED', 409);
   return data.value as BillingAccount;
 }
-function existingWorkspace(data: ReadDoc, expectedId: string): Workspace {
+export function existingWorkspace(data: ReadDoc, expectedId: string): Workspace {
   if (!data || data.value.id !== expectedId || data.value.status !== 'active')
     throw new BillingAdminError('BILLING_WORKSPACE_UNAVAILABLE', 409);
   return data.value as Workspace;
 }
-function assertAccountWorkspace(account: BillingAccount, workspace: Workspace): void {
+export function assertAccountWorkspace(account: BillingAccount, workspace: Workspace): void {
   if (account.workspaceId !== workspace.id || account.ug !== (workspace.ug || '')
     || account.authorizedEmail !== workspace.authorizedEmail)
     throw new BillingAdminError('BILLING_WORKSPACE_MISMATCH', 403);
@@ -754,7 +754,7 @@ export async function requestSectorGrace48(actor: Actor, workspaceId: string, em
   });
 }
 
-function requireCheckoutConfig() {
+export function requireCheckoutConfig() {
   if (process.env.INFINITEPAY_BILLING_ENABLED !== '1')
     throw new BillingAdminError('BILLING_CHECKOUT_NOT_ENABLED', 503);
   const secret = process.env.INFINITEPAY_ORDER_SECRET || '';
@@ -774,14 +774,14 @@ function requireCheckoutConfig() {
  * the founder opts into public rollout. Never derive its callback host from
  * untrusted Host / X-Forwarded-* request headers.
  */
-function requireCheckoutWorkspace(workspaceId: string): void {
+export function requireCheckoutWorkspace(workspaceId: string): void {
   const scope = process.env.INFINITEPAY_BILLING_SCOPE || 'disabled';
   if (scope === 'all') return;
   if (scope === 'pilot' && process.env.INFINITEPAY_BILLING_PILOT_WORKSPACE_ID === workspaceId)
     return;
   throw new BillingAdminError('BILLING_CHECKOUT_NOT_AVAILABLE_FOR_SECTOR', 403);
 }
-function configuredBillingOrigin(): string {
+export function configuredBillingOrigin(): string {
   const raw = process.env.EMPROVEX_BILLING_PUBLIC_ORIGIN || '';
   let url: URL;
   try { url = new URL(raw); }
@@ -846,6 +846,7 @@ export async function createSectorSubscriptionCheckout(actor: Actor, workspaceId
       throw new BillingAdminError('BILLING_PROVIDER_ORDER_REUSED', 409);
     if (previous && previous.amountCents !== amount)
       throw new BillingAdminError('BILLING_FROZEN_AMOUNT_MISMATCH', 409);
+    if (previous?.sharedPayment) throw new BillingAdminError('BILLING_SHARED_CYCLE_ACTIVE', 409);
     if (previous?.checkoutOrderNsu && previous.checkoutOrderNsu !== orderNsu)
       throw new BillingAdminError('BILLING_OTHER_CHECKOUT_EXISTS', 409);
     // A webhook can settle the invoice before the browser receives its URL.
