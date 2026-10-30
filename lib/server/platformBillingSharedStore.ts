@@ -23,6 +23,13 @@ import {
 import type { Actor } from './platformBillingAdminStore';
 
 type PaymentReturn = { orderNsu: string; transactionNsu: string; slug: string };
+type SharedCheckoutResult = {
+  status: 'reserved' | 'ready' | 'paid' | 'pending_review';
+  orderNsu: string;
+  checkoutUrl: string;
+  amountCents: number;
+  referenceMonth: string;
+};
 const CONFIG_PATH = 'platformBillingConfig/main';
 const codePattern = /^epx-[0-9]{6}-[a-f0-9]{24}$/;
 
@@ -133,7 +140,7 @@ export async function configureSectorSharedPayment(
     const amount = quoteFor(currentAccount, month);
     let shared: SharedBillingPayment;
     try {
-      shared = createSharedPayment({ amountCents: amount, participantNames, acceptedAt: new Date().toISOString() });
+      shared = createSharedPayment({ amountCents: amount, participantNames, acceptedAt: new Date().toISOString() }) as SharedBillingPayment;
     } catch {
       throw new BillingAdminError('BILLING_SHARED_PARTICIPANTS_INVALID', 400);
     }
@@ -182,7 +189,7 @@ export async function createSectorSharedCheckout(
     workspaceId: workspaceId + '-shared-part-' + number, referenceMonth: month, orderIdSecret: secret,
   });
   const ip = 'billingPaymentIntents/' + orderNsu;
-  const prepared = await transaction(token, [wp, ap, cp, ip], docs => {
+  const prepared = await transaction<SharedCheckoutResult>(token, [wp, ap, cp, ip], docs => {
     const workspace = existingWorkspace(docs.get(wp) ?? null, workspaceId);
     const currentAccount = existingAccount(docs.get(ap) ?? null);
     verifyCustomer(workspace, currentAccount, email);
@@ -276,7 +283,7 @@ export async function createSectorSharedCheckout(
     return { ...prepared, status: 'pending_review' as const };
   }
   try {
-    return await transaction(token, [cp, ip], docs => {
+    return await transaction<SharedCheckoutResult>(token, [cp, ip], docs => {
       const cycle = docs.get(cp)?.value as BillingCycle | undefined;
       const intent = docs.get(ip)?.value as Record<string, unknown> | undefined;
       const part = cycle?.sharedPayment?.parts[number-1];
