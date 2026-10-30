@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Building2, CheckCircle2, Loader2, LockKeyhole } from 'lucide-react';
 import type { CreateCompanyInput } from '../../hooks/usePlatformAdminCompanies';
+import { isValidCompanyCnpj, normalizeCompanyCnpj } from '../../lib/companyProvisioning';
 
 interface Props {
   creating: boolean;
@@ -20,9 +21,12 @@ const inputClass = 'min-h-11 w-full rounded-xl border border-white/10 bg-black/2
 const digits = (value: string) => value.replace(/\D/g, '');
 
 const maskCnpj = (value: string) => {
-  const d = digits(value).slice(0, 14);
-  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+  const chars = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14);
+  const parts = [chars.slice(0, 2), chars.slice(2, 5), chars.slice(5, 8), chars.slice(8, 12), chars.slice(12, 14)];
+  return parts[0] + (parts[1] ? '.' + parts[1] : '')
+    + (parts[2] ? '.' + parts[2] : '')
+    + (parts[3] ? '/' + parts[3] : '')
+    + (parts[4] ? '-' + parts[4] : '');
 };
 const maskCep = (value: string) => digits(value).slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
 const maskPhone = (value: string) => {
@@ -35,17 +39,6 @@ const maskPhone = (value: string) => {
 };
 const suggestId = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
-
-function validCnpj(value: string): boolean {
-  const d = digits(value);
-  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
-  for (const size of [12, 13]) {
-    const weights = size === 12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2];
-    const remainder = d.slice(0, size).split('').reduce((sum, n, index) => sum + Number(n) * weights[index], 0) % 11;
-    if (Number(d[size]) !== (remainder < 2 ? 0 : 11 - remainder)) return false;
-  }
-  return true;
-}
 
 function Field({ label, value, onChange, required = false, type = 'text', placeholder, autoComplete, maxLength }: {
   label: string; value: string; onChange: (value: string) => void;
@@ -88,7 +81,7 @@ export function AdminCreateCompanyPanel({ creating, onCreate, onCreated }: Props
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    if (!validCnpj(form.cnpj)) return setError('Informe um CNPJ válido, com 14 dígitos verificáveis.');
+    if (!isValidCompanyCnpj(form.cnpj)) return setError('Informe um CNPJ válido com 14 caracteres e dígitos verificadores.');
     if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(form.workspaceId)) {
       return setError('O workspace deve ter de 3 a 40 caracteres: letras minúsculas, números e hífen.');
     }
@@ -103,7 +96,7 @@ export function AdminCreateCompanyPanel({ creating, onCreate, onCreated }: Props
       await onCreate({
         ...form,
         legalName: form.legalName.trim(), tradeName: form.tradeName.trim(),
-        cnpj: digits(form.cnpj), workspaceId: form.workspaceId.trim(),
+        cnpj: normalizeCompanyCnpj(form.cnpj), workspaceId: form.workspaceId.trim(),
         responsibleName: form.responsibleName.trim(), responsiblePhone: digits(form.responsiblePhone),
         companyEmail: form.companyEmail.trim().toLowerCase(), loginEmail: form.loginEmail.trim().toLowerCase(),
         postalCode: digits(form.postalCode), address: form.address.trim(),
