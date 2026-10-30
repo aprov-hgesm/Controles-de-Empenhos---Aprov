@@ -1,0 +1,71 @@
+# One-time targeted security dependency resolver; self-removing after all gates pass
+name: Security Patch R1 residual remediation (temporary)
+on:
+  push:
+    branches: [fix/security-patch-r1-20261030]
+    paths: [".github/workflows/security-patch-r1-resolve-residual.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: security-patch-r1-residual-remediation
+  cancel-in-progress: false
+jobs:
+  resolve-verify-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Deterministically resolve the targeted security overrides
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify resolution and lockfile integrity
+        run: |
+          node <<'NODE'
+          const x=require('./package-lock.json').packages;
+          for(const [path,version] of Object.entries({
+            'node_modules/next':'15.5.28',
+            'node_modules/undici':'6.29.1',
+            'node_modules/dompurify':'3.4.17',
+            'node_modules/@grpc/grpc-js':'1.13.6',
+            'node_modules/source-map-js':'1.2.2',
+            'node_modules/postcss':'8.5.28',
+            'node_modules/next/node_modules/postcss':'8.5.28'
+          })){
+            const p=x[path];
+            if(path==='node_modules/next/node_modules/postcss'&&!p)continue; // deduplicated into root
+            if(!p||p.version!==version||!p.integrity)throw Error(path+' expected '+version+', got '+p?.version);
+            console.log(path+' -> '+p.version);
+          }
+          for(const [k,v] of Object.entries(x)){
+            if((k.endsWith('/postcss')&&v.version!=='8.5.28')||(k.endsWith('/source-map-js')&&v.version!=='1.2.2')||(k.endsWith('/@grpc/grpc-js')&&v.version!=='1.13.6'))throw Error('Unexpected nested dependency: '+k+'@'+v.version);
+          }
+          NODE
+      - name: Deterministic installation with scripts
+        run: npm ci --no-audit --no-fund
+      - name: npm audit (must be free of reportable advisories)
+        run: npm audit --audit-level=moderate
+      - name: TypeScript and build
+        run: |
+          npm run typecheck
+          npm run build
+      - name: Security and operational regressions
+        run: |
+          npm run verify:emprovex-core-protection
+          npm run verify:multitenant-security
+          npm run test:cronograma-email
+          npm run test:invoice-identity
+          npm run test:adm-deposito-outbound-return
+          node --test scripts/warehouse-server-command-security.test.mjs
+      - name: Persist lockfile and remove this temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -- .github/workflows/security-patch-r1-resolve-residual.yml
+          git add package-lock.json
+          git diff --cached --check
+          git commit -m "fix(security): resolve remaining audited transitive dependencies"
+          git push origin HEAD:fix/security-patch-r1-20261030
