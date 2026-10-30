@@ -32,11 +32,11 @@ requireText(
 requireText(
   rules,
   "function isPasswordFounderSession()",
-  'Rules não definem a sessão Google do fundador.'
+  'Rules não definem a sessão password do fundador.'
 );
 requireText(
   rules,
-  "return hasSignInProvider('google.com')",
+  "return hasSignInProvider('password')",
   'Fundador não está fixado no provider password.'
 );
 requireText(
