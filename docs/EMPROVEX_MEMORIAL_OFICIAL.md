@@ -4126,3 +4126,14 @@ O fundador executou \`C:\Users\marco\Downloads\publicar_emprovex_main_f024529.ps
 
 **Quem faz o quê:** ChatGPT/GitHub registra decisões, corrige código e executa CI quando solicitado; fundador executa publicações na equipe Vercel proprietária via PowerShell e atua no Admin. **Não solicitar chaves secretas, não publicar Rules por inércia e não repetir deploy/promote da R4.**
 
+
+
+## BIL-ANV-R2 — Aniversário mensal confirmado (29/10/2026)
+
+**Decisão aprovada:** o EMPROVEX usa o modelo de aniversário mensal para novas contratações. A primeira mensalidade começa com a confirmação integral do pagamento (pagamento único ou última cota compartilhada), não com a data provisória do cadastro ou do término do teste. As renovações ocorrem na mesma data de aniversário, com tolerância de **10 dias corridos**, exclusivamente quando a mensalidade anterior foi quitada. O pagamento de renovação realizado durante a tolerância **não desloca** o aniversário. A mensalidade equivale a um mês de calendário, não a 30 dias fixos. Datas visíveis em Brasília.
+
+**Contratos históricos:** datas já registradas, isenções, VIPs e fundador são preservados, sem migração retroativa. A política nova é identificada por `billingPeriodPolicy='payment_anniversary_v2'`. Conciliação idempotente na InfinitePay; faturas e rateios pendentes são fixados na competência original mesmo se cruzarem meses. Nada muda na conta de login ou permissões do workspace.
+
+**Fonte de verdade:** `lib/billing.ts`, `lib/billingAccess.ts`, `lib/server/platformBillingAdminStore.ts`, `lib/server/platformBillingSharedStore.ts`; interface `components/billing/BillingAnniversaryCard.tsx`; Termos §4.2; testes `scripts/billing-payment-anniversary.test.mjs`. Memorial operacional detalhado em `docs/commerce/billing-shared-monthly-r1.md`.
+
+**Implementação em revisão:** branch `feat/billing-shared-monthly-r1-20261029`, PR #415. **Sem merge/deploy/ativação de cobrança compartilhada automática** até homologação financeira completa e conclusão do CI. `EMPROVEX_SHARED_BILLING_ENABLED` permanece desativado por padrão.
