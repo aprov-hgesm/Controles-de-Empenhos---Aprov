@@ -711,6 +711,7 @@ export async function readSectorBillingAccess(workspaceId: string, email: string
         || (cycleDoc?.value as BillingCycle | undefined)?.status === 'waived')
         ? period.endsAt : period.startsAt : null,
     renewalGraceUntil: account && period && period.periodNumber > 1
+      && !['paid','waived'].includes((cycleDoc?.value as BillingCycle | undefined)?.status || '')
       && previousCycleDoc && ['paid','waived'].includes((previousCycleDoc.value as BillingCycle).status)
       ? new Date(new Date(period.startsAt).getTime() +
           renewalGraceDaysForAccount(account, configDoc?.value?.gracePeriodDays || 0) * 86400000).toISOString() : null,
