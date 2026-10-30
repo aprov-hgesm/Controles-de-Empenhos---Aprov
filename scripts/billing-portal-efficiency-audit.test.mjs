@@ -13,7 +13,7 @@ const code = ts.transpileModule(portalSource, {
 }).outputText;
 
 function harness({ status = 'active', authorized = true, delayMs = 0 } = {}) {
-  const stats = { directoryResolutions: 0, privilegedHistoryQueries: 0, providerCalls: 0 };
+  const stats = { directoryResolutions: 0, privilegedHistoryQueries: 0, providerCalls: 0, sharedQueries: 0 };
   const ledger = [{ referenceMonth: '2026-10', amountCents: 7000, dueDate: '2026-10-30', status: 'pending' }];
   const dependencies = {
     'node:crypto': { timingSafeEqual },
@@ -25,6 +25,18 @@ function harness({ status = 'active', authorized = true, delayMs = 0 } = {}) {
       createSectorSubscriptionCheckout() { throw Error('checkout must not run in this test'); },
       reconcileSectorSubscriptionPayment() { throw Error('payment must not run in this test'); },
       reconcileInfinitePayWebhook() { throw Error('webhook must not run in this test'); },
+    },
+    '../../../../lib/server/platformBillingSharedStore': {
+      async readSectorSharedPayment(workspaceId, email) {
+        stats.sharedQueries++;
+        assert.equal(workspaceId, 'workspace-a');
+        assert.equal(email, 'a@example.com');
+        return { enabled: false, eligible: false, shared: null, amountCents: 0 };
+      },
+      configureSectorSharedPayment() { throw Error('shared configuration not under test'); },
+      createSectorSharedCheckout() { throw Error('shared checkout must not run in read tests'); },
+      reconcileSharedOrFullReturn() { throw Error('payment must not run in read tests'); },
+      reconcileSharedOrFullWebhook() { throw Error('webhook must not run in read tests'); },
     },
     'next/server': {
       NextResponse: {
@@ -91,6 +103,17 @@ test('payments tab never launches the privileged Firestore billing-cycle query',
   assert.deepEqual(Array.from(response.body.history.cycles), []);
   assert.equal(response.body.pilot.enabled, false);
   assert.equal(stats.directoryResolutions, 1);
+  assert.equal(stats.privilegedHistoryQueries, 0);
+  assert.equal(stats.sharedQueries, 0);
+  assert.equal(stats.providerCalls, 0);
+});
+
+test('shared view stays workspace-bound and never queries the history ledger', async () => {
+  const { handler, stats } = harness();
+  const response = await handler.GET(new Request('https://emprovex.com.br/api/billing/portal?view=shared'));
+  assert.equal(response.status, 200);
+  assert.equal(response.body.enabled, false);
+  assert.equal(stats.sharedQueries, 1);
   assert.equal(stats.privilegedHistoryQueries, 0);
   assert.equal(stats.providerCalls, 0);
 });

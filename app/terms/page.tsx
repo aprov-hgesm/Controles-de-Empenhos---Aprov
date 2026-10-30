@@ -14,7 +14,7 @@ export default function TermsPage() {
       eyebrow="Condições de utilização"
       title="Termos de Serviço"
       description="Estes Termos estabelecem as condições para utilização do EMPROVEX como serviço por usuários e workspaces previamente autorizados."
-      updatedAt="27 de outubro de 2026"
+      updatedAt="29 de outubro de 2026"
       version={CURRENT_LEGAL_BUNDLE.termsVersion}
     >
       <LegalSection title="1. Aceitação e versão dos Termos">
@@ -93,6 +93,67 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="4.1. Pagamento compartilhado e taxa de divisão">
+        <p>
+          Opcionalmente, o setor poderá dividir o pagamento de uma mesma competência entre
+          dois ou mais participantes identificados pelo responsável pela conta. A modalidade
+          não cria contas, perfis, workspaces, licenças ou assinaturas adicionais: o acesso
+          ao EMPROVEX continua vinculado à mesma conta e ao mesmo setor contratado.
+        </p>
+        <p>
+          Todas as cotas terão o mesmo valor, calculado pela divisão da mensalidade pela
+          quantidade de participantes e <strong>arredondamento de cada cota para cima,
+          até o próximo centavo</strong>. A eventual diferença entre a soma das cotas e
+          a mensalidade original constitui uma <strong>taxa de divisão por arredondamento</strong>
+          do EMPROVEX, não uma tarifa bancária ou taxa cobrada pela InfinitePay.
+          O valor da taxa, o valor individual, o total a pagar e a quantidade de cotas
+          serão exibidos antes do aceite e da emissão das cobranças.
+        </p>
+        <p>
+          O rateio fica fixado para a competência e cada cota é cobrada uma única vez
+          por link próprio. Os links podem ser encaminhados aos integrantes sem compartilhar
+          credenciais de acesso. Qualquer integrante poderá assumir voluntariamente uma
+          cota ainda pendente. O setor é responsável pela quitação de todas as cotas;
+          pagamentos parciais não constituem quitação integral da mensalidade.
+          Continuam aplicáveis as regras de vencimento e tolerância do contrato,
+          sem bloqueio antecipado exclusivamente pela opção de rateio.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="4.2. Início do período pago, aniversário e renovação">
+        <p>
+          Nos novos contratos sujeitos à modalidade de <strong>aniversário mensal por pagamento
+          confirmado</strong>, o primeiro período pago começa na data e hora em que o
+          EMPROVEX confirmar a primeira mensalidade integral. No pagamento compartilhado,
+          a ativação começa apenas depois de verificada a última cota. O período coberto
+          corresponde a <strong>um mês de calendário</strong>, não necessariamente a
+          trinta dias exatos.
+        </p>
+        <p>
+          As renovações seguintes ocorrem a cada mês na data de aniversário fixada na
+          primeira quitação. Em meses sem o mesmo dia, o aniversário ocorre no último
+          dia do mês correspondente. A cobrança de renovação não muda o aniversário
+          caso o cliente pague durante o prazo de tolerância.
+        </p>
+        <p>
+          Para as renovações de períodos anteriormente quitados, aplica-se
+          <strong>tolerância de dez dias corridos após o aniversário</strong> para
+          regularizar a nova competência. Essa tolerância não constitui um mês
+          gratuito adicional e não se aplica à primeira ativação paga. Após seu
+          encerramento sem quitação, as funcionalidades operacionais sujeitas ao
+          controle financeiro poderão ser restringidas; os dados permanecem
+          preservados conforme estes Termos.
+        </p>
+        <p>
+          Quando uma primeira mensalidade for quitada depois da data inicialmente
+          estimada no cadastro, o aniversário será fixado pela confirmação real do
+          pagamento, sem perda dos dias anteriores à ativação. Contratos preexistentes
+          mantêm suas datas e condições anteriores, sem reancoragem retroativa.
+          A plataforma informará em Minha Assinatura as datas de uso, renovação
+          e eventual tolerância aplicáveis.
+        </p>
+      </LegalSection>
+
       <LegalSection title="5. Contas, credenciais e acesso">
         <p>
           A Organização Militar é a entidade institucional a que o setor está vinculado; o
@@ -100,12 +161,16 @@ export default function TermsPage() {
           <strong>conta contratante</strong> representa a contratação e suas obrigações financeiras;
           e o <strong>usuário autorizado</strong> é a pessoa credenciada a atuar no ambiente, segundo
           o perfil e o vínculo institucional aplicáveis. Esses conceitos não são intercambiáveis.
-          Cada usuário deve proteger suas credenciais e não compartilhar senhas ou tokens.
+          Quando a contratação adotar uma conta setorial compartilhada, seu uso fica
+          restrito aos integrantes expressamente autorizados pelo mesmo setor, observados
+          os limites de sessões e as regras de segurança da plataforma. A conta e suas
+          credenciais não podem ser entregues a pessoas externas ou não autorizadas.
         </p>
         <p>
-          Cada usuário deve atuar somente no workspace e na Unidade Gestora a que estiver autorizado.
-          É proibido utilizar credenciais alheias, explorar falhas de autorização, alterar registros sem
-          permissão ou consultar dados de outro setor. Direitos sobre dados próprios não afastam
+          Cada integrante autorizado deve atuar somente no workspace e na Unidade Gestora
+          a que estiver vinculado. É proibido utilizar credenciais de outros setores sem
+          autorização, explorar falhas de autorização, alterar registros sem permissão ou
+          consultar dados de outra Organização Militar. Direitos sobre dados próprios não afastam
           autenticação, sigilo, integridade ou segregação entre organizações.
         </p>
       </LegalSection>

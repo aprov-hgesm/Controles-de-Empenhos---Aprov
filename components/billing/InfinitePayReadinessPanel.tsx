@@ -13,6 +13,8 @@ import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBilling
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 import { InfinitePayPilotPanel, type PilotReturnParams } from './InfinitePayPilotPanel';
+import { SharedBillingPanel } from './SharedBillingPanel';
+import { BillingAnniversaryCard, type BillingPeriodTimeline } from './BillingAnniversaryCard';
 import type { BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 function money(cents: number) {
@@ -96,9 +98,13 @@ export function InfinitePayReadinessPanel({
   const [realCheckoutUrl, setRealCheckoutUrl] = useState('');
   const [realCheckoutAmount, setRealCheckoutAmount] = useState<number | null>(null);
   const [currentQuotedCents, setCurrentQuotedCents] = useState<number | null>(null);
+  const [billingTimeline, setBillingTimeline] = useState<BillingPeriodTimeline | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
+  const [sharedConfigured, setSharedConfigured] = useState(false);
+  const [sharedRefreshToken, setSharedRefreshToken] = useState(0);
+  const [sharedReturnConfirmed, setSharedReturnConfirmed] = useState(false);
   const [checkoutPendingReview, setCheckoutPendingReview] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
   // Live individual quote, not the last persisted account amount or the
@@ -107,6 +113,7 @@ export function InfinitePayReadinessPanel({
   useEffect(() => {
     if (context.status !== 'sector' || !auth.currentUser) {
       setCurrentQuotedCents(null);
+      setBillingTimeline(null);
       return;
     }
     let active = true;
@@ -116,13 +123,14 @@ export function InfinitePayReadinessPanel({
       }),
     ).then(async response => {
       if (!response.ok) return;
-      const data = await response.json() as { amountCents?: number };
+      const data = await response.json() as BillingPeriodTimeline & { amountCents?: number };
+      if (active) setBillingTimeline(data);
       if (active && Number.isSafeInteger(data.amountCents) && (data.amountCents ?? 0) >= 0)
         setCurrentQuotedCents(data.amountCents!);
     }).catch(() => undefined);
     return () => { active = false; };
   }, [context.status, context.status === 'sector' ? context.workspaceId : null,
-      account?.monthlyPriceCents, activeTab]);
+      account?.monthlyPriceCents, activeTab, sharedRefreshToken]);
 
 
   useEffect(() => {
@@ -227,13 +235,19 @@ export function InfinitePayReadinessPanel({
           headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
           body: JSON.stringify(returnParams), cache: 'no-store',
         });
-        const data = await response.json() as { verified?: boolean; code?: string };
+        const data = await response.json() as { verified?: boolean; code?: string; fullyPaid?: boolean };
         if (!active) return;
         if (!response.ok || !data.verified) {
           setCheckoutError('Pagamento ainda não confirmado pelo servidor. Confira a InfinitePay e evite pagar duas vezes.');
           return;
         }
-        setCheckoutConfirmed(true);
+        if (data.fullyPaid === false) {
+          setSharedReturnConfirmed(true);
+          setSharedRefreshToken(v => v + 1);
+        } else {
+          setCheckoutConfirmed(true);
+          setSharedRefreshToken(v => v + 1);
+        }
       } catch {
         if (active) setCheckoutError('Não foi possível confirmar o pagamento. Não faça outro Pix até conferir a transação.');
       }
@@ -345,6 +359,7 @@ export function InfinitePayReadinessPanel({
         )}
 
 
+        <BillingAnniversaryCard period={billingTimeline} />
         <section className="mt-4 rounded-2xl border border-emerald-100 bg-white p-5"
           data-testid="billing-full-plan-benefits">
           <h3 className="text-sm font-extrabold text-emerald-800">Condições do Plano Completo EMPROVEX</h3>
@@ -423,6 +438,11 @@ export function InfinitePayReadinessPanel({
               a partir do mês 13 R$ 69,90/mês.
               A contagem é por competência do setor, a partir do primeiro mês pago após o período
               gratuito, quando concedido. Não há débito recorrente automático.
+              Para novas contratações, o primeiro mês pago começa com a confirmação
+              do pagamento integral pela InfinitePay ou da última cota no rateio.
+              A renovação ocorre no mesmo aniversário a cada mês de calendário,
+              com tolerância de 10 dias corridos apenas nas renovações de meses
+              anteriores quitados. Pagar na tolerância não altera o aniversário.
               Consulte os <a href="/terms" target="_blank" rel="noreferrer" className="font-bold underline">
               Termos de Serviço</a> e a <a href="/privacy" target="_blank" rel="noreferrer" className="font-bold underline">
               Política de Privacidade</a> antes de confirmar. Este aceite financeiro não substitui o
@@ -443,7 +463,23 @@ export function InfinitePayReadinessPanel({
         )}
 
 
-      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt' && (
+      {activeTab === 'payments' && workspaceResolved && (
+        <BillingAnniversaryCard period={billingTimeline} />
+      )}
+      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt'
+        && account?.pricingTermsAcceptedAt && status === 'authenticated' && (
+        <SharedBillingPanel
+          workspaceId={context.status === 'sector' ? context.workspaceId : ''}
+          onConfiguredChange={setSharedConfigured} refreshToken={sharedRefreshToken}
+        />
+      )}
+      {activeTab === 'payments' && sharedReturnConfirmed && (
+        <p role="status" className="mt-3 rounded-xl bg-sky-50 p-3 text-xs font-semibold text-sky-900">
+          Cota verificada pelo servidor. A mensalidade será quitada quando todas as cotas forem pagas.
+        </p>
+      )}
+
+      {activeTab === 'payments' && workspaceResolved && !sharedConfigured && account?.status !== 'exempt' && (
         <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
           data-testid="billing-real-checkout">
           <h3 className="font-extrabold text-slate-900">Pagar minha mensalidade</h3>

@@ -42,6 +42,9 @@ export interface PlatformBillingConfig {
   updatedBy: string;
 }
 
+/** New contracts use actual payment confirmation as their first paid anniversary. */
+export const PAYMENT_ANNIVERSARY_POLICY = 'payment_anniversary_v2' as const;
+
 export interface BillingAccount {
   version: typeof EMPROVEX_BILLING_VERSION;
   workspaceId: string;
@@ -58,6 +61,16 @@ export interface BillingAccount {
   firstPaidReferenceMonth?: string;
   /** Anniversary timestamp for each complete monthly service period. */
   firstPaidAt?: string;
+  /** Opt-in by NEW contract creation only; historical contract dates remain immutable. */
+  billingPeriodPolicy?: typeof PAYMENT_ANNIVERSARY_POLICY;
+  /** Filled only on first verified FULL payment or last verified shared share. */
+  firstPaymentConfirmedAt?: string;
+  /** Original provider order month; can differ if first payment is late across months. */
+  firstPaymentCycleReferenceMonth?: string;
+  /** Prevents generating another initial invoice when the original link crosses a month. */
+  pendingInitialCycleReferenceMonth?: string;
+  /** Pending shared instalments remain bound to their original frozen cycle. */
+  pendingSharedCycleReferenceMonth?: string;
   lastBilledReferenceMonth?: string;
   /** One temporary 48h return to operations per reference month. */
   grace48ReferenceMonth?: string;
@@ -77,6 +90,33 @@ export interface BillingAccount {
   updatedBy: string;
 }
 
+export interface SharedBillingPart {
+  number: number;
+  name: string;
+  amountCents: number;
+  status: 'open' | 'paid';
+  orderNsu?: string;
+  checkoutState?: 'prepared' | 'dispatching' | 'linked' | 'settled';
+  checkoutUrl?: string;
+  checkoutValidUntil?: string;
+  paidAt?: string;
+  ledgerId?: string;
+}
+export interface SharedBillingPayment {
+  version: 'shared_v1';
+  termsVersion: string;
+  acceptedAt: string;
+  amountCents: number;
+  count: number;
+  partAmountCents: number;
+  totalCents: number;
+  feeCents: number;
+  paidCount?: number;
+  paidCents?: number;
+  fullyPaid?: boolean;
+  parts: SharedBillingPart[];
+}
+
 export interface BillingCycle {
   version: typeof EMPROVEX_BILLING_VERSION;
   id: string;
@@ -87,6 +127,7 @@ export interface BillingCycle {
   dueDate: string;
   status: BillingCycleStatus;
   /** Deterministic provider intent persisted before the outbound checkout call. */
+  sharedPayment?: SharedBillingPayment;
   checkoutOrderNsu?: string;
   checkoutUrl?: string;
   checkoutValidUntil?: string;
@@ -154,6 +195,17 @@ export function getReferenceMonth(value: string | Date = new Date()): string {
   return formatUtcDateOnly(value).slice(0, 7);
 }
 
+/** Legal billing dates shown to Brazilian clients follow Sao Paulo local time. */
+export function billingBrazilDateOnly(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error('BILLING_DATE_INVALID');
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const getPart = (name: string) => parts.find(part => part.type === name)?.value || '';
+  return getPart('year') + '-' + getPart('month') + '-' + getPart('day');
+}
+
 /** Monthly service anniversaries clamp at month end (Jan 31 -> Feb 28).
  * The reference month belongs to the PERIOD START, not the calendar month of access.
  * Never moves a customer's first paid month earlier on a trial extension.
@@ -169,6 +221,88 @@ export function billingAnniversary(start: string | Date, months: number): Date {
   return base;
 }
 
+/**
+ * Calendar-month anniversary in Brazilian civil time. UTC instants near midnight
+ * can belong to the preceding Brazilian day; never derive the billing day from UTC.
+ * Legacy billingAnniversary deliberately remains untouched.
+ */
+export function billingBrazilAnniversary(start: string | Date, months: number): Date {
+  const initial = new Date(start);
+  if (!Number.isFinite(initial.getTime()) || !Number.isSafeInteger(months)
+    || months < 0 || months > 600) throw new Error('BILLING_ANNIVERSARY_INVALID');
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = (date: Date) => {
+    const tokens = formatter.formatToParts(date);
+    const number = (type: string) => Number(tokens.find(part => part.type === type)?.value);
+    return { year: number('year'), month: number('month'), day: number('day'),
+      hour: number('hour'), minute: number('minute'), second: number('second') };
+  };
+  const origin = parts(initial);
+  const first = new Date(Date.UTC(origin.year, origin.month - 1 + months, 1));
+  const targetYear = first.getUTCFullYear();
+  const targetMonth = first.getUTCMonth();
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const localUtc = Date.UTC(targetYear, targetMonth, Math.min(origin.day, lastDay),
+    origin.hour, origin.minute, origin.second, initial.getUTCMilliseconds());
+  // Iteratively convert the requested local wall clock to an absolute instant.
+  let candidate = new Date(localUtc);
+  for (let i = 0; i < 3; i += 1) {
+    const local = parts(candidate);
+    const observed = Date.UTC(local.year, local.month - 1, local.day,
+      local.hour, local.minute, local.second, candidate.getUTCMilliseconds());
+    const shift = localUtc - observed;
+    if (shift === 0) break;
+    candidate = new Date(candidate.getTime() + shift);
+  }
+  return candidate;
+}
+
+/** Preserve historical cycle IDs when an initial payment is made in a later month. */
+export function billingCycleReferenceForPeriod(
+  account: BillingAccount, period: PaidServicePeriod,
+): string {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    && account.firstPaymentConfirmedAt && period.periodNumber === 1
+    && account.firstPaymentCycleReferenceMonth
+    ? account.firstPaymentCycleReferenceMonth : period.referenceMonth;
+}
+
+/** The new payment-anniversary contract has exactly ten calendar grace days on renewal. */
+export function renewalGraceDaysForAccount(account: BillingAccount, configuredDays: number): number {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY ? 10 : configuredDays;
+}
+
+export function billingFirstPaymentPending(account: BillingAccount): boolean {
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    && !account.firstPaymentConfirmedAt;
+}
+
+/** First invoice remains month ONE even if the customer pays months after trial. */
+export function billingRampStartMonth(account: BillingAccount, referenceMonth: string): string {
+  return billingFirstPaymentPending(account) ? referenceMonth
+    : account.firstPaidReferenceMonth || referenceMonth;
+}
+
+/** Idempotent; does not reanchor renewals or modify older contracts. */
+export function settleFirstPaymentAnniversary(
+  account: BillingAccount, cycleReferenceMonth: string, verifiedAt: string,
+): BillingAccount {
+  if (!billingFirstPaymentPending(account)) return account;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(cycleReferenceMonth)
+    || !Number.isFinite(Date.parse(verifiedAt))) throw new Error('BILLING_ANNIVERSARY_INVALID');
+  return {
+    ...account,
+    firstPaidAt: verifiedAt,
+    firstPaidReferenceMonth: billingBrazilDateOnly(verifiedAt).slice(0, 7),
+    firstPaymentCycleReferenceMonth: cycleReferenceMonth,
+    firstPaymentConfirmedAt: verifiedAt,
+  };
+}
+
 export interface PaidServicePeriod {
   referenceMonth: string;
   periodNumber: number;
@@ -176,7 +310,8 @@ export interface PaidServicePeriod {
   endsAt: string;
 }
 export function paidServicePeriod(
-  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>,
+  account: Pick<BillingAccount,'firstPaidAt'|'firstPaidReferenceMonth'>
+    & Partial<Pick<BillingAccount,'billingPeriodPolicy'>>,
   now: Date = new Date(),
 ): PaidServicePeriod | null {
   const start = account.firstPaidAt
@@ -184,17 +319,25 @@ export function paidServicePeriod(
   if (!start) return null;
   const first = new Date(start);
   if (!Number.isFinite(first.getTime()) || now < first) return null;
-  const monthsApart = (now.getUTCFullYear() - first.getUTCFullYear()) * 12
-    + now.getUTCMonth() - first.getUTCMonth();
-  let periodIndex = Math.max(0, monthsApart);
-  if (billingAnniversary(first, periodIndex) > now) periodIndex -= 1;
+  const brazil = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY;
+  const firstMonth = brazil ? billingBrazilDateOnly(first).slice(0, 7)
+    : getReferenceMonth(first);
+  const currentMonth = brazil ? billingBrazilDateOnly(now).slice(0, 7)
+    : getReferenceMonth(now);
+  const [firstYear, firstM] = firstMonth.split('-').map(Number);
+  const [currentYear, currentM] = currentMonth.split('-').map(Number);
+  let periodIndex = Math.max(0, (currentYear - firstYear) * 12 + currentM - firstM);
+  const anniversary = (index: number) => brazil
+    ? billingBrazilAnniversary(first, index) : billingAnniversary(first, index);
+  if (anniversary(periodIndex) > now) periodIndex -= 1;
   if (periodIndex < 0) return null;
-  const begin = billingAnniversary(first, periodIndex);
+  const begin = anniversary(periodIndex);
   return {
-    referenceMonth: getReferenceMonth(begin),
+    referenceMonth: brazil ? billingBrazilDateOnly(begin).slice(0, 7)
+      : getReferenceMonth(begin),
     periodNumber: periodIndex + 1,
     startsAt: begin.toISOString(),
-    endsAt: billingAnniversary(first, periodIndex + 1).toISOString(),
+    endsAt: anniversary(periodIndex + 1).toISOString(),
   };
 }
 
@@ -350,8 +493,9 @@ export function buildInitialBillingAccount(
     monthlyPriceCents: isFounder ? 0 : rampForNewCustomer
       ? EMPROVEX_NEW_CUSTOMER_START_CENTS : DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
     ...(rampForNewCustomer ? {
+      billingPeriodPolicy: PAYMENT_ANNIVERSARY_POLICY,
       pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
-      firstPaidReferenceMonth: getReferenceMonth(referenceStart),
+      firstPaidReferenceMonth: billingBrazilDateOnly(referenceStart).slice(0, 7),
       firstPaidAt: referenceStart.toISOString(),
       pricingTermsAcceptedAt: '',
     } : {}),
@@ -509,7 +653,11 @@ export function buildBillingCycle(
   actorEmail: string,
   now: string = new Date().toISOString()
 ): BillingCycle {
-  const dueDate = getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const provisionalPeriod = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? paidServicePeriod(account, new Date(now)) : null;
+  const dueDate = provisionalPeriod?.referenceMonth === referenceMonth
+    ? billingBrazilDateOnly(billingFirstPaymentPending(account) ? now : provisionalPeriod.startsAt)
+    : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   return {
     version: EMPROVEX_BILLING_VERSION,
     id: billingCycleId(account.workspaceId, referenceMonth),
@@ -546,13 +694,16 @@ export function getBillingAttention(
   const period = account.pricingPolicyId === EMPROVEX_NEW_CUSTOMER_RAMP_ID
     ? paidServicePeriod(account, new Date(now)) : null;
   const referenceMonth = period?.referenceMonth || getReferenceMonth(now);
-  const dueDate = period?.startsAt.slice(0, 10)
-    || getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
+  const dueDate = period
+    ? account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+      ? billingBrazilDateOnly(period.startsAt) : period.startsAt.slice(0, 10)
+    : getDueDateForReferenceMonth(referenceMonth, config.holidayDates);
   const graceEndsAt = getGraceEndsAt(dueDate, config.gracePeriodDays);
-  const today = formatUtcDateOnly(now);
+  const today = account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? billingBrazilDateOnly(now) : formatUtcDateOnly(now);
   const currentCycle = cycles.find(
     (cycle) => cycle.workspaceId === account.workspaceId
-      && cycle.referenceMonth === referenceMonth
+      && cycle.referenceMonth === (period ? billingCycleReferenceForPeriod(account, period) : referenceMonth)
   ) || null;
   const trialExpired = isTrialExpired(account, now);
   const trialDaysRemaining = calculateTrialDaysRemaining(account, now);
