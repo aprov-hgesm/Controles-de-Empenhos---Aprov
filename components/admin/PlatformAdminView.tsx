@@ -47,6 +47,12 @@ const AdminWorldHomePanel = lazy(() =>
 const AdminCreateSectorPanel = lazy(() =>
   import('./AdminCreateSectorPanel').then((module) => ({ default: module.AdminCreateSectorPanel }))
 );
+const AdminCreateCompanyPanel = lazy(() =>
+  import('./AdminCreateCompanyPanel').then((module) => ({ default: module.AdminCreateCompanyPanel }))
+);
+const AdminCompaniesPanel = lazy(() =>
+  import('./AdminCompaniesPanel').then((module) => ({ default: module.AdminCompaniesPanel }))
+);
 const AdminSecurityPanel = lazy(() =>
   import('./AdminSecurityPanel').then((module) => ({ default: module.AdminSecurityPanel }))
 );
@@ -78,6 +84,7 @@ import type {
   GoogleMonitoringCredentialSource,
 } from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
+import { usePlatformAdminCompanies } from '../../hooks/usePlatformAdminCompanies';
 import type {
   BillingAccount,
   BillingAccountStatus,
@@ -92,6 +99,8 @@ type AdminTabId =
   | 'overview'
   | 'setores'
   | 'novo-setor'
+  | 'empresas'
+  | 'nova-empresa'
   | 'interessados'
   | 'consumo'
   | 'sessoes'
@@ -122,6 +131,18 @@ const ADMIN_TABS = [
     id: 'novo-setor',
     label: 'Cadastrar Setor',
     description: 'Provisionamento completo de uma nova unidade operacional.',
+    icon: Plus,
+  },
+  {
+    id: 'empresas',
+    label: 'Empresas',
+    description: 'Diretório de clientes empresariais, responsáveis e acessos.',
+    icon: Building2,
+  },
+  {
+    id: 'nova-empresa',
+    label: 'Cadastrar Empresa',
+    description: 'Provisionamento seguro de uma nova empresa contratada.',
     icon: Plus,
   },
   {
@@ -173,7 +194,7 @@ const ADMIN_TABS = [
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
   { label: 'Central', tabs: ['inicio', 'overview'] },
-  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'interessados', 'assinaturas'] },
+  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'empresas', 'nova-empresa', 'interessados', 'assinaturas'] },
   { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
   { label: 'Governança', tabs: ['seguranca'] },
 ];
@@ -293,6 +314,7 @@ export function PlatformAdminView({
   const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
     ? 'overview'
     : requestedAdminTab;
+  const companiesDirectory = usePlatformAdminCompanies(adminUser, activeTab === 'empresas');
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -918,6 +940,27 @@ export function PlatformAdminView({
             disabled={!persistentDirectoryReady}
             onCreate={handleCreateSector}
             onCreated={() => changeAdminTab('setores')}
+          />
+        )}
+
+        {activeTab === 'empresas' && (
+          <AdminCompaniesPanel
+            companies={companiesDirectory.companies}
+            loading={companiesDirectory.loading}
+            error={companiesDirectory.error}
+            onRefresh={() => void companiesDirectory.refresh()}
+            onCreateRequested={() => changeAdminTab('nova-empresa')}
+          />
+        )}
+
+        {activeTab === 'nova-empresa' && (
+          <AdminCreateCompanyPanel
+            creating={companiesDirectory.creating}
+            onCreate={companiesDirectory.createCompany}
+            onCreated={(companyName) => {
+              showAdminToast('Empresa ' + companyName + ' cadastrada com sucesso.');
+              changeAdminTab('empresas');
+            }}
           />
         )}
 
