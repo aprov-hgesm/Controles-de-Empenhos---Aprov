@@ -13,6 +13,7 @@ import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBilling
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 import { InfinitePayPilotPanel, type PilotReturnParams } from './InfinitePayPilotPanel';
+import { SharedBillingPanel } from './SharedBillingPanel';
 import type { BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 function money(cents: number) {
@@ -99,6 +100,9 @@ export function InfinitePayReadinessPanel({
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
+  const [sharedConfigured, setSharedConfigured] = useState(false);
+  const [sharedRefreshToken, setSharedRefreshToken] = useState(0);
+  const [sharedReturnConfirmed, setSharedReturnConfirmed] = useState(false);
   const [checkoutPendingReview, setCheckoutPendingReview] = useState(false);
   const [returnParams, setReturnParams] = useState<PilotReturnParams | null>(null);
   // Live individual quote, not the last persisted account amount or the
@@ -227,13 +231,19 @@ export function InfinitePayReadinessPanel({
           headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
           body: JSON.stringify(returnParams), cache: 'no-store',
         });
-        const data = await response.json() as { verified?: boolean; code?: string };
+        const data = await response.json() as { verified?: boolean; code?: string; fullyPaid?: boolean };
         if (!active) return;
         if (!response.ok || !data.verified) {
           setCheckoutError('Pagamento ainda não confirmado pelo servidor. Confira a InfinitePay e evite pagar duas vezes.');
           return;
         }
-        setCheckoutConfirmed(true);
+        if (data.fullyPaid === false) {
+          setSharedReturnConfirmed(true);
+          setSharedRefreshToken(v => v + 1);
+        } else {
+          setCheckoutConfirmed(true);
+          setSharedRefreshToken(v => v + 1);
+        }
       } catch {
         if (active) setCheckoutError('Não foi possível confirmar o pagamento. Não faça outro Pix até conferir a transação.');
       }
@@ -443,7 +453,20 @@ export function InfinitePayReadinessPanel({
         )}
 
 
-      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt' && (
+      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt'
+        && account?.pricingTermsAcceptedAt && status === 'authenticated' && (
+        <SharedBillingPanel
+          workspaceId={context.status === 'sector' ? context.workspaceId : ''}
+          onConfiguredChange={setSharedConfigured} refreshToken={sharedRefreshToken}
+        />
+      )}
+      {activeTab === 'payments' && sharedReturnConfirmed && (
+        <p role="status" className="mt-3 rounded-xl bg-sky-50 p-3 text-xs font-semibold text-sky-900">
+          Cota verificada pelo servidor. A mensalidade será quitada quando todas as cotas forem pagas.
+        </p>
+      )}
+
+      {activeTab === 'payments' && workspaceResolved && !sharedConfigured && account?.status !== 'exempt' && (
         <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
           data-testid="billing-real-checkout">
           <h3 className="font-extrabold text-slate-900">Pagar minha mensalidade</h3>
