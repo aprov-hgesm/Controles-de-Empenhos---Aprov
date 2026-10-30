@@ -134,3 +134,35 @@ test('geração tardia da fatura de renovação preserva vencimento do aniversá
   assert.equal(cy.dueDate,'2026-11-05');
   assert.equal(billing.renewalGraceDaysForAccount(active,0),10);
 });
+
+test('pagamento às 22h30 do último dia mantém aniversário no calendário do Brasil', () => {
+  const paidAt='2026-11-01T01:30:00.000Z'; // 31/10 22h30 BRT
+  const first=billing.settleFirstPaymentAnniversary(account('2026-10-31T15:00:00Z'),
+    '2026-10',paidAt);
+  assert.equal(billing.billingBrazilDateOnly(first.firstPaidAt),'2026-10-31');
+  const october=billing.paidServicePeriod(first,new Date('2026-11-10T12:00:00Z'));
+  assert.equal(october.referenceMonth,'2026-10');
+  assert.equal(billing.billingBrazilDateOnly(october.endsAt),'2026-11-30');
+  assert.equal(october.endsAt,'2026-12-01T01:30:00.000Z');
+  const november=billing.paidServicePeriod(first,new Date('2026-12-01T02:00:00Z'));
+  assert.equal(november.periodNumber,2);
+  assert.equal(november.referenceMonth,'2026-11');
+  assert.equal(billing.billingBrazilDateOnly(november.startsAt),'2026-11-30');
+  assert.equal(billing.billingBrazilDateOnly(november.endsAt),'2026-12-31');
+  const december=billing.paidServicePeriod(first,new Date('2027-01-01T02:00:00Z'));
+  assert.equal(december.periodNumber,3);
+  assert.equal(december.referenceMonth,'2026-12');
+  assert.equal(billing.billingBrazilDateOnly(december.startsAt),'2026-12-31');
+  assert.equal(access.decideBillingAccess(first,cycle(first,'2026-10'),
+    new Date('2026-11-01T16:00:00Z'),null,10).reason,'paid');
+});
+test('meia-noite em Brasilia não transforma competência da assinatura em UTC', () => {
+  const first=billing.settleFirstPaymentAnniversary(account('2026-10-31T15:00:00Z'),
+    '2026-10','2026-11-01T02:59:59.000Z'); // 31/10, 23h59m59s BRT
+  assert.equal(first.firstPaidReferenceMonth,'2026-10');
+  assert.equal(billing.paidServicePeriod(first,new Date('2026-11-01T03:00:00Z')).referenceMonth,'2026-10');
+  const end=billing.paidServicePeriod(first,new Date('2026-11-10T16:00:00Z')).endsAt;
+  assert.equal(billing.billingBrazilDateOnly(end),'2026-11-30');
+  const next=billing.paidServicePeriod(first,new Date('2026-12-01T03:00:00Z'));
+  assert.equal(next.referenceMonth,'2026-11');
+});
