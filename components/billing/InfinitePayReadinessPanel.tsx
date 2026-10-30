@@ -14,6 +14,7 @@ import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccou
 import { inspectInfinitePayReturn } from '../../lib/billing/infinitepayReturnStatus.mjs';
 import { InfinitePayPilotPanel, type PilotReturnParams } from './InfinitePayPilotPanel';
 import { SharedBillingPanel } from './SharedBillingPanel';
+import { BillingAnniversaryCard, type BillingPeriodTimeline } from './BillingAnniversaryCard';
 import type { BillingPortalTab } from '../../lib/billing/billingPortalTabs';
 
 function money(cents: number) {
@@ -97,6 +98,7 @@ export function InfinitePayReadinessPanel({
   const [realCheckoutUrl, setRealCheckoutUrl] = useState('');
   const [realCheckoutAmount, setRealCheckoutAmount] = useState<number | null>(null);
   const [currentQuotedCents, setCurrentQuotedCents] = useState<number | null>(null);
+  const [billingTimeline, setBillingTimeline] = useState<BillingPeriodTimeline | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkoutConfirmed, setCheckoutConfirmed] = useState(false);
@@ -111,6 +113,7 @@ export function InfinitePayReadinessPanel({
   useEffect(() => {
     if (context.status !== 'sector' || !auth.currentUser) {
       setCurrentQuotedCents(null);
+      setBillingTimeline(null);
       return;
     }
     let active = true;
@@ -120,13 +123,14 @@ export function InfinitePayReadinessPanel({
       }),
     ).then(async response => {
       if (!response.ok) return;
-      const data = await response.json() as { amountCents?: number };
+      const data = await response.json() as BillingPeriodTimeline & { amountCents?: number };
+      if (active) setBillingTimeline(data);
       if (active && Number.isSafeInteger(data.amountCents) && (data.amountCents ?? 0) >= 0)
         setCurrentQuotedCents(data.amountCents!);
     }).catch(() => undefined);
     return () => { active = false; };
   }, [context.status, context.status === 'sector' ? context.workspaceId : null,
-      account?.monthlyPriceCents, activeTab]);
+      account?.monthlyPriceCents, activeTab, sharedRefreshToken]);
 
 
   useEffect(() => {
@@ -355,6 +359,7 @@ export function InfinitePayReadinessPanel({
         )}
 
 
+        <BillingAnniversaryCard period={billingTimeline} />
         <section className="mt-4 rounded-2xl border border-emerald-100 bg-white p-5"
           data-testid="billing-full-plan-benefits">
           <h3 className="text-sm font-extrabold text-emerald-800">Condições do Plano Completo EMPROVEX</h3>
@@ -453,6 +458,9 @@ export function InfinitePayReadinessPanel({
         )}
 
 
+      {activeTab === 'payments' && workspaceResolved && (
+        <BillingAnniversaryCard period={billingTimeline} />
+      )}
       {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt'
         && account?.pricingTermsAcceptedAt && status === 'authenticated' && (
         <SharedBillingPanel
