@@ -20,6 +20,10 @@ export interface CreateCompanyWorkspaceInput {
   cnpj: string;
   responsibleName: string;
   authorizedEmail: string;
+  companyEmail?: string;
+  postalCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
   initialPassword: string;
   phone?: string;
   whatsapp?: string;
@@ -68,6 +72,10 @@ export function parseCompanyProvisioningInput(value: unknown): CreateCompanyWork
     cnpj: required('cnpj'),
     responsibleName: required('responsibleName'),
     authorizedEmail: required('authorizedEmail'),
+    companyEmail: optional('companyEmail'),
+    postalCode: optional('postalCode'),
+    addressNumber: optional('addressNumber'),
+    addressComplement: optional('addressComplement'),
     initialPassword: required('initialPassword'),
     phone: optional('phone'),
     whatsapp: optional('whatsapp'),
@@ -87,6 +95,8 @@ export function validateCompanyProvisioningInput(input: CreateCompanyWorkspaceIn
   if (!input.responsibleName.trim()) errors.push('Informe o responsável principal.');
   if (!isValidCompanyCnpj(input.cnpj)) errors.push('CNPJ inválido.');
   if (!isValidPlatformEmail(input.authorizedEmail)) errors.push('E-mail empresarial inválido.');
+  if (input.companyEmail?.trim() && !isValidPlatformEmail(input.companyEmail)) errors.push('E-mail comercial inválido.');
+  if (input.postalCode?.trim() && !/^\d{8}$/.test(input.postalCode.replace(/\D/g, ''))) errors.push('CEP inválido.');
   if (!input.city.trim()) errors.push('Informe a cidade da empresa.');
   if (!/^[A-Z]{2}$/.test(input.state.trim().toUpperCase())) errors.push('UF inválida.');
   if (input.initialPassword.length < MIN_COMPANY_PASSWORD_LENGTH
@@ -118,6 +128,10 @@ export function buildProvisionedCompanyRecords(
     cnpj: normalizeCompanyCnpj(input.cnpj),
     responsibleName: input.responsibleName.trim(),
     accessEmail: authorizedEmail,
+    ...(input.companyEmail?.trim() ? { companyEmail: normalizePlatformEmail(input.companyEmail) } : {}),
+    ...(input.postalCode?.trim() ? { postalCode: input.postalCode.replace(/\D/g, '') } : {}),
+    ...(input.addressNumber?.trim() ? { addressNumber: input.addressNumber.trim() } : {}),
+    ...(input.addressComplement?.trim() ? { addressComplement: input.addressComplement.trim() } : {}),
     ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
     ...(input.whatsapp?.trim() ? { whatsapp: input.whatsapp.trim() } : {}),
     ...(input.address?.trim() ? { address: input.address.trim() } : {}),
