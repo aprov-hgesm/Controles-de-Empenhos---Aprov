@@ -437,7 +437,7 @@ export async function mutateBillingAdmin(actor: Actor, command: Mutation): Promi
         pricingPolicyId: EMPROVEX_NEW_CUSTOMER_RAMP_ID,
         pricingTermsAcceptedAt: '',
         billingPeriodPolicy: PAYMENT_ANNIVERSARY_POLICY,
-        firstPaidAt: start, firstPaidReferenceMonth: getReferenceMonth(start),
+        firstPaidAt: start, firstPaidReferenceMonth: billingBrazilDateOnly(start).slice(0, 7),
         monthlyPriceCents: 2990, updatedAt: now, updatedBy: actor.email };
       return { result: updated, updates: [
         { path: accountPath, data: updated },
@@ -653,7 +653,10 @@ function previousServiceReference(account: BillingAccount): string | null {
     || (account.firstPaidReferenceMonth ? account.firstPaidReferenceMonth + '-01T00:00:00Z' : '');
   if (period.periodNumber === 2 && account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
     && account.firstPaymentCycleReferenceMonth) return account.firstPaymentCycleReferenceMonth;
-  return first ? getReferenceMonth(billingAnniversary(first, period.periodNumber - 2)) : null;
+  if (!first) return null;
+  const priorStart = billingAnniversary(first, period.periodNumber - 2);
+  return account.billingPeriodPolicy === PAYMENT_ANNIVERSARY_POLICY
+    ? billingBrazilDateOnly(priorStart).slice(0, 7) : getReferenceMonth(priorStart);
 }
 
 /** An entitlement check is never a write or a client-chosen month/amount. */
