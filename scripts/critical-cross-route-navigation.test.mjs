@@ -6,13 +6,26 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
+
+test('P0: Central de Empenhos e a rota canonica, com alias legado sem segundo gate', () => {
+  const canonical = read('app/central-empenhos/page.tsx');
+  const nextConfig = read('next.config.ts');
+  const operational = read('app/login/page.tsx');
+  assert.match(canonical, /export \{ default \} from '\.\.\/login\/page'/);
+  assert.match(nextConfig, /source:\s*'\/login',\s*destination:\s*'\/central-empenhos',\s*permanent:\s*false/);
+  assert.match(nextConfig, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
+  assert.match(operational, /checkSectorBillingAccess/);
+  assert.match(operational, /billingAccessIdentity === currentBillingIdentity/);
+  assert.match(operational, /showBillingRequired/);
+});
+
 test('P0: Administração e assinatura carregam a rota ao primeiro clique', () => {
   const header = read('components/layout/AppHeader.tsx');
   assert.match(header, /setActiveProfileMode\('platformAdmin'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.assign\('\/admin'\)/);
   assert.match(header, /window\.location\.assign\('\/regularizacao'\)/);
   assert.doesNotMatch(header, /router\.(?:push|replace)\(/);
   const admin = read('components/admin/PlatformAdminView.tsx');
-  assert.match(admin, /setActiveProfileMode\('sector'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.replace\('\/login'\)/);
+  assert.match(admin, /setActiveProfileMode\('sector'\);\s*(?:\/\/[^\n]*\n\s*)*window\.location\.replace\('\/central-empenhos'\)/);
   assert.doesNotMatch(admin, /router\.(?:push|replace)\(/);
   // A opção Essencial introduziu um destino local efetivo (inicio -> overview).
   // Continuar exigindo setState local, sem router RSC para cada aba.
@@ -29,15 +42,15 @@ test('P0: links entre áreas são navegações de documento, não transições t
     assert.match(source, /<a(?:\s|>)/);
     assert.doesNotMatch(source, /<\/a(?=\r?\n)/, 'Âncoras devem fechar com >.');
   }
-  assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/login"/);
+  assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/central-empenhos"/);
   assert.match(read('features/warehouse/components/WarehouseSidebar.tsx'), /href="\/operador-movel"/);
   assert.match(read('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/operador-movel"/);
   const billingShell = read('components/billing/BillingPortalShell.tsx');
   const returnButton = read('components/billing/BillingReturnButton.tsx');
   assert.ok(billingShell.includes('<BillingReturnButton'),
     'Assinaturas devem manter retorno condicionado ao entitlement.');
-  assert.ok(returnButton.includes("window.location.assign('/login')"),
-    'Retorno autorizado deve carregar /login como documento.');
+  assert.ok(returnButton.includes("window.location.assign('/central-empenhos')"),
+    'Retorno autorizado deve carregar /central-empenhos como documento.');
   assert.ok(returnButton.includes('/api/billing/portal?view=access'),
     'O botão não pode contornar o gate financeiro.');
 });
@@ -74,7 +87,7 @@ test('P0: varredura completa do frontend bloqueia navegação RSC vulnerável', 
   const session = read('hooks/useOperationalData.ts');
   assert.match(session, /window\.location\.replace\('\/admin'\)/);
   const delivery = read('features/warehouse/components/WarehouseDeliveriesOperational.tsx');
-  assert.match(delivery, /href="\/login\?tab=cronogramas"/);
+  assert.match(delivery, /href="\/central-empenhos\?tab=cronogramas"/);
   const login = read('app/login/page.tsx');
   assert.match(login, /if \(tab === 'cronogramas'\) setActiveTab\('cronogramas'\)/);
   const mobile = read('features/warehouse/mobile/WarehouseMobilePositionCheck.tsx');
