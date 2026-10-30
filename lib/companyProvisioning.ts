@@ -35,18 +35,18 @@ export interface CompanyProvisioningResult {
 }
 
 export function normalizeCompanyCnpj(value: string): string {
-  return value.replace(/\D/g, '');
+  return value.toUpperCase().replace(/[.\/\-\s]/g, '');
 }
 
-/** Verificação dos dígitos verificadores do CNPJ tradicional de 14 algarismos. */
+/** Aceita CNPJ numérico e alfanumérico, ambos com DV módulo 11 (ASCII - 48). */
 export function isValidCompanyCnpj(value: string): boolean {
   const digits = normalizeCompanyCnpj(value);
-  if (!/^\d{14}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false;
+  if (!/^[A-Z0-9]{12}\d{2}$/.test(digits) || /^(\d)\1{13}$/.test(digits)) return false;
   const checksum = (length: number): number => {
     const weights = length === 12
       ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
       : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    const sum = weights.reduce((total, weight, i) => total + Number(digits[i]) * weight, 0);
+    const sum = weights.reduce((total, weight, i) => total + (digits.charCodeAt(i) - 48) * weight, 0);
     const remainder = sum % 11;
     return remainder < 2 ? 0 : 11 - remainder;
   };
