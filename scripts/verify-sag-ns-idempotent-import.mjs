@@ -16,7 +16,7 @@ const view = [
   read('features/relatorios/components/SagApplyConfirmationDialog.tsx'),
 ].join('\n');
 const reportsView = read('features/relatorios/components/RelatoriosView.tsx');
-const page = read('app/page.tsx');
+const page = read('app/login/page.tsx');
 const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');

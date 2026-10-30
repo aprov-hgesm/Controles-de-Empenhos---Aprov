@@ -11,7 +11,7 @@ const sidebar = read('components/layout/AppSidebar.tsx');
 const drive = read('components/layout/WorkspaceDriveControl.tsx');
 const signature = read('components/layout/chrome/AppShellSignature.tsx');
 const logo = read('components/layout/chrome/AppShellLogo.tsx');
-const page = read('app/page.tsx');
+const page = read('app/login/page.tsx');
 const css = read('app/globals.css');
 
 requireText(header, 'emprovex-app-header fixed top-0', 'Header deixou de ser fixo no topo.');
