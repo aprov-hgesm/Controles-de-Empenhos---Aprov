@@ -1,5 +1,7 @@
 # EMPROVEX — Program Control / Coordenador Geral
 
+> **Hospedagem vigente desde 31/10/2026:** Cloud Run (São Paulo), servido pelo Firebase Hosting em `emprovex.com.br`. Novas releases: [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). A Vercel é contingência histórica, não destino padrão.
+
 Data de instituição: **2026-10-02**
 
 Estado: **ARQUITETURA OFICIAL ATIVA / PROGRAM CONTROL + COORDENAÇÃO DO RC EM OPERAÇÃO / FASE DE RELEASE ENGINEERING**
