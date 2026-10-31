@@ -37,6 +37,10 @@ A conta migradora recebe `roles/iam.workloadIdentityUser` apenas para o sujeito 
 
 O script confere que **todos os três cofres estão vazios antes de escrever o primeiro**. Se falhar parcialmente, **não repetir**: bloquear e realizar diagnóstico de recuperação. Nenhuma chamada à InfinitePay é efetuada.
 
+## Correção pontual R4.1 (Windows)
+
+A primeira execução criou com sucesso o pool `emprovex-vercel-r4` e o provider `vercel-production`, mas o Google recusou a conta migradora anterior por exceder 30 caracteres. O ID corrigido é `emprovex-r4-migrator`, e a ponte usa agora o email `emprovex-r4-migrator@gen-lang-client-0982077967.iam.gserviceaccount.com`. O PowerShell trata pool/provider existentes sem recriá-los. **Nenhum segredo foi transferido nessa falha.** Execute `git pull --ff-only` na branch antes de repetir o script; NÃO use o clone antigo sem atualização.
+
 ## Preparação necessária no Windows — SEM TRANSFERIR AINDA
 
 1. No painel Vercel, conferir que o modo do emissor OIDC é **Team** em Project Settings → Security → OIDC Federation. Emissor esperado: `https://oidc.vercel.com/aprov-hgesms-projects`.
