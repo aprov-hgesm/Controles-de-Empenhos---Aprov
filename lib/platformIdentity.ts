@@ -4,7 +4,13 @@ export type PlatformAccountStatus = 'active' | 'disabled';
 
 export type PlatformAuthProvider = 'google.com' | 'password';
 
-export const FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'google.com';
+export const FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'password';
+// Compatibilidade: o Google permanece habilitado no Firebase para a conta
+// fundadora. A interface pública oferece somente e-mail e senha.
+export const FOUNDER_GOOGLE_AUTH_PROVIDER: PlatformAuthProvider = 'google.com';
+export function isFounderSignInProvider(value: string | null | undefined): boolean {
+  return value === FOUNDER_AUTH_PROVIDER || value === FOUNDER_GOOGLE_AUTH_PROVIDER;
+}
 export const SECTOR_AUTH_PROVIDER: PlatformAuthProvider = 'password';
 
 export type WorkspaceStatus = 'active' | 'disabled';
@@ -184,6 +190,7 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
     account.authProvider !== undefined
     && account.authProvider !== FOUNDER_AUTH_PROVIDER
     && account.authProvider !== SECTOR_AUTH_PROVIDER
+    && account.authProvider !== FOUNDER_GOOGLE_AUTH_PROVIDER
   ) {
     errors.push('Provedor de autenticação da conta da plataforma é inválido.');
   }

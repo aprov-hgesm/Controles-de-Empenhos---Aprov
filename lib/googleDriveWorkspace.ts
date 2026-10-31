@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  GoogleAuthProvider,
-  reauthenticateWithPopup,
-  type User,
-} from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 import { normalizePlatformEmail } from './platformIdentity';
 import type { SectorWorkspaceContext } from './workspaceContext';
@@ -312,36 +308,12 @@ async function connectExternalWorkspaceDrive(
 }
 
 async function connectFounderDriveSession(
-  user: User,
+  _user: User,
   context: SectorWorkspaceContext,
   expectedEmail: string
 ): Promise<WorkspaceGoogleDriveSession> {
-  const provider = new GoogleAuthProvider();
-  provider.addScope(GOOGLE_DRIVE_WORKSPACE_SCOPE);
-  provider.setCustomParameters({
-    prompt: GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT,
-    login_hint: context.email,
-  });
-
-  const result = await reauthenticateWithPopup(user, provider);
-  const returnedEmail = normalizePlatformEmail(result.user.email || '');
-
-  if (result.user.uid !== user.uid || returnedEmail !== expectedEmail) {
-    throw new Error('A Conta Google selecionada não corresponde à conta autorizada deste setor. Selecione a conta correta e tente novamente.');
-  }
-
-  const credential = GoogleAuthProvider.credentialFromResult(result);
-  const accessToken = credential?.accessToken;
-  if (!accessToken) {
-    throw new Error('O Google não retornou uma autorização temporária para a Drive API.');
-  }
-
-  return {
-    accessToken,
-    email: returnedEmail,
-    workspaceId: context.workspaceId,
-    connectedAt: new Date().toISOString(),
-  };
+  // O OAuth do Drive não reautentica nem altera a sessão Firebase por senha.
+  return connectExternalWorkspaceDrive(context, expectedEmail);
 }
 
 export async function connectGoogleDriveForWorkspace(
@@ -362,7 +334,7 @@ export async function connectGoogleDriveForWorkspace(
     return connectExternalWorkspaceDrive(context, expectedEmail);
   }
 
-  // O workspace fundador legado mantém o fluxo Firebase/Google já consolidado.
+  // O workspace fundador também usa OAuth independente para o Drive.
   return connectFounderDriveSession(user, context, expectedEmail);
 }
 

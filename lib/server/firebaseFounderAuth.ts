@@ -3,7 +3,7 @@ import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose'
 import firebaseConfig from '../../firebase-applet-config.json';
 import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
 import {
-  FOUNDER_AUTH_PROVIDER,
+  isFounderSignInProvider,
   normalizePlatformEmail,
 } from '../platformIdentity';
 
@@ -155,8 +155,8 @@ export async function verifyFounderFirebaseRequest(
     throw new FounderAuthError('Acesso reservado à conta fundadora.', 403);
   }
 
-  if (verified.signInProvider !== FOUNDER_AUTH_PROVIDER) {
-    throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
+  if (!isFounderSignInProvider(verified.signInProvider)) {
+    throw new FounderAuthError('Provedor de autenticação da conta fundadora não autorizado.', 403);
   }
 
   return {

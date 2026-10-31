@@ -18,6 +18,10 @@ service cloud.firestore {
       return hasSignInProvider('password');
     }
 
+    function isPasswordFounderSession() {
+      return hasSignInProvider('password');
+    }
+
     function isGoogleFounderSession() {
       return hasSignInProvider('google.com');
     }
@@ -25,7 +29,7 @@ service cloud.firestore {
     function isHgesmFounder() {
       return isVerifiedUser()
         && request.auth.token.email == 'aprov1hgesm@gmail.com'
-        && isGoogleFounderSession();
+        && (isPasswordFounderSession() || isGoogleFounderSession());
     }
 
     function isPlatformAdmin() {

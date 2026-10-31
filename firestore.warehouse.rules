@@ -18,10 +18,14 @@ service cloud.firestore {
       return hasSignInProvider('google.com');
     }
 
+    function isPasswordFounderSession() {
+      return hasSignInProvider('password');
+    }
+
     function isHgesmFounder() {
       return isVerifiedUser()
         && request.auth.token.email == 'aprov1hgesm@gmail.com'
-        && isGoogleFounderSession();
+        && (isGoogleFounderSession() || isPasswordFounderSession());
     }
 
     function isValidUnitUg(value) {

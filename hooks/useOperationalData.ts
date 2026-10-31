@@ -28,7 +28,6 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { isValidPlatformEmail, normalizePlatformEmail } from '../lib/platformIdentity';
-import { HGESM_SECTOR_EMAIL } from '../lib/hgesmWorkspace';
 import {
   MAX_SECTOR_PASSWORD_LENGTH,
   MIN_SECTOR_PASSWORD_LENGTH,
@@ -502,12 +501,6 @@ export function useOperationalData(
       throw new Error('Informe um e-mail válido para receber as instruções de redefinição.');
     }
 
-    // A conta fundadora permanece Google-only. A resposta é deliberadamente
-    // indistinguível para não expor a existência ou o tipo de uma conta.
-    if (normalizedEmail === HGESM_SECTOR_EMAIL) {
-      return PASSWORD_RESET_CONFIRMATION;
-    }
-
     try {
       await sendPasswordResetEmail(auth, normalizedEmail);
       return PASSWORD_RESET_CONFIRMATION;
@@ -569,10 +562,9 @@ export function useOperationalData(
 
     const tokenResult = await currentUser.getIdTokenResult();
     if (
-      normalizedEmail === HGESM_SECTOR_EMAIL
-      || tokenResult.signInProvider !== 'password'
+      tokenResult.signInProvider !== 'password'
     ) {
-      throw new Error('Esta conta utiliza acesso institucional pelo Google e não possui senha do EMPROVEX para alterar.');
+      throw new Error('Esta sessão não utiliza autenticação por senha.');
     }
 
     try {

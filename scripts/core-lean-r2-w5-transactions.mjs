@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {existsSync,writeFileSync} from 'node:fs';
 import {initializeApp,deleteApp} from 'firebase/app';
-import {getAuth,connectAuthEmulator,GoogleAuthProvider,signInWithCredential} from 'firebase/auth';
+import {getAuth,connectAuthEmulator,signInWithEmailAndPassword} from 'firebase/auth';
 import {getFirestore,connectFirestoreEmulator,doc,getDoc} from 'firebase/firestore';
 import {summary,parseStream} from './core-lean-r2-w5-profile.mjs';
 
@@ -43,8 +43,31 @@ const app=initializeApp({projectId:PROJECT,apiKey:'fake-api-key',
   authDomain:PROJECT+'.firebaseapp.com'},'w5-transaction-benchmarks');
 const auth=getAuth(app);
 connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
-const login=await signInWithCredential(auth,GoogleAuthProvider.credential(
-  JSON.stringify({sub:'w5-benchmark-founder',email:'aprov1hgesm@gmail.com',email_verified:true})));
+// Conta fundadora sintética, criada e verificada apenas no Firebase Auth Emulator.
+const fixtureEmail='aprov1hgesm@gmail.com';
+const fixturePassword='benchmark-only-password-2026';
+const authBase='http://127.0.0.1:9099';
+const signUp=await fetch(authBase+'/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({email:fixtureEmail,password:fixturePassword,returnSecureToken:true}),
+});
+if(!signUp.ok)throw Error('W5_DEMO_FOUNDER_SIGNUP_FAILED');
+const created=await signUp.json();
+const verifyRequest=await fetch(authBase+'/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=fake-api-key',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({requestType:'VERIFY_EMAIL',idToken:created.idToken}),
+});
+if(!verifyRequest.ok)throw Error('W5_DEMO_FOUNDER_VERIFY_REQUEST_FAILED');
+const codes=await fetch(authBase+'/emulator/v1/projects/'+PROJECT+'/oobCodes');
+if(!codes.ok)throw Error('W5_DEMO_FOUNDER_OOB_FAILED');
+const oob=(await codes.json()).oobCodes?.find(
+  x=>x.email===fixtureEmail&&x.requestType==='VERIFY_EMAIL'
+);
+if(!oob?.oobLink)throw Error('W5_DEMO_FOUNDER_OOB_MISSING');
+const verifiedResponse=await fetch(oob.oobLink);
+if(!verifiedResponse.ok)throw Error('W5_DEMO_FOUNDER_EMAIL_VERIFY_FAILED');
+const login=await signInWithEmailAndPassword(auth,fixtureEmail,fixturePassword);
+assert.equal((await login.user.getIdTokenResult()).signInProvider,'password');
 const access=await verifyWarehouseRequest('Bearer '+await login.user.getIdToken());
 assert.equal(access.workspaceId,WS);assert.equal(access.ug,UG);
 const db=getFirestore(app,DB);

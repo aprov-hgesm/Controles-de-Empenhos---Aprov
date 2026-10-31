@@ -30,8 +30,8 @@ requireText(
 );
 requireText(
   identity,
-  "FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'google.com'",
-  'Provedor do fundador não está fixado em Google.'
+  "FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'password'",
+  'Provedor do fundador não está fixado em e-mail/senha.'
 );
 requireText(
   identity,
@@ -56,8 +56,8 @@ requireText(
 );
 requireText(
   access,
-  'signInProvider !== FOUNDER_AUTH_PROVIDER',
-  'Fundador não está restrito a sessão Google.'
+  'isFounderSignInProvider(signInProvider)',
+  'Fundador não reconhece ambos os provedores previamente vinculados.'
 );
 requireText(
   access,
@@ -96,29 +96,24 @@ requireText(
   'Tela principal não delega credenciais de setor ao fluxo seguro existente.'
 );
 requireText(
-  page,
-  'await signInUser()',
-  'Tela principal não preserva a delegação do acesso institucional Google.'
+  login,
+  'Entrar com e-mail e senha',
+  'Componente público não oferece o login por senha.'
 );
 requireText(
   login,
-  'Entrar com e-mail e senha',
-  'Componente público não oferece o login por senha dos setores.'
+  'Entrar com Google — HGeSM',
+  'A interface deve preservar o acesso Google como alternativa para a conta fundadora.'
+);
+requireText(
+  operationalData,
+  'signInWithPopup',
+  'O fluxo Google deve permanecer disponível para o fundador.'
 );
 requireText(
   login,
   'onSectorLogin(loginEmail, loginPassword)',
   'Componente público não delega o login setorial para a camada de sessão.'
-);
-requireText(
-  login,
-  'Entrar com Google — HGeSM',
-  'Componente público não preserva o acesso Google exclusivo do fundador.'
-);
-requireText(
-  login,
-  'onFounderLogin()',
-  'Componente público não delega o acesso institucional para a camada de sessão.'
 );
 requireText(
   rules,
@@ -127,8 +122,8 @@ requireText(
 );
 requireText(
   rules,
-  "hasSignInProvider('google.com')",
-  'Firestore Rules não restringem o fundador ao provider Google.'
+  'function isPasswordFounderSession()',
+  'Firestore Rules não reconhecem senha no fundador.'
 );
 requireText(
   rules,
@@ -153,7 +148,7 @@ requireText(
 requireText(
   driveClient,
   'connectFounderDriveSession',
-  'Fluxo Google do fundador não foi preservado.'
+  'OAuth independente do Drive fundador não foi preservado.'
 );
 if (!externalDriveBlock) {
   findings.push('Não foi possível isolar estaticamente o bloco OAuth do setor externo.');
@@ -178,15 +173,15 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Nova autenticação — Bloco 1: modelo híbrido\n');
-  console.log('Fundador: google.com');
+  console.log('Fundador: senha na tela, Google mantido no Firebase');
   console.log('Setores externos: password');
   console.log('Provider real: validado pelo ID token Firebase');
   console.log('Conta externa por Google: bloqueada no runtime');
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
-  console.log('Login Google: preservado exclusivamente para o fundador');
-  console.log('Enforcement nas Rules: ativo para Google/password');
-  console.log('Drive externo: OAuth Google independente sem trocar o provider Firebase');
+  console.log('Login Google Firebase: preservado na interface do fundador');
+  console.log('Founder: Google e senha autorizados; setores externos: password');
+  console.log('Drive: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
 }
 

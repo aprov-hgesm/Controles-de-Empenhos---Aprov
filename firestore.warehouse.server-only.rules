@@ -22,7 +22,7 @@ service cloud.firestore {
 
     function isFounderWorkspace(workspaceId) {
       return workspaceId == 'hgesm-aprov'
-        && providerIs('google.com')
+        && (providerIs('google.com') || providerIs('password'))
         && request.auth.token.email == 'aprov1hgesm@gmail.com';
     }
 

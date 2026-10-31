@@ -260,7 +260,7 @@ export function EmprovexLogin({
 
                 <div className="mt-7">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/80">
-                    Acesso do setor
+                    Acesso à plataforma
                   </p>
                   <h2
                     id="emprovex-login-heading"
@@ -310,7 +310,7 @@ export function EmprovexLogin({
                         inputMode="email"
                         required
                         disabled={isSigningIn}
-                        placeholder="setor@exemplo.mil.br"
+                        placeholder="seu-email@exemplo.com"
                         className="emprovex-login-input relative z-[1] h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-4 text-sm font-medium text-white outline-none placeholder:text-slate-600 disabled:opacity-60"
                       />
                       <span className="emprovex-login-field__line pointer-events-none absolute inset-x-4 bottom-0 z-[3] h-px origin-center" />
@@ -405,7 +405,7 @@ export function EmprovexLogin({
                             inputMode="email"
                             required
                             disabled={recoverySending}
-                            placeholder="setor@exemplo.mil.br"
+                            placeholder="seu-email@exemplo.com"
                             className="h-11 w-full rounded-xl border border-white/[0.09] bg-slate-950/35 pl-10 pr-3 text-xs font-medium text-white outline-none placeholder:text-slate-600 focus:border-blue-400/40 disabled:opacity-60"
                           />
                         </div>
@@ -480,7 +480,7 @@ export function EmprovexLogin({
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-slate-200">Conta fundadora HGeSM</p>
                       <p className="mt-1 text-[11px] leading-5 text-slate-500">
-                        A conta fundadora do HGeSM continua utilizando exclusivamente o Google.
+                        A conta fundadora pode entrar com e-mail e senha acima ou continuar utilizando o Google.
                       </p>
                     </div>
                   </div>

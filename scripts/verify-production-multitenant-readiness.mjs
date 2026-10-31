@@ -128,7 +128,7 @@ requireText(sectorProvisioning, 'deleteAuthUser', 'Provisionamento não possui r
 requireText(access, 'resolveAndBindExternalIdentity', 'Login externo não mantém resolução/vínculo de identidade.');
 requireText(access, 'firebaseUid', 'Login externo perdeu vínculo de UID.');
 requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o provider real da sessão.');
-requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
+requireText(access, 'isFounderSignInProvider(signInProvider)', 'Fundador não valida providers vinculados.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
 requireText(drive, 'initTokenClient', 'OAuth independente do Drive externo não usa Google Identity Services.');
 requireText(drive, "GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'", 'OAuth Drive externo não preserva seleção explícita da Conta Google.');
@@ -149,8 +149,8 @@ if (!externalDriveBlock) {
 }
 if (!founderDriveBlock) {
   findings.push('Não foi possível isolar o fluxo Drive do fundador.');
-} else if (!founderDriveBlock.includes('reauthenticateWithPopup')) {
-  findings.push('Fluxo Drive do fundador perdeu a reautenticação Google/Firebase consolidada.');
+} else if (founderDriveBlock.includes('reauthenticateWithPopup')) {
+  findings.push('Fluxo Drive do fundador não pode reautenticar via Google/Firebase.');
 }
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
@@ -185,7 +185,7 @@ if (!productionRulesTarget) {
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Rules não exigem UID vinculado para operação externa.');
 requireText(rules, 'request.auth.token.firebase.sign_in_provider == provider', 'Rules não validam o provider real do token.');
-requireText(rules, "hasSignInProvider('google.com')", 'Fundador não está restrito ao provider Google nas Rules.');
+requireText(rules, 'function isPasswordFounderSession()', 'Fundador não está restrito ao provider password nas Rules.');
 requireText(rules, "hasSignInProvider('password')", 'Setores externos não estão restritos ao provider password nas Rules.');
 requireText(rules, "workspaceId != 'hgesm-aprov'", 'Workspace fundador não está protegido.');
 requireText(rules, "match /workspaces/{workspaceId}/settings/documentStorage", 'documentStorage não possui regra dedicada.');

@@ -22,9 +22,9 @@ const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const rules = read('firestore.rules');
 const docs = read('docs/BLOCK_16_7_SECURITY_CONCURRENCY_HARDENING.md');
 
-requireText(founderAuth, 'FOUNDER_AUTH_PROVIDER', 'API founder-only deve reutilizar o provider fundador canônico.');
+requireText(founderAuth, 'isFounderSignInProvider', 'API founder-only deve validar os provedores Firebase autorizados.');
 requireText(founderAuth, 'sign_in_provider', 'API founder-only deve validar sign_in_provider.');
-requireText(founderAuth, 'A conta fundadora exige autenticação Google.', 'Falha explícita de provider founder-only ausente.');
+requireText(founderAuth, 'Provedor de autenticação da conta fundadora não autorizado.', 'Falha explícita de provider founder-only ausente.');
 
 requireText(lease, 'if (revocationSnapshot.exists())', 'Aquisição deve rejeitar qualquer tombstone existente.');
 forbidText(lease, 'stillRevoked', 'Tombstone não pode voltar a autorizar o mesmo sessionId por expiração.');
@@ -71,6 +71,7 @@ requireText(
 );
 
 for (const invariant of [
+  "isPasswordFounderSession()",
   "isGoogleFounderSession()",
   "function isLegacySessionSlotId(slotId)",
   "function isValidSessionSlotId(slotId)",

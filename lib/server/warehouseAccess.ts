@@ -1,7 +1,7 @@
 import firebaseConfig from '../../firebase-applet-config.json';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
-  FOUNDER_AUTH_PROVIDER,
+  isFounderSignInProvider,
   SECTOR_AUTH_PROVIDER,
   isValidUnitUg,
   isValidWorkspaceId,
@@ -204,7 +204,7 @@ async function resolveExternalWarehouseAccess(
 /**
  * Gate server-side da Central de Depósitos.
  *
- * O fundador mantém o acesso Google ao workspace HGeSM. Setores externos são
+ * O fundador acessa o workspace HGeSM por senha na interface e pode preservar a sessão Google já vinculada. Setores externos são
  * validados novamente contra o diretório operacional do Firestore principal e,
  * depois disso, recebem claims Firebase assinadas com workspace + UG. O banco
  * emprovex-warehouse usa essas claims para isolar cada setor sem depender de
@@ -223,7 +223,7 @@ export async function verifyWarehouseRequest(
 
   if (
     verified.email === HGESM_SECTOR_EMAIL
-    && verified.signInProvider === FOUNDER_AUTH_PROVIDER
+    && isFounderSignInProvider(verified.signInProvider)
   ) {
     return {
       uid: verified.uid,
