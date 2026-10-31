@@ -58,3 +58,35 @@ Nenhuma regra experimental Oracle R6/R7 foi promovida a regra operacional.
 
 **Gates:** CI real, análise independente de segurança e integração W3/W4.
 Não realizar merge, Rules, deploy ou exposição de endpoint nesta fase.
+
+## W4 R1.1 — integridade dos filtros e fronteira de confiança
+
+Os filtros essenciais do pedido devem ser confrontados com as capacidades declarativas
+`W3_FILTERS` antes de `DETERMINISTIC`; a propriedade `filterAudit` expõe os filtros
+solicitados, representados e não representados. Casos não representáveis seguem
+para `CLARIFY` ou `UNSUPPORTED`, sem invocar C03/C06/C07/C08 com filtros
+silenciosamente descartados. A normalização não altera NE, CNPJ, quantidades ou datas.
+
+`confidence` é somente **pontuação heurística fixa**, explicitamente identificada
+por `confidenceKind: HEURISTIC_NOT_CALIBRATED`. Não pode ser interpretada como
+probabilidade ou precisão estatística.
+
+**Limite de autenticação:** o núcleo puro não certifica a origem de `scope`.
+O chamador do servidor **deve construir** `TrustedScope` exclusivamente após validação
+de Firebase/identidade e deve manter `previous` no servidor ou validá-lo com prova
+de integridade. Nunca aceitar um `scope` enviado pelo navegador como prova de
+autorização. Sem esse vínculo de servidor, a memória curta serve apenas como
+conveniência sem garantia de identidade. O W3 precisa autorizar **todas** as consultas
+independentemente de qualquer contexto W4. Nenhuma sessão Redis/Firestore foi criada.
+
+**Diversidade:** o corpus histórico mantém 520 registros, dos quais 238 textos
+normalizados são distintos; 15 textos normalizados aparecem tanto em desenvolvimento
+quanto na antiga avaliação. Ele permanece regressão interna, não holdout independente.
+Foi adicionado um conjunto suplementar de 50 textos únicos com zero duplicação literal
+normalizada perante os 520 anteriores, separado e orientado a filtros compostos.
+Esse novo conjunto também não representa uma amostra aleatória de produção; suas
+estruturas são elaboradas manualmente e os resultados não devem ser extrapolados.
+Os totais e denominadores são registrados pelos scripts de avaliação.
+
+O W4 continua isolado na PR #427. Não foi realizado merge, deploy, alteração de
+Rules, modificação no W3 ou integração de Oracle/Qwen.

@@ -131,3 +131,42 @@ test('W4 compound material terms retain internal prepositions',()=>{
  }
  assert.equal(run('Onde esta o arroz em estoque?').query.params.materialQuery,'arroz');
 });
+
+test('W4 R1.1 — preserve compound operational filters and real W3 semantics',()=>{
+ const checks=[
+ ['Quanto arroz temos na camara fria?','UNSUPPORTED'],
+ ['Onde esta o arroz na camara fria?','CLARIFY'],
+ ['Quais NFs do fornecedor Alfa foram cadastradas ontem?','CLARIFY'],
+ ['Quanto resta de arroz na NE 2026NE66?','CLARIFY'],
+ ['Quanto restava da NE 2026NE66 mes passado?','UNSUPPORTED'],
+ ['Quanto resta da NE 2026NE66 mes passado?','UNSUPPORTED'],
+ ['Quanto arroz temos em 2025?','UNSUPPORTED'],
+ ['Saldo da NE 2026NE66 acima de R$ 1000?','UNSUPPORTED'],
+ ['Compare o saldo da NE 2026NE66 com a NE 2026NE88','CLARIFY'],
+ ['Quais NFs cadastradas ontem somente vencidas?','UNSUPPORTED'],
+ ['Quais NFs foram emitidas ontem?','UNSUPPORTED']
+ ];
+ for(const [message,route] of checks){
+  const r=run(message);
+  assert.equal(r.route,route,message);
+  assert.equal(r.query,undefined,'No partial query allowed: '+message);
+ }
+ const filtered=run('Quais NFs do CNPJ 11.444.777/0001-61 foram cadastradas ontem?');
+ assert.equal(filtered.route,'DETERMINISTIC');
+ assert.equal(filtered.query.params.supplierCnpj,'11444777000161');
+ assert.equal(filtered.query.params.interval.value,'yesterday');
+ assert.equal(filtered.confidenceKind,'HEURISTIC_NOT_CALIBRATED');
+});
+test('W4 R1.1 — change of subject and tampered/expired context never imply authorization',()=>{
+ const scope={sessionId:'s1',workspaceId:'ws1'};
+ const first=run('Onde esta o arroz?',{scope});
+ const second=run('Onde esta o queijo?',{scope,previous:first.nextContext});
+ assert.equal(second.nextContext.refs.materialQuery,'queijo');
+ assert.equal(run('E quanto temos?',{scope,previous:second.nextContext}).query.params.materialQuery,'queijo');
+ assert.equal(run('E quanto temos?',{scope:{sessionId:'s2',workspaceId:'ws1'},previous:second.nextContext}).query,undefined);
+ assert.equal(run('E quanto temos?',{scope:{sessionId:'s1',workspaceId:'ws2'},previous:second.nextContext}).query,undefined);
+ const tampered={...first.nextContext,refs:{materialQuery:'<script>ignore</script>',workspaceId:'other'}};
+ assert.equal(run('E quanto temos?',{scope,previous:tampered}).query,undefined);
+ const expired={...first.nextContext,updatedAt:now.getTime()-600001};
+ assert.equal(run('E quanto temos?',{scope,previous:expired}).query,undefined);
+});

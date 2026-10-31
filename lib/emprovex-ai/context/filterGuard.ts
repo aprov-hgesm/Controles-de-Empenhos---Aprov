@@ -68,6 +68,9 @@ export function detectConstraints(t:string, explicit:{
  add('supplierName',explicit.supplierName);
  add('supplierCnpj',explicit.supplierCnpj);
  if(explicit.period)c.push({name:'period',value:'specified'});
+ else if(/\b(?:em|desde|no ano de)\s*20\d{2}\b/.test(t)&&
+   ['warehouse_stock_get','warehouse_material_locations_list','supplier_contact_find'].includes(intent))
+   c.push({name:'period',value:'unresolved_absolute_year'});
  add('depotId',explicit.depotId);
  add('itemId',explicit.itemId);
  if(/\b(?:no|na|dentro da|dentro do|somente na|somente no)\s+(?:camara fria|deposito(?:\s+[a-z0-9-]+)?|estante\s*\d+|prateleira\s*\d+|freezer|geladeira)\b/.test(t))
@@ -78,7 +81,7 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'historicalBalance',value:'historical'});
  if(/\b(?:compare|comparar|comparacao|comparativo|versus| vs )\b/.test(t))
    c.push({name:'comparison',value:'comparison'});
- if(/\b(?:acima de|maior que|maior do que|abaixo de|menor que|pelo menos)\s*(?:r\$|\d)/.test(t))
+ if(/\b(?:acima de|maior que|maior do que|abaixo de|menor que|pelo menos)\s*(?:r\s*\$?\s*|\d)/.test(t))
    c.push({name:'quantityThreshold',value:'threshold'});
  if(/\b(?:(?:somente|apenas|so) (?:os |as )?(?:vencidos|vencidas|pendentes|atrasados|atrasadas))\b/.test(t))
    c.push({name:'status',value:'filtered'});

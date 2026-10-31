@@ -6,7 +6,7 @@ const require=createRequire(import.meta.url);
 const {interpret}=require('../.w4-dist/index.cjs');
 const read=(name)=>JSON.parse(readFileSync(new URL('../lib/emprovex-ai/context/evaluation/'+name,import.meta.url),'utf8'));
 const current=read('r11-novel-50.json'),legacy=read('corpus-520.json');
-const key=s=>s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const key=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const dev=new Set(legacy.filter(x=>x.split==='dev').map(x=>key(x.message)));
 const hold=new Set(legacy.filter(x=>x.split==='holdout').map(x=>key(x.message)));
 const historical=new Set(legacy.map(x=>key(x.message)));
