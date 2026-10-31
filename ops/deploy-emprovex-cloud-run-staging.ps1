@@ -79,6 +79,17 @@ MustExit 'STAGING_DESCRIBE_FAILED'
 $Obj=($ServiceJson|Out-String)|ConvertFrom-Json
 $ObjURL=[string]$Obj.status.url
 if(-not $ObjURL.StartsWith('https://')){throw 'STAGING_NO_HTTPS_URL'}
+if([string]$Obj.spec.template.spec.serviceAccountName -cne $Runtime){
+ throw 'STAGING_WRONG_RUNTIME_IDENTITY'
+}
+$PolicyJson=@(gcloud.cmd run services get-iam-policy $Service --region=$Region --project=$Project --format=json)
+MustExit 'STAGING_IAM_READ_FAILED'
+$Policy=($PolicyJson|Out-String)|ConvertFrom-Json
+$PublicBindings=@($Policy.bindings|Where-Object{
+ $_.members -contains 'allUsers' -or $_.members -contains 'allAuthenticatedUsers'
+})
+if($PublicBindings.Count -gt 0){throw 'STAGING_PUBLIC_IAM_BINDING_FOUND'}
+Write-Host 'PASS: runtime identity correct; no allUsers/allAuthenticatedUsers IAM binding.'
 Write-Host "STAGING PRIVATE URL: $ObjURL"
 Write-Host 'Deploy finished; Cloud Run IAM authentication required for requests.'
 Write-Host 'Financial integration and login on the staging host are NOT certified.'
