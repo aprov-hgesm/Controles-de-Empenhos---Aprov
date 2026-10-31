@@ -432,8 +432,8 @@
     "message": "O motor está funcionando?",
     "route": "CLARIFY",
     "intent": "unknown",
-    "domain": "IN_SCOPE",
-    "why": "domínio incerto"
+    "domain": "UNCERTAIN",
+    "why": "domínio incerto: motor não é necessariamente material de estoque"
   },
   {
     "id": "W4-R11-048",

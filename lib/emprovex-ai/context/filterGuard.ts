@@ -49,7 +49,8 @@ export function auditFilters(intent:W3Intent,params:Record<string,unknown>,const
    route='CLARIFY';reason='DEPOT_NAME_REQUIRES_DEPOT_ID';
    question='Informe a identificação do depósito (depotId). O nome não é um identificador seguro.';
  }else if(has('depotName')||has('depotId')){
-   reason='STOCK_BY_DEPOT_NOT_AVAILABLE';affected='warehouse_by_location';
+   reason='LOCATION_FILTER_NOT_AVAILABLE';
+   if(intent.startsWith('warehouse_'))affected='warehouse_by_location';
  }else if(has('historicalBalance')){reason='HISTORICAL_BALANCE_UNAVAILABLE';}
  else if(has('comparison')){reason='COMPARISON_NOT_AVAILABLE';}
  else if(has('quantityThreshold')){reason='QUANTITY_THRESHOLD_NOT_AVAILABLE';}

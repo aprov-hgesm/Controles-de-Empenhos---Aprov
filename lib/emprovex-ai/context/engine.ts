@@ -98,7 +98,7 @@ export function interpret(input:Input):Result {
  const entities:Record<string,string|number>={};
  if(!text.trim()||text.length>MAX_CHARS)return finish('UNCERTAIN','CLARIFY','unknown','INPUT_SIZE_LIMIT',undefined,'Resuma sua solicitação em até 1.000 caracteres.');
  if(text.split(/\s+/).length>MAX_WORDS)return finish('UNCERTAIN','CLARIFY','unknown','WORD_LIMIT',undefined,'Envie uma pergunta mais curta.');
- let norm=normalize(text),t=repairSafeWords(norm);work=t.length;
+ let norm=normalize(text).replace(/[.,;:!?]+$/,'').trim(),t=repairSafeWords(norm);work=t.length;
  if(/(?:ignore (?:as |todas as )?instrucoes|system prompt|firebase|firestore|workspaceid|id.?token|token de acesso|credenciais|colecao privada|rode (?:sql|query)|execute (?:sql|query))/i.test(t))
    return finish('OUT_OF_SCOPE','OUT_OF_SCOPE','unknown','UNTRUSTED_INSTRUCTION');
  const procedure=/^(como|onde posso|qual (?:o )?procedimento|me ensine|explique como)\b/.test(t);
@@ -218,7 +218,7 @@ export function interpret(input:Input):Result {
     /\b(?:deposito|camara fria|estante|prateleira|freezer)\b/.test(t)&&!x.material)
    return unavailable('warehouse_by_location','P1_LOCATION_TO_MATERIALS_UNAVAILABLE');
  if(isStock||isLocation||!!material){
-   const asksLocation=/\b(?:onde|localiza|armazenado|fica|encontrar)\b/.test(t);
+   const asksLocation=/\b(?:onde|localizacao|localize|localizado|localizada|armazenado|fica|encontrar)\b/.test(t);
    const intent=asksLocation?'warehouse_material_locations_list':'warehouse_stock_get';
    if(!material)return clarify(intent,'Qual material você deseja consultar?');
    return success(intent,{materialQuery:material,...(intent==='warehouse_material_locations_list'&&x.depotId?{depotId:x.depotId}:{})},'material → estoque → localização');
