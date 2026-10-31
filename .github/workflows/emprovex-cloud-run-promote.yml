@@ -109,39 +109,50 @@ jobs:
           echo "PREVIOUS_REVISION=${current}" >> "${GITHUB_ENV}"
           echo "VALIDATED_IMAGE=${expected_image}" >> "${GITHUB_ENV}"
 
-      - name: Change traffic only after explicit workflow dispatch and environment approval
+      - name: Promote traffic, verify live health, and roll back on ANY failure
         shell: bash
         run: |
           set -euo pipefail
+          finished=0
+          rollback_on_failure() {
+            rc=$?
+            trap - EXIT
+            if [[ "${finished}" != "1" ]]; then
+              echo "::error::Promotion did not finish safely; restoring previous revision."
+              if ! gcloud run services update-traffic "${SERVICE}" \
+                --project="${PROJECT}" --region="${REGION}" \
+                --to-revisions="${PREVIOUS_REVISION}=100" --quiet; then
+                echo "::error::Automatic rollback also failed. Restore ${PREVIOUS_REVISION} in Cloud Run Console immediately."
+              fi
+            fi
+            exit "${rc}"
+          }
+          trap rollback_on_failure EXIT
+
           gcloud run services update-traffic "${SERVICE}" \
             --project="${PROJECT}" --region="${REGION}" \
             --to-revisions="${REQUESTED_REVISION}=100" --quiet
-          gcloud run services describe "${SERVICE}" --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/after.json"
+
+          gcloud run services describe "${SERVICE}" \
+            --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/after.json"
           jq -e --arg rev "${REQUESTED_REVISION}" \
             '[.status.traffic[]? | select(.percent == 100 and .revisionName == $rev)] | length == 1' \
             "${RUNNER_TEMP}/after.json" >/dev/null
 
-      - name: Verify live domain; restore preceding revision if verification fails
-        shell: bash
-        run: |
-          set -euo pipefail
-          ok=0
+          health_ok=0
           for attempt in 1 2 3 4; do
             if curl --fail --silent --show-error --max-time 20 \
               --resolve "${DOMAIN}:443:${HOSTING_IP}" \
               "https://${DOMAIN}/api/health" > /dev/null; then
-              ok=1
+              health_ok=1
               break
             fi
             sleep 4
           done
-          if [[ "${ok}" != "1" ]]; then
-            echo "::error::Post-promotion health failed; attempting automatic traffic rollback."
-            gcloud run services update-traffic "${SERVICE}" \
-              --project="${PROJECT}" --region="${REGION}" \
-              --to-revisions="${PREVIOUS_REVISION}=100" --quiet
-            exit 1
-          fi
+          [[ "${health_ok}" == "1" ]] || { echo "::error::Live health failed."; exit 1; }
+
+          finished=1
+          trap - EXIT
           {
             echo "## EMPROVEX — live production promotion verified"
             echo "- Approved SHA: \`${REQUESTED_SHA}\`"
