@@ -128,9 +128,12 @@ jobs:
           revision="$(jq -r '.status.latestCreatedRevisionName // empty' "${RUNNER_TEMP}/after.json")"
           [[ "${revision}" == "${SERVICE}-${REV_SUFFIX}" ]] || exit 1
           jq -e --arg sa "${RUNTIME_SA}" '.spec.template.spec.serviceAccountName == $sa' "${RUNNER_TEMP}/after.json" >/dev/null
-          diff -u \
+          if ! cmp -s \
             <(jq -Sc '(.spec.template.spec.containers[0].env // []) | sort_by(.name)' "${RUNNER_TEMP}/before.json") \
-            <(jq -Sc '(.spec.template.spec.containers[0].env // []) | sort_by(.name)' "${RUNNER_TEMP}/after.json")
+            <(jq -Sc '(.spec.template.spec.containers[0].env // []) | sort_by(.name)' "${RUNNER_TEMP}/after.json"); then
+            echo "::error::Cloud Run environment configuration unexpectedly changed (values suppressed)."
+            exit 1
+          fi
           diff -u "${RUNNER_TEMP}/before-traffic.json" \
             <(jq -c '[.status.traffic[]? | select((.percent // 0) > 0) | {revisionName,percent}] | sort_by(.revisionName)' "${RUNNER_TEMP}/after.json")
           jq -e --arg revision "${revision}" '[.status.traffic[]? | select(.revisionName == $revision and (.percent // 0) > 0)] | length == 0' "${RUNNER_TEMP}/after.json" >/dev/null
