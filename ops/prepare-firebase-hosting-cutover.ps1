@@ -1,3 +1,5 @@
+# HISTORICAL INITIAL CUTOVER TOOL ONLY. Site, certificate and DNS are already in production.
+# For new app versions do NOT redeploy Hosting; use ops/release-emprovex-cloud-run.ps1.
 # EMPROVEX Firebase Hosting routing to Cloud Run in Sao Paulo.
 # In its initial stage the Cloud Run candidate MUST remain PRIVATE.
 # This does not alter emprovex.com.br DNS, Vercel or Firestore Rules.
