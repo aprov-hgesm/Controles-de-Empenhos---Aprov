@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
 import {
+  isFounderSignInProvider,
   normalizePlatformEmail,
   normalizeUnitUg,
   validatePlatformAccount,
@@ -39,10 +40,12 @@ export async function resolveBillingWorkspaceContext(user: User): Promise<Resolv
   }
 
   if (email === HGESM_SECTOR_EMAIL) {
-    if (token.signInProvider !== 'google.com') {
+    // Identidade fundadora validada: dois provedores vinculados, perfil setor
+    // nesta tela mesmo quando o perfil operacional ativo for Admin.
+    if (!isFounderSignInProvider(token.signInProvider)) {
       throw new Error('BILLING_FOUNDER_PROVIDER_MISMATCH');
     }
-    return resolveWorkspaceContext(email);
+    return resolveWorkspaceContext(email, 'sector');
   }
 
   if (token.signInProvider !== 'password') {
