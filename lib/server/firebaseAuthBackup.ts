@@ -1,6 +1,7 @@
 import { SignJWT, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunAccessToken, isCloudRunRuntime } from './cloudRunServiceIdentity.mjs';
 
 const PROJECT_ID = firebaseConfig.projectId;
 const DATABASE_ID = firebaseConfig.firestoreDatabaseId;
@@ -92,6 +93,8 @@ function parseServiceAccount(): Required<Pick<ServiceAccountCredentials, 'client
 }
 
 async function getGoogleAdminAccessToken(): Promise<string> {
+  // Cloud Run must never require a downloaded Firebase Admin private key.
+  if (isCloudRunRuntime()) return getCloudRunAccessToken();
   const now = Date.now();
   if (accessTokenCache && accessTokenCache.expiresAt - 60_000 > now) {
     return accessTokenCache.token;
