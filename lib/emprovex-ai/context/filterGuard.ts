@@ -77,7 +77,7 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'depotName',value:'location'});
  if((intent==='commitment_total_balance'||intent==='commitment_get')&&
     (/\b(?:restava|tinha saldo|saldo (?:em|no|na|de) (?:ontem|semana passada|mes passado)|na data de)\b/.test(t)||
-     (explicit.period!==undefined&&/\b(?:resta|restante|saldo|quanto falta)\b/.test(t))))
+     (explicit.period!=null&&/\b(?:resta|restante|saldo|quanto falta)\b/.test(t))))
    c.push({name:'historicalBalance',value:'historical'});
  if(/\b(?:compare|comparar|comparacao|comparativo|versus| vs )\b/.test(t))
    c.push({name:'comparison',value:'comparison'});
