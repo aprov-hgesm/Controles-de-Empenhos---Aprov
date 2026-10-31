@@ -42,9 +42,14 @@ async function authorizeBilling(
     coreDocument('platformBillingConfig/main',access.googleToken),
     coreDocument('billingAccounts/'+access.workspaceId,access.googleToken),
   ]);
-  const live=process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED==='1'
+  const qaLive=process.env.EMPROVEX_BILLING_QA_WORKSPACE_ID===access.workspaceId
+    && process.env.INFINITEPAY_BILLING_ENABLED==='1'
+    && process.env.INFINITEPAY_BILLING_SCOPE==='pilot'
+    && process.env.INFINITEPAY_BILLING_PILOT_WORKSPACE_ID===access.workspaceId;
+  const globalLive=process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED==='1'
     && process.env.INFINITEPAY_BILLING_ENABLED==='1'
     && config?.billingMode==='enforce' && config?.requirePayment===true;
+  const live=globalLive||qaLive;
   if(!live)return;
   if (!accountRaw || accountRaw.workspaceId!==access.workspaceId
     || accountRaw.ug!==access.ug || accountRaw.authorizedEmail!==access.email)

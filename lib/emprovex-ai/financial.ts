@@ -54,7 +54,7 @@ async function supplierFind(access:AiAccess,p:Record<string,unknown>):Promise<Qu
   const matches=result.rows.filter(row=>!nameQuery ||
     words(s(row.data.legalName)).includes(nameQuery)).filter(row=>!cnpj||row.data.cnpj===cnpj);
   // O fallback global é deliberadamente restrito ao formato comprovado no documento defaults.
-  if(!matches.length && cnpj && !result.truncated) {
+  if(!matches.length && cnpj && !p.nameQuery && !result.truncated) {
     const global=await coreDocument('supplierDirectory/defaults',access.googleToken);
     const raw=global?.entries;
     const entries=Array.isArray(raw)?raw:[];
@@ -148,17 +148,27 @@ async function sentHistory(access:AiAccess,p:Record<string,unknown>):Promise<Que
     if(row)q.rows.push(row);
   }
   const period=p.sentPeriod as {start:string;endExclusive:string}|undefined;
+  const supplierByCronograma=new Map<string,string>();
+  let unresolvedSupplier=false;
+  if(p.supplierCnpj){
+    for(const row of q.rows){
+      const ne=s(row.data.empenhoId)||row.id;
+      const empenho=await coreOperationalDocument(access,'empenhos',ne);
+      if(empenho)supplierByCronograma.set(row.id,s(empenho.data.supplierCnpj));
+      else unresolvedSupplier=true;
+    }
+  }
   const records=q.rows.flatMap(row=>historyOf(row).flatMap(ev=>{
     const at=s(ev.enviadoEm);
     if(period && (!Number.isFinite(Date.parse(at)) || Date.parse(at)<Date.parse(operationalMidnightUtc(period.start))
       ||Date.parse(at)>=Date.parse(operationalMidnightUtc(period.endExclusive))))return [];
-    if(p.supplierCnpj && row.data.supplierCnpj!==p.supplierCnpj)return [];
+    if(p.supplierCnpj && supplierByCronograma.get(row.id)!==p.supplierCnpj)return [];
     return [{commitmentId:s(row.data.empenhoId)||row.id,sentAt:at,
       messageId:ev.messageId,to:ev.destinatario,subject:ev.assunto,
       supplier:ev.fornecedor||null,remessas:ev.remessas||null,sourceRecordId:row.id}];
   })).sort((a,b)=>String(b.sentAt).localeCompare(String(a.sentAt)));
   const limited=records.length>(p.pageSize as number);
-  const unverifiableSupplier=Boolean(p.supplierCnpj && q.rows.some(row=>!row.data.supplierCnpj));
+  const unverifiableSupplier=Boolean(p.supplierCnpj && unresolvedSupplier);
   const incomplete=q.truncated||limited||unverifiableSupplier
     ||records.some(item=>item.remessas===null);
   return {status:incomplete?'partial':records.length?'ok':'empty',
@@ -168,7 +178,7 @@ async function sentHistory(access:AiAccess,p:Record<string,unknown>):Promise<Que
     limitations:['messageId registra envio, não confirma entrega nem leitura do e-mail.',
       'Ausência de registro não comprova ausência de envio pelo Gmail.',
       ...(incomplete?['Retratos de remessas ou cobertura histórica podem estar incompletos.']:[])],
-    examinedDocuments:q.examined};
+    examinedDocuments:q.examined+(p.supplierCnpj?q.rows.length:0)};
 }
 async function invoicePeriod(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
   const period=p.interval as {start:string;endExclusive:string},size=p.pageSize as number;
