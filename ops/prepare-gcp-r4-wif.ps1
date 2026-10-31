@@ -8,7 +8,8 @@ $Conta='marcoa.r.aquino@gmail.com'
 $Team='aprov-hgesms-projects'
 $Pool='emprovex-vercel-r4'
 $Provider='vercel-production'
-$Migrator='emprovex-vercel-secret-migrator'
+$Migrator='emprovex-r4-migrator'
+if ($Migrator.Length -lt 6 -or $Migrator.Length -gt 30) { throw 'Invalid service account ID length' }
 $Email="$Migrator@$Projeto.iam.gserviceaccount.com"
 $Subject="owner:$Team"+':project:controles-de-empenhos-aprov:environment:production'
 $Principal="principal://iam.googleapis.com/projects/$Numero/locations/global/workloadIdentityPools/$Pool/subject/$Subject"
