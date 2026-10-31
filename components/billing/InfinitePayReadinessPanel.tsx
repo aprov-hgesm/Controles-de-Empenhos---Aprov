@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { auth } from '../../lib/firebase';
+import { HGESM_SECTOR_EMAIL } from '../../lib/hgesmWorkspace';
 import { resolveWorkspaceContext, type ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { resolveBillingWorkspaceContext } from '../../lib/billing/resolveBillingWorkspaceContext';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
@@ -91,6 +92,8 @@ export function InfinitePayReadinessPanel({
 }) {
   const { status, context, email } = useSafeWorkspaceBillingContext();
   const { account, loading: billingLoading } = useWorkspaceBillingAccount(context);
+  const founderExempt = status === 'authenticated' && context.status === 'sector'
+    && context.email === HGESM_SECTOR_EMAIL;
   const [returnNotice, setReturnNotice] = useState(false);
   const [rampConfirmed, setRampConfirmed] = useState(false);
   const [rampSaving, setRampSaving] = useState(false);
@@ -111,7 +114,7 @@ export function InfinitePayReadinessPanel({
   // historical R$50 global configuration. Only the tenant's own Firebase
   // token can request this figure; future tiers remain in contract consent.
   useEffect(() => {
-    if (context.status !== 'sector' || !auth.currentUser) {
+    if (context.status !== 'sector' || !auth.currentUser || founderExempt) {
       setCurrentQuotedCents(null);
       setBillingTimeline(null);
       return;
@@ -130,7 +133,7 @@ export function InfinitePayReadinessPanel({
     }).catch(() => undefined);
     return () => { active = false; };
   }, [context.status, context.status === 'sector' ? context.workspaceId : null,
-      account?.monthlyPriceCents, activeTab, sharedRefreshToken]);
+      account?.monthlyPriceCents, activeTab, sharedRefreshToken, founderExempt]);
 
 
   useEffect(() => {
@@ -325,9 +328,12 @@ export function InfinitePayReadinessPanel({
               <ShieldCheck className="h-4 w-4" /> Situação comercial
             </div>
             <p className="mt-3 text-base font-extrabold text-[#13263a]">
-              {!workspaceResolved ? (status === 'loading' ? 'Validando acesso...' : 'Sem setor autorizado') : (billingLoading ? 'Consultando conta...' : accountStatus(account?.status))}
+              {!workspaceResolved ? (status === 'loading' ? 'Validando acesso...' : 'Sem setor autorizado') : founderExempt ? 'Isento de cobrança — conta fundadora' : (billingLoading ? 'Consultando conta...' : accountStatus(account?.status))}
             </p>
-            {workspaceResolved && !billingLoading && account && (
+            {founderExempt && (
+              <p className="mt-1 text-xs text-emerald-700">Conta fundadora HGeSM protegida: nenhum pagamento é necessário nesta área.</p>
+            )}
+            {workspaceResolved && !founderExempt && !billingLoading && account && (
               <p className="mt-1 text-xs text-slate-500">
                 {exempt ? 'Isenção preservada. Nenhum pagamento necessário.' :
                   account.pricingPolicyId === 'emprovex_individual_ramp_v1'
@@ -335,7 +341,7 @@ export function InfinitePayReadinessPanel({
                     : `Valor atual cadastrado: ${money(account.monthlyPriceCents)}/mês.`}
               </p>
             )}
-            {workspaceResolved && !billingLoading && !account && (
+            {workspaceResolved && !founderExempt && !billingLoading && !account && (
               <p className="mt-1 text-xs text-slate-500">
                 Nenhum registro comercial acessível para esta sessão. Não é possível calcular cobrança.
               </p>
@@ -348,7 +354,7 @@ export function InfinitePayReadinessPanel({
           </div>
         </div>
 
-        {workspaceResolved && !billingLoading && account?.status === 'trial' && account.trialEndsAt && (
+        {workspaceResolved && !founderExempt && !billingLoading && account?.status === 'trial' && account.trialEndsAt && (
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
             <p className="font-extrabold">Período de teste</p>
             <p className="mt-1">
@@ -359,7 +365,7 @@ export function InfinitePayReadinessPanel({
         )}
 
 
-        <BillingAnniversaryCard period={billingTimeline} />
+        {!founderExempt && <BillingAnniversaryCard period={billingTimeline} />}
         <section className="mt-4 rounded-2xl border border-emerald-100 bg-white p-5"
           data-testid="billing-full-plan-benefits">
           <h3 className="text-sm font-extrabold text-emerald-800">Condições do Plano Completo EMPROVEX</h3>
@@ -411,12 +417,24 @@ export function InfinitePayReadinessPanel({
       </section>
       )}
 
-      <InfinitePayPilotPanel
+      {!founderExempt && <InfinitePayPilotPanel
         authorizedWorkspace={workspaceResolved && status === 'authenticated'}
         workspaceId={workspaceResolved ? context.workspaceId : null}
         returnParams={returnParams}
         activeTab={activeTab}
-      />
+      />}
+
+      {activeTab === 'history' && founderExempt && (
+        <div role="status" data-testid="billing-founder-exempt-history" className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          Conta fundadora HGeSM isenta: o histórico de cobranças dos setores contratantes não se aplica a esta identidade.
+        </div>
+      )}
+
+      {activeTab === 'payments' && founderExempt && (
+        <div role="status" data-testid="billing-founder-exempt-payments" className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+          A conta fundadora é isenta de mensalidade. Não é necessário gerar cobrança ou efetuar pagamento.
+        </div>
+      )}
 
       {activeTab === 'history' && !workspaceResolved && (
         <div data-testid="billing-history-unauthorized" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
@@ -425,7 +443,7 @@ export function InfinitePayReadinessPanel({
         </div>
       )}
 
-      {workspaceResolved && !billingLoading && activeTab === 'payments'
+      {workspaceResolved && !founderExempt && !billingLoading && activeTab === 'payments'
           && account?.pricingPolicyId === 'emprovex_individual_ramp_v1'
           && !account.pricingTermsAcceptedAt && (
           <section className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5"
@@ -463,10 +481,10 @@ export function InfinitePayReadinessPanel({
         )}
 
 
-      {activeTab === 'payments' && workspaceResolved && (
+      {activeTab === 'payments' && workspaceResolved && !founderExempt && (
         <BillingAnniversaryCard period={billingTimeline} />
       )}
-      {activeTab === 'payments' && workspaceResolved && account?.status !== 'exempt'
+      {activeTab === 'payments' && workspaceResolved && !founderExempt && account?.status !== 'exempt'
         && account?.pricingTermsAcceptedAt && status === 'authenticated' && (
         <SharedBillingPanel
           workspaceId={context.status === 'sector' ? context.workspaceId : ''}
@@ -479,7 +497,7 @@ export function InfinitePayReadinessPanel({
         </p>
       )}
 
-      {activeTab === 'payments' && workspaceResolved && !sharedConfigured && account?.status !== 'exempt' && (
+      {activeTab === 'payments' && workspaceResolved && !founderExempt && !sharedConfigured && account?.status !== 'exempt' && (
         <section className="mt-5 rounded-2xl border border-emerald-200 bg-white p-5"
           data-testid="billing-real-checkout">
           <h3 className="font-extrabold text-slate-900">Pagar minha mensalidade</h3>

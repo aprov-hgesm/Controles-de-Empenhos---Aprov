@@ -84,3 +84,23 @@ test('read-only resolver never uses a user-provided tenant ID or writes', async 
   assert.match(source, /validateBillingIdentity/);
   assert.doesNotMatch(source, /runTransaction|setDoc|updateDoc|writeBatch|localStorage|sessionStorage/);
 });
+
+
+test('founder billing read-only portal accepts linked Google/password and never offers checkout', async () => {
+  const fs = await import('node:fs/promises');
+  const source = await fs.readFile('lib/billing/resolveBillingWorkspaceContext.ts', 'utf8');
+  const panel = await fs.readFile('components/billing/InfinitePayReadinessPanel.tsx', 'utf8');
+  const server = await fs.readFile('lib/server/billingPortalIdentity.ts', 'utf8');
+  assert.match(source, /isFounderSignInProvider\(token\.signInProvider\)/);
+  assert.match(source, /return resolveWorkspaceContext\(email, 'sector'\)/);
+  assert.match(source, /BILLING_FOUNDER_PROVIDER_MISMATCH/);
+  assert.match(source, /tokenEmail !== email \|\| token\.claims\.email_verified !== true/);
+  assert.match(panel, /founderExempt = status === 'authenticated'/);
+  assert.match(panel, /Isento de cobrança — conta fundadora/);
+  assert.match(panel, /!founderExempt && <InfinitePayPilotPanel/);
+  assert.match(panel, /billing-founder-exempt-history/);
+  assert.match(panel, /billing-founder-exempt-payments/);
+  assert.match(panel, /!founderExempt && !sharedConfigured/);
+  assert.match(server, /provider !== 'password'/);
+  assert.match(server, /validateBillingIdentity/);
+});
