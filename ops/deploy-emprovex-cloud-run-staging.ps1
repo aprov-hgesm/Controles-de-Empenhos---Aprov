@@ -7,6 +7,8 @@ $Account='marcoa.r.aquino@gmail.com'
 $Region='southamerica-east1'
 $Service='emprovex-cloudrun-staging'
 $Runtime="emprovex-run-runtime@$Project.iam.gserviceaccount.com"
+$BuildAccount='943599311487-compute@developer.gserviceaccount.com'
+$BuildMember="serviceAccount:$BuildAccount"
 $ExpectedBranch='feat/cloud-run-r7-service-identity-20261031'
 $Root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
@@ -24,17 +26,48 @@ $SACheck=@(gcloud.cmd iam service-accounts describe $Runtime --project=$Project 
 MustExit 'RUNTIME_ACCOUNT_NOT_FOUND'
 if($SACheck -contains 'True'){throw 'RUNTIME_ACCOUNT_DISABLED'}
 
-# Avoid modifying an existing Cloud Run service. New staging namespace only.
+# An earlier failed source build may leave a staging service resource.
+# Reuse only if it already has the expected runtime identity and private IAM.
 $Existing=@(gcloud.cmd run services list --project=$Project --region=$Region --format='value(metadata.name)')
 MustExit 'RUN_SERVICES_LIST_FAILED'
-if(@($Existing | Where-Object { ($_ -split '/')[-1] -eq $Service }).Count -gt 0){
- throw 'STAGING_SERVICE_ALREADY_EXISTS: never replace another service implicitly'
+$ServiceExists=@($Existing | Where-Object { ($_ -split '/')[-1] -eq $Service }).Count -gt 0
+if($ServiceExists){
+ $ExistingJson=@(gcloud.cmd run services describe $Service --project=$Project --region=$Region --format=json)
+ MustExit 'STAGING_EXISTING_DESCRIBE_FAILED'
+ $ExistingObject=($ExistingJson|Out-String)|ConvertFrom-Json
+ if([string]$ExistingObject.spec.template.spec.serviceAccountName -cne $Runtime){
+  throw 'STAGING_EXISTING_RUNTIME_MISMATCH: manual review required'
+ }
+ $ExistingPolicyJson=@(gcloud.cmd run services get-iam-policy $Service --project=$Project --region=$Region --format=json)
+ MustExit 'STAGING_EXISTING_IAM_READ_FAILED'
+ $ExistingPolicy=($ExistingPolicyJson|Out-String)|ConvertFrom-Json
+ if(@($ExistingPolicy.bindings|Where-Object{
+   $_.members -contains 'allUsers' -or $_.members -contains 'allAuthenticatedUsers'
+ }).Count -gt 0){
+  throw 'STAGING_EXISTING_PUBLIC_BINDING: manual review required'
+ }
 }
+# Use the EXACT default Compute Engine build account reported by the failed build.
+# Grant only the Google-documented roles/run.builder role, never Owner or Editor.
+$BuildAccountEnabled=@(gcloud.cmd iam service-accounts describe $BuildAccount --project=$Project --format='value(disabled)')
+MustExit 'CLOUD_BUILD_ACCOUNT_NOT_FOUND'
+if($BuildAccountEnabled -contains 'True'){throw 'CLOUD_BUILD_ACCOUNT_DISABLED'}
+$ProjectIamJson=@(gcloud.cmd projects get-iam-policy $Project --format=json)
+MustExit 'PROJECT_IAM_READ_FAILED'
+$ProjectIam=($ProjectIamJson|Out-String)|ConvertFrom-Json
+$BuilderGranted=@($ProjectIam.bindings|Where-Object{
+ $_.role -eq 'roles/run.builder' -and
+ ($_.members -contains $BuildMember) -and
+ ([string]$_.condition.expression -eq '')
+}).Count -gt 0
 Write-Host '=== EMPROVEX PRIVATE CLOUD RUN STAGING / PRECHECK ==='
 Write-Host "PROJECT: $Project"
 Write-Host "REGION: $Region"
 Write-Host "SERVICE: $Service"
 Write-Host "RUNTIME: $Runtime"
+Write-Host "BUILD IDENTITY: $BuildAccount"
+Write-Host "BUILD ROLE: roles/run.builder (already granted: $BuilderGranted)"
+Write-Host "EXISTING STAGING SERVICE: $ServiceExists"
 Write-Host "GIT SHA: $((git -C $Root rev-parse HEAD).Trim())"
 Write-Host 'ACCESS: IAM-authenticated only (no public allUsers access)'
 Write-Host 'BILLING: InfinitePay and financial enforcement disabled in staging.'
@@ -43,11 +76,24 @@ Write-Host 'SERVICES: Cloud Run builds source with Dockerfile, 0 min / 1 max ins
 Write-Host 'DOES NOT: update domain, Vercel, webhooks, cron, Firebase Auth domains, or main.'
 Write-Host 'COST: Cloud Build, Artifact Registry and Cloud Run may be billed.'
 if(-not $Deploy){
- Write-Host 'EMPROVEX STAGING DRY-RUN PASS; no service created.'
+ Write-Host 'EMPROVEX STAGING DRY-RUN PASS; no IAM binding or service modified.'
  return
 }
-$Confirmation=Read-Host 'Digite CRIAR-STAGING-PRIVADO para autorizar o build e deploy'
+$Confirmation=Read-Host 'Digite CRIAR-STAGING-PRIVADO para autorizar build IAM e deploy'
 if($Confirmation -cne 'CRIAR-STAGING-PRIVADO'){throw 'DEPLOY_CANCELLED'}
+
+if(-not $BuilderGranted){
+ Write-Host '=== CLOUD BUILD / GRANT OFFICIAL BUILD ROLE ==='
+ gcloud.cmd projects add-iam-policy-binding $Project `
+   "--member=$BuildMember" `
+   --role=roles/run.builder `
+   --condition=None `
+   --quiet --format=none
+ MustExit 'CLOUD_BUILD_BUILDER_ROLE_GRANT_FAILED'
+ Write-Host 'BUILD ROLE: granted to Compute Engine default build service account.'
+}else{
+ Write-Host 'BUILD ROLE: already granted; no IAM update.'
+}
 
 $DeployArgs=@(
  'run','deploy',$Service,
