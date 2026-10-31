@@ -46,10 +46,11 @@ async function main() {
   let allowed = 0;
   let denied = 0;
   for (const [db, expected] of DATABASES) {
+    // Collection and document IDs must not match reserved Firestore __.*__ pattern.
     // The random path is never created; a 404 proves document GET is authorized.
     // A 403 proves this exact document GET was not authorized.
     const uri = 'https://firestore.googleapis.com/v1/projects/' +
-      PROJECT + '/databases/' + db + '/documents/__emprovex_r7_iam_probe__/' + nonce;
+      PROJECT + '/databases/' + db + '/documents/emprovex_r7_iam_probe/' + nonce;
     const response = await fetch(uri, {
       method: 'GET',
       headers: { Authorization: 'Bearer ' + token },
