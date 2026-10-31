@@ -105,7 +105,7 @@ for (const scenario of [
   'Movimento da FASE 2 não existe sem atualização de saldo correspondente',
   'Setor externo não lê ledger da FASE 2',
   'Setor externo não lê saldo da FASE 2',
-  'Sessão fundadora por senha não lê ledger da FASE 2',
+  'Sessão fundadora por senha lê ledger da FASE 2',
 ]) {
   requireText(
     securitySuite,

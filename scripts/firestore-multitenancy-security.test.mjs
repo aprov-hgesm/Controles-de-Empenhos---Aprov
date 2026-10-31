@@ -1220,6 +1220,18 @@ async function main() {
       )
     );
 
+    await allowed('Sessão fundadora por senha lê ledger da FASE 2', () =>
+      getDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase2Movement1Id
+        )
+      )
+    );
+
     console.log('\nFASE 4 — NF → estoque, cutoff e rastreabilidade');
 
     const phase4MaterialId = 'mat_' + '4'.repeat(32);
