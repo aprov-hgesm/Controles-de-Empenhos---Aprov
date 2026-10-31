@@ -4,6 +4,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'lib/emprovex-ai/**'
+      - 'lib/server/firebaseFounderAuth.ts'
       - 'app/api/emprovex-ai/**'
       - 'scripts/emprovex-ai-w5*'
       - '.github/workflows/emprovex-ai-w5-certification.yml'
@@ -34,6 +35,8 @@ jobs:
         run: node --test scripts/emprovex-ai-w5.test.mjs
       - name: W5 HTTP and security integration with synthetic dependencies
         run: node --test scripts/emprovex-ai-w5-security.test.mjs
+      - name: W5 R1.1 independent findings regressions
+        run: node --test scripts/emprovex-ai-w5-r11.test.mjs
       - name: W5 bounded lexical benchmark
         run: node scripts/emprovex-ai-w5-benchmark.mjs
       - name: W3 W4 W4.5 all existing synthetic regressions
