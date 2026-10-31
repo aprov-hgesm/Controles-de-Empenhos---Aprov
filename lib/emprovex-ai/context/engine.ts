@@ -158,10 +158,14 @@ export function interpret(input:Input):Result {
    return finish('IN_SCOPE','UNSUPPORTED',intent,reason)};
  const clarify=(intent:Intent,msg:string)=>{dimensions.intention=intent;
    return finish('IN_SCOPE','CLARIFY',intent,'MISSING_OR_AMBIGUOUS_PARAMETER',undefined,msg)};
+ if(/\b(?:outra|outro)\s+(?:ug|workspace|setor|organizacao)|\b(?:ug|workspace|setor)\s*(?:id|:|=)?\s*\d{6}\b/.test(t))
+   return finish('OUT_OF_SCOPE','OUT_OF_SCOPE','unknown','CLIENT_SCOPE_OVERRIDE_FORBIDDEN');
+ if(isCommitment&&isBalance&&/\b(?:saldo contabil|siafi)\b/.test(t))
+   return unavailable('general_document_search','OFFICIAL_ACCOUNTING_BALANCE_UNAVAILABLE');
  if(x.multiCommitments)return clarify('unknown','Você citou mais de uma NE. Qual delas deseja consultar?');
  const compound=inspectCompound(t);
  if(compound)return clarify('unknown',compound);
- if(/\b(?:sem|exceto|excluindo)\s+(?:(?:os|as|o|a)\s+)?(?:materiais|itens|notas|nfs|empenhos|fornecedores|vencidos|pendentes)\b/.test(t))
+ if(/\b(?:sem|exceto|excluindo|menos)\b/.test(t))
    return unavailable('general_document_search','EXCLUSION_FILTER_UNAVAILABLE');
  const contextChange=/^(?:agora\s+(?:quero|gostaria)\s+(?:de\s+)?saber\s+sobre|na verdade[, ]+\s*(?:eu\s+)?(?:quis|queria)\s+dizer|corrigindo[, ]*|era\s+(?:o|a))/.test(t);
  if(contextChange){
