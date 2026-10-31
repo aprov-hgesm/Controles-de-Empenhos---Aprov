@@ -80,7 +80,7 @@ export function detectConstraints(t:string, explicit:{
     (/\b(?:restava|tinha saldo|saldo (?:em|no|na|de) (?:ontem|semana passada|mes passado)|na data de)\b/.test(t)||
      (explicit.period!=null&&/\b(?:resta|restante|saldo|quanto falta)\b/.test(t))))
    c.push({name:'historicalBalance',value:'historical'});
- if(/\b(?:compare|comparar|comparacao|comparativo|versus| vs )\b/.test(t))
+ if(/\b(?:compare|comparar|comparacao|comparativo|versus|diferenca| vs )\b/.test(t))
    c.push({name:'comparison',value:'comparison'});
  if(/\b(?:acima de|maior que|maior do que|abaixo de|menor que|pelo menos)\s*(?:r\s*\$?\s*|\d)/.test(t))
    c.push({name:'quantityThreshold',value:'threshold'});

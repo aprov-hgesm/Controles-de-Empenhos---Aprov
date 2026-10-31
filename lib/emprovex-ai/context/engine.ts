@@ -1,6 +1,7 @@
 import {ACCEPTED_INTENTS} from './catalog';
 import {makeW3Query} from './adapter';
 import {auditFilters,detectConstraints} from './filterGuard';
+import {inspectCompound} from './hardening';
 import {has,matchAny,normalize,repairSafeWords,parsePeriod,WORDS} from './language';
 import type {Input,Result,Route,Domain,Intent,ContextRefs,Dimensions,ShortContext,W3Intent} from './types';
 
@@ -20,7 +21,9 @@ function safeContext(input:Input,now:number):ContextRefs {
 }
 function extract(text:string,canonical:string) {
  const fullIds=[...text.matchAll(/\b\d{4}NE\d{1,10}\b/gi)].map(m=>m[0].toUpperCase());
- const id=fullIds[0];const multiCommitments=new Set(fullIds).size>1;
+ const named=text.match(/\b(?:empenho|NE)\s*(\d{1,10})\s+(?:de|do exercicio de)\s+(20\d{2})\b/i);
+ const id=fullIds[0]||(named?named[2]+'NE'+named[1]:undefined);
+ const multiCommitments=new Set(fullIds).size>1;
  const partial=text.match(/\bNE\s*[-]?\s*(\d{1,10})\b/i)?.[0];
  const allCnpj=[...text.matchAll(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/g)].map(m=>m[0].replace(/\D/g,''));
  const multipleCnpj=new Set(allCnpj).size>1;
@@ -33,6 +36,8 @@ function extract(text:string,canonical:string) {
   .replace(/\s+(?:foram|foi|estao|forneceu|cadastrad[ao]s?|registrad[ao]s?|enviad[ao]s?|entre|em|ontem|na|no|da|do|de)\b.*$/iu,'')
   .replace(/[.,;!?]+$/,'').trim();
  let material='';
+ const subject=canonical.match(/^(?:agora\s+(?:quero|gostaria)\s+(?:de\s+)?saber\s+sobre|na verdade[, ]+\s*(?:eu\s+)?(?:quis|queria)\s+dizer|corrigindo[, ]*|era\s+(?:o|a))\s+(?:o|a|do|da)?\s*([a-z][a-z\s-]{1,75})$/);
+ if(subject)material=subject[1].trim();
  const patterns=[
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
    /\b(?:onde (?:esta|fica|estao)|localizacao de|localize|encontrar)\s+(?:(?:o|a|os|as)\s+)?(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
@@ -40,7 +45,7 @@ function extract(text:string,canonical:string) {
    /\btemos\s+(.{2,85}?)\s+em estoque\b/,
    /\b(?:existe|ha)\s+(.{2,85}?)\s+(?:no deposito|na camara|em estoque)\b/
  ];
- for(const re of patterns){const m=canonical.match(re);if(m){material=m[1].trim();break;}}
+ if(!material)for(const re of patterns){const m=canonical.match(re);if(m){material=m[1].trim();break;}}
  if(!material&&/\b(?:resta|saldo|restante|falta)\b/.test(canonical)&&/\b\d{4}ne\d+\b/.test(canonical)){
    const m=canonical.match(/\b(?:resta|saldo|restante|falta)\s+(?:de|do|da)\s+([a-z][a-z -]{1,65}?)\s+(?:na|no|da|do)\s+(?:ne|empenho|nota de empenho|\d{4}ne)/);
    if(m)material=m[1];
@@ -76,9 +81,9 @@ export function interpret(input:Input):Result {
      query=makeW3Query(intent as W3Intent,params||{})||undefined;
    if(route==='DETERMINISTIC'&&!query){route='CLARIFY';question='Informe os dados necessários para identificar o registro.';reason='W3_SCHEMA_REJECTED';}
    let nextContext:ShortContext|undefined;
-   if(query&&input.scope?.sessionId&&input.scope.workspaceId) {
-     // Context change is explicit: do not retain unrelated stale materials/NEs.
-     const r:ContextRefs={};
+   if((query||clarificationRefs)&&input.scope?.sessionId&&input.scope.workspaceId) {
+     // Explicit corrections replace stale entities. Only typed, scoped refs survive.
+     const r:ContextRefs=clarificationRefs?{...clarificationRefs}:{};
      if(typeof params?.commitmentId==='string')r.commitmentId=params.commitmentId;
      if(typeof params?.materialQuery==='string')r.materialQuery=params.materialQuery;
      if(typeof params?.nameQuery==='string')r.supplierName=params.nameQuery;
@@ -96,6 +101,7 @@ export function interpret(input:Input):Result {
      metrics:{durationMs:Date.now()-started,estimatedWork:work,qwenCalls:0}};
  };
  const entities:Record<string,string|number>={};
+ let clarificationRefs:ContextRefs|undefined;
  if(!text.trim()||text.length>MAX_CHARS)return finish('UNCERTAIN','CLARIFY','unknown','INPUT_SIZE_LIMIT',undefined,'Resuma sua solicitação em até 1.000 caracteres.');
  if(text.split(/\s+/).length>MAX_WORDS)return finish('UNCERTAIN','CLARIFY','unknown','WORD_LIMIT',undefined,'Envie uma pergunta mais curta.');
  let norm=normalize(text).replace(/[.,;:!?]+$/,'').trim(),t=repairSafeWords(norm);work=t.length;
@@ -152,6 +158,20 @@ export function interpret(input:Input):Result {
  const clarify=(intent:Intent,msg:string)=>{dimensions.intention=intent;
    return finish('IN_SCOPE','CLARIFY',intent,'MISSING_OR_AMBIGUOUS_PARAMETER',undefined,msg)};
  if(x.multiCommitments)return clarify('unknown','Você citou mais de uma NE. Qual delas deseja consultar?');
+ const compound=inspectCompound(t);
+ if(compound)return clarify('unknown',compound);
+ if(/\b(?:sem|exceto|excluindo)\s+(?:(?:os|as|o|a)\s+)?(?:materiais|itens|notas|nfs|empenhos|fornecedores|vencidos|pendentes)\b/.test(t))
+   return unavailable('general_document_search','EXCLUSION_FILTER_UNAVAILABLE');
+ const contextChange=/^(?:agora\s+(?:quero|gostaria)\s+(?:de\s+)?saber\s+sobre|na verdade[, ]+\s*(?:eu\s+)?(?:quis|queria)\s+dizer|corrigindo[, ]*|era\s+(?:o|a))/.test(t);
+ if(contextChange){
+   if(!x.material)return clarify('unknown','Qual material deseja usar como nova referência?');
+   clarificationRefs={materialQuery:x.material};
+   dimensions.material=x.material;
+   return finish('IN_SCOPE','CLARIFY','warehouse_stock_get','CONTEXT_REFERENCE_UPDATED',undefined,
+     'Referência atualizada para '+x.material+'. Você deseja consultar o saldo ou a localização?');
+ }
+ if(x.material&&/\s+e\s+/.test(x.material))
+   return clarify('warehouse_stock_get','Você citou mais de um possível material. Qual deseja consultar primeiro?');
  if(x.multipleCnpj)return clarify('unknown','Você citou mais de um CNPJ. Qual deles deve ser utilizado?');
  if(/\b(?:fornecedor|fornecedores)\s+[^.!?]{1,65}\s+e\s+(?:fornecedor|fornecedores)\b/.test(t))
    return clarify('supplier_contact_find','Informe um fornecedor por consulta.');
