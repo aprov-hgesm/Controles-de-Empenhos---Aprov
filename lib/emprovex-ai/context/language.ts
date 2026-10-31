@@ -7,7 +7,7 @@ export const WORDS={
   stock:['estoque','saldo fisico','quantidade','temos','disponivel','material','materiais','produto','produtos'],
   location:['cade','aonde','onde','localizacao','localizado','armazenado','deposito','camara fria','estante','prateleira','freezer','geladeira'],
   contact:['contato','telefone','email','e-mail','whatsapp','numero de telefone'],
-  balance:['saldo','resta','restante','quanto falta','a liquidar','valor disponivel','tem saldo','falta entregar','pra receber','para receber','a receber','ainda tem pra receber','quanto ainda tem','sobrou'],
+  balance:['saldo','resta','restante','quanto falta','a liquidar','valor disponivel','tem saldo','falta entregar','pra receber','para receber','a receber','ainda tem pra receber','quanto ainda tem','sobrou','sobra'],
   register:['cadastradas','cadastrados','registradas','registrados','lancadas','inseridas'],
   issued:['emitida','emitidas','emissao','emitidos','emitido'],
   sent:['enviado','enviados','enviamos','enviada','envio','remessa'],
