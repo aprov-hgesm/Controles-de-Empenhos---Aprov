@@ -121,7 +121,7 @@ function pruneBurstBuckets(now: number): void {
  * Proteção de burst local ao processo.
  *
  * Deliberadamente não é tratada como rate limit distribuído/autoridade de
- * segurança. Em Vercel/serverless cada instância mantém seu próprio bucket. O
+ * segurança. No Cloud Run, cada instância mantém seu próprio bucket. O
  * objetivo é conter loops, cliques repetidos e abuso concentrado sem adicionar
  * Redis, banco ou uma dependência operacional nova.
  */
