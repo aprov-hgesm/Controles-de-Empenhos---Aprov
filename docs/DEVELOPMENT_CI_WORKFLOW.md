@@ -4,6 +4,12 @@ Este documento registra a política oficial de desenvolvimento assistido do EMPR
 
 Ele se aplica ao projeto inteiro e deve ser considerado junto da `main`, dos documentos de arquitetura e das memórias específicas de cada módulo.
 
+## 0. Atualização operacional vigente — Cloud Run (31/10/2026)
+
+**Nova hospedagem oficial:** Registro.br → Firebase Hosting (`emprovex-cloudrun-943599311487`) → Cloud Run (`emprovex-cloudrun-candidate`, `southamerica-east1`). A partir do corte de 31/10/2026, o padrão de publicação **não** é mais Vercel. Seguir [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md).
+
+Novo fluxo: PR/CI proporcional → `main` integrada → nova revisão Cloud Run `--no-traffic` → confirmação pontual → promoção de tráfego da revisão → rollback por revisão se necessário. Sem alterações repetidas em DNS, certificado SSL, Hosting ou Rules. O `vercel.json` e o respectivo teste de bloqueio de Git deployment permanecem **apenas para preservar a contingência da Vercel**. As seções históricas 13 e 14 abaixo devem ser interpretadas com essa precedência.
+
 ## 1. Princípio geral
 
 O objetivo do processo de validação é **proteger o sistema sem transformar cada pequena alteração em uma regressão completa obrigatória**.
