@@ -2,6 +2,15 @@
 
 **Data: 31/10/2026.** Fonte operacional: [Memorial Oficial](./EMPROVEX_MEMORIAL_OFICIAL.md). **Novas publicações exclusivamente pelo [runbook Cloud Run](./EMPROVEX_RELEASE_CLOUD_RUN.md).**
 
+## Auditoria real de código (Fast CI — 31/10/2026)
+
+O scanner percorreu **548 arquivos de runtime** e inicialmente sinalizou **7 referências à Vercel**, das quais somente **1 era dependência executável que impedia o guard**: `app/dev/visual-r1/page.tsx` aceitava `process.env.VERCEL_ENV === 'preview'`. Corrigido para acesso **apenas em desenvolvimento local** (`NODE_ENV=development`). O restante incluía avisos legais desatualizados, texto do laboratório e cabeçalho legado de contingência.
+
+- `app/privacy/page.tsx` e `app/terms/page.tsx`: conteúdo legal ajustado para identificar Google Cloud Run/Firebase Hosting como provedores de produção e Vercel apenas como contingência.
+- `components/visual/EmprovexVisualIntegrationPreview.tsx`: texto do laboratório já não apresenta Vercel Preview como meio atual.
+- `lib/server/requestSecurity.ts`: descrição de bucket local ajustada à arquitetura Cloud Run; leitura de `x-vercel-forwarded-for` preservada antes de `x-forwarded-for` exclusivamente para compatibilidade de contingência. No tráfego Cloud Run normal, o cabeçalho esperado é `x-forwarded-for`.
+- O primeiro Fast CI com o novo guard falhou de maneira legítima por causa da rota visual; o código foi corrigido em commits subsequentes. **Não marcar o Fast CI de um HEAD posterior como PASS sem verificar seu run.**
+
 ## 1. Código operacional — mudanças realizadas
 
 | Local | Resultado |
