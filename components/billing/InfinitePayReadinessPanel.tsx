@@ -482,7 +482,7 @@ export function InfinitePayReadinessPanel({
 
 
       {activeTab === 'payments' && workspaceResolved && !founderExempt && (
-        {!founderExempt && <BillingAnniversaryCard period={billingTimeline} />}
+        <BillingAnniversaryCard period={billingTimeline} />
       )}
       {activeTab === 'payments' && workspaceResolved && !founderExempt && account?.status !== 'exempt'
         && account?.pricingTermsAcceptedAt && status === 'authenticated' && (
