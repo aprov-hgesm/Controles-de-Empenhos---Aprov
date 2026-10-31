@@ -32,6 +32,8 @@ jobs:
           cp .w4-dist/index.js .w4-dist/index.cjs
       - name: W5 semantic corpus and 20 conversations
         run: node --test scripts/emprovex-ai-w5.test.mjs
+      - name: W5 HTTP and security integration with synthetic dependencies
+        run: node --test scripts/emprovex-ai-w5-security.test.mjs
       - name: W3 W4 W4.5 all existing synthetic regressions
         run: |
           node --test scripts/emprovex-ai-w3.test.mjs
