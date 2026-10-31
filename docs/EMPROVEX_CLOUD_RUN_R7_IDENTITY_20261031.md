@@ -1,6 +1,8 @@
 # EMPROVEX Cloud Run R7 — identidade nativa para Firebase Auth e Monitoring
 
-**ESTADO:** implementação em branch isolada / PR DRAFT. **NÃO MESCLAR, NÃO PUBLICAR, NÃO ALTERAR IAM SEM AUTORIZAÇÃO.**
+> **ATUALIZAÇÃO DE STATUS (31/10/2026):** identidade de serviço R7 e aplicação Cloud Run efetivamente homologadas e em produção por Firebase Hosting, domínio com SSL ativo. A informação original abaixo de que a Vercel ainda é produção e de que a PR não pode ser publicada é um checkpoint **pré-corte**, preservado como histórico. A PR #426 continua DRAFT no GitHub neste commit; não presumir merge nem deploy de HEAD. Procedimento vigente: [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md).
+
+**ESTADO HISTÓRICO:** implementação em branch isolada / PR DRAFT. **NÃO MESCLAR, NÃO PUBLICAR, NÃO ALTERAR IAM SEM AUTORIZAÇÃO.**
 
 ## Base de produção e objetivo
 
