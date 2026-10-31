@@ -326,6 +326,74 @@ test('Synthetic request timing and bounded execution counters',async()=>{
    note:'Local synthetic fixture, not Firestore/Oracle production performance'}));
  assert.equal(counters.writes,0);assert.equal(counters.forbiddenNetworks,0);
 });
+test('Concurrent independent queries never bypass W3 local concurrency gate',async()=>{
+ const operations=Array.from({length:20},(_,i)=>
+   ask(i%2===0?'Onde está o arroz?':'Quanto resta da NE 2026NE66?',i%3===0?'Bearer B':'Bearer A')
+     .then(v=>({payload:v.payload})).catch(error=>({error})));
+ const outcomes=await Promise.all(operations);
+ const success=outcomes.filter(x=>x.payload);
+ assert.ok(success.length>0);
+ for(const x of outcomes){
+   if(x.error)assert.equal(x.error.code,'AI_LOCAL_CONCURRENCY_EXCEEDED');
+   else {
+     assert.equal(x.payload.metrics.qwenCalls,0);
+     assert.ok(['ok','partial'].includes(x.payload.status));
+     if(x.payload.intent==='commitment_total_balance')
+       assert.ok([8000,1000].includes(x.payload.result.data.operationalBalance));
+     if(x.payload.intent==='warehouse_material_locations_list')
+       assert.ok(['Depósito Alfa','Depósito Beta'].includes(x.payload.result.data.locations[0].depot.name));
+   }
+ }
+ assert.equal(counters.writes,0);
+});
+test('W3 real pagination preserves page-size, cursor and scoped filters',async()=>{
+ const access=await prepareAiAccess('Bearer A');
+ const added=[];
+ try {
+   for(const id of ['2025NE90','2025NE91','2025NE92']){
+     const path='workspaces/'+WS_A+'/empenhos/'+id;
+     record(path,{workspaceId:WS_A,ug:UG_A,id,date:'2025-10-10',
+       items:[{id:'i-'+id,quantity:4,received:1,unitPrice:10,unit:'un',name:'Synthetic'}]});
+     added.push(path);
+   }
+   const params={exerciseYear:2025,pageSize:2};
+   const first=await executeAuthorizedAiQuery(access,{
+     version:'emprovex.ai.query.v1',intent:'commitment_previous_open_list',params
+   });
+   assert.equal(first.status,'partial');
+   assert.equal(first.data.length,2);
+   assert.ok(first.pagination.nextCursor);
+   const second=await executeAuthorizedAiQuery(access,{
+     version:'emprovex.ai.query.v1',intent:'commitment_previous_open_list',
+     params:{...params,cursor:first.pagination.nextCursor}
+   });
+   assert.ok(second.data.length>=1);
+   assert.equal(new Set([...first.data,...second.data].map(x=>x.commitmentId)).size,
+     first.data.length+second.data.length,'pages must not repeat documents');
+   const other=await prepareAiAccess('Bearer B');
+   await assert.rejects(()=>executeAuthorizedAiQuery(other,{
+     version:'emprovex.ai.query.v1',intent:'commitment_previous_open_list',
+     params:{...params,cursor:first.pagination.nextCursor}
+   }),/AI_CURSOR_FORBIDDEN/);
+ }finally{for(const path of added)docs.delete(path);}
+});
+test('Missing canonical warehouse balance is partial, never invented as zero',async()=>{
+ const path='warehouse/'+WS_A+'/balances/'+MAT,original=docs.get(path);
+ docs.delete(path);
+ try{
+   const {payload}=await ask('Quanto arroz temos?');
+   assert.equal(payload.status,'partial');
+   assert.equal(payload.result.coverage,'unknown');
+   assert.equal(payload.result.data.quantity,null);
+   assert.match(payload.answer,/não informado/i);
+ }finally{docs.set(path,original);}
+});
+test('No context secret fails closed even for unrelated semantic routes',async()=>{
+ const key=process.env.EMPROVEX_AI_W45_CONTEXT_SECRET;
+ delete process.env.EMPROVEX_AI_W45_CONTEXT_SECRET;
+ try{await assert.rejects(()=>ask('Quanto arroz temos?'),/AI_CONTEXT_NOT_CONFIGURED/);}
+ finally{process.env.EMPROVEX_AI_W45_CONTEXT_SECRET=key;}
+});
 process.on('exit',()=>{globalThis.fetch=originalFetch;
  for(const key of ['EMPROVEX_AI_W45_CONTEXT_SECRET','EMPROVEX_AI_CURSOR_SECRET',
   'INFINITEPAY_BILLING_ENABLED','EMPROVEX_BILLING_ENFORCEMENT_ENABLED']){
