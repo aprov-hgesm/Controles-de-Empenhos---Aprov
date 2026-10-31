@@ -123,3 +123,11 @@ test('W4 ambiguous NEs, contextual supplier and explicit date interval',()=>{
  assert.deepEqual(fiscal.query.params.interval,{start:'2026-10-01',endExclusive:'2026-10-06'});
  assert.equal(run('Quais notas fiscais cadastradas entre 30/02/2026 e 05/10/2026').route,'CLARIFY');
 });
+
+test('W4 compound material terms retain internal prepositions',()=>{
+ for(const query of ['Onde esta o leite em po?','Me diz onde esta o leite em po']){
+   const r=run(query);assert.equal(r.route,'DETERMINISTIC');
+   assert.equal(r.query.params.materialQuery,'leite em po');
+ }
+ assert.equal(run('Onde esta o arroz em estoque?').query.params.materialQuery,'arroz');
+});

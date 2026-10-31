@@ -27,7 +27,7 @@ function extract(text:string,canonical:string) {
  let material='';
  const patterns=[
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
-   /\b(?:onde (?:esta|fica|estao)|localizacao de|localize|encontrar)\s+(?:o|a|os|as)?\s*(.{2,85}?)(?:\s+(?:no|na|em|dentro|agora)\b|$)/,
+   /\b(?:onde (?:esta|fica|estao)|localizacao de|localize|encontrar)\s+(?:o|a|os|as)?\s*(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
    /\b(?:quantidade|estoque|saldo fisico)\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em|agora)\b|$)/,
    /\btemos\s+(.{2,85}?)\s+em estoque\b/,
    /\b(?:existe|ha)\s+(.{2,85}?)\s+(?:no deposito|na camara|em estoque)\b/
