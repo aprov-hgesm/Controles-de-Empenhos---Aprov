@@ -1,6 +1,8 @@
-# EMPROVEX — Publicação Vercel PowerShell: procedimento canônico vigente
+# EMPROVEX — Publicação Vercel PowerShell: PROCEDIMENTO HISTÓRICO / CONTINGÊNCIA
 
-> **GOV-SIMP-01 / validado em 24/10/2026.** Revoga para este projeto Hobby o antigo procedimento padrão `vercel build --prod` + `deploy --prebuilt`, que conflita com as publicações remotas confirmadas. Esta instrução é a fonte única a ser consultada junto com o [memorial](./EMPROVEX_MEMORIAL_OFICIAL.md). Não publicar documentação por conta própria na Vercel.
+> **ARQUIVADO PARA NOVAS RELEASES desde 31/10/2026:** a produção oficial passou para **Firebase Hosting → Google Cloud Run**. O procedimento canônico atual é [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md), com `ops/release-emprovex-cloud-run.ps1`. **NÃO executar `vercel deploy/promote` para novas versões.** O conteúdo abaixo documenta releases anteriores e referência de contingência da Vercel, não o estado atual do domínio.
+
+> **HISTÓRICO GOV-SIMP-01 / validado em 24/10/2026.** Revoga para este projeto Hobby o antigo procedimento padrão `vercel build --prod` + `deploy --prebuilt`, que conflita com as publicações remotas confirmadas. Esta instrução é a fonte única a ser consultada junto com o [memorial](./EMPROVEX_MEMORIAL_OFICIAL.md). Não publicar documentação por conta própria na Vercel.
 
 ## Contrato invariável
 
