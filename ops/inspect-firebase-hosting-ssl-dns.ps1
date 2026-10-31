@@ -21,6 +21,38 @@ try {
   $domainData = Invoke-RestMethod -Method GET -Uri $endpoint -Headers @{
     Authorization = "Bearer $($accessToken[0])"
   } -TimeoutSec 45
+} catch {
+  $errorRecord = $_
+  $httpCode = if ($errorRecord.Exception.Response) {
+    [int]$errorRecord.Exception.Response.StatusCode
+  } else { 0 }
+  $jsonError = [string]$errorRecord.ErrorDetails.Message
+  if (-not $jsonError -and $errorRecord.Exception.Response) {
+    try {
+      $reader = New-Object System.IO.StreamReader($errorRecord.Exception.Response.GetResponseStream())
+      $jsonError = $reader.ReadToEnd()
+      $reader.Dispose()
+    } catch { $jsonError = '' }
+  }
+  Write-Host "SSL_API_HTTP: $httpCode"
+  if ($jsonError) {
+    try {
+      $apiError = $jsonError | ConvertFrom-Json
+      Write-Host "SSL_API_STATUS: $($apiError.error.status)"
+      Write-Host "SSL_API_MESSAGE: $($apiError.error.message)"
+      foreach ($detail in @($apiError.error.details)) {
+        if ($detail.reason) { Write-Host "SSL_API_REASON: $($detail.reason)" }
+      }
+    } catch {
+      Write-Host "SSL_API_ERROR: $($jsonError.Substring(0,[Math]::Min($jsonError.Length,1200)))"
+    }
+  }
+  if ($httpCode -eq 403) {
+    Write-Host 'Acesso 403 ao Firebase Hosting: conferir permissao firebasehosting.sites.get, escopo OAuth e se GCloud e Firebase CLI usam a mesma conta.'
+    Write-Host 'Diagnostico local (sem alterar nada): npx.cmd --yes firebase-tools login:list'
+    throw 'SSL_API_ACCESS_DENIED_DO_NOT_CHANGE_DNS'
+  }
+  throw "SSL_API_READ_FAILED_HTTP_$httpCode"
 } finally {
   $accessToken = $null
 }
