@@ -51,14 +51,14 @@ A primeira execução criou com sucesso o pool `emprovex-vercel-r4` e o provider
 
 ## Execução posterior, sujeita a autorização
 
-- Criar a variável Config Production `EMPROVEX_R4_TRANSFER_CONFIRMATION=EMPROVEX_R4_TRANSFER_20261030` no projeto Vercel original.
-- Em clone isolado da **branch R4**, vincular ao projeto Vercel correto. Executar **uma única vez** `vercel deploy --prod --skip-domain --archive=tgz --scope aprov-hgesms-projects`. Isso constrói um deployment de produção **não promovido ao domínio**.
+- NÃO criar uma variável persistente Production para ativação. Usar o parâmetro pontual `--build-env EMPROVEX_R4_TRANSFER_CONFIRMATION=EMPROVEX_R4_TRANSFER_20261030` somente no deploy isolado. Isso evita habilitar a rotina em deploys futuros.
+- Em clone isolado da **branch R4**, vincular ao projeto Vercel correto. Executar **uma única vez** `vercel deploy --prod --skip-domain --archive=tgz --build-env EMPROVEX_R4_TRANSFER_CONFIRMATION=EMPROVEX_R4_TRANSFER_20261030 --scope aprov-hgesms-projects`. Isso autoriza exclusivamente o build isolado de produção, **sem promover o domínio**. Não usar `--prebuilt` (removeria token OIDC de build).
 - Observar apenas `R4_BRIDGE: CREATED <cofre> version <n>` (sem conteúdo) e `R4_BRIDGE: PASS`; conferir três versões `ENABLED` via `gcloud secrets versions list`. **Não executar promote**.
 - Em caso de erro, não repetir build automaticamente e não apagar versões. Inspecionar o estado de cada cofre.
 
 ## Revogação obrigatória
 
-Após o PASS, remover `EMPROVEX_R4_TRANSFER_CONFIRMATION` da Vercel; retirar `roles/secretmanager.viewer` e `roles/secretmanager.secretVersionAdder` da conta migradora nos três cofres; remover o binding `roles/iam.workloadIdentityUser`; desabilitar provedor OIDC ou conta migradora; descartar branch R4 sem merge. Manter as três credenciais originais em produção na Vercel até o corte do Cloud Run ser homologado.
+Após o PASS, não deve haver variável persistente `EMPROVEX_R4_TRANSFER_CONFIRMATION` na Vercel, pois somente o build teve o flag; retirar `roles/secretmanager.viewer` e `roles/secretmanager.secretVersionAdder` da conta migradora nos três cofres; remover o binding `roles/iam.workloadIdentityUser`; desabilitar provedor OIDC ou conta migradora; descartar branch R4 sem merge. Manter as três credenciais originais em produção na Vercel até o corte do Cloud Run ser homologado.
 
 ## Fontes
 
