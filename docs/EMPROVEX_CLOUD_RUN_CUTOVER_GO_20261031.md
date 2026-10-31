@@ -1,4 +1,15 @@
-# EMPROVEX — Cutover Vercel → Cloud Run / GO de preparação
+# EMPROVEX — Cutover Vercel → Cloud Run / REGISTRO DE EXECUÇÃO
+
+
+## Corte executado e evidenciado (31/10/2026, BRT)
+
+**Mudança concluída no destino Google:** domínio `emprovex.com.br` registrado no Firebase Hosting `emprovex-cloudrun-943599311487` com `OWNERSHIP_ACTIVE` e `CERT_ACTIVE`; registro A atualizado nos servidores autoritativos do Registro.br para `199.36.158.100` (antigo `216.198.79.1` Vercel). O Firebase Hosting reescreve as rotas para o serviço público `emprovex-cloudrun-candidate`, `southamerica-east1`. A URL `.web.app/api/health` retornou HTTP 200 após adicionar `roles/run.invoker` para `allUsers`; `/api/billing/portal` anônimo retornou HTTP 401. A requisição HTTPS para `emprovex.com.br/api/health` forçada ao IP `199.36.158.100` retornou HTTP 200, `Server: Google Frontend` sem falha SSL. No último teste, `8.8.8.8` ainda conservava o IP antigo no cache: propagação recursiva global NÃO comprovada.
+
+**Estado de conclusão:** migração de hospedagem/SSL/DNS autoritativo tecnicamente comprovada. Vercel preservada como contingência, sem ser o destino de novas publicações. `CRON_SECRET` não aparecia na listagem Production da Vercel em 31/10: cron legado não certificado. Sem Cloud Scheduler duplicado, sem troca de Firestore Rules/dados, sem novo pagamento de teste. Fonte canônica de próximas releases: [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md).
+
+**Os parágrafos e checklists abaixo são o PLANO HISTÓRICO ANTERIOR AO CORTE**; seus estados pendentes não prevalecem sobre o registro de execução acima.
+
+---
 
 **Data:** 31/10/2026. **Decisão do fundador:** prosseguir para migração definitiva, corrigindo não bloqueadores após hospedagem Cloud Run. O comando de troca de DNS NÃO foi autorizado nem executado por estes arquivos.
 
