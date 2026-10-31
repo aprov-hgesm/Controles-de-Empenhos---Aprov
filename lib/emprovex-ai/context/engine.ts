@@ -120,7 +120,8 @@ export function interpret(input:Input):Result {
  if(x.year)entities.year=x.year;
  if(x.nf)entities.invoiceNumber=x.nf;
  const rel=parsePeriod(t);dimensions.period=rel;
- const isInvoice=(has(t,WORDS.invoice)||/\bnotas?\s+(?:de|do|da)\s+\S+/.test(t)||/\bnota\s+\d{1,12}\b/.test(t))&&!/\bnota de empenho\b/.test(t),isCommitment=has(t,WORDS.commitment)||!!x.id||!!x.partial;
+ const isInvoice=(has(t,WORDS.invoice)||/\bnotas?\s+(?:de|do|da)\s+\S+/.test(t)||/\bnota\s+\d{1,12}\b/.test(t))&&!/\bnota de empenho\b/.test(t),isCommitment=has(t,WORDS.commitment)||!!x.id||!!x.partial||
+   (!!refs.commitmentId&&/\b(?:dela|dele|daquela|daquele|desse|dessa|e quanto)\b/.test(t)&&has(t,WORDS.balance));
  const isSchedule=has(t,WORDS.schedule),isSupplier=has(t,WORDS.supplier);
  const isContact=has(t,WORDS.contact),isStock=has(t,WORDS.stock);
  const isLocation=has(t,WORDS.location);
