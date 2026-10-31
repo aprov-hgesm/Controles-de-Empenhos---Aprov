@@ -18,3 +18,6 @@ firebase-debug.log
 .DS_Store
 ops/*.zip
 ops/*.tar.gz
+
+# Defense in depth: temporary GitHub OIDC credential files must never enter images.
+gha-creds-*.json
