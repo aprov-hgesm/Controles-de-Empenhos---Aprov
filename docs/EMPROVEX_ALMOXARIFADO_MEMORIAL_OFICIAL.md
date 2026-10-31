@@ -1,7 +1,7 @@
 # EMPROVEX ALMOXARIFADO — MEMORIAL OFICIAL
 
 **Produto:** EMPROVEX Almoxarifado — Gestão Logística e Financeira para Setores de Material de Organizações Militares.  
-**Edição:** Planejamento R0.1 — consolidado em 31/10/2026.  
+**Edição:** Planejamento R0.2 — estratégia executiva híbrida consolidada em 31/10/2026 (inclui R0.1).  
 **Estado:** PLANEJADO; este documento não comprova implementação, homologação, merge nem publicação.  
 **Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov.  
 **Base de inspeção da main:** c096b53d0bb3dda058cd91915cf7ffffa1d275d6 (31/10/2026).  
@@ -320,39 +320,79 @@ Constituem evolução própria R2. Ao distribuir bem permanente para dependênci
 
 **Unidades e estoque:** armazenar quantidade na unidade canônica do catálogo e converter apresentações somente com fator explícito válido. Os dados de planejamento não devem alterar saldo físico até o evento de saída. Nenhuma nova coleção ou índice deve ser criado antes de uma revisão de contratos, regras e custo Firestore.
 
-## 9. Fases, entregas e prioridades
+## 9. Plano executivo de desenvolvimento — estratégia híbrida R0.2 (DECISÃO VIGENTE)
 
-| Etapa | Conteúdo | Prioridade | Marco de aceite |
+**Decisão de 31/10/2026:** executar **sequencialmente as fundações e a integração final**, com **até três Workers de implementação em paralelo** apenas para módulos independentes e com contratos congelados. Não utilizar paralelismo irrestrito, nem redesenhar todo o sistema. O plano R0/R1/R2/R3 do produto permanece; os nomes W0–W5 abaixo representam frentes de execução, não versões comerciais.
+
+### 9.1. Sequência obrigatória e dependências
+
+\`\`\`text
+W0 — AUDITORIA CURTA DE REAPROVEITAMENTO (somente leitura de código + escrita do handoff neste memorial)
+ ↓ checkpoint: arquitetura recomendada, dependências reais, contratos e GO/NO-GO fundamentado
+W1 — FUNDAÇÃO R0 (identidade de setor, Admin, roteamento, workspace, shell do Almoxarifado)
+ ↓ checkpoint: contrato compartilhado de Pedido/Material/Posição/Ficha congelado e testes dirigidos
+ ├── W2 — IMPORTADOR SISCOFIS PDF/TXT (R1-A) ────────────────┐
+ ├── W3 — LOCALIZAÇÃO E PLANEJAMENTO DE SEPARAÇÃO (R1-B) ────┼→ W5 INTEGRADOR
+ └── W4 — FICHA DE SEPARAÇÃO PDF (R1-B) ──────────────────────┘   + SAÍDA R1-C
+                                                                      ↓
+                                                HOMOLOGAÇÃO → merge autorizado → Cloud Run
+\`\`\`
+
+**W0 e W1 não são paralelos no mesmo contrato de identidade.** W0 identifica oportunidades; W1 implementa com a menor mudança validada. **W2, W3 e W4 podem trabalhar em paralelo** se W1 entregar contratos estáveis e os Workers não alterarem simultaneamente os mesmos arquivos centrais. **W5 começa a integração das três entregas somente após resultados tecnicamente utilizáveis**, resolve conflitos, confere saldo/concorrência e implementa a saída assistida. R2 Patrimônio é onda posterior específica, não pertence ao W2–W5.
+
+| Worker | Papel | Dependência | Entregável e limites |
 | --- | --- | --- | --- |
-| R0 — Identidade e shell | Admin com modalidade Almoxarifado, login único, roteamento, workspace isolado, visual próprio com módulos comuns | P0 | Login setorial e fundador preservados; /almoxarifado autorizado; isolamento e 401/403 seguros |
-| R1-A — Importação | Leitor determinístico TXT/PDF e prévia de pedido sem escrita de estoque; correspondência material canônico | P0 | Arquivos reais homologados e erros explícitos |
-| R1-B — Localização e ficha | Seleção automática quando só existe uma posição; seleção humana quando 2+; divisão; PDF de separação | P0 | Casos físicos e relatório PDF conferidos pelo setor |
-| R1-C — Execução de saída | Ciclo de separação/conferência, movimentação idempotente, pendências e histórico | P0 | Testes de saldo, concorrência, escopo e regressão PASS |
-| R2 — Patrimônio | Material permanente, identificação individual, destino e detentor, sem substituir registro oficial | P1 | Modelo patrimonial e fluxo de OM homologados |
-| R3 — Otimização | Ficha digital móvel, leitura de posições, agrupamento de pedidos e relatórios especializados | P2 | Benefício operacional comprovado |
+| **W0 — Auditor de reaproveitamento** | Somente leitura no código; registrar achados e handoff no memorial | PR documental #434 / branch do memorial | Estado real da main e do Empresas, mapa mínimo de componentes, riscos, contratos comuns e recomendação GO/NO-GO; **nenhuma alteração de código** |
+| **W1 — Fundação Almoxarifado** | Identidade confiável, Admin e rota /almoxarifado, sem comprometer Aprovisionamento/Empresas | W0 concluído e revisado | Nova modalidade de setor, workspace isolado, navegação segura, testes P0; contrato R1 de dados acordado |
+| **W2 — Parser pedido SISCOFIS** | Ler PDF textual/TXT e extrair contrato normalizado determinístico | W1 + contrato compartilhado | Parsers e testes independentes; idealmente amostras reais anonimizadas; nenhuma baixa |
+| **W3 — Seletor de posições** | Correlacionar material, unidade, saldos e posições; planejar parcelas | W1 + contrato compartilhado | Regras de posição única, múltipla, divisão, falta e inconsistência; sem gravação de baixa |
+| **W4 — Ficha PDF** | Gerar documento operacional para separação física | W1 + contrato compartilhado | PDF imprimível com depósito/local/subposição e parcelas; não altera estoque |
+| **W5 — Integração e saída assistida** | Unir W2–W4, adicionar fluxos de conferência e execução segura no servidor | W2–W4 prontos e W1 homologado | Fluxo ponta a ponta, idempotência, revalidação, isolamento, regressão e evidência final |
 
-**Estratégia de branches:** desenvolvimento em PRs pequenas por marco, integração na main somente depois de homologação dirigida. Não manter expansão inteira indefinidamente em uma branch longa; nenhuma PR de planejamento implica deploy. Não integrar em produção a identidade do Empresas ainda não certificada.
+### 9.2. Contrato comum antes do paralelismo
 
-### 9.1. Sugestão de divisão de Workers
+Para evitar divergência entre W2, W3 e W4, W1/integrador publicará um contrato de leitura e transformação que contenha, no mínimo:
+- Pedido importado: workspaceId, sourceHash, identificador externo, solicitante e linhas;
+- Linha do pedido: código/ficha SISCOFIS, descrição original, quantidade, unidade e vínculo canônico **validado**;
+- Plano de separação: alocações por linha e posição completa (depósito/local/subposição ou local direto), quantidades e estados de validação;
+- Ficha: mesmo plano imutável de separação, número de pedido, destino e metadados suficientes para impressão;
+- Erros tipados (não encontrado, unidade incompatível, múltiplas posições, estoque insuficiente, pedido repetido, saldo alterado);
+- Limites de responsabilidade por Worker e nomes dos arquivos centrais que só o integrador pode alterar.
 
-- **W0 — Auditoria curta de reaproveitamento (somente leitura):** mapa de login/Admin/warehouse, estado Empresas e interfaces que precisam de extensão; entrega de riscos e plano mínimo.
-- **W1 — Fundação R0:** sectorType, provisionamento, login e portal Almoxarifado, com testes de regressão de Aprovisionamento/Empresas.
-- **W2 — Parser SISCOFIS R1-A:** amostras reais, contrato de pedidos, TXT/PDF, validação, homologação de linhas e correspondência.
-- **W3 — Separação R1-B:** serviço determinístico de posição/saldo e PDF da ficha, sem debitar estoque.
-- **W4 — Execução R1-C:** confirmação/baixa, auditoria, idempotência, concorrência, integração com operações do servidor.
-- **W5 — Patrimônio R2:** somente após decisões funcionais específicas; não misturar com W1–W4.
+**W2 não escolhe posição; W3 não interpreta o layout do SISCOFIS; W4 não movimenta estoque.** A transformação final e a aplicação transacional são responsabilidades do W5. Não duplicar núcleos de empenhos/warehouse nem criar versão paralela da autenticação.
 
-Workers podem atuar em paralelo somente se as interfaces e bases estiverem estabelecidas; o integrador é responsável por garantir ausência de conflitos.
+### 9.3. Regras de colaboração, branches e governança
 
-### 9.2. Critérios mínimos de aprovação por marco
+1. **Até três Workers de implementação simultâneos** (W2/W3/W4), mais um integrador de revisão. O W0 antecede o W1; não ativar a onda paralela sem base e contrato homogêneos.
+2. **Um branch por Worker, PR DRAFT por entrega**, usando como base a branch/commit de integração definido no handoff. Evitar commits diretos na main e merge automático.
+3. O integrador atua no fim da onda; resolve conflitos de contratos e valida os três fluxos juntos. Não considerar PASS isolado como certificação ponta a ponta.
+4. Os testes devem ser **proporcionais ao risco**: testes específicos para parsers, invariantes de localização, geração PDF, permissões, concorrência e regressão de login e warehouse. Não repetir baterias gerais sem mudança pertinente, mas nunca retirar assertions críticas.
+5. Tratar a PR Empresas #419 como dependência a **verificar novamente** antes do W1. Não presumir que roteamento empresarial ou tipos de conta já estão na main; W0 indicará o caminho seguro de reaproveitamento.
+6. A produção permanece Cloud Run; somente após merge autorizado e homologação, conforme docs/EMPROVEX_RELEASE_CLOUD_RUN.md. Nenhum Worker deste planejamento pode fazer deploy, publicar Firestore Rules, alterar IAM, DNS, segredos ou cobrança por conta própria.
+7. **Toda conclusão de Worker precisa deixar handoff auditável neste memorial**, seguindo a seção 13. Comentário de chat sozinho não conta como entrega.
+8. O W0 não pode iniciar mudanças no código nem criar PRs funcionais; sua única escrita permitida é o adendo do memorial em branch própria, com PR de documentação.
 
-- Testes proporcionais ao risco, incluindo segurança multitenant e navegação P0.
-- Sem mudanças em dados reais ou infraestrutura sem autorização específica.
-- Sincronização de nomenclaturas com o código efetivo; nenhum teste removido para conseguir PASS.
-- Preservação de EMPROVEX Aprovisionamento, Empresa e Admin.
-- Quando houver mudança de backend de estoque, provar operação atômica e idempotência.
-- Antes de publicar, cumprir o procedimento canônico de docs/EMPROVEX_RELEASE_CLOUD_RUN.md: versão correta da main, revisão sem tráfego, verificação mínima e promoção explícita.
-- Decisão de cobrança do Almoxarifado separada, não presumida.
+### 9.4. Marcos GO/NO-GO
+
+- **Após W0:** confirmar que as bases reais foram examinadas e que login único/Empresas, provisionamento e isolamento têm estratégia sem regressão. Parecer **GO para W1**, **GO condicionado** ou **NO-GO**, com fatores objetivos.
+- **Após W1:** não liberar onda paralela se houver falha de login, navegação, escopo ou se o contrato R1 estiver instável. A PR Empresas não deve ser mesclada artificialmente para passar o gate.
+- **Após W2–W4:** cada Worker entrega testes do módulo, evidência e handoff; W5 só integra itens conhecidos e congela alterações conflitantes.
+- **Após W5:** testes integrados/segurança PASS, aprovação explícita para merge e publicação, e smoke test de Cloud Run do SHA correto. Publicação é ato separado de merge.
+
+### 9.5. Etapas do produto (preservadas)
+
+| Etapa de produto | Conteúdo | Prioridade |
+| --- | --- | --- |
+| R0 — Fundação | identidade, cadastro Admin, workspace, portal e reutilização de módulos | P0 |
+| R1-A — Importação | pedido PDF/TXT, prévia e correspondência segura | P0 |
+| R1-B — Localização e ficha | localização, seleção/particionamento e ficha de separação | P0 |
+| R1-C — Execução física assistida | status, conferência, saída idempotente e histórico | P0 |
+| R2 — Materiais permanentes | identificação, localização e detentor sem substituir registro oficial | P1 |
+| R3 — Otimização | separação móvel, barcode e relatórios | P2 |
+
+**Nota de desempenho:** as durações não são estimadas nem comprometidas; a ordem depende de evidências técnicas e dos modelos reais de exportação SISCOFIS.
+
+---
 
 ## 10. Perguntas pendentes — não bloqueiam planejamento R0
 
@@ -375,6 +415,8 @@ Essas decisões devem ser respondidas com observação do fluxo real e menor bur
 
 **31/10/2026 — Consolidação do memorial:** manter documento oficial próprio separado do Empresas e do Aprovisionamento; reaproveitar a arquitetura de login/roteamento do Empresas, mas vincular contas por identidade autenticada, tipo, workspace e permissões — jamais e-mail puro. Estado de código: planejamento documental, sem implementação.
 
+**31/10/2026 — Plano de execução R0.2 (PREVALECE):** abordagem híbrida, W0 e W1 sequenciais; W2/W3/W4 paralelos sob contrato estabilizado; W5 integrador e saída; handoff obrigatório no presente memorial, com PR e SHA verificáveis. Nenhum Worker homologado ou publicado nesta decisão.
+
 **Regra de precedência futura:** decisões novas devem ser adicionadas como adendos datados ao topo ou a este log, sem apagar o motivo das decisões anteriores. Somente decisão expressa reabre escopo excluído.
 
 ---
@@ -389,3 +431,52 @@ Essas decisões devem ser respondidas com observação do fluxo real e menor bur
 - PR de integração Empresas em revisão na data-base: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/419
 
 **Caráter deste memorial:** especificação de produto, requisitos funcionais e controles de integração. Não representa implementação ou autorização de publicação.
+---
+
+## 13. Protocolo obrigatório de handoff de Workers — registro no memorial
+
+**Objetivo:** ao receber a mensagem curta **"verifique o resultado do worker"**, o coordenador deve conseguir identificar, inspecionar e avaliar o trabalho pelo GitHub, **sem solicitar que o usuário cole longos relatórios, PRs ou SHAs**. O registro canônico é este arquivo na branch de entrega do respectivo Worker; se ainda não estiver mesclado, NÃO afirmar que o memorial da main está atualizado.
+
+### 13.1. Como o Worker deve entregar o handoff
+
+1. Antes do trabalho, ler este memorial integralmente, registrar SHA da main, branch e PRs relevantes que foram efetivamente consultados.
+2. Operar em **branch isolada**; para o W0, partir **da branch documental da PR #434** (ou do commit mais recente desta PR), porque este arquivo pode não existir ainda na main. Sugerido W0: audit/emprovex-almox-r0-w0-reuse.
+3. Escrever o **handoff no próprio docs/EMPROVEX_ALMOXARIFADO_MEMORIAL_OFICIAL.md** da branch de entrega; preservar o conteúdo existente e somente acrescentar adendo em ordem cronológica à seção 13.3. Não editar memoriais de Empresas/Aprovisionamento como substituição.
+4. Abrir **PR DRAFT de documentação do W0** com base na branch da PR #434 (se continuar sem merge); se a #434 já tiver sido integrada, usar main como base. Indicar claramente no título "EMPROVEX Almoxarifado W0 — auditoria de reaproveitamento e handoff". Não publicar nem mesclar automaticamente.
+5. No corpo da PR, apontar o **caminho exato do memorial** e o link âncora para a seção de handoff; incluir as evidências essenciais. A mensagem final do Worker deve ser curta: **link da PR + branch + SHA + resultado GO/NO-GO + "handoff registrado no memorial"**.
+6. Registrar status com precisão: PLANEJADO, AUDITADO, EM PR, HOMOLOGADO ou PUBLICADO. Nunca usar "implementado" em auditoria somente leitura, nem afirmar que PR aberta está na main.
+7. Se não conseguir escrever/abrir PR, informar **explicitamente** a impossibilidade, a razão e o texto exato de adendo para inserção posterior. Não declarar handoff concluído sem commit verificado.
+
+### 13.2. Modelo obrigatório do registro (preencher fatos, não previsões)
+
+O adendo deve conter os seguintes campos com evidências rastreáveis:
+
+- **Identificação:** Worker, data UTC/BRT, objetivo, versão do memorial, branch, commit SHA, PR da entrega, base e estado de merge.
+- **Escopo realizado:** arquivos/áreas realmente inspecionados e limites. Diferenciar achado **confirmado**, **hipótese** e **não verificado**.
+- **Mapa de reaproveitamento:** componente atual, localização no repositório, estado (main / PR) e ação mínima recomendada (reutilizar, adaptar, aguardar, não tocar).
+- **Identidade e Empresas:** situação real da #419, main, /login, setor vs company; riscos de accountType/sectorType, roteamento e regressões.
+- **Central de Depósitos/SISCOFIS:** parser de Mapa de Existência vs pedido exportado, posições e saldos, command server, documento de saída e lacunas reais.
+- **Riscos/pendências:** classificação P0/P1/P2, impacto e decisão objetiva que desbloqueia; marcar arquivos reais ainda necessários (TXT/PDF) em vez de inventar campos.
+- **Provas:** links para arquivos/commits/PRs/checks, comandos somente leitura quando houver e resultados obtidos. Falta de evidência é estado não verificado.
+- **Parecer:** GO, GO CONDICIONAL ou NO-GO **para iniciar W1**, com justificativa.
+- **Próxima ação:** contratos que W1 deverá congelar, arquivos a preservar, sugestão concreta de branch/PR e plano de testes mínimos.
+- **Nenhum efeito colateral:** declarar se houve ou não alterações de código, merge, publicação, Firestore, IAM, cobrança ou dados.
+
+### 13.3. Handoffs registrados — histórico de execução
+
+> **ESTADO EM 31/10/2026, na criação do plano R0.2: NENHUM WORKER DO ALMOXARIFADO CONCLUÍDO.** As linhas a seguir são apenas placeholders de organização e não constituem resultados.
+>
+> **W0 — AGUARDANDO EXECUÇÃO.** O Worker deve substituir esta linha de status por um **adendo datado abaixo**, com os campos da seção 13.2, sem reescrever seções de produto.
+
+### 13.4. Procedimento de verificação por mensagem curta
+
+Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coordenador deverá:
+
+1. Consultar a **PR #434** e seu branch documental e pesquisar **PRs/branches recentes W0/W1… de Almoxarifado**. Se o W0 tiver PR empilhada sobre #434, inspecionar o arquivo **na branch da PR do W0**, não apenas na main.
+2. Ler integralmente o **último adendo de handoff na seção 13.3** e conferir contra código/arquivos/PRs/checks reais. Não tomar declaração do Worker como prova suficiente.
+3. Confirmar SHA base, arquivo alterado, escopo, ausência de merge/deploy e se a PR documental preserva o memorial.
+4. Responder com resumo das entregas, evidências, riscos e **GO/NO-GO para a fase seguinte**, e indicar a sequência correta (W1 ou correções pontuais).
+5. Se nenhum handoff estiver persistido, reportar "**handoff não localizado no GitHub**", sem presumir conclusão.
+
+**Regra de coordenação:** o memorial continua sendo a fonte do planejamento e histórico de Worker; PRs e commits fornecem a evidência material. Nunca exigir novo relato manual se houver acesso ao repositório.
+
