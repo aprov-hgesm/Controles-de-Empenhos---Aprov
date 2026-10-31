@@ -1,10 +1,10 @@
-name: EMPROVEX Cloud Run — stage after Application CI
+name: EMPROVEX Cloud Run — build and stage main
 
 on:
-  workflow_run:
-    workflows: ["Application CI"]
-    types: [completed]
+  push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -17,11 +17,7 @@ concurrency:
 jobs:
   stage:
     name: Build, push and deploy a zero-traffic revision
-    if: >-
-      ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov'
-          && github.event.workflow_run.event == 'push'
-          && github.event.workflow_run.head_branch == 'main'
-          && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -34,24 +30,24 @@ jobs:
       IMAGE_BASE: southamerica-east1-docker.pkg.dev/gen-lang-client-0982077967/emprovex/emprovex
 
     steps:
-      - name: Check out the exact successful Application CI SHA
+      - name: Check out the exact main SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Fail closed if the tested commit is no longer the current main
+      - name: Verify exact main SHA and prevent stale deploy
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           [[ "${GITHUB_REPOSITORY_ID}" == "1286320615" ]] || exit 1
           [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || exit 1
           remote_main="$(git ls-remote origin refs/heads/main | cut -f1)"
           [[ "${remote_main}" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Main advanced since Application CI. A newer run will stage the new SHA."
+            echo "::error::Main advanced. A newer push will stage the new SHA."
             exit 1
           }
           [[ -f Dockerfile ]] || exit 1
