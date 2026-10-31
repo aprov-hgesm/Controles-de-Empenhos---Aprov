@@ -20,6 +20,7 @@ $endpoint = "https://firebasehosting.googleapis.com/v1beta1/projects/$Project/si
 try {
   $domainData = Invoke-RestMethod -Method GET -Uri $endpoint -Headers @{
     Authorization = "Bearer $($accessToken[0])"
+    'x-goog-user-project' = $Project
   } -TimeoutSec 45
 } catch {
   $errorRecord = $_
