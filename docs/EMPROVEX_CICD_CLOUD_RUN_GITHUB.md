@@ -35,12 +35,12 @@ O WIF limita o token ao **repository ID + owner ID + branch main + dois paths ex
 
 ## Preparação única (exige conta com IAM administrativo no GCP)
 
-1. Confirmar que a PR #426 está integrada e que a automação foi incorporada na `main`, sem conflitos ou falhas de CI. **Não executar um novo deploy para preparar o IAM.**
+1. Revisar e certificar a PR #426 e esta PR de automação. **Preparar WIF e a aprovação GitHub antes do merge final em `main`**, para que o primeiro workflow automático não falhe por falta de IAM. O preparo não publica revisão nem concede tokens a branches de PR.
 2. Acessar `https://console.cloud.google.com/cloudshell` com o projeto `gen-lang-client-0982077967` selecionado.
 3. Executar no **Cloud Shell**, não no PowerShell do Windows:
 
    ```bash
-   git clone --depth=1 --branch main https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov.git emprovex-ci
+   git clone --depth=1 --branch feat/cloud-run-r7-github-oidc-cicd-20261031 https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov.git emprovex-ci
    cd emprovex-ci
    bash ops/bootstrap-github-oidc-cloud-shell.sh
    ```
@@ -49,7 +49,7 @@ O WIF limita o token ao **repository ID + owner ID + branch main + dois paths ex
 
 4. No GitHub, usuário com direito de administração abre **Settings → Environments → New environment** e cria `emprovex-production`. Em **Deployment protection rules** selecionar **Required reviewers**, com usuário `Moriark` (ou o revisor autorizado). Configurar restrição de deployment para somente branch `main`. Para aprovação pelo próprio operador, **não selecionar Prevent self-review**; se houver segundo revisor, habilitar essa opção é preferível. Salvar a proteção. O repositório é público, compatível com required reviewers nos planos suportados pelo GitHub.
 5. Revisar a proteção da branch `main`: exigir checks relevantes (Application CI e Core Protection) e bloqueio de merge quando falham, além de revisão para alterações em `.github/workflows` e `ops/`. A conexão disponível do GitHub não tem permissão de administração e **não configura esses controles automaticamente**.
-6. Na primeira execução, revisar logs do stage antes de promover. Confirmar nome de revisão `emprovex-cloudrun-candidate-g<SHA12>-<RUN_NUMBER>`, preview e `0%` de tráfego de produção, além de `HTTP 200` na saúde e `HTTP 401` sem token em `/api/billing/portal`. Executar o fluxo manual com SHA completo/revisão fornecidos no resumo.
+6. Depois de IAM e ambiente protegidos: integrar a PR #430 na branch da #426, verificar CI da #426 e só então fazer o merge na `main`. Na primeira execução, revisar logs do stage antes de promover. Confirmar nome de revisão `emprovex-cloudrun-candidate-g<SHA12>-<RUN_NUMBER>`, preview e `0%` de tráfego de produção, além de `HTTP 200` na saúde e `HTTP 401` sem token em `/api/billing/portal`. Executar o fluxo manual com SHA completo/revisão fornecidos no resumo.
 
 Não criar `GOOGLE_APPLICATION_CREDENTIALS` como secret, não importar service-account JSON e não copiar as 11 referências do Secret Manager para o GitHub. O runtime conserva as próprias credenciais nativas e configurações já presentes no serviço.
 
