@@ -101,11 +101,31 @@ foreach($id in $Bancos){
  $Index++
  $expr='resource.name=="projects/'+$Projeto+'/databases/'+$id+'"'
  $title="EMPROVEX_R7_DB_$Index"
- $condition="expression=$expr,title=$title,description=R7_Cloud_Run_only_database"
  $policy=Read-GcloudJson @(gcloud.cmd projects get-iam-policy $Projeto --format=json) 'R7_PROJECT_IAM_READ_FAILED'
  if(-not(Has-DirectBinding $policy 'roles/datastore.user' $Member $expr)){
-   gcloud.cmd projects add-iam-policy-binding $Projeto --member=$Member --role=roles/datastore.user --condition=$condition --quiet --format=none
-   Assert-Exit "R7_FIRESTORE_GRANT_FAILED: $id"
+   # Windows PowerShell 5.1 can strip embedded double quotes in a native CLI
+   # argument. A JSON condition file preserves Firestore's exact CEL string.
+   $conditionData=@{
+     expression=$expr
+     title=$title
+     description='R7_Cloud_Run_only_database'
+   } | ConvertTo-Json -Compress
+   $tempFile=Join-Path ([System.IO.Path]::GetTempPath()) ("emprovex-r7-condition-"+[guid]::NewGuid().ToString('N')+".json")
+   try {
+     [System.IO.File]::WriteAllText(
+       $tempFile,$conditionData,(New-Object System.Text.UTF8Encoding($false))
+     )
+     $parsedCondition=Get-Content -LiteralPath $tempFile -Raw | ConvertFrom-Json
+     if($parsedCondition.expression -cne $expr){
+       throw "R7_CONDITION_SERIALIZATION_FAILED: $id"
+     }
+     gcloud.cmd projects add-iam-policy-binding $Projeto `
+       --member=$Member --role=roles/datastore.user `
+       "--condition-from-file=$tempFile" --quiet --format=none
+     Assert-Exit "R7_FIRESTORE_GRANT_FAILED: $id"
+   } finally {
+     Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+   }
  }
  Write-Host "READY CONDITIONAL DATABASE: $id"
 }
