@@ -113,7 +113,7 @@ foreach($id in $Bancos){
    $tempFile=Join-Path ([System.IO.Path]::GetTempPath()) ("emprovex-r7-condition-"+[guid]::NewGuid().ToString('N')+".json")
    try {
      [System.IO.File]::WriteAllText(
-       $tempFile,$conditionData,(New-Object System.Text.UTF8Encoding($false))
+       $tempFile,$conditionData,([System.Text.UTF8Encoding]::new($false))
      )
      $parsedCondition=Get-Content -LiteralPath $tempFile -Raw | ConvertFrom-Json
      if($parsedCondition.expression -cne $expr){
