@@ -86,7 +86,7 @@ for (const scenario of [
   'Material não pode declarar workspace diferente do caminho',
   'Setor externo não lê material do fundador',
   'Setor externo não grava material nem no próprio workspace',
-  'Sessão fundadora por senha não lê materiais da FASE 1',
+  'Sessão fundadora por senha lê materiais da FASE 1',
   'Fundador não grava material em workspace externo',
 ]) {
   requireText(

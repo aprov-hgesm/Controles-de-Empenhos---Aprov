@@ -1,12 +1,12 @@
 # EMPROVEX — Login visual por e-mail e senha; Google Firebase preservado
 
 ## Decisão definitiva — 30/10/2026
-- Na interface de login do EMPROVEX, apresentar somente e-mail e senha para fundador, setores e futuras empresas.
+- Publicação parcial: apresentar e-mail/senha para todos, mantendo o botão Google visível para o fundador.
 - **Manter Email/Password e Google habilitados em Firebase Authentication.** Não executar a etapa de desabilitar Google.
-- Para a identidade fundadora existente, permitir sessões Firebase previamente vinculadas com `sign_in_provider=password` **ou** `google.com`; os endpoints e Firestore Rules verificam o provider real. Não apresentar botão Google nem implementar novo botão de autenticação federada.
+- Para a identidade fundadora existente, permitir sessões Firebase previamente vinculadas com `sign_in_provider=password` **ou** `google.com`; os endpoints e Firestore Rules verificam o provider real. Manter o botão Google visível nesta publicação parcial.
 - Setores externos permanecem vinculados exclusivamente ao provider `password`; nenhuma abertura de login social para contas externas.
 - O fluxo de Google Drive/GIS continua independente, com validação do e-mail esperado, sem reautenticar a sessão Firebase.
-- Ocultar o botão não revoga o provedor: autenticação Google continuará tecnicamente possível por outros clientes Firebase autorizados e pela conta vinculada. Não anunciar bloqueio de Google.
+- Os dois métodos permanecem disponíveis visualmente para a conta fundadora; Google continua habilitado no Firebase.
 
 ## Identidade fundadora — evidência operacional confirmada pelo administrador
 - E-mail: `aprov1hgesm@gmail.com`
@@ -26,4 +26,4 @@
 - Não desvincular Google da conta fundadora.
 - Não excluir/recriar a conta, nem migrar UID ou dados.
 - Não revogar tokens de forma generalizada por causa dessa alteração.
-- Não tornar login Google visível na interface EMPROVEX.
+- Não ocultar o botão Google nesta publicação parcial.

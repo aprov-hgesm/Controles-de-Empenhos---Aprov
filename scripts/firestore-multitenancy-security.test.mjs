@@ -1030,6 +1030,18 @@ async function main() {
       )
     );
 
+    await allowed('Sessão fundadora por senha lê materiais da FASE 1', () =>
+      getDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'materials',
+          canonicalMaterialId
+        )
+      )
+    );
+
     await denied('Fundador não grava material em workspace externo', () =>
       setDoc(
         doc(

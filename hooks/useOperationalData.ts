@@ -4,16 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   browserLocalPersistence,
   EmailAuthProvider,
+  GoogleAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
   sendPasswordResetEmail,
   setPersistence,
+  signInWithCredential,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updatePassword,
   type User,
 } from 'firebase/auth';
-import { auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import { resolveAuthenticatedWorkspaceContext } from '../lib/platformAccess';
 import {
@@ -383,6 +386,30 @@ export function useOperationalData(
     return resolvedContext;
   };
 
+  const signInUser = async () => {
+    explicitSignInRef.current = true;
+    setSyncing(true);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      const credential = process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
+        ? await signInWithCredential(
+            auth,
+            GoogleAuthProvider.credential(
+              JSON.stringify({
+                sub: 'google-admin-google',
+                email: 'aprov1hgesm@gmail.com',
+                email_verified: true,
+              })
+            )
+          )
+        : await signInWithPopup(auth, googleProvider);
+      return await finalizeSignIn(credential.user);
+    } finally {
+      explicitSignInRef.current = false;
+      setSyncing(false);
+    }
+  };
+
   const signInSectorUser = async (email: string, password: string) => {
     const normalizedEmail = normalizePlatformEmail(email);
 
@@ -679,7 +706,7 @@ export function useOperationalData(
     invoices, setInvoices,
     comissoes, setComissoes,
     cronogramas, setCronogramas,
-    signInSectorUser, requestSectorPasswordReset,
+    signInUser, signInSectorUser, requestSectorPasswordReset,
     changeSectorPassword, signOutUser,
     getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,

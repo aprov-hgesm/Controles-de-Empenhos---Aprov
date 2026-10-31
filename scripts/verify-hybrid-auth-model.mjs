@@ -100,15 +100,15 @@ requireText(
   'Entrar com e-mail e senha',
   'Componente público não oferece o login por senha.'
 );
-forbidText(
+requireText(
   login,
-  'Entrar com Google',
-  'A interface não pode oferecer login social pelo Google.'
+  'Entrar com Google — HGeSM',
+  'A interface deve preservar o acesso Google como alternativa para a conta fundadora.'
 );
-forbidText(
+requireText(
   operationalData,
   'signInWithPopup',
-  'O fluxo de autenticação não pode oferecer popup Google.'
+  'O fluxo Google deve permanecer disponível para o fundador.'
 );
 requireText(
   login,
@@ -179,7 +179,7 @@ if (findings.length) {
   console.log('Conta externa por Google: bloqueada no runtime');
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
-  console.log('Login Google Firebase: removido da interface');
+  console.log('Login Google Firebase: preservado na interface do fundador');
   console.log('Founder: Google e senha autorizados; setores externos: password');
   console.log('Drive: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
