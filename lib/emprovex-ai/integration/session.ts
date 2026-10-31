@@ -1,5 +1,5 @@
 /** W4.5: sessao e contexto autenticados; sem armazenamento global ou banco novo. */
-import {createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
+import {createHmac,createHash,createCipheriv,createDecipheriv,randomBytes,timingSafeEqual} from 'node:crypto';
 import {AiExecutionError} from '../response';
 import type {ShortContext,ContextRefs} from '../context/types';
 
@@ -18,8 +18,26 @@ function key():string {
 function signature(purpose:'session'|'context',body:string):Buffer {
  return createHmac('sha256',key()).update('W45:'+purpose+':'+body).digest();
 }
+function encryptedContext(raw:Buffer):string {
+ const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',
+   createHash('sha256').update('emprovex-ai-w5-context:').update(key()).digest(),iv);
+ const ciphertext=Buffer.concat([cipher.update(raw),cipher.final()]);
+ return Buffer.concat([iv,cipher.getAuthTag(),ciphertext]).toString('base64url');
+}
+function decryptedContext(encoded:string):Buffer {
+ try {
+   const packed=Buffer.from(encoded,'base64url');
+   if(packed.length<29)throw new Error('short');
+   const decipher=createDecipheriv('aes-256-gcm',
+     createHash('sha256').update('emprovex-ai-w5-context:').update(key()).digest(),
+     packed.subarray(0,12));
+   decipher.setAuthTag(packed.subarray(12,28));
+   return Buffer.concat([decipher.update(packed.subarray(28)),decipher.final()]);
+ }catch{throw new AiExecutionError('AI_CONTEXT_FORBIDDEN',403);}
+}
 function issue(purpose:'session'|'context',data:object):string {
- const body=Buffer.from(JSON.stringify(data)).toString('base64url');
+ const raw=Buffer.from(JSON.stringify(data));
+ const body=purpose==='context'?encryptedContext(raw):raw.toString('base64url');
  return body+'.'+signature(purpose,body).toString('base64url');
 }
 function read(purpose:'session'|'context',token:string):Record<string,unknown> {
@@ -31,7 +49,7 @@ function read(purpose:'session'|'context',token:string):Record<string,unknown> {
  if(expected.length!==provided.length||!timingSafeEqual(expected,provided))
    throw new AiExecutionError('AI_CONTEXT_FORBIDDEN',403);
  try {
-   const parsed=JSON.parse(Buffer.from(body,'base64url').toString('utf8'));
+   const parsed=JSON.parse((purpose==='context'?decryptedContext(body):Buffer.from(body,'base64url')).toString('utf8'));
    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('shape');
    return parsed as Record<string,unknown>;
  }catch {throw new AiExecutionError('AI_CONTEXT_FORBIDDEN',403);}

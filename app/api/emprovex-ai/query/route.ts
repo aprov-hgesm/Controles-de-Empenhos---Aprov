@@ -1,3 +1,4 @@
+import {aiExperimentalEnabled} from '../../../../lib/emprovex-ai/integration/environment';
 import { NextResponse, type NextRequest } from 'next/server';
 import { executeAiQuery } from '../../../../lib/emprovex-ai/query';
 import { AiInputError } from '../../../../lib/emprovex-ai/contracts';
@@ -6,11 +7,11 @@ import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-const headers={'cache-control':'no-store, private'};
+const headers={'cache-control':'no-store, private','x-content-type-options':'nosniff'};
 export async function POST(request:NextRequest){
   try {
     // Desligado por padrao, inclusive em previews automaticos e sempre em producao.
-    if(process.env.VERCEL_ENV==='production' || process.env.EMPROVEX_AI_W45_ENABLED!=='1')
+    if(!aiExperimentalEnabled())
       return NextResponse.json({error:'AI_EXPERIMENT_DISABLED'},{status:404,headers});
     if(Number(request.headers.get('content-length')||0)>16384)
       return NextResponse.json({error:'AI_REQUEST_TOO_LARGE'},{status:413,headers});
