@@ -1,5 +1,8 @@
 # EMPROVEX — GitHub Actions + Workload Identity Federation + Cloud Run (R7 CI/CD)
 
+> **ATUALIZAÇÃO DE FLUXO R7 (31/10/2026):** o stage foi integrado à `main` e já criou com sucesso a revisão `emprovex-cloudrun-candidate-g247800729a16-1`, 0% de tráfego, via WIF, com health de prévia aprovado (execução GitHub `41213923941`). O stage agora dispara em **push na main**, sem aguardar o Application CI; em toda promoção o assistente ainda deve consultar checks proporcionais e bloquear casos críticos. Esta alteração de automação adiciona um **canal alternativo de promoção por autorização explícita no chat**, acionado por commit exclusivo em `ops/cloud-run/promotion-request.json`. A promoção manual via `workflow_dispatch` e `emprovex-production` continua disponível. O modo chat usa `emprovex-chat-authorized`, sem Required reviewers, para eliminar o segundo clique no GitHub. Este procedimento só passa a ser ATIVO quando a PR de implementação for incorporada à `main`. Consultar a seção prioritária "GOVERNANÇA DE RELEASE — AUTORIZAÇÃO NO CHAT" do Memorial Oficial. O arquivo de autorização é público e não comprova criptograficamente a mensagem no chat; a atribuição da solicitação vem do commit autenticado no GitHub.
+
+
 **Estado atual: infraestrutura WIF/Artifact Registry configurada por operador e ambiente GitHub `emprovex-production` salvo; workflows AINDA NÃO ATIVADOS (não integrados na `main`).** Esta automação só entra em vigor quando integrada na `main`, após a PR #426 e seus checks estarem aptos, o IAM do Google Cloud estar configurado e o ambiente protegido do GitHub estar criado. Não confundir arquivos versionados com implantação autorizada. Política GOV-SIMP-01.
 
 ## Contrato operacional
