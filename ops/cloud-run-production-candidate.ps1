@@ -1,3 +1,5 @@
+# EMPROVEX — HISTORICAL BOOTSTRAP ONLY (31/10/2026), NOT A RELEASE COMMAND.
+# New production versions: ops/release-emprovex-cloud-run.ps1 -Stage / -PromoteRevision.
 # EMPROVEX — build-free, isolated Cloud Run production candidate using tested staging image.
 # No domain/hosting/cron/public Cloud Run changes. Authorize creation explicitly.
 param([switch]$Create)
