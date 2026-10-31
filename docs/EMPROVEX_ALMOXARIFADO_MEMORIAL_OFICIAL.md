@@ -326,7 +326,7 @@ Constituem evolução própria R2. Ao distribuir bem permanente para dependênci
 
 ### 9.1. Sequência obrigatória e dependências
 
-\`\`\`text
+```text
 W0 — AUDITORIA CURTA DE REAPROVEITAMENTO (somente leitura de código + escrita do handoff neste memorial)
  ↓ checkpoint: arquitetura recomendada, dependências reais, contratos e GO/NO-GO fundamentado
 W1 — FUNDAÇÃO R0 (identidade de setor, Admin, roteamento, workspace, shell do Almoxarifado)
@@ -336,7 +336,7 @@ W1 — FUNDAÇÃO R0 (identidade de setor, Admin, roteamento, workspace, shell d
  └── W4 — FICHA DE SEPARAÇÃO PDF (R1-B) ──────────────────────┘   + SAÍDA R1-C
                                                                       ↓
                                                 HOMOLOGAÇÃO → merge autorizado → Cloud Run
-\`\`\`
+```
 
 **W0 e W1 não são paralelos no mesmo contrato de identidade.** W0 identifica oportunidades; W1 implementa com a menor mudança validada. **W2, W3 e W4 podem trabalhar em paralelo** se W1 entregar contratos estáveis e os Workers não alterarem simultaneamente os mesmos arquivos centrais. **W5 começa a integração das três entregas somente após resultados tecnicamente utilizáveis**, resolve conflitos, confere saldo/concorrência e implementa a saída assistida. R2 Patrimônio é onda posterior específica, não pertence ao W2–W5.
 
