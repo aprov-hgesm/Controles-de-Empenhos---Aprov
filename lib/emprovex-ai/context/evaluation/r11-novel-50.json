@@ -117,13 +117,13 @@
   },
   {
     "id": "W4-R11-014",
-    "message": "Temos arroz em estoque?",
+    "message": "Quanto café temos?",
     "route": "DETERMINISTIC",
     "intent": "warehouse_stock_get",
     "domain": "IN_SCOPE",
-    "why": "estoque material",
+    "why": "consulta de estoque sem localizador",
     "expectedParams": {
-      "materialQuery": "arroz"
+      "materialQuery": "cafe"
     }
   },
   {
@@ -161,14 +161,11 @@
   },
   {
     "id": "W4-R11-018",
-    "message": "Quais empenhos de 2025 ainda têm saldo?",
+    "message": "Liste os empenhos anteriores que ainda têm saldo.",
     "route": "DETERMINISTIC",
     "intent": "commitment_previous_open_list",
     "domain": "IN_SCOPE",
-    "why": "C04 exercício",
-    "expectedParams": {
-      "exerciseYear": 2025
-    }
+    "why": "empenhos anteriores sem ano explícito"
   },
   {
     "id": "W4-R11-019",
@@ -309,11 +306,11 @@
   },
   {
     "id": "W4-R11-034",
-    "message": "Quanto resta da NE66?",
+    "message": "NE88 ainda tem saldo?",
     "route": "CLARIFY",
     "intent": "commitment_total_balance",
     "domain": "IN_SCOPE",
-    "why": "NE incompleta"
+    "why": "NE parcial diferente"
   },
   {
     "id": "W4-R11-035",
@@ -424,14 +421,6 @@
   },
   {
     "id": "W4-R11-046",
-    "message": "Quais movimentações de arroz ocorreram ontem?",
-    "route": "UNSUPPORTED",
-    "intent": "warehouse_movement",
-    "domain": "IN_SCOPE",
-    "why": "P1 movimento"
-  },
-  {
-    "id": "W4-R11-047",
     "message": "Qual a validade do arroz?",
     "route": "UNSUPPORTED",
     "intent": "validity_alerts",
@@ -439,7 +428,7 @@
     "why": "P1 vencimento"
   },
   {
-    "id": "W4-R11-048",
+    "id": "W4-R11-047",
     "message": "O motor está funcionando?",
     "route": "CLARIFY",
     "intent": "unknown",
@@ -447,7 +436,7 @@
     "why": "domínio incerto"
   },
   {
-    "id": "W4-R11-049",
+    "id": "W4-R11-048",
     "message": "Quais cronogramas enviados ontem no depósito?",
     "route": "UNSUPPORTED",
     "intent": "schedule_sent_history_list",
@@ -455,7 +444,7 @@
     "why": "localização não suportada cronograma"
   },
   {
-    "id": "W4-R11-050",
+    "id": "W4-R11-049",
     "message": "Qual e-mail do fornecedor Alfa na semana passada?",
     "route": "UNSUPPORTED",
     "intent": "supplier_contact_find",
@@ -463,7 +452,7 @@
     "why": "contato não tem histórico temporal"
   },
   {
-    "id": "W4-R11-051",
+    "id": "W4-R11-050",
     "message": "Quais cronogramas enviados ontem da NE 2026NE66 do fornecedor Alfa?",
     "route": "CLARIFY",
     "intent": "schedule_sent_history_list",
