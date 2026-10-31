@@ -73,13 +73,14 @@ export function detectConstraints(t:string, explicit:{
  if(/\b(?:no|na|dentro da|dentro do|somente na|somente no)\s+(?:camara fria|deposito(?:\s+[a-z0-9-]+)?|estante\s*\d+|prateleira\s*\d+|freezer|geladeira)\b/.test(t))
    c.push({name:'depotName',value:'location'});
  if((intent==='commitment_total_balance'||intent==='commitment_get')&&
-    /\b(?:restava|tinha saldo|saldo (?:em|no|na|de) (?:ontem|semana passada|mes passado)|na data de)\b/.test(t))
+    (/\b(?:restava|tinha saldo|saldo (?:em|no|na|de) (?:ontem|semana passada|mes passado)|na data de)\b/.test(t)||
+     (explicit.period!==undefined&&/\b(?:resta|restante|saldo|quanto falta)\b/.test(t))))
    c.push({name:'historicalBalance',value:'historical'});
  if(/\b(?:compare|comparar|comparacao|comparativo|versus| vs )\b/.test(t))
    c.push({name:'comparison',value:'comparison'});
  if(/\b(?:acima de|maior que|maior do que|abaixo de|menor que|pelo menos)\s*(?:r\$|\d)/.test(t))
    c.push({name:'quantityThreshold',value:'threshold'});
- if(/\b(?:somente (?:vencidos|pendentes|atrasados)|apenas (?:vencidos|pendentes|atrasados))\b/.test(t))
+ if(/\b(?:(?:somente|apenas|so) (?:os |as )?(?:vencidos|vencidas|pendentes|atrasados|atrasadas))\b/.test(t))
    c.push({name:'status',value:'filtered'});
  return c;
 }

@@ -153,15 +153,19 @@ export function interpret(input:Input):Result {
    return finish('IN_SCOPE','CLARIFY',intent,'MISSING_OR_AMBIGUOUS_PARAMETER',undefined,msg)};
  if(x.multiCommitments)return clarify('unknown','Você citou mais de uma NE. Qual delas deseja consultar?');
  if(x.multipleCnpj)return clarify('unknown','Você citou mais de um CNPJ. Qual deles deve ser utilizado?');
+ if(/\b(?:fornecedor|fornecedores)\s+[^.!?]{1,65}\s+e\s+(?:fornecedor|fornecedores)\b/.test(t))
+   return clarify('supplier_contact_find','Informe um fornecedor por consulta.');
+ if(/\b(?:estoque|temos)\b/.test(t)&&isCommitment&&isBalance&&/\b(?:e qual|e quanto|e onde|tambem)\b/.test(t))
+   return clarify('unknown','Você solicitou duas consultas diferentes. Qual deseja primeiro?');
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
  if(isInvoice) {
+   if(isIssued)return unavailable('invoice_issued_period','ISSUED_DATE_NOT_REGISTERED_DATE');
    if(x.supplier&&!x.cnpj)return clarify('invoice_registration_period_list',
      'Informe o CNPJ do fornecedor. O W3 não filtra notas fiscais pelo nome.');
    if(x.supplier&&x.cnpj)return clarify('invoice_registration_period_list',
      'Confirme o fornecedor pelo CNPJ; o nome não foi vinculado com segurança ao documento.');
    if(x.cnpj&&!/^\d{14}$/.test(x.cnpj))return clarify('invoice_registration_period_list','Informe um CNPJ válido.');
-   if(isIssued)return unavailable('invoice_issued_period','ISSUED_DATE_NOT_REGISTERED_DATE');
    if((x.material||(/\b(?:de|do|da)\s+\w+\s+(?:cadastrad|da semana)/.test(t)))&&!x.id)
      return unavailable('invoice_by_material_period','P1_MATERIAL_DATE_FILTER_UNAVAILABLE');
    if(x.nf)return clarify('invoice_by_number','Informe também o fornecedor ou CNPJ da nota fiscal.');
