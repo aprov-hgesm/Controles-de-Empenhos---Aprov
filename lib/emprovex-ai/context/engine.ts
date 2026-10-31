@@ -21,6 +21,7 @@ function extract(text:string,canonical:string) {
  const cnpj=rawCnpj?.replace(/\D/g,'');
  const nf=canonical.match(/\b(?:nf|nota fiscal|nota)\s*(?:n[uo]mero|n|no)?\s*(\d{1,12})\b/)?.[1];
  let supplier=text.match(/\bfornecedor\s+[\p{L}][\p{L}\s.\-]{1,75}/iu)?.[0]?.trim();
+ if(!supplier)supplier=text.match(/\bfornecedo\s+[\p{L}][\p{L}\s.\-]{1,75}/iu)?.[0]?.replace(/^fornecedo/i,'fornecedor').trim();
  if(supplier)supplier=supplier.replace(/\s+(?:da|de|do|no|na|em)\s+(?:semana|mes|ano|dia)\b.*$/i,'').replace(/[.,;!?]+$/,'').trim();
  let material='';
  const patterns=[
@@ -31,6 +32,10 @@ function extract(text:string,canonical:string) {
    /\b(?:existe|ha)\s+(.{2,85}?)\s+(?:no deposito|na camara|em estoque)\b/
  ];
  for(const re of patterns){const m=canonical.match(re);if(m){material=m[1].trim();break;}}
+ if(!material&&/\b(?:nota|notas|nf|nfs)\b/.test(canonical)){
+   const m=canonical.match(/\b(?:notas?|nfs?)\s+(?:de|do|da)\s+([a-z][a-z -]{1,60}?)(?=\s+(?:foram|cadastrad|da semana|na semana|emitid|ontem)|$)/);
+   if(m)material=m[1];
+ }
  if(!material&&/\b(?:estoque|armazenado|material|deposito)\b/.test(canonical)){
    const m=canonical.match(/\b(?:do|da|de)\s+([a-z][a-z\s-]{1,65})$/);
    if(m)material=m[1];
@@ -90,7 +95,7 @@ export function interpret(input:Input):Result {
  if(x.year)entities.year=x.year;
  if(x.nf)entities.invoiceNumber=x.nf;
  const rel=relativePeriod(t);dimensions.period=rel;
- const isInvoice=has(t,WORDS.invoice),isCommitment=has(t,WORDS.commitment)||!!x.id||!!x.partial;
+ const isInvoice=(has(t,WORDS.invoice)||/\bnotas?\s+(?:de|do|da)\s+\S+/.test(t)||/\bnota\s+\d{1,12}\b/.test(t))&&!/\bnota de empenho\b/.test(t),isCommitment=has(t,WORDS.commitment)||!!x.id||!!x.partial;
  const isSchedule=has(t,WORDS.schedule),isSupplier=has(t,WORDS.supplier);
  const isContact=has(t,WORDS.contact),isStock=has(t,WORDS.stock);
  const isLocation=has(t,WORDS.location);
