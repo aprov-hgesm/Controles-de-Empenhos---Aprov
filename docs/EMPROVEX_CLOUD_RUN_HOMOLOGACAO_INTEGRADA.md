@@ -1,28 +1,50 @@
-# EMPROVEX — Homologação integrada Cloud Run (plano simplificado)
+# EMPROVEX — Homologação funcional integrada (Cloud Run)
 
-Status: **pronto para teste de build/deploy privado, não certificado para tráfego de clientes**. Branch de trabalho: `feat/cloud-run-r7-service-identity-20261031`, PR #426 Draft. `main`, Vercel e `emprovex.com.br` não foram modificados.
+**Uma entrega, sem novos workers.** Branch `feat/cloud-run-r7-service-identity-20261031`, PR #426 DRAFT. `main`, Vercel, `emprovex.com.br`, InfinitePay e cron permanecem em produção sem mudanças.
 
-## Concluído antes desta etapa
-- 11 versões de segredos migradas para Secret Manager R4/R6; pontes temporárias desativadas.
-- R7 identidade nativa Cloud Run e testes (5 unitários, 6 integração, typecheck, CI de segurança/E2E).
-- IAM direta aos 11 segredos, Cloud Monitoring e Firebase Auth; Firestore com condições por banco; Cloud Run Job `emprovex-r7-iam-probe-44l8g` concluiu com êxito, após correção do nome reservado do documento de teste.
+## Situação comprovada (31/10/2026)
 
-## Build e deploy privado
-- `Dockerfile` multiestágio Next.js 15.5.24 / Node 24 / output standalone; contém `npm run typecheck && npm run build`; não injeta secrets no build.
-- `.dockerignore` protege arquivos `.env*`, credenciais, Git e `.vercel`.
-- `ops/deploy-emprovex-cloud-run-staging.ps1`: sem argumentos = *dry-run*; `-Deploy` cria **apenas** o serviço `emprovex-cloudrun-staging` na região `southamerica-east1`, com conta `emprovex-run-runtime`, `--no-allow-unauthenticated`, `--min-instances=0` e `--max-instances=1`.
-- A primeira homologação **não recebe nenhum dos 11 segredos**. `INFINITEPAY_BILLING_ENABLED=0` e `EMPROVEX_BILLING_ENFORCEMENT_ENABLED=0`, sem chave InfinitePay; não testar pagamentos.
-- Deploy privado exige autenticação IAM. Não é uma prévia de login para navegador comum. A primeira validação é de empacotamento, inicialização, `/api/health`, página institucional e código/status de rotas protegidas. Não consumir APIs com efeitos colaterais.
-- A identidade `emprovex-run-runtime` possui IAM de **escrita** em dois bancos de produção e administra Auth. Não executar rotas que criem, atualizem ou excluam contas, dados, estoques ou cobranças na homologação inicial.
-- `gcloud run deploy --source .` pode exigir Cloud Build e Artifact Registry, gerar custos e solicitar configuração de serviços. Não desabilitar IAM nem conceder Viewer/Editor global para contornar erros.
+- 11 segredos copiados para Secret Manager R4/R6; pontes temporárias de transferência revogadas.
+- Identidade nativa Cloud Run sem chave privada: `emprovex-run-runtime`; Firebase Auth e Cloud Monitoring receberam os papéis previstos; os dois bancos Firestore contam com condições por banco.
+- Cloud Run Job `emprovex-r7-iam-probe-44l8g` confirmou, por leitura de documentos inexistentes, acesso aos dois bancos operacionais e negação aos três restantes.
+- Build Docker Next.js standalone PASS; hospedagem privada `emprovex-cloudrun-staging` implantada em `southamerica-east1`, revisão `00001-mhq`.
+- Teste real da URL privada, via token IAM: `/api/health` PASS e `/` HTTP 200.
+- PR #426 com checks aplicáveis aprovados no commit do deploy; checks novos podem precisar concluir após novos commits documentais.
+- O staging tem `EMPROVEX_CLOUD_RUN_STAGE=1`, `INFINITEPAY_BILLING_ENABLED=0`, `EMPROVEX_BILLING_ENFORCEMENT_ENABLED=0`. Nenhum segredo InfinitePay foi montado no serviço de homologação.
 
-## Pendente para migração funcional (antes de aceitar usuários)
-1. Inventário completo de variáveis Vercel Production. Os 11 segredos transferidos são apenas parte da configuração. Revisar `CRON_SECRET`, `APP_URL`, configuração App Check/Google OAuth, URLs públicas, variáveis de billing, integrações de Drive e outros valores.
-2. Testar Firebase Authentication e App Check no domínio privado de homologação; Cloud Run IAM pode impedir acesso normal no navegador. Planejar ambiente autenticado ou sandbox com dados sintéticos, sem conceder acesso público ao backend atual com permissões de produção.
-3. Adaptar cron Vercel para Cloud Scheduler sem duas execuções simultâneas; coordenar no corte.
-4. Validar webhooks/callbacks InfinitePay e origem pública, garantir entrega/assinatura, idempotência de pagamentos, e implementar rollback para a Vercel antes de redirecionar o domínio.
-5. Testar custo e latência entre Cloud Run `southamerica-east1` e bancos Firestore `us-east1`.
-6. Antes de redirecionar `emprovex.com.br`, aprovar decisão de cutover, smoke do serviço operacional, callbacks, backups e rollback. Não remover configurações da Vercel até o corte certificado.
+## Executar a homologação integrada em uma única operação
 
-## Critério imediato
-Uma homologação **privada** compila e inicia a aplicação Next.js sem secrets financeiros e sem causar efeitos em dados operacionais. Não confundir smoke técnico com liberação comercial. A homologação funcional de faturamento exige etapas adicionais, agrupadas num único plano de cutover.
+No PowerShell, dentro de `$HOME\EMPROVEX-R7-IDENTITY`:
+
+```powershell
+git pull --ff-only origin feat/cloud-run-r7-service-identity-20261031
+if ($LASTEXITCODE -ne 0) { throw 'Falha ao atualizar o codigo.' }
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\ops\homologate-cloud-run-integrated.ps1 -Browser
+if ($LASTEXITCODE -ne 0) { throw 'Homologacao integrada falhou.' }
+```
+
+O script faz um só checklist de HTTP e segurança (GET apenas, sem ler documentos reais), depois abre um **proxy privado local** em `http://localhost:8089/central-empenhos`. Para usar, manter a janela do proxy aberta. O acesso direto à URL `.run.app` permanece protegido por IAM.
+
+## Checklist da homologação pelo navegador
+
+1. **Visual**: login, identidade visual, modo Normal/Essencial, navegação pública, ícones e responsividade.
+2. **Autenticação Firebase**: somente conta designada de teste; testar com cuidado, pois o navegador usa o Firebase de produção e o fluxo de sessão pode **escrever** (renovações de lease, registros etc.). Login Google por popup/redirect pode depender de `localhost` como domínio autorizado. Não adicionar `localhost` ao projeto de produção apenas para contornar um erro do teste; revisar alternativa isolada.
+3. **Áreas operacionais**: acesso, menus, painéis, NF, relatórios, Central de Depósitos. Na hospedagem atual, usar apenas navegação/leitura em conta de teste — não cadastrar/alterar/excluir documentos, estoque ou contas.
+4. **Integrações**: Google Drive, Firebase App Check, permissões de assinatura e outros provedores ainda dependem de configuração específica do host e da homologação. Não apresentar como validados com base apenas em HTTP 200.
+5. **Cobrança**: InfinitePay sem segredos no staging, checkout e webhooks NÃO testáveis nessa hospedagem; testar em ambiente isolado e sem transação real antes de corte.
+6. **Agendamento**: `vercel.json` tem cron de `/api/cron/usage-snapshot`; Cloud Scheduler não deve rodar em paralelo com cron Vercel. Só migrar com coordenação de corte.
+7. **Corte**: somente após configurações reais, backup/rollback, validação de custo e latência (Cloud Run São Paulo, Firestore us-east1), domínio, OAuth/App Check, storage e webhooks. Nunca remover Vercel antes do novo serviço estar certificado.
+
+## Limitações e bloqueio de liberação pública
+
+O aplicativo cliente importa `firebase-applet-config.json`, que referencia diretamente o projeto Firestore de produção. As Firestore Security Rules e as políticas de cliente não são equivalentes ao IAM do serviço. A conta Cloud Run tem acesso administrativo aos bancos operacionais; **um navegador autenticado no aplicativo também pode chamar diretamente o Firebase**. O modo de staging e o bloqueio de cobrança não constituem uma barreira global contra escritas no Firebase pelo cliente.
+
+Por isso, o serviço permanece privado e os testes de gravação precisam de dados/ambiente isolados e configuração de autenticação adequada. Este documento não autoriza tornar staging público, trocar domínio ou promover a PR.
+
+## Critério de conclusão
+
+1. Smoke integrado PASS + navegador via proxy alcançando login.
+2. Homologação funcional das integrações e operações **com dados de teste isolados** sem afetar workspaces reais.
+3. Cutover Vercel -> Cloud Run (DNS, callbacks, agendamento) com rollback conferido.
+
+Executar estes critérios como **um único plano de homologação e corte**, sem abrir novas trilhas de auditorias fragmentadas.
