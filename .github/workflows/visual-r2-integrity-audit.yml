@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
           cache: npm
       - run: npm ci
       - name: "Verificações de documentos: executar todas, consolidar falhas"
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
           cache: npm
       - run: npm ci
       - name: TypeScript real
@@ -121,7 +121,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
           cache: npm
       - run: npm ci
       - name: "Verificar isolamento e sintaxe da prévia local"
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
           cache: npm
       - uses: actions/setup-java@v4
         with:
@@ -201,7 +201,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
           cache: npm
       - uses: actions/setup-java@v4
         with:
