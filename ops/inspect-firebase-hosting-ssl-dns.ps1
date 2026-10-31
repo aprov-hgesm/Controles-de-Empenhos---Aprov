@@ -66,7 +66,46 @@ Write-Host "DOMINIO: $Domain"
 Write-Host "PROPRIEDADE: $($domainData.ownershipState)"
 Write-Host "CERTIFICADO: $($domainData.cert.state)"
 Write-Host "HOSPEDAGEM: $($domainData.hostState)"
-Write-Host "ULTIMA_ATUALIZACAO: $($domainData.updateTime)"
+Write-Host "ULTIMA_ATUALIZACAO_RECURSO: $($domainData.updateTime)"
+Write-Host "ULTIMA_CONSULTA_DNS_PROPRIEDADE: $($domainData.requiredDnsUpdates.checkTime)"
+Write-Host "ULTIMA_CONSULTA_DNS_ACME: $($domainData.cert.verification.dns.checkTime)"
+Write-Host "RECONCILIANDO: $($domainData.reconciling)"
+$issueList = @($domainData.issues) + @($domainData.cert.issues)
+foreach ($issue in $issueList) {
+  if ($issue.code -or $issue.message) {
+    Write-Host "AVISO_FIREBASE: [$($issue.code)] $($issue.message)"
+  }
+}
+$ownershipExpected = @(
+  foreach ($set in @($domainData.requiredDnsUpdates.desired)) {
+    foreach ($record in @($set.records)) {
+      if ($record.type -eq 'TXT' -and $record.rdata -like 'hosting-site=*') {
+        [string]$record.rdata
+      }
+    }
+  }
+)
+$ownershipDiscovered = @(
+  foreach ($set in @($domainData.requiredDnsUpdates.discovered)) {
+    foreach ($record in @($set.records)) {
+      if ($record.type -eq 'TXT' -and $record.rdata -like 'hosting-site=*') {
+        [string]$record.rdata
+      }
+    }
+  }
+)
+Write-Host "TXT_PROPRIEDADE_ESPERADO: $($ownershipExpected -join ', ')"
+Write-Host "TXT_PROPRIEDADE_DETECTADO_FIREBASE: $($ownershipDiscovered -join ', ')"
+$acmeDiscovered = @(
+  foreach ($set in @($domainData.cert.verification.dns.discovered)) {
+    foreach ($record in @($set.records)) {
+      if ($record.type -eq 'TXT' -and $set.domainName -like '_acme-challenge.*') {
+        [string]$record.rdata
+      }
+    }
+  }
+)
+Write-Host "TXT_ACME_DETECTADO_FIREBASE: $($acmeDiscovered -join ', ')"
 
 $challenges = @()
 if ($domainData.cert.verification.dns.desired) {
@@ -108,7 +147,7 @@ if ($records.Count -eq 0) {
   Write-Host ''
   Write-Host '=== TXT DNS-01 EXATO PARA REGISTRO.BR ==='
   $records | Format-List NomeCompleto,NomeNoRegistroBR,Tipo,Valor,Acao
-  Write-Host 'Crie este novo TXT no Registro.br usando os valores EXATOS acima.'
+  Write-Host 'Se o TXT ja existe no Registro.br e aparece no nslookup, NAO recrie o registro: apenas acompanhe o reconhecimento e a emissao.'
   Write-Host 'Nao altere A 216.198.79.1, nao remova TXT hosting-site nem google-site-verification.'
   Write-Host 'Depois de salvar, consulte: nslookup -type=TXT _acme-challenge.emprovex.com.br 8.8.8.8'
   Write-Host 'Aguarde ate o Firebase indicar CERT_ACTIVE antes do corte DNS.'
