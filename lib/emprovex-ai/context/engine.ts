@@ -1,9 +1,12 @@
 import {ACCEPTED_INTENTS} from './catalog';
 import {makeW3Query} from './adapter';
+import {auditFilters,detectConstraints} from './filterGuard';
 import {has,matchAny,normalize,repairSafeWords,parsePeriod,WORDS} from './language';
 import type {Input,Result,Route,Domain,Intent,ContextRefs,Dimensions,ShortContext,W3Intent} from './types';
 
 const MAX_CHARS=1000,MAX_WORDS=150,MAX_REFS=4,TTL=10*60*1000;
+const EXACT_NE=/^\d{4}NE\d{1,10}$/;
+const SAFE_MATERIAL=/^[^<>\u0000-\u001f\u007f]{2,120}$/;
 const EMPTY:Dimensions={intention:null,document:null,material:null,situation:null,period:null,
   identity:null,quantity:null,location:null,relationship:null,format:null};
 function safeContext(input:Input,now:number):ContextRefs {
@@ -11,19 +14,24 @@ function safeContext(input:Input,now:number):ContextRefs {
  if(!p||!s||!s.sessionId||!s.workspaceId||p.sessionId!==s.sessionId||p.workspaceId!==s.workspaceId||
    !Number.isFinite(p.updatedAt)||p.updatedAt>now+30000||now-p.updatedAt>TTL)return {};
  return Object.fromEntries(Object.entries(p.refs||{}).filter(([k,v])=>
-   ['commitmentId','materialQuery','supplierName','supplierCnpj'].includes(k)&&typeof v==='string'&&v.length<=120)
+   ['commitmentId','materialQuery','supplierName','supplierCnpj'].includes(k)&&typeof v==='string'&&v.length<=120&&
+   (k==='commitmentId'?EXACT_NE.test(v):k==='supplierCnpj'?/^\d{14}$/.test(v):SAFE_MATERIAL.test(v)))
    .slice(0,MAX_REFS)) as ContextRefs;
 }
 function extract(text:string,canonical:string) {
  const fullIds=[...text.matchAll(/\b\d{4}NE\d{1,10}\b/gi)].map(m=>m[0].toUpperCase());
  const id=fullIds[0];const multiCommitments=new Set(fullIds).size>1;
  const partial=text.match(/\bNE\s*[-]?\s*(\d{1,10})\b/i)?.[0];
- const rawCnpj=text.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/)?.[0];
- const cnpj=rawCnpj?.replace(/\D/g,'');
+ const allCnpj=[...text.matchAll(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/g)].map(m=>m[0].replace(/\D/g,''));
+ const multipleCnpj=new Set(allCnpj).size>1;
+ const rawCnpj=allCnpj[0];
+ const cnpj=rawCnpj;
  const nf=canonical.match(/\b(?:nf|nota fiscal|nota)\s*(?:n[uo]mero|n|no)?\s*(\d{1,12})\b/)?.[1];
  let supplier=text.match(/\bfornecedor\s+[\p{L}][\p{L}\s.\-]{1,75}/iu)?.[0]?.trim();
  if(!supplier)supplier=text.match(/\bfornecedo\s+[\p{L}][\p{L}\s.\-]{1,75}/iu)?.[0]?.replace(/^fornecedo/i,'fornecedor').trim();
- if(supplier)supplier=supplier.replace(/\s+(?:da|de|do|no|na|em)\s+(?:semana|mes|ano|dia)\b.*$/i,'').replace(/[.,;!?]+$/,'').trim();
+ if(supplier)supplier=supplier
+  .replace(/\s+(?:foram|foi|estao|forneceu|cadastrad[ao]s?|registrad[ao]s?|enviad[ao]s?|entre|em|ontem|na|no|da|do|de)\b.*$/iu,'')
+  .replace(/[.,;!?]+$/,'').trim();
  let material='';
  const patterns=[
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
@@ -33,6 +41,10 @@ function extract(text:string,canonical:string) {
    /\b(?:existe|ha)\s+(.{2,85}?)\s+(?:no deposito|na camara|em estoque)\b/
  ];
  for(const re of patterns){const m=canonical.match(re);if(m){material=m[1].trim();break;}}
+ if(!material&&/\b(?:resta|saldo|restante|falta)\b/.test(canonical)&&/\b\d{4}ne\d+\b/.test(canonical)){
+   const m=canonical.match(/\b(?:resta|saldo|restante|falta)\s+(?:de|do|da)\s+([a-z][a-z -]{1,65}?)\s+(?:na|no|da|do)\s+(?:ne|empenho|nota de empenho|\d{4}ne)/);
+   if(m)material=m[1];
+ }
  if(!material&&/\b(?:nota|notas|nf|nfs)\b/.test(canonical)){
    const m=canonical.match(/\b(?:notas?|nfs?)\s+(?:de|do|da)\s+([a-z][a-z -]{1,60}?)(?=\s+(?:foram|cadastrad|da semana|na semana|emitid|ontem)|$)/);
    if(m)material=m[1];
@@ -46,7 +58,10 @@ function extract(text:string,canonical:string) {
  if(/^(?:material|materiais|produto|produtos|deposito|estoque|esse material|aquele material|isso)$/.test(material))material='';
  if(!/^[a-z][a-z0-9\s\/-]{1,119}$/.test(material))material='';
  const year=canonical.match(/\b(?:exercicio|ano|de)\s+(20\d{2})\b/)?.[1];
- return {id,partial,cnpj,supplier,material,multiCommitments,year:year?Number(year):undefined,nf};
+ const depotId=text.match(/\bdep_[a-f0-9]{32}\b/i)?.[0];
+ const itemId=text.match(/\bitemId[:= ]+([a-zA-Z0-9_-]{1,130})\b/i)?.[1];
+ return {id,partial,cnpj,supplier,material,multiCommitments,multipleCnpj,depotId,itemId,
+  year:year?Number(year):undefined,nf};
 }
 export function interpret(input:Input):Result {
  const started=Date.now(),now=input.now instanceof Date&&Number.isFinite(input.now.getTime())?input.now.getTime():started;
@@ -54,6 +69,7 @@ export function interpret(input:Input):Result {
  const dimensions:Dimensions={...EMPTY};
  const refs=safeContext(input,now);
  let work=0;
+ let filterAudit:Result['filterAudit'];
  const finish=(domain:Domain,route:Route,intent:Intent,reason:string,params?:Record<string,unknown>,question?:string):Result=>{
    let query:Result['query'];
    if(route==='DETERMINISTIC'&&ACCEPTED_INTENTS.includes(intent as W3Intent))
@@ -61,7 +77,8 @@ export function interpret(input:Input):Result {
    if(route==='DETERMINISTIC'&&!query){route='CLARIFY';question='Informe os dados necessários para identificar o registro.';reason='W3_SCHEMA_REJECTED';}
    let nextContext:ShortContext|undefined;
    if(query&&input.scope?.sessionId&&input.scope.workspaceId) {
-     const r:ContextRefs={...refs};
+     // Context change is explicit: do not retain unrelated stale materials/NEs.
+     const r:ContextRefs={};
      if(typeof params?.commitmentId==='string')r.commitmentId=params.commitmentId;
      if(typeof params?.materialQuery==='string')r.materialQuery=params.materialQuery;
      if(typeof params?.nameQuery==='string')r.supplierName=params.nameQuery;
@@ -73,6 +90,7 @@ export function interpret(input:Input):Result {
      allowedIntents:ACCEPTED_INTENTS,maxOutputTokens:128 as const,temperature:0 as const,
      context:refs,jsonOnly:true as const}:undefined;
    return {domain,route,intent,confidence:route==='DETERMINISTIC'?0.98:route==='MODEL_ELIGIBLE'?0.45:0.9,
+     confidenceKind:'HEURISTIC_NOT_CALIBRATED',...(filterAudit?{filterAudit}:{}),
      dimensions,entities:{...entities},...(query?{query}:{}),...(question?{question}:{}),
      reason,...(nextContext?{nextContext}:{}),...(model?{model}:{}),
      metrics:{durationMs:Date.now()-started,estimatedWork:work,qwenCalls:0}};
@@ -116,25 +134,49 @@ export function interpret(input:Input):Result {
  dimensions.location=isLocation?(/\b(?:camara fria|deposito|estante|prateleira|freezer|geladeira)\b/.exec(t)?.[0]||'localização'):null;
  dimensions.format=/\btabela\b/.test(t)?'table':/\bcompare|comparacao\b/.test(t)?'comparison':
    /\blista|quais|mostra\b/.test(t)?'list':'short';
- const success=(intent:W3Intent,params:Record<string,unknown>,relation?:string)=>{dimensions.intention=intent;
-   if(relation)dimensions.relationship=relation;return finish('IN_SCOPE','DETERMINISTIC',intent,'W3_P0',params)};
+ const success=(intent:W3Intent,params:Record<string,unknown>,relation?:string)=>{
+   dimensions.intention=intent;
+   const constraints=detectConstraints(t,{
+     commitmentId:x.id,materialQuery:x.material,supplierName:x.supplier,supplierCnpj:x.cnpj,
+     period:rel,depotId:x.depotId,itemId:x.itemId
+   },intent);
+   const decision=auditFilters(intent,params,constraints);
+   filterAudit=decision?{requested:decision.requested,represented:decision.represented,unhandled:decision.unhandled}:
+     {requested:[...new Set(constraints.map(c=>c.name))],represented:[...new Set(constraints.map(c=>c.name))],unhandled:[]};
+   if(decision)return finish('IN_SCOPE',decision.route,decision.intent,decision.reason,undefined,decision.question);
+   if(relation)dimensions.relationship=relation;
+   return finish('IN_SCOPE','DETERMINISTIC',intent,'W3_P0',params);
+ };
  const unavailable=(intent:Intent,reason:string)=>{dimensions.intention=intent;
    return finish('IN_SCOPE','UNSUPPORTED',intent,reason)};
  const clarify=(intent:Intent,msg:string)=>{dimensions.intention=intent;
    return finish('IN_SCOPE','CLARIFY',intent,'MISSING_OR_AMBIGUOUS_PARAMETER',undefined,msg)};
  if(x.multiCommitments)return clarify('unknown','Você citou mais de uma NE. Qual delas deseja consultar?');
+ if(x.multipleCnpj)return clarify('unknown','Você citou mais de um CNPJ. Qual deles deve ser utilizado?');
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
  if(isInvoice) {
+   if(x.supplier&&!x.cnpj)return clarify('invoice_registration_period_list',
+     'Informe o CNPJ do fornecedor. O W3 não filtra notas fiscais pelo nome.');
+   if(x.supplier&&x.cnpj)return clarify('invoice_registration_period_list',
+     'Confirme o fornecedor pelo CNPJ; o nome não foi vinculado com segurança ao documento.');
+   if(x.cnpj&&!/^\d{14}$/.test(x.cnpj))return clarify('invoice_registration_period_list','Informe um CNPJ válido.');
    if(isIssued)return unavailable('invoice_issued_period','ISSUED_DATE_NOT_REGISTERED_DATE');
    if((x.material||(/\b(?:de|do|da)\s+\w+\s+(?:cadastrad|da semana)/.test(t)))&&!x.id)
      return unavailable('invoice_by_material_period','P1_MATERIAL_DATE_FILTER_UNAVAILABLE');
    if(x.nf)return clarify('invoice_by_number','Informe também o fornecedor ou CNPJ da nota fiscal.');
-   if(rel&&isRegistered)return success('invoice_registration_period_list',{interval:rel,dateMeaning:'registered'},'NF → cadastro');
+   if(rel&&isRegistered)return success('invoice_registration_period_list',{
+     interval:rel,dateMeaning:'registered',
+     ...(x.cnpj?{supplierCnpj:x.cnpj}:{}),...(x.id?{commitmentId:x.id}:{})
+   },'NF → cadastro');
    if(isRegistered&&!rel)return clarify('invoice_registration_period_list','Qual período de cadastro das notas fiscais?');
    return unavailable('general_document_search','INVOICE_CONTRACT_NOT_AVAILABLE');
  }
  if(isSchedule){
+   if(x.supplier&&!x.cnpj)return clarify('schedule_sent_history_list',
+     'Informe o CNPJ do fornecedor para preservar esse filtro de cronogramas.');
+   if(x.supplier&&x.cnpj)return clarify('schedule_sent_history_list',
+     'Confirme o CNPJ correspondente ao fornecedor mencionado.');
    if(!has(t,WORDS.sent)&&!/\bquando\b/.test(t))return unavailable('general_document_search','SCHEDULE_QUERY_UNSUPPORTED');
    if(commitmentId||rel||x.cnpj)return success('schedule_sent_history_list',{
      ...(commitmentId?{commitmentId}:{}),...(rel?{sentPeriod:rel}:{}),...(x.cnpj?{supplierCnpj:x.cnpj}:{})
@@ -157,7 +199,7 @@ export function interpret(input:Input):Result {
      return success('commitment_previous_open_list',x.year?{exerciseYear:x.year}:{});
    if(isBalance){
      if(!commitmentId)return clarify('commitment_total_balance','Qual NE completa deseja consultar?');
-     return success('commitment_total_balance',{commitmentId});
+     return success('commitment_total_balance',{commitmentId,...(x.itemId?{itemId:x.itemId}:{})});
    }
    if(!commitmentId)return clarify('commitment_get','Qual NE completa deseja consultar?');
    return success('commitment_get',{commitmentId,includeItems:/\bitens\b/.test(t)});
@@ -175,7 +217,7 @@ export function interpret(input:Input):Result {
    const asksLocation=/\b(?:onde|localiza|armazenado|fica|encontrar)\b/.test(t);
    const intent=asksLocation?'warehouse_material_locations_list':'warehouse_stock_get';
    if(!material)return clarify(intent,'Qual material você deseja consultar?');
-   return success(intent,{materialQuery:material},'material → estoque → localização');
+   return success(intent,{materialQuery:material,...(intent==='warehouse_material_locations_list'&&x.depotId?{depotId:x.depotId}:{})},'material → estoque → localização');
  }
  if(procedure)return unavailable('operational_procedure','P1_PROCEDURES_UNAVAILABLE');
  if(/\b(?:painel|abra|navegar|acesse|menu|aba)\b/.test(t))return unavailable('navigation','NAVIGATION_NOT_AVAILABLE_IN_W3');

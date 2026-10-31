@@ -33,3 +33,5 @@ export const FUTURE_CONTRACTS:Partial<Record<Intent,string>>={
   inventory_status:'warehouse.inventory.status.v1'
 };
 export const ACCEPTED_INTENTS=Object.freeze(Object.keys(W3_CONTRACTS) as W3Intent[]);
+
+export {W3_FILTERS} from './filterGuard';

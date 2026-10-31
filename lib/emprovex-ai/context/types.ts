@@ -26,6 +26,9 @@ export type ModelProposal = {schema:'emprovex.ai.modelProposal.v1';userText:stri
   allowedIntents:readonly W3Intent[];maxOutputTokens:128;temperature:0;
   context:ContextRefs;jsonOnly:true};
 export type Result = {domain:Domain;route:Route;intent:Intent;confidence:number;
+  /** Compatibility score only; not a statistically calibrated probability. */
+  confidenceKind:'HEURISTIC_NOT_CALIBRATED';
+  filterAudit?:{requested:string[];represented:string[];unhandled:string[]};
   dimensions:Dimensions;entities:Record<string,string|number>;query?:W3Query;
   question?:string;reason:string;nextContext?:ShortContext;model?:ModelProposal;
   metrics:{durationMs:number;estimatedWork:number;qwenCalls:0}};
