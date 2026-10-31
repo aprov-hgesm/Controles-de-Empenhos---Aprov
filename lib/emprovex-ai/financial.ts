@@ -4,6 +4,8 @@ import type { AiQuery } from './contracts';
 import { AiExecutionError, type QueryOutcome } from './response';
 import { coreDocument, coreOperationalDocument, coreOperationalQuery, type AiRow } from './reader';
 import { getEmpenhoExerciseYear } from '../../features/empenhos/domain/empenhoExercise';
+import { parseAiCursor, makeAiCursor } from './cursor';
+import { operationalMidnightUtc } from './period';
 
 function s(v:unknown):string{return typeof v==='string'?v:'';}
 function n(v:unknown):number {
@@ -97,7 +99,8 @@ async function commitmentBalance(access:AiAccess,p:Record<string,unknown>):Promi
 async function previousOpen(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
   const requested=p.exerciseYear as number|undefined,older=p.includeHistorical===true,now=new Date().getUTCFullYear();
   const pageSize=p.pageSize as number;
-  const q=await coreOperationalQuery(access,'empenhos',[],201);
+  const cursor=p.cursor?parseAiCursor(String(p.cursor),access,'commitment_previous_open_list',p):undefined;
+  const q=await coreOperationalQuery(access,'empenhos',[],201,'__name__',cursor);
   const found=q.rows.flatMap(row=>{
     const year=getEmpenhoExerciseYear({id:s(row.data.id)||row.id,date:s(row.data.date)});
     if(!year || (requested!==undefined&&requested!==year)
@@ -109,14 +112,19 @@ async function previousOpen(access:AiAccess,p:Record<string,unknown>):Promise<Qu
       operationalClassification:year===now-1?'previous_exercise':'historical'}];
   });
   const over=found.length>pageSize;
+  const lastMatched=found.length>pageSize?found[pageSize-1].commitmentId:null;
+  const lastScanned=q.rows.at(-1)?.id||null;
+  const nextCursor=(q.truncated||over) && (lastMatched||lastScanned)
+    ? makeAiCursor(access,'commitment_previous_open_list',p,lastMatched||lastScanned||'') :null;
   return {status:q.truncated||over?'partial':found.length?'ok':'empty',
     data:found.slice(0,pageSize),evidence:q.rows.filter(row=>found.some(f=>f.commitmentId===row.id))
       .slice(0,pageSize).map(row=>source('empenhos',row)),
     coverage:q.truncated||over?'incomplete':'complete',
-    truncated:q.truncated||over,
+    truncated:q.truncated||over,nextCursor,
     limitations:['Classificação por exercício não comprova inscrição oficial em RPNP no SIAFI.',
       ...(q.truncated?['Pesquisa limitada a 200 empenhos; resultados podem estar incompletos.']:[]),
-      ...(over?['Página limitada; refinamento por exercício recomendado.']:[])],
+      ...(over?['Página limitada; refinamento por exercício recomendado.']:[]),
+      ...((q.truncated||over)&&!nextCursor?['Paginação indisponível: configurar EMPROVEX_AI_CURSOR_SECRET com segredo seguro.']:[])],
     examinedDocuments:q.examined};
 }
 function historyOf(row:AiRow): Array<Record<string,unknown>> {
@@ -142,14 +150,16 @@ async function sentHistory(access:AiAccess,p:Record<string,unknown>):Promise<Que
   const period=p.sentPeriod as {start:string;endExclusive:string}|undefined;
   const records=q.rows.flatMap(row=>historyOf(row).flatMap(ev=>{
     const at=s(ev.enviadoEm);
-    if(period && (at.slice(0,10)<period.start||at.slice(0,10)>=period.endExclusive))return [];
+    if(period && (!Number.isFinite(Date.parse(at)) || Date.parse(at)<Date.parse(operationalMidnightUtc(period.start))
+      ||Date.parse(at)>=Date.parse(operationalMidnightUtc(period.endExclusive))))return [];
     if(p.supplierCnpj && row.data.supplierCnpj!==p.supplierCnpj)return [];
     return [{commitmentId:s(row.data.empenhoId)||row.id,sentAt:at,
       messageId:ev.messageId,to:ev.destinatario,subject:ev.assunto,
       supplier:ev.fornecedor||null,remessas:ev.remessas||null,sourceRecordId:row.id}];
   })).sort((a,b)=>String(b.sentAt).localeCompare(String(a.sentAt)));
   const limited=records.length>(p.pageSize as number);
-  const incomplete=q.truncated||limited
+  const unverifiableSupplier=Boolean(p.supplierCnpj && q.rows.some(row=>!row.data.supplierCnpj));
+  const incomplete=q.truncated||limited||unverifiableSupplier
     ||records.some(item=>item.remessas===null);
   return {status:incomplete?'partial':records.length?'ok':'empty',
     data:records.slice(0,p.pageSize as number),
@@ -162,12 +172,15 @@ async function sentHistory(access:AiAccess,p:Record<string,unknown>):Promise<Que
 }
 async function invoicePeriod(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
   const period=p.interval as {start:string;endExclusive:string},size=p.pageSize as number;
+  const cursor=p.cursor?parseAiCursor(String(p.cursor),access,'invoice_registration_period_list',p):undefined;
   const q=await coreOperationalQuery(access,'invoices',[
-    {field:'registeredAt',op:'GREATER_THAN_OR_EQUAL',value:period.start},
-    {field:'registeredAt',op:'LESS_THAN',value:period.endExclusive}],size+1,'registeredAt');
-  const rows=q.rows.filter(row=>!p.supplierCnpj||row.data.supplierCnpj===p.supplierCnpj)
+    {field:'registeredAt',op:'GREATER_THAN_OR_EQUAL',value:operationalMidnightUtc(period.start)},
+    {field:'registeredAt',op:'LESS_THAN',value:operationalMidnightUtc(period.endExclusive)}],size+1,'registeredAt',cursor);
+  const scanned=q.rows.slice(0,size);
+  const visible=scanned.filter(row=>!p.supplierCnpj||row.data.supplierCnpj===p.supplierCnpj)
     .filter(row=>!p.commitmentId||row.data.empenhoId===p.commitmentId);
-  const visible=rows.slice(0,size);
+  const last=scanned.at(-1);
+  const nextCursor=q.truncated&&last?makeAiCursor(access,'invoice_registration_period_list',p,last.id,s(last.data.registeredAt)):null;
   const incomplete=q.truncated || !!p.supplierCnpj || !!p.commitmentId;
   return {status:incomplete?'partial':visible.length?'ok':'empty',
     data:visible.map(row=>({recordKey:row.id,number:row.data.id,
@@ -175,10 +188,11 @@ async function invoicePeriod(access:AiAccess,p:Record<string,unknown>):Promise<Q
       commitmentId:row.data.empenhoId,registeredAt:row.data.registeredAt,
       issueDate:row.data.issueDate,totalValue:row.data.totalValue,currency:'BRL'})),
     evidence:visible.map(row=>source('invoices',row)),coverage:incomplete?'incomplete':'complete',
-    truncated:q.truncated,
+    truncated:q.truncated,nextCursor,
     limitations:['Pesquisa por registeredAt; emissão, termo, comissão e tesouraria são datas distintas.',
       'Notas legadas sem registeredAt não entram nesta consulta; cobertura histórica não comprovada.',
-      ...(incomplete?['Filtros adicionais ou paginação podem omitir registros; refine o intervalo.']:[])],
+      ...(incomplete?['Filtros adicionais ou paginação podem omitir registros; refine o intervalo.']:[]),
+      ...(q.truncated&&!nextCursor?['Paginação indisponível: configurar EMPROVEX_AI_CURSOR_SECRET.']:[])],
     examinedDocuments:q.examined};
 }
 export async function executeFinancial(access:AiAccess,q:AiQuery):Promise<QueryOutcome>{
