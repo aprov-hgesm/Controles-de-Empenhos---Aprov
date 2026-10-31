@@ -9,18 +9,19 @@ import ts from 'typescript';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const nativeRequire=createRequire(import.meta.url);
-const cache=new Map();
-function load(path,mocks={}){
+const sharedCache=new Map();
+function load(path,mocks={},scenarioCache=Object.keys(mocks).length?new Map():sharedCache){
   const name=resolve(root,path);
-  if(cache.has(name)&&!Object.keys(mocks).length)return cache.get(name);
+  if(scenarioCache.has(name))return scenarioCache.get(name);
   const code=ts.transpileModule(readFileSync(name,'utf8'),{fileName:name,compilerOptions:{
     module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true
   }}).outputText;
   const mod={exports:{}};
-  if(!Object.keys(mocks).length)cache.set(name,mod.exports);
+  // Registrar antes de carregar dependencias: um ciclo retorna exports parciais.
+  scenarioCache.set(name,mod.exports);
   const importer=(id)=>{
     if(Object.prototype.hasOwnProperty.call(mocks,id))return mocks[id];
-    if(id.startsWith('.'))return load(resolve(dirname(name),id).slice(root.length+1)+'.ts',mocks);
+    if(id.startsWith('.'))return load(resolve(dirname(name),id).slice(root.length+1)+'.ts',mocks,scenarioCache);
     return nativeRequire(id);
   };
   new Function('require','module','exports','process','Buffer',code)(importer,mod,mod.exports,process,Buffer);
