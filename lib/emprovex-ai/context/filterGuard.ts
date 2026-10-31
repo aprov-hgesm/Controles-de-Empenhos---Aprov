@@ -74,6 +74,9 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'period',value:'unresolved_absolute_year'});
  add('depotId',explicit.depotId);
  add('itemId',explicit.itemId);
+ if(intent==='commitment_total_balance'&&!explicit.itemId&&
+   /\b(?:por item|do item|referente ao|referente a|relativo ao|saldo de material|saldo do material)\b/.test(t))
+   c.push({name:'materialQuery',value:'unresolved_commitment_item'});
  if(/\b(?:no|na|dentro da|dentro do|somente na|somente no)\s+(?:camara fria|deposito(?:\s+[a-z0-9-]+)?|estante\s*\d+|prateleira\s*\d+|freezer|geladeira)\b/.test(t))
    c.push({name:'depotName',value:'location'});
  if((intent==='commitment_total_balance'||intent==='commitment_get')&&
