@@ -13,7 +13,7 @@ export function inspectCompound(t:string):string|null {
   /\b(?:entregas|fornecedores)\b.{0,100}\be\s+(?:qual|quanto|valor)\b/,
   /\b(?:saldo|resta|restante)\b.{0,90}\be\s+(?:a\s+)?(?:quantidade|localizacao|validade)\b/,
   /\b(?:quanto|temos|estoque)\b.{0,90}\be\s+(?:qual|a|o)\s+(?:validade|vencimento)\b/,
-  /\b(?:cronograma|envio)\b.{0,90}\be\s+(?:quanto|resta)\b/
+  /\b(?:cronograma|envio)\b.{0,90}\be\s+(?:(?:qual|quanto)\s+(?:o\s+|a\s+)?)?(?:saldo|resta|valor)\b/
  ];
  return phrases.some(re=>re.test(t))
   ?'A solicitação reúne informações que não posso combinar com segurança nesta fase. Qual consulta deseja realizar primeiro?'
