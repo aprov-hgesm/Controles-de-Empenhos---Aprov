@@ -117,8 +117,9 @@ export default function PrivacyPage() {
 
       <LegalSection title="7. Fornecedores de infraestrutura e serviços integrados">
         <p>
-          O EMPROVEX utiliza Firebase e Google Cloud para autenticação, banco de dados, segurança e serviços de nuvem,
-          além da Vercel para hospedagem e execução da aplicação. Google Drive e Gmail são utilizados apenas quando as
+          O EMPROVEX utiliza Firebase e Google Cloud para autenticação, banco de dados, segurança,
+          hospedagem pelo Firebase Hosting e execução da aplicação no Cloud Run. A Vercel permanece apenas como
+          infraestrutura de contingência. Google Drive e Gmail são utilizados apenas quando as
           integrações correspondentes forem autorizadas pelo usuário.
         </p>
         <p>
