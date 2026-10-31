@@ -1,5 +1,37 @@
 # EMPROVEX — Memorial Oficial
 
+
+## ESTADO OPERACIONAL VIGENTE — PRODUÇÃO MIGRADA PARA GOOGLE CLOUD RUN (31/10/2026, Brasília)
+
+> **PRECEDÊNCIA OBRIGATÓRIA:** esta seção substitui todas as referências abaixo que descrevam a **Vercel como hospedagem produtiva atual**, `vercel deploy/promote` como **publicação canônica**, ou a migração Cloud Run como ainda não iniciada. As seções antigas são **histórico imutável de releases**, não procedimentos aplicáveis hoje. **As alterações deste documento foram registradas na branch da PR #426; não confundir atualização do GitHub com novo deployment do aplicativo.**
+
+### Endereço, infraestrutura e prova do corte
+
+- **URL pública canônica:** `https://emprovex.com.br`. Domínio gerenciado no Registro.br, zona avançada. Registro A autoritativo: `199.36.158.100` (**Firebase Hosting**, antigo Vercel `216.198.79.1` retirado). Manter TXT `hosting-site=emprovex-cloudrun-943599311487`, verificação Google e `_acme-challenge` emitido pelo Firebase.
+- **Entrada HTTPS/CDN:** Firebase Hosting, site `emprovex-cloudrun-943599311487`, URL `https://emprovex-cloudrun-943599311487.web.app`, rewrite `**` para serviço `emprovex-cloudrun-candidate`, região `southamerica-east1` (São Paulo). Definição isolada em `ops/cloud-run-hosting/firebase.json`. Domínio apresentou `OWNERSHIP_ACTIVE` e certificado `CERT_ACTIVE`.
+- **Runtime em produção:** Google Cloud Run, projeto `gen-lang-client-0982077967` (`943599311487`), serviço `emprovex-cloudrun-candidate`, executando Next.js standalone em Docker. O nome *candidate* é legado do plano de transição, mas **é o serviço real destinado à produção**; **não renomear precipitadamente**, pois o rewrite do Hosting aponta para ele.
+- **Identidade da execução:** `emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com`, tokens curtos obtidos no metadata server. Firestore operacional e Warehouse têm IAM direcionado; sem JSON privado `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` nem chave dedicada Monitoring no Cloud Run. Firebase Auth/Rules e guardas de workspace, UID e UG continuam aplicáveis.
+- **Acesso:** `roles/run.invoker` para `allUsers` permite o tráfego público de HTTP ao serviço, **não** autentica usuários. O serviço mantém autenticação Firebase e autorização no próprio aplicativo; prova pontual: `GET /api/billing/portal` anônimo → HTTP **401** `BILLING_AUTH_REQUIRED`.
+- **Cobrança:** 11 variáveis/segredos de produção em Secret Manager (versão 1) mapeados ao serviço, incluindo InfinitePay e políticas de enforcement. O controle de domínio do checkout segue `https://emprovex.com.br`. A lista Production da Vercel em 31/10/2026 não apresentou `EMPROVEX_SHARED_BILLING_ENABLED`, também ausente no Cloud Run: não ativar rateio sem decisão explícita.
+- **Agendamento:** `vercel.json` mantém somente como legado `/api/cron/usage-snapshot` às `15 9 * * *`; `CRON_SECRET` estava ausente da listagem Production da Vercel consultada no corte. Não afirmar execução efetiva do cron, nem instalar Cloud Scheduler duplicado. A futura transição de cron é separada do deploy web.
+- **Provas reais do corte (31/10/2026):** DNS `a.sec.dns.br` e `c.sec.dns.br` retornaram `199.36.158.100`. `curl.exe --resolve emprovex.com.br:443:199.36.158.100 https://emprovex.com.br/api/health` retornou **HTTP 200**, `Server: Google Frontend`, JSON `{"status":"ok",...}` e certificado HTTPS aceito. No mesmo momento, o DNS recursivo `8.8.8.8` ainda tinha o endereço Vercel em cache (TTL ~3.256s). Portanto **a implantação no novo destino está comprovada, mas a propagação global do DNS não foi certificada nesse instante**.
+- **Homologação operacional reaproveitada:** acesso administrativo e operacional, 3D, autenticação, Google Drive com download de NE, NF criada/excluída e PDF, saída de material e documento via proxy privado Cloud Run. Reaproveitar a evidência; **não repetir toda a bateria** em futuras mudanças meramente operacionais.
+
+### PUBLICAÇÃO CANÔNICA (substitui Vercel)
+
+**Documento normativo:** [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). **Comando operacional:** `ops/release-emprovex-cloud-run.ps1`.
+
+**Fluxo:** integração/CI proporcional na `main` → `-Status` → `-Stage` (**um build de Dockerfile no Cloud Run, nova revisão `--no-traffic`**) → smoke mínimo do novo revision tag → `-PromoteRevision <REVISAO>` (**100% do tráfego**) → `/api/health` com SSL pelo domínio → guardar revisão anterior para `-RollbackRevision <ANTERIOR>`. A publicação não modifica DNS, Firebase Hosting, IAM, secrets, dados, Firestore Rules ou o cron. Fonte de release deve estar na `main` integrada e em árvore limpa; a PR [#426](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/426) foi mantida **DRAFT durante a implementação da documentação**, não presumir merge ou publicação do HEAD documental.
+
+**Vercel agora é contingência, não produção de novos releases.** Preservar equipe/projeto `aprov-hgesms-projects/controles-de-empenhos-aprov`, última versão preservada e `vercel.json` com `git.deploymentEnabled=false`. Não executar `vercel deploy/promote` para colocar novas versões no domínio. Em falha, preferir rollback de revisão no Cloud Run; rollback por DNS para o IP anterior da Vercel somente como contingência excepcional e com consciência do cache. Dados/Rules/webhooks não retrocedem com rollback de código.
+
+**Regra para agentes futuros:** o procedimento histórico [EMPROVEX_RELEASE_POWERSHELL.md](./EMPROVEX_RELEASE_POWERSHELL.md) **não é mais canônico**. A hospedagem padrão de novas versões é Cloud Run, região `southamerica-east1`, sempre via Firebase Hosting. Evitar migrações adicionais, novos workers ou auditorias repetidas sem mudança funcional de risco.
+
+**Referências do corte:** [Memorial de cutover](./EMPROVEX_CLOUD_RUN_CUTOVER_GO_20261031.md), [Homologação integrada](./EMPROVEX_CLOUD_RUN_HOMOLOGACAO_INTEGRADA.md), [Identidade R7](./EMPROVEX_CLOUD_RUN_R7_IDENTITY_20261031.md).
+
+---
+
+
 ## PUBLICAÇÃO CONFIRMADA — PDF DE NOTA DE EMPENHO SALVO AUTOMATICAMENTE NO GOOGLE DRIVE (29/10/2026, BRT)
 
 > **PUBLICADO / CONFIRMADO NO DOMÍNIO PELO PROPRIETÁRIO.** Este é o estado produtivo mais recente comprovado para a funcionalidade de importação de NE por PDF. Substitui apenas o estado de implantação registrado nos checkpoints abaixo, que permanecem históricos. **NÃO repetir clone, build, deploy nem promote desta release.**
