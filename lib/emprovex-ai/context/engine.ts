@@ -40,14 +40,14 @@ function extract(text:string,canonical:string) {
  if(subject)material=subject[1].trim();
  const patterns=[
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
-   /\b(?:onde (?:esta|fica|estao)|localizacao de|localize|encontrar)\s+(?:(?:o|a|os|as)\s+)?(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
+   /\b(?:onde (?:esta|fica|estao)|localizacao (?:de|da|do)|localize|encontrar)\s+(?:(?:o|a|os|as)\s+)?(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
    /\b(?:quantidade|estoque|saldo fisico)\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em|agora)\b|$)/,
    /\btemos\s+(.{2,85}?)\s+em estoque\b/,
    /\b(?:existe|ha)\s+(.{2,85}?)\s+(?:no deposito|na camara|em estoque)\b/
  ];
  if(!material)for(const re of patterns){const m=canonical.match(re);if(m){material=m[1].trim();break;}}
- if(!material&&/\b(?:resta|saldo|restante|falta)\b/.test(canonical)&&/\b\d{4}ne\d+\b/.test(canonical)){
-   const m=canonical.match(/\b(?:resta|saldo|restante|falta)\s+(?:de|do|da)\s+([a-z][a-z -]{1,65}?)\s+(?:na|no|da|do)\s+(?:ne|empenho|nota de empenho|\d{4}ne)/);
+ if(!material&&/\b(?:resta|saldo|restante|falta|sobra|sobrou)\b/.test(canonical)&&/\b\d{4}ne\d+\b/.test(canonical)){
+   const m=canonical.match(/\b(?:resta|saldo|restante|falta|sobra|sobrou)\s+(?:de|do|da)\s+([a-z][a-z -]{1,65}?)\s+(?:na|no|da|do)\s+(?:ne|empenho|nota de empenho|\d{4}ne)/);
    if(m)material=m[1];
  }
  if(!material&&/\b(?:nota|notas|nf|nfs)\b/.test(canonical)){
@@ -233,7 +233,7 @@ export function interpret(input:Input):Result {
    if(!commitmentId)return clarify('commitment_get','Qual NE completa deseja consultar?');
    return success('commitment_get',{commitmentId,includeItems:/\bitens\b/.test(t)});
  }
- if(/\b(?:validade|vencimento|vencendo|vencidos|vencidas)\b/.test(t))
+ if(/\b(?:validade|vencimento|vencendo|vencido|vencida|vencidos|vencidas)\b/.test(t))
    return unavailable('validity_alerts','P1_EXPIRY_UNAVAILABLE');
  if(/\b(?:movimentacao|movimentacoes|retirada|saidas|entradas|transferencias)\b/.test(t))
    return unavailable('warehouse_movement','P1_MOVEMENTS_UNAVAILABLE');
