@@ -34,9 +34,19 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
     && args.includes('dev');
   const hostIndex = args.indexOf('--hostname');
   const loopbackBind = hostIndex >= 0 && args[hostIndex+1] === '127.0.0.1';
-  const localOnly = process.env.NODE_ENV === 'development'
+  const loopbackDev = process.env.NODE_ENV === 'development'
     && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
-    && !hosted && dev && loopbackBind;
+    && dev && loopbackBind;
+  // CI offline executa o autorizador diretamente (sem servidor HTTP).
+  // Permitir SOMENTE estes scripts conhecidos, com dois emuladores locais.
+  // Nao permitir CLI generico, Next start nem ambiente hospedado.
+  const localCli = process.env.NODE_ENV !== 'production'
+    && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:8080'
+    && [
+      'core-lean-r2-w5-transactions.mjs',
+      'core-lean-r2-w4-authz-mobile.integration.mjs',
+    ].some(name => args[0]?.replace(/\\/g,'/').endsWith('/scripts/'+name));
+  const localOnly = !hosted && (loopbackDev || localCli);
 
   if (!enabled || !localEmulator || !projectId.startsWith('demo-') || !localOnly) return null;
 
