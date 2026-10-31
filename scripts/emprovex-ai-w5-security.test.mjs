@@ -142,6 +142,33 @@ test('W5 HTTP ask: correction can update context without querying W3',async()=>{
   'Bearer TEST',start.cookies.written.value));
  assert.equal(followup.body.query.params.materialQuery,'feijao');
 });
+const queryMocks={...mocks,
+ '../../../../lib/emprovex-ai/query':{executeAiQuery:async(token,query)=>{
+   if(token!=='Bearer TEST')throw new FakeFounderAuthError('AUTH_INVALID');
+   return {version:'emprovex.ai.response.v1',status:'ok',intent:query?.intent||null,
+     syntheticFixture:true};
+ }}};
+const queryRoute=load('app/api/emprovex-ai/query/route.ts',queryMocks);
+test('W5 HTTP query route: fail-closed environment, payload bounds and synthetic auth',async()=>{
+ delete process.env.EMPROVEX_AI_W45_ENABLED;
+ let result=await queryRoute.POST(request('{}'));
+ assert.equal(result.status,404);
+ preview();
+ result=await queryRoute.POST(request('invalid json'));
+ assert.equal(result.status,400);
+ result=await queryRoute.POST(request(JSON.stringify({junk:'x'.repeat(17000)})));
+ assert.equal(result.status,413);
+ result=await queryRoute.POST(request(JSON.stringify({intent:'warehouse_stock_get'}),'Bearer BAD'));
+ assert.equal(result.status,401);
+ result=await queryRoute.POST(request(JSON.stringify({version:'emprovex.ai.query.v1',
+   intent:'warehouse_stock_get',params:{materialQuery:'arroz'}})));
+ assert.equal(result.status,200);
+ assert.equal(result.body.intent,'warehouse_stock_get');
+ process.env.VERCEL_ENV='production';
+ result=await queryRoute.POST(request('{}'));
+ assert.equal(result.status,404);
+ preview();
+});
 process.on('exit',()=>{for(const name of ['EMPROVEX_AI_W45_CONTEXT_SECRET','EMPROVEX_AI_W45_ENABLED','VERCEL','VERCEL_ENV','K_SERVICE','K_REVISION','K_CONFIGURATION']){
  if(oldEnv[name]===undefined)delete process.env[name];else process.env[name]=oldEnv[name];
 }});

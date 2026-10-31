@@ -18,17 +18,19 @@ test('W5 distinct 120-item annotated corpus: 30 per semantic category',()=>{
  for(const c of cases){
   assert.ok(c.id&&c.question&&c.expectedRoute&&c.rationale&&c.expectedEntities&&Array.isArray(c.essentialFilters));
   const category=c.id.split('-')[1];count.set(category,(count.get(category)||0)+1);
-  const normalized=c.question.toLowerCase().replace(/\\s+/g,' ').trim();
+  const normalized=c.question.toLowerCase().replace(/\s+/g,' ').trim();
   lexical.add(normalized);
  }
  for(const category of ['CONTEXT','INFORMAL','COMPOUND','ADVERSARIAL'])assert.equal(count.get(category),30);
  assert.ok(lexical.size>=110,'Corpus must not be simple duplicates');
+ assert.equal(cases.filter(c=>c.split==='development').length,80);
+ assert.equal(cases.filter(c=>c.split==='heldout').length,40);
 });
 test('W5 heldout + development corpus: fail closed, verify W3 intent for eligible',()=>{
  const results={development:{accepted:0,blocked:0,failures:0},heldout:{accepted:0,blocked:0,failures:0}};
  const errors=[];
  for(let i=0;i<cases.length;i++){
-  const c=cases[i],bucket=results[i<80?'development':'heldout'];
+  const c=cases[i],bucket=results[c.split];
   const result=interpret({message:c.question,now,scope,previous:context[c.context]});
   if(c.expectedRoute==='DETERMINISTIC'){
    if(result.route!=='DETERMINISTIC'||result.query?.intent!==c.expectedIntent)
