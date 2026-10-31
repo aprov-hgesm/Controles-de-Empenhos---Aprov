@@ -116,7 +116,9 @@ function load(file){
    if(id.startsWith('.')){
      const path=resolve(dirname(name),id);
      if(extname(path)==='.json')return require(path);
-     return load(extname(path)?path:path+'.ts');
+     if(extname(path))return load(path);
+     const candidate=path+'.ts';
+     return load(existsSync(candidate)?candidate:resolve(path,'index.ts'));
    }
    return require(id);
  };
