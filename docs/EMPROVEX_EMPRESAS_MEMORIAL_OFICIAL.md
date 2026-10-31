@@ -1,5 +1,7 @@
 # EMPROVEX EMPRESAS — MEMORIAL OFICIAL
 
+> **PRECEDÊNCIA DE INFRAESTRUTURA (31/10/2026):** os workspaces empresariais continuam sujeitos ao seu próprio ciclo de desenvolvimento/integração; **não** confundir migração da hospedagem web com publicação das funcionalidades empresariais. O domínio operacional principal está em Google Cloud Run por Firebase Hosting, e o procedimento canônico de publicação é [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). Registros Vercel abaixo são históricos.
+
 ## CHECKPOINT R0 — Decisão de integração e estratégia de branches (30/10/2026)
 
 > **GO/NO-GO do integrador: NO-GO para merge da PR #419 e para produção até resolver regressão E2E de login setorial, reconciliar os contratos de verificação legados e demonstrar cadastro/login empresarial QA.** É autorizado continuar desenvolvimento em branches isoladas.
