@@ -5,14 +5,14 @@ export const WORDS={
   schedule:['cronograma','cronogramas','crongrama','programacao de entrega'],
   supplier:['fornecedor','fornecedores','empresa','cnpj','firma'],
   stock:['estoque','saldo fisico','quantidade','temos','disponivel','material','materiais','produto','produtos'],
-  location:['onde','localizacao','localizado','armazenado','deposito','camara fria','estante','prateleira','freezer','geladeira'],
+  location:['cade','aonde','onde','localizacao','localizado','armazenado','deposito','camara fria','estante','prateleira','freezer','geladeira'],
   contact:['contato','telefone','email','e-mail','whatsapp','numero de telefone'],
-  balance:['saldo','resta','restante','quanto falta','a liquidar','valor disponivel','tem saldo'],
+  balance:['saldo','resta','restante','quanto falta','a liquidar','valor disponivel','tem saldo','falta entregar','pra receber','para receber','a receber','ainda tem pra receber','quanto ainda tem','sobrou','sobra'],
   register:['cadastradas','cadastrados','registradas','registrados','lancadas','inseridas'],
   issued:['emitida','emitidas','emissao','emitidos','emitido'],
   sent:['enviado','enviados','enviamos','enviada','envio','remessa'],
   writing:['exclua','excluir','apague','apagar','delete','deletar','altere','alterar','modifique','edite','editar','cadastre','cadastrar',
-    'crie','criar','gere','gerar','envie','enviar','transfira','transferir','movimente','movimentar','baixe','baixar','registre','registrar'],
+    'crie','criar','gere','gerar','envie','enviar','transfira','transferir','movimente','movimentar','da baixa','baixe','baixar','registre','registrar'],
   late:['atrasadas','atrasados','atraso','vencidas','vencidos','pendentes']
 } as const;
 export function normalize(text:string):string {

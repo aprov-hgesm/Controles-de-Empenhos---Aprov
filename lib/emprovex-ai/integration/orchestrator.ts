@@ -65,6 +65,7 @@ export async function runAiAsk(args:{
      contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
  }else if(route==='CLARIFY'){
    status='clarify';answer=interpreted.question||'Poderia esclarecer a identificação da consulta?';
+   if(interpreted.nextContext)contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
  }else if(route==='UNSUPPORTED'){
    status='unsupported';answer='Esta consulta ainda não está disponível nos contratos operacionais desta fase.';
  }else if(route==='REJECT_MUTATION'){
