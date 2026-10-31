@@ -10,6 +10,7 @@ const hook = read('hooks/usePlatformBranding.ts');
 const logo = read('components/layout/chrome/AppShellLogo.tsx');
 const header = read('components/layout/AppHeader.tsx');
 const page = read('app/page.tsx');
+const operationalPage = read('app/login/page.tsx');
 const adminPage = read('app/admin/page.tsx');
 const sync = read('lib/firebaseSync.ts');
 const rules = read('firestore.rules');
@@ -60,7 +61,11 @@ for (const forbidden of ['onLogoUpload', 'onRemoveLogo', 'ChangeEvent', 'MouseEv
   forbidText(header, forbidden, `Contrato do header voltou a transportar mutação do logo: ${forbidden}`);
 }
 
-requireText(page, 'const { customLogo } = usePlatformBranding();', 'Aplicação principal não usa branding somente leitura.');
+// O shell historico passou a delegar o / para app/login/page.tsx.
+requireText(page, "export { default } from './login/page';",
+  'Raiz publica nao reutiliza o shell operacional canonico.');
+requireText(operationalPage, 'const { customLogo } = usePlatformBranding();',
+  'Shell operacional canonico nao usa branding somente leitura.');
 requireText(adminPage, 'const { customLogo } = usePlatformBranding();', 'Administração não usa branding somente leitura.');
 
 for (const forbidden of [
@@ -69,7 +74,8 @@ for (const forbidden of [
   'savePlatformLogo',
   'getPlatformLogo',
 ]) {
-  forbidText(page, forbidden, `Página principal reintroduziu mutação do logo: ${forbidden}`);
+  forbidText(page, forbidden, `Raiz publica reintroduziu mutação do logo: ${forbidden}`);
+  forbidText(operationalPage, forbidden, `Shell operacional reintroduziu mutação do logo: ${forbidden}`);
   forbidText(sync, forbidden, `firebaseSync reintroduziu API de branding mutável: ${forbidden}`);
 }
 
