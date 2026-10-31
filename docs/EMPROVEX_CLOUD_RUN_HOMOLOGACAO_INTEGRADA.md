@@ -1,5 +1,7 @@
 # EMPROVEX — Homologação funcional integrada (Cloud Run)
 
+> **STATUS APÓS CORTE (31/10/2026):** a implantação de produção por Firebase Hosting → Cloud Run foi concluída, com SSL ativo e HTTP 200 pelo IP novo do domínio. As restrições de publicação deste documento se referem ao **staging privado e ao estado anterior ao cutover**, não ao serviço produtivo atual `emprovex-cloudrun-candidate`. Referência vigente: [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). Não repetir homologações encerradas.
+
 **Uma entrega, sem novos workers.** Branch `feat/cloud-run-r7-service-identity-20261031`, PR #426 DRAFT. `main`, Vercel, `emprovex.com.br`, InfinitePay e cron permanecem em produção sem mudanças.
 
 ## Situação comprovada (31/10/2026)
