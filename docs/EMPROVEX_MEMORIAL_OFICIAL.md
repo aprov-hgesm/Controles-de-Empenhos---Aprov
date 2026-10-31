@@ -1,5 +1,19 @@
 # EMPROVEX — Memorial Oficial
 
+## GOVERNANÇA DE RELEASE — AUTORIZAÇÃO NO CHAT (31/10/2026)
+
+**Modo proposto no GitHub:** a promoção de uma revisão Cloud Run já criada e validada pode ser solicitada por mensagem explícita do responsável ao ChatGPT ("promova a revisão X" ou "publique a versão validada"). Após verificar no GitHub a identidade do repositório, SHA, status da revisão e autorização inequívoca nesta conversa, o assistente cria/atualiza **exclusivamente** `ops/cloud-run/promotion-request.json` na `main`, via conector GitHub autenticado como `Moriark`. Esse commit é o evento de autorização para o workflow `emprovex-cloud-run-promote.yml`; a solicitação não pode promover uma versão diferente do SHA/revisão registrados. A operação não exige Cloud Shell, PowerShell, token privado ou login de GitHub a cada release.
+
+**Obrigatório antes de cada pedido:** (a) autorização do usuário para a revisão específica; não inferir autorização permanente para toda nova versão; (b) certificar que o build já gerou uma revisão `Ready` com tráfego 0%, health de prévia e IAM preservado; (c) conferir que a revisão corresponde ao digest da imagem SHA no Artifact Registry; (d) nunca escrever o arquivo de autorização para solicitações ambíguas, checks críticos reprovados ou revisões não verificadas; (e) usar apenas `schemaVersion=1`, `authorizationMode=explicit_chat_request`, `authorizedBy=Moriark`, `revision` e `sourceSha`; (f) acompanhar os logs de promoção e checar o domínio; registrar resultado real, tentativa de rollback e tráfego final. Não declarar implantação concluída apenas porque a solicitação foi registrada.
+
+**Comportamento técnico:** commits que alterem SOMENTE esse arquivo na `main`, originados da conta GitHub `Moriark`, acionam a promoção via WIF já autorizado ao workflow original. Todos os controles transacionais da promoção anterior permanecem: SHA ancestral da main, digest imutável, service account, revisão pronta sem tráfego, snapshot da revisão anterior, atualização para 100%, health HTTPS do domínio e rollback se falhar. O workflow manual em `emprovex-production` continua disponível como contingência com `Required reviewers`. O modo via chat usa ambiente GitHub distinto, `emprovex-chat-authorized`, sem o segundo clique de aprovação.
+
+**Risco residual explícito:** o registro no repositório é a prova operacional da instrução do assistente, **não uma assinatura criptográfica da conversa do ChatGPT**. Qualquer pessoa/sistema com permissão para publicar commits autenticados como o usuário ou editar workflows da `main` pode tentar uma promoção; o memorial não é uma barreira de IAM. O operador aceitou essa troca para eliminar aprovações repetidas na operação individual. Caso outras pessoas recebam acesso de escrita, endurecer as proteções do GitHub.
+
+**Status:** somente considerar o modo chat ATIVO após merge do workflow à `main` e verificação de execução real. Antes disso, a aprovação manual original ainda é necessária.
+
+---
+
 ## DIRETRIZ VIGENTE — GOV-SIMP-01: publicação ágil com conferência obrigatória do assistente (31/10/2026)
 
 **DECISÃO DO RESPONSÁVEL:** não criar, exigir ou bloquear o trabalho por novo ruleset/branch protection nesta etapa. O EMPROVEX é operado pelo responsável com apoio do ChatGPT; as verificações serão **conferências do assistente antes de executar ações**, proporcionais ao risco, em vez de novas aprovações burocráticas no GitHub. Este capítulo tem precedência sobre recomendações históricas de ruleset obrigatório.

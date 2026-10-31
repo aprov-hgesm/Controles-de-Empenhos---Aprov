@@ -1,6 +1,10 @@
 name: EMPROVEX Cloud Run — promote approved revision
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/cloud-run/promotion-request.json'
   workflow_dispatch:
     inputs:
       revision:
@@ -23,9 +27,9 @@ concurrency:
 jobs:
   promote:
     name: Human-approved promotion and automatic health rollback
-    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'Moriark')) }}
     environment:
-      name: emprovex-production
+      name: ${{ github.event_name == 'workflow_dispatch' && 'emprovex-production' || 'emprovex-chat-authorized' }}
       url: https://emprovex.com.br
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -48,6 +52,43 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      # Each chat authorization is a single, attributable GitHub Contents API commit
+      # changing only ops/cloud-run/promotion-request.json. No permanent credentials.
+      # The old workflow_dispatch path still uses the protected human-review environment.
+      - name: Load explicit chat authorization from exact single-file push
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        env:
+          EXPECTED_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_ACTOR}" == "Moriark" ]] || {
+            echo "::error::Only Moriark may trigger chat-authorized promotion."
+            exit 1
+          }
+          [[ "$(git rev-parse HEAD^)" == "${EXPECTED_BEFORE}" ]] || {
+            echo "::error::Approval push must contain exactly one commit."
+            exit 1
+          }
+          [[ "$(git diff --name-only HEAD^ HEAD)" == "ops/cloud-run/promotion-request.json" ]] || {
+            echo "::error::Approval commit must modify only the dedicated request file."
+            exit 1
+          }
+          request="ops/cloud-run/promotion-request.json"
+          jq -e '
+            type == "object"
+            and (.schemaVersion == 1)
+            and (.authorizationMode == "explicit_chat_request")
+            and (.authorizedBy == "Moriark")
+            and (.revision | type == "string")
+            and (.sourceSha | type == "string")
+          ' "${request}" >/dev/null
+          revision="$(jq -r '.revision' "${request}")"
+          source_sha="$(jq -r '.sourceSha' "${request}")"
+          echo "REQUESTED_REVISION=${revision}" >> "${GITHUB_ENV}"
+          echo "REQUESTED_SHA=${source_sha}" >> "${GITHUB_ENV}"
+          echo "Authorized by in-chat request, attributed to GitHub pusher: ${GITHUB_ACTOR}"
 
       - name: Check that the named candidate belongs to a main SHA
         shell: bash
