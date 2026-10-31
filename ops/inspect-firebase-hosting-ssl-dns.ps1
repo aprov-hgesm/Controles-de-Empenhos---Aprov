@@ -160,8 +160,14 @@ if ($records.Count -eq 0) {
   Write-Host ''
   Write-Host '=== TXT DNS-01 EXATO PARA REGISTRO.BR ==='
   $records | Format-List NomeCompleto,NomeNoRegistroBR,Tipo,Valor,Acao
-  Write-Host 'Se o TXT ja existe no Registro.br e aparece no nslookup, NAO recrie o registro: apenas acompanhe o reconhecimento e a emissao.'
-  Write-Host 'Nao altere A 216.198.79.1, nao remova TXT hosting-site nem google-site-verification.'
-  Write-Host 'Depois de salvar, consulte: nslookup -type=TXT _acme-challenge.emprovex.com.br 8.8.8.8'
-  Write-Host 'Aguarde ate o Firebase indicar CERT_ACTIVE antes do corte DNS.'
+  if ($domainData.ownershipState -eq 'OWNERSHIP_ACTIVE' -and $domainData.cert.state -eq 'CERT_ACTIVE') {
+    Write-Host 'SSL ATIVO: dominio e certificado verificados; nenhuma entrada TXT nova e necessaria.'
+    Write-Host 'Publicacao de codigo: ops/release-emprovex-cloud-run.ps1 (nao alterar DNS/Hosting).'
+    if ($domainData.hostState -eq 'HOST_MISMATCH') {
+      Write-Host 'HOST_MISMATCH: verificar se o registro A autoritativo e 199.36.158.100 e aguardar caches DNS.'
+    }
+  } else {
+    Write-Host 'Se TXT ja existe, NAO recrie registro: aguarde a verificacao pelo Firebase.'
+    Write-Host 'Mantenha os registros existentes e confirme o estado antes de qualquer alteracao.'
+  }
 }
