@@ -1,5 +1,7 @@
 # EMPROVEX — MODO ESSENCIAL / MODO NORMAL — MEMORIAL OFICIAL R1
 
+> **PRECEDÊNCIA DE HOSPEDAGEM (31/10/2026):** o modo Normal/Essencial permanece funcional no EMPROVEX, agora servido por **Google Cloud Run via Firebase Hosting**. O deployment Vercel indicado abaixo corresponde à publicação histórica de 29/10, **não** à hospedagem atual. Futuras releases seguem [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md).
+
 ## RELEASE PUBLICADA — NORMAL/ESSENCIAL R3 (29/10/2026)
 
 > **STATUS ATUAL:** versão em produção, confirmada pelos comandos `vercel promote` e `vercel inspect https://emprovex.com.br` do proprietário. Este checkpoint **substitui as marcações antigas de DRAFT / NÃO PUBLICADO, que permanecem abaixo como histórico**.

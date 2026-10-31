@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Vercel manual deployment policy
+      - name: Vercel contingency protection (Git auto-deploy disabled)
         run: npm run test:vercel-manual-deploy
 
       - name: Admin digital neighborhood contracts

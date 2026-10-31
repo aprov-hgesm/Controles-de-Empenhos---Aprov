@@ -31,6 +31,8 @@ jobs:
           cache: npm
       - name: Dependências
         run: npm ci
+      - name: Cloud Run — bloquear acoplamento Vercel no runtime
+        run: node scripts/audit-cloud-run-legacy.mjs --strict
       - name: CI LEAN planner — fail-closed selection and negative tests
         run: node --test scripts/ci-lean-plan.test.mjs scripts/ci-lean-syntax.test.mjs scripts/ci-lean-domain.test.mjs scripts/ci-lean-guards.test.mjs scripts/ci-lean-mutations.test.mjs scripts/ci-lean-coverage.test.mjs
       - name: Executable JavaScript syntax (including .mjs)

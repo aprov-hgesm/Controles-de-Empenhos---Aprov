@@ -8,13 +8,13 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const config = JSON.parse(read('vercel.json'));
 
-test('Vercel desativa deploy automático em todas as branches', () => {
+test('Vercel de contingência permanece sem deploy automático em todas as branches', () => {
   assert.equal(config.git?.deploymentEnabled, false,
     'Deployments automáticos GitHub → Vercel devem permanecer desativados (D-127).');
   assert.equal(config.$schema, 'https://openapi.vercel.sh/vercel.json');
 });
 
-test('Cron preexistente continua programado sem modificação', () => {
+test('Definição cron legada é preservada sem duplicar Cloud Scheduler', () => {
   assert.deepEqual(config.crons, [
     { path: '/api/cron/usage-snapshot', schedule: '15 9 * * *' },
   ]);
@@ -25,7 +25,7 @@ test('GitHub Actions continua funcionando em PR, main e execução manual', () =
   assert.match(workflow, /(?:^|\n)on:\s*\n\s*pull_request:/);
   assert.match(workflow, /(?:^|\n)\s*push:\s*\n\s*branches:\s*\n\s*-\s*main/);
   assert.match(workflow, /(?:^|\n)\s*workflow_dispatch:/);
-  assert.match(workflow, /name: Vercel manual deployment policy/);
+  assert.match(workflow, /name: Vercel contingency protection \(Git auto-deploy disabled\)/);
   assert.match(workflow, /npm run test:vercel-manual-deploy/);
 });
 

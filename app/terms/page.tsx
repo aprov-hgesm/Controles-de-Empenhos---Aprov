@@ -270,8 +270,9 @@ export default function TermsPage() {
 
       <LegalSection title="11. Serviços de terceiros">
         <p>
-          O funcionamento do EMPROVEX depende de serviços de terceiros, incluindo Firebase/Google Cloud, Vercel e,
-          quando autorizadas pelo usuário, integrações Google Drive e Gmail, além do checkout da
+          O funcionamento do EMPROVEX depende de serviços de terceiros, incluindo Firebase/Google Cloud
+          (Firebase Hosting e Cloud Run), Vercel como contingência e, quando autorizadas pelo usuário,
+          integrações Google Drive e Gmail, além do checkout da
           InfinitePay. O Pix e o cartão são meios de pagamento do provedor, não provedores contratados
           pelo EMPROVEX. Cada serviço de terceiro possui termos e políticas próprios.
         </p>

@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunAccessToken, isCloudRunRuntime } from './cloudRunServiceIdentity.mjs';
 import { buildInitialBillingAccount } from '../billing';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
@@ -167,6 +168,8 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
 }
 
 export async function getGoogleAccessToken(): Promise<string> {
+  // Cloud Run uses the attached identity; private-key JWT remains only for non-Cloud-Run contingency/local runtimes.
+  if (isCloudRunRuntime()) return getCloudRunAccessToken();
   const now = Date.now();
   if (accessTokenCache && accessTokenCache.expiresAt - 60_000 > now) {
     return accessTokenCache.token;

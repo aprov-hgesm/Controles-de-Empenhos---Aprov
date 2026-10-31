@@ -1,0 +1,23 @@
+# Never send host credentials, previous Vercel env, Git history or generated files to Cloud Build.
+.git
+.github
+.next
+node_modules
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
+*.log
+coverage
+.vercel
+firebase-debug.log
+.DS_Store
+ops/*.zip
+ops/*.tar.gz
+
+# Defense in depth: temporary GitHub OIDC credential files must never enter images.
+gha-creds-*.json

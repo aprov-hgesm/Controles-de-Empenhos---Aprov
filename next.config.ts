@@ -3,7 +3,7 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // O endpoint PWA precisa da mesma imagem PNG em runtime no bundle Vercel.
+  // O endpoint PWA inclui a imagem PNG no output standalone do Cloud Run.
   // O arquivo é incluído somente na função do ícone, não em todas as funções.
   outputFileTracingIncludes: {
     '/api/install-icon/*': ['./public/emprovex-logo.png'],

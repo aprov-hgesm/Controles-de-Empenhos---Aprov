@@ -24,7 +24,7 @@ export function EmprovexVisualIntegrationPreview() {
         <p className="text-xs font-bold uppercase tracking-widest">EMPROVEX / VISUAL-R1 / Worker 5</p>
         <h1 className="text-3xl font-bold">Laboratório de integração visual</h1>
         <p className="text-sm text-slate-600">
-          Prévia isolada em desenvolvimento ou Vercel Preview, sem autenticação, dados ou consultas operacionais.
+          Prévia isolada exclusivamente no desenvolvimento local, sem autenticação, dados ou consultas operacionais.
           Somente o núcleo central do Início é colorido. Os carregamentos e usos secundários permanecem monocromáticos em superfícies claras ou escuras. A Home R2, os loaders W2 e os refinamentos W3 já estão presentes nas respectivas branches de testes; nada foi promovido à produção.
         </p>
       </header>

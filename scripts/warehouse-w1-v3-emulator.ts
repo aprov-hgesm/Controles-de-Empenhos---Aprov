@@ -199,7 +199,15 @@ async function run(){
     finalizeWarehouseWithdrawalV3Server(access,raceA),
     finalizeWarehouseWithdrawalV3Server(access,raceB),
   ]);
-  assert.equal(race.filter(x=>x.status==='fulfilled').length,1);
+  // Keep the strict atomicity assertion; expose only emulator error codes on failure.
+  // This identifies conflicts vs. business rejections without changing production logic.
+  const raceOutcomes=race.map(x=>x.status==='fulfilled'?'FULFILLED':
+    x.reason && typeof x.reason === 'object'
+      ? String((x.reason as {code?:string;message?:string}).code
+        ||(x.reason as {message?:string}).message||'UNKNOWN_ERROR')
+      :'UNKNOWN_ERROR');
+  assert.equal(race.filter(x=>x.status==='fulfilled').length,1,
+    'W1_V3_RACE_OUTCOMES='+raceOutcomes.join(','));
   assert.equal(await balance(),snapshot-1-25);
   pass('concorrência de duas operações diferentes preserva saldo e atomicidade');
 

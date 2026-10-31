@@ -37,7 +37,11 @@ for (const marker of [
   'data-testid="admin-overview-tab"',
   'data-testid="admin-sectors-tab"',
   'new URLSearchParams(window.location.search)',
-  "url.searchParams.set('tab', tab)",
+  // A aba efetiva é normalizada no modo Essencial antes de atualizar a URL.
+  "const nextTab = mode === 'essencial' && tab === 'inicio' ? 'overview' : tab;",
+  "url.searchParams.set('tab', nextTab)",
+  "url.searchParams.delete('tab')",
+  "window.history.replaceState(window.history.state, '', url)",
   '<AdminCreateSectorPanel',
   '<AdminConsumptionHub',
   '<AdminSessionsPanel',

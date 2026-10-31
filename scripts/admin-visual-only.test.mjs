@@ -40,7 +40,11 @@ test('Admin original: oito abas e ações preservadas, somadas ao novo Início',
   assert.match(view, /emprovex-app-header fixed inset-x-0 top-0/);
   assert.match(view, /bg-\[#edf3fb\]/);
   assert.match(view, /new URLSearchParams\(window.location.search\)/);
-  assert.match(view, /url.searchParams.set\('tab', tab\)/);
+  // The actual tab is canonicalized for Essential mode before updating the URL.
+  assert.match(view, /const nextTab = mode === 'essencial' && tab === 'inicio' \? 'overview' : tab;/);
+  assert.match(view, /url.searchParams.set\('tab', nextTab\)/);
+  assert.match(view, /url.searchParams.delete\('tab'\)/);
+  assert.match(view, /window.history.replaceState\(window.history.state, '', url\)/);
 });
 
 test('identidade visual reutiliza App Shell e detalhe ativo original, não reimplementa motor', () => {

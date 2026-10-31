@@ -142,6 +142,14 @@ await billingDayModule.link(async (specifier) => {
 });
 await billingDayModule.evaluate();
 
+// R7: VM sandbox must explicitly reject Cloud Run identity in the Vercel/legacy path.
+const cloudRunIdentity = await synthetic('file:///lib/server/cloudRunServiceIdentity.mjs', {
+  isCloudRunRuntime: () => false,
+  getCloudRunAccessToken: async () => {
+    throw new Error('R7: metadata identity must not run in non-Cloud-Run integration tests.');
+  },
+});
+
 const monitoringModule = compiled(
   'file:///lib/server/googleCloudMonitoring.js',
   'lib/server/googleCloudMonitoring.ts'
@@ -151,6 +159,7 @@ await monitoringModule.link(async (specifier) => {
   if (specifier === '../../firebase-applet-config.json') return firebaseConfig;
   if (specifier === '../firestoreBillingDay') return billingDayModule;
   if (specifier === '../platformCapacity') return capacityModule;
+  if (specifier === './cloudRunServiceIdentity.mjs') return cloudRunIdentity;
   throw new Error(`Import inesperado em googleCloudMonitoring: ${specifier}`);
 });
 await monitoringModule.evaluate();

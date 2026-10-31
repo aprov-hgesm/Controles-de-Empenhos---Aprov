@@ -1,0 +1,163 @@
+name: EMPROVEX Cloud Run — promote approved revision
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "Exact zero-traffic Cloud Run revision from the stage summary"
+        required: true
+        type: string
+      source_sha:
+        description: "Full 40-character main commit SHA from the stage summary"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: emprovex-cloud-run-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Human-approved promotion and automatic health rollback
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' }}
+    environment:
+      name: emprovex-production
+      url: https://emprovex.com.br
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PROJECT: gen-lang-client-0982077967
+      REGION: southamerica-east1
+      SERVICE: emprovex-cloudrun-candidate
+      RUNTIME_SA: emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com
+      DEPLOY_SA: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+      WIF_PROVIDER: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+      IMAGE_BASE: southamerica-east1-docker.pkg.dev/gen-lang-client-0982077967/emprovex/emprovex
+      DOMAIN: emprovex.com.br
+      HOSTING_IP: 199.36.158.100
+      REQUESTED_REVISION: ${{ inputs.revision }}
+      REQUESTED_SHA: ${{ inputs.source_sha }}
+
+    steps:
+      - name: Check out main for ancestry and workflow verification
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check that the named candidate belongs to a main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REPOSITORY_ID}" == "1286320615" ]] || exit 1
+          [[ "${REQUESTED_SHA}" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          [[ "${REQUESTED_REVISION}" =~ ^emprovex-cloudrun-candidate-g[a-f0-9]{12}-[0-9]+$ ]] || exit 1
+          short="${REQUESTED_SHA:0:12}"
+          [[ "${REQUESTED_REVISION}" == "${SERVICE}-g${short}-"* ]] || exit 1
+          git merge-base --is-ancestor "${REQUESTED_SHA}" HEAD || {
+            echo "::error::The source SHA is not an ancestor of main."
+            exit 1
+          }
+          [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "$(git rev-parse HEAD)" ]] || {
+            echo "::error::Main advanced while the approval was pending. Re-run from current main."
+            exit 1
+          }
+
+      - name: Authenticate with short-lived Google WIF credentials
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+          create_credentials_file: true
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+
+      - name: Validate exact revision, image digest, identity and existing traffic
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud run revisions describe "${REQUESTED_REVISION}" \
+            --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/candidate.json"
+          jq -e --arg sa "${RUNTIME_SA}" \
+            '.spec.serviceAccountName == $sa and
+             ([.status.conditions[]? | select(.type == "Ready" and .status == "True")] | length == 1)' \
+            "${RUNNER_TEMP}/candidate.json" >/dev/null
+
+          digest="$(gcloud artifacts docker images describe "${IMAGE_BASE}:${REQUESTED_SHA}" \
+            --project="${PROJECT}" --format='value(image_summary.digest)')"
+          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+          expected_image="${IMAGE_BASE}@${digest}"
+          jq -e --arg image "${expected_image}" '.spec.containers[0].image == $image' "${RUNNER_TEMP}/candidate.json" >/dev/null
+          gcloud run services describe "${SERVICE}" --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/before.json"
+          jq -e --arg sa "${RUNTIME_SA}" '.spec.template.spec.serviceAccountName == $sa' "${RUNNER_TEMP}/before.json" >/dev/null
+          jq -e --arg rev "${REQUESTED_REVISION}" \
+            '[.status.traffic[]? | select(.revisionName == $rev and (.percent // 0) > 0)] | length == 0' \
+            "${RUNNER_TEMP}/before.json" >/dev/null
+          current="$(jq -r '[.status.traffic[]? | select(.percent == 100) | .revisionName] | if length == 1 then .[0] else empty end' "${RUNNER_TEMP}/before.json")"
+          [[ -n "${current}" && "${current}" != "${REQUESTED_REVISION}" ]] || {
+            echo "::error::Expected exactly one previous revision at 100% traffic."
+            exit 1
+          }
+          echo "PREVIOUS_REVISION=${current}" >> "${GITHUB_ENV}"
+          echo "VALIDATED_IMAGE=${expected_image}" >> "${GITHUB_ENV}"
+
+      - name: Promote traffic, verify live health, and roll back on ANY failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          finished=0
+          rollback_on_failure() {
+            rc=$?
+            trap - EXIT
+            if [[ "${finished}" != "1" ]]; then
+              echo "::error::Promotion did not finish safely; restoring previous revision."
+              if ! gcloud run services update-traffic "${SERVICE}" \
+                --project="${PROJECT}" --region="${REGION}" \
+                --to-revisions="${PREVIOUS_REVISION}=100" --quiet; then
+                echo "::error::Automatic rollback also failed. Restore ${PREVIOUS_REVISION} in Cloud Run Console immediately."
+              fi
+            fi
+            exit "${rc}"
+          }
+          trap rollback_on_failure EXIT
+
+          gcloud run services update-traffic "${SERVICE}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --to-revisions="${REQUESTED_REVISION}=100" --quiet
+
+          gcloud run services describe "${SERVICE}" \
+            --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/after.json"
+          jq -e --arg rev "${REQUESTED_REVISION}" \
+            '[.status.traffic[]? | select(.percent == 100 and .revisionName == $rev)] | length == 1' \
+            "${RUNNER_TEMP}/after.json" >/dev/null
+
+          health_ok=0
+          for attempt in 1 2 3 4; do
+            if curl --fail --silent --show-error --max-time 20 \
+              --resolve "${DOMAIN}:443:${HOSTING_IP}" \
+              "https://${DOMAIN}/api/health" > /dev/null; then
+              health_ok=1
+              break
+            fi
+            sleep 4
+          done
+          [[ "${health_ok}" == "1" ]] || { echo "::error::Live health failed."; exit 1; }
+
+          finished=1
+          trap - EXIT
+          {
+            echo "## EMPROVEX — live production promotion verified"
+            echo "- Approved SHA: \`${REQUESTED_SHA}\`"
+            echo "- Active revision (100% traffic): \`${REQUESTED_REVISION}\`"
+            echo "- Image: \`${VALIDATED_IMAGE}\`"
+            echo "- Previous revision for rollback: \`${PREVIOUS_REVISION}\`"
+            echo "- Canonical domain health: HTTP 200 via Firebase Hosting."
+          } >> "${GITHUB_STEP_SUMMARY}"

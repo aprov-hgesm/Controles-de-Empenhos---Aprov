@@ -76,7 +76,8 @@ for (const marker of [
   'Índice global de UG não pode ser alterado depois de criado',
   'Índice global de UG não pode ser excluído',
   'Fundador não pode voltar a gravar no legado raiz',
-  'Fundador autenticado por senha não acessa o legado raiz',
+  'Fundador por senha pode consultar legado raiz somente leitura',
+  'Fundador autenticado via Google mantém leitura do legado raiz',
   'Administrador pode listar a auditoria administrativa',
   'Setor externo não lista a auditoria administrativa',
 ]) {

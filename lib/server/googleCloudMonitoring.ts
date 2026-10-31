@@ -1,6 +1,7 @@
 import { importPKCS8, SignJWT } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { getCloudRunAccessToken, isCloudRunRuntime } from './cloudRunServiceIdentity.mjs';
 import {
   FIRESTORE_BILLING_TIME_ZONE,
   getFirestoreBillingDayKey,
@@ -172,7 +173,7 @@ function monitoringCredentialCandidates(): ServiceAccountCredentials[] {
 }
 
 export function isGoogleCloudMonitoringConfigured(): boolean {
-  return monitoringCredentialCandidates().length > 0;
+  return isCloudRunRuntime() || monitoringCredentialCandidates().length > 0;
 }
 
 function parseBooleanEnvironment(name: string, fallback: boolean): boolean {
@@ -473,6 +474,11 @@ async function loadFirebaseGlobalUsageObservationForInterval(
   startTime: string,
   endTime: string
 ): Promise<FirebaseGlobalUsageObservation> {
+  // On Cloud Run, use the workload identity exclusively (no private-key fallback).
+  if (isCloudRunRuntime()) {
+    const accessToken = await getCloudRunAccessToken();
+    return loadObservationWithAccessToken(accessToken, startTime, endTime, 'cloud-run');
+  }
   const candidates = monitoringCredentialCandidates();
   if (!candidates.length) {
     throw new Error('Cloud Monitoring ainda não possui credencial server-side configurada.');
