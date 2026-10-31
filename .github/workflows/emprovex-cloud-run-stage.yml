@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - 'docs/**'
+      - 'ops/cloud-run/promotion-request.json'
 
 permissions:
   contents: read
