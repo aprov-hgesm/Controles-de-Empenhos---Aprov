@@ -1,0 +1,462 @@
+[
+  {
+    "id": "W4-R11-001",
+    "message": "Quanto arroz temos na câmara fria?",
+    "route": "UNSUPPORTED",
+    "intent": "warehouse_by_location",
+    "domain": "IN_SCOPE",
+    "why": "filtro localização em estoque"
+  },
+  {
+    "id": "W4-R11-002",
+    "message": "Onde está o arroz na câmara fria?",
+    "route": "CLARIFY",
+    "intent": "warehouse_material_locations_list",
+    "domain": "IN_SCOPE",
+    "why": "depósito nomeado sem ID"
+  },
+  {
+    "id": "W4-R11-003",
+    "message": "Quais NFs do fornecedor Alfa foram cadastradas ontem?",
+    "route": "CLARIFY",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "fornecedor por nome NF"
+  },
+  {
+    "id": "W4-R11-004",
+    "message": "Quais NFs do CNPJ 11.444.777/0001-61 foram cadastradas ontem?",
+    "route": "DETERMINISTIC",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "CNPJ válido no período",
+    "expectedParams": {
+      "supplierCnpj": "11444777000161",
+      "interval": "yesterday"
+    }
+  },
+  {
+    "id": "W4-R11-005",
+    "message": "Quanto resta de arroz na NE 2026NE66?",
+    "route": "CLARIFY",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "saldo do item sem itemId"
+  },
+  {
+    "id": "W4-R11-006",
+    "message": "Quais notas de tempero foram cadastradas na semana passada?",
+    "route": "UNSUPPORTED",
+    "intent": "invoice_by_material_period",
+    "domain": "IN_SCOPE",
+    "why": "filtro conjunto material+data"
+  },
+  {
+    "id": "W4-R11-007",
+    "message": "Quais NFs foram emitidas ontem?",
+    "route": "UNSUPPORTED",
+    "intent": "invoice_issued_period",
+    "domain": "IN_SCOPE",
+    "why": "emissão não é cadastro"
+  },
+  {
+    "id": "W4-R11-008",
+    "message": "Quanto restava da NE 2026NE66 mês passado?",
+    "route": "UNSUPPORTED",
+    "intent": "commitment_get",
+    "domain": "IN_SCOPE",
+    "why": "saldo histórico"
+  },
+  {
+    "id": "W4-R11-009",
+    "message": "Compare o saldo da NE 2026NE66 com a NE 2026NE88.",
+    "route": "CLARIFY",
+    "intent": "unknown",
+    "domain": "IN_SCOPE",
+    "why": "duas NEs"
+  },
+  {
+    "id": "W4-R11-010",
+    "message": "Quais fornecedores têm entregas atrasadas?",
+    "route": "UNSUPPORTED",
+    "intent": "delivery_late_list",
+    "domain": "IN_SCOPE",
+    "why": "P1 entregas"
+  },
+  {
+    "id": "W4-R11-011",
+    "message": "Quais cronogramas da NE 2026NE66 foram enviados ontem?",
+    "route": "DETERMINISTIC",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "NE + período cronograma",
+    "expectedParams": {
+      "commitmentId": "2026NE66",
+      "sentPeriod": "yesterday"
+    }
+  },
+  {
+    "id": "W4-R11-012",
+    "message": "Quando foi enviado o cronograma do fornecedor Alfa?",
+    "route": "CLARIFY",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "cronograma fornecedor nome"
+  },
+  {
+    "id": "W4-R11-013",
+    "message": "Quais cronogramas enviados ontem do CNPJ 11.444.777/0001-61?",
+    "route": "DETERMINISTIC",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "CNPJ cronograma + período",
+    "expectedParams": {
+      "supplierCnpj": "11444777000161",
+      "sentPeriod": "yesterday"
+    }
+  },
+  {
+    "id": "W4-R11-014",
+    "message": "Quanto café temos?",
+    "route": "DETERMINISTIC",
+    "intent": "warehouse_stock_get",
+    "domain": "IN_SCOPE",
+    "why": "consulta de estoque sem localizador",
+    "expectedParams": {
+      "materialQuery": "cafe"
+    }
+  },
+  {
+    "id": "W4-R11-015",
+    "message": "Onde está a farinha de trigo?",
+    "route": "DETERMINISTIC",
+    "intent": "warehouse_material_locations_list",
+    "domain": "IN_SCOPE",
+    "why": "localização material composto",
+    "expectedParams": {
+      "materialQuery": "farinha de trigo"
+    }
+  },
+  {
+    "id": "W4-R11-016",
+    "message": "Qual é o saldo da NE 2026NE88?",
+    "route": "DETERMINISTIC",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "C03 por NE",
+    "expectedParams": {
+      "commitmentId": "2026NE88"
+    }
+  },
+  {
+    "id": "W4-R11-017",
+    "message": "Mostre o empenho 2026NE77.",
+    "route": "DETERMINISTIC",
+    "intent": "commitment_get",
+    "domain": "IN_SCOPE",
+    "why": "C02 consulta",
+    "expectedParams": {
+      "commitmentId": "2026NE77"
+    }
+  },
+  {
+    "id": "W4-R11-018",
+    "message": "Liste os empenhos anteriores que ainda têm saldo.",
+    "route": "DETERMINISTIC",
+    "intent": "commitment_previous_open_list",
+    "domain": "IN_SCOPE",
+    "why": "empenhos anteriores sem ano explícito"
+  },
+  {
+    "id": "W4-R11-019",
+    "message": "Qual o e-mail do fornecedor Delta?",
+    "route": "DETERMINISTIC",
+    "intent": "supplier_contact_find",
+    "domain": "IN_SCOPE",
+    "why": "C01 canal",
+    "expectedParams": {
+      "nameQuery": "fornecedor Delta",
+      "channel": "email"
+    }
+  },
+  {
+    "id": "W4-R11-020",
+    "message": "Quais NFs foram cadastradas anteontem?",
+    "route": "DETERMINISTIC",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "C06 anteontem",
+    "expectedParams": {
+      "interval": "day_before_yesterday"
+    }
+  },
+  {
+    "id": "W4-R11-021",
+    "message": "Quais NFs foram cadastradas entre 01/10/2026 e 03/10/2026?",
+    "route": "DETERMINISTIC",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "intervalo absoluto",
+    "expectedParams": {
+      "interval": {
+        "start": "2026-10-01",
+        "endExclusive": "2026-10-04"
+      }
+    }
+  },
+  {
+    "id": "W4-R11-022",
+    "message": "Quais NFs do CNPJ 11.444.777/0001-61 foram emitidas ontem?",
+    "route": "UNSUPPORTED",
+    "intent": "invoice_issued_period",
+    "domain": "IN_SCOPE",
+    "why": "filtro composto emissão"
+  },
+  {
+    "id": "W4-R11-023",
+    "message": "Quais NFs da NE 2026NE66 foram cadastradas ontem?",
+    "route": "DETERMINISTIC",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "NE + período NF",
+    "expectedParams": {
+      "commitmentId": "2026NE66",
+      "interval": "yesterday"
+    }
+  },
+  {
+    "id": "W4-R11-024",
+    "message": "Quanto queijo temos no depósito?",
+    "route": "UNSUPPORTED",
+    "intent": "warehouse_by_location",
+    "domain": "IN_SCOPE",
+    "why": "estoque por depósito sem ID"
+  },
+  {
+    "id": "W4-R11-025",
+    "message": "Onde está queijo no depósito?",
+    "route": "CLARIFY",
+    "intent": "warehouse_material_locations_list",
+    "domain": "IN_SCOPE",
+    "why": "localização restrita por nome"
+  },
+  {
+    "id": "W4-R11-026",
+    "message": "Saldo da NE 2026NE66 acima de R$ 1000?",
+    "route": "UNSUPPORTED",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "limiar numérico"
+  },
+  {
+    "id": "W4-R11-027",
+    "message": "Quais NFs cadastradas ontem somente vencidas?",
+    "route": "UNSUPPORTED",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "estado não suportado"
+  },
+  {
+    "id": "W4-R11-028",
+    "message": "Quanto resta da NE 2026NE66 mês passado?",
+    "route": "UNSUPPORTED",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "período histórico de saldo"
+  },
+  {
+    "id": "W4-R11-029",
+    "message": "Quanto temos?",
+    "route": "CLARIFY",
+    "intent": "warehouse_stock_get",
+    "domain": "IN_SCOPE",
+    "why": "material não informado"
+  },
+  {
+    "id": "W4-R11-030",
+    "message": "Qual o e-mail do fornecedor?",
+    "route": "CLARIFY",
+    "intent": "supplier_contact_find",
+    "domain": "IN_SCOPE",
+    "why": "fornecedor não informado"
+  },
+  {
+    "id": "W4-R11-031",
+    "message": "Quais NFs do CNPJ 00.000.000/0000-00 foram cadastradas ontem?",
+    "route": "CLARIFY",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "CNPJ inválido"
+  },
+  {
+    "id": "W4-R11-032",
+    "message": "Quais NFs dos CNPJ 11.444.777/0001-61 e 11.222.333/0001-81 cadastradas ontem?",
+    "route": "CLARIFY",
+    "intent": "unknown",
+    "domain": "IN_SCOPE",
+    "why": "múltiplos CNPJs"
+  },
+  {
+    "id": "W4-R11-033",
+    "message": "Qual o telefone do fornecedor Alfa e fornecedor Beta?",
+    "route": "CLARIFY",
+    "intent": "supplier_contact_find",
+    "domain": "IN_SCOPE",
+    "why": "dois fornecedores"
+  },
+  {
+    "id": "W4-R11-034",
+    "message": "NE88 ainda tem saldo?",
+    "route": "CLARIFY",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "NE parcial diferente"
+  },
+  {
+    "id": "W4-R11-035",
+    "message": "Quais notas fiscais foram cadastradas entre 30/02/2026 e 02/03/2026?",
+    "route": "CLARIFY",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "data inválida"
+  },
+  {
+    "id": "W4-R11-036",
+    "message": "Quando enviamos os cronogramas?",
+    "route": "CLARIFY",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "falta filtro C05"
+  },
+  {
+    "id": "W4-R11-037",
+    "message": "Exclua a NF 987 agora.",
+    "route": "REJECT_MUTATION",
+    "intent": "future_operation",
+    "domain": "IN_SCOPE",
+    "why": "operação de escrita"
+  },
+  {
+    "id": "W4-R11-038",
+    "message": "Quem ganhou a Copa do Mundo de 2018?",
+    "route": "OUT_OF_SCOPE",
+    "intent": "unknown",
+    "domain": "OUT_OF_SCOPE",
+    "why": "fora do domínio"
+  },
+  {
+    "id": "W4-R11-039",
+    "message": "Você tem o whatsapp do fornecedor Gama?",
+    "route": "DETERMINISTIC",
+    "intent": "supplier_contact_find",
+    "domain": "IN_SCOPE",
+    "why": "canal WhatsApp",
+    "expectedParams": {
+      "nameQuery": "fornecedor Gama",
+      "channel": "whatsapp"
+    }
+  },
+  {
+    "id": "W4-R11-040",
+    "message": "Onde está o leite em pó agora?",
+    "route": "DETERMINISTIC",
+    "intent": "warehouse_material_locations_list",
+    "domain": "IN_SCOPE",
+    "why": "material com preposição interna",
+    "expectedParams": {
+      "materialQuery": "leite em po"
+    }
+  },
+  {
+    "id": "W4-R11-041",
+    "message": "Qual a quantidade de queijo?",
+    "route": "DETERMINISTIC",
+    "intent": "warehouse_stock_get",
+    "domain": "IN_SCOPE",
+    "why": "quantidade material",
+    "expectedParams": {
+      "materialQuery": "queijo"
+    }
+  },
+  {
+    "id": "W4-R11-042",
+    "message": "Quero a localização de arroz.",
+    "route": "DETERMINISTIC",
+    "intent": "warehouse_material_locations_list",
+    "domain": "IN_SCOPE",
+    "why": "C08 localização",
+    "expectedParams": {
+      "materialQuery": "arroz"
+    }
+  },
+  {
+    "id": "W4-R11-043",
+    "message": "Nota de queijo cadastrada ontem.",
+    "route": "UNSUPPORTED",
+    "intent": "invoice_by_material_period",
+    "domain": "IN_SCOPE",
+    "why": "NF por item"
+  },
+  {
+    "id": "W4-R11-044",
+    "message": "Quais NFs cadastradas amanhã?",
+    "route": "DETERMINISTIC",
+    "intent": "invoice_registration_period_list",
+    "domain": "IN_SCOPE",
+    "why": "cadastro futuro filtro",
+    "expectedParams": {
+      "interval": "tomorrow"
+    }
+  },
+  {
+    "id": "W4-R11-045",
+    "message": "Me diga quanto falta da NE 2025NE9.",
+    "route": "DETERMINISTIC",
+    "intent": "commitment_total_balance",
+    "domain": "IN_SCOPE",
+    "why": "saldo outra NE",
+    "expectedParams": {
+      "commitmentId": "2025NE9"
+    }
+  },
+  {
+    "id": "W4-R11-046",
+    "message": "Qual a validade do arroz?",
+    "route": "UNSUPPORTED",
+    "intent": "validity_alerts",
+    "domain": "IN_SCOPE",
+    "why": "P1 vencimento"
+  },
+  {
+    "id": "W4-R11-047",
+    "message": "O motor está funcionando?",
+    "route": "CLARIFY",
+    "intent": "unknown",
+    "domain": "UNCERTAIN",
+    "why": "domínio incerto: motor não é necessariamente material de estoque"
+  },
+  {
+    "id": "W4-R11-048",
+    "message": "Quais cronogramas enviados ontem no depósito?",
+    "route": "UNSUPPORTED",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "localização não suportada cronograma"
+  },
+  {
+    "id": "W4-R11-049",
+    "message": "Qual e-mail do fornecedor Alfa na semana passada?",
+    "route": "UNSUPPORTED",
+    "intent": "supplier_contact_find",
+    "domain": "IN_SCOPE",
+    "why": "contato não tem histórico temporal"
+  },
+  {
+    "id": "W4-R11-050",
+    "message": "Quais cronogramas enviados ontem da NE 2026NE66 do fornecedor Alfa?",
+    "route": "CLARIFY",
+    "intent": "schedule_sent_history_list",
+    "domain": "IN_SCOPE",
+    "why": "C05 fornecedor nomeado"
+  }
+]
