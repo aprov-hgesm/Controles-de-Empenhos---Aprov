@@ -17,6 +17,7 @@ export const CONTRACTS = {
 export type AiIntent = keyof typeof CONTRACTS;
 export type AiStatus = 'ok'|'empty'|'ambiguous'|'partial'|'unsupported'|'forbidden'|'error';
 export type AiPeriod = { start: string; endExclusive: string };
+import { resolveAiPeriod } from './period';
 export type AiQuery = {version: typeof AI_QUERY_VERSION; intent: AiIntent; params: Record<string, unknown>};
 export type AiEvidence = { source: string; documentId: string };
 export type AiResponse = {
@@ -130,7 +131,7 @@ export function parseAiQuery(input: unknown): AiQuery {
     case 'schedule_sent_history_list': {
       onlyKeys(p,['commitmentId','sentPeriod','supplierCnpj','pageSize']);
       if (p.commitmentId!==undefined) params.commitmentId=stringParam(p.commitmentId,'commitment_id',NE,22).toUpperCase();
-      if (p.sentPeriod!==undefined) params.sentPeriod=period(p.sentPeriod);
+      if (p.sentPeriod!==undefined) params.sentPeriod=resolveAiPeriod(p.sentPeriod);
       if (p.supplierCnpj!==undefined) params.supplierCnpj=cnpj(p.supplierCnpj);
       if (!params.commitmentId && !params.sentPeriod && !params.supplierCnpj)
         throw new AiInputError('AI_SCHEDULE_FILTER_REQUIRED');
@@ -138,7 +139,7 @@ export function parseAiQuery(input: unknown): AiQuery {
     }
     case 'invoice_registration_period_list': {
       onlyKeys(p,['interval','dateMeaning','supplierCnpj','commitmentId','pageSize','cursor']);
-      params.interval=period(p.interval);
+      params.interval=resolveAiPeriod(p.interval);
       if(p.dateMeaning!=='registered') throw new AiInputError('AI_INVOICE_DATE_MEANING_INVALID');
       params.dateMeaning='registered';
       if(p.supplierCnpj!==undefined) params.supplierCnpj=cnpj(p.supplierCnpj);
