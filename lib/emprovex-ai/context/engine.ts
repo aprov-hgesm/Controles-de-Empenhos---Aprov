@@ -1,6 +1,6 @@
 import {ACCEPTED_INTENTS} from './catalog';
 import {makeW3Query} from './adapter';
-import {has,matchAny,normalize,repairSafeWords,relativePeriod,WORDS} from './language';
+import {has,matchAny,normalize,repairSafeWords,parsePeriod,WORDS} from './language';
 import type {Input,Result,Route,Domain,Intent,ContextRefs,Dimensions,ShortContext,W3Intent} from './types';
 
 const MAX_CHARS=1000,MAX_WORDS=150,MAX_REFS=4,TTL=10*60*1000;
@@ -15,7 +15,8 @@ function safeContext(input:Input,now:number):ContextRefs {
    .slice(0,MAX_REFS)) as ContextRefs;
 }
 function extract(text:string,canonical:string) {
- const id=text.match(/\b\d{4}NE\d{1,10}\b/i)?.[0].toUpperCase();
+ const fullIds=[...text.matchAll(/\b\d{4}NE\d{1,10}\b/gi)].map(m=>m[0].toUpperCase());
+ const id=fullIds[0];const multiCommitments=new Set(fullIds).size>1;
  const partial=text.match(/\bNE\s*[-]?\s*(\d{1,10})\b/i)?.[0];
  const rawCnpj=text.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{14}\b/)?.[0];
  const cnpj=rawCnpj?.replace(/\D/g,'');
@@ -45,7 +46,7 @@ function extract(text:string,canonical:string) {
  if(/^(?:material|materiais|produto|produtos|deposito|estoque|esse material|aquele material|isso)$/.test(material))material='';
  if(!/^[a-z][a-z0-9\s\/-]{1,119}$/.test(material))material='';
  const year=canonical.match(/\b(?:exercicio|ano|de)\s+(20\d{2})\b/)?.[1];
- return {id,partial,cnpj,supplier,material,year:year?Number(year):undefined,nf};
+ return {id,partial,cnpj,supplier,material,multiCommitments,year:year?Number(year):undefined,nf};
 }
 export function interpret(input:Input):Result {
  const started=Date.now(),now=input.now instanceof Date&&Number.isFinite(input.now.getTime())?input.now.getTime():started;
@@ -94,7 +95,7 @@ export function interpret(input:Input):Result {
  if(x.material)entities.material=x.material;
  if(x.year)entities.year=x.year;
  if(x.nf)entities.invoiceNumber=x.nf;
- const rel=relativePeriod(t);dimensions.period=rel;
+ const rel=parsePeriod(t);dimensions.period=rel;
  const isInvoice=(has(t,WORDS.invoice)||/\bnotas?\s+(?:de|do|da)\s+\S+/.test(t)||/\bnota\s+\d{1,12}\b/.test(t))&&!/\bnota de empenho\b/.test(t),isCommitment=has(t,WORDS.commitment)||!!x.id||!!x.partial;
  const isSchedule=has(t,WORDS.schedule),isSupplier=has(t,WORDS.supplier);
  const isContact=has(t,WORDS.contact),isStock=has(t,WORDS.stock);
@@ -121,6 +122,7 @@ export function interpret(input:Input):Result {
    return finish('IN_SCOPE','UNSUPPORTED',intent,reason)};
  const clarify=(intent:Intent,msg:string)=>{dimensions.intention=intent;
    return finish('IN_SCOPE','CLARIFY',intent,'MISSING_OR_AMBIGUOUS_PARAMETER',undefined,msg)};
+ if(x.multiCommitments)return clarify('unknown','Você citou mais de uma NE. Qual delas deseja consultar?');
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
  if(isInvoice) {
@@ -139,6 +141,8 @@ export function interpret(input:Input):Result {
    },'NE → cronograma');
    return clarify('schedule_sent_history_list','Informe a NE, o fornecedor (CNPJ) ou o período de envio.');
  }
+ if(directContext&&commitmentId&&isSupplier&&!isContact&&!isInvoice)
+   return unavailable('supplier_by_commitment','P1_NE_TO_SUPPLIER_UNAVAILABLE');
  if((isSupplier||isContact)&&isOverdue)return unavailable('delivery_late_list','P1_DELIVERIES_UNAVAILABLE');
  if(isContact||((isSupplier||!!supplier||!!x.cnpj)&&/\b(?:telefone|email|whatsapp)\b/.test(t))){
    if(commitmentId&&!supplier&&!x.cnpj)return unavailable('supplier_by_commitment','P1_SUPPLIER_FROM_NE_UNAVAILABLE');

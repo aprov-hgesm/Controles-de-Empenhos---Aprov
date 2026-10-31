@@ -45,3 +45,21 @@ const SPELLING:Readonly<Record<string,string>>={
 export function repairSafeWords(t:string):string {
   return t.split(' ').map(w=>/\d|[@/._-]/.test(w)?w:(SPELLING[w]||w)).join(' ');
 }
+
+/** Absolute dd/mm/yyyy date range. Inclusive request dates -> exclusive W3 end date. */
+export function parsePeriod(text:string):{kind:'relative';value:string}|{start:string;endExclusive:string}|null {
+ const rel=relativePeriod(text);if(rel)return rel;
+ const m=text.match(/\b(?:entre|de)\s+(\d{1,2})\/(\d{1,2})\/(20\d{2})\s+(?:e|a|ate)\s+(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/);
+ if(!m)return null;
+ const date=(d:string,mo:string,y:string)=>{
+   const day=Number(d),month=Number(mo),year=Number(y);
+   if(month<1||month>12||day<1||day>31)return null;
+   const t=new Date(Date.UTC(year,month-1,day));
+   if(t.getUTCFullYear()!==year||t.getUTCMonth()!==month-1||t.getUTCDate()!==day)return null;
+   return t.toISOString().slice(0,10);
+ };
+ const start=date(m[1],m[2],m[3]),end=date(m[4],m[5],m[6]);
+ if(!start||!end||start>end||Date.parse(end)-Date.parse(start)>365*86400000)return null;
+ const endExclusive=new Date(Date.parse(end+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+ return {start,endExclusive};
+}

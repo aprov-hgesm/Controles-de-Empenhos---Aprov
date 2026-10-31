@@ -11,6 +11,7 @@ export type Intent = W3Intent | 'invoice_by_material_period'|'invoice_issued_per
   'operational_procedure'|'navigation'|'future_operation'|'unknown';
 export type W3Query = {version:typeof W3_VERSION;intent:W3Intent;params:Record<string,unknown>};
 export type Relative = {kind:'relative';value:string};
+export type AiPeriodInput = Relative|{start:string;endExclusive:string};
 export type ContextRefs = {commitmentId?:string; materialQuery?:string; supplierName?:string; supplierCnpj?:string};
 export type ShortContext = {sessionId:string;workspaceId:string;updatedAt:number;refs:ContextRefs};
 export type TrustedScope = {sessionId:string;workspaceId:string};
@@ -18,7 +19,7 @@ export type TrustedScope = {sessionId:string;workspaceId:string};
 export type Input = {message:string;now?:Date;scope?:TrustedScope;previous?:ShortContext};
 export type Dimensions = {
   intention:string|null;document:string|null;material:string|null;situation:string|null;
-  period:Relative|null;identity:{type:string;original:string;value:string}|null;
+  period:AiPeriodInput|null;identity:{type:string;original:string;value:string}|null;
   quantity:string|null;location:string|null;relationship:string|null;format:string|null;
 };
 export type ModelProposal = {schema:'emprovex.ai.modelProposal.v1';userText:string;

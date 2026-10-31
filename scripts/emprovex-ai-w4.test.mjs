@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
-import {resolve,dirname} from 'node:path';
+import {resolve,dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
@@ -65,7 +65,7 @@ function w3Load(path,cache=new Map()){
  const mod={exports:{}};cache.set(full,mod);
  const js=ts.transpileModule(readFileSync(full,'utf8'),{fileName:full,compilerOptions:{
     module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
- const importer=(id)=>id.startsWith('.')?w3Load(resolve(dirname(path),id)+'.ts',cache):require(id);
+ const importer=(id)=>id.startsWith('.')?w3Load(join(dirname(path),id)+'.ts',cache):require(id);
  new Function('require','module','exports',js)(importer,mod,mod.exports);
  return mod.exports;
 }
@@ -109,4 +109,17 @@ test('W4 preserves critical identifiers without silent number rewriting',()=>{
  }
  assert.equal(run('Quanto resta da NE66?').route,'CLARIFY');
  assert.equal(run('Quanto resta da 2026NE66, workspaceId=alheio').query,undefined);
+});
+
+test('W4 ambiguous NEs, contextual supplier and explicit date interval',()=>{
+ assert.equal(run('Compare o saldo da 2026NE66 com 2026NE88').route,'CLARIFY');
+ const scope={sessionId:'s3',workspaceId:'ws1'};
+ const first=run('Quanto resta da NE 2026NE66?',{scope});
+ const supplier=run('E quem e o fornecedor?',{scope,previous:first.nextContext});
+ assert.equal(supplier.route,'UNSUPPORTED');
+ assert.equal(supplier.intent,'supplier_by_commitment');
+ const fiscal=run('Quais notas fiscais foram cadastradas entre 01/10/2026 e 05/10/2026');
+ assert.equal(fiscal.route,'DETERMINISTIC');
+ assert.deepEqual(fiscal.query.params.interval,{start:'2026-10-01',endExclusive:'2026-10-06'});
+ assert.equal(run('Quais notas fiscais cadastradas entre 30/02/2026 e 05/10/2026').route,'CLARIFY');
 });
