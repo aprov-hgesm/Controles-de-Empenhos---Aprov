@@ -34,6 +34,17 @@ for(const c of corpus){
 }
 const fail=rows.filter(c=>c.mismatches.length);
 for(const [category,m] of Object.entries(metrics))console.log(category,JSON.stringify(m));
+const eligible=rows.filter(r=>r.route==='DETERMINISTIC');
+const accepted=rows.filter(r=>r.actual.route==='DETERMINISTIC');
+const outside=rows.filter(r=>r.domain==='OUT_OF_SCOPE');
+const pct=(numerator,denominator)=>denominator?Math.round(numerator/denominator*10000)/100:null;
+const rates={
+ eligibleDeterministic:pct(eligible.filter(r=>r.actual.route==='DETERMINISTIC'&&!r.mismatches.length).length,eligible.length),
+ acceptedPrecision:pct(accepted.filter(r=>!r.mismatches.length).length,accepted.length),
+ outsideDomainRejection:pct(outside.filter(r=>r.actual.route==='OUT_OF_SCOPE').length,outside.length),
+ eligibleTotal:eligible.length,autoAccepted:accepted.length,outsideTotal:outside.length,
+};
+console.log('W4 MEASURED RATES',JSON.stringify(rates));
 console.log('W4 CORPUS SUMMARY',JSON.stringify({
  cases:rows.length,passed:rows.length-fail.length,failed:fail.length,
  devPassed:rows.filter(r=>r.split==='dev'&&!r.mismatches.length).length,

@@ -34,3 +34,5 @@ jobs:
         run: W4_REQUIRE_W3=1 node --test scripts/emprovex-ai-w4.test.mjs
       - name: Versioned 520-case corpus (360 dev / 160 holdout)
         run: node scripts/emprovex-ai-w4-evaluate.mjs
+      - name: Isolated CPU latency and memory measurement
+        run: node scripts/emprovex-ai-w4-benchmark.mjs

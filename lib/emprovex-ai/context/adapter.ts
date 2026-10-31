@@ -65,3 +65,15 @@ export function makeW3Query(intent:W3Intent,p:Record<string,unknown>):W3Query|nu
  }
  return valid?{version:W3_VERSION,intent,params:{...p}}:null;
 }
+
+/** Validate a W5 model candidate as untrusted input; it never authorizes execution.
+ * The caller MUST subsequently hand this to W3 parseAiQuery + authorizeAi.
+ */
+export function validateModelCandidate(candidate:unknown,previousRoute:'MODEL_ELIGIBLE'|string):W3Query|null {
+ if(previousRoute!=='MODEL_ELIGIBLE'||!candidate||typeof candidate!=='object'||Array.isArray(candidate))return null;
+ const p=candidate as Record<string,unknown>;
+ if(!keys(p,['intent','params'])||typeof p.intent!=='string'||
+   !Object.prototype.hasOwnProperty.call(W3_CONTRACTS,p.intent)||!p.params||
+   typeof p.params!=='object'||Array.isArray(p.params))return null;
+ return makeW3Query(p.intent as W3Intent,p.params as Record<string,unknown>);
+}

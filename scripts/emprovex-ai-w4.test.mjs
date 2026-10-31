@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),require=createRequire(import.meta.url);
-const {interpret,makeW3Query,ACCEPTED_INTENTS,FAMILIES}=require('../.w4-dist/index.cjs');
+const {interpret,makeW3Query,validateModelCandidate,ACCEPTED_INTENTS,FAMILIES}=require('../.w4-dist/index.cjs');
 const now=new Date('2026-10-31T14:00:00Z');
 const run=(message,extra={})=>interpret({message,now,...extra});
 test('W4 catalog: 26 families, 8 W3 contracts and closed adapter',()=>{
@@ -87,4 +87,26 @@ test('W4 adapter contract parity against W3 PR #425 real parser',()=>{
    assert.equal(r.route,'DETERMINISTIC',question);
    assert.deepEqual(parseAiQuery(r.query).intent,r.query.intent);
  }
+});
+
+test('W4 model candidate is closed and always revalidated',()=>{
+ assert.equal(validateModelCandidate({intent:'commitment_total_balance',params:{commitmentId:'2026NE66'}},'MODEL_ELIGIBLE')?.intent,'commitment_total_balance');
+ for(const candidate of [
+   {intent:'invoice_delete',params:{}},
+   {intent:'commitment_get',params:{commitmentId:'2026NE66',workspaceId:'other'}},
+   {intent:'warehouse_stock_get',params:{materialQuery:'<script>alert(1)</script>'}},
+   {intent:'commitment_get',params:{commitmentId:'NE66'}},
+   {intent:'commitment_get',params:{commitmentId:'2026NE66'},ug:'160416'},
+   '__proto__',null
+ ])assert.equal(validateModelCandidate(candidate,'MODEL_ELIGIBLE'),null);
+ assert.equal(validateModelCandidate({intent:'commitment_get',params:{commitmentId:'2026NE66'}},'UNSUPPORTED'),null);
+});
+test('W4 preserves critical identifiers without silent number rewriting',()=>{
+ for(const id of ['2026NE6','2026NE0066','2025NE0042','2026NE00000088']){
+   const r=run('Quanto resta da '+id);
+   assert.equal(r.route,'DETERMINISTIC');
+   assert.equal(r.query.params.commitmentId,id);
+ }
+ assert.equal(run('Quanto resta da NE66?').route,'CLARIFY');
+ assert.equal(run('Quanto resta da 2026NE66, workspaceId=alheio').query,undefined);
 });
