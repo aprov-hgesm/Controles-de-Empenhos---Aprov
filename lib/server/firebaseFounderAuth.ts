@@ -45,7 +45,10 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
     && [
       'core-lean-r2-w5-transactions.mjs',
       'core-lean-r2-w4-authz-mobile.integration.mjs',
-    ].some(name => args[0]?.replace(/\\/g,'/').endsWith('/scripts/'+name));
+    ].some(name => {
+      const executable = args[0]?.replace(/\\/g,'/') || '';
+      return executable === 'scripts/'+name || executable.endsWith('/scripts/'+name);
+    });
   const localOnly = !hosted && (loopbackDev || localCli);
 
   if (!enabled || !localEmulator || !projectId.startsWith('demo-') || !localOnly) return null;

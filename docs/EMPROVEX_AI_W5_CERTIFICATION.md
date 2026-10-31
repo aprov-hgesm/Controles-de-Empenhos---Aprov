@@ -45,3 +45,39 @@ Interpretador W4/W5 → auditoria de filtros essenciais → parser fechado W3 �
 5. Prontidão para **revisão independente**, não para merge, publicação ou habilitação produtiva. Application CI skipped não é PASS.
 
 **Parecer de engenharia sujeito ao último CI:** `W5_CONTEXT_ENGINE_READY_FOR_REVIEW` se todos os gates finais estiverem verdes; caso contrário, `W5_PARTIAL_BLOCKED`.
+
+---
+
+## W5 R1.1 — Correção pontual após revisão independente #5723387118 (31/10/2026)
+
+**Referência de auditoria:** PR #429, commit `7855f9c6f011d72d8eca8c789422a4f97ba6ed5f`. **Branch preservada:** `feat/emprovex-ai-r1-w5-context-hardening`. Este registro complementa, sem substituir, a certificação W5 R1.
+
+### P1-A — Filtros de situação
+- **Antes:** `detectConstraints()` reconhecia basicamente vencido/pendente/atrasado precedidos por `somente/apenas`; perguntas como `Quais NFs cadastradas ontem que já foram pagas?` podiam gerar C06 sem a condição de pagamento.
+- **Depois:** detecção de pago/não pago, liquidado/não liquidado, pendente, atrasado, entregue, recebido, concluído, cancelado, parcialmente atendido, em aberto e vencido. O catálogo W3 não representa estado de pagamento em C06; portanto, rota não determinística, sem execução nem perda de filtros. `Quais NFs foram cadastradas ontem?` segue elegível.
+- **Limite:** status em empenhos históricos com saldo é mantido no contrato existente; nenhum contrato P1/P2 foi criado.
+
+### P1-B — Localização física
+- **Antes:** `Quanto arroz temos no almoxarifado?` não era reconhecido como filtro físico e podia retornar C07 agregado.
+- **Depois:** detector inclui almoxarifado, depósito de secos/gêneros, estoque central, área de recebimento/armazenamento, sala, setor físico, posição, local de armazenagem e termos anteriores. Restrições não mapeáveis em `warehouse_stock_get` não executam saldo agregado; em `warehouse_material_locations_list`, identificação física por nome exige esclarecimento/ID canônico quando aplicável.
+
+### P1-C — Respostas sem truncamento silencioso
+- **Antes:** o formatador aplicava `v.slice(0,5)` mesmo quando W3 retornava 6–20 registros com cobertura completa.
+- **Depois:** o apresentador utiliza todos os elementos da página já limitada pelo W3, sem criar nova paginação. Continuam sinalizados `coverage`, `status=partial`, `pagination.truncated`, limitações e resultado vazio. Regressões: 1, 5, 6, 10 e 20 NFs, cronogramas, empenhos, fornecedores e localizações com mais de cinco registros.
+
+### P1-D — Isolamento do Firebase Auth Emulator
+- **Antes:** três flags E2E e projeto `demo-` habilitavam decodificação sem verificação de assinatura, mesmo se replicadas num ambiente hospedado.
+- **Depois:** fluxo de emulação precisa de flag E2E, projeto demo e endpoint de emulador local **mais** ambiente não hospedado. Única permissão HTTP: processo `Next dev`, `NODE_ENV=development`, `--hostname 127.0.0.1`, marcadores E2E locais; produção/preview Vercel, Cloud Run e ambientes remotos identificados rejeitam JWT não assinado, seguindo para validação JWKS RS256. Para preservar testes offline preexistentes do Warehouse, os scripts CLI `core-lean-r2-w5-transactions.mjs` e `core-lean-r2-w4-authz-mobile.integration.mjs` são autorizados **somente** em execução direta, com Auth e Firestore emuladores loopback, fora da produção e sem marcadores de hospedagem. Outros executáveis CLI, Next start e servidor com bind público são proibidos.
+- **Evidência adicional:** uma versão intermediária bloqueou `true-transaction-probes`; correção restrita recuperou sua execução real com emuladores, sem permitir JWT emulado em endpoints de produção. Não afirmar garantia contra ambientes remotos arbitrários que ocultem deliberadamente sua identidade e executem um binário permitido em condições de laboratório; manter requisito de deploy seguro e revisão independente.
+
+### P2 — Integridade de sobre-recebimento
+- **Antes:** `Math.max(0, quantity-received)` apresentava zero para 100 empenhados e 120 recebidos.
+- **Depois:** W3 rejeita a leitura com `AI_COMMITMENT_ITEM_INTEGRITY` quando `received>quantity`, assim como números negativos ou unidade/identificador inválidos. Não altera os dados originais nem a política de cobrança. **Decisão operacional pendente:** classificar sobre-recebimento legítimo/exceção/erro de dados históricos; a implementação falha de maneira segura, sem tratar automaticamente a condição como saldo zero.
+
+### Certificação W5 R1.1
+- Novo arquivo `scripts/emprovex-ai-w5-r11.test.mjs`: sete grupos de regressão, incluindo 18 frases de situação, 16 restrições locacionais, paginação/formatação, JWT normal sintético vs JWT emulado, identidade de ambiente, sobre-recebimento e valores negativos/não numéricos.
+- Workflow `EMPROVEX AI W5 Context Hardening Certification` executa R1.1 além de TypeScript, corpus 120, 20 conversas, testes HTTP e regressões W3/W4/W4.5, corpus 520 + 50; Core Protection e Fast CI separados.
+- Confirmações com serviços reais Firebase Auth e Firestore produtivos **não executadas**; ensaios são fixtures/emuladores isolados. Application CI em PR DRAFT pode permanecer `skipped`, que **não significa PASS**.
+- Sem mudança de Firestore Rules, cobrança, exposição de endpoint, integração Qwen/Oracle, W6, deploy ou merge.
+
+**Parecer após CI final:** `W5_R1_1_READY_FOR_INDEPENDENT_RECHECK` somente com todas as verificações críticas executadas e aprovadas. A classificação exige ainda rechecagem independente e não autoriza produção.

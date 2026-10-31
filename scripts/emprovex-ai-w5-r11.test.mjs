@@ -234,6 +234,8 @@ test('P1-D local emulator only, signed valid/invalid and hosted flags reject uns
   process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080';
   process.argv=[argvKeep[0],'scripts/core-lean-r2-w5-transactions.mjs'];
   assert.equal((await verifyFirebaseRequest('Bearer unsigned')).uid,'synthetic-uid');
+  process.argv=[argvKeep[0],'/tmp/isolated/scripts/core-lean-r2-w5-transactions.mjs'];
+  assert.equal((await verifyFirebaseRequest('Bearer unsigned')).uid,'synthetic-uid');
   process.argv=[argvKeep[0],'scripts/core-lean-r2-w4-authz-mobile.integration.mjs'];
   assert.equal((await verifyFirebaseRequest('Bearer unsigned')).uid,'synthetic-uid');
   process.argv=[argvKeep[0],'scripts/unknown-server.mjs'];
