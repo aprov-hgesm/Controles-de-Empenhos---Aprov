@@ -9,6 +9,9 @@ export const dynamic='force-dynamic';
 const headers={'cache-control':'no-store, private'};
 export async function POST(request:NextRequest){
   try {
+    // Desligado por padrao, inclusive em previews automaticos e sempre em producao.
+    if(process.env.VERCEL_ENV==='production' || process.env.EMPROVEX_AI_W45_ENABLED!=='1')
+      return NextResponse.json({error:'AI_EXPERIMENT_DISABLED'},{status:404,headers});
     if(Number(request.headers.get('content-length')||0)>16384)
       return NextResponse.json({error:'AI_REQUEST_TOO_LARGE'},{status:413,headers});
     const raw=await request.text();

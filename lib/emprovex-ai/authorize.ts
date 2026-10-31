@@ -72,7 +72,7 @@ async function authorizeBilling(
     renewalGraceDaysForAccount(account, Number(config?.gracePeriodDays)||0));
   if(!decision.allowed)throw new AiExecutionError('AI_BILLING_FORBIDDEN',403);
 }
-export async function authorizeAi(authorization:string|null,intent:AiIntent):Promise<AiAccess> {
+export async function prepareAiAccess(authorization:string|null):Promise<AiAccess> {
   const verified=await verifyFirebaseRequest(authorization);
   const googleToken=await getGoogleAccessToken();
   if(verified.email===HGESM_SECTOR_EMAIL && isFounderSignInProvider(verified.signInProvider)){
@@ -80,8 +80,6 @@ export async function authorizeAi(authorization:string|null,intent:AiIntent):Pro
     if(!workspace || workspace.status!=='active'
       || workspace.ug!==HGESM_UG || workspace.authorizedEmail!==HGESM_SECTOR_EMAIL)
       throw new AiExecutionError('AI_FOUNDER_WORKSPACE_FORBIDDEN',403);
-    if(intent.startsWith('warehouse_')&&!warehouseModuleEnabled)
-      throw new AiExecutionError('AI_MODULE_DISABLED',403);
     return {uid:verified.uid,email:verified.email,workspaceId:HGESM_WORKSPACE_ID,ug:HGESM_UG,googleToken};
   }
   if(verified.signInProvider!=='password')throw new AiExecutionError('AI_PROVIDER_FORBIDDEN',403);
@@ -90,9 +88,19 @@ export async function authorizeAi(authorization:string|null,intent:AiIntent):Pro
     throw new AiExecutionError('AI_ACCOUNT_FORBIDDEN',403);
   const workspace=await coreDocument('workspaces/'+field(account,'workspaceId'),googleToken);
   const identity=validateAiIdentity({uid:verified.uid,email:normalizePlatformEmail(verified.email),account,workspace});
-  if(intent.startsWith('warehouse_')&&!warehouseModuleEnabled)
-    throw new AiExecutionError('AI_MODULE_DISABLED',403);
   const access={uid:verified.uid,email:verified.email,...identity,googleToken};
   await authorizeBilling(access);
+  return access;
+}
+
+/** Gate por contrato executado novamente em toda consulta, inclusive nos follow-ups. */
+export function authorizeAiIntent(_access:AiAccess,intent:AiIntent):void {
+  if(intent.startsWith('warehouse_')&&!warehouseModuleEnabled)
+    throw new AiExecutionError('AI_MODULE_DISABLED',403);
+}
+/** Compatibilidade W3: identidade/assinatura e modulo continuam obrigatorios. */
+export async function authorizeAi(authorization:string|null,intent:AiIntent):Promise<AiAccess> {
+  const access=await prepareAiAccess(authorization);
+  authorizeAiIntent(access,intent);
   return access;
 }
