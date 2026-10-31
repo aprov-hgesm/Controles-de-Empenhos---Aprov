@@ -170,3 +170,16 @@ test('W4 R1.1 — change of subject and tampered/expired context never imply aut
  const expired={...first.nextContext,updatedAt:now.getTime()-600001};
  assert.equal(run('E quanto temos?',{scope,previous:expired}).query,undefined);
 });
+
+test('W4 R1.1 — article is a complete word; no deletion of material first letter',()=>{
+ for(const [message,want] of [
+   ['Quero a localizacao de arroz.','arroz'],
+   ['Onde esta a farinha de trigo?','farinha de trigo'],
+   ['Onde esta arroz?','arroz'],
+   ['Onde esta o queijo?','queijo']
+ ]){
+   const r=run(message);
+   assert.equal(r.route,'DETERMINISTIC',message);
+   assert.equal(r.query.params.materialQuery,want,message);
+ }
+});
