@@ -77,8 +77,19 @@ Write-Host 'R7.4 STRUCTURAL IAM PASS — no IAM changes'
 # gcloud impersonation requires iam.serviceAccounts.getAccessToken on the runtime SA.
 # If it is not available, skip: never grant broader privileges just for this probe.
 Write-Host '=== R7.4 / EFFECTIVE ACCESS (IF IMPERSONATION ALREADY AUTHORIZED) ==='
-$tokenResult = @(gcloud.cmd auth print-access-token "--impersonate-service-account=$Runtime" --project=$Project 2>$null)
-if ($LASTEXITCODE -ne 0 -or $tokenResult.Count -ne 1 -or
+$tokenResult = @()
+$impersonationExit = 1
+$previousErrorAction = $ErrorActionPreference
+try {
+ $ErrorActionPreference = 'Continue'
+ $tokenResult = @(gcloud.cmd auth print-access-token "--impersonate-service-account=$Runtime" --project=$Project 2>$null)
+ $impersonationExit = $LASTEXITCODE
+} catch {
+ $impersonationExit = 1
+} finally {
+ $ErrorActionPreference = $previousErrorAction
+}
+if ($impersonationExit -ne 0 -or $tokenResult.Count -ne 1 -or
     [string]::IsNullOrWhiteSpace($tokenResult[0])) {
  Write-Host 'R7.4 EFFECTIVE: NOT TESTED (no impersonation permission). No IAM role was added.'
  Write-Host 'Next step: read-only probe inside isolated Cloud Run runtime, with attached SA.'
