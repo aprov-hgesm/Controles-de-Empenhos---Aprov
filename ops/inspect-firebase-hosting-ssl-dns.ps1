@@ -88,12 +88,25 @@ $ownershipExpected = @(
 $ownershipDiscovered = @(
   foreach ($set in @($domainData.requiredDnsUpdates.discovered)) {
     foreach ($record in @($set.records)) {
-      if ($record.type -eq 'TXT' -and $record.rdata -like 'hosting-site=*') {
-        [string]$record.rdata
+      $normalizedText = ([string]$record.rdata).Trim().Trim('"')
+      if ($record.type -eq 'TXT' -and $normalizedText -like 'hosting-site=*') {
+        $normalizedText
       }
     }
   }
 )
+Write-Host '=== DNS APICE OBSERVADO PELO FIREBASE (sem filtros de propriedade) ==='
+foreach ($set in @($domainData.requiredDnsUpdates.discovered)) {
+  Write-Host "DNS_CONJUNTO: $($set.domainName)"
+  if ($set.checkError) {
+    Write-Host "DNS_CONSULTA_ERRO: [$($set.checkError.code)] $($set.checkError.message)"
+  }
+  foreach ($record in @($set.records)) {
+    if ($record.type -eq 'TXT' -or $record.type -eq 'A' -or $record.type -eq 'AAAA') {
+      Write-Host "DNS_REGISTRO: $($record.type) | $($record.rdata) | $($record.requiredAction)"
+    }
+  }
+}
 Write-Host "TXT_PROPRIEDADE_ESPERADO: $($ownershipExpected -join ', ')"
 Write-Host "TXT_PROPRIEDADE_DETECTADO_FIREBASE: $($ownershipDiscovered -join ', ')"
 $acmeDiscovered = @(
