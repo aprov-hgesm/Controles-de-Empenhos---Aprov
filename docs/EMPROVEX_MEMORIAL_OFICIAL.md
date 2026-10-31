@@ -1,5 +1,26 @@
 # EMPROVEX — Memorial Oficial
 
+## DIRETRIZ VIGENTE — GOV-SIMP-01: publicação ágil com conferência obrigatória do assistente (31/10/2026)
+
+**DECISÃO DO RESPONSÁVEL:** não criar, exigir ou bloquear o trabalho por novo ruleset/branch protection nesta etapa. O EMPROVEX é operado pelo responsável com apoio do ChatGPT; as verificações serão **conferências do assistente antes de executar ações**, proporcionais ao risco, em vez de novas aprovações burocráticas no GitHub. Este capítulo tem precedência sobre recomendações históricas de ruleset obrigatório.
+
+**Checklist obrigatório para qualquer chat/worker antes de alterar GitHub, main ou Cloud Run:**
+
+1. Identificar repositório e branch corretos, verificar SHA real da `main` e da PR, objetivo autorizado, diffs e risco específico. Não misturar PRs independentes ou presumir que deploy já ocorreu.
+2. Consultar os checks existentes. Para merge de código funcional, exigir **Fast CI + Core Protection + Application CI** aprovados no SHA que será integrado; acrescentar Domain CI ou teste direcionado se a área for afetada. Se houver falha, **diagnosticar a causa real e fazer somente a correção necessária**; não marcar PASS por inferência, retirar assertions ou contornar teste. Evitar repetir certificações que já cobrem o mesmo SHA. Para alterações puramente documentais, não impor build pesado por padrão.
+3. Para cada publicação, preservar projeto `gen-lang-client-0982077967`, região `southamerica-east1`, serviço `emprovex-cloudrun-candidate`, identidade `emprovex-run-runtime` e as 11 referências Secret Manager existentes. Não refazer DNS, Firebase Hosting, IAM, Rules, cron, billing ou Vercel por rotina. Nunca criar/importar JSON de conta de serviço no GitHub.
+4. Automação: merge aprovado na `main` → Application CI de push aprovado → compilação e nova revisão **sem tráfego** pelo workflow GitHub OIDC/WIF. Verificar revisão Ready, SHA, digest da imagem, ambiente preservado, URL de prévia, `/api/health` HTTP 200 e proteção de rota de cobrança anônima HTTP 401. Prévia tagged compartilha recursos de produção: **não realizar mutações destrutivas/financeiras como teste**.
+5. **Promover tráfego para produção somente com autorização explícita do responsável e aprovação do ambiente GitHub `emprovex-production`**, executando o workflow manual com revision/SHA fixos. Guardar revisão anterior e conferir health via domínio. Em erro, tentar rollback de tráfego e reportar resultado.
+6. Ao concluir, registrar no chat e no histórico GitHub: PR, SHA, checks, revisão e tráfego efetivos, bloqueios pendentes; distinguir com clareza **código mesclado / revisão criada sem tráfego / produção promovida**. Nunca dizer “publicado” antes de confirmar o tráfego.
+
+**Redução de burocracia:** uma revisão concentrada antes da ação, testes proporcionais ao risco, sem exigência de outro revisor, sem novo ruleset, sem PowerShell local e sem solicitações repetidas de autorização para ações já explicitamente autorizadas. Apenas a promoção em produção mantém aprovação humana.
+
+**Limite de segurança conhecido e aceito para operação individual:** o memorial não impõe uma restrição técnica ao GitHub. Como a service account do deploy possui `roles/run.developer`, um workflow malicioso que seja alterado na `main` poderia contornar o ambiente de aprovação. A obrigação de conferência do chat reduz riscos operacionais mas não impede alterações externas. Caso se habilitem outros colaboradores ou automações com escrita, reavaliar ruleset obrigatório. Não alegar blindagem técnica inexistente.
+
+**Estado registrado pelo operador:** bootstrap WIF/Artifact Registry/identidade deploy concluído no Cloud Shell, sem chaves privadas; ambiente `emprovex-production` criado e salvo com `Moriark` em Required reviewers, bypass administrativo desativado, branch `main` exclusiva. Não repetir bootstrap. Fluxo CI/CD ainda depende da integração das PRs e da certificação final. Detalhes em [EMPROVEX_CICD_CLOUD_RUN_GITHUB.md](./EMPROVEX_CICD_CLOUD_RUN_GITHUB.md).
+
+---
+
 
 ## ESTADO OPERACIONAL VIGENTE — PRODUÇÃO MIGRADA PARA GOOGLE CLOUD RUN (31/10/2026, Brasília)
 
@@ -4169,3 +4190,12 @@ O fundador executou \`C:\Users\marco\Downloads\publicar_emprovex_main_f024529.ps
 **Fonte de verdade:** `lib/billing.ts`, `lib/billingAccess.ts`, `lib/server/platformBillingAdminStore.ts`, `lib/server/platformBillingSharedStore.ts`; interface `components/billing/BillingAnniversaryCard.tsx`; Termos §4.2; testes `scripts/billing-payment-anniversary.test.mjs`. Memorial operacional detalhado em `docs/commerce/billing-shared-monthly-r1.md`.
 
 **Implementação em revisão:** branch `feat/billing-shared-monthly-r1-20261029`, PR #415. **Sem merge/deploy/ativação de cobrança compartilhada automática** até homologação financeira completa e conclusão do CI. `EMPROVEX_SHARED_BILLING_ENABLED` permanece desativado por padrão.
+
+
+## Atualização R7 — GitHub Actions / Cloud Run sem chaves (31/10/2026)
+
+**Proposta preparada em branch, sem implantação automática ativada nesta etapa.** A implantação de novas versões pode passar a utilizar os workflows `.github/workflows/emprovex-cloud-run-stage.yml` (disparado apenas após o **Application CI** do push `main` concluir com sucesso) e `.github/workflows/emprovex-cloud-run-promote.yml` (apenas `workflow_dispatch` com `revision` + SHA, associado ao ambiente GitHub `emprovex-production` protegido por aprovação humana). O stage compila o Dockerfile, publica a imagem SHA no Artifact Registry e cria revisão Cloud Run **sem tráfego**. A promoção valida digest da imagem, readiness, identidade, linhagem do SHA e preserva a revisão anterior. Saúde pública é testada após a promoção; em falha, a automação tenta voltar à revisão anterior.
+
+Identidade de deploy proposta: `emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com` via Workload Identity Federation `projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main`, estritamente condicionada ao repository ID `1286320615`, owner ID `298800054`, branch `main` e arquivos dos dois workflows. Nenhum segredo/chave de conta de serviço no GitHub. O runtime permanece `emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com`, com as 11 referências Secret Manager preservadas. A PR #426, main e estado de produção anteriores não são alterados pelo simples preparo do fluxo.
+
+**Precondições para declarar ATIVO:** PR #426 certificada e incorporada; CI/CD mesclado na `main`; `ops/bootstrap-github-oidc-cloud-shell.sh` executado uma única vez por administrador no Cloud Shell; ambiente `emprovex-production` com **Required reviewers** e branch `main` configurados no GitHub; primeira execução de stage/preview certificada sem tráfego; promoção somente mediante aprovação. Não substituir o novo fluxo por deploy automático de 100% após merge. Procedimento detalhado: [EMPROVEX_CICD_CLOUD_RUN_GITHUB.md](./EMPROVEX_CICD_CLOUD_RUN_GITHUB.md). O PowerShell `ops/release-emprovex-cloud-run.ps1` continua como método manual de contingência, não obrigatório após ativação do CI/CD.

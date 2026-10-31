@@ -1,6 +1,8 @@
-# EMPROVEX — Publicação oficial no Google Cloud Run (PowerShell)
+# EMPROVEX — Publicação oficial no Google Cloud Run (manual / contingência)
 
-**VIGENTE desde o corte DNS de 31/10/2026.** Este documento substitui, para novas versões, o procedimento `docs/EMPROVEX_RELEASE_POWERSHELL.md`, que passa a registrar somente o método histórico Vercel e o rollback. Fonte: [Memorial Oficial](./EMPROVEX_MEMORIAL_OFICIAL.md). Diretriz: **GOV-SIMP-01**, segurança essencial com o menor número de etapas.
+**Método manual vigente desde o corte DNS de 31/10/2026.** Este documento substitui, para novas versões, o procedimento `docs/EMPROVEX_RELEASE_POWERSHELL.md`, que passa a registrar somente o método histórico Vercel e o rollback. Fonte: [Memorial Oficial](./EMPROVEX_MEMORIAL_OFICIAL.md). Diretriz: **GOV-SIMP-01**, segurança essencial com o menor número de etapas.
+
+> **CI/CD em preparação (não ativado):** o novo procedimento de deploy sem PowerShell com GitHub Actions + Workload Identity Federation, estágio sem tráfego e promoção humana está documentado em [EMPROVEX_CICD_CLOUD_RUN_GITHUB.md](./EMPROVEX_CICD_CLOUD_RUN_GITHUB.md). Não considerar ativado antes de merge na `main`, bootstrap IAM e configuração do ambiente GitHub `emprovex-production` com reviewers obrigatórios. Até lá, este procedimento manual permanece disponível.
 
 ## 1. Arquitetura em produção
 
@@ -72,7 +74,7 @@ Rollback de revisão **não desfaz** escritas no Firestore, transações finance
 ## 5. Guardrails permanentes
 
 1. **Não executar** `vercel deploy`, `vercel promote`, `vercel build` ou `vercel --prod` para lançar código no domínio oficial.
-2. **Não publicar automaticamente** no Cloud Run por commit/merge sem uma política específica aprovada. `git push` não equivale a deploy.
+2. **Não promover automaticamente produção por commit/merge.** A política de CI/CD proposta permite somente build e revisão **sem tráfego** após Application CI aprovado; a promoção exige despacho manual e aprovação do ambiente protegido, após ativação formal. `git push` não equivale a promover tráfego.
 3. **Não refazer** DNS `199.36.158.100`, SSL ou Hosting a cada versão; a revisão do mesmo serviço é suficiente.
 4. **Não registrar** valores de segredos. A implantação usa a identidade da revisão, sem `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` e sem chave de Monitoring dedicada.
 5. **Não executar** em duplicidade o cron. Sua migração para Cloud Scheduler será tarefa operacional separada, quando a origem for identificada e o `CRON_SECRET` for estabelecido.

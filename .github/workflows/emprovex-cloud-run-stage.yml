@@ -1,0 +1,170 @@
+name: EMPROVEX Cloud Run — stage after Application CI
+
+on:
+  workflow_run:
+    workflows: ["Application CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: emprovex-cloud-run-release
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    name: Build, push and deploy a zero-traffic revision
+    if: >-
+      ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov'
+          && github.event.workflow_run.event == 'push'
+          && github.event.workflow_run.head_branch == 'main'
+          && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PROJECT: gen-lang-client-0982077967
+      REGION: southamerica-east1
+      SERVICE: emprovex-cloudrun-candidate
+      RUNTIME_SA: emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com
+      DEPLOY_SA: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+      WIF_PROVIDER: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+      IMAGE_BASE: southamerica-east1-docker.pkg.dev/gen-lang-client-0982077967/emprovex/emprovex
+
+    steps:
+      - name: Check out the exact successful Application CI SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fail closed if the tested commit is no longer the current main
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REPOSITORY_ID}" == "1286320615" ]] || exit 1
+          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || exit 1
+          remote_main="$(git ls-remote origin refs/heads/main | cut -f1)"
+          [[ "${remote_main}" == "${EXPECTED_SHA}" ]] || {
+            echo "::error::Main advanced since Application CI. A newer run will stage the new SHA."
+            exit 1
+          }
+          [[ -f Dockerfile ]] || exit 1
+          short="${EXPECTED_SHA:0:12}"
+          echo "SOURCE_SHA=${EXPECTED_SHA}" >> "${GITHUB_ENV}"
+          echo "SHORT_SHA=${short}" >> "${GITHUB_ENV}"
+          echo "IMAGE_TAG=${IMAGE_BASE}:${EXPECTED_SHA}" >> "${GITHUB_ENV}"
+          echo "CANDIDATE_TAG=s${short}" >> "${GITHUB_ENV}"
+          echo "REV_SUFFIX=g${short}-${GITHUB_RUN_NUMBER}" >> "${GITHUB_ENV}"
+
+      - name: Build the existing production Dockerfile (no Google credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            --label "org.opencontainers.image.revision=${SOURCE_SHA}" \
+            --tag "${IMAGE_TAG}" .
+
+      - name: Obtain temporary Google credentials through Workload Identity Federation
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+          create_credentials_file: true
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+
+      - name: Confirm current service identity and preserve revision configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud run services describe "${SERVICE}" --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/before.json"
+          jq -e --arg sa "${RUNTIME_SA}" '.spec.template.spec.serviceAccountName == $sa' "${RUNNER_TEMP}/before.json" >/dev/null
+          for key in INFINITEPAY_API_KEY INFINITEPAY_ORDER_SECRET INFINITEPAY_WEBHOOK_TOKEN INFINITEPAY_BILLING_ENABLED EMPROVEX_BILLING_ENFORCEMENT_ENABLED EMPROVEX_BILLING_PUBLIC_ORIGIN; do
+            jq -e --arg key "${key}" '[.spec.template.spec.containers[0].env[]? | select(.name == $key)] | length == 1' "${RUNNER_TEMP}/before.json" >/dev/null
+          done
+          jq -c '[.status.traffic[]? | select((.percent // 0) > 0) | {revisionName,percent}] | sort_by(.revisionName)' "${RUNNER_TEMP}/before.json" > "${RUNNER_TEMP}/before-traffic.json"
+          test "$(jq '[.status.traffic[]? | select((.percent // 0) > 0) | .percent] | add // 0' "${RUNNER_TEMP}/before.json")" -eq 100
+
+      - name: Push immutable SHA-tagged image to Artifact Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker push "${IMAGE_TAG}"
+          digest="$(gcloud artifacts docker images describe "${IMAGE_TAG}" --project="${PROJECT}" --format='value(image_summary.digest)')"
+          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+          echo "IMAGE_DIGEST=${IMAGE_BASE}@${digest}" >> "${GITHUB_ENV}"
+
+      - name: Recheck main before writing a Cloud Run revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git ls-remote origin refs/heads/main | cut -f1)" == "${SOURCE_SHA}" ]] || {
+            echo "::error::Main changed during the build. Refusing to stage a stale revision."
+            exit 1
+          }
+
+      - name: Stage new Cloud Run revision WITHOUT production traffic
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud run deploy "${SERVICE}" \
+            --project="${PROJECT}" --region="${REGION}" \
+            --image="${IMAGE_DIGEST}" \
+            --service-account="${RUNTIME_SA}" \
+            --revision-suffix="${REV_SUFFIX}" \
+            --tag="${CANDIDATE_TAG}" --no-traffic --quiet
+          gcloud run services describe "${SERVICE}" --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/after.json"
+          revision="$(jq -r '.status.latestCreatedRevisionName // empty' "${RUNNER_TEMP}/after.json")"
+          [[ "${revision}" == "${SERVICE}-${REV_SUFFIX}" ]] || exit 1
+          jq -e --arg sa "${RUNTIME_SA}" '.spec.template.spec.serviceAccountName == $sa' "${RUNNER_TEMP}/after.json" >/dev/null
+          if ! cmp -s \
+            <(jq -Sc '(.spec.template.spec.containers[0].env // []) | sort_by(.name)' "${RUNNER_TEMP}/before.json") \
+            <(jq -Sc '(.spec.template.spec.containers[0].env // []) | sort_by(.name)' "${RUNNER_TEMP}/after.json"); then
+            echo "::error::Cloud Run environment configuration unexpectedly changed (values suppressed)."
+            exit 1
+          fi
+          diff -u "${RUNNER_TEMP}/before-traffic.json" \
+            <(jq -c '[.status.traffic[]? | select((.percent // 0) > 0) | {revisionName,percent}] | sort_by(.revisionName)' "${RUNNER_TEMP}/after.json")
+          jq -e --arg revision "${revision}" '[.status.traffic[]? | select(.revisionName == $revision and (.percent // 0) > 0)] | length == 0' "${RUNNER_TEMP}/after.json" >/dev/null
+          preview="$(jq -r --arg tag "${CANDIDATE_TAG}" '.status.traffic[]? | select(.tag == $tag) | .url // empty' "${RUNNER_TEMP}/after.json" | head -1)"
+          [[ "${preview}" == https://* ]] || exit 1
+          echo "REVISION=${revision}" >> "${GITHUB_ENV}"
+          echo "PREVIEW_URL=${preview}" >> "${GITHUB_ENV}"
+
+      - name: Verify candidate health and unauthenticated billing protection
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud run revisions describe "${REVISION}" --project="${PROJECT}" --region="${REGION}" --format=json > "${RUNNER_TEMP}/revision.json"
+          jq -e --arg sa "${RUNTIME_SA}" --arg image "${IMAGE_DIGEST}" \
+            '.spec.serviceAccountName == $sa and .spec.containers[0].image == $image and
+             ([.status.conditions[]? | select(.type == "Ready" and .status == "True")] | length == 1)' \
+            "${RUNNER_TEMP}/revision.json" >/dev/null
+          curl --fail --silent --show-error --retry 4 --retry-delay 3 --max-time 20 \
+            "${PREVIEW_URL}/api/health" >/dev/null
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --max-time 20 "${PREVIEW_URL}/api/billing/portal")"
+          [[ "${status}" == "401" ]] || {
+            echo "::error::Unauthenticated billing route returned HTTP ${status}, expected 401."
+            exit 1
+          }
+          {
+            echo "## EMPROVEX — candidate ready (zero traffic)"
+            echo "- Main SHA: \`${SOURCE_SHA}\`"
+            echo "- Revision: \`${REVISION}\`"
+            echo "- Image: \`${IMAGE_DIGEST}\`"
+            echo "- Preview: ${PREVIEW_URL}"
+            echo "- Production traffic: unchanged"
+            echo "- Next step: run **EMPROVEX Cloud Run — promote approved revision** manually after validating preview."
+          } >> "${GITHUB_STEP_SUMMARY}"
