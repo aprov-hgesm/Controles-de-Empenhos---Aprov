@@ -107,6 +107,8 @@ export function interpret(input:Input):Result {
  let norm=normalize(text).replace(/[.,;:!?]+$/,'').trim(),t=repairSafeWords(norm);work=t.length;
  if(/(?:ignore (?:as |todas as )?instrucoes|system prompt|firebase|firestore|workspaceid|id.?token|token de acesso|credenciais|colecao privada|rode (?:sql|query)|execute (?:sql|query))/i.test(t))
    return finish('OUT_OF_SCOPE','OUT_OF_SCOPE','unknown','UNTRUSTED_INSTRUCTION');
+ if(/\b(?:faca|realize|efetue|processe|execute)\s+(?:(?:um|uma|o|a)\s+)?(?:transferencia|saida|retirada|entrada|ajuste|baixa|exclusao|alteracao|cadastro|lancamento)\b/.test(t))
+   return finish('IN_SCOPE','REJECT_MUTATION','future_operation','READ_ONLY_NO_MUTATIONS');
  const procedure=/^(como|onde posso|qual (?:o )?procedimento|me ensine|explique como)\b/.test(t);
  if(!procedure&&has(t,WORDS.writing))return finish('IN_SCOPE','REJECT_MUTATION','future_operation','READ_ONLY_NO_MUTATIONS');
  if(/(?:construir um foguete|motor de foguete|capital do brasil|previsao do tempo|receita de bolo|resultado do futebol|cotacao da bolsa)/.test(t))
