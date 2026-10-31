@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {values,safeContext,SECRETS,main} from './cloud-run-secret-bridge-r4.mjs';
+import {values,safeContext,SECRETS,main,MIGRATOR_EMAIL} from './cloud-run-secret-bridge-r4.mjs';
 
 const now=Math.floor(Date.now()/1000);
 const claims={iss:'https://oidc.vercel.com/aprov-hgesms-projects',
@@ -10,6 +10,11 @@ const jwt=(c)=>['eyJhbGciOiJub25lIn0',Buffer.from(JSON.stringify(c)).toString('b
 const context={VERCEL:'1',VERCEL_ENV:'production',
   EMPROVEX_R4_TRANSFER_CONFIRMATION:'EMPROVEX_R4_TRANSFER_20261030',
   VERCEL_OIDC_TOKEN:jwt(claims)};
+test('R4: migrator service-account ID is valid and exact',()=>{
+ const id=MIGRATOR_EMAIL.split('@')[0];
+ assert.match(id,/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/);
+ assert.equal(MIGRATOR_EMAIL,'emprovex-r4-migrator@gen-lang-client-0982077967.iam.gserviceaccount.com');
+});
 test('R4: exactly three secret keys',()=>{
  assert.deepEqual(SECRETS.map(x=>x[0]),['INFINITEPAY_API_KEY','INFINITEPAY_ORDER_SECRET','INFINITEPAY_WEBHOOK_TOKEN']);
  const input=Object.fromEntries(SECRETS.map(([k])=>[k,'simulated-not-a-secret-123456']));
