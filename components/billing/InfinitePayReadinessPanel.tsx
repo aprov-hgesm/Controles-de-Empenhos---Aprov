@@ -260,7 +260,7 @@ export function InfinitePayReadinessPanel({
   }, [returnParams, status, context.status, context.status === 'sector' ? context.workspaceId : null]);
 
   const workspaceResolved = context.status === 'sector';
-  const exempt = founderExempt || account?.status === 'exempt';
+  const exempt = account?.status === 'exempt';
   return (
     <div data-testid="infinitepay-regularization-panel" className="mt-5 space-y-5">
       {returnNotice && activeTab === 'payments' && (
