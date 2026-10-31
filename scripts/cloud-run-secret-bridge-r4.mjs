@@ -9,7 +9,7 @@ const TEAM = 'aprov-hgesms-projects';
 const VERCEL_PROJECT = 'controles-de-empenhos-aprov';
 const POOL = 'emprovex-vercel-r4';
 const PROVIDER = 'vercel-production';
-const MIGRATOR_EMAIL = `emprovex-vercel-secret-migrator@${PROJECT_ID}.iam.gserviceaccount.com`;
+const MIGRATOR_EMAIL = `emprovex-r4-migrator@${PROJECT_ID}.iam.gserviceaccount.com`;
 const EXPECTED_SUBJECT = `owner:${TEAM}:project:${VERCEL_PROJECT}:environment:production`;
 const EXPECTED_ISSUER = `https://oidc.vercel.com/${TEAM}`;
 const EXPECTED_AUDIENCE = `https://vercel.com/${TEAM}`;
@@ -113,4 +113,4 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
     process.exitCode=1;
   });
 }
-export {main,safeContext,values,SECRETS};
+export {main,safeContext,values,SECRETS,MIGRATOR_EMAIL};
