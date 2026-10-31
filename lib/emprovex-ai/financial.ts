@@ -28,7 +28,9 @@ function balanceOf(record:Record<string,unknown>, itemId?:string) {
   let committed=0,received=0;
   const calculated=selected.map(item=>{
     const quantity=n(item.quantity),got=n(item.received),price=n(item.unitPrice);
-    if(quantity<0||got<0||price<0||!s(item.unit) || !s(item.id))
+    // Nao mascarar sobre-recebimento como saldo zero: exigir revisao
+    // operacional dos registros antes de oferecer saldo aparentemente valido.
+    if(quantity<0||got<0||got>quantity||price<0||!s(item.unit) || !s(item.id))
       throw new AiExecutionError('AI_COMMITMENT_ITEM_INTEGRITY',503);
     const amount=quantity*price, receivedAmount=got*price;
     if(!Number.isFinite(amount)||!Number.isFinite(receivedAmount))throw new AiExecutionError('AI_FINANCIAL_OVERFLOW',503);

@@ -77,7 +77,7 @@ export function detectConstraints(t:string, explicit:{
  if(intent==='commitment_total_balance'&&!explicit.itemId&&
    /\b(?:por item|do item|referente ao|referente a|relativo ao|saldo de material|saldo do material)\b/.test(t))
    c.push({name:'materialQuery',value:'unresolved_commitment_item'});
- if(/\b(?:no|na|dentro da|dentro do|somente na|somente no)\s+(?:camara fria|deposito(?:\s+[a-z0-9-]+)?|estante\s*\d+|prateleira\s*\d+|freezer|geladeira)\b/.test(t))
+ if(/\b(?:no|na|em|dentro (?:da|do)|somente (?:na|no))\s+(?:camara fria|deposito(?:\s+(?:de\s+)?[a-z0-9-]+(?:\s+[a-z0-9-]+)?)?|almoxarifado|estoque central|area (?:de|do) (?:recebimento|armazenamento)|local de armazenagem|estante\s*\d+|prateleira\s*\d+|posicao\s*[a-z0-9-]+|sala\s+[a-z0-9-]+|setor fisico(?:\s+[a-z0-9-]+)?|freezer|geladeira)\b/.test(t))
    c.push({name:'depotName',value:'location'});
  if((intent==='commitment_total_balance'||intent==='commitment_get')&&
     (/\b(?:restava|tinha saldo|saldo (?:em|no|na|de) (?:ontem|semana passada|mes passado)|na data de)\b/.test(t)||
@@ -87,7 +87,7 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'comparison',value:'comparison'});
  if(/\b(?:acima de|maior que|maior do que|abaixo de|menor que|pelo menos)\s*(?:r\s*\$?\s*|\d)/.test(t))
    c.push({name:'quantityThreshold',value:'threshold'});
- if(/\b(?:(?:somente|apenas|so) (?:os |as )?(?:vencidos|vencidas|pendentes|atrasados|atrasadas))\b/.test(t))
+ if(/\b(?:nao\s+)?(?:pag[ao]s?|liquidad[ao]s?|pendentes?|atrasad[ao]s?|entregues?|recebid[ao]s?|concluid[ao]s?|cancelad[ao]s?|vencid[ao]s?|quitad[ao]s?|inadimplentes?)\b|\b(?:parcialmente\s+(?:atendid[ao]s?|entregues?|recebid[ao]s?|liquidad[ao]s?))\b|\bem\s+aberto\b/.test(t))
    c.push({name:'status',value:'filtered'});
  return c;
 }

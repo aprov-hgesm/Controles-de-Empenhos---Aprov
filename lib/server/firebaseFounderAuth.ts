@@ -19,7 +19,26 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
   const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
   const localEmulator = emulatorHost === '127.0.0.1:9099' || emulatorHost === 'localhost:9099';
 
-  if (!enabled || !localEmulator || !projectId.startsWith('demo-')) return null;
+  // O decodificador de JWT do emulador so pode existir no processo
+  // iniciado como Next dev e limitado a loopback. Nao basta declarar flags.
+  // Hospedagem conhecida ou identidade desconhecida => verificar RS256.
+  const hosted = Boolean(
+    process.env.VERCEL || process.env.VERCEL_ENV || process.env.K_SERVICE
+    || process.env.K_REVISION || process.env.K_CONFIGURATION
+    || process.env.GAE_SERVICE || process.env.KUBERNETES_SERVICE_HOST
+    || process.env.FUNCTION_TARGET || process.env.AWS_EXECUTION_ENV
+    || process.env.WEBSITE_SITE_NAME || process.env.RENDER || process.env.FLY_APP_NAME
+  );
+  const args = process.argv.slice(1);
+  const dev = args.some(arg => /(?:^|[\\/])next(?:\.js)?$/.test(arg))
+    && args.includes('dev');
+  const hostIndex = args.indexOf('--hostname');
+  const loopbackBind = hostIndex >= 0 && args[hostIndex+1] === '127.0.0.1';
+  const localOnly = process.env.NODE_ENV === 'development'
+    && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
+    && !hosted && dev && loopbackBind;
+
+  if (!enabled || !localEmulator || !projectId.startsWith('demo-') || !localOnly) return null;
 
   return {
     projectId,

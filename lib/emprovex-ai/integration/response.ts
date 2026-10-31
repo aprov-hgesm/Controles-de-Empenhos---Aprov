@@ -13,7 +13,7 @@ function money(value:unknown):string {
  return typeof value==='number'&&Number.isFinite(value)
    ?new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value):'não informado';
 }
-function list(v:unknown):Record<string,unknown>[] {return Array.isArray(v)?v.slice(0,5).map(row):[];}
+function list(v:unknown):Record<string,unknown>[] {return Array.isArray(v)?v.map(row):[];}
 function unit(v:unknown):string {return text(typeof v==='string'?v:row(v).code||row(v).label||row(v).name);}
 function formatDate(v:unknown):string {
  const s=text(v);if(!s)return 'não informada';
