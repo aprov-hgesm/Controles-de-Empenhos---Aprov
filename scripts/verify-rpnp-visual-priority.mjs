@@ -21,7 +21,19 @@ assert(!exercise.includes('classification:') || !exercise.includes('classificati
 assert(dashboard.includes('::RPNP'), 'Dashboard precisa manter segmento RPNP separado da classe-base.');
 assert(dashboard.includes('Saldo RPNP prioritário'), 'Dashboard precisa expor o saldo RPNP prioritário.');
 assert(dashboard.includes('Restos a Pagar Não Processados'), 'Dashboard precisa identificar semanticamente RPNP.');
-assert(dashboard.includes('matchesClassSegment'), 'Cálculos do Dashboard precisam respeitar o segmento RPNP.');
+// O Dashboard R3 projeta linhas a partir dos buckets por segmento já classificados.
+// Validar a cadeia que constrói e consome esses buckets, sem exigir a antiga
+// função matchesClassSegment, removida na otimização de leitura.
+assert(
+  dashboard.includes("const segment = getEmpenhoBaseClassification(emp) + (rpnp ? '::RPNP' : '');")
+  && dashboard.includes('bySegment.set(segment, entry);')
+  && dashboard.includes('entry.records.push(emp);')
+  && dashboard.includes('entry.committed += committed;')
+  && dashboard.includes('entry.received += received;')
+  && dashboard.includes('const rawClassEmpenhos = getSegment(cls.key)?.records ?? [];')
+  && /projectDashboardRows\(\s*rawClassEmpenhos,/.test(dashboard),
+  'Cálculos do Dashboard precisam respeitar o segmento RPNP.'
+);
 assert(dashboard.includes('Prioridade'), 'Dashboard precisa manter destaque discreto de prioridade.');
 
 assert(empenhos.includes('compareEmpenhosByRpnpPriority'), 'A aba Empenhos precisa ordenar RPNP primeiro.');
