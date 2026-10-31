@@ -168,7 +168,7 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
 }
 
 export async function getGoogleAccessToken(): Promise<string> {
-  // Cloud Run uses its attached service identity; Vercel keeps the proven JWT flow.
+  // Cloud Run uses the attached identity; private-key JWT remains only for non-Cloud-Run contingency/local runtimes.
   if (isCloudRunRuntime()) return getCloudRunAccessToken();
   const now = Date.now();
   if (accessTokenCache && accessTokenCache.expiresAt - 60_000 > now) {
