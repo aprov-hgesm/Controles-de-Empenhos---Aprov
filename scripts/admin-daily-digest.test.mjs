@@ -21,7 +21,7 @@ test('aggregates billing states without guessing cash revenue', () => {
   assert.match(report.text, /Verificações HTTPS bem-sucedidas: 90%/);
   assert.match(report.text, /Em dia: 1 \| Trial: 1/);
   assert.match(report.text, /Erros HTTP 5xx no Cloud Run: 2/);
-  assert.match(report.text, /1 ciclos marcados pagos/);
+  assert.match(report.text, /1 ciclos registrados como pagos/);
   assert.doesNotMatch(report.text, /R\$\s*\d+/);
 });
 
@@ -30,7 +30,7 @@ test('unknown data is marked unavailable rather than zero', () => {
     day: '2026-11-01', now: '2026-11-01T21:00:00Z',
     accounts: null, cycles: null, usage: null, uptime: null, errors5xx: null,
   });
-  assert.match(report.text, /indisponiveis/);
+  assert.match(report.text, /indisponíveis/);
   assert.match(report.text, /Não interpretar como zero/);
   assert.match(report.text, /sem medicao confiavel/);
 });
