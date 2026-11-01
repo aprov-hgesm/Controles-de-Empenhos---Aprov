@@ -13,6 +13,7 @@ import {
   LogOut,
   Package,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   UserRound,
   X,
@@ -32,7 +33,8 @@ export type AppTab =
   | 'relatorios'
   | 'itens_empenho'
   | 'cronogramas'
-  | 'avisos';
+  | 'avisos'
+  | 'eleonor';
 
 interface AppSidebarProps {
   activeTab: AppTab;
@@ -252,6 +254,20 @@ export function AppSidebar({
                     </span>
                   )}
                 </span>
+              </button>
+            </div>
+
+            <div className="emprovex-sidebar-nav-group" role="group" aria-label="Assistente inteligente" data-nav-group="assistant">
+              <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true">
+                <span>Inteligência operacional</span>
+              </div>
+              <button type="button" data-testid="nav-eleonor"
+                onClick={() => onNavigate('eleonor')}
+                className="emprovex-sidebar-nav-item"
+                data-active={activeTab === 'eleonor' ? 'true' : 'false'}
+                aria-current={activeTab === 'eleonor' ? 'page' : undefined}>
+                <Sparkles className="h-5 w-5" aria-hidden="true" />
+                <span>Eleonor · Assistente AI</span>
               </button>
             </div>
 
