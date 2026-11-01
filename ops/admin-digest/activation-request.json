@@ -10,7 +10,7 @@
   "schedule": "0 18 * * *",
   "sendTestNow": true,
   "activateDaily18h": true,
-  "activationAttempt": 4,
+  "activationAttempt": 5,
   "activationStrategy": "existing-approved-promotion-workflow",
-  "permissionFix": "secretAccessor granted to the two Gmail secrets; Cloud Scheduler API enabled successfully by admin"
+  "permissionFix": "Gmail secrets reader + Cloud Scheduler API + temporary roles/cloudscheduler.admin on GitHub deployer confirmed by administrator"
 }
