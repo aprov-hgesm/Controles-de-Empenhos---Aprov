@@ -17,7 +17,7 @@ export function usePlatformBranding() {
 
   useEffect(() => {
     let active = true;
-    const staticLogo = process.env.NEXT_PUBLIC_EMPROVEX_LOGO_URL?.trim() || '';
+    const staticLogo = process.env.NEXT_PUBLIC_EMPROVEX_LOGO_URL?.trim() || '/emprovex-logo.png?v=20261101';
     const cacheKey = 'emprovex:branding-logo:v1';
 
     if (staticLogo) {

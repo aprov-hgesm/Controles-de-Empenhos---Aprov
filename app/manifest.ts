@@ -15,19 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     prefer_related_applications: false,
     icons: [
       {
-        src: '/api/install-icon/192',
+        src: '/api/install-icon/192?v=20261101',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/api/install-icon/512',
+        src: '/api/install-icon/512?v=20261101',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/api/install-icon/512?maskable=1',
+        src: '/api/install-icon/512?maskable=1&v=20261101',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
