@@ -7,6 +7,7 @@ import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
 import { WarehouseAccessBoundary } from '../../features/warehouse/components/WarehouseProtectedSurface';
 import { useVisualMode } from '../../components/visual-mode/VisualModeProvider';
 import type { SectorWorkspaceContext } from '../../lib/workspaceContext';
+import { AlmoxSiscofisWorkbench } from '../../features/almoxarifado/components/AlmoxSiscofisWorkbench';
 
 type PortalSection =
   | 'inicio' | 'empenhos' | 'notas-fiscais' | 'cronogramas'
@@ -21,7 +22,7 @@ const SECTIONS: { id: PortalSection; label: string; available: boolean; summary:
   { id: 'consulta-itens', label: 'Consulta de Itens', available: false, summary: 'Integração de catálogo e regras de unidade pendente.' },
   { id: 'depositos', label: 'Central de Depósitos', available: true, summary: 'Estrutura física, materiais, saldos e localização por workspace.' },
   { id: 'relatorios', label: 'Relatórios', available: false, summary: 'Modelos de relatórios precisam excluir conteúdo alimentar específico.' },
-  { id: 'siscofis', label: 'Pedidos SISCOFIS', available: false, summary: 'Reservado para os Workers W2, W3, W4 e integração W5.' },
+  { id: 'siscofis', label: 'Pedidos SISCOFIS', available: true, summary: 'Conferência técnica com fixtures sintéticas; importação real e saída auxiliar indisponíveis.' },
 ];
 
 function AlmoxPortal({ context }: { context: SectorWorkspaceContext }) {
@@ -92,6 +93,7 @@ function AlmoxPortal({ context }: { context: SectorWorkspaceContext }) {
               <a href="/central-depositos" className="inline-block rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-500">Abrir Central de Depósitos</a>
             </div>
           )}
+          {selected === 'siscofis' && <AlmoxSiscofisWorkbench />}
           {!active.available && <p className="mt-5 rounded-lg border border-amber-300/20 bg-amber-100/5 p-3 text-sm text-amber-100">Ainda não habilitado para operação no Almoxarifado. Nenhum dado será alterado nesta tela.</p>}
           {selected === 'depositos' && <a href="/central-depositos" className="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold">Acessar depósitos</a>}
         </section>
