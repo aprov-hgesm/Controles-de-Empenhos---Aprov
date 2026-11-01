@@ -1,8 +1,6 @@
 name: EMPROVEX Almoxarifado W9 R1-D - integrated pilot QA
 
 on:
-  push:
-    branches: [integration/emprovex-almox-r1d-w9-pilot]
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]

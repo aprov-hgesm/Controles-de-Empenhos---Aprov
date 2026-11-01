@@ -24,7 +24,7 @@ test('W9 - usuário Almoxarifado no Firebase Emulator: login, módulos e logout'
   const nav = page.getByRole('navigation',{name:'Navegação Almoxarifado'});
   for(const label of ['Empenhos','Notas Fiscais','Cronogramas','Fornecedores','Consulta de Itens','Materiais','Relatórios']){
     await nav.getByRole('button',{name:label,exact:true}).click();
-    await expect(page.getByRole('heading',{name:label,exact:true})).toBeVisible({timeout:45000});
+    await expect(page.locator('main[data-testid="almoxarifado-portal"] > div > section > h2')).toHaveText(label,{timeout:45000});
     await expect(page.getByText('em preparação',{exact:false})).toHaveCount(0);
     if (['Fornecedores','Consulta de Itens','Materiais'].includes(label)){
       await expect(page.locator('[data-testid^="almox-w7-"]')).toBeVisible({timeout:60000});

@@ -223,6 +223,8 @@ try {
       {
         ...process.env,
         EMPROVEX_E2E_BASE_URL: appBase,
+        // Firebase CLI fornece GCLOUD_PROJECT; helper de testes exige o alias explícito.
+        GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '',
       }
     );
   }
