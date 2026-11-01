@@ -29,6 +29,8 @@ import {
   type PlatformAccount,
   type SectorAccount,
   type Workspace,
+  type PlatformWorkspace,
+  isSectorWorkspace,
 } from './platformIdentity';
 import { buildSectorInstitutionalProfile } from './sectorProvisioning';
 export type { CreateSectorWorkspaceInput } from './sectorProvisioning';
@@ -381,7 +383,8 @@ export function subscribePlatformAdminDirectory(
     collection(db, WORKSPACES_COLLECTION),
     (snapshot) => {
       workspaces = snapshot.docs
-        .map((item) => item.data() as Workspace)
+        .map((item) => item.data() as PlatformWorkspace)
+        .filter(isSectorWorkspace)
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
       emit();
     },
@@ -391,7 +394,7 @@ export function subscribePlatformAdminDirectory(
   const unsubscribeAccounts = onSnapshot(
     collection(db, PLATFORM_ACCOUNTS_COLLECTION),
     (snapshot) => {
-      accounts = snapshot.docs.map((item) => item.data() as PlatformAccount);
+      accounts = snapshot.docs.map((item) => item.data() as PlatformAccount).filter((account) => account.accountType !== 'company');
       emit();
     },
     (error) => onError(error)

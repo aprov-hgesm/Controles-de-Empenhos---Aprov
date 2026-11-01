@@ -692,3 +692,23 @@ Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coorden
 **Aceite proporcional ao risco:** testes de TypeScript/build, cadastro de cada modalidade em Auth/Firestore Emulator, isolamento de workspaces mesmo com UG igual, CNPJ único, UID/e-mail autorizado, conta desativada, fallback legado, admin/fundador por senha, rota correta, tentativa de URL cruzada, negação de company no Warehouse setorial, e ausência de cobrança/trial assumidos. Publicação de Rules, merge, migração e Cloud Run exigem decisão posterior. Não usar dados reais para contornar pendências.
 
 **Referências no momento da decisão:** W1 R0.1 PR #436 SHA baa5cde3957cb00b40bec9e1a250621a15cc4e06; W5 R1-C PR #441 SHA d89781d5347d04173af98bcc50c71d99bfb8f663 (GO CONDICIONAL técnico, saída desabilitada); Empresas PR #419 SHA 2281ac7deddc5271354e1f1faef441bc17246472 (DRAFT, não integrada). Esta seção é **exclusivamente documental**. Nenhum handoff W0–W5 foi modificado.
+
+
+---
+
+### 13.6. Handoff transversal — Integrador Admin e Identidade R1 (31/10/2026 BRT)
+
+**PR DRAFT #447:** feat/emprovex-admin-identity-unified-r1, baseada na PR documental #444, originada do W5 R1-C PR #441, SHA de código certificado `7541b4c51b267b2122fdbde8022a07a762656214`. A PR continua **sem merge, deploy ou publicação**.
+
+**Missão realizada:** cadastro único "Cadastrar cliente" com seletor de Aprovisionamento, Almoxarifado e Empresa; reaproveita AdminCreateSectorPanel da PR #436 e AdminCreateCompanyPanel/serviços empresariais da PR #419, sem terceiro sistema de provisionamento. Mantém AdminCompaniesPanel e diretório empresarial próprios, com distinção de dados comerciais e setoriais.
+
+**Identidade reconciliada:** accountType sector + sectorType aprovisionamento/almoxarifado e accountType company + workspaceType company. Ausência de sectorType somente em conta sector é compatibilidade legada de Aprovisionamento. Company sem UG, sem claims Warehouse setoriais nem assinatura/trial herdados. A seleção do Admin não é fonte de autorização; o servidor confere identidade Firebase, UID, conta, status e workspace. Mesmo UG pode aparecer em dois workspaces setoriais diferentes sem acesso cruzado.
+
+**Correção de login do fundador:** lib/platformIdentity.ts mantém FOUNDER_AUTH_PROVIDER=password, com Google compatível no backend Firebase, mas o botão "Entrar com Google — HGeSM" deixou de ser exibido. O /login passou a resolver a sessão company via /api/company/session antes de montar o shell operacional, que foi extraído sem alterar as regras de setor e assinatura para app/login/OperationalEntry.tsx. Company entra em /empresa, Almox em /almoxarifado, Aprovisionamento em /central-empenhos, Admin em /admin após resolução autorizada. Não reutilizar versões antigas de login da PR #419 sem reconciliação.
+
+**Evidências de código:** TypeScript integral PASS, sete testes dirigidos de identidade/cadastro PASS e build integral PASS no workflow isolado "EMPROVEX Admin e Identidade R1" (SHA de código acima). Fast CI, Core Protection, Auth/tenant, Warehouse/3D, documentos, transações e testes de isolamento setorial Firebase/Firestore Emulator PASS na mesma revisão conforme checks GitHub. Browser E2E deve ser conferido no estado atual da PR, sem presumir aprovação antes de seu check definitivo. Os sete testes combinam contratos puros e inspeções estáticas; **não** representam homologação de provisionamento company real nem E2E empresarial com Auth Emulator.
+
+**Pendências e limites:** QA independente da criação e login de empresa (CNPJ único, UID, rollback, contas desativadas, workspace de empresa, rotas e leitura de API); revisão de Firestore Rules/índices, permissões Cloud Run e fluxo de recuperação; homologação com conta QA e testes de não regressão quando publicar. Nenhuma alteração nas Rules ou nos motores W2–W5; importação SISCOFIS real e baixa permanecem desabilitadas. **GO CONDICIONAL para integração técnica; NO-GO para merge/main, publicação e produção sem QA empresarial específica.** Não presumir políticas comerciais de empresa e Almox.
+
+**Documentação sincronizada:** checkpoint R1 do memorial EMPROVEX Empresas, nesta mesma PR. A PR #444 permanece documental, e W5 PR #441 com SHA d89781d5347d04173af98bcc50c71d99bfb8f663 não foi modificado. Preservados os handoffs W0–W5 nesta seção.
+
