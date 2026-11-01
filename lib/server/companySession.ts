@@ -15,6 +15,24 @@ const DB_ROOT = 'https://firestore.googleapis.com/v1/projects/'
 const IDENTITY_LOOKUP = 'https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='
   + encodeURIComponent(firebaseConfig.apiKey);
 
+/**
+ * Isolamento estrito: tokens do Firebase Auth Emulator nunca devem ser enviados
+ * aos serviços reais de Auth/Firestore. Fora da suíte demo, somente os serviços
+ * oficiais são consultados. Nenhum host variável não-local é aceito aqui.
+ */
+function e2eEmulators(): { auth: string; firestore: string; projectId: string } | null {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH !== '1') return null;
+  const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
+  const auth = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
+  const firestore = process.env.FIRESTORE_EMULATOR_HOST?.trim() || '';
+  if (
+    !projectId.startsWith('demo-')
+    || !['127.0.0.1:9099', 'localhost:9099'].includes(auth)
+    || !['127.0.0.1:8080', 'localhost:8080'].includes(firestore)
+  ) return null;
+  return { auth, firestore, projectId };
+}
+
 type FireValue = {
   stringValue?: string;
   mapValue?: { fields?: Record<string, FireValue> };
@@ -62,8 +80,13 @@ async function readDirectoryDocument(
   collection: 'platformAccounts' | 'workspaces',
   documentId: string
 ): Promise<FireDocument | null> {
-  const result = await fetch(DB_ROOT + '/' + collection + '/' + encodeURIComponent(documentId), {
-    headers: { authorization: 'Bearer ' + serviceToken },
+  const emulator = e2eEmulators();
+  const root = emulator
+    ? 'http://' + emulator.firestore + '/v1/projects/' + encodeURIComponent(emulator.projectId)
+      + '/databases/(default)/documents'
+    : DB_ROOT;
+  const result = await fetch(root + '/' + collection + '/' + encodeURIComponent(documentId), {
+    headers: emulator ? {} : { authorization: 'Bearer ' + serviceToken },
     cache: 'no-store',
   });
   if (result.status === 404) return null;
@@ -72,10 +95,21 @@ async function readDirectoryDocument(
 }
 
 async function verifyActiveFirebaseUser(token: string, uid: string, email: string): Promise<void> {
-  const response = await fetch(IDENTITY_LOOKUP, {
+  const emulator = e2eEmulators();
+  // O token já foi verificado por verifyFirebaseRequest (issuer/audience/expiry).
+  // No Emulator, conferir adicionalmente UID, e-mail, status e verificação no
+  // diretório local de Auth, sem enviar token demo à API de produção.
+  const lookupUrl = emulator
+    ? 'http://' + emulator.auth + '/identitytoolkit.googleapis.com/v1/projects/'
+      + encodeURIComponent(emulator.projectId)
+      + '/accounts:lookup?key=' + encodeURIComponent(firebaseConfig.apiKey)
+    : IDENTITY_LOOKUP;
+  const response = await fetch(lookupUrl, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ idToken: token }),
+    headers: emulator
+      ? { 'content-type': 'application/json', authorization: 'Bearer owner' }
+      : { 'content-type': 'application/json' },
+    body: JSON.stringify(emulator ? { localId: [uid] } : { idToken: token }),
     cache: 'no-store',
   });
   if (!response.ok) throw new CompanyAccessError('COMPANY_AUTH_INVALID', 401);
@@ -113,7 +147,9 @@ export async function verifyCompanySession(authorization: string | null): Promis
   await verifyActiveFirebaseUser(verified.idToken, verified.uid, verified.email);
   let serviceToken: string;
   try {
-    serviceToken = await getGoogleAccessToken();
+    // No E2E, o diretório lido é somente o Firestore Emulator demo. Jamais
+    // obter credenciais de produção ou tocar o banco real neste caminho.
+    serviceToken = e2eEmulators() ? '' : await getGoogleAccessToken();
   } catch {
     throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
   }
