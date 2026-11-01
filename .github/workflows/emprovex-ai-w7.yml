@@ -1,0 +1,41 @@
+name: EMPROVEX AI W7 — Eleonor conversational certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/emprovex-ai/**'
+      - 'app/api/emprovex-ai/**'
+      - 'scripts/emprovex-ai-w7.test.mjs'
+      - 'docs/EMPROVEX_AI_CONVERSATIONAL_ENGINE_R1.md'
+      - '.github/workflows/emprovex-ai-w7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-w7-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  isolated-certification:
+    name: TypeScript + W7 + W6/W5 focused regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON: ''
+      GOOGLE_APPLICATION_CREDENTIALS: ''
+      EMPROVEX_AI_W7_GENERATIVE_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Synthetic W7 & W6/W5 security tests
+        run: node --test scripts/emprovex-ai-w7.test.mjs scripts/emprovex-ai-w6.test.mjs scripts/emprovex-ai-w5-security.test.mjs
+      - name: Confirm no cloud credentials
+        run: |
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test -z "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON"
