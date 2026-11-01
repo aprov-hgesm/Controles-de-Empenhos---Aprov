@@ -523,6 +523,30 @@ O adendo deve conter os seguintes campos com evidências rastreáveis:
 
 ---
 
+#### W1 — Fundação, identidade, provisionamento e portal operacional (31/10/2026)
+
+**Entrega no GitHub:** [PR DRAFT #436](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/436); branch `feat/emprovex-almox-r0-w1-foundation`, base `main` `35825d5ad563361fecd1b3d2a00ca81a4734e532`. A PR é a fonte de verdade do **SHA final (`head.sha`)**, atualizado após este próprio adendo. SHA de checkpoint de código/documentação pré-handoff: `675a8ebd153fb3b1035777ac7d32832afd1e2134`. Um commit não pode conter o seu próprio hash final no conteúdo que o determina; consultar o `head.sha` da PR para a referência exata mais recente. Memorial R0.2 e adendo W0 foram copiados integralmente da branch da PR #435; PR documental #434 continua em DRAFT. Nenhum merge/cherry-pick da #419 (Empresas).
+
+**Implementações persistidas na branch W1, NÃO em produção:**
+- Modelo `accountType=sector` e `sectorType` (Aprovisionamento ou Almoxarifado), com fallback para Aprovisionamento quando ausente; validação estrutural em conta/workspace e verificação da coincidência de modalidade.
+- Provisionamento administrativo de Almoxarifado com UID Firebase, e-mail autorizado, OM, sigla, UG e workspace setorial próprio, reutilizando código de cadastro. A separação de índices/locks por modalidade permite a mesma UG em dois workspaces, sem usá-la como chave de autorização. Nenhum trial/cobrança do Aprovisionamento é criado para Almoxarifado, cuja política comercial permanece indefinida.
+- Contexto autenticado com UID, status, workspace e modalidade conferidos; gate da Central de Depósitos preserva verificação server-side e valida modalidade correspondente de conta e workspace. Login existente conserva senha do fundador e compatibilidade Google no backend, sem botão Google novamente exposto. Redirecionamentos: Admin `/admin`, setor legado `/central-empenhos`, Almox `/almoxarifado`; empresas não habilitadas automaticamente.
+- Portal `/almoxarifado` protegido, com modo Normal/Essencial, início e acesso ao núcleo compartilhado da Central de Depósitos; nove destinos preparados. Empenhos, NF, cronogramas, fornecedores, consulta de itens, relatórios e pedidos SISCOFIS **ainda não foram homologados como operacionais para Almox** e são apresentados como preparação. O portal não expõe CREM/TREM/comissão QR. Reuso integral das telas financeiras/fluxos sem elementos alimentares **é pendência**, não resultado certificado.
+- Contrato tipado único R1 em `lib/almoxarifado/contracts.ts`: `ImportedRequestV1`, `RequestLineV1`, `MaterialCorrespondenceV1`, `PhysicalPositionV1`, `SeparationPlanV1`, `SeparationSheetV1`, `SeparationPdfResultV1`, erros `TypedIssueV1`. Sem importador, planejador, gerador PDF ou baixa/ledger implementados.
+- Proposta de `firestore.rules` em **código da PR apenas** para aceitar e conferir `sectorType` e reservar índice auxiliar. **Nenhuma Rule foi aplicada ou publicada**. Requer simulação no Emulator, revisão das invariantes da Rules publicada e aprovação específica antes de provisionamento real.
+
+**Arquivos alterados/criados:** `lib/platformIdentity.ts`, `lib/workspaceContext.ts`, `lib/sectorProvisioning.ts`, `lib/platformAccess.ts`, `lib/server/sectorProvisioningAdmin.ts`, `lib/platformAdminStore.ts`, `components/admin/AdminCreateSectorPanel.tsx`, `lib/sectorBillingGate.ts`, `lib/server/warehouseAccess.ts`, `app/login/page.tsx`, `features/warehouse/components/WarehouseProtectedSurface.tsx`, `app/almoxarifado/page.tsx` (novo), `lib/almoxarifado/contracts.ts` (novo), `firestore.rules` (somente proposta), `scripts/emprovex-almox-w1.test.mjs` (novo), este memorial. Nenhum arquivo dos motores W2–W5 alterado.
+
+**Testes e evidências — distinção obrigatória:** 15/15 verificações **textuais, em leitura de arquivos efetivamente presentes no GitHub**, PASS (fallback, discriminador, UID/status, índices UG por modalidade, ausência de cobrança herdada, proteção de portal, roteamento, contrato, Rules e integridade do W0). Foi adicionado `scripts/emprovex-almox-w1.test.mjs`, porém **sua execução não foi comprovada**. `node --test scripts/emprovex-almox-w1.test.mjs`, `npm run typecheck`, `npm run build`, testes do Firestore Emulator, login do fundador, setor legado, Almox QA, duas modalidades na mesma UG, contas desativadas, trocas de URL, APIs e navegação requerem execução real; **não registrar PASS** para esses cenários. Nenhuma conta QA real foi provisionada ou alterada.
+
+**Riscos bloqueantes P0:** (1) TypeScript/build/CI e emulator/Auth QA não certificados; (2) Rules alteradas na PR mas não homologadas/publicadas — provisionamento ou atualizações de contas com `sectorType` podem falhar contra Rules vigentes; (3) reuso das interfaces financeiras para Almox e eliminação de operações alimentares não concluídos; (4) integrações de navegação direta/warehouse e cobranças futuras precisam homologação por modalidade; (5) PR Empresas #419 permanece isolada e não homologa `company` nem `/empresa`. Verificar em especial o índice de UG separado, a consistência de proteção no servidor e o ramo legável de login ao integrar na main.
+
+**Parecer W1: NO-GO para ativar W2, W3 e W4 neste checkpoint.** O esqueleto foi implementado e o contrato R1 definido, mas **não congelado/homologado** sem TypeScript, build, emulador, regressão e resolução dos bloqueios citados. A sequência é correção/homologação direcionada no **mesmo W1/PR #436**, sem iniciar W2–W5. Reavaliar então GO/GO CONDICIONAL. Não afirmar produção pronta nem expandir escopo.
+
+**Evidência de ausência de publicação e integração:** PR #436 criada em `DRAFT`, alvo `main`, alteração restrita à branch; nenhuma operação de merge, deploy, Cloud Run, IAM, DNS, Firebase Auth real, faturamento ou publicação de Firestore Rules foi executada neste Worker. Consultar PR #436 e diff para confirmação atualizada. Handoff persistido diretamente neste memorial no commit final da PR.
+
+---
+
 ### 13.4. Procedimento de verificação por mensagem curta
 
 Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coordenador deverá:
