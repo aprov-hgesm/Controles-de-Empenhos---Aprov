@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import firebaseConfig from '../../../../firebase-applet-config.json';
 import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningAdmin';
 import { createRequestSecurityContext, enforceBestEffortBurstLimit, readBoundedJsonRequest } from '../../../../lib/server/requestSecurity';
+import { recordRepeatAccessRequest } from '../../../../lib/server/accessRequestSupport';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,9 +38,10 @@ export async function POST(request: Request) {
     }
     const id = createHash('sha256').update(email).digest('hex');
     const now = new Date().toISOString();
-    const api = 'https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(firebaseConfig.projectId)
+    const baseUrl = 'https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(firebaseConfig.projectId)
       +'/databases/'+encodeURIComponent(firebaseConfig.firestoreDatabaseId)
-      +'/documents/platformAccessRequests?documentId='+id;
+      +'/documents/platformAccessRequests';
+    const api = baseUrl + '?documentId=' + id;
     const token = await getGoogleAccessToken();
     const saved = await fetch(api, {
       method: 'POST', cache: 'no-store',
@@ -50,10 +52,18 @@ export async function POST(request: Request) {
         whatsapp: field(whatsapp), source: field('emprovex-institucional'),
         status: field('novo'), createdAt: { timestampValue: now },
         updatedAt: { timestampValue: now },
+        lastRequestedAt: { timestampValue: now },
       }}),
     });
-    // Formulário idempotente por e-mail: repetição não altera o histórico do atendimento.
-    if (saved.status === 409 || saved.ok) return NextResponse.json({ ok: true }, { headers: {'Cache-Control':'no-store'} });
+    // Identificação por hash permanece estável: sem duplicar interessado ou reabrir status.
+    // Uma nova tentativa só altera o marcador após 24h, com precondição Firestore CAS.
+    // A resposta externa nunca indica se o e-mail já existia.
+    if (saved.status === 409) {
+      try { await recordRepeatAccessRequest(baseUrl, id, token, now); }
+      catch { /* Registro de reenvio é best-effort; nenhuma enumeração pública. */ }
+      return NextResponse.json({ ok: true }, { headers: {'Cache-Control':'no-store'} });
+    }
+    if (saved.ok) return NextResponse.json({ ok: true }, { headers: {'Cache-Control':'no-store'} });
     console.error('EMPROVEX_PUBLIC_LEAD_WRITE_FAILED', { status: saved.status, requestId: security.requestId });
     return NextResponse.json({ ok: false, error: 'Não foi possível receber a solicitação. Tente novamente.' }, { status: 503 });
   } catch (error) {

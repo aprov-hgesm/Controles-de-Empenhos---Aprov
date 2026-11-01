@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import { usePathname } from 'next/navigation';
 
@@ -27,6 +27,12 @@ import { WarehouseTabContent } from './WarehouseTabContent';
 import { WarehouseSectionLoading } from './WarehouseSectionLoading';
 import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
+const EmprovexHelpOverlay = lazy(() =>
+  import('../../support/EmprovexHelpOverlay').then(module => ({
+    default: module.EmprovexHelpOverlay,
+  }))
+);
+
 export function WarehouseModuleShell({
   children,
   workspaceContext,
@@ -37,6 +43,7 @@ export function WarehouseModuleShell({
   const pathname = usePathname();
   const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<WarehouseSectionId>(
     () => getWarehouseSectionForPathname(pathname).id
   );
@@ -195,6 +202,7 @@ export function WarehouseModuleShell({
           userDisplayName={userDisplayName}
           showMobileAccess={showMobileAccess}
           onClose={() => setSidebarOpen(false)}
+          onOpenHelp={() => { setHelpOpen(true); setSidebarOpen(false); }}
           onNavigate={navigateWarehouseTab}
           onLogout={handleLogout}
         />
@@ -259,6 +267,11 @@ export function WarehouseModuleShell({
           </footer>
         </main>
       </div>
+      {helpOpen && (
+        <Suspense fallback={<WarehouseSectionLoading />}>
+          <EmprovexHelpOverlay initialTopic="depositos" onClose={() => setHelpOpen(false)} />
+        </Suspense>
+      )}
       </div>
     </WarehouseTabNavigationProvider>
   );
