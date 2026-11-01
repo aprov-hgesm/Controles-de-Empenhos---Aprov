@@ -23,6 +23,7 @@ const SURFACE_LABELS: Record<OperationalActiveTab, string> = {
   itens_empenho: 'ITENS DO EMPENHO',
   cronogramas: 'CRONOGRAMAS',
   avisos: 'CENTRAL DE AVISOS',
+  eleonor: 'ELEONOR',
 };
 
 export function OperationalSurfaceTransition({
