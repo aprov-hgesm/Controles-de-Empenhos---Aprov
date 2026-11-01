@@ -668,3 +668,27 @@ Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coorden
 5. Se nenhum handoff estiver persistido, reportar "**handoff não localizado no GitHub**", sem presumir conclusão.
 
 **Regra de coordenação:** o memorial continua sendo a fonte do planejamento e histórico de Worker; PRs e commits fornecem a evidência material. Nunca exigir novo relato manual se houver acesso ao repositório.
+
+
+---
+
+### 13.5. Decisão executiva transversal — Cadastro Unificado de Clientes no Admin (31/10/2026)
+
+**DECISÃO APROVADA PELO RESPONSÁVEL DO PRODUTO; IMPLEMENTAÇÃO AINDA PENDENTE.** Reaproveitar os cadastros das PRs **#436 (Aprovisionamento/Almoxarifado)** e **#419 (Empresas)**, oferecendo **uma única entrada "Cadastrar cliente" no painel Admin**, com escolha da modalidade e formulário específico. Esta decisão coordena as fundações e não modifica o escopo técnico certificado do W5 R1-C. Manter o memorial oficial do EMPROVEX Empresas sincronizado com esta decisão.
+
+**Identidade e fluxo pretendidos:**
+- **Aprovisionamento:** accountType='sector', sectorType='aprovisionamento', workspace setorial, UG, OM e e-mail autorizado; destino /central-empenhos.
+- **Almoxarifado:** accountType='sector', sectorType='almoxarifado', workspace setorial **distinto**, UG/OM e e-mail autorizado; destino /almoxarifado.
+- **Empresa fornecedora (cliente do SaaS):** accountType='company', workspaceType='company', CNPJ, razão social, contatos, e-mail/UID e workspace empresarial próprio, **sem UG setorial**; destino /empresa apenas após a homologação do provisionamento/roteamento empresarial.
+- **Fundador/Admin:** accountType='platformAdmin', destino /admin, sem inferência de tenant por e-mail, UG ou URL. O acesso visual do fundador por senha e compatibilidade backend Google atuais são preservados.
+- **Legado:** conta sector sem sectorType permanece Aprovisionamento. Não aplicar esse fallback a company, nem aceitar sectorType arbitrário. Dois workspaces com a mesma UG podem existir em modalidades distintas, sem compartilhamento de saldos/identidades.
+
+**Solução mínima de UX (GOV-SIMP-01):** o Admin apresenta uma entrada única "Cadastrar cliente" e seletor **Aprovisionamento | Almoxarifado | Empresa**. A seleção usa os componentes e formulários **já escritos**, sem reconstruir validadores: AdminCreateSectorPanel/provisionamento da #436 para os dois setores; AdminCreateCompanyPanel/API e cadastro empresarial da #419 para empresas. Manter regras próprias de campos (UG/OM para setores; CNPJ/razão social para empresa), estados de erro, diretório e feedback, sem expor informações de outras modalidades. Uma interface de cadastro única **não exige** um endpoint, diretório ou mecanismo de Auth novo; usar despachos explícitos para os dois fluxos server-side existentes, com autorização e isolamento independentes.
+
+**Reconciliar antes de implementar:** a PR #419 está em DRAFT, divergente da base W1/W5 e possui versão anterior de lib/platformIdentity.ts/app/login/page.tsx que usa o provedor Google como acesso principal do fundador. **Proibido mesclar integralmente ou substituir os arquivos de identidade/login recentes por versões antigas da #419.** Incorporar pontualmente as extensões company, campos, APIs e componentes empresariais sobre a identidade W1 corrigida; conciliar lib/platformAdminStore.ts, components/admin/PlatformAdminView.tsx, roteamento, tipos e autorização sem perder sectorType. Company não recebe UG, claims Warehouse, dados do Aprovisionamento, trial ou cobrança por inferência. Não declarar /empresa operacional antes dos testes específicos.
+
+**Fase e responsabilidade:** realizar como etapa **integradora de fundações Admin/Identidade**, em branch/PR DRAFT própria baseada na fundação W5 ou em integração técnica equivalente, após preservar o W5 já certificado. **Não reabrir nem modificar os motores W2–W5 apenas para adicionar o cadastro.** Se necessário, executar um Worker específico de integração Admin, deixando o W5 e a #419 independentes até homologação.
+
+**Aceite proporcional ao risco:** testes de TypeScript/build, cadastro de cada modalidade em Auth/Firestore Emulator, isolamento de workspaces mesmo com UG igual, CNPJ único, UID/e-mail autorizado, conta desativada, fallback legado, admin/fundador por senha, rota correta, tentativa de URL cruzada, negação de company no Warehouse setorial, e ausência de cobrança/trial assumidos. Publicação de Rules, merge, migração e Cloud Run exigem decisão posterior. Não usar dados reais para contornar pendências.
+
+**Referências no momento da decisão:** W1 R0.1 PR #436 SHA baa5cde3957cb00b40bec9e1a250621a15cc4e06; W5 R1-C PR #441 SHA d89781d5347d04173af98bcc50c71d99bfb8f663 (GO CONDICIONAL técnico, saída desabilitada); Empresas PR #419 SHA 2281ac7deddc5271354e1f1faef441bc17246472 (DRAFT, não integrada). Esta seção é **exclusivamente documental**. Nenhum handoff W0–W5 foi modificado.
