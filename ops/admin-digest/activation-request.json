@@ -3,13 +3,14 @@
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
   "purpose": "Ativar boletim diario EMPROVEX Gmail e enviar teste agora, conforme pedido do administrador.",
-  "sourceSha": "5a84844f8e9959b9650c8346fb97d94c530a5846",
+  "sourceSha": "badb5c53e62be2a7cc8f1ed95f0f98849ddf6f3f",
   "from": "marcoa.r.aquino@gmail.com",
   "to": "codex.martis.dev@gmail.com",
   "timezone": "America/Sao_Paulo",
   "schedule": "0 18 * * *",
   "sendTestNow": true,
   "activateDaily18h": true,
-  "activationAttempt": 2,
-  "activationStrategy": "existing-approved-promotion-workflow"
+  "activationAttempt": 3,
+  "activationStrategy": "existing-approved-promotion-workflow",
+  "permissionFix": "secretAccessor on exactly both Gmail secrets confirmed by administrator"
 }
