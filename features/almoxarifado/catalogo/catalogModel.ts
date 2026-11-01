@@ -75,14 +75,14 @@ export interface AlmoxCatalogProjection {
 }
 
 const unitAliases: Record<string, WarehouseMaterialUnit['code']> = {
-  un: 'unit', und: 'unit', unid: 'unit', unidade: 'unit', unidades: 'unit',
+  unit: 'unit', un: 'unit', und: 'unit', unid: 'unit', unidade: 'unit', unidades: 'unit',
   kg: 'kg', quilograma: 'kg', quilogramas: 'kg',
   g: 'g', grama: 'g', gramas: 'g',
   l: 'l', litro: 'l', litros: 'l',
   ml: 'ml', mililitro: 'ml', mililitros: 'ml',
-  pct: 'package', pacote: 'package', pacotes: 'package',
-  cx: 'box', caixa: 'box', caixas: 'box',
-  fardo: 'bundle', fardos: 'bundle',
+  package: 'package', pct: 'package', pacote: 'package', pacotes: 'package',
+  box: 'box', cx: 'box', caixa: 'box', caixas: 'box',
+  bundle: 'bundle', fardo: 'bundle', fardos: 'bundle',
 };
 function normalizeName(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
