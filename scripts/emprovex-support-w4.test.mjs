@@ -36,3 +36,13 @@ test('W2 preserva proteção founder-only e contratos no servidor', () => {
   assert.match(helper, /updateTime/);
   assert.match(publicRoute, /lastRequestedAt/);
 });
+
+test('W2 mantém paginação sob demanda e autorização administrativa', () => {
+  const panel = read('components/admin/AdminAccessRequestsPanel.tsx');
+  const admin = read('app/api/admin/access-requests/route.ts');
+  assert.match(panel, /nextPageToken/);
+  assert.match(panel, /pageTokens/);
+  assert.match(admin, /requireFounder\(request\)/);
+  assert.match(admin, /listAccessRequestPage\(/);
+  assert.doesNotMatch(panel, /onSnapshot\s*\(/);
+});
