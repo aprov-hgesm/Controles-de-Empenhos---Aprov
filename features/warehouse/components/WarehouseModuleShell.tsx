@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
 import { usePathname } from 'next/navigation';
 
@@ -26,6 +26,12 @@ import { WarehouseTabNavigationProvider } from './WarehouseTabNavigation';
 import { WarehouseTabContent } from './WarehouseTabContent';
 import { WarehouseSectionLoading } from './WarehouseSectionLoading';
 import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
+
+const EleonorExperience = lazy(() =>
+  import('../../eleonor/components/EleonorExperience').then(module => ({
+    default: module.EleonorExperience,
+  }))
+);
 
 export function WarehouseModuleShell({
   children,
@@ -258,6 +264,9 @@ export function WarehouseModuleShell({
             EMPROVEX · Central de Depósitos · ambiente operacional integrado
           </footer>
         </main>
+        <Suspense fallback={null}>
+          <EleonorExperience user={currentUser} />
+        </Suspense>
       </div>
       </div>
     </WarehouseTabNavigationProvider>
