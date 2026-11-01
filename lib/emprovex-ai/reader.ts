@@ -64,6 +64,9 @@ export async function coreDocument(path:string,token:string):Promise<Record<stri
   const response=await firestoreFetch(firestoreRoot()+'/'+safePath(path),token);
   if(response.status===404)return null;
   const doc=await response.json() as FireDocument;
+  // Candidate W6 must also validate the project/database/path in direct GET replies.
+  if(w6DataTarget() && doc.name!==firestoreRoot().slice('https://firestore.googleapis.com/v1/'.length)+'/'+safePath(path))
+    throw new AiExecutionError('AI_W6_CORE_SCOPE_VIOLATION',503);
   return fields(doc.fields||{});
 }
 export async function coreOperationalDocument(
