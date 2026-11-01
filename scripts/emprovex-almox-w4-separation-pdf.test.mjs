@@ -153,7 +153,7 @@ test('posição única: documento A4 inclui identificação, código, quantidade
   await verifyPdf(result.doc, result.pageCount);
   const text = pageText(result.doc);
   for (const value of ['SISCO-1', 'DEP-01', 'EST-01', 'P-01', '2026-000123',
-    'PLANEJADA', 'SEPARADO', '10', 'Militar QA', 'Organiza']) {
+    'PLANEJADA', 'Separado', '10', 'Militar QA', 'Organiza']) {
     assert.ok(text.includes(value), 'Campo ausente no PDF: ' + value);
   }
   assert.deepEqual(before, copy, 'Geração documental não pode mutar estado operacional');
