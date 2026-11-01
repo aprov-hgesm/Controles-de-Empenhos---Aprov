@@ -31,6 +31,17 @@ Backups já existentes e alertas de uptime permanecem intactos; esta versão nã
 4. Conferir o estado do OAuth consent screen: apps externos em **Testing** podem receber refresh tokens com validade de **sete dias** para `gmail.send`; para operação permanente será necessário um estado de produção aplicável.
 5. Não usar service account para enviar como uma conta pessoal `@gmail.com`; isso não substitui autorização do titular. Não pedir senha ou senha de aplicativo da conta.
 
+## Autorização pelo PowerShell — procedimento recomendado
+
+Esta etapa pode ocorrer no Windows com Google Cloud SDK 587 ou posterior; o consentimento do Google ainda requer navegador.
+
+1. Abrir **Google Auth Platform → Clients** no projeto `gen-lang-client-0982077967`, criar ou baixar um OAuth client **Desktop app**. É possível reutilizar o projeto existente, sem alterar o cliente web já usado pelos fornecedores.
+2. Executar localmente um script PowerShell de OAuth Desktop com loopback em `127.0.0.1`, PKCE S256, `state`, `access_type=offline` e `prompt=consent`; conferir a conta Gmail `marcoa.r.aquino@gmail.com` e seus escopos `gmail.send` + `userinfo.email`.
+3. Salvar client secret e refresh token diretamente no **Secret Manager**, respectivamente nos segredos `emprovex-admin-digest-gmail-client-secret` e `emprovex-admin-digest-gmail-refresh-token`, sem imprimir tokens. O OAuth client ID não é secreto e será configurado no runtime.
+4. Conferir o estado da tela de consentimento **Audience/Publishing status**: apps externos em Testing podem emitir refresh tokens válidos por apenas sete dias se usarem `gmail.send`. Exigir condição adequada para operação contínua.
+5. A autorização por si só **não envia boletins**, não altera Cloud Run e não cria Cloud Scheduler. A ativação depende da integração aprovada, publicação, montagem dos segredos e homologação de envio.
+
+Nunca colar JSON do cliente OAuth, tokens ou conteúdo do Secret Manager no GitHub, nos logs ou no chat.
 ## Configurações de runtime para o Cloud Run
 
 - `EMPROVEX_ADMIN_DIGEST_ENABLED=1` — somente após credenciais válidas e teste controlado;
