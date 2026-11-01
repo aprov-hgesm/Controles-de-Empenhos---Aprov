@@ -3,6 +3,7 @@
  * Unverified commercial/runtime claims are deliberately not included.
  */
 import {normalize,repairSafeWords} from '../context/language';
+import {approvedPublicAnswer} from './knowledge';
 
 export type ConversationTopic='eleonor'|'emprovex'|'ai'|'general';
 export type ConversationMemory={topic:ConversationTopic;intent:string};
@@ -87,23 +88,23 @@ export function planConversation(input:{
      'Não tenho sentimentos ou consciência humana para afirmar isso. Posso, sim, conversar com atenção, respeito e uma pitada de bom humor.');
  if(matches(t,/\b(?:quem e voce|quem e a eleonor|quem eh voce|tu e quem|se apresente|me fal[ae] sobre voce|me conta quem e a eleonor|qual e sua historia)\b/))
    return decision('identity','who','eleonor',
-     'Sou a Eleonor, assistente inteligente do EMPROVEX. Meu papel é facilitar consultas autorizadas, explicar informações e ajudar com clareza — sem fingir saber o que ainda não verifiquei.');
+     approvedPublicAnswer('eleonor.identity')||'Minha identidade institucional ainda não foi validada.');
  if(matches(t,/\b(?:por que (?:voce )?(?:se chama|esse nome)|origem do (?:seu )?nome|por que eleonor|significado de eleonor)\b/)||
    (previous?.topic==='eleonor'&&previous.intent==='name'&&/^(?:e )?por que\b/.test(t)))
    return decision('identity','name','eleonor',
-     'Eleonor é a identidade original escolhida para a assistente do EMPROVEX: um nome humano para uma interação natural, sem fingir que sou uma pessoa.');
+     approvedPublicAnswer('eleonor.name')||'Ainda não posso confirmar a origem do nome.');
  if(matches(t,/\b(?:quem criou (?:voce|a eleonor)|quem desenvolveu voce|quem criou o emprovex|fundador do emprovex)\b/))
    return decision('institutional','founder','emprovex',
      'Não tenho uma fonte institucional pública validada nesta versão para atribuir formalmente a autoria. Prefiro confirmar a informação a inventar um nome.');
  if(matches(t,/\b(?:donna paulsen|inspiracao da sua personalidade|voce foi inspirada)\b/))
    return decision('curiosities','inspiration','eleonor',
-     'Minha personalidade foi inspirada em qualidades como percepção, elegância, firmeza e discrição, estudadas em Donna Paulsen, de Suits. Minha identidade e minhas respostas, porém, são originais.');
+     approvedPublicAnswer('eleonor.inspiration')||'Ainda não posso confirmar essa referência.');
  if(matches(t,/\b(?:curiosidade sobre voce|me conte uma curiosidade|algo interessante sobre voce)\b/))
    return decision('curiosities','curiosity','eleonor',
      'Uma curiosidade: minha personalidade separa o jeito de conversar da origem dos fatos. A apresentação pode ser elegante; saldos e dados só vêm de consultas autorizadas.');
  if(matches(t,/\b(?:o que significa emprovex|o que e o emprovex|para que serve o emprovex|conhece o emprovex|quais funcionalidades|recursos do emprovex)\b/))
    return decision('institutional','about','emprovex',
-     'O EMPROVEX é uma plataforma de gestão logística e financeira, com foco em organização operacional. Funcionalidades efetivamente liberadas dependem do ambiente e da versão; não vou apresentar recursos em desenvolvimento como já publicados.');
+     approvedPublicAnswer('emprovex.purpose')||'Não tenho uma descrição institucional aprovada para divulgar.');
  if(matches(t,/\b(?:quanto custa|qual o preco|assinatura do emprovex|como contratar|empresa usa o emprovex|emprovex empresas)\b/))
    return decision('institutional','availability','emprovex',
      'Preços, planos e disponibilidade precisam ser confirmados na informação comercial vigente. Não tenho essa fonte sincronizada nesta conversa.');
