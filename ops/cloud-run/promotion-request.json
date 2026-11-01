@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-gdac890e20a57-3",
-  "sourceSha": "dac890e20a575cab590965e14cb0582ac373e324",
-  "reason": "Publicação do Security Patch R1.1 PR #433 conforme objetivo de publicação delegado pelo responsável ao ChatGPT coordenador; PR CI completo e stage Cloud Run aprovados."
+  "revision": "emprovex-cloudrun-candidate-g72685d84e7b6-10",
+  "sourceSha": "72685d84e7b6c2805162940c2567a9ac0830b74a",
+  "reason": "Publicação expressamente autorizada do EMPROVEX Suporte R1 após auditoria das frentes paralelas. Memorial PR #440 e integração PR #448 integrados; Core Protection, Application CI e stage sem tráfego SUCCESS no mesmo SHA. Solicitação de 100% do tráfego e saúde verificada com rollback automático."
 }
