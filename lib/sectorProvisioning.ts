@@ -53,7 +53,11 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
   );
 
   return {
-    sectorType: typeof source.sectorType === 'string' ? source.sectorType as SectorType : 'aprovisionamento',
+    sectorType: source.sectorType === undefined
+      ? 'aprovisionamento'
+      : isSectorType(source.sectorType)
+        ? source.sectorType
+        : (() => { throw new Error('Modalidade setorial inválida.'); })(),
     workspaceId: requiredString('workspaceId'),
     workspaceName: requiredString('workspaceName'),
     ug: requiredString('ug'),
@@ -68,6 +72,7 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
 
 export type SectorInstitutionalProfileInput = Pick<
   CreateSectorWorkspaceInput,
+  | 'sectorType'
   | 'organizationName'
   | 'organizationShortName'
   | 'sectionName'
