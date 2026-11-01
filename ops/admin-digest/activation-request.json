@@ -10,7 +10,7 @@
   "schedule": "0 18 * * *",
   "sendTestNow": true,
   "activateDaily18h": true,
-  "activationAttempt": 3,
+  "activationAttempt": 4,
   "activationStrategy": "existing-approved-promotion-workflow",
-  "permissionFix": "secretAccessor on exactly both Gmail secrets confirmed by administrator"
+  "permissionFix": "secretAccessor granted to the two Gmail secrets; Cloud Scheduler API enabled successfully by admin"
 }
