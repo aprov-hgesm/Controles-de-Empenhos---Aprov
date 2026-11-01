@@ -3,6 +3,7 @@ import { verifyFirebaseRequest } from '../server/firebaseFounderAuth';
 import { getGoogleAccessToken } from '../server/sectorProvisioningAdmin';
 import {w6DataTarget,getW6GoogleAccessToken,verifyW6FirebaseRequest} from './integration/w6Isolation';
 import {aiProductionPilotEnabled} from './integration/environment';
+import {getAiProductionGoogleAccessToken} from './integration/productionPilot';
 import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID, HGESM_UG } from '../hgesmWorkspace';
 import { isFounderSignInProvider, isValidUnitUg, isValidWorkspaceId,
   normalizePlatformEmail } from '../platformIdentity';
@@ -85,7 +86,8 @@ export async function prepareAiAccess(authorization:string|null):Promise<AiAcces
   if(aiProductionPilotEnabled() &&
      !(verified.email===HGESM_SECTOR_EMAIL && isFounderSignInProvider(verified.signInProvider)))
     throw new AiExecutionError('AI_PILOT_FORBIDDEN',403);
-  const googleToken=w6?await getW6GoogleAccessToken():await getGoogleAccessToken();
+  const googleToken=w6?await getW6GoogleAccessToken():
+    aiProductionPilotEnabled()?await getAiProductionGoogleAccessToken():await getGoogleAccessToken();
   if(verified.email===HGESM_SECTOR_EMAIL && isFounderSignInProvider(verified.signInProvider)){
     const workspace=await coreDocument('workspaces/'+HGESM_WORKSPACE_ID,googleToken);
     if(!workspace || workspace.status!=='active'
