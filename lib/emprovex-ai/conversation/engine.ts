@@ -35,7 +35,7 @@ const modelTask=(family:string,intent:string,topic:ConversationTopic,answer:stri
  decision(family,intent,topic,answer,'fallback_unavailable',true,'guidance','MODEL_OPTIONAL_ONLY');
 
 function simpleMath(t:string):string|null {
- const normalized=t.replace(/^(?:quanto e|calcule|qual e o resultado de|quanto da)\s+/,'')
+ const normalized=t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^(?:quanto e|calcule|qual e o resultado de|quanto da)\s+/,'')
    .replace(/[?=]/g,'').trim();
  const m=normalized.match(/^(-?\d+(?:[.,]\d+)?)\s*(\+|\-|\*|x|\/)\s*(-?\d+(?:[.,]\d+)?)$/);
  if(!m)return null;
@@ -136,7 +136,7 @@ export function planConversation(input:{
    'Consigo auxiliar nessa redação quando o recurso generativo estiver habilitado. No momento, não vou simular um texto gerado.');
  if(generalCreativity.test(t)&&!sensitive.test(t))return modelTask('creativity','brainstorm','general',
    'A criação aberta depende do modelo generativo, que ainda pode estar indisponível neste ambiente.');
- const math=simpleMath(t);
+ const math=simpleMath(input.message);
  if(math!==null)return decision('mathematics','arithmetic','general',math);
  if(matches(t,/\b(?:explique melhor|me explica melhor|fala de um jeito mais simples|por que|continua|nao entendi|e voce)\b/)||
    /^(?:e )?por que\b/.test(t)){
