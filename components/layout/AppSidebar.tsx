@@ -266,6 +266,7 @@ export function AppSidebar({
                 className="emprovex-sidebar-nav-item"
                 data-active={activeTab === 'eleonor' ? 'true' : 'false'}
                 aria-current={activeTab === 'eleonor' ? 'page' : undefined}>
+                <span className={beamStyles.beam} data-emprovex-nav-beam="true" aria-hidden="true" />
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
                 <span>Eleonor · Assistente AI</span>
               </button>
