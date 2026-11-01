@@ -287,6 +287,37 @@ Nunca marcar feature como **implementada** por estar apenas neste plano; registr
 - Mudanças em conteúdo legal precisam preservar documentos e versões oficiais.
 - Merge, promoção Cloud Run, Rules e dados produtivos só mediante autorização específica do responsável e processo do memorial geral.
 
+### 13.4. Checkpoint — Entregas W1 e W2 verificadas no GitHub (31/10/2026, Brasília)
+
+**Escopo deste checkpoint:** verificação somente leitura das PRs, de seus handoffs e dos checks associados aos SHAs finais. Esta atualização é exclusivamente documental; não houve merge, execução de testes em ambiente local nem deploy pelo coordenador.
+
+| Worker | PR DRAFT | Head SHA verificado | Evidência e estado | Decisão |
+| --- | --- | --- | --- | --- |
+| W1 — Central de Ajuda/Academia | [#442](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/442) | `c3258b5e39a7ec5f19c4adeee128cd614064751c` | Workflow isolado da Academia SUCCESS, Fast CI SUCCESS, Core Protection SUCCESS, Visual-R2 SUCCESS. Handoff informa 5/5 testes + TypeScript PASS; código não foi integrado aos menus. | **GO para W4 técnico; NO-GO para produção direta** |
+| W2 — Relacionamento/Interessados | [#443](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/443) | `ad76a306a34d0cb963719b3f0f8dbeaa2929cad2` | Fast CI SUCCESS **inclusive no último SHA**, Core Protection SUCCESS, Visual-R2 SUCCESS e demais checks aplicáveis. Handoff informa 8 verificações comportamentais sintéticas PASS, mas não comprova execução integral de `scripts/emprovex-support-w2.test.mjs` pela pipeline. | **GO condicional para W4 técnico; NO-GO para merge/produção isolados** |
+| W0 — Memorial oficial | [#440](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/440) | Branch documental de referência, SHA variável | Memorial oficial criado, com auditoria R0 e plano híbrido; ainda DRAFT e fora da `main`. | **Handoff documental disponível** |
+
+**Evidência dos arquivos e isolamento:**
+- PR #442 contém cinco arquivos: `.github/workflows/emprovex-support-w1.yml`, `docs/EMPROVEX_SUPORTE_W1_R1_HANDOFF.md`, `features/support/EmprovexHelpCenter.tsx`, `features/support/tutorialCatalog.ts`, `scripts/emprovex-support-w1.test.mjs`. Não alterou login, sidebar, Admin ou Rules.
+- PR #443 contém seis arquivos: `app/api/admin/access-requests/route.ts`, `app/api/public/access-requests/route.ts`, `components/admin/AdminAccessRequestsPanel.tsx`, `docs/handoffs/EMPROVEX_SUPORTE_R1_W2_HANDOFF.md`, `lib/server/accessRequestSupport.ts`, `scripts/emprovex-support-w2.test.mjs`. Não alterou shell, Auth, billing ou Rules.
+- As mudanças funcionais de W1 e W2 são independentes nos arquivos examinados; a certificação da **composição** ainda não foi realizada. Em ambas, o Application CI apareceu `skipped` por serem PRs DRAFT, e isso não deve ser relatado como PASS.
+- Handoffs oficiais: `docs/EMPROVEX_SUPORTE_W1_R1_HANDOFF.md` da branch W1 e `docs/handoffs/EMPROVEX_SUPORTE_R1_W2_HANDOFF.md` da branch W2. Os arquivos ainda estão em branches diferentes, não na `main`.
+
+### 13.5. Liberação e sequência para W4 R1
+
+**Decisão:** LIBERADO iniciar a integração técnica W4 com as PRs #442 e #443; **não** liberar merge na `main` nem produção por esta declaração. O W3 (auditoria de adoção e retenção) pode continuar separadamente e **não bloqueia a integração das capacidades R1 de Ajuda e Interessados**, desde que W4 não implante as métricas R3 nem faça promessas de redução de churn.
+
+**Procedimento mínimo do W4, sem burocracia:**
+1. Verificar a `main` mais recente e reconciliar apenas as alterações de código dos W1 e W2, documentando SHAs de origem; incluir handoffs na branch de integração e preservar a PR #440 como fonte documental. Se o memorial não estiver na main, evitar sobrescrita/duplicação de conteúdo quando for integrado.
+2. Montar `EmprovexHelpCenter` na navegação operacional e no ponto apropriado da Central de Depósitos, com UX funcional desktop/mobile/Essencial e abertura leve sob demanda. Respeitar login, termos, assinatura, 3D e rotas existentes; conferir PRs concorrentes Empresas/Almoxarifado antes de editar shells.
+3. Integrar o painel de Interessados e suas APIs preservando fundador-only, CAS, paginação server-side, reenvio neutro, validação das notas e ausência de associação indevida com trial/workspace.
+4. Executar **uma vez** a suíte dirigida do W2 (Node 24, `node --experimental-strip-types --test scripts/emprovex-support-w2.test.mjs`) no SHA de integração. Aproveitar evidência W1 e CI já certificados, repetindo apenas testes necessários após mudança real.
+5. Conferir atualização de informação de privacidade/retensão para `adminNote`, `lastContactAt`, `nextActionAt` e `lastRequestedAt`, conforme tratamento novo; não instituir migração ou Rules novas se o contrato atual for suficiente.
+6. Rodar Fast CI + Core Protection + Application CI e smoke funcional/visual estritamente pertinentes ao SHA integrado; corrigir falhas reais, não remover guards ou checks.
+7. Abrir PR DRAFT de integração, registrar handoff no memorial e apresentar GO/NO-GO. A publicação Cloud Run requer autorização específica do responsável, verificação de revisão/health e processo vigente de release; **não executar promoção automaticamente**.
+
+**Não reabrir escopo:** sem CRM paralelo, chatbot, suporte por WhatsApp não configurado, ciclo de tickets completo, novas métricas por clique, mudanças de Auth/billing nem varreduras contínuas de dados.
+
 ## 14. Evidências de referência — código fixado na baseline
 
 - [Checklist de primeiro acesso](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/35825d5ad563361fecd1b3d2a00ca81a4734e532/components/auth/SectorFirstAccessChecklist.tsx)
