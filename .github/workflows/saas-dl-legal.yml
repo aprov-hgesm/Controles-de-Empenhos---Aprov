@@ -9,6 +9,9 @@ on:
       - "hooks/useLegalAcceptance.ts"
       - "lib/legalAcceptance.ts"
       - "lib/legalVersions.ts"
+      - "app/api/legal-acceptance/route.ts"
+      - "lib/server/legalAcceptanceRecord.ts"
+      - "scripts/legal-acceptance-r4-regression.test.mjs"
       - "firestore.rules"
       - "scripts/legal-acceptance-security.test.mjs"
       - "scripts/verify-saas-r1-legal-acceptance.mjs"
@@ -52,6 +55,9 @@ jobs:
 
       - name: Versioned legal acceptance guard
         run: npm run verify:saas-r1-legal-acceptance
+
+      - name: R4 immutable founder-UG acceptance regression
+        run: node --test scripts/legal-acceptance-r4-regression.test.mjs
 
       - name: Legal acceptance Firestore Rules tests
         run: npm run test:saas-r1-legal-acceptance

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import firebaseConfig from '../../../firebase-applet-config.json';
-import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID } from '../../../lib/hgesmWorkspace';
+import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../../../lib/hgesmWorkspace';
 import { CURRENT_LEGAL_BUNDLE, LEGAL_ACCEPTANCE_SCHEMA_VERSION, legalAcceptanceDocumentId } from '../../../lib/legalVersions';
 import { normalizePlatformEmail, isValidWorkspaceId } from '../../../lib/platformIdentity';
 import { verifyFirebaseRequest, FounderAuthError } from '../../../lib/server/firebaseFounderAuth';
 import { getGoogleAccessToken } from '../../../lib/server/sectorProvisioningAdmin';
+import { isVerifiedLegalAcceptance } from '../../../lib/server/legalAcceptanceRecord';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -95,24 +96,35 @@ function documentName(identity: { workspaceId: string; uid: string }) {
     + '/legalAcceptances/' + encodeURIComponent(legalAcceptanceDocumentId(identity.uid));
 }
 
+type AcceptanceState = 'missing' | 'accepted' | 'conflict';
+
 async function readAcceptance(token: string, document: string,
-  identity: { workspaceId: string; uid: string; email: string; ug: string }) {
+  identity: { workspaceId: string; uid: string; email: string; ug: string }): Promise<AcceptanceState> {
   const response = await fetch(document, {
     headers: { Authorization: 'Bearer ' + token }, cache: 'no-store',
   });
-  if (response.status === 404) return false;
-  if (!response.ok) throw new LegalFailure('LEGAL_ACCEPTANCE_READ_FAILED', 503);
+  if (response.status === 404) return 'missing';
+  if (!response.ok) {
+    // Only upstream HTTP status: no tokens, payloads, UIDs or personal data.
+    console.error('EMPROVEX_LEGAL_ACCEPTANCE_READ_UPSTREAM_STATUS', response.status);
+    throw new LegalFailure('LEGAL_ACCEPTANCE_READ_FAILED', 503);
+  }
 
-  const payload = await response.json() as { fields?: Record<string, { stringValue?: string }> };
-  const fields = payload.fields;
-  return valueOf(fields, 'uid') === identity.uid
-    && valueOf(fields, 'email') === identity.email
-    && valueOf(fields, 'workspaceId') === identity.workspaceId
-    && valueOf(fields, 'ug') === identity.ug
-    && valueOf(fields, 'legalBundleVersion') === CURRENT_LEGAL_BUNDLE.legalBundleVersion
-    && valueOf(fields, 'termsVersion') === CURRENT_LEGAL_BUNDLE.termsVersion
-    && valueOf(fields, 'privacyVersion') === CURRENT_LEGAL_BUNDLE.privacyVersion
-    && valueOf(fields, 'schemaVersion') === LEGAL_ACCEPTANCE_SCHEMA_VERSION;
+  const payload = await response.json() as {
+    fields?: Record<string, { stringValue?: string; nullValue?: null; timestampValue?: string }>;
+  };
+  const verified = isVerifiedLegalAcceptance(
+    payload.fields,
+    identity,
+    {
+      schemaVersion: LEGAL_ACCEPTANCE_SCHEMA_VERSION,
+      legalBundleVersion: CURRENT_LEGAL_BUNDLE.legalBundleVersion,
+      termsVersion: CURRENT_LEGAL_BUNDLE.termsVersion,
+      privacyVersion: CURRENT_LEGAL_BUNDLE.privacyVersion,
+    },
+    { workspaceId: HGESM_WORKSPACE_ID, email: HGESM_SECTOR_EMAIL, ug: HGESM_UG },
+  );
+  return verified ? 'accepted' : 'conflict';
 }
 
 function fields(identity: { workspaceId: string; uid: string; email: string; ug: string }) {
@@ -131,7 +143,14 @@ function fields(identity: { workspaceId: string; uid: string; email: string; ug:
 
 async function handler(request: Request, write: boolean) {
   try {
-    if (CURRENT_LEGAL_BUNDLE.legalBundleVersion !== 'saas-r4-2026-10-27') {
+    // The canonical bundle is defined solely in legalVersions.ts. When the
+    // legal documents and this bundle are updated together, the deterministic
+    // acceptance document ID changes and users must accept that NEW version.
+    // Do not pin the API to R4: that would cause HTTP 503 on a future R5.
+    if (!CURRENT_LEGAL_BUNDLE.legalBundleVersion
+      || !CURRENT_LEGAL_BUNDLE.termsVersion
+      || !CURRENT_LEGAL_BUNDLE.privacyVersion
+      || String(CURRENT_LEGAL_BUNDLE.legalBundleVersion) === 'saas-r1-2026-10-01') {
       throw new LegalFailure('LEGAL_SERVER_BUNDLE_NOT_ACTIVE', 503);
     }
     let workspaceId = '';
@@ -158,10 +177,16 @@ async function handler(request: Request, write: boolean) {
     const identity = await authorize(request, workspaceId);
     const adminToken = LEGAL_E2E_EMULATOR ? 'owner' : await getGoogleAccessToken();
     const document = documentName(identity);
-    if (await readAcceptance(adminToken, document, identity)) {
+    const acceptanceState = await readAcceptance(adminToken, document, identity);
+    if (acceptanceState === 'accepted') {
       return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
     }
     if (!write) return answer({ accepted: false });
+    // Never try to overwrite a legitimate but incompatible historical record.
+    // Its exact conflict is a recovery case, not an opaque 503.
+    if (acceptanceState === 'conflict') {
+      throw new LegalFailure('LEGAL_ACCEPTANCE_RECORD_CONFLICT', 409);
+    }
 
     // Idempotent, create-only server timestamp. No client can choose uid/email,
     // target tenant, bundle, or rewrite any historical acceptance.
@@ -180,9 +205,18 @@ async function handler(request: Request, write: boolean) {
     if (!response.ok) {
       // Two browser tabs may accept simultaneously; accept only the matching
       // immutable document, never overwrite it.
-      if ([400, 409, 412].includes(response.status) && await readAcceptance(adminToken, document, identity)) {
-        return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
+      if ([400, 409, 412].includes(response.status)) {
+        const raced = await readAcceptance(adminToken, document, identity);
+        if (raced === 'accepted') {
+          return answer({ accepted: true, created: false, versions: CURRENT_LEGAL_BUNDLE });
+        }
+        if (raced === 'conflict') {
+          throw new LegalFailure('LEGAL_ACCEPTANCE_RECORD_CONFLICT', 409);
+        }
       }
+      // A real write failure (e.g., insufficient Firestore IAM) must remain
+      // observable without logging request bodies or authorization tokens.
+      console.error('EMPROVEX_LEGAL_ACCEPTANCE_WRITE_UPSTREAM_STATUS', response.status);
       throw new LegalFailure('LEGAL_ACCEPTANCE_SAVE_FAILED', 503);
     }
     return answer({ accepted: true, created: true, versions: CURRENT_LEGAL_BUNDLE });
