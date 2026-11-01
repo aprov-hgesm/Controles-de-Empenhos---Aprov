@@ -86,7 +86,11 @@ async function readDirectoryDocument(
       + '/databases/(default)/documents'
     : DB_ROOT;
   const result = await fetch(root + '/' + collection + '/' + encodeURIComponent(documentId), {
-    headers: emulator ? {} : { authorization: 'Bearer ' + serviceToken },
+    // Credencial privilegiada exclusivamente do Firestore Emulator em loopback;
+    // o serviço real continua exigindo o token da service account.
+    headers: emulator
+      ? { authorization: 'Bearer owner' }
+      : { authorization: 'Bearer ' + serviceToken },
     cache: 'no-store',
   });
   if (result.status === 404) return null;
