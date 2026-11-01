@@ -8,7 +8,14 @@ const MODEL='lfm3:1.7b-q4_K_M';
 const OUTPUT_TOKENS=128;
 const MAX_RESPONSE_CHARS=8192;
 const METADATA_TIMEOUT_MS=1800;
-const INFERENCE_TIMEOUT_MS=8000;
+const INFERENCE_TIMEOUT_MS=30000;
+const MAX_INFERENCE_TIMEOUT_MS=30000;
+function inferenceTimeoutMs():number {
+ const raw=process.env.EMPROVEX_AI_LFM3_TIMEOUT_MS;
+ if(!raw)return INFERENCE_TIMEOUT_MS;
+ const value=Number(raw);
+ return Number.isInteger(value)&&value>=5000&&value<=MAX_INFERENCE_TIMEOUT_MS?value:INFERENCE_TIMEOUT_MS;
+}
 
 function inferenceOrigin(raw:string|undefined):string|null {
  if(!raw)return null;
@@ -53,7 +60,7 @@ export async function proposeWithLfm3(proposal:ModelProposal):Promise<unknown|nu
      {role:'user',content:JSON.stringify({question:proposal.userText,context:proposal.context,allowedIntents:proposal.allowedIntents})}
     ]
    }),
-   signal:AbortSignal.timeout(INFERENCE_TIMEOUT_MS),cache:'no-store'
+   signal:AbortSignal.timeout(inferenceTimeoutMs()),cache:'no-store'
   });
   if(!response.ok)return null;
   const raw=await response.text();
