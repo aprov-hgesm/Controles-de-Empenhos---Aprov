@@ -66,7 +66,9 @@ node --experimental-strip-types --test scripts/emprovex-support-w2.test.mjs
 
 Coberturas sintéticas implementadas: status, CAS, validação de campos, página >100, custo de paginação, reenvio em menos/acima de 24h, conflito 412, e inspeção estática de guard fundador e resposta neutra. As provas de não regressão de provisionamento decorrem do diff restrito; **não substituem teste integrado de ambiente real**.
 
-**Situação na elaboração:** execução local de testes e TypeScript ainda não certificada; CI da PR deve ser consultado antes de elevar parecer. Application CI é normalmente omitido em PR DRAFT, por desenho da pipeline vigente.
+**Evidência de validação adicional:** 8 verificações comportamentais **PASS** (status/CAS, nota limitada, data inválida, rejeição de workspaceId, token, paginação 127 registros/6 chamadas, recontato elegível, reenvio <24h). Foi executado o código de `lib/server/accessRequestSupport.ts` da branch em ambiente JavaScript isolado com somente anotações de tipos TypeScript removidas e HTTP simulado. **Não equivale à execução do arquivo Node de testes, à integração Next/Firebase ou a teste com clientes.**
+
+**CI verificado:** Fast CI do commit `5286368e41a679dc297fb6b56f33b04e85620cfa` concluiu **SUCCESS**, incluindo TypeScript sem erros, sintaxe JS e suites selecionadas; o arquivo W2 foi marcado como sintaticamente válido, mas **não foi executado como suíte funcional dedicada** nessa pipeline. Alteração posterior na normalização do texto `bdaa05f20cb4d7579297332e89f7da2c53d619f4` deverá ser acompanhada pelos checks próprios. Application CI da PR DRAFT não constitui certificação completa.
 
 ## 7. Pendências e parecer
 
