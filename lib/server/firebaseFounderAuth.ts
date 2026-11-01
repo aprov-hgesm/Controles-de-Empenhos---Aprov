@@ -36,7 +36,7 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
   const loopbackBind = hostIndex >= 0 && args[hostIndex+1] === '127.0.0.1';
   const loopbackDev = process.env.NODE_ENV === 'development'
     && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
-    && dev && loopbackBind;
+    && ((dev && loopbackBind) || process.env.EMPROVEX_E2E_LOCAL_LOOPBACK === '1');
   // CI offline executa o autorizador diretamente (sem servidor HTTP).
   // Permitir SOMENTE estes scripts conhecidos, com dois emuladores locais.
   // Nao permitir CLI generico, Next start nem ambiente hospedado.

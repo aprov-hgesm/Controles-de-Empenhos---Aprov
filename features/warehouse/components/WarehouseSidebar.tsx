@@ -13,6 +13,7 @@ import {
   ScanLine,
   Warehouse,
   ShieldCheck,
+  Sparkles,
   Smartphone,
   UserRound,
   X,
@@ -181,6 +182,15 @@ export function WarehouseSidebar({
                 </div>
               </div>
             )}
+            <div className="emprovex-sidebar-nav-group" role="group" aria-label="Assistente inteligente">
+              <div className="emprovex-sidebar-nav-group__heading" aria-hidden="true"><span>Inteligência operacional</span></div>
+              <button type="button" data-testid="nav-eleonor"
+                onClick={() => onNavigate('/eleonor')}
+                className="emprovex-sidebar-nav-item">
+                <Sparkles className="h-5 w-5" aria-hidden="true" />
+                <span>Eleonor · Assistente AI</span>
+              </button>
+            </div>
           </nav>
         </div>
 

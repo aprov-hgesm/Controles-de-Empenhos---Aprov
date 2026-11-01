@@ -168,6 +168,8 @@ try {
         NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
         NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
         EMPROVEX_E2E_SERVER_AUTH: '1',
+        // E2E launcher starts Next on loopback; worker argv may omit CLI flags.
+        EMPROVEX_E2E_LOCAL_LOOPBACK: '1',
         // O backend deve apontar ao Warehouse Emulator 8081, JAMAIS ao banco real.
         EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1',
         EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
