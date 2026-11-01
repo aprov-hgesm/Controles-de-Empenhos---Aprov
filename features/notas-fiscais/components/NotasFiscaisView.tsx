@@ -296,6 +296,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
     empenhosById,
     invoiceDerived,
     invoices,
+    isAlmox,
     nfEmpenhoFilter,
     nfMonthFilter,
     nfSortOrder,
