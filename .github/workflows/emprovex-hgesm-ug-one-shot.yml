@@ -1,0 +1,73 @@
+name: P0 HGeSM founder UG — guarded one-shot repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/emprovex-hgesm-ug-one-shot.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: emprovex-hgesm-founder-ug-single-repair
+  cancel-in-progress: false
+
+jobs:
+  verify-and-repair:
+    name: Verify and repair ONLY the founder platform account UG
+    if: ${{ github.repository_id == '1286320615' && github.actor == 'Moriark' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PROJECT: gen-lang-client-0982077967
+      DEPLOY_SA: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+      WIF_PROVIDER: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+
+    steps:
+      - name: Check out current commit without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js for targeted local tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Verify exact one-shot code and guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY_ID}" = '1286320615'
+          node --check scripts/repair-hgesm-founder-ug-one-shot.mjs
+          node --test scripts/repair-hgesm-founder-ug-one-shot.test.mjs
+
+      - name: Authenticate via existing short-lived WIF identity
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+          create_credentials_file: true
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+
+      - name: Audit both founder identity documents (read-only)
+        run: node scripts/repair-hgesm-founder-ug-one-shot.mjs audit
+
+      - name: Repair only absent founder account UG (optimistic concurrency)
+        run: node scripts/repair-hgesm-founder-ug-one-shot.mjs repair
+
+      - name: Record outcome without recording personal documents
+        if: success()
+        run: |
+          echo '### P0 Founder account UG' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Strict project/database/workspace/account guard: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Only platformAccounts account UG can change: 160416 (string)' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Optimistic updateTime precondition and post-write verification: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- No changes to empenhos, invoices, collections, workspaces or other tenants' >> "$GITHUB_STEP_SUMMARY"
