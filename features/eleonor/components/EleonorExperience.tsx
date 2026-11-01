@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle, MessageCircle,
-  Plus, ShieldCheck, Sparkles, X,
+  Plus, Sparkles, X,
 } from 'lucide-react';
 
 type Evidence = { source: string; documentId: string };
@@ -29,9 +29,9 @@ type AskResponse = {
   };
 };
 const SUGGESTIONS = [
-  'Quanto resta da NE 2026NE66?',
   'Quais notas fiscais foram cadastradas ontem?',
-  'Onde está o arroz no estoque?',
+  'Quais empenhos de exercícios anteriores têm saldo?',
+  'Onde está o arroz?',
 ];
 
 function EleonorSymbol({ size = 'normal' }: { size?: 'normal' | 'large' }) {
@@ -215,9 +215,9 @@ export function EleonorExperience({
                 </div>
               )}
               <p className="whitespace-pre-wrap break-words">{item.text}</p>
-              {item.role === 'assistant' && (item.coverage === 'incomplete' || item.morePages) && (
+              {item.role === 'assistant' && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
                 <p className="mt-2 text-[11px] font-semibold text-amber-700">
-                  {item.morePages ? 'Existem outros registros disponíveis.' : 'Esta consulta pode não cobrir todos os registros.'}
+                  {item.morePages ? 'Existem outros registros disponíveis.' : 'A cobertura desta consulta não está confirmada como completa.'}
                 </p>
               )}
               {item.role === 'assistant' && item.evidence && item.evidence.length > 0 && (
@@ -267,7 +267,7 @@ export function EleonorExperience({
   if (fullPage) {
     return (
       <section data-testid="eleonor-full-chat"
-        className="relative flex min-h-[calc(100dvh-9.5rem)] flex-col overflow-hidden rounded-[28px] border border-[#dce5f4] bg-gradient-to-b from-[#f4f8ff] via-[#f7faff] to-[#edf3fc] shadow-[0_20px_65px_-40px_rgba(0,40,142,0.32)]">
+        className="relative flex h-[calc(100dvh-11rem)] min-h-[440px] flex-col overflow-hidden rounded-[28px] border border-[#dce5f4] bg-gradient-to-b from-[#f4f8ff] via-[#f7faff] to-[#edf3fc] shadow-[0_20px_65px_-40px_rgba(0,40,142,0.32)]">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-blue-100 bg-white/75 px-5 py-4 sm:px-7">
           <div className="flex items-center gap-3">
             <EleonorSymbol />
