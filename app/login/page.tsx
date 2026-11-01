@@ -41,6 +41,11 @@ const OperationalWorkspace = lazy(() =>
     default: module.OperationalWorkspace,
   }))
 );
+const EleonorExperience = lazy(() =>
+  import('../../features/eleonor/components/EleonorExperience').then((module) => ({
+    default: module.EleonorExperience,
+  }))
+);
 
 export default function Home() {
   const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
@@ -89,6 +94,7 @@ export default function Home() {
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab === 'cronogramas') setActiveTab('cronogramas');
+    if (tab === 'eleonor') setActiveTab('eleonor');
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
@@ -197,7 +203,7 @@ export default function Home() {
     if (activeTab !== 'inicio') {
       setHasOpenedOperationalSurface(true);
     }
-    if (activeTab !== 'inicio' && activeTab !== 'painel') {
+    if (activeTab !== 'inicio' && activeTab !== 'painel' && activeTab !== 'eleonor') {
       setHasOpenedTransactionalSurface(true);
     }
   }, [activeTab]);
@@ -416,7 +422,7 @@ export default function Home() {
             </OperationalSurfaceTransition>
           )}
 
-          {(activeTab !== 'inicio' || hasOpenedOperationalSurface) && (
+          {activeTab !== 'eleonor' && (activeTab !== 'inicio' || hasOpenedOperationalSurface) && (
             <Suspense
               key="operational-workspace"
               fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
@@ -443,6 +449,17 @@ export default function Home() {
               ) : null}
             </Suspense>
           )}
+          <Suspense fallback={null}>
+            <EleonorExperience
+              key={`${user?.uid || 'anonymous'}:${workspaceContext.status === 'sector' ? workspaceContext.workspaceId : 'platform'}`}
+              user={user}
+              fullPage={activeTab === 'eleonor'}
+              onOpenFull={() => {
+                setActiveTab('eleonor');
+                setSidebarOpen(false);
+              }}
+            />
+          </Suspense>
         </main>
       </div>
 
