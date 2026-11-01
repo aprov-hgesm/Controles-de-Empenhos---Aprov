@@ -24,6 +24,7 @@ interface AdminCreateSectorPanelProps {
 }
 
 const INITIAL_FORM: CreateSectorWorkspaceInput = {
+  sectorType: 'aprovisionamento',
   workspaceId: '',
   workspaceName: '',
   ug: '',
@@ -182,6 +183,25 @@ export function AdminCreateSectorPanel({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Modalidade do setor" required>
+                <select
+                  value={form.sectorType || 'aprovisionamento'}
+                  onChange={(event) => {
+                    const sectorType = event.target.value === 'almoxarifado'
+                      ? 'almoxarifado' : 'aprovisionamento';
+                    setForm((current) => ({
+                      ...current,
+                      sectorType,
+                      sectionName: sectorType === 'almoxarifado' ? 'Seção de Almoxarifado' : 'Seção de Aprovisionamento',
+                      grantTrial: sectorType === 'almoxarifado' ? false : current.grantTrial,
+                    }));
+                  }}
+                  className={inputClass}
+                >
+                  <option value="aprovisionamento">Aprovisionamento</option>
+                  <option value="almoxarifado">Almoxarifado</option>
+                </select>
+              </Field>
               <Field label="Nome do setor" required>
                 <input
                   value={form.workspaceName}
@@ -357,6 +377,11 @@ export function AdminCreateSectorPanel({
             </div>
           </div>
 
+          {form.sectorType === 'almoxarifado' ? (
+            <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-xs text-cyan-100">
+              A política comercial do Almoxarifado ainda será definida. Este cadastro não gera trial nem cobrança do Aprovisionamento.
+            </p>
+          ) : (
           <div className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.05] p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -383,6 +408,8 @@ export function AdminCreateSectorPanel({
               </label>
             </div>
           </div>
+
+          )}
 
           <div className="rounded-2xl border border-blue-300/12 bg-blue-400/[0.04] p-4">
             <div className="flex items-start gap-3">
