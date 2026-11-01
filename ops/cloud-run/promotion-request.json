@@ -2,7 +2,6 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g844518a26732-841",
-  "sourceSha": "844518a26732ac1070e3048e97d6c4da995f9050",
-  "reason": "Publicacao em producao expressamente solicitada no chat em 01/11/2026 para testar a Eleonor no dominio canonico. PR #462 integrada, Application CI + Browser E2E + AI W6/W7 PASS, stage em 0% e segredos/IAM LFM3 configurados pelo operador. Promover a revisao AI habilitada somente para fundador, com verificacao de saude e rollback automatico. A falha 401/403 observada na previa requer verificacao posterior com a conta fundadora; a promocao nao comprova a correcao de autenticacao."
+  "revision": "emprovex-cloudrun-candidate-g2f26a7ce6917-14",
+  "sourceSha": "2f26a7ce6917e4247ac5f416afdcfda0e2aaa9ec"
 }
