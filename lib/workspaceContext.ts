@@ -46,7 +46,7 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   status: 'sector';
   email: string;
   accountType: 'sector';
-  sectorType: SectorType;
+  sectorType?: SectorType;
   workspaceId: string;
   workspaceName: string;
   ug: string | null;
