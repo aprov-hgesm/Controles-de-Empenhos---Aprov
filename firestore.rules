@@ -76,10 +76,18 @@ service cloud.firestore {
         && value.matches('^[0-9]{6}$');
     }
 
+    // Compatibilidade de registros legados sem sectorType; divergência nega acesso.
+    function sectorTypesMatch(workspace, account) {
+      let workspaceType = 'sectorType' in workspace ? workspace.sectorType : 'aprovisionamento';
+      let accountType = 'sectorType' in account ? account.sectorType : 'aprovisionamento';
+      return workspaceType in ['aprovisionamento', 'almoxarifado']
+        && accountType == workspaceType;
+    }
+
     function workspaceAndAccountUgMatch(workspaceId) {
       let workspace = workspaceData(workspaceId);
       let account = workspaceAccountData(workspaceId);
-      return (
+      return sectorTypesMatch(workspace, account) && (
           !('ug' in workspace)
           && !('ug' in account)
         )
@@ -143,6 +151,7 @@ service cloud.firestore {
         && account.status == 'active'
         && account.workspaceId == workspaceId
         && account.email == workspace.authorizedEmail
+        && sectorTypesMatch(workspace, account)
         && (
           (
             !('ug' in workspace)
@@ -537,12 +546,15 @@ service cloud.firestore {
           'authorizedEmail',
           'ug',
           'legacyWorkspace',
+          'sectorType',
           'institutionalProfile',
           'createdAt',
           'updatedAt',
           'createdBy'
         ])
         && request.resource.data.id == workspaceId
+        && (!('sectorType' in request.resource.data)
+            || request.resource.data.sectorType in ['aprovisionamento', 'almoxarifado'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.authorizedEmail is string
@@ -572,6 +584,8 @@ service cloud.firestore {
         && getAfter(
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
         ).data.status == request.resource.data.status
+        && sectorTypesMatch(request.resource.data,
+            getAfter(/databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)).data)
         && (
           (
             !('ug' in request.resource.data)
@@ -627,6 +641,7 @@ service cloud.firestore {
           'authProvider',
           'firebaseUid',
           'accountType',
+          'sectorType',
           'workspaceId',
           'ug',
           'status',
@@ -638,6 +653,8 @@ service cloud.firestore {
         ])
         && request.resource.data.email == accountId
         && request.resource.data.accountType == 'sector'
+        && (!('sectorType' in request.resource.data)
+            || request.resource.data.sectorType in ['aprovisionamento', 'almoxarifado'])
         && (
           !('authProvider' in request.resource.data)
           || request.resource.data.authProvider == 'password'
@@ -671,6 +688,9 @@ service cloud.firestore {
         && getAfter(
           /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
         ).data.status == request.resource.data.status
+        && sectorTypesMatch(
+            getAfter(/databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)).data,
+            request.resource.data)
         && (
           (
             !('ug' in request.resource.data)
@@ -2135,6 +2155,13 @@ service cloud.firestore {
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
         ).data.workspaceId == request.resource.data.workspaceId;
       allow update, delete: if false;
+    }
+
+    // Índice auxiliar de UG por modalidade: gravado somente no backend autorizado.
+    // Nunca confundir UG com autorização ao workspace.
+    match /platformSectorUgIndex/{indexId} {
+      allow get, list: if isPlatformAdmin();
+      allow create, update, delete: if false;
     }
 
     // Commercial readiness — metadados de backup. O fundador enxerga apenas
