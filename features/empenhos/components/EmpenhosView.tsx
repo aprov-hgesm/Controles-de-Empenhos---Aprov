@@ -1064,7 +1064,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                     <Loader2 className="w-4 h-4 animate-spin text-[#00288e]" />
                                   )}
                                   <select
-                                    value={targetEmp.classification || 'QR'}
+                                    value={isAlmox ? getAlmoxDefaultClass(targetEmp.classification) : targetEmp.classification || 'QR'}
                                     disabled={savingClassificationEmpenhoId === targetEmp.id}
                                     onChange={async (event) => {
                                       const nextClassification = event.target.value;
@@ -1707,8 +1707,8 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                 <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
                                   <th className="p-3.5 pl-5">Número NF</th>
                                   <th className="p-3.5">Emissão</th>
-                                  <th className="p-3.5">Data do TR</th>
-                                  <th className="p-3.5">Comissão</th>
+                                  {!isAlmox && <th className="p-3.5">Data do TR</th>}
+                                  {!isAlmox && <th className="p-3.5">Comissão</th>}
                                   <th className="p-3.5">Tesouraria</th>
                                   <th className="p-3.5">Pendência</th>
                                   <th className="p-3.5">Nº da NS</th>
@@ -1732,7 +1732,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                     <td className="p-3.5 text-gray-600 font-semibold">
                                       {formatDateOnly(inv.issueDate)}
                                     </td>
-                                    <td className="p-3.5">
+                                    {!isAlmox && (<td className="p-3.5">
                                       {!requiresCommission ? (
                                         <span className="text-gray-400 font-semibold text-[11px]">Dispensado</span>
                                       ) : inv.termoEmissaoDate ? (
@@ -1747,8 +1747,8 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                       ) : (
                                         <span className="text-gray-400 italic text-[11px]">Pendente</span>
                                       )}
-                                    </td>
-                                    <td className="p-3.5">
+                                    </td>)}
+                                    {!isAlmox && (<td className="p-3.5">
                                       {!requiresCommission ? (
                                         <span className="text-gray-400 font-semibold text-[11px]">Dispensada</span>
                                       ) : inv.comissaoDate ? (
@@ -1756,7 +1756,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
                                       )}
-                                    </td>
+                                    </td>)}
                                     <td className="p-3.5">
                                       {inv.tesourariaDate ? (
                                         <span className="font-bold text-gray-700">{formatDateOnly(inv.tesourariaDate)}</span>
@@ -1772,7 +1772,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                           empenhoClasses
                                         );
 
-                                        if (pendingStage === 'commission') {
+                                        if (!isAlmox && pendingStage === 'commission') {
                                           return (
                                             <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-extrabold text-rose-700">
                                               Aguardando Comissão
@@ -1780,7 +1780,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                           );
                                         }
 
-                                        if (pendingStage === 'treasury') {
+                                        if ((isAlmox && !inv.tesourariaDate) || pendingStage === 'treasury') {
                                           return (
                                             <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-extrabold text-amber-800">
                                               Aguardando Tesouraria
@@ -1817,14 +1817,14 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                                         >
                                           <Eye className="w-4 h-4" />
                                         </button>
-                                        <button
+                                        {!isAlmox && (<button
                                           type="button"
                                           onClick={() => handleDownloadTermoRecebimento(inv)}
                                           className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer"
                                           title="Baixar Termo de Recebimento"
                                         >
                                           <FileDown className="w-4 h-4" />
-                                        </button>
+                                        </button>)}
                                         <EmpenhoDocumentActions
                                           empenho={targetEmp}
                                           user={user}
@@ -1852,7 +1852,7 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                               </tbody>
                               <tfoot>
                                 <tr className="bg-gray-50 font-black text-xs text-[#0b1c30] border-t border-gray-200">
-                                  <td colSpan={7} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
+                                  <td colSpan={isAlmox ? 5 : 7} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
                                     Total de Notas Fiscais Lançadas ({targetInvoiceCount ?? targetInvoices.length})
                                   </td>
                                   <td className="p-3.5 text-right font-black text-emerald-600">
