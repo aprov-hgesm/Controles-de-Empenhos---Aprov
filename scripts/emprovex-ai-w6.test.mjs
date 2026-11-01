@@ -285,3 +285,31 @@ test('Model route retains independent sector authority and never shares response
  assert.equal(w3Calls[0].access.workspaceId,'sector-a');
  assert.equal(w3Calls[1].access.workspaceId,'sector-b');
 });
+
+test('Founder-only Cloud Run production pilot is disabled by default and service-bound',()=>{
+ const pilot={
+  EMPROVEX_AI_W45_ENABLED:'1',
+  EMPROVEX_AI_PRODUCTION_PILOT_ENABLED:'1',
+  EMPROVEX_AI_LFM3_ENABLED:'1',
+  K_SERVICE:'emprovex-cloudrun-candidate',
+  K_CONFIGURATION:'emprovex-cloudrun-candidate',
+  K_REVISION:'emprovex-cloudrun-candidate-00003-abc'
+ };
+ assert.equal(env.aiProductionPilotEnabled(pilot),true);
+ assert.equal(env.aiExperimentalEnabled(pilot),true);
+ assert.equal(env.aiLfm3Enabled(pilot),true);
+ for(const bad of [
+  {...pilot,EMPROVEX_AI_W45_ENABLED:'0'},
+  {...pilot,EMPROVEX_AI_PRODUCTION_PILOT_ENABLED:'0'},
+  {...pilot,K_SERVICE:'emprovex-cloudrun-staging'},
+  {...pilot,K_CONFIGURATION:'emprovex-cloudrun-staging'},
+  {...pilot,K_REVISION:'emprovex-cloudrun-staging-00003-abc'},
+  {...pilot,VERCEL:'1'},
+  {...pilot,VERCEL_ENV:'preview'},
+ ]) {
+  assert.equal(env.aiProductionPilotEnabled(bad),false,JSON.stringify(bad));
+  assert.equal(env.aiLfm3Enabled(bad),false,JSON.stringify(bad));
+ }
+ assert.equal(env.aiExperimentalEnabled({...pilot,EMPROVEX_AI_LFM3_ENABLED:'0'}),true);
+ assert.equal(env.aiLfm3Enabled({...pilot,EMPROVEX_AI_LFM3_ENABLED:'0'}),false);
+});
