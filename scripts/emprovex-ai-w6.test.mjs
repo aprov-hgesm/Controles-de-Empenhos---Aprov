@@ -313,3 +313,69 @@ test('Founder-only Cloud Run production pilot is disabled by default and service
  assert.equal(env.aiExperimentalEnabled({...pilot,EMPROVEX_AI_LFM3_ENABLED:'0'}),true);
  assert.equal(env.aiLfm3Enabled({...pilot,EMPROVEX_AI_LFM3_ENABLED:'0'}),false);
 });
+
+test('Production pilot blocks all non-founder users before obtaining Google credentials',async()=>{
+ let currentEmail='outside@example.test',googleCalls=0;
+ class FakeAiExecutionError extends Error{
+  constructor(code,status){super(code);this.code=code;this.httpStatus=status;}
+ }
+ const auth=load('lib/emprovex-ai/authorize.ts',{
+  '../server/firebaseFounderAuth':{verifyFirebaseRequest:async()=>({
+   uid:'test-uid',email:currentEmail,signInProvider:'password'
+  })},
+  '../server/sectorProvisioningAdmin':{getGoogleAccessToken:async()=>{googleCalls++;return 'legacy';}},
+  './integration/w6Isolation':{w6DataTarget:()=>null,
+   verifyW6FirebaseRequest:async()=>{throw Error('W6 must not run');},
+   getW6GoogleAccessToken:async()=>{throw Error('W6 must not run');}},
+  './integration/environment':{aiProductionPilotEnabled:()=>true},
+  './integration/productionPilot':{getAiProductionGoogleAccessToken:async()=>{
+   googleCalls++;return 'managed-token';}},
+  '../hgesmWorkspace':{HGESM_SECTOR_EMAIL:'founder@example.test',
+   HGESM_WORKSPACE_ID:'founder-sector',HGESM_UG:'160416'},
+  '../platformIdentity':{isFounderSignInProvider:p=>['password','google.com'].includes(p),
+   isValidUnitUg:()=>true,isValidWorkspaceId:()=>true,
+   normalizePlatformEmail:email=>email},
+  '../warehouse/featureFlag':{warehouseModuleEnabled:true},
+  '../billingAccess':{decideBillingAccess:()=>({allowed:true})},
+  '../billing':{},
+  './reader':{coreDocument:async()=>({status:'active',ug:'160416',
+   authorizedEmail:'founder@example.test'})},
+  './response':{AiExecutionError:FakeAiExecutionError}
+ });
+ await assert.rejects(()=>auth.prepareAiAccess('Bearer fake'),
+  e=>e.code==='AI_PILOT_FORBIDDEN'&&e.httpStatus===403);
+ assert.equal(googleCalls,0);
+ currentEmail='founder@example.test';
+ const allowed=await auth.prepareAiAccess('Bearer fake');
+ assert.equal(googleCalls,1);
+ assert.equal(allowed.workspaceId,'founder-sector');
+ assert.equal(allowed.googleToken,'managed-token');
+});
+
+test('Managed production pilot requires exact runtime service account',async()=>{
+ const saved={};
+ const pilot={
+  EMPROVEX_AI_W45_ENABLED:'1',EMPROVEX_AI_PRODUCTION_PILOT_ENABLED:'1',
+  K_SERVICE:'emprovex-cloudrun-candidate',
+  K_CONFIGURATION:'emprovex-cloudrun-candidate',
+  K_REVISION:'emprovex-cloudrun-candidate-00003-abc'
+ };
+ for(const key of Object.keys(pilot)){saved[key]=process.env[key];process.env[key]=pilot[key];}
+ const originalFetch=globalThis.fetch;
+ try{
+  const client=load('lib/emprovex-ai/integration/productionPilot.ts');
+  globalThis.fetch=async url=>({ok:true,text:async()=>String(url).endsWith('/email')
+   ?'unexpected@example.test':'{"access_token":"ya29.synthetic-token-good"}'});
+  await assert.rejects(()=>client.getAiProductionGoogleAccessToken(),
+   /AI_PILOT_RUNTIME_IDENTITY_FORBIDDEN/);
+  globalThis.fetch=async url=>({ok:true,text:async()=>String(url).endsWith('/email')
+   ?'emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com'
+   :'{"access_token":"ya29.synthetic-token-good"}'});
+  const token=await client.getAiProductionGoogleAccessToken();
+  assert.equal(token,'ya29.synthetic-token-good');
+ }finally{
+  globalThis.fetch=originalFetch;
+  for(const key of Object.keys(pilot))
+   saved[key]===undefined?delete process.env[key]:process.env[key]=saved[key];
+ }
+});
