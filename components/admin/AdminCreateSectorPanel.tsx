@@ -377,6 +377,11 @@ export function AdminCreateSectorPanel({
             </div>
           </div>
 
+          {form.sectorType === 'almoxarifado' ? (
+            <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-xs text-cyan-100">
+              A política comercial do Almoxarifado ainda será definida. Este cadastro não gera trial nem cobrança do Aprovisionamento.
+            </p>
+          ) : (
           <div className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.05] p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -403,6 +408,8 @@ export function AdminCreateSectorPanel({
               </label>
             </div>
           </div>
+
+          )}
 
           <div className="rounded-2xl border border-blue-300/12 bg-blue-400/[0.04] p-4">
             <div className="flex items-start gap-3">
