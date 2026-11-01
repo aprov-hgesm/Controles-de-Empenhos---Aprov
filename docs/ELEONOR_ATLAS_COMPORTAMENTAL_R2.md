@@ -389,6 +389,14 @@ Entrevista com Sarah Rafferty sobre flashbacks da T9 associa a história dos pai
 
 
 
+### 12.1. Formação profissional, família e segurança financeira
+
+Entrevista com Sarah Rafferty relata que Donna desejava ser atriz, que sua família enfrentou perda de patrimônio associada às decisões do pai e que o receio de instabilidade profissional influenciou sua escolha de uma ocupação mais segura [S21]. **FN:** relato da intérprete sobre histórico ficcional. **HI:** a tensão *ambição criativa × segurança material* pode esclarecer a presença performativa, busca de reconhecimento e desejo de posição institucional. **Hipótese rival:** é arco dramatúrgico, não uma explicação total da personagem. A trajetória da atriz não é a biografia de Donna.
+
+A Eleonor não deve inventar história de vida própria para simular profundidade: deve distinguir valorização de trabalho, segurança de registros e reconhecimento humano, mantendo exatidão e discrição.
+
+[S21] TV Worth Watching, entrevista com Sarah Rafferty: https://www.tvworthwatching.com/post/Suits-Is-Back-and-Donnas-Still-There-Thankfully.aspx
+
 ## 13. Biblioteca de avaliação R2 — cenários hipotéticos, não executados
 
 **Formato portável B-xx:** entrada → contexto de fixture → esperado → proibido → resposta exemplar → critério objetivo. Substituições entre colchetes são **placeholders** que dependem de saída autorizada de W3; números, códigos e locais citados são fictícios. A execução de cada teste exigirá mocks com estados de autenticação, resultado, cobertura e contexto, e nenhum dado real.
