@@ -668,3 +668,22 @@ Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coorden
 5. Se nenhum handoff estiver persistido, reportar "**handoff não localizado no GitHub**", sem presumir conclusão.
 
 **Regra de coordenação:** o memorial continua sendo a fonte do planejamento e histórico de Worker; PRs e commits fornecem a evidência material. Nunca exigir novo relato manual se houver acesso ao repositório.
+
+
+---
+
+## Checkpoint W9 R1-D — integração técnica e piloto (01/11/2026)
+
+- **Main auditada:** `9e475f86b0ccfb355f1fb2b07f1105d244a8f530`. O W5 é anterior à main; não houve rebase cego.
+- **Base certificada:** W1 PR #436 `baa5cde3957cb00b40bec9e1a250621a15cc4e06`; W5 PR #441 `d89781d5347d04173af98bcc50c71d99bfb8f663`, já incluindo W2/W3/W4.
+- **Workers R1-D consolidados sem duplicação de arquivos:** W6 PR #460 `2fcc96241b11733be3c7e05e40d76eb4a81f4f5b`; W7 PR #458 `8b1c396b77191c3703dab0cef9f572fa3bf6f5f1`; W8 PR #459 `532c184e4ecef4d17f55b84c8d162a93569420a2`.
+- **Branch W9:** `integration/emprovex-almox-r1d-w9-pilot`; commit octopus original `f7f45d45fab57e250c6f57fe92a21d09e6e37559`; conciliação de main `060e0523cbc9b4145b6a618679ea81d29f648a84`, com ancestralidade preservada de main e dos três Workers.
+- **Conciliação:** de 64 arquivos de integração comparados à base comum, somente `app/login/page.tsx` conflitava com alterações vigentes da main. Preservados o login, suporte, correções de segurança e workflows Cloud Run da main, acrescentando redirecionamento por `sectorEntryPath` e proteção para impedir montar o Aprovisionamento no Almoxarifado.
+- **Portal:** `app/almoxarifado/page.tsx` monta W6 (Empenhos, NF, Cronogramas), W7 (Fornecedores, Consulta de Itens, Materiais), W8 (Relatórios), Warehouse existente e Workbench SISCOFIS sintético. Os hooks financeiros, estado de interface e serviços de persistência continuam os mesmos do EMPROVEX, com `sectorType='almoxarifado'`. Modo Normal/Essencial e navegação mantidos.
+- **Financeiro:** inicialização FUNADOM, bloqueios CREM/TREM/comissão e separação entre recebimento financeiro e posição física; nenhuma nova coleção/ledger. Estado/ações adaptados em `features/operational/components/OperationalWorkspace.tsx`. Os relatórios recebem somente fontes do contexto autorizado, marcadas explicitamente como **parciais**, até comprovação de recorte completo.
+- **Segurança:** `WarehouseAccessBoundary` continua exigindo conta ativa, mesma UID/workspace/UG, aceites e autorização do servidor. W7 exige UG validada. Nada de consulta global financeira ou filtro de UG isolado como prova de tenancy.
+- **SISCOFIS:** PDF real de Pedido de Material ainda não fornecido. A ausência **não bloqueia o piloto das demais funções**. Parser, planejamento e ficha PDF W2–W5 permanecem experimentais; importação real, reserva, baixa auxiliar, baixa automática e movimentação transacional de pedido ficam desabilitadas. Mapa de Existência SISCOFIS do Warehouse permanece independente.
+- **Empresas:** PRs #419/#444/#447 não foram incorporadas. Nenhum cadastro real, cobrança, DNS, IAM, Firestore Rules em produção ou deploy foi autorizado.
+- **Testes W9:** workflow `.github/workflows/emprovex-almox-w9-pilot.yml` inclui typecheck, regressões focadas W1/W5/W6/W7/W8, emulator de isolamento e build; resultados devem ser registrados conforme execução do SHA final. Teste de navegador autenticado e cadastro do primeiro usuário piloto exigem evidências próprias, não se presumem PASS.
+- **Release controlado:** somente após aprovação de PR e autorização específica de merge na main, revisão Cloud Run sem tráfego, smoke de saúde e piloto, autorização específica de promoção com rollback disponível; `docs/EMPROVEX_RELEASE_CLOUD_RUN.md` e workflows vigentes continuam canônicos.
+- **Parecer intermediário:** GO para revisão da integração técnica isolada; NO-GO para produção, criação de usuário real e pedidos SISCOFIS completos sem homologação restante.
