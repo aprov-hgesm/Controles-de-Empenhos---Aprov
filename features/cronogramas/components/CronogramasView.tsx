@@ -9,6 +9,8 @@ import { CronogramaEnviosView } from './CronogramaEnviosView';
 import type { CronogramaEmailConfirmation } from '../hooks/useCronogramaActions';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import type { SectorType } from '../../../lib/platformIdentity';
+import { getAlmoxDefaultClass } from '../../almoxarifado/financeiro/sectorFinancialPolicy';
 
 interface CronogramasViewContext {
   applyAllToFirstRemessa: any;
@@ -68,9 +70,11 @@ interface CronogramasViewContext {
 
 interface CronogramasViewProps {
   context: CronogramasViewContext;
+  sectorType?: SectorType;
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
-export function CronogramasView({ context }: CronogramasViewProps) {
+export function CronogramasView({ context, sectorType }: CronogramasViewProps) {
+  const isAlmox = sectorType === 'almoxarifado';
   const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, confirmCronogramaEmail, cancelCronogramaEmail, updateCronogramaEmailRecipient, cronogramaEmailConfirmation, saveEmailInSupplierRecord, setSaveEmailInSupplierRecord, isPreparingCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
@@ -986,7 +990,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                               type="text"
                               value={cronogramaLocalEntrega}
                               onChange={(e) => setCronogramaLocalEntrega(e.target.value)}
-                              placeholder="ex: Almoxarifado Geral / Seção de Aprovisionamento - HGeSM"
+                              placeholder="ex: Almoxarifado Geral / Seção de Material da OM"
                               className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#00288e]/20 focus:border-[#00288e]"
                             />
                           </div>
@@ -1030,7 +1034,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                               type="text"
                               value={cronogramaResponsavelCargo}
                               onChange={(e) => setCronogramaResponsavelCargo(e.target.value)}
-                              placeholder="ex: Fiscal de Contrato / Seção de Aprovisionamento - HGeSM"
+                              placeholder="ex: Fiscal de Contrato / Seção de Material da OM"
                               className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#00288e]/20 focus:border-[#00288e]"
                             />
                           </div>
@@ -1069,7 +1073,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                   <div className="text-center space-y-1 border-b border-gray-300 pb-4">
                                     <p className="text-xs font-extrabold text-[#00288e] tracking-widest uppercase">MINISTÉRIO DA DEFESA • EXÉRCITO BRASILEIRO</p>
                                     <p className="text-xs font-bold text-gray-700">HOSPITAL GERAL DE SANTA MARIA (HGeSM)</p>
-                                    <p className="text-[11px] text-gray-500 font-medium">SEÇÃO DE APROVISIONAMENTO / LOGÍSTICA HOSPITALAR</p>
+                                    <p className="text-[11px] text-gray-500 font-medium">{isAlmox ? 'SETOR DE MATERIAL / ALMOXARIFADO' : 'SEÇÃO DE APROVISIONAMENTO / LOGÍSTICA HOSPITALAR'}</p>
                                     <h2 className="text-sm font-black text-[#00288e] pt-2 uppercase tracking-wide">
                                       CRONOGRAMA DE ENTREGA DE MATERIAL / GÊNEROS (NE: {targetEmp.id})
                                     </h2>
@@ -1087,7 +1091,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                     </div>
                                     <div>
                                       <span className="text-gray-400 font-bold block text-[10px] uppercase">Classe:</span>
-                                      <strong className="text-gray-900">{targetEmp.classification || 'QR'}</strong>
+                                      <strong className="text-gray-900">{isAlmox ? getAlmoxDefaultClass(targetEmp.classification) : targetEmp.classification || 'QR'}</strong>
                                     </div>
                                     <div className="sm:col-span-2">
                                       <span className="text-gray-400 font-bold block text-[10px] uppercase">Fornecedor:</span>
@@ -1171,7 +1175,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                   <div className="grid grid-cols-2 gap-8 pt-8 border-t border-gray-200 text-center text-xs">
                                     <div className="space-y-1">
                                       <div className="w-48 h-[1px] bg-gray-400 mx-auto mb-2" />
-                                      <p className="font-bold text-gray-900">{cronogramaResponsavelNome || 'Encarregado do Aprovisionamento'}</p>
+                                      <p className="font-bold text-gray-900">{cronogramaResponsavelNome || (isAlmox ? 'Encarregado do Almoxarifado' : 'Encarregado do Aprovisionamento')}</p>
                                       <p className="text-[10px] text-gray-500">{cronogramaResponsavelCargo}</p>
                                     </div>
                                     <div className="space-y-1">
