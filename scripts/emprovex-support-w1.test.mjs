@@ -36,11 +36,11 @@ test('14 vídeos oficiais, sequência e allowlist da landing preservados sem inv
   const allowedIds = [...list[1].matchAll(/'([\w-]{11})'/g)].map(match => match[1]);
   const official = catalog.SUPPORT_TUTORIALS;
   assert.equal(official.length, 14);
-  assert.deepEqual(official.map(t => t.number), Array.from({ length: 14 }, (_, i) => i + 1));
+  assert.deepEqual(Array.from(official, t => t.number), Array.from({ length: 14 }, (_, i) => i + 1));
   assert.equal(new Set(official.map(t => t.youtubeId)).size, 14);
   assert.equal(new Set(htmlIds).size, 14);
-  assert.deepEqual([...htmlIds].sort(), official.map(t => t.youtubeId).sort());
-  assert.deepEqual([...allowedIds].sort(), official.map(t => t.youtubeId).sort());
+  assert.deepEqual([...htmlIds].sort(), Array.from(official, t => t.youtubeId).sort());
+  assert.deepEqual([...allowedIds].sort(), Array.from(official, t => t.youtubeId).sort());
   for (const tutorial of official) {
     assert.match(tutorial.youtubeId, /^[\w-]{11}$/);
     assert.ok(html.includes('data-video-id="' + tutorial.youtubeId + '"'));
