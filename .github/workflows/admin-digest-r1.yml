@@ -1,0 +1,23 @@
+name: EMPROVEX Admin Digest R1
+on:
+  pull_request:
+    paths:
+      - 'app/api/cron/admin-digest/**'
+      - 'lib/server/adminDailyDigest.ts'
+      - 'lib/adminDailyDigest.*'
+      - 'scripts/admin-daily-digest.test.mjs'
+      - '.github/workflows/admin-digest-r1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  admin-digest-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - name: Validate daily digest semantics and OIDC guards
+        run: node --test scripts/admin-daily-digest.test.mjs
