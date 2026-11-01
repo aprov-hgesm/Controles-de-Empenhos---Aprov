@@ -122,7 +122,7 @@ export function planConversation(input:{
  if(matches(t,/\b(?:piada|trocadilho|charada|me faca rir|brincadeira)\b/))
    return decision('humor','joke','general',
      'Por que o arquivo estava tão tranquilo? Porque estava bem organizado. Um privilégio que nem toda pasta conhece.');
- if(matches(t,/\b(?:estou cansad|estou com preguica|hoje esta dificil|dia complicado|que dia longo)\b/))
+ if(matches(t,/\b(?:estou cansad[oa]|estou com preguica|hoje esta dificil|dia complicado|que dia longo)\b/))
    return decision('social','tired','general',
      'Parece um dia exigente. Podemos escolher só a próxima prioridade e deixar o restante mais simples.');
  if(matches(t,/\b(?:deu tudo certo|consegui|estou animad|finalmente terminei)\b/))
