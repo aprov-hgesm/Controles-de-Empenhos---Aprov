@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   applicationName: 'EMPROVEX',
   manifest: '/manifest.webmanifest',
   icons: {
-    icon: [{ url: '/api/install-icon/32', sizes: '32x32', type: 'image/png' }],
-    apple: [{ url: '/api/install-icon/180', sizes: '180x180', type: 'image/png' }],
+    icon: [{ url: '/api/install-icon/32?v=20261101', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/api/install-icon/180?v=20261101', sizes: '180x180', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
