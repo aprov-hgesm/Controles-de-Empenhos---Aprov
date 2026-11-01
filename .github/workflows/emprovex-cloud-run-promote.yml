@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'ops/cloud-run/promotion-request.json'
+      - 'ops/admin-digest/activation-request.json'
   workflow_dispatch:
     inputs:
       revision:
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   promote:
     name: Human-approved promotion and automatic health rollback
-    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'Moriark')) }}
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'Moriark')) && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'ativacao-boletim')) }}
     environment:
       name: ${{ github.event_name == 'workflow_dispatch' && 'emprovex-production' || 'emprovex-chat-authorized' }}
       url: https://emprovex.com.br
@@ -202,3 +203,34 @@ jobs:
             echo "- Previous revision for rollback: \`${PREVIOUS_REVISION}\`"
             echo "- Canonical domain health: HTTP 200 via Firebase Hosting."
           } >> "${GITHUB_STEP_SUMMARY}"
+
+
+  activate-digest:
+    name: Ativar boletim Gmail usando workflow WIF homologado
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor == 'Moriark' && contains(github.event.head_commit.message, 'ativacao-boletim') }}
+    environment:
+      name: emprovex-chat-authorized
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exato para validar pedido unico
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Autenticar Google por WIF existente
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: gen-lang-client-0982077967
+          workload_identity_provider: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+          service_account: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+          create_credentials_file: true
+      - name: Configurar gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: gen-lang-client-0982077967
+      - name: Validar autorizacao e ativar boletim com teste e rollback
+        shell: bash
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: bash ops/admin-digest/activate.sh
