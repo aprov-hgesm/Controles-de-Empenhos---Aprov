@@ -139,6 +139,9 @@ test('W6 Firestore Core and Warehouse target only the isolated project',async()=
   if(target.endsWith('/workspaces/sector-ai-a'))
    return {ok:true,status:200,json:async()=>({name:'projects/emprovex-w6-test-2026/databases/(default)/documents/workspaces/sector-ai-a',
     fields:{status:{stringValue:'active'}}})};
+  if(target.endsWith('/platformAccounts/user%40example.test'))
+   return {ok:true,status:200,json:async()=>({name:'projects/emprovex-w6-test-2026/databases/(default)/documents/platformAccounts/user@example.test',
+    fields:{email:{stringValue:'user@example.test'}}})};
   if(target.endsWith('/warehouse/sector-ai-a/materials/mat_123'))
    return {ok:true,status:200,json:async()=>({name:'projects/emprovex-w6-test-2026/databases/emprovex-warehouse/documents/warehouse/sector-ai-a/materials/mat_123',
     fields:{workspaceId:{stringValue:'sector-ai-a'},ug:{stringValue:'160416'}}})};
@@ -150,11 +153,12 @@ test('W6 Firestore Core and Warehouse target only the isolated project',async()=
  };
  try{
   assert.equal((await reader.coreDocument('workspaces/sector-ai-a',access.googleToken)).status,'active');
+  assert.equal((await reader.coreDocument('platformAccounts/user@example.test',access.googleToken)).email,'user@example.test');
   assert.equal((await reader.warehouseDocument(access,'materials','mat_123')).id,'mat_123');
   const queried=await reader.warehouseQuery(access,'materials',null,21);
   assert.equal(queried.rows.length,1);
   assert.equal(queried.rows[0].id,'mat_123');
-  assert.equal(urls.length,3);
+  assert.equal(urls.length,4);
  }finally{globalThis.fetch=former;}
 });
 
