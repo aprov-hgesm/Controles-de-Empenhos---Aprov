@@ -1,0 +1,30 @@
+name: EMPROVEX AI W3 isolated certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, converted_to_draft]
+    paths:
+      - "lib/emprovex-ai/**"
+      - "app/api/emprovex-ai/**"
+      - "scripts/emprovex-ai-w3.test.mjs"
+      - ".github/workflows/emprovex-ai-w3.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-w3-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W3 P0 synthetic boundary tests
+        run: node --test scripts/emprovex-ai-w3.test.mjs

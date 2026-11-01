@@ -1,0 +1,52 @@
+name: EMPROVEX AI W5 Context Hardening Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/emprovex-ai/**'
+      - 'lib/server/firebaseFounderAuth.ts'
+      - 'app/api/emprovex-ai/**'
+      - 'scripts/emprovex-ai-w5*'
+      - '.github/workflows/emprovex-ai-w5-certification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-w5-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: W5 and W3 TypeScript
+        run: npm run typecheck
+      - name: W4 context build
+        run: |
+          npx --no-install tsc lib/emprovex-ai/context/index.ts --module commonjs --moduleResolution node --target es2022 --skipLibCheck --esModuleInterop --outDir .w4-dist
+          cp .w4-dist/index.js .w4-dist/index.cjs
+      - name: W5 semantic corpus and 20 conversations
+        run: node --test scripts/emprovex-ai-w5.test.mjs
+      - name: W5 HTTP and security integration with synthetic dependencies
+        run: node --test scripts/emprovex-ai-w5-security.test.mjs
+      - name: W5 R1.1 independent findings regressions
+        run: node --test scripts/emprovex-ai-w5-r11.test.mjs
+      - name: W5 bounded lexical benchmark
+        run: node scripts/emprovex-ai-w5-benchmark.mjs
+      - name: W3 W4 W4.5 all existing synthetic regressions
+        run: |
+          node --test scripts/emprovex-ai-w3.test.mjs
+          node --test scripts/emprovex-ai-w4.test.mjs
+          node scripts/emprovex-ai-w4-evaluate.mjs
+          node scripts/emprovex-ai-w4-r11-evaluate.mjs
+          node --test scripts/emprovex-ai-w45.test.mjs
+      - name: No real backend secrets
+        run: |
+          test -z "${EMPROVEX_AI_W45_CONTEXT_SECRET:-}"
+          test -z "${INFINITEPAY_BILLING_ENABLED:-}"
