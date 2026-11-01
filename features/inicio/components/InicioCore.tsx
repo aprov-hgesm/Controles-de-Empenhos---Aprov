@@ -55,7 +55,7 @@ export function InicioCore({ snapshot, performanceMode, ambientPaused }: InicioC
         </span>
         <span className={styles.float}>
           <Image
-            src="/branding/emprovex-dark-transparent.png"
+            src="/Novo%20Logo%20Emprovex%2001.11.2026.png"
             alt=""
             width={3375}
             height={3375}

@@ -17,7 +17,9 @@ export function usePlatformBranding() {
 
   useEffect(() => {
     let active = true;
-    const staticLogo = process.env.NEXT_PUBLIC_EMPROVEX_LOGO_URL?.trim() || '/emprovex-logo.png?v=20261101';
+    // O logotipo institucional oficial é fixo. NEXT_PUBLIC_EMPROVEX_LOGO_URL
+    // (configuração legada) não pode substituir a arte nova por uma URL antiga.
+    const staticLogo = '/Novo%20Logo%20Emprovex%2001.11.2026.png';
     const cacheKey = 'emprovex:branding-logo:v1';
 
     if (staticLogo) {
