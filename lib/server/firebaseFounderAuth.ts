@@ -46,7 +46,7 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
     && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:8080'
     && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
     && args.length === 1
-    && /(?:^|[\\/])node_modules[\\/]next[\\/]dist[\\/]server[\\/]lib[\\/]start-server\\.js$/.test(args[0] || '');
+    && /(?:^|[\\/])node_modules[\\/]next[\\/]dist[\\/]server[\\/]lib[\\/]start-server\.js$/.test(args[0] || '');
   // CI offline executa o autorizador diretamente (sem servidor HTTP).
   // Permitir SOMENTE estes scripts conhecidos, com dois emuladores locais.
   // Nao permitir CLI generico, Next start nem ambiente hospedado.
