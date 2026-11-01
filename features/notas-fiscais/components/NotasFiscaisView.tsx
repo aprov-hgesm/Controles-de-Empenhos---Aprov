@@ -14,6 +14,7 @@ import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit,
 import { motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
+import type { SectorType } from '../../../lib/platformIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { loadAllInvoicesHistory, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
@@ -98,6 +99,7 @@ interface NotasFiscaisViewContext {
 
 interface NotasFiscaisViewProps {
   context: NotasFiscaisViewContext;
+  sectorType?: SectorType;
 }
 
 const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
@@ -114,7 +116,8 @@ const getInvoiceSortTimestamp = (invoice: Invoice): number => {
   return Number.isNaN(timestamp) ? 0 : timestamp;
 };
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
-export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
+export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps) {
+  const isAlmox = sectorType === 'almoxarifado';
   const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   // O PDF em rascunho pertence à sessão operacional, não à aba montada.
@@ -193,7 +196,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
     for (const invoice of invoices) {
       const targetEmpenho = empenhosById.get(invoice.empenhoId);
-      const requiresTR = classRequiresTermoRecebimento(
+      const requiresTR = !isAlmox && classRequiresTermoRecebimento(
         targetEmpenho?.classification,
         empenhoClasses
       );
@@ -213,7 +216,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     }
 
     return { byKey, faltaComissao, faltaTesouraria, concluidas };
-  }, [empenhoClasses, empenhosById, invoices]);
+  }, [empenhoClasses, empenhosById, invoices, isAlmox]);
 
   const totalInvoiceCount = summaryCounts?.total
     ?? (historyLoaded && !historyTruncated ? invoices.length : null);
@@ -255,10 +258,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
           || invoice.empenhoId === nfEmpenhoFilter;
         const meta = invoiceDerived.byKey.get(getInvoiceRecordKey(invoice));
         const currentLocation = meta?.currentLocation ?? getInvoiceLocation(invoice);
-        const requiresTR = meta?.requiresTR ?? classRequiresTermoRecebimento(
+        const requiresTR = !isAlmox && (meta?.requiresTR ?? classRequiresTermoRecebimento(
           empenhosById.get(invoice.empenhoId)?.classification,
           empenhoClasses
-        );
+        ));
 
         let matchesTramitacao = true;
         if (nfTramitacaoFilter === 'EmTramitacao') {
@@ -380,7 +383,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   }`}
                 >
                   Comissões de Recebimento
-                  {nfSubTab === 'comissao' && (
+                  {!isAlmox && nfSubTab === 'comissao' && (
                     <motion.div layoutId="nfActiveSubTabBorder" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00288e]" />
                   )}
                 </button>
@@ -631,10 +634,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       return filteredInvoices.map((inv) => {
                         const targetEmpenho = empenhosById.get(inv.empenhoId);
                         const invoiceMeta = invoiceDerived.byKey.get(getInvoiceRecordKey(inv));
-                        const requiresTR = invoiceMeta?.requiresTR ?? classRequiresTermoRecebimento(
+                        const requiresTR = !isAlmox && (invoiceMeta?.requiresTR ?? classRequiresTermoRecebimento(
                           targetEmpenho?.classification,
                           empenhoClasses
-                        );
+                        ));
                         const currentLocation = invoiceMeta?.currentLocation ?? getInvoiceLocation(inv);
 
                         return (
@@ -645,7 +648,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 <span className="bg-blue-50 text-[#00288e] text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
                                   NF-e #{inv.id}
                                 </span>
-                                {inv.termoNumero && (
+                                {!isAlmox && inv.termoNumero && (
                                   <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
                                     <Check className="w-3 h-3" /> Termo Nº {inv.termoNumero} ({formatDateOnly(inv.termoEmissaoDate || inv.registeredAt || inv.issueDate)})
                                   </span>
@@ -702,7 +705,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               onDocumentUploaded={handleEmpenhoDocumentUploaded}
                               onNotify={showToast}
                             />
-                            {requiresTR ? (
+                            {!isAlmox && (requiresTR ? (
                               <TermoRecebimentoActions
                                 invoice={inv}
                                 onAction={handleTermoRecebimentoAction}
@@ -721,7 +724,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                   </div>
                                 </div>
                               </section>
-                            )}
+                            ))}
                           </div>
 
                           <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -730,7 +733,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               <p className="text-xs text-gray-500 font-medium mt-0.5">
                                 {requiresTR
                                   ? 'Altere este campo quando a NF retornar da Comissão ou Tesouraria para correção. O histórico de datas permanece preservado.'
-                                  : 'Esta classe dispensa Comissão de Recebimento. A NF tramita diretamente entre Aprovisionamento e Tesouraria.'}
+                                  : isAlmox ? 'A NF pode ser acompanhada do Almoxarifado até a Tesouraria, sem CREM/TREM.' : 'Esta classe dispensa Comissão de Recebimento. A NF tramita diretamente entre Aprovisionamento e Tesouraria.'}
                               </p>
                             </div>
                             <select
@@ -740,8 +743,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               aria-busy={processingInvoiceId === getInvoiceRecordKey(inv)}
                               className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px] disabled:opacity-60 disabled:cursor-wait"
                             >
-                              <option value="APROVISIONAMENTO">Aprovisionamento</option>
-                              {(requiresTR || currentLocation === 'COMISSAO') && (
+                              <option value="APROVISIONAMENTO">{isAlmox ? 'Almoxarifado' : 'Aprovisionamento'}</option>
+                              {!isAlmox && (requiresTR || currentLocation === 'COMISSAO') && (
                                 <option value="COMISSAO">
                                   {requiresTR ? 'Comissão de Recebimento' : 'Comissão de Recebimento (histórico)'}
                                 </option>
@@ -1219,7 +1222,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
               )}
 
               {/* Sub-Tab 3: Comissões de Recebimento */}
-              {nfSubTab === 'comissao' && (
+              {!isAlmox && nfSubTab === 'comissao' && (
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pb-24">
                   {/* Left Column: Register New Committee */}
                   <div className="xl:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
