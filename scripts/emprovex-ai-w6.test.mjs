@@ -159,7 +159,9 @@ test('W6 Firestore Core and Warehouse target only the isolated project',async()=
 });
 
 test('IAM metadata token and Ollama JSON mode, think=false, output/time bounds',async()=>{
- const previous=globalThis.fetch;
+ const previous=globalThis.fetch,previousTimeout=AbortSignal.timeout;
+ const timeoutValues=[];
+ AbortSignal.timeout=(ms)=>{timeoutValues.push(ms);return previousTimeout(ms);};
  let requests=[];
  globalThis.fetch=async(url,options)=>{
   requests.push({url:String(url),options});
@@ -184,7 +186,8 @@ test('IAM metadata token and Ollama JSON mode, think=false, output/time bounds',
   assert.equal(body.options.temperature,0);
   assert.equal(body.format.additionalProperties,false);
   assert.ok(requests[1].options.signal);
- }finally{globalThis.fetch=previous;}
+  assert.deepEqual(timeoutValues,[1800,30000]);
+ }finally{globalThis.fetch=previous;AbortSignal.timeout=previousTimeout;}
 });
 test('Model outages/invalid target/invalid JSON fail closed, not operational queries',async()=>{
  const original=globalThis.fetch,originalUrl=process.env.EMPROVEX_AI_LFM3_URL;
