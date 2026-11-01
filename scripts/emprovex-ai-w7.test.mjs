@@ -66,13 +66,14 @@ test('W7 taxonomy has all 18 required families, with separate support states',()
  assert.equal(CONVERSATION_FAMILIES.length,18);
  for(const family of new Set(cases.map(c=>c[1])))assert.ok(CONVERSATION_FAMILIES.includes(family),family);
 });
-test('54 synthetic unseen phrases: routing is traceable, without LFM3',()=>{
- let correct=0;
+test('Synthetic phrase corpus: report all mismatches without LFM3',()=>{
+ let correct=0;const mismatches=[];
  for(const [message,expected] of cases){
   const actual=plan(message);
   if(actual?.family===expected)correct++;
-  assert.equal(actual?.family,expected,JSON.stringify({message,actual,expected}));
+  else mismatches.push({message,actual:actual?.family,expected});
  }
+ assert.deepEqual(mismatches,[]);
  assert.equal(correct,cases.length);
 });
 test('Operational W4 always wins: no casual override, including mixed-language prompts',()=>{
