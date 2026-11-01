@@ -14,7 +14,7 @@ const component = read('components/InvoiceMirrorDocumentActions.tsx');
 const documents = read('features/relatorios/hooks/useDocumentActions.ts');
 const rootEntry = read('app/page.tsx');
 const page = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx')
+  ? read('app/login/OperationalEntry.tsx')
   : rootEntry;
 if (rootEntry.includes("export { default } from './login/page'") && !page.includes("import('../../features/operational/components/OperationalWorkspace')")) {
   throw new Error('Shell canônico de /login não carrega OperationalWorkspace sob demanda.');

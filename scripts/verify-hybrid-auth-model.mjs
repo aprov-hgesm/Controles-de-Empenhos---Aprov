@@ -11,7 +11,7 @@ const access = read('lib/platformAccess.ts');
 const operationalData = read('hooks/useOperationalData.ts');
 const rootEntry = read('app/page.tsx');
 const page = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx')
+  ? read('app/login/OperationalEntry.tsx')
   : rootEntry;
 const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
@@ -100,11 +100,10 @@ requireText(
   'Entrar com e-mail e senha',
   'Componente público não oferece o login por senha.'
 );
-requireText(
-  login,
-  'Entrar com Google — HGeSM',
-  'A interface deve preservar o acesso Google como alternativa para a conta fundadora.'
-);
+if (login.includes('Entrar com Google — HGeSM')) {
+  findings.push('Login fundador não deve reexibir botão Google na interface pública.');
+}
+requireText(identity, 'FOUNDER_GOOGLE_AUTH_PROVIDER', 'Compatibilidade do provider Google no Firebase foi removida.');
 requireText(
   operationalData,
   'signInWithPopup',
@@ -179,7 +178,7 @@ if (findings.length) {
   console.log('Conta externa por Google: bloqueada no runtime');
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
-  console.log('Login Google Firebase: preservado na interface do fundador');
+  console.log('Login Google Firebase: compatibilidade backend preservada, botão oculto');
   console.log('Founder: Google e senha autorizados; setores externos: password');
   console.log('Drive: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
