@@ -45,6 +45,7 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
     && [
       'core-lean-r2-w5-transactions.mjs',
       'core-lean-r2-w4-authz-mobile.integration.mjs',
+      'core-lean-r2-w4-assurance-emulator.ts',
       'emprovex-ai-functional-homologation.mjs',
     ].some(name => {
       const executable = args[0]?.replace(/\\/g,'/') || '';
