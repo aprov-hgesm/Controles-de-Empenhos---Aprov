@@ -63,6 +63,20 @@ export function buildAlmoxFinancialReport(expectedWorkspaceId: string, source: A
       year: /^\d{4}/.test(empenho.date) ? empenho.date.slice(0, 4) : 'Não informado',
       itemCount: empenho.items.length,
       invoiceCount: linkedInvoices.length,
+      items: empenho.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        committedQuantity: item.quantity,
+        receivedQuantity: item.received,
+        committedValue: item.quantity * item.unitPrice,
+      })),
+      invoices: linkedInvoices.map((invoice) => ({
+        id: invoice.id,
+        issueDate: invoice.issueDate,
+        totalValue: invoice.totalValue,
+        numeroNS: invoice.numeroNS || null,
+      })),
       committedValue,
       invoiceValue,
       /** Saldo financeiro do relatório legado (com piso zero); não é saldo físico. */
