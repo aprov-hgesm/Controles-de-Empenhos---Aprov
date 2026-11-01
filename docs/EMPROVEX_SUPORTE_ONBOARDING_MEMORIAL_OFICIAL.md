@@ -340,6 +340,36 @@ Nunca marcar feature como **implementada** por estar apenas neste plano; registr
 
 **Parecer documental:** **GO para revisão final da integração**; a pendência do Browser E2E geral informada anteriormente está **RESOLVIDA — SUCCESS**. **NO-GO para afirmar homologação visual específica de Ajuda mobile/Essencial sem teste correspondente**, e **NO-GO para declarar Application CI PASS** enquanto estiver skipped. Para preparar merge, avaliar tornar a PR Ready for review e obter Application CI no SHA vigente, sem permitir merge automático. Merge na `main` e deploy/promoção Cloud Run permanecem sujeitos à autorização específica do responsável e às políticas de release vigentes.
 
+### 13.7. ENCERRAMENTO — Suporte R1 em produção (01/11/2026, Brasília)
+
+**Status final: IMPLEMENTADO, CERTIFICADO, INTEGRADO NA MAIN E PUBLICADO NO CLOUD RUN COM 100% DO TRÁFEGO.** Este checkpoint encerra a frente Suporte R1, sem encerrar o desenvolvimento contínuo do produto nem as frentes independentes.
+
+**Integrações GitHub:**
+- [PR #440 — Memorial oficial](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/440) **MERGED** via squash `56d24c0cdb005e3d63ac1703b2703afdd49caa46`.
+- [PR #448 — Suporte R1 / W4](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/448) **MERGED** via squash `e68f358e711167c5c0639c978b7c0da00e668bbb`.
+- Correção restrita de whitespace Markdown em três handoffs, sem mudança de lógica: `31028642232250435459228df66d5a029cb39077`. O Application CI identificou inicialmente `Diff hygiene` reprovado por espaços finais nos handoffs; correção foi realizada, mantendo quebras de linha Markdown.
+- Proteção adicional de teste no W4 para paginação sob demanda e Auth fundador: `72685d84e7b6c2805162940c2567a9ac0830b74a` (**SHA exato da imagem publicada**).
+
+**Certificação do SHA `72685d84e7b6c2805162940c2567a9ac0830b74a`:**
+- [Core Protection — run 41273609069](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41273609069): **SUCCESS**.
+- [Application CI — run 41273609073](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41273609073): **SUCCESS**, incluindo validação principal e Block 16/17/18/19/20/21 Final Gates.
+- [Cloud Run build and stage — run 41273609086](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41273609086): **SUCCESS**, revisão criada e verificada com **0% de tráfego**; saúde da candidata e proteção HTTP 401 da rota de cobrança sem autenticação validadas.
+- SHA da imagem no Artifact Registry: `sha256:e1fa1d84900ad16252c5af44f12bb370ad5c781841305ef69cc22538c738823a`.
+
+**Publicação autorizada por mensagem expressa do responsável neste chat:**
+- Commit exclusivamente de autorização: `b9301f786479f595036bf35b2416d83e2e8fde36`, alterando apenas `ops/cloud-run/promotion-request.json`, com `sourceSha` e `revision` fixos.
+- [Workflow de promoção — run 41273907751](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41273907751): **SUCCESS**. Verificou imagem/digest, serviço e identidade, promoveu e confirmou o tráfego **100%** para `emprovex-cloudrun-candidate-g72685d84e7b6-10` e saúde HTTPS do domínio `https://emprovex.com.br/api/health` com êxito.
+- Revisão anterior preservada para rollback: `emprovex-cloudrun-candidate-dbadb5c53e62b-6`. Nenhum rollback foi necessário.
+- Infraestrutura vigente preservada: projeto `gen-lang-client-0982077967`, região `southamerica-east1`, serviço `emprovex-cloudrun-candidate`, runtime service account `emprovex-run-runtime`. Não houve publicação de Firestore Rules, mudança de segredos ou gravação em dados reais de clientes pelo coordenador.
+
+**Verificação dos desenvolvimentos paralelos antes da publicação:** Almoxarifado #436/#441 permaneceu isolado; EMPROVEX Empresas #419/#447 suspenso; EMPROVEX AI/LFM3 #450 e Eleonor #453 em PRs independentes, não integrados ao release. O boletim administrativo R1/R2 já estava na main e teve publicação/homologação em ciclo próprio; sua ativação não foi repetida. Não presumir que essas frentes estejam homologadas ou publicadas por causa do merge de Suporte.
+
+**Escopo operacional efetivamente publicado:** Central de Ajuda com catálogo oficial 14 vídeos, pesquisa e player sob demanda; entrada no Aprovisionamento e na Central de Depósitos com tópico específico; overlay acessível em desktop/mobile/Essencial; acompanhamento administrativo de interessados com paginação server-side 25 por página, reenvios tratados em janela de 24h e nota curta founder-only. Nenhum chatbot, CRM paralelo, listener adicional ou mudança de billing foi incluído.
+
+**Limite de homologação:** CI, emulator/Browser E2E geral, health e tráfego foram confirmados. A interação manual dentro do novo overlay em navegador autenticado de cliente real **não foi certificada nesta execução**; poderá ser observada naturalmente em produção, sem justificar reabrir a implantação já concluída se não houver problema concreto.
+
+**Decisão final:** **GO / ENCERRADO** para o desenvolvimento Suporte R1. Demais evoluções W3 (adoção/retencão), feedback R4, demandas de clientes e mudanças futuras são novos escopos, não pendências bloqueantes deste release.
+
 ## 14. Evidências de referência — código fixado na baseline
 
 - [Checklist de primeiro acesso](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/35825d5ad563361fecd1b3d2a00ca81a4734e532/components/auth/SectorFirstAccessChecklist.tsx)
