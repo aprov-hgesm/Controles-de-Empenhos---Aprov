@@ -13,11 +13,14 @@ test('W9 - usuário Almoxarifado no Firebase Emulator: login, módulos e logout'
   await page.getByTestId('sector-login-submit').click();
   await expect(page).toHaveURL(/\/almoxarifado\/?$/, {timeout:45000});
   const legal = page.getByRole('heading',{name:'Termos e Privacidade'});
-  if (await legal.isVisible({timeout:7000}).catch(()=>false)) {
+  const shell = page.getByTestId('almoxarifado-portal');
+  // A validação assíncrona do Warehouse ocorre depois do redirecionamento.
+  // isVisible() sozinho não aguarda; aceite pode montar só após o status 200.
+  await expect(shell.or(legal).first()).toBeVisible({timeout:60000});
+  if (await legal.isVisible()) {
     await page.getByRole('checkbox',{name:'Li e aceito os Termos de Serviço e a Política de Privacidade.'}).check();
     await page.getByRole('button',{name:'Aceitar e continuar'}).click();
   }
-  const shell = page.getByTestId('almoxarifado-portal');
   await expect(shell).toBeVisible({timeout:60000});
   await expect(shell).toContainText('EMPROVEX · ALMOXARIFADO');
 
