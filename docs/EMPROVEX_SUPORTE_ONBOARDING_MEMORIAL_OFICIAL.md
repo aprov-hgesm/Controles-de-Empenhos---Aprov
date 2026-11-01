@@ -267,7 +267,7 @@ Indicadores futuros, ainda sem baseline quantitativa:
 
 - **Base:** `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`.
 - **Escopo:** auditoria somente leitura, 16 achados, código e PRs cruzados, matriz de reaproveitamento e plano híbrido.
-- **PR e SHA documental:** preencher após a criação efetiva, sem antecipar resultado.
+- **PR documental:** [#440](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/440), **DRAFT**; commit inicial do memorial `7c01c38cb554720cfff33e86e4fa34ef1ad03473`. O SHA da branch poderá evoluir com atualizações exclusivamente documentais.
 - **Validação:** documento criado/recuperado no GitHub; nenhum código funcional alterado; sem merge/deploy.
 - **Parecer:** GO para trabalho isolado e planejamento; integração/produção condicionadas às etapas e autorização.
 - **Riscos conhecidos:** documentações SaaS legadas, conflitos com Empresas e Almoxarifado, ausência de dados reais de churn.
