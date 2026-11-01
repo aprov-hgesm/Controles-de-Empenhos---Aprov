@@ -171,6 +171,7 @@ try {
         ...process.env,
         FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
         NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
+        ...(process.argv.includes('--almox-w9') ? { EMPROVEX_E2E_LOOPBACK_NEXT_DEV: '1' } : {}),
         NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
         NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
         EMPROVEX_E2E_SERVER_AUTH: '1',

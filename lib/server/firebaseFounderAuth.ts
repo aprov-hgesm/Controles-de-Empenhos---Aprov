@@ -37,6 +37,16 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
   const loopbackDev = process.env.NODE_ENV === 'development'
     && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
     && dev && loopbackBind;
+  // Next.js 15 executa route handlers no processo filho start-server.js:
+  // a assinatura argv de "next dev" não está presente nesse worker.
+  // Apenas o E2E explícito com projeto demo, dois emuladores locais e
+  // marcador definido pelo launcher em localhost pode usar JWT do Auth Emulator.
+  const loopbackNextWorker = process.env.EMPROVEX_E2E_LOOPBACK_NEXT_DEV === '1'
+    && process.env.NODE_ENV === 'development'
+    && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:8080'
+    && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
+    && args.length === 1
+    && /(?:^|[\\/])node_modules[\\/]next[\\/]dist[\\/]server[\\/]lib[\\/]start-server\\.js$/.test(args[0] || '');
   // CI offline executa o autorizador diretamente (sem servidor HTTP).
   // Permitir SOMENTE estes scripts conhecidos, com dois emuladores locais.
   // Nao permitir CLI generico, Next start nem ambiente hospedado.
@@ -54,7 +64,7 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
       const executable = args[0]?.replace(/\\/g,'/') || '';
       return executable === 'scripts/'+name || executable.endsWith('/scripts/'+name);
     });
-  const localOnly = !hosted && (loopbackDev || localCli);
+  const localOnly = !hosted && (loopbackDev || loopbackNextWorker || localCli);
 
   if (!enabled || !localEmulator || !projectId.startsWith('demo-') || !localOnly) return null;
 
