@@ -877,7 +877,7 @@ Este arquivo: `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.
 
 **Camada 2 — Estado operacional de cada programa**
 
-- **EMPROVEX AI / Eleonor (identidade e experiência):** [EMPROVEX_AI_MEMORIAL_OFICIAL.md](./EMPROVEX_AI_MEMORIAL_OFICIAL.md) — matriz integral de personalidade R1 inspirada em Donna Paulsen; proposta documental, **não implementada** e sem autorização de merge/deploy. A situação técnica dos Workers deve ser conferida nas respectivas PRs.
+- **EMPROVEX AI / Eleonor (identidade e experiência):** [EMPROVEX_AI_MEMORIAL_OFICIAL.md](./EMPROVEX_AI_MEMORIAL_OFICIAL.md) — referência canônica; matriz R1 preservada e evolução R2 no [Atlas Comportamental](./ELEONOR_ATLAS_COMPORTAMENTAL_R2.md), com constituição, microcomportamentos e cenários. **Somente documentação em PR encadeada: não implementada, homologada nem publicada.** Consultar o estado real dos Workers nas respectivas PRs.
 - **ADMIN-2.0 (estudo/planejamento):** `docs/ADMIN_2_0_MEMORIAL_DESENVOLVIMENTO.md` — Clientes 360°, EMPROVEX Command, acesso Global Superadmin e escalabilidade (2026-10-17; não implementado).
 - `docs/SAAS_R1_INTEGRATION_STATUS.md`
 - `docs/SAAS_R1_COORDENADOR_HANDOFF.md`
