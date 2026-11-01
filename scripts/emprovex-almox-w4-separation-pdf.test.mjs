@@ -227,7 +227,8 @@ test('falha fechada em contrato/tenant/posição/somas inválidos', async () => 
 
 test('sem leitura/escrita operacional, SDK, rede ou mecanismo de saída/CREM/TREM', () => {
   assert.doesNotMatch(source, /from ['"](?:firebase|firebase-admin|.*\/outbound|.*\/withdrawal)/i);
-  assert.doesNotMatch(source, /\b(?:fetch|writeBatch|runTransaction|setDoc|updateDoc|addDoc|deleteDoc)\s*\(/);
+  const executableSource = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  assert.doesNotMatch(executableSource, /\b(?:fetch|writeBatch|runTransaction|setDoc|updateDoc|addDoc|deleteDoc)\s*\(/);
   assert.doesNotMatch(source, /CREM|TREM/);
   assert.match(source, /loadJsPdf/);
   assert.match(source, /SeparationSheetV1/);
