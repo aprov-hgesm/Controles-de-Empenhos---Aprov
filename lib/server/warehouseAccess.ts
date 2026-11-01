@@ -8,6 +8,7 @@ import {
   normalizePlatformEmail,
   normalizeUnitUg,
   normalizeWorkspaceId,
+  type SectorType,
 } from '../platformIdentity';
 import { warehouseModuleEnabled } from '../warehouse/featureFlag';
 import {
@@ -27,6 +28,7 @@ export interface VerifiedWarehouseRequest {
   email: string;
   workspaceId: string;
   ug: string;
+  sectorType: SectorType;
   claimsUpdated: boolean;
 }
 
@@ -136,11 +138,13 @@ async function resolveExternalWarehouseAccess(
   const accountUid = stringField(account, 'firebaseUid');
   const accountType = stringField(account, 'accountType');
   const accountStatus = stringField(account, 'status');
+  const accountSectorType = stringField(account, 'sectorType') || 'aprovisionamento';
   const accountProvider = stringField(account, 'authProvider') || SECTOR_AUTH_PROVIDER;
 
   if (
     accountType !== 'sector'
     || accountStatus !== 'active'
+    || !['aprovisionamento', 'almoxarifado'].includes(accountSectorType)
     || accountEmail !== verified.email
     || accountUid !== verified.uid
     || accountProvider !== SECTOR_AUTH_PROVIDER
@@ -163,11 +167,13 @@ async function resolveExternalWarehouseAccess(
   const workspaceStatus = stringField(workspace, 'status');
   const workspaceEmail = normalizePlatformEmail(stringField(workspace, 'authorizedEmail'));
   const workspaceUg = normalizeUnitUg(stringField(workspace, 'ug'));
+  const workspaceSectorType = stringField(workspace, 'sectorType') || 'aprovisionamento';
 
   if (
     workspaceStatus !== 'active'
     || workspaceRecordId !== workspaceId
     || workspaceEmail !== verified.email
+    || workspaceSectorType !== accountSectorType
     || workspaceUg !== accountUg
   ) {
     throw new WarehouseAccessError('Workspace sem autorização para a Central de Depósitos.', 403);
@@ -197,6 +203,7 @@ async function resolveExternalWarehouseAccess(
     email: verified.email,
     workspaceId,
     ug: workspaceUg,
+    sectorType: accountSectorType as SectorType,
     claimsUpdated,
   };
 }
@@ -230,6 +237,7 @@ export async function verifyWarehouseRequest(
       email: verified.email,
       workspaceId: HGESM_WORKSPACE_ID,
       ug: HGESM_UG,
+      sectorType: 'aprovisionamento',
       claimsUpdated: false,
     };
   }
@@ -238,7 +246,7 @@ export async function verifyWarehouseRequest(
   // Additional server-side gate for every Warehouse endpoint that uses this
   // verifier. Fail closed for non-exempt tenants when enabled at cutover.
   // Short-lived positive cache avoids three Firestore reads per scanner action.
-  if (process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1') {
+  if (access.sectorType !== 'almoxarifado' && process.env.EMPROVEX_BILLING_ENFORCEMENT_ENABLED === '1') {
     const cacheKey = access.uid + ':' + access.workspaceId;
     const now = Date.now();
     const cached = billingAuthorizedCache.get(cacheKey) || 0;
