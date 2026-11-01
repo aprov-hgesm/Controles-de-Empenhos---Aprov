@@ -17,6 +17,7 @@ import {
 import { MIN_SECTOR_PASSWORD_LENGTH } from '../../lib/sectorProvisioning';
 
 interface AdminCreateSectorPanelProps {
+  initialSectorType?: 'aprovisionamento' | 'almoxarifado';
   creating: boolean;
   disabled?: boolean;
   onCreate: (input: CreateSectorWorkspaceInput) => Promise<void>;
@@ -40,12 +41,17 @@ const inputClass =
   'min-h-11 w-full rounded-xl border border-white/[0.09] bg-black/20 px-3.5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-600 focus:border-blue-300/35 focus:bg-blue-400/[0.035] focus:ring-2 focus:ring-blue-300/10 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function AdminCreateSectorPanel({
+  initialSectorType = 'aprovisionamento',
   creating,
   disabled = false,
   onCreate,
   onCreated,
 }: AdminCreateSectorPanelProps) {
-  const [form, setForm] = useState<CreateSectorWorkspaceInput>(INITIAL_FORM);
+  const initialForm = (): CreateSectorWorkspaceInput => ({ ...INITIAL_FORM, sectorType: initialSectorType,
+    sectionName: initialSectorType === 'almoxarifado' ? 'Seção de Almoxarifado' : INITIAL_FORM.sectionName,
+    grantTrial: initialSectorType !== 'almoxarifado',
+  });
+  const [form, setForm] = useState<CreateSectorWorkspaceInput>(initialForm);
   const [workspaceIdTouched, setWorkspaceIdTouched] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +69,7 @@ export function AdminCreateSectorPanel({
   }, [suggestedId, workspaceIdTouched]);
 
   const resetForm = () => {
-    setForm(INITIAL_FORM);
+    setForm(initialForm());
     setWorkspaceIdTouched(false);
     setConfirmPassword('');
     setError(null);
