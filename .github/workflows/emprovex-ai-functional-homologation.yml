@@ -1,0 +1,62 @@
+name: EMPROVEX AI — Functional Homologation (local Firebase Emulators)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/emprovex-ai-functional-homologation.mjs'
+      - 'lib/server/firebaseFounderAuth.ts'
+      - '.github/workflows/emprovex-ai-functional-homologation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-homologation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  emulator-http:
+    name: Auth and Firestore Emulator — authenticated W4/W3 functional flow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+      GCLOUD_PROJECT: demo-emprovex-security
+      FIREBASE_PROJECT_ID: demo-emprovex-security
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-security
+      NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1'
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1'
+      EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081'
+      EMPROVEX_AI_W45_CONTEXT_SECRET: 'synthetic-homologation-only-2026-0123456789'
+      EMPROVEX_AI_CURSOR_SECRET: 'synthetic-homologation-cursor-2026-0123456789'
+      FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON: ''
+      GOOGLE_APPLICATION_CREDENTIALS: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Ensure only demo projects and no credentials
+        run: |
+          test "$GOOGLE_CLOUD_PROJECT" = "demo-emprovex-security"
+          test ! -f .env.production.local
+          test ! -f service-account.json
+          test -z "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON"
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+      - name: Authenticate with Auth Emulator and query Firestore Emulator (real W4 + W3)
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-ai-functional-homologation.mjs"
+      - name: Existing W5 regressions
+        run: |
+          npx --no-install tsc lib/emprovex-ai/context/index.ts --module commonjs --moduleResolution node --target es2022 --skipLibCheck --esModuleInterop --outDir .w4-dist
+          cp .w4-dist/index.js .w4-dist/index.cjs
+          node --test scripts/emprovex-ai-w5.test.mjs
+          node --test scripts/emprovex-ai-w5-r11.test.mjs
+          node --test scripts/emprovex-ai-w45.test.mjs
