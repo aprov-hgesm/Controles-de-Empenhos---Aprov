@@ -21,7 +21,11 @@ function load(path,mocks={},scenarioCache=Object.keys(mocks).length?new Map():sh
   scenarioCache.set(name,mod.exports);
   const importer=(id)=>{
     if(Object.prototype.hasOwnProperty.call(mocks,id))return mocks[id];
-    if(id.startsWith('.'))return load(resolve(dirname(name),id).slice(root.length+1)+'.ts',mocks,scenarioCache);
+    if(id.startsWith('.')){
+      const local=resolve(dirname(name),id);
+      if(local.endsWith('.json'))return nativeRequire(local);
+      return load(local.slice(root.length+1)+(local.endsWith('.ts')?'':'.ts'),mocks,scenarioCache);
+    }
     return nativeRequire(id);
   };
   new Function('require','module','exports','process','Buffer',code)(importer,mod,mod.exports,process,Buffer);
