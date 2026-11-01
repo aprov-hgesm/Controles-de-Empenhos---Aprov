@@ -150,7 +150,7 @@ async function handler(request: Request, write: boolean) {
     if (!CURRENT_LEGAL_BUNDLE.legalBundleVersion
       || !CURRENT_LEGAL_BUNDLE.termsVersion
       || !CURRENT_LEGAL_BUNDLE.privacyVersion
-      || CURRENT_LEGAL_BUNDLE.legalBundleVersion === 'saas-r1-2026-10-01') {
+      || String(CURRENT_LEGAL_BUNDLE.legalBundleVersion) === 'saas-r1-2026-10-01') {
       throw new LegalFailure('LEGAL_SERVER_BUNDLE_NOT_ACTIVE', 503);
     }
     let workspaceId = '';
