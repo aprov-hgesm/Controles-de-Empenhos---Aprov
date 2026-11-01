@@ -36,3 +36,10 @@ export function aiLfm3Enabled(env:NodeJS.ProcessEnv=process.env):boolean {
    (onExactService(env,W6_CANDIDATE_SERVICE)||aiProductionPilotEnabled(env))&&
    env.EMPROVEX_AI_LFM3_ENABLED==='1';
 }
+
+/** W7 creative responses are additional opt-in; inherit W6 private IAM
+ * and exact Cloud Run founder-only pilot gates without widening access.
+ */
+export function aiConversationalModelEnabled(env:NodeJS.ProcessEnv=process.env):boolean {
+ return aiLfm3Enabled(env)&&env.EMPROVEX_AI_W7_GENERATIVE_ENABLED==='1';
+}
