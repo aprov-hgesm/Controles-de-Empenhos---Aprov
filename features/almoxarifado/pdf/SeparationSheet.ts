@@ -278,7 +278,7 @@ export async function createSeparationSheetPdf(
   function section(title: string): void {
     reserve(11);
     y += 2;
-    doc.setFillColor(235);
+    doc.setFillColor(235, 235, 235);
     doc.rect(LEFT, y - 3, CONTENT, 7, 'F');
     doc.setTextColor(20);
     doc.setFont('helvetica', 'bold');
