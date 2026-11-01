@@ -82,6 +82,10 @@ test('1: relatório por empenho utiliza valores reais do cadastro (NE/NF)', () =
   assert.equal(result.byEmpenho[0].invoiceValue, 75);
   assert.equal(result.byEmpenho[0].balanceValue, 75);
   assert.equal(result.byEmpenho[0].year, '2026');
+  assert.equal(result.byEmpenho[0].items[0].committedQuantity, 10);
+  assert.equal(result.byEmpenho[0].items[0].receivedQuantity, 5);
+  assert.equal(result.byEmpenho[0].invoices[0].id, 'NF-1');
+  assert.equal(result.byEmpenho[0].invoices[0].totalValue, 75);
 });
 
 test('2: fornecedor compartilha o agregador certificado do Aprovisionamento', () => {
