@@ -110,7 +110,7 @@ export function planConversation(input:{
  if(matches(t,/\b(?:como voce funciona|voce usa ia|voce e uma ia|o que e inteligencia artificial|o que e ollama|o que e lfm3|voce conhece o chatgpt|diferenca entre voce e o chatgpt|voce aprende sozinha|voce pode errar)\b/))
    return decision('artificial_intelligence','technology','ai',
      'Interpreto perguntas e, quando o recurso está habilitado, encaminho consultas aos contratos autorizados do EMPROVEX. Posso errar na interpretação; por isso, resultados operacionais dependem de validação. Não aprendo sozinha com cada conversa.');
- if(matches(t,/\b(?:que horas sao|que dia e hoje|qual a data de hoje|dia da semana)\b/)){
+ if(matches(t,/\b(?:que horas sao|que dia e hoje|qual (?:e )?a data de hoje|dia da semana)\b/)){
    const now=input.now||new Date();
    return decision('current_information','server_time','general',
      'Pelo horário de Brasília, agora são '+new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'full',timeStyle:'short'}).format(now)+'.');
