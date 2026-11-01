@@ -451,6 +451,7 @@ export default function Home() {
           )}
           <Suspense fallback={null}>
             <EleonorExperience
+              key={`${user?.uid || 'anonymous'}:${workspaceContext.status === 'sector' ? workspaceContext.workspaceId : 'platform'}`}
               user={user}
               fullPage={activeTab === 'eleonor'}
               onOpenFull={() => {
