@@ -4,7 +4,7 @@
 
 ## Objetivo e horário
 
-Resumo administrativo agregado às **18:00**, todos os dias, no fuso **America/Sao_Paulo**, para a conta administrativa autorizada. O boletim é independente dos alertas de uptime existentes no Google Cloud Monitoring.
+Resumo administrativo agregado às **18:00**, todos os dias, no fuso **America/Sao_Paulo**, com remetente **`marcoa.r.aquino@gmail.com`** e destinatário **`codex.martis.dev@gmail.com`**, definidos pelo administrador. O boletim é independente dos alertas de uptime existentes no Google Cloud Monitoring.
 
 ## Como o Gmail existente será reaproveitado
 
@@ -23,7 +23,7 @@ Backups já existentes e alertas de uptime permanecem intactos; esta versão nã
 
 ## Autorização Google — uma única vez
 
-**A autorização atual do navegador não basta para um envio às 18h sem ninguém conectado.** É necessário um grant OAuth 2.0 de acesso offline à conta Gmail remetente escolhida:
+**A autorização atual do navegador não basta para um envio às 18h sem ninguém conectado.** É necessário um grant OAuth 2.0 de acesso offline à conta remetente **`marcoa.r.aquino@gmail.com`**:
 
 1. Usar o cliente OAuth do projeto GCP EMPROVEX existente, se ele suportar o fluxo de servidor (redirect URI válido e client secret), ou criar um client OAuth adicional no mesmo projeto. Não criar outra conta Google.
 2. Solicitar os escopos `https://www.googleapis.com/auth/gmail.send` e `https://www.googleapis.com/auth/userinfo.email`, parâmetros `access_type=offline`, `prompt=consent`.
@@ -34,13 +34,15 @@ Backups já existentes e alertas de uptime permanecem intactos; esta versão nã
 ## Configurações de runtime para o Cloud Run
 
 - `EMPROVEX_ADMIN_DIGEST_ENABLED=1` — somente após credenciais válidas e teste controlado;
-- `EMPROVEX_ADMIN_DIGEST_TO=marcoa.r.aquino@gmail.com`;
-- `EMPROVEX_ADMIN_DIGEST_GMAIL_FROM` = e-mail Gmail exato da conta autorizada, definido pelo administrador;
+- `EMPROVEX_ADMIN_DIGEST_TO=codex.martis.dev@gmail.com`;
+- `EMPROVEX_ADMIN_DIGEST_GMAIL_FROM=marcoa.r.aquino@gmail.com` = conta autorizada no OAuth; o servidor verifica essa identidade antes de enviar;
 - `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_ID` = ID do OAuth client (pode vir de variável/Secret Manager);
 - `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_SECRET` = referência versionada do Secret Manager;
 - `EMPROVEX_ADMIN_DIGEST_GMAIL_REFRESH_TOKEN` = referência versionada do Secret Manager;
 - `EMPROVEX_ADMIN_DIGEST_SCHEDULER_EMAIL=emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com`;
 - `EMPROVEX_ADMIN_DIGEST_OIDC_AUDIENCE=https://emprovex.com.br/api/cron/admin-digest`.
+
+A autorização OAuth deve ser concedida pela conta `marcoa.r.aquino@gmail.com`, não pela destinatária `codex.martis.dev@gmail.com`. O destinatário não precisa autorizar nada.
 
 Não incluir no deploy a chave antiga Resend: `EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY` é obsoleta nesta PR.
 
