@@ -264,7 +264,9 @@ export function EleonorExperience({
             <ArrowUp className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-2 text-center text-[10px] text-slate-400">
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
+          <Image src="/branding/emprovex-light.svg" alt="" width={19} height={19}
+            unoptimized className="h-4 w-4 shrink-0 rounded" />
           Consultas somente de leitura · Respostas baseadas no EMPROVEX
         </p>
       </form>
