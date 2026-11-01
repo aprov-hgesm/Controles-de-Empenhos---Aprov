@@ -1,0 +1,42 @@
+name: EMPROVEX Support R1 integration certification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/emprovex-support-r1-integration.yml'
+      - 'features/support/**'
+      - 'components/layout/AppSidebar.tsx'
+      - 'app/login/page.tsx'
+      - 'features/warehouse/components/WarehouseSidebar.tsx'
+      - 'features/warehouse/components/WarehouseModuleShell.tsx'
+      - 'components/admin/AdminAccessRequestsPanel.tsx'
+      - 'app/api/admin/access-requests/route.ts'
+      - 'app/api/public/access-requests/route.ts'
+      - 'lib/server/accessRequestSupport.ts'
+      - 'scripts/emprovex-support-*.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  directed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: W1 tutorials and player
+        run: node --test scripts/emprovex-support-w1.test.mjs
+      - name: W2 support contract
+        run: node --experimental-strip-types --test scripts/emprovex-support-w2.test.mjs
+      - name: W4 integration guards
+        run: node --test scripts/emprovex-support-w4.test.mjs
+      - name: TypeScript
+        run: npm run typecheck

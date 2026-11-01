@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Boxes,
   ClipboardPlus,
+  CircleHelp,
   House,
   LayoutDashboard,
   LogOut,
@@ -36,6 +37,7 @@ interface WarehouseSidebarProps {
   userDisplayName: string;
   showMobileAccess: boolean;
   onClose: () => void;
+  onOpenHelp: () => void;
   onNavigate: (href: string) => void;
   onLogout: () => void | Promise<void>;
 }
@@ -46,6 +48,7 @@ export function WarehouseSidebar({
   userDisplayName,
   showMobileAccess,
   onClose,
+  onOpenHelp,
   onNavigate,
   onLogout,
 }: WarehouseSidebarProps) {
@@ -149,6 +152,16 @@ export function WarehouseSidebar({
                 </button>
               );
             })}
+
+            <button
+              type="button"
+              data-testid="warehouse-nav-ajuda"
+              onClick={onOpenHelp}
+              className="emprovex-sidebar-nav-item"
+            >
+              <CircleHelp className="h-5 w-5" aria-hidden="true" />
+              <span>Central de Ajuda</span>
+            </button>
 
             {showMobileAccess && (
               <div className="mt-3 border-t border-white/[0.08] pt-3">

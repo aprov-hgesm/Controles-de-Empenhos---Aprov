@@ -42,6 +42,12 @@ const OperationalWorkspace = lazy(() =>
   }))
 );
 
+const EmprovexHelpOverlay = lazy(() =>
+  import('../../features/support/EmprovexHelpOverlay').then(module => ({
+    default: module.EmprovexHelpOverlay,
+  }))
+);
+
 export default function Home() {
   const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   // Toast / Notifications helper
@@ -91,6 +97,7 @@ export default function Home() {
     if (tab === 'cronogramas') setActiveTab('cronogramas');
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
   // Ao entrar pela primeira vez numa tela transacional, preservar os hooks
   // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
@@ -364,6 +371,7 @@ export default function Home() {
           userDisplayName={user?.displayName || (workspaceContext.status === 'sector' ? workspaceContext.workspaceName : '') || 'Operador EMPROVEX'}
           noticeCount={pendingNoticeCount}
           onClose={() => setSidebarOpen(false)}
+          onOpenHelp={() => { setHelpOpen(true); setSidebarOpen(false); }}
           onNavigate={(tab) => {
             setActiveTab(tab);
             if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
@@ -445,6 +453,12 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {helpOpen && (
+        <Suspense fallback={<OperationalSurfaceLoading />}>
+          <EmprovexHelpOverlay onClose={() => setHelpOpen(false)} />
+        </Suspense>
+      )}
 
       <MobileNavigation
         activeTab={activeTab}

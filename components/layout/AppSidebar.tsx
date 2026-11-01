@@ -6,6 +6,7 @@ import {
   Boxes,
   Building2,
   CalendarDays,
+  CircleHelp,
   FileSpreadsheet,
   FileText,
   Home,
@@ -44,6 +45,7 @@ interface AppSidebarProps {
   onLogout: () => void | Promise<void>;
   warehouseModuleEnabled?: boolean;
   onOpenWarehouse?: () => void;
+  onOpenHelp: () => void;
 }
 
 export function AppSidebar({
@@ -56,6 +58,7 @@ export function AppSidebar({
   onLogout,
   warehouseModuleEnabled = false,
   onOpenWarehouse,
+  onOpenHelp,
 }: AppSidebarProps) {
   const { mode } = useVisualMode();
 
@@ -272,6 +275,16 @@ export function AppSidebar({
                 </button>
               </div>
             )}
+
+            <button
+              type="button"
+              data-testid="nav-ajuda"
+              onClick={onOpenHelp}
+              className="emprovex-sidebar-nav-item"
+            >
+              <CircleHelp className="h-5 w-5" aria-hidden="true" />
+              <span>Central de Ajuda</span>
+            </button>
           </nav>
         </div>
 
