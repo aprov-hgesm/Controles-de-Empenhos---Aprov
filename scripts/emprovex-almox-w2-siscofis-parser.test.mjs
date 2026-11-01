@@ -158,7 +158,7 @@ test('PDF scan/corrompido e PDF de inventário são rejeitados sem fallback para
   const fake = await pdf({ bytes: asBytes('%PDF-1.4\nBT (SISCOFIS|PEDIDO_DE_MATERIAL) Tj ET\n%%EOF'), workspaceId: 'almox-qa-w2' });
   assert.equal(fake.ok, false);
   assert.equal(fake.issue.code, 'UNREADABLE_SOURCE');
-  const inventory = await syntheticPdf(['MAPA DE EXISTENCIA - MATERIAL DE CONSUMO', 'Nr Ficha', '07.001P']);
+  const inventory = await syntheticPdf(['MAPA DE EXISTENCIA - MATERIAL DE CONSUMO', 'Nr Ficha', '07.001P', 'Nome do Material', 'Qtde Exist', 'Qtde Disp']);
   const wrong = await pdf({ bytes: inventory, workspaceId: 'almox-qa-w2' });
   assert.equal(wrong.ok, false);
   assert.equal(wrong.issue.code, 'UNSUPPORTED_LAYOUT');
