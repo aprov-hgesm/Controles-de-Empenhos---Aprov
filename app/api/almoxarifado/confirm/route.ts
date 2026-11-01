@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyWarehouseRequest } from '../../../lib/server/warehouseAccess';
-import { requireAlmoxAccess, confirmAlmoxPhysicalWithdrawal } from '../../../lib/almoxarifado/integration';
+import { verifyWarehouseRequest } from '../../../../lib/server/warehouseAccess';
+import { requireAlmoxAccess, confirmAlmoxPhysicalWithdrawal } from '../../../../lib/almoxarifado/integration';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

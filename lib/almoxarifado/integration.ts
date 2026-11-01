@@ -3,7 +3,7 @@
  * A caller must supply an IAM-read, validated snapshot; no client mapping is trusted.
  */
 import { createHash } from 'node:crypto';
-import type { ImportedRequestV1, MaterialCorrespondenceV1, SeparationPlanV1, SeparationSheetV1 } from './contracts';
+import type { ImportedRequestV1, MaterialCorrespondenceV1, SeparationPlanV1, SeparationSheetV1, TypedIssueV1 } from './contracts';
 import { ALMOX_SHEET_SCHEMA_VERSION } from './contracts';
 import { parseSiscofisRequestTxt } from './siscofisRequestTxt';
 import { parseSiscofisRequestPdf } from './siscofisRequestPdf';
@@ -105,12 +105,13 @@ export async function previewAlmoxSyntheticRequest(input: AlmoxPreviewInputV1): 
     if (!materialId) continue;
     for (const b of snapshot.balances) {
       if (b.materialId !== materialId || b.quantity <= 0 || b.position.kind === 'UNASSIGNED') continue;
-      const d = snapshot.depots.find(d => d.id === b.position.depotId && d.status === 'active');
-      const l = snapshot.locations.find(l => l.id === b.position.locationId && l.depotId === b.position.depotId
+      const position = b.position;
+      const d = snapshot.depots.find(d => d.id === position.depotId && d.status === 'active');
+      const l = snapshot.locations.find(l => l.id === position.locationId && l.depotId === position.depotId
         && l.kind === 'LOCAL' && l.status === 'active');
-      const sub = b.position.kind === 'SUBPOSITION' ? snapshot.locations.find(s =>
-        s.id === b.position.subpositionId && s.parentLocationId === b.position.locationId
-        && s.depotId === b.position.depotId && s.status === 'active' && s.kind === 'SUBPOSITION') : null;
+      const sub = position.kind === 'SUBPOSITION' ? snapshot.locations.find(s =>
+        s.id === position.subpositionId && s.parentLocationId === position.locationId
+        && s.depotId === position.depotId && s.status === 'active' && s.kind === 'SUBPOSITION') : null;
       if (!d || !l || (b.position.kind === 'SUBPOSITION' && !sub)) continue;
       availablePositions.push({ sourceRowId: row.sourceRowId, position: b.position,
         balanceRevision: b.revision, quantity: b.quantity,
