@@ -1,0 +1,27 @@
+name: EMPROVEX Admin e Identidade R1 — certificação isolada
+on:
+  pull_request:
+    branches:
+      - docs/emprovex-cadastro-unificado-admin-r0-20261031
+  workflow_dispatch:
+jobs:
+  admin-identity-r1:
+    name: TypeScript, identidade, cadastro e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Dependências imutáveis
+        run: npm ci
+      - name: Tipagem integral
+        run: npm run typecheck
+      - name: Cadastro unificado e identidade determinística
+        run: node --test scripts/emprovex-admin-identity-r1.test.mjs
+      - name: Build, sem deploy
+        run: npm run build
