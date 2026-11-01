@@ -32,6 +32,7 @@ function load(path,mocks={}){
  return module.exports;
 }
 const {planConversation,CONVERSATION_FAMILIES}=load('lib/emprovex-ai/conversation/engine.ts');
+const {KNOWLEDGE_VERSION,KNOWLEDGE_RECORDS,approvedPublicAnswer}=load('lib/emprovex-ai/conversation/knowledge.ts');
 const other={route:'OUT_OF_SCOPE',reason:'OUTSIDE_OPERATIONAL_DOMAIN',intent:'unknown'};
 const plan=(message,operational=other,previous)=>planConversation({message,operational,previous,now:new Date('2026-11-01T12:00:00Z')});
 const cases=[
@@ -62,6 +63,23 @@ const cases=[
  ['Quero uma resposta totalmente inusitada','unknown'],
  ['Quero invadir uma conta','safety'],['Quero morrer','safety']
 ];
+test('Public catalog refuses unpublished, restricted and missing facts',()=>{
+ assert.equal(KNOWLEDGE_VERSION,'eleonor.knowledge.r1');
+ assert.ok(KNOWLEDGE_RECORDS.length>=6);
+ assert.match(approvedPublicAnswer('eleonor.identity'),/Eleonor/);
+ assert.match(approvedPublicAnswer('emprovex.purpose'),/logística/);
+ assert.equal(approvedPublicAnswer('emprovex.founder'),null);
+ assert.equal(approvedPublicAnswer('emprovex.commercial'),null);
+ assert.equal(approvedPublicAnswer('emprovex.future_module'),null);
+ assert.equal(approvedPublicAnswer('unknown'),null);
+});
+test('Procedure help is a clarification, not an operational mutation',()=>{
+ const result=plan('Como cadastro uma nota fiscal?',{
+  route:'UNSUPPORTED',reason:'P1_PROCEDURES_UNAVAILABLE',intent:'operational_procedure'
+ });
+ assert.equal(result.family,'help');assert.equal(result.status,'clarify');
+ assert.doesNotMatch(result.answer,/clique em|registro criado/);
+});
 test('W7 taxonomy has all 18 required families, with separate support states',()=>{
  assert.equal(CONVERSATION_FAMILIES.length,18);
  for(const family of new Set(cases.map(c=>c[1])))assert.ok(CONVERSATION_FAMILIES.includes(family),family);
