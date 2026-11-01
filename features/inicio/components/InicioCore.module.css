@@ -107,16 +107,7 @@
   object-fit: contain;
   filter: drop-shadow(0 0 15px rgba(130, 169, 243, .20));
   user-select: none;
-  /* O PNG original tem fundo branco opaco. Esta máscara revela somente o símbolo,
-     preservando o desenho e as cores originais, sem trocar a imagem. */
-  -webkit-mask-image: url('/emprovex-logo-core-mask.svg');
-  mask-image: url('/emprovex-logo-core-mask.svg');
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+  /* O símbolo oficial possui transparência própria; a máscara da marca anterior não se aplica. */
 }
 
 .reflection {
