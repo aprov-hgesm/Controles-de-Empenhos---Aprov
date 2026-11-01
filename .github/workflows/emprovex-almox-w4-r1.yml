@@ -1,0 +1,30 @@
+name: EMPROVEX Almoxarifado W4 R1-B - PDF certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'features/almoxarifado/pdf/**'
+      - 'scripts/emprovex-almox-w4-separation-pdf.test.mjs'
+      - '.github/workflows/emprovex-almox-w4-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  separation-pdf:
+    name: W4 - TypeScript and PDF generation (no deploy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: TypeScript strict
+        run: npm run typecheck
+      - name: Synthetic A4 separation sheet PDF tests
+        run: node --test scripts/emprovex-almox-w4-separation-pdf.test.mjs
