@@ -1,0 +1,40 @@
+name: EMPROVEX AI W6 — LFM3 IAM integration certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/emprovex-ai/**'
+      - 'app/api/emprovex-ai/**'
+      - 'scripts/emprovex-ai-w6.test.mjs'
+      - 'docs/EMPROVEX_AI_W6_LFM3_HOMOLOGACAO.md'
+      - '.github/workflows/emprovex-ai-w6.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-w6-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  isolated-certification:
+    name: TypeScript + W6 focused security and W5 regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON: ''
+      GOOGLE_APPLICATION_CREDENTIALS: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: IAM, filters, tenant isolation and fallback (mock only)
+        run: node --test scripts/emprovex-ai-w6.test.mjs scripts/emprovex-ai-w5-security.test.mjs
+      - name: Confirm no cloud credentials in this certification
+        run: |
+          test -z "$GOOGLE_APPLICATION_CREDENTIALS"
+          test -z "$FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON"
