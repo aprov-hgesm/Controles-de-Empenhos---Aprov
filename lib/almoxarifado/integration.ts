@@ -32,7 +32,7 @@ export interface AlmoxPreviewInputV1 {
   organizationName: string;
 }
 export type AlmoxPreviewResultV1 =
-  | { ok: false; issue: { code: string; severity: 'BLOCKING'; details?: string } }
+  | { ok: false; issue: TypedIssueV1 }
   | { ok: true; request: ImportedRequestV1; plan: SeparationPlanV1; sheet: SeparationSheetV1 | null;
       depots: AlmoxSnapshotV1['depots']; locations: AlmoxSnapshotV1['locations'];
       availablePositions: { sourceRowId: string; position: WarehouseLocationBalance['position']; balanceRevision: number; quantity: number; depotCode: string; locationCode: string; subpositionCode: string | null }[];
