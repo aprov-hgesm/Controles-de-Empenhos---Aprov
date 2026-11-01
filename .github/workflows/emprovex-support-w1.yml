@@ -1,0 +1,34 @@
+name: EMPROVEX Support W1 isolated certification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "features/support/**"
+      - "scripts/emprovex-support-w1.test.mjs"
+      - ".github/workflows/emprovex-support-w1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: support-w1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  support-w1:
+    name: Catálogo oficial, player sob demanda e TypeScript
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: Testes dirigidos da Academia EMPROVEX
+        run: node --test scripts/emprovex-support-w1.test.mjs
+      - name: TypeScript
+        run: npm run typecheck
