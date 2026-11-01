@@ -19,6 +19,19 @@ export function guardLfm3Candidate(args:{
 }):{ok:boolean;audit:ModelFilterAudit} {
  const {query,interpretation,message,previous}=args;
  const refs=previous?.refs||{},p=query.params,t=norm(message);
+ const family=query.intent.startsWith('supplier_')?'supplier':
+   query.intent.startsWith('commitment_')?'commitment':
+   query.intent.startsWith('schedule_')?'schedule':
+   query.intent.startsWith('invoice_')?'invoice':'warehouse';
+ const grounds:Record<string,RegExp>={
+  supplier:/\\b(?:fornecedor|contato|cnpj|telefone|email|whatsapp)\\b/,
+  commitment:/\\b(?:empenho|ne|saldo|exercicio)\\b/,
+  schedule:/\\b(?:cronograma|envio)\\b/,
+  invoice:/\\b(?:nota|nf|nfs|fiscal)\\b/,
+  warehouse:/\\b(?:estoque|material|deposito|arroz|localizacao|localize|armazenado)\\b/
+ };
+ if(!grounds[family].test(t))return {ok:false,audit:{
+  requested:['intent_grounding'],represented:[],unhandled:['intent_grounding']}};
  const invalid=(unhandled:string[]):{ok:false;audit:ModelFilterAudit}=>({
   ok:false,audit:{requested:unhandled,represented:[],unhandled}
  });
@@ -34,6 +47,13 @@ export function guardLfm3Candidate(args:{
   barcode:mentioned(message,p.barcode)
  };
  const ungrounded=Object.entries(checks).filter(([key,valid])=>p[key]!==undefined&&!valid).map(([key])=>key);
+ const entities=interpretation.entities;
+ const compare=(param:unknown,explicit:unknown)=>typeof explicit!=='string'||param===undefined||
+   (typeof param==='string'&&norm(param)===norm(explicit));
+ if(!compare(p.commitmentId,entities.commitmentId))ungrounded.push('commitmentId');
+ if(!compare(p.materialQuery,entities.material))ungrounded.push('materialQuery');
+ if(!compare(p.nameQuery,entities.supplier))ungrounded.push('supplierName');
+ if(!compare(p.cnpj,entities.cnpj)&&!compare(p.supplierCnpj,entities.cnpj))ungrounded.push('supplierCnpj');
  if(ungrounded.length)return invalid(ungrounded);
  // Model must not add pagination/cursors or self-authorize broader history.
  if(p.cursor!==undefined||p.pageSize!==undefined||p.includeHistorical===true)
@@ -46,7 +66,6 @@ export function guardLfm3Candidate(args:{
    return invalid(['period']);
  if(p.exerciseYear!==undefined&&!t.includes(String(p.exerciseYear)))
    return invalid(['exerciseYear']);
- const entities=interpretation.entities;
  const constraints=detectConstraints(t,{
   commitmentId:typeof entities.commitmentId==='string'?entities.commitmentId:undefined,
   materialQuery:typeof entities.material==='string'?entities.material:undefined,
