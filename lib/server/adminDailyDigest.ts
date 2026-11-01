@@ -136,7 +136,7 @@ async function prepare(token: string, now: Date) {
   });
 }
 
-export async function sendAdminDailyDigest(now = new Date()) {
+export async function sendAdminDailyDigest(now = new Date(), mode: 'daily' | 'test' = 'daily') {
   if (!isCloudRunRuntime() || process.env.EMPROVEX_ADMIN_DIGEST_ENABLED !== '1') {
     throw new Error('ADMIN_DIGEST_DISABLED');
   }
@@ -144,16 +144,21 @@ export async function sendAdminDailyDigest(now = new Date()) {
   const from = env('EMPROVEX_ADMIN_DIGEST_GMAIL_FROM');
   const token = await getCloudRunAccessToken();
   const day = brazilDay(now);
-  let message = await readRun(token, day);
-  if (message?.status === 'sent') return { status: 'already_sent', day };
+  const runId = mode === 'test' ? 'test-' + day : day;
+  let message = await readRun(token, runId);
+  if (message?.status === 'sent') return { status: 'already_sent', day, mode };
   // Gmail nao oferece idempotency key. Se ha envio pendente, bloquear retry
   // para evitar duplicacao em falha de rede apos o Gmail aceitar a mensagem.
   if (message?.status === 'pending') throw new Error('ADMIN_DIGEST_MANUAL_REVIEW_REQUIRED');
-  if (!message) message = await savePending(token, day, await prepare(token, now));
+  if (!message) {
+    const draft = await prepare(token, now);
+    if (mode === 'test') draft.subject = '[TESTE] ' + draft.subject;
+    message = await savePending(token, runId, draft);
+  }
   if (message.status === 'sent') return { status: 'already_sent', day };
   await sendAdminDigestViaGmail({
     from, to, subject: message.subject, text: message.text,
   });
-  await markSent(token, day);
-  return { status: 'sent', day };
+  await markSent(token, runId);
+  return { status: 'sent', day, mode };
 }

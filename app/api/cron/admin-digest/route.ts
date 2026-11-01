@@ -34,7 +34,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, code: 'UNAUTHORIZED' }, { status: 401, headers });
   }
   try {
-    const result = await sendAdminDailyDigest();
+    const mode = request.nextUrl.searchParams.get('mode');
+    if (mode && mode !== 'test') {
+      return NextResponse.json({ ok: false, code: 'INVALID_MODE' }, { status: 400, headers });
+    }
+    const result = await sendAdminDailyDigest(new Date(), mode === 'test' ? 'test' : 'daily');
     return NextResponse.json({ ok: true, ...result }, { headers });
   } catch (error) {
     console.error('EMPROVEX_ADMIN_DIGEST_FAILED', {

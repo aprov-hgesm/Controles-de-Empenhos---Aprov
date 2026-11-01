@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { brazilDay, buildAdminDigest } from '../lib/adminDailyDigest.mjs';
+import { renderAdminDigestHtml } from '../lib/adminDigestEmail.mjs';
 
 test('18:00 horario de Brasilia uses local date', () => {
   assert.equal(brazilDay(new Date('2026-11-01T21:00:00Z')), '2026-11-01');
@@ -61,4 +62,29 @@ test('Gmail R1 keeps previous browser supplier flow intact and uses offline user
   assert.match(gmail, /ADMIN_DIGEST_GMAIL_SENDER_MISMATCH/);
   assert.match(gmail, /base64url/);
   assert.doesNotMatch(gmail, /googleWorkspaceMail|GmailRuntime|resend.com/);
+});
+
+test('HTML executive email is friendly, readable, and escapes operational data', () => {
+  const plain = buildAdminDigest({
+    day:'2026-11-01', now:'2026-11-01T21:00:00Z',
+    accounts:null, cycles:null, usage:null, uptime:null, errors5xx:null,
+  });
+  const html=renderAdminDigestHtml(plain.text,{test:true});
+  assert.match(html,/Desenvolvedor, Administrador e Gestor/);
+  assert.match(html,/Panorama executivo/);
+  assert.match(html,/ENVIO DE TESTE/);
+  assert.match(html,/Dados ausentes sao identificados/);
+  const escaped=renderAdminDigestHtml(plain.text+'\\n<alert>&evil');
+  assert.ok(!escaped.includes('<alert>'));
+  assert.match(escaped,/&lt;alert&gt;&amp;evil/);
+});
+test('Gmail HTML MIME stays multipart and test mode remains independent of daily key',()=>{
+  const gmail=readFileSync(resolve('lib/server/adminDigestGmail.ts'),'utf8');
+  const server=readFileSync(resolve('lib/server/adminDailyDigest.ts'),'utf8');
+  const route=readFileSync(resolve('app/api/cron/admin-digest/route.ts'),'utf8');
+  assert.match(gmail,/multipart\/alternative/);
+  assert.match(gmail,/Content-Type: text\/html/);
+  assert.match(server,/'test-' \+ day/);
+  assert.match(server,/runId/);
+  assert.match(route,/mode === 'test'/);
 });
