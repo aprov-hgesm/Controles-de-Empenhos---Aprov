@@ -47,6 +47,18 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    // Diagnóstico sem tokens, somente em runner local com Firebase demo.
+    if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1'
+      && process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID === 'demo-emprovex-security') {
+      console.warn('W9_E2E_WAREHOUSE_STATUS_DIAG', {
+        code: error instanceof Error ? error.message : String(error),
+        nodeEnv: process.env.NODE_ENV,
+        authEmulator: process.env.FIREBASE_AUTH_EMULATOR_HOST || 'unset',
+        firestoreEmulator: process.env.FIRESTORE_EMULATOR_HOST || 'unset',
+        hosted: Boolean(process.env.K_SERVICE || process.env.VERCEL),
+        argv: process.argv.slice(1),
+      });
+    }
     if (error instanceof FounderAuthError || error instanceof WarehouseAccessError) {
       return NextResponse.json(
         { error: 'WAREHOUSE_ACCESS_DENIED' },
