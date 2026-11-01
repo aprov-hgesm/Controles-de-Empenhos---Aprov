@@ -126,14 +126,14 @@ test('W5 proposal and grounding guard reject invented parameters and silent filt
 });
 let modelAnswer=null,modelCalls=0,w3Calls=[];
 const mocked={
- '../authorize':{prepareAiAccess:async()=>({
-  uid:'synthetic-a',workspaceId:'sector-a',ug:'160416',email:'a@example.test',googleToken:'fake'
- })},
+ '../authorize':{prepareAiAccess:async(token)=>token==='Bearer B'?{
+  uid:'synthetic-b',workspaceId:'sector-b',ug:'160417',email:'b@example.test',googleToken:'fake'
+ }:{uid:'synthetic-a',workspaceId:'sector-a',ug:'160416',email:'a@example.test',googleToken:'fake'}},
  '../query':{executeAuthorizedAiQuery:async(access,query)=>{
   w3Calls.push({access,query});
   return {version:'emprovex.ai.response.v1',status:'ok',intent:query.intent,
    contract:'supplier.contact.find.v1',data:query.intent==='supplier_contact_find'?
-    [{legalName:'Fornecedor Alfa',email:'alfa@example.test'}]:
+    [{legalName:'Fornecedor Alfa',email:access.workspaceId==='sector-b'?'b@example.test':'a@example.test'}]:
     {commitmentId:'2026NE66',operationalBalance:10,committedAmount:10,receivedAmount:0},
    filters:query.params,evidence:[{source:'synthetic',documentId:'fake'}],
    asOf:'2026-11-01T00:00:00Z',coverage:'complete',limitations:[],
@@ -142,7 +142,9 @@ const mocked={
  './lfm3':{proposeWithLfm3:async()=>{modelCalls++;return modelAnswer;}}
 };
 const {runAiAsk}=load('lib/emprovex-ai/integration/orchestrator.ts',mocked);
-async function ask(message){return (await runAiAsk({authorization:'Bearer fake',input:{message}})).payload;}
+async function ask(message,authorization='Bearer fake'){
+ return (await runAiAsk({authorization,input:{message}})).payload;
+}
 test('Deterministic query never invokes LFM3 and stays workspace-scoped',async()=>{
  w3Calls=[];modelCalls=0;
  const result=await ask('Quanto resta da NE 2026NE66?');
@@ -157,7 +159,7 @@ test('MODEL_ELIGIBLE only: model proposal proceeds through W5 and W3',async()=>{
  assert.equal(result.metrics.lfm3Calls,1);assert.equal(modelCalls,1);
  assert.equal(result.query.intent,'supplier_contact_find');
  assert.equal(w3Calls.length,1);assert.equal(w3Calls[0].access.workspaceId,'sector-a');
- assert.match(result.answer,/alfa@example.test/);
+ assert.match(result.answer,/a@example.test/);
 });
 test('Untrusted or unavailable model never executes an unauthorized W3 query',async()=>{
  w3Calls=[];modelAnswer={intent:'supplier_contact_find',params:{nameQuery:'fornecedor Beta'}};
@@ -167,4 +169,17 @@ test('Untrusted or unavailable model never executes an unauthorized W3 query',as
  const offline=await ask('Detalhe o fornecedor Alfa');
  assert.equal(offline.status,'fallback_unavailable');
  assert.equal(w3Calls.length,0);
+});
+test('Model route retains independent sector authority and never shares response data',async()=>{
+ modelAnswer={intent:'supplier_contact_find',params:{nameQuery:'fornecedor Alfa'}};
+ w3Calls=[];
+ const first=await ask('Detalhe o fornecedor Alfa','Bearer A');
+ const other=await ask('Detalhe o fornecedor Alfa','Bearer B');
+ assert.equal(first.status,'ok');assert.equal(other.status,'ok');
+ assert.match(first.answer,/a@example.test/);
+ assert.doesNotMatch(first.answer,/b@example.test/);
+ assert.match(other.answer,/b@example.test/);
+ assert.doesNotMatch(other.answer,/a@example.test/);
+ assert.equal(w3Calls[0].access.workspaceId,'sector-a');
+ assert.equal(w3Calls[1].access.workspaceId,'sector-b');
 });
