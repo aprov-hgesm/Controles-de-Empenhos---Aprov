@@ -20,3 +20,8 @@ export function aiLfm3Enabled(env:NodeJS.ProcessEnv=process.env):boolean {
  return aiExperimentalEnabled(env)&&env.K_SERVICE===W6_CANDIDATE_SERVICE&&
    env.EMPROVEX_AI_LFM3_ENABLED==='1';
 }
+
+/** W7 requires an additional explicit opt-in; W6 being enabled is not consent for open chat. */
+export function aiConversationalModelEnabled(env:NodeJS.ProcessEnv=process.env):boolean {
+ return aiLfm3Enabled(env)&&env.EMPROVEX_AI_W7_GENERATIVE_ENABLED==='1';
+}
