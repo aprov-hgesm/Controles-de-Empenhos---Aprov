@@ -63,6 +63,101 @@ test('Cloud Run gate requires exact separate W6 service and approval flags',()=>
   assert.equal(env.aiLfm3Enabled(bad),false,JSON.stringify(bad));
  }
 });
+test('W6 hosted candidate fails closed on project, emulator, and credentials',()=>{
+ const isolation=load('lib/emprovex-ai/integration/w6Isolation.ts',{
+  jose:{createRemoteJWKSet:()=>({}),jwtVerify:async()=>({payload:{sub:'uid',
+   email:'user@example.test',email_verified:true,firebase:{sign_in_provider:'password'}}})},
+  '../../server/firebaseFounderAuth':{FounderAuthError:class FounderAuthError extends Error{}}
+ });
+ const env={...candidateEnv,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID:'emprovex-w6-test-2026',
+  EMPROVEX_AI_W6_CORE_DATABASE_ID:'(default)',
+  EMPROVEX_AI_W6_WAREHOUSE_DATABASE_ID:'emprovex-warehouse'};
+ assert.deepEqual(isolation.w6DataTarget(env),{
+  projectId:'emprovex-w6-test-2026',coreDatabaseId:'(default)',
+  warehouseDatabaseId:'emprovex-warehouse'});
+ assert.equal(isolation.w6DataTarget({...env,K_SERVICE:'other',
+   K_CONFIGURATION:'other',K_REVISION:'other-00001-ab'}),null);
+ for(const bad of [
+  {...env,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID:undefined},
+  {...env,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID:'gen-lang-client-0982077967'},
+  {...env,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID:'demo-emprovex-security'},
+  {...env,EMPROVEX_AI_W6_WAREHOUSE_DATABASE_ID:undefined},
+  {...env,FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON:'{"private_key":"no"}'},
+  {...env,GOOGLE_APPLICATION_CREDENTIALS:'/tmp/key.json'},
+  {...env,FIRESTORE_EMULATOR_HOST:'127.0.0.1:8080'},
+  {...env,FIREBASE_AUTH_EMULATOR_HOST:'127.0.0.1:9099'},
+  {...env,EMPROVEX_E2E_SERVER_AUTH:'1'},
+  {...env,K_CONFIGURATION:'wrong'}
+ ])assert.throws(()=>isolation.w6DataTarget(bad),/AI_W6_ISOLATION_NOT_CONFIGURED/);
+ const old={};
+ const vars=Object.keys(env);
+ for(const key of vars){old[key]=process.env[key];process.env[key]=env[key];}
+ const fetchWas=globalThis.fetch;
+ return (async()=>{
+  const calls=[];
+  globalThis.fetch=async(url)=>{
+   calls.push(String(url));
+   if(String(url).endsWith('/email'))return {ok:true,text:async()=> 'not-authorized@example.test'};
+   return {ok:true,text:async()=> '{"access_token":"ya29.synthetic-token-good"}'};
+  };
+  await assert.rejects(()=>isolation.getW6GoogleAccessToken(),/AI_W6_RUNTIME_IDENTITY_FORBIDDEN/);
+  assert.equal(calls.some(x=>x.includes('firestore.googleapis.com')),false);
+  globalThis.fetch=async(url)=>{
+   calls.push(String(url));
+   return {ok:true,text:async()=>String(url).endsWith('/email')?
+    'emprovex-ai-w6-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com':
+    '{"access_token":"ya29.synthetic-token-good"}'};
+  };
+  assert.equal(await isolation.getW6GoogleAccessToken(),'ya29.synthetic-token-good');
+  assert.equal(calls.some(x=>x.includes('/token')),true);
+  const verified=await isolation.verifyW6FirebaseRequest('Bearer test-verified-token');
+  assert.equal(verified.email,'user@example.test');
+  await assert.rejects(()=>isolation.verifyW6FirebaseRequest('Bearer invalid two spaces'));
+  return isolation;
+ })().finally(()=>{
+   globalThis.fetch=fetchWas;
+   for(const key of vars)old[key]===undefined?delete process.env[key]:process.env[key]=old[key];
+ });
+});
+test('W6 Firestore Core and Warehouse target only the isolated project',async()=>{
+ const w6={projectId:'emprovex-w6-test-2026',coreDatabaseId:'(default)',
+  warehouseDatabaseId:'emprovex-warehouse'};
+ const reader=load('lib/emprovex-ai/reader.ts',{
+  './integration/w6Isolation':{w6DataTarget:()=>w6},
+  '../server/warehouseFirestoreTransaction':{
+   warehouseAdminBatchRead:async()=>{throw Error('PROD_WAREHOUSE_FORBIDDEN');},
+   warehouseAdminReadScopedQuery:async()=>{throw Error('PROD_WAREHOUSE_FORBIDDEN');}
+  }
+ });
+ const access={uid:'uid',email:'user@example.test',workspaceId:'sector-ai-a',
+  ug:'160416',googleToken:'test-managed-token'};
+ const former=globalThis.fetch, urls=[];
+ globalThis.fetch=async(url,options={})=>{
+  const target=String(url);urls.push(target);
+  assert.match(target,/^https:\/\/firestore.googleapis.com\/v1\/projects\/emprovex-w6-test-2026\/databases\//);
+  assert.equal(options.headers.authorization,'Bearer test-managed-token');
+  if(target.endsWith('/workspaces/sector-ai-a'))
+   return {ok:true,status:200,json:async()=>({name:'projects/emprovex-w6-test-2026/databases/(default)/documents/workspaces/sector-ai-a',
+    fields:{status:{stringValue:'active'}}})};
+  if(target.endsWith('/warehouse/sector-ai-a/materials/mat_123'))
+   return {ok:true,status:200,json:async()=>({name:'projects/emprovex-w6-test-2026/databases/emprovex-warehouse/documents/warehouse/sector-ai-a/materials/mat_123',
+    fields:{workspaceId:{stringValue:'sector-ai-a'},ug:{stringValue:'160416'}}})};
+  if(target.endsWith('/warehouse/sector-ai-a:runQuery'))
+   return {ok:true,status:200,json:async()=>([{document:{
+    name:'projects/emprovex-w6-test-2026/databases/emprovex-warehouse/documents/warehouse/sector-ai-a/materials/mat_123',
+    fields:{workspaceId:{stringValue:'sector-ai-a'},ug:{stringValue:'160416'}}}}])};
+  throw Error('unexpected target '+target);
+ };
+ try{
+  assert.equal((await reader.coreDocument('workspaces/sector-ai-a',access.googleToken)).status,'active');
+  assert.equal((await reader.warehouseDocument(access,'materials','mat_123')).id,'mat_123');
+  const queried=await reader.warehouseQuery(access,'materials',null,21);
+  assert.equal(queried.rows.length,1);
+  assert.equal(queried.rows[0].id,'mat_123');
+  assert.equal(urls.length,3);
+ }finally{globalThis.fetch=former;}
+});
+
 test('IAM metadata token and Ollama JSON mode, think=false, output/time bounds',async()=>{
  const previous=globalThis.fetch;
  let requests=[];
