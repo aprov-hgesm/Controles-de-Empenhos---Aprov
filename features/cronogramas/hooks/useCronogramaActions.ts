@@ -57,6 +57,11 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile, workspaceContext }=context;
   const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
   const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
+  const isAlmox = workspaceContext.status === 'sector' && workspaceContext.sectorType === 'almoxarifado';
+  const sectorDeliveryNotes = isAlmox
+    ? '1. As entregas deverão ocorrer nas datas previstas, acompanhadas das respectivas Notas Fiscais.\n2. Os materiais deverão corresponder aos itens, quantidades e especificações do empenho.\n3. Alterações de prazo deverão ser comunicadas formalmente ao setor com antecedência.'
+    : '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.';
+  const sectorRole = isAlmox ? 'Encarregado do Almoxarifado' : defaultResponsibleRole;
   const [isSendingCronogramaEmail, setIsSendingCronogramaEmail] = useState(false);
   const [isPreparingCronogramaEmail, setIsPreparingCronogramaEmail] = useState(false);
   const [cronogramaEmailConfirmation, setCronogramaEmailConfirmation] = useState<CronogramaEmailConfirmation | null>(null);
@@ -82,10 +87,10 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       setCronogramaHorarioEntrega(saved.horarioEntrega || 'Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30');
       setCronogramaObservacoes(
         saved.observacoes ||
-        '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.'
+        sectorDeliveryNotes
       );
       setCronogramaResponsavelNome(saved.responsavelNome || (user?.displayName || ''));
-      setCronogramaResponsavelCargo(saved.responsavelCargo || defaultResponsibleRole);
+      setCronogramaResponsavelCargo(saved.responsavelCargo || sectorRole);
     } else {
       // Default: 2 remessas quinzenais
       const initialCols: CronogramaEntregaColuna[] = [
@@ -107,10 +112,10 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       setCronogramaLocalEntrega(defaultDeliveryLocation);
       setCronogramaHorarioEntrega('Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30');
       setCronogramaObservacoes(
-        '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.'
+        sectorDeliveryNotes
       );
       setCronogramaResponsavelNome(user?.displayName || '');
-      setCronogramaResponsavelCargo(defaultResponsibleRole);
+      setCronogramaResponsavelCargo(sectorRole);
     }
   };
 
@@ -469,7 +474,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
      doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    const sig1Text = cronogramaResponsavelNome || 'Encarregado do Aprovisionamento';
+    const sig1Text = cronogramaResponsavelNome || sectorRole;
     doc.text(sig1Text, margin + (boxWidth / 2), sigY + 4, { align: 'center' });
      doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.8);
@@ -667,7 +672,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         'Local de entrega: ' + (cronogramaLocalEntrega || defaultDeliveryLocation),
         '',
         'Atenciosamente,',
-        cronogramaResponsavelNome || user.displayName || 'Setor de Aprovisionamento',
+        cronogramaResponsavelNome || user.displayName || (isAlmox ? 'Setor de Almoxarifado' : 'Setor de Aprovisionamento'),
         cronogramaResponsavelCargo || defaultResponsibleRole,
         organizationName,
         '',
