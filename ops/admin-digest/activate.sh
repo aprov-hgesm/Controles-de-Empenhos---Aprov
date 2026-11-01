@@ -26,10 +26,8 @@ gcloud run services describe "$service" --region="$region" --project="$project" 
 jq -e --arg sa "$runtime_sa" '.spec.template.spec.serviceAccountName==$sa' "$RUNNER_TEMP/before.json" >/dev/null
 old="$(jq -r '[.status.traffic[]? | select(.percent==100) | .revisionName] | if length==1 then .[0] else empty end' "$RUNNER_TEMP/before.json")"
 [[ -n "$old" ]] || { echo "::error::Require exactly one active revision at 100%"; exit 1; }
-for secret in emprovex-admin-digest-gmail-client-secret emprovex-admin-digest-gmail-refresh-token; do
-  [[ "$(gcloud secrets versions describe 1 --secret="$secret" --project="$project" --format="value(state)")" == ENABLED ]] || exit 1
-  gcloud secrets add-iam-policy-binding "$secret" --project="$project" --member="serviceAccount:$runtime_sa" --role="roles/secretmanager.secretAccessor" --quiet >/dev/null
-done
+# Preserve existing IAM. Cloud Run verifies the runtime account can access both secrets during deploy.
+# If IAM is insufficient, stop before traffic changes rather than broadening permissions here.
 digest="$(gcloud artifacts docker images describe "$image_base:$source_sha" --project="$project" --format='value(image_summary.digest)')"
 [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
 suffix="d$short_sha-$GITHUB_RUN_NUMBER"
@@ -56,6 +54,11 @@ gcloud scheduler jobs create http "$test_job" --project="$project" --location="$
   --uri="$preview/api/cron/admin-digest?mode=test" \
   --oidc-service-account-email="$runtime_sa" --oidc-token-audience="$audience" \
   --max-retry-attempts=0 --attempt-deadline=180s --quiet
+cleanup_test() {
+  gcloud scheduler jobs delete "$test_job" --project="$project" --location="$region" --quiet
+trap - EXIT >/dev/null 2>&1 || true
+}
+trap cleanup_test EXIT
 gcloud scheduler jobs run "$test_job" --project="$project" --location="$region" --quiet
 success=0
 for attempt in $(seq 1 24); do
