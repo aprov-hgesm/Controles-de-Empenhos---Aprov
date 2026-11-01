@@ -1,89 +1,119 @@
-# EMPROVEX — Boletim Diário do Administrador R1 (Gmail API)
+# EMPROVEX — Memorial Oficial do Boletim Diário do Administrador (R1/R2)
 
-**Status:** PR #445 — implementação na branch, sem publicação nem agendamento em produção. **Resend foi descartado** em favor da Gmail API já usada para os envios aos fornecedores.
+**Estado final: CONCLUÍDO, HOMOLOGADO E ATIVO EM PRODUÇÃO — 01/11/2026.**
 
-## Objetivo e horário
+**Responsável funcional:** Desenvolvedor, Administrador e Gestor do EMPROVEX.  
+**Diretriz:** GOV-SIMP-01 — segurança essencial, reaproveitamento, intervenção mínima e testes proporcionais ao risco.  
+**Escopo deste memorial:** boletim executivo automático enviado pela Gmail API, independente dos alertas operacionais já existentes.
 
-Resumo administrativo agregado às **18:00**, todos os dias, no fuso **America/Sao_Paulo**, com remetente **`marcoa.r.aquino@gmail.com`** e destinatário **`codex.martis.dev@gmail.com`**, definidos pelo administrador. O boletim é independente dos alertas de uptime existentes no Google Cloud Monitoring.
+> **Certificação de encerramento (01/11/2026):** a integração foi publicada no Cloud Run, houve envio real de teste confirmado na pasta **Enviados** da conta remetente, o job diário foi criado e verificado como **ENABLED**, e o acesso administrativo temporário ao Cloud Scheduler foi revogado após a ativação. A chegada à caixa de entrada do destinatário e a primeira execução regular às 18h não foram verificadas nesta certificação; não confundir com o teste de envio bem-sucedido.
 
-## Como o Gmail existente será reaproveitado
+## 1. Configuração operacional oficial
 
-- O envio de cronogramas dos fornecedores já chama a Gmail API com `gmail.send` e `userinfo.email` em `lib/googleWorkspaceMail.ts`.
-- Esse módulo é `use client`: usa autorização temporária no navegador, sem refresh token no servidor; **não é possível chamá-lo de um job automático diretamente**.
-- O novo `lib/server/adminDigestGmail.ts` utiliza a **mesma Gmail API** (`users/me/messages/send`) e o formato MIME/base64URL, porém com OAuth `offline`, validando a identidade do Gmail remetente antes de enviar.
-- Não modificar o fluxo dos fornecedores, não adicionar Resend, não exigir outro domínio de envio ou uma nova conta Gmail.
+| Parâmetro | Valor confirmado |
+| --- | --- |
+| Remetente | `marcoa.r.aquino@gmail.com` |
+| Destinatário | `codex.martis.dev@gmail.com` |
+| Periodicidade | Diária, inclusive fins de semana |
+| Horário | 18h00 (`0 18 * * *`) |
+| Fuso | `America/Sao_Paulo` |
+| Projeto Google Cloud | `gen-lang-client-0982077967` |
+| Região | `southamerica-east1` |
+| Serviço Cloud Run | `emprovex-cloudrun-candidate` |
+| Job Cloud Scheduler | `emprovex-admin-digest-r1` |
+| Método e rota | `POST https://emprovex.com.br/api/cron/admin-digest` |
+| Autenticação do job | OIDC assinado pelo Google, com audience igual à URL da rota |
+| Identidade OIDC efetivamente utilizada | `emprovex-run-runtime@gen-lang-client-0982077967.iam.gserviceaccount.com` |
+| Transporte de e-mail | Gmail API `users/me/messages/send`, OAuth offline, sem Resend |
 
-## Indicadores R1
+O agendamento teve `state: ENABLED` e próxima execução informada pelo serviço como `2026-11-01T21:00:00Z`, equivalente a **01/11/2026, 18h de Brasília**. O job de teste temporário `emprovex-admin-digest-r2-test-once` foi excluído depois da homologação; **não há um segundo agendamento diário** previsto nesta implementação.
 
-Uptime do check público existente nas últimas 24h, erros HTTP 5xx Cloud Run quando disponíveis, contas por estado, ciclos pagos/abertos/pendentes/vencidos, revisões de cobrança e métricas globais parciais de Read/Realtime Read/Write Units.
+## 2. Evidências de homologação e publicação
 
-Indicadores ausentes são descritos como indisponíveis. Não inferir receita recebida de ciclos marcados pagos. Não incluir PII de clientes, documentos de fornecedores, dados bancários ou detalhes por UG.
+- **PR #445 — núcleo R1:** integração da rota, geração do conteúdo agregado, Gmail API e testes; incorporada à `main` no commit `1ccb1383c2a61c5e4a05e5b4f4c1cbba670f3d42`.
+- **PR #449 — apresentação R2:** saudação e linguagem dirigidas ao Desenvolvedor, Administrador e Gestor, e-mail executivo HTML com alternativa em texto puro e teste isolado; incorporada à `main`. Os testes do boletim e a proteção do núcleo foram aprovados.
+- **PR #452 — ativação segura:** execução do processo pelo workflow de promoção já autorizado via Workload Identity Federation (WIF), sem alterar a condição de segurança do provedor; incorporada à `main`.
+- **Ativação definitiva:** workflow GitHub Actions `EMPROVEX Cloud Run — promote approved revision`, execução **#41271765423**, concluído com `success`: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41271765423 .
+- **Revisão colocada em tráfego:** `emprovex-cloudrun-candidate-dbadb5c53e62b-6`, baseada na imagem do SHA `badb5c53e62be2a7cc8f1ed95f0f98849ddf6f3f`, com **100% do tráfego** após teste, promoção e verificação de saúde.
+- **Teste real automatizado:** uma execução autenticada do Cloud Scheduler contra a revisão candidata, em `POST /api/cron/admin-digest?mode=test`, teve resultado de entrega HTTP considerado bem-sucedido pelo workflow. O Gmail da conta remetente registrou a mensagem **`[TESTE] EMPROVEX | Boletim de Gestão — 2026-11-01`**, destinada a `codex.martis.dev@gmail.com`. O teste foi independente da chave diária e não consome o envio das 18h.
+- **Teste de apresentação adicional:** `[TESTE DE RECEBIMENTO] EMPROVEX | Seu boletim de gestão — prévia executiva`, também enviado a partir da conta conectada. Era somente prévia visual, sem métricas operacionais coletadas; **não** substituiu o teste automático.
+- **Agendamento definitivo:** o mesmo workflow criou e validou o job `emprovex-admin-digest-r1`, `schedule: 0 18 * * *`, `timeZone: America/Sao_Paulo`, `state: ENABLED`, com requisição `POST` autenticada por OIDC.
+- **Segurança após ativação:** o administrador confirmou no PowerShell a retirada do papel temporário `roles/cloudscheduler.admin` da conta `emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com`. A retirada não cancela um job já criado e não revoga os direitos específicos de acesso do runtime aos segredos Gmail.
 
-Backups já existentes e alertas de uptime permanecem intactos; esta versão não consulta a data de última execução de backup nem faz contagem automática de incidentes de segurança.
+**Limites da evidência:** o status `SENT` confirma que o Gmail aceitou/registrou as mensagens, mas não prova leitura nem recebimento na caixa de entrada externa. A primeira execução regular das 18h permanece um evento futuro no momento desta homologação. O êxito do teste de integração não significa que todos os indicadores retornarão dados em todo dia; ausência de dados deve continuar explícita.
 
-## Autorização Google — uma única vez
+## 3. Estrutura do boletim e personalidade editorial
 
-**A autorização atual do navegador não basta para um envio às 18h sem ninguém conectado.** É necessário um grant OAuth 2.0 de acesso offline à conta remetente **`marcoa.r.aquino@gmail.com`**:
+O e-mail apresenta identidade visual EMPROVEX, com HTML responsivo e alternativa `text/plain`, mantendo legibilidade em clientes de e-mail variados.
 
-1. Usar o cliente OAuth do projeto GCP EMPROVEX existente, se ele suportar o fluxo de servidor (redirect URI válido e client secret), ou criar um client OAuth adicional no mesmo projeto. Não criar outra conta Google.
-2. Solicitar os escopos `https://www.googleapis.com/auth/gmail.send` e `https://www.googleapis.com/auth/userinfo.email`, parâmetros `access_type=offline`, `prompt=consent`.
-3. Usar o `refresh_token` obtido uma única vez e armazenar **somente no Secret Manager**, com acesso exclusivo ao runtime do Cloud Run. Guardar client secret também no Secret Manager; nunca publicar tokens no Git ou colar no chat.
-4. Conferir o estado do OAuth consent screen: apps externos em **Testing** podem receber refresh tokens com validade de **sete dias** para `gmail.send`; para operação permanente será necessário um estado de produção aplicável.
-5. Não usar service account para enviar como uma conta pessoal `@gmail.com`; isso não substitui autorização do titular. Não pedir senha ou senha de aplicativo da conta.
+**Tratamento editorial:** comunicação carismática, cordial, respeitosa, objetiva e segura com o titular dos papéis de **Desenvolvedor, Administrador e Gestor**; reconhecimento de suas responsabilidades sem bajulação, exageros ou formalismo excessivo. Dar prioridade a panorama executivo, decisões práticas, alertas relevantes e limitações claras.
 
-## Autorização pelo PowerShell — procedimento recomendado
+Seções em produção:
 
-Esta etapa pode ocorrer no Windows com Google Cloud SDK 587 ou posterior; o consentimento do Google ainda requer navegador.
+1. **Panorama executivo:** saudação e contexto do dia.
+2. **Disponibilidade e saúde técnica:** amostras disponíveis do monitoramento HTTPS e erros HTTP 5xx, sem transformar amostragem em SLA.
+3. **Clientes e assinaturas:** contas por situação, ciclos pagos/pendentes/vencidos e revisões financeiras.
+4. **Consumo e infraestrutura:** Read Units, Realtime Read Units e Write Units observáveis, com ressalvas sobre parcialidade das métricas.
+5. **Segurança e continuidade:** informações e limitações do resumo atual; sem inventar a última data de backup ou contagem de incidentes que não tenham sido consultadas.
+6. **Rodapé institucional:** links do painel administrativo e Cloud Monitoring, e observação de confidencialidade.
 
-1. Abrir **Google Auth Platform → Clients** no projeto `gen-lang-client-0982077967`, criar ou baixar um OAuth client **Desktop app**. É possível reutilizar o projeto existente, sem alterar o cliente web já usado pelos fornecedores.
-2. Executar localmente um script PowerShell de OAuth Desktop com loopback em `127.0.0.1`, PKCE S256, `state`, `access_type=offline` e `prompt=consent`; conferir a conta Gmail `marcoa.r.aquino@gmail.com` e seus escopos `gmail.send` + `userinfo.email`.
-3. Salvar client secret e refresh token diretamente no **Secret Manager**, respectivamente nos segredos `emprovex-admin-digest-gmail-client-secret` e `emprovex-admin-digest-gmail-refresh-token`, sem imprimir tokens. O OAuth client ID não é secreto e será configurado no runtime.
-4. Conferir o estado da tela de consentimento **Audience/Publishing status**: apps externos em Testing podem emitir refresh tokens válidos por apenas sete dias se usarem `gmail.send`. Exigir condição adequada para operação contínua.
-5. A autorização por si só **não envia boletins**, não altera Cloud Run e não cria Cloud Scheduler. A ativação depende da integração aprovada, publicação, montagem dos segredos e homologação de envio.
+Não enviar PII de clientes, documentos ou dados bancários; não detalhar informações por UG. **Ciclos registrados como pagos não equivalem necessariamente a receita contabilmente confirmada.** Quando uma fonte não responder, registrar `indisponível`, nunca substituir silenciosamente por zero.
 
-Nunca colar JSON do cliente OAuth, tokens ou conteúdo do Secret Manager no GitHub, nos logs ou no chat.
-## Configurações de runtime para o Cloud Run
+## 4. Arquitetura e segurança
 
-- `EMPROVEX_ADMIN_DIGEST_ENABLED=1` — somente após credenciais válidas e teste controlado;
-- `EMPROVEX_ADMIN_DIGEST_TO=codex.martis.dev@gmail.com`;
-- `EMPROVEX_ADMIN_DIGEST_GMAIL_FROM=marcoa.r.aquino@gmail.com` = conta autorizada no OAuth; o servidor verifica essa identidade antes de enviar;
-- `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_ID` = ID do OAuth client (pode vir de variável/Secret Manager);
-- `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_SECRET` = referência versionada do Secret Manager;
-- `EMPROVEX_ADMIN_DIGEST_GMAIL_REFRESH_TOKEN` = referência versionada do Secret Manager;
-- `EMPROVEX_ADMIN_DIGEST_SCHEDULER_EMAIL=emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com`;
-- `EMPROVEX_ADMIN_DIGEST_OIDC_AUDIENCE=https://emprovex.com.br/api/cron/admin-digest`.
+### 4.1 Gmail, OAuth e segredos
 
-A autorização OAuth deve ser concedida pela conta `marcoa.r.aquino@gmail.com`, não pela destinatária `codex.martis.dev@gmail.com`. O destinatário não precisa autorizar nada.
+O fluxo de envios aos fornecedores existente em `lib/googleWorkspaceMail.ts` permanece independente e inalterado. O boletim usa `lib/server/adminDigestGmail.ts`, com autorização offline e verificação da identidade real do Gmail antes de enviar, sem credenciais privadas no repositório.
 
-Não incluir no deploy a chave antiga Resend: `EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY` é obsoleta nesta PR.
+Cliente OAuth **Desktop** criado especificamente para o boletim; conta remetente validada com `gmail.send` e `userinfo.email`. A tela de consentimento Google foi verificada como **Em produção**, evitando a regra de expiração de sete dias imposta ao estado de testes em determinadas condições. Isso não impede revogação, expiração por inatividade ou outras causas previstas pelo Google.
 
-## Rota, armazenamento e duplicidade
+Segredos mantidos no Google Secret Manager:
+- `emprovex-admin-digest-gmail-client-secret`
+- `emprovex-admin-digest-gmail-refresh-token`
 
-`POST /api/cron/admin-digest` valida token OIDC assinado pelo Google, issuer/audience, e-mail e `email_verified` da conta de serviço destinada exclusivamente ao Cloud Scheduler. O servidor usa a identidade Cloud Run para ler fontes de dados, grava um marcador diário em `platformAdminDigestRuns/{YYYY-MM-DD}` e envia o e-mail via Gmail.
+O acesso `roles/secretmanager.secretAccessor` foi concedido à identidade `emprovex-run-runtime` **somente para esses dois segredos**. Nunca gravar tokens, JSON OAuth, client secret ou refresh token em Git, logs, e-mails ou mensagens.
 
-O Gmail **não oferece Idempotency-Key em `messages.send`**. Por segurança: gravar `pending` *antes* do envio; caso exista `pending` em uma tentativa seguinte, **não reenviar automaticamente** — investigar caixa de enviados e logs, pois o Gmail pode ter enviado antes de uma falha de rede. Após envio e marcação `sent`, tentativas seguintes retornam `already_sent`.
+Variáveis de runtime confirmadas pelo deploy: `EMPROVEX_ADMIN_DIGEST_ENABLED=1`, `EMPROVEX_ADMIN_DIGEST_GMAIL_FROM`, `EMPROVEX_ADMIN_DIGEST_TO`, `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_ID`, `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_SECRET` (Secret Manager), `EMPROVEX_ADMIN_DIGEST_GMAIL_REFRESH_TOKEN` (Secret Manager), `EMPROVEX_ADMIN_DIGEST_SCHEDULER_EMAIL` e `EMPROVEX_ADMIN_DIGEST_OIDC_AUDIENCE`. Não usar `EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY`.
 
-Portanto, a deduplicação automática é conservadora: minimiza reenvios, mas pode exigir revisão manual em incidentes raros. É intencional.
+### 4.2 Endpoint, IAM e prevenção de duplicidade
 
-## Agendamento (somente após homologação das credenciais e deploy)
+`app/api/cron/admin-digest/route.ts` rejeita solicitações sem um token OIDC Google válido (`401`), com validação de issuer, audience, identidade de serviço e e-mail verificado. O job executa com a conta `emprovex-run-runtime`, que também aparece como remetente da identidade OIDC no contrato da rota; não presumir que uma conta separada `emprovex-digest-trigger` tenha sido criada.
 
-Criar conta de serviço de disparo sem chaves, sem acesso direto a Firestore/Secret Manager. Criar um único job Cloud Scheduler na região southamerica-east1:
+`lib/server/adminDailyDigest.ts` produz métricas agregadas por meio das fontes operacionais existentes, grava o controle no Firestore e chama o adaptador Gmail. Há marcadores diários em `platformAdminDigestRuns/{YYYY-MM-DD}`. O teste usa o marcador isolado `platformAdminDigestRuns/test-{YYYY-MM-DD}`.
 
-- `schedule: 0 18 * * *`
-- `time-zone: America/Sao_Paulo`
-- `HTTP: POST https://emprovex.com.br/api/cron/admin-digest`
-- `oidc-service-account-email`: conta dedicada de disparo
-- `oidc-token-audience: https://emprovex.com.br/api/cron/admin-digest`
+A estratégia conservadora de idempotência é:
+- se `sent`, responder `already_sent`;
+- se `pending`, **não reenviar automaticamente**, pois o Gmail pode ter aceito o e-mail antes da confirmação;
+- se não houver registro, criar `pending`, enviar e marcar `sent`.
 
-Não instalar agendamento antes do deploy válido; não recriar nem modificar cron legado `usage-snapshot` desta etapa. Não duplicar o job.
+Uma execução com `pending` requer revisão manual da pasta Enviados e dos logs, sem apagar o marcador às cegas. O Gmail não oferece idempotency key nativa no `messages.send`.
 
-## Homologação mínima GOV-SIMP-01
+### 4.3 Automação e manutenção
 
-- `node --test scripts/admin-daily-digest.test.mjs` e Fast CI (TypeScript);
-- rota sem autenticação -> 401 quando habilitada;
-- autorização Google com conta remetente confirmada pelo `userinfo.email`;
-- envio controlado e recebimento do e-mail pelo destinatário;
-- reexecução no mesmo dia -> `already_sent` após envio confirmado;
-- observar a primeira execução automática das 18h sem interferência no envio de cronogramas aos fornecedores.
+Arquivos relevantes:
+- `lib/adminDailyDigest.mjs` e `lib/adminDigestEmail.mjs`: conteúdo agregado e apresentação HTML;
+- `lib/server/adminDigestGmail.ts` e `lib/server/adminDailyDigest.ts`: transporte autenticado e agregação;
+- `app/api/cron/admin-digest/route.ts`: endpoint;
+- `scripts/admin-daily-digest.test.mjs` e `.github/workflows/admin-digest-r1.yml`: testes;
+- `ops/admin-digest/activate.sh` e `ops/admin-digest/activation-request.json`: trilha de ativação;
+- `.github/workflows/emprovex-cloud-run-promote.yml`: workflow WIF homologado, usado na ativação.
 
-**Nenhuma chave, refresh token, senha ou segredo deve ser fornecido neste chat ou versionado no GitHub.**
+As permissões administrativas temporárias necessárias à criação e à execução do teste foram retiradas após o sucesso. Para futuras **alterações no job**, conceder somente a autorização necessária pelo período estritamente necessário e retirar depois. A conta de serviço gerenciada do Cloud Scheduler continua autorizada a executar o job existente.
+
+**Não repetir a ativação ou o disparo de teste sem motivo.** Alterações futuras devem verificar o estado real do job, as regras de deduplicação e o tráfego Cloud Run antes de agir. Preservar os demais jobs, alertas, backups e o fluxo de fornecedores.
+
+## 5. Critérios de encerramento e observações
+
+| Critério | Resultado em 01/11/2026 |
+| --- | --- |
+| Núcleo, interface executiva e testes específicos integrados à `main` | **Concluído** |
+| Gmail OAuth autorizado, estado publicado e segredos protegidos | **Concluído** |
+| Envio automatizado de teste pelo Cloud Run + Scheduler | **PASS / registrado em Enviados** |
+| Revisão em produção e health verificado | **PASS / 100% de tráfego** |
+| Job de 18h criado com estado `ENABLED` | **PASS** |
+| Privilégio temporário `cloudscheduler.admin` revogado | **Confirmado pelo comando do administrador** |
+| Recebimento na caixa externa e primeira execução regular às 18h | **A observar; não bloqueiam o encerramento do desenvolvimento** |
+
+**Decisão de encerramento:** o Desenvolvedor, Administrador e Gestor considerou a implantação **um sucesso** e autorizou o fechamento dos trabalhos deste chat. Não há nova mudança funcional pendente neste escopo. Acompanhamentos de entrega/rotina, se necessários, devem ser tratados como operação normal do EMPROVEX, não como reabertura automática deste desenvolvimento.
+
+**Referências principais:** PRs [#445](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/445), [#449](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/449), [#452](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/452) e [execução final de ativação #41271765423](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41271765423).
