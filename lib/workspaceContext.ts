@@ -5,7 +5,7 @@ import {
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
 import { getActiveProfileMode, type EmprovexProfileMode } from './profileMode';
-import { normalizePlatformEmail, type WorkspaceInstitutionalProfile } from './platformIdentity';
+import { normalizePlatformEmail, type SectorType, type WorkspaceInstitutionalProfile } from './platformIdentity';
 
 export type WorkspaceContextStatus =
   | 'anonymous'
@@ -46,6 +46,7 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   status: 'sector';
   email: string;
   accountType: 'sector';
+  sectorType: SectorType;
   workspaceId: string;
   workspaceName: string;
   ug: string | null;
@@ -142,6 +143,7 @@ export function resolveWorkspaceContext(
       accountType: 'sector',
       workspaceId: HGESM_WORKSPACE_ID,
       workspaceName: 'Aprovisionamento HGeSM',
+      sectorType: 'aprovisionamento',
       ug: HGESM_UG,
       institutionalProfile: {
         ...HGESM_INSTITUTIONAL_PROFILE,
