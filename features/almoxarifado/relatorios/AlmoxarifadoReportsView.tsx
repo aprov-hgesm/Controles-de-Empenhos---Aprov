@@ -102,6 +102,7 @@ export function AlmoxarifadoReportsView({
   const [scopeState, setScopeState] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [tab, setTab] = useState<Tab>('financeiro');
   const [financialTab, setFinancialTab] = useState<'empenho' | 'fornecedor'>('empenho');
+  const [selectedEmpenhoId, setSelectedEmpenhoId] = useState('');
   const [year, setYear] = useState('');
   const [search, setSearch] = useState('');
   const [warehouse, setWarehouse] = useState<AlmoxWarehouseSnapshot | null>(null);
@@ -181,6 +182,7 @@ export function AlmoxarifadoReportsView({
     (!search || (row.id + ' ' + row.supplier).toLocaleLowerCase('pt-BR')
       .includes(search.toLocaleLowerCase('pt-BR')))),
   [finance, year, search]);
+  const selectedEmpenho = filteredEmpenhos.find((row) => row.id === selectedEmpenhoId) || null;
   const filteredSuppliers = useMemo(() => (finance?.suppliers || []).filter((row) =>
     !search || (row.supplierName + ' ' + row.cnpj).toLocaleLowerCase('pt-BR')
       .includes(search.toLocaleLowerCase('pt-BR'))),
@@ -291,7 +293,13 @@ export function AlmoxarifadoReportsView({
                   <tbody className="divide-y divide-slate-100">
                     {financialTab === 'empenho' ? filteredEmpenhos.slice(0, 100).map((r) => (
                       <tr key={r.id}>
-                        <td className={tableCell}>{r.id}</td><td className={tableCell}>{r.supplier}</td>
+                        <td className={tableCell}>
+                          <button type="button" onClick={() => setSelectedEmpenhoId(r.id)}
+                            aria-pressed={selectedEmpenhoId === r.id}
+                            className="font-bold text-[#00288e] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2">
+                            {r.id} · Ver detalhes
+                          </button>
+                        </td><td className={tableCell}>{r.supplier}</td>
                         <td className={tableCell}>{r.year}</td><td className={tableCell}>{count(r.itemCount)}</td>
                         <td className={tableCell}>{count(r.invoiceCount)}</td>
                         <td className={tableCell}>{money(r.committedValue)}</td>
@@ -316,6 +324,45 @@ export function AlmoxarifadoReportsView({
                   <p className="p-5 text-center text-sm text-slate-500">Nenhum registro no recorte informado.</p>
                 )}
               </div>
+              {financialTab === 'empenho' && selectedEmpenho && (
+                <section className="space-y-3 rounded-xl border border-blue-100 bg-white p-4"
+                  aria-label={"Detalhamento do empenho " + selectedEmpenho.id}>
+                  <div>
+                    <h3 className="font-bold text-[#00288e]">Itens e notas fiscais — {selectedEmpenho.id}</h3>
+                    <p className="text-xs text-slate-500">Quantidades financeiras cadastradas; não representam necessariamente o saldo físico.</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[620px] w-full"><thead className="bg-slate-50"><tr>
+                      {['Item da NE', 'Unidade', 'Qtd. empenhada', 'Qtd. recebida cadastrada', 'Valor empenhado'].map((v) =>
+                        <th key={v} className={tableHeader}>{v}</th>)}
+                    </tr></thead><tbody className="divide-y divide-slate-100">
+                      {selectedEmpenho.items.map((item) => <tr key={item.id}>
+                        <td className={tableCell}>{item.name}</td>
+                        <td className={tableCell}>{item.unit}</td>
+                        <td className={tableCell}>{count(item.committedQuantity)}</td>
+                        <td className={tableCell}>{count(item.receivedQuantity)}</td>
+                        <td className={tableCell}>{money(item.committedValue)}</td>
+                      </tr>)}
+                    </tbody></table>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-700">Notas fiscais associadas ({selectedEmpenho.invoices.length})</h4>
+                  {selectedEmpenho.invoices.length === 0 ? (
+                    <p className="text-xs text-slate-500">Nenhuma NF registrada para este empenho no recorte consultado.</p>
+                  ) : (
+                    <div className="overflow-x-auto"><table className="min-w-[600px] w-full"><thead className="bg-slate-50"><tr>
+                      {['NF', 'Emissão', 'Valor cadastrado', 'NS informada'].map((v) =>
+                        <th key={v} className={tableHeader}>{v}</th>)}
+                    </tr></thead><tbody className="divide-y divide-slate-100">
+                      {selectedEmpenho.invoices.map((invoice, index) => <tr key={invoice.id + ':' + index}>
+                        <td className={tableCell}>{invoice.id}</td>
+                        <td className={tableCell}>{invoice.issueDate}</td>
+                        <td className={tableCell}>{money(invoice.totalValue)}</td>
+                        <td className={tableCell}>{invoice.numeroNS || 'Não informada'}</td>
+                      </tr>)}
+                    </tbody></table></div>
+                  )}
+                </section>
+              )}
               {finance.missingCnpjCount > 0 && (
                 <p className="text-xs text-amber-700">{finance.missingCnpjCount} empenho(s) sem CNPJ não entram no agrupamento por fornecedor.</p>
               )}
