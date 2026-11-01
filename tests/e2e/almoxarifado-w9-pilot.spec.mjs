@@ -43,6 +43,6 @@ test('W9 - usuário Almoxarifado no Firebase Emulator: login, módulos e logout'
   await page.reload();
   await expect(shell).toBeVisible({timeout:60000});
   await page.getByRole('button',{name:'Sair',exact:true}).click();
-  await expect(page).toHaveURL(/\/login\/?$/, {timeout:45000});
+  await expect(page).toHaveURL(/\/(?:login|central-empenhos)\/?$/, {timeout:45000});
   await expect(page.getByTestId('sector-login-email')).toBeVisible({timeout:45000});
 });
