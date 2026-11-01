@@ -276,6 +276,12 @@ export function AppSidebar({
               </div>
             )}
 
+          </nav>
+
+          <section className="px-3" aria-label="Suporte EMPROVEX">
+            <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
+              Suporte
+            </div>
             <button
               type="button"
               data-testid="nav-ajuda"
@@ -285,7 +291,7 @@ export function AppSidebar({
               <CircleHelp className="h-5 w-5" aria-hidden="true" />
               <span>Central de Ajuda</span>
             </button>
-          </nav>
+          </section>
         </div>
 
         <footer className="emprovex-sidebar-system relative z-[1] mx-4">

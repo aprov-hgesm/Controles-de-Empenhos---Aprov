@@ -12,6 +12,8 @@ test('Ajuda autenticada disponível nos dois menus sem criar abas ou rotas', () 
   assert.match(main, /onOpenHelp=\{\(\) =>/);
   assert.match(warehouse, /initialTopic="depositos"/);
   assert.match(side, /data-testid="nav-ajuda"/);
+  const primaryNav = side.slice(side.indexOf('<nav className="emprovex-sidebar-nav'), side.indexOf('</nav>'));
+  assert.doesNotMatch(primaryNav, /data-testid="nav-ajuda"/); // dez destinos originais intactos
   assert.match(warehouseSide, /data-testid="warehouse-nav-ajuda"/);
   assert.match(main, /const EmprovexHelpOverlay = lazy\(/);
   assert.match(warehouse, /const EmprovexHelpOverlay = lazy\(/);
