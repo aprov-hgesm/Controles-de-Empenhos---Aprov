@@ -91,6 +91,7 @@ function validDate(value: string): string | null {
 
 function requestedQuantity(text: string): number | null {
   // Separador decimal brasileiro sempre vírgula. Ponto isolado é ambíguo e bloqueado.
+  if (/^\d{1,3}\.\d{3}$/.test(text)) return null; // 1.234 é ambíguo sem vírgula decimal.
   if (!/^(?:[1-9]\d*|0|[1-9]\d{0,2}(?:\.\d{3})+)(?:,\d{1,3})?$/.test(text)) return null;
   const value = Number(text.replace(/\./g, '').replace(',', '.'));
   return Number.isFinite(value) && value > 0 && value <= 1_000_000_000 ? value : null;
@@ -191,7 +192,7 @@ export function parseRequestTextLines(
       continue;
     }
     if (ended) return lineIssue('UNSUPPORTED_LAYOUT', 'Conteúdo desconhecido após o fim da tabela.', line);
-    const parts = line.text.split('|').map(part => part.trim());
+    const parts = line.text.split('|').map((part: string) => part.trim());
     if (parts.length !== 5 || !/^\d{1,5}$/.test(parts[0])
       || identifiers.has(parts[0])) {
       return lineIssue('UNSUPPORTED_LAYOUT', 'Linha de item ambígua ou identificador repetido.', line);
