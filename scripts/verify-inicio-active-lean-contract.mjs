@@ -35,7 +35,10 @@ assert.match(view, /<InicioEntrySequence\s*\/>/, 'Entrada controlada deve ser ma
 assert.doesNotMatch(view, /InicioOrbitSystem|<canvas|three\.js|onSnapshot\(/);
 
 assert.match(core, /data-testid="inicio-logo-core"/);
-assert.match(core, /src="\/emprovex-logo%20\(2\)\.png"/, 'Logo oficial nao esta no nucleo.');
+assert.match(core, /src="\/branding\/emprovex-dark-transparent\.png"/, 'Nucleo nao usa o simbolo oficial transparente.');
+assert(existsSync('public/branding/emprovex-dark-transparent.png'), 'Imagem oficial transparente ausente.');
+assert.doesNotMatch(coreCss, /(?:-webkit-)?mask-image:\s*url\('\/emprovex-logo-core-mask\.svg'\)/,
+  'Mascara legada recorta indevidamente o novo simbolo.');
 assert.match(core, /snapshot\?\.alerts\.total/, 'Pendencias devem derivar de snapshot.');
 assert.match(core, /aria-label=/, 'Nucleo deve ser acessivel.');
 assert.doesNotMatch(core, /onSnapshot\(|firebase\/firestore|<canvas|three\.js/);
