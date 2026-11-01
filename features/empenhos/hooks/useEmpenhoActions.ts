@@ -16,7 +16,7 @@ import { MAX_EMPENHO_PDF_BYTES, uploadEmpenhoPdf } from '../../../lib/empenhoDoc
 import { assertWorkspacePdfIsSafeForStorage } from '../../../lib/pdfSecurity';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import type { SectorType } from '../../../lib/platformIdentity';
-import { getAlmoxDefaultClass } from '../../almoxarifado/financeiro/sectorFinancialPolicy';
+import { getAlmoxDefaultClass, isAlmoxFinanceClass } from '../../almoxarifado/financeiro/sectorFinancialPolicy';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
@@ -604,7 +604,9 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         numeroContratacao: result.numeroContratacao || '',
         notaCredito: result.notaCredito || '',
         contrato: result.contrato || '',
-        classification: normalizedClassification(result.classification),
+        classification: context.sectorType === 'almoxarifado' && !isAlmoxFinanceClass(result.classification)
+          ? '' // Classe importada alimentar não é reinterpretada automaticamente; exigir escolha humana na revisão.
+          : normalizedClassification(result.classification),
         valorTotalDeclarado: result.valorTotal,
         importSource: 'pdf',
         importWarnings: result.warnings,
