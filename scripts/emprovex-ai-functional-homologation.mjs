@@ -8,7 +8,7 @@
  * Warehouse uses the existing server-only emulator adapter at 127.0.0.1:8081.
  */
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {readFileSync,existsSync} from 'node:fs';
 import {dirname,resolve,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -113,7 +113,8 @@ async function createVerifiedAccount(email){
 }
 async function setup(){
  const start=warehouseEmulatorLaunch();
- warehouseProcess=spawn(start.command,start.args,{cwd:repo,env:{...process.env,FIRESTORE_EMULATOR_HOST:''},stdio:['ignore','pipe','pipe']});
+ warehouseProcess=spawn(start.command,start.args,{cwd:repo,env:{...process.env,FIRESTORE_EMULATOR_HOST:''},
+  stdio:['ignore','pipe','pipe'],windowsHide:true,detached:process.platform!=='win32'});
  warehouseProcess.on('error',e=>console.error('Warehouse emulator launch failed',String(e)));
  warehouseProcess.stdout.on('data',s=>process.stdout.write('[warehouse] '+s));
  warehouseProcess.stderr.on('data',s=>process.stderr.write('[warehouse] '+s));
@@ -249,15 +250,37 @@ async function run(){
    oracleCalls:0,qwenCalls:0,cloudFirestoreCalls:0,
    note:'Emulators only: not a deployed Cloud Run / Firebase Cloud credential test'}));
 }
+async function stopWarehouseEmulator(){
+ if(!warehouseProcess?.pid)return;
+ const child=warehouseProcess;
+ // npx is only the parent: Firebase CLI -> Node -> Java are descendants.
+ // Killing npx alone leaves Java alive and the inherited pipe handles open,
+ // so firebase emulators:exec never sees the test child finish.
+ if(process.platform==='win32'){
+   const killed=spawnSync('taskkill',['/PID',String(child.pid),'/T','/F'],
+    {windowsHide:true,stdio:'ignore',timeout:10000});
+   if(killed.status!==0&&child.exitCode===null)child.kill('SIGTERM');
+ }else{
+   // detached=true creates a dedicated process group, separate from this test.
+   try{process.kill(-child.pid,'SIGTERM');}
+   catch(error){if(error?.code!=='ESRCH')throw error;}
+   await sleep(1200);
+   // Kill any remaining Java/Node grandchildren even if npx already exited.
+   try{process.kill(-child.pid,'SIGKILL');}
+   catch(error){if(error?.code!=='ESRCH')throw error;}
+ }
+ child.stdout?.destroy();
+ child.stderr?.destroy();
+ await Promise.race([
+  new Promise(resolve=>child.once('exit',resolve)),
+  sleep(1500),
+ ]);
+}
 try{
  await setup();
  await run();
 }catch(error){console.error('AI_FUNCTIONAL_HOMOLOGATION_FAILED',error?.stack||String(error));process.exitCode=1;
 }finally{
  globalThis.fetch=actualFetch;
- if(warehouseProcess){
-  warehouseProcess.kill('SIGTERM');
-  await sleep(1200);
-  if(warehouseProcess.exitCode===null)warehouseProcess.kill('SIGKILL');
- }
+ await stopWarehouseEmulator();
 }
