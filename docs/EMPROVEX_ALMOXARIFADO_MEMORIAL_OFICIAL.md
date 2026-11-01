@@ -574,6 +574,26 @@ O adendo deve conter os seguintes campos com evidências rastreáveis:
 
 ---
 
+
+#### W4 R1-B — Ficha de Separação de Material PDF A4 (31/10/2026 BRT; 01/11/2026 UTC)
+
+**Identificação/PR:** Worker W4; [PR DRAFT #437](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/437), branch 'feat/emprovex-almox-r1-w4-separation-pdf', direcionada à 'feat/emprovex-almox-r0-w1-foundation'. **Base imutável de partida:** W1 R0.1 SHA 'baa5cde3957cb00b40bec9e1a250621a15cc4e06'. **SHA de código certificado antes deste handoff:** '4c1fc73e7effd2a304a229b8cdf67aad48bf1541'. O SHA final do handoff é o head_sha consultável na PR #437 (o conteúdo do commit não pode incluir seu próprio hash). **Estado:** DRAFT; sem merge, deploy ou publicação.
+
+**Arquivos W4:** 'features/almoxarifado/pdf/SeparationSheet.ts' (gerador); 'scripts/emprovex-almox-w4-separation-pdf.test.mjs' (6 testes sintéticos); '.github/workflows/emprovex-almox-w4-r1.yml' (certificação isolada); este adendo documental. Nenhuma alteração em contracts.ts, parsers W2, planejador W3, login, Rules, saldos ou operações de saída.
+
+**Entrega funcional:** gera application/pdf A4 com jsPDF carregado sob demanda via lib/pdfToolkit.ts, resultado compatível com SeparationPdfResultV1, doc para download/impressão pelo consumidor, nome de arquivo sanitizado e total de páginas. Utiliza diretamente SeparationSheetV1 e projeções **somente leitura** de ImportedRequestV1 e das entidades warehouse do mesmo workspace: ficha/OM/Almoxarifado, número e data de pedido SISCOFIS, dependência, código e descrição originais, unidades informadas na origem, quantidades em **unidade-base** solicitada/planejada e parcela por posição, depósito/local/subposição, checklist físico, faltas/pendências/observações, identificação do emissor, responsáveis e datas para preenchimento manual. Ordenação estável por depósito → local → subposição; parcelas sem localização vão ao final como pendência. Cabeçalho e aviso **"Documento auxiliar: NÃO substitui registro ou autorização no SISCOFIS."** repetidos em todas as páginas; rodapé "não é comprovante de entrega ou baixa" e página N de M. Não se confunde com CREM/TREM, pedido oficial ou baixa concluída.
+
+**Proteções:** valida esquema compartilhado, mesmo workspace entre ficha/pedido/plano e catálogos de localização, vínculo de pedido e revisão, referência de local/subposição, linha de origem, quantidades finitas e soma de parcelas igual ao planejado. Rejeita documento cancelado, posição inexistente, soma inconsistente e referências cruzadas; preserva inputs sem mutação. Não importa Firebase nem executa requests, transações, baixa ou alteração de estado.
+
+**Evidência efetivamente executada:** [GitHub Actions W4 R1-B, run #41261306103](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41261306103), head '4c1fc73e7effd2a304a229b8cdf67aad48bf1541', **SUCCESS**: npm ci PASS; npm run typecheck PASS; node --test scripts/emprovex-almox-w4-separation-pdf.test.mjs **6/6 PASS**. Cenários: uma posição, posições e parcelas múltiplas fora de ordem, parcial e sem posição, documento longo multipágina com cabeçalho/aviso por página, falha fechada por tenant/posição/somas/contrato e ausência de operações de escrita. Verificação estrutural de PDFs reais em memória com pdf-lib (assinatura %PDF-, abertura, dimensões A4 e contagem de páginas). O primeiro run detectou ajuste de overload TypeScript do jsPDF; o segundo detectou falso positivo do teste estático em comentário. Ambos corrigidos sem remover cenários ou relaxar guardas; a certificação final acima é PASS. **Sem certificação visual por rasterização ou amostra real de pedido SISCOFIS** nesta fase isolada.
+
+**Pendências/handoff para W5:** conectar o gerador à tela/fluxo autorizado, fornecer ImportedRequestV1 e snapshots legítimos de depósitos/locais do workspace antes de imprimir (o contrato SeparationSheetV1 isoladamente não contém descrição/código legíveis nem nomes físicos); ensaiar impressão visual e documentos reais anonimizados; validar UX e integração com W2/W3. Impressão não autoriza retirada nem altera ledger e não comprova entrega. A homologação ponta a ponta, identidade/autorização na fronteira W5, merge e deploy permanecem decisões separadas.
+
+**Parecer W4:** **GO CONDICIONAL para integração W5 em ambiente isolado**. PDF e contratos dirigidos certificados por CI; **NÃO é GO para merge/produção**.
+
+---
+
+
 ### 13.4. Procedimento de verificação por mensagem curta
 
 Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coordenador deverá:
