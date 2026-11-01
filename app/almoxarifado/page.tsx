@@ -104,14 +104,12 @@ function AlmoxPortal({ context }: { context: SectorWorkspaceContext }) {
   }, [context.sectorType]);
 
   const changeOperationalTab: Dispatch<SetStateAction<OperationalActiveTab>> = useCallback(update => {
-    setOperationalTab(previous => {
-      const next = typeof update === 'function' ? update(previous) : update;
-      if (next === 'empenhos' || next === 'itens_empenho') setSelected('empenhos');
-      if (next === 'nova_nf') setSelected('notas-fiscais');
-      if (next === 'cronogramas') setSelected('cronogramas');
-      return next;
-    });
-  }, []);
+    const next = typeof update === 'function' ? update(operationalTab) : update;
+    setOperationalTab(next);
+    if (next === 'empenhos' || next === 'itens_empenho') setSelected('empenhos');
+    if (next === 'nova_nf') setSelected('notas-fiscais');
+    if (next === 'cronogramas') setSelected('cronogramas');
+  }, [operationalTab]);
   const showToast = useCallback((message: string, type?: 'success' | 'error' | 'info') => {
     setToast((type === 'error' ? 'Erro: ' : '') + message);
   }, []);

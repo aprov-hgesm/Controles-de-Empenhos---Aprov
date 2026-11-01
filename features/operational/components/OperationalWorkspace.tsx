@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import type { User } from 'firebase/auth';
 import type { SectorType } from '../../../lib/platformIdentity';
 import type { ResolvedWorkspaceContext } from '../../../lib/workspaceContext';
-import { AlmoxEmpenhosSurface, AlmoxNotasFiscaisSurface, AlmoxCronogramasSurface } from '../../almoxarifado/financeiro/AlmoxFinancialSurfaces';
+
 
 import type { ComponentProps, Dispatch, SetStateAction } from 'react';
 
@@ -85,6 +85,11 @@ function SectorCronogramas({ context, user, workspace, sectorType }: {
   if (!user || workspace.status !== 'sector' || workspace.sectorType !== 'almoxarifado') return <OperationalSurfaceLoading />;
   return <AlmoxCronogramasSurface context={context} user={user} workspace={workspace} />;
 }
+
+// Carregar os adaptadores W6 apenas para o portal Almoxarifado.
+const AlmoxEmpenhosSurface = dynamic(() => import('../../almoxarifado/financeiro/AlmoxFinancialSurfaces').then(m => m.AlmoxEmpenhosSurface));
+const AlmoxNotasFiscaisSurface = dynamic(() => import('../../almoxarifado/financeiro/AlmoxFinancialSurfaces').then(m => m.AlmoxNotasFiscaisSurface));
+const AlmoxCronogramasSurface = dynamic(() => import('../../almoxarifado/financeiro/AlmoxFinancialSurfaces').then(m => m.AlmoxCronogramasSurface));
 
 type OperationalData = ReturnType<typeof useOperationalData>;
 type OperationalViewState = ReturnType<typeof useOperationalViewState>;
