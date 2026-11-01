@@ -6,6 +6,7 @@ on:
       - 'lib/emprovex-ai/**'
       - 'app/api/emprovex-ai/**'
       - 'scripts/emprovex-ai-w6.test.mjs'
+      - 'docs/EMPROVEX_AI_W6_LFM3_HOMOLOGACAO.md'
       - '.github/workflows/emprovex-ai-w6.yml'
   workflow_dispatch:
 permissions:
