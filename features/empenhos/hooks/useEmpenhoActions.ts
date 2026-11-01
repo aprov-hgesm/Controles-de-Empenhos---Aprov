@@ -21,7 +21,8 @@ import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
 import { loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
+import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
+type ActiveTab = OperationalActiveTab;
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 type ToastType = 'success' | 'error' | 'info';
