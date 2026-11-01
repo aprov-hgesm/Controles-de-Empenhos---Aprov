@@ -265,7 +265,7 @@ export function WarehouseModuleShell({
           </footer>
         </main>
         <Suspense fallback={null}>
-          <EleonorExperience user={currentUser} />
+          <EleonorExperience key={`${currentUser?.uid || 'anonymous'}:${workspaceContext.workspaceId}`} user={currentUser} />
         </Suspense>
       </div>
       </div>
