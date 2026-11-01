@@ -34,6 +34,8 @@ import {
   summarizeEmpenhoInvoicePending,
 } from '../../notas-fiscais/domain/invoiceOperationalPending';
 import type { User } from 'firebase/auth';
+import type { SectorType } from '../../../lib/platformIdentity';
+import { getAlmoxFinanceClasses, getAlmoxDefaultClass } from '../../almoxarifado/financeiro/sectorFinancialPolicy';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
 
 type NewEmpenhoForm = {
@@ -112,12 +114,14 @@ interface EmpenhosViewContext {
   user: User | null;
 }
 
-interface EmpenhosViewProps { context: EmpenhosViewContext; }
+interface EmpenhosViewProps { context: EmpenhosViewContext; sectorType?: SectorType; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
-export function EmpenhosView({ context }: EmpenhosViewProps) {
+export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
+  const isAlmox = sectorType === 'almoxarifado';
   const shouldReduceMotion = useReducedMotion();
   const { alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const sectorClasses = React.useMemo(() => isAlmox ? getAlmoxFinanceClasses(empenhoClasses) : empenhoClasses, [isAlmox, empenhoClasses]);
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -252,10 +256,10 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
   const handleAddClass = async () => {
     try {
-      const created = await addEmpenhoClass(newClassCode, newClassDescription, newClassRequiresTR);
+      const created = await addEmpenhoClass(newClassCode, newClassDescription, isAlmox ? false : newClassRequiresTR);
       setNewClassCode('');
       setNewClassDescription('');
-      setNewClassRequiresTR(true);
+      setNewClassRequiresTR(!isAlmox);
       showToast(`Classe ${created.code} adicionada com sucesso.`, 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Não foi possível adicionar a classe.', 'error');
@@ -265,7 +269,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const handleSaveClassDefinition = async (definition: EmpenhoClassDefinition) => {
     const description = (classDescriptionDrafts[definition.code] ?? definition.description).trim();
     const requiresTermoRecebimento =
-      classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento;
+      (isAlmox ? false : classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento);
     try {
       await updateEmpenhoClass(definition.code, description, requiresTermoRecebimento);
       setClassDescriptionDrafts((current) => {
@@ -525,7 +529,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         className="w-full h-12 px-3 border border-white/30 rounded-xl bg-white/40 backdrop-blur-sm text-xs font-bold text-gray-700 outline-none focus:bg-white/60 focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
                       >
                         <option value="Todos">Todas as Classes</option>
-                        {empenhoClasses.map((definition) => (
+                        {sectorClasses.map((definition) => (
                           <option key={definition.code} value={definition.code}>
                             {definition.code}
                           </option>
@@ -759,12 +763,12 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
                   const requiresCommission = classRequiresTermoRecebimento(
                     targetEmp.classification,
-                    empenhoClasses
+                    sectorClasses
                   );
                   const invoicePendingSummary = summarizeEmpenhoInvoicePending(
                     targetEmp,
                     targetInvoices,
-                    empenhoClasses
+                    sectorClasses
                   );
                   const activeEmpenhoNotices = alerts
                     .filter((alert) => alert.empenhoId === targetEmp.id && isNoticeVisibleInActiveQueue(alert))
@@ -1073,7 +1077,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     }}
                                     className="h-9 min-w-[190px] px-3 rounded-lg border border-blue-200 bg-white text-xs font-bold text-[#00288e] outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
                                   >
-                                    {empenhoClasses.map((definition) => (
+                                    {sectorClasses.map((definition) => (
                                       <option key={definition.code} value={definition.code}>
                                         {definition.code} — {definition.description}
                                       </option>
@@ -1129,7 +1133,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </div>
                       </div>
 
-                      {invoicePendingSummary.stage !== 'none' && (
+                      {!isAlmox && invoicePendingSummary.stage !== 'none' && (
                         <div
                           data-testid="empenho-invoice-pending-summary"
                           data-invoice-pending={invoicePendingSummary.stage}
@@ -1887,7 +1891,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         <p className="font-mono text-[8px] font-bold uppercase tracking-[0.20em] text-blue-200/60">EMPROVEX // CLASSIFICAÇÃO</p>
                         <h3 className="mt-1 text-base font-extrabold tracking-tight">Configuração das Classes de Empenho</h3>
                         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-100/75">
-                          Edite o descritivo, defina a exigência de Termo de Recebimento ou inclua novas classes para este workspace.
+                          {isAlmox ? 'Edite descrições e inclua classes de empenho para o Almoxarifado. Sem CREM/TREM ou comissão QR.' : 'Edite o descritivo, defina a exigência de Termo de Recebimento ou inclua novas classes para este workspace.'}
                         </p>
                       </div>
                     </div>
@@ -1895,7 +1899,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                       <div className="space-y-6 p-5 sm:p-6">
                         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                          {empenhoClasses.map((definition) => {
+                          {sectorClasses.map((definition) => {
                             const classCount = empenhos.filter(
                               (emp) => (emp.classification || 'QR').toUpperCase() === definition.code
                             ).length;
@@ -1925,7 +1929,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     aria-label={`Descritivo da classe ${definition.code}`}
                                   />
 
-                                  <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                                  {!isAlmox && <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                       <span className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Termo de Recebimento (TR)</span>
                                       <span className="mt-0.5 block text-[11px] font-medium text-gray-500">
@@ -1946,7 +1950,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       />
                                       Exige TR
                                     </label>
-                                  </div>
+                                  </div>}
 
                                   <div className="flex justify-end">
                                     <button
@@ -1990,7 +1994,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               className="h-10 rounded-xl border border-blue-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#00288e]"
                             />
                           </div>
-                          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
+                          {!isAlmox && <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
                             <input
                               type="checkbox"
                               checked={newClassRequiresTR}
@@ -2003,7 +2007,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 Desmarque quando as NFs desta classe puderem seguir direto para liquidação/Tesouraria, sem Comissão de Recebimento e sem TR.
                               </span>
                             </span>
-                          </label>
+                          </label>}
                           <div className="mt-3 flex justify-end">
                             <button
                               type="button"
@@ -2176,14 +2180,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Classificação do Empenho</label>
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                              {empenhoClasses.map((definition) => (
+                              {sectorClasses.map((definition) => (
                                 <button
                                   key={definition.code}
                                   type="button"
                                   title={definition.description}
                                   onClick={() => setNewEmpenhoForm({ ...newEmpenhoForm, classification: definition.code })}
                                   className={`min-h-11 rounded-xl px-2 font-bold text-xs flex items-center justify-center border transition-all ${
-                                    newEmpenhoForm.classification === definition.code
+                                    (isAlmox ? getAlmoxDefaultClass(newEmpenhoForm.classification) : newEmpenhoForm.classification) === definition.code
                                       ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
                                       : 'bg-white/40 text-gray-600 border-gray-200 hover:bg-white/60 backdrop-blur-sm'
                                   }`}
@@ -2309,14 +2313,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             <div>
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Classificação do Empenho</label>
                               <div className="grid grid-cols-2 gap-1">
-                                {empenhoClasses.map((definition) => (
+                                {sectorClasses.map((definition) => (
                                   <button
                                     key={definition.code}
                                     type="button"
                                     title={definition.description}
                                     onClick={() => setReviewEmpenho({ ...reviewEmpenho, classification: definition.code })}
                                     className={`py-1.5 rounded-lg px-1 font-bold text-[10px] border transition-all ${
-                                      reviewEmpenho.classification === definition.code
+                                      (isAlmox ? getAlmoxDefaultClass(reviewEmpenho.classification) : reviewEmpenho.classification) === definition.code
                                         ? 'bg-[#00288e] text-white border-[#00288e]'
                                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                     }`}
