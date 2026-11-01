@@ -1,7 +1,12 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { Dispatch, SetStateAction } from 'react';
+import type { User } from 'firebase/auth';
+import type { SectorType } from '../../../lib/platformIdentity';
+import type { ResolvedWorkspaceContext } from '../../../lib/workspaceContext';
+import { AlmoxEmpenhosSurface, AlmoxNotasFiscaisSurface, AlmoxCronogramasSurface } from '../../almoxarifado/financeiro/AlmoxFinancialSurfaces';
+
+import type { ComponentProps, Dispatch, SetStateAction } from 'react';
 
 import { useEmpenhoClasses } from '../../../hooks/useEmpenhoClasses';
 import type { useOperationalData } from '../../../hooks/useOperationalData';
@@ -54,6 +59,33 @@ const CentralAvisosView = dynamic(
   { loading: () => <OperationalSurfaceLoading /> }
 );
 
+// O adaptador preserva as mesmas views e ações no Aprovisionamento.
+// Somente o Almoxarifado passa pelas superfícies de políticas setoriais W6.
+function SectorEmpenhos({ context, user, workspace, sectorType }: {
+  context: ComponentProps<typeof EmpenhosView>['context']; user: User | null;
+  workspace: ResolvedWorkspaceContext; sectorType?: SectorType;
+}) {
+  if (sectorType !== 'almoxarifado') return <EmpenhosView context={context} />;
+  if (!user || workspace.status !== 'sector' || workspace.sectorType !== 'almoxarifado') return <OperationalSurfaceLoading />;
+  return <AlmoxEmpenhosSurface context={context} user={user} workspace={workspace} />;
+}
+function SectorNotas({ context, user, workspace, sectorType }: {
+  context: ComponentProps<typeof NotasFiscaisView>['context']; user: User | null;
+  workspace: ResolvedWorkspaceContext; sectorType?: SectorType;
+}) {
+  if (sectorType !== 'almoxarifado') return <NotasFiscaisView context={context} />;
+  if (!user || workspace.status !== 'sector' || workspace.sectorType !== 'almoxarifado') return <OperationalSurfaceLoading />;
+  return <AlmoxNotasFiscaisSurface context={context} user={user} workspace={workspace} />;
+}
+function SectorCronogramas({ context, user, workspace, sectorType }: {
+  context: ComponentProps<typeof CronogramasView>['context']; user: User | null;
+  workspace: ResolvedWorkspaceContext; sectorType?: SectorType;
+}) {
+  if (sectorType !== 'almoxarifado') return <CronogramasView context={context} />;
+  if (!user || workspace.status !== 'sector' || workspace.sectorType !== 'almoxarifado') return <OperationalSurfaceLoading />;
+  return <AlmoxCronogramasSurface context={context} user={user} workspace={workspace} />;
+}
+
 type OperationalData = ReturnType<typeof useOperationalData>;
 type OperationalViewState = ReturnType<typeof useOperationalViewState>;
 type ToastType = 'success' | 'error' | 'info';
@@ -69,6 +101,7 @@ interface OperationalWorkspaceProps {
   setTempNSValue: Dispatch<SetStateAction<string>>;
   showToast: (message: string, type?: ToastType) => void;
   surfaceReady: boolean;
+  sectorType?: SectorType;
 }
 
 export function OperationalWorkspace({
@@ -82,6 +115,7 @@ export function OperationalWorkspace({
   setTempNSValue,
   showToast,
   surfaceReady,
+  sectorType,
 }: OperationalWorkspaceProps) {
   const {
     user,
@@ -267,6 +301,7 @@ export function OperationalWorkspace({
     handleFinishEmpenhoRegistry,
     handleDeleteSpecificEmpenho,
   } = useEmpenhoActions({
+    sectorType,
     user,
     empenhos,
     setEmpenhos,
@@ -308,6 +343,7 @@ export function OperationalWorkspace({
     handleSaveNumeroNS,
     handleSaveComissao,
   } = useNotasFiscaisActions({
+    sectorType,
     user,
     empenhos,
     setEmpenhos,
@@ -459,7 +495,7 @@ export function OperationalWorkspace({
           )}
 
           {activeTab === 'empenhos' && (
-            <EmpenhosView context={{ alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user }} />
+            <SectorEmpenhos user={user} workspace={workspaceContext} sectorType={sectorType} context={{ alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user }} />
           )}
 
           {activeTab === 'fornecedores' && (
@@ -472,7 +508,7 @@ export function OperationalWorkspace({
           )}
 
           {activeTab === 'nova_nf' && (
-            <NotasFiscaisView context={{ comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user }} />
+            <SectorNotas user={user} workspace={workspaceContext} sectorType={sectorType} context={{ comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user }} />
           )}
 
           {activeTab === 'avisos' && (
@@ -501,7 +537,7 @@ export function OperationalWorkspace({
           )}
 
           {activeTab === 'cronogramas' && (
-            <CronogramasView context={{ applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, confirmCronogramaEmail, cancelCronogramaEmail, updateCronogramaEmailRecipient, cronogramaEmailConfirmation, isPreparingCronogramaEmail, saveEmailInSupplierRecord, setSaveEmailInSupplierRecord, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos }} />
+            <SectorCronogramas user={user} workspace={workspaceContext} sectorType={sectorType} context={{ applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, confirmCronogramaEmail, cancelCronogramaEmail, updateCronogramaEmailRecipient, cronogramaEmailConfirmation, isPreparingCronogramaEmail, saveEmailInSupplierRecord, setSaveEmailInSupplierRecord, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos }} />
           )}
         </OperationalSurfaceTransition>
       )}
