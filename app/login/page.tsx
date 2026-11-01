@@ -22,6 +22,7 @@ import { LegalAcceptanceGate } from '../../components/legal/LegalAcceptanceGate'
 import type { OperationalActiveTab } from '../../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../../lib/platformModuleAccess';
+import { sectorEntryPath } from '../../lib/platformIdentity';
 import { checkSectorBillingAccess, showBillingRequired } from '../../lib/sectorBillingGate';
 
 const InicioView = lazy(() =>
@@ -107,6 +108,20 @@ export default function Home() {
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = operationalData;
+
+  // Um único /login resolve a identidade já validada; não decide por e-mail/URL.
+  const resolvedEntryPath = workspaceContext.status === 'platformAdmin'
+    ? '/admin'
+    : workspaceContext.status === 'sector'
+      ? sectorEntryPath(workspaceContext.sectorType)
+      : null;
+
+  useEffect(() => {
+    if (loadingAuth || !user || !resolvedEntryPath) return;
+    if (window.location.pathname !== resolvedEntryPath) {
+      window.location.replace(resolvedEntryPath);
+    }
+  }, [loadingAuth, user, resolvedEntryPath]);
 
   const currentBillingIdentity = user && !loadingAuth
     ? user.uid + ':' + (workspaceContext.status === 'sector'
@@ -299,6 +314,15 @@ export default function Home() {
         onFounderLogin={handleFounderLogin}
       />
     );
+  }
+
+  // Não mostrar dados do Aprovisionamento ao Almox/administrador nem por URL digitada.
+  if (
+    workspaceContext.status !== 'sector'
+    || resolvedEntryPath !== '/central-empenhos'
+    || (typeof window !== 'undefined' && window.location.pathname !== resolvedEntryPath)
+  ) {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
   // No operational surface may render before a server billing decision.
