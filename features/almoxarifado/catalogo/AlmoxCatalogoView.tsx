@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Empenho } from '../../../lib/types';
 import { FornecedoresView } from '../../fornecedores/components/FornecedoresView';
@@ -91,9 +91,9 @@ export function AlmoxCatalogoView({ user, workspaceId, ug, section }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, needle]);
 
-  const showToast = (message: string, type?: 'success' | 'error' | 'info') => {
+  const showToast = useCallback((message: string, type?: 'success' | 'error' | 'info') => {
     setToast((type === 'error' ? 'Erro: ' : '') + message);
-  };
+  }, []);
   if (loading) return <p role="status" className="text-sm text-slate-300">Carregando catálogo do Almoxarifado…</p>;
   if (error || !data) return <p role="alert" className="rounded-xl border border-rose-700 p-4 text-sm text-rose-200">{error || 'Acesso indisponível.'}</p>;
 
