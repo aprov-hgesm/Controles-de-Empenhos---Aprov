@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "authorizationMode": "explicit_chat_request",
+  "authorizedBy": "Moriark",
+  "purpose": "Ativar boletim diario EMPROVEX Gmail e enviar teste agora, conforme pedido do administrador.",
+  "sourceSha": "96b3c78c859de503fea735ad885e34fb502cb1f7",
+  "from": "marcoa.r.aquino@gmail.com",
+  "to": "codex.martis.dev@gmail.com",
+  "timezone": "America/Sao_Paulo",
+  "schedule": "0 18 * * *",
+  "sendTestNow": true,
+  "activateDaily18h": true
+}
