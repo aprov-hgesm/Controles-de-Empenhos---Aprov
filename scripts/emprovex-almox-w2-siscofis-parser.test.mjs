@@ -116,6 +116,7 @@ test('rejeições TXT determinísticas: formato, quantidade, unidade, duplicidad
     [fixture.replace('EMPROVEX_FIXTURE_R1', 'LAYOUT_REAL_DESCONHECIDO'), 'UNSUPPORTED_LAYOUT'],
     [fixture.replace('Qtd Solicitada', 'Qtd'), 'UNKNOWN_QUANTITY_MEANING'],
     [fixture.replace('|20|RESMA', '|12.5|RESMA'), 'INVALID_QUANTITY'],
+    [fixture.replace('|20|RESMA', '|1.234|RESMA'), 'INVALID_QUANTITY'],
     [fixture.replace('|20|RESMA', '|0|RESMA'), 'INVALID_QUANTITY'],
     [fixture.replace('|20|RESMA', '|20|KG/UN'), 'UNIT_INCOMPATIBLE'],
     [fixture.replace('2|07.002C|', '1|07.002C|'), 'UNSUPPORTED_LAYOUT'],
