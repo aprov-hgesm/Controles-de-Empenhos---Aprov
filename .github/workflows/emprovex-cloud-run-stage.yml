@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'ops/cloud-run/promotion-request.json'
+      - 'ops/admin-digest/activation-request.json'
 
 permissions:
   contents: read

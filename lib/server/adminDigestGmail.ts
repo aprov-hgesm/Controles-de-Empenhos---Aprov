@@ -3,6 +3,7 @@
  * Aqui OAuth offline, consentido pelo dono, sem Firebase SDK nem token do browser.
  */
 import { Buffer } from 'node:buffer';
+import { renderAdminDigestHtml } from '../adminDigestEmail.mjs';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const IDENTITY_URL = 'https://www.googleapis.com/oauth2/v3/userinfo';
@@ -25,15 +26,28 @@ export function makeGmailMessage(input: { from: string; to: string; subject: str
   const to = validEmail(input.to);
   if (!input.subject || /[\r\n]/.test(input.subject) || input.subject.length > 240
       || input.text.length > 20000) throw new Error('ADMIN_DIGEST_GMAIL_MESSAGE_INVALID');
+  const boundary = 'epx_digest_' + Buffer.from(input.subject).toString('hex').slice(0, 24);
+  const html = renderAdminDigestHtml(input.text, {
+    test: input.subject.startsWith('[TESTE]'),
+  });
   const mime = [
     'From: ' + from,
     'To: ' + to,
     'Subject: =?UTF-8?B?' + Buffer.from(input.subject).toString('base64') + '?=',
     'MIME-Version: 1.0',
+    'Content-Type: multipart/alternative; boundary="' + boundary + '"',
+    '',
+    '--' + boundary,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
     Buffer.from(input.text, 'utf8').toString('base64'),
+    '--' + boundary,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(html, 'utf8').toString('base64'),
+    '--' + boundary + '--',
     '',
   ].join('\r\n');
   return Buffer.from(mime, 'utf8').toString('base64url');

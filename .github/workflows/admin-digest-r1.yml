@@ -7,6 +7,9 @@ on:
       - 'lib/adminDailyDigest.*'
       - 'scripts/admin-daily-digest.test.mjs'
       - '.github/workflows/admin-digest-r1.yml'
+      - '.github/workflows/emprovex-admin-digest-activate.yml'
+      - 'ops/admin-digest/activate.sh'
+      - 'lib/adminDigestEmail.*'
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,3 +24,5 @@ jobs:
           node-version: '24.22.1'
       - name: Validate daily digest semantics and OIDC guards
         run: node --test scripts/admin-daily-digest.test.mjs
+      - name: Check activation script Bash syntax
+        run: bash -n ops/admin-digest/activate.sh
