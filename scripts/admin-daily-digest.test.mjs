@@ -18,7 +18,7 @@ test('aggregates billing states without guessing cash revenue', () => {
     usage: { billableReadUnits: 100, billableRealtimeReadUnits: 20, billableWriteUnits: 10 },
     uptime: { total: 10, passed: 9 }, errors5xx: 2,
   });
-  assert.match(report.text, /Verificacoes HTTPS bem-sucedidas: 90%/);
+  assert.match(report.text, /Verificações HTTPS bem-sucedidas: 90%/);
   assert.match(report.text, /Em dia: 1 \| Trial: 1/);
   assert.match(report.text, /Erros HTTP 5xx no Cloud Run: 2/);
   assert.match(report.text, /1 ciclos marcados pagos/);
@@ -31,7 +31,7 @@ test('unknown data is marked unavailable rather than zero', () => {
     accounts: null, cycles: null, usage: null, uptime: null, errors5xx: null,
   });
   assert.match(report.text, /indisponiveis/);
-  assert.match(report.text, /Nao interpretar como zero/);
+  assert.match(report.text, /Não interpretar como zero/);
   assert.match(report.text, /sem medicao confiavel/);
 });
 
@@ -73,7 +73,7 @@ test('HTML executive email is friendly, readable, and escapes operational data',
   assert.match(html,/Desenvolvedor, Administrador e Gestor/);
   assert.match(html,/Panorama executivo/);
   assert.match(html,/ENVIO DE TESTE/);
-  assert.match(html,/Dados ausentes sao identificados/);
+  assert.match(html,/Dados ausentes são identificados/);
   const escaped=renderAdminDigestHtml(plain.text+'\\n<alert>&evil');
   assert.ok(!escaped.includes('<alert>'));
   assert.match(escaped,/&lt;alert&gt;&amp;evil/);
