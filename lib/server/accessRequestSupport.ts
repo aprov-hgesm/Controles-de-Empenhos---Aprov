@@ -43,7 +43,7 @@ export function mapAccessRequest(document: FirestoreDocument) {
 }
 
 export function validAccessRequestPageToken(value: string | null): boolean {
-  return value === null || (value.length <= 4096 && /^[A-Za-z0-9+/_=.\\-]+$/.test(value));
+  return value === null || (value.length <= 4096 && /^[A-Za-z0-9+/_=.\-]+$/.test(value));
 }
 
 export async function listAccessRequestPage(
@@ -73,7 +73,7 @@ export async function listAccessRequestPage(
 
 function validDate(value: unknown): value is string {
   if (value === '') return true;
-  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(value + 'T00:00:00.000Z');
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
@@ -102,7 +102,7 @@ export function parseAccessRequestPatch(value: unknown, now: string): AccessRequ
   }
   if (Object.prototype.hasOwnProperty.call(body, 'adminNote')) {
     if (typeof body.adminNote !== 'string' || body.adminNote.length > ACCESS_REQUEST_NOTE_LIMIT
-      || /[\\u0000-\\u001F\\u007F]/.test(body.adminNote)) return null;
+      || /[\u0000-\u001F\u007F]/.test(body.adminNote)) return null;
     fields.adminNote = { stringValue: body.adminNote.normalize('NFC').trim() };
     fieldPaths.push('adminNote');
   }
