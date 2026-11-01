@@ -1,0 +1,46 @@
+name: EMPROVEX — ativar boletim administrativo 18h
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/admin-digest/activation-request.json'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: emprovex-cloud-run-release
+  cancel-in-progress: false
+
+jobs:
+  activation:
+    name: Habilitar Gmail, enviar teste e agendar 18h
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && github.actor == 'Moriark' }}
+    environment:
+      name: emprovex-chat-authorized
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact main SHA for authorization validation
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Authenticate with keyless Google WIF
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: gen-lang-client-0982077967
+          workload_identity_provider: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+          service_account: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+          create_credentials_file: true
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: gen-lang-client-0982077967
+      - name: Execute explicitly authorized safe activation
+        shell: bash
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: bash ops/admin-digest/activate.sh
