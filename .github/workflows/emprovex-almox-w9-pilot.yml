@@ -47,3 +47,26 @@ jobs:
         run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-almox-w1-isolation-emulator.test.mjs"
       - name: Next.js build without publication
         run: npm run build
+
+  browser-pilot:
+    name: W9 - Playwright pilot route with emulated authentication (no production)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright test runner
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: W9 pilot - real browser + Auth and Firestore Emulators
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs --almox-w9 tests/e2e/almoxarifado-w9-pilot.spec.mjs"

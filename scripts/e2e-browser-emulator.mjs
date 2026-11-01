@@ -106,6 +106,12 @@ await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']
 // O teste multi-tenant restaura a conta de trial vencido. Para o browser E2E
 // usar contas fictícias isentas; cobrança real e Rules continuam intactas.
 await run(process.execPath, ['scripts/e2e-billing-fixture.mjs']);
+// Apenas no E2E dirigido W9, criar identidades fictícias de modalidades distintas
+// sob a mesma UG e validar isolamento com Rules/Authentication reais do Emulator.
+if (process.argv.includes('--almox-w9')) {
+  await run(process.execPath, ['scripts/emprovex-almox-w1-isolation-emulator.test.mjs']);
+  await run(process.execPath, ['scripts/emprovex-almox-w9-browser-seed.mjs']);
+}
 
 // A versão atual do Firestore Emulator não suporta Rules de múltiplos bancos
 // no mesmo processo. A Central usa uma segunda instância dedicada em 8081.
@@ -213,7 +219,7 @@ try {
   } else {
     await run(
       process.execPath,
-      [playwrightCli, 'test', ...process.argv.slice(2), '--config=playwright.e2e.config.mjs'],
+      [playwrightCli, 'test', ...process.argv.slice(2).filter(arg => arg !== '--almox-w9'), '--config=playwright.e2e.config.mjs'],
       {
         ...process.env,
         EMPROVEX_E2E_BASE_URL: appBase,
