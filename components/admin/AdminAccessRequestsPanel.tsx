@@ -57,7 +57,7 @@ function TrackingEditor({ lead, busy, onSave }: {
       {open && (
         <form className="mt-3 grid gap-3 sm:grid-cols-2" onSubmit={event => {
           event.preventDefault();
-          void onSave({ adminNote: note, lastContactAt: lastContact, nextActionAt: nextAction });
+          void onSave({ adminNote: note.normalize('NFC').replace(/\s+/g, ' ').trim(), lastContactAt: lastContact, nextActionAt: nextAction });
         }}>
           <label className="block text-xs font-semibold">Último contato efetivo
             <input type="date" value={lastContact} disabled={busy} onChange={event => setLastContact(event.target.value)}
