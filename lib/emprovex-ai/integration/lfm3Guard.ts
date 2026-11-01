@@ -24,11 +24,11 @@ export function guardLfm3Candidate(args:{
    query.intent.startsWith('schedule_')?'schedule':
    query.intent.startsWith('invoice_')?'invoice':'warehouse';
  const grounds:Record<string,RegExp>={
-  supplier:/\\b(?:fornecedor|contato|cnpj|telefone|email|whatsapp)\\b/,
-  commitment:/\\b(?:empenho|ne|saldo|exercicio)\\b/,
-  schedule:/\\b(?:cronograma|envio)\\b/,
-  invoice:/\\b(?:nota|nf|nfs|fiscal)\\b/,
-  warehouse:/\\b(?:estoque|material|deposito|arroz|localizacao|localize|armazenado)\\b/
+  supplier:/\b(?:fornecedor|contato|cnpj|telefone|email|whatsapp)\b/,
+  commitment:/\b(?:empenho|ne|saldo|exercicio)\b/,
+  schedule:/\b(?:cronograma|envio)\b/,
+  invoice:/\b(?:nota|nf|nfs|fiscal)\b/,
+  warehouse:/\b(?:estoque|material|deposito|localizacao|localize|armazenado)\b/
  };
  if(!grounds[family].test(t))return {ok:false,audit:{
   requested:['intent_grounding'],represented:[],unhandled:['intent_grounding']}};
@@ -53,7 +53,7 @@ export function guardLfm3Candidate(args:{
  if(!compare(p.commitmentId,entities.commitmentId))ungrounded.push('commitmentId');
  if(!compare(p.materialQuery,entities.material))ungrounded.push('materialQuery');
  if(!compare(p.nameQuery,entities.supplier))ungrounded.push('supplierName');
- if(!compare(p.cnpj,entities.cnpj)&&!compare(p.supplierCnpj,entities.cnpj))ungrounded.push('supplierCnpj');
+ if(!compare(p.cnpj,entities.cnpj)||!compare(p.supplierCnpj,entities.cnpj))ungrounded.push('supplierCnpj');
  if(ungrounded.length)return invalid(ungrounded);
  // Model must not add pagination/cursors or self-authorize broader history.
  if(p.cursor!==undefined||p.pageSize!==undefined||p.includeHistorical===true)
