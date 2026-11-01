@@ -33,6 +33,12 @@ const EmprovexHelpOverlay = lazy(() =>
   }))
 );
 
+const EleonorExperience = lazy(() =>
+  import('../../eleonor/components/EleonorExperience').then(module => ({
+    default: module.EleonorExperience,
+  }))
+);
+
 export function WarehouseModuleShell({
   children,
   workspaceContext,
@@ -266,6 +272,9 @@ export function WarehouseModuleShell({
             EMPROVEX · Central de Depósitos · ambiente operacional integrado
           </footer>
         </main>
+        <Suspense fallback={null}>
+          <EleonorExperience key={`${currentUser?.uid || 'anonymous'}:${workspaceContext.workspaceId}`} user={currentUser} />
+        </Suspense>
       </div>
       {helpOpen && (
         <Suspense fallback={<WarehouseSectionLoading />}>

@@ -14,7 +14,8 @@ import {
 } from '../../empenhos/domain/empenhoExercise';
 
 type DashboardClassFilter = string;
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
+import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
+type ActiveTab = OperationalActiveTab;
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
 
 interface DashboardViewProps {

@@ -1,7 +1,8 @@
 /** Fluxo autenticação -> W4 -> parser e autorização W3 -> resposta sem LLM. */
 import {interpret,validateModelCandidate} from '../context';
-import {aiLfm3Enabled} from './environment';
-import {proposeWithLfm3} from './lfm3';
+import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
+import {planConversation} from '../conversation/engine';
+import {proposeWithLfm3,respondConversationally} from './lfm3';
 import {guardLfm3Candidate} from './lfm3Guard';
 import {parseAiQuery,AiInputError,type AiResponse} from '../contracts';
 import {prepareAiAccess} from '../authorize';
@@ -45,8 +46,25 @@ export async function runAiAsk(args:{
  let status:AiAskPayload['status'],answer:string;
  let result:AiResponse|undefined,query:AiAskPayload['query'],contextToken:string|undefined;
  let lfm3Calls=0,modelAudit:AiAskPayload['filterAudit']|undefined;
- const route=interpreted.route;
- if(route==='DETERMINISTIC'){
+ const conversation=planConversation({message:args.input.message,
+   operational:{route:interpreted.route,reason:interpreted.reason,intent:interpreted.intent},
+   previous:previous?.conversation,now});
+ const route=conversation?'CONVERSATIONAL':interpreted.route;
+ if(conversation){
+   // No W3 queries, authorizations, cached results or operational references
+   // are exported through a conversation. Only a typed topic is retained.
+   status=conversation.status;answer=conversation.answer;
+   if(conversation.modelEligible&&aiConversationalModelEnabled()){
+     lfm3Calls=1;
+     const generated=await respondConversationally(args.input.message);
+     if(generated){answer=generated;status='ok';}
+   }
+   contextToken=sealContext({
+     sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+     updatedAt:now.getTime(),refs:{},
+     conversation:{topic:conversation.topic,intent:conversation.intent}
+   },cookieState.session,now.getTime());
+ }else if(route==='DETERMINISTIC'){
    // Nenhum filtro solicitado pode desaparecer na fronteira W4 -> W3.
    const audit=interpreted.filterAudit;
    if(!audit||audit.unhandled.length||audit.requested.some(x=>!audit.represented.includes(x)))
@@ -124,8 +142,8 @@ export async function runAiAsk(args:{
  }else{
    status='out_of_scope';answer='Posso consultar informações operacionais do EMPROVEX, dentro dos contratos disponíveis.';
  }
- const payload:AiAskPayload={version:'emprovex.ai.ask.v1',status,route,intent:interpreted.intent,
-   answer,reason:interpreted.reason,...(query?{query}:{}),...(result?{result}:{}),
+ const payload:AiAskPayload={version:'emprovex.ai.ask.v1',status,route,intent:conversation?.intent||interpreted.intent,
+   answer,reason:conversation?.reason||interpreted.reason,...(query?{query}:{}),...(result?{result}:{}),
    ...(contextToken?{contextToken}:{}),
    ...(modelAudit?{filterAudit:modelAudit}:
      interpreted.filterAudit?{filterAudit:interpreted.filterAudit}:{}),

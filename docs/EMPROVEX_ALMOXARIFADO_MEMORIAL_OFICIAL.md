@@ -687,3 +687,16 @@ Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coorden
 - **Testes W9:** workflow `.github/workflows/emprovex-almox-w9-pilot.yml` inclui typecheck, regressões focadas W1/W5/W6/W7/W8, emulator de isolamento e build; resultados devem ser registrados conforme execução do SHA final. Teste de navegador autenticado e cadastro do primeiro usuário piloto exigem evidências próprias, não se presumem PASS.
 - **Release controlado:** somente após aprovação de PR e autorização específica de merge na main, revisão Cloud Run sem tráfego, smoke de saúde e piloto, autorização específica de promoção com rollback disponível; `docs/EMPROVEX_RELEASE_CLOUD_RUN.md` e workflows vigentes continuam canônicos.
 - **Parecer intermediário:** GO para revisão da integração técnica isolada; NO-GO para produção, criação de usuário real e pedidos SISCOFIS completos sem homologação restante.
+
+
+### W9 — reconciliação adicional com main Eleonor (01/11/2026)
+
+A `main` avançou durante o desenvolvimento W9 para `844518a26732ac1070e3048e97d6c4da995f9050`, incorporando 12 commits da interface conversacional Eleonor e infraestrutura associada. Foi incorporada integralmente como ancestral da branch W9, sem importar PRs Empresas, sem merge na `main` e sem deploy pelo W9.
+
+Quatro arquivos em comum foram resolvidos com prioridade à `main` vigente:
+- `app/login/page.tsx`: preservados a interface e o gatilho da Eleonor, acrescentando redirecionamento setorial autorizado para `/almoxarifado`.
+- `features/empenhos/hooks/useEmpenhoActions.ts`: mantido `OperationalActiveTab` atualizado (incluindo Eleonor), preservadas as regras FUNADOM do W6.
+- `lib/server/firebaseFounderAuth.ts`: preservada a solução atual da main para Firebase Emulator em processo filho Next.js, sem mecanismos duplicados ou alteração de autorização de produção.
+- `scripts/e2e-browser-emulator.mjs`: preservado `EMPROVEX_E2E_LOCAL_LOOPBACK` da main e adicionado somente o seed fictício W9 e identidade de projeto da suite QA.
+
+A primeira execução Chromium W9 detectou HTTP 401 do Warehouse status no processo filho Next (`start-server.js`), anterior à conciliação. O fix do launcher e autenticador da `main` passou a ser a referência. Revalidar sempre o SHA final pelo workflow e conferir o navegador autenticado antes de qualquer liberação.

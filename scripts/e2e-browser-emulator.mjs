@@ -106,8 +106,6 @@ await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']
 // O teste multi-tenant restaura a conta de trial vencido. Para o browser E2E
 // usar contas fictícias isentas; cobrança real e Rules continuam intactas.
 await run(process.execPath, ['scripts/e2e-billing-fixture.mjs']);
-// Apenas no E2E dirigido W9, criar identidades fictícias de modalidades distintas
-// sob a mesma UG e validar isolamento com Rules/Authentication reais do Emulator.
 if (process.argv.includes('--almox-w9')) {
   await run(process.execPath, ['scripts/emprovex-almox-w1-isolation-emulator.test.mjs']);
   await run(process.execPath, ['scripts/emprovex-almox-w9-browser-seed.mjs']);
@@ -171,10 +169,11 @@ try {
         ...process.env,
         FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
         NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
-        ...(process.argv.includes('--almox-w9') ? { EMPROVEX_E2E_LOOPBACK_NEXT_DEV: '1' } : {}),
         NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
         NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
         EMPROVEX_E2E_SERVER_AUTH: '1',
+        // E2E launcher starts Next on loopback; worker argv may omit CLI flags.
+        EMPROVEX_E2E_LOCAL_LOOPBACK: '1',
         // O backend deve apontar ao Warehouse Emulator 8081, JAMAIS ao banco real.
         EMPROVEX_WAREHOUSE_ADMIN_EMULATOR: '1',
         EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
@@ -224,7 +223,6 @@ try {
       {
         ...process.env,
         EMPROVEX_E2E_BASE_URL: appBase,
-        // Firebase CLI fornece GCLOUD_PROJECT; helper de testes exige o alias explícito.
         GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '',
       }
     );
