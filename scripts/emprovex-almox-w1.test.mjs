@@ -67,3 +67,40 @@ test('contratos R1 W2-W4 existem e não implementam motor', () => {
     assert.ok(contracts.includes(key), key);
   }
 });
+
+test('provisionamento tipado mantém workspaces distintos para UG igual', () => {
+  const platformIdentity = loadPureIdentity();
+  const exports = {};
+  const transpiled = ts.transpileModule(source('lib/sectorProvisioning.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
+  const require = (name) => {
+    if (name === './platformIdentity') return platformIdentity;
+    if (name === './hgesmWorkspace') return { HGESM_SECTOR_EMAIL: 'aprov1hgesm@gmail.com' };
+    throw Error('Unexpected import in provisioner: ' + name);
+  };
+  runInNewContext(transpiled.outputText, { exports, require });
+  const base = {
+    ug: '160416',
+    initialPassword: 'password-QA-2026',
+    organizationName: 'OM QA',
+    organizationShortName: 'OMQA',
+    grantTrial: false,
+  };
+  const apro = exports.buildProvisionedSectorRecords({
+    ...base, workspaceId:'qa-aprov-w1',workspaceName:'Aprovisionamento QA',
+    authorizedEmail:'aprov.qa@example.test',sectionName:'Aprovisionamento'
+  },'fundador@example.test','uid-aprov');
+  const almox = exports.buildProvisionedSectorRecords({
+    ...base, sectorType:'almoxarifado',
+    workspaceId:'qa-almox-w1',workspaceName:'Almoxarifado QA',
+    authorizedEmail:'almox.qa@example.test',sectionName:'Almoxarifado'
+  },'fundador@example.test','uid-almox');
+  assert.equal(apro.workspace.ug,almox.workspace.ug);
+  assert.notEqual(apro.workspace.id,almox.workspace.id);
+  assert.equal(apro.account.sectorType,'aprovisionamento');
+  assert.equal(almox.account.sectorType,'almoxarifado');
+  assert.equal(almox.account.firebaseUid,'uid-almox');
+  assert.equal(almox.workspace.institutionalProfile.defaultResponsibleRole,'Chefe do Almoxarifado');
+  assert.throws(() => exports.parseSectorProvisioningInput({sectorType:'company'}), /Modalidade setorial inválida/);
+});
