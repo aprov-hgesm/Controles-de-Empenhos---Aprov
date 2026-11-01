@@ -9,6 +9,7 @@ import {
   normalizeUnitUg,
   normalizeWorkspaceId,
   type SectorType,
+  isSectorType,
 } from '../platformIdentity';
 import { warehouseModuleEnabled } from '../warehouse/featureFlag';
 import {
@@ -144,7 +145,7 @@ async function resolveExternalWarehouseAccess(
   if (
     accountType !== 'sector'
     || accountStatus !== 'active'
-    || !['aprovisionamento', 'almoxarifado'].includes(accountSectorType)
+    || !isSectorType(accountSectorType)
     || accountEmail !== verified.email
     || accountUid !== verified.uid
     || accountProvider !== SECTOR_AUTH_PROVIDER
@@ -203,7 +204,7 @@ async function resolveExternalWarehouseAccess(
     email: verified.email,
     workspaceId,
     ug: workspaceUg,
-    sectorType: accountSectorType as SectorType,
+    sectorType: accountSectorType,
     claimsUpdated,
   };
 }
