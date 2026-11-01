@@ -32,11 +32,17 @@ jobs:
         with:
           node-version: '24.22.1'
           cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Install locked dependencies
         run: npm ci
       - name: TypeScript
         run: npm run typecheck
       - name: Financial and tenant synthetic tests
         run: node --test scripts/emprovex-almox-w6-financial.test.mjs
+      - name: Firestore Auth/Rules isolation — two workspaces, same UG
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-almox-w1-isolation-emulator.test.mjs"
       - name: Build without deploy
         run: npm run build
