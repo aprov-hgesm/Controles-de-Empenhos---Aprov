@@ -1,11 +1,11 @@
 # EMPROVEX ALMOXARIFADO — MEMORIAL OFICIAL
 
-**Produto:** EMPROVEX Almoxarifado — Gestão Logística e Financeira para Setores de Material de Organizações Militares.  
-**Edição:** Planejamento R0.2 — estratégia executiva híbrida consolidada em 31/10/2026 (inclui R0.1).  
-**Estado:** PLANEJADO; este documento não comprova implementação, homologação, merge nem publicação.  
-**Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov.  
-**Base de inspeção da main:** c096b53d0bb3dda058cd91915cf7ffffa1d275d6 (31/10/2026).  
-**Diretriz:** GOV-SIMP-01 — desburocratização com segurança essencial, reaproveitamento de código, economia computacional e testes proporcionais ao risco.  
+**Produto:** EMPROVEX Almoxarifado — Gestão Logística e Financeira para Setores de Material de Organizações Militares.
+**Edição:** Planejamento R0.2 — estratégia executiva híbrida consolidada em 31/10/2026 (inclui R0.1).
+**Estado:** PLANEJADO; este documento não comprova implementação, homologação, merge nem publicação.
+**Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov.
+**Base de inspeção da main:** c096b53d0bb3dda058cd91915cf7ffffa1d275d6 (31/10/2026).
+**Diretriz:** GOV-SIMP-01 — desburocratização com segurança essencial, reaproveitamento de código, economia computacional e testes proporcionais ao risco.
 **Memorial próprio:** não substituir, misturar nem reescrever os memoriais do EMPROVEX Aprovisionamento ou EMPROVEX Empresas.
 
 > **DECISÃO DE ESCOPO MAIS RECENTE — PRECEDÊNCIA ABSOLUTA (31/10/2026):** NÃO desenvolver CREM nem TREM no EMPROVEX Almoxarifado nesta expansão. Não criar cadastro de comissão, formulários públicos, geração automática ou fluxo de assinatura de TREM. O usuário considera esse acompanhamento atribuição da Fiscalização Administrativa e não deseja transferir encargos ao Almoxarifado. A exclusão funcional não redefine competências legais nem desobriga os agentes da OM de seus procedimentos oficiais. A comissão de artigos de Quantitativo de Rancho (QR), própria da operação de gêneros alimentícios, também NÃO integra o novo ambiente.
@@ -547,6 +547,33 @@ O adendo deve conter os seguintes campos com evidências rastreáveis:
 
 ---
 
+#### W1 R0.1 — Correção pontual, homologação dirigida e liberação controlada (31/10/2026)
+
+**PR/branch:** [#436](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/436) — `feat/emprovex-almox-r0-w1-foundation`, DRAFT, base inicial `main` no SHA `35825d5ad563361fecd1b3d2a00ca81a4734e532`. **SHA do código homologado antes deste handoff:** `8b09e33735906dc8805a877a3b40eb08776ce93f`. **SHA final da PR:** consultar o `head_sha` da #436 após este adendo (um commit não consegue conter seu próprio hash em seu conteúdo). Nenhum merge/deploy executado.
+
+**Correções pontuais concluídas:**
+1. `lib/sectorProvisioning.ts`: `SectorInstitutionalProfileInput` inclui `sectorType`, preservando perfil institucional de Almoxarifado e fallback do Aprovisionamento; o parser rejeita modalidade desconhecida sem casts artificiais.
+2. `lib/server/warehouseAccess.ts`: mantém modalidade obrigatória no `VerifiedWarehouseRequest`, validada na fronteira server-side, compatível com conta/workspace/UID/status; removido cast artificial do subtipo.
+3. `lib/server/warehouseMobileTrust.mjs`: preserva `sectorType` no resultado imutável e tipado; adapta somente a **entrada legada** sem o campo para `aprovisionamento`, rejeita subtipo desconhecido, não autoriza workspace adicional e não relaxa claims/UID.
+4. `scripts/warehouse-mobile-trust-emulator.ts` e `scripts/warehouse-read-r1-emulator.ts`: fixtures declaram o setor histórico explicitamente, sem alterar motores.
+5. `scripts/mobile-server-barcode-read.test.mjs`: expectativa atualizada para o resultado normalizado (`sectorType='aprovisionamento'`); adicionados assert de preservação de `almoxarifado` e negativa de `company`. Testes não removidos.
+6. `scripts/emprovex-almox-w1.test.mjs`: cenário determinístico de provisionamento para duas modalidades com mesma UG, em workspaces/UID distintos, além dos testes W1 anteriores.
+7. **Novos:** `scripts/emprovex-almox-w1-isolation-emulator.test.mjs` (autenticação real no Auth Emulator e Rules de teste) e `.github/workflows/emprovex-almox-w1-r01.yml` (certificação isolada, sem qualquer deploy ou publicação). As Firestore Rules do código permanecem PROPOSTAS; não aplicadas.
+
+**Evidências realmente executadas (commit de código `8b09e33735906dc8805a877a3b40eb08776ce93f`):**
+- GitHub Actions **EMPROVEX Almoxarifado W1 R0.1 — isolated certification**, run **41257796853**, **SUCCESS**: `npm ci`, `npm run typecheck`, `node --test scripts/emprovex-almox-w1.test.mjs`, `npm run build`, Firestore Auth/Rules Emulator (QA Aprovisionamento legado e Almoxarifado, **mesma UG**, workspaces diferentes, login password, UID divergente, modalidade divergente, conta/workspace desativados, acesso cruzado por URL, índice não gravável pelo setor), teste existente `test:central-depositos-external-security` de Warehouse multitenant — **todos PASS**.
+- GitHub Actions **EMPROVEX Fast CI**, run **41257796926**, **SUCCESS**: TypeScript estrito, navegação P0, contratos móveis e testes afetados, incluindo a regressão `test:mobile-server-barcode-read` — **PASS**.
+- **Core Protection** run **41257796873**, **SUCCESS**; **W4 Five-Worker Integration Evidence** run **41257796863**, **SUCCESS** (checks gerais aproveitados, não substituem os testes W1).
+- **SAAS-DL Legal Validation** run **41257796805**, **FAIL** antes de seus testes, exclusivamente em **Diff hygiene** por espaços de fim de linha presentes no memorial W0 histórico (linhas 3–8 e fim). Este adendo também remove esses espaços e normaliza EOF; **a correção só estará certificada quando um novo check registrar PASS**. Não confundir falha de higiene documental com uma falha do TypeScript ou dos emuladores já aprovados.
+- **Application CI** foi `skipped` porque PR permanece DRAFT, conforme política existente. Os testes dirigidos citados foram executados por workflow isolado, não por esse gate.
+- **Limitações:** não houve login com conta real de produção nem provisionamento real; o login QA foi testado no Auth Emulator. Não publicar Rules ou solicitar merge para suprir essa limitação. Testes de navegador/fundador históricos podem ser aproveitados como evidência de regressão, mas não afirmar novo teste completo do fundador neste R0.1.
+
+**Parecer técnico W1 R0.1: GO CONDICIONAL para iniciar W2, W3 e W4 em branches/PRs DRAFT isoladas**, derivados da fundação W1 corrigida. Os contratos `lib/almoxarifado/contracts.ts` não foram alterados nesta correção, permanecendo estabilizados para leitura e importação pelos três Workers. TypeScript, build, Auth/Rules Emulator e isolamento entre workspaces demonstrados. W2/W3/W4 não devem editar o contrato compartilhado nem executar escrita financeira/logística.
+
+**Condições para integração/produção futura (NÃO bloqueiam desenvolvimento paralelo):** homologar e obter aprovação específica antes de publicar Firestore Rules, completar adaptação dos módulos financeiros e operacionais do Almoxarifado com exclusão de conteúdo alimentar, validar QA com provisionamento real e fluxos de navegação do fundador quando cabível; manter Empresas #419 independente. Nenhuma cobrança foi acrescentada; nenhum merge, Cloud Run deploy, IAM, DNS, Rules publish, Firebase Auth real ou transação em produção foi realizado. Este parecer **não é GO para produção**.
+
+---
+
 ### 13.4. Procedimento de verificação por mensagem curta
 
 Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coordenador deverá:
@@ -558,4 +585,3 @@ Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coorden
 5. Se nenhum handoff estiver persistido, reportar "**handoff não localizado no GitHub**", sem presumir conclusão.
 
 **Regra de coordenação:** o memorial continua sendo a fonte do planejamento e histórico de Worker; PRs e commits fornecem a evidência material. Nunca exigir novo relato manual se houver acesso ao repositório.
-
