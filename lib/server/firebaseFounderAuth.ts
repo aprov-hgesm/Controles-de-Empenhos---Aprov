@@ -19,7 +19,44 @@ function emulatorAuthContext(): { projectId: string; issuer: string } | null {
   const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
   const localEmulator = emulatorHost === '127.0.0.1:9099' || emulatorHost === 'localhost:9099';
 
-  if (!enabled || !localEmulator || !projectId.startsWith('demo-')) return null;
+  // O decodificador de JWT do emulador so pode existir no processo
+  // iniciado como Next dev e limitado a loopback. Nao basta declarar flags.
+  // Hospedagem conhecida ou identidade desconhecida => verificar RS256.
+  const hosted = Boolean(
+    process.env.VERCEL || process.env.VERCEL_ENV || process.env.K_SERVICE
+    || process.env.K_REVISION || process.env.K_CONFIGURATION
+    || process.env.GAE_SERVICE || process.env.KUBERNETES_SERVICE_HOST
+    || process.env.FUNCTION_TARGET || process.env.AWS_EXECUTION_ENV
+    || process.env.WEBSITE_SITE_NAME || process.env.RENDER || process.env.FLY_APP_NAME
+  );
+  const args = process.argv.slice(1);
+  const dev = args.some(arg => /(?:^|[\\/])next(?:\.js)?$/.test(arg))
+    && args.includes('dev');
+  const hostIndex = args.indexOf('--hostname');
+  const loopbackBind = hostIndex >= 0 && args[hostIndex+1] === '127.0.0.1';
+  const loopbackDev = process.env.NODE_ENV === 'development'
+    && process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
+    && dev && loopbackBind;
+  // CI offline executa o autorizador diretamente (sem servidor HTTP).
+  // Permitir SOMENTE estes scripts conhecidos, com dois emuladores locais.
+  // Nao permitir CLI generico, Next start nem ambiente hospedado.
+  const localCli = process.env.NODE_ENV !== 'production'
+    && process.env.FIRESTORE_EMULATOR_HOST === '127.0.0.1:8080'
+    && [
+      'core-lean-r2-w5-transactions.mjs',
+      'core-lean-r2-w4-authz-mobile.integration.mjs',
+      'core-lean-r2-w4-assurance-emulator.ts',
+      'warehouse-w1-v3-emulator.ts',
+      'core-lean-r2-w4-v3-emulator.mjs',
+      'warehouse-server-manual-entry-emulator.ts',
+      'emprovex-ai-functional-homologation.mjs',
+    ].some(name => {
+      const executable = args[0]?.replace(/\\/g,'/') || '';
+      return executable === 'scripts/'+name || executable.endsWith('/scripts/'+name);
+    });
+  const localOnly = !hosted && (loopbackDev || localCli);
+
+  if (!enabled || !localEmulator || !projectId.startsWith('demo-') || !localOnly) return null;
 
   return {
     projectId,

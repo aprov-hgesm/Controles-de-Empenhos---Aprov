@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "authorizationMode": "explicit_chat_request",
+  "authorizedBy": "Moriark",
+  "purpose": "Ativar boletim diario EMPROVEX Gmail e enviar teste agora, conforme pedido do administrador.",
+  "sourceSha": "badb5c53e62be2a7cc8f1ed95f0f98849ddf6f3f",
+  "from": "marcoa.r.aquino@gmail.com",
+  "to": "codex.martis.dev@gmail.com",
+  "timezone": "America/Sao_Paulo",
+  "schedule": "0 18 * * *",
+  "sendTestNow": true,
+  "activateDaily18h": true,
+  "activationAttempt": 5,
+  "activationStrategy": "existing-approved-promotion-workflow",
+  "permissionFix": "Gmail secrets reader + Cloud Scheduler API + temporary roles/cloudscheduler.admin on GitHub deployer confirmed by administrator"
+}

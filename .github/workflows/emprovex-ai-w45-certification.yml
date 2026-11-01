@@ -1,0 +1,46 @@
+name: EMPROVEX AI W4.5 controlled integration certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/emprovex-ai/**'
+      - 'app/api/emprovex-ai/**'
+      - 'scripts/emprovex-ai-w45.test.mjs'
+      - '.github/workflows/emprovex-ai-w45-certification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: emprovex-ai-w45-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W3 existing regression
+        run: node --test scripts/emprovex-ai-w3.test.mjs
+      - name: W4 build
+        run: |
+          npx --no-install tsc lib/emprovex-ai/context/index.ts --module commonjs --moduleResolution node --target es2022 --skipLibCheck --esModuleInterop --outDir .w4-dist
+          cp .w4-dist/index.js .w4-dist/index.cjs
+      - name: W4 13 regression tests (actual integrated W3 parser available)
+        run: node --test scripts/emprovex-ai-w4.test.mjs
+      - name: W4 corpus 520
+        run: node scripts/emprovex-ai-w4-evaluate.mjs
+      - name: W4 R1.1 novel 50 cases
+        run: node scripts/emprovex-ai-w4-r11-evaluate.mjs
+      - name: W4.5 integration, isolation, security and synthetic performance
+        run: node --test scripts/emprovex-ai-w45.test.mjs
+      - name: Assert zero production credentials
+        run: |
+          test -z "${EMPROVEX_AI_W45_CONTEXT_SECRET:-}"
+          test -z "${INFINITEPAY_BILLING_ENABLED:-}"
