@@ -59,8 +59,8 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
   const isAlmox = workspaceContext.status === 'sector' && workspaceContext.sectorType === 'almoxarifado';
   const sectorDeliveryNotes = isAlmox
-    ? '1. As entregas deverão ocorrer nas datas previstas, acompanhadas das respectivas Notas Fiscais.\\n2. Os materiais deverão corresponder aos itens, quantidades e especificações do empenho.\\n3. Alterações de prazo deverão ser comunicadas formalmente ao setor com antecedência.'
-    : '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.';
+    ? '1. As entregas deverão ocorrer nas datas previstas, acompanhadas das respectivas Notas Fiscais.\n2. Os materiais deverão corresponder aos itens, quantidades e especificações do empenho.\n3. Alterações de prazo deverão ser comunicadas formalmente ao setor com antecedência.'
+    : '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.';
   const sectorRole = isAlmox ? 'Encarregado do Almoxarifado' : defaultResponsibleRole;
   const [isSendingCronogramaEmail, setIsSendingCronogramaEmail] = useState(false);
   const [isPreparingCronogramaEmail, setIsPreparingCronogramaEmail] = useState(false);
