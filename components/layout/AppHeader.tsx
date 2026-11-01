@@ -100,7 +100,7 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="emprovex-header-controls flex items-center gap-2 sm:gap-3">
+      <div className="emprovex-header-controls flex items-center gap-2 sm:gap-3" role="region" aria-label="Controles do cabeçalho; deslize para ver todas as ações" tabIndex={0}>
         {syncing && (
           <div
             role="status"
