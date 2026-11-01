@@ -46,8 +46,19 @@ test('cron route is authenticated and uses POST only', () => {
 
 test('daily server dispatch is idempotent and never needs browser OAuth', () => {
   const content = readFileSync(resolve('lib/server/adminDailyDigest.ts'), 'utf8');
-  assert.match(content, /Idempotency-Key/);
+  assert.match(content, /ADMIN_DIGEST_MANUAL_REVIEW_REQUIRED/);
   assert.match(content, /platformAdminDigestRuns/);
   assert.match(content, /getCloudRunAccessToken/);
-  assert.doesNotMatch(content, /googleWorkspaceMail|gmail.googleapis/);
+  assert.match(content, /sendAdminDigestViaGmail/);
+  assert.doesNotMatch(content, /RESEND_API_KEY|api\.resend\.com/);
+});
+
+test('Gmail R1 keeps previous browser supplier flow intact and uses offline user OAuth', () => {
+  const gmail = readFileSync(resolve('lib/server/adminDigestGmail.ts'), 'utf8');
+  assert.match(gmail, /oauth2.googleapis.com\/token/);
+  assert.match(gmail, /gmail.googleapis.com\/gmail\/v1\/users\/me\/messages\/send/);
+  assert.match(gmail, /EMPROVEX_ADMIN_DIGEST_GMAIL_REFRESH_TOKEN/);
+  assert.match(gmail, /ADMIN_DIGEST_GMAIL_SENDER_MISMATCH/);
+  assert.match(gmail, /base64url/);
+  assert.doesNotMatch(gmail, /googleWorkspaceMail|GmailRuntime|resend.com/);
 });

@@ -3,6 +3,7 @@ import { brazilDay, buildAdminDigest } from '../adminDailyDigest.mjs';
 import { getCloudRunAccessToken, isCloudRunRuntime } from './cloudRunServiceIdentity.mjs';
 import { readBillingAdminDirectory } from './platformBillingAdminStore';
 import { loadFirebaseGlobalUsageObservation } from './googleCloudMonitoring';
+import { sendAdminDigestViaGmail } from './adminDigestGmail';
 
 const project = firebaseConfig.projectId;
 const database = firebaseConfig.firestoreDatabaseId;
@@ -45,9 +46,7 @@ async function savePending(token: string, day: string, draft: { subject: string;
     cache: 'no-store',
   });
   if (r.status === 409) {
-    const existing = await readRun(token, day);
-    if (!existing) throw new Error('ADMIN_DIGEST_CONCURRENT_READ');
-    return existing;
+    throw new Error('ADMIN_DIGEST_CONCURRENT_SEND_UNCERTAIN');
   }
   if (!r.ok) throw new Error('ADMIN_DIGEST_STORE_CREATE_' + r.status);
   return { ...draft, status: 'pending' };
@@ -141,30 +140,20 @@ export async function sendAdminDailyDigest(now = new Date()) {
   if (!isCloudRunRuntime() || process.env.EMPROVEX_ADMIN_DIGEST_ENABLED !== '1') {
     throw new Error('ADMIN_DIGEST_DISABLED');
   }
-  const apiKey = env('EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY');
   const to = env('EMPROVEX_ADMIN_DIGEST_TO');
-  const from = env('EMPROVEX_ADMIN_DIGEST_FROM');
-  if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(to) ||
-      !(/^.{1,128}<[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+>$/.test(from) ||
-        /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(from))) {
-    throw new Error('ADMIN_DIGEST_EMAIL_INVALID');
-  }
+  const from = env('EMPROVEX_ADMIN_DIGEST_GMAIL_FROM');
   const token = await getCloudRunAccessToken();
   const day = brazilDay(now);
   let message = await readRun(token, day);
   if (message?.status === 'sent') return { status: 'already_sent', day };
+  // Gmail nao oferece idempotency key. Se ha envio pendente, bloquear retry
+  // para evitar duplicacao em falha de rede apos o Gmail aceitar a mensagem.
+  if (message?.status === 'pending') throw new Error('ADMIN_DIGEST_MANUAL_REVIEW_REQUIRED');
   if (!message) message = await savePending(token, day, await prepare(token, now));
   if (message.status === 'sent') return { status: 'already_sent', day };
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json',
-      'Idempotency-Key': 'emprovex-admin-digest-r1/' + day,
-    },
-    body: JSON.stringify({ from, to: [to], subject: message.subject, text: message.text }),
-    cache: 'no-store',
+  await sendAdminDigestViaGmail({
+    from, to, subject: message.subject, text: message.text,
   });
-  if (!response.ok) throw new Error('ADMIN_DIGEST_SEND_' + response.status);
   await markSent(token, day);
   return { status: 'sent', day };
 }
