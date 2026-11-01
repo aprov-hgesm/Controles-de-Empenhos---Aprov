@@ -66,16 +66,21 @@ $IMAGE = '<IMAGEM_W6_1_IMUTAVEL>'
 # Dois segredos distintos e já criados no Secret Manager:
 $CONTEXT_SECRET = '<NOME_SECRET_W6_CONTEXT>'
 $CURSOR_SECRET  = '<NOME_SECRET_W6_CURSOR>'
-gcloud run deploy $SERVICE --project $PROJECT --region $REGION \
-  --image $IMAGE --service-account $SA --no-allow-unauthenticated \
-  --min-instances 0 --max-instances 1 \
-  --set-env-vars "EMPROVEX_AI_W45_ENABLED=1,EMPROVEX_AI_HOMOLOGATION_ENABLED=1,EMPROVEX_AI_LFM3_ENABLED=1,EMPROVEX_AI_LFM3_URL=$INFERENCE_URL,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID=$TEST_PROJECT,EMPROVEX_AI_W6_CORE_DATABASE_ID=$CORE_DB,EMPROVEX_AI_W6_WAREHOUSE_DATABASE_ID=$WAREHOUSE_DB" \
-  --set-secrets "EMPROVEX_AI_W45_CONTEXT_SECRET=$($CONTEXT_SECRET):latest,EMPROVEX_AI_CURSOR_SECRET=$($CURSOR_SECRET):latest"
+$deployArgs = @(
+  'run', 'deploy', $SERVICE,
+  "--project=$PROJECT", "--region=$REGION",
+  "--image=$IMAGE", "--service-account=$SA",
+  '--no-allow-unauthenticated', '--min-instances=0', '--max-instances=1',
+  "--set-env-vars=EMPROVEX_AI_W45_ENABLED=1,EMPROVEX_AI_HOMOLOGATION_ENABLED=1,EMPROVEX_AI_LFM3_ENABLED=1,EMPROVEX_AI_LFM3_URL=$INFERENCE_URL,EMPROVEX_AI_W6_FIREBASE_PROJECT_ID=$TEST_PROJECT,EMPROVEX_AI_W6_CORE_DATABASE_ID=$CORE_DB,EMPROVEX_AI_W6_WAREHOUSE_DATABASE_ID=$WAREHOUSE_DB",
+  "--set-secrets=EMPROVEX_AI_W45_CONTEXT_SECRET=$($CONTEXT_SECRET):latest,EMPROVEX_AI_CURSOR_SECRET=$($CURSOR_SECRET):latest"
+)
+& gcloud.cmd @deployArgs
+if ($LASTEXITCODE -ne 0) { throw 'Deploy da candidata W6.1 falhou' }
 # Conferir ao final: configuração da revisão, IAM privado e somente runtime W6.
 # Nenhuma modificação de tráfego ou de serviços de produção.
 ```
 
-**Nota PowerShell:** o caractere de continuação no trecho acima é ilustrativo; no Windows PowerShell substitua as barras invertidas de continuação por crases PowerShell ou execute os argumentos de `gcloud` em uma única linha. Nunca copie placeholders literalmente para uma implantação.
+**Nota PowerShell:** o comando usa splatting com array de argumentos, compatível com Windows PowerShell. Nunca copie placeholders literalmente para uma implantação; confirme previamente que a imagem foi gerada a partir do SHA exato da PR e que os secrets de homologação existem.
 
 Para invocar o Cloud Run privado, use um chamador previamente autorizado no IAM da **candidata**, obtenha ID token com audience da URL dessa candidata e envie um segundo token Firebase do projeto **de testes** no cabeçalho HTTP esperado pelo endpoint; como ambos usam `Authorization`, a homologação remota pode exigir um proxy/gateway de teste autenticado ou a passagem do token Cloud Run por `X-Serverless-Authorization` (Cloud Run verifica IAM e encaminha o `Authorization` do usuário). Não habilitar invocação anônima apenas para simplificar o teste.
 
