@@ -318,6 +318,28 @@ Nunca marcar feature como **implementada** por estar apenas neste plano; registr
 
 **Não reabrir escopo:** sem CRM paralelo, chatbot, suporte por WhatsApp não configurado, ciclo de tickets completo, novas métricas por clique, mudanças de Auth/billing nem varreduras contínuas de dados.
 
+### 13.6. Checkpoint — Integração W4 verificada no GitHub (31/10/2026, Brasília)
+
+**Origem:** [PR #448 — EMPROVEX Suporte R1](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/448), branch `integration/emprovex-suporte-r1`, **DRAFT**, head **`85c9001b3802c735805d392ace94101fc684ade3`** após correção visual `85c9001b`. Base `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`. Estado confirmado por consulta ao GitHub: PR aberta, `mergeable=true`, **não merged**, `main` inalterada no momento da conferência.
+
+**Escopo comprovado por lista de 19 arquivos:** composição das entregas W1 (#442) e W2 (#443), `features/support/EmprovexHelpOverlay.tsx`, montagem em `app/login/page.tsx` e `components/layout/AppSidebar.tsx`, montagem da Central de Depósitos em `features/warehouse/components/WarehouseModuleShell.tsx` e `WarehouseSidebar.tsx`, scripts W1/W2/W4, workflow de certificação e handoffs isolados. **Nenhuma alteração em Firestore Rules, IAM, billing ou infraestrutura.** Handoff integrado na branch W4: `docs/handoffs/EMPROVEX_SUPORTE_R1_W4_HANDOFF.md`.
+
+**Checks do SHA final verificados no GitHub:**
+
+| Check / workflow | Evidência real | Estado |
+| --- | --- | --- |
+| EMPROVEX Support R1 integration certification | [run 41266420448](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420448): executa as suítes W1, W2, W4 e `npm run typecheck` | **SUCCESS** |
+| EMPROVEX Support W1 isolated certification | [run 41266420479](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420479) | **SUCCESS** |
+| EMPROVEX Fast CI | [run 41266420483](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420483) | **SUCCESS** |
+| EMPROVEX Core Protection | [run 41266420446](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420446) | **SUCCESS** |
+| VISUAL-R1 W4 QA (isolated) | [run 41266420450](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420450) | **SUCCESS** |
+| VISUAL-R2 Integrity Audit | [run 41266421435](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266421435): todos os jobs aplicáveis concluídos SUCCESS; inclusive Browser E2E geral — login no Firebase Emulator e tarefas operacionais | **SUCCESS** |
+| Application CI | [run 41266420457](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/41266420457) — PR DRAFT | **SKIPPED**, não PASS |
+
+**Limite de cobertura:** o teste `scripts/emprovex-support-w4.test.mjs` confere estaticamente os pontos de montagem e o isolamento. O Browser E2E geral da Visual R2 **não demonstra, por si só,** o clique real e a interação dentro do novo overlay de Ajuda em navegador autenticado no mobile e no modo Essencial. O próximo passo proporcional é **um teste visual/interativo dirigido** desses pontos, sem repetir integralmente as suites W1/W2/R2 já aprovadas. Confirmar também a adequação das novas anotações administrativas à política de privacidade/retensão antes de publicação.
+
+**Parecer documental:** **GO para revisão final da integração**; a pendência do Browser E2E geral informada anteriormente está **RESOLVIDA — SUCCESS**. **NO-GO para afirmar homologação visual específica de Ajuda mobile/Essencial sem teste correspondente**, e **NO-GO para declarar Application CI PASS** enquanto estiver skipped. Para preparar merge, avaliar tornar a PR Ready for review e obter Application CI no SHA vigente, sem permitir merge automático. Merge na `main` e deploy/promoção Cloud Run permanecem sujeitos à autorização específica do responsável e às políticas de release vigentes.
+
 ## 14. Evidências de referência — código fixado na baseline
 
 - [Checklist de primeiro acesso](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/35825d5ad563361fecd1b3d2a00ca81a4734e532/components/auth/SectorFirstAccessChecklist.tsx)
