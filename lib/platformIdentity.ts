@@ -1,4 +1,16 @@
 export type PlatformAccountType = 'platformAdmin' | 'sector';
+export type SectorType = 'aprovisionamento' | 'almoxarifado';
+
+/** Somente o campo ausente representa uma conta legada de Aprovisionamento. */
+export function resolveSectorType(type?: SectorType): SectorType {
+  return type ?? 'aprovisionamento';
+}
+export function isSectorType(value: unknown): value is SectorType {
+  return value === 'aprovisionamento' || value === 'almoxarifado';
+}
+export function sectorEntryPath(type?: SectorType): '/central-empenhos' | '/almoxarifado' {
+  return resolveSectorType(type) === 'almoxarifado' ? '/almoxarifado' : '/central-empenhos';
+}
 
 export type PlatformAccountStatus = 'active' | 'disabled';
 
@@ -48,6 +60,8 @@ export interface PlatformAdminAccount extends PlatformAccountBase {
 
 export interface SectorAccount extends PlatformAccountBase {
   accountType: 'sector';
+  /** Ausente nos registros históricos; significa Aprovisionamento. */
+  sectorType?: SectorType;
   /** Cada conta operacional de setor pertence a exatamente um workspace. */
   workspaceId: string;
   /**
@@ -74,6 +88,8 @@ export interface WorkspaceInstitutionalProfile {
 
 export interface Workspace {
   id: string;
+  /** Ausente nos workspaces históricos; significa Aprovisionamento. */
+  sectorType?: SectorType;
   name: string;
   status: WorkspaceStatus;
   /**
@@ -174,6 +190,10 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
     errors.push('E-mail da conta da plataforma é inválido.');
   }
 
+  if (account.accountType === 'sector' && account.sectorType !== undefined && !isSectorType(account.sectorType)) {
+    errors.push('Modalidade da conta setorial é inválida.');
+  }
+
   if (account.accountType === 'sector' && !isValidWorkspaceId(account.workspaceId)) {
     errors.push('Conta de setor precisa possuir um workspaceId válido.');
   }
@@ -200,6 +220,10 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
 
 export function validateWorkspace(workspace: Workspace): string[] {
   const errors: string[] = [];
+
+  if (workspace.sectorType !== undefined && !isSectorType(workspace.sectorType)) {
+    errors.push('Modalidade do workspace é inválida.');
+  }
 
   if (!isValidWorkspaceId(workspace.id)) {
     errors.push('Identificador do workspace é inválido.');

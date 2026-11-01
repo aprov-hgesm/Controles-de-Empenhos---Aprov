@@ -60,7 +60,7 @@ export async function registerEmulatedLegalAcceptance(context) {
         }
         workspaceId = body.workspaceId;
       } else return reply({ code: 'LEGAL_METHOD_DENIED' }, 405);
-      if (!/^workspace-(?:lifecycle|b)$/.test(workspaceId ?? '')) {
+      if (!/^(?:workspace-(?:lifecycle|b)|qa-almox-w1)$/.test(workspaceId ?? '')) {
         return reply({ code: 'LEGAL_WORKSPACE_INVALID' }, 403);
       }
       // Estes GETs usam o token real do usuário e as Rules do emulador.

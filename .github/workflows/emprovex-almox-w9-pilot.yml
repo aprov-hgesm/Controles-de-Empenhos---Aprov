@@ -1,0 +1,70 @@
+name: EMPROVEX Almoxarifado W9 R1-D - integrated pilot QA
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emprovex-almox-w9-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pilot-certification:
+    name: W9 - TypeScript, functional tests, isolation and build (no deploy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W9 assembly contracts and targeted W1/W5/W6/W7/W8 regressions
+        run: |
+          node --test scripts/emprovex-almox-w9-integration.test.mjs
+          node --test scripts/emprovex-almox-w1.test.mjs
+          node --test scripts/emprovex-almox-w5.test.mjs
+          node --test scripts/emprovex-almox-w6-financial.test.mjs
+          node --test scripts/emprovex-almox-w7-materials.test.mjs
+          node --test scripts/emprovex-almox-w8-reports.test.mjs
+          node --test scripts/operational-subscription-plan.test.mjs
+      - name: Firebase Auth and Firestore Rules emulator - same UG isolation and disabled account
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-almox-w1-isolation-emulator.test.mjs"
+      - name: Next.js build without publication
+        run: npm run build
+
+  browser-pilot:
+    name: W9 - Playwright pilot route with emulated authentication (no production)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright test runner
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: W9 pilot - real browser + Auth and Firestore Emulators
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs --almox-w9 tests/e2e/almoxarifado-w9-pilot.spec.mjs"

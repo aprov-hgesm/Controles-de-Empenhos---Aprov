@@ -80,7 +80,13 @@ export function WarehouseAccessBoundary({
       clearResolvedWorkspaceContext();
       resetActiveProfileMode();
       clearVisualMode();
-      window.location.replace('/central-empenhos');
+      // Evita loop de /almoxarifado -> /central-empenhos -> /almoxarifado
+      // em falhas do gate de segurança: encerrar a identidade da rota protegida.
+      if (window.location.pathname === '/almoxarifado') {
+        void signOut(auth).finally(() => window.location.replace('/login'));
+      } else {
+        window.location.replace('/central-empenhos');
+      }
     };
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {

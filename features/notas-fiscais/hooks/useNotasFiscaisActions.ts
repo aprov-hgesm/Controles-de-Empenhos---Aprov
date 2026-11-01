@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
+import type { SectorType } from '../../../lib/platformIdentity';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveAlert, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
@@ -22,6 +23,7 @@ import {
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
 interface NotasActionsContext {
+  sectorType?: SectorType;
   user: User | null;
   empenhos: Empenho[]; setEmpenhos: React.Dispatch<React.SetStateAction<Empenho[]>>;
   alerts: Alert[]; setAlerts: React.Dispatch<React.SetStateAction<Alert[]>>;
@@ -563,6 +565,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleDeleteAllComissoes = async () => {
+    if (context.sectorType === 'almoxarifado') throw new Error('ALMOX_COMMISSION_DISABLED');
     if (comissoes.length === 0) {
       showToast('Não há Comissões para apagar.', 'info');
       return;
@@ -584,6 +587,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleMarkComissao = async (invoiceRecordKey: string) => {
+    if (context.sectorType === 'almoxarifado') throw new Error('ALMOX_COMMISSION_DISABLED');
     const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
@@ -854,6 +858,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleSaveComissao = async () => {
+    if (context.sectorType === 'almoxarifado') throw new Error('ALMOX_COMMISSION_DISABLED');
     if (!comissaoBoletimNum) {
       showToast('Por favor, informe o número do Boletim Interno.', 'error');
       return;

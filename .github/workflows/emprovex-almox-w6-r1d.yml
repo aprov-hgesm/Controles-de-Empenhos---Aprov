@@ -1,0 +1,48 @@
+name: EMPROVEX Almoxarifado W6 R1-D financial certification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - feat/emprovex-almox-r1-w5-integration
+    paths:
+      - 'features/almoxarifado/financeiro/**'
+      - 'features/empenhos/**'
+      - 'features/notas-fiscais/**'
+      - 'features/cronogramas/**'
+      - 'scripts/emprovex-almox-w6-financial.test.mjs'
+      - '.github/workflows/emprovex-almox-w6-r1d.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: almox-w6-r1d-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  financial-certification:
+    name: TypeScript, financial regressions and build (no deploy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Financial and tenant synthetic tests
+        run: node --test scripts/emprovex-almox-w6-financial.test.mjs
+      - name: Firestore Auth/Rules isolation — two workspaces, same UG
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-almox-w1-isolation-emulator.test.mjs"
+      - name: Build without deploy
+        run: npm run build

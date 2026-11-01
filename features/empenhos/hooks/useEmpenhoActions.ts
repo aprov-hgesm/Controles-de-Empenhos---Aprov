@@ -15,6 +15,8 @@ import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../l
 import { MAX_EMPENHO_PDF_BYTES, uploadEmpenhoPdf } from '../../../lib/empenhoDocuments';
 import { assertWorkspacePdfIsSafeForStorage } from '../../../lib/pdfSecurity';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
+import type { SectorType } from '../../../lib/platformIdentity';
+import { getAlmoxDefaultClass, isAlmoxFinanceClass } from '../../almoxarifado/financeiro/sectorFinancialPolicy';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
@@ -28,6 +30,7 @@ type NewItemForm = { id: string; name: string; unit: string; quantity: string; u
 type ToastType = 'success' | 'error' | 'info';
 
 interface EmpenhoActionsContext {
+  sectorType?: SectorType;
   user: User | null;
   empenhos: Empenho[];
   setEmpenhos: React.Dispatch<React.SetStateAction<Empenho[]>>;
@@ -56,6 +59,9 @@ interface EmpenhoActionsContext {
 
 /** Ações do domínio de empenhos; estado e persistência continuam injetados pelo orquestrador. */
 export function useEmpenhoActions(context: EmpenhoActionsContext) {
+  const defaultClassification = context.sectorType === 'almoxarifado' ? 'FUNADOM' : 'QR';
+  const normalizedClassification = (value: string) => context.sectorType === 'almoxarifado'
+    ? getAlmoxDefaultClass(value) : normalizeEmpenhoClassCode(value) || 'QR';
   const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, newEmpenhoForm, setNewEmpenhoForm, setShowNewEmpenhoModal, setEditingEmpenhoId, setSelectedEmpenhoDetailId, setActiveTab, showToast, setJsonError, setReviewEmpenho, reviewEmpenho, setShowConfirmSaveModal, newItemForm, setNewItemForm, editingEmpenhoId, setIsDeletingEmpenho, setEmpenhoToDelete, activeTab } = context;
 
   // O PDF original permanece apenas em memória até a confirmação do cadastro.
@@ -474,7 +480,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       ...(newEmpenhoForm.pregao
         ? { numeroContratacao: newEmpenhoForm.pregao }
         : {}),
-      classification: normalizeEmpenhoClassCode(newEmpenhoForm.classification) || 'QR',
+      classification: normalizedClassification(newEmpenhoForm.classification),
     };
     if (!user) {
       showToast('Sua sessão expirou. Entre novamente antes de cadastrar o empenho.', 'error');
@@ -492,7 +498,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
     setEmpenhos((current) => [committedEmpenho, ...current.filter((emp) => emp.id !== committedEmpenho.id)]);
     showToast(`Nota de Empenho ${newEmp.id} criada! Adicione itens a ela.`, 'success');
-    setNewEmpenhoForm({ id: '', supplier: '', supplierCnpj: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: 'QR' });
+    setNewEmpenhoForm({ id: '', supplier: '', supplierCnpj: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: defaultClassification });
     setShowNewEmpenhoModal(false);
      // Redirect to Detail view of this new empenho
     setEditingEmpenhoId(newEmp.id);
@@ -599,7 +605,9 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         numeroContratacao: result.numeroContratacao || '',
         notaCredito: result.notaCredito || '',
         contrato: result.contrato || '',
-        classification: normalizeEmpenhoClassCode(result.classification) || 'QR',
+        classification: context.sectorType === 'almoxarifado' && !isAlmoxFinanceClass(result.classification)
+          ? ''
+          : normalizedClassification(result.classification),
         valorTotalDeclarado: result.valorTotal,
         importSource: 'pdf',
         importWarnings: result.warnings,
@@ -698,7 +706,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       ...(String(reviewEmpenho.contrato || '').trim()
         ? { contrato: String(reviewEmpenho.contrato).trim() }
         : {}),
-      classification: normalizeEmpenhoClassCode(String(reviewEmpenho.classification || 'QR')) || 'QR',
+      classification: normalizedClassification(String(reviewEmpenho.classification || defaultClassification)),
     };
     if (!user) {
       showToast('Sua sessão expirou. Entre novamente antes de cadastrar o empenho.', 'error');

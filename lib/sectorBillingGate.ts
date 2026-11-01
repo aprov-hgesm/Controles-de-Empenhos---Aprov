@@ -19,9 +19,12 @@ export async function checkSectorBillingAccess(
   user: User,
   context: SectorWorkspaceContext,
 ): Promise<SectorBillingDecision> {
-  if (user.email?.toLowerCase() === HGESM_SECTOR_EMAIL.toLowerCase()) {
+  // Sem política de cobrança homologada para Almoxarifado, nunca herdar
+  // a cobrança do Aprovisionamento. O contexto setorial já passou pelo
+  // resolvedor de UID/conta/workspace antes de chegar aqui.
+  if (context.sectorType === 'almoxarifado' || user.email?.toLowerCase() === HGESM_SECTOR_EMAIL.toLowerCase()) {
     return {
-      allowed: true, reason: 'vip', referenceMonth: '', amountCents: 0,
+      allowed: true, reason: context.sectorType === 'almoxarifado' ? 'policy_pending' : 'vip', referenceMonth: '', amountCents: 0,
       graceUntil: null, canRequestGrace48: false, requestPending: false, requiresPayment: false,
     };
   }

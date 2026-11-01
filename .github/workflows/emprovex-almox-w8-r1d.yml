@@ -1,0 +1,36 @@
+name: EMPROVEX Almoxarifado W8 R1-D - reports read-only
+on:
+  push:
+    branches:
+      - feat/emprovex-almox-r1d-w8-reports
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'features/almoxarifado/relatorios/**'
+      - 'scripts/emprovex-almox-w8-reports.test.mjs'
+      - '.github/workflows/emprovex-almox-w8-r1d.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly-reports:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W8 deterministic reports and isolation
+        run: node --test scripts/emprovex-almox-w8-reports.test.mjs
+      - name: Regression on W5 base
+        run: |
+          node --test scripts/emprovex-almox-w1.test.mjs
+          node --test scripts/emprovex-almox-w5.test.mjs
+      - name: Next build (no deployment)
+        run: npm run build

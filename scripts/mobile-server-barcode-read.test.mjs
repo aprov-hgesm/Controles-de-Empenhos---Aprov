@@ -31,7 +31,9 @@ test('seis telas móveis dependem da leitura de barcode no servidor, sem fallbac
 
 test('motor autoriza sessao vinculada a workspace e UG, sem consultar Rule por chamada', () => {
   const result = bind(verified, verified.workspaceId);
-  assert.deepEqual(result, verified);
+  // O contexto antigo sem sectorType é normalizado sem perder UID/UG/workspace.
+  assert.deepEqual(result, { ...verified, sectorType: 'aprovisionamento' });
+  assert.equal(bind({ ...verified, sectorType: 'almoxarifado' }, verified.workspaceId).sectorType, 'almoxarifado');
   assert.equal(Object.isFrozen(result), true);
   assert.notEqual(result, verified);
   const engine = file('lib/server/warehouseMobileTrust.mjs');
@@ -44,6 +46,7 @@ test('motor rejeita acesso entre workspaces, falta de identidade e UG inválida'
     ['falta de identidade', { ...verified, uid: '' }, verified.workspaceId],
     ['email não validado', { ...verified, email: '' }, verified.workspaceId],
     ['UG inválida', { ...verified, ug: '999' }, verified.workspaceId],
+    ['modalidade desconhecida', { ...verified, sectorType: 'company' }, verified.workspaceId],
     ['sem contexto', null, verified.workspaceId],
   ]) {
     assert.throws(() => bind(access, ws), (e) =>

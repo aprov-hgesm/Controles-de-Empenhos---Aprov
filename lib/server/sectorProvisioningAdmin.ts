@@ -14,6 +14,8 @@ import {
   normalizePlatformEmail,
   normalizeUnitUg,
   normalizeWorkspaceId,
+  resolveSectorType,
+  type SectorType,
 } from '../platformIdentity';
 import {
   buildProvisionedSectorRecords,
@@ -99,6 +101,7 @@ interface ProvisioningLockState {
   operationId: string;
   workspaceId: string;
   ug: string;
+  sectorType?: SectorType;
   email: string;
   phase: string;
   createdBy: string;
@@ -841,12 +844,12 @@ async function deleteFirestoreDocumentTree(
   ]);
 }
 
-function lockDocumentIds(email: string, workspaceId: string, ug?: string): string[] {
+function lockDocumentIds(email: string, workspaceId: string, ug?: string, sectorType?: SectorType): string[] {
   const emailHash = createHash('sha256').update(email).digest('hex');
   return [
     `platformProvisioningLocks/email-${emailHash}`,
     `platformProvisioningLocks/workspace-${workspaceId}`,
-    ...(isValidUnitUg(ug) ? [`platformProvisioningLocks/ug-${normalizeUnitUg(ug)}`] : []),
+    ...(isValidUnitUg(ug) ? [`platformProvisioningLocks/ug-${normalizeUnitUg(ug)}${resolveSectorType(sectorType) === 'almoxarifado' ? '-almoxarifado' : ''}`] : []),
   ];
 }
 
@@ -868,7 +871,7 @@ async function acquireProvisioningLocks(
   accessToken: string,
   state: ProvisioningLockState
 ): Promise<string[]> {
-  const paths = lockDocumentIds(state.email, state.workspaceId, state.ug);
+  const paths = lockDocumentIds(state.email, state.workspaceId, state.ug, state.sectorType);
   try {
     await commitFirestoreWrites(accessToken, lockWrites(paths, state, true));
   } catch (error) {
@@ -922,11 +925,13 @@ async function createSectorDirectory(
       400
     );
   }
-  const ugIndexPath = `platformUgIndex/${ug}`;
+  const isAlmox = resolveSectorType(result.account.sectorType) === 'almoxarifado';
+  const ugIndexPath = isAlmox ? `platformSectorUgIndex/${ug}-almoxarifado` : `platformUgIndex/${ug}`;
   const billingPath = `billingAccounts/${result.workspace.id}`;
   // Only newly provisioned customers enter the individual progressive offer.
   // The sector must accept the complete schedule before any cycle is issued.
-  const billingAccount = buildInitialBillingAccount(
+  // A política comercial do Almox ainda não foi definida: não criar cobrança nem trial.
+  const billingAccount = isAlmox ? null : buildInitialBillingAccount(
     result.workspace,
     founder.email,
     grantTrial,
@@ -942,8 +947,10 @@ async function createSectorDirectory(
           name: firestoreDocumentName(workspacePath),
           fields: toFirestoreFields({
             ...result.workspace,
-            billingPolicyId: billingAccount.pricingPolicyId || '',
-            billingEntitlementUntil: grantTrial ? billingAccount.trialEndsAt : billingAccount.createdAt,
+            ...(billingAccount ? {
+              billingPolicyId: billingAccount.pricingPolicyId || '',
+              billingEntitlementUntil: grantTrial ? billingAccount.trialEndsAt : billingAccount.createdAt,
+            } : {}),
           } as Record<string, unknown>),
         },
         currentDocument: { exists: false },
@@ -975,13 +982,13 @@ async function createSectorDirectory(
         },
         currentDocument: { exists: false },
       },
-      {
+      ...(billingAccount ? [{
         update: {
           name: firestoreDocumentName(billingPath),
           fields: toFirestoreFields(billingAccount as unknown as Record<string, unknown>),
         },
         currentDocument: { exists: false },
-      },
+      }] : []),
       serverPlatformAuditWrite({
         operation: 'sector.create',
         workspaceId: result.workspace.id,
@@ -997,8 +1004,9 @@ async function createSectorDirectory(
         },
         metadata: {
           authProvider: result.account.authProvider || 'password',
-          grantTrial,
-          billingMode: 'observe',
+          grantTrial: isAlmox ? false : grantTrial,
+          billingMode: isAlmox ? 'not-configured' : 'observe',
+          sectorType: resolveSectorType(result.account.sectorType),
         },
       }),
     ]);
@@ -1019,7 +1027,8 @@ async function deleteSectorDirectory(
   accessToken: string,
   workspaceId: string,
   email: string,
-  ug?: string
+  ug?: string,
+  sectorType?: SectorType
 ): Promise<void> {
   const normalizedUg = normalizeUnitUg(ug);
 
@@ -1035,7 +1044,7 @@ async function deleteSectorDirectory(
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
     { delete: firestoreDocumentName(`billingAccounts/${workspaceId}`) },
     ...(isValidUnitUg(normalizedUg)
-      ? [{ delete: firestoreDocumentName(`platformUgIndex/${normalizedUg}`) }]
+      ? [{ delete: firestoreDocumentName(resolveSectorType(sectorType) === 'almoxarifado' ? `platformSectorUgIndex/${normalizedUg}-almoxarifado` : `platformUgIndex/${normalizedUg}`) }]
       : []),
   ]);
 }
@@ -1273,7 +1282,15 @@ export async function deleteSectorWorkspaceWithAuth(
     );
   }
   const storedUg = workspaceUg || accountUg;
-  const lockPaths = lockDocumentIds(email, workspaceId, storedUg);
+  const storedSectorType = firestoreStringField(accountDocument?.fields, 'sectorType') === 'almoxarifado'
+    || firestoreStringField(workspaceDocument?.fields, 'sectorType') === 'almoxarifado'
+    ? 'almoxarifado' as const : 'aprovisionamento' as const;
+  if (
+    firestoreStringField(accountDocument?.fields, 'sectorType') !== firestoreStringField(workspaceDocument?.fields, 'sectorType')
+  ) {
+    throw new SectorProvisioningFailure('Modalidade divergente entre conta e workspace.', 'CONFLICT', 409);
+  }
+  const lockPaths = lockDocumentIds(email, workspaceId, storedUg, storedSectorType);
 
   if (!workspaceDocument && !accountDocument && !emailLockDocument && !workspaceLockDocument) {
     throw new SectorProvisioningFailure(
@@ -1329,7 +1346,7 @@ export async function deleteSectorWorkspaceWithAuth(
     await commitFirestoreWrites(accessToken, [
       { delete: firestoreDocumentName(accountPath) },
       ...(isValidUnitUg(storedUg)
-        ? [{ delete: firestoreDocumentName(`platformUgIndex/${storedUg}`) }]
+        ? [{ delete: firestoreDocumentName(storedSectorType === 'almoxarifado' ? `platformSectorUgIndex/${storedUg}-almoxarifado` : `platformUgIndex/${storedUg}`) }]
         : []),
     ]);
   } catch (error) {
@@ -1412,7 +1429,8 @@ export async function provisionSectorWorkspaceWithAuth(
   const email = normalizePlatformEmail(input.authorizedEmail);
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
   const ug = normalizeUnitUg(input.ug);
-  if (ug === HGESM_UG) {
+  const sectorType = resolveSectorType(input.sectorType);
+  if (ug === HGESM_UG && sectorType === 'aprovisionamento') {
     throw new SectorProvisioningFailure(
       'A UG 160416 já pertence ao workspace fundador do HGeSM.',
       'CONFLICT',
@@ -1432,6 +1450,7 @@ export async function provisionSectorWorkspaceWithAuth(
     operationId,
     workspaceId,
     ug,
+    sectorType,
     email,
     phase: 'acquiring-lock',
     createdBy: founder.email,
@@ -1553,7 +1572,7 @@ export async function provisionSectorWorkspaceWithAuth(
 
     if (directoryCreated) {
       try {
-        await deleteSectorDirectory(accessToken, workspaceId, email, ug);
+        await deleteSectorDirectory(accessToken, workspaceId, email, ug, sectorType);
         directoryCreated = false;
       } catch (rollbackError) {
         recoveryRequired = true;

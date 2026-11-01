@@ -163,7 +163,12 @@ export async function updateSectorWorkspaceProfile(
       throw new Error('A UG já vinculada ao setor é imutável e não pode ser substituída.');
     }
 
-    const ugIndexRef = doc(db, PLATFORM_UG_INDEX_COLLECTION, ug);
+    const isAlmox = current.sectorType === 'almoxarifado';
+    const ugIndexRef = doc(
+      db,
+      isAlmox ? 'platformSectorUgIndex' : PLATFORM_UG_INDEX_COLLECTION,
+      isAlmox ? `${ug}-almoxarifado` : ug
+    );
     const ugIndexSnapshot = await transaction.get(ugIndexRef);
     if (ugIndexSnapshot.exists()) {
       const indexed = ugIndexSnapshot.data() as { workspaceId?: string; email?: string };
@@ -181,7 +186,7 @@ export async function updateSectorWorkspaceProfile(
       ug,
       name: input.workspaceName.trim(),
       institutionalProfile: buildSectorInstitutionalProfile(
-        input,
+        { ...input, sectorType: current.sectorType },
         current.institutionalProfile.documentHeaderLines
       ),
       updatedAt: now,
