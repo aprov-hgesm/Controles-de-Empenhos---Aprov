@@ -1,56 +1,76 @@
-# EMPROVEX — Boletim Diário do Administrador R1
+# EMPROVEX — Boletim Diário do Administrador R1 (Gmail API)
 
-Situação: IMPLEMENTADO EM BRANCH / AGUARDANDO PR, SEGREDOS E ATIVAÇÃO EXTERNA. Não enviado em produção.
+**Status:** PR #445 — implementação na branch, sem publicação nem agendamento em produção. **Resend foi descartado** em favor da Gmail API já usada para os envios aos fornecedores.
 
-## Objetivo
+## Objetivo e horário
 
-Boletim agregado enviado **todos os dias às 18:00 no fuso America/Sao_Paulo**, ao e-mail pessoal administrativo autorizado, sem sessão no navegador. Esta função complementa, mas NÃO substitui, os alertas de indisponibilidade do Google Cloud Monitoring.
+Resumo administrativo agregado às **18:00**, todos os dias, no fuso **America/Sao_Paulo**, para a conta administrativa autorizada. O boletim é independente dos alertas de uptime existentes no Google Cloud Monitoring.
 
-## O que inclui
+## Como o Gmail existente será reaproveitado
 
-- Sucesso das amostras regionais do uptime check nas últimas 24 horas (não é SLA).
-- Respostas 5xx do Cloud Run, quando disponíveis.
-- Situação geral das contas na Central de Assinaturas: ativos, trial, pendentes, suspensos, isentos e cancelados.
-- Ciclos marcados pagos, pendentes, vencidos e solicitações de revisão financeira (não são valores efetivamente recebidos).
-- Read/Realtime Read/Write Units do Firestore principal (parcial; não é a fatura).
-- Limites explícitos: os eventos de segurança e o horário do último backup não são consultados nesta R1. Os backups existentes permanecem intocados.
+- O envio de cronogramas dos fornecedores já chama a Gmail API com `gmail.send` e `userinfo.email` em `lib/googleWorkspaceMail.ts`.
+- Esse módulo é `use client`: usa autorização temporária no navegador, sem refresh token no servidor; **não é possível chamá-lo de um job automático diretamente**.
+- O novo `lib/server/adminDigestGmail.ts` utiliza a **mesma Gmail API** (`users/me/messages/send`) e o formato MIME/base64URL, porém com OAuth `offline`, validando a identidade do Gmail remetente antes de enviar.
+- Não modificar o fluxo dos fornecedores, não adicionar Resend, não exigir outro domínio de envio ou uma nova conta Gmail.
 
-Dados ausentes são apresentados como "indisponíveis", nunca como zero. Não inclui PII de clientes, dados bancários, PDFs ou detalhes de UGs.
+## Indicadores R1
 
-## Código
+Uptime do check público existente nas últimas 24h, erros HTTP 5xx Cloud Run quando disponíveis, contas por estado, ciclos pagos/abertos/pendentes/vencidos, revisões de cobrança e métricas globais parciais de Read/Realtime Read/Write Units.
 
-- POST /api/cron/admin-digest: verifica token OIDC assinado pelo Google (issuer, audience e conta de serviço do Scheduler).
-- lib/server/adminDailyDigest.ts: consulta fontes consolidadas já implementadas, armazena marcador de envio diário no Firestore principal e envia via API Resend.
-- lib/adminDailyDigest.mjs: composição pura do texto; testado.
-- scripts/admin-daily-digest.test.mjs: testes mínimos de semântica e proteção.
-- Coleção técnica: platformAdminDigestRuns/{YYYY-MM-DD}; contém somente texto agregado e estado do despacho; acesso exclusivamente via IAM do runtime (Rules permanecem inalteradas).
-- Idempotência do provedor por dia (24 horas) e marcador persistente de envio evitam duplicações nas reexecuções comuns.
+Indicadores ausentes são descritos como indisponíveis. Não inferir receita recebida de ciclos marcados pagos. Não incluir PII de clientes, documentos de fornecedores, dados bancários ou detalhes por UG.
 
-## Configuração externa pendente — não presumir aplicada
+Backups já existentes e alertas de uptime permanecem intactos; esta versão não consulta a data de última execução de backup nem faz contagem automática de incidentes de segurança.
 
-1. Verificar domínio remetente no Resend, configurar chave de envio restrita e guardar em Secret Manager (sem copiar chave para GitHub).
-2. Criar uma conta de serviço sem chaves para o Cloud Scheduler, por exemplo emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com. Não conceder a ela acesso ao Firestore/Secret Manager; ela é somente identidade de disparo.
-3. Publicar a revisão pela pipeline Cloud Run existente, preservando segredos atuais. Somente após essa etapa, anexar as seguintes configurações de runtime, sem inventar valores:
-   - EMPROVEX_ADMIN_DIGEST_ENABLED=1
-   - EMPROVEX_ADMIN_DIGEST_TO=marcoa.r.aquino@gmail.com
-   - EMPROVEX_ADMIN_DIGEST_FROM=EMPROVEX <boletim@emprovex.com.br> (exemplo sujeito a domínio verificado)
-   - EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY=referência versionada Secret Manager
-   - EMPROVEX_ADMIN_DIGEST_SCHEDULER_EMAIL=emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com
-   - EMPROVEX_ADMIN_DIGEST_OIDC_AUDIENCE=https://emprovex.com.br/api/cron/admin-digest
-4. Validar que a rota POST recusa token ausente (HTTP 401) e que o Cloud Run runtime possui IAM suficiente para consulta Firestore/Monitoring.
-5. Criar UM job Cloud Scheduler na região southamerica-east1 com cron "0 18 * * *", time-zone "America/Sao_Paulo", HTTP POST, URL https://emprovex.com.br/api/cron/admin-digest, identidade OIDC da service account dedicada e audience idêntico ao da variável acima. Exemplo de comando a ajustar ao recurso existente:
+## Autorização Google — uma única vez
 
-   gcloud.cmd scheduler jobs create http emprovex-admin-digest-r1 --project=gen-lang-client-0982077967 --location=southamerica-east1 --schedule="0 18 * * *" --time-zone="America/Sao_Paulo" --http-method=POST --uri="https://emprovex.com.br/api/cron/admin-digest" --oidc-service-account-email="emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com" --oidc-token-audience="https://emprovex.com.br/api/cron/admin-digest"
+**A autorização atual do navegador não basta para um envio às 18h sem ninguém conectado.** É necessário um grant OAuth 2.0 de acesso offline à conta Gmail remetente escolhida:
 
-6. Conferir uma execução autenticada e a entrega no e-mail. Retry seguro retorna "already_sent" após o despacho marcado sent. Monitorar falhas de job pelo Cloud Scheduler/Logging.
+1. Usar o cliente OAuth do projeto GCP EMPROVEX existente, se ele suportar o fluxo de servidor (redirect URI válido e client secret), ou criar um client OAuth adicional no mesmo projeto. Não criar outra conta Google.
+2. Solicitar os escopos `https://www.googleapis.com/auth/gmail.send` e `https://www.googleapis.com/auth/userinfo.email`, parâmetros `access_type=offline`, `prompt=consent`.
+3. Usar o `refresh_token` obtido uma única vez e armazenar **somente no Secret Manager**, com acesso exclusivo ao runtime do Cloud Run. Guardar client secret também no Secret Manager; nunca publicar tokens no Git ou colar no chat.
+4. Conferir o estado do OAuth consent screen: apps externos em **Testing** podem receber refresh tokens com validade de **sete dias** para `gmail.send`; para operação permanente será necessário um estado de produção aplicável.
+5. Não usar service account para enviar como uma conta pessoal `@gmail.com`; isso não substitui autorização do titular. Não pedir senha ou senha de aplicativo da conta.
 
-Nunca criar job antes de publicar com as variáveis válidas, senão haverá somente HTTP 503. Nunca usar conta de envio Gmail autorizada no browser como credencial de serviço. Não criar um segundo cron de usage-snapshot: a migração do cron legado Vercel permanece independente.
+## Configurações de runtime para o Cloud Run
 
-## Testes mínimos
+- `EMPROVEX_ADMIN_DIGEST_ENABLED=1` — somente após credenciais válidas e teste controlado;
+- `EMPROVEX_ADMIN_DIGEST_TO=marcoa.r.aquino@gmail.com`;
+- `EMPROVEX_ADMIN_DIGEST_GMAIL_FROM` = e-mail Gmail exato da conta autorizada, definido pelo administrador;
+- `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_ID` = ID do OAuth client (pode vir de variável/Secret Manager);
+- `EMPROVEX_ADMIN_DIGEST_GMAIL_CLIENT_SECRET` = referência versionada do Secret Manager;
+- `EMPROVEX_ADMIN_DIGEST_GMAIL_REFRESH_TOKEN` = referência versionada do Secret Manager;
+- `EMPROVEX_ADMIN_DIGEST_SCHEDULER_EMAIL=emprovex-digest-trigger@gen-lang-client-0982077967.iam.gserviceaccount.com`;
+- `EMPROVEX_ADMIN_DIGEST_OIDC_AUDIENCE=https://emprovex.com.br/api/cron/admin-digest`.
 
-- node --test scripts/admin-daily-digest.test.mjs
-- npm run typecheck
-- npm run build, na revisão candidata.
-- Teste de rota POST sem autorização; teste único autorizado; repetição retorna already_sent; entrega do e-mail.
+Não incluir no deploy a chave antiga Resend: `EMPROVEX_ADMIN_DIGEST_RESEND_API_KEY` é obsoleta nesta PR.
 
-Não alterar Rules, workspaces, pagamentos, backups, uptime check existente, configuração de DNS, nem promover produção sem configuração externa validada.
+## Rota, armazenamento e duplicidade
+
+`POST /api/cron/admin-digest` valida token OIDC assinado pelo Google, issuer/audience, e-mail e `email_verified` da conta de serviço destinada exclusivamente ao Cloud Scheduler. O servidor usa a identidade Cloud Run para ler fontes de dados, grava um marcador diário em `platformAdminDigestRuns/{YYYY-MM-DD}` e envia o e-mail via Gmail.
+
+O Gmail **não oferece Idempotency-Key em `messages.send`**. Por segurança: gravar `pending` *antes* do envio; caso exista `pending` em uma tentativa seguinte, **não reenviar automaticamente** — investigar caixa de enviados e logs, pois o Gmail pode ter enviado antes de uma falha de rede. Após envio e marcação `sent`, tentativas seguintes retornam `already_sent`.
+
+Portanto, a deduplicação automática é conservadora: minimiza reenvios, mas pode exigir revisão manual em incidentes raros. É intencional.
+
+## Agendamento (somente após homologação das credenciais e deploy)
+
+Criar conta de serviço de disparo sem chaves, sem acesso direto a Firestore/Secret Manager. Criar um único job Cloud Scheduler na região southamerica-east1:
+
+- `schedule: 0 18 * * *`
+- `time-zone: America/Sao_Paulo`
+- `HTTP: POST https://emprovex.com.br/api/cron/admin-digest`
+- `oidc-service-account-email`: conta dedicada de disparo
+- `oidc-token-audience: https://emprovex.com.br/api/cron/admin-digest`
+
+Não instalar agendamento antes do deploy válido; não recriar nem modificar cron legado `usage-snapshot` desta etapa. Não duplicar o job.
+
+## Homologação mínima GOV-SIMP-01
+
+- `node --test scripts/admin-daily-digest.test.mjs` e Fast CI (TypeScript);
+- rota sem autenticação -> 401 quando habilitada;
+- autorização Google com conta remetente confirmada pelo `userinfo.email`;
+- envio controlado e recebimento do e-mail pelo destinatário;
+- reexecução no mesmo dia -> `already_sent` após envio confirmado;
+- observar a primeira execução automática das 18h sem interferência no envio de cronogramas aos fornecedores.
+
+**Nenhuma chave, refresh token, senha ou segredo deve ser fornecido neste chat ou versionado no GitHub.**
