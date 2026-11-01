@@ -6,6 +6,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { warehouseAdminBatchRead, warehouseAdminReadScopedQuery,
   type WarehouseAdminDocument } from '../server/warehouseFirestoreTransaction';
 import { AiExecutionError } from './response';
+import {w6DataTarget} from './integration/w6Isolation';
 import type { AiAccess } from './authorize';
 
 type FireValue={stringValue?:string; integerValue?:string; doubleValue?:number;
@@ -17,6 +18,18 @@ export type AiFilter={field:string;op:'EQUAL'|'GREATER_THAN_OR_EQUAL'|'LESS_THAN
 const ROOT='https://firestore.googleapis.com/v1/projects/'
   +encodeURIComponent(firebaseConfig.projectId)+'/databases/'
   +encodeURIComponent(firebaseConfig.firestoreDatabaseId)+'/documents';
+function firestoreRoot(database:'core'|'warehouse'='core'):string {
+  const w6=w6DataTarget();
+  if(!w6)return ROOT; // Warehouse production continues through its existing adapter.
+  const name=database==='core'?w6.coreDatabaseId:w6.warehouseDatabaseId;
+  return 'https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(w6.projectId)
+    +'/databases/'+encodeURIComponent(name)+'/documents';
+}
+function corePrefix():string {
+  const w6=w6DataTarget();
+  return 'projects/'+(w6?.projectId||firebaseConfig.projectId)+'/databases/'
+    +(w6?.coreDatabaseId||firebaseConfig.firestoreDatabaseId)+'/documents/';
+}
 const OPERATIONAL=['suppliers','empenhos','invoices','cronogramas'] as const;
 export type OperationalDomain=typeof OPERATIONAL[number];
 function decode(value:FireValue):unknown {
@@ -48,7 +61,7 @@ async function firestoreFetch(url:string,token:string,body?:unknown):Promise<Res
   return response;
 }
 export async function coreDocument(path:string,token:string):Promise<Record<string,unknown>|null>{
-  const response=await firestoreFetch(ROOT+'/'+safePath(path),token);
+  const response=await firestoreFetch(firestoreRoot()+'/'+safePath(path),token);
   if(response.status===404)return null;
   const doc=await response.json() as FireDocument;
   return fields(doc.fields||{});
@@ -73,7 +86,7 @@ export async function coreOperationalQuery(
     || filters.length>3 || filters.some(f=>!['registeredAt','empenhoId','supplierCnpj','cnpj'].includes(f.field)))
     throw new AiExecutionError('AI_QUERY_CONTRACT_INVALID',400);
   const parent='workspaces/'+access.workspaceId;
-  const prefix='projects/'+firebaseConfig.projectId+'/databases/'+firebaseConfig.firestoreDatabaseId+'/documents/'+parent+'/'+domain+'/';
+  const prefix=corePrefix()+parent+'/'+domain+'/';
   const comparisons=filters.map(f=>({fieldFilter:{field:{fieldPath:f.field},op:f.op,value:{stringValue:f.value}}}));
   const where=comparisons.length===0?{}:{where:comparisons.length===1?comparisons[0]:{compositeFilter:{op:'AND',filters:comparisons}}};
   const orders=orderField==='registeredAt'
@@ -82,7 +95,7 @@ export async function coreOperationalQuery(
   const start=startAfter?{startAt:{before:false,values:orderField==='registeredAt'
     ? [{stringValue:startAfter.fieldValue},{referenceValue:prefix+startAfter.id}]
     :[{referenceValue:prefix+startAfter.id}]}}:{};
-  const response=await firestoreFetch(ROOT+'/'+parent+':runQuery',access.googleToken,
+  const response=await firestoreFetch(firestoreRoot()+'/'+parent+':runQuery',access.googleToken,
     {structuredQuery:{from:[{collectionId:domain}],...where,orderBy:orders,...start,limit:max}});
   const payload=await response.json() as Array<{document?:FireDocument}>;
   if(!Array.isArray(payload))throw new AiExecutionError('AI_QUERY_PAYLOAD_INVALID',503);
@@ -103,6 +116,19 @@ export async function warehouseDocument(
   access:AiAccess,domain:'materials'|'balances'|'depots'|'locations'|'barcodes',id:string
 ):Promise<AiRow|null> {
   const path='warehouse/'+access.workspaceId+'/'+domain+'/'+id;
+  const isolated=w6DataTarget();
+  if(isolated){
+    if(!/^[A-Za-z0-9_-]{1,130}$/.test(id))throw new AiExecutionError('AI_WAREHOUSE_ID_INVALID',400);
+    const base=firestoreRoot('warehouse');
+    const res=await firestoreFetch(base+'/'+path.split('/').map(encodeURIComponent).join('/'),access.googleToken);
+    if(res.status===404)return null;
+    const doc=await res.json() as FireDocument;
+    if(doc.name!==base.slice('https://firestore.googleapis.com/v1/'.length)+'/'+path)
+      throw new AiExecutionError('AI_W6_WAREHOUSE_SCOPE_VIOLATION',503);
+    const row={path,data:fields(doc.fields||{}),updateTime:''};
+    assertWarehouseRow(row,access);
+    return {id,data:row.data};
+  }
   const map=await warehouseAdminBatchRead(access.googleToken,[path]);
   const row=map.get(path);
   if(!row)return null;
@@ -116,6 +142,30 @@ export async function warehouseQuery(
   const filters=filter?[filter]:[];
   if(filter && !((domain==='locationBalances'&&filter.field==='materialId')
     ||(domain==='barcodes'&&filter.field==='materialId')))throw new AiExecutionError('AI_WAREHOUSE_FILTER_INVALID',400);
+  const isolated=w6DataTarget();
+  if(isolated){
+    const base=firestoreRoot('warehouse');
+    const parent='warehouse/'+access.workspaceId;
+    const prefix=base.slice('https://firestore.googleapis.com/v1/'.length)+'/'+parent+'/'+domain+'/';
+    const response=await firestoreFetch(base+'/'+parent+':runQuery',access.googleToken,{
+      structuredQuery:{from:[{collectionId:domain}],
+        ...(filter?{where:{fieldFilter:{field:{fieldPath:filter.field},op:'EQUAL',
+          value:{stringValue:filter.value}}}}:{}),limit:max}
+    });
+    const payload=await response.json() as Array<{document?:FireDocument}>;
+    if(!Array.isArray(payload))throw new AiExecutionError('AI_W6_WAREHOUSE_PAYLOAD_INVALID',503);
+    const rows=payload.flatMap(value=>{
+      if(!value.document)return [];
+      const doc=value.document;
+      if(!doc.name?.startsWith(prefix))throw new AiExecutionError('AI_W6_WAREHOUSE_SCOPE_VIOLATION',503);
+      const id=doc.name.slice(prefix.length);
+      if(!/^[A-Za-z0-9_-]{1,130}$/.test(id))throw new AiExecutionError('AI_W6_WAREHOUSE_ID_INVALID',503);
+      const row={path:parent+'/'+domain+'/'+id,data:fields(doc.fields||{}),updateTime:''};
+      assertWarehouseRow(row,access);
+      return [{id,data:row.data}];
+    });
+    return {rows,truncated:rows.length>=max,examined:rows.length};
+  }
   const rows=await warehouseAdminReadScopedQuery(access.googleToken,access.workspaceId,domain,filters,max);
   for(const row of rows)assertWarehouseRow(row,access);
   return {rows:rows.map(row=>({id:row.path.split('/').at(-1)!,data:row.data})),
