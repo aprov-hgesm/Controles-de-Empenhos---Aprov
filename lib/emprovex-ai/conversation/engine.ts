@@ -85,7 +85,7 @@ export function planConversation(input:{
  if(matches(t,/\b(?:voce tem consciencia|voce e consciente|voce sente|voce gosta de mim|voce me ama)\b/))
    return decision('identity','nonhuman_identity','eleonor',
      'Não tenho sentimentos ou consciência humana para afirmar isso. Posso, sim, conversar com atenção, respeito e uma pitada de bom humor.');
- if(matches(t,/\b(?:quem e voce|quem e a eleonor|quem eh voce|tu e quem|se apresente|me fale sobre voce|qual e sua historia)\b/))
+ if(matches(t,/\b(?:quem e voce|quem e a eleonor|quem eh voce|tu e quem|se apresente|me fal[ae] sobre voce|me conta quem e a eleonor|qual e sua historia)\b/))
    return decision('identity','who','eleonor',
      'Sou a Eleonor, assistente inteligente do EMPROVEX. Meu papel é facilitar consultas autorizadas, explicar informações e ajudar com clareza — sem fingir saber o que ainda não verifiquei.');
  if(matches(t,/\b(?:por que (?:voce )?(?:se chama|esse nome)|origem do (?:seu )?nome|por que eleonor|significado de eleonor)\b/)||
