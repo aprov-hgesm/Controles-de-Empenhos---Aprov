@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { Empenho } from '../../../lib/types';
 import { FornecedoresView } from '../../fornecedores/components/FornecedoresView';
@@ -41,7 +41,7 @@ function LinkNotice({ item }: { item: AlmoxItemRow }) {
  */
 export function AlmoxCatalogoView({ user, workspaceId, ug, section }: Props) {
   const [data, setData] = useState<AlmoxCatalogProjection | null>(null);
-  const [empenhos, setEmpenhos]: [Empenho[], Dispatch<SetStateAction<Empenho[]>>] = useState([]);
+  const [empenhos, setEmpenhos] = useState<Empenho[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
