@@ -2,6 +2,7 @@
  * No private JSON keys: Cloud Run metadata issues an audience-bound IAM ID token.
  */
 import type {ModelProposal} from '../context/types';
+import {aiLfm3Enabled} from './environment';
 
 const MODEL='lfm3:1.7b-q4_K_M';
 const OUTPUT_TOKENS=128;
@@ -28,6 +29,7 @@ function validToken(token:string):boolean {
 }
 /** Response is not trusted even after JSON mode. Caller MUST use W5 + W3 validators. */
 export async function proposeWithLfm3(proposal:ModelProposal):Promise<unknown|null> {
+ if(!aiLfm3Enabled())return null;
  const origin=inferenceOrigin(process.env.EMPROVEX_AI_LFM3_URL);
  if(!origin)return null;
  try{
