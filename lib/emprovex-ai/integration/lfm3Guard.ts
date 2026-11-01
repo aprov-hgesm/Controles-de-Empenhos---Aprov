@@ -25,7 +25,7 @@ export function guardLfm3Candidate(args:{
    query.intent.startsWith('invoice_')?'invoice':'warehouse';
  const grounds:Record<string,RegExp>={
   supplier:/\b(?:fornecedor|contato|cnpj|telefone|email|whatsapp)\b/,
-  commitment:/\b(?:empenho|ne|saldo|exercicio)\b/,
+  commitment:/\b(?:empenho|ne|exercicio)\b|\b\d{4}ne\d+\b/,
   schedule:/\b(?:cronograma|envio)\b/,
   invoice:/\b(?:nota|nf|nfs|fiscal)\b/,
   warehouse:/\b(?:estoque|material|deposito|localizacao|localize|armazenado)\b/
@@ -66,6 +66,12 @@ export function guardLfm3Candidate(args:{
    return invalid(['period']);
  if(p.exerciseYear!==undefined&&!t.includes(String(p.exerciseYear)))
    return invalid(['exerciseYear']);
+ const proposedPeriod=p.interval??p.sentPeriod;
+ if(proposedPeriod!==undefined){
+  const spokenPeriod=interpretation.dimensions.period;
+  if(!spokenPeriod||JSON.stringify(proposedPeriod)!==JSON.stringify(spokenPeriod))
+   return invalid(['period_mismatch']);
+ }
  const constraints=detectConstraints(t,{
   commitmentId:typeof entities.commitmentId==='string'?entities.commitmentId:undefined,
   materialQuery:typeof entities.material==='string'?entities.material:undefined,
