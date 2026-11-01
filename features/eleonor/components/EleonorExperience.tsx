@@ -37,13 +37,13 @@ const SUGGESTIONS = [
 
 function EleonorSymbol({ size = 'normal' }: { size?: 'normal' | 'large' }) {
   if (size === 'large') {
-    return <Image src="/branding/eleonor-light.svg" alt="Eleonor" width={240} height={80}
+    return <Image src="/branding/eleonor-light-transparent.png" alt="Eleonor" width={240} height={80}
       unoptimized className="h-auto w-[220px] max-w-[70vw]" />;
   }
   return (
     <span aria-hidden="true"
-      className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#dce5f4] bg-[#f1f6fe]">
-      <Image src="/branding/eleonor-light.svg" alt="" width={120} height={40} unoptimized
+      className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-transparent">
+      <Image src="/branding/eleonor-light-transparent.png" alt="" width={120} height={40} unoptimized
         className="h-10 w-[120px] max-w-none object-left" />
     </span>
   );
@@ -188,7 +188,7 @@ export function EleonorExperience({
         className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7">
         {messages.length === 0 && (
           <div className="flex min-h-full flex-col items-center justify-center py-8 text-center">
-            <EleonorSymbol size="large" />
+            {fullPage && <EleonorSymbol size="large" />}
             <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.28em] text-blue-700/65">
               Inteligência operacional EMPROVEX
             </p>
@@ -196,7 +196,9 @@ export function EleonorExperience({
               Como posso ajudar?
             </h2>
             <p className="mt-3 max-w-sm text-sm leading-6 text-slate-500">
-              Sou a Eleonor. Posso ajudar com empenhos, notas fiscais, fornecedores e estoque, usando os dados autorizados do seu setor.
+              {fullPage
+                ? 'Sou a Eleonor. Posso ajudar com empenhos, notas fiscais, fornecedores e estoque, usando os dados autorizados do seu setor.'
+                : 'Pergunte sobre empenhos, notas fiscais, fornecedores e materiais, respeitando o acesso autorizado do seu setor.'}
             </p>
             <div className="mt-6 flex w-full max-w-md flex-col gap-2">
               {SUGGESTIONS.map(example => (
@@ -214,9 +216,8 @@ export function EleonorExperience({
             <div className={`max-w-[92%] rounded-[22px] px-4 py-3 text-sm leading-6 sm:max-w-[84%] ${item.role === 'user'
               ? 'rounded-br-md bg-[#00288e] text-white'
               : 'rounded-bl-md border border-slate-200/85 bg-white/90 text-[#152742] shadow-sm'}`}>
-              {item.role === 'assistant' && (
+              {item.role === 'assistant' && fullPage && (
                 <div className="mb-2 flex items-center gap-2">
-                  <EleonorSymbol />
                   <span className="text-xs font-bold text-[#00288e]">Eleonor</span>
                   {item.status === 'partial' && <span className="text-[10px] font-semibold text-amber-700">Resultado parcial</span>}
                 </div>
@@ -265,7 +266,7 @@ export function EleonorExperience({
           </button>
         </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
-          <Image src="/branding/emprovex-light.svg" alt="" width={19} height={19}
+          <Image src="/branding/emprovex-light-transparent.png" alt="" width={19} height={19}
             unoptimized className="h-4 w-4 shrink-0 rounded" />
           Consultas somente de leitura · Respostas baseadas no EMPROVEX
         </p>
@@ -279,7 +280,7 @@ export function EleonorExperience({
         className="relative flex h-[calc(100dvh-11rem)] min-h-[440px] flex-col overflow-hidden rounded-[28px] border border-[#dce5f4] bg-gradient-to-b from-[#f4f8ff] via-[#f7faff] to-[#edf3fc] shadow-[0_20px_65px_-40px_rgba(0,40,142,0.32)]">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-blue-900 bg-[#06183e] px-4 py-3 sm:px-7">
           <div className="flex items-center gap-3">
-            <Image src="/branding/eleonor-dark.svg" alt="Eleonor" width={150} height={50}
+            <Image src="/branding/eleonor-dark-transparent.png" alt="Eleonor" width={150} height={50}
               unoptimized className="h-auto w-[138px] sm:w-[166px]" priority />
             <div className="hidden sm:block">
               <h1 className="sr-only">Eleonor</h1>
@@ -303,10 +304,9 @@ export function EleonorExperience({
           className="pointer-events-auto flex h-[min(590px,calc(100dvh-9rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[25px] border border-blue-200/60 bg-[#f6f9ff] shadow-[0_24px_85px_rgba(2,17,49,0.28)]">
           <header className="flex shrink-0 items-center justify-between border-b border-blue-100 bg-white/90 px-4 py-3">
             <div className="flex items-center gap-2">
-              <Image src="/branding/eleonor-light.svg" alt="Eleonor" width={132} height={44}
+              <Image src="/branding/eleonor-light-transparent.png" alt="Eleonor" width={132} height={44}
                 unoptimized className="h-auto w-[126px]" />
-              <span className="hidden text-[10px] text-slate-500 sm:inline">AI</span>
-            </div>
+             </div>
             <div className="flex items-center gap-1">
               <button type="button" onClick={newConversation} aria-label="Nova conversa"
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Plus className="h-4 w-4" /></button>
@@ -327,8 +327,8 @@ export function EleonorExperience({
         aria-expanded={open} title="Conversar com Eleonor"
         className="pointer-events-auto group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] border border-blue-300/50 bg-[#06183e] text-white shadow-[0_12px_32px_rgba(0,40,142,0.28)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,40,142,0.4)]">
         <span className="absolute inset-0 overflow-hidden rounded-[19px]" aria-hidden="true">
-          <Image src="/branding/emprovex-dark.svg" alt="" width={72} height={72}
-            unoptimized className="h-full w-full scale-[1.45] object-cover" />
+          <Image src="/branding/emprovex-dark-transparent.png" alt="" width={72} height={72}
+            unoptimized className="h-full w-full object-contain p-1.5" />
         </span>
         {open && <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-200 bg-white text-[#00288e] shadow-sm">
           <X className="h-3 w-3" />
