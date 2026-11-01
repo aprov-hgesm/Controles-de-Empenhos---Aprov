@@ -1,6 +1,9 @@
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
   SECTOR_AUTH_PROVIDER,
+  isSectorType,
+  resolveSectorType,
+  type SectorType,
   isValidPlatformEmail,
   isValidUnitUg,
   isValidWorkspaceId,
@@ -17,6 +20,7 @@ export const MIN_SECTOR_PASSWORD_LENGTH = 8;
 export const MAX_SECTOR_PASSWORD_LENGTH = 128;
 
 export interface CreateSectorWorkspaceInput {
+  sectorType?: SectorType;
   workspaceId: string;
   workspaceName: string;
   ug: string;
@@ -49,6 +53,7 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
   );
 
   return {
+    sectorType: typeof source.sectorType === 'string' ? source.sectorType as SectorType : 'aprovisionamento',
     workspaceId: requiredString('workspaceId'),
     workspaceName: requiredString('workspaceName'),
     ug: requiredString('ug'),
@@ -81,9 +86,12 @@ export function buildSectorInstitutionalProfile(
   documentHeaderLines?: string[]
 ): Workspace['institutionalProfile'] {
   const organizationShortName = input.organizationShortName?.trim();
-  const defaultDeliveryLocation = organizationShortName
-    ? `Setor de Aprovisionamento - ${organizationShortName}`
+  const label = resolveSectorType(input.sectorType) === 'almoxarifado'
+    ? 'Setor de Almoxarifado'
     : 'Setor de Aprovisionamento';
+  const defaultDeliveryLocation = organizationShortName
+    ? `${label} - ${organizationShortName}`
+    : label;
 
   return {
     organizationName: input.organizationName.trim(),
@@ -93,7 +101,9 @@ export function buildSectorInstitutionalProfile(
       : {}),
     ...optionalTrimmedField('organizationShortName', organizationShortName),
     defaultDeliveryLocation,
-    defaultResponsibleRole: 'Chefe do Aprovisionamento',
+    defaultResponsibleRole: resolveSectorType(input.sectorType) === 'almoxarifado'
+      ? 'Chefe do Almoxarifado'
+      : 'Chefe do Aprovisionamento',
   };
 }
 
@@ -103,6 +113,9 @@ export function validateSectorProvisioningInput(input: CreateSectorWorkspaceInpu
   const ug = normalizeUnitUg(input.ug);
   const authorizedEmail = normalizePlatformEmail(input.authorizedEmail);
 
+  if (!isSectorType(resolveSectorType(input.sectorType))) {
+    errors.push('Escolha Aprovisionamento ou Almoxarifado como modalidade.');
+  }
   if (!isValidWorkspaceId(workspaceId)) {
     errors.push('O identificador do setor é inválido. Use letras minúsculas, números e hífens.');
   }
@@ -158,6 +171,7 @@ export function buildProvisionedSectorRecords(
 
   const workspace: Workspace = {
     id: workspaceId,
+    sectorType: resolveSectorType(input.sectorType),
     name: input.workspaceName.trim(),
     status: 'active',
     ug,
@@ -173,6 +187,7 @@ export function buildProvisionedSectorRecords(
     authProvider: SECTOR_AUTH_PROVIDER,
     firebaseUid: firebaseUid.trim(),
     accountType: 'sector',
+    sectorType: resolveSectorType(input.sectorType),
     workspaceId,
     ug,
     status: 'active',
