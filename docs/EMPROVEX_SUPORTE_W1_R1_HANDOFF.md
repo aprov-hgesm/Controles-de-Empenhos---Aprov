@@ -1,10 +1,10 @@
 # EMPROVEX SUPORTE — Handoff W1 R1 (Ajuda / Academia)
 
-**Estado:** IMPLEMENTADO E CERTIFICADO PARA INTEGRAÇÃO TÉCNICA — PR #442 DRAFT; ainda não montado na navegação nem publicado.  
-**Data:** 31/10/2026 (Brasília).  
-**Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov  
-**Branch:** feat/emprovex-suporte-r1-w1-ajuda-academia  
-**Base da main confirmada:** 35825d5ad563361fecd1b3d2a00ca81a4734e532  
+**Estado:** IMPLEMENTADO E CERTIFICADO PARA INTEGRAÇÃO TÉCNICA — PR #442 DRAFT; ainda não montado na navegação nem publicado.\
+**Data:** 31/10/2026 (Brasília).\
+**Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov\
+**Branch:** feat/emprovex-suporte-r1-w1-ajuda-academia\
+**Base da main confirmada:** 35825d5ad563361fecd1b3d2a00ca81a4734e532\
 **Memorial de referência:** docs/EMPROVEX_SUPORTE_ONBOARDING_MEMORIAL_OFICIAL.md, PR #440, branch docs/emprovex-suporte-onboarding-r0-20261031.
 
 ## 1. Arquivos do W1
@@ -46,8 +46,8 @@ Importar o módulo:
 
 ## 4. Testes e limites da evidência
 
-Comando dirigido: node --test scripts/emprovex-support-w1.test.mjs  
-Comando de tipos: npm run typecheck  
+Comando dirigido: node --test scripts/emprovex-support-w1.test.mjs\
+Comando de tipos: npm run typecheck\
 Workflow de PR: EMPROVEX Support W1 isolated certification.
 
 Os testes executáveis verificam conteúdo e renderização React SSR, filtros, URLs e ausência de iframe na montagem inicial. A responsividade é inspecionada via classes mobile-first; a verificação visual interativa em browser real depende da etapa de integração W4. Validade estrutural de ID/URL não garante que todo vídeo permaneça publicamente disponível no YouTube.
@@ -58,8 +58,8 @@ Resultado dos checks/CI deve ser consultado no SHA atualizado da PR; não confun
 
 **GO para integração técnica pelo W4:** certificação dirigida, TypeScript, Fast CI e Core Protection confirmados no SHA de código abaixo. Revisão da montagem nos shells ainda é responsabilidade do W4. **NO-GO para produção** neste Worker. W2/W3 não foram modificados.
 
-**PR:** #442 — https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/442 — DRAFT, sem merge.  
-**SHA de código certificado:** f0462ab500f973903b87a5481976ecceac6cd53d (correção pontual do comparador cross-realm no teste).  
+**PR:** #442 — https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/442 — DRAFT, sem merge.\
+**SHA de código certificado:** f0462ab500f973903b87a5481976ecceac6cd53d (correção pontual do comparador cross-realm no teste).\
 **SHA final da branch:** consultar head SHA da PR após o registro de evidências finais; este handoff é histórico.
 
 

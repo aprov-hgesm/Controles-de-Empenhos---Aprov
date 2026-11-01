@@ -1,11 +1,11 @@
 # EMPROVEX Suporte R1 — Handoff técnico do Worker W2
 
-**Data:** 31/10/2026 (Brasília)  
-**Status:** EM PR DRAFT — sem merge e sem produção  
-**Branch:** `feat/emprovex-suporte-r1-w2-relacionamento`  
-**PR:** [#443](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/443)  
-**Base técnica inicial:** `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`  
-**Memorial canônico:** `docs/EMPROVEX_SUPORTE_ONBOARDING_MEMORIAL_OFICIAL.md`, PR #440  
+**Data:** 31/10/2026 (Brasília)\
+**Status:** EM PR DRAFT — sem merge e sem produção\
+**Branch:** `feat/emprovex-suporte-r1-w2-relacionamento`\
+**PR:** [#443](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/443)\
+**Base técnica inicial:** `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`\
+**Memorial canônico:** `docs/EMPROVEX_SUPORTE_ONBOARDING_MEMORIAL_OFICIAL.md`, PR #440\
 **Diretriz:** GOV-SIMP-01.
 
 ## 1. Auditoria prévia e decisões

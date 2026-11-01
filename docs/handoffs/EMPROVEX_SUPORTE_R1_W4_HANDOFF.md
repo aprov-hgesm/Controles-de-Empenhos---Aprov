@@ -1,9 +1,9 @@
 # EMPROVEX Suporte R1 — Handoff W4 de integração
 
-**Data:** 31/10/2026 (Brasília)  
-**Diretriz:** GOV-SIMP-01 — intervenção mínima, segurança essencial, testes dirigidos e economia computacional.  
-**Branch:** `integration/emprovex-suporte-r1`  
-**Base verificada:** `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`  
+**Data:** 31/10/2026 (Brasília)\
+**Diretriz:** GOV-SIMP-01 — intervenção mínima, segurança essencial, testes dirigidos e economia computacional.\
+**Branch:** `integration/emprovex-suporte-r1`\
+**Base verificada:** `main@35825d5ad563361fecd1b3d2a00ca81a4734e532`\
 **Memorial canônico:** `docs/EMPROVEX_SUPORTE_ONBOARDING_MEMORIAL_OFICIAL.md` na PR DRAFT #440, SHA `abb90d4f5001d5196e12dcc96cb9b4687af45865`. Não foi duplicado na integração.
 
 ## 1. Origem e composição dos Workers
