@@ -1,6 +1,6 @@
 # EMPROVEX SUPORTE — Handoff W1 R1 (Ajuda / Academia)
 
-**Estado:** IMPLEMENTADO EM BRANCH ISOLADA — ainda não integrado na navegação nem publicado.  
+**Estado:** IMPLEMENTADO E CERTIFICADO PARA INTEGRAÇÃO TÉCNICA — PR #442 DRAFT; ainda não montado na navegação nem publicado.  
 **Data:** 31/10/2026 (Brasília).  
 **Repositório:** aprov-hgesm/Controles-de-Empenhos---Aprov  
 **Branch:** feat/emprovex-suporte-r1-w1-ajuda-academia  
@@ -56,8 +56,23 @@ Resultado dos checks/CI deve ser consultado no SHA atualizado da PR; não confun
 
 ## 5. Parecer de integração técnica
 
-**GO condicionado** à execução positiva dos testes dirigidos, TypeScript e revisão da PR, com integração exclusiva pelo W4. **NO-GO para produção** neste Worker. W2/W3 não foram modificados.
+**GO para integração técnica pelo W4:** certificação dirigida, TypeScript, Fast CI e Core Protection confirmados no SHA de código abaixo. Revisão da montagem nos shells ainda é responsabilidade do W4. **NO-GO para produção** neste Worker. W2/W3 não foram modificados.
 
-**PR:** registrada na abertura de PR DRAFT, sem merge.  
-**Código implementado até:** b0a816fe6d867aec646198b8af6d1ed631e273b3.  
+**PR:** #442 — https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/442 — DRAFT, sem merge.  
+**SHA de código certificado:** f0462ab500f973903b87a5481976ecceac6cd53d (correção pontual do comparador cross-realm no teste).  
 **SHA final da branch:** consultar head SHA da PR após o registro de evidências finais; este handoff é histórico.
+
+
+## 6. Evidências reais — execução da PR #442
+
+**SHA testado:** f0462ab500f973903b87a5481976ecceac6cd53d.
+
+- EMPROVEX Support W1 isolated certification: **PASS**, run #41263319225; node --test scripts/emprovex-support-w1.test.mjs: **5/5 PASS**; npm run typecheck: **PASS**.
+- EMPROVEX Fast CI: **PASS**, run #41263319258 (tipos, sintaxe, navegação, isolamento e testes afetados).
+- EMPROVEX Core Protection: **PASS**, run #41263319210.
+- Primeira execução do teste dirigido no SHA 35f6a090 falhou exclusivamente em comparação deepStrictEqual entre arrays de contextos VM diferentes, corrigido por Array.from na revisão f0462ab5. Sem alteração no módulo após a certificação.
+- Conferência do diff: cinco arquivos novos e nenhuma mudança nos shells ou regras compartilhados.
+
+**Limite consciente:** teste responsivo é estrutural/SSR (classes e composição); usabilidade mobile/Essencial com navegação efetivamente montada será comprovada em browser na integração W4. Não foi verificada por rede externa a disponibilidade dos vídeos em tempo real.
+
+**Parecer final do W1:** GO para integração técnica W4. NO-GO para produção direta ou merge pelo W1. O commit documental posterior a f0462ab5 não altera código ou testes.
