@@ -4,7 +4,7 @@ import React from 'react';
 import beamStyles from './OperationalNavigationBeam.module.css';
 import { CalendarDays, FileSpreadsheet, FileText, Layers, TrendingUp } from 'lucide-react';
 
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
+type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos' | 'eleonor';
 
 interface MobileNavigationProps {
   activeTab: ActiveTab;

@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('all ten sidebar destinations have identical decorative beams without changing navigation contracts', () => {
+test('all eleven sidebar destinations have identical decorative beams without changing navigation contracts', () => {
   const source = read('components/layout/AppSidebar.tsx');
   const scope = source.slice(source.indexOf('<nav className="emprovex-sidebar-nav'), source.indexOf('</nav>'));
   const count = (scope.match(/data-emprovex-nav-beam="true"/g) ?? []).length;
-  assert.equal(count, 10);
-  for (const key of ['inicio','painel','empenhos','fornecedores','itens','nova_nf','avisos','relatorios','cronogramas']) {
+  assert.equal(count, 11);
+  for (const key of ['inicio','painel','empenhos','fornecedores','itens','nova_nf','avisos','relatorios','cronogramas','eleonor']) {
     assert.match(scope, new RegExp("onNavigate\\('"+key+"'\\)"));
   }
   assert.match(scope, /onOpenWarehouse/);

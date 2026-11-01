@@ -4,16 +4,17 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('all ten primary destinations preserve accessible native controls and share one decoration', () => {
+test('all eleven primary destinations preserve accessible native controls and share one decoration', () => {
   const sidebar = read('components/layout/AppSidebar.tsx');
   const nav = sidebar.slice(sidebar.indexOf('<nav className="emprovex-sidebar-nav'), sidebar.indexOf('</nav>'));
-  assert.equal((nav.match(/className="emprovex-sidebar-nav-item"/g) ?? []).length, 10);
-  assert.equal((nav.match(/data-emprovex-nav-beam="true"/g) ?? []).length, 10);
+  assert.equal((nav.match(/className="emprovex-sidebar-nav-item"/g) ?? []).length, 11);
+  assert.equal((nav.match(/data-emprovex-nav-beam="true"/g) ?? []).length, 11);
   assert.equal((nav.match(/aria-hidden="true" \/>/g) ?? []).length >= 10, true);
   for (const tab of ['inicio', 'painel', 'empenhos', 'fornecedores', 'itens', 'nova_nf', 'avisos', 'relatorios', 'cronogramas']) {
     assert.ok(nav.includes("onNavigate('" + tab + "')"), 'navigation callback changed: ' + tab);
   }
   assert.match(nav, /aria-current=/);
+  assert.match(nav, /onNavigate\('eleonor'\)/);
   const warehouseStart = nav.indexOf('data-testid="nav-central-depositos"');
   const warehouse = nav.slice(warehouseStart, nav.indexOf('</button>', warehouseStart));
   assert.ok(warehouseStart > 0);
@@ -42,26 +43,26 @@ test('one canonical modular beam, mobile motion safety, focus and contrast prote
 });
 
 
-test('sidebar navigation follows operational workflow, preserving the ten native destinations', () => {
+test('sidebar navigation follows operational workflow, preserving original ten and Eleonor', () => {
   const sidebar = read('components/layout/AppSidebar.tsx');
   const css = read('app/globals.css');
   const nav = sidebar.slice(sidebar.indexOf('<nav className="emprovex-sidebar-nav'), sidebar.indexOf('</nav>'));
-  const groups = ['overview', 'management', 'follow-up', 'warehouse'];
+  const groups = ['overview', 'management', 'follow-up', 'assistant', 'warehouse'];
   let previousGroup = -1;
   for (const id of groups) {
     const at = nav.indexOf('data-nav-group="' + id + '"');
     assert.ok(at > previousGroup, 'sidebar group absent or unordered: ' + id);
     previousGroup = at;
   }
-  const orderedTabs = ['inicio', 'painel', 'empenhos', 'nova_nf', 'itens', 'fornecedores', 'cronogramas', 'relatorios', 'avisos'];
+  const orderedTabs = ['inicio', 'painel', 'empenhos', 'nova_nf', 'itens', 'fornecedores', 'cronogramas', 'relatorios', 'avisos', 'eleonor'];
   let previousItem = -1;
   for (const id of orderedTabs) {
     const at = nav.indexOf("onNavigate('" + id + "')");
     assert.ok(at > previousItem, 'navigation must follow workflow: ' + id);
     previousItem = at;
   }
-  assert.equal((nav.match(/className="emprovex-sidebar-nav-item"/g) ?? []).length, 10);
-  assert.equal((nav.match(/data-emprovex-nav-beam="true"/g) ?? []).length, 10);
+  assert.equal((nav.match(/className="emprovex-sidebar-nav-item"/g) ?? []).length, 11);
+  assert.equal((nav.match(/data-emprovex-nav-beam="true"/g) ?? []).length, 11);
   assert.match(nav, /warehouseModuleEnabled && onOpenWarehouse && \(/);
   assert.match(nav, /data-testid="nav-central-depositos"/);
   assert.match(css, /\.emprovex-sidebar-nav-group--warehouse/);

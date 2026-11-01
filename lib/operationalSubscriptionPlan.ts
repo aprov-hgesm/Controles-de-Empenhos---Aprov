@@ -8,7 +8,8 @@ export type OperationalActiveTab =
   | 'relatorios'
   | 'itens_empenho'
   | 'cronogramas'
-  | 'avisos';
+  | 'avisos'
+  | 'eleonor';
 
 export type RealtimeOperationalCollection =
   | 'empenhos'
@@ -95,6 +96,10 @@ const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
     invoices: false,
     comissoes: false,
     cronogramas: false,
+  },
+  // Eleonor usa apenas a API autenticada, sem novas assinaturas Firestore.
+  eleonor: {
+    empenhos: false, alerts: false, invoices: false, comissoes: false, cronogramas: false,
   },
 };
 
