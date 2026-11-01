@@ -45,6 +45,23 @@
 
 ---
 
+
+## CHECKPOINT TRANSVERSAL R0.1 — Cadastro Unificado de Clientes no Admin (31/10/2026)
+
+**Decisão aprovada, pendente de implementação; sem merge nem deploy.** Integrar o formulário de cadastro empresarial da PR #419 com o cadastro setorial da PR #436 (Aprovisionamento/Almoxarifado) em **uma entrada "Cadastrar cliente" no painel Admin**. Utilizar seleção **Aprovisionamento | Almoxarifado | Empresa**, reaproveitando componentes existentes e encaminhando cada modalidade ao seu provisionamento server-side já desenhado. O plano principal está sincronizado com a seção 13.5 do memorial EMPROVEX Almoxarifado, no ramo documental específico da integração. A certificação técnica do Almoxarifado W5 PR #441 continua independente e não autoriza publicação.
+
+**Modelo e restrições:** contas empresariais têm accountType='company' e workspaceType='company', CNPJ/razão social/contato e **não têm UG** nem permissões Warehouse setoriais. Aprovisionamento e Almoxarifado permanecem accountType='sector' com sectorType='aprovisionamento' ou 'almoxarifado'; omissão do subtipo em contas setoriais legadas significa apenas Aprovisionamento. Não aplicar fallback setorial a company. Conta platformAdmin mantém /admin; destinos de setor /central-empenhos e /almoxarifado, de empresa /empresa **apenas após homologação própria**. Workspace, UID e permissões são sempre conferidos pelo servidor; e-mail, CNPJ, UG e URL não concedem acesso por si.
+
+**Reaproveitamento objetivo:** reutilizar AdminCreateCompanyPanel, AdminCompaniesPanel, usePlatformAdminCompanies, companyProvisioning e endpoints administrativos da #419; reutilizar AdminCreateSectorPanel, identidade sectorType e provisionamento da #436. O painel Admin deve expor uma única entrada de criação e renderizar o formulário específico sem duplicar mecanismo de autenticação, validação de CNPJ, criação de UID ou controle de workspace. Preservar capacidade de gerenciar e localizar clientes por tipo.
+
+**Conflito P0 a resolver na integração:** a PR #419 foi construída antes da fundação Almoxarifado e contém fluxo de fundador por Google, enquanto a fundação W1/W5 possui acesso visual por senha com Google apenas compatível no backend. NÃO executar merge irrestrito da #419, nem regredir login, correções Cloud Run ou proteção de workspaces. Conciliar pontualmente lib/platformIdentity.ts, app/login/page.tsx, lib/platformAdminStore.ts, components/admin/PlatformAdminView.tsx e dependências das duas frentes, mantendo as três identidades de cliente isoladas.
+
+**Execução proposta:** um integrador específico de fundações Admin/Identidade em branch/PR DRAFT própria, partindo da fundação técnica consolidada W5 PR #441 ou base equivalente verificada, sem alterar os motores SISCOFIS, separação PDF ou baixa. Validar TypeScript/build, formulários e provisionamento dos três tipos em Emulator, mesmo UG em workspaces setoriais diferentes, bloqueio de company no Warehouse, login fundador/legado, rotas, contas desativadas e CNPJ duplicado. Sem cobrança/trial empresarial ou de Almoxarifado por inferência. Rules, merge e deploy somente após autorização separada.
+
+**Referências:** Empresas PR #419 SHA 2281ac7deddc5271354e1f1faef441bc17246472; Almox W1 PR #436 SHA baa5cde3957cb00b40bec9e1a250621a15cc4e06; Almox W5 PR #441 SHA d89781d5347d04173af98bcc50c71d99bfb8f663. **Somente decisão documental nesta etapa.**
+
+---
+
 # EMPROVEX EMPRESAS — PLANO MESTRE V2
 ## Gestão do pós-licitação, cadeia de abastecimento, compras, entregas e financeiro
 
