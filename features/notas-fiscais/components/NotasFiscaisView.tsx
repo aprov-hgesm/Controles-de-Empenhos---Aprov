@@ -374,7 +374,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                     <motion.div layoutId="nfActiveSubTabBorder" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00288e]" />
                   )}
                 </button>
-                <button
+                {!isAlmox && (<button
                   onClick={() => setNfSubTab('comissao')}
                   className={`pb-3 font-bold text-sm transition-all relative ${
                     nfSubTab === 'comissao' 
@@ -386,7 +386,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                   {!isAlmox && nfSubTab === 'comissao' && (
                     <motion.div layoutId="nfActiveSubTabBorder" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00288e]" />
                   )}
-                </button>
+                </button>)}
               </div>
               </EmprovexBorderBeam>
 
@@ -504,7 +504,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                           </span>
                         </button>
 
-                        <button
+                        {!isAlmox && (<button
                           type="button"
                           onClick={() => setNfTramitacaoFilter('FaltaComissao')}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -520,7 +520,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                           }`}>
                             {invoiceDerived.faltaComissao}
                           </span>
-                        </button>
+                        </button>)}
 
                         <button
                           type="button"
@@ -753,7 +753,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                             </select>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                          <div className={`grid grid-cols-1 ${isAlmox ? "md:grid-cols-2" : "md:grid-cols-3"} gap-4 pt-1`}>
                             {/* 1. DATA DE CADASTRAMENTO */}
                             <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex items-center gap-3">
                               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -768,7 +768,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                             </div>
 
                             {/* 2. COMISSÃO DE RECEBIMENTO */}
-                            <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex flex-col justify-between gap-2">
+                            <div className={isAlmox ? "hidden" : "bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex flex-col justify-between gap-2"}>
                               <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-lg ${
                                   requiresTR
@@ -942,7 +942,7 @@ export function NotasFiscaisView({ context, sectorType }: NotasFiscaisViewProps)
                             <div>
                               <p className="text-xs font-black text-[#001453] uppercase tracking-wider">Documento de Liquidação Consolidada</p>
                               <p className="text-xs text-gray-600 font-medium mt-1">
-                                {requiresTR
+                                {isAlmox ? 'Reúne Nota de Empenho, Nota Fiscal e Espelho (quando anexado), sem documentos alimentares.' : requiresTR
                                   ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Espelho da Nota Fiscal (quando anexado) + Termo de Recebimento em um único PDF.'
                                   : `Une Nota de Empenho + Nota Fiscal + Espelho da Nota Fiscal (quando anexado) em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
                               </p>
