@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g72685d84e7b6-10",
-  "sourceSha": "72685d84e7b6c2805162940c2567a9ac0830b74a",
-  "reason": "Publicação expressamente autorizada do EMPROVEX Suporte R1 após auditoria das frentes paralelas. Memorial PR #440 e integração PR #448 integrados; Core Protection, Application CI e stage sem tráfego SUCCESS no mesmo SHA. Solicitação de 100% do tráfego e saúde verificada com rollback automático."
+  "revision": "emprovex-cloudrun-candidate-g844518a26732-841",
+  "sourceSha": "844518a26732ac1070e3048e97d6c4da995f9050",
+  "reason": "Publicacao em producao expressamente solicitada no chat em 01/11/2026 para testar a Eleonor no dominio canonico. PR #462 integrada, Application CI + Browser E2E + AI W6/W7 PASS, stage em 0% e segredos/IAM LFM3 configurados pelo operador. Promover a revisao AI habilitada somente para fundador, com verificacao de saude e rollback automatico. A falha 401/403 observada na previa requer verificacao posterior com a conta fundadora; a promocao nao comprova a correcao de autenticacao."
 }
