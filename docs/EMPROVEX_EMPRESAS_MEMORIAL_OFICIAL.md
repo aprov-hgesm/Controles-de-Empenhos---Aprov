@@ -1,5 +1,30 @@
 # EMPROVEX EMPRESAS — MEMORIAL OFICIAL
 
+## DECISÃO DE PRODUTO R0-S — SUSPENSÃO CONTROLADA EMPROVEX EMPRESAS (01/11/2026)
+
+**Situação vigente e prevalente sobre os checkpoints históricos abaixo: PAUSADO / PRESERVADO PARA RETOMADA.**
+Por decisão do responsável do EMPROVEX, a expansão **EMPROVEX Empresas** não é prioridade do ciclo atual. O **EMPROVEX Almoxarifado** passa a ser a expansão prioritária para desenvolvimento e homologação operacional, por permitir avaliação prática com fluxos e materiais reais. Esta é uma decisão de priorização, **não** um cancelamento do produto empresarial, nem uma ordem de excluir código ou encerrar PRs.
+
+### Congelamento organizado e independência das branches
+- **Empresas #419:** manter a PR Draft e os commits, formulários, serviços, memorial e contratos como referências preservadas; não fazer merge, deploy, publicar Rules, habilitar cadastro real, criar cobranças ou iniciar Workers empresariais enquanto suspenso.
+- **Admin + Identidade #447:** preservar a integração com cadastro unificado e sua homologação técnica (SHA `83a9d7d2eb3b3863c25a385a6339c9c24fd854cb`, 12/12 E2E e demais checks aplicáveis PASS). Ela é uma **entrega técnica armazenada para a retomada**, não um pré-requisito de incorporação do Almoxarifado à main. A PR #447 depende das PRs #444 -> #441 -> #436 e **não deve ser mesclada isoladamente nem ser aplicada sobre a main sem reconciliação**.
+- **Decisão documental #444:** manter como memória arquitetural do cadastro unificado, mas seu cronograma de ativação de empresas é suspenso. Não forçar Empresas na ordem de merge do Almoxarifado.
+- **Almoxarifado W1 #436 e W5 #441:** seguir em branches próprias, com a modalidade `sectorType='almoxarifado'`, o fluxo setorial e seus testes específicos, sem importar identidade `company` ou a PR #447 como dependência. Integração e publicação do Almox são decisões autônomas, sujeitas aos seus bloqueios funcionais e de segurança (em particular SISCOFIS real e baixa transacional).
+- Esta decisão **não** altera código, Firestore Rules, identidade do fundador, produção, deploy ou a estrutura de trabalho de outros Workers.
+
+### Obrigação na futura reativação — revisar o sistema vigente ANTES de continuar
+Na retomada de Empresas, realizar uma **auditoria técnica de compatibilidade objetiva e proporcional ao risco**, usando como verdade a `main` e a infraestrutura de produção **vigentes na data da reativação**, não o snapshot de outubro de 2026:
+1. Obter SHAs e estados atuais de `main`, PRs #419, #444, #447 e das PRs efetivamente incorporadas; identificar conflitos, código já absorvido, funcionalidades substituídas e histórico de alterações no Admin, Almoxarifado, login e identidade.
+2. Conferir a arquitetura em operação (Cloud Run/Firebase Hosting ou sucessora), versões de Next.js/Node, APIs, Firebase Auth/Firestore, Rules, IAM/segredos e forma atual de publicação, sem reintroduzir legado Vercel ou acesso Google visível do fundador se não estiver aprovado.
+3. Comparar contratos `accountType`, `sectorType`, `workspaceType`, UID/e-mail, CNPJ, workspaces, diretórios e roteamento `/login`, `/empresa`, `/almoxarifado`, `/central-empenhos`; manter isolamento entre clientes e permissões mínimas. Não presumir cobrança/trial para company.
+4. Avaliar se #419/#447 podem ser reaproveitadas por **portabilidade seletiva, rebase ou nova PR integradora pequena**; resolver diferenças antes de reativar. Evitar merge cego de branches antigas, substituições de arquivos centrais ou reabrir correções já resolvidas.
+5. Atualizar este memorial e o plano de implementação com **lacunas reais** e testes necessários: TypeScript/build; login do fundador/setor/empresa, criação fictícia de empresa, CNPJ único, conta desativada, Firestore/Auth Emulator, negação de acesso cruzado e QA E2E empresarial antes de qualquer produção. Reutilizar verificações válidas; não repetir suítes extensas sem razão técnica.
+6. Somente então deliberar **GO/NO-GO** e a sequência de PRs/merge/deploy, sempre com autorização específica. A suspensão **não tem data automática de término**.
+
+**Handoff de retomada recomendado:** iniciar pelo presente checkpoint, reler as seções do memorial e verificar o estado real do repositório/infraestrutura. O trabalho empresarial continua aproveitável, mas **compatibilidade futura não é garantida sem essa conferência**.
+
+---
+
 > **PRECEDÊNCIA DE INFRAESTRUTURA (31/10/2026):** os workspaces empresariais continuam sujeitos ao seu próprio ciclo de desenvolvimento/integração; **não** confundir migração da hospedagem web com publicação das funcionalidades empresariais. O domínio operacional principal está em Google Cloud Run por Firebase Hosting, e o procedimento canônico de publicação é [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). Registros Vercel abaixo são históricos.
 
 ## CHECKPOINT R0 — Decisão de integração e estratégia de branches (30/10/2026)
