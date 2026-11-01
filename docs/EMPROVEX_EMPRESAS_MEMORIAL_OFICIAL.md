@@ -62,6 +62,19 @@
 
 ---
 
+
+## CHECKPOINT TRANSVERSAL R1 — Integrador Admin e Identidade (31/10/2026)
+
+**Entrega de implementação:** PR DRAFT #447 — feat/emprovex-admin-identity-unified-r1; SHA certificado de código `7541b4c51b267b2122fdbde8022a07a762656214`. Base documental PR #444, fundação Almox W5 PR #441 SHA d89781d5347d04173af98bcc50c71d99bfb8f663; componentes empresariais portados seletivamente da PR #419 SHA 2281ac7deddc5271354e1f1faef441bc17246472.
+
+**Implementado:** uma entrada "Cadastrar cliente" no Admin, com seleção Apo​rovisionamento, Almoxarifado ou Empresa; reaproveitamento dos formulários e serviços, sem reimplementar cadastro; AdminCompaniesPanel e APIs server-side de provisionamento, unicidade CNPJ e sessão empresarial; portal /empresa protegido. Conta company/workspaceType company é separada de sector/sectorType, sem UG ou claims Warehouse. Acesso por UID, conta e workspace real, não pelo tipo escolhido no frontend. O fundador continua usando senha na tela; Google compatível somente no Firebase backend. /login resolve company no servidor antes de carregar o shell dos setores.
+
+**Certificação:** workflow isolado R1: npm run typecheck PASS; 7/7 testes puros/estruturais dirigidos PASS; npm run build PASS. Fast CI, Core Protection, Auth/tenant, Warehouse/3D, documentos, transações e isolamento setorial no Emulator passam no SHA de código. Browser E2E geral não é declarado PASS até GitHub registrar seu resultado. Esses testes não substituem QA empresarial real de criação de identidade Firebase, índices CNPJ, isolamento e login entre workspaces.
+
+**Parecer:** GO CONDICIONAL para revisão técnica da integração; NO-GO para merge, deploy, Rules e ativação de contas reais. Workflows existentes e estados exatos da PR são a evidência final. Preservar a saída W5 bloqueada e não inferir cobrança/trial para Company/Almox.
+
+---
+
 # EMPROVEX EMPRESAS — PLANO MESTRE V2
 ## Gestão do pós-licitação, cadeia de abastecimento, compras, entregas e financeiro
 
