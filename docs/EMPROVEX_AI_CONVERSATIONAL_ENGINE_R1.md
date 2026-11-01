@@ -41,6 +41,8 @@ A classificação é heurística de reconhecimento conservadora; não é um clas
 
 Fonte documental: docs/EMPROVEX_AI_MEMORIAL_OFICIAL.md na PR #455. A matriz R1 inspira elegância, objetividade, honestidade epistêmica, empatia moderada, firmeza e humor discreto; não reproduz identidade ou falas de Donna Paulsen.
 
+O catálogo versionado em lib/emprovex-ai/conversation/knowledge.ts contém id, tema, perguntas relacionadas, fonte, visibilidade (public/sector/admin), versão, disponibilidade, restrições e referências. approvedPublicAnswer só devolve conteúdo explicitamente público e documentalmente verificado; dados planejados, comerciais sem fonte vigente ou administrativos retornam ausência de resposta.
+
 As respostas locais autorizadas incluem identidade de Eleonor, sua inspiração e o propósito geral do EMPROVEX. Autoria do projeto, preços, produtos em desenvolvimento, capacidade técnica habilitada e regras de retenção dependem de fonte institucional atualizada e autorizada. Não foi criado catálogo paralelo com tutoriais privados.
 
 A camada de estilo: presentAiResponse() W3 segue íntegra; o estilo W7 atua nas respostas conversacionais, sem tocar valores, resultados, ressalvas, escopo ou proveniência de W3.
