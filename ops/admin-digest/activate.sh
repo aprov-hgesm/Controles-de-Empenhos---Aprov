@@ -55,8 +55,7 @@ gcloud scheduler jobs create http "$test_job" --project="$project" --location="$
   --oidc-service-account-email="$runtime_sa" --oidc-token-audience="$audience" \
   --max-retry-attempts=0 --attempt-deadline=180s --quiet
 cleanup_test() {
-  gcloud scheduler jobs delete "$test_job" --project="$project" --location="$region" --quiet
-trap - EXIT >/dev/null 2>&1 || true
+  gcloud scheduler jobs delete "$test_job" --project="$project" --location="$region" --quiet >/dev/null 2>&1 || true
 }
 trap cleanup_test EXIT
 gcloud scheduler jobs run "$test_job" --project="$project" --location="$region" --quiet
@@ -75,6 +74,7 @@ for attempt in $(seq 1 24); do
 done
 [[ "$success" == 1 ]] || { echo "::error::Unable to verify HTTP test delivery"; exit 1; }
 gcloud scheduler jobs delete "$test_job" --project="$project" --location="$region" --quiet
+trap - EXIT
 # Only promote after the test HTTP target reports success.
 finished=0
 rollback() {
