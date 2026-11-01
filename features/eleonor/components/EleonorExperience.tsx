@@ -73,6 +73,7 @@ export function EleonorExperience({
   const contextRef = useRef<string | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
   const requestNumber = useRef(0);
+  const busyRef = useRef(false);
   const nextId = useRef(0);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -89,6 +90,7 @@ export function EleonorExperience({
 
   const newConversation = () => {
     requestNumber.current += 1;
+    busyRef.current = false;
     controllerRef.current?.abort();
     controllerRef.current = null;
     contextRef.current = undefined;
@@ -100,7 +102,8 @@ export function EleonorExperience({
 
   const send = async (value = draft) => {
     const message = value.trim();
-    if (!message || message.length > 1000 || loading || !user) return;
+    if (!message || message.length > 1000 || busyRef.current || !user) return;
+    busyRef.current = true;
     const number = ++requestNumber.current;
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -162,6 +165,7 @@ export function EleonorExperience({
       }]);
     } finally {
       if (number === requestNumber.current) {
+        busyRef.current = false;
         controllerRef.current = null;
         setLoading(false);
       }
