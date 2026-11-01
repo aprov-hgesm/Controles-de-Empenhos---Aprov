@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
+import Image from 'next/image';
 import {
-  ArrowUp, BookOpenText, ExternalLink, LoaderCircle, MessageCircle,
-  Plus, Sparkles, X,
+  ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
+  Plus, X,
 } from 'lucide-react';
 
 type Evidence = { source: string; documentId: string };
@@ -35,13 +36,15 @@ const SUGGESTIONS = [
 ];
 
 function EleonorSymbol({ size = 'normal' }: { size?: 'normal' | 'large' }) {
+  if (size === 'large') {
+    return <Image src="/branding/eleonor-light.svg" alt="Eleonor" width={240} height={80}
+      unoptimized className="h-auto w-[220px] max-w-[70vw]" />;
+  }
   return (
-    <span
-      aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center rounded-[35%] border border-blue-300/40 bg-gradient-to-br from-[#3261e7] via-[#00288e] to-[#031229] text-white shadow-[0_7px_24px_rgba(3,35,112,0.28)] ${size === 'large' ? 'h-14 w-14' : 'h-10 w-10'}`}
-    >
-      <span className={`font-semibold tracking-[-0.12em] [font-family:Georgia,serif] ${size === 'large' ? 'text-[35px]' : 'text-[25px]'}`}>E</span>
-      <Sparkles className="absolute -right-1 -top-1 h-3.5 w-3.5 text-[#b9dcff]" />
+    <span aria-hidden="true"
+      className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-[#dce5f4] bg-[#f1f6fe]">
+      <Image src="/branding/eleonor-light.svg" alt="" width={120} height={40} unoptimized
+        className="h-10 w-[120px] max-w-none object-left" />
     </span>
   );
 }
@@ -272,16 +275,17 @@ export function EleonorExperience({
     return (
       <section data-testid="eleonor-full-chat"
         className="relative flex h-[calc(100dvh-11rem)] min-h-[440px] flex-col overflow-hidden rounded-[28px] border border-[#dce5f4] bg-gradient-to-b from-[#f4f8ff] via-[#f7faff] to-[#edf3fc] shadow-[0_20px_65px_-40px_rgba(0,40,142,0.32)]">
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-blue-100 bg-white/75 px-5 py-4 sm:px-7">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-blue-900 bg-[#06183e] px-4 py-3 sm:px-7">
           <div className="flex items-center gap-3">
-            <EleonorSymbol />
-            <div>
-              <h1 className="text-lg font-bold leading-tight tracking-tight text-[#0b1c30]">Eleonor</h1>
-              <p className="text-[11px] font-medium text-slate-500">Assistente inteligente do EMPROVEX</p>
+            <Image src="/branding/eleonor-dark.svg" alt="Eleonor" width={150} height={50}
+              unoptimized className="h-auto w-[138px] sm:w-[166px]" priority />
+            <div className="hidden sm:block">
+              <h1 className="sr-only">Eleonor</h1>
+              <p className="text-[11px] font-medium text-blue-100/80">Assistente inteligente do EMPROVEX</p>
             </div>
           </div>
           <button onClick={newConversation} type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-[#00288e] hover:bg-blue-50">
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
             <Plus className="h-4 w-4" /> Nova conversa
           </button>
         </header>
@@ -296,12 +300,10 @@ export function EleonorExperience({
         <section role="dialog" aria-modal="false" aria-label="Conversa rápida com Eleonor"
           className="pointer-events-auto flex h-[min(590px,calc(100dvh-9rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[25px] border border-blue-200/60 bg-[#f6f9ff] shadow-[0_24px_85px_rgba(2,17,49,0.28)]">
           <header className="flex shrink-0 items-center justify-between border-b border-blue-100 bg-white/90 px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <EleonorSymbol />
-              <div>
-                <p className="text-sm font-bold text-[#0b1c30]">Eleonor</p>
-                <p className="text-[10px] text-slate-500">Assistente EMPROVEX</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <Image src="/branding/eleonor-light.svg" alt="Eleonor" width={132} height={44}
+                unoptimized className="h-auto w-[126px]" />
+              <span className="hidden text-[10px] text-slate-500 sm:inline">AI</span>
             </div>
             <div className="flex items-center gap-1">
               <button type="button" onClick={newConversation} aria-label="Nova conversa"
@@ -321,9 +323,14 @@ export function EleonorExperience({
       <button type="button" onClick={() => setOpen(value => !value)}
         aria-label={open ? 'Recolher Eleonor' : 'Conversar com Eleonor'}
         aria-expanded={open} title="Conversar com Eleonor"
-        className="pointer-events-auto group inline-flex h-14 w-14 items-center justify-center rounded-[20px] border border-blue-300/50 bg-gradient-to-br from-[#1c51df] to-[#021c57] text-white shadow-[0_12px_32px_rgba(0,40,142,0.28)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,40,142,0.4)]">
-        {open ? <MessageCircle className="h-5 w-5" /> : <span className="text-3xl [font-family:Georgia,serif]">E</span>}
-        {!open && <Sparkles className="absolute -right-1 -top-1 h-4 w-4 text-[#bfddff]" aria-hidden="true" />}
+        className="pointer-events-auto group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] border border-blue-300/50 bg-[#06183e] text-white shadow-[0_12px_32px_rgba(0,40,142,0.28)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(0,40,142,0.4)]">
+        <span className="absolute inset-0 overflow-hidden rounded-[19px]" aria-hidden="true">
+          <Image src="/branding/emprovex-dark.svg" alt="" width={72} height={72}
+            unoptimized className="h-full w-full scale-[1.45] object-cover" />
+        </span>
+        {open && <span className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-200 bg-white text-[#00288e] shadow-sm">
+          <X className="h-3 w-3" />
+        </span>}
       </button>
     </aside>
   );
