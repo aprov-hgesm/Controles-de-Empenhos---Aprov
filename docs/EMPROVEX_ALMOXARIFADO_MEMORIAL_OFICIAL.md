@@ -574,6 +574,25 @@ O adendo deve conter os seguintes campos com evidências rastreáveis:
 
 ---
 
+#### W3 R1-B — Motor determinístico de posições (31/10/2026)
+
+**Entrega:** [PR DRAFT #439](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/439) → `feat/emprovex-almox-r1-w3-position-planner`, direcionada a `feat/emprovex-almox-r0-w1-foundation`. **Base exata W1 R0.1:** `baa5cde3957cb00b40bec9e1a250621a15cc4e06`. **SHA de código antes deste adendo:** `dcaf8eec653c260af28fba10ccea5b3f922f5b25`. O SHA final com o próprio handoff deve ser conferido no `head.sha` da PR #439 (um commit não pode registrar seu próprio hash em seu conteúdo).
+
+**Arquivos exclusivos alterados/criados:**
+- `lib/almoxarifado/materialMatch.ts` — correspondência por `MaterialCorrespondenceV1` aprovada e versionada com chave de workspace, código SISCOFIS e unidade; verificação do fator contra apresentações/conversões cadastradas, quantidade canônica limitada a seis decimais e sugestões textuais **sem confirmação automática**. Material fora do workspace, inativo, desconhecido ou mapeamentos conflitantes resultam em pendência.
+- `lib/almoxarifado/positionPlanner.ts` — motor puro baseado em `RequestLineV1`, `SeparationPlanV1` e `WarehouseStockPosition`: elegibilidade somente de depósito/local/subposição ativos, com workspace e UG consistentes, saldos físicos reais e revisões, seleção única automática somente quando há uma posição suficiente, escolha humana se houver várias, parcelas explícitas que fecham o somatório e parcial apenas com `allowPartial`. O mesmo saldo não é contabilizado duas vezes entre linhas no mesmo plano. Exibe `MULTIPLE_POSITIONS`, `UNASSIGNED_STOCK`, `INACTIVE_POSITION`, `INSUFFICIENT_STOCK`, `STOCK_CHANGED` e `CROSS_WORKSPACE_ACCESS` sem inventar local/saldo.
+- `scripts/emprovex-almox-w3.test.mjs` — testes determinísticos e regressões negativas para posição única, múltiplas, subposição, split, falta/parcial, inativos, desconhecido, unidade, mapeamento ambíguo, workspace, revisões, concorrência lógica entre linhas e duplicidades.
+
+**Invariantes:** nenhuma gravação Firestore, transação, reserva, baixa, movimento, edição de ledger, alteração de `contracts.ts`, W2, W4, identidade, Rules ou infraestrutura. `SeparationPlanV1` preserva `actualBaseQuantity=null`, `plannedBaseQuantity <= requestedBaseQuantity`, soma das parcelas igual ao planejado, cada alocação com posição completa, revisão e saldo disponível do snapshot. `UNKNOWN` não vira quantidade autorizada. Uma sugestão por descrição nunca vincula `materialId` automaticamente. Snapshots de múltiplos workspaces são bloqueados integralmente, sem exposição de detalhes de terceiro.
+
+**Evidências realmente executadas:** `node --test scripts/emprovex-almox-w3.test.mjs` — **13/13 PASS** em ambiente local isolado, com simuladores dos helpers puros de warehouse; `tsc --noEmit --strict --target ES2022 --module commonjs --moduleResolution node ...` — **PASS para os dois módulos W3** com interfaces locais equivalentes aos contratos W1 e warehouse. Hashes SHA-1 dos blobs de origem conferidos entre arquivos ensaiados e arquivos publicados na PR: `adc01cdb8703e04879244027a5b2d47761d0b53f`, `e8b0d8ae3c4be8aa1003b4cd1670f1f4529d1882`, `335471c0a00fea0a3004c957004e913d5bd85c0f`. **TypeScript/build da aplicação completa e CI GitHub ainda dependem de evidência própria**; não inferir PASS a partir desses testes isolados.
+
+**Riscos e handoff ao W5:** (P0) snapshot de saldo pode ficar obsoleto entre planejamento e saída: W5 deve reconsultar e validar atomicamente sob transação/ledger idempotente; `revalidatePhysicalSeparation()` é apenas pré-conferência, nunca autorização de baixa. (P1) correspondências SISCOFIS exigem cadastro/validação da origem confiável e revisão auditável; não confiar em texto ou na marca `CONFIRMED` isolada do documento importado. (P1) apresentações especiais com rótulo não são convertidas por código genérico para evitar fator falso; homologar unidades reais do SISCOFIS com o catálogo. (P1) testes locais simulam helpers do warehouse e não constituem integração E2E; W5 precisa executar cenários de snapshots reais, isolamento e saldo concorrente. (P2) ordenação por chave estável de posição, sem roteirização geométrica.
+
+**Parecer W3:** **GO CONDICIONAL para revisão/integrador W5**, com motor R1-B implementado e testes dirigidos verdes; **NO-GO para merge, baixa ou produção nesta PR isolada**. Manter DRAFT sem deploy, sem publicação de Rules e sem merge. A homologação final é responsabilidade de W5.
+
+---
+
 ### 13.4. Procedimento de verificação por mensagem curta
 
 Ao receber **"verifique o resultado do worker"** sobre o Almoxarifado, o coordenador deverá:
