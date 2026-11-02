@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-gb62f82ec6a87-20",
-  "sourceSha": "b62f82ec6a87403a84cd7ba19c6b7cd8ac7a6329",
-  "reason": "Explicit authorization for exactly revision gb62f82ec6a87-20, SHA b62f82ec6a87403a84cd7ba19c6b7cd8ac7a6329, 100% production traffic, domain health, circular favicon and rollback. R4 branding PR #469; later Eleonor main SHA not included in this approved image."
+  "revision": "emprovex-cloudrun-candidate-g84f0f1c107fa-21",
+  "sourceSha": "84f0f1c107fabb4f9b77924c84ddb1a1833d5590",
+  "reason": "Usuario reportou falhas da Eleonor na producao e solicitou correcao: launcher oculto, menu indisponivel, respostas genericas, consulta NFs pendentes. PR #470 incorporada ao main, W3-W7/Fast CI/Core Protection/Application CI/Visual R1+R2 PASS; Cloud Run stage revisao exata com zero trafego e health PASS. Promover via workflow oficial com rollback automatico. Preservar logo/favicon PR #469 incluido na imagem. Piloto fundador mantido; notas pendentes apenas de tramitacao, nao pagamento."
 }
