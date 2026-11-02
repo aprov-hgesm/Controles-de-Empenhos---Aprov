@@ -1,6 +1,6 @@
 /** Fluxo autenticação -> W4 -> parser e autorização W3 -> resposta sem LLM. */
 import {interpret,validateModelCandidate} from '../context';
-import {interpretFirstWithLfm3} from './modelFirst';
+import {interpretFirstWithLfm3,type ModelFirstOutcome} from './modelFirst';
 import {historyEnabled,createHistory,getHistory,appendHistory} from '../conversation/historyStore';
 import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 import {planConversation} from '../conversation/engine';
@@ -23,6 +23,7 @@ export type AiAskPayload={
  result?:AiResponse;contextToken?:string;filterAudit?:{requested:string[];represented:string[];unhandled:string[]};
  metrics:{authenticationMs:number;interpretationMs:number;contractValidationMs:number;w3ExecutionMs:number;
   responseMs:number;totalMs:number;examinedDocuments:number;qwenCalls:0;lfm3Calls:number;
+  modelFirstOutcome:'not_attempted'|'skipped_safe_writing'|ModelFirstOutcome;
   modelOutcome:'not_attempted'|Lfm3Outcome|'candidate_rejected'|'filter_rejected'|'query_accepted'};
 };
 export function parseAskInput(input:unknown):AiAskInput {
@@ -69,12 +70,31 @@ export async function runAiAsk(args:{
      conversationId=undefined;
    }
  }
- // Language model classifies first. Firestore and W3 remain exclusively server-authorized.
- const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&aiLfm3Enabled();
- const modelFirst=modelFirstAttempted?await interpretFirstWithLfm3(args.input.message,previous?.refs):null;
+ // W4 is an immutable safety preflight, never the authority for unknown language.
+ // Harmless writing bypasses a redundant model classification to save CPU and latency.
+ // Every operational request still reaches the LFM3 classifier before W5/W3 execution.
  const interpreted=interpret({message:args.input.message,now,
    scope:{sessionId:cookieState.session.sid,workspaceId:access.workspaceId},previous});
  const interpretationMs=interpreted.metrics.durationMs;
+ const conversation=planConversation({message:args.input.message,
+   operational:{route:interpreted.route,reason:interpreted.reason,intent:interpreted.intent},
+   previous:previous?.conversation,now});
+ const operationalSignal=/\b(?:empenho|empenhos|fornecedor|fornecedores|nota fiscal|notas fiscais|nf|nfs|estoque|deposito|material|materiais|cronograma|saldo|ug|siafi|siscofis|pagamento|financeiro|cadastro|fatura)\b/i.test(args.input.message);
+ const safeCreativeWriting=conversation?.modelEligible===true && conversation.family==='writing' &&
+   !operationalSignal && conversation.mode!=='critical' &&
+   !/\b(?:com dados|dados do|saldo|valores?|empenhos?|notas? fiscais?|movimentacoes?|extrato|pagamento|senha|token|cpf|cnpj|conta bancaria|dados pessoais)\b/i.test(args.input.message);
+ const directWriter=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1' &&
+   safeCreativeWriting&&aiConversationalModelEnabled();
+ const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&
+   aiLfm3Enabled()&&!directWriter;
+ let modelFirstOutcome:AiAskPayload['metrics']['modelFirstOutcome']=directWriter?'skipped_safe_writing':'not_attempted';
+ const modelFirst=modelFirstAttempted?await interpretFirstWithLfm3(
+   args.input.message,previous?.refs,(outcome)=>{modelFirstOutcome=outcome}
+ ):null;
+ // The following diagnostics contain only constant outcome codes, not model text or tokens.
+ if(modelFirstAttempted && modelFirst && modelFirstOutcome==='not_attempted')
+   modelFirstOutcome=modelFirst.kind==='operational'?'model_operational':
+     modelFirst.kind==='conversation'?'model_conversation':'model_unsupported';
  let contractValidationMs=0,w3ExecutionMs=0,responseMs=0,examinedDocuments=0;
  let status:AiAskPayload['status'],answer:string;
  let result:AiResponse|undefined,query:AiAskPayload['query'],contextToken:string|undefined;
@@ -83,15 +103,9 @@ export async function runAiAsk(args:{
  if(modelFirst)modelOutcome=modelFirst.kind==='operational'?'model_json_received':
    modelFirst.kind==='conversation'?'model_answer_accepted':'candidate_rejected';
  const recordModelOutcome=(outcome:Lfm3Outcome)=>{modelOutcome=outcome;};
- const conversation=planConversation({message:args.input.message,
-   operational:{route:interpreted.route,reason:interpreted.reason,intent:interpreted.intent},
-   previous:previous?.conversation,now});
- const operationalSignal=/\b(?:empenho|empenhos|fornecedor|fornecedores|nota fiscal|notas fiscais|nf|nfs|estoque|deposito|material|materiais|cronograma|saldo|ug|siafi|siscofis|pagamento|financeiro|cadastro|fatura)\b/i.test(args.input.message);
  const highRiskRoute=['UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route);
  const modelOperational=modelFirst?.kind==='operational' && !highRiskRoute && interpreted.route!=='DETERMINISTIC' &&
    (operationalSignal||interpreted.route==='MODEL_ELIGIBLE');
- const safeCreativeWriting=conversation?.modelEligible===true && conversation.family==='writing' &&
-   !/\b(?:com dados|dados do|saldo|valores?|empenhos?|notas? fiscais?|movimentacoes?|extrato|pagamento)\b/i.test(args.input.message);
  const modelConversation=modelFirst?.kind==='conversation' &&
    (safeCreativeWriting||(!operationalSignal &&
      !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route))) &&
@@ -209,7 +223,7 @@ export async function runAiAsk(args:{
    ...(modelAudit?{filterAudit:modelAudit}:
      interpreted.filterAudit?{filterAudit:interpreted.filterAudit}:{}),
    metrics:{authenticationMs,interpretationMs,contractValidationMs,w3ExecutionMs,responseMs,
-     totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls,modelOutcome}};
+     totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls,modelFirstOutcome,modelOutcome}};
  if(historyActive && historyWritable && conversationId){
     try{
       await appendHistory(access,conversationId,args.input.message,answer,{status,route});

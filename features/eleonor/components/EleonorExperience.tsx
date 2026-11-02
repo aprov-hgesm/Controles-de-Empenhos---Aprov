@@ -19,6 +19,7 @@ type ChatMessage = {
   evidence?: Evidence[];
   coverage?: string;
   morePages?: boolean;
+  modelDiagnostic?: string;
 };
 type AskResponse = {
   conversationId?:string;
@@ -27,6 +28,7 @@ type AskResponse = {
   status?: string;
   contextToken?: string;
   error?: string;
+  metrics?: {lfm3Calls?:number;modelFirstOutcome?:string;modelOutcome?:string};
   result?: {
     evidence?: Evidence[];
     coverage?: string;
@@ -51,6 +53,28 @@ function EleonorSymbol({ size = 'normal' }: { size?: 'normal' | 'large' }) {
         className="h-10 w-[120px] max-w-none object-left" />
     </span>
   );
+}
+
+const DIAGNOSTIC_NAMES:Record<string,string>={
+  request_timeout:'tempo de resposta excedido',
+  request_failed:'erro na chamada ao modelo',
+  model_http_error:'serviço de inferência retornou erro',
+  model_truncated:'resposta incompleta',
+  model_invalid_response:'formato de resposta inválido',
+  identity_unavailable:'identidade da aplicação indisponível',
+  identity_invalid:'autorização de serviço inválida',
+  url_invalid:'endereço de inferência inválido',
+  disabled:'recurso desativado',
+  candidate_rejected:'interpretação fora dos contratos permitidos',
+  filter_rejected:'filtros não validados'
+};
+function modelDiagnostic(payload:AskResponse):string|undefined {
+  if(payload.status!=='fallback_unavailable'&&payload.status!=='clarify')return undefined;
+  if(!payload.metrics?.lfm3Calls)return undefined;
+  const first=payload.metrics.modelFirstOutcome||'';
+  const last=payload.metrics.modelOutcome||'';
+  const label=DIAGNOSTIC_NAMES[last]||DIAGNOSTIC_NAMES[first];
+  return label?'Diagnóstico LFM3: '+label+'.':'A interpretação do LFM3 não foi concluída.';
 }
 
 function friendlyError(status: number, error?: string): string {
@@ -190,6 +214,7 @@ export function EleonorExperience({
         role: 'assistant',
         text,
         status: body.status,
+        modelDiagnostic: modelDiagnostic(body),
         evidence: Array.isArray(body.result?.evidence)
           ? body.result.evidence.filter(item => typeof item.source === 'string' && typeof item.documentId === 'string')
           : undefined,
@@ -269,6 +294,7 @@ export function EleonorExperience({
                 </div>
               )}
               <p className="whitespace-pre-wrap break-words">{item.text}</p>
+              {item.modelDiagnostic&&<p className="mt-2 text-[11px] text-amber-700" role="status">{item.modelDiagnostic}</p>}
               {item.role === 'assistant' && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
                 <p className="mt-2 text-[11px] font-semibold text-amber-700">
                   {item.morePages ? 'Existem outros registros disponíveis.' : 'A cobertura desta consulta não está confirmada como completa.'}
