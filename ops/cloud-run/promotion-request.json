@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
-  "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
-  "reason": "Goal urgente P0 aprovado em chat 2026-11-02: consolidar PR #472 acesso InPrivate e PR #473 HTML cache desatualizado; Application CI, Fast CI, Visual R2, security checks PASS; build Cloud Run confirmado com rota dinamica e stage 0% health PASS. Promover 100% via workflow oficial com rollback. Preservar autenticação, faturamento, empenhos, notas, Firestore, IA e logos. Firebase Hosting cache invalidation tratada separadamente."
+  "revision": "emprovex-cloudrun-candidate-g949be94af071-25",
+  "sourceSha": "949be94af071e715b86b6a3965cc0ef23ba29547",
+  "reason": "Autorizacao explicita em 2026-11-02 via 'vamos fazer oq vc recomenda': promover Eleonor R3 integrada e validada, mantendo EMPROVEX_AI_R3_MODEL_FIRST_ENABLED e EMPROVEX_AI_HISTORY_ENABLED desligados. Build stage 41396761640, Application CI 41396761701 e Core Protection 41396761656 SUCCESS; isolamento de dados, Firestore e IAM nao alterados. Preservar rollback automatico e revisao anterior."
 }
