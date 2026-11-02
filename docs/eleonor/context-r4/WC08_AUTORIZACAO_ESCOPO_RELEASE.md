@@ -73,15 +73,6 @@ As 18 famílias somam exatamente 242 IDs. Papel/visibilidade abaixo é política
 
 | Família | IDs | Domínio | Rota | Status de código/documento | Perfil | Gate/ressalva |
 |---|---:|---|---|---|---|---|
-| F-10 | 15 | Alocação/SISCOFIS | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, docs and positions |
-| F-11 | 16 | Estoque/inventário | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, balances and scope |
-| F-12 | 15 | Saídas | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, stock and manual confirmation |
-| F-13 | 11 | Operador móvel | /operador-movel | MAIN COM GATES | operador setorial autorizado | Auth and mobile API |
-| F-14 | 22 | Admin | /admin | MAIN | fundador verificado | independent founder authorization |
-| F-15 | 16 | Assinatura/ajuda | /regularizacao; menu Ajuda; institucional | MAIN COM GATES | visitante/setor/fundador conforme função | billing/catalog/revision |
-| F-16 | 9 | Eleonor | /central-empenhos?tab=eleonor | MAIN COM GATES | setor autorizado; piloto restrito | AI environment + Auth + W3 |
-| F-17 | 15 | Almoxarifado | /almoxarifado | PR/PILOTO | setor piloto futuro | PR #463 sem release |
-| F-18 | 5 | Empresas | /empresa | PAUSADO | empresa futura, suspensão vigente | PR #419 suspensa |
 | F-01 | 13 | Login/identidade | /login; /central-empenhos | MAIN | setor próprio; fundador em modo Admin | session/account/workspace/provider |
 | F-02 | 8 | Painel financeiro | /central-empenhos | MAIN | setor do workspace | authenticated workspace |
 | F-03 | 22 | Empenhos | /central-empenhos | MAIN | setor do workspace | identified NE and tenant |
@@ -91,6 +82,15 @@ As 18 famílias somam exatamente 242 IDs. Papel/visibilidade abaixo é política
 | F-07 | 12 | Relatórios/SAG | /central-empenhos | MAIN | setor do workspace | UI and source data |
 | F-08 | 7 | Avisos | /central-empenhos | MAIN | setor do workspace | own account |
 | F-09 | 16 | Depósitos/estrutura | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, billing, status API |
+| F-10 | 15 | Alocação/SISCOFIS | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, docs and positions |
+| F-11 | 16 | Estoque/inventário | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, balances and scope |
+| F-12 | 15 | Saídas | /central-depositos | MAIN COM GATES | setor Warehouse ativo | module, stock and manual confirmation |
+| F-13 | 11 | Operador móvel | /operador-movel | MAIN COM GATES | operador setorial autorizado | Auth and mobile API |
+| F-14 | 22 | Admin | /admin | MAIN | fundador verificado | independent founder authorization |
+| F-15 | 16 | Assinatura/ajuda | /regularizacao; menu Ajuda; institucional | MAIN COM GATES | visitante/setor/fundador conforme função | billing/catalog/revision |
+| F-16 | 9 | Eleonor | /central-empenhos?tab=eleonor | MAIN COM GATES | setor autorizado; piloto restrito | AI environment + Auth + W3 |
+| F-17 | 15 | Almoxarifado | /almoxarifado | PR/PILOTO | setor piloto futuro | PR #463 sem release |
+| F-18 | 5 | Empresas | /empresa | PAUSADO | empresa futura, suspensão vigente | PR #419 suspensa |
 
 ### Gatilhos especiais
 
