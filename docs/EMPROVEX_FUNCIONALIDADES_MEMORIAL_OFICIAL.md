@@ -11,6 +11,14 @@
 
 > Este memorial distingue **o que está implementado**, **o que o usuário pode ver**, **o que ainda depende de habilitação** e **o que não está publicado**. A Eleonor deve reconhecer essa distinção em todas as respostas. Os passos descrevem o caminho funcional esperado pelas telas auditadas, não garantem que o botão esteja disponível em qualquer sessão/revisão.
 
+## Atualização R2 — bateria de avaliação da Eleonor (02/11/2026)
+
+O **catálogo oficial de 242 funcionalidades e respectivos passos permanece na seção 4**. A expansão R2 adiciona uma bateria com **4.412 perguntas/mensagens de teste**: **4.114 variações vinculadas aos procedimentos (§9)**, **175 cenários específicos com expectativa explícita (§10)** e **123 mensagens em 41 conversas de múltiplos turnos (§11)**. As 4.114 perguntas do §9 são únicas dentro desse conjunto; os cenários e conversas acrescentam novos contextos de avaliação.
+
+**Como usar:** escolha uma pergunta identificada, confira o procedimento `F-XX-YYY` correspondente no §4, peça à Eleonor que responda no ambiente em que está autorizada e compare o resultado aos critérios da seção 12. Registre PASS/REVIEW/FAIL e não atribua sucesso ao simples fato de o teste ter sido escrito. Para uma medição honesta, mantenha §10–11 como *holdout* durante eventuais ajustes no motor; apenas depois de encerrar a rodada use os erros para revisão do corpus.
+
+**Não foi executado treinamento de pesos, fine-tuning, integração automática do corpus ao motor, validação de respostas no Cloud Run nem deploy.** A documentação prepara os dados para essas etapas, com segurança e sem prometer que recursos em PR estão publicados.
+
 ## 1. Metodologia e fontes
 
 1. Inspeção da árvore completa da `main` pelo endpoint GitHub Git Tree (`recursive=1`): **1.541 entradas**, resposta marcada `truncated=false`. Incluídos `app`, `features`, `components`, `lib`, `docs`, APIs, shell de navegação e Operador Móvel.
@@ -2441,9 +2449,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.1. Acesso, identidade e preferência
 
-#### F-01-001 — Entrar como setor · MAIN
+#### Bateria vinculada a F-01-001 — Entrar como setor · MAIN
 
-**Referência de resposta:** [F-01-001](#f-01-001-entrar-como-setor) — passos do §4 e condição: Exige credenciais válidas, setor ativo e autorização; não compartilhar senhas.
+**Referência de resposta:** procedimento `F-01-001` (§4) — passos e condição: Exige credenciais válidas, setor ativo e autorização; não compartilhar senhas.
 
 - **Q-F-01-001-01:** Como faço para entrar como setor no EMPROVEX?
 - **Q-F-01-001-02:** Onde encontro a opção para entrar como setor?
@@ -2463,9 +2471,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-001-16:** Você consegue me orientar sobre entrar como setor pelo celular ou no modo Essencial?
 - **Q-F-01-001-17:** A função de entrar como setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-002 — Entrar como fundador · MAIN
+#### Bateria vinculada a F-01-002 — Entrar como fundador · MAIN
 
-**Referência de resposta:** [F-01-002](#f-01-002-entrar-como-fundador) — passos do §4 e condição: Acesso administrativo depende da identidade fundadora, não da aparência de um botão.
+**Referência de resposta:** procedimento `F-01-002` (§4) — passos e condição: Acesso administrativo depende da identidade fundadora, não da aparência de um botão.
 
 - **Q-F-01-002-01:** Como faço para entrar como fundador no EMPROVEX?
 - **Q-F-01-002-02:** Onde encontro a opção para entrar como fundador?
@@ -2485,9 +2493,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-002-16:** Você consegue me orientar sobre entrar como fundador pelo celular ou no modo Essencial?
 - **Q-F-01-002-17:** A função de entrar como fundador está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-003 — Recuperar senha · MAIN
+#### Bateria vinculada a F-01-003 — Recuperar senha · MAIN
 
-**Referência de resposta:** [F-01-003](#f-01-003-recuperar-senha) — passos do §4 e condição: Não solicitar códigos ou senhas na conversa.
+**Referência de resposta:** procedimento `F-01-003` (§4) — passos e condição: Não solicitar códigos ou senhas na conversa.
 
 - **Q-F-01-003-01:** Como faço para recuperar senha no EMPROVEX?
 - **Q-F-01-003-02:** Onde encontro a opção para recuperar senha?
@@ -2507,9 +2515,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-003-16:** Você consegue me orientar sobre recuperar senha pelo celular ou no modo Essencial?
 - **Q-F-01-003-17:** A função de recuperar senha está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-004 — Mostrar ou ocultar senha · MAIN
+#### Bateria vinculada a F-01-004 — Mostrar ou ocultar senha · MAIN
 
-**Referência de resposta:** [F-01-004](#f-01-004-mostrar-ou-ocultar-senha) — passos do §4 e condição: Controle visual; não modifica a senha.
+**Referência de resposta:** procedimento `F-01-004` (§4) — passos e condição: Controle visual; não modifica a senha.
 
 - **Q-F-01-004-01:** Como faço para mostrar ou ocultar senha no EMPROVEX?
 - **Q-F-01-004-02:** Onde encontro a opção para mostrar ou ocultar senha?
@@ -2529,9 +2537,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-004-16:** Você consegue me orientar sobre mostrar ou ocultar senha pelo celular ou no modo Essencial?
 - **Q-F-01-004-17:** A função de mostrar ou ocultar senha está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-005 — Aceite de termos e privacidade · MAIN
+#### Bateria vinculada a F-01-005 — Aceite de termos e privacidade · MAIN
 
-**Referência de resposta:** [F-01-005](#f-01-005-aceite-de-termos-e-privacidade) — passos do §4 e condição: Não contornar bloqueio de aceite obrigatório.
+**Referência de resposta:** procedimento `F-01-005` (§4) — passos e condição: Não contornar bloqueio de aceite obrigatório.
 
 - **Q-F-01-005-01:** Como faço para aceite de termos e privacidade no EMPROVEX?
 - **Q-F-01-005-02:** Onde encontro a opção para aceite de termos e privacidade?
@@ -2551,9 +2559,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-005-16:** Você consegue me orientar sobre aceite de termos e privacidade pelo celular ou no modo Essencial?
 - **Q-F-01-005-17:** A função de aceite de termos e privacidade está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-006 — Primeiro acesso setorial · MAIN
+#### Bateria vinculada a F-01-006 — Primeiro acesso setorial · MAIN
 
-**Referência de resposta:** [F-01-006](#f-01-006-primeiro-acesso-setorial) — passos do §4 e condição: Checklist de orientação, não prova de execução de tarefa real.
+**Referência de resposta:** procedimento `F-01-006` (§4) — passos e condição: Checklist de orientação, não prova de execução de tarefa real.
 
 - **Q-F-01-006-01:** Como faço para primeiro acesso setorial no EMPROVEX?
 - **Q-F-01-006-02:** Onde encontro a opção para primeiro acesso setorial?
@@ -2573,9 +2581,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-006-16:** Você consegue me orientar sobre primeiro acesso setorial pelo celular ou no modo Essencial?
 - **Q-F-01-006-17:** A função de primeiro acesso setorial está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-007 — Alterar senha de setor · MAIN
+#### Bateria vinculada a F-01-007 — Alterar senha de setor · MAIN
 
-**Referência de resposta:** [F-01-007](#f-01-007-alterar-senha-de-setor) — passos do §4 e condição: Não instruir a modificar senhas de terceiros.
+**Referência de resposta:** procedimento `F-01-007` (§4) — passos e condição: Não instruir a modificar senhas de terceiros.
 
 - **Q-F-01-007-01:** Como faço para alterar senha de setor no EMPROVEX?
 - **Q-F-01-007-02:** Onde encontro a opção para alterar senha de setor?
@@ -2595,9 +2603,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-007-16:** Você consegue me orientar sobre alterar senha de setor pelo celular ou no modo Essencial?
 - **Q-F-01-007-17:** A função de alterar senha de setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-008 — Abrir Minha Conta · MAIN
+#### Bateria vinculada a F-01-008 — Abrir Minha Conta · MAIN
 
-**Referência de resposta:** [F-01-008](#f-01-008-abrir-minha-conta) — passos do §4 e condição: As ações disponíveis dependem do perfil e do estado comercial.
+**Referência de resposta:** procedimento `F-01-008` (§4) — passos e condição: As ações disponíveis dependem do perfil e do estado comercial.
 
 - **Q-F-01-008-01:** Como faço para abrir Minha Conta no EMPROVEX?
 - **Q-F-01-008-02:** Onde encontro a opção para abrir Minha Conta?
@@ -2617,9 +2625,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-008-16:** Você consegue me orientar sobre abrir Minha Conta pelo celular ou no modo Essencial?
 - **Q-F-01-008-17:** A função de abrir Minha Conta está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-009 — Alternar perfil fundador/setor · MAIN
+#### Bateria vinculada a F-01-009 — Alternar perfil fundador/setor · MAIN
 
-**Referência de resposta:** [F-01-009](#f-01-009-alternar-perfil-fundadorsetor) — passos do §4 e condição: Não pressupor disponibilidade para todo usuário.
+**Referência de resposta:** procedimento `F-01-009` (§4) — passos e condição: Não pressupor disponibilidade para todo usuário.
 
 - **Q-F-01-009-01:** Como faço para alternar perfil fundador/setor no EMPROVEX?
 - **Q-F-01-009-02:** Onde encontro a opção para alternar perfil fundador/setor?
@@ -2639,9 +2647,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-009-16:** Você consegue me orientar sobre alternar perfil fundador/setor pelo celular ou no modo Essencial?
 - **Q-F-01-009-17:** A função de alternar perfil fundador/setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-010 — Sair com segurança · MAIN
+#### Bateria vinculada a F-01-010 — Sair com segurança · MAIN
 
-**Referência de resposta:** [F-01-010](#f-01-010-sair-com-seguranca) — passos do §4 e condição: Não presumir que fechar a aba equivale a logout.
+**Referência de resposta:** procedimento `F-01-010` (§4) — passos e condição: Não presumir que fechar a aba equivale a logout.
 
 - **Q-F-01-010-01:** Como faço para sair com segurança no EMPROVEX?
 - **Q-F-01-010-02:** Onde encontro a opção para sair com segurança?
@@ -2661,9 +2669,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-010-16:** Você consegue me orientar sobre sair com segurança pelo celular ou no modo Essencial?
 - **Q-F-01-010-17:** A função de sair com segurança está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-011 — Alternar modo Normal/Essencial · MAIN
+#### Bateria vinculada a F-01-011 — Alternar modo Normal/Essencial · MAIN
 
-**Referência de resposta:** [F-01-011](#f-01-011-alternar-modo-normalessencial) — passos do §4 e condição: Modo Essencial não é um segundo banco nem autoriza operações diferentes.
+**Referência de resposta:** procedimento `F-01-011` (§4) — passos e condição: Modo Essencial não é um segundo banco nem autoriza operações diferentes.
 
 - **Q-F-01-011-01:** Como faço para alternar modo Normal/Essencial no EMPROVEX?
 - **Q-F-01-011-02:** Onde encontro a opção para alternar modo Normal/Essencial?
@@ -2683,9 +2691,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-011-16:** Você consegue me orientar sobre alternar modo Normal/Essencial pelo celular ou no modo Essencial?
 - **Q-F-01-011-17:** A função de alternar modo Normal/Essencial está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-012 — Usar menu móvel e acessibilidade · MAIN
+#### Bateria vinculada a F-01-012 — Usar menu móvel e acessibilidade · MAIN
 
-**Referência de resposta:** [F-01-012](#f-01-012-usar-menu-movel-e-acessibilidade) — passos do §4 e condição: Controles de teclado e responsividade podem variar por superfície.
+**Referência de resposta:** procedimento `F-01-012` (§4) — passos e condição: Controles de teclado e responsividade podem variar por superfície.
 
 - **Q-F-01-012-01:** Como faço para usar menu móvel e acessibilidade no EMPROVEX?
 - **Q-F-01-012-02:** Onde encontro a opção para usar menu móvel e acessibilidade?
@@ -2705,9 +2713,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-01-012-16:** Você consegue me orientar sobre usar menu móvel e acessibilidade pelo celular ou no modo Essencial?
 - **Q-F-01-012-17:** A função de usar menu móvel e acessibilidade está disponível para todos os workspaces ou depende de acesso?
 
-#### F-01-013 — Acessar módulo Depósitos autorizado · MAIN
+#### Bateria vinculada a F-01-013 — Acessar módulo Depósitos autorizado · MAIN
 
-**Referência de resposta:** [F-01-013](#f-01-013-acessar-modulo-depositos-autorizado) — passos do §4 e condição: A presença do atalho não substitui autorização por workspace.
+**Referência de resposta:** procedimento `F-01-013` (§4) — passos e condição: A presença do atalho não substitui autorização por workspace.
 
 - **Q-F-01-013-01:** Como faço para acessar módulo Depósitos autorizado no EMPROVEX?
 - **Q-F-01-013-02:** Onde encontro a opção para acessar módulo Depósitos autorizado?
@@ -2729,9 +2737,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.2. Início e Painel Financeiro
 
-#### F-02-001 — Abrir tela Início · MAIN
+#### Bateria vinculada a F-02-001 — Abrir tela Início · MAIN
 
-**Referência de resposta:** [F-02-001](#f-02-001-abrir-tela-inicio) — passos do §4 e condição: No modo Essencial a interface pode usar o Painel como entrada.
+**Referência de resposta:** procedimento `F-02-001` (§4) — passos e condição: No modo Essencial a interface pode usar o Painel como entrada.
 
 - **Q-F-02-001-01:** Como faço para abrir tela Início no EMPROVEX?
 - **Q-F-02-001-02:** Onde encontro a opção para abrir tela Início?
@@ -2751,9 +2759,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-001-16:** Você consegue me orientar sobre abrir tela Início pelo celular ou no modo Essencial?
 - **Q-F-02-001-17:** A função de abrir tela Início está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-002 — Abrir Painel · MAIN
+#### Bateria vinculada a F-02-002 — Abrir Painel · MAIN
 
-**Referência de resposta:** [F-02-002](#f-02-002-abrir-painel) — passos do §4 e condição: Valores dependem dos documentos disponíveis no workspace.
+**Referência de resposta:** procedimento `F-02-002` (§4) — passos e condição: Valores dependem dos documentos disponíveis no workspace.
 
 - **Q-F-02-002-01:** Como faço para abrir Painel no EMPROVEX?
 - **Q-F-02-002-02:** Onde encontro a opção para abrir Painel?
@@ -2773,9 +2781,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-002-16:** Você consegue me orientar sobre abrir Painel pelo celular ou no modo Essencial?
 - **Q-F-02-002-17:** A função de abrir Painel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-003 — Filtrar indicadores por pregão · MAIN
+#### Bateria vinculada a F-02-003 — Filtrar indicadores por pregão · MAIN
 
-**Referência de resposta:** [F-02-003](#f-02-003-filtrar-indicadores-por-pregao) — passos do §4 e condição: Não confundir filtro visual com alteração de dados.
+**Referência de resposta:** procedimento `F-02-003` (§4) — passos e condição: Não confundir filtro visual com alteração de dados.
 
 - **Q-F-02-003-01:** Como faço para filtrar indicadores por pregão no EMPROVEX?
 - **Q-F-02-003-02:** Onde encontro a opção para filtrar indicadores por pregão?
@@ -2795,9 +2803,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-003-16:** Você consegue me orientar sobre filtrar indicadores por pregão pelo celular ou no modo Essencial?
 - **Q-F-02-003-17:** A função de filtrar indicadores por pregão está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-004 — Filtrar indicadores por classe · MAIN
+#### Bateria vinculada a F-02-004 — Filtrar indicadores por classe · MAIN
 
-**Referência de resposta:** [F-02-004](#f-02-004-filtrar-indicadores-por-classe) — passos do §4 e condição: Classes dependem de configuração vigente.
+**Referência de resposta:** procedimento `F-02-004` (§4) — passos e condição: Classes dependem de configuração vigente.
 
 - **Q-F-02-004-01:** Como faço para filtrar indicadores por classe no EMPROVEX?
 - **Q-F-02-004-02:** Onde encontro a opção para filtrar indicadores por classe?
@@ -2817,9 +2825,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-004-16:** Você consegue me orientar sobre filtrar indicadores por classe pelo celular ou no modo Essencial?
 - **Q-F-02-004-17:** A função de filtrar indicadores por classe está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-005 — Consultar saldo empenhado, recebido e disponível · MAIN
+#### Bateria vinculada a F-02-005 — Consultar saldo empenhado, recebido e disponível · MAIN
 
-**Referência de resposta:** [F-02-005](#f-02-005-consultar-saldo-empenhado-recebido-e-disponivel) — passos do §4 e condição: Cálculo depende dos registros e da consistência financeira.
+**Referência de resposta:** procedimento `F-02-005` (§4) — passos e condição: Cálculo depende dos registros e da consistência financeira.
 
 - **Q-F-02-005-01:** Como faço para consultar saldo empenhado, recebido e disponível no EMPROVEX?
 - **Q-F-02-005-02:** Onde encontro a opção para consultar saldo empenhado, recebido e disponível?
@@ -2839,9 +2847,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-005-16:** Você consegue me orientar sobre consultar saldo empenhado, recebido e disponível pelo celular ou no modo Essencial?
 - **Q-F-02-005-17:** A função de consultar saldo empenhado, recebido e disponível está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-006 — Pesquisar NE ou fornecedor no painel · MAIN
+#### Bateria vinculada a F-02-006 — Pesquisar NE ou fornecedor no painel · MAIN
 
-**Referência de resposta:** [F-02-006](#f-02-006-pesquisar-ne-ou-fornecedor-no-painel) — passos do §4 e condição: Busca local, não busca global entre organizações.
+**Referência de resposta:** procedimento `F-02-006` (§4) — passos e condição: Busca local, não busca global entre organizações.
 
 - **Q-F-02-006-01:** Como faço para pesquisar NE ou fornecedor no painel no EMPROVEX?
 - **Q-F-02-006-02:** Onde encontro a opção para pesquisar NE ou fornecedor no painel?
@@ -2861,9 +2869,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-006-16:** Você consegue me orientar sobre pesquisar NE ou fornecedor no painel pelo celular ou no modo Essencial?
 - **Q-F-02-006-17:** A função de pesquisar NE ou fornecedor no painel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-007 — Examinar detalhamento por classe · MAIN
+#### Bateria vinculada a F-02-007 — Examinar detalhamento por classe · MAIN
 
-**Referência de resposta:** [F-02-007](#f-02-007-examinar-detalhamento-por-classe) — passos do §4 e condição: Linhas podem carregar progressivamente.
+**Referência de resposta:** procedimento `F-02-007` (§4) — passos e condição: Linhas podem carregar progressivamente.
 
 - **Q-F-02-007-01:** Como faço para examinar detalhamento por classe no EMPROVEX?
 - **Q-F-02-007-02:** Onde encontro a opção para examinar detalhamento por classe?
@@ -2883,9 +2891,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-02-007-16:** Você consegue me orientar sobre examinar detalhamento por classe pelo celular ou no modo Essencial?
 - **Q-F-02-007-17:** A função de examinar detalhamento por classe está disponível para todos os workspaces ou depende de acesso?
 
-#### F-02-008 — Abrir itens ou cadastro de NF pelo Painel · MAIN
+#### Bateria vinculada a F-02-008 — Abrir itens ou cadastro de NF pelo Painel · MAIN
 
-**Referência de resposta:** [F-02-008](#f-02-008-abrir-itens-ou-cadastro-de-nf-pelo-painel) — passos do §4 e condição: Confirme identidade da NE antes de registrar recebimento.
+**Referência de resposta:** procedimento `F-02-008` (§4) — passos e condição: Confirme identidade da NE antes de registrar recebimento.
 
 - **Q-F-02-008-01:** Como faço para abrir itens ou cadastro de NF pelo Painel no EMPROVEX?
 - **Q-F-02-008-02:** Onde encontro a opção para abrir itens ou cadastro de NF pelo Painel?
@@ -2907,9 +2915,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.3. Gestão de Empenhos e itens de NE
 
-#### F-03-001 — Listar empenhos · MAIN
+#### Bateria vinculada a F-03-001 — Listar empenhos · MAIN
 
-**Referência de resposta:** [F-03-001](#f-03-001-listar-empenhos) — passos do §4 e condição: Somente registros acessíveis à UG/workspace.
+**Referência de resposta:** procedimento `F-03-001` (§4) — passos e condição: Somente registros acessíveis à UG/workspace.
 
 - **Q-F-03-001-01:** Como faço para listar empenhos no EMPROVEX?
 - **Q-F-03-001-02:** Onde encontro a opção para listar empenhos?
@@ -2929,9 +2937,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-001-16:** Você consegue me orientar sobre listar empenhos pelo celular ou no modo Essencial?
 - **Q-F-03-001-17:** A função de listar empenhos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-002 — Pesquisar NE ou fornecedor · MAIN
+#### Bateria vinculada a F-03-002 — Pesquisar NE ou fornecedor · MAIN
 
-**Referência de resposta:** [F-03-002](#f-03-002-pesquisar-ne-ou-fornecedor) — passos do §4 e condição: Cheque exercício e fornecedor para homônimos.
+**Referência de resposta:** procedimento `F-03-002` (§4) — passos e condição: Cheque exercício e fornecedor para homônimos.
 
 - **Q-F-03-002-01:** Como faço para pesquisar NE ou fornecedor no EMPROVEX?
 - **Q-F-03-002-02:** Onde encontro a opção para pesquisar NE ou fornecedor?
@@ -2951,9 +2959,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-002-16:** Você consegue me orientar sobre pesquisar NE ou fornecedor pelo celular ou no modo Essencial?
 - **Q-F-03-002-17:** A função de pesquisar NE ou fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-003 — Filtrar NE por pregão · MAIN
+#### Bateria vinculada a F-03-003 — Filtrar NE por pregão · MAIN
 
-**Referência de resposta:** [F-03-003](#f-03-003-filtrar-ne-por-pregao) — passos do §4 e condição: É filtro de consulta.
+**Referência de resposta:** procedimento `F-03-003` (§4) — passos e condição: É filtro de consulta.
 
 - **Q-F-03-003-01:** Como faço para filtrar NE por pregão no EMPROVEX?
 - **Q-F-03-003-02:** Onde encontro a opção para filtrar NE por pregão?
@@ -2973,9 +2981,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-003-16:** Você consegue me orientar sobre filtrar NE por pregão pelo celular ou no modo Essencial?
 - **Q-F-03-003-17:** A função de filtrar NE por pregão está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-004 — Filtrar NE por exercício · MAIN
+#### Bateria vinculada a F-03-004 — Filtrar NE por exercício · MAIN
 
-**Referência de resposta:** [F-03-004](#f-03-004-filtrar-ne-por-exercicio) — passos do §4 e condição: Exercícios anteriores podem ter regras específicas de saldo.
+**Referência de resposta:** procedimento `F-03-004` (§4) — passos e condição: Exercícios anteriores podem ter regras específicas de saldo.
 
 - **Q-F-03-004-01:** Como faço para filtrar NE por exercício no EMPROVEX?
 - **Q-F-03-004-02:** Onde encontro a opção para filtrar NE por exercício?
@@ -2995,9 +3003,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-004-16:** Você consegue me orientar sobre filtrar NE por exercício pelo celular ou no modo Essencial?
 - **Q-F-03-004-17:** A função de filtrar NE por exercício está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-005 — Filtrar NE por classe · MAIN
+#### Bateria vinculada a F-03-005 — Filtrar NE por classe · MAIN
 
-**Referência de resposta:** [F-03-005](#f-03-005-filtrar-ne-por-classe) — passos do §4 e condição: Classe é atributo próprio da NE.
+**Referência de resposta:** procedimento `F-03-005` (§4) — passos e condição: Classe é atributo próprio da NE.
 
 - **Q-F-03-005-01:** Como faço para filtrar NE por classe no EMPROVEX?
 - **Q-F-03-005-02:** Onde encontro a opção para filtrar NE por classe?
@@ -3017,9 +3025,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-005-16:** Você consegue me orientar sobre filtrar NE por classe pelo celular ou no modo Essencial?
 - **Q-F-03-005-17:** A função de filtrar NE por classe está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-006 — Filtrar NE por situação/saldo · MAIN
+#### Bateria vinculada a F-03-006 — Filtrar NE por situação/saldo · MAIN
 
-**Referência de resposta:** [F-03-006](#f-03-006-filtrar-ne-por-situacaosaldo) — passos do §4 e condição: Rótulos exatos podem variar com os estados presentes.
+**Referência de resposta:** procedimento `F-03-006` (§4) — passos e condição: Rótulos exatos podem variar com os estados presentes.
 
 - **Q-F-03-006-01:** Como faço para filtrar NE por situação/saldo no EMPROVEX?
 - **Q-F-03-006-02:** Onde encontro a opção para filtrar NE por situação/saldo?
@@ -3039,9 +3047,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-006-16:** Você consegue me orientar sobre filtrar NE por situação/saldo pelo celular ou no modo Essencial?
 - **Q-F-03-006-17:** A função de filtrar NE por situação/saldo está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-007 — Cadastrar NE manualmente · MAIN
+#### Bateria vinculada a F-03-007 — Cadastrar NE manualmente · MAIN
 
-**Referência de resposta:** [F-03-007](#f-03-007-cadastrar-ne-manualmente) — passos do §4 e condição: Não duplicar NE; respeitar validações de número/identidade.
+**Referência de resposta:** procedimento `F-03-007` (§4) — passos e condição: Não duplicar NE; respeitar validações de número/identidade.
 
 - **Q-F-03-007-01:** Como faço para cadastrar NE manualmente no EMPROVEX?
 - **Q-F-03-007-02:** Onde encontro a opção para cadastrar NE manualmente?
@@ -3061,9 +3069,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-007-16:** Você consegue me orientar sobre cadastrar NE manualmente pelo celular ou no modo Essencial?
 - **Q-F-03-007-17:** A função de cadastrar NE manualmente está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-008 — Cadastrar NE por PDF · MAIN
+#### Bateria vinculada a F-03-008 — Cadastrar NE por PDF · MAIN
 
-**Referência de resposta:** [F-03-008](#f-03-008-cadastrar-ne-por-pdf) — passos do §4 e condição: Extração exige revisão humana; modo JSON de cadastro de NE foi desativado.
+**Referência de resposta:** procedimento `F-03-008` (§4) — passos e condição: Extração exige revisão humana; modo JSON de cadastro de NE foi desativado.
 
 - **Q-F-03-008-01:** Como faço para cadastrar NE por PDF no EMPROVEX?
 - **Q-F-03-008-02:** Onde encontro a opção para cadastrar NE por PDF?
@@ -3083,9 +3091,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-008-16:** Você consegue me orientar sobre cadastrar NE por PDF pelo celular ou no modo Essencial?
 - **Q-F-03-008-17:** A função de cadastrar NE por PDF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-009 — Revisar NE importada · MAIN
+#### Bateria vinculada a F-03-009 — Revisar NE importada · MAIN
 
-**Referência de resposta:** [F-03-009](#f-03-009-revisar-ne-importada) — passos do §4 e condição: A IA não deve inventar valores ausentes.
+**Referência de resposta:** procedimento `F-03-009` (§4) — passos e condição: A IA não deve inventar valores ausentes.
 
 - **Q-F-03-009-01:** Como faço para revisar NE importada no EMPROVEX?
 - **Q-F-03-009-02:** Onde encontro a opção para revisar NE importada?
@@ -3105,9 +3113,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-009-16:** Você consegue me orientar sobre revisar NE importada pelo celular ou no modo Essencial?
 - **Q-F-03-009-17:** A função de revisar NE importada está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-010 — Abrir detalhe da NE · MAIN
+#### Bateria vinculada a F-03-010 — Abrir detalhe da NE · MAIN
 
-**Referência de resposta:** [F-03-010](#f-03-010-abrir-detalhe-da-ne) — passos do §4 e condição: Ação de leitura.
+**Referência de resposta:** procedimento `F-03-010` (§4) — passos e condição: Ação de leitura.
 
 - **Q-F-03-010-01:** Como faço para abrir detalhe da NE no EMPROVEX?
 - **Q-F-03-010-02:** Onde encontro a opção para abrir detalhe da NE?
@@ -3127,9 +3135,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-010-16:** Você consegue me orientar sobre abrir detalhe da NE pelo celular ou no modo Essencial?
 - **Q-F-03-010-17:** A função de abrir detalhe da NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-011 — Editar CNPJ do fornecedor em NE · MAIN
+#### Bateria vinculada a F-03-011 — Editar CNPJ do fornecedor em NE · MAIN
 
-**Referência de resposta:** [F-03-011](#f-03-011-editar-cnpj-do-fornecedor-em-ne) — passos do §4 e condição: Migração de identidade financeira pode afetar documentos relacionados.
+**Referência de resposta:** procedimento `F-03-011` (§4) — passos e condição: Migração de identidade financeira pode afetar documentos relacionados.
 
 - **Q-F-03-011-01:** Como faço para editar CNPJ do fornecedor em NE no EMPROVEX?
 - **Q-F-03-011-02:** Onde encontro a opção para editar CNPJ do fornecedor em NE?
@@ -3149,9 +3157,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-011-16:** Você consegue me orientar sobre editar CNPJ do fornecedor em NE pelo celular ou no modo Essencial?
 - **Q-F-03-011-17:** A função de editar CNPJ do fornecedor em NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-012 — Editar pregão da NE · MAIN
+#### Bateria vinculada a F-03-012 — Editar pregão da NE · MAIN
 
-**Referência de resposta:** [F-03-012](#f-03-012-editar-pregao-da-ne) — passos do §4 e condição: Não alterar outros atributos desnecessariamente.
+**Referência de resposta:** procedimento `F-03-012` (§4) — passos e condição: Não alterar outros atributos desnecessariamente.
 
 - **Q-F-03-012-01:** Como faço para editar pregão da NE no EMPROVEX?
 - **Q-F-03-012-02:** Onde encontro a opção para editar pregão da NE?
@@ -3171,9 +3179,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-012-16:** Você consegue me orientar sobre editar pregão da NE pelo celular ou no modo Essencial?
 - **Q-F-03-012-17:** A função de editar pregão da NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-013 — Editar nota de crédito da NE · MAIN
+#### Bateria vinculada a F-03-013 — Editar nota de crédito da NE · MAIN
 
-**Referência de resposta:** [F-03-013](#f-03-013-editar-nota-de-credito-da-ne) — passos do §4 e condição: Validar formato e origem documental.
+**Referência de resposta:** procedimento `F-03-013` (§4) — passos e condição: Validar formato e origem documental.
 
 - **Q-F-03-013-01:** Como faço para editar nota de crédito da NE no EMPROVEX?
 - **Q-F-03-013-02:** Onde encontro a opção para editar nota de crédito da NE?
@@ -3193,9 +3201,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-013-16:** Você consegue me orientar sobre editar nota de crédito da NE pelo celular ou no modo Essencial?
 - **Q-F-03-013-17:** A função de editar nota de crédito da NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-014 — Alterar classificação da NE · MAIN
+#### Bateria vinculada a F-03-014 — Alterar classificação da NE · MAIN
 
-**Referência de resposta:** [F-03-014](#f-03-014-alterar-classificacao-da-ne) — passos do §4 e condição: Classes configuráveis pela unidade.
+**Referência de resposta:** procedimento `F-03-014` (§4) — passos e condição: Classes configuráveis pela unidade.
 
 - **Q-F-03-014-01:** Como faço para alterar classificação da NE no EMPROVEX?
 - **Q-F-03-014-02:** Onde encontro a opção para alterar classificação da NE?
@@ -3215,9 +3223,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-014-16:** Você consegue me orientar sobre alterar classificação da NE pelo celular ou no modo Essencial?
 - **Q-F-03-014-17:** A função de alterar classificação da NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-015 — Adicionar item à NE · MAIN
+#### Bateria vinculada a F-03-015 — Adicionar item à NE · MAIN
 
-**Referência de resposta:** [F-03-015](#f-03-015-adicionar-item-a-ne) — passos do §4 e condição: Unidade e quantidade devem corresponder ao documento original.
+**Referência de resposta:** procedimento `F-03-015` (§4) — passos e condição: Unidade e quantidade devem corresponder ao documento original.
 
 - **Q-F-03-015-01:** Como faço para adicionar item à NE no EMPROVEX?
 - **Q-F-03-015-02:** Onde encontro a opção para adicionar item à NE?
@@ -3237,9 +3245,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-015-16:** Você consegue me orientar sobre adicionar item à NE pelo celular ou no modo Essencial?
 - **Q-F-03-015-17:** A função de adicionar item à NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-016 — Editar descritivo ou NR de item · MAIN
+#### Bateria vinculada a F-03-016 — Editar descritivo ou NR de item · MAIN
 
-**Referência de resposta:** [F-03-016](#f-03-016-editar-descritivo-ou-nr-de-item) — passos do §4 e condição: Não substituir identificação oficial por aproximação textual.
+**Referência de resposta:** procedimento `F-03-016` (§4) — passos e condição: Não substituir identificação oficial por aproximação textual.
 
 - **Q-F-03-016-01:** Como faço para editar descritivo ou NR de item no EMPROVEX?
 - **Q-F-03-016-02:** Onde encontro a opção para editar descritivo ou NR de item?
@@ -3259,9 +3267,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-016-16:** Você consegue me orientar sobre editar descritivo ou NR de item pelo celular ou no modo Essencial?
 - **Q-F-03-016-17:** A função de editar descritivo ou NR de item está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-017 — Remover item de NE · MAIN
+#### Bateria vinculada a F-03-017 — Remover item de NE · MAIN
 
-**Referência de resposta:** [F-03-017](#f-03-017-remover-item-de-ne) — passos do §4 e condição: Pode ser bloqueado por NF, saldo ou vínculos existentes.
+**Referência de resposta:** procedimento `F-03-017` (§4) — passos e condição: Pode ser bloqueado por NF, saldo ou vínculos existentes.
 
 - **Q-F-03-017-01:** Como faço para remover item de NE no EMPROVEX?
 - **Q-F-03-017-02:** Onde encontro a opção para remover item de NE?
@@ -3281,9 +3289,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-017-16:** Você consegue me orientar sobre remover item de NE pelo celular ou no modo Essencial?
 - **Q-F-03-017-17:** A função de remover item de NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-018 — Consultar saldo por item de NE · MAIN
+#### Bateria vinculada a F-03-018 — Consultar saldo por item de NE · MAIN
 
-**Referência de resposta:** [F-03-018](#f-03-018-consultar-saldo-por-item-de-ne) — passos do §4 e condição: Saldo de NE não equivale a saldo físico do depósito.
+**Referência de resposta:** procedimento `F-03-018` (§4) — passos e condição: Saldo de NE não equivale a saldo físico do depósito.
 
 - **Q-F-03-018-01:** Como faço para consultar saldo por item de NE no EMPROVEX?
 - **Q-F-03-018-02:** Onde encontro a opção para consultar saldo por item de NE?
@@ -3303,9 +3311,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-018-16:** Você consegue me orientar sobre consultar saldo por item de NE pelo celular ou no modo Essencial?
 - **Q-F-03-018-17:** A função de consultar saldo por item de NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-019 — Gerar ou imprimir relatório de NE · MAIN
+#### Bateria vinculada a F-03-019 — Gerar ou imprimir relatório de NE · MAIN
 
-**Referência de resposta:** [F-03-019](#f-03-019-gerar-ou-imprimir-relatorio-de-ne) — passos do §4 e condição: O documento reproduz registros autorizados.
+**Referência de resposta:** procedimento `F-03-019` (§4) — passos e condição: O documento reproduz registros autorizados.
 
 - **Q-F-03-019-01:** Como faço para gerar ou imprimir relatório de NE no EMPROVEX?
 - **Q-F-03-019-02:** Onde encontro a opção para gerar ou imprimir relatório de NE?
@@ -3325,9 +3333,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-019-16:** Você consegue me orientar sobre gerar ou imprimir relatório de NE pelo celular ou no modo Essencial?
 - **Q-F-03-019-17:** A função de gerar ou imprimir relatório de NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-020 — Gerenciar classes de empenho · MAIN
+#### Bateria vinculada a F-03-020 — Gerenciar classes de empenho · MAIN
 
-**Referência de resposta:** [F-03-020](#f-03-020-gerenciar-classes-de-empenho) — passos do §4 e condição: Configuração tem impacto em classificações e relatórios.
+**Referência de resposta:** procedimento `F-03-020` (§4) — passos e condição: Configuração tem impacto em classificações e relatórios.
 
 - **Q-F-03-020-01:** Como faço para gerenciar classes de empenho no EMPROVEX?
 - **Q-F-03-020-02:** Onde encontro a opção para gerenciar classes de empenho?
@@ -3347,9 +3355,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-020-16:** Você consegue me orientar sobre gerenciar classes de empenho pelo celular ou no modo Essencial?
 - **Q-F-03-020-17:** A função de gerenciar classes de empenho está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-021 — Excluir NE · MAIN
+#### Bateria vinculada a F-03-021 — Excluir NE · MAIN
 
-**Referência de resposta:** [F-03-021](#f-03-021-excluir-ne) — passos do §4 e condição: Ação destrutiva: a Eleonor apenas orienta, não executa.
+**Referência de resposta:** procedimento `F-03-021` (§4) — passos e condição: Ação destrutiva: a Eleonor apenas orienta, não executa.
 
 - **Q-F-03-021-01:** Como faço para excluir NE no EMPROVEX?
 - **Q-F-03-021-02:** Onde encontro a opção para excluir NE?
@@ -3369,9 +3377,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-03-021-16:** Você consegue me orientar sobre excluir NE pelo celular ou no modo Essencial?
 - **Q-F-03-021-17:** A função de excluir NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-03-022 — Anexar ou consultar PDF de Nota de Empenho · MAIN
+#### Bateria vinculada a F-03-022 — Anexar ou consultar PDF de Nota de Empenho · MAIN
 
-**Referência de resposta:** [F-03-022](#f-03-022-anexar-ou-consultar-pdf-de-nota-de-empenho) — passos do §4 e condição: Depende de storage/Drive e autorização; não inventar link documental.
+**Referência de resposta:** procedimento `F-03-022` (§4) — passos e condição: Depende de storage/Drive e autorização; não inventar link documental.
 
 - **Q-F-03-022-01:** Como faço para anexar ou consultar PDF de Nota de Empenho no EMPROVEX?
 - **Q-F-03-022-02:** Onde encontro a opção para anexar ou consultar PDF de Nota de Empenho?
@@ -3393,9 +3401,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.4. Notas Fiscais, NS e recebimento
 
-#### F-04-001 — Acompanhar NFs cadastradas · MAIN
+#### Bateria vinculada a F-04-001 — Acompanhar NFs cadastradas · MAIN
 
-**Referência de resposta:** [F-04-001](#f-04-001-acompanhar-nfs-cadastradas) — passos do §4 e condição: A situação é derivada dos registros existentes.
+**Referência de resposta:** procedimento `F-04-001` (§4) — passos e condição: A situação é derivada dos registros existentes.
 
 - **Q-F-04-001-01:** Como faço para acompanhar NFs cadastradas no EMPROVEX?
 - **Q-F-04-001-02:** Onde encontro a opção para acompanhar NFs cadastradas?
@@ -3415,9 +3423,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-001-16:** Você consegue me orientar sobre acompanhar NFs cadastradas pelo celular ou no modo Essencial?
 - **Q-F-04-001-17:** A função de acompanhar NFs cadastradas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-002 — Buscar nota fiscal · MAIN
+#### Bateria vinculada a F-04-002 — Buscar nota fiscal · MAIN
 
-**Referência de resposta:** [F-04-002](#f-04-002-buscar-nota-fiscal) — passos do §4 e condição: Checar CNPJ e identidade da NF para números repetidos.
+**Referência de resposta:** procedimento `F-04-002` (§4) — passos e condição: Checar CNPJ e identidade da NF para números repetidos.
 
 - **Q-F-04-002-01:** Como faço para buscar nota fiscal no EMPROVEX?
 - **Q-F-04-002-02:** Onde encontro a opção para buscar nota fiscal?
@@ -3437,9 +3445,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-002-16:** Você consegue me orientar sobre buscar nota fiscal pelo celular ou no modo Essencial?
 - **Q-F-04-002-17:** A função de buscar nota fiscal está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-003 — Filtrar NF por NE · MAIN
+#### Bateria vinculada a F-04-003 — Filtrar NF por NE · MAIN
 
-**Referência de resposta:** [F-04-003](#f-04-003-filtrar-nf-por-ne) — passos do §4 e condição: Somente NFs autorizadas.
+**Referência de resposta:** procedimento `F-04-003` (§4) — passos e condição: Somente NFs autorizadas.
 
 - **Q-F-04-003-01:** Como faço para filtrar NF por NE no EMPROVEX?
 - **Q-F-04-003-02:** Onde encontro a opção para filtrar NF por NE?
@@ -3459,9 +3467,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-003-16:** Você consegue me orientar sobre filtrar NF por NE pelo celular ou no modo Essencial?
 - **Q-F-04-003-17:** A função de filtrar NF por NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-004 — Filtrar NF por mês · MAIN
+#### Bateria vinculada a F-04-004 — Filtrar NF por mês · MAIN
 
-**Referência de resposta:** [F-04-004](#f-04-004-filtrar-nf-por-mes) — passos do §4 e condição: Usar a data do documento definida pelo sistema.
+**Referência de resposta:** procedimento `F-04-004` (§4) — passos e condição: Usar a data do documento definida pelo sistema.
 
 - **Q-F-04-004-01:** Como faço para filtrar NF por mês no EMPROVEX?
 - **Q-F-04-004-02:** Onde encontro a opção para filtrar NF por mês?
@@ -3481,9 +3489,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-004-16:** Você consegue me orientar sobre filtrar NF por mês pelo celular ou no modo Essencial?
 - **Q-F-04-004-17:** A função de filtrar NF por mês está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-005 — Filtrar NF por tramitação · MAIN
+#### Bateria vinculada a F-04-005 — Filtrar NF por tramitação · MAIN
 
-**Referência de resposta:** [F-04-005](#f-04-005-filtrar-nf-por-tramitacao) — passos do §4 e condição: Não afirmar que todo documento pendente foi efetivamente recebido.
+**Referência de resposta:** procedimento `F-04-005` (§4) — passos e condição: Não afirmar que todo documento pendente foi efetivamente recebido.
 
 - **Q-F-04-005-01:** Como faço para filtrar NF por tramitação no EMPROVEX?
 - **Q-F-04-005-02:** Onde encontro a opção para filtrar NF por tramitação?
@@ -3503,9 +3511,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-005-16:** Você consegue me orientar sobre filtrar NF por tramitação pelo celular ou no modo Essencial?
 - **Q-F-04-005-17:** A função de filtrar NF por tramitação está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-006 — Ordenar NFs · MAIN
+#### Bateria vinculada a F-04-006 — Ordenar NFs · MAIN
 
-**Referência de resposta:** [F-04-006](#f-04-006-ordenar-nfs) — passos do §4 e condição: Ordenação não altera registros.
+**Referência de resposta:** procedimento `F-04-006` (§4) — passos e condição: Ordenação não altera registros.
 
 - **Q-F-04-006-01:** Como faço para ordenar NFs no EMPROVEX?
 - **Q-F-04-006-02:** Onde encontro a opção para ordenar NFs?
@@ -3525,9 +3533,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-006-16:** Você consegue me orientar sobre ordenar NFs pelo celular ou no modo Essencial?
 - **Q-F-04-006-17:** A função de ordenar NFs está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-007 — Cadastrar NF · MAIN
+#### Bateria vinculada a F-04-007 — Cadastrar NF · MAIN
 
-**Referência de resposta:** [F-04-007](#f-04-007-cadastrar-nf) — passos do §4 e condição: Cadastro altera recebimento financeiro e precisa refletir documento real.
+**Referência de resposta:** procedimento `F-04-007` (§4) — passos e condição: Cadastro altera recebimento financeiro e precisa refletir documento real.
 
 - **Q-F-04-007-01:** Como faço para cadastrar NF no EMPROVEX?
 - **Q-F-04-007-02:** Onde encontro a opção para cadastrar NF?
@@ -3547,9 +3555,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-007-16:** Você consegue me orientar sobre cadastrar NF pelo celular ou no modo Essencial?
 - **Q-F-04-007-17:** A função de cadastrar NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-008 — Anexar PDF da NF · MAIN
+#### Bateria vinculada a F-04-008 — Anexar PDF da NF · MAIN
 
-**Referência de resposta:** [F-04-008](#f-04-008-anexar-pdf-da-nf) — passos do §4 e condição: No formulário auditado o limite indicado é 10 MB.
+**Referência de resposta:** procedimento `F-04-008` (§4) — passos e condição: No formulário auditado o limite indicado é 10 MB.
 
 - **Q-F-04-008-01:** Como faço para anexar PDF da NF no EMPROVEX?
 - **Q-F-04-008-02:** Onde encontro a opção para anexar PDF da NF?
@@ -3569,9 +3577,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-008-16:** Você consegue me orientar sobre anexar PDF da NF pelo celular ou no modo Essencial?
 - **Q-F-04-008-17:** A função de anexar PDF da NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-009 — Editar NF · MAIN
+#### Bateria vinculada a F-04-009 — Editar NF · MAIN
 
-**Referência de resposta:** [F-04-009](#f-04-009-editar-nf) — passos do §4 e condição: Recalcular saldo vinculado com integridade transacional.
+**Referência de resposta:** procedimento `F-04-009` (§4) — passos e condição: Recalcular saldo vinculado com integridade transacional.
 
 - **Q-F-04-009-01:** Como faço para editar NF no EMPROVEX?
 - **Q-F-04-009-02:** Onde encontro a opção para editar NF?
@@ -3591,9 +3599,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-009-16:** Você consegue me orientar sobre editar NF pelo celular ou no modo Essencial?
 - **Q-F-04-009-17:** A função de editar NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-010 — Excluir NF · MAIN
+#### Bateria vinculada a F-04-010 — Excluir NF · MAIN
 
-**Referência de resposta:** [F-04-010](#f-04-010-excluir-nf) — passos do §4 e condição: Exclusão ajusta recebimentos da NE; não tratar como simples remoção visual.
+**Referência de resposta:** procedimento `F-04-010` (§4) — passos e condição: Exclusão ajusta recebimentos da NE; não tratar como simples remoção visual.
 
 - **Q-F-04-010-01:** Como faço para excluir NF no EMPROVEX?
 - **Q-F-04-010-02:** Onde encontro a opção para excluir NF?
@@ -3613,9 +3621,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-010-16:** Você consegue me orientar sobre excluir NF pelo celular ou no modo Essencial?
 - **Q-F-04-010-17:** A função de excluir NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-011 — Abrir itens de NF · MAIN
+#### Bateria vinculada a F-04-011 — Abrir itens de NF · MAIN
 
-**Referência de resposta:** [F-04-011](#f-04-011-abrir-itens-de-nf) — passos do §4 e condição: Consulta não modifica registros.
+**Referência de resposta:** procedimento `F-04-011` (§4) — passos e condição: Consulta não modifica registros.
 
 - **Q-F-04-011-01:** Como faço para abrir itens de NF no EMPROVEX?
 - **Q-F-04-011-02:** Onde encontro a opção para abrir itens de NF?
@@ -3635,9 +3643,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-011-16:** Você consegue me orientar sobre abrir itens de NF pelo celular ou no modo Essencial?
 - **Q-F-04-011-17:** A função de abrir itens de NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-012 — Gerar/imprimir relatório ou PDF de NF · MAIN
+#### Bateria vinculada a F-04-012 — Gerar/imprimir relatório ou PDF de NF · MAIN
 
-**Referência de resposta:** [F-04-012](#f-04-012-gerarimprimir-relatorio-ou-pdf-de-nf) — passos do §4 e condição: Não confundir espelho da NF com documento original do fornecedor.
+**Referência de resposta:** procedimento `F-04-012` (§4) — passos e condição: Não confundir espelho da NF com documento original do fornecedor.
 
 - **Q-F-04-012-01:** Como faço para gerar/imprimir relatório ou PDF de NF no EMPROVEX?
 - **Q-F-04-012-02:** Onde encontro a opção para gerar/imprimir relatório ou PDF de NF?
@@ -3657,9 +3665,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-012-16:** Você consegue me orientar sobre gerar/imprimir relatório ou PDF de NF pelo celular ou no modo Essencial?
 - **Q-F-04-012-17:** A função de gerar/imprimir relatório ou PDF de NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-013 — Anexar ou consultar espelho da NF · MAIN
+#### Bateria vinculada a F-04-013 — Anexar ou consultar espelho da NF · MAIN
 
-**Referência de resposta:** [F-04-013](#f-04-013-anexar-ou-consultar-espelho-da-nf) — passos do §4 e condição: Armazenamento e acesso dependem de permissões.
+**Referência de resposta:** procedimento `F-04-013` (§4) — passos e condição: Armazenamento e acesso dependem de permissões.
 
 - **Q-F-04-013-01:** Como faço para anexar ou consultar espelho da NF no EMPROVEX?
 - **Q-F-04-013-02:** Onde encontro a opção para anexar ou consultar espelho da NF?
@@ -3679,9 +3687,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-013-16:** Você consegue me orientar sobre anexar ou consultar espelho da NF pelo celular ou no modo Essencial?
 - **Q-F-04-013-17:** A função de anexar ou consultar espelho da NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-014 — Registrar ou corrigir NS · MAIN
+#### Bateria vinculada a F-04-014 — Registrar ou corrigir NS · MAIN
 
-**Referência de resposta:** [F-04-014](#f-04-014-registrar-ou-corrigir-ns) — passos do §4 e condição: Não forçar NS em documento sem conciliação íntegra.
+**Referência de resposta:** procedimento `F-04-014` (§4) — passos e condição: Não forçar NS em documento sem conciliação íntegra.
 
 - **Q-F-04-014-01:** Como faço para registrar ou corrigir NS no EMPROVEX?
 - **Q-F-04-014-02:** Onde encontro a opção para registrar ou corrigir NS?
@@ -3701,9 +3709,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-014-16:** Você consegue me orientar sobre registrar ou corrigir NS pelo celular ou no modo Essencial?
 - **Q-F-04-014-17:** A função de registrar ou corrigir NS está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-015 — Consultar tramitação de NF/NS · MAIN
+#### Bateria vinculada a F-04-015 — Consultar tramitação de NF/NS · MAIN
 
-**Referência de resposta:** [F-04-015](#f-04-015-consultar-tramitacao-de-nfns) — passos do §4 e condição: Pendente é um estado verificável, não uma previsão de conclusão.
+**Referência de resposta:** procedimento `F-04-015` (§4) — passos e condição: Pendente é um estado verificável, não uma previsão de conclusão.
 
 - **Q-F-04-015-01:** Como faço para consultar tramitação de NF/NS no EMPROVEX?
 - **Q-F-04-015-02:** Onde encontro a opção para consultar tramitação de NF/NS?
@@ -3723,9 +3731,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-015-16:** Você consegue me orientar sobre consultar tramitação de NF/NS pelo celular ou no modo Essencial?
 - **Q-F-04-015-17:** A função de consultar tramitação de NF/NS está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-016 — Configurar comissão de recebimento · MAIN
+#### Bateria vinculada a F-04-016 — Configurar comissão de recebimento · MAIN
 
-**Referência de resposta:** [F-04-016](#f-04-016-configurar-comissao-de-recebimento) — passos do §4 e condição: Documentos devem seguir os dados administrativos reais.
+**Referência de resposta:** procedimento `F-04-016` (§4) — passos e condição: Documentos devem seguir os dados administrativos reais.
 
 - **Q-F-04-016-01:** Como faço para configurar comissão de recebimento no EMPROVEX?
 - **Q-F-04-016-02:** Onde encontro a opção para configurar comissão de recebimento?
@@ -3745,9 +3753,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-016-16:** Você consegue me orientar sobre configurar comissão de recebimento pelo celular ou no modo Essencial?
 - **Q-F-04-016-17:** A função de configurar comissão de recebimento está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-017 — Emitir Termo de Recebimento · MAIN
+#### Bateria vinculada a F-04-017 — Emitir Termo de Recebimento · MAIN
 
-**Referência de resposta:** [F-04-017](#f-04-017-emitir-termo-de-recebimento) — passos do §4 e condição: Disponibilidade condicionada a dados/documentação exigidos.
+**Referência de resposta:** procedimento `F-04-017` (§4) — passos e condição: Disponibilidade condicionada a dados/documentação exigidos.
 
 - **Q-F-04-017-01:** Como faço para emitir Termo de Recebimento no EMPROVEX?
 - **Q-F-04-017-02:** Onde encontro a opção para emitir Termo de Recebimento?
@@ -3767,9 +3775,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-04-017-16:** Você consegue me orientar sobre emitir Termo de Recebimento pelo celular ou no modo Essencial?
 - **Q-F-04-017-17:** A função de emitir Termo de Recebimento está disponível para todos os workspaces ou depende de acesso?
 
-#### F-04-018 — Conferir vínculo de documentos com NE · MAIN
+#### Bateria vinculada a F-04-018 — Conferir vínculo de documentos com NE · MAIN
 
-**Referência de resposta:** [F-04-018](#f-04-018-conferir-vinculo-de-documentos-com-ne) — passos do §4 e condição: Não deduzir relação apenas de semelhança no fornecedor.
+**Referência de resposta:** procedimento `F-04-018` (§4) — passos e condição: Não deduzir relação apenas de semelhança no fornecedor.
 
 - **Q-F-04-018-01:** Como faço para conferir vínculo de documentos com NE no EMPROVEX?
 - **Q-F-04-018-02:** Onde encontro a opção para conferir vínculo de documentos com NE?
@@ -3791,9 +3799,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.5. Cronogramas de entrega e comunicação
 
-#### F-05-001 — Listar cronogramas por NE · MAIN
+#### Bateria vinculada a F-05-001 — Listar cronogramas por NE · MAIN
 
-**Referência de resposta:** [F-05-001](#f-05-001-listar-cronogramas-por-ne) — passos do §4 e condição: A lista usa empenhos do setor.
+**Referência de resposta:** procedimento `F-05-001` (§4) — passos e condição: A lista usa empenhos do setor.
 
 - **Q-F-05-001-01:** Como faço para listar cronogramas por NE no EMPROVEX?
 - **Q-F-05-001-02:** Onde encontro a opção para listar cronogramas por NE?
@@ -3813,9 +3821,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-001-16:** Você consegue me orientar sobre listar cronogramas por NE pelo celular ou no modo Essencial?
 - **Q-F-05-001-17:** A função de listar cronogramas por NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-002 — Criar cronograma · MAIN
+#### Bateria vinculada a F-05-002 — Criar cronograma · MAIN
 
-**Referência de resposta:** [F-05-002](#f-05-002-criar-cronograma) — passos do §4 e condição: Não programar recebimentos acima do saldo registrado.
+**Referência de resposta:** procedimento `F-05-002` (§4) — passos e condição: Não programar recebimentos acima do saldo registrado.
 
 - **Q-F-05-002-01:** Como faço para criar cronograma no EMPROVEX?
 - **Q-F-05-002-02:** Onde encontro a opção para criar cronograma?
@@ -3835,9 +3843,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-002-16:** Você consegue me orientar sobre criar cronograma pelo celular ou no modo Essencial?
 - **Q-F-05-002-17:** A função de criar cronograma está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-003 — Editar cronograma · MAIN
+#### Bateria vinculada a F-05-003 — Editar cronograma · MAIN
 
-**Referência de resposta:** [F-05-003](#f-05-003-editar-cronograma) — passos do §4 e condição: Manter histórico e não tratar edição como envio automático.
+**Referência de resposta:** procedimento `F-05-003` (§4) — passos e condição: Manter histórico e não tratar edição como envio automático.
 
 - **Q-F-05-003-01:** Como faço para editar cronograma no EMPROVEX?
 - **Q-F-05-003-02:** Onde encontro a opção para editar cronograma?
@@ -3857,9 +3865,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-003-16:** Você consegue me orientar sobre editar cronograma pelo celular ou no modo Essencial?
 - **Q-F-05-003-17:** A função de editar cronograma está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-004 — Adicionar remessa · MAIN
+#### Bateria vinculada a F-05-004 — Adicionar remessa · MAIN
 
-**Referência de resposta:** [F-05-004](#f-05-004-adicionar-remessa) — passos do §4 e condição: Remessas referem-se à NE selecionada.
+**Referência de resposta:** procedimento `F-05-004` (§4) — passos e condição: Remessas referem-se à NE selecionada.
 
 - **Q-F-05-004-01:** Como faço para adicionar remessa no EMPROVEX?
 - **Q-F-05-004-02:** Onde encontro a opção para adicionar remessa?
@@ -3879,9 +3887,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-004-16:** Você consegue me orientar sobre adicionar remessa pelo celular ou no modo Essencial?
 - **Q-F-05-004-17:** A função de adicionar remessa está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-005 — Remover remessa · MAIN
+#### Bateria vinculada a F-05-005 — Remover remessa · MAIN
 
-**Referência de resposta:** [F-05-005](#f-05-005-remover-remessa) — passos do §4 e condição: Pode mudar total programado.
+**Referência de resposta:** procedimento `F-05-005` (§4) — passos e condição: Pode mudar total programado.
 
 - **Q-F-05-005-01:** Como faço para remover remessa no EMPROVEX?
 - **Q-F-05-005-02:** Onde encontro a opção para remover remessa?
@@ -3901,9 +3909,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-005-16:** Você consegue me orientar sobre remover remessa pelo celular ou no modo Essencial?
 - **Q-F-05-005-17:** A função de remover remessa está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-006 — Aplicar distribuição predefinida · MAIN
+#### Bateria vinculada a F-05-006 — Aplicar distribuição predefinida · MAIN
 
-**Referência de resposta:** [F-05-006](#f-05-006-aplicar-distribuicao-predefinida) — passos do §4 e condição: Sugestões não substituem o planejamento operacional.
+**Referência de resposta:** procedimento `F-05-006` (§4) — passos e condição: Sugestões não substituem o planejamento operacional.
 
 - **Q-F-05-006-01:** Como faço para aplicar distribuição predefinida no EMPROVEX?
 - **Q-F-05-006-02:** Onde encontro a opção para aplicar distribuição predefinida?
@@ -3923,9 +3931,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-006-16:** Você consegue me orientar sobre aplicar distribuição predefinida pelo celular ou no modo Essencial?
 - **Q-F-05-006-17:** A função de aplicar distribuição predefinida está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-007 — Programar tudo na primeira remessa · MAIN
+#### Bateria vinculada a F-05-007 — Programar tudo na primeira remessa · MAIN
 
-**Referência de resposta:** [F-05-007](#f-05-007-programar-tudo-na-primeira-remessa) — passos do §4 e condição: Não pressupor disponibilidade de fornecedor.
+**Referência de resposta:** procedimento `F-05-007` (§4) — passos e condição: Não pressupor disponibilidade de fornecedor.
 
 - **Q-F-05-007-01:** Como faço para programar tudo na primeira remessa no EMPROVEX?
 - **Q-F-05-007-02:** Onde encontro a opção para programar tudo na primeira remessa?
@@ -3945,9 +3953,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-007-16:** Você consegue me orientar sobre programar tudo na primeira remessa pelo celular ou no modo Essencial?
 - **Q-F-05-007-17:** A função de programar tudo na primeira remessa está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-008 — Limpar distribuição de remessas · MAIN
+#### Bateria vinculada a F-05-008 — Limpar distribuição de remessas · MAIN
 
-**Referência de resposta:** [F-05-008](#f-05-008-limpar-distribuicao-de-remessas) — passos do §4 e condição: Não é exclusão da NE.
+**Referência de resposta:** procedimento `F-05-008` (§4) — passos e condição: Não é exclusão da NE.
 
 - **Q-F-05-008-01:** Como faço para limpar distribuição de remessas no EMPROVEX?
 - **Q-F-05-008-02:** Onde encontro a opção para limpar distribuição de remessas?
@@ -3967,9 +3975,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-008-16:** Você consegue me orientar sobre limpar distribuição de remessas pelo celular ou no modo Essencial?
 - **Q-F-05-008-17:** A função de limpar distribuição de remessas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-009 — Preencher instruções de entrega · MAIN
+#### Bateria vinculada a F-05-009 — Preencher instruções de entrega · MAIN
 
-**Referência de resposta:** [F-05-009](#f-05-009-preencher-instrucoes-de-entrega) — passos do §4 e condição: Tratar como instrução institucional, não mensagem espontânea da Eleonor.
+**Referência de resposta:** procedimento `F-05-009` (§4) — passos e condição: Tratar como instrução institucional, não mensagem espontânea da Eleonor.
 
 - **Q-F-05-009-01:** Como faço para preencher instruções de entrega no EMPROVEX?
 - **Q-F-05-009-02:** Onde encontro a opção para preencher instruções de entrega?
@@ -3989,9 +3997,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-009-16:** Você consegue me orientar sobre preencher instruções de entrega pelo celular ou no modo Essencial?
 - **Q-F-05-009-17:** A função de preencher instruções de entrega está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-010 — Gerar prévia de cronograma · MAIN
+#### Bateria vinculada a F-05-010 — Gerar prévia de cronograma · MAIN
 
-**Referência de resposta:** [F-05-010](#f-05-010-gerar-previa-de-cronograma) — passos do §4 e condição: Prévia não prova que o fornecedor recebeu.
+**Referência de resposta:** procedimento `F-05-010` (§4) — passos e condição: Prévia não prova que o fornecedor recebeu.
 
 - **Q-F-05-010-01:** Como faço para gerar prévia de cronograma no EMPROVEX?
 - **Q-F-05-010-02:** Onde encontro a opção para gerar prévia de cronograma?
@@ -4011,9 +4019,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-010-16:** Você consegue me orientar sobre gerar prévia de cronograma pelo celular ou no modo Essencial?
 - **Q-F-05-010-17:** A função de gerar prévia de cronograma está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-011 — Imprimir ou baixar cronograma PDF · MAIN
+#### Bateria vinculada a F-05-011 — Imprimir ou baixar cronograma PDF · MAIN
 
-**Referência de resposta:** [F-05-011](#f-05-011-imprimir-ou-baixar-cronograma-pdf) — passos do §4 e condição: Documento do setor e da NE autorizada.
+**Referência de resposta:** procedimento `F-05-011` (§4) — passos e condição: Documento do setor e da NE autorizada.
 
 - **Q-F-05-011-01:** Como faço para imprimir ou baixar cronograma PDF no EMPROVEX?
 - **Q-F-05-011-02:** Onde encontro a opção para imprimir ou baixar cronograma PDF?
@@ -4033,9 +4041,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-011-16:** Você consegue me orientar sobre imprimir ou baixar cronograma PDF pelo celular ou no modo Essencial?
 - **Q-F-05-011-17:** A função de imprimir ou baixar cronograma PDF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-012 — Enviar cronograma por e-mail · MAIN
+#### Bateria vinculada a F-05-012 — Enviar cronograma por e-mail · MAIN
 
-**Referência de resposta:** [F-05-012](#f-05-012-enviar-cronograma-por-e-mail) — passos do §4 e condição: Não alegar entrega de e-mail sem confirmação registrada.
+**Referência de resposta:** procedimento `F-05-012` (§4) — passos e condição: Não alegar entrega de e-mail sem confirmação registrada.
 
 - **Q-F-05-012-01:** Como faço para enviar cronograma por e-mail no EMPROVEX?
 - **Q-F-05-012-02:** Onde encontro a opção para enviar cronograma por e-mail?
@@ -4055,9 +4063,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-05-012-16:** Você consegue me orientar sobre enviar cronograma por e-mail pelo celular ou no modo Essencial?
 - **Q-F-05-012-17:** A função de enviar cronograma por e-mail está disponível para todos os workspaces ou depende de acesso?
 
-#### F-05-013 — Consultar histórico de envios · MAIN
+#### Bateria vinculada a F-05-013 — Consultar histórico de envios · MAIN
 
-**Referência de resposta:** [F-05-013](#f-05-013-consultar-historico-de-envios) — passos do §4 e condição: O histórico de envio não comprova aceite pelo destinatário.
+**Referência de resposta:** procedimento `F-05-013` (§4) — passos e condição: O histórico de envio não comprova aceite pelo destinatário.
 
 - **Q-F-05-013-01:** Como faço para consultar histórico de envios no EMPROVEX?
 - **Q-F-05-013-02:** Onde encontro a opção para consultar histórico de envios?
@@ -4079,9 +4087,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.6. Fornecedores e Consulta de Itens
 
-#### F-06-001 — Listar fornecedores · MAIN
+#### Bateria vinculada a F-06-001 — Listar fornecedores · MAIN
 
-**Referência de resposta:** [F-06-001](#f-06-001-listar-fornecedores) — passos do §4 e condição: Somente cadastro autorizado.
+**Referência de resposta:** procedimento `F-06-001` (§4) — passos e condição: Somente cadastro autorizado.
 
 - **Q-F-06-001-01:** Como faço para listar fornecedores no EMPROVEX?
 - **Q-F-06-001-02:** Onde encontro a opção para listar fornecedores?
@@ -4101,9 +4109,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-001-16:** Você consegue me orientar sobre listar fornecedores pelo celular ou no modo Essencial?
 - **Q-F-06-001-17:** A função de listar fornecedores está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-002 — Pesquisar fornecedor · MAIN
+#### Bateria vinculada a F-06-002 — Pesquisar fornecedor · MAIN
 
-**Referência de resposta:** [F-06-002](#f-06-002-pesquisar-fornecedor) — passos do §4 e condição: Identidade preferencial por CNPJ.
+**Referência de resposta:** procedimento `F-06-002` (§4) — passos e condição: Identidade preferencial por CNPJ.
 
 - **Q-F-06-002-01:** Como faço para pesquisar fornecedor no EMPROVEX?
 - **Q-F-06-002-02:** Onde encontro a opção para pesquisar fornecedor?
@@ -4123,9 +4131,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-002-16:** Você consegue me orientar sobre pesquisar fornecedor pelo celular ou no modo Essencial?
 - **Q-F-06-002-17:** A função de pesquisar fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-003 — Filtrar fornecedores por situação · MAIN
+#### Bateria vinculada a F-06-003 — Filtrar fornecedores por situação · MAIN
 
-**Referência de resposta:** [F-06-003](#f-06-003-filtrar-fornecedores-por-situacao) — passos do §4 e condição: Situação é calculada a partir de registros da unidade.
+**Referência de resposta:** procedimento `F-06-003` (§4) — passos e condição: Situação é calculada a partir de registros da unidade.
 
 - **Q-F-06-003-01:** Como faço para filtrar fornecedores por situação no EMPROVEX?
 - **Q-F-06-003-02:** Onde encontro a opção para filtrar fornecedores por situação?
@@ -4145,9 +4153,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-003-16:** Você consegue me orientar sobre filtrar fornecedores por situação pelo celular ou no modo Essencial?
 - **Q-F-06-003-17:** A função de filtrar fornecedores por situação está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-004 — Cadastrar fornecedor · MAIN
+#### Bateria vinculada a F-06-004 — Cadastrar fornecedor · MAIN
 
-**Referência de resposta:** [F-06-004](#f-06-004-cadastrar-fornecedor) — passos do §4 e condição: Validar CNPJ e evitar registro duplicado.
+**Referência de resposta:** procedimento `F-06-004` (§4) — passos e condição: Validar CNPJ e evitar registro duplicado.
 
 - **Q-F-06-004-01:** Como faço para cadastrar fornecedor no EMPROVEX?
 - **Q-F-06-004-02:** Onde encontro a opção para cadastrar fornecedor?
@@ -4167,9 +4175,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-004-16:** Você consegue me orientar sobre cadastrar fornecedor pelo celular ou no modo Essencial?
 - **Q-F-06-004-17:** A função de cadastrar fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-005 — Editar cadastro de fornecedor · MAIN
+#### Bateria vinculada a F-06-005 — Editar cadastro de fornecedor · MAIN
 
-**Referência de resposta:** [F-06-005](#f-06-005-editar-cadastro-de-fornecedor) — passos do §4 e condição: Conciliação com NE pode exigir tratamento de identidade.
+**Referência de resposta:** procedimento `F-06-005` (§4) — passos e condição: Conciliação com NE pode exigir tratamento de identidade.
 
 - **Q-F-06-005-01:** Como faço para editar cadastro de fornecedor no EMPROVEX?
 - **Q-F-06-005-02:** Onde encontro a opção para editar cadastro de fornecedor?
@@ -4189,9 +4197,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-005-16:** Você consegue me orientar sobre editar cadastro de fornecedor pelo celular ou no modo Essencial?
 - **Q-F-06-005-17:** A função de editar cadastro de fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-006 — Consultar vínculos de fornecedor · MAIN
+#### Bateria vinculada a F-06-006 — Consultar vínculos de fornecedor · MAIN
 
-**Referência de resposta:** [F-06-006](#f-06-006-consultar-vinculos-de-fornecedor) — passos do §4 e condição: Não somar documentos de identidades distintas sem validação.
+**Referência de resposta:** procedimento `F-06-006` (§4) — passos e condição: Não somar documentos de identidades distintas sem validação.
 
 - **Q-F-06-006-01:** Como faço para consultar vínculos de fornecedor no EMPROVEX?
 - **Q-F-06-006-02:** Onde encontro a opção para consultar vínculos de fornecedor?
@@ -4211,9 +4219,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-006-16:** Você consegue me orientar sobre consultar vínculos de fornecedor pelo celular ou no modo Essencial?
 - **Q-F-06-006-17:** A função de consultar vínculos de fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-007 — Consultar itens empenhados · MAIN
+#### Bateria vinculada a F-06-007 — Consultar itens empenhados · MAIN
 
-**Referência de resposta:** [F-06-007](#f-06-007-consultar-itens-empenhados) — passos do §4 e condição: Item de NE difere de material de estoque físico.
+**Referência de resposta:** procedimento `F-06-007` (§4) — passos e condição: Item de NE difere de material de estoque físico.
 
 - **Q-F-06-007-01:** Como faço para consultar itens empenhados no EMPROVEX?
 - **Q-F-06-007-02:** Onde encontro a opção para consultar itens empenhados?
@@ -4233,9 +4241,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-007-16:** Você consegue me orientar sobre consultar itens empenhados pelo celular ou no modo Essencial?
 - **Q-F-06-007-17:** A função de consultar itens empenhados está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-008 — Filtrar itens por saldo · MAIN
+#### Bateria vinculada a F-06-008 — Filtrar itens por saldo · MAIN
 
-**Referência de resposta:** [F-06-008](#f-06-008-filtrar-itens-por-saldo) — passos do §4 e condição: Não altera quantidade.
+**Referência de resposta:** procedimento `F-06-008` (§4) — passos e condição: Não altera quantidade.
 
 - **Q-F-06-008-01:** Como faço para filtrar itens por saldo no EMPROVEX?
 - **Q-F-06-008-02:** Onde encontro a opção para filtrar itens por saldo?
@@ -4255,9 +4263,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-06-008-16:** Você consegue me orientar sobre filtrar itens por saldo pelo celular ou no modo Essencial?
 - **Q-F-06-008-17:** A função de filtrar itens por saldo está disponível para todos os workspaces ou depende de acesso?
 
-#### F-06-009 — Abrir composição de item por NE · MAIN
+#### Bateria vinculada a F-06-009 — Abrir composição de item por NE · MAIN
 
-**Referência de resposta:** [F-06-009](#f-06-009-abrir-composicao-de-item-por-ne) — passos do §4 e condição: Pode haver itens homônimos em NEs distintas.
+**Referência de resposta:** procedimento `F-06-009` (§4) — passos e condição: Pode haver itens homônimos em NEs distintas.
 
 - **Q-F-06-009-01:** Como faço para abrir composição de item por NE no EMPROVEX?
 - **Q-F-06-009-02:** Onde encontro a opção para abrir composição de item por NE?
@@ -4279,9 +4287,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.7. Relatórios financeiros, SAG e integridade
 
-#### F-07-001 — Abrir Central de Relatórios · MAIN
+#### Bateria vinculada a F-07-001 — Abrir Central de Relatórios · MAIN
 
-**Referência de resposta:** [F-07-001](#f-07-001-abrir-central-de-relatorios) — passos do §4 e condição: Cada modo tem fontes e permissões próprias.
+**Referência de resposta:** procedimento `F-07-001` (§4) — passos e condição: Cada modo tem fontes e permissões próprias.
 
 - **Q-F-07-001-01:** Como faço para abrir Central de Relatórios no EMPROVEX?
 - **Q-F-07-001-02:** Onde encontro a opção para abrir Central de Relatórios?
@@ -4301,9 +4309,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-001-16:** Você consegue me orientar sobre abrir Central de Relatórios pelo celular ou no modo Essencial?
 - **Q-F-07-001-17:** A função de abrir Central de Relatórios está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-002 — Relatório por empenho · MAIN
+#### Bateria vinculada a F-07-002 — Relatório por empenho · MAIN
 
-**Referência de resposta:** [F-07-002](#f-07-002-relatorio-por-empenho) — passos do §4 e condição: Registros refletem os dados da UG.
+**Referência de resposta:** procedimento `F-07-002` (§4) — passos e condição: Registros refletem os dados da UG.
 
 - **Q-F-07-002-01:** Como faço para relatório por empenho no EMPROVEX?
 - **Q-F-07-002-02:** Onde encontro a opção para relatório por empenho?
@@ -4323,9 +4331,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-002-16:** Você consegue me orientar sobre relatório por empenho pelo celular ou no modo Essencial?
 - **Q-F-07-002-17:** A função de relatório por empenho está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-003 — Relatório por fornecedor · MAIN
+#### Bateria vinculada a F-07-003 — Relatório por fornecedor · MAIN
 
-**Referência de resposta:** [F-07-003](#f-07-003-relatorio-por-fornecedor) — passos do §4 e condição: Consolidação financeira por CNPJ exige identidade consistente.
+**Referência de resposta:** procedimento `F-07-003` (§4) — passos e condição: Consolidação financeira por CNPJ exige identidade consistente.
 
 - **Q-F-07-003-01:** Como faço para relatório por fornecedor no EMPROVEX?
 - **Q-F-07-003-02:** Onde encontro a opção para relatório por fornecedor?
@@ -4345,9 +4353,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-003-16:** Você consegue me orientar sobre relatório por fornecedor pelo celular ou no modo Essencial?
 - **Q-F-07-003-17:** A função de relatório por fornecedor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-004 — Filtrar relatórios por data · MAIN
+#### Bateria vinculada a F-07-004 — Filtrar relatórios por data · MAIN
 
-**Referência de resposta:** [F-07-004](#f-07-004-filtrar-relatorios-por-data) — passos do §4 e condição: A coluna temporal exata depende do relatório.
+**Referência de resposta:** procedimento `F-07-004` (§4) — passos e condição: A coluna temporal exata depende do relatório.
 
 - **Q-F-07-004-01:** Como faço para filtrar relatórios por data no EMPROVEX?
 - **Q-F-07-004-02:** Onde encontro a opção para filtrar relatórios por data?
@@ -4367,9 +4375,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-004-16:** Você consegue me orientar sobre filtrar relatórios por data pelo celular ou no modo Essencial?
 - **Q-F-07-004-17:** A função de filtrar relatórios por data está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-005 — Exportar/imprimir relatório · MAIN
+#### Bateria vinculada a F-07-005 — Exportar/imprimir relatório · MAIN
 
-**Referência de resposta:** [F-07-005](#f-07-005-exportarimprimir-relatorio) — passos do §4 e condição: Nem todas as modalidades têm o mesmo formato.
+**Referência de resposta:** procedimento `F-07-005` (§4) — passos e condição: Nem todas as modalidades têm o mesmo formato.
 
 - **Q-F-07-005-01:** Como faço para exportar/imprimir relatório no EMPROVEX?
 - **Q-F-07-005-02:** Onde encontro a opção para exportar/imprimir relatório?
@@ -4389,9 +4397,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-005-16:** Você consegue me orientar sobre exportar/imprimir relatório pelo celular ou no modo Essencial?
 - **Q-F-07-005-17:** A função de exportar/imprimir relatório está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-006 — Iniciar importação SAG de NS · MAIN
+#### Bateria vinculada a F-07-006 — Iniciar importação SAG de NS · MAIN
 
-**Referência de resposta:** [F-07-006](#f-07-006-iniciar-importacao-sag-de-ns) — passos do §4 e condição: Importação assistida manual: não pressupor integração automática com SAG.
+**Referência de resposta:** procedimento `F-07-006` (§4) — passos e condição: Importação assistida manual: não pressupor integração automática com SAG.
 
 - **Q-F-07-006-01:** Como faço para iniciar importação SAG de NS no EMPROVEX?
 - **Q-F-07-006-02:** Onde encontro a opção para iniciar importação SAG de NS?
@@ -4411,9 +4419,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-006-16:** Você consegue me orientar sobre iniciar importação SAG de NS pelo celular ou no modo Essencial?
 - **Q-F-07-006-17:** A função de iniciar importação SAG de NS está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-007 — Colar e validar JSON SAG · MAIN
+#### Bateria vinculada a F-07-007 — Colar e validar JSON SAG · MAIN
 
-**Referência de resposta:** [F-07-007](#f-07-007-colar-e-validar-json-sag) — passos do §4 e condição: JSON para NS/SAG não é cadastro JSON de NE.
+**Referência de resposta:** procedimento `F-07-007` (§4) — passos e condição: JSON para NS/SAG não é cadastro JSON de NE.
 
 - **Q-F-07-007-01:** Como faço para colar e validar JSON SAG no EMPROVEX?
 - **Q-F-07-007-02:** Onde encontro a opção para colar e validar JSON SAG?
@@ -4433,9 +4441,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-007-16:** Você consegue me orientar sobre colar e validar JSON SAG pelo celular ou no modo Essencial?
 - **Q-F-07-007-17:** A função de colar e validar JSON SAG está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-008 — Conferir conciliação CNPJ → NF → NE · MAIN
+#### Bateria vinculada a F-07-008 — Conferir conciliação CNPJ → NF → NE · MAIN
 
-**Referência de resposta:** [F-07-008](#f-07-008-conferir-conciliacao-cnpj-nf-ne) — passos do §4 e condição: Conflito ou NF não encontrada não autoriza associação aproximada.
+**Referência de resposta:** procedimento `F-07-008` (§4) — passos e condição: Conflito ou NF não encontrada não autoriza associação aproximada.
 
 - **Q-F-07-008-01:** Como faço para conferir conciliação CNPJ → NF → NE no EMPROVEX?
 - **Q-F-07-008-02:** Onde encontro a opção para conferir conciliação CNPJ → NF → NE?
@@ -4455,9 +4463,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-008-16:** Você consegue me orientar sobre conferir conciliação CNPJ → NF → NE pelo celular ou no modo Essencial?
 - **Q-F-07-008-17:** A função de conferir conciliação CNPJ → NF → NE está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-009 — Pré-visualizar alterações SAG · MAIN
+#### Bateria vinculada a F-07-009 — Pré-visualizar alterações SAG · MAIN
 
-**Referência de resposta:** [F-07-009](#f-07-009-pre-visualizar-alteracoes-sag) — passos do §4 e condição: Mudanças financeiras exigem revisão humana.
+**Referência de resposta:** procedimento `F-07-009` (§4) — passos e condição: Mudanças financeiras exigem revisão humana.
 
 - **Q-F-07-009-01:** Como faço para pré-visualizar alterações SAG no EMPROVEX?
 - **Q-F-07-009-02:** Onde encontro a opção para pré-visualizar alterações SAG?
@@ -4477,9 +4485,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-009-16:** Você consegue me orientar sobre pré-visualizar alterações SAG pelo celular ou no modo Essencial?
 - **Q-F-07-009-17:** A função de pré-visualizar alterações SAG está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-010 — Aplicar NS importadas · MAIN
+#### Bateria vinculada a F-07-010 — Aplicar NS importadas · MAIN
 
-**Referência de resposta:** [F-07-010](#f-07-010-aplicar-ns-importadas) — passos do §4 e condição: Respeitar deduplicação, concorrência e integridade; sem execução autônoma pela Eleonor.
+**Referência de resposta:** procedimento `F-07-010` (§4) — passos e condição: Respeitar deduplicação, concorrência e integridade; sem execução autônoma pela Eleonor.
 
 - **Q-F-07-010-01:** Como faço para aplicar NS importadas no EMPROVEX?
 - **Q-F-07-010-02:** Onde encontro a opção para aplicar NS importadas?
@@ -4499,9 +4507,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-010-16:** Você consegue me orientar sobre aplicar NS importadas pelo celular ou no modo Essencial?
 - **Q-F-07-010-17:** A função de aplicar NS importadas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-011 — Verificar integridade histórica · MAIN
+#### Bateria vinculada a F-07-011 — Verificar integridade histórica · MAIN
 
-**Referência de resposta:** [F-07-011](#f-07-011-verificar-integridade-historica) — passos do §4 e condição: Diagnóstico não é prova de que um saneamento foi feito.
+**Referência de resposta:** procedimento `F-07-011` (§4) — passos e condição: Diagnóstico não é prova de que um saneamento foi feito.
 
 - **Q-F-07-011-01:** Como faço para verificar integridade histórica no EMPROVEX?
 - **Q-F-07-011-02:** Onde encontro a opção para verificar integridade histórica?
@@ -4521,9 +4529,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-07-011-16:** Você consegue me orientar sobre verificar integridade histórica pelo celular ou no modo Essencial?
 - **Q-F-07-011-17:** A função de verificar integridade histórica está disponível para todos os workspaces ou depende de acesso?
 
-#### F-07-012 — Sanear inconsistências históricas permitidas · MAIN
+#### Bateria vinculada a F-07-012 — Sanear inconsistências históricas permitidas · MAIN
 
-**Referência de resposta:** [F-07-012](#f-07-012-sanear-inconsistencias-historicas-permitidas) — passos do §4 e condição: Nunca orientar correção cega de saldos e NS.
+**Referência de resposta:** procedimento `F-07-012` (§4) — passos e condição: Nunca orientar correção cega de saldos e NS.
 
 - **Q-F-07-012-01:** Como faço para sanear inconsistências históricas permitidas no EMPROVEX?
 - **Q-F-07-012-02:** Onde encontro a opção para sanear inconsistências históricas permitidas?
@@ -4545,9 +4553,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.8. Central de Avisos
 
-#### F-08-001 — Abrir Central de Avisos · MAIN
+#### Bateria vinculada a F-08-001 — Abrir Central de Avisos · MAIN
 
-**Referência de resposta:** [F-08-001](#f-08-001-abrir-central-de-avisos) — passos do §4 e condição: Avisos têm severidade e ciclo de vida.
+**Referência de resposta:** procedimento `F-08-001` (§4) — passos e condição: Avisos têm severidade e ciclo de vida.
 
 - **Q-F-08-001-01:** Como faço para abrir Central de Avisos no EMPROVEX?
 - **Q-F-08-001-02:** Onde encontro a opção para abrir Central de Avisos?
@@ -4567,9 +4575,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-001-16:** Você consegue me orientar sobre abrir Central de Avisos pelo celular ou no modo Essencial?
 - **Q-F-08-001-17:** A função de abrir Central de Avisos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-002 — Pesquisar aviso · MAIN
+#### Bateria vinculada a F-08-002 — Pesquisar aviso · MAIN
 
-**Referência de resposta:** [F-08-002](#f-08-002-pesquisar-aviso) — passos do §4 e condição: Busca de avisos da unidade.
+**Referência de resposta:** procedimento `F-08-002` (§4) — passos e condição: Busca de avisos da unidade.
 
 - **Q-F-08-002-01:** Como faço para pesquisar aviso no EMPROVEX?
 - **Q-F-08-002-02:** Onde encontro a opção para pesquisar aviso?
@@ -4589,9 +4597,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-002-16:** Você consegue me orientar sobre pesquisar aviso pelo celular ou no modo Essencial?
 - **Q-F-08-002-17:** A função de pesquisar aviso está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-003 — Filtrar por severidade · MAIN
+#### Bateria vinculada a F-08-003 — Filtrar por severidade · MAIN
 
-**Referência de resposta:** [F-08-003](#f-08-003-filtrar-por-severidade) — passos do §4 e condição: Severidade não equivale a confirmação de risco externo.
+**Referência de resposta:** procedimento `F-08-003` (§4) — passos e condição: Severidade não equivale a confirmação de risco externo.
 
 - **Q-F-08-003-01:** Como faço para filtrar por severidade no EMPROVEX?
 - **Q-F-08-003-02:** Onde encontro a opção para filtrar por severidade?
@@ -4611,9 +4619,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-003-16:** Você consegue me orientar sobre filtrar por severidade pelo celular ou no modo Essencial?
 - **Q-F-08-003-17:** A função de filtrar por severidade está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-004 — Filtrar avisos por situação · MAIN
+#### Bateria vinculada a F-08-004 — Filtrar avisos por situação · MAIN
 
-**Referência de resposta:** [F-08-004](#f-08-004-filtrar-avisos-por-situacao) — passos do §4 e condição: Estados explícitos no código.
+**Referência de resposta:** procedimento `F-08-004` (§4) — passos e condição: Estados explícitos no código.
 
 - **Q-F-08-004-01:** Como faço para filtrar avisos por situação no EMPROVEX?
 - **Q-F-08-004-02:** Onde encontro a opção para filtrar avisos por situação?
@@ -4633,9 +4641,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-004-16:** Você consegue me orientar sobre filtrar avisos por situação pelo celular ou no modo Essencial?
 - **Q-F-08-004-17:** A função de filtrar avisos por situação está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-005 — Marcar avisos como lidos · MAIN
+#### Bateria vinculada a F-08-005 — Marcar avisos como lidos · MAIN
 
-**Referência de resposta:** [F-08-005](#f-08-005-marcar-avisos-como-lidos) — passos do §4 e condição: Marcar como lido não significa resolver o evento.
+**Referência de resposta:** procedimento `F-08-005` (§4) — passos e condição: Marcar como lido não significa resolver o evento.
 
 - **Q-F-08-005-01:** Como faço para marcar avisos como lidos no EMPROVEX?
 - **Q-F-08-005-02:** Onde encontro a opção para marcar avisos como lidos?
@@ -4655,9 +4663,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-005-16:** Você consegue me orientar sobre marcar avisos como lidos pelo celular ou no modo Essencial?
 - **Q-F-08-005-17:** A função de marcar avisos como lidos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-006 — Resolver, reabrir ou arquivar aviso · MAIN
+#### Bateria vinculada a F-08-006 — Resolver, reabrir ou arquivar aviso · MAIN
 
-**Referência de resposta:** [F-08-006](#f-08-006-resolver-reabrir-ou-arquivar-aviso) — passos do §4 e condição: Ciclo de vida auditável; não eliminar a origem do problema por mera mudança de estado.
+**Referência de resposta:** procedimento `F-08-006` (§4) — passos e condição: Ciclo de vida auditável; não eliminar a origem do problema por mera mudança de estado.
 
 - **Q-F-08-006-01:** Como faço para resolver, reabrir ou arquivar aviso no EMPROVEX?
 - **Q-F-08-006-02:** Onde encontro a opção para resolver, reabrir ou arquivar aviso?
@@ -4677,9 +4685,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-08-006-16:** Você consegue me orientar sobre resolver, reabrir ou arquivar aviso pelo celular ou no modo Essencial?
 - **Q-F-08-006-17:** A função de resolver, reabrir ou arquivar aviso está disponível para todos os workspaces ou depende de acesso?
 
-#### F-08-007 — Ir ao empenho associado ao aviso · MAIN
+#### Bateria vinculada a F-08-007 — Ir ao empenho associado ao aviso · MAIN
 
-**Referência de resposta:** [F-08-007](#f-08-007-ir-ao-empenho-associado-ao-aviso) — passos do §4 e condição: Sem vínculo, não inventar NE correspondente.
+**Referência de resposta:** procedimento `F-08-007` (§4) — passos e condição: Sem vínculo, não inventar NE correspondente.
 
 - **Q-F-08-007-01:** Como faço para ir ao empenho associado ao aviso no EMPROVEX?
 - **Q-F-08-007-02:** Onde encontro a opção para ir ao empenho associado ao aviso?
@@ -4701,9 +4709,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.9. Central de Depósitos — estruturas e visualização
 
-#### F-09-001 — Abrir Início dos Depósitos · MAIN
+#### Bateria vinculada a F-09-001 — Abrir Início dos Depósitos · MAIN
 
-**Referência de resposta:** [F-09-001](#f-09-001-abrir-inicio-dos-depositos) — passos do §4 e condição: Exige autorização Warehouse.
+**Referência de resposta:** procedimento `F-09-001` (§4) — passos e condição: Exige autorização Warehouse.
 
 - **Q-F-09-001-01:** Como faço para abrir Início dos Depósitos no EMPROVEX?
 - **Q-F-09-001-02:** Onde encontro a opção para abrir Início dos Depósitos?
@@ -4723,9 +4731,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-001-16:** Você consegue me orientar sobre abrir Início dos Depósitos pelo celular ou no modo Essencial?
 - **Q-F-09-001-17:** A função de abrir Início dos Depósitos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-002 — Abrir Meus Depósitos · MAIN
+#### Bateria vinculada a F-09-002 — Abrir Meus Depósitos · MAIN
 
-**Referência de resposta:** [F-09-002](#f-09-002-abrir-meus-depositos) — passos do §4 e condição: Localizações e saldos são setoriais.
+**Referência de resposta:** procedimento `F-09-002` (§4) — passos e condição: Localizações e saldos são setoriais.
 
 - **Q-F-09-002-01:** Como faço para abrir Meus Depósitos no EMPROVEX?
 - **Q-F-09-002-02:** Onde encontro a opção para abrir Meus Depósitos?
@@ -4745,9 +4753,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-002-16:** Você consegue me orientar sobre abrir Meus Depósitos pelo celular ou no modo Essencial?
 - **Q-F-09-002-17:** A função de abrir Meus Depósitos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-003 — Cadastrar depósito · MAIN
+#### Bateria vinculada a F-09-003 — Cadastrar depósito · MAIN
 
-**Referência de resposta:** [F-09-003](#f-09-003-cadastrar-deposito) — passos do §4 e condição: Não criar código duplicado.
+**Referência de resposta:** procedimento `F-09-003` (§4) — passos e condição: Não criar código duplicado.
 
 - **Q-F-09-003-01:** Como faço para cadastrar depósito no EMPROVEX?
 - **Q-F-09-003-02:** Onde encontro a opção para cadastrar depósito?
@@ -4767,9 +4775,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-003-16:** Você consegue me orientar sobre cadastrar depósito pelo celular ou no modo Essencial?
 - **Q-F-09-003-17:** A função de cadastrar depósito está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-004 — Configurar estantes/prateleiras · MAIN
+#### Bateria vinculada a F-09-004 — Configurar estantes/prateleiras · MAIN
 
-**Referência de resposta:** [F-09-004](#f-09-004-configurar-estantesprateleiras) — passos do §4 e condição: Evitar alteração destrutiva se existir saldo.
+**Referência de resposta:** procedimento `F-09-004` (§4) — passos e condição: Evitar alteração destrutiva se existir saldo.
 
 - **Q-F-09-004-01:** Como faço para configurar estantes/prateleiras no EMPROVEX?
 - **Q-F-09-004-02:** Onde encontro a opção para configurar estantes/prateleiras?
@@ -4789,9 +4797,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-004-16:** Você consegue me orientar sobre configurar estantes/prateleiras pelo celular ou no modo Essencial?
 - **Q-F-09-004-17:** A função de configurar estantes/prateleiras está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-005 — Cadastrar geladeira/freezer e outros suportes · MAIN
+#### Bateria vinculada a F-09-005 — Cadastrar geladeira/freezer e outros suportes · MAIN
 
-**Referência de resposta:** [F-09-005](#f-09-005-cadastrar-geladeirafreezer-e-outros-suportes) — passos do §4 e condição: A aparência 3D não é controle de temperatura.
+**Referência de resposta:** procedimento `F-09-005` (§4) — passos e condição: A aparência 3D não é controle de temperatura.
 
 - **Q-F-09-005-01:** Como faço para cadastrar geladeira/freezer e outros suportes no EMPROVEX?
 - **Q-F-09-005-02:** Onde encontro a opção para cadastrar geladeira/freezer e outros suportes?
@@ -4811,9 +4819,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-005-16:** Você consegue me orientar sobre cadastrar geladeira/freezer e outros suportes pelo celular ou no modo Essencial?
 - **Q-F-09-005-17:** A função de cadastrar geladeira/freezer e outros suportes está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-006 — Editar nome/dimensões de depósito · MAIN
+#### Bateria vinculada a F-09-006 — Editar nome/dimensões de depósito · MAIN
 
-**Referência de resposta:** [F-09-006](#f-09-006-editar-nomedimensoes-de-deposito) — passos do §4 e condição: Preservar códigos e saldos vinculados.
+**Referência de resposta:** procedimento `F-09-006` (§4) — passos e condição: Preservar códigos e saldos vinculados.
 
 - **Q-F-09-006-01:** Como faço para editar nome/dimensões de depósito no EMPROVEX?
 - **Q-F-09-006-02:** Onde encontro a opção para editar nome/dimensões de depósito?
@@ -4833,9 +4841,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-006-16:** Você consegue me orientar sobre editar nome/dimensões de depósito pelo celular ou no modo Essencial?
 - **Q-F-09-006-17:** A função de editar nome/dimensões de depósito está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-007 — Duplicar ou renomear localização · MAIN
+#### Bateria vinculada a F-09-007 — Duplicar ou renomear localização · MAIN
 
-**Referência de resposta:** [F-09-007](#f-09-007-duplicar-ou-renomear-localizacao) — passos do §4 e condição: Não duplicar saldo físico junto com o endereço.
+**Referência de resposta:** procedimento `F-09-007` (§4) — passos e condição: Não duplicar saldo físico junto com o endereço.
 
 - **Q-F-09-007-01:** Como faço para duplicar ou renomear localização no EMPROVEX?
 - **Q-F-09-007-02:** Onde encontro a opção para duplicar ou renomear localização?
@@ -4855,9 +4863,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-007-16:** Você consegue me orientar sobre duplicar ou renomear localização pelo celular ou no modo Essencial?
 - **Q-F-09-007-17:** A função de duplicar ou renomear localização está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-008 — Excluir depósito/local bloqueado por saldo · MAIN
+#### Bateria vinculada a F-09-008 — Excluir depósito/local bloqueado por saldo · MAIN
 
-**Referência de resposta:** [F-09-008](#f-09-008-excluir-depositolocal-bloqueado-por-saldo) — passos do §4 e condição: Não burlar salvaguarda de saldo positivo.
+**Referência de resposta:** procedimento `F-09-008` (§4) — passos e condição: Não burlar salvaguarda de saldo positivo.
 
 - **Q-F-09-008-01:** Como faço para excluir depósito/local bloqueado por saldo no EMPROVEX?
 - **Q-F-09-008-02:** Onde encontro a opção para excluir depósito/local bloqueado por saldo?
@@ -4877,9 +4885,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-008-16:** Você consegue me orientar sobre excluir depósito/local bloqueado por saldo pelo celular ou no modo Essencial?
 - **Q-F-09-008-17:** A função de excluir depósito/local bloqueado por saldo está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-009 — Editar croqui 2D · MAIN
+#### Bateria vinculada a F-09-009 — Editar croqui 2D · MAIN
 
-**Referência de resposta:** [F-09-009](#f-09-009-editar-croqui-2d) — passos do §4 e condição: Croqui é representação física do mesmo cadastro.
+**Referência de resposta:** procedimento `F-09-009` (§4) — passos e condição: Croqui é representação física do mesmo cadastro.
 
 - **Q-F-09-009-01:** Como faço para editar croqui 2D no EMPROVEX?
 - **Q-F-09-009-02:** Onde encontro a opção para editar croqui 2D?
@@ -4899,9 +4907,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-009-16:** Você consegue me orientar sobre editar croqui 2D pelo celular ou no modo Essencial?
 - **Q-F-09-009-17:** A função de editar croqui 2D está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-010 — Visualizar depósito em 3D · MAIN
+#### Bateria vinculada a F-09-010 — Visualizar depósito em 3D · MAIN
 
-**Referência de resposta:** [F-09-010](#f-09-010-visualizar-deposito-em-3d) — passos do §4 e condição: 3D depende de navegador, desempenho e modo visual.
+**Referência de resposta:** procedimento `F-09-010` (§4) — passos e condição: 3D depende de navegador, desempenho e modo visual.
 
 - **Q-F-09-010-01:** Como faço para visualizar depósito em 3D no EMPROVEX?
 - **Q-F-09-010-02:** Onde encontro a opção para visualizar depósito em 3D?
@@ -4921,9 +4929,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-010-16:** Você consegue me orientar sobre visualizar depósito em 3D pelo celular ou no modo Essencial?
 - **Q-F-09-010-17:** A função de visualizar depósito em 3D está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-011 — Alternar perspectivas de estrutura · MAIN
+#### Bateria vinculada a F-09-011 — Alternar perspectivas de estrutura · MAIN
 
-**Referência de resposta:** [F-09-011](#f-09-011-alternar-perspectivas-de-estrutura) — passos do §4 e condição: Interação visual, não alteração de estoque.
+**Referência de resposta:** procedimento `F-09-011` (§4) — passos e condição: Interação visual, não alteração de estoque.
 
 - **Q-F-09-011-01:** Como faço para alternar perspectivas de estrutura no EMPROVEX?
 - **Q-F-09-011-02:** Onde encontro a opção para alternar perspectivas de estrutura?
@@ -4943,9 +4951,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-011-16:** Você consegue me orientar sobre alternar perspectivas de estrutura pelo celular ou no modo Essencial?
 - **Q-F-09-011-17:** A função de alternar perspectivas de estrutura está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-012 — Inspecionar posição ou prateleira · MAIN
+#### Bateria vinculada a F-09-012 — Inspecionar posição ou prateleira · MAIN
 
-**Referência de resposta:** [F-09-012](#f-09-012-inspecionar-posicao-ou-prateleira) — passos do §4 e condição: Dados vêm do depósito autorizado.
+**Referência de resposta:** procedimento `F-09-012` (§4) — passos e condição: Dados vêm do depósito autorizado.
 
 - **Q-F-09-012-01:** Como faço para inspecionar posição ou prateleira no EMPROVEX?
 - **Q-F-09-012-02:** Onde encontro a opção para inspecionar posição ou prateleira?
@@ -4965,9 +4973,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-012-16:** Você consegue me orientar sobre inspecionar posição ou prateleira pelo celular ou no modo Essencial?
 - **Q-F-09-012-17:** A função de inspecionar posição ou prateleira está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-013 — Pesquisar material em todos os depósitos · MAIN
+#### Bateria vinculada a F-09-013 — Pesquisar material em todos os depósitos · MAIN
 
-**Referência de resposta:** [F-09-013](#f-09-013-pesquisar-material-em-todos-os-depositos) — passos do §4 e condição: Pesquisar não é movimentar.
+**Referência de resposta:** procedimento `F-09-013` (§4) — passos e condição: Pesquisar não é movimentar.
 
 - **Q-F-09-013-01:** Como faço para pesquisar material em todos os depósitos no EMPROVEX?
 - **Q-F-09-013-02:** Onde encontro a opção para pesquisar material em todos os depósitos?
@@ -4987,9 +4995,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-013-16:** Você consegue me orientar sobre pesquisar material em todos os depósitos pelo celular ou no modo Essencial?
 - **Q-F-09-013-17:** A função de pesquisar material em todos os depósitos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-014 — Ver validade no ambiente 3D · MAIN
+#### Bateria vinculada a F-09-014 — Ver validade no ambiente 3D · MAIN
 
-**Referência de resposta:** [F-09-014](#f-09-014-ver-validade-no-ambiente-3d) — passos do §4 e condição: Destaque visual é alerta, não descarte automático.
+**Referência de resposta:** procedimento `F-09-014` (§4) — passos e condição: Destaque visual é alerta, não descarte automático.
 
 - **Q-F-09-014-01:** Como faço para ver validade no ambiente 3D no EMPROVEX?
 - **Q-F-09-014-02:** Onde encontro a opção para ver validade no ambiente 3D?
@@ -5009,9 +5017,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-014-16:** Você consegue me orientar sobre ver validade no ambiente 3D pelo celular ou no modo Essencial?
 - **Q-F-09-014-17:** A função de ver validade no ambiente 3D está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-015 — Gerar PDF de conteúdo por local · MAIN
+#### Bateria vinculada a F-09-015 — Gerar PDF de conteúdo por local · MAIN
 
-**Referência de resposta:** [F-09-015](#f-09-015-gerar-pdf-de-conteudo-por-local) — passos do §4 e condição: Relatório de consulta, não inventário assinado.
+**Referência de resposta:** procedimento `F-09-015` (§4) — passos e condição: Relatório de consulta, não inventário assinado.
 
 - **Q-F-09-015-01:** Como faço para gerar PDF de conteúdo por local no EMPROVEX?
 - **Q-F-09-015-02:** Onde encontro a opção para gerar PDF de conteúdo por local?
@@ -5031,9 +5039,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-09-015-16:** Você consegue me orientar sobre gerar PDF de conteúdo por local pelo celular ou no modo Essencial?
 - **Q-F-09-015-17:** A função de gerar PDF de conteúdo por local está disponível para todos os workspaces ou depende de acesso?
 
-#### F-09-016 — Criar/editar etiquetas de posições · MAIN
+#### Bateria vinculada a F-09-016 — Criar/editar etiquetas de posições · MAIN
 
-**Referência de resposta:** [F-09-016](#f-09-016-criareditar-etiquetas-de-posicoes) — passos do §4 e condição: Códigos devem corresponder a localizações reais.
+**Referência de resposta:** procedimento `F-09-016` (§4) — passos e condição: Códigos devem corresponder a localizações reais.
 
 - **Q-F-09-016-01:** Como faço para criar/editar etiquetas de posições no EMPROVEX?
 - **Q-F-09-016-02:** Onde encontro a opção para criar/editar etiquetas de posições?
@@ -5055,9 +5063,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.10. Central de Depósitos — entrada, alocação e SISCOFIS
 
-#### F-10-001 — Abrir Alocação de Material · MAIN
+#### Bateria vinculada a F-10-001 — Abrir Alocação de Material · MAIN
 
-**Referência de resposta:** [F-10-001](#f-10-001-abrir-alocacao-de-material) — passos do §4 e condição: Recebimento documental e posição física são conceitos distintos.
+**Referência de resposta:** procedimento `F-10-001` (§4) — passos e condição: Recebimento documental e posição física são conceitos distintos.
 
 - **Q-F-10-001-01:** Como faço para abrir Alocação de Material no EMPROVEX?
 - **Q-F-10-001-02:** Onde encontro a opção para abrir Alocação de Material?
@@ -5077,9 +5085,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-001-16:** Você consegue me orientar sobre abrir Alocação de Material pelo celular ou no modo Essencial?
 - **Q-F-10-001-17:** A função de abrir Alocação de Material está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-002 — Consultar NFs pendentes de alocação · MAIN
+#### Bateria vinculada a F-10-002 — Consultar NFs pendentes de alocação · MAIN
 
-**Referência de resposta:** [F-10-002](#f-10-002-consultar-nfs-pendentes-de-alocacao) — passos do §4 e condição: Somente documentos disponíveis para entrada.
+**Referência de resposta:** procedimento `F-10-002` (§4) — passos e condição: Somente documentos disponíveis para entrada.
 
 - **Q-F-10-002-01:** Como faço para consultar NFs pendentes de alocação no EMPROVEX?
 - **Q-F-10-002-02:** Onde encontro a opção para consultar NFs pendentes de alocação?
@@ -5099,9 +5107,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-002-16:** Você consegue me orientar sobre consultar NFs pendentes de alocação pelo celular ou no modo Essencial?
 - **Q-F-10-002-17:** A função de consultar NFs pendentes de alocação está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-003 — Abrir alocação detalhada de NF · MAIN
+#### Bateria vinculada a F-10-003 — Abrir alocação detalhada de NF · MAIN
 
-**Referência de resposta:** [F-10-003](#f-10-003-abrir-alocacao-detalhada-de-nf) — passos do §4 e condição: Não ultrapassar saldo pendente, respeitar local ativo.
+**Referência de resposta:** procedimento `F-10-003` (§4) — passos e condição: Não ultrapassar saldo pendente, respeitar local ativo.
 
 - **Q-F-10-003-01:** Como faço para abrir alocação detalhada de NF no EMPROVEX?
 - **Q-F-10-003-02:** Onde encontro a opção para abrir alocação detalhada de NF?
@@ -5121,9 +5129,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-003-16:** Você consegue me orientar sobre abrir alocação detalhada de NF pelo celular ou no modo Essencial?
 - **Q-F-10-003-17:** A função de abrir alocação detalhada de NF está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-004 — Alocar por item e posição · MAIN
+#### Bateria vinculada a F-10-004 — Alocar por item e posição · MAIN
 
-**Referência de resposta:** [F-10-004](#f-10-004-alocar-por-item-e-posicao) — passos do §4 e condição: Alocação oficial altera posição; verificar saldo antes e depois.
+**Referência de resposta:** procedimento `F-10-004` (§4) — passos e condição: Alocação oficial altera posição; verificar saldo antes e depois.
 
 - **Q-F-10-004-01:** Como faço para alocar por item e posição no EMPROVEX?
 - **Q-F-10-004-02:** Onde encontro a opção para alocar por item e posição?
@@ -5143,9 +5151,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-004-16:** Você consegue me orientar sobre alocar por item e posição pelo celular ou no modo Essencial?
 - **Q-F-10-004-17:** A função de alocar por item e posição está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-005 — Cadastrar entrada avulsa · MAIN
+#### Bateria vinculada a F-10-005 — Cadastrar entrada avulsa · MAIN
 
-**Referência de resposta:** [F-10-005](#f-10-005-cadastrar-entrada-avulsa) — passos do §4 e condição: A origem avulsa não deve ser confundida com recebimento de NF.
+**Referência de resposta:** procedimento `F-10-005` (§4) — passos e condição: A origem avulsa não deve ser confundida com recebimento de NF.
 
 - **Q-F-10-005-01:** Como faço para cadastrar entrada avulsa no EMPROVEX?
 - **Q-F-10-005-02:** Onde encontro a opção para cadastrar entrada avulsa?
@@ -5165,9 +5173,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-005-16:** Você consegue me orientar sobre cadastrar entrada avulsa pelo celular ou no modo Essencial?
 - **Q-F-10-005-17:** A função de cadastrar entrada avulsa está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-006 — Cadastrar entradas em lote · MAIN
+#### Bateria vinculada a F-10-006 — Cadastrar entradas em lote · MAIN
 
-**Referência de resposta:** [F-10-006](#f-10-006-cadastrar-entradas-em-lote) — passos do §4 e condição: Validação de lote deve ser atômica ou apresentar falhas por linha.
+**Referência de resposta:** procedimento `F-10-006` (§4) — passos e condição: Validação de lote deve ser atômica ou apresentar falhas por linha.
 
 - **Q-F-10-006-01:** Como faço para cadastrar entradas em lote no EMPROVEX?
 - **Q-F-10-006-02:** Onde encontro a opção para cadastrar entradas em lote?
@@ -5187,9 +5195,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-006-16:** Você consegue me orientar sobre cadastrar entradas em lote pelo celular ou no modo Essencial?
 - **Q-F-10-006-17:** A função de cadastrar entradas em lote está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-007 — Consultar itens já armazenados · MAIN
+#### Bateria vinculada a F-10-007 — Consultar itens já armazenados · MAIN
 
-**Referência de resposta:** [F-10-007](#f-10-007-consultar-itens-ja-armazenados) — passos do §4 e condição: Não duplicar total com a mesma posição em telas distintas.
+**Referência de resposta:** procedimento `F-10-007` (§4) — passos e condição: Não duplicar total com a mesma posição em telas distintas.
 
 - **Q-F-10-007-01:** Como faço para consultar itens já armazenados no EMPROVEX?
 - **Q-F-10-007-02:** Onde encontro a opção para consultar itens já armazenados?
@@ -5209,9 +5217,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-007-16:** Você consegue me orientar sobre consultar itens já armazenados pelo celular ou no modo Essencial?
 - **Q-F-10-007-17:** A função de consultar itens já armazenados está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-008 — Consultar histórico legado de entrada · MAIN
+#### Bateria vinculada a F-10-008 — Consultar histórico legado de entrada · MAIN
 
-**Referência de resposta:** [F-10-008](#f-10-008-consultar-historico-legado-de-entrada) — passos do §4 e condição: Legado pode ter saldo sem rastreio de posição.
+**Referência de resposta:** procedimento `F-10-008` (§4) — passos e condição: Legado pode ter saldo sem rastreio de posição.
 
 - **Q-F-10-008-01:** Como faço para consultar histórico legado de entrada no EMPROVEX?
 - **Q-F-10-008-02:** Onde encontro a opção para consultar histórico legado de entrada?
@@ -5231,9 +5239,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-008-16:** Você consegue me orientar sobre consultar histórico legado de entrada pelo celular ou no modo Essencial?
 - **Q-F-10-008-17:** A função de consultar histórico legado de entrada está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-009 — Iniciar Migração SISCOFIS de estoque · MAIN
+#### Bateria vinculada a F-10-009 — Iniciar Migração SISCOFIS de estoque · MAIN
 
-**Referência de resposta:** [F-10-009](#f-10-009-iniciar-migracao-siscofis-de-estoque) — passos do §4 e condição: Este é Mapa de Existência para estoque, diferente de Pedido de Material R1-D.
+**Referência de resposta:** procedimento `F-10-009` (§4) — passos e condição: Este é Mapa de Existência para estoque, diferente de Pedido de Material R1-D.
 
 - **Q-F-10-009-01:** Como faço para iniciar Migração SISCOFIS de estoque no EMPROVEX?
 - **Q-F-10-009-02:** Onde encontro a opção para iniciar Migração SISCOFIS de estoque?
@@ -5253,9 +5261,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-009-16:** Você consegue me orientar sobre iniciar Migração SISCOFIS de estoque pelo celular ou no modo Essencial?
 - **Q-F-10-009-17:** A função de iniciar Migração SISCOFIS de estoque está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-010 — Revisar itens extraídos do Mapa SISCOFIS · MAIN
+#### Bateria vinculada a F-10-010 — Revisar itens extraídos do Mapa SISCOFIS · MAIN
 
-**Referência de resposta:** [F-10-010](#f-10-010-revisar-itens-extraidos-do-mapa-siscofis) — passos do §4 e condição: Parser pode exigir intervenção; não supor leitura perfeita.
+**Referência de resposta:** procedimento `F-10-010` (§4) — passos e condição: Parser pode exigir intervenção; não supor leitura perfeita.
 
 - **Q-F-10-010-01:** Como faço para revisar itens extraídos do Mapa SISCOFIS no EMPROVEX?
 - **Q-F-10-010-02:** Onde encontro a opção para revisar itens extraídos do Mapa SISCOFIS?
@@ -5275,9 +5283,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-010-16:** Você consegue me orientar sobre revisar itens extraídos do Mapa SISCOFIS pelo celular ou no modo Essencial?
 - **Q-F-10-010-17:** A função de revisar itens extraídos do Mapa SISCOFIS está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-011 — Conciliar item SISCOFIS com material · MAIN
+#### Bateria vinculada a F-10-011 — Conciliar item SISCOFIS com material · MAIN
 
-**Referência de resposta:** [F-10-011](#f-10-011-conciliar-item-siscofis-com-material) — passos do §4 e condição: Evitar criar duas identidades para o mesmo material.
+**Referência de resposta:** procedimento `F-10-011` (§4) — passos e condição: Evitar criar duas identidades para o mesmo material.
 
 - **Q-F-10-011-01:** Como faço para conciliar item SISCOFIS com material no EMPROVEX?
 - **Q-F-10-011-02:** Onde encontro a opção para conciliar item SISCOFIS com material?
@@ -5297,9 +5305,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-011-16:** Você consegue me orientar sobre conciliar item SISCOFIS com material pelo celular ou no modo Essencial?
 - **Q-F-10-011-17:** A função de conciliar item SISCOFIS com material está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-012 — Excluir linha inadequada do importador · MAIN
+#### Bateria vinculada a F-10-012 — Excluir linha inadequada do importador · MAIN
 
-**Referência de resposta:** [F-10-012](#f-10-012-excluir-linha-inadequada-do-importador) — passos do §4 e condição: Excluir da prévia não é excluir estoque produtivo.
+**Referência de resposta:** procedimento `F-10-012` (§4) — passos e condição: Excluir da prévia não é excluir estoque produtivo.
 
 - **Q-F-10-012-01:** Como faço para excluir linha inadequada do importador no EMPROVEX?
 - **Q-F-10-012-02:** Onde encontro a opção para excluir linha inadequada do importador?
@@ -5319,9 +5327,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-012-16:** Você consegue me orientar sobre excluir linha inadequada do importador pelo celular ou no modo Essencial?
 - **Q-F-10-012-17:** A função de excluir linha inadequada do importador está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-013 — Confirmar importação SISCOFIS · MAIN
+#### Bateria vinculada a F-10-013 — Confirmar importação SISCOFIS · MAIN
 
-**Referência de resposta:** [F-10-013](#f-10-013-confirmar-importacao-siscofis) — passos do §4 e condição: Necessário validar quantidade e não duplicar importação.
+**Referência de resposta:** procedimento `F-10-013` (§4) — passos e condição: Necessário validar quantidade e não duplicar importação.
 
 - **Q-F-10-013-01:** Como faço para confirmar importação SISCOFIS no EMPROVEX?
 - **Q-F-10-013-02:** Onde encontro a opção para confirmar importação SISCOFIS?
@@ -5341,9 +5349,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-013-16:** Você consegue me orientar sobre confirmar importação SISCOFIS pelo celular ou no modo Essencial?
 - **Q-F-10-013-17:** A função de confirmar importação SISCOFIS está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-014 — Acompanhar pendências pós-importação · MAIN
+#### Bateria vinculada a F-10-014 — Acompanhar pendências pós-importação · MAIN
 
-**Referência de resposta:** [F-10-014](#f-10-014-acompanhar-pendencias-pos-importacao) — passos do §4 e condição: Saldo sem local não pode ser tratado como saldo disponível em toda retirada.
+**Referência de resposta:** procedimento `F-10-014` (§4) — passos e condição: Saldo sem local não pode ser tratado como saldo disponível em toda retirada.
 
 - **Q-F-10-014-01:** Como faço para acompanhar pendências pós-importação no EMPROVEX?
 - **Q-F-10-014-02:** Onde encontro a opção para acompanhar pendências pós-importação?
@@ -5363,9 +5371,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-10-014-16:** Você consegue me orientar sobre acompanhar pendências pós-importação pelo celular ou no modo Essencial?
 - **Q-F-10-014-17:** A função de acompanhar pendências pós-importação está disponível para todos os workspaces ou depende de acesso?
 
-#### F-10-015 — Imprimir ficha/etiqueta de alocação · MAIN
+#### Bateria vinculada a F-10-015 — Imprimir ficha/etiqueta de alocação · MAIN
 
-**Referência de resposta:** [F-10-015](#f-10-015-imprimir-fichaetiqueta-de-alocacao) — passos do §4 e condição: Fichas são documentos auxiliares.
+**Referência de resposta:** procedimento `F-10-015` (§4) — passos e condição: Fichas são documentos auxiliares.
 
 - **Q-F-10-015-01:** Como faço para imprimir ficha/etiqueta de alocação no EMPROVEX?
 - **Q-F-10-015-02:** Onde encontro a opção para imprimir ficha/etiqueta de alocação?
@@ -5387,9 +5395,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.11. Central de Depósitos — controle, estoque e inventário
 
-#### F-11-001 — Abrir Controle de Materiais · MAIN
+#### Bateria vinculada a F-11-001 — Abrir Controle de Materiais · MAIN
 
-**Referência de resposta:** [F-11-001](#f-11-001-abrir-controle-de-materiais) — passos do §4 e condição: Essas cinco abas são explicitamente definidas no código.
+**Referência de resposta:** procedimento `F-11-001` (§4) — passos e condição: Essas cinco abas são explicitamente definidas no código.
 
 - **Q-F-11-001-01:** Como faço para abrir Controle de Materiais no EMPROVEX?
 - **Q-F-11-001-02:** Onde encontro a opção para abrir Controle de Materiais?
@@ -5409,9 +5417,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-001-16:** Você consegue me orientar sobre abrir Controle de Materiais pelo celular ou no modo Essencial?
 - **Q-F-11-001-17:** A função de abrir Controle de Materiais está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-002 — Consultar resumo logístico · MAIN
+#### Bateria vinculada a F-11-002 — Consultar resumo logístico · MAIN
 
-**Referência de resposta:** [F-11-002](#f-11-002-consultar-resumo-logistico) — passos do §4 e condição: Resumo é projeção; use ledger para conferir histórico.
+**Referência de resposta:** procedimento `F-11-002` (§4) — passos e condição: Resumo é projeção; use ledger para conferir histórico.
 
 - **Q-F-11-002-01:** Como faço para consultar resumo logístico no EMPROVEX?
 - **Q-F-11-002-02:** Onde encontro a opção para consultar resumo logístico?
@@ -5431,9 +5439,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-002-16:** Você consegue me orientar sobre consultar resumo logístico pelo celular ou no modo Essencial?
 - **Q-F-11-002-17:** A função de consultar resumo logístico está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-003 — Pesquisar estoque · MAIN
+#### Bateria vinculada a F-11-003 — Pesquisar estoque · MAIN
 
-**Referência de resposta:** [F-11-003](#f-11-003-pesquisar-estoque) — passos do §4 e condição: Respeitar contexto de depósito.
+**Referência de resposta:** procedimento `F-11-003` (§4) — passos e condição: Respeitar contexto de depósito.
 
 - **Q-F-11-003-01:** Como faço para pesquisar estoque no EMPROVEX?
 - **Q-F-11-003-02:** Onde encontro a opção para pesquisar estoque?
@@ -5453,9 +5461,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-003-16:** Você consegue me orientar sobre pesquisar estoque pelo celular ou no modo Essencial?
 - **Q-F-11-003-17:** A função de pesquisar estoque está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-004 — Consultar lotes e validades · MAIN
+#### Bateria vinculada a F-11-004 — Consultar lotes e validades · MAIN
 
-**Referência de resposta:** [F-11-004](#f-11-004-consultar-lotes-e-validades) — passos do §4 e condição: Não dispensar checagem física da validade.
+**Referência de resposta:** procedimento `F-11-004` (§4) — passos e condição: Não dispensar checagem física da validade.
 
 - **Q-F-11-004-01:** Como faço para consultar lotes e validades no EMPROVEX?
 - **Q-F-11-004-02:** Onde encontro a opção para consultar lotes e validades?
@@ -5475,9 +5483,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-004-16:** Você consegue me orientar sobre consultar lotes e validades pelo celular ou no modo Essencial?
 - **Q-F-11-004-17:** A função de consultar lotes e validades está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-005 — Consultar códigos de barras · MAIN
+#### Bateria vinculada a F-11-005 — Consultar códigos de barras · MAIN
 
-**Referência de resposta:** [F-11-005](#f-11-005-consultar-codigos-de-barras) — passos do §4 e condição: Etiqueta errada não autoriza atribuir material diferente.
+**Referência de resposta:** procedimento `F-11-005` (§4) — passos e condição: Etiqueta errada não autoriza atribuir material diferente.
 
 - **Q-F-11-005-01:** Como faço para consultar códigos de barras no EMPROVEX?
 - **Q-F-11-005-02:** Onde encontro a opção para consultar códigos de barras?
@@ -5497,9 +5505,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-005-16:** Você consegue me orientar sobre consultar códigos de barras pelo celular ou no modo Essencial?
 - **Q-F-11-005-17:** A função de consultar códigos de barras está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-006 — Consultar movimentações · MAIN
+#### Bateria vinculada a F-11-006 — Consultar movimentações · MAIN
 
-**Referência de resposta:** [F-11-006](#f-11-006-consultar-movimentacoes) — passos do §4 e condição: Movimentações registradas não devem ser reexecutadas por consulta.
+**Referência de resposta:** procedimento `F-11-006` (§4) — passos e condição: Movimentações registradas não devem ser reexecutadas por consulta.
 
 - **Q-F-11-006-01:** Como faço para consultar movimentações no EMPROVEX?
 - **Q-F-11-006-02:** Onde encontro a opção para consultar movimentações?
@@ -5519,9 +5527,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-006-16:** Você consegue me orientar sobre consultar movimentações pelo celular ou no modo Essencial?
 - **Q-F-11-006-17:** A função de consultar movimentações está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-007 — Abrir inventário · MAIN
+#### Bateria vinculada a F-11-007 — Abrir inventário · MAIN
 
-**Referência de resposta:** [F-11-007](#f-11-007-abrir-inventario) — passos do §4 e condição: Conferência física exige observação no depósito.
+**Referência de resposta:** procedimento `F-11-007` (§4) — passos e condição: Conferência física exige observação no depósito.
 
 - **Q-F-11-007-01:** Como faço para abrir inventário no EMPROVEX?
 - **Q-F-11-007-02:** Onde encontro a opção para abrir inventário?
@@ -5541,9 +5549,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-007-16:** Você consegue me orientar sobre abrir inventário pelo celular ou no modo Essencial?
 - **Q-F-11-007-17:** A função de abrir inventário está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-008 — Registrar contagem física · MAIN
+#### Bateria vinculada a F-11-008 — Registrar contagem física · MAIN
 
-**Referência de resposta:** [F-11-008](#f-11-008-registrar-contagem-fisica) — passos do §4 e condição: Não inventar contagem ou zerar material não verificado.
+**Referência de resposta:** procedimento `F-11-008` (§4) — passos e condição: Não inventar contagem ou zerar material não verificado.
 
 - **Q-F-11-008-01:** Como faço para registrar contagem física no EMPROVEX?
 - **Q-F-11-008-02:** Onde encontro a opção para registrar contagem física?
@@ -5563,9 +5571,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-008-16:** Você consegue me orientar sobre registrar contagem física pelo celular ou no modo Essencial?
 - **Q-F-11-008-17:** A função de registrar contagem física está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-009 — Tratar divergência de inventário · MAIN
+#### Bateria vinculada a F-11-009 — Tratar divergência de inventário · MAIN
 
-**Referência de resposta:** [F-11-009](#f-11-009-tratar-divergencia-de-inventario) — passos do §4 e condição: Ajustes de estoque são operações sensíveis.
+**Referência de resposta:** procedimento `F-11-009` (§4) — passos e condição: Ajustes de estoque são operações sensíveis.
 
 - **Q-F-11-009-01:** Como faço para tratar divergência de inventário no EMPROVEX?
 - **Q-F-11-009-02:** Onde encontro a opção para tratar divergência de inventário?
@@ -5585,9 +5593,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-009-16:** Você consegue me orientar sobre tratar divergência de inventário pelo celular ou no modo Essencial?
 - **Q-F-11-009-17:** A função de tratar divergência de inventário está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-010 — Consultar histórico de inventários · MAIN
+#### Bateria vinculada a F-11-010 — Consultar histórico de inventários · MAIN
 
-**Referência de resposta:** [F-11-010](#f-11-010-consultar-historico-de-inventarios) — passos do §4 e condição: Histórico distinto de contagem nova.
+**Referência de resposta:** procedimento `F-11-010` (§4) — passos e condição: Histórico distinto de contagem nova.
 
 - **Q-F-11-010-01:** Como faço para consultar histórico de inventários no EMPROVEX?
 - **Q-F-11-010-02:** Onde encontro a opção para consultar histórico de inventários?
@@ -5607,9 +5615,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-010-16:** Você consegue me orientar sobre consultar histórico de inventários pelo celular ou no modo Essencial?
 - **Q-F-11-010-17:** A função de consultar histórico de inventários está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-011 — Relatórios logísticos gerais · MAIN
+#### Bateria vinculada a F-11-011 — Relatórios logísticos gerais · MAIN
 
-**Referência de resposta:** [F-11-011](#f-11-011-relatorios-logisticos-gerais) — passos do §4 e condição: Relatório deriva de transações reais e das lacunas de dados.
+**Referência de resposta:** procedimento `F-11-011` (§4) — passos e condição: Relatório deriva de transações reais e das lacunas de dados.
 
 - **Q-F-11-011-01:** Como faço para relatórios logísticos gerais no EMPROVEX?
 - **Q-F-11-011-02:** Onde encontro a opção para relatórios logísticos gerais?
@@ -5629,9 +5637,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-011-16:** Você consegue me orientar sobre relatórios logísticos gerais pelo celular ou no modo Essencial?
 - **Q-F-11-011-17:** A função de relatórios logísticos gerais está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-012 — Exportar relatório logístico CSV · MAIN
+#### Bateria vinculada a F-11-012 — Exportar relatório logístico CSV · MAIN
 
-**Referência de resposta:** [F-11-012](#f-11-012-exportar-relatorio-logistico-csv) — passos do §4 e condição: Exportação contém dados operacionais da unidade.
+**Referência de resposta:** procedimento `F-11-012` (§4) — passos e condição: Exportação contém dados operacionais da unidade.
 
 - **Q-F-11-012-01:** Como faço para exportar relatório logístico CSV no EMPROVEX?
 - **Q-F-11-012-02:** Onde encontro a opção para exportar relatório logístico CSV?
@@ -5651,9 +5659,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-012-16:** Você consegue me orientar sobre exportar relatório logístico CSV pelo celular ou no modo Essencial?
 - **Q-F-11-012-17:** A função de exportar relatório logístico CSV está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-013 — Consultar consumo por destino · MAIN
+#### Bateria vinculada a F-11-013 — Consultar consumo por destino · MAIN
 
-**Referência de resposta:** [F-11-013](#f-11-013-consultar-consumo-por-destino) — passos do §4 e condição: Não inferir consumo real fora das saídas registradas.
+**Referência de resposta:** procedimento `F-11-013` (§4) — passos e condição: Não inferir consumo real fora das saídas registradas.
 
 - **Q-F-11-013-01:** Como faço para consultar consumo por destino no EMPROVEX?
 - **Q-F-11-013-02:** Onde encontro a opção para consultar consumo por destino?
@@ -5673,9 +5681,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-013-16:** Você consegue me orientar sobre consultar consumo por destino pelo celular ou no modo Essencial?
 - **Q-F-11-013-17:** A função de consultar consumo por destino está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-014 — Consultar consumo por material ou responsável · MAIN
+#### Bateria vinculada a F-11-014 — Consultar consumo por material ou responsável · MAIN
 
-**Referência de resposta:** [F-11-014](#f-11-014-consultar-consumo-por-material-ou-responsavel) — passos do §4 e condição: Nomes de responsáveis dependem de preenchimento na saída.
+**Referência de resposta:** procedimento `F-11-014` (§4) — passos e condição: Nomes de responsáveis dependem de preenchimento na saída.
 
 - **Q-F-11-014-01:** Como faço para consultar consumo por material ou responsável no EMPROVEX?
 - **Q-F-11-014-02:** Onde encontro a opção para consultar consumo por material ou responsável?
@@ -5695,9 +5703,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-014-16:** Você consegue me orientar sobre consultar consumo por material ou responsável pelo celular ou no modo Essencial?
 - **Q-F-11-014-17:** A função de consultar consumo por material ou responsável está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-015 — Consultar alertas de logística · MAIN
+#### Bateria vinculada a F-11-015 — Consultar alertas de logística · MAIN
 
-**Referência de resposta:** [F-11-015](#f-11-015-consultar-alertas-de-logistica) — passos do §4 e condição: Alertas não executam correção automática.
+**Referência de resposta:** procedimento `F-11-015` (§4) — passos e condição: Alertas não executam correção automática.
 
 - **Q-F-11-015-01:** Como faço para consultar alertas de logística no EMPROVEX?
 - **Q-F-11-015-02:** Onde encontro a opção para consultar alertas de logística?
@@ -5717,9 +5725,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-11-015-16:** Você consegue me orientar sobre consultar alertas de logística pelo celular ou no modo Essencial?
 - **Q-F-11-015-17:** A função de consultar alertas de logística está disponível para todos os workspaces ou depende de acesso?
 
-#### F-11-016 — Consultar relatórios SISCOFIS históricos · MAIN
+#### Bateria vinculada a F-11-016 — Consultar relatórios SISCOFIS históricos · MAIN
 
-**Referência de resposta:** [F-11-016](#f-11-016-consultar-relatorios-siscofis-historicos) — passos do §4 e condição: Separar histórico importado e operações nativas.
+**Referência de resposta:** procedimento `F-11-016` (§4) — passos e condição: Separar histórico importado e operações nativas.
 
 - **Q-F-11-016-01:** Como faço para consultar relatórios SISCOFIS históricos no EMPROVEX?
 - **Q-F-11-016-02:** Onde encontro a opção para consultar relatórios SISCOFIS históricos?
@@ -5741,9 +5749,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.12. Central de Depósitos — saída e rastreabilidade
 
-#### F-12-001 — Abrir Saída de Material · MAIN
+#### Bateria vinculada a F-12-001 — Abrir Saída de Material · MAIN
 
-**Referência de resposta:** [F-12-001](#f-12-001-abrir-saida-de-material) — passos do §4 e condição: A baixa é protegida por validações do servidor.
+**Referência de resposta:** procedimento `F-12-001` (§4) — passos e condição: A baixa é protegida por validações do servidor.
 
 - **Q-F-12-001-01:** Como faço para abrir Saída de Material no EMPROVEX?
 - **Q-F-12-001-02:** Onde encontro a opção para abrir Saída de Material?
@@ -5763,9 +5771,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-001-16:** Você consegue me orientar sobre abrir Saída de Material pelo celular ou no modo Essencial?
 - **Q-F-12-001-17:** A função de abrir Saída de Material está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-002 — Iniciar nova saída · MAIN
+#### Bateria vinculada a F-12-002 — Iniciar nova saída · MAIN
 
-**Referência de resposta:** [F-12-002](#f-12-002-iniciar-nova-saida) — passos do §4 e condição: Somente material efetivamente alocado e apto pode sair.
+**Referência de resposta:** procedimento `F-12-002` (§4) — passos e condição: Somente material efetivamente alocado e apto pode sair.
 
 - **Q-F-12-002-01:** Como faço para iniciar nova saída no EMPROVEX?
 - **Q-F-12-002-02:** Onde encontro a opção para iniciar nova saída?
@@ -5785,9 +5793,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-002-16:** Você consegue me orientar sobre iniciar nova saída pelo celular ou no modo Essencial?
 - **Q-F-12-002-17:** A função de iniciar nova saída está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-003 — Localizar material por barcode · MAIN
+#### Bateria vinculada a F-12-003 — Localizar material por barcode · MAIN
 
-**Referência de resposta:** [F-12-003](#f-12-003-localizar-material-por-barcode) — passos do §4 e condição: Código vinculado pode mudar; reconferir se aviso de divergência.
+**Referência de resposta:** procedimento `F-12-003` (§4) — passos e condição: Código vinculado pode mudar; reconferir se aviso de divergência.
 
 - **Q-F-12-003-01:** Como faço para localizar material por barcode no EMPROVEX?
 - **Q-F-12-003-02:** Onde encontro a opção para localizar material por barcode?
@@ -5807,9 +5815,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-003-16:** Você consegue me orientar sobre localizar material por barcode pelo celular ou no modo Essencial?
 - **Q-F-12-003-17:** A função de localizar material por barcode está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-004 — Selecionar posição de retirada · MAIN
+#### Bateria vinculada a F-12-004 — Selecionar posição de retirada · MAIN
 
-**Referência de resposta:** [F-12-004](#f-12-004-selecionar-posicao-de-retirada) — passos do §4 e condição: Bloqueia saldo insuficiente ou não rastreado para posição.
+**Referência de resposta:** procedimento `F-12-004` (§4) — passos e condição: Bloqueia saldo insuficiente ou não rastreado para posição.
 
 - **Q-F-12-004-01:** Como faço para selecionar posição de retirada no EMPROVEX?
 - **Q-F-12-004-02:** Onde encontro a opção para selecionar posição de retirada?
@@ -5829,9 +5837,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-004-16:** Você consegue me orientar sobre selecionar posição de retirada pelo celular ou no modo Essencial?
 - **Q-F-12-004-17:** A função de selecionar posição de retirada está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-005 — Informar quantidade/unidade da saída · MAIN
+#### Bateria vinculada a F-12-005 — Informar quantidade/unidade da saída · MAIN
 
-**Referência de resposta:** [F-12-005](#f-12-005-informar-quantidadeunidade-da-saida) — passos do §4 e condição: Não utilizar quantidade maior que estoque apto.
+**Referência de resposta:** procedimento `F-12-005` (§4) — passos e condição: Não utilizar quantidade maior que estoque apto.
 
 - **Q-F-12-005-01:** Como faço para informar quantidade/unidade da saída no EMPROVEX?
 - **Q-F-12-005-02:** Onde encontro a opção para informar quantidade/unidade da saída?
@@ -5851,9 +5859,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-005-16:** Você consegue me orientar sobre informar quantidade/unidade da saída pelo celular ou no modo Essencial?
 - **Q-F-12-005-17:** A função de informar quantidade/unidade da saída está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-006 — Adicionar material ao carrinho · MAIN
+#### Bateria vinculada a F-12-006 — Adicionar material ao carrinho · MAIN
 
-**Referência de resposta:** [F-12-006](#f-12-006-adicionar-material-ao-carrinho) — passos do §4 e condição: O carrinho ainda não é baixa concluída.
+**Referência de resposta:** procedimento `F-12-006` (§4) — passos e condição: O carrinho ainda não é baixa concluída.
 
 - **Q-F-12-006-01:** Como faço para adicionar material ao carrinho no EMPROVEX?
 - **Q-F-12-006-02:** Onde encontro a opção para adicionar material ao carrinho?
@@ -5873,9 +5881,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-006-16:** Você consegue me orientar sobre adicionar material ao carrinho pelo celular ou no modo Essencial?
 - **Q-F-12-006-17:** A função de adicionar material ao carrinho está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-007 — Editar/remover linha do carrinho · MAIN
+#### Bateria vinculada a F-12-007 — Editar/remover linha do carrinho · MAIN
 
-**Referência de resposta:** [F-12-007](#f-12-007-editarremover-linha-do-carrinho) — passos do §4 e condição: Revalidar antes de concluir a saída.
+**Referência de resposta:** procedimento `F-12-007` (§4) — passos e condição: Revalidar antes de concluir a saída.
 
 - **Q-F-12-007-01:** Como faço para editar/remover linha do carrinho no EMPROVEX?
 - **Q-F-12-007-02:** Onde encontro a opção para editar/remover linha do carrinho?
@@ -5895,9 +5903,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-007-16:** Você consegue me orientar sobre editar/remover linha do carrinho pelo celular ou no modo Essencial?
 - **Q-F-12-007-17:** A função de editar/remover linha do carrinho está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-008 — Selecionar destino da saída · MAIN
+#### Bateria vinculada a F-12-008 — Selecionar destino da saída · MAIN
 
-**Referência de resposta:** [F-12-008](#f-12-008-selecionar-destino-da-saida) — passos do §4 e condição: Destinos inativos não podem ser usados.
+**Referência de resposta:** procedimento `F-12-008` (§4) — passos e condição: Destinos inativos não podem ser usados.
 
 - **Q-F-12-008-01:** Como faço para selecionar destino da saída no EMPROVEX?
 - **Q-F-12-008-02:** Onde encontro a opção para selecionar destino da saída?
@@ -5917,9 +5925,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-008-16:** Você consegue me orientar sobre selecionar destino da saída pelo celular ou no modo Essencial?
 - **Q-F-12-008-17:** A função de selecionar destino da saída está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-009 — Identificar responsável/retirante · MAIN
+#### Bateria vinculada a F-12-009 — Identificar responsável/retirante · MAIN
 
-**Referência de resposta:** [F-12-009](#f-12-009-identificar-responsavelretirante) — passos do §4 e condição: Dados devem corresponder a pessoa/finalidade real.
+**Referência de resposta:** procedimento `F-12-009` (§4) — passos e condição: Dados devem corresponder a pessoa/finalidade real.
 
 - **Q-F-12-009-01:** Como faço para identificar responsável/retirante no EMPROVEX?
 - **Q-F-12-009-02:** Onde encontro a opção para identificar responsável/retirante?
@@ -5939,9 +5947,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-009-16:** Você consegue me orientar sobre identificar responsável/retirante pelo celular ou no modo Essencial?
 - **Q-F-12-009-17:** A função de identificar responsável/retirante está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-010 — Finalizar saída · MAIN
+#### Bateria vinculada a F-12-010 — Finalizar saída · MAIN
 
-**Referência de resposta:** [F-12-010](#f-12-010-finalizar-saida) — passos do §4 e condição: A operação pode ser negada se saldo ou validade tiver mudado.
+**Referência de resposta:** procedimento `F-12-010` (§4) — passos e condição: A operação pode ser negada se saldo ou validade tiver mudado.
 
 - **Q-F-12-010-01:** Como faço para finalizar saída no EMPROVEX?
 - **Q-F-12-010-02:** Onde encontro a opção para finalizar saída?
@@ -5961,9 +5969,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-010-16:** Você consegue me orientar sobre finalizar saída pelo celular ou no modo Essencial?
 - **Q-F-12-010-17:** A função de finalizar saída está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-011 — Retomar saída incompleta · MAIN
+#### Bateria vinculada a F-12-011 — Retomar saída incompleta · MAIN
 
-**Referência de resposta:** [F-12-011](#f-12-011-retomar-saida-incompleta) — passos do §4 e condição: Não duplicar baixa após timeout/erro incerto.
+**Referência de resposta:** procedimento `F-12-011` (§4) — passos e condição: Não duplicar baixa após timeout/erro incerto.
 
 - **Q-F-12-011-01:** Como faço para retomar saída incompleta no EMPROVEX?
 - **Q-F-12-011-02:** Onde encontro a opção para retomar saída incompleta?
@@ -5983,9 +5991,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-011-16:** Você consegue me orientar sobre retomar saída incompleta pelo celular ou no modo Essencial?
 - **Q-F-12-011-17:** A função de retomar saída incompleta está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-012 — Consultar registro de saídas · MAIN
+#### Bateria vinculada a F-12-012 — Consultar registro de saídas · MAIN
 
-**Referência de resposta:** [F-12-012](#f-12-012-consultar-registro-de-saidas) — passos do §4 e condição: Histórico auditável de retirada.
+**Referência de resposta:** procedimento `F-12-012` (§4) — passos e condição: Histórico auditável de retirada.
 
 - **Q-F-12-012-01:** Como faço para consultar registro de saídas no EMPROVEX?
 - **Q-F-12-012-02:** Onde encontro a opção para consultar registro de saídas?
@@ -6005,9 +6013,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-012-16:** Você consegue me orientar sobre consultar registro de saídas pelo celular ou no modo Essencial?
 - **Q-F-12-012-17:** A função de consultar registro de saídas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-013 — Emitir ficha de saída · MAIN
+#### Bateria vinculada a F-12-013 — Emitir ficha de saída · MAIN
 
-**Referência de resposta:** [F-12-013](#f-12-013-emitir-ficha-de-saida) — passos do §4 e condição: Fichas não substituem confirmação no ledger.
+**Referência de resposta:** procedimento `F-12-013` (§4) — passos e condição: Fichas não substituem confirmação no ledger.
 
 - **Q-F-12-013-01:** Como faço para emitir ficha de saída no EMPROVEX?
 - **Q-F-12-013-02:** Onde encontro a opção para emitir ficha de saída?
@@ -6027,9 +6035,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-013-16:** Você consegue me orientar sobre emitir ficha de saída pelo celular ou no modo Essencial?
 - **Q-F-12-013-17:** A função de emitir ficha de saída está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-014 — Emitir pedido de recolhimento de vencidos · MAIN
+#### Bateria vinculada a F-12-014 — Emitir pedido de recolhimento de vencidos · MAIN
 
-**Referência de resposta:** [F-12-014](#f-12-014-emitir-pedido-de-recolhimento-de-vencidos) — passos do §4 e condição: Vencido não deve ser retirado como consumo regular.
+**Referência de resposta:** procedimento `F-12-014` (§4) — passos e condição: Vencido não deve ser retirado como consumo regular.
 
 - **Q-F-12-014-01:** Como faço para emitir pedido de recolhimento de vencidos no EMPROVEX?
 - **Q-F-12-014-02:** Onde encontro a opção para emitir pedido de recolhimento de vencidos?
@@ -6049,9 +6057,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-12-014-16:** Você consegue me orientar sobre emitir pedido de recolhimento de vencidos pelo celular ou no modo Essencial?
 - **Q-F-12-014-17:** A função de emitir pedido de recolhimento de vencidos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-12-015 — Gerar relatório de consumo · MAIN
+#### Bateria vinculada a F-12-015 — Gerar relatório de consumo · MAIN
 
-**Referência de resposta:** [F-12-015](#f-12-015-gerar-relatorio-de-consumo) — passos do §4 e condição: Consumo reportado deriva das saídas contabilizadas.
+**Referência de resposta:** procedimento `F-12-015` (§4) — passos e condição: Consumo reportado deriva das saídas contabilizadas.
 
 - **Q-F-12-015-01:** Como faço para gerar relatório de consumo no EMPROVEX?
 - **Q-F-12-015-02:** Onde encontro a opção para gerar relatório de consumo?
@@ -6073,9 +6081,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.13. Operador Móvel
 
-#### F-13-001 — Abrir Operador Móvel · MAIN
+#### Bateria vinculada a F-13-001 — Abrir Operador Móvel · MAIN
 
-**Referência de resposta:** [F-13-001](#f-13-001-abrir-operador-movel) — passos do §4 e condição: Fluxo móvel protegido por API do servidor.
+**Referência de resposta:** procedimento `F-13-001` (§4) — passos e condição: Fluxo móvel protegido por API do servidor.
 
 - **Q-F-13-001-01:** Como faço para abrir Operador Móvel no EMPROVEX?
 - **Q-F-13-001-02:** Onde encontro a opção para abrir Operador Móvel?
@@ -6095,9 +6103,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-001-16:** Você consegue me orientar sobre abrir Operador Móvel pelo celular ou no modo Essencial?
 - **Q-F-13-001-17:** A função de abrir Operador Móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-002 — Ler etiqueta/código no celular · MAIN
+#### Bateria vinculada a F-13-002 — Ler etiqueta/código no celular · MAIN
 
-**Referência de resposta:** [F-13-002](#f-13-002-ler-etiquetacodigo-no-celular) — passos do §4 e condição: O acesso à câmera depende de navegador/HTTPS/permissão.
+**Referência de resposta:** procedimento `F-13-002` (§4) — passos e condição: O acesso à câmera depende de navegador/HTTPS/permissão.
 
 - **Q-F-13-002-01:** Como faço para ler etiqueta/código no celular no EMPROVEX?
 - **Q-F-13-002-02:** Onde encontro a opção para ler etiqueta/código no celular?
@@ -6117,9 +6125,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-002-16:** Você consegue me orientar sobre ler etiqueta/código no celular pelo celular ou no modo Essencial?
 - **Q-F-13-002-17:** A função de ler etiqueta/código no celular está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-003 — Alocar recebimento no móvel · MAIN
+#### Bateria vinculada a F-13-003 — Alocar recebimento no móvel · MAIN
 
-**Referência de resposta:** [F-13-003](#f-13-003-alocar-recebimento-no-movel) — passos do §4 e condição: Não confundir leitura de etiqueta com gravação já realizada.
+**Referência de resposta:** procedimento `F-13-003` (§4) — passos e condição: Não confundir leitura de etiqueta com gravação já realizada.
 
 - **Q-F-13-003-01:** Como faço para alocar recebimento no móvel no EMPROVEX?
 - **Q-F-13-003-02:** Onde encontro a opção para alocar recebimento no móvel?
@@ -6139,9 +6147,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-003-16:** Você consegue me orientar sobre alocar recebimento no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-003-17:** A função de alocar recebimento no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-004 — Cadastrar avulso no móvel · MAIN
+#### Bateria vinculada a F-13-004 — Cadastrar avulso no móvel · MAIN
 
-**Referência de resposta:** [F-13-004](#f-13-004-cadastrar-avulso-no-movel) — passos do §4 e condição: Origem avulsa deve ser identificada.
+**Referência de resposta:** procedimento `F-13-004` (§4) — passos e condição: Origem avulsa deve ser identificada.
 
 - **Q-F-13-004-01:** Como faço para cadastrar avulso no móvel no EMPROVEX?
 - **Q-F-13-004-02:** Onde encontro a opção para cadastrar avulso no móvel?
@@ -6161,9 +6169,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-004-16:** Você consegue me orientar sobre cadastrar avulso no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-004-17:** A função de cadastrar avulso no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-005 — Transferir material no móvel · MAIN
+#### Bateria vinculada a F-13-005 — Transferir material no móvel · MAIN
 
-**Referência de resposta:** [F-13-005](#f-13-005-transferir-material-no-movel) — passos do §4 e condição: Transferência não deve escolher automaticamente validade por FEFO.
+**Referência de resposta:** procedimento `F-13-005` (§4) — passos e condição: Transferência não deve escolher automaticamente validade por FEFO.
 
 - **Q-F-13-005-01:** Como faço para transferir material no móvel no EMPROVEX?
 - **Q-F-13-005-02:** Onde encontro a opção para transferir material no móvel?
@@ -6183,9 +6191,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-005-16:** Você consegue me orientar sobre transferir material no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-005-17:** A função de transferir material no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-006 — Fazer saída móvel · MAIN
+#### Bateria vinculada a F-13-006 — Fazer saída móvel · MAIN
 
-**Referência de resposta:** [F-13-006](#f-13-006-fazer-saida-movel) — passos do §4 e condição: Validade e posição protegidas no servidor.
+**Referência de resposta:** procedimento `F-13-006` (§4) — passos e condição: Validade e posição protegidas no servidor.
 
 - **Q-F-13-006-01:** Como faço para fazer saída móvel no EMPROVEX?
 - **Q-F-13-006-02:** Onde encontro a opção para fazer saída móvel?
@@ -6205,9 +6213,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-006-16:** Você consegue me orientar sobre fazer saída móvel pelo celular ou no modo Essencial?
 - **Q-F-13-006-17:** A função de fazer saída móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-007 — Consultar localização no móvel · MAIN
+#### Bateria vinculada a F-13-007 — Consultar localização no móvel · MAIN
 
-**Referência de resposta:** [F-13-007](#f-13-007-consultar-localizacao-no-movel) — passos do §4 e condição: Consulta apenas.
+**Referência de resposta:** procedimento `F-13-007` (§4) — passos e condição: Consulta apenas.
 
 - **Q-F-13-007-01:** Como faço para consultar localização no móvel no EMPROVEX?
 - **Q-F-13-007-02:** Onde encontro a opção para consultar localização no móvel?
@@ -6227,9 +6235,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-007-16:** Você consegue me orientar sobre consultar localização no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-007-17:** A função de consultar localização no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-008 — Consultar item no móvel · MAIN
+#### Bateria vinculada a F-13-008 — Consultar item no móvel · MAIN
 
-**Referência de resposta:** [F-13-008](#f-13-008-consultar-item-no-movel) — passos do §4 e condição: Dados limitados ao workspace.
+**Referência de resposta:** procedimento `F-13-008` (§4) — passos e condição: Dados limitados ao workspace.
 
 - **Q-F-13-008-01:** Como faço para consultar item no móvel no EMPROVEX?
 - **Q-F-13-008-02:** Onde encontro a opção para consultar item no móvel?
@@ -6249,9 +6257,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-008-16:** Você consegue me orientar sobre consultar item no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-008-17:** A função de consultar item no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-009 — Realizar inventário móvel · MAIN
+#### Bateria vinculada a F-13-009 — Realizar inventário móvel · MAIN
 
-**Referência de resposta:** [F-13-009](#f-13-009-realizar-inventario-movel) — passos do §4 e condição: Requer conferência física.
+**Referência de resposta:** procedimento `F-13-009` (§4) — passos e condição: Requer conferência física.
 
 - **Q-F-13-009-01:** Como faço para realizar inventário móvel no EMPROVEX?
 - **Q-F-13-009-02:** Onde encontro a opção para realizar inventário móvel?
@@ -6271,9 +6279,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-009-16:** Você consegue me orientar sobre realizar inventário móvel pelo celular ou no modo Essencial?
 - **Q-F-13-009-17:** A função de realizar inventário móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-010 — Conferir posição no móvel · MAIN
+#### Bateria vinculada a F-13-010 — Conferir posição no móvel · MAIN
 
-**Referência de resposta:** [F-13-010](#f-13-010-conferir-posicao-no-movel) — passos do §4 e condição: Não inventar conferência sem presença física.
+**Referência de resposta:** procedimento `F-13-010` (§4) — passos e condição: Não inventar conferência sem presença física.
 
 - **Q-F-13-010-01:** Como faço para conferir posição no móvel no EMPROVEX?
 - **Q-F-13-010-02:** Onde encontro a opção para conferir posição no móvel?
@@ -6293,9 +6301,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-13-010-16:** Você consegue me orientar sobre conferir posição no móvel pelo celular ou no modo Essencial?
 - **Q-F-13-010-17:** A função de conferir posição no móvel está disponível para todos os workspaces ou depende de acesso?
 
-#### F-13-011 — Voltar ao EMPROVEX · MAIN
+#### Bateria vinculada a F-13-011 — Voltar ao EMPROVEX · MAIN
 
-**Referência de resposta:** [F-13-011](#f-13-011-voltar-ao-emprovex) — passos do §4 e condição: Não troca identidade.
+**Referência de resposta:** procedimento `F-13-011` (§4) — passos e condição: Não troca identidade.
 
 - **Q-F-13-011-01:** Como faço para voltar ao EMPROVEX no EMPROVEX?
 - **Q-F-13-011-02:** Onde encontro a opção para voltar ao EMPROVEX?
@@ -6317,9 +6325,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.14. Administração da plataforma
 
-#### F-14-001 — Abrir Administração · MAIN
+#### Bateria vinculada a F-14-001 — Abrir Administração · MAIN
 
-**Referência de resposta:** [F-14-001](#f-14-001-abrir-administracao) — passos do §4 e condição: Usuário setorial comum não pode administrar outros workspaces.
+**Referência de resposta:** procedimento `F-14-001` (§4) — passos e condição: Usuário setorial comum não pode administrar outros workspaces.
 
 - **Q-F-14-001-01:** Como faço para abrir Administração no EMPROVEX?
 - **Q-F-14-001-02:** Onde encontro a opção para abrir Administração?
@@ -6339,9 +6347,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-001-16:** Você consegue me orientar sobre abrir Administração pelo celular ou no modo Essencial?
 - **Q-F-14-001-17:** A função de abrir Administração está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-002 — Consultar Início administrativo · MAIN
+#### Bateria vinculada a F-14-002 — Consultar Início administrativo · MAIN
 
-**Referência de resposta:** [F-14-002](#f-14-002-consultar-inicio-administrativo) — passos do §4 e condição: Pode ser substituído por Visão Geral no modo Essencial.
+**Referência de resposta:** procedimento `F-14-002` (§4) — passos e condição: Pode ser substituído por Visão Geral no modo Essencial.
 
 - **Q-F-14-002-01:** Como faço para consultar Início administrativo no EMPROVEX?
 - **Q-F-14-002-02:** Onde encontro a opção para consultar Início administrativo?
@@ -6361,9 +6369,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-002-16:** Você consegue me orientar sobre consultar Início administrativo pelo celular ou no modo Essencial?
 - **Q-F-14-002-17:** A função de consultar Início administrativo está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-003 — Consultar Visão Geral · MAIN
+#### Bateria vinculada a F-14-003 — Consultar Visão Geral · MAIN
 
-**Referência de resposta:** [F-14-003](#f-14-003-consultar-visao-geral) — passos do §4 e condição: Não interpretar indisponibilidade de métrica como serviço indisponível.
+**Referência de resposta:** procedimento `F-14-003` (§4) — passos e condição: Não interpretar indisponibilidade de métrica como serviço indisponível.
 
 - **Q-F-14-003-01:** Como faço para consultar Visão Geral no EMPROVEX?
 - **Q-F-14-003-02:** Onde encontro a opção para consultar Visão Geral?
@@ -6383,9 +6391,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-003-16:** Você consegue me orientar sobre consultar Visão Geral pelo celular ou no modo Essencial?
 - **Q-F-14-003-17:** A função de consultar Visão Geral está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-004 — Listar setores e workspaces · MAIN
+#### Bateria vinculada a F-14-004 — Listar setores e workspaces · MAIN
 
-**Referência de resposta:** [F-14-004](#f-14-004-listar-setores-e-workspaces) — passos do §4 e condição: Respeitar UG e workspace.
+**Referência de resposta:** procedimento `F-14-004` (§4) — passos e condição: Respeitar UG e workspace.
 
 - **Q-F-14-004-01:** Como faço para listar setores e workspaces no EMPROVEX?
 - **Q-F-14-004-02:** Onde encontro a opção para listar setores e workspaces?
@@ -6405,9 +6413,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-004-16:** Você consegue me orientar sobre listar setores e workspaces pelo celular ou no modo Essencial?
 - **Q-F-14-004-17:** A função de listar setores e workspaces está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-005 — Buscar setor · MAIN
+#### Bateria vinculada a F-14-005 — Buscar setor · MAIN
 
-**Referência de resposta:** [F-14-005](#f-14-005-buscar-setor) — passos do §4 e condição: Duas organizações podem ter identificadores semelhantes.
+**Referência de resposta:** procedimento `F-14-005` (§4) — passos e condição: Duas organizações podem ter identificadores semelhantes.
 
 - **Q-F-14-005-01:** Como faço para buscar setor no EMPROVEX?
 - **Q-F-14-005-02:** Onde encontro a opção para buscar setor?
@@ -6427,9 +6435,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-005-16:** Você consegue me orientar sobre buscar setor pelo celular ou no modo Essencial?
 - **Q-F-14-005-17:** A função de buscar setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-006 — Cadastrar novo setor · MAIN
+#### Bateria vinculada a F-14-006 — Cadastrar novo setor · MAIN
 
-**Referência de resposta:** [F-14-006](#f-14-006-cadastrar-novo-setor) — passos do §4 e condição: Cria identidade e workspace; não simular com cadastro manual no Firestore.
+**Referência de resposta:** procedimento `F-14-006` (§4) — passos e condição: Cria identidade e workspace; não simular com cadastro manual no Firestore.
 
 - **Q-F-14-006-01:** Como faço para cadastrar novo setor no EMPROVEX?
 - **Q-F-14-006-02:** Onde encontro a opção para cadastrar novo setor?
@@ -6449,9 +6457,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-006-16:** Você consegue me orientar sobre cadastrar novo setor pelo celular ou no modo Essencial?
 - **Q-F-14-006-17:** A função de cadastrar novo setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-007 — Editar dados do setor · MAIN
+#### Bateria vinculada a F-14-007 — Editar dados do setor · MAIN
 
-**Referência de resposta:** [F-14-007](#f-14-007-editar-dados-do-setor) — passos do §4 e condição: Mudanças de UG/identidade podem ser sensíveis.
+**Referência de resposta:** procedimento `F-14-007` (§4) — passos e condição: Mudanças de UG/identidade podem ser sensíveis.
 
 - **Q-F-14-007-01:** Como faço para editar dados do setor no EMPROVEX?
 - **Q-F-14-007-02:** Onde encontro a opção para editar dados do setor?
@@ -6471,9 +6479,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-007-16:** Você consegue me orientar sobre editar dados do setor pelo celular ou no modo Essencial?
 - **Q-F-14-007-17:** A função de editar dados do setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-008 — Suspender ou reativar setor · MAIN
+#### Bateria vinculada a F-14-008 — Suspender ou reativar setor · MAIN
 
-**Referência de resposta:** [F-14-008](#f-14-008-suspender-ou-reativar-setor) — passos do §4 e condição: Nunca contornar controle de acesso.
+**Referência de resposta:** procedimento `F-14-008` (§4) — passos e condição: Nunca contornar controle de acesso.
 
 - **Q-F-14-008-01:** Como faço para suspender ou reativar setor no EMPROVEX?
 - **Q-F-14-008-02:** Onde encontro a opção para suspender ou reativar setor?
@@ -6493,9 +6501,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-008-16:** Você consegue me orientar sobre suspender ou reativar setor pelo celular ou no modo Essencial?
 - **Q-F-14-008-17:** A função de suspender ou reativar setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-009 — Redefinir senha de setor no Admin · MAIN
+#### Bateria vinculada a F-14-009 — Redefinir senha de setor no Admin · MAIN
 
-**Referência de resposta:** [F-14-009](#f-14-009-redefinir-senha-de-setor-no-admin) — passos do §4 e condição: Credenciais não devem aparecer na Eleonor.
+**Referência de resposta:** procedimento `F-14-009` (§4) — passos e condição: Credenciais não devem aparecer na Eleonor.
 
 - **Q-F-14-009-01:** Como faço para redefinir senha de setor no Admin no EMPROVEX?
 - **Q-F-14-009-02:** Onde encontro a opção para redefinir senha de setor no Admin?
@@ -6515,9 +6523,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-009-16:** Você consegue me orientar sobre redefinir senha de setor no Admin pelo celular ou no modo Essencial?
 - **Q-F-14-009-17:** A função de redefinir senha de setor no Admin está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-010 — Excluir setor · MAIN
+#### Bateria vinculada a F-14-010 — Excluir setor · MAIN
 
-**Referência de resposta:** [F-14-010](#f-14-010-excluir-setor) — passos do §4 e condição: Ação altamente destrutiva; não aconselhar sem backups.
+**Referência de resposta:** procedimento `F-14-010` (§4) — passos e condição: Ação altamente destrutiva; não aconselhar sem backups.
 
 - **Q-F-14-010-01:** Como faço para excluir setor no EMPROVEX?
 - **Q-F-14-010-02:** Onde encontro a opção para excluir setor?
@@ -6537,9 +6545,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-010-16:** Você consegue me orientar sobre excluir setor pelo celular ou no modo Essencial?
 - **Q-F-14-010-17:** A função de excluir setor está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-011 — Consultar interessados · MAIN
+#### Bateria vinculada a F-14-011 — Consultar interessados · MAIN
 
-**Referência de resposta:** [F-14-011](#f-14-011-consultar-interessados) — passos do §4 e condição: Lead não equivale a conta provisionada.
+**Referência de resposta:** procedimento `F-14-011` (§4) — passos e condição: Lead não equivale a conta provisionada.
 
 - **Q-F-14-011-01:** Como faço para consultar interessados no EMPROVEX?
 - **Q-F-14-011-02:** Onde encontro a opção para consultar interessados?
@@ -6559,9 +6567,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-011-16:** Você consegue me orientar sobre consultar interessados pelo celular ou no modo Essencial?
 - **Q-F-14-011-17:** A função de consultar interessados está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-012 — Atualizar situação de interessado · MAIN
+#### Bateria vinculada a F-14-012 — Atualizar situação de interessado · MAIN
 
-**Referência de resposta:** [F-14-012](#f-14-012-atualizar-situacao-de-interessado) — passos do §4 e condição: Não marcar trial como ativo sem verificar billing/workspace.
+**Referência de resposta:** procedimento `F-14-012` (§4) — passos e condição: Não marcar trial como ativo sem verificar billing/workspace.
 
 - **Q-F-14-012-01:** Como faço para atualizar situação de interessado no EMPROVEX?
 - **Q-F-14-012-02:** Onde encontro a opção para atualizar situação de interessado?
@@ -6581,9 +6589,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-012-16:** Você consegue me orientar sobre atualizar situação de interessado pelo celular ou no modo Essencial?
 - **Q-F-14-012-17:** A função de atualizar situação de interessado está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-013 — Contatar interessado · MAIN
+#### Bateria vinculada a F-14-013 — Contatar interessado · MAIN
 
-**Referência de resposta:** [F-14-013](#f-14-013-contatar-interessado) — passos do §4 e condição: Não afirmar que o contato foi enviado sem comprovante.
+**Referência de resposta:** procedimento `F-14-013` (§4) — passos e condição: Não afirmar que o contato foi enviado sem comprovante.
 
 - **Q-F-14-013-01:** Como faço para contatar interessado no EMPROVEX?
 - **Q-F-14-013-02:** Onde encontro a opção para contatar interessado?
@@ -6603,9 +6611,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-013-16:** Você consegue me orientar sobre contatar interessado pelo celular ou no modo Essencial?
 - **Q-F-14-013-17:** A função de contatar interessado está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-014 — Consultar Consumo & Cotas · MAIN
+#### Bateria vinculada a F-14-014 — Consultar Consumo & Cotas · MAIN
 
-**Referência de resposta:** [F-14-014](#f-14-014-consultar-consumo-cotas) — passos do §4 e condição: Telemetria real global ≠ estimativa por UG.
+**Referência de resposta:** procedimento `F-14-014` (§4) — passos e condição: Telemetria real global ≠ estimativa por UG.
 
 - **Q-F-14-014-01:** Como faço para consultar Consumo & Cotas no EMPROVEX?
 - **Q-F-14-014-02:** Onde encontro a opção para consultar Consumo & Cotas?
@@ -6625,9 +6633,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-014-16:** Você consegue me orientar sobre consultar Consumo & Cotas pelo celular ou no modo Essencial?
 - **Q-F-14-014-17:** A função de consultar Consumo & Cotas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-015 — Analisar custos Firestore · MAIN
+#### Bateria vinculada a F-14-015 — Analisar custos Firestore · MAIN
 
-**Referência de resposta:** [F-14-015](#f-14-015-analisar-custos-firestore) — passos do §4 e condição: Estimativa não equivale a fatura oficial.
+**Referência de resposta:** procedimento `F-14-015` (§4) — passos e condição: Estimativa não equivale a fatura oficial.
 
 - **Q-F-14-015-01:** Como faço para analisar custos Firestore no EMPROVEX?
 - **Q-F-14-015-02:** Onde encontro a opção para analisar custos Firestore?
@@ -6647,9 +6655,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-015-16:** Você consegue me orientar sobre analisar custos Firestore pelo celular ou no modo Essencial?
 - **Q-F-14-015-17:** A função de analisar custos Firestore está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-016 — Configurar alertas de uso · MAIN
+#### Bateria vinculada a F-14-016 — Configurar alertas de uso · MAIN
 
-**Referência de resposta:** [F-14-016](#f-14-016-configurar-alertas-de-uso) — passos do §4 e condição: Não confundir alerta com bloqueio automático.
+**Referência de resposta:** procedimento `F-14-016` (§4) — passos e condição: Não confundir alerta com bloqueio automático.
 
 - **Q-F-14-016-01:** Como faço para configurar alertas de uso no EMPROVEX?
 - **Q-F-14-016-02:** Onde encontro a opção para configurar alertas de uso?
@@ -6669,9 +6677,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-016-16:** Você consegue me orientar sobre configurar alertas de uso pelo celular ou no modo Essencial?
 - **Q-F-14-016-17:** A função de configurar alertas de uso está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-017 — Consultar sessões ativas · MAIN
+#### Bateria vinculada a F-14-017 — Consultar sessões ativas · MAIN
 
-**Referência de resposta:** [F-14-017](#f-14-017-consultar-sessoes-ativas) — passos do §4 e condição: Último heartbeat não mede produtividade.
+**Referência de resposta:** procedimento `F-14-017` (§4) — passos e condição: Último heartbeat não mede produtividade.
 
 - **Q-F-14-017-01:** Como faço para consultar sessões ativas no EMPROVEX?
 - **Q-F-14-017-02:** Onde encontro a opção para consultar sessões ativas?
@@ -6691,9 +6699,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-017-16:** Você consegue me orientar sobre consultar sessões ativas pelo celular ou no modo Essencial?
 - **Q-F-14-017-17:** A função de consultar sessões ativas está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-018 — Encerrar sessão remotamente · MAIN
+#### Bateria vinculada a F-14-018 — Encerrar sessão remotamente · MAIN
 
-**Referência de resposta:** [F-14-018](#f-14-018-encerrar-sessao-remotamente) — passos do §4 e condição: Operação administrativa de segurança.
+**Referência de resposta:** procedimento `F-14-018` (§4) — passos e condição: Operação administrativa de segurança.
 
 - **Q-F-14-018-01:** Como faço para encerrar sessão remotamente no EMPROVEX?
 - **Q-F-14-018-02:** Onde encontro a opção para encerrar sessão remotamente?
@@ -6713,9 +6721,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-018-16:** Você consegue me orientar sobre encerrar sessão remotamente pelo celular ou no modo Essencial?
 - **Q-F-14-018-17:** A função de encerrar sessão remotamente está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-019 — Consultar backups · MAIN
+#### Bateria vinculada a F-14-019 — Consultar backups · MAIN
 
-**Referência de resposta:** [F-14-019](#f-14-019-consultar-backups) — passos do §4 e condição: Verificar realmente o arquivo antes de prometer recuperação.
+**Referência de resposta:** procedimento `F-14-019` (§4) — passos e condição: Verificar realmente o arquivo antes de prometer recuperação.
 
 - **Q-F-14-019-01:** Como faço para consultar backups no EMPROVEX?
 - **Q-F-14-019-02:** Onde encontro a opção para consultar backups?
@@ -6735,9 +6743,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-019-16:** Você consegue me orientar sobre consultar backups pelo celular ou no modo Essencial?
 - **Q-F-14-019-17:** A função de consultar backups está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-020 — Backup administrativo de identidades · MAIN
+#### Bateria vinculada a F-14-020 — Backup administrativo de identidades · MAIN
 
-**Referência de resposta:** [F-14-020](#f-14-020-backup-administrativo-de-identidades) — passos do §4 e condição: Dados de autenticação exigem proteção rigorosa.
+**Referência de resposta:** procedimento `F-14-020` (§4) — passos e condição: Dados de autenticação exigem proteção rigorosa.
 
 - **Q-F-14-020-01:** Como faço para backup administrativo de identidades no EMPROVEX?
 - **Q-F-14-020-02:** Onde encontro a opção para backup administrativo de identidades?
@@ -6757,9 +6765,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-020-16:** Você consegue me orientar sobre backup administrativo de identidades pelo celular ou no modo Essencial?
 - **Q-F-14-020-17:** A função de backup administrativo de identidades está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-021 — Recuperação de backup · MAIN
+#### Bateria vinculada a F-14-021 — Recuperação de backup · MAIN
 
-**Referência de resposta:** [F-14-021](#f-14-021-recuperacao-de-backup) — passos do §4 e condição: Não improvisar restauração via chat, nem afetar outros workspaces.
+**Referência de resposta:** procedimento `F-14-021` (§4) — passos e condição: Não improvisar restauração via chat, nem afetar outros workspaces.
 
 - **Q-F-14-021-01:** Como faço para recuperação de backup no EMPROVEX?
 - **Q-F-14-021-02:** Onde encontro a opção para recuperação de backup?
@@ -6779,9 +6787,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-14-021-16:** Você consegue me orientar sobre recuperação de backup pelo celular ou no modo Essencial?
 - **Q-F-14-021-17:** A função de recuperação de backup está disponível para todos os workspaces ou depende de acesso?
 
-#### F-14-022 — Consultar Segurança · MAIN
+#### Bateria vinculada a F-14-022 — Consultar Segurança · MAIN
 
-**Referência de resposta:** [F-14-022](#f-14-022-consultar-seguranca) — passos do §4 e condição: Painel não substitui auditoria de configuração externa.
+**Referência de resposta:** procedimento `F-14-022` (§4) — passos e condição: Painel não substitui auditoria de configuração externa.
 
 - **Q-F-14-022-01:** Como faço para consultar Segurança no EMPROVEX?
 - **Q-F-14-022-02:** Onde encontro a opção para consultar Segurança?
@@ -6803,9 +6811,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.15. Assinaturas, suporte, documentos e operação institucional
 
-#### F-15-001 — Abrir Minha Assinatura · MAIN
+#### Bateria vinculada a F-15-001 — Abrir Minha Assinatura · MAIN
 
-**Referência de resposta:** [F-15-001](#f-15-001-abrir-minha-assinatura) — passos do §4 e condição: Exibição pode ser condicionada a flags e perfil.
+**Referência de resposta:** procedimento `F-15-001` (§4) — passos e condição: Exibição pode ser condicionada a flags e perfil.
 
 - **Q-F-15-001-01:** Como faço para abrir Minha Assinatura no EMPROVEX?
 - **Q-F-15-001-02:** Onde encontro a opção para abrir Minha Assinatura?
@@ -6825,9 +6833,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-001-16:** Você consegue me orientar sobre abrir Minha Assinatura pelo celular ou no modo Essencial?
 - **Q-F-15-001-17:** A função de abrir Minha Assinatura está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-002 — Consultar período de teste · MAIN
+#### Bateria vinculada a F-15-002 — Consultar período de teste · MAIN
 
-**Referência de resposta:** [F-15-002](#f-15-002-consultar-periodo-de-teste) — passos do §4 e condição: Período de trial depende do cadastro; não inventar prazo individual.
+**Referência de resposta:** procedimento `F-15-002` (§4) — passos e condição: Período de trial depende do cadastro; não inventar prazo individual.
 
 - **Q-F-15-002-01:** Como faço para consultar período de teste no EMPROVEX?
 - **Q-F-15-002-02:** Onde encontro a opção para consultar período de teste?
@@ -6847,9 +6855,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-002-16:** Você consegue me orientar sobre consultar período de teste pelo celular ou no modo Essencial?
 - **Q-F-15-002-17:** A função de consultar período de teste está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-003 — Regularizar acesso · MAIN
+#### Bateria vinculada a F-15-003 — Regularizar acesso · MAIN
 
-**Referência de resposta:** [F-15-003](#f-15-003-regularizar-acesso) — passos do §4 e condição: Não pedir dados de cartão no chat.
+**Referência de resposta:** procedimento `F-15-003` (§4) — passos e condição: Não pedir dados de cartão no chat.
 
 - **Q-F-15-003-01:** Como faço para regularizar acesso no EMPROVEX?
 - **Q-F-15-003-02:** Onde encontro a opção para regularizar acesso?
@@ -6869,9 +6877,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-003-16:** Você consegue me orientar sobre regularizar acesso pelo celular ou no modo Essencial?
 - **Q-F-15-003-17:** A função de regularizar acesso está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-004 — Gerar pagamento/checkout InfinitePay · MAIN
+#### Bateria vinculada a F-15-004 — Gerar pagamento/checkout InfinitePay · MAIN
 
-**Referência de resposta:** [F-15-004](#f-15-004-gerar-pagamentocheckout-infinitepay) — passos do §4 e condição: Checkout e pagamento confirmado são estados diferentes.
+**Referência de resposta:** procedimento `F-15-004` (§4) — passos e condição: Checkout e pagamento confirmado são estados diferentes.
 
 - **Q-F-15-004-01:** Como faço para gerar pagamento/checkout InfinitePay no EMPROVEX?
 - **Q-F-15-004-02:** Onde encontro a opção para gerar pagamento/checkout InfinitePay?
@@ -6891,9 +6899,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-004-16:** Você consegue me orientar sobre gerar pagamento/checkout InfinitePay pelo celular ou no modo Essencial?
 - **Q-F-15-004-17:** A função de gerar pagamento/checkout InfinitePay está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-005 — Acompanhar retorno de pagamento · MAIN
+#### Bateria vinculada a F-15-005 — Acompanhar retorno de pagamento · MAIN
 
-**Referência de resposta:** [F-15-005](#f-15-005-acompanhar-retorno-de-pagamento) — passos do §4 e condição: Webhook e conciliação podem não ser instantâneos.
+**Referência de resposta:** procedimento `F-15-005` (§4) — passos e condição: Webhook e conciliação podem não ser instantâneos.
 
 - **Q-F-15-005-01:** Como faço para acompanhar retorno de pagamento no EMPROVEX?
 - **Q-F-15-005-02:** Onde encontro a opção para acompanhar retorno de pagamento?
@@ -6913,9 +6921,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-005-16:** Você consegue me orientar sobre acompanhar retorno de pagamento pelo celular ou no modo Essencial?
 - **Q-F-15-005-17:** A função de acompanhar retorno de pagamento está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-006 — Configurar cobrança no Admin · MAIN
+#### Bateria vinculada a F-15-006 — Configurar cobrança no Admin · MAIN
 
-**Referência de resposta:** [F-15-006](#f-15-006-configurar-cobranca-no-admin) — passos do §4 e condição: Não modificar preço ou VIP por suposição da Eleonor.
+**Referência de resposta:** procedimento `F-15-006` (§4) — passos e condição: Não modificar preço ou VIP por suposição da Eleonor.
 
 - **Q-F-15-006-01:** Como faço para configurar cobrança no Admin no EMPROVEX?
 - **Q-F-15-006-02:** Onde encontro a opção para configurar cobrança no Admin?
@@ -6935,9 +6943,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-006-16:** Você consegue me orientar sobre configurar cobrança no Admin pelo celular ou no modo Essencial?
 - **Q-F-15-006-17:** A função de configurar cobrança no Admin está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-007 — Consultar cobrança por workspace · MAIN
+#### Bateria vinculada a F-15-007 — Consultar cobrança por workspace · MAIN
 
-**Referência de resposta:** [F-15-007](#f-15-007-consultar-cobranca-por-workspace) — passos do §4 e condição: Billing setorial e lead interessado são cadastros separados.
+**Referência de resposta:** procedimento `F-15-007` (§4) — passos e condição: Billing setorial e lead interessado são cadastros separados.
 
 - **Q-F-15-007-01:** Como faço para consultar cobrança por workspace no EMPROVEX?
 - **Q-F-15-007-02:** Onde encontro a opção para consultar cobrança por workspace?
@@ -6957,9 +6965,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-007-16:** Você consegue me orientar sobre consultar cobrança por workspace pelo celular ou no modo Essencial?
 - **Q-F-15-007-17:** A função de consultar cobrança por workspace está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-008 — Gerenciar mensalidade compartilhada · MAIN
+#### Bateria vinculada a F-15-008 — Gerenciar mensalidade compartilhada · MAIN
 
-**Referência de resposta:** [F-15-008](#f-15-008-gerenciar-mensalidade-compartilhada) — passos do §4 e condição: Não pressupor disponibilidade para todos os workspaces.
+**Referência de resposta:** procedimento `F-15-008` (§4) — passos e condição: Não pressupor disponibilidade para todos os workspaces.
 
 - **Q-F-15-008-01:** Como faço para gerenciar mensalidade compartilhada no EMPROVEX?
 - **Q-F-15-008-02:** Onde encontro a opção para gerenciar mensalidade compartilhada?
@@ -6979,9 +6987,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-008-16:** Você consegue me orientar sobre gerenciar mensalidade compartilhada pelo celular ou no modo Essencial?
 - **Q-F-15-008-17:** A função de gerenciar mensalidade compartilhada está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-009 — Consultar área institucional · MAIN
+#### Bateria vinculada a F-15-009 — Consultar área institucional · MAIN
 
-**Referência de resposta:** [F-15-009](#f-15-009-consultar-area-institucional) — passos do §4 e condição: Páginas públicas não exigem sessão operacional.
+**Referência de resposta:** procedimento `F-15-009` (§4) — passos e condição: Páginas públicas não exigem sessão operacional.
 
 - **Q-F-15-009-01:** Como faço para consultar área institucional no EMPROVEX?
 - **Q-F-15-009-02:** Onde encontro a opção para consultar área institucional?
@@ -7001,9 +7009,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-009-16:** Você consegue me orientar sobre consultar área institucional pelo celular ou no modo Essencial?
 - **Q-F-15-009-17:** A função de consultar área institucional está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-010 — Solicitar acesso pelo site · MAIN
+#### Bateria vinculada a F-15-010 — Solicitar acesso pelo site · MAIN
 
-**Referência de resposta:** [F-15-010](#f-15-010-solicitar-acesso-pelo-site) — passos do §4 e condição: Não equivale a criar conta automaticamente.
+**Referência de resposta:** procedimento `F-15-010` (§4) — passos e condição: Não equivale a criar conta automaticamente.
 
 - **Q-F-15-010-01:** Como faço para solicitar acesso pelo site no EMPROVEX?
 - **Q-F-15-010-02:** Onde encontro a opção para solicitar acesso pelo site?
@@ -7023,9 +7031,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-010-16:** Você consegue me orientar sobre solicitar acesso pelo site pelo celular ou no modo Essencial?
 - **Q-F-15-010-17:** A função de solicitar acesso pelo site está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-011 — Abrir Central de Ajuda · MAIN
+#### Bateria vinculada a F-15-011 — Abrir Central de Ajuda · MAIN
 
-**Referência de resposta:** [F-15-011](#f-15-011-abrir-central-de-ajuda) — passos do §4 e condição: Catálogo está em main; disponibilidade da entrada depende da revisão publicada.
+**Referência de resposta:** procedimento `F-15-011` (§4) — passos e condição: Catálogo está em main; disponibilidade da entrada depende da revisão publicada.
 
 - **Q-F-15-011-01:** Como faço para abrir Central de Ajuda no EMPROVEX?
 - **Q-F-15-011-02:** Onde encontro a opção para abrir Central de Ajuda?
@@ -7045,9 +7053,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-011-16:** Você consegue me orientar sobre abrir Central de Ajuda pelo celular ou no modo Essencial?
 - **Q-F-15-011-17:** A função de abrir Central de Ajuda está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-012 — Pesquisar um dos 14 tutoriais · MAIN
+#### Bateria vinculada a F-15-012 — Pesquisar um dos 14 tutoriais · MAIN
 
-**Referência de resposta:** [F-15-012](#f-15-012-pesquisar-um-dos-14-tutoriais) — passos do §4 e condição: Não inventar tutoriais ou vídeos fora da lista oficial.
+**Referência de resposta:** procedimento `F-15-012` (§4) — passos e condição: Não inventar tutoriais ou vídeos fora da lista oficial.
 
 - **Q-F-15-012-01:** Como faço para pesquisar um dos 14 tutoriais no EMPROVEX?
 - **Q-F-15-012-02:** Onde encontro a opção para pesquisar um dos 14 tutoriais?
@@ -7067,9 +7075,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-012-16:** Você consegue me orientar sobre pesquisar um dos 14 tutoriais pelo celular ou no modo Essencial?
 - **Q-F-15-012-17:** A função de pesquisar um dos 14 tutoriais está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-013 — Contato com suporte · MAIN
+#### Bateria vinculada a F-15-013 — Contato com suporte · MAIN
 
-**Referência de resposta:** [F-15-013](#f-15-013-contato-com-suporte) — passos do §4 e condição: Eleonor não deve inventar SLA ou protocolo de chamado.
+**Referência de resposta:** procedimento `F-15-013` (§4) — passos e condição: Eleonor não deve inventar SLA ou protocolo de chamado.
 
 - **Q-F-15-013-01:** Como faço para contato com suporte no EMPROVEX?
 - **Q-F-15-013-02:** Onde encontro a opção para contato com suporte?
@@ -7089,9 +7097,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-013-16:** Você consegue me orientar sobre contato com suporte pelo celular ou no modo Essencial?
 - **Q-F-15-013-17:** A função de contato com suporte está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-014 — Usar Google Drive para documentos · MAIN
+#### Bateria vinculada a F-15-014 — Usar Google Drive para documentos · MAIN
 
-**Referência de resposta:** [F-15-014](#f-15-014-usar-google-drive-para-documentos) — passos do §4 e condição: Não assumir que todo setor está vinculado ao Drive.
+**Referência de resposta:** procedimento `F-15-014` (§4) — passos e condição: Não assumir que todo setor está vinculado ao Drive.
 
 - **Q-F-15-014-01:** Como faço para usar Google Drive para documentos no EMPROVEX?
 - **Q-F-15-014-02:** Onde encontro a opção para usar Google Drive para documentos?
@@ -7111,9 +7119,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-014-16:** Você consegue me orientar sobre usar Google Drive para documentos pelo celular ou no modo Essencial?
 - **Q-F-15-014-17:** A função de usar Google Drive para documentos está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-015 — Consultar backup do workspace · MAIN
+#### Bateria vinculada a F-15-015 — Consultar backup do workspace · MAIN
 
-**Referência de resposta:** [F-15-015](#f-15-015-consultar-backup-do-workspace) — passos do §4 e condição: Distinguir backup lógico e arquivo PDF de NE/NF.
+**Referência de resposta:** procedimento `F-15-015` (§4) — passos e condição: Distinguir backup lógico e arquivo PDF de NE/NF.
 
 - **Q-F-15-015-01:** Como faço para consultar backup do workspace no EMPROVEX?
 - **Q-F-15-015-02:** Onde encontro a opção para consultar backup do workspace?
@@ -7133,9 +7141,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-15-015-16:** Você consegue me orientar sobre consultar backup do workspace pelo celular ou no modo Essencial?
 - **Q-F-15-015-17:** A função de consultar backup do workspace está disponível para todos os workspaces ou depende de acesso?
 
-#### F-15-016 — Instalar acesso PWA · MAIN
+#### Bateria vinculada a F-15-016 — Instalar acesso PWA · MAIN
 
-**Referência de resposta:** [F-15-016](#f-15-016-instalar-acesso-pwa) — passos do §4 e condição: PWA não muda permissões nem autoriza operação offline.
+**Referência de resposta:** procedimento `F-15-016` (§4) — passos e condição: PWA não muda permissões nem autoriza operação offline.
 
 - **Q-F-15-016-01:** Como faço para instalar acesso PWA no EMPROVEX?
 - **Q-F-15-016-02:** Onde encontro a opção para instalar acesso PWA?
@@ -7157,9 +7165,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.16. Eleonor — interface e consultas
 
-#### F-16-001 — Abrir Eleonor em aba própria · MAIN COM GATES
+#### Bateria vinculada a F-16-001 — Abrir Eleonor em aba própria · MAIN COM GATES
 
-**Referência de resposta:** [F-16-001](#f-16-001-abrir-eleonor-em-aba-propria) — passos do §4 e condição: A presença do chat não prova que backend/IA está habilitado.
+**Referência de resposta:** procedimento `F-16-001` (§4) — passos e condição: A presença do chat não prova que backend/IA está habilitado.
 
 - **Q-F-16-001-01:** Como faço para abrir Eleonor em aba própria no EMPROVEX?
 - **Q-F-16-001-02:** Onde encontro a opção para abrir Eleonor em aba própria?
@@ -7179,9 +7187,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-001-16:** Você consegue me orientar sobre abrir Eleonor em aba própria pelo celular ou no modo Essencial?
 - **Q-F-16-001-17:** Se abrir Eleonor em aba própria aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-002 — Abrir chat flutuante · MAIN COM GATES
+#### Bateria vinculada a F-16-002 — Abrir chat flutuante · MAIN COM GATES
 
-**Referência de resposta:** [F-16-002](#f-16-002-abrir-chat-flutuante) — passos do §4 e condição: Visibilidade pode variar por revisão e estado de UI.
+**Referência de resposta:** procedimento `F-16-002` (§4) — passos e condição: Visibilidade pode variar por revisão e estado de UI.
 
 - **Q-F-16-002-01:** Como faço para abrir chat flutuante no EMPROVEX?
 - **Q-F-16-002-02:** Onde encontro a opção para abrir chat flutuante?
@@ -7201,9 +7209,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-002-16:** Você consegue me orientar sobre abrir chat flutuante pelo celular ou no modo Essencial?
 - **Q-F-16-002-17:** Se abrir chat flutuante aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-003 — Expandir chat · MAIN COM GATES
+#### Bateria vinculada a F-16-003 — Expandir chat · MAIN COM GATES
 
-**Referência de resposta:** [F-16-003](#f-16-003-expandir-chat) — passos do §4 e condição: Não pressupor persistência entre dispositivos.
+**Referência de resposta:** procedimento `F-16-003` (§4) — passos e condição: Não pressupor persistência entre dispositivos.
 
 - **Q-F-16-003-01:** Como faço para expandir chat no EMPROVEX?
 - **Q-F-16-003-02:** Onde encontro a opção para expandir chat?
@@ -7223,9 +7231,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-003-16:** Você consegue me orientar sobre expandir chat pelo celular ou no modo Essencial?
 - **Q-F-16-003-17:** Se expandir chat aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-004 — Iniciar nova conversa · MAIN COM GATES
+#### Bateria vinculada a F-16-004 — Iniciar nova conversa · MAIN COM GATES
 
-**Referência de resposta:** [F-16-004](#f-16-004-iniciar-nova-conversa) — passos do §4 e condição: Contexto anterior não deve se misturar automaticamente.
+**Referência de resposta:** procedimento `F-16-004` (§4) — passos e condição: Contexto anterior não deve se misturar automaticamente.
 
 - **Q-F-16-004-01:** Como faço para iniciar nova conversa no EMPROVEX?
 - **Q-F-16-004-02:** Onde encontro a opção para iniciar nova conversa?
@@ -7245,9 +7253,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-004-16:** Você consegue me orientar sobre iniciar nova conversa pelo celular ou no modo Essencial?
 - **Q-F-16-004-17:** Se iniciar nova conversa aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-005 — Consultar fornecedor ou empenho · MAIN COM GATES
+#### Bateria vinculada a F-16-005 — Consultar fornecedor ou empenho · MAIN COM GATES
 
-**Referência de resposta:** [F-16-005](#f-16-005-consultar-fornecedor-ou-empenho) — passos do §4 e condição: Só se gates de IA e permissões estiverem ativos; consultas de leitura.
+**Referência de resposta:** procedimento `F-16-005` (§4) — passos e condição: Só se gates de IA e permissões estiverem ativos; consultas de leitura.
 
 - **Q-F-16-005-01:** Como faço para consultar fornecedor ou empenho no EMPROVEX?
 - **Q-F-16-005-02:** Onde encontro a opção para consultar fornecedor ou empenho?
@@ -7267,9 +7275,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-005-16:** Você consegue me orientar sobre consultar fornecedor ou empenho pelo celular ou no modo Essencial?
 - **Q-F-16-005-17:** Se consultar fornecedor ou empenho aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-006 — Consultar NF/NS com Eleonor · MAIN COM GATES
+#### Bateria vinculada a F-16-006 — Consultar NF/NS com Eleonor · MAIN COM GATES
 
-**Referência de resposta:** [F-16-006](#f-16-006-consultar-nfns-com-eleonor) — passos do §4 e condição: Não inferir pendência por mera ausência de registro; usar dados determinísticos.
+**Referência de resposta:** procedimento `F-16-006` (§4) — passos e condição: Não inferir pendência por mera ausência de registro; usar dados determinísticos.
 
 - **Q-F-16-006-01:** Como faço para consultar NF/NS com Eleonor no EMPROVEX?
 - **Q-F-16-006-02:** Onde encontro a opção para consultar NF/NS com Eleonor?
@@ -7289,9 +7297,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-006-16:** Você consegue me orientar sobre consultar NF/NS com Eleonor pelo celular ou no modo Essencial?
 - **Q-F-16-006-17:** Se consultar NF/NS com Eleonor aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-007 — Consultar localização de material com Eleonor · MAIN COM GATES
+#### Bateria vinculada a F-16-007 — Consultar localização de material com Eleonor · MAIN COM GATES
 
-**Referência de resposta:** [F-16-007](#f-16-007-consultar-localizacao-de-material-com-eleonor) — passos do §4 e condição: Localização e estoque exigem autorização Warehouse.
+**Referência de resposta:** procedimento `F-16-007` (§4) — passos e condição: Localização e estoque exigem autorização Warehouse.
 
 - **Q-F-16-007-01:** Como faço para consultar localização de material com Eleonor no EMPROVEX?
 - **Q-F-16-007-02:** Onde encontro a opção para consultar localização de material com Eleonor?
@@ -7311,9 +7319,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-007-16:** Você consegue me orientar sobre consultar localização de material com Eleonor pelo celular ou no modo Essencial?
 - **Q-F-16-007-17:** Se consultar localização de material com Eleonor aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-008 — Entender resposta indisponível · MAIN COM GATES
+#### Bateria vinculada a F-16-008 — Entender resposta indisponível · MAIN COM GATES
 
-**Referência de resposta:** [F-16-008](#f-16-008-entender-resposta-indisponivel) — passos do §4 e condição: Flags de piloto, IAM e roteamento determinístico podem bloquear consultas.
+**Referência de resposta:** procedimento `F-16-008` (§4) — passos e condição: Flags de piloto, IAM e roteamento determinístico podem bloquear consultas.
 
 - **Q-F-16-008-01:** Como faço para entender resposta indisponível no EMPROVEX?
 - **Q-F-16-008-02:** Onde encontro a opção para entender resposta indisponível?
@@ -7333,9 +7341,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-16-008-16:** Você consegue me orientar sobre entender resposta indisponível pelo celular ou no modo Essencial?
 - **Q-F-16-008-17:** Se entender resposta indisponível aparece na tela mas o serviço está desabilitado, o que significa?
 
-#### F-16-009 — Entender escopo sem escrita · MAIN COM GATES
+#### Bateria vinculada a F-16-009 — Entender escopo sem escrita · MAIN COM GATES
 
-**Referência de resposta:** [F-16-009](#f-16-009-entender-escopo-sem-escrita) — passos do §4 e condição: A Eleonor atual não deve executar exclusão, baixa, cadastro, cobrança ou mutação por chat.
+**Referência de resposta:** procedimento `F-16-009` (§4) — passos e condição: A Eleonor atual não deve executar exclusão, baixa, cadastro, cobrança ou mutação por chat.
 
 - **Q-F-16-009-01:** Como faço para entender escopo sem escrita no EMPROVEX?
 - **Q-F-16-009-02:** Onde encontro a opção para entender escopo sem escrita?
@@ -7357,9 +7365,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.17. EMPROVEX Almoxarifado R1-D (PR #463, não integrado)
 
-#### F-17-001 — Acessar portal Almoxarifado (piloto) · PR / PILOTO
+#### Bateria vinculada a F-17-001 — Acessar portal Almoxarifado (piloto) · PR / PILOTO
 
-**Referência de resposta:** [F-17-001](#f-17-001-acessar-portal-almoxarifado-piloto) — passos do §4 e condição: NÃO instruir usuário comum a acessar hoje como disponível em produção.
+**Referência de resposta:** procedimento `F-17-001` (§4) — passos e condição: NÃO instruir usuário comum a acessar hoje como disponível em produção.
 
 - **Q-F-17-001-01:** Como faço para acessar portal Almoxarifado (piloto) no EMPROVEX?
 - **Q-F-17-001-02:** Onde encontro a opção para acessar portal Almoxarifado (piloto)?
@@ -7379,9 +7387,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-001-16:** Você consegue me orientar sobre acessar portal Almoxarifado (piloto) pelo celular ou no modo Essencial?
 - **Q-F-17-001-17:** Posso acessar portal Almoxarifado (piloto) no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-002 — Cadastrar setor Almoxarifado (piloto) · PR / PILOTO
+#### Bateria vinculada a F-17-002 — Cadastrar setor Almoxarifado (piloto) · PR / PILOTO
 
-**Referência de resposta:** [F-17-002](#f-17-002-cadastrar-setor-almoxarifado-piloto) — passos do §4 e condição: Provisionamento real ainda requer validação específica.
+**Referência de resposta:** procedimento `F-17-002` (§4) — passos e condição: Provisionamento real ainda requer validação específica.
 
 - **Q-F-17-002-01:** Como faço para cadastrar setor Almoxarifado (piloto) no EMPROVEX?
 - **Q-F-17-002-02:** Onde encontro a opção para cadastrar setor Almoxarifado (piloto)?
@@ -7401,9 +7409,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-002-16:** Você consegue me orientar sobre cadastrar setor Almoxarifado (piloto) pelo celular ou no modo Essencial?
 - **Q-F-17-002-17:** Posso cadastrar setor Almoxarifado (piloto) no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-003 — Consultar empenhos do Almoxarifado · PR / PILOTO
+#### Bateria vinculada a F-17-003 — Consultar empenhos do Almoxarifado · PR / PILOTO
 
-**Referência de resposta:** [F-17-003](#f-17-003-consultar-empenhos-do-almoxarifado) — passos do §4 e condição: Reaproveita núcleo; não herdar dados de Aprovisionamento sem autorização.
+**Referência de resposta:** procedimento `F-17-003` (§4) — passos e condição: Reaproveita núcleo; não herdar dados de Aprovisionamento sem autorização.
 
 - **Q-F-17-003-01:** Como faço para consultar empenhos do Almoxarifado no EMPROVEX?
 - **Q-F-17-003-02:** Onde encontro a opção para consultar empenhos do Almoxarifado?
@@ -7423,9 +7431,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-003-16:** Você consegue me orientar sobre consultar empenhos do Almoxarifado pelo celular ou no modo Essencial?
 - **Q-F-17-003-17:** Posso consultar empenhos do Almoxarifado no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-004 — Cadastrar NF do Almoxarifado · PR / PILOTO
+#### Bateria vinculada a F-17-004 — Cadastrar NF do Almoxarifado · PR / PILOTO
 
-**Referência de resposta:** [F-17-004](#f-17-004-cadastrar-nf-do-almoxarifado) — passos do §4 e condição: Cobertura funcional de QA sintético não certifica mutação real.
+**Referência de resposta:** procedimento `F-17-004` (§4) — passos e condição: Cobertura funcional de QA sintético não certifica mutação real.
 
 - **Q-F-17-004-01:** Como faço para cadastrar NF do Almoxarifado no EMPROVEX?
 - **Q-F-17-004-02:** Onde encontro a opção para cadastrar NF do Almoxarifado?
@@ -7445,9 +7453,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-004-16:** Você consegue me orientar sobre cadastrar NF do Almoxarifado pelo celular ou no modo Essencial?
 - **Q-F-17-004-17:** Posso cadastrar NF do Almoxarifado no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-005 — Criar cronograma do Almoxarifado · PR / PILOTO
+#### Bateria vinculada a F-17-005 — Criar cronograma do Almoxarifado · PR / PILOTO
 
-**Referência de resposta:** [F-17-005](#f-17-005-criar-cronograma-do-almoxarifado) — passos do §4 e condição: Reuso funcional ainda em PR.
+**Referência de resposta:** procedimento `F-17-005` (§4) — passos e condição: Reuso funcional ainda em PR.
 
 - **Q-F-17-005-01:** Como faço para criar cronograma do Almoxarifado no EMPROVEX?
 - **Q-F-17-005-02:** Onde encontro a opção para criar cronograma do Almoxarifado?
@@ -7467,9 +7475,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-005-16:** Você consegue me orientar sobre criar cronograma do Almoxarifado pelo celular ou no modo Essencial?
 - **Q-F-17-005-17:** Posso criar cronograma do Almoxarifado no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-006 — Consultar fornecedores setoriais · PR / PILOTO
+#### Bateria vinculada a F-17-006 — Consultar fornecedores setoriais · PR / PILOTO
 
-**Referência de resposta:** [F-17-006](#f-17-006-consultar-fornecedores-setoriais) — passos do §4 e condição: Consulta de W7 prioritariamente leitura.
+**Referência de resposta:** procedimento `F-17-006` (§4) — passos e condição: Consulta de W7 prioritariamente leitura.
 
 - **Q-F-17-006-01:** Como faço para consultar fornecedores setoriais no EMPROVEX?
 - **Q-F-17-006-02:** Onde encontro a opção para consultar fornecedores setoriais?
@@ -7489,9 +7497,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-006-16:** Você consegue me orientar sobre consultar fornecedores setoriais pelo celular ou no modo Essencial?
 - **Q-F-17-006-17:** Posso consultar fornecedores setoriais no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-007 — Consultar itens e materiais setoriais · PR / PILOTO
+#### Bateria vinculada a F-17-007 — Consultar itens e materiais setoriais · PR / PILOTO
 
-**Referência de resposta:** [F-17-007](#f-17-007-consultar-itens-e-materiais-setoriais) — passos do §4 e condição: Item financeiro e material físico são identidades distintas.
+**Referência de resposta:** procedimento `F-17-007` (§4) — passos e condição: Item financeiro e material físico são identidades distintas.
 
 - **Q-F-17-007-01:** Como faço para consultar itens e materiais setoriais no EMPROVEX?
 - **Q-F-17-007-02:** Onde encontro a opção para consultar itens e materiais setoriais?
@@ -7511,9 +7519,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-007-16:** Você consegue me orientar sobre consultar itens e materiais setoriais pelo celular ou no modo Essencial?
 - **Q-F-17-007-17:** Posso consultar itens e materiais setoriais no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-008 — Usar Warehouse no Almoxarifado · PR / PILOTO
+#### Bateria vinculada a F-17-008 — Usar Warehouse no Almoxarifado · PR / PILOTO
 
-**Referência de resposta:** [F-17-008](#f-17-008-usar-warehouse-no-almoxarifado) — passos do §4 e condição: Não declarar estoque setorial produtivo antes de homologação.
+**Referência de resposta:** procedimento `F-17-008` (§4) — passos e condição: Não declarar estoque setorial produtivo antes de homologação.
 
 - **Q-F-17-008-01:** Como faço para usar Warehouse no Almoxarifado no EMPROVEX?
 - **Q-F-17-008-02:** Onde encontro a opção para usar Warehouse no Almoxarifado?
@@ -7533,9 +7541,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-008-16:** Você consegue me orientar sobre usar Warehouse no Almoxarifado pelo celular ou no modo Essencial?
 - **Q-F-17-008-17:** Posso usar Warehouse no Almoxarifado no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-009 — Consultar relatórios do Almoxarifado · PR / PILOTO
+#### Bateria vinculada a F-17-009 — Consultar relatórios do Almoxarifado · PR / PILOTO
 
-**Referência de resposta:** [F-17-009](#f-17-009-consultar-relatorios-do-almoxarifado) — passos do §4 e condição: W8 read-only e pode sinalizar partial.
+**Referência de resposta:** procedimento `F-17-009` (§4) — passos e condição: W8 read-only e pode sinalizar partial.
 
 - **Q-F-17-009-01:** Como faço para consultar relatórios do Almoxarifado no EMPROVEX?
 - **Q-F-17-009-02:** Onde encontro a opção para consultar relatórios do Almoxarifado?
@@ -7555,9 +7563,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-009-16:** Você consegue me orientar sobre consultar relatórios do Almoxarifado pelo celular ou no modo Essencial?
 - **Q-F-17-009-17:** Posso consultar relatórios do Almoxarifado no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-010 — Usar FUNADOM inicial · PR / PILOTO
+#### Bateria vinculada a F-17-010 — Usar FUNADOM inicial · PR / PILOTO
 
-**Referência de resposta:** [F-17-010](#f-17-010-usar-funadom-inicial) — passos do §4 e condição: Não confundir com inclusão automática de outras classificações.
+**Referência de resposta:** procedimento `F-17-010` (§4) — passos e condição: Não confundir com inclusão automática de outras classificações.
 
 - **Q-F-17-010-01:** Como faço para usar FUNADOM inicial no EMPROVEX?
 - **Q-F-17-010-02:** Onde encontro a opção para usar FUNADOM inicial?
@@ -7577,9 +7585,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-010-16:** Você consegue me orientar sobre usar FUNADOM inicial pelo celular ou no modo Essencial?
 - **Q-F-17-010-17:** Posso usar FUNADOM inicial no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-011 — Importar Pedido de Material SISCOFIS TXT/PDF · PR / PILOTO
+#### Bateria vinculada a F-17-011 — Importar Pedido de Material SISCOFIS TXT/PDF · PR / PILOTO
 
-**Referência de resposta:** [F-17-011](#f-17-011-importar-pedido-de-material-siscofis-txtpdf) — passos do §4 e condição: Somente fixtures sintéticas homologadas; PDF real e operação oficial NO-GO.
+**Referência de resposta:** procedimento `F-17-011` (§4) — passos e condição: Somente fixtures sintéticas homologadas; PDF real e operação oficial NO-GO.
 
 - **Q-F-17-011-01:** Como faço para importar Pedido de Material SISCOFIS TXT/PDF no EMPROVEX?
 - **Q-F-17-011-02:** Onde encontro a opção para importar Pedido de Material SISCOFIS TXT/PDF?
@@ -7599,9 +7607,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-011-16:** Você consegue me orientar sobre importar Pedido de Material SISCOFIS TXT/PDF pelo celular ou no modo Essencial?
 - **Q-F-17-011-17:** Posso importar Pedido de Material SISCOFIS TXT/PDF no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-012 — Planejar separação física · PR / PILOTO
+#### Bateria vinculada a F-17-012 — Planejar separação física · PR / PILOTO
 
-**Referência de resposta:** [F-17-012](#f-17-012-planejar-separacao-fisica) — passos do §4 e condição: Motor de planejamento W3 não faz baixa nem reserva produtiva.
+**Referência de resposta:** procedimento `F-17-012` (§4) — passos e condição: Motor de planejamento W3 não faz baixa nem reserva produtiva.
 
 - **Q-F-17-012-01:** Como faço para planejar separação física no EMPROVEX?
 - **Q-F-17-012-02:** Onde encontro a opção para planejar separação física?
@@ -7621,9 +7629,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-012-16:** Você consegue me orientar sobre planejar separação física pelo celular ou no modo Essencial?
 - **Q-F-17-012-17:** Posso planejar separação física no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-013 — Emitir ficha de separação PDF A4 · PR / PILOTO
+#### Bateria vinculada a F-17-013 — Emitir ficha de separação PDF A4 · PR / PILOTO
 
-**Referência de resposta:** [F-17-013](#f-17-013-emitir-ficha-de-separacao-pdf-a4) — passos do §4 e condição: Documento é auxiliar e não comprova retirada efetiva.
+**Referência de resposta:** procedimento `F-17-013` (§4) — passos e condição: Documento é auxiliar e não comprova retirada efetiva.
 
 - **Q-F-17-013-01:** Como faço para emitir ficha de separação PDF A4 no EMPROVEX?
 - **Q-F-17-013-02:** Onde encontro a opção para emitir ficha de separação PDF A4?
@@ -7643,9 +7651,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-013-16:** Você consegue me orientar sobre emitir ficha de separação PDF A4 pelo celular ou no modo Essencial?
 - **Q-F-17-013-17:** Posso emitir ficha de separação PDF A4 no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-014 — Registrar estado experimental de atendimento · PR / PILOTO
+#### Bateria vinculada a F-17-014 — Registrar estado experimental de atendimento · PR / PILOTO
 
-**Referência de resposta:** [F-17-014](#f-17-014-registrar-estado-experimental-de-atendimento) — passos do §4 e condição: Não criar baixa SISCOFIS nem alteração de saldo.
+**Referência de resposta:** procedimento `F-17-014` (§4) — passos e condição: Não criar baixa SISCOFIS nem alteração de saldo.
 
 - **Q-F-17-014-01:** Como faço para registrar estado experimental de atendimento no EMPROVEX?
 - **Q-F-17-014-02:** Onde encontro a opção para registrar estado experimental de atendimento?
@@ -7665,9 +7673,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-17-014-16:** Você consegue me orientar sobre registrar estado experimental de atendimento pelo celular ou no modo Essencial?
 - **Q-F-17-014-17:** Posso registrar estado experimental de atendimento no EMPROVEX publicado hoje, ou é apenas recurso do piloto em PR?
 
-#### F-17-015 — Limitações excluídas do piloto · PR / PILOTO
+#### Bateria vinculada a F-17-015 — Limitações excluídas do piloto · PR / PILOTO
 
-**Referência de resposta:** [F-17-015](#f-17-015-limitacoes-excluidas-do-piloto) — passos do §4 e condição: CREM/TREM fora do escopo R1-D; baixa auxiliar desabilitada; pedido real adiado.
+**Referência de resposta:** procedimento `F-17-015` (§4) — passos e condição: CREM/TREM fora do escopo R1-D; baixa auxiliar desabilitada; pedido real adiado.
 
 - **Q-F-17-015-01:** Como faço para limitações excluídas do piloto no EMPROVEX?
 - **Q-F-17-015-02:** Onde encontro a opção para limitações excluídas do piloto?
@@ -7689,9 +7697,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 
 ### 9.18. EMPROVEX Empresas (desenvolvimento pausado)
 
-#### F-18-001 — Provisionar conta empresa · PAUSADO
+#### Bateria vinculada a F-18-001 — Provisionar conta empresa · PAUSADO
 
-**Referência de resposta:** [F-18-001](#f-18-001-provisionar-conta-empresa) — passos do §4 e condição: PAUSADO: não disponível como processo corrente.
+**Referência de resposta:** procedimento `F-18-001` (§4) — passos e condição: PAUSADO: não disponível como processo corrente.
 
 - **Q-F-18-001-01:** Como faço para provisionar conta empresa no EMPROVEX?
 - **Q-F-18-001-02:** Onde encontro a opção para provisionar conta empresa?
@@ -7711,9 +7719,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-18-001-16:** Você consegue me orientar sobre provisionar conta empresa pelo celular ou no modo Essencial?
 - **Q-F-18-001-17:** Isso de provisionar conta empresa já funciona na produção, ou o módulo continua pausado?
 
-#### F-18-002 — Cadastrar e gerenciar diretório de empresas · PAUSADO
+#### Bateria vinculada a F-18-002 — Cadastrar e gerenciar diretório de empresas · PAUSADO
 
-**Referência de resposta:** [F-18-002](#f-18-002-cadastrar-e-gerenciar-diretorio-de-empresas) — passos do §4 e condição: PAUSADO: não executar com dados reais no sistema atual.
+**Referência de resposta:** procedimento `F-18-002` (§4) — passos e condição: PAUSADO: não executar com dados reais no sistema atual.
 
 - **Q-F-18-002-01:** Como faço para cadastrar e gerenciar diretório de empresas no EMPROVEX?
 - **Q-F-18-002-02:** Onde encontro a opção para cadastrar e gerenciar diretório de empresas?
@@ -7733,9 +7741,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-18-002-16:** Você consegue me orientar sobre cadastrar e gerenciar diretório de empresas pelo celular ou no modo Essencial?
 - **Q-F-18-002-17:** Isso de cadastrar e gerenciar diretório de empresas já funciona na produção, ou o módulo continua pausado?
 
-#### F-18-003 — Login de empresa · PAUSADO
+#### Bateria vinculada a F-18-003 — Login de empresa · PAUSADO
 
-**Referência de resposta:** [F-18-003](#f-18-003-login-de-empresa) — passos do §4 e condição: PAUSADO: não prometer /empresa em produção.
+**Referência de resposta:** procedimento `F-18-003` (§4) — passos e condição: PAUSADO: não prometer /empresa em produção.
 
 - **Q-F-18-003-01:** Como faço para login de empresa no EMPROVEX?
 - **Q-F-18-003-02:** Onde encontro a opção para login de empresa?
@@ -7755,9 +7763,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-18-003-16:** Você consegue me orientar sobre login de empresa pelo celular ou no modo Essencial?
 - **Q-F-18-003-17:** Isso de login de empresa já funciona na produção, ou o módulo continua pausado?
 
-#### F-18-004 — Cadastro unificado de clientes · PAUSADO
+#### Bateria vinculada a F-18-004 — Cadastro unificado de clientes · PAUSADO
 
-**Referência de resposta:** [F-18-004](#f-18-004-cadastro-unificado-de-clientes) — passos do §4 e condição: PAUSADO: UI unificada não integra main auditada.
+**Referência de resposta:** procedimento `F-18-004` (§4) — passos e condição: PAUSADO: UI unificada não integra main auditada.
 
 - **Q-F-18-004-01:** Como faço para cadastro unificado de clientes no EMPROVEX?
 - **Q-F-18-004-02:** Onde encontro a opção para cadastro unificado de clientes?
@@ -7777,9 +7785,9 @@ Cada entrada contém: **ID estável**, finalidade, sequência orientativa e rest
 - **Q-F-18-004-16:** Você consegue me orientar sobre cadastro unificado de clientes pelo celular ou no modo Essencial?
 - **Q-F-18-004-17:** Isso de cadastro unificado de clientes já funciona na produção, ou o módulo continua pausado?
 
-#### F-18-005 — Gestão empresarial de notas/fornecedores · PAUSADO
+#### Bateria vinculada a F-18-005 — Gestão empresarial de notas/fornecedores · PAUSADO
 
-**Referência de resposta:** [F-18-005](#f-18-005-gestao-empresarial-de-notasfornecedores) — passos do §4 e condição: Não extrapolar funções atuais do Aprovisionamento para Empresa.
+**Referência de resposta:** procedimento `F-18-005` (§4) — passos e condição: Não extrapolar funções atuais do Aprovisionamento para Empresa.
 
 - **Q-F-18-005-01:** Como faço para gestão empresarial de notas/fornecedores no EMPROVEX?
 - **Q-F-18-005-02:** Onde encontro a opção para gestão empresarial de notas/fornecedores?
