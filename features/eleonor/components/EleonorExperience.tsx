@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import Image from 'next/image';
+import {EleonorHistoryPanel,type StoredChatMessage} from './EleonorHistoryPanel';
 import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
@@ -114,6 +115,16 @@ export function EleonorExperience({
     inputRef.current?.focus();
   };
 
+  const selectHistory=(id:string,stored:StoredChatMessage[])=>{
+    requestNumber.current+=1;controllerRef.current?.abort();controllerRef.current=null;
+    busyRef.current=false;setLoading(false);contextRef.current=undefined;
+    activeHistoryRef.current=id;setActiveHistoryId(id);setDraft('');
+    setMessages(stored.map((m,i)=>({id:i+1,role:m.role,text:m.text,status:m.status})));
+    nextId.current=stored.length;
+    if(!fullPage)setHistoryOpen(false);
+  };
+  const historyPanel=<EleonorHistoryPanel user={user} activeId={activeHistoryId}
+    refreshKey={historyRevision} onSelect={selectHistory} onNew={newConversation}/>;
   const send = async (value = draft) => {
     const message = value.trim();
     if (!message || message.length > 1000 || busyRef.current || !user) return;
@@ -309,7 +320,10 @@ export function EleonorExperience({
             <Plus className="h-4 w-4" /> Nova conversa
           </button>
         </header>
-        {conversation}
+        <div className="flex min-h-0 flex-1">
+          {historyOpen&&<aside className="w-52 shrink-0 overflow-hidden border-r border-slate-200 bg-white/85 sm:w-64">{historyPanel}</aside>}
+          {conversation}
+        </div>
       </section>
     );
   }
@@ -337,6 +351,7 @@ export function EleonorExperience({
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><X className="h-4 w-4" /></button>
             </div>
           </header>
+          {historyOpen&&<div className="max-h-48 min-h-28 shrink-0 overflow-y-auto border-b border-slate-200 bg-white">{historyPanel}</div>}
           {conversation}
         </section>
       )}
