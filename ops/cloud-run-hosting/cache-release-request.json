@@ -4,6 +4,6 @@
   "authorizedBy": "Moriark",
   "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
   "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
-  "reason": "Reexecucao P0 apos bloqueio WIF de workflow novo (run 41388812489): agora mesma etapa de Hosting executa pelo workflow Cloud Run promote ja confiavel, PR #475. Revisao g4b0afc57135a-23 ativa 100%; aplicar apenas no-store em /central-empenhos do Firebase Hosting, com validacao fail-closed da configuracao existente e sem alteracoes financeiras.",
-  "attempt": 2
+  "reason": "hosting-p0: P0 autorizado por /goal do usuario; executar Firebase Hosting cache-policy pelo workflow confiavel apos correcoes #472/#473 com Cloud Run g4b0afc57135a-23 100%; PR #476 ajustou selecao do evento sem afrouxar WIF; somente Hosting, validacao fail-closed.",
+  "attempt": 3
 }
