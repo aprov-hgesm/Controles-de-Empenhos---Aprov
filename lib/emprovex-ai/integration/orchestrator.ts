@@ -18,6 +18,7 @@ export type AiAskPayload={
  version:'emprovex.ai.ask.v1';status:'ok'|'partial'|'empty'|'ambiguous'|'clarify'|'unsupported'|'rejected'|'out_of_scope'|'fallback_unavailable';
  route:string;intent:string;answer:string;reason:string;
  conversationId?:string;
+ historyStatus?:'saved'|'unavailable'|'disabled';
  query?:{version:string;intent:string;params:Record<string,unknown>};
  result?:AiResponse;contextToken?:string;filterAudit?:{requested:string[];represented:string[];unhandled:string[]};
  metrics:{authenticationMs:number;interpretationMs:number;contractValidationMs:number;w3ExecutionMs:number;
@@ -47,10 +48,25 @@ export async function runAiAsk(args:{
  const authenticationMs=Date.now()-start;
  const cookieState=sessionForRequest(args.sessionCookie,access.uid,access.workspaceId,now.getTime());
  const previous=restoreContext(args.input.contextToken,cookieState.session,now.getTime());
+ // History must never block AI inference or a valid W3 read on a storage outage.
+ // Preserve 4xx owner/ID errors; fail soft only for storage/unavailable errors.
+ const historyActive=historyEnabled();
+ let historyStatus:'saved'|'unavailable'|'disabled'=historyActive?'unavailable':'disabled';
  let conversationId=args.input.conversationId;
- if(historyEnabled()){
-   if(conversationId)await getHistory(access,conversationId);
-   else conversationId=(await createHistory(access,args.input.message)).id;
+ let historyWritable=false;
+ if(historyActive){
+   try{
+     if(conversationId)await getHistory(access,conversationId);
+     else conversationId=(await createHistory(access,args.input.message)).id;
+     historyWritable=true;
+   }catch(error){
+     if(error instanceof AiExecutionError && error.httpStatus>=400 && error.httpStatus<500)
+       throw error; // Invalid IDs, other-user chats and quotas fail closed.
+     console.warn('emprovex_ai_history_unavailable',{
+       phase:'prepare',code:error instanceof AiExecutionError?error.code:'AI_HISTORY_STORAGE_FAILURE'
+     });
+     conversationId=undefined;
+   }
  }
  // Language model classifies first. Firestore and W3 remain exclusively server-authorized.
  const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&aiLfm3Enabled();
@@ -193,9 +209,19 @@ export async function runAiAsk(args:{
      interpreted.filterAudit?{filterAudit:interpreted.filterAudit}:{}),
    metrics:{authenticationMs,interpretationMs,contractValidationMs,w3ExecutionMs,responseMs,
      totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls,modelOutcome}};
- if(historyEnabled()&&conversationId){
-    await appendHistory(access,conversationId,args.input.message,answer,{status,route});
-    payload.conversationId=conversationId;
+ if(historyActive && historyWritable && conversationId){
+    try{
+      await appendHistory(access,conversationId,args.input.message,answer,{status,route});
+      historyStatus='saved';
+      payload.conversationId=conversationId;
+    }catch(error){
+      // The model/W3 answer has already succeeded: an audit-store outage must
+      // be clearly disclosed, but must not discard the answer.
+      console.warn('emprovex_ai_history_unavailable',{
+        phase:'append',code:error instanceof AiExecutionError?error.code:'AI_HISTORY_STORAGE_FAILURE'
+      });
+    }
   }
+  payload.historyStatus=historyStatus;
   return {payload,cookie:cookieState.cookie,setCookie:cookieState.newCookie};
 }
