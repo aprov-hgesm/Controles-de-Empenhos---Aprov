@@ -193,6 +193,58 @@ test('IAM metadata token and Ollama JSON mode, think=false, output/time bounds',
   assert.deepEqual(timeoutValues,[1800,30000]);
  }finally{globalThis.fetch=previous;AbortSignal.timeout=previousTimeout;}
 });
+test('LFM3 reports safe outcomes without exposing user prompts or tokens',async()=>{
+ const previous=globalThis.fetch;
+ const outcomes=[];
+ const proposal=interpret({message:'Detalhe o fornecedor Alfa',now:new Date()}).model;
+ let calls=0;
+ globalThis.fetch=async()=>++calls===1
+   ? {ok:true,text:async()=> 'aa.bb.cc'}
+   : {ok:true,text:async()=>JSON.stringify({done_reason:'stop',
+       message:{content:JSON.stringify({intent:'supplier_contact_find',params:{nameQuery:'fornecedor Alfa'}})}})};
+ try{
+   const good=await model.proposeWithLfm3(proposal,x=>outcomes.push(x));
+   assert.equal(good.intent,'supplier_contact_find');
+   assert.deepEqual(outcomes,['model_json_received']);
+   outcomes.length=0;calls=0;
+   globalThis.fetch=async()=>++calls===1?{ok:true,text:async()=> 'aa.bb.cc'}
+     :{ok:true,text:async()=>JSON.stringify({done_reason:'length',message:{content:'{}'}})};
+   assert.equal(await model.proposeWithLfm3(proposal,x=>outcomes.push(x)),null);
+   assert.deepEqual(outcomes,['model_truncated']);
+   outcomes.length=0;calls=0;
+   globalThis.fetch=async()=>++calls===1?{ok:true,text:async()=> 'aa.bb.cc'}
+     :{ok:false,status:503};
+   assert.equal(await model.proposeWithLfm3(proposal,x=>outcomes.push(x)),null);
+   assert.deepEqual(outcomes,['model_http_error']);
+ }finally{globalThis.fetch=previous;}
+});
+test('W7 writing invokes LFM3 with bounded valid JSON and diagnostic outcome',async()=>{
+ const previous=globalThis.fetch,old=process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+ process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED='1';
+ const calls=[];const outcomes=[];
+ globalThis.fetch=async(url,options)=>{
+   calls.push({url:String(url),options});
+   if(calls.length===1)return {ok:true,text:async()=> 'aa.bb.cc'};
+   return {ok:true,text:async()=>JSON.stringify({done_reason:'stop',
+     message:{content:JSON.stringify({answer:'Bem-vindos à equipe! Uma nova etapa começa hoje.'})}})};
+ };
+ try{
+   const answer=await model.respondConversationally('Escreva uma mensagem de boas-vindas.',x=>outcomes.push(x));
+   assert.match(answer,/Bem-vindos/);
+   assert.deepEqual(outcomes,['model_answer_accepted']);
+   assert.equal(calls.length,2);
+   const body=JSON.parse(calls[1].options.body);
+   assert.equal(body.options.num_predict,256);
+   assert.deepEqual(body.format.required,['answer']);
+   assert.equal(body.think,false);
+   assert.equal(body.stream,false);
+   assert.ok(!calls[1].options.body.includes('workspaces/'));
+ }finally{
+   globalThis.fetch=previous;
+   if(old===undefined)delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+   else process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED=old;
+ }
+});
 test('Model outages/invalid target/invalid JSON fail closed, not operational queries',async()=>{
  const original=globalThis.fetch,originalUrl=process.env.EMPROVEX_AI_LFM3_URL;
  try {
