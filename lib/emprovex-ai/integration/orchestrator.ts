@@ -73,8 +73,11 @@ export async function runAiAsk(args:{
  const highRiskRoute=['UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route);
  const modelOperational=modelFirst?.kind==='operational' && !highRiskRoute && interpreted.route!=='DETERMINISTIC' &&
    (operationalSignal||interpreted.route==='MODEL_ELIGIBLE');
- const modelConversation=modelFirst?.kind==='conversation' && !operationalSignal &&
-   !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route) &&
+ const safeCreativeWriting=conversation?.modelEligible===true && conversation.family==='writing' &&
+   !/\b(?:com dados|dados do|saldo|valores?|empenhos?|notas? fiscais?|movimentacoes?|extrato|pagamento)\b/i.test(args.input.message);
+ const modelConversation=modelFirst?.kind==='conversation' &&
+   (safeCreativeWriting||(!operationalSignal &&
+     !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route))) &&
    conversation?.mode!=='critical' &&
    !/\b(?:senha|token|cpf|cnpj|conta bancaria|dados pessoais|invadir|fraudar|falsificar|roubar)\b/i.test(args.input.message);
  const route=modelConversation?'CONVERSATIONAL':modelOperational?'MODEL_ELIGIBLE':
@@ -91,7 +94,7 @@ export async function runAiAsk(args:{
    // No W3 queries, authorizations, cached results or operational references
    // are exported through a conversation. Only a typed topic is retained.
    status=conversation.status;answer=conversation.answer;
-   if(conversation.modelEligible&&aiConversationalModelEnabled()&&!modelFirstAttempted){
+   if(conversation.modelEligible&&aiConversationalModelEnabled()&&(!modelFirstAttempted||!modelFirst)){
      lfm3Calls=1;
      const generated=await respondConversationally(args.input.message,recordModelOutcome);
      if(generated){answer=generated;status='ok';}
