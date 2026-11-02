@@ -63,6 +63,25 @@ const cases=[
  ['Quero uma resposta totalmente inusitada','unknown'],
  ['Quero invadir uma conta','safety'],['Quero morrer','safety']
 ];
+test('Eleonor answers capabilities and clarifies generic outstanding work',()=>{
+  const capabilities=plan('o que vc pode fazer?');
+  assert.equal(capabilities.intent,'capabilities');
+  assert.match(capabilities.answer,/notas fiscais/);
+  assert.match(capabilities.answer,/tramitação/);
+  const pending=plan('quais as nossas pendências?');
+  assert.equal(pending.intent,'pending_kind');
+  assert.equal(pending.status,'clarify');
+  assert.doesNotMatch(pending.answer,/encontrei \d+|paga(s)?/);
+});
+test('Floating Eleonor uses body portal, and sidebar shows one early entry',()=>{
+  const ui=readFileSync(resolve(root,'features/eleonor/components/EleonorExperience.tsx'),'utf8');
+  const sidebar=readFileSync(resolve(root,'components/layout/AppSidebar.tsx'),'utf8');
+  assert.match(ui,/createPortal\(/);
+  assert.match(ui,/setFloatingHost\(document\.body\)/);
+  assert.equal((sidebar.match(/data-testid="nav-eleonor"/g)||[]).length,1);
+  assert.ok(sidebar.indexOf('data-testid="nav-eleonor"')<sidebar.indexOf('data-nav-group="management"'));
+});
+
 test('Public catalog refuses unpublished, restricted and missing facts',()=>{
  assert.equal(KNOWLEDGE_VERSION,'eleonor.knowledge.r1');
  assert.ok(KNOWLEDGE_RECORDS.length>=6);
