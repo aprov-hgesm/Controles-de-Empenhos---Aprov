@@ -52,6 +52,8 @@
 | P1 | K13 | [F-07-003](#f-07-003) | Fornecedores sem CNPJ ficam fora de consolidação por CNPJ; não juntar por semelhança de nome | [main](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatorioPorFornecedorView.tsx#L80-L197) |
 | P2 | K14 | [F-08-005](#f-08-005) | Marcar em lote atua nos avisos NOVO e não resolve/arquiva os eventos | [main](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts#L68-L91) |
 
+**Comparação R1/R2/R3:** o R3 já possuía 242 IDs, exemplos linguísticos, o manifesto `eleonor.r3.context.v1` com 135 linhas de léxico e a distinção `development`/`evaluation_candidate`; portanto, **não** atribuímos como novidade nem os 89 IDs nem a ideia de paráfrases/partições. O corpus WC03 introduz casos explícitos por intenção operacional, correção de entidade, negação, guarda READ/WRITE e exceções documentais, mas alguns enunciados permanecem semanticamente próximos do R3 e não são contabilizados como conhecimento novo. O R3 é um conjunto documental visível, não um holdout cego. A leitura de código confirma parcialmente o roteiro, não demonstra que todas as 89 operações funcionem em produção.
+
 Esses **14 achados K01–K14** são proposições auditáveis, não novas funcionalidades do produto nem testes executados. Não contam meras paráfrases ou IDs antigos como conhecimento novo. A verificação de diff entre baseline R3 `b62f82e...` e `main@57a55b172790` encontrou 30 commits à frente, mas nenhum arquivo modificado dentre as famílias financeiras filtradas; isso não comprova equivalência de runtime nem que todo R3 era completo.
 
 ## 5. Casos difíceis transversais e formatos documentais
@@ -65,7 +67,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 ## 6. Cartões de procedimento por featureId
 
 
+<a id="f-02-cartoes"></a>
+
 ### F-02 cartoes — Início e indicadores
+
+<a id="f-02-001"></a>
 
 #### F-02-001 — Abrir tela Início
 
@@ -86,6 +92,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como abrir tela Início? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-02-002"></a>
+
 #### F-02-002 — Abrir Painel
 
 - **Domínio / intenção / acesso:** Painel e Início · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace próprios. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -104,6 +112,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** projeção de leitura; não altera lançamentos. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como abrir Painel? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-02-003"></a>
 
 #### F-02-003 — Filtrar indicadores por pregão
 
@@ -124,6 +134,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar indicadores por pregão? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-02-004"></a>
+
 #### F-02-004 — Filtrar indicadores por classe
 
 - **Domínio / intenção / acesso:** Painel e Início · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace próprios. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -142,6 +154,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** projeção de leitura; não altera lançamentos. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar indicadores por classe? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-02-005"></a>
 
 #### F-02-005 — Consultar saldo empenhado, recebido e disponível
 
@@ -162,6 +176,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como consultar saldo empenhado, recebido e disponível? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx#L60-L110) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-02-006"></a>
+
 #### F-02-006 — Pesquisar NE ou fornecedor no painel
 
 - **Domínio / intenção / acesso:** Painel e Início · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace próprios. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -181,6 +197,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como pesquisar NE ou fornecedor no painel? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-02-007"></a>
+
 #### F-02-007 — Examinar detalhamento por classe
 
 - **Domínio / intenção / acesso:** Painel e Início · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace próprios. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -199,6 +217,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** projeção de leitura; não altera lançamentos. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como examinar detalhamento por classe? **R:** Orientar o caminho **Central de Empenhos > Painel ou Início**, detalhar somente etapas verificáveis do cartão F-02-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-02-008"></a>
 
 #### F-02-008 — Abrir itens ou cadastro de NF pelo Painel
 
@@ -220,7 +240,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/inicio/components/InicioView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-03-cartoes"></a>
+
 ### F-03 cartoes — Empenhos, itens e NE PDF
+
+<a id="f-03-001"></a>
 
 #### F-03-001 — Listar empenhos
 
@@ -241,6 +265,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como listar empenhos? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-002"></a>
+
 #### F-03-002 — Pesquisar NE ou fornecedor
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -259,6 +285,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como pesquisar NE ou fornecedor? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-003"></a>
 
 #### F-03-003 — Filtrar NE por pregão
 
@@ -279,6 +307,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar NE por pregão? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-004"></a>
+
 #### F-03-004 — Filtrar NE por exercício
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -297,6 +327,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar NE por exercício? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-005"></a>
 
 #### F-03-005 — Filtrar NE por classe
 
@@ -317,6 +349,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar NE por classe? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-006"></a>
+
 #### F-03-006 — Filtrar NE por situação/saldo
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -335,6 +369,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar NE por situação/saldo? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-007"></a>
 
 #### F-03-007 — Cadastrar NE manualmente
 
@@ -356,6 +392,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como cadastrar NE manualmente? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-008"></a>
+
 #### F-03-008 — Cadastrar NE por PDF
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `GATED` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -376,10 +414,12 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como cadastrar NE por PDF? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-008, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/app/api/empenhos/parse-ne/route.ts#L15-L76) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-009"></a>
+
 #### F-03-009 — Revisar NE importada
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Empenhos; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Empenhos; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** Após leitura do PDF examinar prévia de importação.; Corrigir campos extraídos incorretos.; Confirmar apenas depois de conferir o documento oficial. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -388,12 +428,14 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Confirmar apenas depois de conferir o documento oficial.
 
 - **Evidência/nuance auditada:** O PDF original fica em memória durante a revisão; importação requer confirmação e comparação humana com a NE oficial; falha de parser não autoriza inventar campos.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** A IA não deve inventar valores ausentes. Conferir NE/exercício/fornecedor e vínculo com NF antes de qualquer gravação. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reversão depende da opção e bloqueios previstos pelo módulo; operação de escrita NÃO possui estorno universal comprovado.
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como revisar NE importada? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-009, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts#L61-L74) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-010"></a>
 
 #### F-03-010 — Abrir detalhe da NE
 
@@ -413,6 +455,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como abrir detalhe da NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-010, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-011"></a>
 
 #### F-03-011 — Editar CNPJ do fornecedor em NE
 
@@ -434,6 +478,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar CNPJ do fornecedor em NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-011, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts#L236-L324) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-012"></a>
+
 #### F-03-012 — Editar pregão da NE
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -452,6 +498,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como editar pregão da NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-012, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-013"></a>
 
 #### F-03-013 — Editar nota de crédito da NE
 
@@ -473,6 +521,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar nota de crédito da NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-013, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-014"></a>
+
 #### F-03-014 — Alterar classificação da NE
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -491,6 +541,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como alterar classificação da NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-014, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-015"></a>
 
 #### F-03-015 — Adicionar item à NE
 
@@ -512,6 +564,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como adicionar item à NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-015, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-016"></a>
+
 #### F-03-016 — Editar descritivo ou NR de item
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -532,6 +586,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar descritivo ou NR de item? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-016, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-017"></a>
+
 #### F-03-017 — Remover item de NE
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -550,6 +606,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como remover item de NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-017, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-018"></a>
 
 #### F-03-018 — Consultar saldo por item de NE
 
@@ -570,6 +628,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como consultar saldo por item de NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-018, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/dashboard/components/DashboardView.tsx#L75-L78) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-019"></a>
+
 #### F-03-019 — Gerar ou imprimir relatório de NE
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -588,6 +648,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como gerar ou imprimir relatório de NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-019, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-020"></a>
 
 #### F-03-020 — Gerenciar classes de empenho
 
@@ -609,6 +671,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como gerenciar classes de empenho? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-020, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx#L1874-L1920) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-03-021"></a>
+
 #### F-03-021 — Excluir NE
 
 - **Domínio / intenção / acesso:** Empenhos e itens da NE · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; gravação sujeita às validações do serviço. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -627,6 +691,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alterações de NE/itens podem afetar cálculo e vínculos financeiros. **Segurança:** mudança de maior risco; confirmação humana e integridade obrigatórias. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como excluir NE? **R:** Orientar o caminho **Central de Empenhos > Empenhos**, detalhar somente etapas verificáveis do cartão F-03-021, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/empenhoDeletionService.ts#L37-L41) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-03-022"></a>
 
 #### F-03-022 — Anexar ou consultar PDF de Nota de Empenho
 
@@ -648,7 +714,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/components/EmpenhosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/empenhos/hooks/useEmpenhoActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/components/EmpenhoDocumentActions.tsx#L40-L74) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-04-cartoes"></a>
+
 ### F-04 cartoes — NFs, NS, espelho e TR
+
+<a id="f-04-001"></a>
 
 #### F-04-001 — Acompanhar NFs cadastradas
 
@@ -669,6 +739,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como acompanhar NFs cadastradas? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-002"></a>
+
 #### F-04-002 — Buscar nota fiscal
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -687,6 +759,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como buscar nota fiscal? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/invoiceIdentity.ts) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-003"></a>
 
 #### F-04-003 — Filtrar NF por NE
 
@@ -707,6 +781,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar NF por NE? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-004"></a>
+
 #### F-04-004 — Filtrar NF por mês
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -725,6 +801,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar NF por mês? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-005"></a>
 
 #### F-04-005 — Filtrar NF por tramitação
 
@@ -745,6 +823,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar NF por tramitação? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-006"></a>
+
 #### F-04-006 — Ordenar NFs
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -763,6 +843,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como ordenar NFs? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-007"></a>
 
 #### F-04-007 — Cadastrar NF
 
@@ -784,6 +866,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como cadastrar NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts#L74-L168) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-008"></a>
+
 #### F-04-008 — Anexar PDF da NF
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `GATED` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -802,6 +886,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como anexar PDF da NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-008, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts#L305-L355) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-009"></a>
 
 #### F-04-009 — Editar NF
 
@@ -823,6 +909,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-009, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts#L74-L168) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-010"></a>
+
 #### F-04-010 — Excluir NF
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -841,6 +929,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** mudança de maior risco; confirmação humana e integridade obrigatórias. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como excluir NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-010, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts#L447-L505) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-011"></a>
 
 #### F-04-011 — Abrir itens de NF
 
@@ -861,6 +951,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como abrir itens de NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-011, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-012"></a>
+
 #### F-04-012 — Gerar/imprimir relatório ou PDF de NF
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -880,6 +972,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como gerar/imprimir relatório ou PDF de NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-012, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-013"></a>
+
 #### F-04-013 — Anexar ou consultar espelho da NF
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `GATED` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -898,6 +992,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como anexar ou consultar espelho da NF? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-013, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/components/InvoiceMirrorDocumentActions.tsx#L35-L107) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-014"></a>
 
 #### F-04-014 — Registrar ou corrigir NS
 
@@ -919,6 +1015,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como registrar ou corrigir NS? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-014, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/nsIntegrity.ts#L53-L103) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-015"></a>
+
 #### F-04-015 — Consultar tramitação de NF/NS
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -937,6 +1035,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como consultar tramitação de NF/NS? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-015, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-016"></a>
 
 #### F-04-016 — Configurar comissão de recebimento
 
@@ -957,6 +1057,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como configurar comissão de recebimento? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-016, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx#L1190-L1300) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-04-017"></a>
+
 #### F-04-017 — Emitir Termo de Recebimento
 
 - **Domínio / intenção / acesso:** Notas Fiscais, NS e TR · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; identidade NF/CNPJ/NE/NS; documentos privados. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -975,6 +1077,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** recebimentos modificam saldos da NE; documentos e tramitação têm estados próprios. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como emitir Termo de Recebimento? **R:** Orientar o caminho **Central de Empenhos > Notas Fiscais**, detalhar somente etapas verificáveis do cartão F-04-017, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/components/TermoRecebimentoActions.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-04-018"></a>
 
 #### F-04-018 — Conferir vínculo de documentos com NE
 
@@ -996,7 +1100,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/hooks/useNotasFiscaisActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/notas-fiscais/components/NotasFiscaisView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-05-cartoes"></a>
+
 ### F-05 cartoes — Cronogramas, PDF e envio
+
+<a id="f-05-001"></a>
 
 #### F-05-001 — Listar cronogramas por NE
 
@@ -1016,6 +1124,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como listar cronogramas por NE? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-05-002"></a>
 
 #### F-05-002 — Criar cronograma
 
@@ -1037,6 +1147,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como criar cronograma? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L72-L114) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-003"></a>
+
 #### F-05-003 — Editar cronograma
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1056,10 +1168,12 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar cronograma? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L188-L229) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-004"></a>
+
 #### F-05-004 — Adicionar remessa
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** No editor de cronograma escolher adicionar remessa.; Definir data e quantidade por item.; Revisar total programado. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1068,17 +1182,19 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Revisar total programado.
 
 - **Evidência/nuance auditada:** **Não verificado na granularidade do comando:** instruções base R3, presencia do componente na main; campos condicionais, texto literal de erros e permissões finas devem ser confirmados no arquivo/fluxo antes de resposta categórica.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Remessas referem-se à NE selecionada. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como adicionar remessa? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-005"></a>
+
 #### F-05-005 — Remover remessa
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** No editor localizar coluna de remessa.; Selecionar remover.; Conferir redistribuição antes de salvar. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1087,17 +1203,19 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Conferir redistribuição antes de salvar.
 
 - **Evidência/nuance auditada:** A remoção da última remessa é bloqueada com aviso literal: 'O cronograma deve conter pelo menos 1 remessa de entrega.'
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Pode mudar total programado. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como remover remessa? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L181-L187) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-006"></a>
+
 #### F-05-006 — Aplicar distribuição predefinida
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** No editor selecionar opção de parcelas/preset.; Revisar datas e quantidades sugeridas.; Ajustar manualmente conforme necessidade. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1106,17 +1224,19 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Ajustar manualmente conforme necessidade.
 
 - **Evidência/nuance auditada:** Preset divide o saldo usando quociente inteiro e resto na primeira remessa; para quantidades fracionárias a adequação deste algoritmo requer revisão específica. Não recomendar resultado sem conferência.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Sugestões não substituem o planejamento operacional. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como aplicar distribuição predefinida? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L117-L140) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-007"></a>
+
 #### F-05-007 — Programar tudo na primeira remessa
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** Selecionar opção de alocação integral na primeira remessa.; Conferir itens e saldo.; Salvar se a entrega integral for o objetivo. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1125,17 +1245,19 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Salvar se a entrega integral for o objetivo.
 
 - **Evidência/nuance auditada:** A opção aloca 100% do saldo atual na primeira remessa, sem consultar disponibilidade real do fornecedor.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Não pressupor disponibilidade de fornecedor. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como programar tudo na primeira remessa? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L143-L156) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-008"></a>
+
 #### F-05-008 — Limpar distribuição de remessas
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** Usar opção de limpar distribuição.; Confirmar as linhas zeradas.; Preencher novo planejamento antes de salvar. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1144,17 +1266,19 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Preencher novo planejamento antes de salvar.
 
 - **Evidência/nuance auditada:** Limpar distribuição atribui zero a todas as combinações item/remessa; não exclui NE, tampouco prova gravação enquanto não salvar.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Não é exclusão da NE. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como limpar distribuição de remessas? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-008, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L159-L171) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-009"></a>
+
 #### F-05-009 — Preencher instruções de entrega
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Cronogramas; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** WRITE (manual/assistido; Eleonor só HOWTO). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** No editor localizar informações complementares.; Informar local, dias/horários, exigências de temperatura, validade e orientações.; Conferir contato e responsável. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1163,12 +1287,14 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Conferir contato e responsável.
 
 - **Evidência/nuance auditada:** **Não verificado na granularidade do comando:** instruções base R3, presencia do componente na main; campos condicionais, texto literal de erros e permissões finas devem ser confirmados no arquivo/fluxo antes de resposta categórica.
-- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria.
+- **Resultado observável:** ação confirmada pelo próprio módulo após persistência válida; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Reabrir o registro no mesmo workspace, validar identidade, quantidades/documentos e estado salvo; em falha, não presumir commit. Para mudanças financeiras, reconciliar saldos/NS e auditoria. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Tratar como instrução institucional, não mensagem espontânea da Eleonor. Usar identificação exata da NE, remessas e datas; separar configuração, PDF, envio e histórico. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Reeditar/remontar a distribuição antes de salvar; após envio, um novo envio não apaga o anterior.
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como preencher instruções de entrega? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-009, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-05-010"></a>
 
 #### F-05-010 — Gerar prévia de cronograma
 
@@ -1189,6 +1315,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como gerar prévia de cronograma? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-010, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-011"></a>
+
 #### F-05-011 — Imprimir ou baixar cronograma PDF
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_READ` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1208,6 +1336,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como imprimir ou baixar cronograma PDF? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-011, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L505-L527) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-05-012"></a>
+
 #### F-05-012 — Enviar cronograma por e-mail
 
 - **Domínio / intenção / acesso:** Cronogramas · `HOWTO_WRITE` (responder instrução; não executar) · sessão operacional; envio exige conta Google do setor e PDF de NE ativo. **Disponibilidade:** `GATED` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1226,6 +1356,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** planejamento e comunicação; PDF/registro não comprovam entrega física. **Segurança:** mudança de maior risco; confirmação humana e integridade obrigatórias. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como enviar cronograma por e-mail? **R:** Orientar o caminho **Central de Empenhos > Cronogramas**, detalhar somente etapas verificáveis do cartão F-05-012, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts#L529-L788) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-05-013"></a>
 
 #### F-05-013 — Consultar histórico de envios
 
@@ -1247,7 +1379,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/components/CronogramasView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/hooks/useCronogramaActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/cronogramas/domain/cronogramaDeliveryTracking.ts#L63-L91) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-06-cartoes"></a>
+
 ### F-06 cartoes — Fornecedores e consulta de itens
+
+<a id="f-06-001"></a>
 
 #### F-06-001 — Listar fornecedores
 
@@ -1268,6 +1404,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como listar fornecedores? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-06-002"></a>
+
 #### F-06-002 — Pesquisar fornecedor
 
 - **Domínio / intenção / acesso:** Fornecedores e itens · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; dados de contatos não são públicos. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1286,6 +1424,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** cadastro/consulta por identidade de fornecedor; itens de NE não equivalem a estoque. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como pesquisar fornecedor? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-06-003"></a>
 
 #### F-06-003 — Filtrar fornecedores por situação
 
@@ -1306,6 +1446,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar fornecedores por situação? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-06-004"></a>
+
 #### F-06-004 — Cadastrar fornecedor
 
 - **Domínio / intenção / acesso:** Fornecedores e itens · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; dados de contatos não são públicos. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1324,6 +1466,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** cadastro/consulta por identidade de fornecedor; itens de NE não equivalem a estoque. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como cadastrar fornecedor? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx#L290-L336) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-06-005"></a>
 
 #### F-06-005 — Editar cadastro de fornecedor
 
@@ -1345,6 +1489,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como editar cadastro de fornecedor? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx#L308-L317) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-06-006"></a>
+
 #### F-06-006 — Consultar vínculos de fornecedor
 
 - **Domínio / intenção / acesso:** Fornecedores e itens · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; dados de contatos não são públicos. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1363,6 +1509,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** cadastro/consulta por identidade de fornecedor; itens de NE não equivalem a estoque. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como consultar vínculos de fornecedor? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-06-007"></a>
 
 #### F-06-007 — Consultar itens empenhados
 
@@ -1383,6 +1531,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como consultar itens empenhados? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx#L65-L109) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-06-008"></a>
+
 #### F-06-008 — Filtrar itens por saldo
 
 - **Domínio / intenção / acesso:** Fornecedores e itens · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; dados de contatos não são públicos. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1401,6 +1551,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** cadastro/consulta por identidade de fornecedor; itens de NE não equivalem a estoque. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar itens por saldo? **R:** Orientar o caminho **Central de Empenhos > Fornecedores / Consulta de Itens**, detalhar somente etapas verificáveis do cartão F-06-008, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-06-009"></a>
 
 #### F-06-009 — Abrir composição de item por NE
 
@@ -1422,7 +1574,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/itens/components/ConsultaItensView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/fornecedores/components/FornecedoresView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-07-cartoes"></a>
+
 ### F-07 cartoes — Relatórios, SAG e saneamento
+
+<a id="f-07-001"></a>
 
 #### F-07-001 — Abrir Central de Relatórios
 
@@ -1443,6 +1599,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como abrir Central de Relatórios? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-002"></a>
+
 #### F-07-002 — Relatório por empenho
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1461,6 +1619,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** relatórios leem registros; aplicação SAG/saneamento podem persistir alterações. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como relatório por empenho? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatorioPorEmpenhoView.tsx#L115-L186) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-07-003"></a>
 
 #### F-07-003 — Relatório por fornecedor
 
@@ -1481,6 +1641,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como relatório por fornecedor? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatorioPorFornecedorView.tsx#L80-L197) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-004"></a>
+
 #### F-07-004 — Filtrar relatórios por data
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1499,6 +1661,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** relatórios leem registros; aplicação SAG/saneamento podem persistir alterações. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como filtrar relatórios por data? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-07-005"></a>
 
 #### F-07-005 — Exportar/imprimir relatório
 
@@ -1519,6 +1683,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como exportar/imprimir relatório? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-006"></a>
+
 #### F-07-006 — Iniciar importação SAG de NS
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1538,10 +1704,12 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como iniciar importação SAG de NS? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/sagNsContract.ts#L1-L61) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-007"></a>
+
 #### F-07-007 — Colar e validar JSON SAG
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Relatórios; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** READ / navegação (sem mutação de domínio).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Relatórios; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** READ / navegação (sem mutação de domínio). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** Na seção de importação colar JSON.; Selecionar validar.; Corrigir erros de schema/identidade indicados. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1550,12 +1718,14 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Corrigir erros de schema/identidade indicados.
 
 - **Evidência/nuance auditada:** JSON SAG tem schema_version, source, supplier_cnpj, ug e records; por registro: ns, ns_issue_date, nf_number_raw, nf_issue_date, observation. É proibido incluir NE/empenho/recordKey no payload.
-- **Resultado observável:** filtro, tela, documento ou resultado exibido no escopo autorizado; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Conferir filtros, identidade da NE/NF/CNPJ, período e abrangência da tela; leitura ou exportação não confirma alteração nem movimentação.
+- **Resultado observável:** filtro, tela, documento ou resultado exibido no escopo autorizado; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Conferir filtros, identidade da NE/NF/CNPJ, período e abrangência da tela; leitura ou exportação não confirma alteração nem movimentação. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** JSON para NS/SAG não é cadastro JSON de NE. Em SAG, nunca inserir vínculo interno no JSON nem aplicar lote conflitado; relatórios com período exigem escolher a data adequada. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Limpar filtro ou retornar à aba; não existe estorno financeiro por esta consulta.
 - **Consequência:** relatórios leem registros; aplicação SAG/saneamento podem persistir alterações. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como colar e validar JSON SAG? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-007, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/sagNsContract.ts#L1-L69) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-07-008"></a>
 
 #### F-07-008 — Conferir conciliação CNPJ → NF → NE
 
@@ -1576,10 +1746,12 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como conferir conciliação CNPJ → NF → NE? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-008, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/sagNsReconciliation.ts#L116-L152) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-009"></a>
+
 #### F-07-009 — Pré-visualizar alterações SAG
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
-- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Relatórios; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** READ / navegação (sem mutação de domínio).
+- **Rota e menu:** `/central-empenhos` → Central de Empenhos > Relatórios; escolher a subaba ou registro descrito abaixo, se renderizado para o perfil. **Operação:** READ / navegação (sem mutação de domínio). **Etapa preparatória:** alterações em formulário, rascunho, revisão ou prévia não equivalem a gravação definitiva.
 - **Entrada, campos e pré-requisitos:** Após conciliação abrir prévia da aplicação.; Revisar cada NS e documento de destino.; Confirmar somente se correspondências forem seguras. Os campos podem variar conforme estado e perfil; antes de gravar conferir dados oficiais, sessão e workspace.
 - **Passos orientativos (R3; conferir UI real quando aplicável):**
 
@@ -1588,12 +1760,14 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 3. Confirmar somente se correspondências forem seguras.
 
 - **Evidência/nuance auditada:** Prévia separa mudança, no-op e bloqueio com fingerprint; confirmar é etapa distinta de aplicar, e alterações na prévia podem invalidar aprovação.
-- **Resultado observável:** filtro, tela, documento ou resultado exibido no escopo autorizado; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Conferir filtros, identidade da NE/NF/CNPJ, período e abrangência da tela; leitura ou exportação não confirma alteração nem movimentação.
+- **Resultado observável:** filtro, tela, documento ou resultado exibido no escopo autorizado; verificar novamente antes de afirmar que foi persistido, enviado ou recebido. **Após salvar/consultar:** Conferir filtros, identidade da NE/NF/CNPJ, período e abrangência da tela; leitura ou exportação não confirma alteração nem movimentação. **Quando aplicável, aguardar a ação explícita Salvar/Aplicar e sua confirmação; não deduzir commit a partir da prévia.**
 - **Erro, bloqueio e restrição:** Mudanças financeiras exigem revisão humana. Em SAG, nunca inserir vínculo interno no JSON nem aplicar lote conflitado; relatórios com período exigem escolher a data adequada. Sem mensagem literal adicional validada no código para este cartão, não citar texto inventado.
 - **Fluxo reverso/estorno:** Limpar filtro ou retornar à aba; não existe estorno financeiro por esta consulta.
 - **Consequência:** relatórios leem registros; aplicação SAG/saneamento podem persistir alterações. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como pré-visualizar alterações SAG? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-009, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/lib/sagNsApplicationPreview.ts#L46-L159) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-07-010"></a>
 
 #### F-07-010 — Aplicar NS importadas
 
@@ -1614,6 +1788,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como aplicar NS importadas? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-010, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/hooks/useSagNsImportActions.ts#L46-L107) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-07-011"></a>
+
 #### F-07-011 — Verificar integridade histórica
 
 - **Domínio / intenção / acesso:** Relatórios, SAG e integridade · `HOWTO_READ` (responder instrução; não executar) · sessão, workspace, UG e conciliação; escritas de NS exigem validação. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1632,6 +1808,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** relatórios leem registros; aplicação SAG/saneamento podem persistir alterações. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como verificar integridade histórica? **R:** Orientar o caminho **Central de Empenhos > Relatórios**, detalhar somente etapas verificáveis do cartão F-07-011, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/HistoricalConsistencyView.tsx#L83-L190) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-07-012"></a>
 
 #### F-07-012 — Sanear inconsistências históricas permitidas
 
@@ -1653,7 +1831,11 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/RelatoriosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/SagImportView.tsx) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/relatorios/components/HistoricalConsistencyView.tsx#L42-L76) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
 
+<a id="f-08-cartoes"></a>
+
 ### F-08 cartoes — Avisos e ciclo de vida
+
+<a id="f-08-001"></a>
 
 #### F-08-001 — Abrir Central de Avisos
 
@@ -1674,6 +1856,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como abrir Central de Avisos? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-001, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-08-002"></a>
+
 #### F-08-002 — Pesquisar aviso
 
 - **Domínio / intenção / acesso:** Avisos · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; estados restritos aos avisos da unidade. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1692,6 +1876,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alteração do ciclo do aviso não corrige automaticamente a origem do alerta. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como pesquisar aviso? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-002, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-08-003"></a>
 
 #### F-08-003 — Filtrar por severidade
 
@@ -1712,6 +1898,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar por severidade? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-003, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-08-004"></a>
+
 #### F-08-004 — Filtrar avisos por situação
 
 - **Domínio / intenção / acesso:** Avisos · `HOWTO_READ` (responder instrução; não executar) · sessão e workspace; estados restritos aos avisos da unidade. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** parcial — fluxo do R3 e presença do componente, sem validação exaustiva.
@@ -1731,6 +1919,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **FAQ canônico:** **P:** Como filtrar avisos por situação? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-004, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
 
+<a id="f-08-005"></a>
+
 #### F-08-005 — Marcar avisos como lidos
 
 - **Domínio / intenção / acesso:** Avisos · `HOWTO_WRITE` (responder instrução; não executar) · sessão e workspace; estados restritos aos avisos da unidade. **Disponibilidade:** `MAIN` na main auditada; produção **NÃO VERIFICADO**. **Certeza:** alta para evidência pontual; parcial para todas as ramificações.
@@ -1748,6 +1938,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alteração do ciclo do aviso não corrige automaticamente a origem do alerta. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como marcar avisos como lidos? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-005, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts#L68-L91) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-08-006"></a>
 
 #### F-08-006 — Resolver, reabrir ou arquivar aviso
 
@@ -1767,6 +1959,8 @@ Esses **14 achados K01–K14** são proposições auditáveis, não novas funcio
 - **Consequência:** alteração do ciclo do aviso não corrige automaticamente a origem do alerta. **Segurança:** nunca revelar dados de outra UG, usuário ou workspace. Permissão granular em runtime não verificada.
 - **FAQ canônico:** **P:** Como resolver, reabrir ou arquivar aviso? **R:** Orientar o caminho **Central de Empenhos > Central de Avisos**, detalhar somente etapas verificáveis do cartão F-08-006, confirmar pré-requisitos e explicar a checagem depois da ação; não dizer que foi executada. **P:** “Você já fez isso por mim?” **R:** “Não. Apenas expliquei o procedimento; confira o registro ou resultado na sua sessão.”
 - **Referências:** [código main — principal](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx) · [código main — complementar](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/hooks/useAvisosActions.ts) · [evidência específica](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/57a55b172790865bdb9b9beffaaa55b6a19c1a28/features/avisos/components/CentralAvisosView.tsx#L302-L350) · [R3 PR #471](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/blob/d7e649d71797b09173fe67c790099d0ceef81f4d/docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md).
+
+<a id="f-08-007"></a>
 
 #### F-08-007 — Ir ao empenho associado ao aviso
 
