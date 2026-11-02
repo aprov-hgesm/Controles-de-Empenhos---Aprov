@@ -65,10 +65,10 @@ export function planConversation(input:{
  const helpQuery=matches(t,/^(?:como|onde posso|me ensine|explique como|qual o procedimento)\b/,/\b(?:tutorial|central de ajuda|me explica esse botao)\b/);
  // Product capabilities are safe institutional guidance, not an operational query.
  // Do not advertise arbitrary queries or pretend a model is a data source.
- if(matches(t,/\\b(?:o que (?:voce|vc) (?:pode|consegue) fazer|quais (?:sao )?(?:suas )?funcionalidades|como (?:voce|vc) (?:pode|consegue) (?:me )?ajudar|em que (?:voce|vc) (?:pode|consegue) ajudar)\\b/))
+ if(matches(t,/\b(?:o que (?:voce|vc) (?:pode|consegue) fazer|quais (?:sao )?(?:suas )?funcionalidades|como (?:voce|vc) (?:pode|consegue) (?:me )?ajudar|em que (?:voce|vc) (?:pode|consegue) ajudar)\b/))
    return decision('help','capabilities','eleonor',
      'Posso consultar, dentro do seu acesso, saldos e empenhos identificados, notas fiscais cadastradas por período, pendências de tramitação das notas, contatos de fornecedores, cronogramas enviados e estoque/localização de materiais. Também posso orientar, conversar e ajudar a redigir textos quando o modelo generativo estiver disponível. Para notas pendentes, informo a etapa operacional; isso não comprova pagamento em aberto.');
- if(matches(t,/\\b(?:quais|o que|como estao|mostre|me diga)\\s+(?:sao\\s+)?(?:as\\s+)?(?:nossas|minhas|principais)\\s+pendencias\\b/,/\\bo que esta pendente\\b/))
+ if(matches(t,/\b(?:quais|o que|como estao|mostre|me diga)\s+(?:sao\s+)?(?:as\s+)?(?:nossas|minhas|principais)\s+pendencias\b/,/\bo que esta pendente\b/))
    return decision('help','pending_kind','emprovex',
      'Você quer ver as notas fiscais pendentes de tramitação, os empenhos de exercícios anteriores com saldo ou os cronogramas enviados? Posso consultar cada categoria disponível sem misturar seus significados.','clarify',false,'guidance','PENDING_CATEGORY_AMBIGUOUS');
  if(hasOperational&&!writingRequest){
