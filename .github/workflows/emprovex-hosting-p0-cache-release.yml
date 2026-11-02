@@ -1,0 +1,76 @@
+name: EMPROVEX P0 Hosting cache release
+on:
+  push:
+    branches: [main]
+    paths: [ops/cloud-run-hosting/cache-release-request.json]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: emprovex-hosting-release-p0
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.actor == 'Moriark' }}
+    environment:
+      name: emprovex-chat-authorized
+      url: https://emprovex.com.br
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PROJECT: gen-lang-client-0982077967
+      SERVICE: emprovex-cloudrun-candidate
+      REGION: southamerica-east1
+      SITE: emprovex-cloudrun-943599311487
+      DOMAIN: emprovex.com.br
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check one-file authorization and fixed scope
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1286320615
+          test "$(git rev-parse HEAD^)" = "$BEFORE"
+          test "$(git diff --name-only HEAD^ HEAD)" = ops/cloud-run-hosting/cache-release-request.json
+          jq -e '.schemaVersion == 1 and .authorizationMode == "explicit_chat_request" and .authorizedBy == "Moriark"' ops/cloud-run-hosting/cache-release-request.json >/dev/null
+          SOURCE="$(jq -r .sourceSha ops/cloud-run-hosting/cache-release-request.json)"
+          REVISION="$(jq -r .revision ops/cloud-run-hosting/cache-release-request.json)"
+          [[ "$SOURCE" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$REVISION" == "$SERVICE-g$(printf %.12s "$SOURCE")-"* ]]
+          git merge-base --is-ancestor "$SOURCE" HEAD
+          echo "REVISION=$REVISION" >> "$GITHUB_ENV"
+          jq -e --arg svc "$SERVICE" --arg reg "$REGION" --arg site "$SITE" '.hosting.site==$site and (.hosting.rewrites|length)==1 and .hosting.rewrites[0].run.serviceId==$svc and .hosting.rewrites[0].run.region==$reg and (.hosting.headers|length)==1 and .hosting.headers[0].source=="/central-empenhos" and (.hosting.headers[0].headers[0].value|contains("no-store"))' ops/cloud-run-hosting/firebase.json >/dev/null
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: projects/943599311487/locations/global/workloadIdentityPools/emprovex-github/providers/emprovex-main
+          service_account: emprovex-github-deployer@gen-lang-client-0982077967.iam.gserviceaccount.com
+          create_credentials_file: true
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT }}
+      - name: Verify currently active revision and Hosting rewrite
+        run: |
+          set -euo pipefail
+          gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format=json > "$RUNNER_TEMP/run.json"
+          jq -e --arg rev "$REVISION" '[.status.traffic[]? | select(.revisionName==$rev and .percent==100)]|length==1' "$RUNNER_TEMP/run.json" >/dev/null
+          TOKEN="$(gcloud auth print-access-token)"
+          ROOT=https://firebasehosting.googleapis.com/v1beta1
+          curl -fSs --max-time 25 -H "Authorization: Bearer $TOKEN" "$ROOT/sites/$SITE/releases?pageSize=1" > "$RUNNER_TEMP/releases.json"
+          VERSION="$(jq -r '.releases[0].version.name // empty' "$RUNNER_TEMP/releases.json")"
+          [[ "$VERSION" == "sites/$SITE/versions/"* ]]
+          curl -fSs --max-time 25 -H "Authorization: Bearer $TOKEN" "$ROOT/$VERSION" > "$RUNNER_TEMP/version.json"
+          jq -e --arg svc "$SERVICE" --arg reg "$REGION" '(.config.rewrites|length)==1 and .config.rewrites[0].run.serviceId==$svc and .config.rewrites[0].run.region==$reg and ([.config.redirects[]?]|length)==0' "$RUNNER_TEMP/version.json" >/dev/null
+      - name: Deploy Hosting ONLY (no Firestore, DNS or Cloud Run changes)
+        run: npx --yes firebase-tools@14 deploy --only hosting --project "$PROJECT" --config ops/cloud-run-hosting/firebase.json --non-interactive
+      - name: Verify canonical HTML and health
+        run: |
+          set -euo pipefail
+          curl -fSsIL --retry 4 --retry-delay 2 --max-time 25 "https://$DOMAIN/central-empenhos" > "$RUNNER_TEMP/headers.txt"
+          grep -iq '^cache-control:.*no-store' "$RUNNER_TEMP/headers.txt"
+          curl -fSs --max-time 20 "https://$DOMAIN/api/health" >/dev/null
+          echo 'EMPROVEX HOSTING CACHE CONTROL VERIFIED'
