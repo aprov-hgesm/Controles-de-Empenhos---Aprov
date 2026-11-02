@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'ops/cloud-run/promotion-request.json'
+      - 'ops/cloud-run-hosting/cache-release-request.json'
+      - '.github/workflows/emprovex-hosting-p0-cache-release.yml'
       - 'ops/admin-digest/activation-request.json'
 
 permissions:
