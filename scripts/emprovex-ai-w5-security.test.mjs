@@ -13,6 +13,7 @@ const oldEnv={...process.env};
 process.env.EMPROVEX_AI_W45_CONTEXT_SECRET='w5-only-synthetic-hmac-encryption-012345678901';
 function load(path,mocks={}){
  const full=resolve(root,path);
+ if(extname(full)==='.json')return require(full);
  if(cache.has(full))return cache.get(full).exports;
  if(!existsSync(full))throw Error('Unexpected source '+full);
  const mod={exports:{}};cache.set(full,mod);

@@ -60,7 +60,7 @@ A camada de estilo: presentAiResponse() W3 segue íntegra; o estilo W7 atua nas 
 - W6 usa LFM3 para MODEL_ELIGIBLE operacional somente quando as guardas originais autorizam.
 - W7 só usa resposta criativa quando todos os gates W6 estão válidos e EMPROVEX_AI_W7_GENERATIVE_ENABLED=1. Padrão: desligado.
 - Mesmo com esse flag, mantém Cloud Run restrito a emprovex-ai-w6-homologation. Não altera produção, IAM, serviço de inferência, configuração de Ollama ou limites existentes de W6.
-- LLM recebe apenas mensagem genérica avaliada pelo roteador, nunca tokens, workspace, resultados W3 nem histórico operacional. think=false, stream=false, JSON com answer:string, limite de 160 tokens, timeout de oito segundos e máximo 900 caracteres.
+- LLM recebe apenas mensagem genérica avaliada pelo roteador, nunca tokens, workspace, resultados W3 nem histórico operacional. think=false, stream=false, JSON com answer:string, limite de 256 tokens, timeout de 30 segundos e máximo 900 caracteres.
 - Texto do modelo não vira consulta, filtro, comando ou mutação. JSON inválido, IAM negado, timeout e indisponibilidade resultam em fallback_unavailable.
 - **Risco residual:** LFM3 1,7B não deve ser tratado como fonte factual, filtro geral de moderação ou gerador irrestrito. Revisar casos sensíveis antes de ativar esse flag.
 
