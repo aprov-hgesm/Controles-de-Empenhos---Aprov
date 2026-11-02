@@ -53,6 +53,9 @@ export function makeW3Query(intent:W3Intent,p:Record<string,unknown>):W3Query|nu
    validPeriod(p.interval)&&p.dateMeaning==='registered'&&
    (p.supplierCnpj===undefined||goodCnpj(p.supplierCnpj))&&
    (p.commitmentId===undefined||(typeof p.commitmentId==='string'&&NE.test(p.commitmentId)))&&p.pageSize===undefined&&p.cursor===undefined;break;
+ case 'invoice_operational_pending_list':
+   valid=keys(p,['stage','pageSize'])&&p.stage==='pending_operational'&&
+     (p.pageSize===undefined||(Number.isInteger(p.pageSize)&&Number(p.pageSize)>=1&&Number(p.pageSize)<=50));break;
  case 'warehouse_stock_get':
  case 'warehouse_material_locations_list':
    valid=keys(p,intent==='warehouse_stock_get'?['materialId','materialQuery','barcode']:
