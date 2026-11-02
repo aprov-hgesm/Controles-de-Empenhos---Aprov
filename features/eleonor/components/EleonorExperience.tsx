@@ -22,6 +22,7 @@ type ChatMessage = {
 };
 type AskResponse = {
   conversationId?:string;
+  historyStatus?:'saved'|'unavailable'|'disabled';
   answer?: string;
   status?: string;
   contextToken?: string;
@@ -80,6 +81,7 @@ export function EleonorExperience({
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historyUnsaved,setHistoryUnsaved]=useState(false);
   const [activeHistoryId,setActiveHistoryId]=useState<string|undefined>();
   const [historyOpen,setHistoryOpen]=useState(fullPage);
   const [historyRevision,setHistoryRevision]=useState(0);
@@ -108,7 +110,7 @@ export function EleonorExperience({
     controllerRef.current=null;busyRef.current=false;
     contextRef.current=undefined;activeHistoryRef.current=undefined;
     setActiveHistoryId(undefined);setMessages([]);setHistoryRevision(0);
-    setDraft('');setLoading(false);
+    setDraft('');setLoading(false);setHistoryUnsaved(false);
   }, [user?.uid]);
 
 
@@ -120,6 +122,7 @@ export function EleonorExperience({
     contextRef.current = undefined;
     activeHistoryRef.current=undefined;setActiveHistoryId(undefined);
     setMessages([]);
+    setHistoryUnsaved(false);
     setDraft('');
     setLoading(false);
     inputRef.current?.focus();
@@ -130,6 +133,7 @@ export function EleonorExperience({
     busyRef.current=false;setLoading(false);contextRef.current=undefined;
     activeHistoryRef.current=id;setActiveHistoryId(id);setDraft('');
     setMessages(stored.map((m,i)=>({id:i+1,role:m.role,text:m.text,status:m.status})));
+    setHistoryUnsaved(false);
     nextId.current=stored.length;
     if(!fullPage)setHistoryOpen(false);
   };
@@ -170,6 +174,7 @@ export function EleonorExperience({
       if (controller.signal.aborted || number !== requestNumber.current) return;
       if (!response.ok) throw new Error(friendlyError(response.status, body.error));
 
+      if(body.historyStatus==='unavailable')setHistoryUnsaved(true);
       if(typeof body.conversationId==='string'){
         activeHistoryRef.current=body.conversationId;
         setActiveHistoryId(body.conversationId);
@@ -222,6 +227,9 @@ export function EleonorExperience({
 
   const conversation = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {historyUnsaved&&<p role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        Histórico indisponível: algumas mensagens desta conversa não foram salvas. A Eleonor continua funcionando.
+      </p>}
       <div role="log" aria-label="Conversa com Eleonor" aria-live="polite"
         className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7">
         {messages.length === 0 && (
