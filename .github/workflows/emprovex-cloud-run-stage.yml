@@ -157,6 +157,20 @@ jobs:
             echo "::error::Unauthenticated billing route returned HTTP ${status}, expected 401."
             exit 1
           }
+          # Branding R4: verificar o arquivo circular de verdade na revisão isolada.
+          curl --fail --silent --show-error --retry 2 --retry-delay 2 --max-time 40 \
+            -D "${RUNNER_TEMP}/favicon.headers" -o "${RUNNER_TEMP}/favicon.png" \
+            "${PREVIEW_URL}/api/install-icon/48?v=20261102-r4"
+          grep -qi '^x-emprovex-icon-source: institutional' "${RUNNER_TEMP}/favicon.headers" || {
+            echo "::error::Favicon nao carregou o PNG institucional circular."
+            exit 1
+          }
+          [[ "$(file --mime-type -b "${RUNNER_TEMP}/favicon.png")" == "image/png" ]] || {
+            echo "::error::Favicon gerado nao e PNG."
+            exit 1
+          }
+          curl --fail --silent --show-error --max-time 20 \
+            "${PREVIEW_URL}/branding/emprovex-dark-transparent.png?v=20261102-r4" > /dev/null
           {
             echo "## EMPROVEX — candidate ready (zero traffic)"
             echo "- Main SHA: \`${SOURCE_SHA}\`"
