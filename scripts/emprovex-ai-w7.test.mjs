@@ -159,7 +159,7 @@ test('W7 generator is separately gated from W6 model access',()=>{
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1'}),true);
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1',K_SERVICE:'production'}),false);
 });
-let w3Calls=[],creativeCalls=0;
+let w3Calls=[],creativeCalls=0,modelFirstReply=null;
 const mocked={
  '../authorize':{prepareAiAccess:async(token)=>{
   if(token==='Bearer invalid')throw Error('invalid auth');
@@ -174,6 +174,7 @@ const mocked={
    filters:query.params,evidence:[],asOf:'2026-11-01T12:00:00Z',
    coverage:'complete',limitations:[],pagination:null,metrics:{durationMs:0,examinedDocuments:1}};
  }},
+ './modelFirst':{interpretFirstWithLfm3:async()=>modelFirstReply},
  './lfm3':{
   proposeWithLfm3:async()=>null,
   respondConversationally:async()=>{creativeCalls++;return 'Texto gerado para teste.';}
@@ -243,6 +244,29 @@ test('Generative text requires W7 opt-in; result never becomes W3 query',async()
   assert.equal(r.payload.metrics.lfm3Calls,1);
   assert.equal(w3Calls.length,0);assert.equal(creativeCalls,1);
  }finally{delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;}
+});
+test('R3 safe creative text uses Ollama-first and does not fabricate operational results',async()=>{
+ modelFirstReply={kind:'conversation',answer:'Bem-vindos ao EMPROVEX! Que seja uma ótima experiência.'};
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED='1';
+ w3Calls=[];creativeCalls=0;
+ try{
+  const response=await ask('Escreva uma mensagem original de boas-vindas para novos usuários do EMPROVEX');
+  assert.equal(response.payload.route,'CONVERSATIONAL');
+  assert.equal(response.payload.status,'ok');
+  assert.match(response.payload.answer,/Bem-vindos ao EMPROVEX/);
+  assert.equal(response.payload.metrics.lfm3Calls,1);
+  assert.equal(w3Calls.length,0);
+  assert.equal(creativeCalls,0);
+  modelFirstReply={kind:'conversation',answer:'Saldo inventado de 99999 reais'};
+  const blocked=await ask('Escreva um relatório com dados do fornecedor Alfa e saldo');
+  assert.notEqual(blocked.payload.answer,'Saldo inventado de 99999 reais');
+  assert.equal(w3Calls.length,0);
+ }finally{
+  modelFirstReply=null;
+  delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+  delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+ }
 });
 test('LFM3 creative output is bounded and does not send operational context',async()=>{
  const model=load('lib/emprovex-ai/integration/lfm3.ts');
