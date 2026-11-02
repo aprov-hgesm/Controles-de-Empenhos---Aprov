@@ -86,6 +86,6 @@ export async function interpretFirstWithLfm3(message:string,context:ContextRefs=
   return value.kind==='conversation'?{kind:'conversation',answer}:{kind:'unsupported',answer};
  }catch(error){
   // Never emit tokens, prompts or model text. Distinguish timeout from other failures.
-  return reject(error instanceof Error && error.name==='TimeoutError'?'request_failed':'request_failed');
+  return reject(error instanceof Error && (error.name==='TimeoutError'||error.name==='AbortError')?'request_timeout':'request_failed');
  }
 }
