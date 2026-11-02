@@ -31,6 +31,12 @@ function inferenceOrigin(raw:string|undefined):string|null {
   return url.origin;
  }catch{return null;}
 }
+function parseJsonObject(raw:string):Record<string,unknown>|null {
+ try{
+  const v:unknown=JSON.parse(raw);
+  return v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:null;
+ }catch{return null;}
+}
 function metadataUrl(audience:string):string {
  return 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience='+
    encodeURIComponent(audience)+'&format=full';
@@ -70,15 +76,15 @@ export async function proposeWithLfm3(proposal:ModelProposal,report?:Lfm3Outcome
   if(!response.ok)return reject('model_http_error');
   const raw=await response.text();
   if(raw.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
-  const body=JSON.parse(raw) as unknown;
-  if(!body||typeof body!=='object'||Array.isArray(body))return reject('model_invalid_response');
-  const completion=body as Record<string,unknown>;
+  const completion=parseJsonObject(raw);
+  if(!completion)return reject('model_invalid_response');
   if(completion.done_reason==='length')return reject('model_truncated');
   const message=completion.message;
   if(!message||typeof message!=='object'||Array.isArray(message))return reject('model_invalid_response');
   const content=(message as Record<string,unknown>).content;
   if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
-  const parsed=JSON.parse(content) as unknown;
+  const parsed=parseJsonObject(content);
+  if(!parsed)return reject('model_invalid_response');
   report?.('model_json_received');
   return parsed;
  }catch{
@@ -120,12 +126,12 @@ export async function respondConversationally(message:string,report?:Lfm3Outcome
   if(!response.ok)return reject('model_http_error');
   const raw=await response.text();
   if(raw.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
-  const parsed=JSON.parse(raw) as Record<string,unknown>;
+  const parsed=parseJsonObject(raw);
   if(parsed?.done_reason==='length')return reject('model_truncated');
   if(!parsed?.message||typeof parsed.message!=='object'||Array.isArray(parsed.message))return reject('model_invalid_response');
   const content=(parsed.message as Record<string,unknown>).content;
   if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
-  const value=JSON.parse(content) as Record<string,unknown>;
+  const value=parseJsonObject(content);
   if(!value||Object.keys(value).length!==1||
      typeof value.answer!=='string'||!value.answer.trim()||value.answer.length>900)return reject('model_invalid_response');
   report?.('model_answer_accepted');
