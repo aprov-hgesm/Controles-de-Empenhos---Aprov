@@ -8,6 +8,7 @@ on:
       - 'ops/cloud-run/promotion-request.json'
       - 'ops/cloud-run-hosting/cache-release-request.json'
       - '.github/workflows/emprovex-hosting-p0-cache-release.yml'
+      - '.github/workflows/emprovex-cloud-run-stage.yml'
       - 'ops/admin-digest/activation-request.json'
 
 permissions:
