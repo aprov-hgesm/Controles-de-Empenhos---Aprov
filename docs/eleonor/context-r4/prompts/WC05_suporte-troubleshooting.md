@@ -5,7 +5,7 @@
 **Base documental obrigatória:** PR #471, branch `docs/emprovex-funcionalidades-memorial-r1-20261102`, e versão `main` vigente para comparar implementação real.
 **Memorial oficial:** `docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md` (242 funcionalidades F-XX-YYY).
 **Anexos existentes:** `docs/EMPROVEX_ELEONOR_ATLAS_LINGUISTICO_R3.md` e `docs/EMPROVEX_ELEONOR_CORPUS_LINGUISTICO_R3.jsonl`.
-**Outras referências:** `docs/EMPROVEX_AI_MEMORIAL_OFICIAL.md`, códigos `lib/emprovex-ai/`, `features/`, `app/`, documentos e PRs conforme escopo.
+**Outras referências:** `docs/EMPROVEX_AI_CONVERSATIONAL_ENGINE_R1.md` (disponível na main) e PR #455/memorial de personalidade somente se acessíveis; não inventar arquivo não encontrado, códigos `lib/emprovex-ai/`, `features/`, `app/`, documentos e PRs conforme escopo.
 **Diretriz GOV-SIMP-01:** pesquisa profunda, evidência verificável, síntese estruturada e mínimo de burocracia.
 
 ## Protocolo de execução obrigatório
