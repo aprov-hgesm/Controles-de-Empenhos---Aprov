@@ -4,5 +4,6 @@
   "authorizedBy": "Moriark",
   "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
   "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
-  "reason": "P0 /goal 2026-11-02: corrigir entrega de HTML antigo, menus sem Eleonor e erro InPrivate/mobile. PRs #472/#473 consolidadas, revisão Cloud Run promovida a 100% em run 41388664185. Aplicar somente cache-control no-store em /central-empenhos do Firebase Hosting para invalidar conteúdo obsoleto, sem tocar Firestore, DNS, IAM, login ou outras rotas."
+  "reason": "Reexecucao P0 apos bloqueio WIF de workflow novo (run 41388812489): agora mesma etapa de Hosting executa pelo workflow Cloud Run promote ja confiavel, PR #475. Revisao g4b0afc57135a-23 ativa 100%; aplicar apenas no-store em /central-empenhos do Firebase Hosting, com validacao fail-closed da configuracao existente e sem alteracoes financeiras.",
+  "attempt": 2
 }
