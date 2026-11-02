@@ -137,3 +137,21 @@ test('R16.1: o site explica teste, preco por setor e contratacao sem cartao', ()
   assert.match(css, /\.value-faq-item/);
   assert.match(css, /prefers-reduced-motion/);
 });
+
+// Release regression: apenas HTML operacional deve evitar cache; imagens e chunks
+// continuam com nomes versionados e cache padrao para nao aumentar custos.
+test('Cloud Run R1: entrada canonica HTML dinamica e sem cache no Next e Hosting', () => {
+  const entry = source('app/central-empenhos/page.tsx');
+  const nextConfig = source('next.config.ts');
+  const hosting = JSON.parse(source('ops/cloud-run-hosting/firebase.json'));
+  assert.match(entry, /export const dynamic = 'force-dynamic';/);
+  assert.match(entry, /export const revalidate = 0;/);
+  assert.match(entry, /export \{ default \} from '\.\.\/login\/page';/);
+  assert.match(nextConfig, /source: '\/central-empenhos',[\s\S]*?Cache-Control',[^\n]*?private, no-store, max-age=0, must-revalidate/);
+  const rule = hosting.hosting.headers.find(x => x.source === '/central-empenhos');
+  assert.ok(rule, 'Firebase Hosting sem regra da rota autenticada');
+  assert.equal(rule.headers.find(x => x.key === 'Cache-Control')?.value, 'private, no-store, max-age=0, must-revalidate');
+  assert.ok(!hosting.hosting.headers.some(x => /_next/.test(x.source)), 'nao alterar cache de assets _next');
+  assert.equal(hosting.hosting.rewrites[0].run.serviceId, 'emprovex-cloudrun-candidate');
+  assert.equal(hosting.hosting.rewrites[0].run.region, 'southamerica-east1');
+});
