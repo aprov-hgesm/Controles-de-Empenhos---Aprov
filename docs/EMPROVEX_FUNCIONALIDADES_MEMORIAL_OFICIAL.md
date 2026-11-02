@@ -8923,7 +8923,7 @@ Cada resposta recebe cinco dimensões de 0 ou 1: (I) identificou intenção/dom�
 
 ### 13.1. Artefatos oficiais desta expansão
 
-1. **[Atlas Linguístico PT-BR R3](EMPROVEX_ELEONOR_ATLAS_LINGUISTICO_R3.md)** — análise específica das lacunas observadas em `lib/emprovex-ai/context/language.ts`, `context/engine.ts`, `filterGuard.ts`, `conversation/engine.ts` e `conversation/knowledge.ts`. Contém 8 grupos linguísticos, **135 entradas lexicais**, **454 grafias/expressões ilustrativas**, regras contextuais, **25 pares mínimos de ambiguidade** e prioridades de engenharia.
+1. **[Atlas Linguístico PT-BR R3](EMPROVEX_ELEONOR_ATLAS_LINGUISTICO_R3.md)** — análise específica das lacunas observadas em `lib/emprovex-ai/context/language.ts`, `context/engine.ts`, `filterGuard.ts`, `conversation/engine.ts` e `conversation/knowledge.ts`. Contém 8 grupos linguísticos, **135 entradas lexicais**, **449 grafias/expressões ilustrativas**, regras contextuais, **25 pares mínimos de ambiguidade** e prioridades de engenharia.
 2. **[Corpus Linguístico R3 — JSONL](EMPROVEX_ELEONOR_CORPUS_LINGUISTICO_R3.jsonl)** — **2.169 registros sintéticos e únicos após normalização**: 1.936 paráfrases linguísticas específicas das 242 funcionalidades; 135 sondas lexicais; 50 itens agrupados em 25 pares mínimos; 48 casos linguísticos de risco. Contém manifesto de metadados e identificadores estáveis `R3-Q-*`, `R3-L-*`, `R3-MP-*` e `R3-H-*`.
 3. **Catálogo funcional de referência:** os 242 procedimentos do §4 continuam sendo a fonte primária dos passos. Os exemplos R3 devem apontar para esses procedimentos, sem substituir o fluxo, atualizar status de produção nem autorizar operações.
 
