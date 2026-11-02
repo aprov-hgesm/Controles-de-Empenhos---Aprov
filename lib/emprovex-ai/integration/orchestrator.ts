@@ -72,7 +72,7 @@ export async function runAiAsk(args:{
  const operationalSignal=/\b(?:empenho|empenhos|fornecedor|fornecedores|nota fiscal|notas fiscais|nf|nfs|estoque|deposito|material|materiais|cronograma|saldo|ug|siafi|siscofis|pagamento|financeiro|cadastro|fatura)\b/i.test(args.input.message);
  const highRiskRoute=['UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route);
  const modelOperational=modelFirst?.kind==='operational' && !highRiskRoute && interpreted.route!=='DETERMINISTIC' &&
-   (operationalSignal||interpreted.route==='DETERMINISTIC'||interpreted.route==='MODEL_ELIGIBLE');
+   (operationalSignal||interpreted.route==='MODEL_ELIGIBLE');
  const modelConversation=modelFirst?.kind==='conversation' && !operationalSignal &&
    !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route) &&
    conversation?.mode!=='critical' &&
