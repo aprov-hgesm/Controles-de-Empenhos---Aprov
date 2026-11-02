@@ -6,6 +6,7 @@ on:
       - 'lib/emprovex-ai/**'
       - 'app/api/emprovex-ai/**'
       - 'scripts/emprovex-ai-w7.test.mjs'
+      - 'scripts/emprovex-ai-r3.test.mjs'
       - 'docs/EMPROVEX_AI_CONVERSATIONAL_ENGINE_R1.md'
       - '.github/workflows/emprovex-ai-w7.yml'
   workflow_dispatch:
@@ -34,7 +35,7 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
       - name: Synthetic W7 & W6/W5 security tests
-        run: node --test scripts/emprovex-ai-w7.test.mjs scripts/emprovex-ai-w6.test.mjs scripts/emprovex-ai-w5-security.test.mjs
+        run: node --test scripts/emprovex-ai-w7.test.mjs scripts/emprovex-ai-w6.test.mjs scripts/emprovex-ai-w5-security.test.mjs scripts/emprovex-ai-r3.test.mjs
       - name: Confirm no cloud credentials
         run: |
           test -z "$GOOGLE_APPLICATION_CREDENTIALS"

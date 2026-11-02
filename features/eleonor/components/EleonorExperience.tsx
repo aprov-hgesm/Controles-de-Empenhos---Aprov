@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import Image from 'next/image';
+import {EleonorHistoryPanel,type StoredChatMessage} from './EleonorHistoryPanel';
 import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
-  Plus, X,
+  Plus, X, Clock3,
 } from 'lucide-react';
 
 type Evidence = { source: string; documentId: string };
@@ -20,6 +21,7 @@ type ChatMessage = {
   morePages?: boolean;
 };
 type AskResponse = {
+  conversationId?:string;
   answer?: string;
   status?: string;
   contextToken?: string;
@@ -78,6 +80,10 @@ export function EleonorExperience({
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeHistoryId,setActiveHistoryId]=useState<string|undefined>();
+  const [historyOpen,setHistoryOpen]=useState(fullPage);
+  const [historyRevision,setHistoryRevision]=useState(0);
+  const activeHistoryRef=useRef<string|undefined>(undefined);
   const contextRef = useRef<string | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
   const requestNumber = useRef(0);
@@ -102,12 +108,23 @@ export function EleonorExperience({
     controllerRef.current?.abort();
     controllerRef.current = null;
     contextRef.current = undefined;
+    activeHistoryRef.current=undefined;setActiveHistoryId(undefined);
     setMessages([]);
     setDraft('');
     setLoading(false);
     inputRef.current?.focus();
   };
 
+  const selectHistory=(id:string,stored:StoredChatMessage[])=>{
+    requestNumber.current+=1;controllerRef.current?.abort();controllerRef.current=null;
+    busyRef.current=false;setLoading(false);contextRef.current=undefined;
+    activeHistoryRef.current=id;setActiveHistoryId(id);setDraft('');
+    setMessages(stored.map((m,i)=>({id:i+1,role:m.role,text:m.text,status:m.status})));
+    nextId.current=stored.length;
+    if(!fullPage)setHistoryOpen(false);
+  };
+  const historyPanel=<EleonorHistoryPanel user={user} activeId={activeHistoryId}
+    refreshKey={historyRevision} onSelect={selectHistory} onNew={newConversation}/>;
   const send = async (value = draft) => {
     const message = value.trim();
     if (!message || message.length > 1000 || busyRef.current || !user) return;
@@ -134,6 +151,7 @@ export function EleonorExperience({
         body: JSON.stringify({
           message,
           ...(contextRef.current ? { contextToken: contextRef.current } : {}),
+          ...(activeHistoryRef.current ? { conversationId:activeHistoryRef.current } : {}),
         }),
         cache: 'no-store',
         signal: controller.signal,
@@ -142,6 +160,11 @@ export function EleonorExperience({
       if (controller.signal.aborted || number !== requestNumber.current) return;
       if (!response.ok) throw new Error(friendlyError(response.status, body.error));
 
+      if(typeof body.conversationId==='string'){
+        activeHistoryRef.current=body.conversationId;
+        setActiveHistoryId(body.conversationId);
+        setHistoryRevision(v=>v+1);
+      }
       // Only the server-issued encrypted context may be replayed to the backend.
       contextRef.current = typeof body.contextToken === 'string'
         ? body.contextToken : undefined;
@@ -292,12 +315,22 @@ export function EleonorExperience({
               <p className="text-[11px] font-medium text-blue-100/80">Assistente inteligente do EMPROVEX</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+          <button type="button" onClick={()=>setHistoryOpen(v=>!v)}
+            aria-label="Mostrar ou ocultar histórico"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+            <Clock3 className="h-4 w-4" /> Histórico
+          </button>
           <button onClick={newConversation} type="button"
             className="inline-flex items-center gap-2 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
             <Plus className="h-4 w-4" /> Nova conversa
           </button>
+        </div>
         </header>
-        {conversation}
+        <div className="flex min-h-0 flex-1">
+          {historyOpen&&<aside className="w-52 shrink-0 overflow-hidden border-r border-slate-200 bg-white/85 sm:w-64">{historyPanel}</aside>}
+          {conversation}
+        </div>
       </section>
     );
   }
@@ -314,6 +347,8 @@ export function EleonorExperience({
                 unoptimized className="h-auto w-[126px]" />
              </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={()=>setHistoryOpen(v=>!v)} aria-label="Histórico de conversas"
+                className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Clock3 className="h-4 w-4" /></button>
               <button type="button" onClick={newConversation} aria-label="Nova conversa"
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Plus className="h-4 w-4" /></button>
               <button type="button" onClick={() => onOpenFull
@@ -325,6 +360,7 @@ export function EleonorExperience({
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><X className="h-4 w-4" /></button>
             </div>
           </header>
+          {historyOpen&&<div className="max-h-48 min-h-28 shrink-0 overflow-y-auto border-b border-slate-200 bg-white">{historyPanel}</div>}
           {conversation}
         </section>
       )}
