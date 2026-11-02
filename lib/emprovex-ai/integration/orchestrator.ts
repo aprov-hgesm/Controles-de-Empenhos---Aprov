@@ -60,8 +60,9 @@ export async function runAiAsk(args:{
      else conversationId=(await createHistory(access,args.input.message)).id;
      historyWritable=true;
    }catch(error){
-     if(error instanceof AiExecutionError && error.httpStatus>=400 && error.httpStatus<500)
-       throw error; // Invalid IDs, other-user chats and quotas fail closed.
+     if(args.input.conversationId && error instanceof AiExecutionError &&
+        error.httpStatus>=400 && error.httpStatus<500)
+       throw error; // An explicitly selected thread cannot silently switch identity.
      console.warn('emprovex_ai_history_unavailable',{
        phase:'prepare',code:error instanceof AiExecutionError?error.code:'AI_HISTORY_STORAGE_FAILURE'
      });
