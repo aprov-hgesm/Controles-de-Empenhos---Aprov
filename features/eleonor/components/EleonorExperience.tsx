@@ -83,7 +83,7 @@ export function EleonorExperience({
   const [activeHistoryId,setActiveHistoryId]=useState<string|undefined>();
   const [historyOpen,setHistoryOpen]=useState(fullPage);
   const [historyRevision,setHistoryRevision]=useState(0);
-  const activeHistoryRef=useRef<string|undefined>();
+  const activeHistoryRef=useRef<string|undefined>(undefined);
   const contextRef = useRef<string | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
   const requestNumber = useRef(0);
