@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g1cee5e78b6a2-17",
-  "sourceSha": "1cee5e78b6a2e3b507f26b1791b9a93fd93e481a",
-  "reason": "User explicitly authorized exact Cloud Run revision and 100% traffic; correction for official logo in login/home/header and mobile header layout, PR #467, staged and CI success. Preserve rollback; later main-only founder recovery scripts are not included in the approved image."
+  "revision": "emprovex-cloudrun-candidate-gb62f82ec6a87-20",
+  "sourceSha": "b62f82ec6a87403a84cd7ba19c6b7cd8ac7a6329",
+  "reason": "Explicit authorization for exactly revision gb62f82ec6a87-20, SHA b62f82ec6a87403a84cd7ba19c6b7cd8ac7a6329, 100% production traffic, domain health, circular favicon and rollback. R4 branding PR #469; later Eleonor main SHA not included in this approved image."
 }
