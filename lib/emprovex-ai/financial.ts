@@ -207,6 +207,60 @@ async function invoicePeriod(access:AiAccess,p:Record<string,unknown>):Promise<Q
       ...(q.truncated&&!nextCursor?['Paginação indisponível: configurar EMPROVEX_AI_CURSOR_SECRET.']:[])],
     examinedDocuments:q.examined};
 }
+/** Bounded read-only view of NFs awaiting operational forwarding.
+ * This is NOT a payment-due or liquidation status report.
+ * The existing UI sources the stage from localizacaoAtual and uses commission /
+ * treasury dates only for legacy records; never infer paid or unpaid.
+ */
+async function pendingOperationalInvoices(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
+  if(p.stage!=='pending_operational')throw new AiExecutionError('AI_INVOICE_PENDING_STAGE_INVALID',400);
+  const size=p.pageSize as number;
+  if(!Number.isInteger(size)||size<1||size>50)throw new AiExecutionError('AI_INVOICE_PENDING_LIMIT_INVALID',400);
+  // Scan at most 201 workspace-scoped rows. No cross-tenant reads and no write.
+  const q=await coreOperationalQuery(access,'invoices',[],201);
+  let inferred=false,unrecognized=false;
+  const pending=q.rows.flatMap(row=>{
+    const d=row.data;
+    const location=d.localizacaoAtual;
+    let stage:'APROVISIONAMENTO'|'COMISSAO'|'TESOURARIA'|null=null;
+    let inferredRow=false;
+    if(location==='APROVISIONAMENTO'||location==='COMISSAO'||location==='TESOURARIA'){
+      stage=location;
+    }else if(location===undefined||location===null||location===''){
+      // UI legacy fallback: status is inferred, not a verified timestamp.
+      inferredRow=true;
+      stage=typeof d.tesourariaDate==='string'&&d.tesourariaDate.trim()
+        ? 'TESOURARIA':typeof d.comissaoDate==='string'&&d.comissaoDate.trim()
+          ? 'COMISSAO':'APROVISIONAMENTO';
+    }else {
+      unrecognized=true;
+      return [];
+    }
+    if(inferredRow)inferred=true;
+    if(stage==='TESOURARIA')return [];
+    return [{recordKey:row.id,number:s(d.id)||row.id,
+      commitmentId:s(d.empenhoId),stage,stageInferred:inferredRow,
+      registeredAt:s(d.registeredAt)}];
+  });
+  const over=pending.length>size,limited=q.truncated||over||unrecognized||inferred;
+  const visible=pending.slice(0,size);
+  return {
+    status:limited?'partial':visible.length?'ok':'empty',
+    data:visible,
+    evidence:visible.map(row=>({source:'invoices',documentId:row.recordKey})),
+    coverage:limited?'incomplete':'complete',
+    truncated:q.truncated||over,
+    limitations:[
+      'Pendência significa tramitação da NF no Aprovisionamento ou Comissão; não comprova pagamento pendente, liquidação ou vencimento.',
+      ...(inferred?['Há notas legadas cuja etapa foi inferida a partir das datas de tramitação.']:[]),
+      ...(unrecognized?['Algumas notas têm etapas não reconhecidas e foram omitidas; cobertura incompleta.']:[]),
+      ...(q.truncated?['Varredura limitada a 200 notas fiscais do workspace; outras pendências podem existir.']:[]),
+      ...(over?['A resposta mostra somente os primeiros registros pendentes da amostra; não representa o total.']:[]),
+    ],
+    examinedDocuments:q.examined,
+  };
+}
+
 export async function executeFinancial(access:AiAccess,q:AiQuery):Promise<QueryOutcome>{
   switch(q.intent) {
     case 'supplier_contact_find':return supplierFind(access,q.params);
@@ -215,6 +269,7 @@ export async function executeFinancial(access:AiAccess,q:AiQuery):Promise<QueryO
     case 'commitment_previous_open_list':return previousOpen(access,q.params);
     case 'schedule_sent_history_list':return sentHistory(access,q.params);
     case 'invoice_registration_period_list':return invoicePeriod(access,q.params);
+    case 'invoice_operational_pending_list':return pendingOperationalInvoices(access,q.params);
     default:throw new AiExecutionError('AI_FINANCIAL_CONTRACT_UNSUPPORTED',422);
   }
 }
