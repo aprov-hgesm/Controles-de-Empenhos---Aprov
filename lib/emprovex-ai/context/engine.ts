@@ -187,6 +187,13 @@ export function interpret(input:Input):Result {
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
  if(isInvoice) {
+   // Pending here refers to operational forwarding, never payment or liquidation.
+   // The filter guard will reject additional unrepresented constraints.
+   if(/\bpendentes?\b/.test(t)
+      && !/\b(?:pagamento|pagas?|pagar|liquidac(?:ao|oes)|liquidad[ao]s?|vencimentos?|vencid[ao]s?|atrasad[ao]s?)\b/.test(t))
+     return success('invoice_operational_pending_list',{stage:'pending_operational',pageSize:20},
+       'NF → tramitação operacional');
+   if(isOverdue)return unavailable('general_document_search','INVOICE_FINANCIAL_OR_LATE_STATUS_UNSUPPORTED');
    if(isIssued)return unavailable('invoice_issued_period','ISSUED_DATE_NOT_REGISTERED_DATE');
    if(x.supplier&&!x.cnpj)return clarify('invoice_registration_period_list',
      'Informe o CNPJ do fornecedor. O W3 não filtra notas fiscais pelo nome.');
