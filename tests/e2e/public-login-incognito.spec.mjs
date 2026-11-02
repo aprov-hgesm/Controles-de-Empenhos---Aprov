@@ -31,3 +31,29 @@ test('login publico carrega em contexto sem cookies nem armazenamento', async ({
   expect(errors, 'Erros React ao abrir login anonimo').toEqual([]);
   await context.close();
 });
+
+
+test('login anonimo tolera bloqueio de localStorage (modo privado restritivo)', async ({ browser }) => {
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e?.message || e).slice(0, 700)));
+  await page.addInitScript(() => {
+    const remove = Storage.prototype.removeItem;
+    Storage.prototype.removeItem = function (key) {
+      if (key === 'local_user_session') {
+        throw new DOMException('Storage access is denied by a restrictive privacy setting', 'SecurityError');
+      }
+      return remove.call(this, key);
+    };
+  });
+  const response = await page.goto('https://emprovex.com.br/central-empenhos', {
+    waitUntil: 'domcontentloaded', timeout: 45_000,
+  });
+  await page.waitForTimeout(5_000);
+  const failure = await page.locator('main[role="alert"]').count();
+  console.log('[LOGIN_PRIVATE_STORAGE_DIAGNOSTIC]', JSON.stringify({ status: response?.status(), failure, errors }));
+  expect(failure, 'Bloqueio de storage causou tela de erro global').toBe(0);
+  await expect(page.getByRole('heading', { name: 'Bem-vindo de volta.' })).toBeVisible();
+  await context.close();
+});
