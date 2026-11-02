@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g84f0f1c107fa-21",
-  "sourceSha": "84f0f1c107fabb4f9b77924c84ddb1a1833d5590",
-  "reason": "Usuario reportou falhas da Eleonor na producao e solicitou correcao: launcher oculto, menu indisponivel, respostas genericas, consulta NFs pendentes. PR #470 incorporada ao main, W3-W7/Fast CI/Core Protection/Application CI/Visual R1+R2 PASS; Cloud Run stage revisao exata com zero trafego e health PASS. Promover via workflow oficial com rollback automatico. Preservar logo/favicon PR #469 incluido na imagem. Piloto fundador mantido; notas pendentes apenas de tramitacao, nao pagamento."
+  "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
+  "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
+  "reason": "Goal urgente P0 aprovado em chat 2026-11-02: consolidar PR #472 acesso InPrivate e PR #473 HTML cache desatualizado; Application CI, Fast CI, Visual R2, security checks PASS; build Cloud Run confirmado com rota dinamica e stage 0% health PASS. Promover 100% via workflow oficial com rollback. Preservar autenticação, faturamento, empenhos, notas, Firestore, IA e logos. Firebase Hosting cache invalidation tratada separadamente."
 }
