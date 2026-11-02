@@ -101,6 +101,16 @@ export function EleonorExperience({
   }, [messages, loading, open, fullPage]);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => {
+    // Account switches may reuse the same mounted UI: never show a previous user's transcript.
+    requestNumber.current++;
+    controllerRef.current?.abort();
+    controllerRef.current=null;busyRef.current=false;
+    contextRef.current=undefined;activeHistoryRef.current=undefined;
+    setActiveHistoryId(undefined);setMessages([]);setHistoryRevision(0);
+    setDraft('');setLoading(false);
+  }, [user?.uid]);
+
 
   const newConversation = () => {
     requestNumber.current += 1;
