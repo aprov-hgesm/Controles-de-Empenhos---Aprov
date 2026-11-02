@@ -3577,6 +3577,15 @@ button[aria-busy="true"] .animate-spin {
   min-width: 0;
 }
 
+/* O PNG institucional transparente possui margem interna generosa. */
+.emprovex-header-logo-core__mark img {
+  transform: scale(1.8);
+}
+
+.emprovex-logo-core__mark img {
+  transform: scale(1.7);
+}
+
 .emprovex-header-brand-kicker {
   margin-bottom: 0.16rem;
   color: rgba(96, 165, 250, 0.58);
