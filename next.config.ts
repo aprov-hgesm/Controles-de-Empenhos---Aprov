@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   // O endpoint PWA inclui a imagem PNG no output standalone do Cloud Run.
   // O arquivo é incluído somente na função do ícone, não em todas as funções.
   outputFileTracingIncludes: {
-    '/api/install-icon/*': ['./public/emprovex-logo.png'],
+    '/api/install-icon/*': ['./public/emprovex-logo favicon.png'],
   },
   // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
   // A raiz pública apresenta o institucional sem alterar o URL canônico.

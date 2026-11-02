@@ -35,12 +35,12 @@ assert.match(view, /<InicioEntrySequence\s*\/>/, 'Entrada controlada deve ser ma
 assert.doesNotMatch(view, /InicioOrbitSystem|<canvas|three\.js|onSnapshot\(/);
 
 assert.match(core, /data-testid="inicio-logo-core"/);
-assert.match(core, /src="\/Novo%20Logo%20Emprovex%2001\.11\.2026\.png"/, 'Nucleo nao usa o logo institucional novo.');
-assert(existsSync('public/Novo Logo Emprovex 01.11.2026.png'), 'Imagem oficial de 01.11.2026 ausente.');
-assert.doesNotMatch(core, /src="\/branding\/emprovex-dark-transparent\.png"/, 'Arte anterior reapareceu no nucleo.');
+assert.match(core, /src="\/branding\/emprovex-dark-transparent\.png"/, 'Nucleo nao usa o logo oficial transparente.');
+assert(existsSync('public/branding/emprovex-dark-transparent.png'), 'Imagem institucional transparente ausente.');
+assert.doesNotMatch(core, /src="\/Novo%20Logo%20Emprovex%2001\.11\.2026\.png"/, 'Arte não transparente reapareceu no nucleo.');
 const branding = read('hooks/usePlatformBranding.ts');
 const headerCss = read('app/globals.css');
-assert.match(branding, /const staticLogo = '\/Novo%20Logo%20Emprovex%2001\.11\.2026\.png'/,
+assert.match(branding, /const staticLogo = '\/branding\/emprovex-dark-transparent\.png\?v=20261102-r4'/,
   'Login e cabecalho nao utilizam o arquivo novo como fonte oficial.');
 const mobileHeader = headerCss.match(/@media \(max-width: 639px\) \{[\s\S]*?\/\* Mobile: prioridade ao símbolo[\s\S]*?@media \(max-width: 459px\)/)?.[0] || '';
 assert.match(mobileHeader, /\.emprovex-header-brand-copy\s*\{\s*display:\s*none;/,

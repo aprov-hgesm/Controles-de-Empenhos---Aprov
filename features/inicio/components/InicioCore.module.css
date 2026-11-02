@@ -105,6 +105,7 @@
   height: auto;
   max-height: 100%;
   object-fit: contain;
+  transform: scale(1.65); /* Arte transparente tem margem intrínseca; amplia só o símbolo. */
   filter: drop-shadow(0 0 15px rgba(130, 169, 243, .20));
   user-select: none;
   /* O símbolo oficial possui transparência própria; a máscara da marca anterior não se aplica. */
