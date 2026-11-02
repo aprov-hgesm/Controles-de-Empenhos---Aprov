@@ -4,6 +4,10 @@
 import type {ModelProposal} from '../context/types';
 import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 
+export type Lfm3Outcome='disabled'|'url_invalid'|'identity_unavailable'|'identity_invalid'|
+  'model_http_error'|'model_truncated'|'model_invalid_response'|'model_json_received'|
+  'model_answer_accepted'|'request_failed';
+export type Lfm3OutcomeRecorder=(outcome:Lfm3Outcome)=>void;
 const MODEL='lfm3:1.7b-q4_K_M';
 const OUTPUT_TOKENS=128;
 const MAX_RESPONSE_CHARS=8192;
@@ -35,18 +39,19 @@ function validToken(token:string):boolean {
  return token.length<16000&&/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
 }
 /** Response is not trusted even after JSON mode. Caller MUST use W5 + W3 validators. */
-export async function proposeWithLfm3(proposal:ModelProposal):Promise<unknown|null> {
- if(!aiLfm3Enabled())return null;
+export async function proposeWithLfm3(proposal:ModelProposal,report?:Lfm3OutcomeRecorder):Promise<unknown|null> {
+ const reject=(outcome:Lfm3Outcome):null=>{report?.(outcome);return null;};
+ if(!aiLfm3Enabled())return reject('disabled');
  const origin=inferenceOrigin(process.env.EMPROVEX_AI_LFM3_URL);
- if(!origin)return null;
+ if(!origin)return reject('url_invalid');
  try{
   const metadata=await fetch(metadataUrl(origin),{
    headers:{'Metadata-Flavor':'Google'},
    signal:AbortSignal.timeout(METADATA_TIMEOUT_MS),cache:'no-store'
   });
-  if(!metadata.ok)return null;
+  if(!metadata.ok)return reject('identity_unavailable');
   const token=(await metadata.text()).trim();
-  if(!validToken(token))return null;
+  if(!validToken(token))return reject('identity_invalid');
   const response=await fetch(origin+'/api/chat',{
    method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},
    body:JSON.stringify({
@@ -56,73 +61,77 @@ export async function proposeWithLfm3(proposal:ModelProposal):Promise<unknown|nu
        params:{type:'object'}}},
     options:{temperature:0,num_predict:Math.min(proposal.maxOutputTokens,OUTPUT_TOKENS)},
     messages:[
-     {role:'system',content:'Você interpreta exclusivamente consultas operacionais do EMPROVEX. Responda SOMENTE JSON com duas chaves: intent (uma das intenções permitidas) e params (objeto). Não invente identificadores, filtros nem dados. Não execute ações. Se não houver interpretação segura, use intent inválido para recusa. Respeite integralmente todas as restrições da pergunta.'},
+     {role:'system',content:'Você interpreta exclusivamente consultas operacionais do EMPROVEX. Responda SOMENTE JSON com duas chaves: intent (uma das intenções permitidas) e params (objeto). Não invente identificadores, filtros nem dados. Para fornecedor identificado por nome, use intent supplier_contact_find e params.nameQuery contendo exatamente o nome mencionado. Exemplo: {"intent":"supplier_contact_find","params":{"nameQuery":"FORNECEDOR TESTE"}}. Use somente as chaves dos contratos e os parâmetros obrigatórios de cada consulta. Não execute ações. Se não houver interpretação segura, use intent inválido para recusa. Respeite integralmente todas as restrições da pergunta.'},
      {role:'user',content:JSON.stringify({question:proposal.userText,context:proposal.context,allowedIntents:proposal.allowedIntents})}
     ]
    }),
    signal:AbortSignal.timeout(inferenceTimeoutMs()),cache:'no-store'
   });
-  if(!response.ok)return null;
+  if(!response.ok)return reject('model_http_error');
   const raw=await response.text();
-  if(raw.length>MAX_RESPONSE_CHARS)return null;
+  if(raw.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
   const body=JSON.parse(raw) as unknown;
-  if(!body||typeof body!=='object'||Array.isArray(body))return null;
+  if(!body||typeof body!=='object'||Array.isArray(body))return reject('model_invalid_response');
   const completion=body as Record<string,unknown>;
-  if(completion.done_reason==='length')return null;
+  if(completion.done_reason==='length')return reject('model_truncated');
   const message=completion.message;
-  if(!message||typeof message!=='object'||Array.isArray(message))return null;
+  if(!message||typeof message!=='object'||Array.isArray(message))return reject('model_invalid_response');
   const content=(message as Record<string,unknown>).content;
-  if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return null;
-  return JSON.parse(content) as unknown;
+  if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
+  const parsed=JSON.parse(content) as unknown;
+  report?.('model_json_received');
+  return parsed;
  }catch{
   // IAM/metadata, cold starts, invalid JSON and Ollama outages are non-fatal.
   // Never log tokens, prompts or raw model output.
-  return null;
+  return reject('request_failed');
  }
 }
 
 /** W7: opt-in creative text only. No tools, W3, Firestore, operational
  * history or model-generated structured commands in this path. */
-export async function respondConversationally(message:string):Promise<string|null> {
- if(!aiConversationalModelEnabled()||message.length>1000||!message.trim())return null;
+export async function respondConversationally(message:string,report?:Lfm3OutcomeRecorder):Promise<string|null> {
+ const reject=(outcome:Lfm3Outcome):null=>{report?.(outcome);return null;};
+ if(!aiConversationalModelEnabled()||message.length>1000||!message.trim())return reject('disabled');
  const origin=inferenceOrigin(process.env.EMPROVEX_AI_LFM3_URL);
- if(!origin)return null;
+ if(!origin)return reject('url_invalid');
  try {
   const metadata=await fetch(metadataUrl(origin),{
    headers:{'Metadata-Flavor':'Google'},
    signal:AbortSignal.timeout(METADATA_TIMEOUT_MS),cache:'no-store'
   });
-  if(!metadata.ok)return null;
+  if(!metadata.ok)return reject('identity_unavailable');
   const token=(await metadata.text()).trim();
-  if(!validToken(token))return null;
+  if(!validToken(token))return reject('identity_invalid');
   const response=await fetch(origin+'/api/chat',{
    method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},
    body:JSON.stringify({
     model:MODEL,stream:false,think:false,
     format:{type:'object',additionalProperties:false,required:['answer'],
       properties:{answer:{type:'string'}}},
-    options:{temperature:0.2,num_predict:160},
+    options:{temperature:0.2,num_predict:256},
     messages:[
-     {role:'system',content:'Você é Eleonor, assistente original do EMPROVEX. Esta chamada serve SOMENTE para escrita criativa genérica e reformulação de texto não sensível. Não acesse nem alegue acessar dados, sistemas ou notícias. Não cite valores, documentos, status ou informações sobre clientes. Não execute comandos, não invente fontes, não imite Donna Paulsen. Seja breve, elegante e atenciosa. Se solicitado algo perigoso, ilegal ou impossível, recuse. Retorne apenas JSON com a chave answer.'},
+     {role:'system',content:'Você é Eleonor, assistente original do EMPROVEX. Esta chamada serve SOMENTE para escrita criativa genérica e reformulação de texto não sensível. Não acesse nem alegue acessar dados, sistemas ou notícias. Não cite valores, documentos, status ou informações sobre clientes. Não execute comandos, não invente fontes, não imite Donna Paulsen. Seja breve, elegante e atenciosa. Se solicitado algo perigoso, ilegal ou impossível, recuse. Responda em até 450 caracteres. Retorne somente JSON válido: {"answer":"seu texto curto e original"}.'},
      {role:'user',content:message}
     ]
    }),
    signal:AbortSignal.timeout(INFERENCE_TIMEOUT_MS),cache:'no-store'
   });
-  if(!response.ok)return null;
+  if(!response.ok)return reject('model_http_error');
   const raw=await response.text();
-  if(raw.length>MAX_RESPONSE_CHARS)return null;
+  if(raw.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
   const parsed=JSON.parse(raw) as Record<string,unknown>;
-  if(parsed?.done_reason==='length'||!parsed?.message||
-     typeof parsed.message!=='object'||Array.isArray(parsed.message))return null;
+  if(parsed?.done_reason==='length')return reject('model_truncated');
+  if(!parsed?.message||typeof parsed.message!=='object'||Array.isArray(parsed.message))return reject('model_invalid_response');
   const content=(parsed.message as Record<string,unknown>).content;
-  if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return null;
+  if(typeof content!=='string'||content.length>MAX_RESPONSE_CHARS)return reject('model_invalid_response');
   const value=JSON.parse(content) as Record<string,unknown>;
   if(!value||Object.keys(value).length!==1||
-     typeof value.answer!=='string'||!value.answer.trim()||value.answer.length>900)return null;
+     typeof value.answer!=='string'||!value.answer.trim()||value.answer.length>900)return reject('model_invalid_response');
+  report?.('model_answer_accepted');
   return value.answer.replace(/[<>\u0000-\u001f\u007f]/g,'').trim();
  }catch{
   // Fail closed: no prompt, raw model response or identity token in logs.
-  return null;
+  return reject('request_failed');
  }
 }
