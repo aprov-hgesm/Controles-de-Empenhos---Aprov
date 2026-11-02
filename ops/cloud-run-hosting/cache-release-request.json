@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "authorizationMode": "explicit_chat_request",
+  "authorizedBy": "Moriark",
+  "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
+  "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
+  "reason": "P0 /goal 2026-11-02: corrigir entrega de HTML antigo, menus sem Eleonor e erro InPrivate/mobile. PRs #472/#473 consolidadas, revisão Cloud Run promovida a 100% em run 41388664185. Aplicar somente cache-control no-store em /central-empenhos do Firebase Hosting para invalidar conteúdo obsoleto, sem tocar Firestore, DNS, IAM, login ou outras rotas."
+}
