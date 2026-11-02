@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
   Plus, X,
@@ -70,6 +71,10 @@ export function EleonorExperience({
   onOpenFull?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [floatingHost, setFloatingHost] = useState<HTMLElement | null>(null);
+  // Render at document.body: operational surfaces use overflow-hidden/transform
+  // which otherwise clip or cover a position:fixed chat launcher.
+  useEffect(() => { setFloatingHost(document.body); }, []);
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -297,7 +302,8 @@ export function EleonorExperience({
     );
   }
 
-  return (
+  if (!floatingHost) return null;
+  return createPortal(
     <aside data-testid="eleonor-floating" className="pointer-events-none fixed bottom-[5.5rem] right-4 z-[70] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open && (
         <section role="dialog" aria-modal="false" aria-label="Conversa rápida com Eleonor"
@@ -334,6 +340,7 @@ export function EleonorExperience({
           <X className="h-3 w-3" />
         </span>}
       </button>
-    </aside>
+    </aside>,
+    floatingHost,
   );
 }
