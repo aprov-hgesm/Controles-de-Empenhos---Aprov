@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g5d6cdf7ce44e-16",
-  "sourceSha": "5d6cdf7ce44e15e2cc43a25a813baf99cac052c3",
-  "reason": "P0 legal acceptance 503 blocking owner login; user explicitly requested comprehensive audit and resolution while away from computer. PR #466 fixes immutable R4 acceptance after founder UG restoration, legal CI and Core Protection PASS, Cloud Run stage and health PASS. Promote by official workflow with automatic rollback; still requires authenticated user acceptance confirmation. Other tenants and Eleonor unchanged."
+  "revision": "emprovex-cloudrun-candidate-g1cee5e78b6a2-17",
+  "sourceSha": "1cee5e78b6a2e3b507f26b1791b9a93fd93e481a",
+  "reason": "User explicitly authorized exact Cloud Run revision and 100% traffic; correction for official logo in login/home/header and mobile header layout, PR #467, staged and CI success. Preserve rollback; later main-only founder recovery scripts are not included in the approved image."
 }
