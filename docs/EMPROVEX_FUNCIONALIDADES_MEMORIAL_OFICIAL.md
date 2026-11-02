@@ -1,6 +1,6 @@
 # EMPROVEX — MEMORIAL OFICIAL DE FUNCIONALIDADES E PROCEDIMENTOS
 
-**Versão:** R2.0 — 02/11/2026 (Brasília) — Auditoria funcional R1 + bateria contextual R2  
+**Versão:** R3.0 — 02/11/2026 (Brasília) — Auditoria funcional R1 + bateria contextual R2 + atlas linguístico R3  
 **Objetivo:** referência canônica de funcionalidades, passos de uso e corpus-base para orientação da Eleonor.  
 **Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`  
 **Baseline de código:** `main@b62f82ec6a87403a84cd7ba19c6b7cd8ac7a6329`  
@@ -8916,4 +8916,58 @@ Cada resposta recebe cinco dimensões de 0 ou 1: (I) identificou intenção/dom�
 2. Corrigir variantes artificiais que não reflitam linguagem de usuários; registrar mudanças por ID, sem apagar silenciosamente.
 3. Se uma resposta falhou, identificar se a falha foi **recuperação de intenção**, **falta de fonte**, **autorização**, **limitação de UI**, **fato de runtime** ou **alucinação**.
 4. Nunca declarar "Eleonor treinada e aprovada" apenas porque este documento contém muitas perguntas; executar uma amostra e registrar evidências concretas.
+
+## 13. Expansão R3 — atlas linguístico PT-BR e contexto conversacional
+
+**Status:** auditoria aprofundada, documentação e exemplos sintéticos; sem integração do corpus à Eleonor, sem alterações no motor, sem treinamento de pesos, sem Firestore, sem Cloud Run e sem deploy. **Data:** 02/11/2026 (Brasília).
+
+### 13.1. Artefatos oficiais desta expansão
+
+1. **[Atlas Linguístico PT-BR R3](EMPROVEX_ELEONOR_ATLAS_LINGUISTICO_R3.md)** — análise específica das lacunas observadas em `lib/emprovex-ai/context/language.ts`, `context/engine.ts`, `filterGuard.ts`, `conversation/engine.ts` e `conversation/knowledge.ts`. Contém 8 grupos linguísticos, **135 entradas lexicais**, **454 grafias/expressões ilustrativas**, regras contextuais, **25 pares mínimos de ambiguidade** e prioridades de engenharia.
+2. **[Corpus Linguístico R3 — JSONL](EMPROVEX_ELEONOR_CORPUS_LINGUISTICO_R3.jsonl)** — **2.169 registros sintéticos e únicos após normalização**: 1.936 paráfrases linguísticas específicas das 242 funcionalidades; 135 sondas lexicais; 50 itens agrupados em 25 pares mínimos; 48 casos linguísticos de risco. Contém manifesto de metadados e identificadores estáveis `R3-Q-*`, `R3-L-*`, `R3-MP-*` e `R3-H-*`.
+3. **Catálogo funcional de referência:** os 242 procedimentos do §4 continuam sendo a fonte primária dos passos. Os exemplos R3 devem apontar para esses procedimentos, sem substituir o fluxo, atualizar status de produção nem autorizar operações.
+
+**Cobertura documental combinada:** os 4.412 textos de teste R2 (§9–§11) mais 2.169 registros R3 compõem **6.581 exemplos/mensagens sintéticos cadastrados**, com objetivos e granularidades diferentes. Essa soma é contagem de artefatos e **não métrica de acerto, de qualidade de modelo ou de representatividade do português brasileiro**.
+
+### 13.2. Lacunas de maior impacto para Eleonor
+
+| Prioridade | Lacuna | O que ensinar/avaliar | Risco que deve ser evitado |
+|---|---|---|---|
+| P0 | Abreviações de chat | `vc`, `pq`, `kd`, `qnd`, `qto`, `hj`, `pfv`, `tbm`, `dnv` | Não alterar identificadores, números ou negadores |
+| P0 | Perguntas por intenção | `como faço?` versus `faz por mim` versus `qual o saldo?` | Não misturar HOWTO/READ/WRITE |
+| P0 | Vocabulário de operação | `bota`, `puxa`, `lança`, `trava`, `sumiu`, `deu ruim` | Não inventar diagnóstico ou executar ações |
+| P0 | Siglas homógrafas | `NE`/“né”, `NS`, `QR`, `TR`, `NF`/NFS-e, `fds` | Resolver contexto antes de normalizar |
+| P0 | Conceitos ambíguos | `saldo`, `baixa`, `nota`, `pendente`, `recebido`, `pedido`, `enviado` | Não confundir estado financeiro, logístico e documental |
+| P0 | Restrições essenciais | `sem`, `não`, `somente`, `exceto`, `antes`, `depois` | Não descartar filtros e executar consulta inexata |
+| P1 | Conversas e referências | `e dessa?`, `só as de ontem`, `não, era NE` | Não carregar contexto vencido ou de outro workspace |
+| P1 | Estilos de escrita | formal, breve, casual, iniciante e técnico | Não mudar nível de segurança ou zombar da escrita |
+| P1 | Disponibilidade de recursos | MAIN, GATES, PR/PILOTO e PAUSADO | Não vender como publicado o que existe só no GitHub |
+| P1 | Fontes e estados de resposta | documento F, W3 autorizado, parcial, vazio e indisponível | Não inventar dados, envio, pagamento ou baixa |
+| P2 | Diagnóstico guiado de UI | erro real → etapa → permissão → ação segura | Não especular sobre bugs, culpa ou incidente |
+
+### 13.3. Exemplos que o roteador deve tratar diferentemente
+
+| O usuário escreve | Interpretação correta | Resposta/encaminhamento esperado |
+|---|---|---|
+| “kd a nf 42? n acho” | Localização de NF com possível ambiguidade | Identificar fornecedor/NE ou orientar busca, sem presumir que foi excluída |
+| “pfv me ensina a baixar o PDF” | HOWTO de download | Passos de documentação, nunca baixa do estoque |
+| “pfv dá baixa em 5 caixas” | Solicitação WRITE | Não executar no chat somente-leitura; orientar saída rastreada |
+| “vc viu NE 2026NE0007 né?” | ID de NE + interjeição | Preservar entidade e ignorar `né` como sigla |
+| “nfs cadastradas no fds passado” | Intervalo do fim de semana e data de cadastro | Interpretar período com calendário/fuso, verificar filtros W3 |
+| “fds, tá dando erro” | Interjeição/frustração | Perguntar qual tela/ação e mensagem, sem supor período |
+| “nfs sem ns” | Restrição negativa | Não transformar em NFs com NS |
+| “o saldo tá errado” | Domínio indeterminado | Esclarecer se é NE/item ou estoque físico |
+| “PDF do Pedido SISCOFIS já dá baixa?” | Recurso em PR/PILOTO | Dizer que não existe baixa oficial homologada nesse fluxo |
+| “o checkout tá gerado então pagou?” | Estado comercial ambíguo | Informar que link gerado não equivale a pagamento confirmado |
+
+### 13.4. Integração futura recomendada — não executada
+
+1. Criar normalizador contextual **não destrutivo**, com original preservado e proteção de tokens atômicos (NE/CNPJ/NS/UG/datas/moeda/unidades/identificadores).
+2. Classificar HOWTO/READ/WRITE antes de propor consulta ou resposta generativa; instruções de uso podem consultar o memorial aprovado, mas dados reais exigem W3 e identidade autorizada.
+3. Recuperar a funcionalidade `F-XX-YYY` e verificar fonte/versão/rota/role/gates, não apenas localizar a palavra na pergunta.
+4. Preservar restrições e contexto em múltiplos turnos dentro do escopo atual; pedir esclarecimento para referência vencida ou entidade ambígua.
+5. Comparar amostras R2/R3 em regressão controlada com critérios de P0 (sem mutação fictícia, sem vazamento, sem falsa produção e sem omissão de filtros). Casos R3 de avaliação **não são holdout cego** porque estão visíveis na documentação.
+6. Integrar somente após revisão de compatibilidade do W3/W4/W7 com a `main` vigente; nenhuma mudança na infraestrutura é necessária para esta fase documental.
+
+**Regra de não equivalência:** que uma frase tenha sinônimos lexicais não significa que suas restrições, valores, permissões, datas e destinatários sejam equivalentes. Este princípio tem precedência sobre qualquer ganho de cobertura ou simplificação conversacional.
 
