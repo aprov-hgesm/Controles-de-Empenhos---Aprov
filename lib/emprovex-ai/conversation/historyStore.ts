@@ -82,7 +82,9 @@ export async function getHistory(access:AiAccess,id:string):Promise<HistoryThrea
 }
 export async function listHistory(access:AiAccess):Promise<HistorySummary[]>{
  enabled();
- const params=new URLSearchParams({pageSize:String(MAX_THREADS+1),orderBy:'updatedAt desc'});
+ // Enterprise Firestore: read a bounded collection and sort locally. Avoid depending
+ // on a server-side index for the small per-user history collection.
+ const params=new URLSearchParams({pageSize:String(MAX_THREADS+1)});
  const r=await request(collection(access)+'?'+params.toString(),access);
  if(r.status===404)return [];
  const parsed=await r.json() as {documents?:FS[]};
