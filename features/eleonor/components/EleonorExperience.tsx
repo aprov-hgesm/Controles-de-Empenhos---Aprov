@@ -315,10 +315,17 @@ export function EleonorExperience({
               <p className="text-[11px] font-medium text-blue-100/80">Assistente inteligente do EMPROVEX</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+          <button type="button" onClick={()=>setHistoryOpen(v=>!v)}
+            aria-label="Mostrar ou ocultar histórico"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+            <Clock3 className="h-4 w-4" /> Histórico
+          </button>
           <button onClick={newConversation} type="button"
             className="inline-flex items-center gap-2 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
             <Plus className="h-4 w-4" /> Nova conversa
           </button>
+        </div>
         </header>
         <div className="flex min-h-0 flex-1">
           {historyOpen&&<aside className="w-52 shrink-0 overflow-hidden border-r border-slate-200 bg-white/85 sm:w-64">{historyPanel}</aside>}
@@ -340,6 +347,8 @@ export function EleonorExperience({
                 unoptimized className="h-auto w-[126px]" />
              </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={()=>setHistoryOpen(v=>!v)} aria-label="Histórico de conversas"
+                className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Clock3 className="h-4 w-4" /></button>
               <button type="button" onClick={newConversation} aria-label="Nova conversa"
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Plus className="h-4 w-4" /></button>
               <button type="button" onClick={() => onOpenFull
