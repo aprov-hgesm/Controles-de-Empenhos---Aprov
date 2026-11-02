@@ -6,7 +6,7 @@ import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 
 export type Lfm3Outcome='disabled'|'url_invalid'|'identity_unavailable'|'identity_invalid'|
   'model_http_error'|'model_truncated'|'model_invalid_response'|'model_json_received'|
-  'model_answer_accepted'|'request_failed';
+  'model_answer_accepted'|'request_failed'|'request_timeout';
 export type Lfm3OutcomeRecorder=(outcome:Lfm3Outcome)=>void;
 const MODEL='lfm3:1.7b-q4_K_M';
 const OUTPUT_TOKENS=128;
@@ -87,10 +87,10 @@ export async function proposeWithLfm3(proposal:ModelProposal,report?:Lfm3Outcome
   if(!parsed)return reject('model_invalid_response');
   report?.('model_json_received');
   return parsed;
- }catch{
+ }catch(error){
   // IAM/metadata, cold starts, invalid JSON and Ollama outages are non-fatal.
   // Never log tokens, prompts or raw model output.
-  return reject('request_failed');
+  return reject(error instanceof Error && (error.name==='TimeoutError'||error.name==='AbortError')?'request_timeout':'request_failed');
  }
 }
 
@@ -136,8 +136,8 @@ export async function respondConversationally(message:string,report?:Lfm3Outcome
      typeof value.answer!=='string'||!value.answer.trim()||value.answer.length>900)return reject('model_invalid_response');
   report?.('model_answer_accepted');
   return value.answer.replace(/[<>\u0000-\u001f\u007f]/g,'').trim();
- }catch{
+ }catch(error){
   // Fail closed: no prompt, raw model response or identity token in logs.
-  return reject('request_failed');
+  return reject(error instanceof Error && (error.name==='TimeoutError'||error.name==='AbortError')?'request_timeout':'request_failed');
  }
 }
