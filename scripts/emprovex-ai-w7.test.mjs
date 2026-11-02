@@ -260,7 +260,7 @@ test('LFM3 creative output is bounded and does not send operational context',asy
   assert.equal(calls.length,2);
   const request=JSON.parse(calls[1].opts.body);
   assert.equal(request.think,false);assert.equal(request.stream,false);
-  assert.equal(request.options.num_predict,160);
+  assert.equal(request.options.num_predict,256);
   assert.equal(request.messages.length,2);
   assert.doesNotMatch(JSON.stringify(request),/workspace-a|2026NE66/);
   calls=[];globalThis.fetch=async()=>{throw Error('offline');};
