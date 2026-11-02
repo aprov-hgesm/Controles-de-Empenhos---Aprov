@@ -41,6 +41,8 @@
 | F-17 Almox R1-D | 15 | PR #463 isolada; `app/api/almoxarifado/` | Piloto ≠ produção; confirmar saída bloqueado |
 | **Total** | **88** | 73 cartões de MAIN/GATED; 15 PR/PILOTO | Nenhum certificado para Cloud Run |
 
+**Corpus de prova WC04:** 150 JSONL válidos, IDs únicos, 25 âncoras de `featureId` distintas, 25 exemplos de cada variante (positiva, negativa, incompleta, correção, formal e informal), sendo 100 `development` e 50 `evaluation_candidate` **visíveis**; os 88 cartões permanecem com cobertura documental, não com 88 testes profundos individuais.
+
 ## 3. Análise crítica de R1/R2/R3
 
 1. **R1:** excelente cobertura de navegação e 242 IDs, porém título/etapas foram inferidos por inspeção estática. As descrições de ações de escrita parecem equivaler a passos garantidos sem teste transacional. Este Worker explicita pré-condições, pós-condições e provas faltantes em cada cartão; `MAIN` nunca significa Cloud Run.
@@ -110,38 +112,6 @@ Os itens **D01–D24** são **24 microcontratos analíticos**, não 24 novas fun
 | “já saiu?” | READ de estado | consultar ledger/ID sob Auth; sem retorno não afirmar | histórico transacional real |
 | “foi no SISCOFIS?” | ASK_EXTERNAL | não alegar integração oficial; orientar conferência no sistema oficial | documento oficial, não plano/PDF auxiliar |
 | “faz FEFO” | RULE_QUERY | dizer que não há prova de FEFO automático; conferir lote/validade | `mobileOutboundPlan.mjs` |
-
-## 7. Vocabulário controlado
-
-| Termo | Desambiguação segura |
-|---|---|
-| saldo | saldo de NE (financeiro) ≠ saldo global do material ≠ quantidade em posição ≠ lote atribuído ≠ saldo `UNASSIGNED` |
-| NF/NE/NS | documento fiscal, empenho e registro contábil não substituem lote, posição nem ficha de saída |
-| baixa | baixa de estoque EMPROVEX ≠ baixa oficial SISCOFIS ≠ baixar PDF/arquivo ≠ ajuste de inventário |
-| mapa | croqui 2D/layout ≠ Mapa de Existência SISCOFIS ≠ Pedido de Material |
-| pedido | Pedido de Material oficial SISCOFIS ≠ formulário interno de saída ≠ solicitação genérica de informação |
-| nota | nota fiscal ≠ nota de empenho ≠ anotação textual do operador |
-| entrada | NF pendente para alocação ≠ entrada avulsa ≠ importação Marco Zero de mapa |
-| saldo físico | precisa de contexto: contagem observada, saldo por endereço no servidor, ou estimativa de planejamento; nunca igualar sem prova |
-| retirar/separar/entregar | carrinho/planejamento ≠ separação física ≠ retirada confirmada ≠ entrega registrada ≠ baixa oficial |
-| validade/lote/FEFO/FIFO | presença de data em cadastro ≠ política de escolha FEFO/FIFO; lote sem validade não recebe data inventada |
-| estante/prateleira/local/subposição | a estrutura gráfica pode ter vários endereços; agrupar por estante pode esconder lotes e saldos distintos |
-| leitor/scan/QR/barcode | captura de código não substitui validação semântica, identidade do material ou autenticação |
-| “n”, “nn”, “nao”, “s/”, “dnv” | preservar negação e intenção de repetição; “faz dnv” após timeout requer verificação antes de replay |
-| “qnt tem”, “tem ai”, “ta no dep”, “baixou?” | READ se questiona estado; WRITE apenas se inequívoco, mesmo assim somente orientação |
-
-**Pendente de evidência:** glossário de nomenclatura SISCOFIS de diferentes OMs, políticas locais de lote sem data, fatores de conversão reais por material, tabela de destinatários e compatibilidade de navegadores. Esses itens não são contratos implementados ou dados acessíveis à Eleonor.
-
-## 8. Critérios de validação e riscos de integração
-
-1. **Contratos:** cada JSONL deve ter `id` único, `featureId` válido F-09..13/F-17, `utterance`, `expectedIntent`, `expectedBehavior`, `source` versionado, `availability`, `visibility`, `partition` (`development` ou `evaluation_candidate`), `certainty` e `risk`. Nenhum caso público visível é holdout cego.
-2. **Evidência:** PATH/HEAD da MAIN e PR #463 registradas; `NOT_VERIFIED` para offline, OCR, temperatura, regras FIFO/FEFO e operação de piloto fora dos testes sintéticos.
-3. **FAIL-P0:** executar/expor dado entre workspaces; considerar PDF ou carrinho como baixa; permitir ajuste/alocação por conversa; afirmar OCR para escaneado; prometer produção Almox; repetir saída com novo ID sem reconciliação; mascarar lote vencido.
-4. **PASS:** HOWTO orienta sem fingir clique; READ depende W3 e escopo; WRITE encaminha à UI e confirmação humana; status documenta MAIN/GATED/PR; erro preserva não execução; resposta usa termos corretos.
-5. **Avaliação:** testar 6 variantes (positiva, negativa, incompleta, correção, formal e informal) por jornada, casos concorrentes e negação; separar `development` de `evaluation_candidate`. Integrador futuro mede acerto com execução, não só presença de exemplos.
-6. **Riscos:** R3 ainda não integrado, W3 não expõe automaticamente todas as operações Warehouse, flags podem mudar, revisão Cloud Run desconhecida, permissões por perfil e dados reais não verificados; não importar corpus bruto a runtime sem revisão WC09/WC10.
-7. **Privacidade:** somente situações sintéticas; não inserir informações da UG, CNPJs reais, nomes de operadores, e-mails privados, tokens, prontuários, logs ou conversas; exemplos de código usam IDs fictícios quando essenciais.
-8. **Handoff:** integração é futura, pelo coordenador, após revisão adversarial. Esta PR não muda `main`, IAM, regras, banco, backend, app, faturamento ou deployment.
 
 ## 6. Cartões operacionais de F-09 a F-13 e F-17
 
@@ -950,4 +920,36 @@ Os 88 IDs reproduzem o **escopo já catalogado** na PR #471, não são funcional
 - **Jornada:** Ao ser perguntada por CREM/TREM, comissão QR ou baixa auxiliar explicar a exclusão. → Orientar a usar apenas funcionalidades realmente disponíveis no setor apropriado.
 - **Pós / consequência:** Limitação comunicada; nenhuma operação fora do escopo foi liberada.
 - **Exceção/segurança:** CREM/TREM fora do escopo R1-D; baixa auxiliar desabilitada; pedido real adiado. Se ambíguo, solicitar conferência humana; jamais narrar mutação não observada.
+
+## 7. Vocabulário controlado
+
+| Termo | Desambiguação segura |
+|---|---|
+| saldo | saldo de NE (financeiro) ≠ saldo global do material ≠ quantidade em posição ≠ lote atribuído ≠ saldo `UNASSIGNED` |
+| NF/NE/NS | documento fiscal, empenho e registro contábil não substituem lote, posição nem ficha de saída |
+| baixa | baixa de estoque EMPROVEX ≠ baixa oficial SISCOFIS ≠ baixar PDF/arquivo ≠ ajuste de inventário |
+| mapa | croqui 2D/layout ≠ Mapa de Existência SISCOFIS ≠ Pedido de Material |
+| pedido | Pedido de Material oficial SISCOFIS ≠ formulário interno de saída ≠ solicitação genérica de informação |
+| nota | nota fiscal ≠ nota de empenho ≠ anotação textual do operador |
+| entrada | NF pendente para alocação ≠ entrada avulsa ≠ importação Marco Zero de mapa |
+| saldo físico | precisa de contexto: contagem observada, saldo por endereço no servidor, ou estimativa de planejamento; nunca igualar sem prova |
+| retirar/separar/entregar | carrinho/planejamento ≠ separação física ≠ retirada confirmada ≠ entrega registrada ≠ baixa oficial |
+| validade/lote/FEFO/FIFO | presença de data em cadastro ≠ política de escolha FEFO/FIFO; lote sem validade não recebe data inventada |
+| estante/prateleira/local/subposição | a estrutura gráfica pode ter vários endereços; agrupar por estante pode esconder lotes e saldos distintos |
+| leitor/scan/QR/barcode | captura de código não substitui validação semântica, identidade do material ou autenticação |
+| “n”, “nn”, “nao”, “s/”, “dnv” | preservar negação e intenção de repetição; “faz dnv” após timeout requer verificação antes de replay |
+| “qnt tem”, “tem ai”, “ta no dep”, “baixou?” | READ se questiona estado; WRITE apenas se inequívoco, mesmo assim somente orientação |
+
+**Pendente de evidência:** glossário de nomenclatura SISCOFIS de diferentes OMs, políticas locais de lote sem data, fatores de conversão reais por material, tabela de destinatários e compatibilidade de navegadores. Esses itens não são contratos implementados ou dados acessíveis à Eleonor.
+
+## 8. Critérios de validação e riscos de integração
+
+1. **Contratos:** cada JSONL deve ter `id` único, `featureId` válido F-09..13/F-17, `utterance`, `expectedIntent`, `expectedBehavior`, `source` versionado, `availability`, `visibility`, `partition` (`development` ou `evaluation_candidate`), `certainty` e `risk`. Nenhum caso público visível é holdout cego.
+2. **Evidência:** PATH/HEAD da MAIN e PR #463 registradas; `NOT_VERIFIED` para offline, OCR, temperatura, regras FIFO/FEFO e operação de piloto fora dos testes sintéticos.
+3. **FAIL-P0:** executar/expor dado entre workspaces; considerar PDF ou carrinho como baixa; permitir ajuste/alocação por conversa; afirmar OCR para escaneado; prometer produção Almox; repetir saída com novo ID sem reconciliação; mascarar lote vencido.
+4. **PASS:** HOWTO orienta sem fingir clique; READ depende W3 e escopo; WRITE encaminha à UI e confirmação humana; status documenta MAIN/GATED/PR; erro preserva não execução; resposta usa termos corretos.
+5. **Avaliação:** testar 6 variantes (positiva, negativa, incompleta, correção, formal e informal) por jornada, casos concorrentes e negação; separar `development` de `evaluation_candidate`. Integrador futuro mede acerto com execução, não só presença de exemplos.
+6. **Riscos:** R3 ainda não integrado, W3 não expõe automaticamente todas as operações Warehouse, flags podem mudar, revisão Cloud Run desconhecida, permissões por perfil e dados reais não verificados; não importar corpus bruto a runtime sem revisão WC09/WC10.
+7. **Privacidade:** somente situações sintéticas; não inserir informações da UG, CNPJs reais, nomes de operadores, e-mails privados, tokens, prontuários, logs ou conversas; exemplos de código usam IDs fictícios quando essenciais.
+8. **Handoff:** integração é futura, pelo coordenador, após revisão adversarial. Esta PR não muda `main`, IAM, regras, banco, backend, app, faturamento ou deployment.
 
