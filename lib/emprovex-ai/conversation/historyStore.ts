@@ -6,6 +6,7 @@
 import {createHash,randomUUID} from 'node:crypto';
 import firebaseConfig from '../../../firebase-applet-config.json';
 import type {AiAccess} from '../authorize';
+import {aiProductionPilotEnabled} from '../integration/environment';
 import {AiExecutionError} from '../response';
 
 export type HistoryMessage={id:string;role:'user'|'assistant';text:string;at:string;status?:string;route?:string};
@@ -18,8 +19,8 @@ const ROOT='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(fi
 const ID=/^[0-9a-f]{8}-[0-9a-f-]{27,40}$/i;
 
 export function historyEnabled():boolean {
- return process.env.EMPROVEX_AI_HISTORY_ENABLED==='1' &&
-   process.env.K_SERVICE==='emprovex-cloudrun-candidate' &&
+ return process.env.EMPROVEX_AI_HISTORY_ENABLED==='1' && aiProductionPilotEnabled() &&
+   process.env.K_SERVICE='emprovex-cloudrun-candidate' &&
    process.env.K_CONFIGURATION==='emprovex-cloudrun-candidate' &&
    process.env.VERCEL_ENV===undefined;
 }
