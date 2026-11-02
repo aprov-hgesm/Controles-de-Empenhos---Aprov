@@ -2,7 +2,7 @@
 import {interpret,validateModelCandidate} from '../context';
 import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 import {planConversation} from '../conversation/engine';
-import {proposeWithLfm3,respondConversationally} from './lfm3';
+import {proposeWithLfm3,respondConversationally,type Lfm3Outcome} from './lfm3';
 import {guardLfm3Candidate} from './lfm3Guard';
 import {parseAiQuery,AiInputError,type AiResponse} from '../contracts';
 import {prepareAiAccess} from '../authorize';
@@ -18,7 +18,8 @@ export type AiAskPayload={
  query?:{version:string;intent:string;params:Record<string,unknown>};
  result?:AiResponse;contextToken?:string;filterAudit?:{requested:string[];represented:string[];unhandled:string[]};
  metrics:{authenticationMs:number;interpretationMs:number;contractValidationMs:number;w3ExecutionMs:number;
-  responseMs:number;totalMs:number;examinedDocuments:number;qwenCalls:0;lfm3Calls:number};
+  responseMs:number;totalMs:number;examinedDocuments:number;qwenCalls:0;lfm3Calls:number;
+  modelOutcome:'not_attempted'|Lfm3Outcome|'candidate_rejected'|'filter_rejected'|'query_accepted'};
 };
 export function parseAskInput(input:unknown):AiAskInput {
  if(!input||typeof input!=='object'||Array.isArray(input))throw new AiInputError('AI_INVALID_OBJECT');
@@ -46,6 +47,8 @@ export async function runAiAsk(args:{
  let status:AiAskPayload['status'],answer:string;
  let result:AiResponse|undefined,query:AiAskPayload['query'],contextToken:string|undefined;
  let lfm3Calls=0,modelAudit:AiAskPayload['filterAudit']|undefined;
+ let modelOutcome:AiAskPayload['metrics']['modelOutcome']='not_attempted';
+ const recordModelOutcome=(outcome:Lfm3Outcome)=>{modelOutcome=outcome;};
  const conversation=planConversation({message:args.input.message,
    operational:{route:interpreted.route,reason:interpreted.reason,intent:interpreted.intent},
    previous:previous?.conversation,now});
@@ -56,7 +59,7 @@ export async function runAiAsk(args:{
    status=conversation.status;answer=conversation.answer;
    if(conversation.modelEligible&&aiConversationalModelEnabled()){
      lfm3Calls=1;
-     const generated=await respondConversationally(args.input.message);
+     const generated=await respondConversationally(args.input.message,recordModelOutcome);
      if(generated){answer=generated;status='ok';}
    }
    contextToken=sealContext({
@@ -99,7 +102,7 @@ export async function runAiAsk(args:{
    answer='Não consegui interpretar esta consulta com segurança. Tente reformular a pergunta.';
    if(aiLfm3Enabled()&&interpreted.model){
      lfm3Calls=1;
-     const proposed=await proposeWithLfm3(interpreted.model);
+     const proposed=await proposeWithLfm3(interpreted.model,recordModelOutcome);
      if(proposed!==null){
        const candidate=validateModelCandidate(proposed,route);
        if(candidate){
@@ -122,6 +125,7 @@ export async function runAiAsk(args:{
              responseMs=Date.now()-presentationStart;
              status=result.status==='ok'?'ok':result.status==='partial'?'partial':
                result.status==='empty'?'empty':result.status==='ambiguous'?'ambiguous':'rejected';
+             modelOutcome='query_accepted';
            }catch(error){
              // W3 read errors are never turned into success or out-of-scope data.
              if(error instanceof AiInputError){
@@ -130,10 +134,12 @@ export async function runAiAsk(args:{
              }else throw error;
            }
          }else{
+           modelOutcome='filter_rejected';
            status='clarify';
            answer='Há filtros ou identificadores que não posso confirmar. Reformule a consulta com os dados necessários.';
          }
        }else{
+         modelOutcome='candidate_rejected';
          status='clarify';
          answer='A interpretação não corresponde aos contratos permitidos. Reformule a consulta.';
        }
@@ -148,6 +154,6 @@ export async function runAiAsk(args:{
    ...(modelAudit?{filterAudit:modelAudit}:
      interpreted.filterAudit?{filterAudit:interpreted.filterAudit}:{}),
    metrics:{authenticationMs,interpretationMs,contractValidationMs,w3ExecutionMs,responseMs,
-     totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls}};
+     totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls,modelOutcome}};
  return {payload,cookie:cookieState.cookie,setCookie:cookieState.newCookie};
 }
