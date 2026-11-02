@@ -33,7 +33,7 @@ function load(path,mocks={},scenarioCache=Object.keys(mocks).length?new Map():sh
 }
 const contracts=load('lib/emprovex-ai/contracts.ts');
 const access={uid:'uid-1',workspaceId:'setor-a',ug:'160416',email:'a@example.com',googleToken:'stub'};
-test('W3.0 — oito contratos fechados e nenhuma selecao arbitraria de dados',()=>{
+test('W3.0 — nove contratos fechados e nenhuma selecao arbitraria de dados',()=>{
   const valid=[
     ['supplier_contact_find',{nameQuery:'Fornecedor Alfa'}],
     ['commitment_get',{commitmentId:'2026NE0066'}],
@@ -41,12 +41,13 @@ test('W3.0 — oito contratos fechados e nenhuma selecao arbitraria de dados',()
     ['commitment_previous_open_list',{}],
     ['schedule_sent_history_list',{commitmentId:'2026NE0066'}],
     ['invoice_registration_period_list',{interval:{start:'2026-10-01',endExclusive:'2026-11-01'},dateMeaning:'registered'}],
+    ['invoice_operational_pending_list',{stage:'pending_operational',pageSize:20}],
     ['warehouse_stock_get',{materialQuery:'arroz'}],
     ['warehouse_material_locations_list',{materialId:'mat_'+'a'.repeat(32)}]
   ];
   for(const [intent,params] of valid)
     assert.equal(contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent,params}).intent,intent);
-  assert.equal(Object.keys(contracts.CONTRACTS).length,8);
+  assert.equal(Object.keys(contracts.CONTRACTS).length,9);
   for(const field of ['workspaceId','ug','collection','path','query'])
     assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
       params:{commitmentId:'2026NE0066',[field]:'evil'}}));
@@ -54,6 +55,32 @@ test('W3.0 — oito contratos fechados e nenhuma selecao arbitraria de dados',()
   assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
     params:{commitmentId:'2026NE0/../admin'}}));
 });
+test('W3 — pending NFs use only operational stages and never infer unpaid status',async()=>{
+  assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',
+    intent:'invoice_operational_pending_list',params:{stage:'pending_payment'}}));
+  assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',
+    intent:'invoice_operational_pending_list',params:{stage:'pending_operational',workspaceId:'other'}}));
+  const finance=load('lib/emprovex-ai/financial.ts',{
+    './reader':{
+      coreOperationalQuery:async(scoped,domain,filters,limit)=>{
+        assert.equal(scoped.workspaceId,'setor-a');assert.equal(domain,'invoices');
+        assert.equal(filters.length,0);assert.equal(limit,201);
+        return {rows:[
+          {id:'nf-A',data:{id:'101',localizacaoAtual:'APROVISIONAMENTO',empenhoId:'2026NE0066'}},
+          {id:'nf-B',data:{id:'102',localizacaoAtual:'COMISSAO'}},
+          {id:'nf-C',data:{id:'103',localizacaoAtual:'TESOURARIA'}},
+        ],truncated:false,examined:3};
+      }
+    }
+  });
+  const result=await finance.executeFinancial(access,{intent:'invoice_operational_pending_list',
+    version:'emprovex.ai.query.v1',params:{stage:'pending_operational',pageSize:20}});
+  assert.equal(result.status,'ok');
+  assert.deepEqual(result.data.map(x=>x.recordKey),['nf-A','nf-B']);
+  assert.equal(result.evidence.length,2);
+  assert.match(result.limitations.join(' '),/não comprova pagamento pendente/);
+});
+
 test('W3 — datas relativas em America/Sao_Paulo',()=>{
   const period=load('lib/emprovex-ai/period.ts');
   const now=new Date('2026-10-31T02:30:00Z');

@@ -18,6 +18,7 @@ export const W3_CONTRACTS:Readonly<Record<W3Intent,string>> = {
   commitment_previous_open_list:'commitment.previousOpen.list.v1',
   schedule_sent_history_list:'schedule.sentHistory.list.v1',
   invoice_registration_period_list:'invoice.registrationPeriod.list.v1',
+  invoice_operational_pending_list:'invoice.operationalPending.list.v1',
   warehouse_stock_get:'warehouse.stock.get.v1',
   warehouse_material_locations_list:'warehouse.materialLocations.list.v1'
 };

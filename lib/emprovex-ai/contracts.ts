@@ -11,6 +11,7 @@ export const CONTRACTS = {
   commitment_previous_open_list: 'commitment.previousOpen.list.v1',
   schedule_sent_history_list: 'schedule.sentHistory.list.v1',
   invoice_registration_period_list: 'invoice.registrationPeriod.list.v1',
+  invoice_operational_pending_list: 'invoice.operationalPending.list.v1',
   warehouse_stock_get: 'warehouse.stock.get.v1',
   warehouse_material_locations_list: 'warehouse.materialLocations.list.v1',
 } as const;
@@ -146,6 +147,13 @@ export function parseAiQuery(input: unknown): AiQuery {
       if(p.commitmentId!==undefined) params.commitmentId=stringParam(p.commitmentId,'commitment_id',NE,22).toUpperCase();
       params.pageSize=pageSize(p.pageSize);
       if(p.cursor!==undefined) params.cursor=stringParam(p.cursor,'cursor',/^[A-Za-z0-9._-]{8,2048}$/,2048);
+      break;
+    }
+    case 'invoice_operational_pending_list': {
+      onlyKeys(p,['stage','pageSize']);
+      if(p.stage!=='pending_operational') throw new AiInputError('AI_INVOICE_PENDING_STAGE_INVALID');
+      params.stage='pending_operational';
+      params.pageSize=pageSize(p.pageSize);
       break;
     }
     case 'warehouse_stock_get':

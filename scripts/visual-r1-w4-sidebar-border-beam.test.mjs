@@ -47,14 +47,14 @@ test('sidebar navigation follows operational workflow, preserving original ten a
   const sidebar = read('components/layout/AppSidebar.tsx');
   const css = read('app/globals.css');
   const nav = sidebar.slice(sidebar.indexOf('<nav className="emprovex-sidebar-nav'), sidebar.indexOf('</nav>'));
-  const groups = ['overview', 'management', 'follow-up', 'assistant', 'warehouse'];
+  const groups = ['assistant', 'overview', 'management', 'follow-up', 'warehouse'];
   let previousGroup = -1;
   for (const id of groups) {
     const at = nav.indexOf('data-nav-group="' + id + '"');
     assert.ok(at > previousGroup, 'sidebar group absent or unordered: ' + id);
     previousGroup = at;
   }
-  const orderedTabs = ['inicio', 'painel', 'empenhos', 'nova_nf', 'itens', 'fornecedores', 'cronogramas', 'relatorios', 'avisos', 'eleonor'];
+  const orderedTabs = ['eleonor', 'inicio', 'painel', 'empenhos', 'nova_nf', 'itens', 'fornecedores', 'cronogramas', 'relatorios', 'avisos'];
   let previousItem = -1;
   for (const id of orderedTabs) {
     const at = nav.indexOf("onNavigate('" + id + "')");

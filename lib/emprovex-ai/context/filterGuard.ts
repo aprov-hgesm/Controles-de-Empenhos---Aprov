@@ -13,11 +13,13 @@ export const W3_FILTERS:Readonly<Record<W3Intent,readonly FilterName[]>>={
  commitment_previous_open_list:[], // exerciseYear/historical list is not a per-document filter
  schedule_sent_history_list:['commitmentId','supplierCnpj','period'],
  invoice_registration_period_list:['commitmentId','supplierCnpj','period'],
+ invoice_operational_pending_list:['status'],
  warehouse_stock_get:['materialQuery'],
  warehouse_material_locations_list:['materialQuery','depotId']
 };
 const asParameter:Partial<Record<FilterName,string>>={
  commitmentId:'commitmentId',supplierCnpj:'supplierCnpj',period:'interval',
+ status:'stage',
  materialQuery:'materialQuery',supplierName:'nameQuery',depotId:'depotId',itemId:'itemId'
 };
 /** No silent reduction: every hard restriction must be representable in destination's real schema. */

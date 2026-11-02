@@ -37,6 +37,13 @@ function render(intent:AiIntent,data:unknown):string {
    'NE '+text(x.commitmentId)+', envio registrado em '+formatDate(x.sentAt)).join('; ');
  case 'invoice_registration_period_list':return list(data).map(x=>
    'NF '+(text(x.number)||text(x.recordKey))+' cadastrada em '+formatDate(x.registeredAt)).join('; ');
+ case 'invoice_operational_pending_list':return list(data).map(x=>
+   'NF '+(text(x.number)||text(x.recordKey))+' — '+
+   (x.stage==='COMISSAO'?'na Comissão, aguardando envio à Tesouraria':
+     'no Aprovisionamento, aguardando encaminhamento')+
+   (text(x.commitmentId)?'; empenho '+text(x.commitmentId):'')+
+   (x.stageInferred===true?' (etapa inferida)':'')
+ ).join('\n');
  case 'warehouse_stock_get':return text(d.description)+': '+number(d.quantity)+
    ' '+unit(d.unit)+' de saldo físico agregado.';
  case 'warehouse_material_locations_list':return list(d.locations).map(x=>{
