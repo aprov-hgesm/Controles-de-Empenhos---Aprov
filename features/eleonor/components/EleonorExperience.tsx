@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
-  Plus, X,
+  Plus, X, Clock3,
 } from 'lucide-react';
 
 type Evidence = { source: string; documentId: string };
@@ -20,6 +20,7 @@ type ChatMessage = {
   morePages?: boolean;
 };
 type AskResponse = {
+  conversationId?:string;
   answer?: string;
   status?: string;
   contextToken?: string;
@@ -78,6 +79,10 @@ export function EleonorExperience({
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeHistoryId,setActiveHistoryId]=useState<string|undefined>();
+  const [historyOpen,setHistoryOpen]=useState(fullPage);
+  const [historyRevision,setHistoryRevision]=useState(0);
+  const activeHistoryRef=useRef<string|undefined>();
   const contextRef = useRef<string | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
   const requestNumber = useRef(0);
@@ -102,6 +107,7 @@ export function EleonorExperience({
     controllerRef.current?.abort();
     controllerRef.current = null;
     contextRef.current = undefined;
+    activeHistoryRef.current=undefined;setActiveHistoryId(undefined);
     setMessages([]);
     setDraft('');
     setLoading(false);
@@ -134,6 +140,7 @@ export function EleonorExperience({
         body: JSON.stringify({
           message,
           ...(contextRef.current ? { contextToken: contextRef.current } : {}),
+          ...(activeHistoryRef.current ? { conversationId:activeHistoryRef.current } : {}),
         }),
         cache: 'no-store',
         signal: controller.signal,
@@ -142,6 +149,11 @@ export function EleonorExperience({
       if (controller.signal.aborted || number !== requestNumber.current) return;
       if (!response.ok) throw new Error(friendlyError(response.status, body.error));
 
+      if(typeof body.conversationId==='string'){
+        activeHistoryRef.current=body.conversationId;
+        setActiveHistoryId(body.conversationId);
+        setHistoryRevision(v=>v+1);
+      }
       // Only the server-issued encrypted context may be replayed to the backend.
       contextRef.current = typeof body.contextToken === 'string'
         ? body.contextToken : undefined;
