@@ -1,0 +1,44 @@
+name: EMPROVEX public anonymous login diagnostic
+
+on:
+  pull_request:
+    paths:
+      - 'tests/e2e/public-login-incognito.spec.mjs'
+      - 'playwright.login-public.config.mts'
+      - '.github/workflows/public-login-incognito.yml'
+      - 'components/auth/**'
+      - 'components/visual-mode/**'
+      - 'hooks/usePlatformBranding.ts'
+      - 'app/login/**'
+      - 'app/globals.css'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-login-guest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Install app dependencies
+        run: npm ci
+      - name: Install isolated Playwright
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Observe public unauthenticated login without modifying production
+        run: npx playwright test --config=playwright.login-public.config.mts
+      - name: Upload screenshot and trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emprovex-public-login-guest
+          path: |
+            test-results/
+          retention-days: 3
