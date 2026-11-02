@@ -2,11 +2,14 @@
  * A proposed query is untrusted until W5 guards + W3 contract and identity authorization.
  */
 import {aiLfm3Enabled} from './environment';
+import type {Lfm3Outcome} from './lfm3';
 import type {ContextRefs} from '../context/types';
 export type ModelFirstDecision=
  |{kind:'operational';intent:string;params:Record<string,unknown>}
  |{kind:'conversation';answer:string}
  |{kind:'unsupported';answer:string};
+export type ModelFirstOutcome=Lfm3Outcome|'model_operational'|'model_conversation'|'model_unsupported';
+export type ModelFirstReporter=(outcome:ModelFirstOutcome)=>void;
 const MODEL='lfm3:1.7b-q4_K_M';
 const MAX_BODY=12000;
 function origin():string|null {
@@ -23,15 +26,16 @@ function parseObject(value:string):Record<string,unknown>|null{
  catch{return null;}
 }
 const kinds=['operational','conversation','unsupported'];
-export async function interpretFirstWithLfm3(message:string,context:ContextRefs={}):Promise<ModelFirstDecision|null> {
- if(!aiLfm3Enabled()||!message.trim()||message.length>1000)return null;
- const url=origin();if(!url)return null;
+export async function interpretFirstWithLfm3(message:string,context:ContextRefs={},report?:ModelFirstReporter):Promise<ModelFirstDecision|null> {
+ const reject=(outcome:ModelFirstOutcome):null=>{report?.(outcome);return null;};
+ if(!aiLfm3Enabled()||!message.trim()||message.length>1000)return reject('disabled');
+ const url=origin();if(!url)return reject('url_invalid');
  try{
   const meta=await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience='+
    encodeURIComponent(url)+'&format=full',{cache:'no-store',headers:{'Metadata-Flavor':'Google'},signal:AbortSignal.timeout(1800)});
-  if(!meta.ok)return null;
+  if(!meta.ok)return reject('identity_unavailable');
   const token=(await meta.text()).trim();
-  if(token.length>16000||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token))return null;
+  if(token.length>16000||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token))return reject('identity_invalid');
   const response=await fetch(url+'/api/chat',{
    method:'POST',cache:'no-store',
    headers:{authorization:'Bearer '+token,'content-type':'application/json'},
@@ -59,25 +63,29 @@ export async function interpretFirstWithLfm3(message:string,context:ContextRefs=
       'warehouse_stock_get','warehouse_material_locations_list']})}
     ]
    }),signal:AbortSignal.timeout(30000)});
-  if(!response.ok)return null;
-  const raw=await response.text();if(raw.length>MAX_BODY)return null;
-  const envelope=parseObject(raw);if(!envelope||envelope.done_reason==='length')return null;
+  if(!response.ok)return reject('model_http_error');
+  const raw=await response.text();if(raw.length>MAX_BODY)return reject('model_invalid_response');
+  const envelope=parseObject(raw);if(!envelope)return reject('model_invalid_response');
+  if(envelope.done_reason==='length')return reject('model_truncated');
   const msg=envelope.message;
-  if(!msg||typeof msg!=='object'||Array.isArray(msg))return null;
+  if(!msg||typeof msg!=='object'||Array.isArray(msg))return reject('model_invalid_response');
   const text=(msg as Record<string,unknown>).content;
-  if(typeof text!=='string'||text.length>MAX_BODY)return null;
+  if(typeof text!=='string'||text.length>MAX_BODY)return reject('model_invalid_response');
   const value=parseObject(text);
   if(!value||!kinds.includes(String(value.kind))||
     typeof value.intent!=='string'||typeof value.answer!=='string'||
-    !value.params||typeof value.params!=='object'||Array.isArray(value.params))return null;
-  if(value.kind==='operational')
+    !value.params||typeof value.params!=='object'||Array.isArray(value.params))return reject('model_invalid_response');
+  if(value.kind==='operational'){
+   report?.('model_operational');
    return {kind:'operational',intent:value.intent,params:value.params as Record<string,unknown>};
-  if(value.answer.length>900||!value.answer.trim())return null;
+  }
+  if(value.answer.length>900||!value.answer.trim())return reject('model_invalid_response');
   const answer=value.answer.replace(/[<>\u0000-\u001f\u007f]/g,'').trim();
-  if(!answer)return null;
+  if(!answer)return reject('model_invalid_response');
+  report?.(value.kind==='conversation'?'model_conversation':'model_unsupported');
   return value.kind==='conversation'?{kind:'conversation',answer}:{kind:'unsupported',answer};
- }catch{
-  // No tokens, prompts or model output in logs.
-  return null;
+ }catch(error){
+  // Never emit tokens, prompts or model text. Distinguish timeout from other failures.
+  return reject(error instanceof Error && error.name==='TimeoutError'?'request_failed':'request_failed');
  }
 }
