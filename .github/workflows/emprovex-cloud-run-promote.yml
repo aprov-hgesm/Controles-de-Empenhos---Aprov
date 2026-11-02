@@ -29,7 +29,7 @@ concurrency:
 jobs:
   promote:
     name: Human-approved promotion and automatic health rollback
-    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'Moriark')) && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.modified, 'ops/cloud-run/promotion-request.json')) }}
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'Moriark')) && (github.event_name == 'workflow_dispatch' || (!contains(github.event.head_commit.message, 'hosting-p0') && !contains(github.event.head_commit.message, 'ativacao-boletim'))) }}
     environment:
       name: ${{ github.event_name == 'workflow_dispatch' && 'emprovex-production' || 'emprovex-chat-authorized' }}
       url: https://emprovex.com.br
@@ -237,7 +237,7 @@ jobs:
         run: bash ops/admin-digest/activate.sh
 
   hosting-cache-p0:
-    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor == 'Moriark' && contains(github.event.head_commit.modified, 'ops/cloud-run-hosting/cache-release-request.json') }}
+    if: ${{ github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor == 'Moriark' && contains(github.event.head_commit.message, 'hosting-p0') }}
     environment:
       name: emprovex-chat-authorized
       url: https://emprovex.com.br
