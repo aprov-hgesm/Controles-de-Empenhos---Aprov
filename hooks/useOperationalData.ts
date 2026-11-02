@@ -95,6 +95,16 @@ function describeSectorAuthorizationFailure(code: string): string {
   return 'Não foi possível concluir a validação do acesso. Tente novamente e, se o problema persistir, contate a Administração EMPROVEX.';
 }
 
+/** A limpeza do marcador legado nao controla a sessao Firebase e pode ser
+ * bloqueada por politicas de privacidade/armazenamento do navegador. */
+function clearLegacyLocalUserSession() {
+  try {
+    window.localStorage.removeItem('local_user_session');
+  } catch {
+    // Falha de storage nao pode derrubar a tela publica nem impedir logout.
+  }
+}
+
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
  *
@@ -205,7 +215,7 @@ export function useOperationalData(
   };
 
   useEffect(() => {
-    localStorage.removeItem('local_user_session');
+    clearLegacyLocalUserSession();
     let active = true;
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -606,7 +616,7 @@ export function useOperationalData(
   };
 
   const signOutUser = async () => {
-    localStorage.removeItem('local_user_session');
+    clearLegacyLocalUserSession();
 
     if (
       user
