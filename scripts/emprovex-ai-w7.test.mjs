@@ -159,7 +159,7 @@ test('W7 generator is separately gated from W6 model access',()=>{
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1'}),true);
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1',K_SERVICE:'production'}),false);
 });
-let w3Calls=[],creativeCalls=0,modelFirstReply=null,historyFault='disabled';
+let w3Calls=[],creativeCalls=0,modelFirstReply=null,modelFirstSignal=null,historyFault='disabled';
 const mocked={
  '../authorize':{prepareAiAccess:async(token)=>{
   if(token==='Bearer invalid')throw Error('invalid auth');
@@ -180,7 +180,7 @@ const mocked={
    getHistory:async()=>{if(historyFault==='prepare')throw Error('synthetic store outage');return {id:'11111111-1111-4111-8111-111111111111'};},
    appendHistory:async()=>{if(historyFault==='append')throw Error('synthetic append outage');}
  },
- './modelFirst':{interpretFirstWithLfm3:async()=>modelFirstReply},
+ './modelFirst':{interpretFirstWithLfm3:async(_message,_refs,report)=>{if(modelFirstSignal)report?.(modelFirstSignal);return modelFirstReply;}},
  './lfm3':{
   proposeWithLfm3:async()=>null,
   respondConversationally:async()=>{creativeCalls++;return 'Texto gerado para teste.';}
@@ -263,7 +263,8 @@ test('R3 P0: Firestore history outage never blocks Ollama-first or authorized W3
   const modelReply=await ask('Escreva uma mensagem original de boas-vindas.');
   assert.equal(modelReply.payload.status,'ok');
   assert.equal(modelReply.payload.route,'CONVERSATIONAL');
-  assert.match(modelReply.payload.answer,/Bem-vindos/);
+  assert.match(modelReply.payload.answer,/Texto gerado para teste/);
+  assert.equal(modelReply.payload.metrics.modelFirstOutcome,'skipped_safe_writing');
   assert.equal(modelReply.payload.historyStatus,'unavailable');
   assert.equal(modelReply.payload.metrics.lfm3Calls,1);
   assert.equal(w3Calls.length,0);
@@ -279,7 +280,7 @@ test('R3 P0: Firestore history outage never blocks Ollama-first or authorized W3
   assert.equal(lostSave.payload.status,'ok');
   assert.equal(lostSave.payload.historyStatus,'unavailable');
   assert.equal(lostSave.payload.conversationId,undefined);
-  assert.match(lostSave.payload.answer,/Mensagem original/);
+  assert.match(lostSave.payload.answer,/Texto gerado para teste/);
   historyFault='working';
   const saved=await ask('Escreva uma mensagem original de boas-vindas.');
   assert.equal(saved.payload.status,'ok');
@@ -300,10 +301,11 @@ test('R3 safe creative text uses Ollama-first and does not fabricate operational
   const response=await ask('Escreva uma mensagem original de boas-vindas para novos usuários do EMPROVEX');
   assert.equal(response.payload.route,'CONVERSATIONAL');
   assert.equal(response.payload.status,'ok');
-  assert.match(response.payload.answer,/Bem-vindos ao EMPROVEX/);
+  assert.equal(response.payload.answer,'Texto gerado para teste.');
+  assert.equal(response.payload.metrics.modelFirstOutcome,'skipped_safe_writing');
   assert.equal(response.payload.metrics.lfm3Calls,1);
   assert.equal(w3Calls.length,0);
-  assert.equal(creativeCalls,0);
+  assert.equal(creativeCalls,1);
   modelFirstReply={kind:'conversation',answer:'Saldo inventado de 99999 reais'};
   const blocked=await ask('Escreva um relatório com dados do fornecedor Alfa e saldo');
   assert.notEqual(blocked.payload.answer,'Saldo inventado de 99999 reais');
@@ -312,6 +314,20 @@ test('R3 safe creative text uses Ollama-first and does not fabricate operational
   modelFirstReply=null;
   delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
   delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+ }
+});
+test('R3: model-first failure diagnostics are safe constants, not prompts',async()=>{
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ modelFirstReply=null;modelFirstSignal='request_timeout';
+ try{
+  const response=await ask('Oi, Eleonor');
+  assert.equal(response.payload.status,'ok');
+  assert.equal(response.payload.metrics.modelFirstOutcome,'request_timeout');
+  assert.equal(response.payload.metrics.lfm3Calls,1);
+  assert.equal(JSON.stringify(response.payload).includes('aa.bb.cc'),false);
+ }finally{
+  modelFirstSignal=null;
+  delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
  }
 });
 test('LFM3 creative output is bounded and does not send operational context',async()=>{
