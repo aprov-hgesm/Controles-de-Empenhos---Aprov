@@ -47,7 +47,7 @@ test('login anonimo tolera bloqueio de localStorage (modo privado restritivo)', 
       return remove.call(this, key);
     };
   });
-  const response = await page.goto('https://emprovex.com.br/central-empenhos', {
+  const response = await page.goto('http://127.0.0.1:3000/central-empenhos', {
     waitUntil: 'domcontentloaded', timeout: 45_000,
   });
   await page.waitForTimeout(5_000);
