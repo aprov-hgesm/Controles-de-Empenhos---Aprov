@@ -53,15 +53,15 @@ export async function runAiAsk(args:{
    else conversationId=(await createHistory(access,args.input.message)).id;
  }
  // Language model classifies first. Firestore and W3 remain exclusively server-authorized.
- const modelFirst=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&aiLfm3Enabled()
-   ?await interpretFirstWithLfm3(args.input.message,previous?.refs):null;
+ const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&aiLfm3Enabled();
+ const modelFirst=modelFirstAttempted?await interpretFirstWithLfm3(args.input.message,previous?.refs):null;
  const interpreted=interpret({message:args.input.message,now,
    scope:{sessionId:cookieState.session.sid,workspaceId:access.workspaceId},previous});
  const interpretationMs=interpreted.metrics.durationMs;
  let contractValidationMs=0,w3ExecutionMs=0,responseMs=0,examinedDocuments=0;
  let status:AiAskPayload['status'],answer:string;
  let result:AiResponse|undefined,query:AiAskPayload['query'],contextToken:string|undefined;
- let lfm3Calls=0,modelAudit:AiAskPayload['filterAudit']|undefined;
+ let lfm3Calls=modelFirstAttempted?1:0,modelAudit:AiAskPayload['filterAudit']|undefined;
  let modelOutcome:AiAskPayload['metrics']['modelOutcome']='not_attempted';
  if(modelFirst)modelOutcome=modelFirst.kind==='operational'?'model_json_received':
    modelFirst.kind==='conversation'?'model_answer_accepted':'candidate_rejected';
@@ -71,7 +71,7 @@ export async function runAiAsk(args:{
    previous:previous?.conversation,now});
  const operationalSignal=/\b(?:empenho|empenhos|fornecedor|fornecedores|nota fiscal|notas fiscais|nf|nfs|estoque|deposito|material|materiais|cronograma|saldo|ug|siafi|siscofis|pagamento|financeiro|cadastro|fatura)\b/i.test(args.input.message);
  const highRiskRoute=['UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route);
- const modelOperational=modelFirst?.kind==='operational' && !highRiskRoute &&
+ const modelOperational=modelFirst?.kind==='operational' && !highRiskRoute && interpreted.route!=='DETERMINISTIC' &&
    (operationalSignal||interpreted.route==='DETERMINISTIC'||interpreted.route==='MODEL_ELIGIBLE');
  const modelConversation=modelFirst?.kind==='conversation' && !operationalSignal &&
    !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route) &&
@@ -91,7 +91,7 @@ export async function runAiAsk(args:{
    // No W3 queries, authorizations, cached results or operational references
    // are exported through a conversation. Only a typed topic is retained.
    status=conversation.status;answer=conversation.answer;
-   if(conversation.modelEligible&&aiConversationalModelEnabled()&&!modelFirst){
+   if(conversation.modelEligible&&aiConversationalModelEnabled()&&!modelFirstAttempted){
      lfm3Calls=1;
      const generated=await respondConversationally(args.input.message,recordModelOutcome);
      if(generated){answer=generated;status='ok';}
@@ -134,9 +134,9 @@ export async function runAiAsk(args:{
    // workspace-bound W3 executor remain the only authority.
    status='fallback_unavailable';
    answer='Não consegui interpretar esta consulta com segurança. Tente reformular a pergunta.';
-   if(aiLfm3Enabled()&&(modelOperational||(!modelFirst&&interpreted.model))){
+   if(aiLfm3Enabled()&&(modelOperational||(!modelFirstAttempted&&interpreted.model))){
      lfm3Calls=1;
-     const proposed=modelOperational?{intent:modelFirst.intent,params:modelFirst.params}:
+     const proposed=modelOperational&&modelFirst?.kind==='operational'?{intent:modelFirst.intent,params:modelFirst.params}:
        await proposeWithLfm3(interpreted.model!,recordModelOutcome);
      if(proposed!==null){
        const candidate=validateModelCandidate(proposed,route);
