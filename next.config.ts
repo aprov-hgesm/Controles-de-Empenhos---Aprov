@@ -33,6 +33,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Somente HTML/RSC da entrada autenticada: scripts _next mantem cache imutavel.
+        source: '/central-empenhos',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
