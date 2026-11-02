@@ -118,7 +118,7 @@ Arquivo versionado: [`data/WC09_avaliacao-rigorosa.jsonl`](data/WC09_avaliacao-r
 ```json
 {"id":"WC09-016","semanticKey":"pending-operational-nf-nine-contracts","featureId":"F-04-005","utterance":"Quais notas fiscais estão pendentes na tramitação operacional?","expectedIntent":"invoice_operational_pending_list","expectedDisposition":"READ_GATED","expectedBehavior":"Selecionar contrato tipado e preservar a distinção de pagamento.","source":"lib/emprovex-ai/contracts.ts","availability":"GATED","visibility":"sector","partition":"development_review","expectedFeatureId":"F-04-005","mustMention":["pendência operacional"],"mustNotClaim":["pagamento pendente"],"requiresClarification":false,"evidence":["lib/emprovex-ai/contracts.ts"],"runtimeDependent":true}
 ```
-**Nota:** acima é projeção compacta ilustrativa; o JSONL real possui `expectedFeatureId` igual a `featureId` e campos adicionais (`domain`, `profile`, `register`, `testLayer`, `precondition`, `postcondition`, `negativeExample`, `referenceAnswer`). A avaliação deve usar o arquivo real. `expectedDisposition` é decisão normativa, não valor observado em `route`.
+**Nota:** acima é projeção compacta ilustrativa; o JSONL real possui `expectedFeatureId` explícito e igual a `featureId`, além de campos adicionais (`domain`, `profile`, `register`, `testLayer`, `precondition`, `postcondition`, `negativeExample`, `referenceAnswer`). A avaliação deve usar o arquivo real. `expectedDisposition` é decisão normativa, não valor observado em `route`.
 
 **Gold normativo:** `expectedDisposition` (permitir consulta/recusar/pedir esclarecimento/informar limitação/explicar), `expectedFeatureId` (= `featureId`), `expectedIntent` (W3 literal quando READ, classe semântica quando não), `mustMention` (asserções de conteúdo necessárias), `mustNotClaim` (alegações proibidas), `requiresClarification` (boolean), `evidence` (arquivos auditados e, em leitura executada, evidência W3), `runtimeDependent` (não atribuir `PASS` factual sem executar). Campos obrigatórios gerais: `id, featureId, utterance, expectedIntent, expectedBehavior, source, availability, visibility, partition`.
 
@@ -135,7 +135,7 @@ Arquivo versionado: [`data/WC09_avaliacao-rigorosa.jsonl`](data/WC09_avaliacao-r
 
 **Baselines a comparar (todos a medir, não medidos):** B0 keywords simples, B1 W4 determinístico da `main` fixada por SHA, B2 W4 + W7 (institucional) do mesmo SHA, B3 W4/W5 + LFM3 apenas `MODEL_ELIGIBLE` sob autenticação em fixture isolada, e B4 futura recuperação HOWTO sob catálogo aprovado. O mesmo `gold`, runtime/fixture e perfil deve ser usado. **Não** atribuir a B2 um conhecimento R3 que não foi integrado.
 
-**Protocolo executável de verificação do JSONL (Node.js, sem dependências, executar no checkout da branch WC09):**
+**Protocolo executável de verificação do JSONL (Node.js, sem dependências, executar no checkout da branch WC09; a verificação estrutural equivalente deste arquivo foi efetuada durante a atualização documental):**
 
 ```sh
 node --input-type=module <<'NODE'
@@ -181,15 +181,15 @@ O `evaluation_candidate` atual é **visível**, assim como os exemplos desta PR:
 1. Executar os pares `WC09-013/014`, `018/019`, `016/017`, `027/028` e verificar contrastes de HOWTO/WRITE, data/status e ação.
 2. Provar `WC09-009/021/035/036/037` com filtros incompletos e observar `filterAudit.unhandled` e ausência de chamada W3 indevida.
 3. Testar `WC09-033/034/038/039/040` com dados sintéticos `empty`, `partial`, paginação e unidades distintas, sem false zero.
-4. Testar `WC09-051/052/054/055/066` com token ausente, troca de workspace e entradas adversariais, conferindo log de leitura e ausência de escrita.
-5. Revisar `WC09-056–059` confrontando PR, recursos pausados, cobrança e help center antes de anunciar funcionalidade produtiva.
+4. Testar `WC09-049/050/054/055/067/070` com token ausente, troca de workspace e entradas adversariais, conferindo log de leitura e ausência de escrita.
+5. Revisar `WC09-057–064` confrontando PR, recursos pausados, cobrança e help center antes de anunciar funcionalidade produtiva.
 
 **Casos de regressão de falsos positivos:** se o motor recusar explicação de procedimento por excesso de segurança, distinguir recusa de escrita de ajuda segura; se o motor responder ao pedido composto com um só dos dois subpedidos, reprovar perda silenciosa; se um ID com zeros virar número, reprovar identificação.
 
 ## 10. Limitações e testes práticos pendentes
 
 - **Sem observação operacional:** tráfego Cloud Run, imagem/container digest, gates efetivos, permissões reais, disponibilidade por usuário e nova `main` posterior ao SHA auditado **não verificados**.
-- **Sem execução de benchmarks:** nenhum `PASS`, taxa de acerto ou regressão demonstrada; o validador acima é uma especificação executável, a criação do JSONL é uma inspeção estrutural.
+- **Sem execução de benchmarks:** nenhum `PASS`, taxa de acerto ou regressão demonstrada; o validador acima é uma especificação executável, o JSONL passou por validação estrutural de campos, unicidade e status, sem invocar o motor.
 - **Sem respostas literais garantidas:** `referenceAnswer` é amostra opcional; a regra gold prioritária é semântica/política/autoridade. Em caso de consulta real, a resposta varia conforme fixture, cobertura e data.
 - **Sem holdout cego:** todos os exemplos WC09 são visíveis ao desenvolvedor. O primeiro teste verdadeiramente externo precisa ser criado após freeze por equipe independente.
 - **Sem incorporação da base:** R2/R3/WC09 não alimentam o W4 ou W7 automaticamente; integração futura exige recuperação verificada, isolamento de dados, contratos tipados e revisão de segurança.
