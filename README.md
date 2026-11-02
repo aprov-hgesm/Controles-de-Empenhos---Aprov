@@ -11,7 +11,7 @@ O serviço executa Next.js standalone em Docker, com a identidade de serviço `e
 ## Fonte de verdade
 
 - [Memorial Oficial](docs/EMPROVEX_MEMORIAL_OFICIAL.md): estado produtivo vigente e histórico preservado.
-- [Memorial Oficial de Funcionalidades](docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md): catálogo de 242 procedimentos para operadores, Admin, Depósitos e Eleonor, com estados MAIN/PR/PAUSADO.
+- [Memorial Oficial de Funcionalidades + Bateria Eleonor R2](docs/EMPROVEX_FUNCIONALIDADES_MEMORIAL_OFICIAL.md): 242 procedimentos, 4.114 perguntas parametrizadas, 175 cenários operacionais e 41 diálogos com 123 mensagens, com estados MAIN/PR/PAUSADO.
 - [Procedimento de publicação Cloud Run](docs/EMPROVEX_RELEASE_CLOUD_RUN.md): **único fluxo canônico** para novas releases.
 - `ops/release-emprovex-cloud-run.ps1`: `-Status`, `-Stage` (nova revisão sem tráfego), `-PromoteRevision` e `-RollbackRevision`. Requer autorização explícita, projeto e identidade corretos.
 - `scripts/audit-cloud-run-legacy.mjs`: auditoria rápida de dependências acidentais da Vercel no runtime.
