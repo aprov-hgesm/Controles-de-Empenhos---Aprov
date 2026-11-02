@@ -21,8 +21,7 @@ const ID=/^[0-9a-f]{8}-[0-9a-f-]{27,40}$/i;
 export function historyEnabled():boolean {
  return process.env.EMPROVEX_AI_HISTORY_ENABLED==='1' && aiProductionPilotEnabled() &&
    process.env.K_SERVICE==='emprovex-cloudrun-candidate' &&
-   process.env.K_CONFIGURATION==='emprovex-cloudrun-candidate' &&
-   process.env.VERCEL_ENV===undefined;
+   process.env.K_CONFIGURATION==='emprovex-cloudrun-candidate';
 }
 function enabled():void {
  if(!historyEnabled())throw new AiExecutionError('AI_HISTORY_DISABLED',503);
