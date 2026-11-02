@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 // Somente GET sem autenticação, contas ou mutações. Reproduz sessão privada nova.
 test('login publico carrega em contexto sem cookies nem armazenamento', async ({ browser }) => {
@@ -24,6 +25,12 @@ test('login publico carrega em contexto sem cookies nem armazenamento', async ({
     })),
   }));
   console.log('[LOGIN_GUEST_DIAGNOSTIC]', JSON.stringify({ status, details, errors, rejects }));
+  const servedLogo = await page.request.get('https://emprovex.com.br/branding/emprovex-dark-transparent.png?v=20261102-r4');
+  const expectedLogo = readFileSync('public/branding/emprovex-dark-transparent.png');
+  const actualLogo = Buffer.from(await servedLogo.body());
+  console.log('[LOGIN_BRAND_SHA_CHECK]', JSON.stringify({ status: servedLogo.status(), bytes: actualLogo.length, matchesOfficial: actualLogo.equals(expectedLogo) }));
+  expect(servedLogo.status()).toBe(200);
+  expect(actualLogo.equals(expectedLogo), 'Logo servido difere do arquivo oficial do repositorio').toBe(true);
   await page.screenshot({ path: 'test-results/public-login-guest.png', fullPage: true });
   expect(status).toBe(200);
   expect(details.hasFailureBoundary, 'UI caiu no VisualModeSafetyBoundary').toBe(false);
