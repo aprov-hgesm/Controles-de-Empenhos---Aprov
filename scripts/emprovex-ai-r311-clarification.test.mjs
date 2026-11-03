@@ -258,3 +258,70 @@ test('R3.1.5 W3 result groups enable optional name refinement with no itemId or 
  assert.equal(clarification.continueClarification(pending,'Quais notas fiscais estão pendentes?').kind,'new_request');
  assert.equal(clarification.continueClarification(pending,'E os itens dessa?').kind,'new_request');
 });
+
+test('R3.1.8 where is arroz? presents real material choices rather than IDs',()=>{
+ const id1='mat_'+'a'.repeat(32),id2='mat_'+'b'.repeat(32);
+ const query={intent:'warehouse_material_locations_list',params:{materialQuery:'arroz'}};
+ const found={candidates:[
+   {materialId:id1,description:'ARROZ PARBOILIZADO TIPO 1',unit:'kg'},
+   {materialId:id2,description:'ARROZ BRANCO TIPO 1',unit:{code:'kg'}}
+ ]};
+ const next=clarification.startMaterialResolution(query.intent,query,'ambiguous','complete',found);
+ assert.equal(next.kind,'question');
+ assert.match(next.question,/ARROZ PARBOILIZADO/);
+ assert.match(next.question,/ARROZ BRANCO/);
+ assert.doesNotMatch(next.question,/mat_[a-f0-9]{32}/);
+ assert.match(next.question,/número da opção/i);
+ assert.equal(clarification.isValidPending(next.pending),true);
+ const selected=clarification.continueClarification(next.pending,'opção 2');
+ assert.equal(selected.kind,'ready');
+ assert.equal(selected.query.intent,'warehouse_material_locations_list');
+ assert.deepEqual(selected.query.params,{materialId:id2});
+ const byName=clarification.continueClarification(next.pending,'arroz integral');
+ assert.deepEqual(byName.query.params,{materialQuery:'arroz integral'});
+ const invalid=clarification.continueClarification(next.pending,'opção 9');
+ assert.equal(invalid.kind,'question');
+ assert.doesNotMatch(invalid.question,/mat_/);
+ assert.equal(clarification.continueClarification(next.pending,'Quais notas fiscais?').kind,'new_request');
+});
+test('R3.1.8 incomplete catalog never implies absence and accepts descriptive refinement',()=>{
+ const query={params:{materialQuery:'arroz'}};
+ const result=clarification.startMaterialResolution('warehouse_material_locations_list',
+   query,'partial','incomplete',null);
+ assert.equal(result.kind,'question');
+ assert.match(result.question,/especificar melhor/i);
+ assert.doesNotMatch(result.question,/ID canônico|código de barras/i);
+ assert.equal(result.pending.step,'material');
+ const refined=clarification.continueClarification(result.pending,'arroz parboilizado');
+ assert.equal(refined.kind,'ready');
+ assert.deepEqual(refined.query.params,{materialQuery:'arroz parboilizado'});
+});
+test('R3.1.8 signed choice cannot cross workspaces, change depot, or accept forged options',()=>{
+ const id='mat_'+'a'.repeat(32),depot='dep_'+'b'.repeat(32);
+ const query={params:{materialQuery:'arroz',depotId:depot}};
+ const choice=clarification.startMaterialResolution('warehouse_material_locations_list',
+   query,'ambiguous','complete',{candidates:[{materialId:id,description:'Arroz',unit:'kg'}]});
+ assert.equal(choice.kind,'question');
+ assert.equal(clarification.isValidPending(choice.pending),true);
+ assert.deepEqual(clarification.continueClarification(choice.pending,'1').query.params,
+   {materialId:id,depotId:depot});
+ assert.equal(clarification.isValidPending({...choice.pending,workspaceId:'other-workspace'}),false);
+ assert.equal(clarification.isValidPending({...choice.pending,options:[id,id]}),false);
+ assert.equal(clarification.isValidPending({...choice.pending,options:['malicious-id']}),false);
+ const old=process.env.EMPROVEX_AI_W45_CONTEXT_SECRET;
+ process.env.EMPROVEX_AI_W45_CONTEXT_SECRET='r318-test-key-'.repeat(5);
+ try{
+   const session=load('lib/emprovex-ai/integration/session.ts');
+   const a=session.sessionForRequest(undefined,'user-a','workspace-a',now.getTime());
+   const token=session.sealContext({sessionId:a.session.sid,workspaceId:'workspace-a',
+     updatedAt:now.getTime(),refs:{},pending:choice.pending},a.session,now.getTime());
+   assert.ok(!token.includes(id));
+   const restored=session.restoreContext(token,a.session,now.getTime()+1000);
+   assert.deepEqual(restored.pending,choice.pending);
+   const b=session.sessionForRequest(undefined,'user-b','workspace-b',now.getTime());
+   assert.throws(()=>session.restoreContext(token,b.session,now.getTime()+1000),/AI_CONTEXT_FORBIDDEN/);
+ }finally{
+   if(old===undefined)delete process.env.EMPROVEX_AI_W45_CONTEXT_SECRET;
+   else process.env.EMPROVEX_AI_W45_CONTEXT_SECRET=old;
+ }
+});
