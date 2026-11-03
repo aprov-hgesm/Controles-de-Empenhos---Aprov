@@ -91,7 +91,7 @@ export function WarehouseEssentialLocationLookup({
       const term = normalize(searchTerm);
       const candidates = materials.filter((item) =>
         item.status === 'active'
-        && normalize([item.id, item.description, ...item.aliases].join(' ')).includes(term)
+        && normalize([item.id, item.description, ...(Array.isArray(item.aliases) ? item.aliases : [])].join(' ')).includes(term)
       );
       const selected = candidates.slice(0, MAX_MATCHED_MATERIALS);
       const perMaterialBalances = await Promise.all(selected.map((item) =>
