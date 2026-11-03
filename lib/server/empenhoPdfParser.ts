@@ -410,6 +410,20 @@ function findNextDate(fields: string[], from: number): number {
   return -1;
 }
 
+/**
+ * SIAFI uses several equivalent ways to reference a procurement:
+ * "Pregão Eletrônico nº 90049/2025", "PE NR 90049/2025",
+ * "PE Nº 90049/2025", "SRP 90049/2025".
+ * Read only an explicitly prefixed number to avoid mistaking processo,
+ * UASG, credit note, or contract numbers for a pregão.
+ */
+export function extractPregaoNumberFromText(source: string): string | null {
+  const text = lookupText(source).replace(/[–—]/g, '-');
+  const pattern = /\b(?:pregao(?:\s+eletronico)?|p\s*e|srp)\b\s*(?:(?:n(?:umero|ro|r|[oº°.])?|numero)\s*[º°.:-]*\s*)?[:#-]?\s*(\d{1,6})\s*\/\s*(20\d{2})\b/ig;
+  const match = pattern.exec(text);
+  return match ? match[1] + '/' + match[2] : null;
+}
+
 function cleanDescriptionLine(value: string): string {
   const ncIndex = value.search(/\b20\d{2}NC\d+\b/i);
   return normalizeText(ncIndex >= 0 ? value.slice(0, ncIndex) : value);
@@ -490,13 +504,13 @@ function parseGeneralData(page: TextStream) {
 
   const notaCredito = fullText.match(/\b(20\d{2}NC\d{5,})\b/i)?.[1]?.toUpperCase() || null;
   const dispensa = fullText.match(/\bDISP(?:ENSA)?\s+ELETR(?:ONICA)?\.?\s+(\d{5}\/\d{4})\b/i);
-  const pregao = fullText.match(/\b(?:SRP|PREGAO(?:\s+ELETRONICO)?)\s+(\d{5}\/\d{4})\b/i);
+  const pregao = extractPregaoNumberFromText(fullText);
   const contrato = fullText.match(/\bCONTRATO\s+([0-9]{1,6}\/\d{4})\b/i)?.[1] || null;
 
   const hasDispensa = Boolean(dispensa)
     || lookupText(fullText).includes('dispensa de licitacao');
   const hasPregao = Boolean(pregao)
-    || /\bPREGAO\b/i.test(fullText);
+    || /\bpregao\b/i.test(lookupText(fullText));
 
   const modalidadeContratacao: EmpenhoContractingModality = hasDispensa
     ? 'DISPENSA_ELETRONICA'
@@ -507,7 +521,7 @@ function parseGeneralData(page: TextStream) {
   const numeroContratacao = modalidadeContratacao === 'DISPENSA_ELETRONICA'
     ? dispensa?.[1] || null
     : modalidadeContratacao === 'PREGAO'
-      ? pregao?.[1] || null
+      ? pregao : null
       : null;
 
   const naturezaDespesa = budgetValues[3] || null;
