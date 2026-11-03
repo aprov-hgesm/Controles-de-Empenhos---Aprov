@@ -10,6 +10,9 @@ export type PendingClarification={
  step:'ne'|'item'|'material'|'materialId';
  commitmentId?:string;
  materialLabel?:string;
+ depotId?:string;
+ // Server-derived Warehouse IDs, encrypted and signed; never ask the user for them.
+ options?:string[];
 };
 export type ClarificationAction=
  |{kind:'question';question:string;pending:PendingClarification}
@@ -31,14 +34,15 @@ const questionItem=(p:PendingClarification)=>
   '? Vou localizar o item pela Consulta de Itens; não é necessário informar itemId.';
 const questionItemSearch='Qual é o nome ou descrição do produto que deseja procurar na Consulta de Itens?';
 const questionMaterial=(p:PendingClarification)=>p.kind==='warehouse_location'
- ?'Qual material deseja localizar? Informe o nome completo, o código de barras ou o ID do material.'
- :'Qual material deseja consultar no estoque físico? Informe o nome completo, o código de barras ou o ID do material.';
-const questionCanonical='Há mais de uma possibilidade ou a busca por nome ficou incompleta. Informe o ID canônico (mat_...) ou o código de barras do material.';
+ ?'Qual material você quer localizar? Pode dizer o nome, a variedade ou a descrição.'
+ :'Qual material você quer consultar no estoque físico? Pode dizer o nome ou a descrição.';
+const questionCanonical='Há mais de uma possibilidade. Escolha uma das opções numeradas ou informe um nome mais específico.';
+const questionIncomplete='Ainda não consegui identificar esse material com segurança no catálogo autorizado. Pode especificar melhor o nome ou a variedade?';
 
 export function isValidPending(value:unknown):value is PendingClarification {
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
  const p=value as Record<string,unknown>;
- if(Object.keys(p).some(k=>!['kind','step','commitmentId','materialLabel'].includes(k))||
+ if(Object.keys(p).some(k=>!['kind','step','commitmentId','materialLabel','depotId','options'].includes(k))||
    typeof p.kind!=='string'||typeof p.step!=='string')return false;
  const commitment=p.kind==='commitment_balance'||p.kind==='commitment_item_balance'||p.kind==='commitment_item_search';
  if(!['commitment_balance','commitment_item_balance','commitment_item_search','warehouse_stock','warehouse_location'].includes(p.kind)||
@@ -49,6 +53,14 @@ export function isValidPending(value:unknown):value is PendingClarification {
  if(p.materialLabel!==undefined&&
    (typeof p.materialLabel!=='string'||p.materialLabel.length<2||p.materialLabel.length>90||
      !SAFE.test(p.materialLabel)))return false;
+ if(p.depotId!==undefined&&(!/^dep_[a-f0-9]{32}$/.test(String(p.depotId))||
+    p.kind!=='warehouse_location'))return false;
+ if(p.options!==undefined&&(
+    !['warehouse_stock','warehouse_location'].includes(p.kind)||
+    p.step!=='materialId'||!Array.isArray(p.options)||
+    !p.options.length||p.options.length>8||
+    p.options.some(id=>typeof id!=='string'||!MATERIAL_ID.test(id))||
+    new Set(p.options).size!==p.options.length))return false;
  if(p.step==='item'&&(!p.commitmentId||p.kind!=='commitment_item_balance'))return false;
  return true;
 }
@@ -94,14 +106,47 @@ export function startClarification(interpreted:Result,message:string):Clarificat
  }
  return null;
 }
-export function startMaterialResolution(intent:string,query:{params:Record<string,unknown>},status:string,coverage:string):ClarificationAction|null{
+export function startMaterialResolution(
+ intent:string,query:{params:Record<string,unknown>},status:string,coverage:string,
+ data:unknown=null
+):ClarificationAction|null{
  if(!['warehouse_stock_get','warehouse_material_locations_list'].includes(intent)||
   !['ambiguous','partial'].includes(status)||coverage!=='incomplete'&&status!=='ambiguous'||
   typeof query.params.materialQuery!=='string'||query.params.materialId||query.params.barcode)return null;
- const pending:PendingClarification={kind:intent==='warehouse_stock_get'?'warehouse_stock':'warehouse_location',
-  step:'materialId'};
- return {kind:'question',question:questionCanonical,pending};
+ const kind=intent==='warehouse_stock_get'?'warehouse_stock':'warehouse_location';
+ const depotId=query.params.depotId;
+ const extra=kind==='warehouse_location'&&typeof depotId==='string'&&/^dep_[a-f0-9]{32}$/.test(depotId)
+   ?{depotId}:{};
+ const queryName=query.params.materialQuery.trim().slice(0,90);
+ const rawCandidates=data&&typeof data==='object'&&!Array.isArray(data)
+   ?(data as Record<string,unknown>).candidates:null;
+ const options:Array<{id:string;description:string;unit:string}>=[];
+ if(Array.isArray(rawCandidates))for(const candidate of rawCandidates){
+   if(!candidate||typeof candidate!=='object'||Array.isArray(candidate))continue;
+   const row=candidate as Record<string,unknown>;
+   if(typeof row.materialId!=='string'||!MATERIAL_ID.test(row.materialId)||
+      typeof row.description!=='string'||!row.description.trim())continue;
+   if(options.some(x=>x.id===row.materialId))continue;
+   options.push({id:row.materialId,description:row.description.replace(/[<>\u0000-\u001f\u007f]/g,'').slice(0,105),
+     unit:typeof row.unit==='string'?row.unit.slice(0,20):''});
+   if(options.length===8)break;
+ }
+ if(options.length){
+   const pending:PendingClarification={kind,step:'materialId',...extra,
+     materialLabel:queryName,options:options.map(x=>x.id)};
+   const lines=options.map((x,i)=>(i+1)+'. '+x.description+
+      (x.unit?' ('+x.unit+')':'')).join('\n');
+   return {kind:'question',
+     question:'Encontrei '+(options.length===1?'esta opção':'estas opções')+
+       ' para “'+queryName+'”:\n'+lines+
+       '\nResponda com o número da opção ou uma descrição mais específica.'+
+       (coverage==='incomplete'?' A busca ainda pode ter outros resultados.':''),
+     pending};
+ }
+ const pending:PendingClarification={kind,step:'material',...extra};
+ return {kind:'question',question:questionIncomplete,pending};
 }
+
 /** Offers an optional contextual refinement after W3 returned multiple
  * real description/unit groups. Carries no balance or item data in the token.
  * The next reply must execute W3 again with the new name, never use a cached
@@ -169,8 +214,19 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
  }
  if(p.step==='materialId'){
   const v=message.replace(/^(?:materialId|id|barcode|codigo de barras|c[oó]digo)\s*[:#=-]?\s*/iu,'').trim();
-  if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase()});
-  if(BARCODE.test(v))return ready(p.kind,{barcode:v});
+  const option=v.match(/^(?:op(?:c|ç)[aã]o\s*[:#=-]?\s*)?(\d{1,2})$/iu)?.[1];
+  const scoped=p.depotId?{depotId:p.depotId}:{};
+  if(option&&p.options){
+    const selected=p.options[Number(option)-1];
+    return selected?ready(p.kind,{materialId:selected,...scoped}):
+      {kind:'question',question:'Escolha um número de 1 a '+p.options.length+
+        ' ou informe uma descrição mais específica.',pending:p};
+  }
+  if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase(),...scoped});
+  if(BARCODE.test(v))return ready(p.kind,{barcode:v,...scoped});
+  if(v.length>=2&&v.length<=120&&SAFE.test(v)&&
+     !/\b(?:exceto|excluindo|outro setor|outra ug|outro workspace|altere|registre|exclua|transfira)\b/iu.test(v))
+    return ready(p.kind,{materialQuery:v,...scoped});
   return {kind:'question',question:questionCanonical,pending:p};
  }
  if(message.length>120||!SAFE.test(message)||/\b(?:exceto|excluindo|outro setor|outra ug|outro workspace|altere|registre|exclua|transfira)\b/iu.test(message))
@@ -181,7 +237,8 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
    if(name.length<2||name.length>120)return {kind:'question',question:questionItemSearch,pending:p};
    return ready(p.kind,{materialQuery:name,...(p.commitmentId?{commitmentId:p.commitmentId}:{})});
  }
- if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase()});
- if(BARCODE.test(v))return ready(p.kind,{barcode:v});
- return ready(p.kind,{materialQuery:v});
+ const scoped=p.depotId?{depotId:p.depotId}:{};
+ if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase(),...scoped});
+ if(BARCODE.test(v))return ready(p.kind,{barcode:v,...scoped});
+ return ready(p.kind,{materialQuery:v,...scoped});
 }

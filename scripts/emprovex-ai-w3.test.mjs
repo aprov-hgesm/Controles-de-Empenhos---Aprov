@@ -157,3 +157,107 @@ test('W3.6 — saldo inexistente nao vira zero',async()=>{
   assert.equal(result.status,'partial');
   assert.equal(result.data.quantity,null);
 });
+
+test('W3.1.8 — arroz resolves longer authorized material descriptions; never returns a fake zero',async()=>{
+ const id1='mat_'+'a'.repeat(32),id2='mat_'+'b'.repeat(32);
+ const warehouse=load('lib/emprovex-ai/warehouse.ts',{
+   './reader':{
+     warehouseQuery:async()=>({rows:[],truncated:false,examined:0}),
+     warehouseMaterialNameSearch:async(_access,name)=>{
+       assert.equal(name,'arroz');
+       return {rows:[
+         {id:id1,data:{workspaceId:'setor-a',ug:'160416',
+           description:'ARROZ PARBOILIZADO TIPO 1',unit:'kg'}},
+         {id:id2,data:{workspaceId:'setor-a',ug:'160416',
+           description:'ARROZ BRANCO TIPO 1',unit:'kg'}}
+       ],examined:25,truncated:false};
+     },
+     warehouseDocument:async()=>{throw Error('Cannot choose an ambiguous material');}
+   },
+   '../warehouse/barcode':{createWarehouseBarcodeId:async()=>''}
+ });
+ const result=await warehouse.executeWarehouse(access,{version:'emprovex.ai.query.v1',
+   intent:'warehouse_material_locations_list',params:{materialQuery:'arroz'}});
+ assert.equal(result.status,'ambiguous');
+ assert.equal(result.coverage,'complete');
+ assert.equal(result.data.candidates.length,2);
+ assert.equal(result.data.candidates[0].materialId,id1);
+ assert.equal(result.data.candidates[1].description,'ARROZ BRANCO TIPO 1');
+ assert.equal(result.examinedDocuments,25);
+});
+test('W3.1.8 — incomplete catalog with a candidate cannot imply uniqueness or zero',async()=>{
+ const id1='mat_'+'a'.repeat(32);
+ const warehouse=load('lib/emprovex-ai/warehouse.ts',{
+   './reader':{
+     warehouseQuery:async()=>({rows:[],truncated:false,examined:0}),
+     warehouseMaterialNameSearch:async()=>({rows:[{id:id1,data:{workspaceId:'setor-a',
+       ug:'160416',description:'ARROZ PARBOILIZADO',unit:'kg'}}],examined:1200,truncated:true}),
+     warehouseDocument:async()=>{throw Error('Should not assume a unique product in a partial scan');}
+   },
+   '../warehouse/barcode':{createWarehouseBarcodeId:async()=>''}
+ });
+ const result=await warehouse.executeWarehouse(access,{version:'emprovex.ai.query.v1',
+   intent:'warehouse_material_locations_list',params:{materialQuery:'arroz'}});
+ assert.equal(result.status,'partial');
+ assert.equal(result.coverage,'incomplete');
+ assert.equal(result.data.candidates.length,1);
+ assert.equal(result.truncated,true);
+ assert.match(result.limitations.join(' '),/parcial/i);
+});
+
+test('W3.1.8 — paginated Warehouse scanner finds arroz in later authorized page',async()=>{
+ const store=load('lib/server/warehouseFirestoreTransaction.ts');
+ const previousFetch=globalThis.fetch;
+ const workspace='setor-a',id='mat_'+'c'.repeat(32);
+ const prefix='warehouse/'+workspace+'/materials/';
+ const fields=(name)=>({description:{stringValue:name},
+   workspaceId:{stringValue:workspace},ug:{stringValue:'160416'}});
+ let calls=0;
+ globalThis.fetch=async (url,options)=>{
+   calls++;
+   assert.match(String(url),/\/warehouse\/setor-a\/materials\?/);
+   assert.equal(options.headers.authorization,'Bearer synthetic-token');
+   const page=new URL(String(url)).searchParams.get('pageToken');
+   const root=String(url).split('/documents/')[0].replace('https://firestore.googleapis.com/v1/','');
+   const doc=(identifier,name)=>({name:root+'/documents/'+prefix+identifier,
+     updateTime:'2026-11-03T00:00:00Z',fields:fields(name)});
+   if(!page)return {ok:true,json:async()=>({documents:[doc('mat_'+'a'.repeat(32),'Queijo')],
+     nextPageToken:'second'})};
+   assert.equal(page,'second');
+   return {ok:true,json:async()=>({documents:[doc(id,'ARROZ PARBOILIZADO TIPO 1')]})};
+ };
+ try {
+   const found=await store.warehouseAdminFindMaterialsByName('synthetic-token',workspace,'arroz',400,12);
+   assert.equal(calls,2);
+   assert.equal(found.rows.length,1);
+   assert.equal(found.examined,2);
+   assert.equal(found.incomplete,false);
+   assert.match(found.rows[0].data.description,/ARROZ/);
+ }finally{globalThis.fetch=previousFetch;}
+});
+test('W3.1.8 — paginated scanner marks overflow and forbids foreign document paths',async()=>{
+ const store=load('lib/server/warehouseFirestoreTransaction.ts');
+ const previousFetch=globalThis.fetch;
+ const documentRoot=url=>String(url).split('/documents/')[0]
+   .replace('https://firestore.googleapis.com/v1/','')+'/documents/';
+ const doc=(root,id,name)=>({name:root+'warehouse/setor-a/materials/'+id,
+   updateTime:'2026-11-03T00:00:00Z',
+   fields:{description:{stringValue:name},workspaceId:{stringValue:'setor-a'},
+     ug:{stringValue:'160416'}}});
+ try {
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[
+     doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz branco'),
+     doc(documentRoot(url),'mat_'+'b'.repeat(32),'Arroz integral'),
+     doc(documentRoot(url),'mat_'+'c'.repeat(32),'Arroz parboilizado')
+   ]})});
+   const result=await store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz',100,2);
+   assert.equal(result.rows.length,2);
+   assert.equal(result.incomplete,true);
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[{
+     ...doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz'),
+     name:documentRoot(url)+'warehouse/setor-b/materials/mat_'+'a'.repeat(32)
+   }]})});
+   await assert.rejects(()=>store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz'),
+     /WAREHOUSE_MATERIAL_DISCOVERY_SCOPE/);
+ }finally{globalThis.fetch=previousFetch;}
+});

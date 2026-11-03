@@ -149,8 +149,12 @@ test('Warehouse: an item beyond the first 21 is found by bounded fallback',async
   './reader':{
    warehouseQuery:async(_access,domain,filter,max)=>{
     seen.push({domain,filter,max});
-    return filter?{rows:[],truncated:false,examined:0}:
-     {rows,truncated:false,examined:80};
+    return {rows:[],truncated:false,examined:0};
+   },
+   warehouseMaterialNameSearch:async(_access,name)=>{
+    seen.push({domain:'materials',method:'nameDiscovery',name});
+    return {rows:rows.filter(r=>r.data.description.toLowerCase().includes(name)),
+      truncated:false,examined:80};
    },
    warehouseDocument:async(_access,domain)=>{
     assert.equal(domain,'balances');
@@ -160,15 +164,14 @@ test('Warehouse: an item beyond the first 21 is found by bounded fallback',async
  });
  const result=await executeWarehouse(access,{intent:'warehouse_stock_get',params:{materialQuery:'maionese'}});
  assert.equal(result.status,undefined);assert.equal(result.data.quantity,9);
- assert.equal(seen[1].max,101);assert.equal(result.examinedDocuments,81);
+ assert.deepEqual(seen[1],{domain:'materials',method:'nameDiscovery',name:'maionese'});
+ assert.equal(result.examinedDocuments,81);
 });
 test('Warehouse: incomplete fallback can never claim definitive absence or zero balance',async()=>{
  const {executeWarehouse}=load('lib/emprovex-ai/warehouse.ts',{
   './reader':{
-   warehouseQuery:async(_access,_domain,filter)=>filter?
-    {rows:[],truncated:false,examined:0}:
-    {rows:Array.from({length:101},(_,i)=>({id:'test-'+i,
-     data:{workspaceId:ws,ug,description:'Outro '+i}})),truncated:true,examined:101},
+   warehouseQuery:async()=>({rows:[],truncated:false,examined:0}),
+   warehouseMaterialNameSearch:async()=>({rows:[],truncated:true,examined:1200}),
    warehouseDocument:async()=>{throw Error('should not read balance');}
   },'../warehouse/barcode':{createWarehouseBarcodeId:async()=> 'unused'}
  });
