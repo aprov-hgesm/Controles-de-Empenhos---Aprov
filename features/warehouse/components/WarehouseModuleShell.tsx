@@ -20,7 +20,7 @@ import {
 } from '../../../lib/platformSessionLease';
 import { flushWorkspaceUsageTelemetry } from '../../../lib/workspaceUsageTelemetry';
 import { usePlatformBranding } from '../../../hooks/usePlatformBranding';
-import { getWarehouseSection, getWarehouseSectionForPathname, WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
+import { getWarehouseSectionForPathname, WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 import { WarehouseSidebar } from './WarehouseSidebar';
 import { WarehouseTabNavigationProvider } from './WarehouseTabNavigation';
 import { WarehouseTabContent } from './WarehouseTabContent';
@@ -65,49 +65,26 @@ export function WarehouseModuleShell({
     pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname
   ));
 
+  // No Essencial, Início e Meus Depósitos passam a exibir consulta textual.
+  // Não redirecionar Início para Controle de Materiais nem pré-carregar o 3D.
   useEffect(() => {
     if (!visualModeReady) return;
-    const redirectHome = mode === 'essencial' && isPrimaryRoute && routeSection.id === 'home';
-    setActiveSectionId(redirectHome ? 'control' : routeSection.id);
-    if (redirectHome) {
-      // O acesso já passou pela autorização do WarehouseProtectedLayout.
-      setHasLocalTabNavigation(true);
-      const url = new URL(window.location.href);
-      url.pathname = getWarehouseSection('control').href;
-      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    }
-  }, [routeSection.id, isPrimaryRoute, mode, visualModeReady]);
+    setActiveSectionId(routeSection.id);
+  }, [routeSection.id, visualModeReady]);
 
   useEffect(() => {
     const restoreTab = () => {
-      const currentPath = window.location.pathname;
-      const redirectHome = mode === 'essencial' && (
-        currentPath === '/central-depositos' || currentPath === '/central-depositos/'
-      );
-      const restoredSection = redirectHome
-        ? getWarehouseSection('control')
-        : getWarehouseSectionForPathname(currentPath);
-      setActiveSectionId(restoredSection.id);
-      if (redirectHome) {
-        setHasLocalTabNavigation(true);
-        window.history.replaceState(
-          null,
-          '',
-          restoredSection.href + window.location.search + window.location.hash
-        );
-      }
+      setActiveSectionId(getWarehouseSectionForPathname(window.location.pathname).id);
       setSidebarOpen(false);
     };
     window.addEventListener('popstate', restoreTab);
     return () => window.removeEventListener('popstate', restoreTab);
-  }, [mode]);
+  }, []);
 
   const navigateWarehouseTab = useCallback((href: string) => {
     const targetUrl = new URL(href, window.location.origin);
     const requestedTarget = WAREHOUSE_SECTIONS.find((item) => item.href === targetUrl.pathname);
-    const target = mode === 'essencial' && requestedTarget?.id === 'home'
-      ? getWarehouseSection('control')
-      : requestedTarget;
+    const target = requestedTarget;
 
     if (!href.startsWith('/') || href.startsWith('//') || targetUrl.origin !== window.location.origin) {
       // URLs externas não devem ser aceitas neste mecanismo interno.
@@ -131,18 +108,15 @@ export function WarehouseModuleShell({
       // Next App Router; não dispara fetch de nova rota nem desmonta o shell.
       window.history.pushState(null, '', nextUrl);
     }
-  }, [activeSectionId, mode]);
+  }, [activeSectionId]);
 
-  const effectiveSectionId = mode === 'essencial' && activeSectionId === 'home'
-    ? 'control'
-    : activeSectionId;
-  const activeSection = WAREHOUSE_SECTIONS.find((item) => item.id === effectiveSectionId) || routeSection;
-  // Uma rota direta /central-depositos no Essencial nunca renderiza a landing.
+  const activeSection = WAREHOUSE_SECTIONS.find((item) => item.id === activeSectionId) || routeSection;
+  // URLs diretas usam a página Next; navegação interna preserva o shell.
   const renderLocalSection = isPrimaryRoute && (
     hasLocalTabNavigation || activeSection.id !== routeSection.id
   );
   const section = activeSection.id;
-  const isImmersive = section === 'home' || section === 'overview';
+  const isImmersive = mode === 'premium' && (section === 'home' || section === 'overview');
   const currentUser = auth.currentUser;
   const showMobileAccess =
     normalizePlatformEmail(workspaceContext.email) === HGESM_SECTOR_EMAIL;
@@ -245,7 +219,9 @@ export function WarehouseModuleShell({
                       {activeSection.label}
                     </h1>
                     <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-                      {activeSection.description}
+                      {mode === 'essencial' && (section === 'home' || section === 'overview')
+                        ? 'Consulta textual de materiais por depósito, local e subposição, sem visualização 3D.'
+                        : activeSection.description}
                     </p>
                   </div>
 
