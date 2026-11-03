@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-geb83e077c9ea-38",
-  "sourceSha": "eb83e077c9ea8fd1b51124e91e9406e519208f6a",
-  "reason": "Melhorias operacionais solicitadas pelo fundador na Central de Empenhos e Notas Fiscais em 03/11/2026: PR #505 (seletor pesquisável de NE para cadastrar NF, reconhecimento de PE NR nos PDFs SIAFI, edição da observação da NE), conforme chat. Stage validado no workflow 41736734945; CI rápido, testes específicos e proteção do núcleo PASS. Promover imagem g eb83e077c9ea 38 para 100% com rollback automático por saúde. Não alterar dados Firestore, documentos PDF, IAM, contratos nem faturamento."
+  "revision": "emprovex-cloudrun-candidate-g789d9334e7ad-39",
+  "sourceSha": "789d9334e7adfba51a43cb29664b3b7f23e32766",
+  "reason": "Melhorias solicitadas pelo usuario na Administracao do EMPROVEX em 03/11/2026, PR #506: placas do bairro com Aprov + sigla institucional da OM, detalhes do setor ao clicar no predio; somente visual e dados ja carregados. Revisao 39 aprovada pelo stage workflow 41742045835 e CI rapido/core protection PASS. Promover para 100% do trafego com rollback automatico em qualquer falha de saude. Nao alterar Firestore, workspaces, IAM, documentos ou cobranca."
 }
