@@ -188,3 +188,48 @@ test('Warehouse: location metadata reads overlap and reuse the same promises',as
  assert.equal(readCount,2);
  assert.ok(maxActive>=2,'location and depot can load concurrently');
 });
+
+test('History: first append reuses Firestore creation version without a second GET',async()=>{
+ const keys=['K_SERVICE','K_CONFIGURATION','EMPROVEX_AI_HISTORY_ENABLED'];
+ const saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+ const oldFetch=globalThis.fetch;
+ process.env.K_SERVICE='emprovex-cloudrun-candidate';
+ process.env.K_CONFIGURATION='emprovex-cloudrun-candidate';
+ process.env.EMPROVEX_AI_HISTORY_ENABLED='1';
+ const requests=[];
+ globalThis.fetch=async(url,opts={})=>{
+  const method=opts.method||'GET',address=String(url);
+  requests.push({method,address});
+  if(method==='GET'&&address.includes('pageSize='))return {ok:true,status:200,
+   json:async()=>({documents:[]})};
+  if(method==='POST'){
+   const body=JSON.parse(opts.body);
+   return {ok:true,status:200,json:async()=>({updateTime:'2026-11-02T15:00:00Z',
+    fields:body.fields})};
+  }
+  if(method==='PATCH'){
+   assert.match(address,/currentDocument\.updateTime=/);
+   return {ok:true,status:200};
+  }
+  throw Error('Unexpected network request: '+method+' '+address);
+ };
+ try{
+  const store=load('lib/emprovex-ai/conversation/historyStore.ts',{
+   '../integration/environment':{aiProductionPilotEnabled:()=>true},
+   '../response':{AiExecutionError:class AiExecutionError extends Error{
+    constructor(code,status){super(code);this.httpStatus=status;this.code=code;}
+   }}
+  });
+  const thread=await store.createHistory(access,'Bom dia');
+  await store.appendHistory(access,thread.id,'Bom dia','Olá!',{
+   status:'ok',route:'CONVERSATIONAL'},thread);
+  assert.equal(requests.filter(x=>x.method==='PATCH').length,1);
+  assert.equal(requests.filter(x=>x.method==='GET'&&!x.address.includes('pageSize=')).length,0);
+ }finally{
+  globalThis.fetch=oldFetch;
+  for(const key of keys){
+   if(saved[key]===undefined)delete process.env[key];
+   else process.env[key]=saved[key];
+  }
+ }
+});
