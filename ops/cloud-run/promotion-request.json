@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g4ba7a19de62d-32",
-  "sourceSha": "4ba7a19de62d7128bd6b98c891bb61ddde1bee87",
-  "reason": "Autorizacao expressa nesta conversa, em 2026-11-03: /goal execute as melhorias e publique. PR #499 integrado na main; Performance Essencial R3.2 para Notas Fiscais, Painel e economia de rede. Testes dedicados, TypeScript, Core Protection, Fast CI e multi-tenant aprovados. Stage Cloud Run run 41658491025 SUCCESS com zero trafego, health, protecao de billing e identidade runtime; promover revisao exata a 100% e manter rollback automatico."
+  "revision": "emprovex-cloudrun-candidate-gce77d90556a4-33",
+  "sourceSha": "ce77d90556a4dfc6d45a4f43a63ace7483c0ae85",
+  "reason": "Continuidade da autorizacao de execucao e publicacao no chat (/goal execute as melhorias e publique), complementada pelo pedido de 2026-11-03 para substituir o 3D de Inicio e Meus Depositos no Modo Essencial por consulta textual leve. PR #500 integrado na main, Fast CI/typecheck/isolamento Warehouse/contratos de consulta PASS; Cloud Run stage run 41662252602 SUCCESS com health, protecao billing e zero trafego. Autorizar promocao da revisao exata a 100% com rollback automatico."
 }
