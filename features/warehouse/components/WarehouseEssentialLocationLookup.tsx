@@ -25,7 +25,7 @@ const MAX_MATCHED_MATERIALS = 12;
 const INITIAL_POSITION_COUNT = 30;
 
 const normalize = (value: string) => value.normalize('NFD')
-  .replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+  .replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
 
 type LookupData = {
   materials: WarehouseMaterial[];
