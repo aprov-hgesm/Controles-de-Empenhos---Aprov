@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g30f94cde210b-34",
-  "sourceSha": "30f94cde210b3c169537ec78d3d7f75d3c380249",
-  "reason": "Promocao expressamente solicitada pelo usuario em 2026-11-03 apos homologacao 11/11 da PR #501, correcao PR #500 Warehouse, aceite juridico sem consulta redundante e ajuste historico Dashboard. Revisao zero-trafego g30f94cde210b-34 certificada no workflow 41720522872. Ativar 100% no Cloud Run para testes reais no navegador com rollback automatico para g4ba7a19de62d-32 em caso de falha de saude. Nao modificar dados Firestore, permissoes, IAM ou cobranca."
+  "revision": "emprovex-cloudrun-candidate-g005f8ee98642-35",
+  "sourceSha": "005f8ee986422d8aa11a93a6b883e81fef139fbb",
+  "reason": "Promocao expressamente autorizada pelo usuario em 2026-11-03 para testar no site oficial a PR #502 (padronizacao das etiquetas e prateleiras HGeSM/6 Bda Inf Bld). Revisao zero-trafego g005f8ee98642-35 validada no workflow 41726603122. Promover 100% do trafego com rollback automatico em caso de falha de saude. Nao alterar registros Firestore, IAM, credenciais ou cobranca."
 }
