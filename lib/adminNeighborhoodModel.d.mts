@@ -3,6 +3,12 @@ export interface NeighborhoodResident {
   id: string;
   label: string;
   email: string;
+  workspaceName: string | null;
+  workspaceStatus: 'active' | 'disabled' | null;
+  organizationName: string | null;
+  organizationShortName: string | null;
+  sectionName: string | null;
+  defaultDeliveryLocation: string | null;
   workspaceId: string | null;
   ug: string | null;
   kind: 'admin' | 'sector';
@@ -19,6 +25,19 @@ export interface NeighborhoodAccount {
   ug?: string;
   lastLoginAt?: string;
 }
+export interface NeighborhoodWorkspace {
+  id: string;
+  name: string;
+  status: 'active' | 'disabled';
+  ug?: string;
+  authorizedEmail: string;
+  institutionalProfile: {
+    organizationName: string;
+    organizationShortName?: string;
+    sectionName: string;
+    defaultDeliveryLocation?: string;
+  };
+}
 export interface NeighborhoodSession {
   uid: string;
   accountEmail: string;
@@ -26,10 +45,14 @@ export interface NeighborhoodSession {
   lastSeenAt: string;
 }
 export const NEIGHBORHOOD_BLOCK_SIZE: number;
+export function neighborhoodSectorLabel(
+  workspace: NeighborhoodWorkspace | null | undefined,
+  account: NeighborhoodAccount
+): string;
 export function buildNeighborhoodResidents(
   accounts?: NeighborhoodAccount[],
   sessions?: NeighborhoodSession[],
-  options?: { now?: number; sessionsAvailable?: boolean }
+  options?: { now?: number; sessionsAvailable?: boolean; workspaces?: NeighborhoodWorkspace[] }
 ): NeighborhoodResident[];
 export function neighborhoodQuota(snapshot: {
   billableReadUnits: number;
