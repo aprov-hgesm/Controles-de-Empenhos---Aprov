@@ -53,7 +53,7 @@ export function isValidPending(value:unknown):value is PendingClarification {
  return true;
 }
 function itemLabel(message:string):string|undefined{
- const match=message.match(/\b(?:item|material|produto)\s+(?:de\s+)?([\p{L}][\p{L}\s/-]{1,70}?)(?=\s+(?:nos?|das?|em)\s+(?:empenhos?|ne|notas? de empenho)\b|[?!.]|$)/iu);
+ const match=message.match(/\b(?:item|material|produto)\s+(?:de\s+)?([\p{L}][\p{L}\s/-]{1,70}?)(?=\s+(?:nos?|nas?|das?|dos?|em)\s+(?:empenhos?|ne|notas? de empenho)\b|[?!.]|$)/iu);
  const v=match?cleaned(match[1]):'';
  return v.length>=2&&SAFE.test(v)?v.slice(0,90):undefined;
 }
