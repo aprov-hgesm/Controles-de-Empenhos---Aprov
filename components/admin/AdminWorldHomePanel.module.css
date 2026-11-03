@@ -199,6 +199,34 @@
 .sceneWaterCard small { display: block; margin-top: 8px; font-size: 9px; line-height: 1.5; color: #8cabb9; }
 .waterTrack { height: 5px; overflow: hidden; border-radius: 99px; margin-top: 7px; background: #294a58; }
 .waterTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #54bcd0, #b2fbed); }
+.sceneSectorDetails {
+  position: absolute;
+  z-index: 5;
+  right: 18px;
+  bottom: 19px;
+  width: min(315px, 46%);
+  max-height: 72%;
+  overflow: auto;
+  border: 1px solid rgba(140, 228, 214, .42);
+  border-radius: 17px;
+  padding: 14px;
+  background: rgba(4, 22, 39, .95);
+  box-shadow: 0 16px 48px rgba(0, 8, 20, .62);
+  backdrop-filter: blur(13px);
+}
+.sceneSectorHeading { display: flex; align-items: center; gap: 9px; }
+.sceneSectorIcon { display: grid; flex-shrink: 0; place-items: center; width: 29px; height: 29px; border-radius: 9px; color: #9bf7dc; background: rgba(135, 233, 204, .11); }
+.sceneSectorHeadingText { min-width: 0; flex: 1; }
+.sceneSectorHeadingText p { color: #8db3c1; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.sceneSectorHeadingText strong { display: block; color: #f5fdff; font-size: 15px; font-weight: 850; overflow-wrap: anywhere; }
+.sceneSectorHeading button { display: grid; place-items: center; flex-shrink: 0; width: 27px; height: 27px; border-radius: 7px; color: #c6dce4; background: rgba(230, 250, 255, .08); }
+.sceneSectorHeading button:hover, .sceneSectorHeading button:focus-visible { background: rgba(230, 250, 255, .19); color: #fff; }
+.sceneSectorOrganization { margin-top: 9px; font-size: 11px; line-height: 1.5; color: #d0e6eb; overflow-wrap: anywhere; }
+.sceneSectorGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-top: 12px; }
+.sceneSectorGrid div { min-width: 0; }
+.sceneSectorGrid dt { color: #89abba; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.sceneSectorGrid dd { margin-top: 2px; color: #f0fdff; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.sceneSectorEmail { margin-top: 11px; padding-top: 10px; border-top: 1px solid rgba(160, 228, 225, .17); color: #a8c9d9; font-size: 10px; overflow-wrap: anywhere; }
 .sceneCaption {
   position: absolute;
   left: 27px;

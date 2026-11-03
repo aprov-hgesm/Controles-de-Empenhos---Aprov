@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   buildNeighborhoodResidents, neighborhoodPages, neighborhoodQuota,
-  partitionNeighborhoodResidents,
+  partitionNeighborhoodResidents, neighborhoodSectorLabel,
 } from '../lib/adminNeighborhoodModel.mjs';
 
 const NOW = Date.parse('2026-10-19T12:00:00Z');
@@ -128,4 +128,44 @@ test('Início ADM é apenas apresentação; não acrescenta Firestore reads/writ
   for(const component of [panel,scene,architecture]){
     assert.doesNotMatch(component,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
   }
+});
+
+test('placas usam sigla real da OM e jamais o nome do e-mail',()=>{
+  const known=[
+    {id:'hgesm-aprov',name:'Aprovisionamento HGeSM',status:'active',ug:'160416',
+      authorizedEmail:'aprov1hgesm@gmail.com',
+      institutionalProfile:{organizationName:'Hospital Geral de Santa Maria',organizationShortName:'HGeSM',sectionName:'Aprovisionamento'}},
+    {id:'bda6-aprov',name:'Aprovisionamento 6ª Bda',status:'active',ug:'160413',
+      authorizedEmail:'aprov6bda@example.com',
+      institutionalProfile:{organizationName:'Comando da 6ª Brigada de Infantaria Blindada',organizationShortName:'6ª Bda Inf Bld',sectionName:'Setor de Aprovisionamento'}},
+  ];
+  const a=[{email:'aprov1hgesm@gmail.com',workspaceId:'hgesm-aprov',ug:'160416',accountType:'sector',status:'active'},
+    {email:'aprov6bda@example.com',workspaceId:'bda6-aprov',ug:'160413',accountType:'sector',status:'active'}];
+  const res=buildNeighborhoodResidents(a,[],{now:NOW,sessionsAvailable:false,workspaces:known});
+  assert.equal(res.find(r=>r.ug==='160416').label,'Aprov HGeSM');
+  const bda=res.find(r=>r.ug==='160413');
+  assert.equal(bda.label,'Aprov 6ª Bda Inf Bld');
+  assert.equal(bda.organizationName,'Comando da 6ª Brigada de Infantaria Blindada');
+  assert.equal(bda.sectionName,'Setor de Aprovisionamento');
+  assert.equal(bda.workspaceName,'Aprovisionamento 6ª Bda');
+  assert.equal(bda.presence,'unknown');
+  assert.equal(neighborhoodSectorLabel(null,{accountType:'sector',ug:'123456'}),'Aprov UG 123456');
+  assert.equal(neighborhoodSectorLabel(null,{accountType:'platformAdmin'}),'Admin EMPROVEX');
+});
+
+test('clicar no prédio abre detalhes institucionais sem criar novas leituras',()=>{
+  const panel=readFileSync('components/admin/AdminWorldHomePanel.tsx','utf8');
+  const view=readFileSync('components/admin/PlatformAdminView.tsx','utf8');
+  const world=readFileSync('components/admin/AdminWorldArchitecture.tsx','utf8');
+  assert.match(view,/workspaces=\\{visibleWorkspaces\\}/);
+  assert.match(panel,/workspaces,\\s*now,\\s*sessionsAvailable|now, sessionsAvailable, workspaces/);
+  assert.match(panel,/data-testid="admin-world-sector-details"/);
+  assert.match(panel,/selected\\.organizationName/);
+  assert.match(panel,/selected\\.sectionName/);
+  assert.match(panel,/selected\\.ug/);
+  assert.match(panel,/selected\\.email/);
+  assert.match(panel,/setSelectedId\\(null\\)/);
+  assert.match(world,/data-testid=\\{isPerson\\?'admin-world-sector-building'/);
+  assert.match(world,/resident\\?\\.label/);
+  assert.doesNotMatch(panel,/\\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\\s*\\(/);
 });

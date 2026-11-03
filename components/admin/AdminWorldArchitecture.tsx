@@ -66,12 +66,12 @@ export function CityBuilding({project, plot, resident, selected=false, onSelect,
   };
   return (
     <g role={isPerson?'button':undefined} tabIndex={isPerson?0:undefined}
-      aria-label={resident ? resident.email+' · '+(lit?'sessão válida':resident.presence==='unknown'?'presença indisponível':resident.disabled?'conta suspensa':'sem sessão válida') : central?'Centro da plataforma EMPROVEX':undefined}
+      aria-label={resident ? resident.label+' · '+resident.email+' · '+(lit?'sessão válida':resident.presence==='unknown'?'presença indisponível':resident.disabled?'conta suspensa':'sem sessão válida') : central?'Centro da plataforma EMPROVEX':undefined}
       aria-pressed={isPerson?selected:undefined} onKeyDown={handleKey}
       onClick={resident?()=>onSelect?.(id):undefined}
       className={isPerson?styles.houseGroup:undefined} data-presence={resident?.presence}
-      data-resident-id={resident?.id}>
-      <title>{resident ? resident.email : central?'EMPROVEX · Centro administrativo':'Edifício cenográfico'}</title>
+      data-resident-id={resident?.id} data-testid={isPerson?'admin-world-sector-building':undefined}>
+      <title>{resident ? resident.label+' · '+resident.email : central?'EMPROVEX · Centro administrativo':'Edifício cenográfico'}</title>
       {selected&&<ellipse cx={cx} cy={cy+9} rx={86} ry={42} fill="#80ffda" opacity={.27} filter="url(#district-bloom)"/>}
       <CityPolygon project={project} points={[[x-9,z-9],[x+w+9,z-9],[x+w+9,z+d+12],[x-9,z+d+12]]}
         fill={central?'#cdd5d2':'#b9c9bc'} stroke={selected?'#72f9e2':'#eff9ef'} strokeWidth={central?3:1.5}/>
@@ -143,18 +143,20 @@ export function CityBuildingLabel({project,plot,resident,central=false}:{
 }) {
   if (!resident && !central) return null;
   const [lx,ly]=project(plot.x+plot.w/2,plot.z+plot.d/2,plot.height+29);
-  const text=central?'APROV HGeSM':resident?.label.slice(0,16) || '';
+  const text=resident?.label || (central ? 'Aprov HGeSM' : '');
   const online=resident?.presence==='online';
   const unknown=!resident || resident.presence==='unknown';
   const fill=online?'#ffd37b':unknown?'#a9bdcb':resident.disabled?'#fb8694':'#779bb2';
-  const labelWidth=central?116:110;
+  const labelWidth=Math.min(220,Math.max(116,28+text.length*6.6));
   return <g pointerEvents="none" data-testid="admin-world-roof-label"
     data-resident-id={resident?.id||undefined}>
     <rect x={lx-labelWidth/2} y={ly-11} width={labelWidth} height="23" rx="9"
       fill="#051d31" opacity={.96} stroke={central?'#8ce4cb':'#7c9db0'} strokeWidth={central?1.7:.9}/>
     <circle cx={lx-labelWidth/2+12} cy={ly+.3} r="3.7" fill={fill}/>
     <text x={lx+5} y={ly+4} fill="#f2faff" fontSize={central?10:9.5}
-      fontWeight="750" fontFamily="system-ui,sans-serif" textAnchor="middle">{text}</text>
+      fontWeight="750" fontFamily="system-ui,sans-serif" textAnchor="middle"
+      textLength={text.length*6.6>labelWidth-30 ? labelWidth-30 : undefined}
+      lengthAdjust="spacingAndGlyphs">{text}</text>
   </g>;
 }
 

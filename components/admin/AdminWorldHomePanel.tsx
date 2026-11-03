@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  Compass, Droplets, Home, Minus, Plus, Radio, RotateCcw, Sparkles, Users,
+  ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight,
+  Compass, Droplets, Home, Minus, Plus, Radio, RotateCcw, Sparkles, Users, X,
 } from 'lucide-react';
-import type { PlatformAccount } from '../../lib/platformIdentity';
+import type { PlatformAccount, Workspace } from '../../lib/platformIdentity';
 import { HGESM_SECTOR_EMAIL } from '../../lib/hgesmWorkspace';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
@@ -17,6 +17,7 @@ import styles from './AdminWorldHomePanel.module.css';
 
 interface Props {
   accounts: PlatformAccount[];
+  workspaces: Workspace[];
   sessions: AdminWorkspaceSession[];
   loadingDirectory: boolean;
   directoryError: string | null;
@@ -31,7 +32,7 @@ const count = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
 const ratio = (value: number) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value) + '%';
 
 export function AdminWorldHomePanel({
-  accounts, sessions, loadingDirectory, directoryError, loadingSessions, sessionsError,
+  accounts, workspaces, sessions, loadingDirectory, directoryError, loadingSessions, sessionsError,
   globalUsage, globalUsageDataThrough, loadingGlobalUsage,
 }: Props) {
   const [page, setPage] = useState(0);
@@ -48,8 +49,8 @@ export function AdminWorldHomePanel({
 
   const sessionsAvailable = !loadingSessions && !sessionsError;
   const residents = useMemo(() => buildNeighborhoodResidents(accounts, sessions, {
-    now, sessionsAvailable,
-  }), [accounts, sessions, now, sessionsAvailable]);
+    now, sessionsAvailable, workspaces,
+  }), [accounts, sessions, workspaces, now, sessionsAvailable]);
   const { founder, neighborhood } = useMemo(
     () => partitionNeighborhoodResidents(residents, HGESM_SECTOR_EMAIL),
     [residents]
@@ -69,6 +70,10 @@ export function AdminWorldHomePanel({
   };
   const lastSeen = selected?.lastSeenAt && Number.isFinite(Date.parse(selected.lastSeenAt))
     ? new Date(selected.lastSeenAt).toLocaleString('pt-BR') : 'Não informada';
+  const selectedPresence = selected?.disabled || selected?.workspaceStatus === 'disabled'
+    ? 'Setor suspenso'
+    : selected?.presence === 'online' ? 'Sessão válida'
+      : selected?.presence === 'unknown' ? 'Presença indisponível' : 'Sem sessão válida';
 
   return (
     <section className={styles.worldRoot} data-testid="admin-world-home-panel"
@@ -78,7 +83,7 @@ export function AdminWorldHomePanel({
           <div className={styles.eyebrow}><Sparkles size={14} /> EMPROVEX / DIGITAL DISTRICT · 01</div>
           <h3>Um universo em movimento<span>.</span></h3>
           <p>Uma representação visual dos acessos à plataforma e do consumo de leitura do Firestore.
-            O prédio central pertence à conta fundadora APROV HGeSM. Cada prédio lateral representa uma conta cadastrada; os lotes ainda livres aguardam novos usuários.</p>
+            O prédio central pertence à conta fundadora Aprov HGeSM. Cada prédio lateral representa uma conta cadastrada; clique em um prédio para consultar o setor. Lotes livres aguardam novos usuários.</p>
         </div>
         <div className={styles.headerPills}>
           <span><span className={styles.pulseDot}/> {sessionsAvailable ? 'Presença monitorada' : 'Presença indisponível'}</span>
@@ -130,6 +135,30 @@ export function AdminWorldHomePanel({
               : quota.exceeded ? 'Acima da referência diária'
                 : 'Proporção da referência diária de Read Units'}</small>
           </div>
+          {selected && (
+            <section className={styles.sceneSectorDetails} aria-label="Detalhes do setor selecionado"
+              data-testid="admin-world-sector-details" aria-live="polite">
+              <div className={styles.sceneSectorHeading}>
+                <span className={styles.sceneSectorIcon}><Building2 size={15}/></span>
+                <div className={styles.sceneSectorHeadingText}>
+                  <p>SETOR SELECIONADO</p>
+                  <strong>{selected.label}</strong>
+                </div>
+                <button type="button" aria-label="Fechar detalhes do setor"
+                  onClick={() => setSelectedId(null)}><X size={15}/></button>
+              </div>
+              <p className={styles.sceneSectorOrganization}>
+                {selected.organizationName || selected.workspaceName || (selected.kind === 'admin' ? 'Administração da plataforma' : 'Organização não informada')}
+              </p>
+              <dl className={styles.sceneSectorGrid}>
+                <div><dt>Setor</dt><dd>{selected.sectionName || (selected.kind === 'admin' ? 'Administração' : 'Não informado')}</dd></div>
+                <div><dt>UG</dt><dd>{selected.ug || 'Não informada'}</dd></div>
+                <div><dt>Situação</dt><dd>{selected.workspaceStatus === 'disabled' || selected.disabled ? 'Suspenso' : selected.workspaceStatus === 'active' ? 'Ativo' : 'Não informada'}</dd></div>
+                <div><dt>Presença</dt><dd>{selectedPresence}</dd></div>
+              </dl>
+              <p className={styles.sceneSectorEmail}>{selected.email}</p>
+            </section>
+          )}
           <div className={styles.sceneCaption}>
             <span className={styles.captionStar}>✦</span> EXPLORER MODE
             <span> · </span> Quarteirão {block.page + 1}
@@ -186,12 +215,14 @@ export function AdminWorldHomePanel({
           {selected ? (
             <>
               <strong>{selected.label}</strong>
+              {selected.workspaceName && <span className={styles.selectedEmail}>{selected.workspaceName}</span>}
+              {selected.organizationName && <small>Organização: {selected.organizationName}</small>}
+              {selected.sectionName && <small>Setor: {selected.sectionName}</small>}
+              {selected.defaultDeliveryLocation && <small>Local de entrega: {selected.defaultDeliveryLocation}</small>}
               <span className={styles.selectedEmail}>{selected.email}</span>
               <div className={styles.selectedStatus}>
                 <i className={selected.presence === 'online' ? styles.lit : selected.presence === 'unknown' ? styles.unknown : styles.dark} />
-                {selected.presence === 'online' ? 'Sessão válida'
-                  : selected.presence === 'unknown' ? 'Presença indisponível'
-                    : selected.presence === 'disabled' ? 'Conta suspensa' : 'Sem sessão válida'}
+                {selectedPresence}
               </div>
               <small>{selected.email === HGESM_SECTOR_EMAIL ? 'Conta fundadora APROV HGeSM' : selected.kind === 'admin' ? 'Administrador' : 'Usuário de setor'}
                 {selected.ug ? ' · UG ' + selected.ug : ''} · Último registro: {lastSeen}</small>
