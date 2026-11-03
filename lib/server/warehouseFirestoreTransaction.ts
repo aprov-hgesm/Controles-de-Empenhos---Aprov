@@ -159,12 +159,16 @@ export async function warehouseAdminBatchRead(
   return docs;
 }
 
+export type WarehouseAdminTransactionWrite =
+  | {path:string;data:Record<string,unknown>;delete?:never}
+  | {path:string;delete:true;data?:never};
+
 export async function warehouseAdminTransaction<T>(
   accessToken: string,
   paths: string[],
   process: (
     read: ReadonlyMap<string, WarehouseAdminDocument | null>,
-  ) => { result: T; writes: Array<{ path: string; data: Record<string, unknown> }> }
+  ) => { result: T; writes: WarehouseAdminTransactionWrite[] }
 ): Promise<T> {
   if (paths.length < 1 || paths.length > 512 || new Set(paths).size !== paths.length) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_READ_SET', 400);
@@ -207,9 +211,14 @@ export async function warehouseAdminTransaction<T>(
     const writes = plan.writes.map(w => {
       const current = read.get(w.path);
       if (!read.has(w.path)) throw new WarehouseStoreError('WAREHOUSE_SERVER_WRITE_NOT_READ', 500);
+      const precondition = current ? { updateTime: current.updateTime } : { exists: false };
+      if (w.delete === true) {
+        if (!current) throw new WarehouseStoreError('WAREHOUSE_SERVER_DELETE_MISSING', 409);
+        return { delete: fullName(w.path), currentDocument: precondition };
+      }
       return {
         update: { name: fullName(w.path), fields: encodeFields(w.data as Record<string, FirestoreValue>) },
-        currentDocument: current ? { updateTime: current.updateTime } : { exists: false },
+        currentDocument: precondition,
       };
     });
     await request(accessToken, ':commit', { writes, transaction });
