@@ -142,7 +142,7 @@ test('PR500: founder opens Normal + Essencial without duplicate legal GET', asyn
 test('PR500: external sector enters its own Warehouse without full-screen recovery', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/central-empenhos');
-  await page.getByTestId('sector-login-email').fill('sector-a@example.test');
+  await page.getByTestId('sector-login-email').fill('sector-lifecycle@example.test');
   await page.getByTestId('sector-login-password').fill('Emprovex-Teste!2026');
   await page.getByTestId('sector-login-submit').click();
   const principal = page.getByRole('navigation', { name: 'Navegação principal' });
