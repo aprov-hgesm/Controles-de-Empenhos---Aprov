@@ -56,6 +56,8 @@ test('W4 recognizes informal material questions and never combines different bal
  assert.equal(cross.route,'CLARIFY');
  assert.equal(cross.intent,'commitment_item_search');
  assert.match(cross.question,/nome do produto/i);
+ const year=ask('Quais empenhos de 2025 possuem queijo?');
+ assert.equal(year.route,'UNSUPPORTED','Year filter must never be silently dropped');
  const mutation=ask('Registre uma saída de cinco quilos de arroz.');
  assert.equal(mutation.route,'REJECT_MUTATION');
 });
