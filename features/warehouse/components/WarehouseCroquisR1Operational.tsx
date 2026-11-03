@@ -52,7 +52,7 @@ import type { WarehouseDepotArchiveDiagnostic } from '../../../lib/server/wareho
 import { readWarehouseCroquiCatalog, readWarehouseCroquiLayouts } from '../../../lib/warehouse/croquiReadRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
-import { warehouseShelfCanonicalCode, warehouseSubpositionSequencePrefix } from '../../../lib/warehouse/subpositionCode';
+import { warehouseShelfCanonicalCode, warehouseShelfPresentationCode, warehouseSubpositionSequencePrefix } from '../../../lib/warehouse/subpositionCode';
 import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
 import { WarehouseDepotQuickCreate } from './WarehouseDepotQuickCreate';
 import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
@@ -1758,7 +1758,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                         </p>
                         {selectedChildren.map(child=>(
                           <div key={child.location.id} className="mt-2 flex items-center gap-1">
-                            <span className="w-16 shrink-0 truncate font-mono text-[9px]">{child.location.code}</span>
+                            <span className="w-16 shrink-0 truncate font-mono text-[9px]">{
+                              warehouseShelfPresentationCode(
+                                selectedLocation.code,
+                                child.location.code,
+                                selectedChildren.map(entry=>entry.location.code)
+                              )
+                            }</span>
                             <input maxLength={120} aria-label={'Nome '+child.location.code}
                               value={localEdits[child.location.id]?.name||child.location.name}
                               onChange={event=>setLocalEdits(current=>({

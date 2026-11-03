@@ -1,5 +1,5 @@
 import type { WarehouseDepot, WarehouseLocation } from './location';
-import { warehouseShelfCanonicalCode } from './subpositionCode';
+import { warehouseShelfPresentationCode } from './subpositionCode';
 import {
   encodeWarehouseCompactLocationBarcode,
   encodeWarehouseLocationBarcode,
@@ -163,12 +163,12 @@ export function buildLocationLabel(
   // No legado do Croqui, EST-01-01 representa a mesma PRAT-01 do cadastro HGeSM.
   // A adaptação é apenas de apresentação/scan: IDs, saldos e vínculos não mudam.
   // Evitar alias caso o depósito possua outra PRAT-01 real sob a mesma estante.
-  const candidate = parent ? warehouseShelfCanonicalCode(parent.code, location.code) : null;
-  const displayCode = candidate && !allLocations.some((other) =>
-    other.id !== location.id && other.kind === 'SUBPOSITION'
-    && other.status === 'active' && other.parentLocationId === parent?.id
-    && other.code === candidate
-  ) ? candidate : location.code;
+  const displayCode = parent ? warehouseShelfPresentationCode(
+    parent.code, location.code,
+    allLocations.filter((other) => other.kind === 'SUBPOSITION'
+      && other.status === 'active' && other.parentLocationId === parent.id)
+      .map((other) => other.code)
+  ) : location.code;
   const adapted = displayCode !== location.code;
   const displayName = adapted
     ? 'Prateleira ' + displayCode.slice(-2)

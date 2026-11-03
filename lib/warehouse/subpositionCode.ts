@@ -29,3 +29,21 @@ export function warehouseSubpositionSequencePrefix(parentCode: string): string {
     ? 'PRAT-00'
     : parentCode.trim().toUpperCase() + '-00';
 }
+
+/**
+ * Alias legível somente quando o código PRAT-NN não conflita com outro
+ * documento filho do mesmo local. Sem renomear os dados persistidos.
+ */
+export function warehouseShelfPresentationCode(
+  parentCode: string,
+  childCode: string,
+  siblingCodes: readonly string[]
+): string {
+  const canonical = warehouseShelfCanonicalCode(parentCode, childCode);
+  if (!canonical) return childCode;
+  const equivalents = siblingCodes.filter((sibling) =>
+    sibling.toUpperCase() === canonical
+    || warehouseShelfCanonicalCode(parentCode, sibling) === canonical
+  );
+  return equivalents.length === 1 ? canonical : childCode;
+}
