@@ -293,6 +293,33 @@ export async function runAiAsk(args:{
  }else{
    status='out_of_scope';answer='Posso consultar informações operacionais do EMPROVEX, dentro dos contratos disponíveis.';
  }
+ // If the user supplied an itemId to answer a question about a named material,
+ // do not return a balance for an unrelated item. W3 is the source of the description.
+ if(result&&result.status==='ok'&&clarification?.kind==='ready'&&
+   previous?.pending?.kind==='commitment_item_balance'&&previous.pending.materialLabel){
+   const data=result.data;
+   const record=data&&typeof data==='object'&&!Array.isArray(data)?
+     data as Record<string,unknown>:null;
+   const items=Array.isArray(record?.items)?record.items:[];
+   const first=items[0];
+   const actual=first&&typeof first==='object'&&!Array.isArray(first)?
+     (first as Record<string,unknown>).description:undefined;
+   if(typeof actual==='string'&&actual.trim()){
+     const normalized=(x:string)=>x.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')
+       .toLocaleLowerCase('pt-BR').trim();
+     const expectedName=normalized(previous.pending.materialLabel);
+     const actualName=normalized(actual);
+     if(!actualName.includes(expectedName)&&!expectedName.includes(actualName)){
+       status='clarify';
+       answer='O itemId informado pertence a um item diferente do material solicitado. Confira o itemId correspondente e informe o código correto.';
+       result=undefined;
+       contextToken=sealContext({
+         sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+         updatedAt:now.getTime(),refs:{},pending:{...previous.pending,step:'item'}
+       },cookieState.session,now.getTime());
+     }
+   }
+ }
  // A genuinely ambiguous or unresolved warehouse material requires a canonical
  // identifier; never silently assume zero from partial catalogue coverage.
  if(query&&result&&
