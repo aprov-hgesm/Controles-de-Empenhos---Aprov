@@ -144,7 +144,8 @@ export async function warehouseQuery(
   if(max<1||max>101||!Number.isInteger(max))throw new AiExecutionError('AI_WAREHOUSE_LIMIT_INVALID',400);
   const filters=filter?[filter]:[];
   if(filter && !((domain==='locationBalances'&&filter.field==='materialId')
-    ||(domain==='barcodes'&&filter.field==='materialId')))throw new AiExecutionError('AI_WAREHOUSE_FILTER_INVALID',400);
+    ||(domain==='barcodes'&&filter.field==='materialId')
+    ||(domain==='materials'&&filter.field==='description')))throw new AiExecutionError('AI_WAREHOUSE_FILTER_INVALID',400);
   const isolated=w6DataTarget();
   if(isolated){
     const base=firestoreRoot('warehouse');
