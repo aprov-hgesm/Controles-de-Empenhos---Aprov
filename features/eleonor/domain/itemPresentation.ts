@@ -30,7 +30,7 @@ export function itemShortLabel(description:string):string {
  const presentation=parts.find(p=>/^apresenta[cç][aã]o\s+/i.test(p))
    ?.replace(/^apresenta[cç][aã]o\s+/i,'');
  const labels=[first,variety,presentation].filter((x):x is string=>!!x);
- return friendly(labels.join(' · ').slice(0,125));
+ return labels.map(friendly).join(' · ').slice(0,125);
 }
 export function parseItemResult(raw:unknown):ItemResultView|null {
  if(!isObject(raw)||raw.intent!=='commitment_item_search'||
