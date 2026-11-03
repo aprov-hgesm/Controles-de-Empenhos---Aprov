@@ -31,7 +31,6 @@ import {
   createWarehouseLocation,
   listWarehouseDepotsCached,
   listWarehouseLocationsCached,
-  invalidateWarehouseLocationReadCache,
   updateWarehouseDepot,
   updateWarehouseLocation,
   archiveWarehouseStructure,
@@ -1004,10 +1003,6 @@ export function WarehouseLocationsR1Operational({
           locations={state.locations}
           selectedDepotId={selectedDepotId}
           selectedLocationId={selectedLocationId}
-          onRefresh={async () => {
-            invalidateWarehouseLocationReadCache(workspaceId);
-            await refresh();
-          }}
         />
       )}
 

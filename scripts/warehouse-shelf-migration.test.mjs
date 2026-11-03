@@ -143,9 +143,9 @@ test('origem do cadastro real continua única e não expõe operações pública
   const croqui=read('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
   assert.match(route,/verifyWarehouseRequest\(request\.headers\.get\('authorization'\)\)/);
   assert.match(route,/case 'SHELF_MIGRATION'/);
-  assert.match(ui,/data-testid="warehouse-shelf-migration-bda"/);
-  assert.match(ui,/mode:'PREVIEW'/);
-  assert.match(ui,/mode:'APPLY'/);
-  assert.match(croqui,/onRefresh=\{reloadBase\}/);
+  assert.match(route,/return reject\('WAREHOUSE_SHELF_MIGRATION_CLOSED',410\)/);
+  assert.doesNotMatch(route,/import \{ warehouseShelfMigrationServer \}/);
+  assert.doesNotMatch(ui,/warehouse-shelf-migration-bda|SHELF_MIGRATION|migrationPreview|migrationBusy/);
+  assert.doesNotMatch(croqui,/onRefresh=\{reloadBase\}/);
   assert.doesNotMatch(croqui,/\b(?:updateDoc|writeBatch|setDoc)\s*\(/);
 });
