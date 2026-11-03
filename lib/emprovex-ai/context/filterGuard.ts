@@ -10,6 +10,7 @@ export const W3_FILTERS:Readonly<Record<W3Intent,readonly FilterName[]>>={
  supplier_contact_find:['supplierName','supplierCnpj'],
  commitment_get:['commitmentId'],
  commitment_total_balance:['commitmentId','itemId'],
+ commitment_item_search:['commitmentId','materialQuery'],
  commitment_previous_open_list:[], // exerciseYear/historical list is not a per-document filter
  schedule_sent_history_list:['commitmentId','supplierCnpj','period'],
  invoice_registration_period_list:['commitmentId','supplierCnpj','period'],
@@ -32,7 +33,7 @@ export function auditFilters(intent:W3Intent,params:Record<string,unknown>,const
    let parameter=asParameter[filter];
    if(filter==='period'&&intent==='schedule_sent_history_list')parameter='sentPeriod';
    if(filter==='supplierName'&&intent!=='supplier_contact_find')parameter=undefined;
-   if(filter==='materialQuery'&&!['warehouse_stock_get','warehouse_material_locations_list'].includes(intent))parameter=undefined;
+   if(filter==='materialQuery'&&!['warehouse_stock_get','warehouse_material_locations_list','commitment_item_search'].includes(intent))parameter=undefined;
    if(filter==='supplierCnpj'&&intent==='supplier_contact_find')parameter='cnpj';
    if(!accepted.includes(filter)||!parameter||params[parameter]===undefined)unhandled.push(filter);
    else represented.push(filter);
