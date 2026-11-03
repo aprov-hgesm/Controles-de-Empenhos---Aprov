@@ -518,7 +518,7 @@ export function DashboardView({
                         return matchesPregao && matchesSearch;
                       },
                       (emp) => aggregates.amounts.get(emp),
-                      mode === 'essencial' ? (visibleRowsByClass[cls.key] ?? 60) : Number.POSITIVE_INFINITY
+                      mode === 'essencial' ? (visibleRowsByClass[cls.key] ?? 24) : Number.POSITIVE_INFINITY
                     );
                     const { matchedCount: filteredClassCount, visibleRows: visibleClassEmpenhos,
                       committed: subtotalEmpenhado, received: subtotalLiquidado } = projected;

@@ -15,8 +15,9 @@ import { motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
-import { loadAllInvoicesHistory, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
+import { loadAllInvoicesHistory, loadAllInvoicesHistoryForDisplay, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
 interface NotasFiscaisViewContext {
   comissaoAux1Nome: any;
@@ -116,7 +117,9 @@ const getInvoiceSortTimestamp = (invoice: Invoice): number => {
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { mode } = useVisualMode();
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
+  const [visibleInvoiceCount, setVisibleInvoiceCount] = useState(24);
   // O PDF em rascunho pertence à sessão operacional, não à aba montada.
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
   const [isSavingComissao, setIsSavingComissao] = useState(false);
@@ -134,7 +137,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const result = await loadAllInvoicesHistory();
+      const result = mode === 'essencial'
+        ? await loadAllInvoicesHistoryForDisplay()
+        : await loadAllInvoicesHistory();
       setInvoices((current) => mergeInvoiceCollections(current, result.invoices));
       setHistoryLoaded(true);
       setHistoryTruncated(result.truncated);
@@ -147,7 +152,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyLoaded, historyLoading, setInvoices]);
+  }, [historyLoaded, historyLoading, mode, setInvoices]);
 
   React.useEffect(() => {
     if (nfSubTab !== 'acompanhar') return;
@@ -240,6 +245,12 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     [empenhos, invoices]
   );
 
+  // No Essencial, somente os cartões visíveis são montados. Filtros e totais
+  // seguem calculados sobre o conjunto integral para evitar perda de dados.
+  React.useEffect(() => {
+    setVisibleInvoiceCount(24);
+  }, [nfSubTab, nfSearch, nfMonthFilter, nfEmpenhoFilter, nfTramitacaoFilter, nfSortOrder, mode]);
+
   const filteredInvoices = React.useMemo(() => {
     const term = deferredNfSearch.toLowerCase();
 
@@ -298,6 +309,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     nfSortOrder,
     nfTramitacaoFilter,
   ]);
+  const visibleInvoices = mode === 'essencial'
+    ? filteredInvoices.slice(0, visibleInvoiceCount)
+    : filteredInvoices;
+
   const runInvoiceTransition = async (invoiceId: string, action: () => Promise<unknown> | unknown) => {
     if (processingInvoiceId !== null) return;
     setProcessingInvoiceId(invoiceId);
@@ -334,7 +349,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   };
 
   return (
-            <div className="space-y-6">
+            <div className="space-y-6" data-testid="invoices-surface">
               
               {/* Screen Header */}
               <div>
@@ -628,7 +643,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         );
                       }
 
-                      return filteredInvoices.map((inv) => {
+                      return visibleInvoices.map((inv) => {
                         const targetEmpenho = empenhosById.get(inv.empenhoId);
                         const invoiceMeta = invoiceDerived.byKey.get(getInvoiceRecordKey(inv));
                         const requiresTR = invoiceMeta?.requiresTR ?? classRequiresTermoRecebimento(
@@ -966,6 +981,20 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         );
                       });
                     })()}
+                    {mode === 'essencial' && visibleInvoices.length < filteredInvoices.length && !historyLoading && (
+                      <div className="flex flex-col items-center gap-2 py-4">
+                        <p className="text-xs text-gray-500 font-medium">
+                          Exibindo {visibleInvoices.length} de {filteredInvoices.length} notas filtradas
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setVisibleInvoiceCount((count) => count + 24)}
+                          className="rounded-xl border border-blue-200 bg-white px-5 py-2.5 text-xs font-bold text-[#00288e] hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+                        >
+                          Mostrar mais 24 notas fiscais
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
