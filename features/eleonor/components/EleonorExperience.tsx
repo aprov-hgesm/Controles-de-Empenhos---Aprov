@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import Image from 'next/image';
 import {EleonorHistoryPanel,type StoredChatMessage} from './EleonorHistoryPanel';
+import {EleonorItemResults} from './EleonorItemResults';
+import {parseItemResult} from '../domain/itemPresentation';
 import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
@@ -20,6 +22,7 @@ type ChatMessage = {
   coverage?: string;
   morePages?: boolean;
   modelDiagnostic?: string;
+  structuredResult?: unknown;
 };
 type AskResponse = {
   conversationId?:string;
@@ -32,6 +35,10 @@ type AskResponse = {
   result?: {
     evidence?: Evidence[];
     coverage?: string;
+    intent?: string;
+    status?: string;
+    data?: unknown;
+    limitations?: string[];
     pagination?: { truncated?: boolean; nextCursor?: string | null } | null;
   };
 };
@@ -116,6 +123,8 @@ export function EleonorExperience({
   const busyRef = useRef(false);
   const nextId = useRef(0);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const lastAssistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -123,7 +132,19 @@ export function EleonorExperience({
   }, [open, fullPage]);
 
   useEffect(() => {
-    if (open || fullPage) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!open && !fullPage) return;
+    const last = messages[messages.length - 1];
+    // Results with many items should open at the summary, not scroll straight
+    // to the last line and hide what the user actually asked.
+    if (last?.role === 'assistant' && parseItemResult(last.structuredResult)) {
+      if (logRef.current && lastAssistantRef.current)
+        logRef.current.scrollTo({
+          top: lastAssistantRef.current.offsetTop,
+          behavior: 'smooth',
+        });
+    } else {
+      bottomRef.current?.scrollIntoView({behavior:'smooth',block:'end'});
+    }
   }, [messages, loading, open, fullPage]);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
@@ -214,6 +235,7 @@ export function EleonorExperience({
         role: 'assistant',
         text,
         status: body.status,
+        structuredResult: parseItemResult(body.result) ? body.result : undefined,
         modelDiagnostic: modelDiagnostic(body),
         evidence: Array.isArray(body.result?.evidence)
           ? body.result.evidence.filter(item => typeof item.source === 'string' && typeof item.documentId === 'string')
@@ -255,8 +277,8 @@ export function EleonorExperience({
       {historyUnsaved&&<p role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
         Histórico indisponível: algumas mensagens desta conversa não foram salvas. A Eleonor continua funcionando.
       </p>}
-      <div role="log" aria-label="Conversa com Eleonor" aria-live="polite"
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7">
+      <div ref={logRef} role="log" aria-label="Conversa com Eleonor" aria-live="polite"
+        className="relative min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-6 sm:px-7">
         {messages.length === 0 && (
           <div className="flex min-h-full flex-col items-center justify-center py-8 text-center">
             {fullPage && <EleonorSymbol size="large" />}
@@ -283,8 +305,11 @@ export function EleonorExperience({
           </div>
         )}
         {messages.map(item => (
-          <div key={item.id} className={`flex ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[92%] rounded-[22px] px-4 py-3 text-sm leading-6 sm:max-w-[84%] ${item.role === 'user'
+          <div key={item.id} ref={item.id===messages[messages.length-1]?.id && item.role==='assistant' ? lastAssistantRef : undefined}
+            className={`flex ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`${item.role==='assistant' && parseItemResult(item.structuredResult)
+              ? 'w-full max-w-full px-3 sm:max-w-[94%]'
+              : 'max-w-[92%] px-4 sm:max-w-[84%]'} rounded-[22px] py-3 text-sm leading-6 ${item.role === 'user'
               ? 'rounded-br-md bg-[#00288e] text-white'
               : 'rounded-bl-md border border-slate-200/85 bg-white/90 text-[#152742] shadow-sm'}`}>
               {item.role === 'assistant' && fullPage && (
@@ -293,14 +318,18 @@ export function EleonorExperience({
                   {item.status === 'partial' && <span className="text-[10px] font-semibold text-amber-700">Resultado parcial</span>}
                 </div>
               )}
-              <p className="whitespace-pre-wrap break-words">{item.text}</p>
+              {item.role==='assistant' && parseItemResult(item.structuredResult)
+                ? <EleonorItemResults result={item.structuredResult} evidence={item.evidence}/>
+                : <p className="whitespace-pre-wrap break-words">{item.text}</p>}
               {item.modelDiagnostic&&<p className="mt-2 text-[11px] text-amber-700" role="status">{item.modelDiagnostic}</p>}
-              {item.role === 'assistant' && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
+              {item.role === 'assistant' && !parseItemResult(item.structuredResult)
+                && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
                 <p className="mt-2 text-[11px] font-semibold text-amber-700">
                   {item.morePages ? 'Existem outros registros disponíveis.' : 'A cobertura desta consulta não está confirmada como completa.'}
                 </p>
               )}
-              {item.role === 'assistant' && item.evidence && item.evidence.length > 0 && (
+              {item.role === 'assistant' && !parseItemResult(item.structuredResult)
+                && item.evidence && item.evidence.length > 0 && (
                 <div className="mt-3 border-t border-slate-100 pt-2">
                   <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     <BookOpenText className="h-3 w-3" /> Fontes da consulta
