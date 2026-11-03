@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-gc6679f5f218f-29",
-  "sourceSha": "c6679f5f218f751a61c0a9a7b123c5e0bcc1fdef",
-  "reason": "Continuidade da autorizacao expressa do usuario para publicar a Eleonor no Cloud Run apos testes: melhoria de organizacao das respostas R3.1.6 solicitada em 2026-11-03. PR #496 mesclada na main. Certificacao TypeScript, W7, Fast CI, Core Protection e teste E2E VISUAL-R2 SUCCESS; stage 41575325884 SUCCESS com 0% de trafego, health e billing protection. Publicacao somente pelo workflow oficial com rollback automatico, sem mudanca em IAM, consultas W3 ou Firestore."
+  "revision": "emprovex-cloudrun-candidate-gb7a073ae04d0-30",
+  "sourceSha": "b7a073ae04d0bba367c8a0695810c9668e88a31c",
+  "reason": "Autorizacao expressa do usuario neste chat (2026-11-03): Eleonor pode ir para producao, incluindo aviso discreto e carismatico de fase de testes e aprimoramento. PR #497 mesclada na main; TypeScript, W7, Fast CI, Core Protection, isolamento e Browser E2E PASS; stage Cloud Run 41576852884 SUCCESS, 0% de trafego, health e billing protection. Publicacao pelo fluxo oficial com rollback automatico, sem alteracao W3, IAM, Firestore nem configuracoes da IA."
 }
