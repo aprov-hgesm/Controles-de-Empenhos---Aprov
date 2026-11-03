@@ -182,3 +182,79 @@ test('End-to-end W4 → signed clarification → authorized W3 across successive
   else process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED=old;
  }
 });
+
+test('R3.1.5 signed context lists items of the last NE without repeating the number',()=>{
+ const first=context.interpret({message:'Mostre a NE 2026NE66',now,scope});
+ assert.equal(first.route,'DETERMINISTIC');
+ assert.equal(first.query.intent,'commitment_get');
+ const second=context.interpret({message:'E os itens dessa?',now,scope,previous:first.nextContext});
+ assert.equal(second.route,'DETERMINISTIC');
+ assert.equal(second.query.intent,'commitment_get');
+ assert.deepEqual(second.query.params,{commitmentId:'2026NE66',includeItems:true});
+ for(const previous of [
+   {...first.nextContext,workspaceId:'private-workspace-b'},
+   {...first.nextContext,sessionId:'other-session'},
+   {...first.nextContext,updatedAt:now.getTime()-600001}
+ ]){
+   const rejected=context.interpret({message:'E os itens dessa?',now,scope,previous});
+   assert.ok(!rejected.query,'expired or cross-scope NE must never be reused');
+ }
+});
+test('R3.1.5 fallback locates an item by name, not user supplied itemId',()=>{
+ const interpreted={route:'CLARIFY',intent:'commitment_total_balance',
+   reason:'ITEM_NAME_REQUIRES_ITEM_ID',
+   filterAudit:{requested:['materialQuery'],represented:[],unhandled:['materialQuery']}};
+ const direct=clarification.startClarification(interpreted,'Qual saldo do item queijo na NE 2026NE66?');
+ assert.equal(direct.kind,'ready');
+ assert.equal(direct.query.intent,'commitment_item_search');
+ assert.deepEqual(direct.query.params,{materialQuery:'queijo',commitmentId:'2026NE66'});
+ const absent=clarification.startClarification(interpreted,'Qual saldo por item na NE 2026NE66?');
+ assert.equal(absent.kind,'question');
+ assert.match(absent.question,/nome ou descrição/i);
+ const ready=clarification.continueClarification(absent.pending,'queijo mussarela');
+ assert.equal(ready.kind,'ready');
+ assert.deepEqual(ready.query.params,{materialQuery:'queijo mussarela',commitmentId:'2026NE66'});
+ const forbidden=clarification.startClarification({...interpreted,
+   filterAudit:{requested:['materialQuery','period'],represented:[],
+     unhandled:['materialQuery','period']}},'Qual saldo do item queijo na NE 2026NE66?');
+ assert.equal(forbidden,null,'unsupported period must never be silently removed');
+});
+test('R3.1.5 legacy encrypted itemId clarification upgrades to Consulta de Itens',()=>{
+ const pending={kind:'commitment_item_balance',step:'ne',materialLabel:'queijo'};
+ const resumed=clarification.continueClarification(pending,'2026NE66');
+ assert.equal(resumed.kind,'ready');
+ assert.deepEqual(resumed.query.params,{materialQuery:'queijo',commitmentId:'2026NE66'});
+ const old={kind:'commitment_item_balance',step:'item',commitmentId:'2026NE66',materialLabel:'queijo'};
+ const newQuery=clarification.continueClarification(old,'queijo');
+ assert.equal(newQuery.query.intent,'commitment_item_search');
+ assert.deepEqual(newQuery.query.params,{materialQuery:'queijo',commitmentId:'2026NE66'});
+});
+test('R3.1.5 presents bounded item listing from authorized commitment response',()=>{
+ const presenter=load('lib/emprovex-ai/integration/response.ts');
+ const answer=presenter.presentAiResponse({status:'ok',coverage:'complete',
+  intent:'commitment_get',data:{id:'2026NE66',supplier:'Fornecedor Teste',status:'aberto',
+   items:[{id:'3',name:'Queijo Mussarela',unit:'kg',quantity:10,received:3}]}});
+ assert.match(answer,/Queijo Mussarela/);
+ assert.match(answer,/10 kg empenhados/);
+ assert.match(answer,/3 recebidos/);
+ assert.match(answer,/2026NE66/);
+});
+
+test('R3.1.5 W3 result groups enable optional name refinement with no itemId or balance in context',()=>{
+ const result={items:[{name:'Queijo Mussarela',unit:'kg',pendingQuantity:7},
+   {name:'Queijo Mussarela',unit:'un',pendingQuantity:3},
+   {name:'Queijo Prato',unit:'kg',pendingQuantity:4}]};
+ const query={intent:'commitment_item_search',
+   params:{materialQuery:'queijo',commitmentId:'2026NE66'}};
+ const pending=clarification.itemSearchRefinement(query,result,'ok');
+ assert.deepEqual(pending,{kind:'commitment_item_search',step:'material',commitmentId:'2026NE66'});
+ assert.ok(!('items' in pending)&&!('balance' in pending));
+ const selected=clarification.continueClarification(pending,'mussarela');
+ assert.equal(selected.kind,'ready');
+ assert.equal(selected.query.intent,'commitment_item_search');
+ assert.deepEqual(selected.query.params,{materialQuery:'mussarela',commitmentId:'2026NE66'});
+ assert.equal(clarification.itemSearchRefinement(query,{items:[result.items[0]]},'ok'),null);
+ assert.equal(clarification.itemSearchRefinement({intent:'warehouse_stock_get',params:{}},result,'ok'),null);
+ assert.equal(clarification.continueClarification(pending,'Quais notas fiscais estão pendentes?').kind,'new_request');
+ assert.equal(clarification.continueClarification(pending,'E os itens dessa?').kind,'new_request');
+});

@@ -2,7 +2,7 @@
 import {interpret,validateModelCandidate} from '../context';
 import {interpretFirstWithLfm3,type ModelFirstOutcome} from './modelFirst';
 import {historyEnabled,createHistory,getHistory,appendHistory} from '../conversation/historyStore';
-import {startClarification,continueClarification,startMaterialResolution} from './clarification';
+import {startClarification,continueClarification,startMaterialResolution,itemSearchRefinement} from './clarification';
 import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 import {planConversation} from '../conversation/engine';
 import {proposeWithLfm3,respondConversationally,type Lfm3Outcome} from './lfm3';
@@ -330,6 +330,22 @@ export async function runAiAsk(args:{
      contextToken=sealContext({
        sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
        updatedAt:now.getTime(),refs:{},pending:refinement.pending
+     },cookieState.session,now.getTime());
+   }
+ }
+ // A list with multiple matching descriptions/units is already a useful
+ // answer, but the user may refine it in the next turn with only a name.
+ // Persist a typed pending intent, never any raw W3 result or numeric balance.
+ if(query&&result&&status!=='clarify'){
+   const refine=itemSearchRefinement(query,result.data,result.status);
+   if(refine){
+     answer+='\n\nSe quiser refinar por uma dessas descrições, diga apenas o nome do produto. Não é necessário informar itemId.';
+     contextToken=sealContext({
+       sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+       updatedAt:now.getTime(),refs:{
+         ...(typeof query.params.commitmentId==='string'?{commitmentId:query.params.commitmentId}:{}),
+         ...(typeof query.params.materialQuery==='string'?{materialQuery:query.params.materialQuery}:{})
+       },pending:refine
      },cookieState.session,now.getTime());
    }
  }

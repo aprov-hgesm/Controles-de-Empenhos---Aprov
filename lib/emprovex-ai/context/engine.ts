@@ -206,6 +206,14 @@ export function interpret(input:Input):Result {
    return clarify('unknown','Você solicitou duas consultas diferentes. Qual deseja primeiro?');
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
+ // Elliptical follow-up: the NE was already authorized and signed in the
+ // previous short-lived context. A user should not have to repeat its number.
+ // Only accept a narrow item-list request; never infer additional filters.
+ const contextualItemListing=!!refs.commitmentId&&!x.id&&!x.partial&&
+   /^(?:e\s+)?(?:quais\s+(?:sao\s+)?|(?:me\s+)?(?:mostre|mostra|liste|exiba|detalhe)\s+)?(?:os\s+)?itens?(?:\s+(?:(?:dessa|desse|dela|dele|daquela|daquele)(?:\s+(?:ne|empenho))?|(?:da|do)\s+(?:ne|empenho)))?$/.test(t);
+ if(contextualItemListing)
+   return success('commitment_get',{commitmentId:refs.commitmentId!,includeItems:true},
+     'NE do contexto → itens cadastrados');
  if(isInvoice) {
    // Pending here refers to operational forwarding, never payment or liquidation.
    // The filter guard will reject additional unrepresented constraints.

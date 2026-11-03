@@ -27,8 +27,8 @@ const questionNe=(p:PendingClarification)=>p.kind==='commitment_item_balance'
  ?'Qual é a NE completa do item que deseja consultar? Exemplo: 2026NE66.'
  :'Qual nota de empenho deseja consultar? Informe a NE completa, por exemplo, 2026NE66.';
 const questionItem=(p:PendingClarification)=>
-  'Qual é o identificador (itemId)'+(p.materialLabel?' correspondente a '+p.materialLabel:' do item')+
-  ' na NE '+p.commitmentId+'? Não posso usar o nome do material como se fosse um itemId.';
+  'Qual é o nome ou a descrição do produto'+(p.commitmentId?' na NE '+p.commitmentId:'')+
+  '? Vou localizar o item pela Consulta de Itens; não é necessário informar itemId.';
 const questionItemSearch='Qual é o nome ou descrição do produto que deseja procurar na Consulta de Itens?';
 const questionMaterial=(p:PendingClarification)=>p.kind==='warehouse_location'
  ?'Qual material deseja localizar? Informe o nome completo, o código de barras ou o ID do material.'
@@ -53,7 +53,7 @@ export function isValidPending(value:unknown):value is PendingClarification {
  return true;
 }
 function itemLabel(message:string):string|undefined{
- const match=message.match(/\b(?:item|material|produto)\s+(?:de\s+)?([\p{L}][\p{L}\s/-]{1,70}?)(?=\s+(?:nos?|das?|em)\s+(?:empenhos?|ne|notas? de empenho)\b|[?!.]|$)/iu);
+ const match=message.match(/\b(?:item|material|produto)\s+(?:de\s+)?([\p{L}][\p{L}\s/-]{1,70}?)(?=\s+(?:nos?|nas?|das?|dos?|em)\s+(?:empenhos?|ne|notas? de empenho)\b|[?!.]|$)/iu);
  const v=match?cleaned(match[1]):'';
  return v.length>=2&&SAFE.test(v)?v.slice(0,90):undefined;
 }
@@ -68,17 +68,24 @@ export function startClarification(interpreted:Result,message:string):Clarificat
    return {kind:'question',question:questionItemSearch,pending};
  }
  if(interpreted.intent==='commitment_total_balance'){
-  // Do not silently replace an item-level request by a total-NE balance.
+  // An item-level request must never become a total-NE balance. Resolve the
+  // material with the existing Consulta de Itens rather than demanding itemId.
+  // This fallback is only for missing slots, never for unrepresented filters.
+  const omitted=interpreted.filterAudit?.unhandled||[];
+  if(omitted.some(name=>name!=='materialQuery'))return null;
   const item=/\b(?:do item|de item|por item|itens|material|materiais|produto)\b/i.test(message)||
     interpreted.reason==='ITEM_NAME_REQUIRES_ITEM_ID';
   const ne=message.match(NE)?.[1]?.toUpperCase();
-  const pending:PendingClarification={
-   kind:item?'commitment_item_balance':'commitment_balance',
-   step:ne&&item?'item':'ne',
-   ...(ne?{commitmentId:ne}:{}),
-   ...(itemLabel(message)?{materialLabel:itemLabel(message)}:{})
-  };
-  return {kind:'question',question:pending.step==='item'?questionItem(pending):questionNe(pending),pending};
+  const name=itemLabel(message);
+  if(item&&name)return readyItemSearch(name,ne);
+  if(item){
+    const pending:PendingClarification={kind:'commitment_item_search',step:'material',
+      ...(ne?{commitmentId:ne}:{})};
+    return {kind:'question',question:questionItemSearch,pending};
+  }
+  const pending:PendingClarification={kind:'commitment_balance',step:'ne',
+    ...(ne?{commitmentId:ne}:{})};
+  return {kind:'question',question:questionNe(pending),pending};
  }
  if(interpreted.intent==='warehouse_stock_get'||interpreted.intent==='warehouse_material_locations_list'){
   const pending:PendingClarification={kind:interpreted.intent==='warehouse_stock_get'?'warehouse_stock':'warehouse_location',
@@ -95,9 +102,36 @@ export function startMaterialResolution(intent:string,query:{params:Record<strin
   step:'materialId'};
  return {kind:'question',question:questionCanonical,pending};
 }
+/** Offers an optional contextual refinement after W3 returned multiple
+ * real description/unit groups. Carries no balance or item data in the token.
+ * The next reply must execute W3 again with the new name, never use a cached
+ * result or infer a numeric itemId.
+ */
+export function itemSearchRefinement(
+ query:{intent:string;params:Record<string,unknown>},data:unknown,status:string
+):PendingClarification|null {
+ if(query.intent!=='commitment_item_search'||!['ok','partial'].includes(status)||
+   !data||typeof data!=='object'||Array.isArray(data))return null;
+ const groups=(data as Record<string,unknown>).items;
+ if(!Array.isArray(groups)||groups.length<2)return null;
+ const ne=query.params.commitmentId;
+ return {kind:'commitment_item_search',step:'material',
+   ...(typeof ne==='string'&&NE.test(ne)?{commitmentId:ne.toUpperCase()}:{})};
+}
 function isSwitch(message:string):boolean {
+ // A contextual follow-up about the last NE is a new supported W4 query,
+ // not a product name to be resolved against the prior choice list.
+ if(/^(?:e\s+)?(?:os\s+)?itens?\s+(?:dessa|desse|dela|dele|da\s+ne|do\s+empenho)$/i.test(message))
+   return true;
  return /^(?:agora |mudando de assunto|outra pergunta|na verdade )?\s*(?:quais?|como|onde|quando|quantos?|quanto|mostre|liste|consulte|detalhe|localize|verifique|preciso saber|explique)\b/i.test(message)
   && /\b(?:estoque|empenho|notas?|nfs?|forneced|deposito|materiais?|item|saldo)\b/i.test(message);
+}
+function readyItemSearch(materialQuery:string,commitmentId?:string):ClarificationAction {
+ const query=makeW3Query('commitment_item_search',{
+   materialQuery,...(commitmentId?{commitmentId}:{})
+ });
+ if(!query)throw new Error('AI_ITEM_SEARCH_SCHEMA_INVALID');
+ return {kind:'ready',query};
 }
 function ready(kind:PendingClarification['kind'],params:Record<string,unknown>):ClarificationAction{
  const intent=kind==='commitment_item_search'?'commitment_item_search':
@@ -116,13 +150,22 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
   const id=message.match(/^(?:a |o )?(?:ne|empenho|nota de empenho)?\s*[:#-]?\s*(20\d{2}NE\d{1,10})$/i)?.[1]?.toUpperCase();
   if(!id)return {kind:'question',question:questionNe(p),pending:p};
   if(p.kind==='commitment_balance')return ready(p.kind,{commitmentId:id});
-  const next:PendingClarification={...p,commitmentId:id,step:'item'};
-  return {kind:'question',question:questionItem(next),pending:next};
+  // Legacy signed item-balance clarification: a known material name is
+  // enough. The W3 item lookup resolves the technical ID server-side.
+  if(p.materialLabel)return readyItemSearch(p.materialLabel,id);
+  const next:PendingClarification={kind:'commitment_item_search',step:'material',
+    commitmentId:id};
+  return {kind:'question',question:questionItemSearch,pending:next};
  }
  if(p.step==='item'){
-  const itemId=message.match(/^(?:(?:itemId|item|codigo do item)\s*[:#=-]?\s*)?([A-Za-z0-9_-]{1,130})$/i)?.[1];
-  if(!itemId||!ITEM.test(itemId))return {kind:'question',question:questionItem(p),pending:p};
-  return ready(p.kind,{commitmentId:p.commitmentId,itemId});
+  // Backward compatibility for pending states created by earlier R3.1:
+  // accept explicit itemId, but prefer the lookup by material description.
+  const explicitId=message.match(/^(?:itemId|codigo do item)\s*[:#=-]?\s*([A-Za-z0-9_-]{1,130})$/i)?.[1];
+  if(explicitId&&ITEM.test(explicitId))
+    return ready(p.kind,{commitmentId:p.commitmentId,itemId:explicitId});
+  const name=p.materialLabel||message.replace(/^(?:item|material|produto)\s+(?:de\s+)?/iu,'');
+  if(!SAFE.test(name)||name.length>90)return {kind:'question',question:questionItem(p),pending:p};
+  return readyItemSearch(name,p.commitmentId);
  }
  if(p.step==='materialId'){
   const v=message.replace(/^(?:materialId|id|barcode|codigo de barras|c[oó]digo)\s*[:#=-]?\s*/iu,'').trim();
