@@ -80,7 +80,8 @@ function commitmentItemName(t:string):string|undefined {
  for(const pattern of patterns){
   const candidate=t.match(pattern)?.[1]?.trim().replace(/[?.!,;:]+$/,'').trim();
   if(!candidate||candidate.length<2||candidate.length>90)continue;
-  if(/^(?:determinado|determinado material|esse|esta|aquele|qual|algum|qualquer|itens?|materiais?|produtos?|saldo|empenhos?)$/.test(candidate))continue;
+  if(/^(?:determinado|determinado material|esse|esta|aquele|qual|algum|qualquer|itens?|materiais?|produtos?|saldo|empenhos?)$/.test(candidate)||
+    /^(?:ne|nota de empenho|empenho)\b/.test(candidate)||/\b20\d{2}ne\d+\b/.test(candidate))continue;
   return candidate;
  }
  return undefined;
