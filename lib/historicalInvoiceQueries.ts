@@ -118,6 +118,11 @@ let recentDisplayHistory: {
   result: Promise<HistoricalInvoiceQueryResult>;
 } | null = null;
 
+/** Clear any recently loaded read-only history after a local NF mutation. */
+export function invalidateInvoiceDisplayHistoryCache(): void {
+  recentDisplayHistory = null;
+}
+
 export function loadAllInvoicesHistoryForDisplay(): Promise<HistoricalInvoiceQueryResult> {
   const scope = getCurrentOperationalScope();
   const uid = auth.currentUser?.uid;
