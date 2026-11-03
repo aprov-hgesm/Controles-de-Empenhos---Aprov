@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g949be94af071-25",
-  "sourceSha": "949be94af071e715b86b6a3965cc0ef23ba29547",
-  "reason": "Autorizacao explicita em 2026-11-02 via 'vamos fazer oq vc recomenda': promover Eleonor R3 integrada e validada, mantendo EMPROVEX_AI_R3_MODEL_FIRST_ENABLED e EMPROVEX_AI_HISTORY_ENABLED desligados. Build stage 41396761640, Application CI 41396761701 e Core Protection 41396761656 SUCCESS; isolamento de dados, Firestore e IAM nao alterados. Preservar rollback automatico e revisao anterior."
+  "revision": "emprovex-cloudrun-candidate-g712f23a2d118-28",
+  "sourceSha": "712f23a2d118889f473929a5b10154b414cedfe5",
+  "reason": "Autorizacao explicita do usuario neste chat em 2026-11-03: apos testes aprovados publicar Eleonor R3.1 e R3.1.5 em producao no Cloud Run para teste pelo site. PR #494 mesclada em #492 e #492 mesclada na main. Build stage 41572758612 SUCCESS com zero trafego, health e billing protection verificados; manter IAM, configuracao, rollback automatico e regras existentes. PR #495 documental permanece isolada."
 }
