@@ -218,6 +218,10 @@ try {
       [playwrightCli, 'test', ...process.argv.slice(2), '--config=playwright.e2e.config.mjs'],
       {
         ...process.env,
+        // Firebase emulators:exec may export only GCLOUD_PROJECT. The
+        // Playwright-only IAM mocks require the canonical alias as well and
+        // still reject every non-demo project in their own guards.
+        GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT,
         EMPROVEX_E2E_BASE_URL: appBase,
       }
     );
