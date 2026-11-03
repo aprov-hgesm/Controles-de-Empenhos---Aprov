@@ -81,7 +81,7 @@ const rootEntry = read('app/page.tsx');
 const operationalEntry = rootEntry.includes("export { default } from './login/page'")
   ? read('app/login/page.tsx') : rootEntry;
 assert.match(operationalEntry, /window\.location\.assign\(/, 'Atalho para Central perdido.');
-assert.match(operationalEntry, /window\\.location\\.assign\\(\\s*'\\/central-depositos'\\s*\\)/,
+assert.match(operationalEntry, /window\.location\.assign\(\s*'\/central-depositos'\s*\)/,
   'Atalho do módulo deve abrir a entrada canônica em ambos os modos.');
 const warehouseSections = read('features/warehouse/components/WarehouseSectionContent.tsx');
 assert.match(warehouseSections, /mode === 'essencial'/,
