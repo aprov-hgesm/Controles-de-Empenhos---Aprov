@@ -115,3 +115,66 @@ test('Clarification results still require W3 schema and authorization in orchest
  assert.match(src,/executeAuthorizedAiQuery\(access,validated\)/);
  assert.match(src,/pending:clarification\.pending/);
 });
+
+test('End-to-end W4 → signed clarification → authorized W3 across successive user turns',async()=>{
+ const tokens=new Map();let next=0,modelCalls=0,w3Calls=[];
+ class AiExecutionError extends Error{constructor(code,status){super(code);this.code=code;this.httpStatus=status;}}
+ const mocks={
+  '../context':{interpret:context.interpret,validateModelCandidate:()=>null},
+  '../conversation/historyStore':{historyEnabled:()=>false},
+  './modelFirst':{interpretFirstWithLfm3:async()=>{modelCalls++;return null;}},
+  './environment':{aiLfm3Enabled:()=>true,aiConversationalModelEnabled:()=>false},
+  '../conversation/engine':{planConversation:()=>null},
+  './lfm3':{proposeWithLfm3:async()=>null,respondConversationally:async()=>null},
+  './lfm3Guard':{guardLfm3Candidate:()=>({ok:false,audit:{requested:[],represented:[],unhandled:[]}})},
+  '../contracts':{parseAiQuery:q=>q,AiInputError:class extends Error{}},
+  '../authorize':{prepareAiAccess:async()=>({uid:'uid-a',workspaceId:scope.workspaceId,ug:'160416'})},
+  '../query':{executeAuthorizedAiQuery:async(_access,q)=>{
+   w3Calls.push(q);
+   if(q.params.itemId==='999')throw new AiExecutionError('AI_ITEM_NOT_FOUND',404);
+   return {status:'ok',data:{commitmentId:q.params.commitmentId,quantity:7},coverage:'complete',
+    metrics:{examinedDocuments:1}};
+  }},
+  '../response':{AiExecutionError},
+  './session':{
+   sessionForRequest:()=>({session:{sid:scope.sessionId,uid:'uid-a',ws:scope.workspaceId},cookie:'opaque',newCookie:false}),
+   restoreContext:token=>token?tokens.get(token):undefined,
+   sealContext:value=>{const key='signed-token-'+(++next);tokens.set(key,value);return key;}
+  },
+  './response':{presentAiResponse:r=>'Dados autorizados: '+JSON.stringify(r.data)}
+ };
+ const {runAiAsk}=load('lib/emprovex-ai/integration/orchestrator.ts',mocks);
+ const old=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ try{
+  const run=(message,contextToken)=>runAiAsk({authorization:'Bearer synthetic',input:{
+   message,...(contextToken?{contextToken}:{})},now});
+  const first=await run('Temos saldo do item queijo nos empenhos?');
+  assert.equal(first.payload.status,'clarify');
+  assert.match(first.payload.answer,/NE completa/);
+  assert.ok(first.payload.contextToken);
+  const second=await run('2026NE66',first.payload.contextToken);
+  assert.equal(second.payload.status,'clarify');
+  assert.match(second.payload.answer,/itemId/);
+  const third=await run('itemId 3',second.payload.contextToken);
+  assert.equal(third.payload.status,'ok');
+  assert.equal(third.payload.query.intent,'commitment_total_balance');
+  assert.deepEqual(third.payload.query.params,{commitmentId:'2026NE66',itemId:'3'});
+  assert.equal(w3Calls.length,1);
+  assert.equal(modelCalls,0);
+  const another=await run('Temos saldo do item queijo nos empenhos?');
+  const afterNe=await run('2026NE66',another.payload.contextToken);
+  const invalid=await run('itemId 999',afterNe.payload.contextToken);
+  assert.equal(invalid.payload.status,'clarify');
+  assert.match(invalid.payload.answer,/itemId correto/);
+  const repaired=await run('itemId 3',invalid.payload.contextToken);
+  assert.equal(repaired.payload.status,'ok');
+  const cancelStart=await run('Qual é o saldo do empenho?');
+  const cancelled=await run('cancelar',cancelStart.payload.contextToken);
+  assert.equal(cancelled.payload.status,'ok');
+  assert.match(cancelled.payload.answer,/cancelada/);
+ }finally{
+  if(old===undefined)delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+  else process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED=old;
+ }
+});
