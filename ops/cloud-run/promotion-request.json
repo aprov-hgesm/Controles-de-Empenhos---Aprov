@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g6a06040ec86c-37",
-  "sourceSha": "6a06040ec86cb0329db4040ce5139187b9687b32",
-  "reason": "Autorizacao do usuario em 2026-11-03 para encerrar campo temporario de padronizacao de prateleiras depois da migracao bem-sucedida da 6 Bda. PR #504 remove UI e bloqueia SHELF_MIGRATION com HTTP 410. Stage g6a06040ec86c-37 certificado no workflow 41733843084. Promover versao do codigo com rollback automatico por saude. Nao modificar dados Firestore, saldos, labels, IAM ou faturamento."
+  "revision": "emprovex-cloudrun-candidate-geb83e077c9ea-38",
+  "sourceSha": "eb83e077c9ea8fd1b51124e91e9406e519208f6a",
+  "reason": "Melhorias operacionais solicitadas pelo fundador na Central de Empenhos e Notas Fiscais em 03/11/2026: PR #505 (seletor pesquisável de NE para cadastrar NF, reconhecimento de PE NR nos PDFs SIAFI, edição da observação da NE), conforme chat. Stage validado no workflow 41736734945; CI rápido, testes específicos e proteção do núcleo PASS. Promover imagem g eb83e077c9ea 38 para 100% com rollback automático por saúde. Não alterar dados Firestore, documentos PDF, IAM, contratos nem faturamento."
 }
