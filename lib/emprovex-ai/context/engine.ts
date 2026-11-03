@@ -254,7 +254,11 @@ export function interpret(input:Input):Result {
  // The existing Consulta de Itens can locate items by description across
  // authorized commitments, including the optional specified NE.
  const itemSearch=commitmentItemName(t);
- if(isCommitment&&!x.itemId&&
+ // Listing the items of a known NE is an existing commitment_get(includeItems)
+ // request, not a search for an unspecified product.
+ const listingItems=!!commitmentId &&
+   /\b(?:quais|liste|listar|mostre|exiba|ver)\s+(?:os?\s+)?itens?\s+(?:da|do|no|na)\s+(?:ne|empenho|nota de empenho)\b/.test(t);
+ if(isCommitment&&!listingItems&&!x.itemId&&
     (itemSearch||/\b(?:item|itens|material|materiais|produto|produtos)\b/.test(t))&&
     (isBalance||/\b(?:quais|encontre|localize|possuem|contem|procurar|consultar)\b/.test(t))){
    if(!itemSearch)
