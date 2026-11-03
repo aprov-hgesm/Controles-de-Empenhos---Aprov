@@ -106,9 +106,8 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
-  // Ao entrar pela primeira vez numa tela transacional, preservar os hooks
-  // e os callbacks desse módulo montados mesmo ao retornar para o Painel.
-  const [hasOpenedTransactionalSurface, setHasOpenedTransactionalSurface] = useState(false);
+  // O Painel é sempre uma superfície de leitura leve. Os drafts continuam
+  // no componente pai, e os hooks transacionais só montam nas abas de operação.
 
   const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey, billingAccessState === 'allowed', billingAccessIdentity);
   const {
@@ -210,9 +209,6 @@ export default function Home() {
   useEffect(() => {
     if (activeTab !== 'inicio') {
       setHasOpenedOperationalSurface(true);
-    }
-    if (activeTab !== 'inicio' && activeTab !== 'painel' && activeTab !== 'eleonor') {
-      setHasOpenedTransactionalSurface(true);
     }
   }, [activeTab]);
 
@@ -436,13 +432,13 @@ export default function Home() {
               key="operational-workspace"
               fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
             >
-              {activeTab === 'painel' && !hasOpenedTransactionalSurface ? (
+              {activeTab === 'painel' ? (
                 <OperationalDashboardEntry
                   operationalData={operationalData}
                   viewState={viewState}
                   setActiveTab={setActiveTab}
                 />
-              ) : (activeTab !== 'inicio' || hasOpenedTransactionalSurface) ? (
+              ) : activeTab !== 'inicio' ? (
               <OperationalWorkspace
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
