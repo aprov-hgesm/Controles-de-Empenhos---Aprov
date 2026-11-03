@@ -46,6 +46,8 @@ test('Resultado textual informa depósito, local, subposição e saldo com alert
   assert.match(lookup, /data\.partial \|\| data\.matchedMaterialLimit/);
   assert.match(lookup, /setVisiblePositionCount\(\(count\) => count \+ INITIAL_POSITION_COUNT\)/);
   assert.match(lookup, /requestId !== requestRef\.current/);
+  assert.match(lookup, /data\?\.workspaceId === workspaceId/);
+  assert.match(lookup, /data\.workspaceId !== workspaceId/);
   assert.match(lookup, /section === 'overview'/);
   assert.match(search, /location\.kind !== 'LOCAL'/);
   assert.match(search, /position\.kind === 'SUBPOSITION'/);
