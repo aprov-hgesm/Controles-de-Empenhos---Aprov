@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { registerEmulatedBillingPortal } from './emulatedBillingPortal.mjs';
+import { registerEmulatedLegalAcceptance } from './emulatedLegalAcceptance.mjs';
 
 // Navegação da Central sob autenticação/Firestore emuladores, sem produção.
 // Valida clique no menu, render real, URL, histórico e recarga de rota direta.
@@ -139,8 +141,12 @@ test('PR500: founder opens Normal + Essencial without duplicate legal GET', asyn
 });
 
 // External sector is a separate identity and MUST authorize its own workspace.
-test('PR500: external sector enters its own Warehouse without full-screen recovery', async ({ page }) => {
+test('PR500: external sector enters its own Warehouse without full-screen recovery', async ({ page, context }) => {
   test.setTimeout(180_000);
+  // A API comercial depende de IAM de produção: usar o mesmo mock restrito
+  // do preview, validando token e workspace somente nos emuladores demo.
+  await registerEmulatedBillingPortal(context);
+  await registerEmulatedLegalAcceptance(context);
   await page.goto('/central-empenhos');
   await page.getByTestId('sector-login-email').fill('sector-lifecycle@example.test');
   await page.getByTestId('sector-login-password').fill('Emprovex-Teste!2026');
