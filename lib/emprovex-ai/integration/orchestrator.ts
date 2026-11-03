@@ -170,24 +170,54 @@ export async function runAiAsk(args:{
    contractValidationMs=Date.now()-validationStart;
    query=validated;
    const executionStart=Date.now();
-   result=await executeAuthorizedAiQuery(access,validated);
+   try{
+     result=await executeAuthorizedAiQuery(access,validated);
+   }catch(error){
+     if(clarification?.kind==='ready'&&previous?.pending?.kind==='commitment_item_balance'&&
+        error instanceof AiExecutionError&&error.code==='AI_ITEM_NOT_FOUND'){
+       // A wrong user-supplied itemId is never reported as a legitimate zero balance.
+       status='clarify';
+       answer='Esse itemId não foi encontrado na NE informada. Confira o código do item e informe o itemId correto.';
+       contextToken=sealContext({
+         sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+         updatedAt:now.getTime(),refs:{},
+         pending:{...previous.pending,step:'item'}
+       },cookieState.session,now.getTime());
+     }else throw error;
+   }
    w3ExecutionMs=Date.now()-executionStart;
-   examinedDocuments=result.metrics.examinedDocuments;
-   const presentationStart=Date.now();
-   answer=presentAiResponse(result);
-   responseMs=Date.now()-presentationStart;
-   status=result.status==='ok'?'ok':result.status==='partial'?'partial':
-     result.status==='empty'?'empty':result.status==='ambiguous'?'ambiguous':'rejected';
-   if(status==='ok'&&interpreted.nextContext&&clarification?.kind!=='ready')
-     contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
-   if(clarification?.kind==='ready'&&status==='ok')
-     contextToken=sealContext({
-       sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
-       updatedAt:now.getTime(),refs:{
-         ...(typeof validated.params.commitmentId==='string'?{commitmentId:validated.params.commitmentId}:{}),
-         ...(typeof validated.params.materialQuery==='string'?{materialQuery:validated.params.materialQuery}:{})
-       }
-     },cookieState.session,now.getTime());
+   if(result){
+     examinedDocuments=result.metrics.examinedDocuments;
+     const presentationStart=Date.now();
+     answer=presentAiResponse(result);
+     responseMs=Date.now()-presentationStart;
+     status=result.status==='ok'?'ok':result.status==='partial'?'partial':
+       result.status==='empty'?'empty':result.status==='ambiguous'?'ambiguous':'rejected';
+     if(status==='ok'&&interpreted.nextContext&&clarification?.kind!=='ready')
+       contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
+     if(clarification?.kind==='ready'&&status==='ok')
+       contextToken=sealContext({
+         sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+         updatedAt:now.getTime(),refs:{
+           ...(typeof validated.params.commitmentId==='string'?{commitmentId:validated.params.commitmentId}:{}),
+           ...(typeof validated.params.materialQuery==='string'?{materialQuery:validated.params.materialQuery}:{})
+         }
+       },cookieState.session,now.getTime());
+     if(clarification?.kind==='ready'&&result.status==='empty'&&
+        validated.intent==='commitment_total_balance'){
+       status='clarify';
+       answer='Não encontrei essa NE nos registros autorizados. Confira o número e informe a NE completa.';
+       contextToken=sealContext({
+         sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+         updatedAt:now.getTime(),refs:{},
+         pending:{
+           kind:previous?.pending?.kind==='commitment_item_balance'?'commitment_item_balance':'commitment_balance',
+           step:'ne',
+           ...(previous?.pending?.materialLabel?{materialLabel:previous.pending.materialLabel}:{})
+         }
+       },cookieState.session,now.getTime());
+     }
+   }
  }else if(route==='CLARIFY'){
    if(clarification?.kind==='cancel'){
      status='ok';answer='Consulta cancelada. Pode fazer uma nova pergunta quando desejar.';
