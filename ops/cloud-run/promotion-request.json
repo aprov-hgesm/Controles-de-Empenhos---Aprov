@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g18bf9cad84a2-36",
-  "sourceSha": "18bf9cad84a2667339d6f33d89051872b4796c54",
-  "reason": "Atualizacao expressamente solicitada para corrigir etiquetas que permaneceram antigas na 6 Bda Inf Bld. PR #503 adiciona migracao do cadastro historico somente por PREVIEW e confirmacao explicita do operador do proprio workspace, preservando IDs e saldos. Revisao g18bf9cad84a2-36 passou stage 41732074760. Promover o codigo em Cloud Run com rollback automatico, sem executar migracao Firestore durante deploy."
+  "revision": "emprovex-cloudrun-candidate-g6a06040ec86c-37",
+  "sourceSha": "6a06040ec86cb0329db4040ce5139187b9687b32",
+  "reason": "Autorizacao do usuario em 2026-11-03 para encerrar campo temporario de padronizacao de prateleiras depois da migracao bem-sucedida da 6 Bda. PR #504 remove UI e bloqueia SHELF_MIGRATION com HTTP 410. Stage g6a06040ec86c-37 certificado no workflow 41733843084. Promover versao do codigo com rollback automatico por saude. Nao modificar dados Firestore, saldos, labels, IAM ou faturamento."
 }
