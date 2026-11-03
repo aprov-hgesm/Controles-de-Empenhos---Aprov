@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 
 import type { Invoice } from './types';
+import { auth } from './firebase';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 import { normalizeSupplierCnpj } from './invoiceIdentity';
 import {
@@ -104,6 +105,36 @@ async function loadHistoricalInvoiceSlice(
 
 export async function loadAllInvoicesHistory(): Promise<HistoricalInvoiceQueryResult> {
   return loadHistoricalInvoiceSlice([]);
+}
+
+// Cache estritamente de leitura, em memória, por identidade e workspace.
+// Evita baixar novamente dezenas de páginas ao voltar rapidamente à aba.
+// TTL curto protege a atualização entre sessões; erros nunca são armazenados.
+// Consultas de relatórios/ações continuam usando loadAllInvoicesHistory sem cache.
+const ESSENTIAL_INVOICE_HISTORY_TTL_MS = 30_000;
+let recentDisplayHistory: {
+  identity: string;
+  until: number;
+  result: Promise<HistoricalInvoiceQueryResult>;
+} | null = null;
+
+export function loadAllInvoicesHistoryForDisplay(): Promise<HistoricalInvoiceQueryResult> {
+  const scope = getCurrentOperationalScope();
+  const uid = auth.currentUser?.uid;
+  if (!uid) return Promise.reject(new Error('Sessão necessária para consultar histórico de notas fiscais.'));
+  const identity = [uid, scope.workspaceId, scope.ug ?? ''].join('|');
+  const now = Date.now();
+
+  if (recentDisplayHistory?.identity === identity && now < recentDisplayHistory.until) {
+    return recentDisplayHistory.result;
+  }
+
+  const result = loadAllInvoicesHistory().catch((error) => {
+    if (recentDisplayHistory?.result === result) recentDisplayHistory = null;
+    throw error;
+  });
+  recentDisplayHistory = { identity, until: now + ESSENTIAL_INVOICE_HISTORY_TTL_MS, result };
+  return result;
 }
 
 export async function loadInvoicesForEmpenho(
