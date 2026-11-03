@@ -37,8 +37,10 @@ export function parseItemResult(raw:unknown):ItemResultView|null {
    !['ok','partial'].includes(String(raw.status))||!isObject(raw.data)||
    !Array.isArray(raw.data.items))return null;
  const data=raw.data;
+ const rawItems=data.items;
+ if(!Array.isArray(rawItems))return null;
  const items:ItemResult[]=[];
- for(const value of data.items) {
+ for(const value of rawItems) {
    if(!isObject(value))return null;
    const name=clean(value.name,280);
    const unit=clean(value.unit,30);
