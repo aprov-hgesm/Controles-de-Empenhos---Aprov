@@ -67,6 +67,9 @@ jobs:
       - name: Firestore Enterprise financial estimate contract tests
         run: npm run test:firestore-cost-estimate
 
+      - name: Essential R3.2 performance and functional contracts
+        run: node --test scripts/essential-r32-performance.test.mjs
+
       - name: TypeScript error budget
         shell: bash
         run: |
