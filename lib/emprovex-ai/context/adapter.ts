@@ -40,6 +40,8 @@ export function makeW3Query(intent:W3Intent,p:Record<string,unknown>):W3Query|nu
    &&(p.includeItems===undefined||typeof p.includeItems==='boolean');break;
  case 'commitment_total_balance':valid=keys(p,['commitmentId','itemId'])&&typeof p.commitmentId==='string'&&NE.test(p.commitmentId)
    &&(p.itemId===undefined||(typeof p.itemId==='string'&&/^[a-z0-9_-]{1,130}$/i.test(p.itemId)));break;
+ case 'commitment_item_search':valid=keys(p,['materialQuery','commitmentId'])&&goodText(p.materialQuery)&&
+   (p.commitmentId===undefined||(typeof p.commitmentId==='string'&&NE.test(p.commitmentId)));break;
  case 'commitment_previous_open_list':valid=keys(p,['exerciseYear','includeHistorical','pageSize','cursor'])&&
    (p.exerciseYear===undefined||(Number.isInteger(p.exerciseYear)&&Number(p.exerciseYear)>=2000&&Number(p.exerciseYear)<=2100))&&
    (p.includeHistorical===undefined||typeof p.includeHistorical==='boolean')&&
