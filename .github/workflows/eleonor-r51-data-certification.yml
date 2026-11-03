@@ -1,0 +1,25 @@
+name: Eleonor R5.1 — corpus and SFT candidate certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/eleonor/lfm3-r5/**'
+      - '.github/workflows/eleonor-r51-data-certification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-data:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate JSONL, train/validation isolation and R5.1 dialogue rules
+        run: python docs/eleonor/lfm3-r5/validate_and_export.py
+      - name: Ensure training and exported artifacts are not created by validation
+        run: |
+          test ! -e /tmp/eleonor-lfm3-sft/train.jsonl
+          test ! -e /tmp/eleonor-lfm3-sft/validation_visible.jsonl

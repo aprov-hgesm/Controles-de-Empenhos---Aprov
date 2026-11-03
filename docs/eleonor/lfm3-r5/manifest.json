@@ -83,5 +83,18 @@
   "sources": [
     "https://huggingface.co/LiquidAI/LFM3-1.7B",
     "https://huggingface.co/LiquidAI/LFM3-1.7B-Base"
-  ]
+  ],
+  "behaviorAlignmentR51": {
+    "status": "CANDIDATE_REVIEW_ONLY",
+    "codePR": 494,
+    "baseSftCandidates": 112,
+    "curatedGroups": [
+      "WC07-D01",
+      "WC07-D02"
+    ],
+    "checks": "validate_and_export.py",
+    "spec": "BEHAVIOR_R51.md",
+    "trainingApprovalCount": 0,
+    "action": "Favor tool lookup and signed conversation context over mandatory technical identifiers; do not imply invoice-supplier chaining is already in runtime."
+  }
 }

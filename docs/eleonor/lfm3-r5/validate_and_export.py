@@ -85,6 +85,27 @@ def validate(manifest: dict, sources: dict[str, list[dict]]) -> tuple[list[dict]
             errors.append(f"Empty SFT text: {case.get('id')}")
         if case.get("status") != "candidate_unreviewed":
             errors.append(f"Unexpected review state: {case.get('id')}")
+    # R5.1 behavior quality gates: high-value examples must not regress into
+    # asking for technical identifiers available via authorized read tools.
+    # This is a targeted content lint, NOT approval of these SFT examples.
+    by_id = {case["id"]: case for case in candidates}
+    behavior_rules = {
+        "WC07-D01-T03": (("mesma NE", "sem exigir"), ("Confirmarei a referência",)),
+        "WC07-D01-T04": (("2026NE9999998", "itens"), ("Deseja ver o saldo",)),
+        "WC07-D02-T03": (("fornecedor", "período"), ("preciso do CNPJ",)),
+        "WC07-D02-T04": (("outubro", "ano"), ("Ainda falta confirmar o CNPJ",)),
+        "WC07-D02-T05": (("histórico de envios", "outubro"), ("Informe a NE, o CNPJ",)),
+    }
+    for record_id, (required, forbidden) in behavior_rules.items():
+        case = by_id.get(record_id)
+        if not case:
+            errors.append(f"R5.1 missing curated case: {record_id}")
+            continue
+        answer = case["messages"][-1]["content"]
+        if any(piece.lower() not in answer.lower() for piece in required) or any(
+            piece.lower() in answer.lower() for piece in forbidden
+        ):
+            errors.append(f"R5.1 behavior regression: {record_id}")
     if errors:
         raise ValueError("Validation errors:\n" + "\n".join(errors[:25]))
     print(f"OK: R2={len(sources['R2'])} R3={len(sources['R3'])} R4={len(sources['R4'])}, "
