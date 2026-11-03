@@ -51,6 +51,9 @@ test('W4 recognizes informal material questions and never combines different bal
  assert.equal(mixed.query.params.commitmentId,undefined);
  const total=ask('Qual o sald da NE 2026NE66?');
  assert.equal(total.query.intent,'commitment_total_balance','NE total must not be interpreted as product');
+ const listing=ask('Quais itens da NE 2026NE66?');
+ assert.equal(listing.query.intent,'commitment_get','NE item listing must remain valid');
+ assert.equal(listing.query.params.includeItems,true);
  const within=ask('Qual saldo do item queijo na NE 2026NE66?');
  assert.equal(within.query?.intent,'commitment_item_search');
  assert.equal(within.query?.params.commitmentId,'2026NE66');
