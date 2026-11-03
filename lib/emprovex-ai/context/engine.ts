@@ -235,7 +235,7 @@ export function interpret(input:Input):Result {
  }
  // Cross-NE material searches cannot be answered by an NE total or physical stock balance.
  if(isCommitment&&/\b(?:item|itens|material|materiais)\b/.test(t)&&
-    (isBalance||/\b(?:quais|encontre|localize|possuem|contem)\b/.test(t))&&
+    (isBalance||(!commitmentId&&/\b(?:quais|encontre|localize|possuem|contem)\b/.test(t)))&&
     !x.itemId)
    return clarify('commitment_total_balance',commitmentId?
      'Para consultar o saldo operacional desse item na NE, informe o identificador do item (itemId).':
