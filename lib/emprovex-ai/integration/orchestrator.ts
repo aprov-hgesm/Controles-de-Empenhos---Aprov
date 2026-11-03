@@ -2,6 +2,7 @@
 import {interpret,validateModelCandidate} from '../context';
 import {interpretFirstWithLfm3,type ModelFirstOutcome} from './modelFirst';
 import {historyEnabled,createHistory,getHistory,appendHistory} from '../conversation/historyStore';
+import {startClarification,continueClarification,startMaterialResolution} from './clarification';
 import {aiLfm3Enabled,aiConversationalModelEnabled} from './environment';
 import {planConversation} from '../conversation/engine';
 import {proposeWithLfm3,respondConversationally,type Lfm3Outcome} from './lfm3';
@@ -80,6 +81,14 @@ export async function runAiAsk(args:{
  const interpreted=interpret({message:args.input.message,now,
    scope:{sessionId:cookieState.session.sid,workspaceId:access.workspaceId},previous});
  const interpretationMs=interpreted.metrics.durationMs;
+ // A user reply to a typed, signed clarification is a continuation, not a new
+ // natural-language query. Always let W4 security veto attempted mutations.
+ const priorClarification=previous?.pending &&
+   !['REJECT_MUTATION','OUT_OF_SCOPE','UNSUPPORTED'].includes(interpreted.route)
+   ?continueClarification(previous.pending,args.input.message):null;
+ const clarification=priorClarification?.kind==='new_request'
+   ?startClarification(interpreted,args.input.message)
+   :priorClarification||startClarification(interpreted,args.input.message);
  const conversation=planConversation({message:args.input.message,
    operational:{route:interpreted.route,reason:interpreted.reason,intent:interpreted.intent},
    previous:previous?.conversation,now});
@@ -90,7 +99,7 @@ export async function runAiAsk(args:{
  const directWriter=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1' &&
    safeCreativeWriting&&aiConversationalModelEnabled();
  const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&
-   aiLfm3Enabled()&&!directWriter&&
+   aiLfm3Enabled()&&!directWriter&&!clarification&&
    // W4 already resolved a safe query or blocked a mutation: skip costly reclassification.
    !['DETERMINISTIC','REJECT_MUTATION','UNSUPPORTED'].includes(interpreted.route);
  let modelFirstOutcome:AiAskPayload['metrics']['modelFirstOutcome']=directWriter?'skipped_safe_writing':'not_attempted';
@@ -119,7 +128,9 @@ export async function runAiAsk(args:{
      !['DETERMINISTIC','MODEL_ELIGIBLE','UNSUPPORTED','REJECT_MUTATION'].includes(interpreted.route))) &&
    conversation?.mode!=='critical' &&
    !/\b(?:senha|token|cpf|cnpj|conta bancaria|dados pessoais|invadir|fraudar|falsificar|roubar)\b/i.test(args.input.message);
- const route=modelConversation?'CONVERSATIONAL':modelOperational?'MODEL_ELIGIBLE':
+ const route=clarification?.kind==='ready'?'DETERMINISTIC':
+   clarification?'CLARIFY':
+   modelConversation?'CONVERSATIONAL':modelOperational?'MODEL_ELIGIBLE':
    conversation?'CONVERSATIONAL':interpreted.route;
  if(modelConversation){
    status='ok';answer=modelFirst!.kind==='conversation'?modelFirst.answer:'';
@@ -146,13 +157,16 @@ export async function runAiAsk(args:{
      conversation:{topic:conversation.topic,intent:conversation.intent}
    },cookieState.session,now.getTime());
  }else if(route==='DETERMINISTIC'){
-   // Nenhum filtro solicitado pode desaparecer na fronteira W4 -> W3.
-   const audit=interpreted.filterAudit;
-   if(!audit||audit.unhandled.length||audit.requested.some(x=>!audit.represented.includes(x)))
-     throw new AiExecutionError('AI_FILTER_GUARD_BLOCKED',422);
-   if(!interpreted.query)throw new AiExecutionError('AI_W4_QUERY_MISSING',422);
+   // A resumed query is constructed solely from validated slots in a sealed
+   // context; both paths still require strict W3 schema + authorization.
+   if(clarification?.kind!=='ready'){
+     const audit=interpreted.filterAudit;
+     if(!audit||audit.unhandled.length||audit.requested.some(x=>!audit.represented.includes(x)))
+       throw new AiExecutionError('AI_FILTER_GUARD_BLOCKED',422);
+     if(!interpreted.query)throw new AiExecutionError('AI_W4_QUERY_MISSING',422);
+   }
    const validationStart=Date.now();
-   const validated=parseAiQuery(interpreted.query);
+   const validated=parseAiQuery(clarification?.kind==='ready'?clarification.query:interpreted.query);
    contractValidationMs=Date.now()-validationStart;
    query=validated;
    const executionStart=Date.now();
@@ -164,11 +178,29 @@ export async function runAiAsk(args:{
    responseMs=Date.now()-presentationStart;
    status=result.status==='ok'?'ok':result.status==='partial'?'partial':
      result.status==='empty'?'empty':result.status==='ambiguous'?'ambiguous':'rejected';
-   if(status==='ok'&&interpreted.nextContext)
+   if(status==='ok'&&interpreted.nextContext&&clarification?.kind!=='ready')
      contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
+   if(clarification?.kind==='ready'&&status==='ok')
+     contextToken=sealContext({
+       sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+       updatedAt:now.getTime(),refs:{
+         ...(typeof validated.params.commitmentId==='string'?{commitmentId:validated.params.commitmentId}:{}),
+         ...(typeof validated.params.materialQuery==='string'?{materialQuery:validated.params.materialQuery}:{})
+       }
+     },cookieState.session,now.getTime());
  }else if(route==='CLARIFY'){
-   status='clarify';answer=interpreted.question||'Poderia esclarecer a identificação da consulta?';
-   if(interpreted.nextContext)contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
+   if(clarification?.kind==='cancel'){
+     status='ok';answer='Consulta cancelada. Pode fazer uma nova pergunta quando desejar.';
+   }else if(clarification?.kind==='question'){
+     status='clarify';answer=clarification.question;
+     contextToken=sealContext({
+       sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+       updatedAt:now.getTime(),refs:{},pending:clarification.pending
+     },cookieState.session,now.getTime());
+   }else{
+     status='clarify';answer=interpreted.question||'Poderia esclarecer a identificação da consulta?';
+     if(interpreted.nextContext)contextToken=sealContext(interpreted.nextContext,cookieState.session,now.getTime());
+   }
  }else if(route==='UNSUPPORTED'){
    status='unsupported';answer='Esta consulta ainda não está disponível nos contratos operacionais desta fase.';
  }else if(route==='REJECT_MUTATION'){
@@ -228,6 +260,19 @@ export async function runAiAsk(args:{
    }
  }else{
    status='out_of_scope';answer='Posso consultar informações operacionais do EMPROVEX, dentro dos contratos disponíveis.';
+ }
+ // A genuinely ambiguous or unresolved warehouse material requires a canonical
+ // identifier; never silently assume zero from partial catalogue coverage.
+ if(query&&result&&
+    (result.status==='ambiguous'||(result.status==='partial'&&result.data===null))){
+   const refinement=startMaterialResolution(query.intent,query,result.status,result.coverage);
+   if(refinement?.kind==='question'){
+     status='clarify';answer=refinement.question;
+     contextToken=sealContext({
+       sessionId:cookieState.session.sid,workspaceId:access.workspaceId,
+       updatedAt:now.getTime(),refs:{},pending:refinement.pending
+     },cookieState.session,now.getTime());
+   }
  }
  const payload:AiAskPayload={version:'emprovex.ai.ask.v1',status,route,intent:conversation?.intent||interpreted.intent,
    answer,reason:conversation?.reason||interpreted.reason,...(query?{query}:{}),...(result?{result}:{}),
