@@ -1220,7 +1220,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         <section data-testid="warehouse-croqui-labels" className="rounded-2xl border border-blue-200 bg-white p-3">
           <WarehouseLabelsR1 depots={depots} locations={locations}
             selectedDepotId={selectedDepotId}
-            selectedLocationId={selectedLayoutObject?.warehouseLocationId || ''}/>
+            selectedLocationId={selectedLayoutObject?.warehouseLocationId || ''}
+            onRefresh={reloadBase}/>
         </section>
       )}
 
