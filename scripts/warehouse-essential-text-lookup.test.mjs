@@ -22,9 +22,13 @@ test('Consulta Essencial não importa renderizadores ou faz leituras ao montar a
     'WarehouseDepotLayoutEditor', 'getActiveWarehouseDepotLayout',
     'listWarehouseLots(', 'listWarehouseVisualExpiryLots(', 'useEffect(() => { void readSnapshot',
   ]) assert.equal(lookup.includes(forbidden), false, 'Dependência pesada indevida: ' + forbidden);
-  assert.match(lookup, /if \(!data\) void readSnapshot\(\)/);
+  assert.match(lookup, /void readSnapshot\(value\)/);
   assert.match(lookup, /onSubmit=\{onSearch\}/);
-  assert.match(lookup, /listWarehousePositiveLocationBalances\(workspaceId, BALANCE_LIMIT\)/);
+  assert.match(lookup, /listWarehouseLocationBalances\(workspaceId, BALANCE_LIMIT_PER_MATERIAL, item\.id\)/);
+  assert.match(lookup, /candidates\.slice\(0, MAX_MATCHED_MATERIALS\)/);
+  assert.match(lookup, /setSubmittedQuery\(searchTerm\)/);
+  assert.match(lookup, /normalize\(\[item\.id, item\.description, \.\.\.item\.aliases\]/);
+  assert.doesNotMatch(lookup, /listWarehousePositiveLocationBalances\(/);
   assert.match(lookup, /listWarehouseMaterials\(workspaceId, MATERIAL_LIMIT\)/);
   assert.match(lookup, /listWarehouseDepotsCached\(workspaceId, DEPOT_LIMIT\)/);
   assert.match(lookup, /listWarehouseLocationsCached\(workspaceId, LOCATION_LIMIT\)/);
@@ -39,7 +43,7 @@ test('Resultado textual informa depósito, local, subposição e saldo com alert
   assert.match(lookup, /position\.locationCode/);
   assert.match(lookup, /position\.subpositionCode/);
   assert.match(lookup, /position\.quantity\.toLocaleString/);
-  assert.match(lookup, /data\.partial \|\| matches\.length >= 100/);
+  assert.match(lookup, /data\.partial \|\| data\.matchedMaterialLimit/);
   assert.match(lookup, /setVisiblePositionCount\(\(count\) => count \+ INITIAL_POSITION_COUNT\)/);
   assert.match(lookup, /requestId !== requestRef\.current/);
   assert.match(lookup, /section === 'overview'/);
