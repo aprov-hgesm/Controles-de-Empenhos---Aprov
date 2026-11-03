@@ -141,6 +141,9 @@ function useRealtimeCollectionSubscription<T>({
     const collectionPath = getOperationalCollectionPath(scope, collectionName);
 
     let firstSnapshot = true;
+    // Reaproveita objetos já mapeados quando o Firestore altera apenas
+    // alguns documentos; preserva a ordem integral de snapshot.docs.
+    const mappedDocuments = new Map<string, T>();
     const stopTrackingListener = trackWorkspaceRealtimeListener(scope);
     const unsubscribe = onSnapshot(
       operationalCollectionRef(scope, collectionName),
@@ -153,7 +156,20 @@ function useRealtimeCollectionSubscription<T>({
           collectionName === 'empenhos' ? 'empenhos' : collectionName === 'invoices' ? 'notas' : 'outros'
         );
         firstSnapshot = false;
-        setData(snapshot.docs.map(mapDocument));
+        for (const change of snapshot.docChanges()) {
+          if (change.type === 'removed') {
+            mappedDocuments.delete(change.doc.id);
+          } else {
+            mappedDocuments.set(change.doc.id, mapDocument(change.doc));
+          }
+        }
+        setData(snapshot.docs.map((snapshotDoc) => {
+          const cached = mappedDocuments.get(snapshotDoc.id);
+          if (cached !== undefined) return cached;
+          const mapped = mapDocument(snapshotDoc);
+          mappedDocuments.set(snapshotDoc.id, mapped);
+          return mapped;
+        }));
         setCollectionReady(collectionName, true);
       },
       (error) => {
