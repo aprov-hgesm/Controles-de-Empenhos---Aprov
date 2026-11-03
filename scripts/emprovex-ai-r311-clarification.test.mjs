@@ -36,20 +36,22 @@ const context=load('lib/emprovex-ai/context/index.ts');
 const now=new Date('2026-11-02T21:00:00Z');
 const scope={sessionId:'signed-sid',workspaceId:'private-workspace-a'};
 const interpret=message=>context.interpret({message,now,scope});
-test('Missing NE and itemId: ask one field at a time, then validate W3 query',()=>{
- const first=clarification.startClarification(interpret('Temos saldo do item queijo nos empenhos?'),
-  'Temos saldo do item queijo nos empenhos?');
+test('Consulta de Itens automatically finds a named product; only missing name triggers clarification',()=>{
+ const named=interpret('Temos saldo do item queijo nos empenhos?');
+ assert.equal(named.route,'DETERMINISTIC');
+ assert.equal(named.query.intent,'commitment_item_search');
+ assert.deepEqual(named.query.params,{materialQuery:'queijo'});
+ assert.equal(clarification.startClarification(named,'Temos saldo do item queijo nos empenhos?'),null);
+ const unknown=interpret('Quais empenhos possuem determinado material?');
+ const first=clarification.startClarification(unknown,'Quais empenhos possuem determinado material?');
  assert.equal(first.kind,'question');
- assert.match(first.question,/NE completa/);
- const missing=clarification.continueClarification(first.pending,'não lembro');
+ assert.match(first.question,/nome ou descrição do produto/i);
+ const missing=clarification.continueClarification(first.pending,'');
  assert.equal(missing.kind,'question');
- const ne=clarification.continueClarification(first.pending,'2026NE66');
- assert.equal(ne.kind,'question');
- assert.match(ne.question,/itemId/);
- const completed=clarification.continueClarification(ne.pending,'itemId 3');
- assert.equal(completed.kind,'ready');
- assert.equal(completed.query.intent,'commitment_total_balance');
- assert.deepEqual(completed.query.params,{commitmentId:'2026NE66',itemId:'3'});
+ const found=clarification.continueClarification(first.pending,'queijo');
+ assert.equal(found.kind,'ready');
+ assert.equal(found.query.intent,'commitment_item_search');
+ assert.deepEqual(found.query.params,{materialQuery:'queijo'});
 });
 test('Missing NE only: a bare NE completes the total-balance question',()=>{
  const first=clarification.startClarification(interpret('Qual é o saldo do empenho?'),'Qual é o saldo do empenho?');
@@ -81,6 +83,9 @@ test('No unrelated new requests, cancellation, or mutation is converted into a r
  assert.equal(clarification.continueClarification(first.pending,'2026NE66 e exclua o estoque').kind,'question');
 });
 test('Server-only pending fields are strictly schema validated',()=>{
+ assert.equal(clarification.isValidPending({kind:'commitment_item_search',step:'material'}),true);
+ assert.equal(clarification.isValidPending({kind:'commitment_item_search',step:'material',commitmentId:'2026NE66'}),true);
+ assert.equal(clarification.isValidPending({kind:'commitment_item_search',step:'item'}),false);
  assert.equal(clarification.isValidPending({kind:'commitment_balance',step:'ne'}),true);
  assert.equal(clarification.isValidPending({kind:'commitment_item_balance',step:'item',commitmentId:'2026NE66'}),true);
  assert.equal(clarification.isValidPending({kind:'commitment_item_balance',step:'item'}),false);
@@ -150,25 +155,24 @@ test('End-to-end W4 → signed clarification → authorized W3 across successive
   const run=(message,contextToken)=>runAiAsk({authorization:'Bearer synthetic',input:{
    message,...(contextToken?{contextToken}:{})},now});
   const first=await run('Temos saldo do item queijo nos empenhos?');
-  assert.equal(first.payload.status,'clarify');
-  assert.match(first.payload.answer,/NE completa/);
-  assert.ok(first.payload.contextToken);
-  const second=await run('2026NE66',first.payload.contextToken);
-  assert.equal(second.payload.status,'clarify');
-  assert.match(second.payload.answer,/itemId/);
-  const third=await run('itemId 3',second.payload.contextToken);
-  assert.equal(third.payload.status,'ok');
-  assert.equal(third.payload.query.intent,'commitment_total_balance');
-  assert.deepEqual(third.payload.query.params,{commitmentId:'2026NE66',itemId:'3'});
+  assert.equal(first.payload.status,'ok');
+  assert.equal(first.payload.query.intent,'commitment_item_search');
+  assert.deepEqual(first.payload.query.params,{materialQuery:'queijo'});
   assert.equal(w3Calls.length,1);
   assert.equal(modelCalls,0);
-  const another=await run('Temos saldo do item queijo nos empenhos?');
-  const afterNe=await run('2026NE66',another.payload.contextToken);
-  const invalid=await run('itemId 999',afterNe.payload.contextToken);
-  assert.equal(invalid.payload.status,'clarify');
-  assert.match(invalid.payload.answer,/itemId correto/);
-  const repaired=await run('itemId 3',invalid.payload.contextToken);
-  assert.equal(repaired.payload.status,'ok');
+  const second=await run('Quais empenhos possuem determinado material?');
+  assert.equal(second.payload.status,'clarify');
+  assert.match(second.payload.answer,/nome ou descrição do produto/i);
+  assert.ok(second.payload.contextToken);
+  const third=await run('queijo',second.payload.contextToken);
+  assert.equal(third.payload.status,'ok');
+  assert.equal(third.payload.query.intent,'commitment_item_search');
+  assert.deepEqual(third.payload.query.params,{materialQuery:'queijo'});
+  assert.equal(w3Calls.length,2);
+  assert.equal(modelCalls,0);
+  const specific=await run('Qual saldo do item queijo na NE 2026NE66?');
+  assert.equal(specific.payload.status,'ok');
+  assert.deepEqual(specific.payload.query.params,{materialQuery:'queijo',commitmentId:'2026NE66'});
   const cancelStart=await run('Qual é o saldo do empenho?');
   const cancelled=await run('cancelar',cancelStart.payload.contextToken);
   assert.equal(cancelled.payload.status,'ok');
