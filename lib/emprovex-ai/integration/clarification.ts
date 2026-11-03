@@ -56,7 +56,9 @@ function itemLabel(message:string):string|undefined{
  return v.length>=2&&SAFE.test(v)?v.slice(0,90):undefined;
 }
 export function startClarification(interpreted:Result,message:string):ClarificationAction|null {
- if(interpreted.route!=='CLARIFY')return null;
+ if(interpreted.route!=='CLARIFY'||
+  !['MISSING_OR_AMBIGUOUS_PARAMETER','ITEM_NAME_REQUIRES_ITEM_ID'].includes(interpreted.reason))
+  return null; // Never drop an unsupported location, time or supplier filter.
  if(interpreted.intent==='commitment_total_balance'){
   // Do not silently replace an item-level request by a total-NE balance.
   const item=/\b(?:do item|de item|por item|itens|material|materiais|produto)\b/i.test(message)||
