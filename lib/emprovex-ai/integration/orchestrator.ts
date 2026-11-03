@@ -56,10 +56,12 @@ export async function runAiAsk(args:{
  let historyStatus:'saved'|'unavailable'|'disabled'=historyActive?'unavailable':'disabled';
  let conversationId=args.input.conversationId;
  let historyWritable=false;
+ let createdHistory:Awaited<ReturnType<typeof createHistory>>|undefined;
  if(historyActive){
    try{
      if(conversationId)await getHistory(access,conversationId);
-     else conversationId=(await createHistory(access,args.input.message)).id;
+     else {createdHistory=await createHistory(access,args.input.message);
+       conversationId=createdHistory.id;}
      historyWritable=true;
    }catch(error){
      if(args.input.conversationId && error instanceof AiExecutionError &&
@@ -237,7 +239,7 @@ export async function runAiAsk(args:{
  if(historyActive && historyWritable && conversationId){
     const appendStart=Date.now();
     try{
-      await appendHistory(access,conversationId,args.input.message,answer,{status,route});
+      await appendHistory(access,conversationId,args.input.message,answer,{status,route},createdHistory);
       historyStatus='saved';
       payload.conversationId=conversationId;
     }catch(error){
