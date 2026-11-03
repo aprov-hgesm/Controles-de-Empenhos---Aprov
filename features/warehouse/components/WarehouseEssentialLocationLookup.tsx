@@ -28,6 +28,7 @@ const normalize = (value: string) => value.normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
 
 type LookupData = {
+  workspaceId: string;
   materials: WarehouseMaterial[];
   depots: WarehouseDepotListItem[];
   locations: WarehouseLocationListItem[];
@@ -78,7 +79,7 @@ export function WarehouseEssentialLocationLookup({
       // Material, depósitos e locais são reutilizados entre buscas nesta aba.
       // Os saldos são consultados SOMENTE por material correspondente, não
       // via leitura de 500 posições globais a cada pesquisa.
-      const current = !force ? data : null;
+      const current = !force && data?.workspaceId === workspaceId ? data : null;
       const [materials, depots, locations] = current
         ? [current.materials, current.depots, current.locations] as const
         : await Promise.all([
@@ -98,6 +99,7 @@ export function WarehouseEssentialLocationLookup({
       ));
       if (requestId !== requestRef.current) return;
       setData({
+        workspaceId,
         materials,
         depots,
         locations,
@@ -133,7 +135,7 @@ export function WarehouseEssentialLocationLookup({
   };
 
   const matches = useMemo(() => {
-    if (!data || !submittedQuery) return [];
+    if (!data || data.workspaceId !== workspaceId || !submittedQuery) return [];
     return findWarehouseMaterialsAcrossDepots({
       query: submittedQuery,
       depots: data.depots.map((entry) => entry.depot),
@@ -142,7 +144,7 @@ export function WarehouseEssentialLocationLookup({
       materials: data.materials,
       maxMaterials: MAX_MATCHED_MATERIALS,
     });
-  }, [data, submittedQuery]);
+  }, [data, submittedQuery, workspaceId]);
 
   const rows = useMemo(() => matches.flatMap((material) =>
     material.positions
@@ -157,6 +159,11 @@ export function WarehouseEssentialLocationLookup({
 
   const visibleRows = rows.slice(0, visiblePositionCount);
   const title = section === 'home' ? 'Localizar material' : 'Consultar meus depósitos';
+
+  // Nem durante a troca de identidade é permitido exibir posições do workspace anterior.
+  if (data && data.workspaceId !== workspaceId) {
+    return <div role="status" className="p-4 text-sm text-slate-600">Preparando consulta do workspace…</div>;
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-5" data-testid="warehouse-essential-location-lookup"
