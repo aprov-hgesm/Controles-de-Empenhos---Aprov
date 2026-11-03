@@ -48,7 +48,7 @@ test('W3.0 — dez contratos fechados e nenhuma selecao arbitraria de dados',()=
   ];
   for(const [intent,params] of valid)
     assert.equal(contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent,params}).intent,intent);
-  assert.equal(Object.keys(contracts.CONTRACTS).length,9);
+  assert.equal(Object.keys(contracts.CONTRACTS).length,10);
   for(const field of ['workspaceId','ug','collection','path','query'])
     assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
       params:{commitmentId:'2026NE0066',[field]:'evil'}}));
