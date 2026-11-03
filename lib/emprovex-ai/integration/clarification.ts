@@ -214,8 +214,19 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
  }
  if(p.step==='materialId'){
   const v=message.replace(/^(?:materialId|id|barcode|codigo de barras|c[oó]digo)\s*[:#=-]?\s*/iu,'').trim();
-  if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase()});
-  if(BARCODE.test(v))return ready(p.kind,{barcode:v});
+  const option=v.match(/^(?:op(?:c|ç)[aã]o\s*[:#=-]?\s*)?(\d{1,2})$/iu)?.[1];
+  const scoped=p.depotId?{depotId:p.depotId}:{};
+  if(option&&p.options){
+    const selected=p.options[Number(option)-1];
+    return selected?ready(p.kind,{materialId:selected,...scoped}):
+      {kind:'question',question:'Escolha um número de 1 a '+p.options.length+
+        ' ou informe uma descrição mais específica.',pending:p};
+  }
+  if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase(),...scoped});
+  if(BARCODE.test(v))return ready(p.kind,{barcode:v,...scoped});
+  if(v.length>=2&&v.length<=120&&SAFE.test(v)&&
+     !/\b(?:exceto|excluindo|outro setor|outra ug|outro workspace|altere|registre|exclua|transfira)\b/iu.test(v))
+    return ready(p.kind,{materialQuery:v,...scoped});
   return {kind:'question',question:questionCanonical,pending:p};
  }
  if(message.length>120||!SAFE.test(message)||/\b(?:exceto|excluindo|outro setor|outra ug|outro workspace|altere|registre|exclua|transfira)\b/iu.test(message))
@@ -226,7 +237,8 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
    if(name.length<2||name.length>120)return {kind:'question',question:questionItemSearch,pending:p};
    return ready(p.kind,{materialQuery:name,...(p.commitmentId?{commitmentId:p.commitmentId}:{})});
  }
- if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase()});
- if(BARCODE.test(v))return ready(p.kind,{barcode:v});
- return ready(p.kind,{materialQuery:v});
+ const scoped=p.depotId?{depotId:p.depotId}:{};
+ if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase(),...scoped});
+ if(BARCODE.test(v))return ready(p.kind,{barcode:v,...scoped});
+ return ready(p.kind,{materialQuery:v,...scoped});
 }
