@@ -86,7 +86,9 @@ export async function runAiAsk(args:{
  const directWriter=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1' &&
    safeCreativeWriting&&aiConversationalModelEnabled();
  const modelFirstAttempted=process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED==='1'&&
-   aiLfm3Enabled()&&!directWriter;
+   aiLfm3Enabled()&&!directWriter&&
+   // W4 already resolved a safe query or blocked a mutation: skip costly reclassification.
+   !['DETERMINISTIC','REJECT_MUTATION','UNSUPPORTED'].includes(interpreted.route);
  let modelFirstOutcome:AiAskPayload['metrics']['modelFirstOutcome']=directWriter?'skipped_safe_writing':'not_attempted';
  const modelFirst=modelFirstAttempted?await interpretFirstWithLfm3(
    args.input.message,previous?.refs,(outcome)=>{modelFirstOutcome=outcome}
