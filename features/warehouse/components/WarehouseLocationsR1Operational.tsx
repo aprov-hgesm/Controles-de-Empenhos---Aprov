@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
+import { warehouseShelfPresentationCode } from '../../../lib/warehouse/subpositionCode';
 import { WarehouseDepotRegistrationR1 } from './WarehouseDepotRegistrationR1';
 import {
   suggestWarehouseLocalCode,
@@ -332,8 +333,8 @@ export function WarehouseLocationsR1Operational({
             kind: 'SUBPOSITION',
             depotId: selectedDepotId,
             parentLocationId: created.id,
-            code: normalizedBaseCode + '-' + sequence,
-            name: 'Subposição ' + sequence,
+            code: 'PRAT-' + sequence,
+            name: 'Prateleira ' + sequence,
             description: 'Criada automaticamente para ' + (locationName.trim() || normalizedBaseCode),
           });
         }
@@ -684,7 +685,7 @@ export function WarehouseLocationsR1Operational({
                     onChange={(event) => setShelfSubpositionCount(Math.max(0, Math.min(30, Number(event.target.value) || 0)))}
                     className={fieldClass}
                   />
-                  <span className="text-[9px] leading-4 text-gray-400">Cria automaticamente EST-XX-01, EST-XX-02… como posições filhas. Use 0 se preferir cadastrar depois.</span>
+                  <span className="text-[9px] leading-4 text-gray-400">Cria automaticamente PRAT-01, PRAT-02… como prateleiras desta estante. Use 0 se preferir cadastrar depois.</span>
                 </label>
               )}
               <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
@@ -959,15 +960,23 @@ export function WarehouseLocationsR1Operational({
               </div>
             ) : (
               <div className="mt-4 max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-1">
-                {subpositions.map((item) => (
-                  <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
+                {subpositions.map((item) => {
+                  const displayCode = warehouseShelfPresentationCode(
+                    selectedLocation.code,
+                    item.location.code,
+                    subpositions.map(sibling => sibling.location.code)
+                  );
+                  const displayName = displayCode !== item.location.code
+                    && /^Subposição \d+$/i.test(item.location.name)
+                    ? 'Prateleira ' + displayCode.slice(-2) : item.location.name;
+                  return <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
                     <div className="flex items-center gap-2">
                       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blue-50 text-[#00288e]">
                         <Archive className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-gray-800">{item.location.name}</p>
-                        <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{item.location.code}</p>
+                        <p className="truncate text-xs font-black text-gray-800">{displayName}</p>
+                        <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{displayCode}</p>
                       </div>
                       <button
                         type="button"
@@ -978,8 +987,8 @@ export function WarehouseLocationsR1Operational({
                         <Pencil className="h-3 w-3" />
                       </button>
                     </div>
-                  </div>
-                ))}
+                  </div>;
+                })}
               </div>
             )}
           </section>
