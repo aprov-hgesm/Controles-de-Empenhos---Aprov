@@ -5,6 +5,7 @@ import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActio
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import { ChevronDown, ChevronUp, Info, Package, Search } from 'lucide-react';
 import type { Empenho } from '../../../lib/types';
+import {normalizeConsultaItemName,normalizeConsultaItemSearch} from '../domain/consultaItens';
 
 interface ConsultaItensViewContext {
   empenhos: Empenho[];
@@ -50,8 +51,6 @@ type ConsolidatedItem = {
   associations: ItemAssociation[];
 };
 
-const normalizeConsultaItemName = (value: string) =>
-  value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
 /** Consulta consolidada de itens extraída sem alterar regras de negócio, dados ou persistência. */
 export function ConsultaItensView({ context }: ConsultaItensViewProps) {
   const { empenhos, expandedConsultaItem, handleEmpenhoDocumentUploaded, itensSaldoFilter, itensSearch, setActiveTab, setExpandedConsultaItem, setItensSaldoFilter, setItensSearch, setSelectedEmpenhoDetailId, showToast, user } = context;
@@ -130,14 +129,14 @@ export function ConsultaItensView({ context }: ConsultaItensViewProps) {
   }, [consolidatedItems]);
 
   const filteredItems = React.useMemo(() => {
-    const normalizedSearch = deferredItensSearch.trim().toLocaleLowerCase('pt-BR');
+    const normalizedSearch = normalizeConsultaItemSearch(deferredItensSearch);
 
     return consolidatedItems.filter((item) => {
       const matchesBalance = itensSaldoFilter === 'Todos'
         || (itensSaldoFilter === 'Com saldo' && item.totalBalance > 0)
         || (itensSaldoFilter === 'Sem saldo' && item.totalBalance === 0);
       const matchesSearch = !normalizedSearch
-        || item.name.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+        || normalizeConsultaItemSearch(item.name).includes(normalizedSearch)
         || item.unit.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
         || item.associations.some((association) =>
           association.empenhoId.toLocaleLowerCase('pt-BR').includes(normalizedSearch)

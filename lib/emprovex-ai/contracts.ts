@@ -8,6 +8,7 @@ export const CONTRACTS = {
   supplier_contact_find: 'supplier.contact.find.v1',
   commitment_get: 'commitment.get.v1',
   commitment_total_balance: 'commitment.balance.v1',
+  commitment_item_search: 'commitment.itemSearch.v1',
   commitment_previous_open_list: 'commitment.previousOpen.list.v1',
   schedule_sent_history_list: 'schedule.sentHistory.list.v1',
   invoice_registration_period_list: 'invoice.registrationPeriod.list.v1',
@@ -115,6 +116,13 @@ export function parseAiQuery(input: unknown): AiQuery {
         if (p.includeItems !== undefined && typeof p.includeItems !== 'boolean') throw new AiInputError('AI_INVALID_INCLUDE_ITEMS');
         params.includeItems = p.includeItems === true;
       } else if(p.itemId!==undefined) params.itemId = stringParam(p.itemId,'item_id',ID,130);
+      break;
+    }
+    case 'commitment_item_search': {
+      onlyKeys(p,['materialQuery','commitmentId']);
+      params.materialQuery=stringParam(p.materialQuery,'material_query',MATERIAL_TEXT,120);
+      if(p.commitmentId!==undefined)
+        params.commitmentId=stringParam(p.commitmentId,'commitment_id',NE,22).toUpperCase();
       break;
     }
     case 'commitment_previous_open_list': {

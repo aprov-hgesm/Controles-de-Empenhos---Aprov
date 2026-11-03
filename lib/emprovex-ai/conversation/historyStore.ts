@@ -11,6 +11,8 @@ import {AiExecutionError} from '../response';
 
 export type HistoryMessage={id:string;role:'user'|'assistant';text:string;at:string;status?:string;route?:string};
 export type HistoryThread={id:string;title:string;createdAt:string;updatedAt:string;messages:HistoryMessage[]};
+// Only the server obtains this optimistic-write precondition from Firestore.
+export type CreatedHistory=HistoryThread&{writeVersion?:string};
 export type HistorySummary=Omit<HistoryThread,'messages'>&{messageCount:number};
 const MAX_THREADS=50, MAX_MESSAGES=120, MAX_TEXT=2200;
 const COLLECTION='eleonorHistory';
@@ -92,7 +94,7 @@ export async function listHistory(access:AiAccess):Promise<HistorySummary[]>{
  return rows.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,MAX_THREADS)
   .map(({messages,...t})=>({...t,messageCount:messages.length}));
 }
-export async function createHistory(access:AiAccess,firstMessage:string):Promise<HistoryThread>{
+export async function createHistory(access:AiAccess,firstMessage:string):Promise<CreatedHistory>{
  enabled();
  const count=await listHistory(access);
  if(count.length>=MAX_THREADS)throw new AiExecutionError('AI_HISTORY_LIMIT_REACHED',409);
@@ -100,11 +102,16 @@ export async function createHistory(access:AiAccess,firstMessage:string):Promise
  const t:HistoryThread={id,title:title(firstMessage),createdAt:now,updatedAt:now,messages:[]};
  const r=await request(collection(access)+'?documentId='+id,access,'POST',pack(access,t));
  if(!r.ok)throw new AiExecutionError('AI_HISTORY_CREATE_FAILED',503);
- return t;
+ const created=await r.json() as FS;
+ return {...t,...(typeof created.updateTime==='string'&&created.updateTime?
+   {writeVersion:created.updateTime}:{})};
 }
 export async function appendHistory(access:AiAccess,id:string,userText:string,
- assistantText:string,meta:{status:string;route:string}):Promise<void>{
- const current=await read(access,id);
+ assistantText:string,meta:{status:string;route:string},created?:CreatedHistory):Promise<void>{
+ // The first turn already owns the just-created document and its updateTime.
+ // Avoid a redundant GET while retaining Firestore optimistic concurrency.
+ const current=created?.id===id&&created.writeVersion?
+   {thread:created as HistoryThread,updateTime:created.writeVersion}:await read(access,id);
  if(!current)throw new AiExecutionError('AI_HISTORY_NOT_FOUND',404);
  const t=current.thread;
  if(t.messages.length+2>MAX_MESSAGES)

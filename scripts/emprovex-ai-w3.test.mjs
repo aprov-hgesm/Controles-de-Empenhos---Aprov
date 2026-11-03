@@ -33,11 +33,12 @@ function load(path,mocks={},scenarioCache=Object.keys(mocks).length?new Map():sh
 }
 const contracts=load('lib/emprovex-ai/contracts.ts');
 const access={uid:'uid-1',workspaceId:'setor-a',ug:'160416',email:'a@example.com',googleToken:'stub'};
-test('W3.0 — nove contratos fechados e nenhuma selecao arbitraria de dados',()=>{
+test('W3.0 — dez contratos fechados e nenhuma selecao arbitraria de dados',()=>{
   const valid=[
     ['supplier_contact_find',{nameQuery:'Fornecedor Alfa'}],
     ['commitment_get',{commitmentId:'2026NE0066'}],
     ['commitment_total_balance',{commitmentId:'2026NE0066'}],
+    ['commitment_item_search',{materialQuery:'queijo'}],
     ['commitment_previous_open_list',{}],
     ['schedule_sent_history_list',{commitmentId:'2026NE0066'}],
     ['invoice_registration_period_list',{interval:{start:'2026-10-01',endExclusive:'2026-11-01'},dateMeaning:'registered'}],
@@ -47,7 +48,7 @@ test('W3.0 — nove contratos fechados e nenhuma selecao arbitraria de dados',()
   ];
   for(const [intent,params] of valid)
     assert.equal(contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent,params}).intent,intent);
-  assert.equal(Object.keys(contracts.CONTRACTS).length,9);
+  assert.equal(Object.keys(contracts.CONTRACTS).length,10);
   for(const field of ['workspaceId','ug','collection','path','query'])
     assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
       params:{commitmentId:'2026NE0066',[field]:'evil'}}));

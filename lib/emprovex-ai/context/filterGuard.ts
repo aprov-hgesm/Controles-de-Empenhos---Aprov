@@ -10,6 +10,7 @@ export const W3_FILTERS:Readonly<Record<W3Intent,readonly FilterName[]>>={
  supplier_contact_find:['supplierName','supplierCnpj'],
  commitment_get:['commitmentId'],
  commitment_total_balance:['commitmentId','itemId'],
+ commitment_item_search:['commitmentId','materialQuery'],
  commitment_previous_open_list:[], // exerciseYear/historical list is not a per-document filter
  schedule_sent_history_list:['commitmentId','supplierCnpj','period'],
  invoice_registration_period_list:['commitmentId','supplierCnpj','period'],
@@ -32,7 +33,7 @@ export function auditFilters(intent:W3Intent,params:Record<string,unknown>,const
    let parameter=asParameter[filter];
    if(filter==='period'&&intent==='schedule_sent_history_list')parameter='sentPeriod';
    if(filter==='supplierName'&&intent!=='supplier_contact_find')parameter=undefined;
-   if(filter==='materialQuery'&&!['warehouse_stock_get','warehouse_material_locations_list'].includes(intent))parameter=undefined;
+   if(filter==='materialQuery'&&!['warehouse_stock_get','warehouse_material_locations_list','commitment_item_search'].includes(intent))parameter=undefined;
    if(filter==='supplierCnpj'&&intent==='supplier_contact_find')parameter='cnpj';
    if(!accepted.includes(filter)||!parameter||params[parameter]===undefined)unhandled.push(filter);
    else represented.push(filter);
@@ -76,6 +77,12 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'period',value:'unresolved_absolute_year'});
  add('depotId',explicit.depotId);
  add('itemId',explicit.itemId);
+ // Consulta de Itens does not yet offer an exercise-year filter: never
+ // silently expand "empenhos de 2025" into an unrestricted all-years search.
+ if(intent==='commitment_item_search'&&!explicit.commitmentId&&
+   /\b(?:em|de|do|ano|exercicio|exercicios)\s+20\d{2}\b/.test(t))
+   c.push({name:'period',value:'unrepresented_exercise'});
+
  if(intent==='commitment_total_balance'&&!explicit.itemId&&
    /\b(?:por item|do item|referente ao|referente a|relativo ao|saldo de material|saldo do material)\b/.test(t))
    c.push({name:'materialQuery',value:'unresolved_commitment_item'});

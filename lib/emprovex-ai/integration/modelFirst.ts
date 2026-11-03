@@ -50,6 +50,7 @@ export async function interpretFirstWithLfm3(message:string,context:ContextRefs=
        'Devolva SOMENTE JSON com kind, intent, params e answer. '+
        'kind=operational se o usuário quer consultar saldos, empenhos, fornecedores, notas fiscais, cronogramas ou estoques do sistema: '+
        'use uma intenção permitida e os parâmetros explícitos na pergunta (sem criar números, nomes ou filtros), answer vazio. '+
+       'Para localizar saldo de produto nos empenhos por nome, use commitment_item_search com materialQuery e commitmentId opcional, nunca invente itemId. '+
        'Exemplo: pergunta Detalhe o fornecedor Alfa -> {"kind":"operational","intent":"supplier_contact_find","params":{"nameQuery":"Alfa"},"answer":""}. '+
        'kind=conversation para conversa, explicação geral, criação e revisão de textos; forneça answer em português com no máximo 900 caracteres, intent vazio, params vazio. '+
        'kind=unsupported se pedirem modificar dados, informações privadas, saldos sem consulta, fatos atuais sem fonte, ou ação fora das ferramentas. '+
@@ -57,7 +58,7 @@ export async function interpretFirstWithLfm3(message:string,context:ContextRefs=
        'Se o usuário pedir ajuda sobre uma função do sistema, não invente passo a passo; peça a tela/funcionalidade ou fonte aprovada. '+
        'Responda com clareza e personalidade profissional discreta.'},
      {role:'user',content:JSON.stringify({question:message,context,allowedIntents:[
-      'supplier_contact_find','commitment_get','commitment_total_balance',
+      'supplier_contact_find','commitment_get','commitment_total_balance','commitment_item_search',
       'commitment_previous_open_list','schedule_sent_history_list',
       'invoice_registration_period_list','invoice_operational_pending_list',
       'warehouse_stock_get','warehouse_material_locations_list']})}

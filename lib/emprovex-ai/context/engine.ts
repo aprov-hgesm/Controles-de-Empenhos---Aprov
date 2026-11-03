@@ -39,6 +39,7 @@ function extract(text:string,canonical:string) {
  const subject=canonical.match(/^(?:agora\s+(?:quero|gostaria)\s+(?:de\s+)?saber\s+sobre|na verdade[, ]+\s*(?:eu\s+)?(?:quis|queria)\s+dizer|corrigindo[, ]*|era\s+(?:o|a))\s+(?:o|a|do|da)?\s*([a-z][a-z\s-]{1,75})$/);
  if(subject)material=subject[1].trim();
  const patterns=[
+   /\bquanto\s+(?:ainda\s+)?temos\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em)\s+(?:deposito|estoque)\b|$)/,
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
    /\b(?:onde (?:esta|fica|estao)|localizacao (?:de|da|do)|localize|encontrar)\s+(?:(?:o|a|os|as)\s+)?(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
    /\b(?:quantidade|estoque|saldo fisico)\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em|agora)\b|$)/,
@@ -59,7 +60,8 @@ function extract(text:string,canonical:string) {
    if(m)material=m[1];
  }
  material=material.replace(/^(?:o|a|os|as|um|uma|do|da|de)\s+/,'')
-   .replace(/\s+(?:em estoque|disponiveis|disponivel|hoje|ontem|aqui)$/,'').trim();
+   .replace(/^(?:item|material|produto)\s+(?:de\s+)?/,'')
+  .replace(/\s+(?:em estoque|disponiveis|disponivel|hoje|ontem|aqui)$/,'').trim();
  if(/^(?:material|materiais|produto|produtos|deposito|estoque|esse material|aquele material|isso)$/.test(material))material='';
  if(!/^[a-z][a-z0-9\s\/-]{1,119}$/.test(material))material='';
  const year=canonical.match(/\b(?:exercicio|ano|de)\s+(20\d{2})\b/)?.[1];
@@ -67,6 +69,22 @@ function extract(text:string,canonical:string) {
  const itemId=text.match(/\bitemId[:= ]+([a-zA-Z0-9_-]{1,130})\b/i)?.[1];
  return {id,partial,cnpj,supplier,material,multiCommitments,multipleCnpj,depotId,itemId,
   year:year?Number(year):undefined,nf};
+}
+/** Find an item description in an EMPROVEX commitment search, never an itemId. */
+function commitmentItemName(t:string):string|undefined {
+ const patterns=[
+  /\b(?:item|material|produto)\s+(?:de\s+)?([a-z][a-z0-9 /-]{1,75}?)(?=\s+(?:nos?|nas?|das?|dos?|entre)\s+(?:empenhos?|ne|notas? de empenho)\b|\s+(?:no|na)\s+(?:empenho|ne)\b|$)/,
+  /\b(?:saldo|restante)\s+(?:do|da|de)\s+([a-z][a-z0-9 /-]{1,75}?)(?=\s+(?:nos?|nas?|das?|dos?)\s+(?:empenhos?|ne|notas? de empenho)\b|$)/,
+  /\b(?:possuem?|contem|contendo)\s+([a-z][a-z0-9 /-]{1,75}?)\s*(?:nos? empenhos?|$)/
+ ];
+ for(const pattern of patterns){
+  const candidate=t.match(pattern)?.[1]?.trim().replace(/[?.!,;:]+$/,'').trim();
+  if(!candidate||candidate.length<2||candidate.length>90)continue;
+  if(/^(?:determinado|determinado material|esse|esta|aquele|qual|algum|qualquer|itens?|materiais?|produtos?|saldo|empenhos?)$/.test(candidate)||
+    /^(?:ne|nota de empenho|empenho)\b/.test(candidate)||/\b20\d{2}ne\d+\b/.test(candidate))continue;
+  return candidate;
+ }
+ return undefined;
 }
 export function interpret(input:Input):Result {
  const started=Date.now(),now=input.now instanceof Date&&Number.isFinite(input.now.getTime())?input.now.getTime():started;
@@ -130,7 +148,7 @@ export function interpret(input:Input):Result {
  const isBalance=has(t,WORDS.balance),isRegistered=has(t,WORDS.register);
  const isIssued=has(t,WORDS.issued);
  const isOverdue=has(t,WORDS.late);
- const directContext=/\b(?:esse|essa|aquele|aquela|mesmo|anterior|mencionado|dele|dela|e quanto|e onde|e quem)\b/.test(t);
+ const directContext=/\b(?:esse|essa|desse|dessa|desses|dessas|aquele|aquela|mesmo|anterior|mencionado|dele|dela|e quanto|e onde|e quem)\b/.test(t);
  const commitmentId=x.id||((directContext||isCommitment)&&!x.partial?refs.commitmentId:undefined);
  const material=x.material||((directContext||(!x.material&&isStock))?refs.materialQuery:undefined);
  const supplier=x.supplier||((directContext&&isContact)?refs.supplierName:undefined);
@@ -146,7 +164,9 @@ export function interpret(input:Input):Result {
  const success=(intent:W3Intent,params:Record<string,unknown>,relation?:string)=>{
    dimensions.intention=intent;
    const constraints=detectConstraints(t,{
-     commitmentId:x.id,materialQuery:x.material,supplierName:x.supplier,supplierCnpj:x.cnpj,
+     commitmentId:x.id,materialQuery:intent==='commitment_item_search'?
+       (typeof params.materialQuery==='string'?params.materialQuery:undefined):x.material,
+       supplierName:x.supplier,supplierCnpj:x.cnpj,
      period:rel,depotId:x.depotId,itemId:x.itemId
    },intent);
    const decision=auditFilters(intent,params,constraints);
@@ -186,6 +206,14 @@ export function interpret(input:Input):Result {
    return clarify('unknown','Você solicitou duas consultas diferentes. Qual deseja primeiro?');
  if(x.partial&&!x.id&&isCommitment)return clarify(isBalance?'commitment_total_balance':'commitment_get',
    'Informe a NE completa, incluindo o exercício (por exemplo, 2026NE66).');
+ // Elliptical follow-up: the NE was already authorized and signed in the
+ // previous short-lived context. A user should not have to repeat its number.
+ // Only accept a narrow item-list request; never infer additional filters.
+ const contextualItemListing=!!refs.commitmentId&&!x.id&&!x.partial&&
+   /^(?:e\s+)?(?:quais\s+(?:sao\s+)?|(?:me\s+)?(?:mostre|mostra|liste|exiba|detalhe)\s+)?(?:os\s+)?itens?(?:\s+(?:(?:dessa|desse|dela|dele|daquela|daquele)(?:\s+(?:ne|empenho))?|(?:da|do)\s+(?:ne|empenho)))?$/.test(t);
+ if(contextualItemListing)
+   return success('commitment_get',{commitmentId:refs.commitmentId!,includeItems:true},
+     'NE do contexto → itens cadastrados');
  if(isInvoice) {
    // Pending here refers to operational forwarding, never payment or liquidation.
    // The filter guard will reject additional unrepresented constraints.
@@ -231,6 +259,25 @@ export function interpret(input:Input):Result {
      /\btelefone\b/.test(t)?'phone':'all';
    return success('supplier_contact_find',{...(x.cnpj?{cnpj:x.cnpj}:{nameQuery:supplier}),channel},'fornecedor → contato');
  }
+ // The existing Consulta de Itens can locate items by description across
+ // authorized commitments, including the optional specified NE.
+ const itemSearch=commitmentItemName(t);
+ // Listing the items of a known NE is an existing commitment_get(includeItems)
+ // request, not a search for an unspecified product.
+ const listingItems=!!commitmentId &&
+   /\b(?:quais|liste|listar|mostre|exiba|ver)\s+(?:os?\s+)?itens?\s+(?:da|do|no|na)\s+(?:ne|empenho|nota de empenho)\b/.test(t);
+ if(isCommitment&&!listingItems&&!x.itemId&&
+    (itemSearch||/\b(?:item|itens|material|materiais|produto|produtos)\b/.test(t))&&
+    (isBalance||/\b(?:quais|encontre|localize|possuem|contem|procurar|consultar)\b/.test(t))){
+   if(!itemSearch)
+     return clarify('commitment_item_search',
+       'Qual é o nome do produto que deseja procurar na Consulta de Itens?');
+   dimensions.material=itemSearch;
+   entities.material=itemSearch;
+   return success('commitment_item_search',{
+     materialQuery:itemSearch,...(commitmentId?{commitmentId}:{})
+   },'item → Consulta de Itens → NE e saldo operacional');
+  }
  if(isCommitment){
    if(/\b(?:fornecedor|empresa)\b/.test(t)&&commitmentId)return unavailable('supplier_by_commitment','P1_NE_TO_SUPPLIER_UNAVAILABLE');
    if(/\b(?:quais|liste|lista|mostre|empenhos)\b/.test(t)&&(/\b(?:anteriores|exercicios|de 20\d{2}|ainda tem saldo|com saldo)\b/.test(t)))

@@ -27,8 +27,31 @@ function render(intent:AiIntent,data:unknown):string {
  case 'supplier_contact_find':return list(data).map(x=>
    [text(x.legalName)||text(x.cnpj),text(x.email),text(x.phone),text(x.whatsapp)]
      .filter(Boolean).join(' · ')).join('; ');
- case 'commitment_get':return 'Empenho '+text(d.id)+': fornecedor '+(text(d.supplier)||'não informado')+
-   ', situação '+(text(d.status)||'não informada')+'.';
+ case 'commitment_get':{
+   const base='Empenho '+text(d.id)+': fornecedor '+(text(d.supplier)||'não informado')+
+     ', situação '+(text(d.status)||'não informada')+'.';
+   if(!Array.isArray(d.items))return base;
+   const items=list(d.items);
+   if(!items.length)return base+' Não há itens cadastrados nessa NE.';
+   const details=items.slice(0,12).map(x=>
+     '• '+(text(x.name)||'Item sem descrição')+' (item '+text(x.id)+') — '+
+     number(x.quantity)+' '+unit(x.unit)+' empenhados; '+
+     number(x.received)+' recebidos');
+   return base+'\nItens da NE ('+items.length+' cadastrados):\n'+details.join('\n')+
+     (items.length>12?'\nExibindo apenas os 12 primeiros itens; refine a consulta para os demais.':'');
+ }
+ case 'commitment_item_search':{
+   const items=list(d.items);
+   if(!items.length)return 'Não foi encontrado item correspondente na cobertura consultada da Consulta de Itens.';
+   return items.map(item=>{
+     const associations=list(item.associations);
+     const neList=associations.map(a=>text(a.commitmentId)+' (item '+text(a.itemId)+')')
+       .filter(Boolean).slice(0,8).join(', ');
+     return text(item.name)+' — saldo operacional: '+number(item.pendingQuantity)+' '+text(item.unit)+
+       '; valor restante: '+money(item.operationalBalance)+
+       (neList?'; empenhos associados: '+neList:'');
+   }).join('\n');
+ }
  case 'commitment_total_balance':return 'Saldo operacional restante da NE '+text(d.commitmentId)+': '+
    money(d.operationalBalance)+'. Valor empenhado: '+money(d.committedAmount)+
    '; recebido: '+money(d.receivedAmount)+'.';
