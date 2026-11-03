@@ -95,7 +95,7 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
   console.log('WAREHOUSE REACT NAVIGATION: PASS (6 abas, voltar, F5, acesso direto e celular)');
 });
 
- 
+
 // Regression for PR #500: opening the Central must not depend on the optional
 // text-only renderer. Once an immutable acceptance is server-verified in
 // Empenhos, Warehouse status includes that evidence and avoids a duplicate GET.
