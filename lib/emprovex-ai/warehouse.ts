@@ -6,9 +6,6 @@ import { warehouseDocument, warehouseQuery, warehouseMaterialNameSearch, type Ai
 import { createWarehouseBarcodeId } from '../warehouse/barcode';
 
 function s(v:unknown):string{return typeof v==='string'?v:'';}
-function searchKey(v:string):string {
-  return v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();
-}
 function positiveQuantity(v:unknown):number {
   if(typeof v!=='number'||!Number.isFinite(v)||v<0)
     throw new AiExecutionError('AI_WAREHOUSE_QUANTITY_INTEGRITY',503);
