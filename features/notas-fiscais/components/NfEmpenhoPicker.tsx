@@ -75,7 +75,7 @@ export function NfEmpenhoPicker({ empenhos, selectedId, onSelect }: Props) {
       setOpen(false);
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((previous) => Math.min(visible.length - 1, previous + 1));
+      setActiveIndex((previous) => visible.length ? Math.min(visible.length - 1, previous + 1) : 0);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActiveIndex((previous) => Math.max(0, previous - 1));
