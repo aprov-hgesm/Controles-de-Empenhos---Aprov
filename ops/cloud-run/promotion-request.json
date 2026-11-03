@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-gb7a073ae04d0-30",
-  "sourceSha": "b7a073ae04d0bba367c8a0695810c9668e88a31c",
-  "reason": "Autorizacao expressa do usuario neste chat (2026-11-03): Eleonor pode ir para producao, incluindo aviso discreto e carismatico de fase de testes e aprimoramento. PR #497 mesclada na main; TypeScript, W7, Fast CI, Core Protection, isolamento e Browser E2E PASS; stage Cloud Run 41576852884 SUCCESS, 0% de trafego, health e billing protection. Publicacao pelo fluxo oficial com rollback automatico, sem alteracao W3, IAM, Firestore nem configuracoes da IA."
+  "revision": "emprovex-cloudrun-candidate-g838d7cf31955-31",
+  "sourceSha": "838d7cf31955314cb9da9f26dbbfcaa14abb37a8",
+  "reason": "Autorizacao explicita do usuario nesta conversa em 2026-11-03: corrigir Eleonor perguntando 'Onde esta o arroz?' (busca nao deve exigir mat_...); implantar novamente no Cloud Run apos testes. PR #498 mesclada na main; cert. W3, W7, Auth, Firestore, Browser E2E, Core Protection PASS. Stage 41579090801 SUCCESS zero trafego, health e billing protection; mantido rollback automatico, IAM e consultas somente de leitura. Aviso: CI Lean em evento de merge retornou CI_LEAN_EMPTY_DIFF por inexistencia de diff na PR ja mesclada; nao e falha funcional. Validacoes de codigo efetivas aprovadas."
 }
