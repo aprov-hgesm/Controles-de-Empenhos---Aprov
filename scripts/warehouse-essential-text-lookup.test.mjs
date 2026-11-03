@@ -8,7 +8,8 @@ test('Início e Meus Depósitos usam chunk separado sem carregar 3D no Essencial
   const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
   assert.match(content, /useVisualMode/);
   assert.match(content, /mode === 'essencial' && \(section === 'home' \|\| section === 'overview'\)/);
-  assert.match(content, /return <WarehouseEssentialLocationLookup workspaceId=\{workspaceId\} section=\{section\} \/>/);
+  assert.match(content, /<WarehouseEssentialLocationLookup workspaceId=\{workspaceId\} section=\{section\} \/>/);
+  assert.match(content, /<WarehouseEssentialSurfaceBoundary/);
   assert.match(content, /import\('\.\/WarehouseEssentialLocationLookup'\)/);
   assert.match(content, /import\('\.\/WarehouseHomeOperational'\)/);
   assert.match(content, /import\('\.\/WarehouseLandingOperational'\)/);
@@ -27,7 +28,7 @@ test('Consulta Essencial não importa renderizadores ou faz leituras ao montar a
   assert.match(lookup, /listWarehouseLocationBalances\(workspaceId, BALANCE_LIMIT_PER_MATERIAL, item\.id\)/);
   assert.match(lookup, /candidates\.slice\(0, MAX_MATCHED_MATERIALS\)/);
   assert.match(lookup, /setSubmittedQuery\(searchTerm\)/);
-  assert.match(lookup, /normalize\(\[item\.id, item\.description, \.\.\.item\.aliases\]/);
+  assert.match(lookup, /Array\.isArray\(item\.aliases\)/);
   assert.doesNotMatch(lookup, /listWarehousePositiveLocationBalances\(/);
   assert.match(lookup, /listWarehouseMaterials\(workspaceId, MATERIAL_LIMIT\)/);
   assert.match(lookup, /listWarehouseDepotsCached\(workspaceId, DEPOT_LIMIT\)/);

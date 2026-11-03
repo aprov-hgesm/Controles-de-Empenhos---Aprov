@@ -69,6 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           docker build \
+            --build-arg NEXT_DEPLOYMENT_ID="g${SHORT_SHA}" \
             --label "org.opencontainers.image.revision=${SOURCE_SHA}" \
             --tag "${IMAGE_TAG}" .
 

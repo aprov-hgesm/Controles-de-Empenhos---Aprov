@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { WarehouseSectionLoading } from './WarehouseSectionLoading';
+import { WarehouseEssentialSurfaceBoundary } from './WarehouseEssentialSurfaceBoundary';
 
 import type { WarehouseSectionId } from '../navigation';
 import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
@@ -75,10 +76,16 @@ export function WarehouseSectionContent({
   section: WarehouseSectionId;
   workspaceId: string;
 }) {
-  const { mode } = useVisualMode();
+  const { mode, setMode } = useVisualMode();
 
   if (mode === 'essencial' && (section === 'home' || section === 'overview')) {
-    return <WarehouseEssentialLocationLookup workspaceId={workspaceId} section={section} />;
+    // Optional text-only module failures must never blank the whole Central.
+    // Users can recover via the known-good Normal surface without logout.
+    return (
+      <WarehouseEssentialSurfaceBoundary key={workspaceId} onRestoreNormal={() => setMode('premium')}>
+        <WarehouseEssentialLocationLookup workspaceId={workspaceId} section={section} />
+      </WarehouseEssentialSurfaceBoundary>
+    );
   }
 
   if (section === 'home') {

@@ -396,7 +396,7 @@ export default function Home() {
           warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
           onOpenWarehouse={() => {
             window.location.assign(
-              mode === 'essencial' ? '/central-depositos/controle-de-itens' : '/central-depositos'
+              '/central-depositos'
             );
           }}
         />
