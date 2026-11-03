@@ -79,7 +79,7 @@ export function startClarification(interpreted:Result,message:string):Clarificat
  }
  return null;
 }
-export function startMaterialResolution(intent:string,query:W3Query,status:string,coverage:string):ClarificationAction|null{
+export function startMaterialResolution(intent:string,query:{params:Record<string,unknown>},status:string,coverage:string):ClarificationAction|null{
  if(!['warehouse_stock_get','warehouse_material_locations_list'].includes(intent)||
   !['ambiguous','partial'].includes(status)||coverage!=='incomplete'&&status!=='ambiguous'||
   typeof query.params.materialQuery!=='string'||query.params.materialId||query.params.barcode)return null;
