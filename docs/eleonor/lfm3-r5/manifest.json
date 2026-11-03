@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "emprovex.eleonor.lfm3.r5.prep.1",
+  "date": "2026-11-02",
+  "targetModel": "LiquidAI/LFM3-1.7B",
+  "trainer": "Hugging Face Transformers + TRL (proposta, NÃO executada)",
+  "runtimeExisting": "Ollama GGUF q4_K_M, apenas inferência; não modificar",
+  "status": "PREPARATION_ONLY_NOT_APPROVED_FOR_TRAINING",
+  "counts": {
+    "R2": 4412,
+    "R3": 2169,
+    "R4": 1811,
+    "normalizedRecords": 8392,
+    "R4RelationCardsWithoutUtterance": 45,
+    "R4RecordsWithUtterance": 1766,
+    "SFTCandidates": 112,
+    "SFTTrainCandidates": 90,
+    "SFTValidationVisibleCandidates": 22
+  },
+  "files": {
+    "R2": [
+      "data/r2-01-of-06.jsonl",
+      "data/r2-02-of-06.jsonl",
+      "data/r2-03-of-06.jsonl",
+      "data/r2-04-of-06.jsonl",
+      "data/r2-05-of-06.jsonl",
+      "data/r2-06-of-06.jsonl"
+    ],
+    "R3": [
+      "data/r3-01-of-05.jsonl",
+      "data/r3-02-of-05.jsonl",
+      "data/r3-03-of-05.jsonl",
+      "data/r3-04-of-05.jsonl",
+      "data/r3-05-of-05.jsonl"
+    ],
+    "R4": [
+      "data/r4-wc01-03-01-of-03.jsonl",
+      "data/r4-wc01-03-02-of-03.jsonl",
+      "data/r4-wc01-03-03-of-03.jsonl",
+      "data/r4-wc04-07-01-of-02.jsonl",
+      "data/r4-wc04-07-02-of-02.jsonl",
+      "data/r4-wc08-10.jsonl"
+    ],
+    "SFT": [
+      "sft/train-candidates.jsonl",
+      "sft/validation-visible-candidates.jsonl"
+    ]
+  },
+  "sourcePRs": {
+    "base": 471,
+    "WC01": 480,
+    "WC02": 481,
+    "WC03": 479,
+    "WC04": 486,
+    "WC05": 487,
+    "WC06": 482,
+    "WC07": 489,
+    "WC08": 488,
+    "WC09": 485,
+    "WC10": 483
+  },
+  "sanitization": [
+    "WC03: 726 registros corrigidos no PR #479; partition separada de visibility; visibility internal_only como medida conservadora até revisão ACL.",
+    "WC04: 24 registros pilot_only corrigidos no PR #486 para internal_only; availability PR/PILOTO preservada.",
+    "R2: 4.114 perguntas, 175 casos com expectedBehavior e 123 turnos sem respostas supervisionadas por turno.",
+    "R3: 2.169 prompts sintéticos não convertidos em respostas gold arbitrárias.",
+    "R4: ontologia WC02 com 45 knowledge_relation não forçada a prompt; metadados de origem e permissão retidos.",
+    "SFT: somente 110 goldResponse do WC07 e 2 referenceAnswer do WC09 foram transformados em mensagens; 16 roteiros multiturn preservados e agrupados na separação visível de treino/validação.",
+    "Todas as mensagens SFT marcadas candidate_unreviewed; nenhuma aprovada ou utilizada para atualizar pesos."
+  ],
+  "policy": {
+    "outputFormat": "UTF-8 JSONL; SFT candidates contain messages [{role,content}], per-record provenance stored until reviewer approval",
+    "llmTruth": "Não treinar modelo para inventar dados de usuário nem agir como fonte de saldo real. W3/servidor permanece como autoridade.",
+    "knowledgeFreshness": "Tutoriais e procedimentos mutáveis devem alimentar catálogo recuperável versionado, não ser memorizados como fatos permanentes no peso do modelo.",
+    "safeExport": "Não exportar candidatos como dataset pronto sem revisão. Validação visível não é holdout cego.",
+    "split": "Agrupamento dos 16 roteiros WC07 por scriptId e sondas por featureId, hash estável; 90/22 divisão visível sem prometer independência semântica total."
+  },
+  "limitations": [
+    "Sem fine-tuning, sem treinar/adaptar Ollama GGUF, sem avaliação real ou validação contra produção.",
+    "Categorias e permissões documentais não substituem ACL do backend.",
+    "R2, R3 e R4 são sintéticos; frases semanticamente redundantes podem persistir apesar de unicidade textual.",
+    "Fine tuning de conhecimento factual exige respostas supervisionadas aprovadas; apenas 112 candidatas com resposta explícita foram extraídas nesta rodada."
+  ],
+  "sources": [
+    "https://huggingface.co/LiquidAI/LFM3-1.7B",
+    "https://huggingface.co/LiquidAI/LFM3-1.7B-Base"
+  ]
+}
