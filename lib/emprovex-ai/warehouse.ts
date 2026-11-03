@@ -36,7 +36,9 @@ async function resolveMaterial(access:AiAccess,p:Record<string,unknown>):
     return {row,candidates:[],examined:2,incomplete:false};
   }
   const lookup=searchKey(s(p.materialQuery));
-  const q=await warehouseQuery(access,'materials',null,21);
+  // warehouse_material_v1 has no canonical normalized-name index. A bounded 101-row
+  // scan improves recall; truncation MUST stay partial, never a false zero or absence.
+  const q=await warehouseQuery(access,'materials',null,101);
   const candidates=q.rows.filter(row=>
     searchKey(s(row.data.description))===lookup
     ||(Array.isArray(row.data.aliases) && row.data.aliases.some(alias=>typeof alias==='string' && searchKey(alias)===lookup)));
@@ -80,14 +82,17 @@ async function locations(access:AiAccess,p:Record<string,unknown>):Promise<Query
     && (row.data.position as Record<string,unknown>|undefined)?.kind!=='UNASSIGNED');
   const pageSize=typeof p.pageSize==='number'?p.pageSize:20;
   const selected=physical.slice(0,pageSize);
-  const depotCache=new Map<string,AiRow|null>(),locationCache=new Map<string,AiRow|null>();
-  const getDepot=async(id:string)=>{
-    if(!depotCache.has(id))depotCache.set(id,await warehouseDocument(access,'depots',id));
-    return depotCache.get(id)||null;
+  // Cache in-flight promises to avoid repeat reads and overlap independent lookups.
+  const depotCache=new Map<string,Promise<AiRow|null>>(),locationCache=new Map<string,Promise<AiRow|null>>();
+  const getDepot=(id:string):Promise<AiRow|null>=>{
+    let task=depotCache.get(id);
+    if(!task){task=warehouseDocument(access,'depots',id);depotCache.set(id,task);}
+    return task;
   };
-  const getLocation=async(id:string)=>{
-    if(!locationCache.has(id))locationCache.set(id,await warehouseDocument(access,'locations',id));
-    return locationCache.get(id)||null;
+  const getLocation=(id:string):Promise<AiRow|null>=>{
+    let task=locationCache.get(id);
+    if(!task){task=warehouseDocument(access,'locations',id);locationCache.set(id,task);}
+    return task;
   };
   const out:Record<string,unknown>[]=[];
   const evidence=[{source:'warehouse.materials',documentId:material.row.id}];
@@ -100,9 +105,9 @@ async function locations(access:AiAccess,p:Record<string,unknown>):Promise<Query
     const subId=s(position.subpositionId);
     if(!/^dep_[a-f0-9]{32}$/.test(depotId)||!/^loc_[a-f0-9]{32}$/.test(locationId)
       || (subId&&!/^sub_[a-f0-9]{32}$/.test(subId)))throw new AiExecutionError('AI_LOCATION_LINK_INVALID',503);
-    const depot=await getDepot(depotId);
-    const location=await getLocation(locationId);
-    const sub=subId?await getLocation(subId):null;
+    const [depot,location,sub]=await Promise.all([
+      getDepot(depotId),getLocation(locationId),subId?getLocation(subId):Promise.resolve(null)
+    ]);
     if(!depot||!location||(subId&&!sub) || location.data.depotId!==depotId
       ||(sub && (sub.data.parentLocationId!==locationId || sub.data.depotId!==depotId))){
       missing=true;
