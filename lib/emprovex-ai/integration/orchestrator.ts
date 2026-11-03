@@ -22,7 +22,7 @@ export type AiAskPayload={
  query?:{version:string;intent:string;params:Record<string,unknown>};
  result?:AiResponse;contextToken?:string;filterAudit?:{requested:string[];represented:string[];unhandled:string[]};
  metrics:{authenticationMs:number;interpretationMs:number;contractValidationMs:number;w3ExecutionMs:number;
-  responseMs:number;totalMs:number;examinedDocuments:number;qwenCalls:0;lfm3Calls:number;
+  responseMs:number;totalMs:number;historyMs:number;lfm3Ms:number;examinedDocuments:number;qwenCalls:0;lfm3Calls:number;
   modelFirstOutcome:'not_attempted'|'skipped_safe_writing'|ModelFirstOutcome;
   modelOutcome:'not_attempted'|Lfm3Outcome|'candidate_rejected'|'filter_rejected'|'query_accepted'};
 };
@@ -51,6 +51,7 @@ export async function runAiAsk(args:{
  const previous=restoreContext(args.input.contextToken,cookieState.session,now.getTime());
  // History must never block AI inference or a valid W3 read on a storage outage.
  // Preserve 4xx owner/ID errors; fail soft only for storage/unavailable errors.
+ const historyStart=Date.now();
  const historyActive=historyEnabled();
  let historyStatus:'saved'|'unavailable'|'disabled'=historyActive?'unavailable':'disabled';
  let conversationId=args.input.conversationId;
@@ -70,6 +71,7 @@ export async function runAiAsk(args:{
      conversationId=undefined;
    }
  }
+ let historyMs=historyActive?Date.now()-historyStart:0;
  // W4 is an immutable safety preflight, never the authority for unknown language.
  // Harmless writing bypasses a redundant model classification to save CPU and latency.
  // Every operational request still reaches the LFM3 classifier before W5/W3 execution.
@@ -90,9 +92,11 @@ export async function runAiAsk(args:{
    // W4 already resolved a safe query or blocked a mutation: skip costly reclassification.
    !['DETERMINISTIC','REJECT_MUTATION','UNSUPPORTED'].includes(interpreted.route);
  let modelFirstOutcome:AiAskPayload['metrics']['modelFirstOutcome']=directWriter?'skipped_safe_writing':'not_attempted';
+ const modelStart=Date.now();
  const modelFirst=modelFirstAttempted?await interpretFirstWithLfm3(
    args.input.message,previous?.refs,(outcome)=>{modelFirstOutcome=outcome}
  ):null;
+ let lfm3Ms=modelFirstAttempted?Date.now()-modelStart:0;
  // The following diagnostics contain only constant outcome codes, not model text or tokens.
  if(modelFirstAttempted && modelFirst && modelFirstOutcome==='not_attempted')
    modelFirstOutcome=modelFirst.kind==='operational'?'model_operational':
@@ -129,7 +133,9 @@ export async function runAiAsk(args:{
    status=conversation.status;answer=conversation.answer;
    if(conversation.modelEligible&&aiConversationalModelEnabled()&&(!modelFirstAttempted||!modelFirst)){
      lfm3Calls=1;
+     const generationStart=Date.now();
      const generated=await respondConversationally(args.input.message,recordModelOutcome);
+     lfm3Ms+=Date.now()-generationStart;
      if(generated){answer=generated;status='ok';}
    }
    contextToken=sealContext({
@@ -172,8 +178,10 @@ export async function runAiAsk(args:{
    answer='Não consegui interpretar esta consulta com segurança. Tente reformular a pergunta.';
    if(aiLfm3Enabled()&&(modelOperational||(!modelFirstAttempted&&interpreted.model))){
      lfm3Calls=1;
+     const proposalStart=Date.now();
      const proposed=modelOperational&&modelFirst?.kind==='operational'?{intent:modelFirst.intent,params:modelFirst.params}:
        await proposeWithLfm3(interpreted.model!,recordModelOutcome);
+     if(!modelOperational)lfm3Ms+=Date.now()-proposalStart;
      if(proposed!==null){
        const candidate=validateModelCandidate(proposed,route);
        if(candidate){
@@ -225,8 +233,9 @@ export async function runAiAsk(args:{
    ...(modelAudit?{filterAudit:modelAudit}:
      interpreted.filterAudit?{filterAudit:interpreted.filterAudit}:{}),
    metrics:{authenticationMs,interpretationMs,contractValidationMs,w3ExecutionMs,responseMs,
-     totalMs:Date.now()-start,examinedDocuments,qwenCalls:0,lfm3Calls,modelFirstOutcome,modelOutcome}};
+     totalMs:Date.now()-start,historyMs,lfm3Ms,examinedDocuments,qwenCalls:0,lfm3Calls,modelFirstOutcome,modelOutcome}};
  if(historyActive && historyWritable && conversationId){
+    const appendStart=Date.now();
     try{
       await appendHistory(access,conversationId,args.input.message,answer,{status,route});
       historyStatus='saved';
@@ -238,7 +247,16 @@ export async function runAiAsk(args:{
         phase:'append',code:error instanceof AiExecutionError?error.code:'AI_HISTORY_STORAGE_FAILURE'
       });
     }
+    historyMs+=Date.now()-appendStart;
   }
   payload.historyStatus=historyStatus;
+  payload.metrics.historyMs=historyMs;
+  payload.metrics.totalMs=Date.now()-start;
+  // Safe diagnostic summary: no query parameters, answers, identifiers or user text.
+  console.info('emprovex_ai_ask_perf',{
+    route,status,totalMs:payload.metrics.totalMs,w4Ms:interpretationMs,
+    lfm3Ms,historyMs,w3Ms:w3ExecutionMs,lfm3Calls,examinedDocuments,
+    outcome:modelOutcome
+  });
   return {payload,cookie:cookieState.cookie,setCookie:cookieState.newCookie};
 }
