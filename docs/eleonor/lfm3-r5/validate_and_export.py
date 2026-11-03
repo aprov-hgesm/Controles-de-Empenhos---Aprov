@@ -8,7 +8,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections import Counter
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
@@ -58,7 +57,7 @@ def validate(manifest: dict, sources: dict[str, list[dict]]) -> tuple[list[dict]
             if row.get("sftEligible") is True or row.get("sftReady") is True:
                 errors.append(f"{record_id}: raw source incorrectly marked SFT-ready")
             feature_id = row.get("featureId")
-            if feature_id and not re.fullmatch(r"F-\\d{2}-\\d{3}", feature_id):
+            if feature_id and not re.fullmatch(r"F-\d{2}-\d{3}", feature_id):
                 errors.append(f"{record_id}: malformed featureId {feature_id}")
     relations = [r for r in sources["R4"] if r.get("recordType") == "knowledge_relation"]
     utterances = [r for r in sources["R4"] if isinstance(r.get("utterance"), str)]
