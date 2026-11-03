@@ -9,7 +9,6 @@ import { transferWarehouseStockServer } from '../../../../lib/server/warehouseTr
 import { saveWarehouseMaterialServer } from '../../../../lib/server/warehouseMaterialWrite';
 import { warehouseDestinationCreateServer, warehouseDestinationSetStatusServer } from '../../../../lib/server/warehouseDestinationWrite';
 import { warehouseStructureServer } from '../../../../lib/server/warehouseStructureWrite';
-import { warehouseShelfMigrationServer } from '../../../../lib/server/warehouseShelfMigration';
 import { warehouseStructureLayoutApplyServer } from '../../../../lib/server/warehouseStructureLayoutApply';
 import { saveWarehouseLandingVisualServer } from '../../../../lib/server/warehouseLandingVisualWrite';
 import { saveWarehouseLogisticsSettingsServer } from '../../../../lib/server/warehouseLogisticsSettingsWrite';
@@ -169,8 +168,8 @@ export async function POST(request: NextRequest) {
         result=await warehouseStructureLayoutApplyServer(access,body.input);
         break;
       case 'SHELF_MIGRATION':
-        result=await warehouseShelfMigrationServer(access,body.input);
-        break;
+        // Migração pontual da 6ª Bda concluída. Bloqueada globalmente após homologação.
+        return reject('WAREHOUSE_SHELF_MIGRATION_CLOSED',410);
       case 'CROQUI_READ':
         result=await warehouseCroquiReadServer(access,body.input);
         break;
