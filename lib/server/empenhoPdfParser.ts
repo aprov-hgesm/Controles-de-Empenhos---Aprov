@@ -521,7 +521,7 @@ function parseGeneralData(page: TextStream) {
   const numeroContratacao = modalidadeContratacao === 'DISPENSA_ELETRONICA'
     ? dispensa?.[1] || null
     : modalidadeContratacao === 'PREGAO'
-      ? pregao : null
+      ? pregao
       : null;
 
   const naturezaDespesa = budgetValues[3] || null;
