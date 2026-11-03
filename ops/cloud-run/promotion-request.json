@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g712f23a2d118-28",
-  "sourceSha": "712f23a2d118889f473929a5b10154b414cedfe5",
-  "reason": "Autorizacao explicita do usuario neste chat em 2026-11-03: apos testes aprovados publicar Eleonor R3.1 e R3.1.5 em producao no Cloud Run para teste pelo site. PR #494 mesclada em #492 e #492 mesclada na main. Build stage 41572758612 SUCCESS com zero trafego, health e billing protection verificados; manter IAM, configuracao, rollback automatico e regras existentes. PR #495 documental permanece isolada."
+  "revision": "emprovex-cloudrun-candidate-gc6679f5f218f-29",
+  "sourceSha": "c6679f5f218f751a61c0a9a7b123c5e0bcc1fdef",
+  "reason": "Continuidade da autorizacao expressa do usuario para publicar a Eleonor no Cloud Run apos testes: melhoria de organizacao das respostas R3.1.6 solicitada em 2026-11-03. PR #496 mesclada na main. Certificacao TypeScript, W7, Fast CI, Core Protection e teste E2E VISUAL-R2 SUCCESS; stage 41575325884 SUCCESS com 0% de trafego, health e billing protection. Publicacao somente pelo workflow oficial com rollback automatico, sem mudanca em IAM, consultas W3 ou Firestore."
 }
