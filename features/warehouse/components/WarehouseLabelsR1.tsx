@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { warehouseServerCommand } from '../../../lib/warehouse/serverCommandClient';
 import {
   Download,
   Eye,
@@ -37,6 +38,7 @@ interface Props {
   locations: WarehouseLocationListItem[];
   selectedDepotId: string;
   selectedLocationId: string;
+  onRefresh?: () => Promise<void>;
 }
 
 const scopeOptions: Array<{
@@ -74,22 +76,81 @@ const scopeOptions: Array<{
   },
 ];
 
+type ShelfMigrationPreview = {
+  mode: 'PREVIEW';
+  depotId: string;
+  depotCode: string;
+  candidateCount: number;
+  parentCount: number;
+  conflicts: number;
+  planHash: string;
+  sample: Array<{before:string;after:string;parent:string}>;
+};
+
 export function WarehouseLabelsR1({
   depots,
   locations,
   selectedDepotId,
   selectedLocationId,
+  onRefresh,
 }: Props) {
   const [scope, setScope] = useState<Scope>('DEPOT_FULL');
   const [preset, setPreset] = useState<WarehouseLabelSheetPreset>('COMPACT');
   const [includeUg, setIncludeUg] = useState(true);
   const [includeHierarchy, setIncludeHierarchy] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [migrationPreview, setMigrationPreview] = useState<ShelfMigrationPreview | null>(null);
+  const [migrationBusy, setMigrationBusy] = useState(false);
 
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot ?? null,
     [depots, selectedDepotId]
   );
+
+  const isBdaPilot = selectedDepot?.workspaceId === 'aprovisionamento-6-bda-inf-bld'
+    && selectedDepot.ug === '160413' && selectedDepot.code === 'DEP-001';
+
+  async function previewShelfMigration() {
+    if (!selectedDepot) return;
+    setMigrationBusy(true);
+    try {
+      const result = await warehouseServerCommand<ShelfMigrationPreview>(
+        selectedDepot.workspaceId, 'SHELF_MIGRATION', {mode:'PREVIEW',depotId:selectedDepot.id}
+      );
+      setMigrationPreview(result);
+      setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setMigrationBusy(false);
+    }
+  }
+
+  async function applyShelfMigration() {
+    if (!selectedDepot || !migrationPreview || migrationBusy
+      || migrationPreview.depotId !== selectedDepot.id
+      || !migrationPreview.candidateCount || migrationPreview.conflicts) return;
+    if (!window.confirm('Padronizar ' + migrationPreview.candidateCount
+      + ' subposições do depósito ' + selectedDepot.code
+      + ' para PRAT-XX? IDs, saldos e histórico serão preservados.')) return;
+    setMigrationBusy(true);
+    try {
+      const result = await warehouseServerCommand<{updated:number}>(
+        selectedDepot.workspaceId,'SHELF_MIGRATION',{
+          mode:'APPLY',depotId:selectedDepot.id,
+          planHash:migrationPreview.planHash,confirmDepotCode:selectedDepot.code,
+        }
+      );
+      setMigrationPreview(null);
+      await onRefresh?.();
+      setMessage(result.updated + ' prateleira(s) padronizada(s). Gere um novo PDF.');
+    } catch (error) {
+      setMigrationPreview(null);
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setMigrationBusy(false);
+    }
+  }
 
   const selectedLocation = useMemo(
     () => locations.find((item) => item.location.id === selectedLocationId)?.location ?? null,
@@ -181,6 +242,47 @@ export function WarehouseLabelsR1({
         </div>
       </div>
 
+      {isBdaPilot && (
+        <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/50 p-4"
+          data-testid="warehouse-shelf-migration-bda">
+          <h3 className="text-sm font-black text-[#00288e]">Padronizar prateleiras existentes — 6ª Bda</h3>
+          <p className="mt-1 text-xs text-gray-600">
+            Converte os códigos antigos EST-01-01 para PRAT-01 no cadastro real, sem recriar
+            depósitos, locais ou movimentar estoque. Verifique a prévia antes de aplicar.
+          </p>
+          <button type="button" disabled={migrationBusy} onClick={() => void previewShelfMigration()}
+            className="mt-3 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#00288e] disabled:opacity-50">
+            {migrationBusy ? 'Verificando…' : 'Verificar códigos antigos'}
+          </button>
+          {migrationPreview && migrationPreview.depotId === selectedDepot?.id && (
+            <div className="mt-3 text-xs text-gray-700" data-testid="warehouse-shelf-migration-preview">
+              <p><strong>{migrationPreview.candidateCount}</strong> subposições em
+                <strong> {migrationPreview.parentCount}</strong> estantes;
+                <strong> {migrationPreview.conflicts}</strong> conflito(s).</p>
+              {migrationPreview.sample.length > 0 && (
+                <p className="mt-1 font-mono text-[11px]">
+                  {migrationPreview.sample.map(item=>item.parent+' · '+item.before+' → '+item.after).join(' | ')}
+                </p>
+              )}
+              {migrationPreview.conflicts > 0 ? (
+                <p className="mt-2 font-bold text-rose-700">
+                  Conversão bloqueada: existem códigos em conflito. Nenhum dado foi alterado.
+                </p>
+              ) : migrationPreview.candidateCount > 0 ? (
+                <button type="button" disabled={migrationBusy}
+                  onClick={() => void applyShelfMigration()}
+                  className="mt-3 rounded-lg bg-[#00288e] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                  Aplicar padronização ({migrationPreview.candidateCount})
+                </button>
+              ) : (
+                <p className="mt-2 font-bold text-emerald-700">
+                  Nenhuma subposição antiga elegível. O cadastro já está padronizado.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <div className="grid gap-5 pt-5 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-5">
             <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
