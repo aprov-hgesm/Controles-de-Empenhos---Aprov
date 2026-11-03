@@ -320,11 +320,15 @@ export async function runAiAsk(args:{
      }
    }
  }
- // A genuinely ambiguous or unresolved warehouse material requires a canonical
- // identifier; never silently assume zero from partial catalogue coverage.
+ // When a material has multiple plausible names (or a partially scanned
+ // catalogue), show actual choices and let the user select by number/name.
+ // No automatic selection from incomplete results or untrusted model output.
  if(query&&result&&
-    (result.status==='ambiguous'||(result.status==='partial'&&result.data===null))){
-   const refinement=startMaterialResolution(query.intent,query,result.status,result.coverage);
+    (result.status==='ambiguous'||(result.status==='partial'&&
+      (result.data===null||
+        (typeof result.data==='object'&&!Array.isArray(result.data)&&
+         Array.isArray((result.data as Record<string,unknown>).candidates)))))){
+   const refinement=startMaterialResolution(query.intent,query,result.status,result.coverage,result.data);
    if(refinement?.kind==='question'){
      status='clarify';answer=refinement.question;
      contextToken=sealContext({
