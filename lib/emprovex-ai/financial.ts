@@ -6,6 +6,7 @@ import { coreDocument, coreOperationalDocument, coreOperationalQuery, type AiRow
 import { getEmpenhoExerciseYear } from '../../features/empenhos/domain/empenhoExercise';
 import { parseAiCursor, makeAiCursor } from './cursor';
 import { operationalMidnightUtc } from './period';
+import {normalizeConsultaItemName,matchesConsultaItemSearch} from '../../features/itens/domain/consultaItens';
 
 function s(v:unknown):string{return typeof v==='string'?v:'';}
 function n(v:unknown):number {
@@ -97,6 +98,78 @@ async function commitmentBalance(access:AiAccess,p:Record<string,unknown>):Promi
   return {data:{commitmentId:row.id,...balance},
     limitations:['Saldo operacional calculado a partir dos itens cadastrados; não equivale ao saldo contábil do SIAFI.'],
     evidence:[source('empenhos',row)],examinedDocuments:1};
+}
+/** Server-side counterpart of the existing Consulta de Itens view.
+ * Reuses the same name+unit grouping and balances, but reads only the validated
+ * workspace/UG through W3. No client data, no write capability, no LFM3 facts.
+ */
+async function commitmentItemSearch(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
+ const materialQuery=s(p.materialQuery).trim(),commitmentId=s(p.commitmentId);
+ const single=!!commitmentId;
+ const q=single
+   ?{rows:await coreOperationalDocument(access,'empenhos',commitmentId).then(row=>row?[row]:[]),
+     truncated:false,examined:1}
+   :await coreOperationalQuery(access,'empenhos',[],201);
+ const groups=new Map<string,{name:string;unit:string;committedQuantity:number;
+   receivedQuantity:number;pendingQuantity:number;operationalBalance:number;
+   associations:Array<{commitmentId:string;itemId:string;supplier:string;
+     committedQuantity:number;receivedQuantity:number;pendingQuantity:number;operationalBalance:number}>}>();
+ const evidence:Array<{source:string;documentId:string}>=[];
+ let skippedRecords=0;
+ for(const row of single?q.rows:q.rows.slice(0,200)){
+   if(!Array.isArray(row.data.items)){skippedRecords++;continue;}
+   const matches=itemsOf(row.data).filter(item=>
+     matchesConsultaItemSearch(s(item.name),materialQuery));
+   if(!matches.length)continue;
+   const seen=new Set<string>();
+   for(const item of matches){
+     const itemId=s(item.id);
+     if(seen.has(itemId))throw new AiExecutionError('AI_DUPLICATE_COMMITMENT_ITEM',503);
+     seen.add(itemId);
+     // Same validated, read-only balance computation as a direct W3 item request.
+     const amount=balanceOf({...row.data,items:[item]},itemId).items[0];
+     if(!amount)throw new AiExecutionError('AI_ITEM_CALCULATION_MISSING',503);
+     const unit=s(amount.unit).trim();
+     const key=normalizeConsultaItemName(s(item.name))+'::'+unit.toLocaleLowerCase('pt-BR');
+     let group=groups.get(key);
+     if(!group){
+       group={name:s(item.name),unit,committedQuantity:0,receivedQuantity:0,
+         pendingQuantity:0,operationalBalance:0,associations:[]};
+       groups.set(key,group);
+     }
+     group.committedQuantity+=amount.committedQuantity;
+     group.receivedQuantity+=amount.receivedQuantity;
+     group.pendingQuantity+=amount.pendingQuantity;
+     group.operationalBalance+=amount.operationalBalance;
+     if(![group.committedQuantity,group.receivedQuantity,group.pendingQuantity,
+       group.operationalBalance].every(Number.isFinite))
+       throw new AiExecutionError('AI_FINANCIAL_OVERFLOW',503);
+     group.associations.push({commitmentId:row.id,itemId,supplier:s(row.data.supplier),
+       committedQuantity:amount.committedQuantity,receivedQuantity:amount.receivedQuantity,
+       pendingQuantity:amount.pendingQuantity,operationalBalance:amount.operationalBalance});
+   }
+   evidence.push(source('empenhos',row));
+ }
+ const all=[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')||
+   a.unit.localeCompare(b.unit,'pt-BR'));
+ const itemLimit=12,associationLimit=8;
+ const hiddenGroups=all.length>itemLimit;
+ const hiddenAssociations=all.slice(0,itemLimit).some(g=>g.associations.length>associationLimit);
+ const incomplete=q.truncated||skippedRecords>0||hiddenGroups||hiddenAssociations;
+ const items=all.slice(0,itemLimit).map(g=>({...g,
+   associations:g.associations.slice(0,associationLimit)}));
+ const limitations=[
+   'Saldo de itens de empenhos é operacional, não é estoque físico nem saldo contábil SIAFI.',
+   ...(q.truncated?['Busca transversal examinou até 200 empenhos; outras NEs podem conter o item.']:[]),
+   ...(skippedRecords?['Alguns empenhos sem cadastro de itens estruturado não foram contabilizados.']:[]),
+   ...(hiddenGroups?['Há mais descrições ou unidades compatíveis; refine o nome do produto.']:[]),
+   ...(hiddenAssociations?['Há mais empenhos associados do que os exibidos nesta resposta.']:[])
+ ];
+ return {status:incomplete?'partial':all.length?'ok':'empty',
+   coverage:incomplete?'incomplete':'complete',
+   data:{materialQuery,items,matchedGroups:all.length,examinedCommitments:q.examined},
+   evidence:evidence.slice(0,40),truncated:incomplete,limitations,
+   examinedDocuments:q.examined};
 }
 async function previousOpen(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
   const requested=p.exerciseYear as number|undefined,older=p.includeHistorical===true,now=new Date().getUTCFullYear();
@@ -265,6 +338,7 @@ export async function executeFinancial(access:AiAccess,q:AiQuery):Promise<QueryO
   switch(q.intent) {
     case 'supplier_contact_find':return supplierFind(access,q.params);
     case 'commitment_get':return commitmentGet(access,q.params);
+    case 'commitment_item_search':return commitmentItemSearch(access,q.params);
     case 'commitment_total_balance':return commitmentBalance(access,q.params);
     case 'commitment_previous_open_list':return previousOpen(access,q.params);
     case 'schedule_sent_history_list':return sentHistory(access,q.params);
