@@ -15,7 +15,7 @@ import { motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
-import { loadAllInvoicesHistory, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
+import { loadAllInvoicesHistory, loadAllInvoicesHistoryForDisplay, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
@@ -137,7 +137,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
-      const result = await loadAllInvoicesHistory();
+      const result = mode === 'essencial'
+        ? await loadAllInvoicesHistoryForDisplay()
+        : await loadAllInvoicesHistory();
       setInvoices((current) => mergeInvoiceCollections(current, result.invoices));
       setHistoryLoaded(true);
       setHistoryTruncated(result.truncated);
@@ -150,7 +152,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyLoaded, historyLoading, setInvoices]);
+  }, [historyLoaded, historyLoading, mode, setInvoices]);
 
   React.useEffect(() => {
     if (nfSubTab !== 'acompanhar') return;
