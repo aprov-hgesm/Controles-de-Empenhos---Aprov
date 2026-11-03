@@ -202,12 +202,14 @@ export async function warehouseStructureLayoutApplyServer(
         return fail('WAREHOUSE_CROQUI_TOO_MANY_SUBPOSITIONS');
       const copiedCodes=new Set<string>();
       for(const [index,child] of children.entries()){
-        const shelfCanonical = warehouseShelfCanonicalCode(parsed.code, child.code);
-        const childCode = code.startsWith('EST-') && /^EST-\\d{1,2}$/.test(code)
-          ? shelfCanonical || (/^PRAT-\\d{1,2}$/.test(child.code) ? child.code : child.code)
+        const shelfCanonical=warehouseShelfCanonicalCode(parsed.code,child.code);
+        const targetIsShelf=/^EST-\d{1,2}$/.test(code);
+        const sourceIsPrat=/^PRAT-\d{1,2}$/.test(child.code);
+        const childCode=targetIsShelf && (shelfCanonical || sourceIsPrat)
+          ? shelfCanonical || child.code
           : child.code.startsWith(parsed.code)
             ? code+child.code.slice(parsed.code.length)
-            : code+'-'+String(index+1).padStart(2,'0');
+            : targetIsShelf ? child.code : code+'-'+String(index+1).padStart(2,'0');
         if(copiedCodes.has(childCode))return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
         copiedCodes.add(childCode);
         const childName = shelfCanonical ? 'Prateleira '+childCode.slice(-2) : child.name;
@@ -219,7 +221,7 @@ export async function warehouseStructureLayoutApplyServer(
         const extraCode=warehouseNextAvailableLocationCode(warehouseSubpositionSequencePrefix(code),copiedCodes);
         copiedCodes.add(extraCode);
         createLocation('SUBPOSITION',extraCode,
-           (extraCode.startsWith('PRAT-')?'Prateleira ':'Subposição ')+extraCode.split('-').at(-1),null,location.id,
+          (extraCode.startsWith('PRAT-')?'Prateleira ':'Subposição ')+extraCode.split('-').at(-1),null,location.id,
           spec.objectId+':extra:'+i);
       }
     }else{

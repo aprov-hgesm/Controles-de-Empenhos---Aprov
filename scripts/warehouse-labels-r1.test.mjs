@@ -111,6 +111,73 @@ test('builder preserva hierarquia Depósito → Local → Subposição', () => {
   assert.equal(result[2].kind, 'SUBPOSITION');
 });
 
+test('6ª Bda: etiquetas antigas EST-XX-YY são exibidas no padrão HGeSM sem recadastro', () => {
+  const bdaDepot = { ...depot, workspaceId: 'aprovisionamento-6-bda-inf-bld', ug: '160413', code: 'DEP-001' };
+  const bdaLocal = { ...local, workspaceId: bdaDepot.workspaceId, ug: bdaDepot.ug };
+  const legacyChild = { ...subposition(1), workspaceId: bdaDepot.workspaceId, ug: bdaDepot.ug,
+    code: 'EST-01-01', name: 'Subposição 01' };
+  const result = labels.buildWarehouseLabelsForScope({
+    depot: bdaDepot, locations: [bdaLocal, legacyChild], scope: 'DEPOT_FULL',
+  });
+  assert.deepEqual(result.map(item => item.code), ['DEP-001', 'EST-01', 'PRAT-01']);
+  assert.equal(result[2].name, 'Prateleira 01');
+  assert.equal(result[2].physicalBarcode, '9813001201101');
+  assert.equal(result[2].id, legacyChild.id);
+  assert.equal(legacyChild.code, 'EST-01-01', 'identidade antiga permanece intacta');
+});
+
+test('alias legada colidente não pode produzir duas etiquetas com o mesmo código', () => {
+  const old = { ...subposition(1), code: 'EST-01-01', id: 'sub_' + '9'.repeat(32) };
+  const standard = subposition(1);
+  const printed = labels.buildWarehouseLabelsForScope({
+    depot, locations: [local, old, standard], scope: 'DEPOT_FULL',
+  });
+  assert.equal(printed.find(item => item.id === old.id).code, 'EST-01-01');
+  assert.notEqual(printed.find(item => item.id === old.id).physicalBarcode,
+    printed.find(item => item.id === standard.id).physicalBarcode);
+});
+
+test('leitor resolve barcode numérico novo para a subposição antiga sem trocar o ID', async () => {
+  const bdaDepot = { ...depot, code: 'DEP-001', workspaceId: 'aprovisionamento-6-bda-inf-bld', ug: '160413' };
+  const bdaLocal = { ...local, workspaceId: bdaDepot.workspaceId, ug: bdaDepot.ug };
+  const bdaChild = { ...subposition(1), code: 'EST-01-01',
+    workspaceId: bdaDepot.workspaceId, ug: bdaDepot.ug };
+  const resolve = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: '9813001201101', workspaceId: bdaDepot.workspaceId, ug: bdaDepot.ug,
+  }, {
+    getDepot: async (id) => id === bdaDepot.id ? bdaDepot : null,
+    getLocation: async (id) => id === bdaLocal.id ? bdaLocal : id === bdaChild.id ? bdaChild : null,
+    getDepotByCode: async (code) => code === 'DEP-001' ? bdaDepot : null,
+    getLocationByCode: async ({ kind, parentLocationId, code }) => {
+      if (kind === 'LOCAL' && code === 'EST-01' && parentLocationId === null) return bdaLocal;
+      if (kind === 'SUBPOSITION' && code === 'EST-01-01' && parentLocationId === bdaLocal.id) return bdaChild;
+      return null;
+    },
+  });
+  assert.equal(resolve.ok, true);
+  assert.equal(resolve.value.location.id, bdaChild.id);
+  assert.equal(resolve.value.position.subpositionId, bdaChild.id);
+});
+
+test('barcode EPX2 anterior continua identificando PRAT depois de atualização futura do código', async () => {
+  const standard = subposition(1);
+  const code = 'EPX2S:DEP-01:EST-01:EST-01-01';
+  const result = await locationBarcode.resolveWarehouseStockPositionCode({
+    code, workspaceId: depot.workspaceId, ug: depot.ug,
+  }, {
+    getDepot: async (id) => id === depot.id ? depot : null,
+    getLocation: async (id) => id === standard.id ? standard : id === local.id ? local : null,
+    getDepotByCode: async (candidate) => candidate === 'DEP-01' ? depot : null,
+    getLocationByCode: async ({ kind, parentLocationId, code: candidate }) => {
+      if (kind === 'LOCAL' && candidate === 'EST-01' && parentLocationId === null) return local;
+      if (kind === 'SUBPOSITION' && candidate === 'PRAT-01' && parentLocationId === local.id) return standard;
+      return null;
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.location.id, standard.id);
+});
+
 test('etiqueta legível diferencia prateleiras com mesmo código em estantes diferentes', () => {
   const estante02 = {
     ...local,

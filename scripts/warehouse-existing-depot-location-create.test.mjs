@@ -10,8 +10,15 @@ const source = read('lib/warehouse/structureLocationDraft.ts');
 const js = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
+const helperExports = {};
+runInNewContext(ts.transpileModule(read('lib/warehouse/subpositionCode.ts'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText, { exports: helperExports });
 const exports = {};
-runInNewContext(js, { exports });
+runInNewContext(js, { exports, require: (id) => {
+  if (id === './subpositionCode') return helperExports;
+  throw new Error('Unexpected import: ' + id);
+} });
 const { suggestWarehouseLocalCode, suggestWarehouseSubpositionCode } = exports;
 
 const depotId = 'dep_one';
@@ -46,8 +53,8 @@ test('sugestão de prateleira não mistura locais pais diferentes', () => {
     subposition('loc_1', 'EST-01-02'),
     subposition('loc_2', 'EST-01-03'),
   ];
-  assert.equal(suggestWarehouseSubpositionCode(items, 'loc_1', 'EST-01'), 'EST-01-03');
-  assert.equal(suggestWarehouseSubpositionCode(items, 'loc_2', 'EST-01'), 'EST-01-01');
+  assert.equal(suggestWarehouseSubpositionCode(items, 'loc_1', 'EST-01'), 'PRAT-03');
+  assert.equal(suggestWarehouseSubpositionCode(items, 'loc_2', 'EST-01'), 'PRAT-01');
   assert.equal(suggestWarehouseSubpositionCode(items, '', 'EST-01'), '');
 });
 
