@@ -16,15 +16,15 @@ const records = Array.from({ length: 1000 }, (_, i) => ({
   amount: { committed: i + 0.25, received: i * 0.47 },
 }));
 
-test('Painel Essencial: 60 linhas apenas no DOM; 100% dos totais/contagem preservados', () => {
+test('Painel Essencial: 24 linhas apenas no DOM; 100% dos totais/contagem preservados', () => {
   const predicate = x => x.classification === 'QR' && x.pregao === 'A';
   const original = records.filter(predicate);
-  const projected = projectDashboardRows(records, predicate, x => x.amount, 60);
+  const projected = projectDashboardRows(records, predicate, x => x.amount, 24);
   assert.equal(projected.matchedCount, original.length);
-  assert.deepEqual(projected.visibleRows, original.slice(0, 60));
+  assert.deepEqual(projected.visibleRows, original.slice(0, 24));
   assert.equal(projected.committed, original.reduce((sum, x) => sum + x.amount.committed, 0));
   assert.equal(projected.received, original.reduce((sum, x) => sum + x.amount.received, 0));
-  assert.equal(projected.visibleRows.length, 60);
+  assert.equal(projected.visibleRows.length, 24);
   assert.equal(records.length, 1000);
 });
 
@@ -70,7 +70,7 @@ test('Projeção é somente leitura: objetos originais e filtros não são modif
 test('Integração visual usa limite Essencial e mantém Normal ilimitado', async () => {
   const component = await readFile(new URL('../features/dashboard/components/DashboardView.tsx', import.meta.url), 'utf8');
   assert.match(component, /projectDashboardRows\(/);
-  assert.match(component, /mode === 'essencial' \? \(visibleRowsByClass\[cls\.key\] \?\? 60\) : Number\.POSITIVE_INFINITY/);
+  assert.match(component, /mode === 'essencial' \? \(visibleRowsByClass\[cls\.key\] \?\? 24\) : Number\.POSITIVE_INFINITY/);
   assert.match(component, /matchedCount: filteredClassCount/);
   assert.doesNotMatch(component, /filteredClassEmpenhos\.slice/);
 });
