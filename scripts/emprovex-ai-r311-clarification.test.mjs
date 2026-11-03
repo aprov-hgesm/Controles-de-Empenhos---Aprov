@@ -239,3 +239,21 @@ test('R3.1.5 presents bounded item listing from authorized commitment response',
  assert.match(answer,/3 recebidos/);
  assert.match(answer,/2026NE66/);
 });
+
+test('R3.1.5 W3 result groups enable optional name refinement with no itemId or balance in context',()=>{
+ const result={items:[{name:'Queijo Mussarela',unit:'kg',pendingQuantity:7},
+   {name:'Queijo Mussarela',unit:'un',pendingQuantity:3},
+   {name:'Queijo Prato',unit:'kg',pendingQuantity:4}]};
+ const query={intent:'commitment_item_search',
+   params:{materialQuery:'queijo',commitmentId:'2026NE66'}};
+ const pending=clarification.itemSearchRefinement(query,result,'ok');
+ assert.deepEqual(pending,{kind:'commitment_item_search',step:'material',commitmentId:'2026NE66'});
+ assert.ok(!('items' in pending)&&!('balance' in pending));
+ const selected=clarification.continueClarification(pending,'mussarela');
+ assert.equal(selected.kind,'ready');
+ assert.equal(selected.query.intent,'commitment_item_search');
+ assert.deepEqual(selected.query.params,{materialQuery:'mussarela',commitmentId:'2026NE66'});
+ assert.equal(clarification.itemSearchRefinement(query,{items:[result.items[0]]},'ok'),null);
+ assert.equal(clarification.itemSearchRefinement({intent:'warehouse_stock_get',params:{}},result,'ok'),null);
+ assert.equal(clarification.continueClarification(pending,'Quais notas fiscais estão pendentes?').kind,'new_request');
+});
