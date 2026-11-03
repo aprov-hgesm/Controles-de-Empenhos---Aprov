@@ -10,8 +10,9 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),require=createR
 const {interpret,makeW3Query,validateModelCandidate,ACCEPTED_INTENTS,FAMILIES}=require('../.w4-dist/index.cjs');
 const now=new Date('2026-10-31T14:00:00Z');
 const run=(message,extra={})=>interpret({message,now,...extra});
-test('W4 catalog: 26 families, 9 W3 contracts and closed adapter',()=>{
- assert.equal(FAMILIES.length,26);assert.equal(ACCEPTED_INTENTS.length,9);
+test('W4 catalog: 26 families, 10 W3 contracts and closed adapter',()=>{
+ assert.equal(FAMILIES.length,26);assert.equal(ACCEPTED_INTENTS.length,10);
+ assert.equal(makeW3Query('commitment_item_search',{materialQuery:'queijo'}).intent,'commitment_item_search');
  assert.equal(makeW3Query('commitment_get',{commitmentId:'2026NE66',workspaceId:'evil'}),null);
  assert.equal(makeW3Query('warehouse_stock_get',{materialQuery:'arroz',ug:'160416'}),null);
  assert.equal(makeW3Query('commitment_get',{commitmentId:'2026NE66'}).intent,'commitment_get');
