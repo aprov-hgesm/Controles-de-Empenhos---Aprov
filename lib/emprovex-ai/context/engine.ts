@@ -39,6 +39,7 @@ function extract(text:string,canonical:string) {
  const subject=canonical.match(/^(?:agora\s+(?:quero|gostaria)\s+(?:de\s+)?saber\s+sobre|na verdade[, ]+\s*(?:eu\s+)?(?:quis|queria)\s+dizer|corrigindo[, ]*|era\s+(?:o|a))\s+(?:o|a|do|da)?\s*([a-z][a-z\s-]{1,75})$/);
  if(subject)material=subject[1].trim();
  const patterns=[
+   /\bquanto\s+(?:ainda\s+)?temos\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em)\s+(?:deposito|estoque)\b|$)/,
    /\bquanto\s+(?:de\s+)?(.{2,85}?)\s+(?:ainda\s+)?temos\b/,
    /\b(?:onde (?:esta|fica|estao)|localizacao (?:de|da|do)|localize|encontrar)\s+(?:(?:o|a|os|as)\s+)?(.{2,85}?)(?:\s+(?:no|na|em|dentro)\s+(?:deposito|camara|estoque|freezer|geladeira|almoxarifado)\b|\s+agora\b|$)/,
    /\b(?:quantidade|estoque|saldo fisico)\s+(?:de|do|da)\s+(.{2,85}?)(?:\s+(?:no|na|em|agora)\b|$)/,
@@ -59,7 +60,8 @@ function extract(text:string,canonical:string) {
    if(m)material=m[1];
  }
  material=material.replace(/^(?:o|a|os|as|um|uma|do|da|de)\s+/,'')
-   .replace(/\s+(?:em estoque|disponiveis|disponivel|hoje|ontem|aqui)$/,'').trim();
+   .replace(/^(?:item|material|produto)\s+(?:de\s+)?/,'')
+  .replace(/\s+(?:em estoque|disponiveis|disponivel|hoje|ontem|aqui)$/,'').trim();
  if(/^(?:material|materiais|produto|produtos|deposito|estoque|esse material|aquele material|isso)$/.test(material))material='';
  if(!/^[a-z][a-z0-9\s\/-]{1,119}$/.test(material))material='';
  const year=canonical.match(/\b(?:exercicio|ano|de)\s+(20\d{2})\b/)?.[1];
@@ -231,6 +233,13 @@ export function interpret(input:Input):Result {
      /\btelefone\b/.test(t)?'phone':'all';
    return success('supplier_contact_find',{...(x.cnpj?{cnpj:x.cnpj}:{nameQuery:supplier}),channel},'fornecedor → contato');
  }
+ // Cross-NE material searches cannot be answered by an NE total or physical stock balance.
+ if(isCommitment&&/\b(?:item|itens|material|materiais)\b/.test(t)&&
+    (isBalance||/\b(?:quais|encontre|localize|possuem|contem)\b/.test(t))&&
+    !x.itemId)
+   return clarify('commitment_total_balance',commitmentId?
+     'Para consultar o saldo operacional desse item na NE, informe o identificador do item (itemId).':
+     'A pesquisa de materiais entre várias NEs ainda não está disponível. Informe a NE completa e o identificador do item para consultar seu saldo operacional.');
  if(isCommitment){
    if(/\b(?:fornecedor|empresa)\b/.test(t)&&commitmentId)return unavailable('supplier_by_commitment','P1_NE_TO_SUPPLIER_UNAVAILABLE');
    if(/\b(?:quais|liste|lista|mostre|empenhos)\b/.test(t)&&(/\b(?:anteriores|exercicios|de 20\d{2}|ainda tem saldo|com saldo)\b/.test(t)))
