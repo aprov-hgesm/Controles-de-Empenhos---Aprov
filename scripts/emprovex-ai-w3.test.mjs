@@ -238,23 +238,24 @@ test('W3.1.8 — paginated Warehouse scanner finds arroz in later authorized pag
 test('W3.1.8 — paginated scanner marks overflow and forbids foreign document paths',async()=>{
  const store=load('lib/server/warehouseFirestoreTransaction.ts');
  const previousFetch=globalThis.fetch;
- const root='projects/test-project/databases/emprovex-warehouse/documents/';
- const doc=(id,name)=>({name:root+'warehouse/setor-a/materials/'+id,
+ const documentRoot=url=>String(url).split('/documents/')[0]
+   .replace('https://firestore.googleapis.com/v1/','')+'/documents/';
+ const doc=(root,id,name)=>({name:root+'warehouse/setor-a/materials/'+id,
    updateTime:'2026-11-03T00:00:00Z',
    fields:{description:{stringValue:name},workspaceId:{stringValue:'setor-a'},
      ug:{stringValue:'160416'}}});
  try {
-   globalThis.fetch=async()=>({ok:true,json:async()=>({documents:[
-     doc('mat_'+'a'.repeat(32),'Arroz branco'),
-     doc('mat_'+'b'.repeat(32),'Arroz integral'),
-     doc('mat_'+'c'.repeat(32),'Arroz parboilizado')
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[
+     doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz branco'),
+     doc(documentRoot(url),'mat_'+'b'.repeat(32),'Arroz integral'),
+     doc(documentRoot(url),'mat_'+'c'.repeat(32),'Arroz parboilizado')
    ]})});
    const result=await store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz',100,2);
    assert.equal(result.rows.length,2);
    assert.equal(result.incomplete,true);
-   globalThis.fetch=async()=>({ok:true,json:async()=>({documents:[{
-     ...doc('mat_'+'a'.repeat(32),'Arroz'),
-     name:root+'warehouse/setor-b/materials/mat_'+'a'.repeat(32)
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[{
+     ...doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz'),
+     name:documentRoot(url)+'warehouse/setor-b/materials/mat_'+'a'.repeat(32)
    }]})});
    await assert.rejects(()=>store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz'),
      /WAREHOUSE_MATERIAL_DISCOVERY_SCOPE/);
