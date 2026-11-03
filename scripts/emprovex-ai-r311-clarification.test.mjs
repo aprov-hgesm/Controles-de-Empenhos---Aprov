@@ -256,4 +256,5 @@ test('R3.1.5 W3 result groups enable optional name refinement with no itemId or 
  assert.equal(clarification.itemSearchRefinement(query,{items:[result.items[0]]},'ok'),null);
  assert.equal(clarification.itemSearchRefinement({intent:'warehouse_stock_get',params:{}},result,'ok'),null);
  assert.equal(clarification.continueClarification(pending,'Quais notas fiscais estão pendentes?').kind,'new_request');
+ assert.equal(clarification.continueClarification(pending,'E os itens dessa?').kind,'new_request');
 });
