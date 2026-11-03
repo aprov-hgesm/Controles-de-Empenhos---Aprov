@@ -305,7 +305,7 @@ export async function runAiAsk(args:{
    const actual=first&&typeof first==='object'&&!Array.isArray(first)?
      (first as Record<string,unknown>).description:undefined;
    if(typeof actual==='string'&&actual.trim()){
-     const normalized=(x:string)=>x.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')
+     const normalized=(x:string)=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
        .toLocaleLowerCase('pt-BR').trim();
      const expectedName=normalized(previous.pending.materialLabel);
      const actualName=normalized(actual);
