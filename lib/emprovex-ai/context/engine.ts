@@ -132,7 +132,7 @@ export function interpret(input:Input):Result {
  const isBalance=has(t,WORDS.balance),isRegistered=has(t,WORDS.register);
  const isIssued=has(t,WORDS.issued);
  const isOverdue=has(t,WORDS.late);
- const directContext=/\b(?:esse|essa|aquele|aquela|mesmo|anterior|mencionado|dele|dela|e quanto|e onde|e quem)\b/.test(t);
+ const directContext=/\b(?:esse|essa|desse|dessa|desses|dessas|aquele|aquela|mesmo|anterior|mencionado|dele|dela|e quanto|e onde|e quem)\b/.test(t);
  const commitmentId=x.id||((directContext||isCommitment)&&!x.partial?refs.commitmentId:undefined);
  const material=x.material||((directContext||(!x.material&&isStock))?refs.materialQuery:undefined);
  const supplier=x.supplier||((directContext&&isContact)?refs.supplierName:undefined);
