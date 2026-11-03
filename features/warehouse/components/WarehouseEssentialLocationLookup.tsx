@@ -7,7 +7,7 @@ import { findWarehouseMaterialsAcrossDepots } from '../../../lib/warehouse/globa
 import {
   listWarehouseDepotsCached,
   listWarehouseLocationsCached,
-  listWarehousePositiveLocationBalances,
+  listWarehouseLocationBalances,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
   type WarehouseLocationBalanceListItem,
@@ -20,8 +20,12 @@ import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 const MATERIAL_LIMIT = 1000;
 const DEPOT_LIMIT = 250;
 const LOCATION_LIMIT = 500;
-const BALANCE_LIMIT = 500;
+const BALANCE_LIMIT_PER_MATERIAL = 500;
+const MAX_MATCHED_MATERIALS = 12;
 const INITIAL_POSITION_COUNT = 30;
+
+const normalize = (value: string) => value.normalize('NFD')
+  .replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
 
 type LookupData = {
   materials: WarehouseMaterial[];
@@ -29,6 +33,7 @@ type LookupData = {
   locations: WarehouseLocationListItem[];
   balances: WarehouseLocationBalanceListItem[];
   partial: boolean;
+  matchedMaterialLimit: boolean;
 };
 
 export function WarehouseEssentialLocationLookup({
@@ -62,31 +67,48 @@ export function WarehouseEssentialLocationLookup({
     return () => { requestRef.current += 1; };
   }, [workspaceId]);
 
-  const readSnapshot = useCallback(async (force = false) => {
-    if (!workspaceId || requestInFlight.current || (data && !force)) return;
+  const readSnapshot = useCallback(async (searchTerm: string, force = false) => {
+    if (!workspaceId || requestInFlight.current) return;
     requestInFlight.current = true;
     const requestId = ++requestRef.current;
     setLoading(true);
     setError(null);
 
     try {
-      const [materials, depots, locations, balances] = await Promise.all([
-        listWarehouseMaterials(workspaceId, MATERIAL_LIMIT),
-        listWarehouseDepotsCached(workspaceId, DEPOT_LIMIT),
-        listWarehouseLocationsCached(workspaceId, LOCATION_LIMIT),
-        listWarehousePositiveLocationBalances(workspaceId, BALANCE_LIMIT),
-      ]);
+      // Material, depósitos e locais são reutilizados entre buscas nesta aba.
+      // Os saldos são consultados SOMENTE por material correspondente, não
+      // via leitura de 500 posições globais a cada pesquisa.
+      const current = !force ? data : null;
+      const [materials, depots, locations] = current
+        ? [current.materials, current.depots, current.locations] as const
+        : await Promise.all([
+          listWarehouseMaterials(workspaceId, MATERIAL_LIMIT),
+          listWarehouseDepotsCached(workspaceId, DEPOT_LIMIT),
+          listWarehouseLocationsCached(workspaceId, LOCATION_LIMIT),
+        ]);
+
+      const term = normalize(searchTerm);
+      const candidates = materials.filter((item) =>
+        item.status === 'active'
+        && normalize([item.id, item.description, ...item.aliases].join(' ')).includes(term)
+      );
+      const selected = candidates.slice(0, MAX_MATCHED_MATERIALS);
+      const perMaterialBalances = await Promise.all(selected.map((item) =>
+        listWarehouseLocationBalances(workspaceId, BALANCE_LIMIT_PER_MATERIAL, item.id)
+      ));
       if (requestId !== requestRef.current) return;
       setData({
         materials,
         depots,
         locations,
-        balances,
+        balances: perMaterialBalances.flat(),
         partial: materials.length >= MATERIAL_LIMIT
           || depots.length >= DEPOT_LIMIT
           || locations.length >= LOCATION_LIMIT
-          || balances.length >= BALANCE_LIMIT,
+          || perMaterialBalances.some((items) => items.length >= BALANCE_LIMIT_PER_MATERIAL),
+        matchedMaterialLimit: candidates.length > MAX_MATCHED_MATERIALS,
       });
+      setSubmittedQuery(searchTerm);
       setVisiblePositionCount(INITIAL_POSITION_COUNT);
     } catch (cause) {
       if (requestId !== requestRef.current) return;
@@ -107,9 +129,7 @@ export function WarehouseEssentialLocationLookup({
       return;
     }
     setError(null);
-    setSubmittedQuery(value);
-    setVisiblePositionCount(INITIAL_POSITION_COUNT);
-    if (!data) void readSnapshot();
+    void readSnapshot(value);
   };
 
   const matches = useMemo(() => {
@@ -120,7 +140,7 @@ export function WarehouseEssentialLocationLookup({
       locations: data.locations.map((entry) => entry.location),
       balances: data.balances.map((entry) => entry.balance),
       materials: data.materials,
-      maxMaterials: 100,
+      maxMaterials: MAX_MATCHED_MATERIALS,
     });
   }, [data, submittedQuery]);
 
@@ -194,7 +214,7 @@ export function WarehouseEssentialLocationLookup({
         {data && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
             <span>Consulta sob demanda · sem carregamento de croquis ou modelos 3D</span>
-            <button type="button" disabled={loading} onClick={() => void readSnapshot(true)}
+            <button type="button" disabled={loading} onClick={() => void readSnapshot(submittedQuery, true)}
               className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Atualizar saldos
             </button>
@@ -202,7 +222,7 @@ export function WarehouseEssentialLocationLookup({
         )}
       </section>
 
-      {submittedQuery && data && !loading && (
+      {submittedQuery && data && !loading && !error && (
         <section className="space-y-3" data-testid="warehouse-essential-text-results" aria-live="polite">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-base font-black text-slate-900">Localização de “{submittedQuery}”</h3>
@@ -211,7 +231,7 @@ export function WarehouseEssentialLocationLookup({
             </span>
           </div>
 
-          {(data.partial || matches.length >= 100) && (
+          {(data.partial || data.matchedMaterialLimit) && (
             <p role="status" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               Consulta parcial: um limite de segurança foi atingido. Podem existir outros materiais ou posições.
