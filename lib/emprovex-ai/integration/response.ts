@@ -43,14 +43,17 @@ function render(intent:AiIntent,data:unknown):string {
  case 'commitment_item_search':{
    const items=list(d.items);
    if(!items.length)return 'Não foi encontrado item correspondente na cobertura consultada da Consulta de Itens.';
-   return items.map(item=>{
+   // Plain-text fallback persists in history and works without a rich UI.
+   // Present one value per line; never combine incompatible units.
+   return items.map((item,index)=>{
      const associations=list(item.associations);
      const neList=associations.map(a=>text(a.commitmentId)+' (item '+text(a.itemId)+')')
        .filter(Boolean).slice(0,8).join(', ');
-     return text(item.name)+' — saldo operacional: '+number(item.pendingQuantity)+' '+text(item.unit)+
-       '; valor restante: '+money(item.operationalBalance)+
-       (neList?'; empenhos associados: '+neList:'');
-   }).join('\n');
+     return (index+1)+'. '+text(item.name)+
+       '\n   Saldo operacional: '+number(item.pendingQuantity)+' '+text(item.unit)+
+       '\n   Valor restante: '+money(item.operationalBalance)+
+       (neList?'\n   NEs: '+neList:'');
+   }).join('\n\n');
  }
  case 'commitment_total_balance':return 'Saldo operacional restante da NE '+text(d.commitmentId)+': '+
    money(d.operationalBalance)+'. Valor empenhado: '+money(d.committedAmount)+
