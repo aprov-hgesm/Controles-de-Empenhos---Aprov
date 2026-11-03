@@ -115,7 +115,7 @@ export async function runAiAsk(args:{
    modelFirstOutcome=modelFirst.kind==='operational'?'model_operational':
      modelFirst.kind==='conversation'?'model_conversation':'model_unsupported';
  let contractValidationMs=0,w3ExecutionMs=0,responseMs=0,examinedDocuments=0;
- let status:AiAskPayload['status'],answer:string;
+ let status:AiAskPayload['status']='fallback_unavailable',answer='Não consegui concluir a consulta. Tente novamente.';
  let result:AiResponse|undefined,query:AiAskPayload['query'],contextToken:string|undefined;
  let lfm3Calls=modelFirstAttempted?1:0,modelAudit:AiAskPayload['filterAudit']|undefined;
  let modelOutcome:AiAskPayload['metrics']['modelOutcome']='not_attempted';
