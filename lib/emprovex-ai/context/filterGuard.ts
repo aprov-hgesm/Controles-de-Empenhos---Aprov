@@ -77,6 +77,12 @@ export function detectConstraints(t:string, explicit:{
    c.push({name:'period',value:'unresolved_absolute_year'});
  add('depotId',explicit.depotId);
  add('itemId',explicit.itemId);
+ // Consulta de Itens does not yet offer an exercise-year filter: never
+ // silently expand "empenhos de 2025" into an unrestricted all-years search.
+ if(intent==='commitment_item_search'&&!explicit.commitmentId&&
+   /\b(?:em|de|do|ano|exercicio|exercicios)\s+20\d{2}\b/.test(t))
+   c.push({name:'period',value:'unrepresented_exercise'});
+
  if(intent==='commitment_total_balance'&&!explicit.itemId&&
    /\b(?:por item|do item|referente ao|referente a|relativo ao|saldo de material|saldo do material)\b/.test(t))
    c.push({name:'materialQuery',value:'unresolved_commitment_item'});
