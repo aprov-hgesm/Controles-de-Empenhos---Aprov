@@ -255,6 +255,7 @@ export function OperationalWorkspace({
   const {
     handleEmpenhoDocumentUploaded,
     handleUpdateEmpenhoPregao,
+    handleUpdateEmpenhoDescription,
     handleUpdateEmpenhoNotaCredito,
     handleUpdateEmpenhoSupplierCnpj,
     handleUpdateEmpenhoClassification,
@@ -459,7 +460,7 @@ export function OperationalWorkspace({
           )}
 
           {activeTab === 'empenhos' && (
-            <EmpenhosView context={{ alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user }} />
+            <EmpenhosView context={{ alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoDescription, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user }} />
           )}
 
           {activeTab === 'fornecedores' && (

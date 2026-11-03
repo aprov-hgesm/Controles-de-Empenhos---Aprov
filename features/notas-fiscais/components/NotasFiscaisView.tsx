@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
+import { NfEmpenhoPicker } from './NfEmpenhoPicker';
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
 import { InvoiceMirrorDocumentActions } from '../../../components/InvoiceMirrorDocumentActions';
 import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
@@ -1034,20 +1035,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                     </h3>
                     
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Pesquise e selecione a Nota de Empenho vinculada</label>
-                      <select 
-                        value={selectedNFCommitmentId}
-                        onChange={(e) => setSelectedNFCommitmentId(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-sm text-[#0b1c30] shadow-sm"
-                      >
-                        {empenhos
-                          .filter(emp => emp.status === 'Ativo' || emp.id === selectedNFCommitmentId)
-                          .map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.id} - {emp.supplier} ({emp.description})
-                            </option>
-                          ))}
-                      </select>
+                      <NfEmpenhoPicker
+                        empenhos={empenhos}
+                        selectedId={selectedNFCommitmentId}
+                        onSelect={setSelectedNFCommitmentId}
+                      />
                     </div>
                   </section>
 

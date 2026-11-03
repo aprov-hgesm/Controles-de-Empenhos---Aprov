@@ -121,6 +121,35 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
   };
 
+  const handleUpdateEmpenhoDescription = async (
+    empenhoId: string,
+    descriptionInput: string
+  ): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      const error = new Error('Empenho não encontrado para editar a observação.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+    const description = descriptionInput.trim().replace(/\s+/g, ' ');
+    if (!description || description.length > 1800) {
+      const error = new Error('A observação deve conter de 1 a 1.800 caracteres.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+    if (description === currentEmpenho.description) return;
+    try {
+      if (!user) throw new Error('Sua sessão expirou. Entre novamente para editar a observação.');
+      const updated = await saveEmpenho(user.uid, { ...currentEmpenho, description });
+      setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updated : emp));
+      showToast('Observação do empenho ' + empenhoId + ' atualizada.', 'success');
+    } catch (error) {
+      console.error('Erro ao atualizar observação do empenho:', error);
+      showToast(error instanceof Error ? error.message : 'Não foi possível atualizar a observação.', 'error');
+      throw error;
+    }
+  };
+
   const handleUpdateEmpenhoNotaCredito = async (
     empenhoId: string,
     notaCreditoInput: string
@@ -954,6 +983,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   return {
     handleEmpenhoDocumentUploaded,
     handleUpdateEmpenhoPregao,
+    handleUpdateEmpenhoDescription,
     handleUpdateEmpenhoNotaCredito,
     handleUpdateEmpenhoSupplierCnpj,
     handleUpdateEmpenhoClassification,
