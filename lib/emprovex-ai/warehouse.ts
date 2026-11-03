@@ -2,7 +2,7 @@
 import type { AiAccess } from './authorize';
 import type { AiQuery } from './contracts';
 import { AiExecutionError, type QueryOutcome } from './response';
-import { warehouseDocument, warehouseQuery, type AiRow } from './reader';
+import { warehouseDocument, warehouseQuery, warehouseMaterialNameSearch, type AiRow } from './reader';
 import { createWarehouseBarcodeId } from '../warehouse/barcode';
 
 function s(v:unknown):string{return typeof v==='string'?v:'';}
@@ -36,7 +36,6 @@ async function resolveMaterial(access:AiAccess,p:Record<string,unknown>):
     return {row,candidates:[],examined:2,incomplete:false};
   }
   const raw=s(p.materialQuery).trim();
-  const lookup=searchKey(raw);
   // Fast exact indexed lookup, scoped to this workspace. Duplicate exact names
   // require disambiguation rather than silently selecting the first record.
   const exact=await warehouseQuery(access,'materials',{field:'description',value:raw},3);
@@ -44,14 +43,13 @@ async function resolveMaterial(access:AiAccess,p:Record<string,unknown>):
     return {row:exact.rows.length===1&&!exact.truncated?exact.rows[0]:null,
       candidates:exact.rows,examined:exact.examined,incomplete:exact.truncated};
   }
-  // warehouse_material_v1 has no canonical normalized-name index. A bounded 101-row
-  // scan improves recall; truncation MUST stay partial, never a false zero or absence.
-  const q=await warehouseQuery(access,'materials',null,101);
-  const candidates=q.rows.filter(row=>
-    searchKey(s(row.data.description))===lookup
-    ||(Array.isArray(row.data.aliases) && row.data.aliases.some(alias=>typeof alias==='string' && searchKey(alias)===lookup)));
+  // A product family (e.g. "arroz") is often part of a longer description.
+  // The new read-only Warehouse discovery scans real paginated catalog pages,
+  // bounded by W3 limits; only an exhausted scan can establish uniqueness.
+  const q=await warehouseMaterialNameSearch(access,raw);
+  const candidates=q.rows;
   return {row:candidates.length===1&&!q.truncated?candidates[0]:null,candidates,
-    examined:q.examined,incomplete:q.truncated};
+    examined:exact.examined+q.examined,incomplete:q.truncated};
 }
 function materialDetails(row:AiRow) {
   return {materialId:row.id,description:row.data.description,unit:row.data.unit,
@@ -60,9 +58,13 @@ function materialDetails(row:AiRow) {
 function unresolved(resolved:Awaited<ReturnType<typeof resolveMaterial>>):QueryOutcome {
   const ambiguous=resolved.candidates.length>1;
   return {status:ambiguous?'ambiguous':resolved.incomplete?'partial':'empty',
-    data:ambiguous?{candidates:resolved.candidates.slice(0,20).map(materialDetails)}:null,
-    evidence:resolved.candidates.map(row=>({source:'warehouse.materials',documentId:row.id})),
-    limitations:resolved.incomplete?['Catálogo maior que o limite de resolução: informe o ID canônico ou código de barras.']:[],
+    // Expose real names/units for a human-readable choice. An incomplete
+    // catalog must NEVER be presented as a definitive list or zero.
+    data:resolved.candidates.length?
+      {candidates:resolved.candidates.slice(0,12).map(materialDetails)}:null,
+    evidence:resolved.candidates.slice(0,12).map(row=>({source:'warehouse.materials',documentId:row.id})),
+    limitations:resolved.incomplete?
+      ['Busca parcial no catálogo autorizado. Você pode escolher uma das opções encontradas ou informar um nome mais específico.']:[],
     coverage:resolved.incomplete?'incomplete':'complete',truncated:resolved.incomplete,
     examinedDocuments:resolved.examined};
 }
