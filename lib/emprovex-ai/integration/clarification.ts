@@ -119,6 +119,10 @@ export function itemSearchRefinement(
    ...(typeof ne==='string'&&NE.test(ne)?{commitmentId:ne.toUpperCase()}:{})};
 }
 function isSwitch(message:string):boolean {
+ // A contextual follow-up about the last NE is a new supported W4 query,
+ // not a product name to be resolved against the prior choice list.
+ if(/^(?:e\s+)?(?:os\s+)?itens?\s+(?:dessa|desse|dela|dele|da\s+ne|do\s+empenho)$/i.test(message))
+   return true;
  return /^(?:agora |mudando de assunto|outra pergunta|na verdade )?\s*(?:quais?|como|onde|quando|quantos?|quanto|mostre|liste|consulte|detalhe|localize|verifique|preciso saber|explique)\b/i.test(message)
   && /\b(?:estoque|empenho|notas?|nfs?|forneced|deposito|materiais?|item|saldo)\b/i.test(message);
 }
