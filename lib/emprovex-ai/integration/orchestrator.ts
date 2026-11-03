@@ -83,8 +83,10 @@ export async function runAiAsk(args:{
  const interpretationMs=interpreted.metrics.durationMs;
  // A user reply to a typed, signed clarification is a continuation, not a new
  // natural-language query. Always let W4 security veto attempted mutations.
- const priorClarification=previous?.pending &&
-   !['REJECT_MUTATION','OUT_OF_SCOPE','UNSUPPORTED'].includes(interpreted.route)
+ const unsafeReply=interpreted.route==='REJECT_MUTATION'||
+   interpreted.route==='UNSUPPORTED'||
+   ['UNTRUSTED_INSTRUCTION','CLIENT_SCOPE_OVERRIDE_FORBIDDEN'].includes(interpreted.reason);
+ const priorClarification=previous?.pending&&!unsafeReply
    ?continueClarification(previous.pending,args.input.message):null;
  const clarification=priorClarification?.kind==='new_request'
    ?startClarification(interpreted,args.input.message)
