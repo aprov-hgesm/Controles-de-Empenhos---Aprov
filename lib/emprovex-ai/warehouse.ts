@@ -35,7 +35,15 @@ async function resolveMaterial(access:AiAccess,p:Record<string,unknown>):
     const row=await warehouseDocument(access,'materials',materialId);
     return {row,candidates:[],examined:2,incomplete:false};
   }
-  const lookup=searchKey(s(p.materialQuery));
+  const raw=s(p.materialQuery).trim();
+  const lookup=searchKey(raw);
+  // Fast exact indexed lookup, scoped to this workspace. Duplicate exact names
+  // require disambiguation rather than silently selecting the first record.
+  const exact=await warehouseQuery(access,'materials',{field:'description',value:raw},3);
+  if(exact.rows.length){
+    return {row:exact.rows.length===1&&!exact.truncated?exact.rows[0]:null,
+      candidates:exact.rows,examined:exact.examined,incomplete:exact.truncated};
+  }
   // warehouse_material_v1 has no canonical normalized-name index. A bounded 101-row
   // scan improves recall; truncation MUST stay partial, never a false zero or absence.
   const q=await warehouseQuery(access,'materials',null,101);
