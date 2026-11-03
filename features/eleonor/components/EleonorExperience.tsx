@@ -366,11 +366,19 @@ export function EleonorExperience({
             <ArrowUp className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
-          <Image src="/branding/emprovex-light-transparent.png" alt="" width={19} height={19}
-            unoptimized className="h-4 w-4 shrink-0 rounded" />
-          Consultas somente de leitura · Respostas baseadas no EMPROVEX
-        </p>
+        <div className="mt-2 space-y-1.5 text-center">
+          <p data-testid="eleonor-pilot-notice" role="note"
+            className="mx-auto max-w-lg px-1 text-[11px] leading-4 text-slate-500">
+            <span className="font-semibold text-slate-600">Um recado da Eleonor:</span>{' '}
+            Ainda estou em fase de testes e aprimoramento. Posso demorar um pouco para responder — e, sim, até eu posso errar.
+            Obrigada pela paciência; excelência exige prática.
+          </p>
+          <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
+            <Image src="/branding/emprovex-light-transparent.png" alt="" width={19} height={19}
+              unoptimized className="h-4 w-4 shrink-0 rounded" />
+            Consultas somente de leitura · Respostas baseadas no EMPROVEX
+          </p>
+        </div>
       </form>
     </div>
   );
