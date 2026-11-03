@@ -6,7 +6,7 @@ import {makeW3Query} from '../context/adapter';
 import type {Result,W3Query} from '../context/types';
 
 export type PendingClarification={
- kind:'commitment_balance'|'commitment_item_balance'|'warehouse_stock'|'warehouse_location';
+ kind:'commitment_balance'|'commitment_item_balance'|'commitment_item_search'|'warehouse_stock'|'warehouse_location';
  step:'ne'|'item'|'material'|'materialId';
  commitmentId?:string;
  materialLabel?:string;
@@ -29,6 +29,7 @@ const questionNe=(p:PendingClarification)=>p.kind==='commitment_item_balance'
 const questionItem=(p:PendingClarification)=>
   'Qual é o identificador (itemId)'+(p.materialLabel?' correspondente a '+p.materialLabel:' do item')+
   ' na NE '+p.commitmentId+'? Não posso usar o nome do material como se fosse um itemId.';
+const questionItemSearch='Qual é o nome ou descrição do produto que deseja procurar na Consulta de Itens?';
 const questionMaterial=(p:PendingClarification)=>p.kind==='warehouse_location'
  ?'Qual material deseja localizar? Informe o nome completo, o código de barras ou o ID do material.'
  :'Qual material deseja consultar no estoque físico? Informe o nome completo, o código de barras ou o ID do material.';
@@ -39,9 +40,10 @@ export function isValidPending(value:unknown):value is PendingClarification {
  const p=value as Record<string,unknown>;
  if(Object.keys(p).some(k=>!['kind','step','commitmentId','materialLabel'].includes(k))||
    typeof p.kind!=='string'||typeof p.step!=='string')return false;
- const commitment=p.kind==='commitment_balance'||p.kind==='commitment_item_balance';
- if(!['commitment_balance','commitment_item_balance','warehouse_stock','warehouse_location'].includes(p.kind)||
-   !(commitment?['ne','item'].includes(p.step):['material','materialId'].includes(p.step)))return false;
+ const commitment=p.kind==='commitment_balance'||p.kind==='commitment_item_balance'||p.kind==='commitment_item_search';
+ if(!['commitment_balance','commitment_item_balance','commitment_item_search','warehouse_stock','warehouse_location'].includes(p.kind)||
+   !(p.kind==='commitment_item_search'?p.step==='material':
+     commitment?['ne','item'].includes(p.step):['material','materialId'].includes(p.step)))return false;
  if(p.commitmentId!==undefined&&
    (typeof p.commitmentId!=='string'||!/^20\d{2}NE\d{1,10}$/.test(p.commitmentId)))return false;
  if(p.materialLabel!==undefined&&
@@ -59,6 +61,12 @@ export function startClarification(interpreted:Result,message:string):Clarificat
  if(interpreted.route!=='CLARIFY'||
   !['MISSING_OR_AMBIGUOUS_PARAMETER','ITEM_NAME_REQUIRES_ITEM_ID'].includes(interpreted.reason))
   return null; // Never drop an unsupported location, time or supplier filter.
+ if(interpreted.intent==='commitment_item_search'){
+   const ne=message.match(NE)?.[1]?.toUpperCase();
+   const pending:PendingClarification={kind:'commitment_item_search',step:'material',
+     ...(ne?{commitmentId:ne}:{})};
+   return {kind:'question',question:questionItemSearch,pending};
+ }
  if(interpreted.intent==='commitment_total_balance'){
   // Do not silently replace an item-level request by a total-NE balance.
   const item=/\b(?:do item|de item|por item|itens|material|materiais|produto)\b/i.test(message)||
@@ -92,7 +100,8 @@ function isSwitch(message:string):boolean {
   && /\b(?:estoque|empenho|notas?|nfs?|forneced|deposito|materiais?|item|saldo)\b/i.test(message);
 }
 function ready(kind:PendingClarification['kind'],params:Record<string,unknown>):ClarificationAction{
- const intent=kind==='commitment_balance'||kind==='commitment_item_balance'?'commitment_total_balance':
+ const intent=kind==='commitment_item_search'?'commitment_item_search':
+   kind==='commitment_balance'||kind==='commitment_item_balance'?'commitment_total_balance':
   kind==='warehouse_stock'?'warehouse_stock_get':'warehouse_material_locations_list';
  const query=makeW3Query(intent,params);
  if(!query)throw new Error('AI_CLARIFICATION_SCHEMA_INVALID');
@@ -124,6 +133,11 @@ export function continueClarification(p:PendingClarification,raw:string):Clarifi
  if(message.length>120||!SAFE.test(message)||/\b(?:exceto|excluindo|outro setor|outra ug|outro workspace|altere|registre|exclua|transfira)\b/iu.test(message))
   return {kind:'question',question:questionMaterial(p),pending:p};
  const v=message.replace(/^(?:(?:o|a|os|as)\s+)?(?:item|material|produto)\s+(?:de\s+)?/iu,'');
+ if(p.kind==='commitment_item_search'){
+   const name=v.trim();
+   if(name.length<2||name.length>120)return {kind:'question',question:questionItemSearch,pending:p};
+   return ready(p.kind,{materialQuery:name,...(p.commitmentId?{commitmentId:p.commitmentId}:{})});
+ }
  if(MATERIAL_ID.test(v))return ready(p.kind,{materialId:v.toLowerCase()});
  if(BARCODE.test(v))return ready(p.kind,{barcode:v});
  return ready(p.kind,{materialQuery:v});
