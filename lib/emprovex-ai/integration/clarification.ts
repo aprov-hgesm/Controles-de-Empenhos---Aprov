@@ -102,6 +102,22 @@ export function startMaterialResolution(intent:string,query:{params:Record<strin
   step:'materialId'};
  return {kind:'question',question:questionCanonical,pending};
 }
+/** Offers an optional contextual refinement after W3 returned multiple
+ * real description/unit groups. Carries no balance or item data in the token.
+ * The next reply must execute W3 again with the new name, never use a cached
+ * result or infer a numeric itemId.
+ */
+export function itemSearchRefinement(
+ query:{intent:string;params:Record<string,unknown>},data:unknown,status:string
+):PendingClarification|null {
+ if(query.intent!=='commitment_item_search'||!['ok','partial'].includes(status)||
+   !data||typeof data!=='object'||Array.isArray(data))return null;
+ const groups=(data as Record<string,unknown>).items;
+ if(!Array.isArray(groups)||groups.length<2)return null;
+ const ne=query.params.commitmentId;
+ return {kind:'commitment_item_search',step:'material',
+   ...(typeof ne==='string'&&NE.test(ne)?{commitmentId:ne.toUpperCase()}:{})};
+}
 function isSwitch(message:string):boolean {
  return /^(?:agora |mudando de assunto|outra pergunta|na verdade )?\s*(?:quais?|como|onde|quando|quantos?|quanto|mostre|liste|consulte|detalhe|localize|verifique|preciso saber|explique)\b/i.test(message)
   && /\b(?:estoque|empenho|notas?|nfs?|forneced|deposito|materiais?|item|saldo)\b/i.test(message);
