@@ -27,6 +27,7 @@ import {
 import type { SaveWarehouseDepotLayoutVersionInput } from '../warehouse/layoutRepository';
 import { warehouseFindOverlappingLocals } from '../warehouse/layoutCollision';
 import { warehouseNextAvailableLocationCode } from '../warehouse/locationCodeSequence';
+import { warehouseShelfCanonicalCode, warehouseSubpositionSequencePrefix } from '../warehouse/subpositionCode';
 
 export interface CroquiCreateLocal {
   objectId: string;
@@ -201,25 +202,33 @@ export async function warehouseStructureLayoutApplyServer(
         return fail('WAREHOUSE_CROQUI_TOO_MANY_SUBPOSITIONS');
       const copiedCodes=new Set<string>();
       for(const [index,child] of children.entries()){
-        const suffix=child.code.startsWith(parsed.code)?child.code.slice(parsed.code.length):'-'+String(index+1).padStart(2,'0');
-        const childCode=code+suffix;
+        const shelfCanonical = warehouseShelfCanonicalCode(parsed.code, child.code);
+        const childCode = code.startsWith('EST-') && /^EST-\\d{1,2}$/.test(code)
+          ? shelfCanonical || (/^PRAT-\\d{1,2}$/.test(child.code) ? child.code : child.code)
+          : child.code.startsWith(parsed.code)
+            ? code+child.code.slice(parsed.code.length)
+            : code+'-'+String(index+1).padStart(2,'0');
         if(copiedCodes.has(childCode))return fail('WAREHOUSE_CROQUI_DUPLICATE_CODE');
         copiedCodes.add(childCode);
-        createLocation('SUBPOSITION',childCode,child.name,child.description,location.id,spec.objectId+':'+index);
+        const childName = shelfCanonical ? 'Prateleira '+childCode.slice(-2) : child.name;
+        createLocation('SUBPOSITION',childCode,childName,child.description,location.id,spec.objectId+':'+index);
       }
       // Novas subposicoes adicionadas pelo menu de contexto a uma copia ainda
       // nao salva. O backend as inclui na MESMA transacao da estante clonada.
       for(let i=0;i<spec.subpositionCount;i++){
-        const extraCode=warehouseNextAvailableLocationCode(code+'-00',copiedCodes);
+        const extraCode=warehouseNextAvailableLocationCode(warehouseSubpositionSequencePrefix(code),copiedCodes);
         copiedCodes.add(extraCode);
         createLocation('SUBPOSITION',extraCode,
-          'Subposição '+extraCode.split('-').at(-1),null,location.id,
+           (extraCode.startsWith('PRAT-')?'Prateleira ':'Subposição ')+extraCode.split('-').at(-1),null,location.id,
           spec.objectId+':extra:'+i);
       }
     }else{
       for(let i=1;i<=spec.subpositionCount;i++){
         const sequence=String(i).padStart(2,'0');
-        createLocation('SUBPOSITION',code+'-'+sequence,'Subposição '+sequence,null,location.id,spec.objectId+':'+i);
+        const childCode=warehouseSubpositionSequencePrefix(code).slice(0,-2)+sequence;
+        createLocation('SUBPOSITION',childCode,
+          (childCode.startsWith('PRAT-')?'Prateleira ':'Subposição ')+sequence,
+          null,location.id,spec.objectId+':'+i);
       }
     }
   }

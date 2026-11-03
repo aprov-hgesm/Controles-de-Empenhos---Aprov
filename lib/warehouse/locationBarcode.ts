@@ -1,3 +1,4 @@
+import { warehouseShelfCanonicalCode, warehouseShelfLegacyCode } from './subpositionCode';
 import {
   isValidUnitUg,
   isValidWorkspaceId,
@@ -801,12 +802,26 @@ export async function resolveWarehousePhysicalIdentityCode(
     }
     const parent = parentValidated.data;
 
-    const rawLocation = await findUniqueLocationByCodes(source, {
+    const numericChildCodes = numeric.value.locationCodeCandidates;
+    let rawLocation = await findUniqueLocationByCodes(source, {
       depotId: depot.id,
       kind: 'SUBPOSITION',
       parentLocationId: parent.id,
-      codes: numeric.value.locationCodeCandidates,
+      codes: numericChildCodes,
     });
+    if (!rawLocation) {
+      // A etiqueta numérica PRAT-01 deve resolver o registro antigo EST-01-01
+      // sem migrar o documento físico nem alterar a posição de estoque.
+      const legacyCodes = numericChildCodes
+        .map((code) => warehouseShelfLegacyCode(parent.code, code))
+        .filter((code): code is string => code !== null);
+      if (legacyCodes.length) rawLocation = await findUniqueLocationByCodes(source, {
+        depotId: depot.id,
+        kind: 'SUBPOSITION',
+        parentLocationId: parent.id,
+        codes: legacyCodes,
+      });
+    }
     if (!rawLocation) return { ok: false, error: 'ENTITY_NOT_FOUND' };
     const locationValidated = validateWarehouseLocation(rawLocation, {
       expectedWorkspaceId: context.workspaceId,
@@ -965,12 +980,23 @@ export async function resolveWarehousePhysicalIdentityCode(
         return { ok: false, error: 'HIERARCHY_INVALID' };
       }
 
-      const rawLocation = await source.getLocationByCode({
+      let rawLocation = await source.getLocationByCode({
         depotId: depot.id,
         kind: 'SUBPOSITION',
         parentLocationId: parent.id,
         code: compact.value.locationCode,
       });
+      if (!rawLocation) {
+        // Code 128 EPX2 anterior permanece legível após qualquer normalização
+        // futura do cadastro EST-01-01 → PRAT-01.
+        const canonical = warehouseShelfCanonicalCode(parent.code, compact.value.locationCode);
+        if (canonical) rawLocation = await source.getLocationByCode({
+          depotId: depot.id,
+          kind: 'SUBPOSITION',
+          parentLocationId: parent.id,
+          code: canonical,
+        });
+      }
       if (!rawLocation) return { ok: false, error: 'ENTITY_NOT_FOUND' };
       const locationValidated = validateWarehouseLocation(rawLocation, {
         expectedWorkspaceId: context.workspaceId,

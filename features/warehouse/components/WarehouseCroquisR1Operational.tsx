@@ -52,6 +52,7 @@ import type { WarehouseDepotArchiveDiagnostic } from '../../../lib/server/wareho
 import { readWarehouseCroquiCatalog, readWarehouseCroquiLayouts } from '../../../lib/warehouse/croquiReadRepository';
 import { warehouseObjectFaceLabels } from '../../../lib/warehouse/layoutOrientation';
 import { warehouseNextAvailableLocationCode, warehouseCodeFromVisualLabel } from '../../../lib/warehouse/locationCodeSequence';
+import { warehouseShelfCanonicalCode, warehouseSubpositionSequencePrefix } from '../../../lib/warehouse/subpositionCode';
 import { warehouseFindFreePosition, warehouseFindOverlappingLocals, warehouseLocalHasCollision } from '../../../lib/warehouse/layoutCollision';
 import { WarehouseDepotQuickCreate } from './WarehouseDepotQuickCreate';
 import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
@@ -857,15 +858,18 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       && !removedSubpositionIds.includes(row.location.id))
     : [];
   function addCroquiSubposition(parentId:string,code:string) {
-    const used=new Set([
+    const existingCodes=[
       ...locations.filter(row=>row.location.parentLocationId===parentId&&row.location.status==='active')
         .map(row=>row.location.code),
       ...newSubpositions.filter(row=>row.parentLocationId===parentId).map(row=>row.code),
-    ]);
-    const nextCode=warehouseNextAvailableLocationCode(code+'-00',used);
+    ];
+    const used=new Set(existingCodes.flatMap(value=>[
+      value,warehouseShelfCanonicalCode(code,value),
+    ].filter((value): value is string=>value!==null)));
+    const nextCode=warehouseNextAvailableLocationCode(warehouseSubpositionSequencePrefix(code),used);
     const sequence=nextCode.split('-').at(-1)||'01';
     setNewSubpositions(current=>[...current,{
-      parentLocationId:parentId,code:nextCode,name:'Subposição '+sequence,description:null,
+      parentLocationId:parentId,code:nextCode,name:nextCode.startsWith('PRAT-')?'Prateleira '+sequence:'Subposição '+sequence,description:null,
     }]);
     setMessage(nextCode+' preparada. A nova subposição será cadastrada ao salvar.');
   }

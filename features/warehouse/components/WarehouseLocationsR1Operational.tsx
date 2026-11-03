@@ -332,8 +332,8 @@ export function WarehouseLocationsR1Operational({
             kind: 'SUBPOSITION',
             depotId: selectedDepotId,
             parentLocationId: created.id,
-            code: normalizedBaseCode + '-' + sequence,
-            name: 'Subposição ' + sequence,
+            code: 'PRAT-' + sequence,
+            name: 'Prateleira ' + sequence,
             description: 'Criada automaticamente para ' + (locationName.trim() || normalizedBaseCode),
           });
         }
@@ -684,7 +684,7 @@ export function WarehouseLocationsR1Operational({
                     onChange={(event) => setShelfSubpositionCount(Math.max(0, Math.min(30, Number(event.target.value) || 0)))}
                     className={fieldClass}
                   />
-                  <span className="text-[9px] leading-4 text-gray-400">Cria automaticamente EST-XX-01, EST-XX-02… como posições filhas. Use 0 se preferir cadastrar depois.</span>
+                  <span className="text-[9px] leading-4 text-gray-400">Cria automaticamente PRAT-01, PRAT-02… como prateleiras desta estante. Use 0 se preferir cadastrar depois.</span>
                 </label>
               )}
               <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
