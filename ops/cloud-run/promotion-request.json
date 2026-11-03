@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g838d7cf31955-31",
-  "sourceSha": "838d7cf31955314cb9da9f26dbbfcaa14abb37a8",
-  "reason": "Autorizacao explicita do usuario nesta conversa em 2026-11-03: corrigir Eleonor perguntando 'Onde esta o arroz?' (busca nao deve exigir mat_...); implantar novamente no Cloud Run apos testes. PR #498 mesclada na main; cert. W3, W7, Auth, Firestore, Browser E2E, Core Protection PASS. Stage 41579090801 SUCCESS zero trafego, health e billing protection; mantido rollback automatico, IAM e consultas somente de leitura. Aviso: CI Lean em evento de merge retornou CI_LEAN_EMPTY_DIFF por inexistencia de diff na PR ja mesclada; nao e falha funcional. Validacoes de codigo efetivas aprovadas."
+  "revision": "emprovex-cloudrun-candidate-g4ba7a19de62d-32",
+  "sourceSha": "4ba7a19de62d7128bd6b98c891bb61ddde1bee87",
+  "reason": "Autorizacao expressa nesta conversa, em 2026-11-03: /goal execute as melhorias e publique. PR #499 integrado na main; Performance Essencial R3.2 para Notas Fiscais, Painel e economia de rede. Testes dedicados, TypeScript, Core Protection, Fast CI e multi-tenant aprovados. Stage Cloud Run run 41658491025 SUCCESS com zero trafego, health, protecao de billing e identidade runtime; promover revisao exata a 100% e manter rollback automatico."
 }
