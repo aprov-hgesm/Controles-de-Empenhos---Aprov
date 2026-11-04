@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g789d9334e7ad-39",
-  "sourceSha": "789d9334e7adfba51a43cb29664b3b7f23e32766",
-  "reason": "Melhorias solicitadas pelo usuario na Administracao do EMPROVEX em 03/11/2026, PR #506: placas do bairro com Aprov + sigla institucional da OM, detalhes do setor ao clicar no predio; somente visual e dados ja carregados. Revisao 39 aprovada pelo stage workflow 41742045835 e CI rapido/core protection PASS. Promover para 100% do trafego com rollback automatico em qualquer falha de saude. Nao alterar Firestore, workspaces, IAM, documentos ou cobranca."
+  "revision": "emprovex-cloudrun-candidate-g31a0e3eb151b-40",
+  "sourceSha": "31a0e3eb151bdf3e798ebf72508e6bbc309d9f06",
+  "reason": "Publicação expressamente solicitada em 04/11/2026: PR #508 comissões de recebimento (sigla da OM externa, auxiliares opcionais, edição e preservação histórica, visto Fiscal Administrativo/Ordenador de Despesas). Stage 41824247127 (tentativa 2) PASS; revisão criada com zero tráfego, validações de saúde e acesso aprovadas. Promover para 100% após verificações automáticas de identidade, digest e health, com rollback automático em qualquer falha. Não alterar IAM, Firestore nem outras funcionalidades."
 }
