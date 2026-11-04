@@ -72,7 +72,7 @@ export function useDocumentActions(context:DocumentActionsContext){
       return Number.isFinite(replacedAt) && validTermoReferenceDate.getTime() < replacedAt;
     });
     const matchingComissao = currentComissao && archivedVersion
-      ? { ...currentComissao, ...archivedVersion.dados }
+      ? { ...currentComissao, ...archivedVersion.dados, vistoResponsavel: archivedVersion.dados.vistoResponsavel || 'FISCAL_ADMINISTRATIVO' }
       : currentComissao;
     if (!matchingComissao) {
       showToast(
