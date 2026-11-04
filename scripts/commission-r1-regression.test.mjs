@@ -47,3 +47,14 @@ test('PDF e histórico omitem auxiliares vazios, mantendo as três assinaturas d
   assert.doesNotMatch(documents, /const aux3 = matchingComissao\.auxiliares\[2\]/);
   assert.match(view, /\(com\.auxiliares \|\| \[\]\)\.filter/);
 });
+
+test('substituições preservam a composição e o visto de TRs antigos', () => {
+  assert.match(types, /historicoAlteracoes\?: Array/);
+  assert.match(actions, /historicoAlteracoes: \[/);
+  assert.match(actions, /substituidaEm: new Date\(\)\.toISOString\(\)/);
+  assert.match(actions, /editing\.mesReferencia !== comissaoMes/);
+  assert.match(documents, /const archivedVersion = currentComissao\?\.historicoAlteracoes\?\.find/);
+  assert.match(documents, /validTermoReferenceDate\.getTime\(\) < replacedAt/);
+  assert.match(documents, /archivedVersion\.dados\.vistoResponsavel \|\| 'FISCAL_ADMINISTRATIVO'/);
+  assert.match(view, /disabled=\{!!editingComissaoId\}/);
+});
