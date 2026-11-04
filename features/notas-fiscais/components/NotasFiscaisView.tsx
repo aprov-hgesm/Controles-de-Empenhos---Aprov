@@ -1299,6 +1299,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           type="month"
                           value={comissaoMes}
                           onChange={(e) => setComissaoMes(e.target.value)}
+                          disabled={!!editingComissaoId}
                           className="w-full h-11 px-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#00288e] outline-none font-semibold text-sm text-[#0b1c30] transition-colors shadow-inner"
                         />
                       </div>
