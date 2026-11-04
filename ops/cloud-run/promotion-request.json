@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g31a0e3eb151b-40",
-  "sourceSha": "31a0e3eb151bdf3e798ebf72508e6bbc309d9f06",
-  "reason": "Publicação expressamente solicitada em 04/11/2026: PR #508 comissões de recebimento (sigla da OM externa, auxiliares opcionais, edição e preservação histórica, visto Fiscal Administrativo/Ordenador de Despesas). Stage 41824247127 (tentativa 2) PASS; revisão criada com zero tráfego, validações de saúde e acesso aprovadas. Promover para 100% após verificações automáticas de identidade, digest e health, com rollback automático em qualquer falha. Não alterar IAM, Firestore nem outras funcionalidades."
+  "revision": "emprovex-cloudrun-candidate-g9dea318b800d-41",
+  "sourceSha": "9dea318b800d7a2a6ab546af088f9e8010c23117",
+  "reason": "Publicação no site oficial expressamente solicitada em 04/11/2026 neste chat. PR #509 integrada à main. Melhorias em Acompanhar Notas Fiscais: NE no menu do cabeçalho, Certificado de Autenticidade e PDFs complementares opcionais, consolidado NE + NF + Espelho + Certificado + Outros + TR; regras anteriores de obrigatoriedade preservadas. CI PR e main PASS; stage Cloud Run 41889768267 PASS com revisão 41 sem tráfego. Autorizar promoção a 100% somente mediante verificações automáticas de imagem, identidade, saúde e rollback do workflow. Não alterar IAM, Firestore ou outros módulos."
 }
