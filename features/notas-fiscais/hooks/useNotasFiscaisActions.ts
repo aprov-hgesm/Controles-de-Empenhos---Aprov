@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
+import type { Alert, Comissao, ComissaoVistoResponsavel, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveAlert, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
@@ -853,61 +853,77 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
   };
 
-  const handleSaveComissao = async () => {
-    if (!comissaoBoletimNum) {
+  const handleSaveComissao = async (options?: {
+    editingId?: string | null;
+    vistoResponsavel?: ComissaoVistoResponsavel;
+  }): Promise<boolean> => {
+    if (!user) {
+      showToast('Faça login novamente antes de salvar a comissão.', 'error');
+      return false;
+    }
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(comissaoMes)) {
+      showToast('Informe um mês de referência válido.', 'error');
+      return false;
+    }
+    if (!comissaoBoletimNum.trim()) {
       showToast('Por favor, informe o número do Boletim Interno.', 'error');
-      return;
+      return false;
     }
     if (!comissaoBoletimDate) {
       showToast('Por favor, informe a data do Boletim Interno.', 'error');
-      return;
+      return false;
     }
-    if (!comissaoPresNome) {
+    if (!comissaoPresNome.trim()) {
       showToast('Por favor, preencha o nome do Presidente.', 'error');
-      return;
+      return false;
     }
-    if (!comissaoAux1Nome || !comissaoAux2Nome || !comissaoAux3Nome) {
-      showToast('Por favor, preencha o nome de todos os três auxiliares.', 'error');
-      return;
+    const editing = options?.editingId
+      ? comissoes.find((commission) => commission.id === options.editingId)
+      : null;
+    if (options?.editingId && !editing) {
+      showToast('A comissão a ser editada não foi encontrada. Atualize a tela antes de continuar.', 'error');
+      return false;
     }
-     const exists = comissoes.some(c => c.mesReferencia === comissaoMes);
-    if (exists) {
+    if (comissoes.some((commission) => commission.id !== editing?.id && commission.mesReferencia === comissaoMes)) {
       showToast(`Já existe uma comissão cadastrada para o mês ${comissaoMes}.`, 'error');
-      return;
+      return false;
     }
-     const newComissao: Comissao = {
-      id: `com-${Date.now()}`,
+    const auxiliares = [
+      { postoGraduacao: comissaoAux1Posto, nomeCompleto: comissaoAux1Nome.trim() },
+      { postoGraduacao: comissaoAux2Posto, nomeCompleto: comissaoAux2Nome.trim() },
+      { postoGraduacao: comissaoAux3Posto, nomeCompleto: comissaoAux3Nome.trim() },
+    ].filter((auxiliar) => auxiliar.nomeCompleto.length > 0);
+    const newComissao: Comissao = {
+      ...(editing || {}),
+      id: editing?.id || `com-${Date.now()}`,
       mesReferencia: comissaoMes,
-      boletimNumero: comissaoBoletimNum,
+      boletimNumero: comissaoBoletimNum.trim(),
       boletimData: comissaoBoletimDate,
-      presidente: {
-        postoGraduacao: comissaoPresPosto,
-        nomeCompleto: comissaoPresNome,
-      },
-      auxiliares: [
-        { postoGraduacao: comissaoAux1Posto, nomeCompleto: comissaoAux1Nome },
-        { postoGraduacao: comissaoAux2Posto, nomeCompleto: comissaoAux2Nome },
-        { postoGraduacao: comissaoAux3Posto, nomeCompleto: comissaoAux3Nome },
-      ],
+      presidente: { postoGraduacao: comissaoPresPosto, nomeCompleto: comissaoPresNome.trim() },
+      auxiliares,
+      vistoResponsavel: options?.vistoResponsavel === 'ORDENADOR_DESPESAS'
+        ? 'ORDENADOR_DESPESAS'
+        : 'FISCAL_ADMINISTRATIVO',
     };
-     const updatedComissoes = [newComissao, ...comissoes];
-    if (user) {
-      try {
-        await saveComissao(user.uid, newComissao);
-      } catch (error) {
-        showToast('Erro ao salvar comissão no Firebase', 'error');
-        return;
-      }
+    try {
+      // Atualizar usando a mesma ID preserva o mês e não afeta outras comissões.
+      await saveComissao(user.uid, newComissao);
+    } catch (error) {
+      console.error('Erro ao salvar comissão no Firebase:', error);
+      showToast('Erro ao salvar comissão no Firebase. Os dados anteriores foram preservados.', 'error');
+      return false;
     }
-    setComissoes(updatedComissoes);
-    showToast(`Comissão de Recebimento de ${comissaoMes} cadastrada com sucesso!`);
-     // Reset name fields and bulletin fields
+    setComissoes((current) => editing
+      ? current.map((commission) => commission.id === editing.id ? newComissao : commission)
+      : [newComissao, ...current]);
+    showToast(`Comissão de Recebimento de ${comissaoMes} ${editing ? 'atualizada' : 'cadastrada'} com sucesso!`);
     setComissaoBoletimNum('');
     setComissaoBoletimDate('');
     setComissaoPresNome('');
     setComissaoAux1Nome('');
     setComissaoAux2Nome('');
     setComissaoAux3Nome('');
+    return true;
   };
 
   return {
