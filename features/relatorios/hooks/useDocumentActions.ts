@@ -64,7 +64,16 @@ export function useDocumentActions(context:DocumentActionsContext){
     const termoReferenceDate = inv.termoEmissaoDate ? new Date(inv.termoEmissaoDate) : now;
     const validTermoReferenceDate = Number.isNaN(termoReferenceDate.getTime()) ? now : termoReferenceDate;
     const termoMonth = `${validTermoReferenceDate.getFullYear()}-${String(validTermoReferenceDate.getMonth() + 1).padStart(2, '0')}`;
-    const matchingComissao = comissoes.find(c => c.mesReferencia === termoMonth);
+    const currentComissao = comissoes.find((c) => c.mesReferencia === termoMonth);
+    // Um termo emitido antes da substituição de membros usa o registro original.
+    // A primeira revisão posterior à emissão guarda a composição que estava vigente.
+    const archivedVersion = currentComissao?.historicoAlteracoes?.find((revision) => {
+      const replacedAt = new Date(revision.substituidaEm).getTime();
+      return Number.isFinite(replacedAt) && validTermoReferenceDate.getTime() < replacedAt;
+    });
+    const matchingComissao = currentComissao && archivedVersion
+      ? { ...currentComissao, ...archivedVersion.dados }
+      : currentComissao;
     if (!matchingComissao) {
       showToast(
         `Não existe Comissão de Recebimento cadastrada para o mês de geração do Termo (${termoMonth}). Cadastre a comissão correspondente antes de gerar o TR.`,
