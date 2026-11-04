@@ -159,12 +159,16 @@ export async function warehouseAdminBatchRead(
   return docs;
 }
 
+export type WarehouseAdminTransactionWrite =
+  | {path:string;data:Record<string,unknown>;delete?:never}
+  | {path:string;delete:true;data?:never};
+
 export async function warehouseAdminTransaction<T>(
   accessToken: string,
   paths: string[],
   process: (
     read: ReadonlyMap<string, WarehouseAdminDocument | null>,
-  ) => { result: T; writes: Array<{ path: string; data: Record<string, unknown> }> }
+  ) => { result: T; writes: WarehouseAdminTransactionWrite[] }
 ): Promise<T> {
   if (paths.length < 1 || paths.length > 512 || new Set(paths).size !== paths.length) {
     throw new WarehouseStoreError('WAREHOUSE_SERVER_INVALID_READ_SET', 400);
@@ -207,9 +211,14 @@ export async function warehouseAdminTransaction<T>(
     const writes = plan.writes.map(w => {
       const current = read.get(w.path);
       if (!read.has(w.path)) throw new WarehouseStoreError('WAREHOUSE_SERVER_WRITE_NOT_READ', 500);
+      const precondition = current ? { updateTime: current.updateTime } : { exists: false };
+      if (w.delete === true) {
+        if (!current) throw new WarehouseStoreError('WAREHOUSE_SERVER_DELETE_MISSING', 409);
+        return { delete: fullName(w.path), currentDocument: precondition };
+      }
       return {
         update: { name: fullName(w.path), fields: encodeFields(w.data as Record<string, FirestoreValue>) },
-        currentDocument: current ? { updateTime: current.updateTime } : { exists: false },
+        currentDocument: precondition,
       };
     });
     await request(accessToken, ':commit', { writes, transaction });
@@ -392,6 +401,84 @@ export async function warehouseAdminListFullStockCatalog(
     pageToken=body.nextPageToken||'';
   } while(pageToken);
   return docs;
+}
+
+/**
+ * Eleonor: bounded, read-only discovery by human material description.
+ * Uses the already-scoped Warehouse REST collection and genuine page tokens.
+ * Never treats an incomplete scan as proof that an item does not exist.
+ *
+ * Results are later rechecked against the authorized UG by the W3 reader.
+ */
+export async function warehouseAdminFindMaterialsByName(
+  accessToken:string,workspaceId:string,materialName:string,
+  maxScanned=1200,maxMatches=12
+):Promise<{rows:WarehouseAdminDocument[];examined:number;incomplete:boolean}> {
+  if(!/^[a-z0-9_-]{2,90}$/.test(workspaceId)
+    ||typeof materialName!=='string'||materialName.trim().length<2
+    ||materialName.length>120
+    ||/[<>\u0000-\u001f\u007f]/.test(materialName)
+    ||!Number.isInteger(maxScanned)||maxScanned<1||maxScanned>1200
+    ||!Number.isInteger(maxMatches)||maxMatches<1||maxMatches>20)
+    throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_INVALID',400);
+  const normalize=(value:string):string=>value.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR')
+    .replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+  const target=normalize(materialName);
+  if(target.length<2)throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_INVALID',400);
+  const matches=(value:unknown):boolean=>{
+    if(typeof value!=='string')return false;
+    const normalized=normalize(value);
+    return normalized===target || normalized.startsWith(target+' ') ||
+      normalized.includes(' '+target+' ') || normalized.endsWith(' '+target);
+  };
+  const root='warehouse/'+workspaceId+'/materials';
+  const prefix=fullName(root+'/probe').slice(0,-'probe'.length);
+  const rows:WarehouseAdminDocument[]=[];
+  const tokens=new Set<string>();
+  let examined=0,pageToken='',incomplete=false;
+  while(examined<maxScanned){
+    if(pageToken){
+      if(tokens.has(pageToken))throw new WarehouseStoreError('WAREHOUSE_MATERIAL_PAGE_LOOP',503);
+      tokens.add(pageToken);
+    }
+    const params=new URLSearchParams({pageSize:String(Math.min(200,maxScanned-examined))});
+    if(pageToken)params.set('pageToken',pageToken);
+    const emulator=process.env.EMPROVEX_WAREHOUSE_ADMIN_EMULATOR==='1';
+    const response=await fetch(firestoreBase()+'/'+root+'?'+params,{
+      cache:'no-store',headers:{authorization:'Bearer '+(emulator?'owner':accessToken)}
+    });
+    if(!response.ok)throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_UNAVAILABLE',503);
+    const body=await response.json() as {
+      documents?:Array<{name?:string;fields?:Record<string,Encoded>;updateTime?:string}>;
+      nextPageToken?:string;
+    };
+    if(body.documents!==undefined&&!Array.isArray(body.documents))
+      throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_PAYLOAD',503);
+    let overflow=false;
+    for(const doc of body.documents||[]){
+      if(!doc.name?.startsWith(prefix)||!doc.updateTime)
+        throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_SCOPE',503);
+      const id=doc.name.slice(prefix.length);
+      if(!/^[A-Za-z0-9_-]+$/.test(id))
+        throw new WarehouseStoreError('WAREHOUSE_MATERIAL_DISCOVERY_ID',503);
+      examined++;
+      const data=decodeFields(doc.fields||{});
+      const aliases=data.aliases;
+      if(matches(data.description)
+        ||(Array.isArray(aliases)&&aliases.some(matches))){
+        if(rows.length<maxMatches)
+          rows.push({path:root+'/'+id,data,updateTime:doc.updateTime});
+        else overflow=true;
+      }
+    }
+    pageToken=body.nextPageToken||'';
+    if(overflow){incomplete=true;break;}
+    if(!pageToken)break;
+    if(rows.length>=maxMatches){incomplete=true;break;}
+  }
+  if(pageToken)incomplete=true;
+  return {rows,examined,incomplete};
 }
 
 export async function warehouseAdminListCollection(

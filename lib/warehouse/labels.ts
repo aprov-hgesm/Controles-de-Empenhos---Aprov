@@ -1,4 +1,5 @@
 import type { WarehouseDepot, WarehouseLocation } from './location';
+import { warehouseShelfPresentationCode } from './subpositionCode';
 import {
   encodeWarehouseCompactLocationBarcode,
   encodeWarehouseLocationBarcode,
@@ -159,16 +160,29 @@ export function buildLocationLabel(
       && candidate.depotId === location.depotId
   );
 
+  // No legado do Croqui, EST-01-01 representa a mesma PRAT-01 do cadastro HGeSM.
+  // A adaptação é apenas de apresentação/scan: IDs, saldos e vínculos não mudam.
+  // Evitar alias caso o depósito possua outra PRAT-01 real sob a mesma estante.
+  const displayCode = parent ? warehouseShelfPresentationCode(
+    parent.code, location.code,
+    allLocations.filter((other) => other.kind === 'SUBPOSITION'
+      && other.status === 'active' && other.parentLocationId === parent.id)
+      .map((other) => other.code)
+  ) : location.code;
+  const adapted = displayCode !== location.code;
+  const displayName = adapted
+    ? 'Prateleira ' + displayCode.slice(-2)
+    : location.name;
   return {
     id: location.id,
     kind: 'SUBPOSITION',
-    code: location.code,
-    name: location.name,
+    code: displayCode,
+    name: displayName,
     depotCode: depot.code,
     depotName: depot.name,
     parentCode: parent?.code ?? null,
     parentName: parent?.name ?? null,
-    hierarchy: [depot.name, parent?.name ?? 'Local', location.name],
+    hierarchy: [depot.name, parent?.name ?? 'Local', displayName],
     workspaceId: location.workspaceId,
     ug: location.ug,
     physicalBarcode: parent
@@ -177,12 +191,12 @@ export function buildLocationLabel(
             kind: 'SUBPOSITION',
             depotCode: depot.code,
             parentCode: parent.code,
-            locationCode: location.code,
+            locationCode: displayCode,
           }) ?? encodeWarehouseCompactLocationBarcode({
             kind: 'SUBPOSITION',
             depotCode: depot.code,
             parentCode: parent.code,
-            locationCode: location.code,
+            locationCode: displayCode,
           })
         )
       : encodeWarehouseLocationBarcode({

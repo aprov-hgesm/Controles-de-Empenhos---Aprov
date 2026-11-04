@@ -35,7 +35,20 @@ assert.match(view, /<InicioEntrySequence\s*\/>/, 'Entrada controlada deve ser ma
 assert.doesNotMatch(view, /InicioOrbitSystem|<canvas|three\.js|onSnapshot\(/);
 
 assert.match(core, /data-testid="inicio-logo-core"/);
-assert.match(core, /src="\/emprovex-logo%20\(2\)\.png"/, 'Logo oficial nao esta no nucleo.');
+assert.match(core, /src="\/branding\/emprovex-dark-transparent\.png"/, 'Nucleo nao usa o logo oficial transparente.');
+assert(existsSync('public/branding/emprovex-dark-transparent.png'), 'Imagem institucional transparente ausente.');
+assert.doesNotMatch(core, /src="\/Novo%20Logo%20Emprovex%2001\.11\.2026\.png"/, 'Arte não transparente reapareceu no nucleo.');
+const branding = read('hooks/usePlatformBranding.ts');
+const headerCss = read('app/globals.css');
+assert.match(branding, /const staticLogo = '\/branding\/emprovex-dark-transparent\.png\?v=20261102-r4'/,
+  'Login e cabecalho nao utilizam o arquivo novo como fonte oficial.');
+const mobileHeader = headerCss.match(/@media \(max-width: 639px\) \{[\s\S]*?\/\* Mobile: prioridade ao símbolo[\s\S]*?@media \(max-width: 459px\)/)?.[0] || '';
+assert.match(mobileHeader, /\.emprovex-header-brand-copy\s*\{\s*display:\s*none;/,
+  'O texto da marca pode sobrepor os controles no celular.');
+assert.match(mobileHeader, /\.emprovex-header-controls\s*\{[\s\S]*?overflow-x:\s*auto;/,
+  'Controles do cabecalho devem rolar horizontalmente sem sobreposicao.');
+assert.doesNotMatch(coreCss, /(?:-webkit-)?mask-image:\s*url\('\/emprovex-logo-core-mask\.svg'\)/,
+  'Mascara legada recorta indevidamente o novo simbolo.');
 assert.match(core, /snapshot\?\.alerts\.total/, 'Pendencias devem derivar de snapshot.');
 assert.match(core, /aria-label=/, 'Nucleo deve ser acessivel.');
 assert.doesNotMatch(core, /onSnapshot\(|firebase\/firestore|<canvas|three\.js/);

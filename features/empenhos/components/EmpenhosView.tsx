@@ -69,6 +69,7 @@ interface EmpenhosViewContext {
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
   handleUpdateEmpenhoItemDetails: (empenhoId: string, itemId: string, updates: { itemCompraNumber: string; name: string }) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
+  handleUpdateEmpenhoDescription: (empenhoId: string, description: string) => Promise<void>;
   handleUpdateEmpenhoNotaCredito: (empenhoId: string, notaCredito: string) => Promise<void>;
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
@@ -120,10 +121,13 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; sectorType?: SectorT
 export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
   const isAlmox = sectorType === 'almoxarifado';
   const shouldReduceMotion = useReducedMotion();
-  const { alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoDescription, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const sectorClasses = React.useMemo(() => isAlmox ? getAlmoxFinanceClasses(empenhoClasses) : empenhoClasses, [isAlmox, empenhoClasses]);
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
+  const [editingDescriptionEmpenhoId, setEditingDescriptionEmpenhoId] = React.useState<string | null>(null);
+  const [descriptionDraft, setDescriptionDraft] = React.useState('');
+  const [savingDescription, setSavingDescription] = React.useState(false);
   const [savingPregao, setSavingPregao] = React.useState(false);
   const [editingNotaCreditoEmpenhoId, setEditingNotaCreditoEmpenhoId] = React.useState<string | null>(null);
   const [notaCreditoDraft, setNotaCreditoDraft] = React.useState('');
@@ -847,9 +851,59 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                             <h3 className="text-xl sm:text-2xl font-black text-[#0b1c30] mt-3">
                               {targetEmp.supplier}
                             </h3>
-                            <p className="text-sm text-gray-600 font-medium mt-1 leading-relaxed">
-                              {targetEmp.description}
-                            </p>
+                            <div className="mt-2 max-w-4xl">
+                              {editingDescriptionEmpenhoId === targetEmp.id ? (
+                                <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+                                  <label htmlFor="empenho-description-edit" className="mb-1 block text-xs font-bold text-[#00288e]">
+                                    Observação / descrição da Nota de Empenho
+                                  </label>
+                                  <textarea id="empenho-description-edit" rows={4} maxLength={1800}
+                                    value={descriptionDraft}
+                                    onChange={(event) => setDescriptionDraft(event.target.value)}
+                                    className="w-full resize-y rounded-lg border border-blue-200 bg-white p-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-blue-200"
+                                    aria-label="Editar observação da Nota de Empenho"
+                                  />
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <button type="button" disabled={savingDescription || !descriptionDraft.trim()}
+                                      onClick={async () => {
+                                        if (savingDescription) return;
+                                        setSavingDescription(true);
+                                        try {
+                                          await handleUpdateEmpenhoDescription(targetEmp.id, descriptionDraft);
+                                          setEditingDescriptionEmpenhoId(null);
+                                        } catch {
+                                          // Toast de erro é apresentado pela ação, mantendo o texto editável.
+                                        } finally {
+                                          setSavingDescription(false);
+                                        }
+                                      }}
+                                      className="rounded-lg bg-[#00288e] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+                                      {savingDescription ? 'Salvando…' : 'Salvar observação'}
+                                    </button>
+                                    <button type="button" disabled={savingDescription}
+                                      onClick={() => setEditingDescriptionEmpenhoId(null)}
+                                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                                      Cancelar
+                                    </button>
+                                    <span className="text-[10px] text-slate-500">{descriptionDraft.length}/1800</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-start gap-2">
+                                  <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm font-medium leading-relaxed text-gray-600">
+                                    {targetEmp.description}
+                                  </p>
+                                  <button type="button" onClick={() => {
+                                    setDescriptionDraft(targetEmp.description || '');
+                                    setEditingDescriptionEmpenhoId(targetEmp.id);
+                                  }}
+                                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-100 bg-white px-2.5 py-1.5 text-xs font-bold text-[#00288e] hover:bg-blue-50"
+                                    aria-label="Editar observação da NE">
+                                    <Edit className="h-3.5 w-3.5" /> Editar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
 
                             <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-2.5 max-w-xl">
                               {editingCnpjEmpenhoId === targetEmp.id ? (
@@ -2350,14 +2404,16 @@ export function EmpenhosView({ context, sectorType }: EmpenhosViewProps) {
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Descrição Sumária do Contrato</label>
-                              <input
-                                type="text"
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                Observação / descrição da Nota de Empenho
+                              </label>
+                              <textarea rows={3} maxLength={1800}
                                 value={reviewEmpenho.description}
                                 onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, description: e.target.value })}
-                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
-                                placeholder="Ex: Aquisição de Insumos Gerais"
+                                className="w-full resize-y px-3 py-2 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="Revise a observação extraída do PDF antes de salvar"
                               />
+                              <p className="mt-1 text-[10px] text-slate-500">O texto extraído do PDF pode ser longo. Você pode encurtá-lo ou corrigi-lo antes de cadastrar.</p>
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Modalidade</label>

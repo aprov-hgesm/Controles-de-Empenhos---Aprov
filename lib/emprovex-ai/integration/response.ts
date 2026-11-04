@@ -27,8 +27,34 @@ function render(intent:AiIntent,data:unknown):string {
  case 'supplier_contact_find':return list(data).map(x=>
    [text(x.legalName)||text(x.cnpj),text(x.email),text(x.phone),text(x.whatsapp)]
      .filter(Boolean).join(' · ')).join('; ');
- case 'commitment_get':return 'Empenho '+text(d.id)+': fornecedor '+(text(d.supplier)||'não informado')+
-   ', situação '+(text(d.status)||'não informada')+'.';
+ case 'commitment_get':{
+   const base='Empenho '+text(d.id)+': fornecedor '+(text(d.supplier)||'não informado')+
+     ', situação '+(text(d.status)||'não informada')+'.';
+   if(!Array.isArray(d.items))return base;
+   const items=list(d.items);
+   if(!items.length)return base+' Não há itens cadastrados nessa NE.';
+   const details=items.slice(0,12).map(x=>
+     '• '+(text(x.name)||'Item sem descrição')+' (item '+text(x.id)+') — '+
+     number(x.quantity)+' '+unit(x.unit)+' empenhados; '+
+     number(x.received)+' recebidos');
+   return base+'\nItens da NE ('+items.length+' cadastrados):\n'+details.join('\n')+
+     (items.length>12?'\nExibindo apenas os 12 primeiros itens; refine a consulta para os demais.':'');
+ }
+ case 'commitment_item_search':{
+   const items=list(d.items);
+   if(!items.length)return 'Não foi encontrado item correspondente na cobertura consultada da Consulta de Itens.';
+   // Plain-text fallback persists in history and works without a rich UI.
+   // Present one value per line; never combine incompatible units.
+   return items.map((item,index)=>{
+     const associations=list(item.associations);
+     const neList=associations.map(a=>text(a.commitmentId)+' (item '+text(a.itemId)+')')
+       .filter(Boolean).slice(0,8).join(', ');
+     return (index+1)+'. '+text(item.name)+
+       '\n   Saldo operacional: '+number(item.pendingQuantity)+' '+text(item.unit)+
+       '\n   Valor restante: '+money(item.operationalBalance)+
+       (neList?'\n   NEs: '+neList:'');
+   }).join('\n\n');
+ }
  case 'commitment_total_balance':return 'Saldo operacional restante da NE '+text(d.commitmentId)+': '+
    money(d.operationalBalance)+'. Valor empenhado: '+money(d.committedAmount)+
    '; recebido: '+money(d.receivedAmount)+'.';
@@ -37,6 +63,13 @@ function render(intent:AiIntent,data:unknown):string {
    'NE '+text(x.commitmentId)+', envio registrado em '+formatDate(x.sentAt)).join('; ');
  case 'invoice_registration_period_list':return list(data).map(x=>
    'NF '+(text(x.number)||text(x.recordKey))+' cadastrada em '+formatDate(x.registeredAt)).join('; ');
+ case 'invoice_operational_pending_list':return list(data).map(x=>
+   'NF '+(text(x.number)||text(x.recordKey))+' — '+
+   (x.stage==='COMISSAO'?'na Comissão, aguardando envio à Tesouraria':
+     'no Aprovisionamento, aguardando encaminhamento')+
+   (text(x.commitmentId)?'; empenho '+text(x.commitmentId):'')+
+   (x.stageInferred===true?' (etapa inferida)':'')
+ ).join('\n');
  case 'warehouse_stock_get':return text(d.description)+': '+number(d.quantity)+
    ' '+unit(d.unit)+' de saldo físico agregado.';
  case 'warehouse_material_locations_list':return list(d.locations).map(x=>{

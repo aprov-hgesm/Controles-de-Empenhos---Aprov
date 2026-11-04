@@ -3,7 +3,8 @@ export const W3_VERSION = 'emprovex.ai.query.v1' as const;
 export type Domain = 'IN_SCOPE'|'OUT_OF_SCOPE'|'UNCERTAIN';
 export type Route = 'DETERMINISTIC'|'CLARIFY'|'MODEL_ELIGIBLE'|'UNSUPPORTED'|'REJECT_MUTATION'|'OUT_OF_SCOPE';
 export type W3Intent = 'supplier_contact_find'|'commitment_get'|'commitment_total_balance'|
-  'commitment_previous_open_list'|'schedule_sent_history_list'|'invoice_registration_period_list'|
+  'commitment_item_search'|'commitment_previous_open_list'|'schedule_sent_history_list'|'invoice_registration_period_list'|
+  'invoice_operational_pending_list'|
   'warehouse_stock_get'|'warehouse_material_locations_list';
 export type Intent = W3Intent | 'invoice_by_material_period'|'invoice_issued_period'|
   'invoice_by_number'|'supplier_by_commitment'|'warehouse_by_location'|'delivery_late_list'|

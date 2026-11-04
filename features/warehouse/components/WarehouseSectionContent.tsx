@@ -2,8 +2,10 @@
 
 import dynamic from 'next/dynamic';
 import { WarehouseSectionLoading } from './WarehouseSectionLoading';
+import { WarehouseEssentialSurfaceBoundary } from './WarehouseEssentialSurfaceBoundary';
 
 import type { WarehouseSectionId } from '../navigation';
+import { useVisualMode } from '../../../components/visual-mode/VisualModeProvider';
 
 const WarehouseDepotsOperational = dynamic(
   () => import('./WarehouseDepotsOperational').then((module) => module.WarehouseDepotsOperational),
@@ -27,6 +29,12 @@ const WarehouseHomeOperational = dynamic(
 );
 const WarehouseLandingOperational = dynamic(
   () => import('./WarehouseLandingOperational').then((module) => module.WarehouseLandingOperational),
+  { loading: () => <WarehouseSectionLoading /> }
+);
+// Chunk separado da visualização 3D: carrega apenas quando o Essencial
+// é selecionado em Início ou Meus Depósitos.
+const WarehouseEssentialLocationLookup = dynamic(
+  () => import('./WarehouseEssentialLocationLookup').then((module) => module.WarehouseEssentialLocationLookup),
   { loading: () => <WarehouseSectionLoading /> }
 );
 
@@ -68,6 +76,18 @@ export function WarehouseSectionContent({
   section: WarehouseSectionId;
   workspaceId: string;
 }) {
+  const { mode, setMode } = useVisualMode();
+
+  if (mode === 'essencial' && (section === 'home' || section === 'overview')) {
+    // Optional text-only module failures must never blank the whole Central.
+    // Users can recover via the known-good Normal surface without logout.
+    return (
+      <WarehouseEssentialSurfaceBoundary key={workspaceId} onRestoreNormal={() => setMode('premium')}>
+        <WarehouseEssentialLocationLookup workspaceId={workspaceId} section={section} />
+      </WarehouseEssentialSurfaceBoundary>
+    );
+  }
+
   if (section === 'home') {
     return <WarehouseLandingOperational workspaceId={workspaceId} />;
   }

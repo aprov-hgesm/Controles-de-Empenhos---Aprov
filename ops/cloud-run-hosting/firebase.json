@@ -15,6 +15,17 @@
           "region": "southamerica-east1"
         }
       }
+    ],
+    "headers": [
+      {
+        "source": "/central-empenhos",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "private, no-store, max-age=0, must-revalidate"
+          }
+        ]
+      }
     ]
   }
 }

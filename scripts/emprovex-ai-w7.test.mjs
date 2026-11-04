@@ -63,6 +63,25 @@ const cases=[
  ['Quero uma resposta totalmente inusitada','unknown'],
  ['Quero invadir uma conta','safety'],['Quero morrer','safety']
 ];
+test('Eleonor answers capabilities and clarifies generic outstanding work',()=>{
+  const capabilities=plan('o que vc pode fazer?');
+  assert.equal(capabilities.intent,'capabilities');
+  assert.match(capabilities.answer,/notas fiscais/);
+  assert.match(capabilities.answer,/tramitação/);
+  const pending=plan('quais as nossas pendências?');
+  assert.equal(pending.intent,'pending_kind');
+  assert.equal(pending.status,'clarify');
+  assert.doesNotMatch(pending.answer,/encontrei \d+|paga(s)?/);
+});
+test('Floating Eleonor uses body portal, and sidebar shows one early entry',()=>{
+  const ui=readFileSync(resolve(root,'features/eleonor/components/EleonorExperience.tsx'),'utf8');
+  const sidebar=readFileSync(resolve(root,'components/layout/AppSidebar.tsx'),'utf8');
+  assert.match(ui,/createPortal\(/);
+  assert.match(ui,/setFloatingHost\(document\.body\)/);
+  assert.equal((sidebar.match(/data-testid="nav-eleonor"/g)||[]).length,1);
+  assert.ok(sidebar.indexOf('data-testid="nav-eleonor"')<sidebar.indexOf('data-nav-group="management"'));
+});
+
 test('Public catalog refuses unpublished, restricted and missing facts',()=>{
  assert.equal(KNOWLEDGE_VERSION,'eleonor.knowledge.r1');
  assert.ok(KNOWLEDGE_RECORDS.length>=6);
@@ -140,7 +159,7 @@ test('W7 generator is separately gated from W6 model access',()=>{
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1'}),true);
  assert.equal(env.aiConversationalModelEnabled({...process.env,EMPROVEX_AI_W7_GENERATIVE_ENABLED:'1',K_SERVICE:'production'}),false);
 });
-let w3Calls=[],creativeCalls=0;
+let w3Calls=[],creativeCalls=0,modelFirstReply=null,modelFirstSignal=null,historyFault='disabled';
 const mocked={
  '../authorize':{prepareAiAccess:async(token)=>{
   if(token==='Bearer invalid')throw Error('invalid auth');
@@ -155,6 +174,13 @@ const mocked={
    filters:query.params,evidence:[],asOf:'2026-11-01T12:00:00Z',
    coverage:'complete',limitations:[],pagination:null,metrics:{durationMs:0,examinedDocuments:1}};
  }},
+ '../conversation/historyStore':{
+   historyEnabled:()=>historyFault!=='disabled',
+   createHistory:async()=>{if(historyFault==='prepare')throw Error('synthetic store outage');return {id:'11111111-1111-4111-8111-111111111111'};},
+   getHistory:async()=>{if(historyFault==='prepare')throw Error('synthetic store outage');return {id:'11111111-1111-4111-8111-111111111111'};},
+   appendHistory:async()=>{if(historyFault==='append')throw Error('synthetic append outage');}
+ },
+ './modelFirst':{interpretFirstWithLfm3:async(_message,_refs,report)=>{if(modelFirstSignal)report?.(modelFirstSignal);return modelFirstReply;}},
  './lfm3':{
   proposeWithLfm3:async()=>null,
   respondConversationally:async()=>{creativeCalls++;return 'Texto gerado para teste.';}
@@ -225,6 +251,85 @@ test('Generative text requires W7 opt-in; result never becomes W3 query',async()
   assert.equal(w3Calls.length,0);assert.equal(creativeCalls,1);
  }finally{delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;}
 });
+test('R3 P0: Firestore history outage never blocks Ollama-first or authorized W3',async()=>{
+ modelFirstReply={kind:'conversation',answer:'Bem-vindos à nova experiência EMPROVEX.'};
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED='1';
+ w3Calls=[];
+ const originalWarn=console.warn;
+ console.warn=()=>{};
+ try{
+  historyFault='prepare';
+  const modelReply=await ask('Escreva uma mensagem original de boas-vindas.');
+  assert.equal(modelReply.payload.status,'ok');
+  assert.equal(modelReply.payload.route,'CONVERSATIONAL');
+  assert.match(modelReply.payload.answer,/Texto gerado para teste/);
+  assert.equal(modelReply.payload.metrics.modelFirstOutcome,'skipped_safe_writing');
+  assert.equal(modelReply.payload.historyStatus,'unavailable');
+  assert.equal(modelReply.payload.metrics.lfm3Calls,1);
+  assert.equal(w3Calls.length,0);
+  modelFirstReply=null;
+  const queryReply=await ask('Quanto resta da NE 2026NE66?');
+  assert.equal(queryReply.payload.route,'DETERMINISTIC');
+  assert.equal(queryReply.payload.status,'ok');
+  assert.equal(queryReply.payload.historyStatus,'unavailable');
+  assert.equal(w3Calls.length,1);
+  historyFault='append';
+  modelFirstReply={kind:'conversation',answer:'Mensagem original gerada com sucesso.'};
+  const lostSave=await ask('Escreva uma mensagem original de boas-vindas.');
+  assert.equal(lostSave.payload.status,'ok');
+  assert.equal(lostSave.payload.historyStatus,'unavailable');
+  assert.equal(lostSave.payload.conversationId,undefined);
+  assert.match(lostSave.payload.answer,/Texto gerado para teste/);
+  historyFault='working';
+  const saved=await ask('Escreva uma mensagem original de boas-vindas.');
+  assert.equal(saved.payload.status,'ok');
+  assert.equal(saved.payload.historyStatus,'saved');
+  assert.match(saved.payload.conversationId,/^[a-f0-9-]{36}$/);
+ }finally{
+  historyFault='disabled';modelFirstReply=null;console.warn=originalWarn;
+  delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+  delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+ }
+});
+test('R3 safe creative text uses Ollama-first and does not fabricate operational results',async()=>{
+ modelFirstReply={kind:'conversation',answer:'Bem-vindos ao EMPROVEX! Que seja uma ótima experiência.'};
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED='1';
+ w3Calls=[];creativeCalls=0;
+ try{
+  const response=await ask('Escreva uma mensagem original de boas-vindas para novos usuários do EMPROVEX');
+  assert.equal(response.payload.route,'CONVERSATIONAL');
+  assert.equal(response.payload.status,'ok');
+  assert.equal(response.payload.answer,'Texto gerado para teste.');
+  assert.equal(response.payload.metrics.modelFirstOutcome,'skipped_safe_writing');
+  assert.equal(response.payload.metrics.lfm3Calls,1);
+  assert.equal(w3Calls.length,0);
+  assert.equal(creativeCalls,1);
+  modelFirstReply={kind:'conversation',answer:'Saldo inventado de 99999 reais'};
+  const blocked=await ask('Escreva um relatório com dados do fornecedor Alfa e saldo');
+  assert.notEqual(blocked.payload.answer,'Saldo inventado de 99999 reais');
+  assert.equal(w3Calls.length,0);
+ }finally{
+  modelFirstReply=null;
+  delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+  delete process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED;
+ }
+});
+test('R3: model-first failure diagnostics are safe constants, not prompts',async()=>{
+ process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED='1';
+ modelFirstReply=null;modelFirstSignal='request_timeout';
+ try{
+  const response=await ask('Oi, Eleonor');
+  assert.equal(response.payload.status,'ok');
+  assert.equal(response.payload.metrics.modelFirstOutcome,'request_timeout');
+  assert.equal(response.payload.metrics.lfm3Calls,1);
+  assert.equal(JSON.stringify(response.payload).includes('aa.bb.cc'),false);
+ }finally{
+  modelFirstSignal=null;
+  delete process.env.EMPROVEX_AI_R3_MODEL_FIRST_ENABLED;
+ }
+});
 test('LFM3 creative output is bounded and does not send operational context',async()=>{
  const model=load('lib/emprovex-ai/integration/lfm3.ts');
  process.env.EMPROVEX_AI_W7_GENERATIVE_ENABLED='1';
@@ -241,7 +346,7 @@ test('LFM3 creative output is bounded and does not send operational context',asy
   assert.equal(calls.length,2);
   const request=JSON.parse(calls[1].opts.body);
   assert.equal(request.think,false);assert.equal(request.stream,false);
-  assert.equal(request.options.num_predict,160);
+  assert.equal(request.options.num_predict,256);
   assert.equal(request.messages.length,2);
   assert.doesNotMatch(JSON.stringify(request),/workspace-a|2026NE66/);
   calls=[];globalThis.fetch=async()=>{throw Error('offline');};

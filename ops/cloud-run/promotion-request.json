@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g72685d84e7b6-10",
-  "sourceSha": "72685d84e7b6c2805162940c2567a9ac0830b74a",
-  "reason": "Publicação expressamente autorizada do EMPROVEX Suporte R1 após auditoria das frentes paralelas. Memorial PR #440 e integração PR #448 integrados; Core Protection, Application CI e stage sem tráfego SUCCESS no mesmo SHA. Solicitação de 100% do tráfego e saúde verificada com rollback automático."
+  "revision": "emprovex-cloudrun-candidate-g789d9334e7ad-39",
+  "sourceSha": "789d9334e7adfba51a43cb29664b3b7f23e32766",
+  "reason": "Melhorias solicitadas pelo usuario na Administracao do EMPROVEX em 03/11/2026, PR #506: placas do bairro com Aprov + sigla institucional da OM, detalhes do setor ao clicar no predio; somente visual e dados ja carregados. Revisao 39 aprovada pelo stage workflow 41742045835 e CI rapido/core protection PASS. Promover para 100% do trafego com rollback automatico em qualquer falha de saude. Nao alterar Firestore, workspaces, IAM, documentos ou cobranca."
 }

@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { getInvoiceRecordKey } from './invoiceIdentity';
+import { invalidateInvoiceDisplayHistoryCache } from './historicalInvoiceQueries';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, CronogramaEmailEnvio, SupplierContact } from './types';
 import {
   commitAllInvoicesDeletionLifecycle,
@@ -173,6 +174,7 @@ export async function saveInvoice(userId: string, invoice: Invoice): Promise<voi
   const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
     await setDoc(operationalDocRef(scope, 'invoices', recordKey), { ...invoice, recordKey, userId });
+    invalidateInvoiceDisplayHistoryCache();
     recordWorkspaceDocumentWrites(scope, 1, 'notas');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -184,6 +186,7 @@ export async function removeInvoice(userId: string, recordKey: string): Promise<
   const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
     await deleteDoc(operationalDocRef(scope, 'invoices', recordKey));
+    invalidateInvoiceDisplayHistoryCache();
     recordWorkspaceDocumentDeletes(scope, 1, 'notas');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -201,7 +204,9 @@ export async function commitInvoiceReceiptChanges(
   userId: string,
   changes: CommitInvoiceReceiptChangesInput
 ): Promise<CommitInvoiceReceiptLifecycleResult> {
-  return commitInvoiceReceiptLifecycle(userId, changes);
+  const result = await commitInvoiceReceiptLifecycle(userId, changes);
+  invalidateInvoiceDisplayHistoryCache();
+  return result;
 }
 
 export async function commitInvoiceDeletion(
@@ -209,10 +214,12 @@ export async function commitInvoiceDeletion(
   updatedEmpenho: Empenho,
   invoiceRecordKey: string
 ): Promise<CommitInvoiceDeletionLifecycleResult> {
-  return commitInvoiceDeletionLifecycle(userId, {
+  const result = await commitInvoiceDeletionLifecycle(userId, {
     updatedEmpenho,
     invoiceRecordKey,
   });
+  invalidateInvoiceDisplayHistoryCache();
+  return result;
 }
 
 export async function commitAllInvoicesDeletion(
@@ -220,10 +227,12 @@ export async function commitAllInvoicesDeletion(
   updatedEmpenhos: Empenho[],
   invoiceRecordKeys: string[]
 ): Promise<CommitAllInvoicesDeletionLifecycleResult> {
-  return commitAllInvoicesDeletionLifecycle(userId, {
+  const result = await commitAllInvoicesDeletionLifecycle(userId, {
     updatedEmpenhos,
     invoiceRecordKeys,
   });
+  invalidateInvoiceDisplayHistoryCache();
+  return result;
 }
 
 export async function commitAllComissoesDeletion(userId: string, ids: string[]): Promise<void> {
@@ -252,7 +261,7 @@ export async function ensureTermoRecebimentoAssignment(
   const counterRef = operationalSettingsDocRef(scope, 'termoRecebimentoCounter');
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(db, async (transaction) => {
       const invoiceSnapshot = await transaction.get(invoiceRef);
       const counterSnapshot = await transaction.get(counterRef);
       if (!invoiceSnapshot.exists()) {
@@ -295,6 +304,8 @@ export async function ensureTermoRecebimentoAssignment(
       transaction.set(invoiceRef, { ...updatedInvoice, userId }, { merge: true });
       return updatedInvoice;
     });
+    invalidateInvoiceDisplayHistoryCache();
+    return result;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${getOperationalDocumentPath(scope, 'invoices', invoiceRecordKey)}/termo`);
     throw error;

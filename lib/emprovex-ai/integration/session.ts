@@ -3,11 +3,12 @@ import {createHmac,createHash,createCipheriv,createDecipheriv,randomBytes,timing
 import {AiExecutionError} from '../response';
 import type {ShortContext,ContextRefs} from '../context/types';
 import type {ConversationMemory} from '../conversation/engine';
+import {isValidPending,type PendingClarification} from './clarification';
 
 export const AI_SESSION_COOKIE='emprovex_ai_session';
 const CONTEXT_TTL=10*60*1000,SESSION_TTL=2*60*60*1000;
 type Session={uid:string;ws:string;sid:string;iat:number;exp:number};
-type Context={uid:string;ws:string;sid:string;updatedAt:number;exp:number;refs:ContextRefs;conversation?:ConversationMemory};
+type Context={uid:string;ws:string;sid:string;updatedAt:number;exp:number;refs:ContextRefs;conversation?:ConversationMemory;pending?:PendingClarification};
 const allowedRefs=['commitmentId','materialQuery','supplierName','supplierCnpj'];
 const ne=/^\d{4}NE\d{1,10}$/;
 const safeText=/^[^<>\u0000-\u001f\u007f]{2,120}$/;
@@ -86,26 +87,30 @@ function validConversation(value:unknown):value is ConversationMemory {
    typeof v.intent==='string'&&/^[a-z_]{1,48}$/.test(v.intent);
 }
 /** Invalidar alteracoes e uso entre sessoes; expirado => contexto vazio, sem leitura. */
-export function restoreContext(token:string|undefined,session:Session,now=Date.now()):(ShortContext & {conversation?:ConversationMemory})|undefined {
+export function restoreContext(token:string|undefined,session:Session,now=Date.now()):(ShortContext & {conversation?:ConversationMemory;pending?:PendingClarification})|undefined {
  if(!token)return undefined;
  const c=read('context',token);
  if(c.uid!==session.uid||c.ws!==session.ws||c.sid!==session.sid)
    throw new AiExecutionError('AI_CONTEXT_FORBIDDEN',403);
  if(typeof c.exp!=='number'||!Number.isFinite(c.exp)||typeof c.updatedAt!=='number'||
    !Number.isFinite(c.updatedAt)||c.updatedAt>now+30000||c.exp-c.updatedAt>CONTEXT_TTL||
-   !validRefs(c.refs)||(c.conversation!==undefined&&!validConversation(c.conversation)))
+   !validRefs(c.refs)||(c.conversation!==undefined&&!validConversation(c.conversation))||
+    (c.pending!==undefined&&!isValidPending(c.pending)))
    throw new AiExecutionError('AI_CONTEXT_FORBIDDEN',403);
  if(c.exp<=now||now-c.updatedAt>CONTEXT_TTL)return undefined;
  return {sessionId:session.sid,workspaceId:session.ws,updatedAt:c.updatedAt,refs:c.refs,
-   ...(c.conversation?{conversation:c.conversation as ConversationMemory}:{})};
+   ...(c.conversation?{conversation:c.conversation as ConversationMemory}:{}),
+    ...(c.pending?{pending:c.pending as PendingClarification}:{})};
 }
-export function sealContext(context:ShortContext & {conversation?:ConversationMemory},session:Session,now=Date.now()):string {
+export function sealContext(context:ShortContext & {conversation?:ConversationMemory;pending?:PendingClarification},session:Session,now=Date.now()):string {
  if(context.sessionId!==session.sid||context.workspaceId!==session.ws||
-   !validRefs(context.refs)||(context.conversation!==undefined&&!validConversation(context.conversation))||!Number.isFinite(context.updatedAt)||
+   !validRefs(context.refs)||(context.conversation!==undefined&&!validConversation(context.conversation))||
+    (context.pending!==undefined&&!isValidPending(context.pending))||!Number.isFinite(context.updatedAt)||
    context.updatedAt>now+30000||now-context.updatedAt>CONTEXT_TTL)
    throw new AiExecutionError('AI_CONTEXT_INVALID',503);
  const payload:Context={uid:session.uid,ws:session.ws,sid:session.sid,updatedAt:context.updatedAt,
    exp:context.updatedAt+CONTEXT_TTL,refs:context.refs,
-   ...(context.conversation?{conversation:context.conversation}:{})};
+   ...(context.conversation?{conversation:context.conversation}:{}),
+    ...(context.pending?{pending:context.pending}:{})};
  return issue('context',payload);
 }

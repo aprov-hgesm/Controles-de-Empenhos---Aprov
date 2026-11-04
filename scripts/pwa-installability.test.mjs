@@ -34,13 +34,26 @@ test('R363: logo enviada ao repositorio existe como PNG, sem alterar imagem orig
   const width = png.readUInt32BE(16);
   const height = png.readUInt32BE(20);
   assert.ok(width >= 512 && height >= 512, 'imagem oficial precisa ter resolucao suficiente');
-  assert.match(route, /public', 'emprovex-logo\.png'/);
+  assert.match(route, /public', 'emprovex-logo favicon\.png'/);
   assert.match(route, /data:image\/png;base64/);
   assert.match(route, /markSize = maskable \? Math\.round\(size \* 0\.76\) : size/);
+  assert.match(route, /MAX_IMAGE_BYTES = 6_000_000/);
+  assert.match(route, /'48'/);
   assert.match(route, /X-Emprovex-Icon-Source/);
   assert.match(nextConfig, /outputFileTracingIncludes:/);
   assert.match(nextConfig, /'\/api\/install-icon\/\*'/);
-  assert.match(nextConfig, /\.\/public\/emprovex-logo\.png/);
+  assert.match(nextConfig, /\.\/public\/emprovex-logo favicon\.png/);
+});
+
+test('R4: favicon circular e PWA nao sao sobrescritos pelo branding do login', () => {
+  const icon = readFileSync(resolve(process.cwd(), 'public/emprovex-logo favicon.png'));
+  assert.ok(icon.length > 4_000_000 && icon.length <= 6_000_000);
+  assert.deepEqual([...icon.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.match(manifest, /v=20261102-r4/);
+  assert.match(layout, /install-icon\/48\?v=20261102-r4/);
+  assert.doesNotMatch(brandHook, /document\.querySelectorAll\("link\[rel\*='icon'\]"\)/);
+  assert.doesNotMatch(brandHook, /canvas\.toDataURL\('image\/png'\)/);
+  assert.match(brandHook, /branding\/emprovex-dark-transparent\.png/);
 });
 
 test('R363: identificacao institucional existente fica preservada sem Firestore nos icones', () => {
@@ -123,4 +136,22 @@ test('R16.1: o site explica teste, preco por setor e contratacao sem cartao', ()
   assert.match(html, /href="#acesso">Solicitar meu teste acompanhado/);
   assert.match(css, /\.value-faq-item/);
   assert.match(css, /prefers-reduced-motion/);
+});
+
+// Release regression: apenas HTML operacional deve evitar cache; imagens e chunks
+// continuam com nomes versionados e cache padrao para nao aumentar custos.
+test('Cloud Run R1: entrada canonica HTML dinamica e sem cache no Next e Hosting', () => {
+  const entry = source('app/central-empenhos/page.tsx');
+  const nextConfig = source('next.config.ts');
+  const hosting = JSON.parse(source('ops/cloud-run-hosting/firebase.json'));
+  assert.match(entry, /export const dynamic = 'force-dynamic';/);
+  assert.match(entry, /export const revalidate = 0;/);
+  assert.match(entry, /export \{ default \} from '\.\.\/login\/page';/);
+  assert.match(nextConfig, /source: '\/central-empenhos',[\s\S]*?Cache-Control',[^\n]*?private, no-store, max-age=0, must-revalidate/);
+  const rule = hosting.hosting.headers.find(x => x.source === '/central-empenhos');
+  assert.ok(rule, 'Firebase Hosting sem regra da rota autenticada');
+  assert.equal(rule.headers.find(x => x.key === 'Cache-Control')?.value, 'private, no-store, max-age=0, must-revalidate');
+  assert.ok(!hosting.hosting.headers.some(x => /_next/.test(x.source)), 'nao alterar cache de assets _next');
+  assert.equal(hosting.hosting.rewrites[0].run.serviceId, 'emprovex-cloudrun-candidate');
+  assert.equal(hosting.hosting.rewrites[0].run.region, 'southamerica-east1');
 });

@@ -167,3 +167,17 @@ html[data-visual-mode='essencial'] [data-testid='dashboard-surface'] .transition
   transition-property: color, background-color, border-color, opacity, transform;
   transition-duration: 120ms;
 }
+
+/* R3.2: NF em equipamentos modestos — sem blur composto por cartão.
+ * Escopo exclusivamente operacional; Central de Depósitos 3D intocada. */
+html[data-visual-mode='essencial'] [data-testid='invoices-surface'] .backdrop-blur-sm,
+html[data-visual-mode='essencial'] [data-testid='invoices-surface'] .backdrop-blur-md,
+html[data-visual-mode='essencial'] [data-testid='invoices-surface'] .backdrop-blur-xl {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-visual-mode='essencial'] [data-testid='invoices-surface'] .transition-all {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 120ms;
+}

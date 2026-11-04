@@ -15,9 +15,11 @@ export const FAMILIES:readonly Family[] = [
 export const W3_CONTRACTS:Readonly<Record<W3Intent,string>> = {
   supplier_contact_find:'supplier.contact.find.v1',commitment_get:'commitment.get.v1',
   commitment_total_balance:'commitment.balance.v1',
+  commitment_item_search:'commitment.itemSearch.v1',
   commitment_previous_open_list:'commitment.previousOpen.list.v1',
   schedule_sent_history_list:'schedule.sentHistory.list.v1',
   invoice_registration_period_list:'invoice.registrationPeriod.list.v1',
+  invoice_operational_pending_list:'invoice.operationalPending.list.v1',
   warehouse_stock_get:'warehouse.stock.get.v1',
   warehouse_material_locations_list:'warehouse.materialLocations.list.v1'
 };

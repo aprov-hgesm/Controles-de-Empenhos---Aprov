@@ -34,3 +34,11 @@ A aplicação permanece fechada por padrão. Só habilita as duas rotas de IA se
 ## Critério de GO/NO-GO
 
 GO apenas depois da verificação de identidade/tráfego do serviço produtivo, CI do commit composto, permissões mínimas e os dois testes com a conta fundadora. Caso contrário, deixar o código e os flags desativados, sem promover a versão. Não iniciar projetos Firebase de homologação nem criar novas contas por padrão.
+
+## Incidente P0 — LFM3 com flags/IAM corretos, mas respostas rejeitadas (02/11/2026)
+
+Evidência em sessão produtiva: a pergunta de redação devolveu o fallback W7 fixo; a pergunta por fornecedor nomeado devolveu a mensagem de rejeição W5 `A interpretação não corresponde aos contratos permitidos`. A segunda mensagem ocorre quando a tentativa MODEL_ELIGIBLE retorna proposta JSON não nula, mas `validateModelCandidate()` não aceita o contrato; não é evidência de execução de W3. Flags W45/piloto/LFM3/W7 em 1, URL HTTPS da inferência e permissão run.invoker da service account produtiva confirmadas pelo operador, sem prova suficiente da qualidade da saída do modelo.
+
+**Hotfix diagnóstico de desenvolvimento, sem ativação automática:** registrar no payload de `/ask` apenas o código seguro `metrics.modelOutcome`, nunca prompt, resposta bruta, token ou identidade. Categorias incluem falha IAM/HTTP, truncamento, JSON inválido, candidato rejeitado pelo contrato, filtro rejeitado ou consulta W3 aceita. O total `metrics.lfm3Calls=1` significa *tentativa*, não sucesso garantido.
+
+**Aceite funcional necessário após publicação deliberada:** executar na conta fundadora duas mensagens sintéticas na Eleonor. Escrita genérica: resposta original `status=ok`, `route=CONVERSATIONAL`, `modelOutcome=model_answer_accepted`; fornecedor fictício nomeado: `route=MODEL_ELIGIBLE`, `modelOutcome=query_accepted` e resultado W3 `empty` ou `ok`, sem cross-workspace. Verificar LFM3 indisponível: fallback sem escrita. Não marcar o incidente como resolvido apenas por teste com mock ou por flag ativa.

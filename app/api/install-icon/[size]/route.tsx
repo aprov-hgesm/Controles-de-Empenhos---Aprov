@@ -5,9 +5,9 @@ import { ImageResponse } from 'next/og';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_IMAGE_BYTES = 4_000_000;
-const SOURCE_PATH = join(process.cwd(), 'public', 'emprovex-logo.png');
-const VALID_SIZES = new Set(['32', '180', '192', '512']);
+const MAX_IMAGE_BYTES = 6_000_000;
+const SOURCE_PATH = join(process.cwd(), 'public', 'emprovex-logo favicon.png');
+const VALID_SIZES = new Set(['32', '48', '180', '192', '512']);
 const CACHE_CONTROL = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400';
 
 // The exact uploaded PNG is packaged with the server route by Next.js file tracing.
@@ -45,8 +45,8 @@ export async function GET(
   const size = Number(rawSize);
   const logo = await logoData();
   const maskable = size === 512 && new URL(request.url).searchParams.get('maskable') === '1';
-  // The supplied file already includes the full official wordmark and blue background.
-  // Render at full size for regular icons; reserve a safe zone for adaptive masks.
+  // Arte circular fornecida pelo usuário: preservar bordas nos ícones normais.
+  // Em máscaras Android, reservar margem e preencher o fundo para evitar recortes.
   const markSize = maskable ? Math.round(size * 0.76) : size;
 
   const result = new ImageResponse(
@@ -54,7 +54,7 @@ export async function GET(
       <div style={{
         width: '100%', height: '100%', display: 'flex',
         justifyContent: 'center', alignItems: 'center',
-        background: '#00288e',
+        background: maskable ? '#00288e' : 'transparent',
       }}>
         {logo ? (
           <img src={logo} alt="" width={markSize} height={markSize}

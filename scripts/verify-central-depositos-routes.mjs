@@ -81,8 +81,13 @@ const rootEntry = read('app/page.tsx');
 const operationalEntry = rootEntry.includes("export { default } from './login/page'")
   ? read('app/login/page.tsx') : rootEntry;
 assert.match(operationalEntry, /window\.location\.assign\(/, 'Atalho para Central perdido.');
-assert.match(operationalEntry, /\/central-depositos\/controle-de-itens/, 'Modo Essencial perdeu acesso à Central.');
-assert.match(operationalEntry, /: '\/central-depositos'/, 'Modo Normal perdeu acesso à Central.');
+assert.match(operationalEntry, /window\.location\.assign\(\s*'\/central-depositos'\s*\)/,
+  'Atalho do módulo deve abrir a entrada canônica em ambos os modos.');
+const warehouseSections = read('features/warehouse/components/WarehouseSectionContent.tsx');
+assert.match(warehouseSections, /mode === 'essencial'/,
+  'Modo Essencial deve continuar funcional na entrada canônica.');
+assert.match(warehouseSections, /WarehouseEssentialLocationLookup/,
+  'Entrada Essencial deve oferecer consulta textual sem 3D.');
 assert.match(operationalEntry, /canAccessWarehouseModule\(workspaceContext\)/, 'Gate de módulo Warehouse removido.');
 assert.match(read('features/warehouse/mobile/WarehouseMobileShell.tsx'), /href="\/central-depositos"/);
 assert.match(read('features/warehouse/components/WarehouseLandingOperational.tsx'), /\/central-depositos\/meus-depositos/);

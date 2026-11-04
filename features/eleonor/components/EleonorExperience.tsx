@@ -3,9 +3,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { User } from 'firebase/auth';
 import Image from 'next/image';
+import {EleonorHistoryPanel,type StoredChatMessage} from './EleonorHistoryPanel';
+import {EleonorItemResults} from './EleonorItemResults';
+import {parseItemResult} from '../domain/itemPresentation';
+import { createPortal } from 'react-dom';
 import {
   ArrowUp, BookOpenText, ExternalLink, LoaderCircle,
-  Plus, X,
+  Plus, X, Clock3,
 } from 'lucide-react';
 
 type Evidence = { source: string; documentId: string };
@@ -17,15 +21,24 @@ type ChatMessage = {
   evidence?: Evidence[];
   coverage?: string;
   morePages?: boolean;
+  modelDiagnostic?: string;
+  structuredResult?: unknown;
 };
 type AskResponse = {
+  conversationId?:string;
+  historyStatus?:'saved'|'unavailable'|'disabled';
   answer?: string;
   status?: string;
   contextToken?: string;
   error?: string;
+  metrics?: {lfm3Calls?:number;modelFirstOutcome?:string;modelOutcome?:string};
   result?: {
     evidence?: Evidence[];
     coverage?: string;
+    intent?: string;
+    status?: string;
+    data?: unknown;
+    limitations?: string[];
     pagination?: { truncated?: boolean; nextCursor?: string | null } | null;
   };
 };
@@ -49,6 +62,28 @@ function EleonorSymbol({ size = 'normal' }: { size?: 'normal' | 'large' }) {
   );
 }
 
+const DIAGNOSTIC_NAMES:Record<string,string>={
+  request_timeout:'tempo de resposta excedido',
+  request_failed:'erro na chamada ao modelo',
+  model_http_error:'serviço de inferência retornou erro',
+  model_truncated:'resposta incompleta',
+  model_invalid_response:'formato de resposta inválido',
+  identity_unavailable:'identidade da aplicação indisponível',
+  identity_invalid:'autorização de serviço inválida',
+  url_invalid:'endereço de inferência inválido',
+  disabled:'recurso desativado',
+  candidate_rejected:'interpretação fora dos contratos permitidos',
+  filter_rejected:'filtros não validados'
+};
+function modelDiagnostic(payload:AskResponse):string|undefined {
+  if(payload.status!=='fallback_unavailable'&&payload.status!=='clarify')return undefined;
+  if(!payload.metrics?.lfm3Calls)return undefined;
+  const first=payload.metrics.modelFirstOutcome||'';
+  const last=payload.metrics.modelOutcome||'';
+  const label=DIAGNOSTIC_NAMES[last]||DIAGNOSTIC_NAMES[first];
+  return label?'Diagnóstico LFM3: '+label+'.':'A interpretação do LFM3 não foi concluída.';
+}
+
 function friendlyError(status: number, error?: string): string {
   if (error === 'AI_EXPERIMENT_DISABLED' || status === 404) {
     return 'A Eleonor ainda não está habilitada neste ambiente. Suas consultas serão liberadas após a homologação do EMPROVEX AI.';
@@ -70,15 +105,26 @@ export function EleonorExperience({
   onOpenFull?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [floatingHost, setFloatingHost] = useState<HTMLElement | null>(null);
+  // Render at document.body: operational surfaces use overflow-hidden/transform
+  // which otherwise clip or cover a position:fixed chat launcher.
+  useEffect(() => { setFloatingHost(document.body); }, []);
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historyUnsaved,setHistoryUnsaved]=useState(false);
+  const [activeHistoryId,setActiveHistoryId]=useState<string|undefined>();
+  const [historyOpen,setHistoryOpen]=useState(fullPage);
+  const [historyRevision,setHistoryRevision]=useState(0);
+  const activeHistoryRef=useRef<string|undefined>(undefined);
   const contextRef = useRef<string | undefined>(undefined);
   const controllerRef = useRef<AbortController | null>(null);
   const requestNumber = useRef(0);
   const busyRef = useRef(false);
   const nextId = useRef(0);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const logRef = useRef<HTMLDivElement | null>(null);
+  const lastAssistantRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -86,10 +132,32 @@ export function EleonorExperience({
   }, [open, fullPage]);
 
   useEffect(() => {
-    if (open || fullPage) bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!open && !fullPage) return;
+    const last = messages[messages.length - 1];
+    // Results with many items should open at the summary, not scroll straight
+    // to the last line and hide what the user actually asked.
+    if (last?.role === 'assistant' && parseItemResult(last.structuredResult)) {
+      if (logRef.current && lastAssistantRef.current)
+        logRef.current.scrollTo({
+          top: lastAssistantRef.current.offsetTop,
+          behavior: 'smooth',
+        });
+    } else {
+      bottomRef.current?.scrollIntoView({behavior:'smooth',block:'end'});
+    }
   }, [messages, loading, open, fullPage]);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => {
+    // Account switches may reuse the same mounted UI: never show a previous user's transcript.
+    requestNumber.current++;
+    controllerRef.current?.abort();
+    controllerRef.current=null;busyRef.current=false;
+    contextRef.current=undefined;activeHistoryRef.current=undefined;
+    setActiveHistoryId(undefined);setMessages([]);setHistoryRevision(0);
+    setDraft('');setLoading(false);setHistoryUnsaved(false);
+  }, [user?.uid]);
+
 
   const newConversation = () => {
     requestNumber.current += 1;
@@ -97,12 +165,25 @@ export function EleonorExperience({
     controllerRef.current?.abort();
     controllerRef.current = null;
     contextRef.current = undefined;
+    activeHistoryRef.current=undefined;setActiveHistoryId(undefined);
     setMessages([]);
+    setHistoryUnsaved(false);
     setDraft('');
     setLoading(false);
     inputRef.current?.focus();
   };
 
+  const selectHistory=(id:string,stored:StoredChatMessage[])=>{
+    requestNumber.current+=1;controllerRef.current?.abort();controllerRef.current=null;
+    busyRef.current=false;setLoading(false);contextRef.current=undefined;
+    activeHistoryRef.current=id;setActiveHistoryId(id);setDraft('');
+    setMessages(stored.map((m,i)=>({id:i+1,role:m.role,text:m.text,status:m.status})));
+    setHistoryUnsaved(false);
+    nextId.current=stored.length;
+    if(!fullPage)setHistoryOpen(false);
+  };
+  const historyPanel=<EleonorHistoryPanel user={user} activeId={activeHistoryId}
+    refreshKey={historyRevision} onSelect={selectHistory} onNew={newConversation}/>;
   const send = async (value = draft) => {
     const message = value.trim();
     if (!message || message.length > 1000 || busyRef.current || !user) return;
@@ -129,6 +210,7 @@ export function EleonorExperience({
         body: JSON.stringify({
           message,
           ...(contextRef.current ? { contextToken: contextRef.current } : {}),
+          ...(activeHistoryRef.current ? { conversationId:activeHistoryRef.current } : {}),
         }),
         cache: 'no-store',
         signal: controller.signal,
@@ -137,6 +219,12 @@ export function EleonorExperience({
       if (controller.signal.aborted || number !== requestNumber.current) return;
       if (!response.ok) throw new Error(friendlyError(response.status, body.error));
 
+      if(body.historyStatus==='unavailable')setHistoryUnsaved(true);
+      if(typeof body.conversationId==='string'){
+        activeHistoryRef.current=body.conversationId;
+        setActiveHistoryId(body.conversationId);
+        setHistoryRevision(v=>v+1);
+      }
       // Only the server-issued encrypted context may be replayed to the backend.
       contextRef.current = typeof body.contextToken === 'string'
         ? body.contextToken : undefined;
@@ -147,6 +235,8 @@ export function EleonorExperience({
         role: 'assistant',
         text,
         status: body.status,
+        structuredResult: parseItemResult(body.result) ? body.result : undefined,
+        modelDiagnostic: modelDiagnostic(body),
         evidence: Array.isArray(body.result?.evidence)
           ? body.result.evidence.filter(item => typeof item.source === 'string' && typeof item.documentId === 'string')
           : undefined,
@@ -184,8 +274,11 @@ export function EleonorExperience({
 
   const conversation = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div role="log" aria-label="Conversa com Eleonor" aria-live="polite"
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-6 sm:px-7">
+      {historyUnsaved&&<p role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        Histórico indisponível: algumas mensagens desta conversa não foram salvas. A Eleonor continua funcionando.
+      </p>}
+      <div ref={logRef} role="log" aria-label="Conversa com Eleonor" aria-live="polite"
+        className="relative min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-6 sm:px-7">
         {messages.length === 0 && (
           <div className="flex min-h-full flex-col items-center justify-center py-8 text-center">
             {fullPage && <EleonorSymbol size="large" />}
@@ -212,8 +305,11 @@ export function EleonorExperience({
           </div>
         )}
         {messages.map(item => (
-          <div key={item.id} className={`flex ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[92%] rounded-[22px] px-4 py-3 text-sm leading-6 sm:max-w-[84%] ${item.role === 'user'
+          <div key={item.id} ref={item.id===messages[messages.length-1]?.id && item.role==='assistant' ? lastAssistantRef : undefined}
+            className={`flex ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`${item.role==='assistant' && parseItemResult(item.structuredResult)
+              ? 'w-full max-w-full px-3 sm:max-w-[94%]'
+              : 'max-w-[92%] px-4 sm:max-w-[84%]'} rounded-[22px] py-3 text-sm leading-6 ${item.role === 'user'
               ? 'rounded-br-md bg-[#00288e] text-white'
               : 'rounded-bl-md border border-slate-200/85 bg-white/90 text-[#152742] shadow-sm'}`}>
               {item.role === 'assistant' && fullPage && (
@@ -222,13 +318,18 @@ export function EleonorExperience({
                   {item.status === 'partial' && <span className="text-[10px] font-semibold text-amber-700">Resultado parcial</span>}
                 </div>
               )}
-              <p className="whitespace-pre-wrap break-words">{item.text}</p>
-              {item.role === 'assistant' && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
+              {item.role==='assistant' && parseItemResult(item.structuredResult)
+                ? <EleonorItemResults result={item.structuredResult} evidence={item.evidence}/>
+                : <p className="whitespace-pre-wrap break-words">{item.text}</p>}
+              {item.modelDiagnostic&&<p className="mt-2 text-[11px] text-amber-700" role="status">{item.modelDiagnostic}</p>}
+              {item.role === 'assistant' && !parseItemResult(item.structuredResult)
+                && ((item.coverage && item.coverage !== 'complete') || item.morePages) && (
                 <p className="mt-2 text-[11px] font-semibold text-amber-700">
                   {item.morePages ? 'Existem outros registros disponíveis.' : 'A cobertura desta consulta não está confirmada como completa.'}
                 </p>
               )}
-              {item.role === 'assistant' && item.evidence && item.evidence.length > 0 && (
+              {item.role === 'assistant' && !parseItemResult(item.structuredResult)
+                && item.evidence && item.evidence.length > 0 && (
                 <div className="mt-3 border-t border-slate-100 pt-2">
                   <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     <BookOpenText className="h-3 w-3" /> Fontes da consulta
@@ -265,11 +366,19 @@ export function EleonorExperience({
             <ArrowUp className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
-          <Image src="/branding/emprovex-light-transparent.png" alt="" width={19} height={19}
-            unoptimized className="h-4 w-4 shrink-0 rounded" />
-          Consultas somente de leitura · Respostas baseadas no EMPROVEX
-        </p>
+        <div className="mt-2 space-y-1.5 text-center">
+          <p data-testid="eleonor-pilot-notice" role="note"
+            className="mx-auto max-w-lg px-1 text-[11px] leading-4 text-slate-500">
+            <span className="font-semibold text-slate-600">Um recado da Eleonor:</span>{' '}
+            Ainda estou em fase de testes e aprimoramento. Posso demorar um pouco para responder — e, sim, até eu posso errar.
+            Obrigada pela paciência; excelência exige prática.
+          </p>
+          <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-slate-400">
+            <Image src="/branding/emprovex-light-transparent.png" alt="" width={19} height={19}
+              unoptimized className="h-4 w-4 shrink-0 rounded" />
+            Consultas somente de leitura · Respostas baseadas no EMPROVEX
+          </p>
+        </div>
       </form>
     </div>
   );
@@ -287,17 +396,28 @@ export function EleonorExperience({
               <p className="text-[11px] font-medium text-blue-100/80">Assistente inteligente do EMPROVEX</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+          <button type="button" onClick={()=>setHistoryOpen(v=>!v)}
+            aria-label="Mostrar ou ocultar histórico"
+            className="inline-flex items-center gap-1 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
+            <Clock3 className="h-4 w-4" /> Histórico
+          </button>
           <button onClick={newConversation} type="button"
             className="inline-flex items-center gap-2 rounded-xl border border-blue-300/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20">
             <Plus className="h-4 w-4" /> Nova conversa
           </button>
+        </div>
         </header>
-        {conversation}
+        <div className="flex min-h-0 flex-1">
+          {historyOpen&&<aside className="w-52 shrink-0 overflow-hidden border-r border-slate-200 bg-white/85 sm:w-64">{historyPanel}</aside>}
+          {conversation}
+        </div>
       </section>
     );
   }
 
-  return (
+  if (!floatingHost) return null;
+  return createPortal(
     <aside data-testid="eleonor-floating" className="pointer-events-none fixed bottom-[5.5rem] right-4 z-[70] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6">
       {open && (
         <section role="dialog" aria-modal="false" aria-label="Conversa rápida com Eleonor"
@@ -308,6 +428,8 @@ export function EleonorExperience({
                 unoptimized className="h-auto w-[126px]" />
              </div>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={()=>setHistoryOpen(v=>!v)} aria-label="Histórico de conversas"
+                className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Clock3 className="h-4 w-4" /></button>
               <button type="button" onClick={newConversation} aria-label="Nova conversa"
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><Plus className="h-4 w-4" /></button>
               <button type="button" onClick={() => onOpenFull
@@ -319,6 +441,7 @@ export function EleonorExperience({
                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50"><X className="h-4 w-4" /></button>
             </div>
           </header>
+          {historyOpen&&<div className="max-h-48 min-h-28 shrink-0 overflow-y-auto border-b border-slate-200 bg-white">{historyPanel}</div>}
           {conversation}
         </section>
       )}
@@ -334,6 +457,7 @@ export function EleonorExperience({
           <X className="h-3 w-3" />
         </span>}
       </button>
-    </aside>
+    </aside>,
+    floatingHost,
   );
 }

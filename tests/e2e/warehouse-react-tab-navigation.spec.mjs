@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { registerEmulatedBillingPortal } from './emulatedBillingPortal.mjs';
+import { registerEmulatedLegalAcceptance } from './emulatedLegalAcceptance.mjs';
 
 // Navegação da Central sob autenticação/Firestore emuladores, sem produção.
 // Valida clique no menu, render real, URL, histórico e recarga de rota direta.
@@ -93,4 +95,74 @@ test('Central de Depósitos: seis abas via React com conteúdo e histórico', as
   await expect(shell).toHaveAttribute('data-warehouse-section', 'overview', { timeout: 45_000 });
   await expect(page.getByTestId('warehouse-home-operational').first()).toBeVisible({ timeout: 45_000 });
   console.log('WAREHOUSE REACT NAVIGATION: PASS (6 abas, voltar, F5, acesso direto e celular)');
+});
+
+
+// Regression for PR #500: opening the Central must not depend on the optional
+// text-only renderer. Once an immutable acceptance is server-verified in
+// Empenhos, Warehouse status includes that evidence and avoids a duplicate GET.
+test('PR500: founder opens Normal + Essencial without duplicate legal GET', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/central-empenhos');
+  await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
+  const principal = page.getByRole('navigation', { name: 'Navegação principal' });
+  const legal = page.getByRole('heading', { name: 'Termos e Privacidade' });
+  await expect(principal.or(legal)).toBeVisible({ timeout: 45_000 });
+  if (await legal.isVisible().catch(() => false)) {
+    await page.getByRole('checkbox', {
+      name: 'Li e aceito os Termos de Serviço e a Política de Privacidade.',
+    }).check();
+    await page.getByRole('button', { name: 'Aceitar e continuar' }).click();
+  }
+  await expect(principal).toBeVisible({ timeout: 45_000 });
+
+  let redundantLegalGets = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && new URL(request.url()).pathname === '/api/legal-acceptance') {
+      redundantLegalGets += 1;
+    }
+  });
+
+  await page.goto('/central-depositos');
+  await expect(page.getByTestId('warehouse-landing-operational')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Não foi possível abrir esta tela' })).toHaveCount(0);
+  expect(redundantLegalGets).toBe(0);
+
+  await page.evaluate(() => sessionStorage.setItem('emprovex:visual-mode:v1', 'essencial'));
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-visual-mode', 'essencial');
+  await expect(page.getByTestId('warehouse-essential-location-lookup')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId('warehouse-essential-local-recovery')).toHaveCount(0);
+  expect(redundantLegalGets).toBe(0);
+
+  await page.getByTestId('warehouse-nav-overview').click();
+  await expect(page.getByTestId('warehouse-essential-location-lookup')).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/central-depositos\/meus-depositos$/);
+});
+
+// External sector is a separate identity and MUST authorize its own workspace.
+test('PR500: external sector enters its own Warehouse without full-screen recovery', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // A API comercial depende de IAM de produção: usar o mesmo mock restrito
+  // do preview, validando token e workspace somente nos emuladores demo.
+  await registerEmulatedBillingPortal(context);
+  await registerEmulatedLegalAcceptance(context);
+  await page.goto('/central-empenhos');
+  await page.getByTestId('sector-login-email').fill('sector-lifecycle@example.test');
+  await page.getByTestId('sector-login-password').fill('Emprovex-Teste!2026');
+  await page.getByTestId('sector-login-submit').click();
+  const principal = page.getByRole('navigation', { name: 'Navegação principal' });
+  const legal = page.getByRole('heading', { name: 'Termos e Privacidade' });
+  await expect(principal.or(legal)).toBeVisible({ timeout: 45_000 });
+  if (await legal.isVisible().catch(() => false)) {
+    await page.getByRole('checkbox', {
+      name: 'Li e aceito os Termos de Serviço e a Política de Privacidade.',
+    }).check();
+    await page.getByRole('button', { name: 'Aceitar e continuar' }).click();
+  }
+  await expect(principal).toBeVisible({ timeout: 45_000 });
+  await page.goto('/central-depositos');
+  await expect(page.getByTestId('warehouse-module-shell')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId('warehouse-landing-operational')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('heading', { name: 'Não foi possível abrir esta tela' })).toHaveCount(0);
 });

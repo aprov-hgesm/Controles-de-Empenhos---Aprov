@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "authorizationMode": "explicit_chat_request",
+  "authorizedBy": "Moriark",
+  "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
+  "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
+  "reason": "hosting-p0: P0 autorizado por /goal do usuario; executar Firebase Hosting cache-policy pelo workflow confiavel apos correcoes #472/#473 com Cloud Run g4b0afc57135a-23 100%; PR #476 ajustou selecao do evento sem afrouxar WIF; somente Hosting, validacao fail-closed.",
+  "attempt": 3
+}

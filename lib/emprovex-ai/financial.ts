@@ -6,6 +6,7 @@ import { coreDocument, coreOperationalDocument, coreOperationalQuery, type AiRow
 import { getEmpenhoExerciseYear } from '../../features/empenhos/domain/empenhoExercise';
 import { parseAiCursor, makeAiCursor } from './cursor';
 import { operationalMidnightUtc } from './period';
+import {normalizeConsultaItemName,matchesConsultaItemSearch} from '../../features/itens/domain/consultaItens';
 
 function s(v:unknown):string{return typeof v==='string'?v:'';}
 function n(v:unknown):number {
@@ -97,6 +98,78 @@ async function commitmentBalance(access:AiAccess,p:Record<string,unknown>):Promi
   return {data:{commitmentId:row.id,...balance},
     limitations:['Saldo operacional calculado a partir dos itens cadastrados; não equivale ao saldo contábil do SIAFI.'],
     evidence:[source('empenhos',row)],examinedDocuments:1};
+}
+/** Server-side counterpart of the existing Consulta de Itens view.
+ * Reuses the same name+unit grouping and balances, but reads only the validated
+ * workspace/UG through W3. No client data, no write capability, no LFM3 facts.
+ */
+async function commitmentItemSearch(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
+ const materialQuery=s(p.materialQuery).trim(),commitmentId=s(p.commitmentId);
+ const single=!!commitmentId;
+ const q=single
+   ?{rows:await coreOperationalDocument(access,'empenhos',commitmentId).then(row=>row?[row]:[]),
+     truncated:false,examined:1}
+   :await coreOperationalQuery(access,'empenhos',[],201);
+ const groups=new Map<string,{name:string;unit:string;committedQuantity:number;
+   receivedQuantity:number;pendingQuantity:number;operationalBalance:number;
+   associations:Array<{commitmentId:string;itemId:string;supplier:string;
+     committedQuantity:number;receivedQuantity:number;pendingQuantity:number;operationalBalance:number}>}>();
+ const evidence:Array<{source:string;documentId:string}>=[];
+ let skippedRecords=0;
+ for(const row of single?q.rows:q.rows.slice(0,200)){
+   if(!Array.isArray(row.data.items)){skippedRecords++;continue;}
+   const matches=itemsOf(row.data).filter(item=>
+     matchesConsultaItemSearch(s(item.name),materialQuery));
+   if(!matches.length)continue;
+   const seen=new Set<string>();
+   for(const item of matches){
+     const itemId=s(item.id);
+     if(seen.has(itemId))throw new AiExecutionError('AI_DUPLICATE_COMMITMENT_ITEM',503);
+     seen.add(itemId);
+     // Same validated, read-only balance computation as a direct W3 item request.
+     const amount=balanceOf({...row.data,items:[item]},itemId).items[0];
+     if(!amount)throw new AiExecutionError('AI_ITEM_CALCULATION_MISSING',503);
+     const unit=s(amount.unit).trim();
+     const key=normalizeConsultaItemName(s(item.name))+'::'+unit.toLocaleLowerCase('pt-BR');
+     let group=groups.get(key);
+     if(!group){
+       group={name:s(item.name),unit,committedQuantity:0,receivedQuantity:0,
+         pendingQuantity:0,operationalBalance:0,associations:[]};
+       groups.set(key,group);
+     }
+     group.committedQuantity+=amount.committedQuantity;
+     group.receivedQuantity+=amount.receivedQuantity;
+     group.pendingQuantity+=amount.pendingQuantity;
+     group.operationalBalance+=amount.operationalBalance;
+     if(![group.committedQuantity,group.receivedQuantity,group.pendingQuantity,
+       group.operationalBalance].every(Number.isFinite))
+       throw new AiExecutionError('AI_FINANCIAL_OVERFLOW',503);
+     group.associations.push({commitmentId:row.id,itemId,supplier:s(row.data.supplier),
+       committedQuantity:amount.committedQuantity,receivedQuantity:amount.receivedQuantity,
+       pendingQuantity:amount.pendingQuantity,operationalBalance:amount.operationalBalance});
+   }
+   evidence.push(source('empenhos',row));
+ }
+ const all=[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')||
+   a.unit.localeCompare(b.unit,'pt-BR'));
+ const itemLimit=12,associationLimit=8;
+ const hiddenGroups=all.length>itemLimit;
+ const hiddenAssociations=all.slice(0,itemLimit).some(g=>g.associations.length>associationLimit);
+ const incomplete=q.truncated||skippedRecords>0||hiddenGroups||hiddenAssociations;
+ const items=all.slice(0,itemLimit).map(g=>({...g,
+   associations:g.associations.slice(0,associationLimit)}));
+ const limitations=[
+   'Saldo de itens de empenhos é operacional, não é estoque físico nem saldo contábil SIAFI.',
+   ...(q.truncated?['Busca transversal examinou até 200 empenhos; outras NEs podem conter o item.']:[]),
+   ...(skippedRecords?['Alguns empenhos sem cadastro de itens estruturado não foram contabilizados.']:[]),
+   ...(hiddenGroups?['Há mais descrições ou unidades compatíveis; refine o nome do produto.']:[]),
+   ...(hiddenAssociations?['Há mais empenhos associados do que os exibidos nesta resposta.']:[])
+ ];
+ return {status:incomplete?'partial':all.length?'ok':'empty',
+   coverage:incomplete?'incomplete':'complete',
+   data:{materialQuery,items,matchedGroups:all.length,examinedCommitments:q.examined},
+   evidence:evidence.slice(0,40),truncated:incomplete,limitations,
+   examinedDocuments:q.examined};
 }
 async function previousOpen(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
   const requested=p.exerciseYear as number|undefined,older=p.includeHistorical===true,now=new Date().getUTCFullYear();
@@ -207,14 +280,70 @@ async function invoicePeriod(access:AiAccess,p:Record<string,unknown>):Promise<Q
       ...(q.truncated&&!nextCursor?['Paginação indisponível: configurar EMPROVEX_AI_CURSOR_SECRET.']:[])],
     examinedDocuments:q.examined};
 }
+/** Bounded read-only view of NFs awaiting operational forwarding.
+ * This is NOT a payment-due or liquidation status report.
+ * The existing UI sources the stage from localizacaoAtual and uses commission /
+ * treasury dates only for legacy records; never infer paid or unpaid.
+ */
+async function pendingOperationalInvoices(access:AiAccess,p:Record<string,unknown>):Promise<QueryOutcome>{
+  if(p.stage!=='pending_operational')throw new AiExecutionError('AI_INVOICE_PENDING_STAGE_INVALID',400);
+  const size=p.pageSize as number;
+  if(!Number.isInteger(size)||size<1||size>50)throw new AiExecutionError('AI_INVOICE_PENDING_LIMIT_INVALID',400);
+  // Scan at most 201 workspace-scoped rows. No cross-tenant reads and no write.
+  const q=await coreOperationalQuery(access,'invoices',[],201);
+  let inferred=false,unrecognized=false;
+  const pending=q.rows.flatMap(row=>{
+    const d=row.data;
+    const location=d.localizacaoAtual;
+    let stage:'APROVISIONAMENTO'|'COMISSAO'|'TESOURARIA'|null=null;
+    let inferredRow=false;
+    if(location==='APROVISIONAMENTO'||location==='COMISSAO'||location==='TESOURARIA'){
+      stage=location;
+    }else if(location===undefined||location===null||location===''){
+      // UI legacy fallback: status is inferred, not a verified timestamp.
+      inferredRow=true;
+      stage=typeof d.tesourariaDate==='string'&&d.tesourariaDate.trim()
+        ? 'TESOURARIA':typeof d.comissaoDate==='string'&&d.comissaoDate.trim()
+          ? 'COMISSAO':'APROVISIONAMENTO';
+    }else {
+      unrecognized=true;
+      return [];
+    }
+    if(inferredRow)inferred=true;
+    if(stage==='TESOURARIA')return [];
+    return [{recordKey:row.id,number:s(d.id)||row.id,
+      commitmentId:s(d.empenhoId),stage,stageInferred:inferredRow,
+      registeredAt:s(d.registeredAt)}];
+  });
+  const over=pending.length>size,limited=q.truncated||over||unrecognized||inferred;
+  const visible=pending.slice(0,size);
+  return {
+    status:limited?'partial':visible.length?'ok':'empty',
+    data:visible,
+    evidence:visible.map(row=>({source:'invoices',documentId:row.recordKey})),
+    coverage:limited?'incomplete':'complete',
+    truncated:q.truncated||over,
+    limitations:[
+      'Pendência significa tramitação da NF no Aprovisionamento ou Comissão; não comprova pagamento pendente, liquidação ou vencimento.',
+      ...(inferred?['Há notas legadas cuja etapa foi inferida a partir das datas de tramitação.']:[]),
+      ...(unrecognized?['Algumas notas têm etapas não reconhecidas e foram omitidas; cobertura incompleta.']:[]),
+      ...(q.truncated?['Varredura limitada a 200 notas fiscais do workspace; outras pendências podem existir.']:[]),
+      ...(over?['A resposta mostra somente os primeiros registros pendentes da amostra; não representa o total.']:[]),
+    ],
+    examinedDocuments:q.examined,
+  };
+}
+
 export async function executeFinancial(access:AiAccess,q:AiQuery):Promise<QueryOutcome>{
   switch(q.intent) {
     case 'supplier_contact_find':return supplierFind(access,q.params);
     case 'commitment_get':return commitmentGet(access,q.params);
+    case 'commitment_item_search':return commitmentItemSearch(access,q.params);
     case 'commitment_total_balance':return commitmentBalance(access,q.params);
     case 'commitment_previous_open_list':return previousOpen(access,q.params);
     case 'schedule_sent_history_list':return sentHistory(access,q.params);
     case 'invoice_registration_period_list':return invoicePeriod(access,q.params);
+    case 'invoice_operational_pending_list':return pendingOperationalInvoices(access,q.params);
     default:throw new AiExecutionError('AI_FINANCIAL_CONTRACT_UNSUPPORTED',422);
   }
 }

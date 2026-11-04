@@ -6,6 +6,8 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app
+ARG NEXT_DEPLOYMENT_ID
+ENV NEXT_DEPLOYMENT_ID=${NEXT_DEPLOYMENT_ID}
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

@@ -40,6 +40,8 @@ export function makeW3Query(intent:W3Intent,p:Record<string,unknown>):W3Query|nu
    &&(p.includeItems===undefined||typeof p.includeItems==='boolean');break;
  case 'commitment_total_balance':valid=keys(p,['commitmentId','itemId'])&&typeof p.commitmentId==='string'&&NE.test(p.commitmentId)
    &&(p.itemId===undefined||(typeof p.itemId==='string'&&/^[a-z0-9_-]{1,130}$/i.test(p.itemId)));break;
+ case 'commitment_item_search':valid=keys(p,['materialQuery','commitmentId'])&&goodText(p.materialQuery)&&
+   (p.commitmentId===undefined||(typeof p.commitmentId==='string'&&NE.test(p.commitmentId)));break;
  case 'commitment_previous_open_list':valid=keys(p,['exerciseYear','includeHistorical','pageSize','cursor'])&&
    (p.exerciseYear===undefined||(Number.isInteger(p.exerciseYear)&&Number(p.exerciseYear)>=2000&&Number(p.exerciseYear)<=2100))&&
    (p.includeHistorical===undefined||typeof p.includeHistorical==='boolean')&&
@@ -53,6 +55,9 @@ export function makeW3Query(intent:W3Intent,p:Record<string,unknown>):W3Query|nu
    validPeriod(p.interval)&&p.dateMeaning==='registered'&&
    (p.supplierCnpj===undefined||goodCnpj(p.supplierCnpj))&&
    (p.commitmentId===undefined||(typeof p.commitmentId==='string'&&NE.test(p.commitmentId)))&&p.pageSize===undefined&&p.cursor===undefined;break;
+ case 'invoice_operational_pending_list':
+   valid=keys(p,['stage','pageSize'])&&p.stage==='pending_operational'&&
+     (p.pageSize===undefined||(Number.isInteger(p.pageSize)&&Number(p.pageSize)>=1&&Number(p.pageSize)<=50));break;
  case 'warehouse_stock_get':
  case 'warehouse_material_locations_list':
    valid=keys(p,intent==='warehouse_stock_get'?['materialId','materialQuery','barcode']:

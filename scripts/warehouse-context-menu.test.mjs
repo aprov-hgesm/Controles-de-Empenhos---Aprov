@@ -61,7 +61,7 @@ test('menu cadastra subposição efetiva em local salvo ou pendente', () => {
   assert.match(center, /addCroquiSubposition\(location\.id, location\.code\)/);
   assert.match(center, /subpositionCount: existing\.subpositionCount \+ 1/);
   assert.match(engine, /children\.length\+spec\.subpositionCount>30/);
-  assert.match(engine, /warehouseNextAvailableLocationCode\(code\+'-00',copiedCodes\)/);
+  assert.match(engine, /warehouseNextAvailableLocationCode\(warehouseSubpositionSequencePrefix\(code\),copiedCodes\)/);
   assert.match(engine, /spec\.objectId\+':extra:'\+i/);
   assert.match(demo, /onAddSubposition=\{object=>/);
   assert.match(demo, /Sem integração com contas, depósitos ou saldos reais/);

@@ -3,10 +3,12 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Next.js version-skew protection: immutable build identity, not runtime secrets.
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID || undefined,
   // O endpoint PWA inclui a imagem PNG no output standalone do Cloud Run.
   // O arquivo é incluído somente na função do ícone, não em todas as funções.
   outputFileTracingIncludes: {
-    '/api/install-icon/*': ['./public/emprovex-logo.png'],
+    '/api/install-icon/*': ['./public/emprovex-logo favicon.png'],
   },
   // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
   // A raiz pública apresenta o institucional sem alterar o URL canônico.
@@ -32,6 +34,25 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        // Somente HTML/RSC da entrada autenticada: scripts _next mantem cache imutavel.
+        source: '/central-empenhos',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/central-depositos',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/central-depositos/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
       {
         source: '/:path*',
         headers: [

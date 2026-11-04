@@ -697,6 +697,7 @@ export function PlatformAdminView({
           <Suspense fallback={<div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">Abrindo visão administrativa...</div>}>
           <AdminWorldHomePanel
             accounts={accounts}
+            workspaces={visibleWorkspaces}
             sessions={sessions}
             loadingDirectory={loadingDirectory}
             directoryError={directoryError}

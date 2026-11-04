@@ -30,6 +30,7 @@ interface WarehouseStatusPayload {
   workspaceId?: string;
   ug?: string;
   claimsUpdated?: boolean;
+  legalAccepted?: boolean | null;
 }
 
 async function requestWarehouseStatus(
@@ -66,6 +67,7 @@ export function WarehouseAccessBoundary({
   const { clear: clearVisualMode } = useVisualMode();
   const [gateState, setGateState] = useState<GateState>('checking');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [legalAcceptedByWarehouseStatus, setLegalAcceptedByWarehouseStatus] = useState(false);
   const [workspaceContext, setWorkspaceContext] =
     useState<SectorWorkspaceContext | null>(null);
 
@@ -75,6 +77,7 @@ export function WarehouseAccessBoundary({
     const denyAccess = () => {
       if (!active) return;
       setGateState('denied');
+      setLegalAcceptedByWarehouseStatus(false);
       setCurrentUser(null);
       setWorkspaceContext(null);
       clearResolvedWorkspaceContext();
@@ -133,6 +136,7 @@ export function WarehouseAccessBoundary({
           return;
         }
 
+        setLegalAcceptedByWarehouseStatus(authorization.status.legalAccepted === true);
         setCurrentUser(currentUser);
         setWorkspaceContext(context);
         setGateState('allowed');
@@ -185,6 +189,7 @@ export function WarehouseAccessBoundary({
       clearVisualMode();
 
       setGateState('denied');
+      setLegalAcceptedByWarehouseStatus(false);
       setCurrentUser(null);
       setWorkspaceContext(null);
 
@@ -225,6 +230,17 @@ export function WarehouseAccessBoundary({
     return <EmprovexAuthLoading hasAuthenticatedIdentity />;
   }
 
+  const operationalSurface = (
+    <WarehouseWorkspaceProvider value={workspaceContext}>
+      {children(workspaceContext)}
+    </WarehouseWorkspaceProvider>
+  );
+
+  // Only a server-verified immutable acceptance, scoped to the same authenticated
+  // UID + workspace + current legal bundle, can skip a second legal GET.
+  // Missing, stale or unreadable acceptance still uses the original gate.
+  if (legalAcceptedByWarehouseStatus) return operationalSurface;
+
   return (
     <LegalAcceptanceGate
       identity={{
@@ -234,9 +250,7 @@ export function WarehouseAccessBoundary({
         ug: workspaceContext.ug,
       }}
     >
-      <WarehouseWorkspaceProvider value={workspaceContext}>
-        {children(workspaceContext)}
-      </WarehouseWorkspaceProvider>
+      {operationalSurface}
     </LegalAcceptanceGate>
   );
 }

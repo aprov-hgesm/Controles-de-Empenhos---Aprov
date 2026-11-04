@@ -33,20 +33,22 @@ function load(path,mocks={},scenarioCache=Object.keys(mocks).length?new Map():sh
 }
 const contracts=load('lib/emprovex-ai/contracts.ts');
 const access={uid:'uid-1',workspaceId:'setor-a',ug:'160416',email:'a@example.com',googleToken:'stub'};
-test('W3.0 — oito contratos fechados e nenhuma selecao arbitraria de dados',()=>{
+test('W3.0 — dez contratos fechados e nenhuma selecao arbitraria de dados',()=>{
   const valid=[
     ['supplier_contact_find',{nameQuery:'Fornecedor Alfa'}],
     ['commitment_get',{commitmentId:'2026NE0066'}],
     ['commitment_total_balance',{commitmentId:'2026NE0066'}],
+    ['commitment_item_search',{materialQuery:'queijo'}],
     ['commitment_previous_open_list',{}],
     ['schedule_sent_history_list',{commitmentId:'2026NE0066'}],
     ['invoice_registration_period_list',{interval:{start:'2026-10-01',endExclusive:'2026-11-01'},dateMeaning:'registered'}],
+    ['invoice_operational_pending_list',{stage:'pending_operational',pageSize:20}],
     ['warehouse_stock_get',{materialQuery:'arroz'}],
     ['warehouse_material_locations_list',{materialId:'mat_'+'a'.repeat(32)}]
   ];
   for(const [intent,params] of valid)
     assert.equal(contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent,params}).intent,intent);
-  assert.equal(Object.keys(contracts.CONTRACTS).length,8);
+  assert.equal(Object.keys(contracts.CONTRACTS).length,10);
   for(const field of ['workspaceId','ug','collection','path','query'])
     assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
       params:{commitmentId:'2026NE0066',[field]:'evil'}}));
@@ -54,6 +56,32 @@ test('W3.0 — oito contratos fechados e nenhuma selecao arbitraria de dados',()
   assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',intent:'commitment_get',
     params:{commitmentId:'2026NE0/../admin'}}));
 });
+test('W3 — pending NFs use only operational stages and never infer unpaid status',async()=>{
+  assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',
+    intent:'invoice_operational_pending_list',params:{stage:'pending_payment'}}));
+  assert.throws(()=>contracts.parseAiQuery({version:'emprovex.ai.query.v1',
+    intent:'invoice_operational_pending_list',params:{stage:'pending_operational',workspaceId:'other'}}));
+  const finance=load('lib/emprovex-ai/financial.ts',{
+    './reader':{
+      coreOperationalQuery:async(scoped,domain,filters,limit)=>{
+        assert.equal(scoped.workspaceId,'setor-a');assert.equal(domain,'invoices');
+        assert.equal(filters.length,0);assert.equal(limit,201);
+        return {rows:[
+          {id:'nf-A',data:{id:'101',localizacaoAtual:'APROVISIONAMENTO',empenhoId:'2026NE0066'}},
+          {id:'nf-B',data:{id:'102',localizacaoAtual:'COMISSAO'}},
+          {id:'nf-C',data:{id:'103',localizacaoAtual:'TESOURARIA'}},
+        ],truncated:false,examined:3};
+      }
+    }
+  });
+  const result=await finance.executeFinancial(access,{intent:'invoice_operational_pending_list',
+    version:'emprovex.ai.query.v1',params:{stage:'pending_operational',pageSize:20}});
+  assert.equal(result.status,'ok');
+  assert.deepEqual(result.data.map(x=>x.recordKey),['nf-A','nf-B']);
+  assert.equal(result.evidence.length,2);
+  assert.match(result.limitations.join(' '),/não comprova pagamento pendente/);
+});
+
 test('W3 — datas relativas em America/Sao_Paulo',()=>{
   const period=load('lib/emprovex-ai/period.ts');
   const now=new Date('2026-10-31T02:30:00Z');
@@ -128,4 +156,108 @@ test('W3.6 — saldo inexistente nao vira zero',async()=>{
     version:'emprovex.ai.query.v1',params:{materialId:'mat_'+'a'.repeat(32)}});
   assert.equal(result.status,'partial');
   assert.equal(result.data.quantity,null);
+});
+
+test('W3.1.8 — arroz resolves longer authorized material descriptions; never returns a fake zero',async()=>{
+ const id1='mat_'+'a'.repeat(32),id2='mat_'+'b'.repeat(32);
+ const warehouse=load('lib/emprovex-ai/warehouse.ts',{
+   './reader':{
+     warehouseQuery:async()=>({rows:[],truncated:false,examined:0}),
+     warehouseMaterialNameSearch:async(_access,name)=>{
+       assert.equal(name,'arroz');
+       return {rows:[
+         {id:id1,data:{workspaceId:'setor-a',ug:'160416',
+           description:'ARROZ PARBOILIZADO TIPO 1',unit:'kg'}},
+         {id:id2,data:{workspaceId:'setor-a',ug:'160416',
+           description:'ARROZ BRANCO TIPO 1',unit:'kg'}}
+       ],examined:25,truncated:false};
+     },
+     warehouseDocument:async()=>{throw Error('Cannot choose an ambiguous material');}
+   },
+   '../warehouse/barcode':{createWarehouseBarcodeId:async()=>''}
+ });
+ const result=await warehouse.executeWarehouse(access,{version:'emprovex.ai.query.v1',
+   intent:'warehouse_material_locations_list',params:{materialQuery:'arroz'}});
+ assert.equal(result.status,'ambiguous');
+ assert.equal(result.coverage,'complete');
+ assert.equal(result.data.candidates.length,2);
+ assert.equal(result.data.candidates[0].materialId,id1);
+ assert.equal(result.data.candidates[1].description,'ARROZ BRANCO TIPO 1');
+ assert.equal(result.examinedDocuments,25);
+});
+test('W3.1.8 — incomplete catalog with a candidate cannot imply uniqueness or zero',async()=>{
+ const id1='mat_'+'a'.repeat(32);
+ const warehouse=load('lib/emprovex-ai/warehouse.ts',{
+   './reader':{
+     warehouseQuery:async()=>({rows:[],truncated:false,examined:0}),
+     warehouseMaterialNameSearch:async()=>({rows:[{id:id1,data:{workspaceId:'setor-a',
+       ug:'160416',description:'ARROZ PARBOILIZADO',unit:'kg'}}],examined:1200,truncated:true}),
+     warehouseDocument:async()=>{throw Error('Should not assume a unique product in a partial scan');}
+   },
+   '../warehouse/barcode':{createWarehouseBarcodeId:async()=>''}
+ });
+ const result=await warehouse.executeWarehouse(access,{version:'emprovex.ai.query.v1',
+   intent:'warehouse_material_locations_list',params:{materialQuery:'arroz'}});
+ assert.equal(result.status,'partial');
+ assert.equal(result.coverage,'incomplete');
+ assert.equal(result.data.candidates.length,1);
+ assert.equal(result.truncated,true);
+ assert.match(result.limitations.join(' '),/parcial/i);
+});
+
+test('W3.1.8 — paginated Warehouse scanner finds arroz in later authorized page',async()=>{
+ const store=load('lib/server/warehouseFirestoreTransaction.ts');
+ const previousFetch=globalThis.fetch;
+ const workspace='setor-a',id='mat_'+'c'.repeat(32);
+ const prefix='warehouse/'+workspace+'/materials/';
+ const fields=(name)=>({description:{stringValue:name},
+   workspaceId:{stringValue:workspace},ug:{stringValue:'160416'}});
+ let calls=0;
+ globalThis.fetch=async (url,options)=>{
+   calls++;
+   assert.match(String(url),/\/warehouse\/setor-a\/materials\?/);
+   assert.equal(options.headers.authorization,'Bearer synthetic-token');
+   const page=new URL(String(url)).searchParams.get('pageToken');
+   const root=String(url).split('/documents/')[0].replace('https://firestore.googleapis.com/v1/','');
+   const doc=(identifier,name)=>({name:root+'/documents/'+prefix+identifier,
+     updateTime:'2026-11-03T00:00:00Z',fields:fields(name)});
+   if(!page)return {ok:true,json:async()=>({documents:[doc('mat_'+'a'.repeat(32),'Queijo')],
+     nextPageToken:'second'})};
+   assert.equal(page,'second');
+   return {ok:true,json:async()=>({documents:[doc(id,'ARROZ PARBOILIZADO TIPO 1')]})};
+ };
+ try {
+   const found=await store.warehouseAdminFindMaterialsByName('synthetic-token',workspace,'arroz',400,12);
+   assert.equal(calls,2);
+   assert.equal(found.rows.length,1);
+   assert.equal(found.examined,2);
+   assert.equal(found.incomplete,false);
+   assert.match(found.rows[0].data.description,/ARROZ/);
+ }finally{globalThis.fetch=previousFetch;}
+});
+test('W3.1.8 — paginated scanner marks overflow and forbids foreign document paths',async()=>{
+ const store=load('lib/server/warehouseFirestoreTransaction.ts');
+ const previousFetch=globalThis.fetch;
+ const documentRoot=url=>String(url).split('/documents/')[0]
+   .replace('https://firestore.googleapis.com/v1/','')+'/documents/';
+ const doc=(root,id,name)=>({name:root+'warehouse/setor-a/materials/'+id,
+   updateTime:'2026-11-03T00:00:00Z',
+   fields:{description:{stringValue:name},workspaceId:{stringValue:'setor-a'},
+     ug:{stringValue:'160416'}}});
+ try {
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[
+     doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz branco'),
+     doc(documentRoot(url),'mat_'+'b'.repeat(32),'Arroz integral'),
+     doc(documentRoot(url),'mat_'+'c'.repeat(32),'Arroz parboilizado')
+   ]})});
+   const result=await store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz',100,2);
+   assert.equal(result.rows.length,2);
+   assert.equal(result.incomplete,true);
+   globalThis.fetch=async(url)=>({ok:true,json:async()=>({documents:[{
+     ...doc(documentRoot(url),'mat_'+'a'.repeat(32),'Arroz'),
+     name:documentRoot(url)+'warehouse/setor-b/materials/mat_'+'a'.repeat(32)
+   }]})});
+   await assert.rejects(()=>store.warehouseAdminFindMaterialsByName('synthetic-token','setor-a','arroz'),
+     /WAREHOUSE_MATERIAL_DISCOVERY_SCOPE/);
+ }finally{globalThis.fetch=previousFetch;}
 });

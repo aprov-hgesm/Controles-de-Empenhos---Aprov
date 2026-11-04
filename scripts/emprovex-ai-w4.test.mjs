@@ -10,8 +10,9 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),require=createR
 const {interpret,makeW3Query,validateModelCandidate,ACCEPTED_INTENTS,FAMILIES}=require('../.w4-dist/index.cjs');
 const now=new Date('2026-10-31T14:00:00Z');
 const run=(message,extra={})=>interpret({message,now,...extra});
-test('W4 catalog: 26 families, 8 W3 contracts and closed adapter',()=>{
- assert.equal(FAMILIES.length,26);assert.equal(ACCEPTED_INTENTS.length,8);
+test('W4 catalog: 26 families, 10 W3 contracts and closed adapter',()=>{
+ assert.equal(FAMILIES.length,26);assert.equal(ACCEPTED_INTENTS.length,10);
+ assert.equal(makeW3Query('commitment_item_search',{materialQuery:'queijo'}).intent,'commitment_item_search');
  assert.equal(makeW3Query('commitment_get',{commitmentId:'2026NE66',workspaceId:'evil'}),null);
  assert.equal(makeW3Query('warehouse_stock_get',{materialQuery:'arroz',ug:'160416'}),null);
  assert.equal(makeW3Query('commitment_get',{commitmentId:'2026NE66'}).intent,'commitment_get');
@@ -21,6 +22,7 @@ test('W4 synthetic integrated scenarios A–K without model or DB',()=>{
   ['Quanto resta da NE 2026NE66?','DETERMINISTIC','commitment_total_balance'],
   ['Me passa o e-mail do fornecedor Alfa.','DETERMINISTIC','supplier_contact_find'],
   ['Quais NFs foram cadastradas ontem?','DETERMINISTIC','invoice_registration_period_list'],
+  ['Quais notas fiscais pendentes?','DETERMINISTIC','invoice_operational_pending_list'],
   ['Quanto arroz temos?','DETERMINISTIC','warehouse_stock_get'],
   ['Quanto resta do empeno 2026NE66?','DETERMINISTIC','commitment_total_balance'],
   ['Como construir um foguete?','OUT_OF_SCOPE','unknown'],
@@ -35,6 +37,18 @@ test('W4 synthetic integrated scenarios A–K without model or DB',()=>{
  assert.equal(run('Quanto resta da NE 2026NE66?').query.params.commitmentId,'2026NE66');
  assert.equal(run('Quais NFs cadastradas ontem').query.params.interval.value,'yesterday');
 });
+test('W4 never conflates operational pending NFs with payment debts or ignored filters',()=>{
+  const ok=run('Quais notas fiscais pendentes?');
+  assert.equal(ok.route,'DETERMINISTIC');
+  assert.equal(ok.query.intent,'invoice_operational_pending_list');
+  assert.equal(ok.query.params.stage,'pending_operational');
+  for(const phrase of [
+    'Quais notas fiscais pendentes de pagamento?',
+    'Quais notas fiscais pendentes ontem?',
+    'Quais notas fiscais pendentes do CNPJ 11.444.777/0001-61?'
+  ])assert.notEqual(run(phrase).route,'DETERMINISTIC',phrase);
+});
+
 test('W4 contextual isolation: same trusted scope and TTL only',()=>{
  const scope={sessionId:'s1',workspaceId:'ws1'};
  const first=run('Onde esta o arroz?',{scope});

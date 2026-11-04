@@ -3,7 +3,7 @@
  * Nunca recebe caminho/colecao do request do cliente.
  */
 import firebaseConfig from '../../firebase-applet-config.json';
-import { warehouseAdminBatchRead, warehouseAdminReadScopedQuery,
+import { warehouseAdminFindMaterialsByName,warehouseAdminBatchRead, warehouseAdminReadScopedQuery,
   type WarehouseAdminDocument } from '../server/warehouseFirestoreTransaction';
 import { AiExecutionError } from './response';
 import {w6DataTarget} from './integration/w6Isolation';
@@ -144,7 +144,8 @@ export async function warehouseQuery(
   if(max<1||max>101||!Number.isInteger(max))throw new AiExecutionError('AI_WAREHOUSE_LIMIT_INVALID',400);
   const filters=filter?[filter]:[];
   if(filter && !((domain==='locationBalances'&&filter.field==='materialId')
-    ||(domain==='barcodes'&&filter.field==='materialId')))throw new AiExecutionError('AI_WAREHOUSE_FILTER_INVALID',400);
+    ||(domain==='barcodes'&&filter.field==='materialId')
+    ||(domain==='materials'&&filter.field==='description')))throw new AiExecutionError('AI_WAREHOUSE_FILTER_INVALID',400);
   const isolated=w6DataTarget();
   if(isolated){
     const base=firestoreRoot('warehouse');
@@ -174,6 +175,37 @@ export async function warehouseQuery(
   return {rows:rows.map(row=>({id:row.path.split('/').at(-1)!,data:row.data})),
     truncated:rows.length>=max,examined:rows.length};
 }
+/** Discovery by name, without exposing arbitrary collection paths.
+ * In production, use the Warehouse's existing IAM-backed paginated catalog.
+ * W6 test isolation continues through the deliberately bounded W6 target.
+ */
+export async function warehouseMaterialNameSearch(
+ access:AiAccess,term:string
+):Promise<{rows:AiRow[];truncated:boolean;examined:number}>{
+ const matches=(value:unknown):boolean=>{
+   if(typeof value!=='string')return false;
+   const normalized=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+     .toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+   const name=normalized(value),query=normalized(term);
+   return query.length>=2&&(name===query||name.startsWith(query+' ')||
+     name.includes(' '+query+' ')||name.endsWith(' '+query));
+ };
+ if(w6DataTarget()){
+   const result=await warehouseQuery(access,'materials',null,101);
+   const rows=result.rows.filter(row=>
+     matches(row.data.description)||
+     (Array.isArray(row.data.aliases)&&row.data.aliases.some(matches)));
+   return {rows:rows.slice(0,12),truncated:result.truncated||rows.length>12,
+     examined:result.examined};
+ }
+ const found=await warehouseAdminFindMaterialsByName(
+   access.googleToken,access.workspaceId,term,1200,12
+ );
+ for(const row of found.rows)assertWarehouseRow(row,access);
+ return {rows:found.rows.map(row=>({id:row.path.split('/').at(-1)!,data:row.data})),
+   truncated:found.incomplete,examined:found.examined};
+}
+
 function assertWarehouseRow(row:WarehouseAdminDocument,access:AiAccess):void {
   if(row.data.workspaceId!==access.workspaceId||row.data.ug!==access.ug)
     throw new AiExecutionError('AI_WAREHOUSE_SCOPE_INTEGRITY',503);

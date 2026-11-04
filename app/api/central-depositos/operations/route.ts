@@ -167,6 +167,9 @@ export async function POST(request: NextRequest) {
       case 'STRUCTURE_LAYOUT_APPLY':
         result=await warehouseStructureLayoutApplyServer(access,body.input);
         break;
+      case 'SHELF_MIGRATION':
+        // Migração pontual da 6ª Bda concluída. Bloqueada globalmente após homologação.
+        return reject('WAREHOUSE_SHELF_MIGRATION_CLOSED',410);
       case 'CROQUI_READ':
         result=await warehouseCroquiReadServer(access,body.input);
         break;

@@ -27,6 +27,13 @@ runInNewContext(ts.transpileModule(sequenceSource,{compilerOptions:{
   exports:sequenceExports,
   require:()=>{throw new Error('Unexpected sequence helper import');},
 });
+const shelfExports={};
+runInNewContext(ts.transpileModule(source('lib/warehouse/subpositionCode.ts'),{compilerOptions:{
+  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,
+}}).outputText,{
+  exports:shelfExports,
+  require:()=>{throw new Error('Unexpected shelf helper import');},
+});
 const uiSource=source('features/warehouse/components/WarehouseCroquisR1Operational.tsx');
 const routeSource=source('app/api/central-depositos/operations/route.ts');
 const panelSource=source('features/warehouse/components/WarehouseDepotsOperational.tsx');
@@ -84,6 +91,7 @@ function createStore(){
     };
     if(module==='../warehouse/layoutCollision')return collisionExports;
     if(module==='../warehouse/locationCodeSequence')return sequenceExports;
+    if(module==='../warehouse/subpositionCode')return shelfExports;
     if(module==='../warehouse/location')return {
       WAREHOUSE_LOCATION_SCHEMA_VERSION:'warehouse_location_v1',
       normalizeWarehouseLogicalCode:value=>typeof value==='string'&&/^[A-Z0-9-]{1,32}$/.test(value)
@@ -138,7 +146,7 @@ test('um salvamento cria local, subposições e croqui no mesmo commit',async()=
   assert.equal(store.rowsOf('layouts').length,1);
   assert.equal(store.rowsOf('structureCodeClaims').length,3);
   const subs=store.rowsOf('locations').filter(x=>x.data.kind==='SUBPOSITION');
-  assert.deepEqual(subs.map(x=>x.data.code).sort(),['EST-01-01','EST-01-02']);
+  assert.deepEqual(subs.map(x=>x.data.code).sort(),['PRAT-01','PRAT-02']);
   assert.ok(subs.every(x=>x.data.parentLocationId===result.createdLocations[0].id));
 });
 test('repetir a mesma operação não gera códigos, subposições nem croquis extras',async()=>{
@@ -173,7 +181,10 @@ test('duplicação de estante clona os códigos filhos sem copiar estoque',async
   assert.equal(second.layout.version,2);
   assert.equal(store.rowsOf('locations').length,6);
   assert.deepEqual(store.rowsOf('locations').filter(x=>x.data.code.startsWith('EST-02'))
-    .map(x=>x.data.code).sort(),['EST-02','EST-02-01','EST-02-02']);
+    .map(x=>x.data.code).sort(),['EST-02']);
+  assert.deepEqual(store.rowsOf('locations').filter(x=>
+    x.data.kind==='SUBPOSITION' && x.data.parentLocationId===second.createdLocations[0].id)
+    .map(x=>x.data.code).sort(),['PRAT-01','PRAT-02']);
   assert.equal(store.rowsOf('locationBalances').length,0);
 });
 test('copia de estante com inclusao pelo menu cria subposicao extra no mesmo commit',async()=>{
@@ -188,7 +199,10 @@ test('copia de estante com inclusao pelo menu cria subposicao extra no mesmo com
   }));
   assert.equal(second.createdLocations.length,1);
   assert.deepEqual(store.rowsOf('locations').filter(x=>x.data.code.startsWith('EST-02'))
-    .map(x=>x.data.code).sort(),['EST-02','EST-02-01','EST-02-02','EST-02-03']);
+    .map(x=>x.data.code).sort(),['EST-02']);
+  assert.deepEqual(store.rowsOf('locations').filter(x=>
+    x.data.kind==='SUBPOSITION' && x.data.parentLocationId===second.createdLocations[0].id)
+    .map(x=>x.data.code).sort(),['PRAT-01','PRAT-02','PRAT-03']);
   assert.equal(store.rowsOf('locationBalances').length,0);
 });
 
@@ -328,19 +342,19 @@ test('referências diferentes não podem compartilhar o mesmo código operaciona
 test('subposição pode ser criada, renomeada e inativada em versões posteriores',async()=>{
   const store=createStore(),created=await store.apply(access,input());
   const parent=created.createdLocations[0].id;
-  const child=store.rowsOf('locations').find(x=>x.data.code==='EST-01-01')?.data;
+  const child=store.rowsOf('locations').find(x=>x.data.code==='PRAT-01')?.data;
   const version=await store.apply(access,input({
     operationId:'ffffffff-ffff-4fff-ffff-ffffffffffff',
     objects:created.layout.objects,
     baseLayoutId:created.layout.id,expectedVersion:1,createLocals:[],
-    createSubpositions:[{parentLocationId:parent,code:'EST-01-03',name:'Subposição 03',description:null}],
+    createSubpositions:[{parentLocationId:parent,code:'PRAT-03',name:'Prateleira 03',description:null}],
     editLocals:[{id:parent,name:'Estante reformada',description:null}],
     archiveSubpositionIds:[child.id],
   }));
   assert.equal(version.layout.version,2);
   assert.equal(store.rowsOf('locations').find(x=>x.data.id===child.id).data.status,'inactive');
   assert.equal(store.rowsOf('locations').find(x=>x.data.id===parent).data.name,'Estante reformada');
-  assert.equal(store.rowsOf('locations').filter(x=>x.data.code==='EST-01-03').length,1);
+  assert.equal(store.rowsOf('locations').filter(x=>x.data.code==='PRAT-03').length,1);
 });
 
 
