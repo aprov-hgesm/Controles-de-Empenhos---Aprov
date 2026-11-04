@@ -155,13 +155,28 @@ export interface MembroComissao {
   nomeCompleto: string;
 }
 
+export type ComissaoVistoResponsavel = 'FISCAL_ADMINISTRATIVO' | 'ORDENADOR_DESPESAS';
+
 export interface Comissao {
   id: string;
   mesReferencia: string; // 'YYYY-MM'
   boletimNumero: string;
   boletimData: string;
   presidente: MembroComissao;
-  auxiliares: MembroComissao[]; // Array de 3 auxiliares
+  auxiliares: MembroComissao[]; // De zero a três auxiliares (registros legados continuam válidos)
+  vistoResponsavel?: ComissaoVistoResponsavel; // Ausente em registros antigos = Fiscal Administrativo
+  /** Cada alteração conserva a composição anterior para segundas vias dos TRs já emitidos. */
+  historicoAlteracoes?: Array<{
+    substituidaEm: string;
+    substituidaPorUid: string;
+    dados: {
+      boletimNumero: string;
+      boletimData: string;
+      presidente: MembroComissao;
+      auxiliares: MembroComissao[];
+      vistoResponsavel?: ComissaoVistoResponsavel;
+    };
+  }>;
 }
 
 export type AlertType = 'INFORMATIVO' | 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERADO';

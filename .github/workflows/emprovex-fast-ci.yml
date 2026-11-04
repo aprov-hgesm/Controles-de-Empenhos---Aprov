@@ -46,6 +46,8 @@ jobs:
         run: node --test scripts/critical-cross-route-navigation.test.mjs
       - name: TypeScript sem erros
         run: npm run typecheck
+      - name: Comissões R1 — OM externa, edição, auxiliares e visto (legado)
+        run: node --test scripts/commission-r1-regression.test.mjs
       - name: Zero gravações Warehouse pelo SDK do cliente
         run: WAREHOUSE_R2_STRICT=1 node scripts/warehouse-r2-direct-write-audit.mjs
       - name: Testes unitários afetados (relatório acumulado, gate estrito)
