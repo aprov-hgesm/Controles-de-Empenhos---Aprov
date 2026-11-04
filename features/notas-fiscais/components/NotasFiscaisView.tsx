@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
+import { EmpenhoDocumentMenu } from '../../../components/EmpenhoDocumentMenu';
+import { InvoiceAuthenticityDocumentActions, InvoiceOtherDocumentsActions } from '../../../components/InvoiceSupplementalDocuments';
 import { NfEmpenhoPicker } from './NfEmpenhoPicker';
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
 import { InvoiceMirrorDocumentActions } from '../../../components/InvoiceMirrorDocumentActions';
@@ -49,6 +50,9 @@ interface NotasFiscaisViewContext {
   handleEmpenhoDocumentUploaded: (...args: any[]) => any;
   handleInvoiceDocumentUploaded: (...args: any[]) => any;
   handleInvoiceMirrorDocumentUploaded: (...args: any[]) => any;
+  handleInvoiceAuthenticityUploaded: (...args: any[]) => any;
+  handleInvoiceOtherDocumentUploaded: (...args: any[]) => any;
+  handleInvoiceOtherDocumentRemoved: (...args: any[]) => any;
   handleMarkComissao: (...args: any[]) => any;
   handleMarkTesouraria: (...args: any[]) => any;
   handleSaveSpedNup: (...args: any[]) => any;
@@ -118,7 +122,7 @@ const getInvoiceSortTimestamp = (invoice: Invoice): number => {
 };
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, organizationShortName, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, organizationShortName, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleInvoiceAuthenticityUploaded, handleInvoiceOtherDocumentUploaded, handleInvoiceOtherDocumentRemoved, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const { mode } = useVisualMode();
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [visibleInvoiceCount, setVisibleInvoiceCount] = useState(24);
@@ -706,9 +710,12 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                     <Check className="w-3 h-3" /> Termo Nº {inv.termoNumero} ({formatDateOnly(inv.termoEmissaoDate || inv.registeredAt || inv.issueDate)})
                                   </span>
                                 )}
-                                <span className="text-gray-400 text-xs font-semibold">
-                                  Empenho: <span className="font-bold text-gray-600">{inv.empenhoId}</span>
-                                </span>
+                                <EmpenhoDocumentMenu
+                                  empenho={targetEmpenho}
+                                  empenhoId={inv.empenhoId}
+                                  user={user}
+                                  onNotify={showToast}
+                                />
                               </div>
                               <h4 className="text-base font-bold text-[#0b1c30] mt-1">{inv.supplier}</h4>
                             </div>
@@ -751,11 +758,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               onDocumentUploaded={handleInvoiceMirrorDocumentUploaded}
                               onNotify={showToast}
                             />
-                            <EmpenhoDocumentActions
-                              empenho={targetEmpenho}
+                            <InvoiceAuthenticityDocumentActions
+                              invoice={inv}
                               user={user}
-                              variant="panel"
-                              onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                              onDocumentUploaded={handleInvoiceAuthenticityUploaded}
                               onNotify={showToast}
                             />
                             {requiresTR ? (
@@ -779,6 +785,14 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               </section>
                             )}
                           </div>
+
+                          <InvoiceOtherDocumentsActions
+                            invoice={inv}
+                            user={user}
+                            onDocumentUploaded={handleInvoiceOtherDocumentUploaded}
+                            onDocumentRemoved={handleInvoiceOtherDocumentRemoved}
+                            onNotify={showToast}
+                          />
 
                           <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div>
@@ -996,8 +1010,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               <p className="text-xs font-black text-[#001453] uppercase tracking-wider">Documento de Liquidação Consolidada</p>
                               <p className="text-xs text-gray-600 font-medium mt-1">
                                 {requiresTR
-                                  ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Espelho da Nota Fiscal (quando anexado) + Termo de Recebimento em um único PDF.'
-                                  : `Une Nota de Empenho + Nota Fiscal + Espelho da Nota Fiscal (quando anexado) em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
+                                  ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Espelho da Nota Fiscal (quando anexado) + Certificado de Autenticidade (opcional) + Outros Documentos (quando anexados) + Termo de Recebimento em um único PDF.'
+                                  : `Une Nota de Empenho + Nota Fiscal (quando houver) + Espelho da Nota Fiscal (quando anexado) + Certificado de Autenticidade (opcional) + Outros Documentos (quando anexados) em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
                               </p>
                             </div>
                             <button

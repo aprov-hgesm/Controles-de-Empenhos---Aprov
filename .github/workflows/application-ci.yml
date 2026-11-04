@@ -466,6 +466,9 @@ jobs:
       - name: EMPROVEX final experience guard
         run: npm run verify:experience-finalization
 
+      - name: Nota Fiscal certificates, legacy contracts and consolidated PDF order
+        run: node --test scripts/verify-invoice-authenticity-document.test.mjs && node scripts/verify-invoice-mirror-document.mjs
+
       - name: Production build
         run: npm run build
 

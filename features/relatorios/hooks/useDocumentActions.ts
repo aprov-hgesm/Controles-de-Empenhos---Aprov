@@ -553,6 +553,17 @@ export function useDocumentActions(context:DocumentActionsContext){
         await appendPdf(await invoiceMirrorBlob.arrayBuffer());
       }
 
+      // Anexos opcionais: não modificam os pré-requisitos anteriores do consolidado.
+      if (inv.certificadoAutenticidadePdf) {
+        const authenticityBlob = await fetchInvoicePdfBlob(user, inv.certificadoAutenticidadePdf);
+        await appendPdf(await authenticityBlob.arrayBuffer());
+      }
+
+      for (const document of inv.outrosDocumentosPdf || []) {
+        const supplementalBlob = await fetchInvoicePdfBlob(user, document);
+        await appendPdf(await supplementalBlob.arrayBuffer());
+      }
+
       if (termo) {
         await appendPdf(termo.doc.output('arraybuffer'));
       }

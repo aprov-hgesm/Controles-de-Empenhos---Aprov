@@ -192,6 +192,15 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.espelhoNotaFiscalPdfVersions?.length
         ? { espelhoNotaFiscalPdfVersions: editingInvoice.espelhoNotaFiscalPdfVersions }
         : {}),
+      ...(editingInvoice?.certificadoAutenticidadePdf
+        ? { certificadoAutenticidadePdf: editingInvoice.certificadoAutenticidadePdf }
+        : {}),
+      ...(editingInvoice?.certificadoAutenticidadePdfVersions?.length
+        ? { certificadoAutenticidadePdfVersions: editingInvoice.certificadoAutenticidadePdfVersions }
+        : {}),
+      ...(editingInvoice?.outrosDocumentosPdf?.length
+        ? { outrosDocumentosPdf: editingInvoice.outrosDocumentosPdf }
+        : {}),
     };
      // Update received quantities in empenhos (applying the new invoice quantities)
     let updatedTargetEmpenho: Empenho | null = null;
@@ -422,6 +431,69 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       )
     );
     if (user) await saveInvoice(user.uid, updatedInvoice);
+  };
+
+  const handleInvoiceAuthenticityUploaded = async (
+    invoiceRecordKey: string,
+    document: InvoicePdfDocument
+  ): Promise<void> => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    if (!targetInvoice || !user) throw new Error('Nota Fiscal não encontrada para vincular o certificado.');
+    const prior = targetInvoice.certificadoAutenticidadePdfVersions ||
+      (targetInvoice.certificadoAutenticidadePdf ? [targetInvoice.certificadoAutenticidadePdf] : []);
+    const versions = [...prior, document]
+      .filter((item, index, all) => all.findIndex((candidate) => candidate.pathname === item.pathname) === index)
+      .slice(-25);
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      certificadoAutenticidadePdf: document,
+      certificadoAutenticidadePdfVersions: versions,
+    };
+    await saveInvoice(user.uid, updatedInvoice);
+    setInvoices((current) => current.map((invoice) =>
+      getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice
+    ));
+  };
+
+  const handleInvoiceOtherDocumentUploaded = async (
+    invoiceRecordKey: string,
+    document: InvoicePdfDocument
+  ): Promise<void> => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    if (!targetInvoice || !user) throw new Error('Nota Fiscal não encontrada para vincular o documento.');
+    const prior = targetInvoice.outrosDocumentosPdf || [];
+    if (prior.length >= 12) throw new Error('Limite de 12 PDFs complementares por Nota Fiscal.');
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      outrosDocumentosPdf: [...prior, document]
+        .filter((item, index, all) => all.findIndex((candidate) => candidate.pathname === item.pathname) === index),
+    };
+    await saveInvoice(user.uid, updatedInvoice);
+    setInvoices((current) => current.map((invoice) =>
+      getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice
+    ));
+  };
+
+  const handleInvoiceOtherDocumentRemoved = async (
+    invoiceRecordKey: string,
+    documentId: string
+  ): Promise<void> => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    if (!targetInvoice || !user) throw new Error('Nota Fiscal não encontrada para remover o anexo.');
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      outrosDocumentosPdf: (targetInvoice.outrosDocumentosPdf || []).filter((doc) => doc.id !== documentId),
+    };
+    await saveInvoice(user.uid, updatedInvoice);
+    setInvoices((current) => current.map((invoice) =>
+      getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice
+    ));
   };
 
   const handleEditInvoice = (invoice: Invoice) => {
@@ -949,6 +1021,9 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     handleSaveInvoice,
     handleInvoiceDocumentUploaded,
     handleInvoiceMirrorDocumentUploaded,
+    handleInvoiceAuthenticityUploaded,
+    handleInvoiceOtherDocumentUploaded,
+    handleInvoiceOtherDocumentRemoved,
     handleEditInvoice,
     handleDeleteInvoice,
     handleDeleteAllInvoices,

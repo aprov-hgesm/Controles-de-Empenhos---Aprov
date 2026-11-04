@@ -146,6 +146,11 @@ export interface Invoice {
   /** Espelho da Nota Fiscal: anexo opcional usado no consolidado de liquidação. */
   espelhoNotaFiscalPdf?: InvoicePdfDocument;
   espelhoNotaFiscalPdfVersions?: InvoicePdfDocument[];
+  /** Certificado opcional de autenticidade da NF. A versão atual entra no consolidado. */
+  certificadoAutenticidadePdf?: InvoicePdfDocument;
+  certificadoAutenticidadePdfVersions?: InvoicePdfDocument[];
+  /** Outros PDFs opcionais, em ordem de inclusão. Cada arquivo mantém identidade própria. */
+  outrosDocumentosPdf?: InvoicePdfDocument[];
   /** Estado da fatia NF → estoque; ausente para NFs anteriores ao cutoff ou tenants sem o piloto. */
   warehouseIntegration?: WarehouseInvoiceIntegrationState;
 }

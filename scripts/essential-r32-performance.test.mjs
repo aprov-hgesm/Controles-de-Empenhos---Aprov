@@ -14,7 +14,13 @@ test('Modo Essencial limita apenas cartões de NF, sem reduzir dados ou ações'
   assert.match(nf, /handleDownloadLiquidacaoConsolidada\(inv\)/);
   assert.match(nf, /<InvoiceDocumentActions/);
   assert.match(nf, /<InvoiceMirrorDocumentActions/);
-  assert.match(nf, /<EmpenhoDocumentActions/);
+  // Consulta à NE preservada no cabeçalho, sem reintroduzir cartão pesado.
+  assert.match(nf, /<EmpenhoDocumentMenu/);
+  const menu = source('components/EmpenhoDocumentMenu.tsx');
+  assert.match(menu, /runEmpenhoPdfAction/);
+  for (const action of ["'view'", "'print'", "'download'"]) {
+    assert.ok(menu.includes(action), 'Ação da NE ausente: ' + action);
+  }
 });
 
 test('Histórico de tela é cache curto, isolado e sem afetar consultas completas', () => {
