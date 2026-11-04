@@ -13,6 +13,7 @@ import {
   SECTOR_AUTH_PROVIDER,
   normalizePlatformEmail,
   normalizeUnitUg,
+  resolveSectorType,
   validatePlatformAccount,
   validateWorkspace,
   type PlatformAccount,
@@ -125,6 +126,9 @@ async function resolveAndBindExternalIdentity(
     if (validateWorkspace(workspace).length > 0) failIdentityResolution('WORKSPACE_INVALID');
     if (workspace.status !== 'active') failIdentityResolution('WORKSPACE_DISABLED');
     if (workspace.id !== account.workspaceId) failIdentityResolution('WORKSPACE_ID_MISMATCH');
+    if (resolveSectorType(workspace.sectorType) !== resolveSectorType(account.sectorType)) {
+      failIdentityResolution('SECTOR_TYPE_MISMATCH');
+    }
     if (normalizePlatformEmail(workspace.authorizedEmail) !== normalizedEmail) {
       failIdentityResolution('WORKSPACE_EMAIL_MISMATCH');
     }
@@ -237,6 +241,7 @@ export async function resolveAuthenticatedWorkspaceContext(
       status: 'sector',
       email: normalizedEmail,
       accountType: 'sector',
+      sectorType: resolveSectorType(workspace.sectorType),
       workspaceId: workspace.id,
       workspaceName: workspace.name,
       ug: normalizeUnitUg(workspace.ug) || null,

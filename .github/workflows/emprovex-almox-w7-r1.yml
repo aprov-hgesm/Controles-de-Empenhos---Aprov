@@ -1,0 +1,39 @@
+name: EMPROVEX Almoxarifado W7 R1-D - isolated materials
+on:
+  push:
+    branches:
+      - feat/emprovex-almox-r1d-w7-materials
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'features/almoxarifado/catalogo/**'
+      - 'scripts/emprovex-almox-w7-materials.test.mjs'
+      - '.github/workflows/emprovex-almox-w7-r1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: almox-w7-r1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  materials:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W7 materials synthetic fixtures
+        run: node --test scripts/emprovex-almox-w7-materials.test.mjs
+      - name: W1 and Warehouse regression
+        run: |
+          node --test scripts/emprovex-almox-w1.test.mjs
+          node --test scripts/emprovex-almox-w5.test.mjs
+      - name: Next build (no deploy)
+        run: npm run build

@@ -1,0 +1,45 @@
+name: EMPROVEX Almoxarifado W5 R1-C - isolated integration
+on:
+  push:
+    branches:
+      - feat/emprovex-almox-r1-w5-integration
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/almoxarifado/**'
+      - 'lib/server/almoxarifadoPreview.ts'
+      - 'app/api/almoxarifado/**'
+      - 'features/almoxarifado/**'
+      - 'app/almoxarifado/page.tsx'
+      - 'scripts/emprovex-almox-w5.test.mjs'
+      - '.github/workflows/emprovex-almox-w5-r1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: almox-w5-r1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: W1 identity and isolation regression
+        run: node --test scripts/emprovex-almox-w1.test.mjs
+      - name: Synthetic W2 W3 W4 W5
+        run: |
+          node --test scripts/emprovex-almox-w2-siscofis-parser.test.mjs
+          node --test scripts/emprovex-almox-w3.test.mjs
+          node --test scripts/emprovex-almox-w4-separation-pdf.test.mjs
+          node --test scripts/emprovex-almox-w5.test.mjs
+      - name: Next build (no deployment)
+        run: npm run build

@@ -1,0 +1,35 @@
+name: EMPROVEX Almoxarifado W2 R1-A - parser isolated certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/almoxarifado/siscofisRequest*.ts'
+      - 'scripts/emprovex-almox-w2-siscofis-parser.test.mjs'
+      - 'scripts/fixtures/siscofis-request-synthetic-r1.txt'
+      - '.github/workflows/emprovex-almox-w2-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: almox-w2-r1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parser-certification:
+    name: W2 R1-A - TypeScript and synthetic TXT/PDF tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Pinned dependencies
+        run: npm ci
+      - name: TypeScript strict
+        run: npm run typecheck
+      - name: Deterministic parser fixtures (synthetic only)
+        run: node --test scripts/emprovex-almox-w2-siscofis-parser.test.mjs

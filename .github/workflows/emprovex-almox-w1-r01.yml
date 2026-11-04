@@ -1,0 +1,46 @@
+name: EMPROVEX Almoxarifado W1 R0.1 - isolated certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'lib/sectorProvisioning.ts'
+      - 'lib/server/warehouseAccess.ts'
+      - 'lib/server/warehouseMobileTrust.mjs'
+      - 'scripts/emprovex-almox-w1*.mjs'
+      - '.github/workflows/emprovex-almox-w1-r01.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: almox-w1-r01-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-certification:
+    name: W1 R0.1 - typecheck, tests, build and emulators
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: TypeScript strict
+        run: npm run typecheck
+      - name: W1 R0.1 functional and regression tests
+        run: node --test scripts/emprovex-almox-w1.test.mjs
+      - name: Build - no deploy
+        run: npm run build
+      - name: Firestore Auth/Rules isolation - same UG, distinct modalities
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/emprovex-almox-w1-isolation-emulator.test.mjs"
+      - name: Existing Warehouse multitenant/Auth security regression
+        run: npm run test:central-depositos-external-security

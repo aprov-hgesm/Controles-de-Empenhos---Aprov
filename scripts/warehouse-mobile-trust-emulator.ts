@@ -16,7 +16,7 @@ const project='demo-emprovex-security',db='emprovex-warehouse',ws='hgesm-aprov',
 const root='projects/'+project+'/databases/'+db+'/documents';
 const base='http://127.0.0.1:8080/v1/';
 const actor={uid:'mobile-trust-tester',email:'tester@example.invalid',
-  workspaceId:ws,ug,claimsUpdated:false};
+  workspaceId:ws,ug,sectorType:'aprovisionamento' as const,claimsUpdated:false};
 const matId='mat_'+'a'.repeat(32),locId='loc_'+'b'.repeat(32);
 const invId='inv_'+'c'.repeat(32),itemId='invit_'+'d'.repeat(64);
 const fields=(value:Record<string,unknown>):Record<string,unknown>=>

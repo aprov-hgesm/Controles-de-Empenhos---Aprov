@@ -17,7 +17,7 @@ const ws='hgesm-aprov',ug='160416';
 const empId='read-r1-empenho-01',nfKey='read-r1-invoice-01',nfId='2026NF810001';
 const itemId='read-r1-item-01';
 const actor={uid:'read-r1-emulator-uid',email:'read-r1@example.invalid',
-  workspaceId:ws,ug,claimsUpdated:false};
+  workspaceId:ws,ug,sectorType:'aprovisionamento' as const,claimsUpdated:false};
 const parent=(database:string)=>'projects/'+project+'/databases/'+database+'/documents';
 const endpoint='http://127.0.0.1:8080/v1/';
 
