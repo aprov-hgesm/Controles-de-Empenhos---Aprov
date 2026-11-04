@@ -14,7 +14,7 @@ import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { EmprovexBorderBeam } from '../../../components/visual/EmprovexBorderBeam';
-import type { Comissao, Empenho, Invoice } from '../../../lib/types';
+import type { Comissao, ComissaoVistoResponsavel, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { loadAllInvoicesHistory, loadAllInvoicesHistoryForDisplay, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
@@ -33,6 +33,7 @@ interface NotasFiscaisViewContext {
   comissaoPresNome: any;
   comissaoPresPosto: any;
   comissoes: Comissao[];
+  organizationShortName: string;
   editingInvoice: Invoice | null;
   empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
@@ -117,13 +118,15 @@ const getInvoiceSortTimestamp = (invoice: Invoice): number => {
 };
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, organizationShortName, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfPdfFile, setNfPdfFile, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const { mode } = useVisualMode();
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [visibleInvoiceCount, setVisibleInvoiceCount] = useState(24);
   // O PDF em rascunho pertence à sessão operacional, não à aba montada.
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
   const [isSavingComissao, setIsSavingComissao] = useState(false);
+  const [editingComissaoId, setEditingComissaoId] = useState<string | null>(null);
+  const [comissaoVistoResponsavel, setComissaoVistoResponsavel] = useState<ComissaoVistoResponsavel>('FISCAL_ADMINISTRATIVO');
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
   const [spedNupDrafts, setSpedNupDrafts] = useState<Record<string, string>>({});
@@ -324,11 +327,48 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     }
   };
 
+  const cancelComissaoEditing = () => {
+    setEditingComissaoId(null);
+    setComissaoVistoResponsavel('FISCAL_ADMINISTRATIVO');
+    setComissaoBoletimNum('');
+    setComissaoBoletimDate('');
+    setComissaoPresNome('');
+    setComissaoAux1Nome('');
+    setComissaoAux2Nome('');
+    setComissaoAux3Nome('');
+  };
+
+  const startComissaoEditing = (comissao: Comissao) => {
+    setEditingComissaoId(comissao.id);
+    setComissaoMes(comissao.mesReferencia);
+    setComissaoBoletimNum(comissao.boletimNumero);
+    setComissaoBoletimDate(comissao.boletimData);
+    setComissaoPresPosto(comissao.presidente.postoGraduacao);
+    setComissaoPresNome(comissao.presidente.nomeCompleto);
+    const auxiliaries = (comissao.auxiliares || []).filter((aux) => aux?.nomeCompleto?.trim());
+    setComissaoAux1Posto(auxiliaries[0]?.postoGraduacao || 'Tenente');
+    setComissaoAux1Nome(auxiliaries[0]?.nomeCompleto || '');
+    setComissaoAux2Posto(auxiliaries[1]?.postoGraduacao || 'Sargento');
+    setComissaoAux2Nome(auxiliaries[1]?.nomeCompleto || '');
+    setComissaoAux3Posto(auxiliaries[2]?.postoGraduacao || 'Cabo');
+    setComissaoAux3Nome(auxiliaries[2]?.nomeCompleto || '');
+    setComissaoVistoResponsavel(comissao.vistoResponsavel === 'ORDENADOR_DESPESAS'
+      ? 'ORDENADOR_DESPESAS'
+      : 'FISCAL_ADMINISTRATIVO');
+  };
+
   const saveComissaoWithFeedback = async () => {
     if (isSavingComissao) return;
     setIsSavingComissao(true);
     try {
-      await handleSaveComissao();
+      const saved = await handleSaveComissao({
+        editingId: editingComissaoId,
+        vistoResponsavel: comissaoVistoResponsavel,
+      });
+      if (saved) {
+        setEditingComissaoId(null);
+        setComissaoVistoResponsavel('FISCAL_ADMINISTRATIVO');
+      }
     } finally {
       setIsSavingComissao(false);
     }
@@ -1246,9 +1286,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   <div className="xl:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
                     <div>
                       <h3 className="text-lg font-bold text-[#0b1c30] tracking-tight flex items-center gap-2">
-                        <Users className="w-5 h-5 text-[#00288e]" /> Cadastrar Comissão de Recebimento
+                        <Users className="w-5 h-5 text-[#00288e]" /> {editingComissaoId ? 'Editar Comissão de Recebimento' : 'Cadastrar Comissão de Recebimento'}
                       </h3>
-                      <p className="text-xs text-gray-500 font-medium font-semibold">As comissões são nomeadas mensalmente por Boletim do HGeSM</p>
+                      <p className="text-xs text-gray-500 font-medium font-semibold">As comissões são nomeadas mensalmente por Boletim da OM: {organizationShortName}</p>
                     </div>
 
                     <div className="space-y-4">
@@ -1321,7 +1361,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       {/* Auxiliaries */}
                       <div className="p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-4">
                         <span className="text-xs font-extrabold text-gray-500 uppercase tracking-wider block border-b border-gray-200/50 pb-2">
-                          Membros Auxiliares (Três Auxiliares)
+                          Membros Auxiliares (até 3, opcionais)
                         </span>
 
                         {/* Auxiliary 1 */}
@@ -1407,6 +1447,32 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                       </div>
 
+                      <div className="p-4 bg-slate-50 rounded-xl border border-gray-100 space-y-2">
+                        <label htmlFor="comissao-visto" className="block text-xs font-extrabold text-gray-600 uppercase tracking-wider">
+                          Autoridade responsável pelo visto no Termo
+                        </label>
+                        <select
+                          id="comissao-visto"
+                          value={comissaoVistoResponsavel}
+                          onChange={(event) => setComissaoVistoResponsavel(event.target.value as ComissaoVistoResponsavel)}
+                          className="w-full h-11 px-3 rounded-xl border border-gray-200 bg-white font-semibold text-sm text-[#0b1c30] focus:border-[#00288e] outline-none"
+                        >
+                          <option value="FISCAL_ADMINISTRATIVO">Fiscal Administrativo</option>
+                          <option value="ORDENADOR_DESPESAS">Ordenador de Despesas</option>
+                        </select>
+                      </div>
+
+                      {editingComissaoId && (
+                        <button
+                          type="button"
+                          onClick={cancelComissaoEditing}
+                          disabled={isSavingComissao}
+                          className="w-full h-10 rounded-xl border border-gray-200 bg-white text-gray-600 font-bold text-xs hover:bg-gray-50 disabled:opacity-60"
+                        >
+                          Cancelar edição
+                        </button>
+                      )}
+
                       <button
                         onClick={saveComissaoWithFeedback}
                         disabled={isSavingComissao}
@@ -1414,7 +1480,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         className="w-full h-11 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                       >
                         {isSavingComissao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {isSavingComissao ? 'Salvando Comissão…' : 'Salvar Comissão de Recebimento'}
+                        {isSavingComissao ? 'Salvando Comissão…' : editingComissaoId ? 'Salvar Alterações da Comissão' : 'Salvar Comissão de Recebimento'}
                       </button>
 
                     </div>
@@ -1425,7 +1491,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                     <div className="flex justify-between items-center px-1">
                       <div>
                         <h3 className="text-lg font-bold text-[#0b1c30] tracking-tight">Comissões Nomeadas</h3>
-                        <p className="text-xs text-gray-500 font-medium">Histórico mensal de comissões ativas no HGeSM</p>
+                        <p className="text-xs text-gray-500 font-medium">Histórico mensal de comissões ativas na {organizationShortName}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {comissoes.length > 0 && (
@@ -1470,6 +1536,16 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                     Mês de Referência: <span className="font-bold text-gray-600">{com.mesReferencia}</span>
                                   </p>
                                 </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => startComissaoEditing(com)}
+                                    disabled={isSavingComissao}
+                                    className="text-gray-500 hover:text-blue-700 p-1.5 rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50"
+                                    title="Editar Comissão"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
                                 <button
                                   onClick={async () => {
                                     if (confirm('Tem certeza que deseja excluir esta comissão?')) {
@@ -1491,12 +1567,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
+                                </div>
                               </div>
 
                               <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600 space-y-1">
                                 <p className="font-bold text-[#0b1c30]">Nomeação por Boletim Interno</p>
                                 <p className="font-medium text-gray-500">
-                                  Boletim Interno nº <span className="font-bold text-gray-700">{com.boletimNumero}</span> do HGeSM de <span className="font-bold text-gray-700">
+                                  Boletim Interno nº <span className="font-bold text-gray-700">{com.boletimNumero}</span> da {organizationShortName} de <span className="font-bold text-gray-700">
                                     {(() => {
                                       try {
                                         const [y, m, d] = com.boletimData.split('-');
@@ -1509,6 +1586,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </p>
                               </div>
 
+                              <p className="text-xs font-medium text-gray-500">
+                                Visto no TR: {com.vistoResponsavel === 'ORDENADOR_DESPESAS' ? 'Ordenador de Despesas' : 'Fiscal Administrativo'}
+                              </p>
                               <div className="space-y-2">
                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Membros Constituintes</div>
                                 
@@ -1525,7 +1605,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                                 {/* Auxiliaries list */}
                                 <div className="grid grid-cols-1 gap-2">
-                                  {com.auxiliares.map((aux, idx) => (
+                                  {(com.auxiliares || []).filter((aux) => aux?.nomeCompleto?.trim()).map((aux, idx) => (
                                     <div key={idx} className="flex items-center gap-3 bg-gray-50/40 p-2.5 rounded-lg border border-gray-100 text-xs">
                                       <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
                                         A{idx + 1}
