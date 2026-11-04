@@ -25,7 +25,7 @@ async function validatePdfBeforeUpload(file: File): Promise<void> {
   });
 }
 
-type InvoiceStoredPdfKind = 'invoice' | 'invoice-mirror';
+type InvoiceStoredPdfKind = 'invoice' | 'invoice-mirror' | 'invoice-authenticity' | 'invoice-other';
 
 function createDriveLogicalPathname(
   workspaceId: string,
@@ -34,7 +34,12 @@ function createDriveLogicalPathname(
   fileId: string,
   kind: InvoiceStoredPdfKind
 ): string {
-  const directory = kind === 'invoice' ? 'notas-fiscais' : 'espelhos-nota-fiscal';
+  const directory = {
+    invoice: 'notas-fiscais',
+    'invoice-mirror': 'espelhos-nota-fiscal',
+    'invoice-authenticity': 'certificados-autenticidade',
+    'invoice-other': 'documentos-complementares',
+  }[kind];
   return `google-drive/${workspaceId}/${directory}/${empenhoId.trim().toUpperCase()}/${invoiceId.trim().toUpperCase()}/${fileId}`;
 }
 
@@ -109,6 +114,24 @@ export async function uploadInvoiceMirrorPdf(
   file: File
 ): Promise<InvoicePdfDocument> {
   return uploadInvoiceRelatedPdf(user, empenhoId, invoiceId, file, 'invoice-mirror');
+}
+
+export async function uploadInvoiceAuthenticityPdf(
+  user: User,
+  empenhoId: string,
+  invoiceId: string,
+  file: File
+): Promise<InvoicePdfDocument> {
+  return uploadInvoiceRelatedPdf(user, empenhoId, invoiceId, file, 'invoice-authenticity');
+}
+
+export async function uploadInvoiceOtherPdf(
+  user: User,
+  empenhoId: string,
+  invoiceId: string,
+  file: File
+): Promise<InvoicePdfDocument> {
+  return uploadInvoiceRelatedPdf(user, empenhoId, invoiceId, file, 'invoice-other');
 }
 
 export async function deleteInvoicePdfUpload(
