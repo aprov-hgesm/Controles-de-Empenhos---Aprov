@@ -366,56 +366,48 @@ export function useDocumentActions(context:DocumentActionsContext){
     addSectionHeader('6. ASSINATURAS E PARECER FINAL');
     addParagraph('Diante dos exames realizados, a Comissão de Recebimento DECLARA que os artigos constantes na presente Nota Fiscal foram recebidos de acordo com as especificações exigidas.', 8.5, 'normal', textColor);
     yPos += 8;
-     const sigColWidth = (pageWidth - margin * 2) / 2;
-
+    const sigColWidth = (pageWidth - margin * 2) / 2;
+    // Só os membros efetivamente nomeados assinam o TR. Registros legados são filtrados
+    // sem exigir migração, preservando a ordem presidente → auxiliares.
+    const signers = [
+      { ...matchingComissao.presidente, role: 'Presidente' },
+      ...(matchingComissao.auxiliares || [])
+        .filter((aux) => aux?.nomeCompleto?.trim())
+        .slice(0, 3)
+        .map((aux, index) => ({ ...aux, role: `${index + 1}º Auxiliar` })),
+    ];
+    for (let index = 0; index < signers.length; index += 2) {
+      if (yPos > doc.internal.pageSize.getHeight() - 45) {
+        doc.addPage();
+        yPos = 25;
+      }
+      signers.slice(index, index + 2).forEach((member, column) => {
+        const x = column === 0 ? margin + 5 : margin + sigColWidth + 5;
+        const xEnd = column === 0 ? margin + sigColWidth - 5 : pageWidth - margin - 5;
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.2);
+        doc.line(x, yPos, xEnd, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(member.nomeCompleto.toUpperCase(), x, yPos + 4);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${member.postoGraduacao} - ${member.role}`, x, yPos + 7);
+      });
+      yPos += 18;
+    }
+    if (yPos > doc.internal.pageSize.getHeight() - 25) {
+      doc.addPage();
+      yPos = 25;
+    }
     doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.2);
-
-    // Line 1 for signatures
-    doc.line(margin + 5, yPos, margin + sigColWidth - 5, yPos);
-    doc.line(margin + sigColWidth + 5, yPos, pageWidth - margin - 5, yPos);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text(matchingComissao.presidente.nomeCompleto.toUpperCase(), margin + 5, yPos + 4);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${matchingComissao.presidente.postoGraduacao} - Presidente`, margin + 5, yPos + 7);
-     const aux1 = matchingComissao.auxiliares[0] || { nomeCompleto: '_______________________', postoGraduacao: 'Auxiliar' };
-    doc.setFont('helvetica', 'bold');
-    doc.text(aux1.nomeCompleto.toUpperCase(), margin + sigColWidth + 5, yPos + 4);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${aux1.postoGraduacao} - 1º Auxiliar`, margin + sigColWidth + 5, yPos + 7);
-     yPos += 18;
-     if (yPos > doc.internal.pageSize.getHeight() - 35) {
-      doc.addPage();
-      yPos = 25;
-    }
-     doc.setDrawColor(180, 180, 180);
-    doc.line(margin + 5, yPos, margin + sigColWidth - 5, yPos);
-    doc.line(margin + sigColWidth + 5, yPos, pageWidth - margin - 5, yPos);
-     const aux2 = matchingComissao.auxiliares[1] || { nomeCompleto: '_______________________', postoGraduacao: 'Auxiliar' };
-    doc.setFont('helvetica', 'bold');
-    doc.text(aux2.nomeCompleto.toUpperCase(), margin + 5, yPos + 4);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${aux2.postoGraduacao} - 2º Auxiliar`, margin + 5, yPos + 7);
-     const aux3 = matchingComissao.auxiliares[2] || { nomeCompleto: '_______________________', postoGraduacao: 'Auxiliar' };
-    doc.setFont('helvetica', 'bold');
-    doc.text(aux3.nomeCompleto.toUpperCase(), margin + sigColWidth + 5, yPos + 4);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${aux3.postoGraduacao} - 3º Auxiliar`, margin + sigColWidth + 5, yPos + 7);
-     yPos += 18;
-     if (yPos > doc.internal.pageSize.getHeight() - 25) {
-      doc.addPage();
-      yPos = 25;
-    }
-     doc.setDrawColor(180, 180, 180);
     doc.line((pageWidth - sigColWidth) / 2, yPos, (pageWidth + sigColWidth) / 2, yPos);
-
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-    const vistoText = 'Visto do FISCAL ADMINISTRATIVO';
+    const vistoText = matchingComissao.vistoResponsavel === 'ORDENADOR_DESPESAS'
+      ? 'Visto do ORDENADOR DE DESPESAS'
+      : 'Visto do FISCAL ADMINISTRATIVO';
     const vistoWidth = doc.getTextWidth(vistoText);
     doc.text(vistoText, (pageWidth - vistoWidth) / 2, yPos + 5);
      // --- PAGE FOOTER WITH PAGE NUMBERING AND DOCUMENT IDENTIFIER ---
