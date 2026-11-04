@@ -155,13 +155,16 @@ export interface MembroComissao {
   nomeCompleto: string;
 }
 
+export type ComissaoVistoResponsavel = 'FISCAL_ADMINISTRATIVO' | 'ORDENADOR_DESPESAS';
+
 export interface Comissao {
   id: string;
   mesReferencia: string; // 'YYYY-MM'
   boletimNumero: string;
   boletimData: string;
   presidente: MembroComissao;
-  auxiliares: MembroComissao[]; // Array de 3 auxiliares
+  auxiliares: MembroComissao[]; // De zero a três auxiliares (registros legados continuam válidos)
+  vistoResponsavel?: ComissaoVistoResponsavel; // Ausente em registros antigos = Fiscal Administrativo
 }
 
 export type AlertType = 'INFORMATIVO' | 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERADO';
