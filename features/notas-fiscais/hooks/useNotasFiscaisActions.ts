@@ -884,6 +884,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       showToast('A comissão a ser editada não foi encontrada. Atualize a tela antes de continuar.', 'error');
       return false;
     }
+    if (editing && editing.mesReferencia !== comissaoMes) {
+      showToast('O mês de referência de uma comissão já salva não pode ser alterado, para preservar o histórico dos Termos.', 'error');
+      return false;
+    }
     if (comissoes.some((commission) => commission.id !== editing?.id && commission.mesReferencia === comissaoMes)) {
       showToast(`Já existe uma comissão cadastrada para o mês ${comissaoMes}.`, 'error');
       return false;
@@ -901,6 +905,21 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       boletimData: comissaoBoletimDate,
       presidente: { postoGraduacao: comissaoPresPosto, nomeCompleto: comissaoPresNome.trim() },
       auxiliares,
+      // A composição anterior permanece disponível para termos emitidos antes da substituição.
+      ...(editing ? { historicoAlteracoes: [
+        ...(editing.historicoAlteracoes || []),
+        {
+          substituidaEm: new Date().toISOString(),
+          substituidaPorUid: user.uid,
+          dados: {
+            boletimNumero: editing.boletimNumero,
+            boletimData: editing.boletimData,
+            presidente: editing.presidente,
+            auxiliares: editing.auxiliares || [],
+            ...(editing.vistoResponsavel ? { vistoResponsavel: editing.vistoResponsavel } : {}),
+          },
+        },
+      ] } : {}),
       vistoResponsavel: options?.vistoResponsavel === 'ORDENADOR_DESPESAS'
         ? 'ORDENADOR_DESPESAS'
         : 'FISCAL_ADMINISTRATIVO',
