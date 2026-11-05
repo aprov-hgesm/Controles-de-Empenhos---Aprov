@@ -160,12 +160,12 @@ export function allocate(commitment: Commitment, input: ReturnType<typeof parseO
   const orderLines: CustomerOrderLine[] = input.lines.map(l => {
     const c = byId.get(l.commitmentLineId);
     if (!c || c.quantity.unit !== l.quantity.unit) throw new W1Error('CONFLICT', 409);
-    const next = (used.get(c.id) || BigInt(0)) + millis(l.quantity.value);
-    if (next < BigInt(0) || next > millis(c.quantity.value)) throw new W1Error('CONFLICT', 409);
-    used.set(c.id, next);
     if (l.salePrice && l.salePrice.amountCents !== c.salePrice.amountCents && !input.negotiationNote) {
       throw new W1Error('INVALID_INPUT',400);
     }
+    const next = (used.get(c.id) || BigInt(0)) + millis(l.quantity.value);
+    if (next < BigInt(0) || next > millis(c.quantity.value)) throw new W1Error('CONFLICT', 409);
+    used.set(c.id, next);
     return {id: l.id, commitmentLineId: c.id, description: c.description,
       quantity: l.quantity, salePrice: l.salePrice || c.salePrice,
       fulfilledQuantity: {value: '0', unit: l.quantity.unit}};

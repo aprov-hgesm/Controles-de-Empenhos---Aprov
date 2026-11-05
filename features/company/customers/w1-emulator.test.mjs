@@ -222,6 +222,18 @@ test('W1: cancelamento auditável libera quantidade sem deletar pedido',async()=
   const cancelled=await get('orders',tokenA,orderId);
   assert.equal(cancelled.payload.result.status,'cancelled');
 });
+test('W1: preço negociado com justificativa registra preço de venda, não custo',async()=>{
+  const data={publicCustomerId:customerId,commitmentId:neId,reference:'Pedido negociado',
+    negotiationNote:'Condição comercial confirmada pela OM',
+    lines:[{id:'line-1',commitmentLineId:'item-1',quantity:q('100'),
+      salePrice:{amountCents:1200,currency:'BRL'}}]};
+  const result=await post('orders',tokenA,data,'negotiation-confirm-01');
+  assert.equal(result.status,201,JSON.stringify(result.payload));
+  assert.equal(result.payload.result.lines[0].salePrice.amountCents,1200);
+  assert.equal('cost' in result.payload.result.lines[0],false);
+  const after=await get('commitments',tokenA,neId);
+  assert.equal(after.payload.result.lines[0].orderedQuantity.value,'500');
+});
 test('W1: piloto OFF = 503; conta A não recebe fallback',async()=>{
   process.env.EMPROVEX_COMPANY_PILOT_ENABLED='0';
   try{const r=await collections.customers.GET(req(tokenA));assert.equal(r.status,503);}
