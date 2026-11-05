@@ -79,7 +79,7 @@ assert.match(nav, /href: '\/central-depositos'/);
 assert.doesNotMatch(nav, /\/adm-deposito/);
 const rootEntry = read('app/page.tsx');
 const operationalEntry = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx') : rootEntry;
+  ? read('app/login/OperationalEntry.tsx') : rootEntry;
 assert.match(operationalEntry, /window\.location\.assign\(/, 'Atalho para Central perdido.');
 assert.match(operationalEntry, /window\.location\.assign\(\s*'\/central-depositos'\s*\)/,
   'Atalho do módulo deve abrir a entrada canônica em ambos os modos.');

@@ -199,7 +199,7 @@ forbidText(
   /from\s+['"][^'"]*\/warehouse\//,
   'Shell principal voltou a importar implementação do ADM Depósito.'
 );
-const canonicalLogin = read('app/login/page.tsx');
+const canonicalLogin = read('app/login/OperationalEntry.tsx');
 // A raiz é institucional via next.config.ts e reexporta o shell de /login.
 // Inspecionar o destino real: o firewall não pode ser contornado por wrapper.
 const rootReexportsLogin = appPage.includes("export { default } from './login/page'");
