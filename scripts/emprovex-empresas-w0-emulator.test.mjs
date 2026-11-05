@@ -25,7 +25,18 @@ process.env.EMPROVEX_E2E_SERVER_AUTH = '1';
 const authRoot = `http://${authHost}/identitytoolkit.googleapis.com/v1`;
 const fsRoot = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents`;
 const demoConfig = { projectId, apiKey: 'fake-emprovex-emulator', firestoreDatabaseId: '(default)' };
-let intercept = (url, options) => globalThis.fetch(url, options);
+let intercept = async (url, options) => {
+  const response = await globalThis.fetch(url, options);
+  if (!response.ok) {
+    const api = new URL(String(url)).pathname;
+    const payload = await response.clone().json().catch(() => ({}));
+    console.warn('W0_EMULATOR_HTTP', {
+      api, method: options?.method || 'GET', status: response.status,
+      statusCode: String(payload.error?.status || payload.error?.message || '').slice(0,64),
+    });
+  }
+  return response;
+};
 const deps = {};
 function loadTs(path, imports = {}) {
   const code = readFileSync(new URL('../' + path, import.meta.url), 'utf8');
@@ -145,7 +156,7 @@ async function signIn(email) {
   return signed;
 }
 async function authDirectory() {
-  const response = await globalThis.fetch(`http://${authHost}/emulator/v1/projects/${projectId}/accounts`);
+  const response = await globalThis.fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:batchGet?maxResults=1000`, { headers: { Authorization: 'Bearer owner' } });
   assert.equal(response.status, 200);
   const data = await response.json();
   return data.users || [];
