@@ -70,7 +70,7 @@ export function CompanyNavigation({
               className={`flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-300 ${active ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
               <Icon size={18} aria-hidden="true" className="shrink-0"/><span className="truncate">{item.label}</span>
               {item.kind === 'preparing' && <span className="sr-only">— Em preparação</span>}
-            </a
+            </a>
           </div>;
         })}
       </nav>
@@ -80,6 +80,6 @@ export function CompanyNavigation({
           <LogOut size={17} aria-hidden="true"/>{signingOut ? 'Saindo...' : 'Sair da conta'}
         </button>
       </div>
-    </aside>
+    </a>side>
   </>;
 }

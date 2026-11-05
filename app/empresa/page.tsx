@@ -61,7 +61,7 @@ export default function CompanyHomePage() {
           <h3 className="mt-4 font-bold text-slate-950">{module.label}</h3>
           <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">{module.description}</p>
           <div className="mt-4">{module.kind === 'preparing' ? <CompanyStatus/> : <span className="text-xs font-semibold text-emerald-700">Identidade validada</span>}</div>
-        </a)}
+        </a>)}
       </div>}
     </section>
     <p className="mt-8 text-xs leading-6 text-slate-500">

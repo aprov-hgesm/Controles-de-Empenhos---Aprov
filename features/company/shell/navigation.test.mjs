@@ -56,6 +56,7 @@ test('W4: isolated portal has no operational military imports and states prepara
     'components/company/CompanyModulePlaceholder.tsx',
   ]) {
     assert.doesNotMatch(read(path), /from\s*['"]next\/link['"]|<Link(?:\s|>)/);
+    assert.doesNotMatch(read(path), /<\/a(?!>)/, 'Fechamento de âncora incompleto.');
   }
   assert.match(read('components/company/CompanySessionGate.tsx'), /aria-checked=\{essential\}/);
   assert.match(read('components/company/CompanyNavigation.tsx'), /motion-reduce:transition-none/);
