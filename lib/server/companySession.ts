@@ -137,6 +137,9 @@ async function verifyActiveFirebaseUser(token: string, uid: string, email: strin
  * mutating company resources. Frontend routing is never an authorization gate.
  */
 export async function verifyCompanySession(authorization: string | null): Promise<VerifiedCompanyContext> {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1' && !e2eEmulators()) {
+    throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
+  }
   let verified;
   try {
     verified = await verifyFirebaseRequest(authorization);

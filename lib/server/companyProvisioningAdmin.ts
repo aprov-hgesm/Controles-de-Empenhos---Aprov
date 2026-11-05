@@ -240,6 +240,9 @@ export async function provisionCompanyWorkspaceWithAuth(
   input: CreateCompanyWorkspaceInput,
   founder: FounderIdentity
 ): Promise<CompanyProvisioningResult> {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1' && !demo) {
+    throw new CompanyProvisioningFailure('Ambiente E2E inválido ou não isolado.', 'PILOT_DISABLED', 503);
+  }
   assertCompanyPilotProvisioningEnabled();
   const errors = validateCompanyProvisioningInput(input);
   if (errors.length) throw new CompanyProvisioningFailure(errors[0], 'INVALID_INPUT', 400);
@@ -462,6 +465,7 @@ async function listCollection(
 }
 
 export async function listCompanyDirectory(): Promise<CompanyDirectoryEntry[]> {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1' && !demo) throw new Error('EMULATOR_ENV_INVALID');
   const token = demo ? '' : await getGoogleAccessToken();
   const [workspaces, accounts] = await Promise.all([
     listCollection(token, 'workspaces'),
