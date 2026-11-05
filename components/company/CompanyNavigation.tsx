@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3, Boxes, Building2, CalendarDays, ClipboardList, FileText, Home,
@@ -67,11 +66,11 @@ export function CompanyNavigation({
           return <div key={item.slug || 'home'}>
             {(index === 0 || prev?.group !== item.group) &&
               <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">{item.group}</p>}
-            <Link href={href} onClick={onClose} aria-current={active ? 'page' : undefined}
+            <a href={href} onClick={onClose} aria-current={active ? 'page' : undefined}
               className={`flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-300 ${active ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
               <Icon size={18} aria-hidden="true" className="shrink-0"/><span className="truncate">{item.label}</span>
               {item.kind === 'preparing' && <span className="sr-only">— Em preparação</span>}
-            </Link>
+            </a
           </div>;
         })}
       </nav>

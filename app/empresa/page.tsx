@@ -1,6 +1,5 @@
 'use client';
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { ArrowRight, Building2, Compass, Layers3, ShieldCheck } from 'lucide-react';
 import {
   COMPANY_SHELL_MODULES, companyShellHref, filterCompanyShellModules,
@@ -53,7 +52,7 @@ export default function CompanyHomePage() {
       <CompanySearchFilters query={query} onQueryChange={setQuery} group={group} onGroupChange={setGroup}/>
       {modules.length === 0 ? <div className="mt-5"><CompanyEmptyState/></div> :
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {modules.map((module) => <Link key={module.slug} href={companyShellHref(module.slug)}
+        {modules.map((module) => <a key={module.slug} href={companyShellHref(module.slug)}
           className="group flex min-h-[190px] flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm outline-none transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-600 motion-reduce:transform-none motion-reduce:transition-none">
           <div className="flex items-start justify-between gap-3">
             <span className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-800">{module.group}</span>
@@ -62,7 +61,7 @@ export default function CompanyHomePage() {
           <h3 className="mt-4 font-bold text-slate-950">{module.label}</h3>
           <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">{module.description}</p>
           <div className="mt-4">{module.kind === 'preparing' ? <CompanyStatus/> : <span className="text-xs font-semibold text-emerald-700">Identidade validada</span>}</div>
-        </Link>)}
+        </a)}
       </div>}
     </section>
     <p className="mt-8 text-xs leading-6 text-slate-500">

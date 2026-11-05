@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { ArrowLeft, CircleCheck, Clock3, LockKeyhole } from 'lucide-react';
 import { companyShellModuleBySlug } from '../../features/company/shell/navigation';
 import { useCompanySession } from './CompanySessionContext';
@@ -11,7 +10,7 @@ export function CompanyModulePlaceholder({ slug }: { slug: string }) {
   if (!module) return null;
   return <main id="company-main" tabIndex={-1} className="outline-none">
     <nav aria-label="Localização" className="text-xs font-semibold text-slate-500">
-      <Link className="hover:text-blue-700 focus-visible:underline" href="/empresa">Início</Link>
+      <a className="hover:text-blue-700 focus-visible:underline" href="/empresa">Início</a
       <span aria-hidden="true" className="px-2">/</span><span aria-current="page">{module.label}</span>
     </nav>
     <header className="mt-6 flex flex-wrap items-start justify-between gap-4">
@@ -40,9 +39,9 @@ export function CompanyModulePlaceholder({ slug }: { slug: string }) {
         <div><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Situação</dt>
           <dd className="mt-1 flex items-center gap-1 text-sm font-semibold text-emerald-700"><CircleCheck size={15} aria-hidden="true"/> Acesso validado</dd></div>
       </dl>}
-      <Link href="/empresa" className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700">
+      <a href="/empresa" className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700">
         <ArrowLeft size={16} aria-hidden="true"/>Voltar ao início
-      </Link>
+      </a
     </section>
   </main>;
 }

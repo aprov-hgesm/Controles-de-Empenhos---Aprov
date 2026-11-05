@@ -3,7 +3,7 @@
 
 ## Contratos W4 (apresentação)
 - `features/company/shell/navigation.ts` é o manifesto **visual** de 14 rotas (não altera `features/company/modules.ts`, contrato compartilhado reservado ao integrador).
-- `CompanyNavigation`: recebe apenas nome da empresa e callbacks de menu/logout da sessão validada. Link client-side com `aria-current`, foco móvel e Escape; não concede permissões.
+- `CompanyNavigation`: recebe apenas nome da empresa e callbacks de menu/logout da sessão validada. Navegação por documento HTML (padrão P0 global) com `aria-current`, foco móvel e Escape; não concede permissões.
 - `CompanySessionGate`: usa a mesma sessão W0 (`resolveCompanySession`), revalida em foco, fail closed; modo Essencial é preferência local visual, não flag de backend nem autorização.
 - `CompanyModulePlaceholder`: tela para todas as rotas ainda sem backend, sempre 'Em preparação'; configurações exibem somente identidade retornada pela sessão autorizada.
 - `CompanySearchFilters`, `CompanyEmptyState`, `CompanyLoadingState`, `CompanyErrorState`, `CompanyFeedback`, `CompanyConfirmDialog`: componentes de apresentação, reutilizáveis no W9, sem consulta de dados, escrituras ou envio automático.

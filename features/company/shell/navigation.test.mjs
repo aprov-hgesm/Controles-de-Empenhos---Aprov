@@ -51,6 +51,12 @@ test('W4: isolated portal has no operational military imports and states prepara
   assert.match(read('app/empresa/page.tsx'), /Em preparação/);
   assert.match(read('components/company/CompanyModulePlaceholder.tsx'), /Em preparação/);
   assert.match(read('components/company/CompanyNavigation.tsx'), /aria-current/);
+  for (const path of [
+    'app/empresa/page.tsx', 'components/company/CompanyNavigation.tsx',
+    'components/company/CompanyModulePlaceholder.tsx',
+  ]) {
+    assert.doesNotMatch(read(path), /from\\s*['"]next\\/link['"]|<Link(?:\\s|>)/);
+  }
   assert.match(read('components/company/CompanySessionGate.tsx'), /aria-checked=\{essential\}/);
   assert.match(read('components/company/CompanyNavigation.tsx'), /motion-reduce:transition-none/);
   assert.match(read('components/company/CompanySessionGate.tsx'), /resolveCompanySession\(user\)/);
