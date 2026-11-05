@@ -14,6 +14,7 @@ import {
 import { auth, googleProvider } from '../../lib/firebase';
 import { normalizePlatformEmail } from '../../lib/platformIdentity';
 import { resolveCompanySession } from '../../lib/company/companySessionClient';
+import { resolveAuthenticatedWorkspaceContext } from '../../lib/platformAccess';
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { EmprovexLogin } from '../../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
@@ -40,18 +41,37 @@ export default function LoginEntryPage() {
         return;
       }
       setStage('checking');
-      void resolveCompanySession(user).then(async (result) => {
-        if (!alive || sequence !== resolutionSequence.current) return;
-        if (result.kind === 'company') {
-          window.location.replace('/empresa');
-        } else if (result.kind === 'invalid-auth') {
-          await signOut(auth);
-        } else {
-          setStage('operational');
+      void (async () => {
+        try {
+          const result = await resolveCompanySession(user);
+          if (!alive || sequence !== resolutionSequence.current) return;
+          if (result.kind === 'company') {
+            window.location.replace('/empresa');
+            return;
+          }
+          if (result.kind === 'invalid-auth') {
+            await signOut(auth).catch(() => undefined);
+            if (alive && sequence === resolutionSequence.current) setStage('login');
+            return;
+          }
+        } catch {
+          // A indisponibilidade do serviço empresarial nunca concede acesso
+          // operacional. A identidade setorial é verificada separadamente abaixo.
         }
-      }).catch(() => {
-        if (alive && sequence === resolutionSequence.current) setStage('unavailable');
-      });
+        try {
+          const institutional = await resolveAuthenticatedWorkspaceContext(user);
+          if (!alive || sequence !== resolutionSequence.current) return;
+          if (institutional.status === 'sector' || institutional.status === 'platformAdmin') {
+            // O resolvedor institucional exige accountType sector (ou fundador).
+            // Conta empresarial suspensa, divergente ou não identificada não entra.
+            setStage('operational');
+          } else {
+            setStage('unavailable');
+          }
+        } catch {
+          if (alive && sequence === resolutionSequence.current) setStage('unavailable');
+        }
+      })();
     });
     return () => {
       alive = false;

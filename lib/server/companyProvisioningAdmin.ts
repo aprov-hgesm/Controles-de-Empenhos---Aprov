@@ -17,7 +17,7 @@ import {
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 
 type FailureCode =
-  | 'INVALID_INPUT' | 'CONFLICT' | 'UPSTREAM_ERROR' | 'RECOVERY_REQUIRED';
+  | 'INVALID_INPUT' | 'CONFLICT' | 'UPSTREAM_ERROR' | 'RECOVERY_REQUIRED' | 'PILOT_DISABLED';
 
 export class CompanyProvisioningFailure extends Error {
   constructor(
@@ -44,8 +44,42 @@ export interface CompanyDirectoryEntry {
 const PROJECT_ID = firebaseConfig.projectId;
 const API_KEY = firebaseConfig.apiKey;
 const DATABASE_ID = firebaseConfig.firestoreDatabaseId;
-const documentsRoot = `projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
-const firestoreUrl = `https://firestore.googleapis.com/v1/${documentsRoot}`;
+
+// Nunca configurar host remoto ou credenciais produtivas para testes.
+// Ativado exclusivamente sob flags E2E, projeto demo-* e loopback local.
+function localDemoEmulators(): { projectId: string; authHost: string; firestoreHost: string } | null {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH !== '1') return null;
+  const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
+  const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
+  const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST?.trim() || '';
+  const hosted = Boolean(process.env.K_SERVICE || process.env.VERCEL || process.env.GAE_SERVICE);
+  if (
+    hosted || !projectId.startsWith('demo-')
+    || !['127.0.0.1:9099', 'localhost:9099'].includes(authHost)
+    || !['127.0.0.1:8080', 'localhost:8080'].includes(firestoreHost)
+  ) return null;
+  return { projectId, authHost, firestoreHost };
+}
+const demo = localDemoEmulators();
+const documentsRoot = demo
+  ? `projects/${demo.projectId}/databases/(default)/documents`
+  : `projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
+const firestoreUrl = demo
+  ? `http://${demo.firestoreHost}/v1/${documentsRoot}`
+  : `https://firestore.googleapis.com/v1/${documentsRoot}`;
+
+export function assertCompanyPilotProvisioningEnabled(): void {
+  if (
+    process.env.EMPROVEX_COMPANY_PILOT_ENABLED !== '1'
+    || process.env.EMPROVEX_DISABLE_COMPANY_PROVISIONING === '1'
+    || process.env.EMPROVEX_DISABLE_ADMIN_MUTATIONS === '1'
+  ) {
+    throw new CompanyProvisioningFailure(
+      'O piloto empresarial não está habilitado para novos cadastros.',
+      'PILOT_DISABLED', 503
+    );
+  }
+}
 
 type FirestoreValue =
   | { stringValue: string }
@@ -128,10 +162,12 @@ async function authAdmin<T>(
   body: Record<string, unknown>
 ): Promise<T> {
   const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/accounts${action}?key=${encodeURIComponent(API_KEY)}`,
+    demo
+      ? `http://${demo.authHost}/identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(demo.projectId)}/accounts${action}?key=${encodeURIComponent(API_KEY)}`
+      : `https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/accounts${action}?key=${encodeURIComponent(API_KEY)}`,
     {
       method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      headers: { authorization: `Bearer ${demo ? 'owner' : token}`, 'content-type': 'application/json' },
       body: JSON.stringify(body),
       cache: 'no-store',
     }
@@ -154,7 +190,7 @@ async function firestoreCommit(token: string, writes: FirestoreWrite[]): Promise
 
 async function firestoreRead(token: string, path: string): Promise<FirestoreDocument | null> {
   const response = await fetch(`${firestoreUrl}/${documentPath(path)}`, {
-    headers: { authorization: `Bearer ${token}` },
+    headers: { authorization: `Bearer ${demo ? 'owner' : token}` },
     cache: 'no-store',
   });
   if (response.status === 404) return null;
@@ -204,10 +240,11 @@ export async function provisionCompanyWorkspaceWithAuth(
   input: CreateCompanyWorkspaceInput,
   founder: FounderIdentity
 ): Promise<CompanyProvisioningResult> {
+  assertCompanyPilotProvisioningEnabled();
   const errors = validateCompanyProvisioningInput(input);
   if (errors.length) throw new CompanyProvisioningFailure(errors[0], 'INVALID_INPUT', 400);
 
-  const token = await getGoogleAccessToken();
+  const token = demo ? '' : await getGoogleAccessToken();
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
   const email = normalizePlatformEmail(input.authorizedEmail);
   const cnpj = normalizeCompanyCnpj(input.cnpj);
@@ -411,7 +448,7 @@ async function listCollection(
     const qs = new URLSearchParams({ pageSize: '100' });
     if (pageToken) qs.set('pageToken', pageToken);
     const response = await fetch(`${firestoreUrl}/${collectionName}?${qs.toString()}`, {
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${demo ? 'owner' : token}` },
       cache: 'no-store',
     });
     const data = await readPayload<{
@@ -425,7 +462,7 @@ async function listCollection(
 }
 
 export async function listCompanyDirectory(): Promise<CompanyDirectoryEntry[]> {
-  const token = await getGoogleAccessToken();
+  const token = demo ? '' : await getGoogleAccessToken();
   const [workspaces, accounts] = await Promise.all([
     listCollection(token, 'workspaces'),
     listCollection(token, 'platformAccounts'),
