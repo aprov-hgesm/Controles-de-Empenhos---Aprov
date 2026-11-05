@@ -59,13 +59,17 @@ jobs:
         if: failure()
         run: |
           if [ -f firestore-debug.log ]; then
-            grep -E 'Exception|ERROR|SEVERE|Caused by|java.lang' firestore-debug.log | tail -n 35 | sed -E 's#(https?://)[^[:space:]]+#\1[redacted]#g' || true
+            sed -n '/java.lang.IllegalArgumentException/,+22p' firestore-debug.log | head -n 70 | sed -E 's#(https?://)[^[:space:]]+#\1[redacted]#g' || true
           fi
       - name: Proteções do núcleo
+        if: always()
         run: node scripts/verify-emprovex-core-protection.mjs
       - name: Regressão de identidade
+        if: always()
         run: node scripts/verify-hybrid-auth-model.mjs
       - name: Rotas críticas
+        if: always()
         run: node --test scripts/critical-cross-route-navigation.test.mjs
       - name: Build, sem deploy
+        if: always()
         run: npm run build
