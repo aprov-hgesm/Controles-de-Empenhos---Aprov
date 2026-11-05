@@ -2,6 +2,228 @@
 
 > **PRECEDÊNCIA DE INFRAESTRUTURA (31/10/2026):** os workspaces empresariais continuam sujeitos ao seu próprio ciclo de desenvolvimento/integração; **não** confundir migração da hospedagem web com publicação das funcionalidades empresariais. O domínio operacional principal está em Google Cloud Run por Firebase Hosting, e o procedimento canônico de publicação é [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). Registros Vercel abaixo são históricos.
 
+## PROMPTS OFICIAIS DOS WORKERS — EXECUÇÃO R2/R3 (05/11/2026)
+
+**Status:** prompts registrados e prontos para utilização; nenhum Worker foi acionado por este registro. Este bloco integra o memorial oficial. O [relatório de auditoria R1-M](./empresas/AUDITORIA_R1M_PLANO_WORKERS_2026-11-05.md) contém achados P0–P2, matriz de 20 testes e arquitetura de execução; seus critérios prevalecem sobre o planejamento histórico quando houver divergência operacional.
+
+**Sequência executiva:** W0 (sequencial) → W1, W2, W3, W4, W5 (paralelos do mesmo SHA W0) → W6, W7, W8 (paralelos após contratos) → W9 (sequencial) → W10 (integração, homologação, piloto). W9 aqui é de Empresas, não o W9 de Almoxarifado.
+
+**Instruções obrigatórias, aplicáveis integralmente a todo prompt abaixo:** você é um Worker implementador no repositório `aprov-hgesm/Controles-de-Empenhos---Aprov`. Verifique primeiro branch, SHA, arquivos atuais e o [memorial](./EMPROVEX_EMPRESAS_MEMORIAL_OFICIAL.md) e a [auditoria](./empresas/AUDITORIA_R1M_PLANO_WORKERS_2026-11-05.md); faça **código real**, não somente propostas ou mockups. Trabalhe em **branch isolada**, abra PR **Draft**, não faça merge, não publique, não promova tráfego, não altere billing/IAM/Rules de produção nem dados reais sem autorização. Preserve a conta fundadora, todos os workspaces militares, o Almoxarifado, a Central de Depósitos, o Cloud Run e o histórico. Toda API empresarial deve validar identidade/workspace e papel no **servidor**; CNPJ, UG, slug ou parâmetro do cliente nunca bastam para autorizar. Não criar segunda fonte de verdade, nem reutilizar ledger militar. Senhas, tokens e documentos nunca em logs. Sem mudanças fora do escopo sem handoff ao integrador. Quando solicitar novo campo ou contrato comum, abra patch/handoff pequeno; não edite em paralelo `lib/platformIdentity.ts`, `app/login/page.tsx`, `lib/server/companySession.ts`, `firestore.rules`, `components/admin/PlatformAdminView.tsx`, CI global ou `package-lock.json`. Resultados devem incluir arquivos alterados, SHA, PR, testes executados de fato, riscos residuais, bloqueios e proposta GO/NO-GO; nunca afirmar testes não realizados.
+
+**Regra de origem:** W0 parte da PR [#510](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/510) no SHA vigente no início. Após o W0 certificar seus contratos, todos W1–W5 partem **do mesmo commit W0**. W6–W8 partem de base integradora com contratos W1–W3 consolidados. W9/W10 partem da integração da etapa anterior, não de branches antigas #419/#447.
+
+### Prompts individuais completos (copiar integralmente o bloco correspondente)
+#### PROMPT W0 — Fundação, identidade e segurança (sequencial obrigatório)
+
+~~~text
+Você é o Worker W0 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: PR #510, no SHA vigente, em branch isolada de fundação; não partir de #419/#447.
+ESCOPO E ARQUIVOS RESERVADOS: app/login/page.tsx, app/login/OperationalEntry.tsx, lib/server/companySession.ts, lib/server/companyProvisioningAdmin.ts, lib/company/contracts/**, lib/server/companyAuthz/**, scripts e testes E2E empresariais. Alterações em arquivos globais somente por este Worker/integrador.
+
+MISSÃO: Consolidar a base empresarial R1-M antes de permitir desenvolvimento operacional. Resolver P0-01 (erro de sessão empresarial não pode indisponibilizar um setor legítimo; jamais fazer fallback de empresa para setor), P0-02 (flag positiva de habilitação do piloto, desativada por padrão e respeitando kill switch existente), P0-03 (guard obrigatório no servidor com UID, workspace, status e escopo) e P0-04 (homologação E2E no Firebase Auth/Firestore Emulator). Fixar nomes de coleções, tipos, erros, operações, datas, unidades, idempotência, auditoria e política de ownership.
+
+CRITÉRIOS DE ACEITE: Demonstrar: login do fundador por Google e senha; acesso do setor legado; empresa A/B isoladas; conta suspensa ou UID divergente bloqueado; 401/403/503 e timeout tratados sem escalada; dois cadastros concorrentes de mesmo CNPJ/e-mail/workspace não produzem duplicidade nem usuário órfão; flag OFF bloqueia provisionamento; schema e API de autorização documentados.
+
+TESTES OBRIGATÓRIOS: npm run typecheck; npm run build; node --test scripts/emprovex-empresas-sync-r1.test.mjs; Core Protection, navegação crítica, Visual-R2 e E2E Auth/Firestore com fixtures demo. Executar testes empresariais reais somente em ambiente isolado, jamais no banco produtivo.
+
+ENTREGA / HANDOFF: Entregar PR Draft, commit SHA de fundação, contratos congelados, mapa de namespaces e APIs, matriz de identidade, relatório dos cenários e GO/NO-GO para abertura de W1–W5.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W1 — Clientes públicos, notas de empenho e pedidos de OMs (paralelo P1)
+
+~~~text
+Você é o Worker W1 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Exclusivamente do commit de fundação aprovado pelo W0.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/customers/**, features/company/commitments/**, features/company/customer-orders/** e lib/company/customers/**. Novas APIs só em app/api/company/customers/**, commitments/** ou customer-orders/**.
+
+MISSÃO: Implementar cadastro de cliente público (OM/órgão), UG/UASG apenas como atributo de cliente, endereços, contatos, referências de NE, itens, preços de venda e pedido efetivo da OM em entidade separada da NE. Uma NE deve aceitar vários pedidos e entregas parciais. Construir componentes, handlers e persistência exclusivamente pelo guard server-side W0, com paginação por workspace e trilha de revisão dos dados extraídos. Disponibilizar eventos e contratos para W6/W7/W8, sem implementar compras, estoque ou financeiro.
+
+CRITÉRIOS DE ACEITE: Empresa A nunca consulta OM/NE/pedido da B; mesma NE pode originar vários pedidos; quantidade de cada linha, saldo comprometido e estado parcial são coerentes; mudança negociada é rastreável; nenhum preço de venda se torna custo por suposição.
+
+TESTES OBRIGATÓRIOS: Unitários dos modelos e validações, integração de APIs com contas A/B, paginação, idempotência de criação, E2E cadastro→NE→pedido, typecheck/build e regressão de isolamento.
+
+ENTREGA / HANDOFF: PR Draft W1 com contratos de customerOrderLine, commitment e publicCustomer, endpoints, testes e mapa dos eventos consumíveis por W6/W7/W8.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W2 — Fornecedores de origem e catálogo empresarial (paralelo P1)
+
+~~~text
+Você é o Worker W2 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Do SHA W0 aprovado, sem importar tipos de fornecedor militar como fonte de verdade.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/suppliers/**, features/company/catalog/**, lib/company/suppliers/**; APIs próprias sob app/api/company/suppliers/** e catalog/**.
+
+MISSÃO: Criar cadastro de sourceSupplier (fornecedor de origem, distinto da empresa licitante), contatos múltiplos, CNPJ quando aplicável, produtos, SKU canônico, embalagem, unidade, conversão, preço e data de referência, lead time estimado, condições comerciais, canais e status ativo/suspenso/inativo. Estruturar consulta e escolha de fornecedor para pedidos de compra sem executar compra neste Worker.
+
+CRITÉRIOS DE ACEITE: Fornecedor suspenso não pode ser escolhido para novo pedido sem exceção autorizada; 1 produto empresarial admite várias referências de fornecedores; a conversão de unidades é explícita, sem arredondamento que crie saldos; preço histórico não é rotulado como preço atual; isolamento A/B comprovado.
+
+TESTES OBRIGATÓRIOS: Validação de dados/CNPJ, duplicidade por tenant, alteração e suspensão de fornecedor, conversões numéricas, busca/paginação, 401/403, typecheck e build.
+
+ENTREGA / HANDOFF: PR Draft W2, dicionário product/SKU/sourceSupplier, endpoints, esquema de preços com vigência e contratos de compra para W6/W7.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W3 — Membros, convites e permissões da empresa (paralelo P1)
+
+~~~text
+Você é o Worker W3 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Do SHA W0; depende do guard e contrato de sessão do W0, não do Admin militar.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/members/**, lib/company/roles/**, lib/server/companyMembership/**, app/api/company/members/**. Mudança de guard comum solicita handoff ao integrador.
+
+MISSÃO: Implementar equipe por empresa e papéis Administrador, Operações/Compras, Estoque, Logística, Motorista e Financeiro, com composição de papéis, convites, aceite, revogação e trilha de auditoria. Preservar a conta titular do cadastro como bootstrap sem permitir escalonamento por request. Projetar compartilhamento por pedido com fornecedor externo como contrato futuro, sem criar convite público abrangente nesta fase.
+
+CRITÉRIOS DE ACEITE: Usuário só vê recursos compatíveis com membership e ação; revogação bloqueia novos requests; o último administrador não é removido sem substituto; nenhuma permissão militar é herdada; convidado jamais enumera outros pedidos ou empresas.
+
+TESTES OBRIGATÓRIOS: Matriz de permissões por papel×ação, tentativas de autopromoção, IDOR, membership revogado, empresa A/B, token errado, convites inválidos e expiração, typecheck/build.
+
+ENTREGA / HANDOFF: PR Draft W3, tabela roles/actions, APIs de membros, mecanismos de revogação e testes reprodutíveis.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W4 — Experiência do portal, navegação e acessibilidade (paralelo P1)
+
+~~~text
+Você é o Worker W4 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Do SHA W0. Interfaces temporárias podem usar estados vazios, mas não dados falsos confundidos com reais.
+ESCOPO E ARQUIVOS RESERVADOS: components/company/**, features/company/shell/** e app/empresa/**, exceto endpoints e componentes pertencentes a outro Worker. Integrador arbitra qualquer modificação em features/company/modules.ts.
+
+MISSÃO: Evoluir o shell R0 para uma experiência comercial profissional, responsiva e acessível com navegação: Início, Pedidos de OM, Empenhos, Compras, Fornecedores, Catálogo, Cronogramas, Estoque, Entregas, Notas Fiscais, Financeiro, Clientes, Relatórios e Configurações. Criar padrões reutilizáveis de busca/filtros, vazio, loading, erro, confirmação, feedback, resumos e modo Essencial sem 3D desnecessário. Animações leves devem respeitar reduced-motion, desempenho e leitores de tela.
+
+CRITÉRIOS DE ACEITE: Fluxos de navegação preservam sessão e identidade; mobile/teclado funcionais; todas as páginas sem backend exibem 'Em preparação' claramente; nenhum SSR/hook operacional militar carrega por acidente; acessibilidade e latência medidas.
+
+TESTES OBRIGATÓRIOS: Typecheck/build, navegação crítica, Playwright desktop/mobile, keyboard/focus, reduced-motion, estado de erro, proteção de rota e isolamento de importações.
+
+ENTREGA / HANDOFF: PR Draft W4 com mapa de telas/rotas, component contracts sem lógica de estoque, capturas QA e matriz de acessibilidade.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W5 — Documentos, NE PDF, anexos e exportações (paralelo P1)
+
+~~~text
+Você é o Worker W5 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Do SHA W0; depende dos tipos documentais compartilhados e utiliza os modelos de W1/W2 por interface acordada.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/documents/**, lib/company/documents/** e app/api/company/documents/**. Não editar o endpoint setorial app/api/empenhos/parse-ne/route.ts sem decisão do integrador.
+
+MISSÃO: Construir endpoint empresarial para importação de NE PDF e revisão humana dos campos parseados, reutilizando somente parser puro existente, nunca autorização ou cobrança do setor. Implementar modelo para anexos de NE/compra/comprovante, controles de tipo/tamanho, sanitização, escopo de acesso e exportação PDF de ordem de compra/romaneio. Mensagens para WhatsApp/e-mail devem ser rascunhos/copiar/compartilhar, nunca registradas como enviadas sem evidência.
+
+CRITÉRIOS DE ACEITE: PDF malformado/grande é rejeitado, campos extraídos exigem confirmação antes de persistir, arquivo A não é baixável por B, URLs temporárias não expõem documentos e PDFs gerados reproduzem dados íntegros.
+
+TESTES OBRIGATÓRIOS: PDF textual válido/malformado, MIME/bytes/limites, autorização de anexos, download/expiração, geração sem duplicação, typecheck/build.
+
+ENTREGA / HANDOFF: PR Draft W5, schema de anexos, endpoints, exemplos anonimizados e contratos de geração para W1/W6/W9.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W6 — Compras e abastecimento junto ao fornecedor (paralelo P2)
+
+~~~text
+Você é o Worker W6 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Depois dos contratos estáveis de W1+W2+W3; iniciar somente lógica pura antecipadamente se possível.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/purchases/**, features/company/inbound/**, lib/company/purchases/**, app/api/company/purchases/**. Ledger de estoque pertence exclusivamente a W7.
+
+MISSÃO: Gerar necessidade de compra com base no pedido da OM e falta líquida; criar purchaseOrder com itens, preços, fornecedor de origem, quantidade, unidade, prazo desejado/confirmado e revisões. Registrar envio efetivamente confirmado, resposta e contraproposta, recebimento parcial, recusa e cronograma inbound. Publicar eventos imutáveis de recebido/cancelado para W7/W8 e não gravar estoque por fora do ledger.
+
+CRITÉRIOS DE ACEITE: Um pedido OM pode derivar ordens de diversos fornecedores; uma compra pode atender várias OMs por alocação contratual; fornecedor confirma 250 de 400 sem converter tudo em recebido; alteração de data não muda prazo acordado com OM; retry é idempotente.
+
+TESTES OBRIGATÓRIOS: Estados de compra/revisão, validação de fornecedor suspenso, parcialidade, concorrência, idempotência, A/B, rate-limit e typecheck/build.
+
+ENTREGA / HANDOFF: PR Draft W6 com purchaseOrder, inbound event contract, testes e definições para integração W7/W8/W9.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W7 — Estoque leve, reservas e alocações N:M (paralelo P2)
+
+~~~text
+Você é o Worker W7 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Depois dos contratos W0/W1/W2/W3 e evento de W6 congelado.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/inventory/**, features/company/allocation/**, lib/company/inventory/**, app/api/company/inventory/**. Não acessar features/warehouse/** ou o ledger de depósitos militares.
+
+MISSÃO: Construir ledger empresarial por evento com unidade canônica, entradas, saídas, reservas, expedições, estornos, ajustes auditáveis e material em trânsito separado de saldo disponível. Alocar quantidades de compras e estoque para pedidos OM com cardinalidade N:M; garantir transações idempotentes, concorrência segura e ausência de estoque negativo ou dupla reserva. Suportar remessa parcial e entrega direta origem→OM com natureza própria (sem simular entrada/saída física).
+
+CRITÉRIOS DE ACEITE: Pedido 500 = 100 estoque + 300 fornecedor A + 100 B; compra 500 distribui 200/300 em duas OMs; duas reservas simultâneas do último saldo não podem ambas concluir; estorno mantém trilha; A/B isoladas.
+
+TESTES OBRIGATÓRIOS: Testes transacionais no Firestore Emulator, falhas concorrentes/retry, idempotência, conversão, parcialidade, saldo e retorno, typecheck/build.
+
+ENTREGA / HANDOFF: PR Draft W7 com esquema de ledger, invariantes quantitativos, testes de corrida e contratos de reserva/expedição para W9.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W8 — Financeiro manual, NFs e margens (paralelo P2)
+
+~~~text
+Você é o Worker W8 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Após contratos de W1/W2/W3; consumir eventos de W6/W7 quando disponíveis, nunca reimplementar compra ou estoque.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/finance/**, lib/company/finance/**, app/api/company/finance/**, sem alterar lib/billing.ts do SaaS militar.
+
+MISSÃO: Separar NF de entrada/compra e NF de venda/entrega; criar obrigações a pagar, contas a receber, vencimentos, parcelas, registros manuais de pagamento e recebimento e cálculo de margem/fluxo de caixa. Utilizar centavos ou aritmética decimal segura, marcar valores estimados e despesas ausentes, e não inferir recebimento bancário ou liquidação da OM a partir de entrega. Controles por papel financeiro.
+
+CRITÉRIOS DE ACEITE: NF de fornecedor não vira receita; NF de venda não vira despesa; pagamentos parciais somam ao saldo; frete/tributo desconhecidos aparecem como lacuna; multas e ajustes exigem auditoria; A/B e papéis isolados.
+
+TESTES OBRIGATÓRIOS: Aritmética/precisão, parcialidade e estorno, autorização por role, concorrência, conciliação manual sem baixa automática, typecheck/build.
+
+ENTREGA / HANDOFF: PR Draft W8 com ledger financeiro próprio, funções puras de cálculo, endpoints e painéis, limites conhecidos e pontos de integração W9.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W9 — Cronogramas interligados, entrega e indicadores (sequencial)
+
+~~~text
+Você é o Worker W9 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Somente depois da integração verificável de W6, W7 e eventos financeiros de W8. Não confundir com o Worker W9 do Almoxarifado.
+ESCOPO E ARQUIVOS RESERVADOS: features/company/schedule/**, features/company/delivery/**, lib/company/schedule/**, app/api/company/schedule/** e delivery/**; integração do menu pela branch integradora.
+
+MISSÃO: Ligar cronograma inbound (compra/fornecedor/recebimento) ao outbound (pedido OM/expedição/entrega), calculando viabilidade com última mercadoria necessária, separação, transporte e margem. Exibir datas solicitada, estimada, confirmada e acordada distintamente; alertas Atenção/Em risco/Atrasado e replanejamento humano. Criar romaneio, eventos de entrega, recusa, comprovante, parcialidade e entrega direta origem→OM sem ficção de custódia. Expor indicadores de prazo e pendência, respeitando acesso por papel.
+
+CRITÉRIOS DE ACEITE: Mudança de prazo de fornecedor identifica pedidos/linhas impactados sem alterar promessa OM automaticamente; entrega parcial não é atesto, liquidação ou pagamento; rota/romaneio reflete itens realmente expedidos; performance aceitável em Essencial.
+
+TESTES OBRIGATÓRIOS: Simulação fornecedor A/B, data alterada, parcialidade e atraso, idempotência de entrega, documento, privacidade e E2E ponta a ponta.
+
+ENTREGA / HANDOFF: PR Draft W9 com cenário de pedido OM até evidência de entrega, indicadores calculados e checklist de falhas relevantes para W10.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+
+#### PROMPT W10 — Integração final, auditoria e piloto controlado (sequencial)
+
+~~~text
+Você é o Worker W10 da extensão EMPROVEX Empresas. Execute efetivamente o trabalho descrito a seguir, em branch isolada e PR Draft; não se limite a planejar.
+
+BASE E DEPENDÊNCIAS: Quando os Workers anteriores entregarem PRs Draft com SHAs e testes; integrar sobre a main mais recente apenas após reconciliação segura.
+ESCOPO E ARQUIVOS RESERVADOS: Branch integration/emprovex-empresas-r3-pilot-<data> (nome a definir na execução), memorial/checkpoints, workflows E2E e ajustes cruzados aprovados. W10 é o único Worker que consolida arquivos compartilhados.
+
+MISSÃO: Revisar e integrar W1–W5, depois W6–W8 e W9, respeitando dependências, corrigindo conflitos de forma mínima e preservando login, Eleonor, Aprovisionamento, Almoxarifado, Admin, NF, Cloud Run e faturamento existentes. Executar E2E de empresa A/B, fundador/setor, pedido OM→compra→recebimento→estoque→entrega→financeiro, testes de carga essencial, revogação e auditoria de segurança. Preparar ambiente de QA isolado e plano reversível do primeiro piloto; não publicar automaticamente.
+
+CRITÉRIOS DE ACEITE: Todos os 20 cenários mínimos da auditoria PASS com evidências; sem leitura entre tenants, saldos e custos coerentes; CI typecheck/build/Core/Visual-R2/Fast/E2E aprovado; rollback definido; feature flag piloto OFF até liberação; bloqueio NO-GO se qualquer P0 persistir.
+
+TESTES OBRIGATÓRIOS: Executar todas as suítes relevantes, Auth/Firestore Emulator, Playwright em browsers, perf por workspace, regressão Cloud Run/Hosting e smoke QA antes de solicitar autorização.
+
+ENTREGA / HANDOFF: Parecer assinado GO/NO-GO, matriz de testes e links, lista de PRs e SHAs, pacote de lançamento com rollback. Merge ou promoção 100% do Cloud Run só mediante autorização explícita.
+
+REGRAS DE EXECUÇÃO: Leia e obedeça as instruções obrigatórias desta seção do memorial e a auditoria R1-M. Não modificar arquivos compartilhados reservados ao integrador, não usar dados militares como dados empresariais, não conceder permissões pelo cliente e não fazer merge/deploy. Registre somente evidências verificáveis, bloqueios e decisões técnicas mínimas, sem burocracia.
+~~~
+**Controle de execução:** os Workers W1–W5 são independentes em código, mas devem aguardar W0 fixar contratos. W6–W8 podem antecipar testes de domínio puros, porém não integrar escrita real antes dos contratos e RBAC. W9/W10 não devem ser executados em paralelo com integrações que modificam os mesmos arquivos. Atualizar este memorial somente com checkpoints de PR e provas de CI/E2E; nunca substituir o histórico.
+
+---
 ## CHECKPOINT R1-M — Retomada e sincronização com main (05/11/2026)
 
 **Estado: desenvolvimento reativado em branch isolada, PR para revisão; ainda NÃO integrado nem publicado.** 
