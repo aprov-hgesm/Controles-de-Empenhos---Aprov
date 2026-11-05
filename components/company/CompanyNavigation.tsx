@@ -80,6 +80,6 @@ export function CompanyNavigation({
           <LogOut size={17} aria-hidden="true"/>{signingOut ? 'Saindo...' : 'Sair da conta'}
         </button>
       </div>
-    </a>side>
+    </aside>
   </>;
 }
