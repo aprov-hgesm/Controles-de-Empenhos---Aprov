@@ -181,6 +181,27 @@ test('pilot OFF: nem reserva, nem Auth, nem API empresarial', async () => {
   assert.equal((await authDirectory()).length, baseline);
 });
 
+test('kill switches existentes prevalecem sobre flag ON sem criar Auth', async () => {
+  const baseline = (await authDirectory()).length;
+  process.env.EMPROVEX_COMPANY_PILOT_ENABLED = '1';
+  for (const flag of ['EMPROVEX_DISABLE_COMPANY_PROVISIONING', 'EMPROVEX_DISABLE_ADMIN_MUTATIONS']) {
+    process.env[flag] = '1';
+    try {
+      await assert.rejects(
+        deps.serverProvision.provisionCompanyWorkspaceWithAuth(fixture(99), founder),
+        error => error.code === 'PILOT_DISABLED' && error.httpStatus === 503,
+      );
+      await assert.rejects(
+        deps.guard.requireCompanyContext(request(), { action: 'company:read' }),
+        error => error.code === 'COMPANY_PILOT_DISABLED' && error.status === 503,
+      );
+    } finally {
+      delete process.env[flag];
+    }
+  }
+  assert.equal((await authDirectory()).length, baseline);
+});
+
 let a, b, tokenA, tokenB;
 test('piloto ON: empresas A/B criadas e autenticadas via Auth Emulator + Firestore', async () => {
   process.env.EMPROVEX_COMPANY_PILOT_ENABLED = '1';
@@ -263,7 +284,10 @@ test('cadastros simultâneos mesmo CNPJ/e-mail/workspace são serializados sem A
       deps.serverProvision.provisionCompanyWorkspaceWithAuth(right, founder),
     ]);
     assert.equal(settled.filter(x => x.status === 'fulfilled').length, 1);
-    assert.equal(settled.filter(x => x.status === 'rejected').length, 1);
+    const rejected = settled.filter(x => x.status === 'rejected');
+    assert.equal(rejected.length, 1);
+    assert.equal(rejected[0].reason.code, 'CONFLICT');
+    assert.equal(rejected[0].reason.httpStatus, 409);
     assert.equal((await authDirectory()).length, before + 1);
   }
 });
