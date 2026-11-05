@@ -234,6 +234,25 @@ test('W1: preço negociado com justificativa registra preço de venda, não cust
   const after=await get('commitments',tokenA,neId);
   assert.equal(after.payload.result.lines[0].orderedQuantity.value,'500');
 });
+test('W1: auditoria e idempotência usam os contratos congelados do W0',async()=>{
+  const root='http://127.0.0.1:8080/v1/projects/'+project+'/databases/(default)/documents/supplierCompanyWorkspaces/'+companyA;
+  const options={headers:{authorization:'Bearer owner'}};
+  const auditResponse=await fetch(root+'/auditEvents?pageSize=100',options);
+  assert.equal(auditResponse.status,200);
+  const audit=(await auditResponse.json()).documents || [];
+  const actions=audit.map(d=>d.fields?.action?.stringValue);
+  for (const expected of ['publicCustomers:write','commitments:write','customerOrders:write']) {
+    assert.ok(actions.includes(expected),expected);
+  }
+  assert.ok(audit.every(d=>d.fields?.actorUid?.stringValue && d.fields?.correlationId?.stringValue &&
+    d.fields?.eventId?.stringValue));
+  const idempotentResponse=await fetch(root+'/idempotencyKeys?pageSize=100',options);
+  assert.equal(idempotentResponse.status,200);
+  const keys=(await idempotentResponse.json()).documents || [];
+  assert.ok(keys.length>=5);
+  assert.ok(keys.every(d=>d.fields?.idempotencyKey?.stringValue &&
+    d.fields?.requestHash?.stringValue && d.fields?.requestedAt?.stringValue));
+});
 test('W1: piloto OFF = 503; conta A não recebe fallback',async()=>{
   process.env.EMPROVEX_COMPANY_PILOT_ENABLED='0';
   try{const r=await collections.customers.GET(req(tokenA));assert.equal(r.status,503);}

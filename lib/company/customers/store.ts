@@ -120,7 +120,7 @@ export class W1Store {
     if (!response.ok) throw new W1Error('DIRECTORY_UNAVAILABLE',503);
     const d=decodeDoc(await response.json() as Document);
     if (d.companyId!==this.ctx.companyId || d.uid!==this.ctx.uid || d.action!==action) throw new W1Error('TENANT_INTEGRITY_ERROR',503);
-    if (d.hash!==hash) throw new W1Error('IDEMPOTENCY_CONFLICT',409);
+    if (d.requestHash!==hash) throw new W1Error('IDEMPOTENCY_CONFLICT',409);
     return d.result && typeof d.result==='object' && !Array.isArray(d.result)
       ? d.result as Record<string,unknown> : null;
   }
@@ -135,16 +135,19 @@ export class W1Store {
     const permitted=new Set(writes.map(w=>w.path));
     if (permitted.size!==writes.length || writes.some(w=>!['publicCustomers','commitments','customerOrders']
       .some(domain=>w.path.startsWith(this.check(domain as CompanySubcollection)+'/')))) throw new W1Error('INVALID_SCOPE',503);
+    const auditAction=action.split(':')[0]+':write';
+    if (!['publicCustomers:write','commitments:write','customerOrders:write'].includes(auditAction)) throw new W1Error('INVALID_SCOPE',503);
     const commitWrites=[
       ...writes.map(w=>({update:{name:this.fullName(w.path),fields:fields(w.data)},
         currentDocument:w.updateTime ? {updateTime:w.updateTime} : {exists:false}})),
       {update:{name:this.fullName(idemPath),fields:fields({
         schemaVersion:'company-r1-v1',companyId:this.ctx.companyId,uid:this.ctx.uid,
-        action,hash,result,occurredAt:now,
+        action,idempotencyKey:key,requestHash:hash,requestedAt:now,result,
       })},currentDocument:{exists:false}},
       {update:{name:this.fullName(auditPath),fields:fields({
         schemaVersion:'company-r1-v1',eventId:auditId,companyId:this.ctx.companyId,
-        actorUid:this.ctx.uid,action,entityType:action.split(':')[0],entityId,
+        actorUid:this.ctx.uid,action:auditAction,operation:action,
+        entityType:action.split(':')[0],entityId,
         correlationId,idempotencyKey:key,beforeRevision:writes[0].updateTime ? Number(writes[0].data.revision)-1 : null,
         afterRevision:Number(writes[0].data.revision),occurredAt:now,
       })},currentDocument:{exists:false}},
