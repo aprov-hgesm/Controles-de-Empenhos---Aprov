@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { CompanyAuthorizedContext } from '../../server/companyAuthz';
 import { W1Store } from './store';
 import {
-  W1Error, allocate, ensureOwned, millis, owned, parseCommitment, parseCustomer,
+  W1Error, allocate, asDecimal, ensureOwned, millis, owned, parseCommitment, parseCustomer,
   parseOrder, validId, validIdempotency,
   type Commitment, type CustomerOrder, type PublicCustomer,
 } from './model';
@@ -23,8 +23,10 @@ function expected(v:unknown):number {
   return v.expectedRevision;
 }
 function commandKey(key:unknown) { return validIdempotency(key); }
-function bump<T extends {revision:number;updatedAt:string}>(v:T):T {
-  return {...v, revision:v.revision+1, updatedAt:new Date().toISOString()};
+function bump<T extends object>(v:T):T & {revision:number;updatedAt:string} {
+  const revision=(v as {revision?:unknown}).revision;
+  if (typeof revision!=='number' || !Number.isSafeInteger(revision)) throw new W1Error('CONFLICT',409);
+  return {...v,revision:revision+1,updatedAt:new Date().toISOString()};
 }
 function limitedHistory(old:unknown, event:Record<string,unknown>) {
   const items=Array.isArray(old) ? old : [];
@@ -148,7 +150,7 @@ export async function updateRecord(ctx:CompanyAuthorizedContext,domain:Domain,
   }
   const prior=before as unknown as CustomerOrder;
   if (cancelling) {
-    if (prior.lines.some(l=>millis(l.fulfilledQuantity.value)>0n)) return conflict();
+    if (prior.lines.some(l=>millis(l.fulfilledQuantity.value)>BigInt(0))) return conflict();
     const commitment=await store.get('commitments',prior.commitmentId);
     if (!commitment) return conflict();
     const c=commitment.data as unknown as Commitment;
@@ -158,10 +160,9 @@ export async function updateRecord(ctx:CompanyAuthorizedContext,domain:Domain,
     const map=new Map(c.lines.map(l=>[l.id,l]));
     const lines=c.lines.map(l=>{
       const release=prior.lines.find(o=>o.commitmentLineId===l.id);
-      const remain=millis(l.orderedQuantity.value) - (release ? millis(release.quantity.value) : 0n);
-      if (remain<0n) return conflict() as never;
-      return {...l,orderedQuantity:{value:remain===0n?'0':(Number(remain/1000n)+'').toString()+
-        (remain%1000n ? '.'+(remain%1000n).toString().padStart(3,'0').replace(/0+$/,'') : ''),unit:l.quantity.unit}};
+      const remain=millis(l.orderedQuantity.value) - (release ? millis(release.quantity.value) : BigInt(0));
+      if (remain<BigInt(0)) return conflict() as never;
+      return {...l,orderedQuantity:{value:asDecimal(remain),unit:l.quantity.unit}};
     });
     void emptyOrder; void map;
     const at=new Date().toISOString();

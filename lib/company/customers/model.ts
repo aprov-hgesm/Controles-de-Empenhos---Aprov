@@ -52,19 +52,19 @@ const arr = (v: unknown, max = 60): Record<string, unknown>[] =>
 export function millis(v: string): bigint {
   if (typeof v !== 'string' || !/^(0|[1-9]\d{0,11})(\.\d{1,3})?$/.test(v)) return bad();
   const [integer, fraction = ''] = v.split('.');
-  return BigInt(integer) * 1000n + BigInt(fraction.padEnd(3, '0'));
+  return BigInt(integer) * BigInt(1000) + BigInt(fraction.padEnd(3, '0'));
 }
 export function asDecimal(v: bigint): string {
-  if (v < 0n) return bad();
-  const f = (v % 1000n).toString().padStart(3, '0').replace(/0+$/, '');
-  return (v / 1000n).toString() + (f ? '.' + f : '');
+  if (v < BigInt(0)) return bad();
+  const f = (v % BigInt(1000)).toString().padStart(3, '0').replace(/0+$/, '');
+  return (v / BigInt(1000)).toString() + (f ? '.' + f : '');
 }
 const unitSet = new Set<CompanyUnit>(['UN','KG','G','L','ML','CX','FD','M']);
 export function quantity(v: unknown, allowZero = false): CompanyQuantity {
   if (!obj(v) || typeof v.value !== 'string' || typeof v.unit !== 'string'
     || !unitSet.has(v.unit as CompanyUnit)) return bad();
   const n = millis(v.value);
-  if (n < 0n || (!allowZero && n === 0n)) return bad();
+  if (n < BigInt(0) || (!allowZero && n === BigInt(0))) return bad();
   return {value: asDecimal(n), unit: v.unit as CompanyUnit};
 }
 export function money(v: unknown): CompanyMoney {
@@ -154,19 +154,19 @@ export function allocate(commitment: Commitment, input: ReturnType<typeof parseO
   for (const p of priorLines) {
     const base = byId.get(p.commitmentLineId);
     if (!base || base.quantity.unit !== p.quantity.unit) throw new W1Error('CONFLICT', 409);
-    used.set(base.id, (used.get(base.id) || 0n) - millis(p.quantity.value));
+    used.set(base.id, (used.get(base.id) || BigInt(0)) - millis(p.quantity.value));
   }
   const orderLines: CustomerOrderLine[] = input.lines.map(l => {
     const c = byId.get(l.commitmentLineId);
     if (!c || c.quantity.unit !== l.quantity.unit) throw new W1Error('CONFLICT', 409);
-    const next = (used.get(c.id) || 0n) + millis(l.quantity.value);
-    if (next < 0n || next > millis(c.quantity.value)) throw new W1Error('CONFLICT', 409);
+    const next = (used.get(c.id) || BigInt(0)) + millis(l.quantity.value);
+    if (next < BigInt(0) || next > millis(c.quantity.value)) throw new W1Error('CONFLICT', 409);
     used.set(c.id, next);
     return {id: l.id, commitmentLineId: c.id, description: c.description,
       quantity: l.quantity, salePrice: c.salePrice,
       fulfilledQuantity: {value: '0', unit: l.quantity.unit}};
   });
   return {orderLines, commitmentLines: commitment.lines.map(l => ({
-    ...l, orderedQuantity: {value: asDecimal(used.get(l.id) || 0n), unit: l.quantity.unit},
+    ...l, orderedQuantity: {value: asDecimal(used.get(l.id) || BigInt(0)), unit: l.quantity.unit},
   }))};
 }

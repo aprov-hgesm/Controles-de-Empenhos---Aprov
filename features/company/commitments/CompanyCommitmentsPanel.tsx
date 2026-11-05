@@ -17,7 +17,7 @@ export function CompanyCommitmentsPanel() {
   async function create(event:React.FormEvent) {
     event.preventDefault();setBusy(true);setError('');
     try {
-      await companyApi('commitments','POST',{publicCustomerId,neNumber,fiscalYear,
+      await companyApi('commitments','POST',{publicCustomerId:customerId,neNumber,fiscalYear,
         extractionSource:'manual',lines:[{id:'item-1',description,
           quantity:{value:qty,unit},salePrice:{amountCents:Number(price),currency:'BRL'}}]});
       setNeNumber('');setDescription('');await load();
