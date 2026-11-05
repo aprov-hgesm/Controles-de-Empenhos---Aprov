@@ -55,6 +55,12 @@ jobs:
           --project demo-emprovex-company-w0
           --only auth,firestore
           "node --test scripts/emprovex-empresas-w0-emulator.test.mjs"
+      - name: Diagnóstico restrito Firestore Emulator (somente se falhar)
+        if: failure()
+        run: |
+          if [ -f firestore-debug.log ]; then
+            grep -E 'Exception|ERROR|SEVERE|Caused by|java.lang' firestore-debug.log | tail -n 35 | sed -E 's#(https?://)[^[:space:]]+#\1[redacted]#g' || true
+          fi
       - name: Proteções do núcleo
         run: node scripts/verify-emprovex-core-protection.mjs
       - name: Regressão de identidade
