@@ -191,7 +191,16 @@ export async function updateCatalogItem(ctx: CompanyAuthorizedContext, id: strin
   // Price observations and references are append-only: historical quotes cannot be rewritten/deleted.
   for (const oldOption of existing.sourcingOptions) {
     const nextOption = parsed.sourcingOptions.find(o=>o.sourceSupplierId===oldOption.sourceSupplierId && o.supplierSku===oldOption.supplierSku);
-    if (!nextOption || nextOption.purchaseUnit !== oldOption.purchaseUnit || JSON.stringify(nextOption.conversion)!==JSON.stringify(oldOption.conversion) || JSON.stringify(nextOption.priceHistory.slice(0,oldOption.priceHistory.length)) !== JSON.stringify(oldOption.priceHistory)) throw new SupplierServiceError('PRICE_HISTORY_IMMUTABLE',409);
+    if (!nextOption || nextOption.purchaseUnit !== oldOption.purchaseUnit
+      || nextOption.conversion.from !== oldOption.conversion.from || nextOption.conversion.to !== oldOption.conversion.to
+      || nextOption.conversion.numerator !== oldOption.conversion.numerator || nextOption.conversion.denominator !== oldOption.conversion.denominator
+      || nextOption.priceHistory.length < oldOption.priceHistory.length
+      || oldOption.priceHistory.some((oldPrice, index) => {
+        const nextPrice = nextOption.priceHistory[index];
+        return !nextPrice || nextPrice.amountCents !== oldPrice.amountCents || nextPrice.currency !== oldPrice.currency
+          || nextPrice.quotedAt !== oldPrice.quotedAt || nextPrice.validFrom !== oldPrice.validFrom
+          || nextPrice.validUntil !== oldPrice.validUntil || nextPrice.basis !== oldPrice.basis;
+      })) throw new SupplierServiceError('PRICE_HISTORY_IMMUTABLE',409);
   }
   const wantedStatus = (input.data as RecordData)?.status ?? existing.status;
   if (wantedStatus !== 'active' && wantedStatus !== 'archived') throw new SupplierServiceError('INVALID_STATUS',400);
