@@ -40,6 +40,10 @@ jobs:
         run: npm run typecheck
       - name: Contratos empresariais isolados
         run: node --test scripts/emprovex-empresas-sync-r1.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Auth/Firestore Emulator — fixtures empresariais demo isoladas
         env:
           NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w0
