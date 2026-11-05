@@ -180,7 +180,7 @@ async function authAdmin<T>(
 async function firestoreCommit(token: string, writes: FirestoreWrite[]): Promise<void> {
   const response = await fetch(`${firestoreUrl}:commit`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    headers: { authorization: `Bearer ${demo ? 'owner' : token}`, 'content-type': 'application/json' },
     body: JSON.stringify({ writes }),
     cache: 'no-store',
   });
