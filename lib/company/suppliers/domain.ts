@@ -164,19 +164,19 @@ export function convertQuantityExact(decimal: string, conversion: CompanyUnitCon
   if (!units.has(conversion.from) || !units.has(conversion.to) || !Number.isSafeInteger(conversion.numerator) || !Number.isSafeInteger(conversion.denominator) || conversion.numerator <= 0 || conversion.denominator <= 0) throw new SupplierValidationError('INVALID_CONVERSION');
   const [integer, fraction = ''] = decimal.split('.');
   let numerator = BigInt(integer + fraction) * BigInt(conversion.numerator);
-  let denominator = 10n ** BigInt(fraction.length) * BigInt(conversion.denominator);
-  const gcd = (a: bigint, b: bigint): bigint => b === 0n ? a : gcd(b, a % b);
+  let denominator = BigInt(10) ** BigInt(fraction.length) * BigInt(conversion.denominator);
+  const gcd = (a: bigint, b: bigint): bigint => b === BigInt(0) ? a : gcd(b, a % b);
   const divisor = gcd(numerator, denominator);
   numerator /= divisor; denominator /= divisor;
   let decimalPlaces = 0;
   let remaining = denominator;
-  while (remaining % 2n === 0n) { remaining /= 2n; decimalPlaces += 1; }
+  while (remaining % BigInt(2) === BigInt(0)) { remaining /= BigInt(2); decimalPlaces += 1; }
   let fivePlaces = 0;
-  while (remaining % 5n === 0n) { remaining /= 5n; fivePlaces += 1; }
-  if (remaining !== 1n) throw new SupplierValidationError('INEXACT_CONVERSION');
+  while (remaining % BigInt(5) === BigInt(0)) { remaining /= BigInt(5); fivePlaces += 1; }
+  if (remaining !== BigInt(1)) throw new SupplierValidationError('INEXACT_CONVERSION');
   const scale = Math.max(decimalPlaces, fivePlaces);
   if (scale > 9) throw new SupplierValidationError('INEXACT_CONVERSION');
-  const scaled = numerator * 10n ** BigInt(scale) / denominator;
+  const scaled = numerator * BigInt(10) ** BigInt(scale) / denominator;
   const digitsValue = scaled.toString().padStart(scale + 1, '0');
   if (scale === 0) return digitsValue;
   return (digitsValue.slice(0,-scale) + '.' + digitsValue.slice(-scale).replace(/0+$/, '')).replace(/\.$/, '');
