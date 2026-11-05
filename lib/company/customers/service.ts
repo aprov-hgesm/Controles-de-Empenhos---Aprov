@@ -10,7 +10,9 @@ import {
 export type Domain = 'publicCustomers' | 'commitments' | 'customerOrders';
 export type Operation = 'read' | 'create' | 'update';
 
-const hash = (v:unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
+// O timestamp derivado pelo servidor não faz parte do hash idempotente do comando.
+const hash = (v:unknown) => createHash('sha256').update(JSON.stringify(v,(key,value) =>
+  key === 'updatedAt' ? undefined : value)).digest('hex');
 const conflict = () => { throw new W1Error('CONFLICT', 409); };
 const notFound = () => { throw new W1Error('NOT_FOUND', 404); };
 const object = (v:unknown): v is Record<string,unknown> =>
@@ -154,17 +156,12 @@ export async function updateRecord(ctx:CompanyAuthorizedContext,domain:Domain,
     const commitment=await store.get('commitments',prior.commitmentId);
     if (!commitment) return conflict();
     const c=commitment.data as unknown as Commitment;
-    const emptyOrder={commitmentId:prior.commitmentId,publicCustomerId:prior.publicCustomerId,
-      reference:prior.reference,lines:[],requestedDelivery:prior.requestedDelivery};
-    // Deallocate this order without creating an artificial negative commitment.
-    const map=new Map(c.lines.map(l=>[l.id,l]));
     const lines=c.lines.map(l=>{
       const release=prior.lines.find(o=>o.commitmentLineId===l.id);
       const remain=millis(l.orderedQuantity.value) - (release ? millis(release.quantity.value) : BigInt(0));
       if (remain<BigInt(0)) return conflict() as never;
       return {...l,orderedQuantity:{value:asDecimal(remain),unit:l.quantity.unit}};
     });
-    void emptyOrder; void map;
     const at=new Date().toISOString();
     const updated=bump({...before,status:'cancelled',negotiationHistory:limitedHistory(before.negotiationHistory,
       {revision:before.revision+1,byUid:ctx.uid,at,reason:'cancelled'})});

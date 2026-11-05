@@ -114,6 +114,7 @@ export function parseOrder(v: unknown) {
   if (!obj(v)) return bad();
   const lines = arr(v.lines).map(l => ({
     id: validId(l.id), commitmentLineId: validId(l.commitmentLineId), quantity: quantity(l.quantity),
+    ...(l.salePrice === undefined ? {} : {salePrice:money(l.salePrice)}),
   }));
   if (new Set(lines.map(l => l.id)).size !== lines.length ||
       new Set(lines.map(l => l.commitmentLineId)).size !== lines.length) return bad();
@@ -162,8 +163,11 @@ export function allocate(commitment: Commitment, input: ReturnType<typeof parseO
     const next = (used.get(c.id) || BigInt(0)) + millis(l.quantity.value);
     if (next < BigInt(0) || next > millis(c.quantity.value)) throw new W1Error('CONFLICT', 409);
     used.set(c.id, next);
+    if (l.salePrice && l.salePrice.amountCents !== c.salePrice.amountCents && !input.negotiationNote) {
+      throw new W1Error('INVALID_INPUT',400);
+    }
     return {id: l.id, commitmentLineId: c.id, description: c.description,
-      quantity: l.quantity, salePrice: c.salePrice,
+      quantity: l.quantity, salePrice: l.salePrice || c.salePrice,
       fulfilledQuantity: {value: '0', unit: l.quantity.unit}};
   });
   return {orderLines, commitmentLines: commitment.lines.map(l => ({
