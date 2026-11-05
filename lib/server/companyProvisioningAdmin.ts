@@ -207,7 +207,7 @@ function createWrite(path: string, record: Record<string, unknown>): FirestoreWr
 }
 
 const isConflict = (error: unknown) =>
-  /ALREADY_EXISTS|FAILED_PRECONDITION|EMAIL_EXISTS/i.test(
+  /ALREADY[\\s_-]*EXISTS|FAILED[\\s_-]*PRECONDITION|EMAIL[\\s_-]*EXISTS/i.test(
     error instanceof Error ? error.message : String(error)
   );
 
