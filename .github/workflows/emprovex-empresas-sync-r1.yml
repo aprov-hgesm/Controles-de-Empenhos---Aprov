@@ -1,0 +1,48 @@
+name: EMPROVEX Empresas — sincronização R1
+on:
+  pull_request:
+    paths:
+      - 'app/empresa/**'
+      - 'app/login/**'
+      - 'app/api/company/**'
+      - 'app/api/admin/companies/**'
+      - 'app/api/admin/provision-company/**'
+      - 'components/company/**'
+      - 'components/admin/**'
+      - 'hooks/usePlatformAdminCompanies.ts'
+      - 'lib/company/**'
+      - 'lib/companyProvisioning.ts'
+      - 'lib/platformIdentity.ts'
+      - 'lib/platformAdminStore.ts'
+      - 'lib/server/company*'
+      - 'lib/server/requestSecurity.ts'
+      - 'scripts/emprovex-empresas-sync-r1.test.mjs'
+      - '.github/workflows/emprovex-empresas-sync-r1.yml'
+  workflow_dispatch:
+jobs:
+  empresas-r1:
+    name: Tipagem, isolamento, regressões e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Dependências
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Contratos empresariais isolados
+        run: node --test scripts/emprovex-empresas-sync-r1.test.mjs
+      - name: Proteções do núcleo
+        run: node scripts/verify-emprovex-core-protection.mjs
+      - name: Regressão de identidade
+        run: node scripts/verify-hybrid-auth-model.mjs
+      - name: Rotas críticas
+        run: node --test scripts/critical-cross-route-navigation.test.mjs
+      - name: Build, sem deploy
+        run: npm run build
