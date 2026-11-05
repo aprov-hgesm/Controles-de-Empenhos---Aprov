@@ -47,6 +47,12 @@ const AdminWorldHomePanel = lazy(() =>
 const AdminCreateSectorPanel = lazy(() =>
   import('./AdminCreateSectorPanel').then((module) => ({ default: module.AdminCreateSectorPanel }))
 );
+const AdminCreateCompanyPanel = lazy(() =>
+  import('./AdminCreateCompanyPanel').then((module) => ({ default: module.AdminCreateCompanyPanel }))
+);
+const AdminCompaniesPanel = lazy(() =>
+  import('./AdminCompaniesPanel').then((module) => ({ default: module.AdminCompaniesPanel }))
+);
 const AdminSecurityPanel = lazy(() =>
   import('./AdminSecurityPanel').then((module) => ({ default: module.AdminSecurityPanel }))
 );
@@ -78,6 +84,7 @@ import type {
   GoogleMonitoringCredentialSource,
 } from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
+import { usePlatformAdminCompanies } from '../../hooks/usePlatformAdminCompanies';
 import type {
   BillingAccount,
   BillingAccountStatus,
@@ -91,6 +98,7 @@ type AdminTabId =
   | 'inicio'
   | 'overview'
   | 'setores'
+  | 'empresas'
   | 'novo-setor'
   | 'interessados'
   | 'consumo'
@@ -119,9 +127,15 @@ const ADMIN_TABS = [
     icon: Building2,
   },
   {
+    id: 'empresas',
+    label: 'Empresas',
+    description: 'Diretório de clientes empresariais e seus acessos.',
+    icon: Building2,
+  },
+  {
     id: 'novo-setor',
-    label: 'Cadastrar Setor',
-    description: 'Provisionamento completo de uma nova unidade operacional.',
+    label: 'Cadastrar cliente',
+    description: 'Cadastro de setor operacional ou empresa contratante.',
     icon: Plus,
   },
   {
@@ -173,7 +187,7 @@ const ADMIN_TABS = [
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
   { label: 'Central', tabs: ['inicio', 'overview'] },
-  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'interessados', 'assinaturas'] },
+  { label: 'Setores e clientes', tabs: ['setores', 'empresas', 'novo-setor', 'interessados', 'assinaturas'] },
   { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
   { label: 'Governança', tabs: ['seguranca'] },
 ];
@@ -293,6 +307,8 @@ export function PlatformAdminView({
   const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
     ? 'overview'
     : requestedAdminTab;
+  const companiesDirectory = usePlatformAdminCompanies(adminUser, activeTab === 'empresas');
+  const [newClientType, setNewClientType] = useState<'setor' | 'empresa'>('setor');
   const [sectorQuery, setSectorQuery] = useState('');
   const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
@@ -799,7 +815,7 @@ export function PlatformAdminView({
                     className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/15 bg-blue-500/10 px-3.5 text-left text-xs font-extrabold text-blue-100 transition hover:bg-blue-500/15"
                   >
                     <Plus className="h-4 w-4" />
-                    Cadastrar novo setor
+                    Cadastrar cliente
                   </button>
                   <button
                     type="button"
@@ -840,11 +856,11 @@ export function PlatformAdminView({
                   type="button"
                   disabled={!persistentDirectoryReady || creatingSector}
                   onClick={() => changeAdminTab('novo-setor')}
-                  title={persistentDirectoryReady ? 'Cadastrar novo setor' : 'Aguardando acesso ao diretório administrativo no Firestore'}
+                  title={persistentDirectoryReady ? 'Cadastrar cliente' : 'Aguardando acesso ao diretório administrativo no Firestore'}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-600/25 disabled:text-blue-100/45"
                 >
                   <Plus className="w-4 h-4" />
-                  Cadastrar novo setor
+                  Cadastrar cliente
                 </button>
               </div>
 
@@ -914,11 +930,43 @@ export function PlatformAdminView({
 
         <Suspense fallback={<section role="status" className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-700">Carregando área administrativa...</section>}>
         {activeTab === 'novo-setor' && (
-          <AdminCreateSectorPanel
-            creating={creatingSector}
-            disabled={!persistentDirectoryReady}
-            onCreate={handleCreateSector}
-            onCreated={() => changeAdminTab('setores')}
+          <div className="space-y-4" data-testid="admin-unified-client-create">
+            <section className="rounded-2xl border border-white/10 bg-[#071225] p-5 text-white">
+              <label className="block text-sm font-semibold" htmlFor="admin-new-client-type">Tipo de cliente</label>
+              <select
+                id="admin-new-client-type"
+                value={newClientType}
+                onChange={(event) => setNewClientType(event.target.value === 'empresa' ? 'empresa' : 'setor')}
+                className="mt-3 min-h-11 w-full rounded-xl border border-white/20 bg-[#10213d] px-4 text-white"
+              >
+                <option value="setor">Setor de Aprovisionamento</option>
+                <option value="empresa">Empresa fornecedora</option>
+              </select>
+            </section>
+            {newClientType === 'empresa' ? (
+              <AdminCreateCompanyPanel
+                creating={companiesDirectory.creating}
+                onCreate={companiesDirectory.createCompany}
+                onCreated={() => { void companiesDirectory.refresh(); changeAdminTab('empresas'); }}
+              />
+            ) : (
+              <AdminCreateSectorPanel
+                creating={creatingSector}
+                disabled={!persistentDirectoryReady}
+                onCreate={handleCreateSector}
+                onCreated={() => changeAdminTab('setores')}
+              />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'empresas' && (
+          <AdminCompaniesPanel
+            companies={companiesDirectory.companies}
+            loading={companiesDirectory.loading}
+            error={companiesDirectory.error}
+            onRefresh={() => void companiesDirectory.refresh()}
+            onCreateRequested={() => { setNewClientType('empresa'); changeAdminTab('novo-setor'); }}
           />
         )}
 

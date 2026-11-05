@@ -2,6 +2,26 @@
 
 > **PRECEDÊNCIA DE INFRAESTRUTURA (31/10/2026):** os workspaces empresariais continuam sujeitos ao seu próprio ciclo de desenvolvimento/integração; **não** confundir migração da hospedagem web com publicação das funcionalidades empresariais. O domínio operacional principal está em Google Cloud Run por Firebase Hosting, e o procedimento canônico de publicação é [EMPROVEX_RELEASE_CLOUD_RUN.md](./EMPROVEX_RELEASE_CLOUD_RUN.md). Registros Vercel abaixo são históricos.
 
+## CHECKPOINT R1-M — Retomada e sincronização com main (05/11/2026)
+
+**Estado: desenvolvimento reativado em branch isolada, PR para revisão; ainda NÃO integrado nem publicado.** 
+Base auditada: `main@80a2f3a3e30cfc31521be6ce05324da3cc952477`. Origem de código empresarial: PR #447 (`83a9d7d2eb3b3863c25a385a6339c9c24fd854cb`), com referência adicional de #419.
+
+**Diferenças e decisões de reconciliação:**
+- #419 estava 390 commits atrás da main e #447, 301. Não fazer merge direto das PRs legadas; portar seletivamente componentes empresariais.
+- Identidade `company`, CNPJ, índices, endpoints Admin e sessão autenticada pertencem ao módulo empresarial, sem UG, sem Warehouse, sem herança de billing setorial.
+- Manter integralmente o shell operacional recente ao extraí-lo para `app/login/OperationalEntry.tsx`; o novo gateway deve resolver empresa no servidor antes de montar listeners/setores. Preservar acesso Google do fundador existente na main.
+- Admin mostra Empresa e Setor sob `Cadastrar cliente`. Não habilitar seletor de Almoxarifado enquanto a fundação setorial correspondente não estiver incorporada à main; a evolução W9 segue independente.
+- Filtrar registros `company` no diretório de setores, preservar os componentes 3D, sessões e a experiência Normal/Essencial da main.
+- `getGoogleAccessToken` do backend vigente continua compatível com Cloud Run (identidade gerenciada). Nenhuma cópia de service-account JSON.
+- Rules atuais exigem `accountType == 'sector'` para autorização operacional. Empresa usa somente API própria com verificação UID/workspace. **Não publicar Rules novas.**
+- Ajustar testes de regressão que localizavam o shell antigo em `app/login/page.tsx` para o novo `OperationalEntry.tsx`, sem enfraquecer verificações.
+- O portal /empresa permanece shell R0: sem criar falsos dados de pedidos, estoque, financeiro, cobrança ou integrações com OMs.
+
+**Gates antes de integração/publicação:** typecheck, build, testes de núcleo/rotas, verificação de autorização por Auth/Firestore Emulator (fundador, setor legado, empresa, UID/CNPJ, isolamento), depois QA real e aprovação de publicação. Nenhuma conta real ou deploy nesta etapa.
+
+---
+
 ## CHECKPOINT R0 — Decisão de integração e estratégia de branches (30/10/2026)
 
 > **GO/NO-GO do integrador: NO-GO para merge da PR #419 e para produção até resolver regressão E2E de login setorial, reconciliar os contratos de verificação legados e demonstrar cadastro/login empresarial QA.** É autorizado continuar desenvolvimento em branches isoladas.
