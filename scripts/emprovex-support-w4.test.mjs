@@ -5,7 +5,10 @@ import { readFileSync } from 'node:fs';
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('Ajuda autenticada disponível nos dois menus sem criar abas ou rotas', () => {
-  const main = read('app/login/page.tsx');
+  // O gateway de identidade é isolado; o suporte autenticado vive no shell operacional.
+  const gateway = read('app/login/page.tsx');
+  const main = read('app/login/OperationalEntry.tsx');
+  assert.match(gateway, /import\('\.\/OperationalEntry'\)/);
   const warehouse = read('features/warehouse/components/WarehouseModuleShell.tsx');
   const side = read('components/layout/AppSidebar.tsx');
   const warehouseSide = read('features/warehouse/components/WarehouseSidebar.tsx');
