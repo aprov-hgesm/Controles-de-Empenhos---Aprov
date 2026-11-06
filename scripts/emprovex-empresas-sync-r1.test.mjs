@@ -99,7 +99,11 @@ test('sessão empresarial valida provedor, e-mail, UID, workspace e status', () 
     "readNestedString(workspace, 'companyProfile', 'registrationStatus') !== 'active'",
     "candidate.emailVerified !== true",
   ]) assert.ok(server.includes(required), 'Guarda empresarial ausente: ' + required);
-  assert.match(read('app/api/company/session/route.ts'), /verifyCompanySession/);
+  // Either legacy single-tenant or W10-III selected context must still perform
+  // verified company-session checks. The selected adapter wraps W0 live Auth.
+  assert.match(read('app/api/company/session/route.ts'),
+    /verify(?:Selected)?CompanySession/);
+  assert.match(read('lib/server/companyProfiles/integration.ts'), /verifyCompanySession/);
   assert.match(read('components/company/CompanySessionGate.tsx'), /stage: 'checking'/);
 });
 

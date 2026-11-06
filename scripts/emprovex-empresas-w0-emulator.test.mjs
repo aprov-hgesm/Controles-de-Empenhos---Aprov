@@ -114,6 +114,12 @@ deps.contracts = loadTs('lib/company/contracts/index.ts', {
 deps.guard = loadTs('lib/server/companyAuthz/index.ts', {
   '../../company/contracts': deps.contracts,
   '../companySession': deps.session,
+  // W0 suite tests legacy-token/no-cookie guard against REAL Auth/Firestore Emulator.
+  // W10-III selected-profile resolution is covered separately by its own test.
+  '../companyProfiles/integration': {
+    verifySelectedCompanySession: async (req) => deps.session.verifyCompanySession(
+      req.headers.get('authorization')),
+  },
   '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 
