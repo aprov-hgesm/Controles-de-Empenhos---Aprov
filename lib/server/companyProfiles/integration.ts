@@ -4,8 +4,6 @@
  * Legacy W0 directory remains immutable. No sector/founder fallback.
  */
 import { verifyFirebaseRequest } from '../firebaseFounderAuth';
-import firebaseConfig from '../../../firebase-applet-config.json';
-import { getGoogleAccessToken } from '../sectorProvisioningAdmin';
 import { createFiscalTransport } from '../../company/fiscal/issuance/firestoreTransport.mjs';
 import { requestAdditionalCompany } from '../../company/profiles/registration.mjs';
 import { createQaAdditionalCompanyRegistry } from '../../company/profiles/qaRegistration.mjs';
