@@ -51,9 +51,9 @@ export function CompanyPurchasesWorkspace({getIdToken}:Props){
       const parsed=JSON.parse(kind==='create'?draft:change) as unknown;
       const path=kind==='create'?'/api/company/purchases':'/api/company/purchases/'+encodeURIComponent(selected?.id||'');
       const response=await request<{result:PurchaseOrder}>(path,kind==='create'?'POST':'PATCH',parsed);
-      setFeedback(kind==='create'?'Rascunho registrado. Sem envio ou estoque automático.':'Operação registrada com auditoria.');
       await reload();
       if(kind==='change')await open(response.result.id);
+      setFeedback(kind==='create'?'Rascunho registrado. Sem envio ou estoque automático.':'Operação registrada com auditoria.');
     }catch(e){setFeedback(e instanceof Error?e.message:'Não foi possível registrar a operação');}
     finally{setLoading(false);}
   };
