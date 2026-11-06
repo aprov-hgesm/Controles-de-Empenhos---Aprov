@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import ts from 'typescript';
+import {runInNewContext} from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('W10: 10 módulos conectados a componentes reais, sem importar domínios militares',()=>{
@@ -36,8 +38,6 @@ test('W10: primeiro acesso do convidado exige cadastro e verificação do email,
   assert.doesNotMatch(source,/localStorage\.setItem|document\.cookie|company:write/);
 });
 test('W10: proposta de rota é cobertura explícita, nunca despacho automático',()=>{
-  const ts = require('typescript');
-  const {runInNewContext}=require('node:vm');
   const source = read('lib/company/integration/deliveryRoutingContract.ts');
   const out={};
   const c=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022},reportDiagnostics:true});
