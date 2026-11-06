@@ -10,7 +10,7 @@ const read = (path) => readFileSync(resolve(process.cwd(), path), 'utf8');
 test('P0: Central de Empenhos e a rota canonica, com alias legado sem segundo gate', () => {
   const canonical = read('app/central-empenhos/page.tsx');
   const nextConfig = read('next.config.ts');
-  const operational = read('app/login/page.tsx');
+  const operational = read('app/login/OperationalEntry.tsx');
   assert.match(canonical, /export \{ default \} from '\.\.\/login\/page'/);
   assert.match(nextConfig, /source:\s*'\/login',\s*destination:\s*'\/central-empenhos',\s*permanent:\s*false/);
   assert.match(nextConfig, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
@@ -91,7 +91,7 @@ test('P0: varredura completa do frontend bloqueia navegação RSC vulnerável', 
   assert.match(session, /window\.location\.replace\('\/admin'\)/);
   const delivery = read('features/warehouse/components/WarehouseDeliveriesOperational.tsx');
   assert.match(delivery, /href="\/central-empenhos\?tab=cronogramas"/);
-  const login = read('app/login/page.tsx');
+  const login = read('app/login/OperationalEntry.tsx');
   assert.match(login, /if \(tab === 'cronogramas'\) setActiveTab\('cronogramas'\)/);
   const mobile = read('features/warehouse/mobile/WarehouseMobilePositionCheck.tsx');
   assert.match(mobile, /new URLSearchParams\(/);

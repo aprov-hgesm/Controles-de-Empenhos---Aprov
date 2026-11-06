@@ -6,6 +6,8 @@ export const SECURITY_BURST_BUCKET_LIMIT = 512;
 
 export type AdminSecurityOperation =
   | 'sector-provision'
+  | 'company-provision'
+  | 'company-list'
   | 'public-access-request'
   | 'sector-delete'
   | 'sector-password-reset'
@@ -16,6 +18,7 @@ export type AdminSecurityOperation =
   | 'warehouse-outbound-return';
 
 export type AdminMutationOperation =
+  | 'company-provision'
   | 'sector-provision'
   | 'sector-delete'
   | 'sector-password-reset'
@@ -191,6 +194,7 @@ export function enforceAuthenticatedAdminBurstLimit(
 }
 
 const killSwitchEnvByOperation: Record<AdminMutationOperation, string> = {
+  'company-provision': 'EMPROVEX_DISABLE_COMPANY_PROVISIONING',
   'sector-provision': 'EMPROVEX_DISABLE_SECTOR_PROVISIONING',
   'sector-delete': 'EMPROVEX_DISABLE_SECTOR_DELETION',
   'sector-password-reset': 'EMPROVEX_DISABLE_SECTOR_PASSWORD_RESET',

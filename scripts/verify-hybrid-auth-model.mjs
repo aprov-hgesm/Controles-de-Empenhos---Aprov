@@ -11,7 +11,7 @@ const access = read('lib/platformAccess.ts');
 const operationalData = read('hooks/useOperationalData.ts');
 const rootEntry = read('app/page.tsx');
 const page = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx')
+  ? read('app/login/OperationalEntry.tsx')
   : rootEntry;
 const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
