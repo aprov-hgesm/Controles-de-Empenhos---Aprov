@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
       - name: Testes de estados e quantidades W6
         run: node --experimental-strip-types --test lib/company/purchases/w6-domain.test.mjs
+      - name: Testes W6 API, guard e rate-limit
+        run: node --test lib/company/purchases/w6-http.test.mjs
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
