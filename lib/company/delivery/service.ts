@@ -3,6 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {COMPANY_CONTRACT_VERSION} from '../contracts';
 import {W9Store,type DeliveryCheck,type DeliveryMutation} from './store';
+import {readIdentityDocument} from '../../server/companyMembership/firestore';
 import {DeliveryError,parseDeliveryDraft,checkDispatchQuota,transitionDelivery,assessSchedule,
   approvePromise,validId,validKey,milli,decimal} from './domain.mjs';
 
@@ -23,6 +24,20 @@ function owned(ctx:CompanyAuthorizedContext,idValue:string,kind:string,data:Reco
 function mandatory(record:Awaited<ReturnType<W9Store['get']>>,code:string){
  if(!record||record.data.status!=='active')return error(code,409);
  return record;
+}
+async function assignedDriver(ctx:CompanyAuthorizedContext,store:W9Store,driverUid:string):Promise<DeliveryCheck|null>{
+ // The owner can operate their own deliveries; a member must have an active, matching W3 role.
+ if(ctx.role==='owner' && driverUid===ctx.uid)return null;
+ const selector=await readIdentityDocument('companyMemberAuthIndex',driverUid);
+ if(!selector||selector.value.firebaseUid!==driverUid||selector.value.companyId!==ctx.companyId||
+  selector.value.workspaceId!==ctx.companyId||typeof selector.value.email!=='string')
+  return error('DRIVER_NOT_IN_COMPANY',403);
+ const email=selector.value.email.trim().toLowerCase();
+ const memberId=digest(email),member=mandatory(await store.get('members',memberId),'DRIVER_NOT_ACTIVE');
+ if(member.data.status!=='active'||member.data.firebaseUid!==driverUid||member.data.email!==email||
+  !Array.isArray(member.data.roles)||!member.data.roles.some((r:string)=>['driver','logistics','admin'].includes(r)))
+  return error('DRIVER_NOT_ACTIVE',403);
+ return {kind:'members',id:memberId,updateTime:member.updateTime};
 }
 async function role(ctx:CompanyAuthorizedContext,store:W9Store) {
  if(ctx.role==='owner')return {canPlan:true,isDriverOnly:false};
@@ -74,6 +89,7 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
  if(!who.canPlan)return error('LOGISTICS_ROLE_REQUIRED',403);
  const draft=parseDeliveryDraft(body),command=await replay(store,'deliveries:create',key,draft);
  if(command.previous)return command.previous;
+ const driverCheck=await assignedDriver(ctx,store,draft.driverUid);
  const order=mandatory(await store.get('customerOrders',draft.customerOrderId),'ORDER_UNAVAILABLE');
  const line=Array.isArray(order.data.lines)?order.data.lines.find((x:any)=>x.id===draft.customerOrderLineId):null;
  if(!line||line.quantity?.unit!==draft.quantity.unit)return error('ORDER_LINE_MISMATCH',409);
@@ -143,7 +159,8 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
   {kind:'allocations',id:orderProjectionId(draft.customerOrderId,draft.customerOrderLineId),updateTime:orderProj.updateTime},
   {kind:'allocations',id:linkId,updateTime:link.updateTime},
   {kind:'publicCustomers',id:customer.data.id,updateTime:customer.updateTime},
-  ...(directEvent?[{kind:'stockEvents' as const,id:directEvent.data.id as string,updateTime:directEvent.updateTime}]:[])];
+  ...(directEvent?[{kind:'stockEvents' as const,id:directEvent.data.id as string,updateTime:directEvent.updateTime}]:[]),
+  ...(driverCheck?[driverCheck]:[])];
  return committed(store,'deliveries:create',command,[mutation(null,record),mutation(totalRow,total),mutation(sourceRow,sourceQuota)],checks,
    {delivery:record,romaneio:{id:deliveryId,manualSequence:draft.manualSequence,driverUid:draft.driverUid,
     source:draft.source,quantity:draft.quantity,destination:draft.destination,eta:null,estimatedDistanceMeters:null,
