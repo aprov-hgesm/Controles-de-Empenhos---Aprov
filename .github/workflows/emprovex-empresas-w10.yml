@@ -49,7 +49,7 @@ jobs:
       - name: W11 — 5 OMs, 2 veículos, limites e providers
         run: node --test lib/company/routing/routing.test.mjs
       - name: W10-II — vínculo W9/W11 e candidatos verificados
-        run: node --test lib/company/integration/*.test.mjs
+        run: node --test lib/company/integration/approvedRoute.test.mjs lib/company/integration/deliveryCandidates.test.mjs
       - name: W10 — integrações
         run: node --test scripts/empresas-w10-integration.test.mjs
       - name: TypeScript
