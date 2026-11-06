@@ -106,12 +106,14 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
  }
  async function addVehicle(){
   if(!fleetForm.start||!fleetForm.end)throw new Error('SHIFT_REQUIRED');
+  if(Boolean(fleetForm.breakStart)!==Boolean(fleetForm.breakEnd))throw new Error('BREAK_WINDOW_REQUIRED');
   const v:Vehicle={id:fleetForm.id,origin:{latitude:Number(fleetForm.lat),longitude:Number(fleetForm.lon),
     coordinateSource:'operador-confirmou'},capacity:{
      ...(fleetForm.weight?{weightKg:Number(fleetForm.weight)}:{}),
      ...(fleetForm.volume?{volumeM3:Number(fleetForm.volume)}:{}),
      ...(fleetForm.units?{units:Number(fleetForm.units)}:{})},
-   shift:{start:iso(fleetForm.start),end:iso(fleetForm.end)},breaks:[],
+   shift:{start:iso(fleetForm.start),end:iso(fleetForm.end)},
+   breaks:fleetForm.breakStart&&fleetForm.breakEnd?[{start:iso(fleetForm.breakStart),end:iso(fleetForm.breakEnd)}]:[],
    ...(fleetForm.driver?{driverUid:fleetForm.driver}:{})};
   await call('/api/company/routing/vehicles','POST',v,true);
   await reload();setSelectedVehicle(v.id);setStatus('Veículo registrado apenas no ambiente empresarial.');
@@ -185,11 +187,12 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
    <p className="text-sm text-slate-600">Informe coordenadas verificadas, capacidade real, turno e motorista.
     Pausas e limites extras podem vir do W9 por contrato; não são presumidos.</p>
    <div className="grid gap-2 sm:grid-cols-3">
-    {(['id','lat','lon','driver','weight','volume','units','start','end'] as const).map(k=>
+    {(['id','lat','lon','driver','weight','volume','units','start','end','breakStart','breakEnd'] as const).map(k=>
      <label className="text-sm" key={k}>{({id:'ID veículo',lat:'Latitude origem',lon:'Longitude origem',
       driver:'UID motorista (opcional)',weight:'Capacidade kg',volume:'Capacidade m³',
-      units:'Capacidade unidades',start:'Turno início',end:'Turno fim'} as const)[k]}
-      <input className={inputClass} type={k==='start'||k==='end'?'datetime-local':'text'}
+      units:'Capacidade unidades',start:'Turno início',end:'Turno fim',
+      breakStart:'Pausa início (opcional)',breakEnd:'Pausa fim (opcional)'} as const)[k]}
+      <input className={inputClass} type={['start','end','breakStart','breakEnd'].includes(k)?'datetime-local':'text'}
        value={fleetForm[k]} onChange={e=>setFleetForm(f=>({...f,[k]:e.target.value}))}/>
      </label>)}
    </div>
@@ -230,6 +233,13 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
       setAssignments(arr);setProposal(null);setSaved(null);}}}
      className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm">
      <span className="flex-1">{i+1}. {byId.get(a.candidateDeliveryId)?.destination.address||a.candidateDeliveryId}</span>
+     <select aria-label={'Veículo para parada '+(i+1)} className={inputClass+' max-w-40'}
+      value={a.vehicleId} onChange={e=>{
+       const next=[...allAssignments];next[i]={...a,vehicleId:e.target.value};
+       setAssignments(next);setProposal(null);setSaved(null);
+      }}>
+      {vehicles.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
+     </select>
      <button className={actionClass} aria-label={'Mover parada '+(i+1)+' para cima'} disabled={i===0}
       onClick={()=>move(i,-1)}>↑</button>
      <button className={actionClass} aria-label={'Mover parada '+(i+1)+' para baixo'} disabled={i===allAssignments.length-1}
