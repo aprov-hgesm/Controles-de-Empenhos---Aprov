@@ -7,6 +7,7 @@
 - `supplierCompanyWorkspaces/{companyId}/accountsPayable/{id}`: **NF recebida de fornecedor / obrigação a pagar** (`direction=payable`).
 - `supplierCompanyWorkspaces/{companyId}/accountsReceivable/{id}`: **NF de saída / obrigação a receber** (`direction=receivable`).
 - `invoice` contém número/série/data/valor em centavos, `source=manual`, `verification=unverified`; sem afirmar que NF-e foi validada/emitida. IDs de contraparte e pedido são referências **informadas e ainda não validadas contra W1/W2/W6**.
+- `installments[]` registra de 1 a 36 parcelas manuais com id, vencimento e valor em centavos; a soma deve fechar exatamente o total original da NF, o primeiro vencimento corresponde a `dueOn`. Na ausência de parcelas fornecidas, há uma única parcela com o total. A previsão distribui pagamentos por ordem de vencimento (FIFO) **somente para projeção**, jamais como conciliação bancária/baixa de parcela específica. Ajustes afetam inicialmente o último vencimento previsto até replanejamento explícito.
 - `entries[]` é o histórico canônico do respectivo título; cada pagamento/recebimento, ajuste e estorno adiciona um evento (não apaga fato). `balance()` reconstitui `totalCents,appliedCents,outstandingCents,status` com inteiros seguros, rejeita sobrepagamento, estorno duplicado e total negativo.
 - `auditEvents/{id}` e `idempotencyKeys/{id}` W0 na **mesma transação** Firestore que o título, usando `currentDocument.updateTime`/CAS para impedir duas baixas concorrentes; 409 em conflito. `expectedRevision` obrigatório em lançamento/cancelamento; `Idempotency-Key` obrigatória em toda mutação.
 - **Não há segunda contabilidade:** a projeção financeira e os eventos manuais pertencem ao próprio título. Não foi criada a coleção `paymentEntries`, não prevista no contrato congelado W0.
@@ -16,7 +17,7 @@
 - `GET/POST /api/company/finance/payables`, `/receivables`: lista paginada ou registra obrigação. Cada título contém a NF manual; não geramos automaticamente título a partir de entrega/NE.
 - `GET /api/company/finance/{book}/{id}`: recupera título validado; `PATCH`: cancelamento auditado, somente sem recebimentos/pagamentos ativos.
 - `POST /api/company/finance/{book}/{id}/entries`: `{expectedRevision,kind:'settlement'|'adjustment'|'settlement_reversal',amountCents?,reversesEntryId?,occurredOn,reason}`. Liquidação bancária/atesto não inferidos.
-- `GET /api/company/finance/summary`: **prévia da primeira página** de cada livro (50 por tipo), `complete=false` e cursors quando há mais dados; nunca rotular como total global.
+- `GET /api/company/finance/summary`: projeção pelos vencimentos das parcelas, **prévia da primeira página** de cada livro (50 por tipo), `complete=false` e cursors quando há mais dados; nunca rotular como total global.
 - `POST /api/company/finance/margin`: projeção com `revenueCents` obrigatório e componentes opcionais `materialCostCents,freightCents,taxesCents,otherCents`; campos ausentes retornam `missing[]` e `complete=false`, não zero implícito.
 - UI isolada em `features/company/finance/FinanceWorkspace.tsx` e `FinanceInsights.tsx`; ambas recebem `getIdToken()` do shell. **W4/W10 são donos de `app/empresa/**`; W8 não integrou visualmente as rotas.**
 
@@ -38,7 +39,7 @@
 - Quaisquer evidências de testes devem se referir a resultados executados, não inferidos da existência do arquivo. `w8.test.mjs` cobre funções puras e transações sob **mock determinístico**, não substitui Firebase Emulator real.
 
 ## Testes previstos neste Worker
-- `node --test lib/company/finance/w8.test.mjs`: cálculo em centavos, lançamentos parciais, estorno, ajustes, cancelamento, margem/lacunas, caixa, A/B, roles W0 e CAS/idempotência no mock.
+- `node --test lib/company/finance/w8.test.mjs`: cálculo em centavos, parcelas e vencimentos, lançamentos parciais, estorno, ajustes, cancelamento, margem/lacunas, caixa, A/B, roles W0 e CAS/idempotência no mock.
 - `npm run typecheck`, `npm run build`, regressões Core Protection: verificar resultados de GitHub Actions após abertura da PR.
 - E2E financeiro Auth/Firestore emulador com W1/W2/W3 integrado e QA do portal **pendentes**.
 
