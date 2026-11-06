@@ -1,0 +1,36 @@
+name: EMPROVEX Empresas W11 - routing isolated
+on:
+  push:
+    branches: ['feat/empresas-w11-*']
+    paths:
+      - 'features/company/routing/**'
+      - 'lib/company/geo/**'
+      - 'lib/company/routing/**'
+      - 'app/api/company/routing/**'
+      - '.github/workflows/emprovex-empresas-w11.yml'
+  pull_request:
+    paths:
+      - 'features/company/routing/**'
+      - 'lib/company/geo/**'
+      - 'lib/company/routing/**'
+      - 'app/api/company/routing/**'
+      - '.github/workflows/emprovex-empresas-w11.yml'
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: W11 deterministic routing engine tests
+        run: node --test lib/company/routing/routing.test.mjs
+      - name: TypeScript guard and UI verification
+        run: npm run typecheck
+      - name: Production build (no deploy)
+        run: npm run build
