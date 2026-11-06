@@ -12,7 +12,7 @@ type Document={name?:string;fields?:Record<string,V>;updateTime?:string};
 type Stored={data:Record<string,any>;updateTime:string};
 export type DeliveryMutation={kind:'deliveries';id:string;data:Record<string,unknown>;updateTime?:string};
 export type DeliveryCheck={kind:CompanySubcollection;id:string;updateTime:string};
-const scopes=new Set<CompanySubcollection>(['deliveries','customerOrders','purchaseOrders','allocations','stockEvents',
+const scopes=new Set<CompanySubcollection>(['deliveries','customerOrders','publicCustomers','purchaseOrders','allocations','stockEvents',
   'documents','members','deliveryRoutes','idempotencyKeys','auditEvents']);
 const error=(c:string,status:400|403|404|409|503=503):never=>{throw new DeliveryError(c,status);};
 function encode(x:unknown):V{
