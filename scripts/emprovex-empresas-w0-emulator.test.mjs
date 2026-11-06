@@ -339,7 +339,7 @@ test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogaç
     '../../company/contracts': deps.contracts,
   });
   const membership = loadTs('lib/server/companyMembership/index.ts', {
-    '../../firebase-applet-config.json': demoConfig,
+    '../../../firebase-applet-config.json': demoConfig,
     '../../company/contracts': deps.contracts,
     '../../platformIdentity': deps.identity,
     '../firebaseFounderAuth': {
