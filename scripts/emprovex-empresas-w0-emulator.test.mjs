@@ -106,6 +106,7 @@ deps.session = loadTs('lib/server/companySession.ts', {
     verifyFirebaseRequest: localVerifiedRequest,
   },
   './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
+  './companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.contracts = loadTs('lib/company/contracts/index.ts', {
   '../../platformIdentity': deps.identity,
@@ -113,6 +114,7 @@ deps.contracts = loadTs('lib/company/contracts/index.ts', {
 deps.guard = loadTs('lib/server/companyAuthz/index.ts', {
   '../../company/contracts': deps.contracts,
   '../companySession': deps.session,
+  '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 
 async function emulatorJson(url, body, method = 'POST') {
@@ -316,4 +318,102 @@ test('falha de commit após Auth: rollback impede usuário órfão', async () =>
   }
   assert.equal((await authDirectory()).length, baseline,
     'O cadastro falho não pode deixar usuário Auth ativo ou órfão.');
+});
+
+
+// W10 INTEGRATION E2E: Real W3 membership persistence + W0 verification against
+// Auth & Firestore Emulators. No production credentials, test-only TS transpiler.
+test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogação', async () => {
+  process.env.EMPROVEX_COMPANY_PILOT_ENABLED = '1';
+  const company = await deps.serverProvision.provisionCompanyWorkspaceWithAuth(fixture(40), founder);
+  const companyB = await deps.serverProvision.provisionCompanyWorkspaceWithAuth(fixture(41), founder);
+  const ownerToken = (await signIn(company.account.email)).idToken;
+  const ownerCtx = await deps.guard.requireCompanyContext(request(ownerToken), { action: 'members:write' });
+  assert.equal(ownerCtx.role, 'owner');
+
+  const roles = loadTs('lib/company/roles/index.ts');
+  const invitation = loadTs('lib/company/roles/invitation.ts');
+  const memberStore = loadTs('lib/server/companyMembership/firestore.ts', {
+    '../../../firebase-applet-config.json': demoConfig,
+    '../sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
+    '../../company/contracts': deps.contracts,
+  });
+  const membership = loadTs('lib/server/companyMembership/index.ts', {
+    '../../../firebase-applet-config.json': demoConfig,
+    '../../company/contracts': deps.contracts,
+    '../../platformIdentity': deps.identity,
+    '../firebaseFounderAuth': {
+      FounderAuthError: StubFounderAuthError,
+      verifyFirebaseRequest: localVerifiedRequest,
+    },
+    '../companyAuthz': { assertCompanyPilotEnabled: deps.guard.assertCompanyPilotEnabled },
+    '../../company/roles': roles,
+    '../../company/roles/invitation': invitation,
+    './firestore': memberStore,
+  });
+  const memberSession = loadTs('lib/server/companySession.ts', {
+    '../../firebase-applet-config.json': demoConfig,
+    '../platformIdentity': deps.identity,
+    './firebaseFounderAuth': {
+      FounderAuthError: StubFounderAuthError,
+      verifyFirebaseRequest: localVerifiedRequest,
+    },
+    './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
+    './companyMembership': membership,
+  });
+  const memberGuard = loadTs('lib/server/companyAuthz/index.ts', {
+    '../../company/contracts': deps.contracts,
+    '../companySession': memberSession,
+    '../companyMembership': membership,
+  });
+  const employee = 'w10-worker40@example.invalid';
+  const invitationCreated = await membership.inviteCompanyMember(ownerCtx, {
+    email: employee, roles: ['stock'],
+  });
+  assert.equal(invitationCreated.member.status, 'invited');
+  assert.ok(invitationCreated.invitationToken);
+
+  const memberCreated = await emulatorJson(
+    'http://' + authHost + '/identitytoolkit.googleapis.com/v1/projects/' + projectId
+      + '/accounts?key=' + demoConfig.apiKey,
+    {email:employee,password:'FakePassDemoW0-2026!',emailVerified:true,disabled:false},
+  );
+  assert.ok(memberCreated.localId);
+  const memberToken = (await signIn(employee)).idToken;
+  await assert.rejects(memberGuard.requireCompanyContext(request(memberToken),
+    {action:'stockEvents:read'}), e => e.status === 403);
+
+  const accepted = await membership.acceptCompanyInvitation('Bearer ' + memberToken, {
+    companyId: company.account.workspaceId, invitationToken: invitationCreated.invitationToken,
+  });
+  assert.equal(accepted.member.firebaseUid, memberCreated.localId);
+  assert.equal(accepted.accessPendingIntegration, false);
+  const index = await memberStore.readIdentityDocument('companyMemberAuthIndex', memberCreated.localId);
+  assert.equal(index.value.companyId, company.account.workspaceId);
+
+  const session = await memberSession.verifyCompanySession('Bearer ' + memberToken);
+  assert.equal(session.accessRole, 'member');
+  assert.equal(session.workspaceId, company.account.workspaceId);
+  const allowed = await memberGuard.requireCompanyContext(request(memberToken),
+    {action:'stockEvents:write'});
+  assert.equal(allowed.role, 'member');
+  assert.equal(allowed.companyId, company.account.workspaceId);
+  await assert.rejects(memberGuard.requireCompanyContext(request(memberToken),
+    {action:'accountsPayable:write'}), e => e.status === 403);
+  await assert.rejects(memberGuard.requireCompanyContext(request(memberToken),
+    {action:'stockEvents:read',companyId:companyB.account.workspaceId}), e => e.status === 403);
+  await assert.rejects(membership.acceptCompanyInvitation('Bearer '+memberToken, {
+    companyId:company.account.workspaceId, invitationToken:invitationCreated.invitationToken,
+  }), e => e.status === 403);
+
+  await membership.changeCompanyMemberRoles(ownerCtx, invitationCreated.member.id, ['finance']);
+  await assert.rejects(memberGuard.requireCompanyContext(request(memberToken),
+    {action:'stockEvents:write'}), e => e.status === 403);
+  assert.equal((await memberGuard.requireCompanyContext(request(memberToken),
+    {action:'accountsReceivable:read'})).role, 'member');
+  await membership.revokeCompanyMember(ownerCtx, invitationCreated.member.id);
+  await assert.rejects(memberGuard.requireCompanyContext(request(memberToken),
+    {action:'accountsReceivable:read'}), e => e.status === 403);
+  await assert.rejects(memberSession.verifyCompanySession('Bearer '+memberToken),
+    e => e.status === 403);
 });

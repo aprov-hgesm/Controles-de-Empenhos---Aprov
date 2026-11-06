@@ -1,0 +1,90 @@
+name: EMPROVEX Empresas — W10 integração e QA
+on:
+  pull_request:
+    paths:
+      - 'app/empresa/**'
+      - 'app/empresa-convite/**'
+      - 'components/company/**'
+      - 'lib/company/**'
+      - 'lib/server/companyAuthz/**'
+      - 'lib/server/companySession.ts'
+      - 'lib/server/companyMembership/**'
+      - 'features/company/**'
+      - 'app/api/company/**'
+      - 'scripts/empresas-w10-*.mjs'
+      - 'scripts/emprovex-empresas-w0-emulator.test.mjs'
+      - '.github/workflows/emprovex-empresas-w10.yml'
+permissions:
+  contents: read
+jobs:
+  domain-contracts:
+    name: W1–W8 e W10 — suítes específicas reais
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: W1 — contrato
+        run: node --test features/company/customers/w1-domain.test.mjs
+      - name: W2 — catálogo e conversão exata
+        run: node --test lib/company/suppliers/w2.test.mjs
+      - name: W3 — convites, papéis e revogação
+        run: node --experimental-strip-types --test features/company/members/*.test.mjs
+      - name: W4 — manifestos e shell
+        run: node --test features/company/shell/navigation.test.mjs
+      - name: W5 — documentos PDF e autorização
+        run: node --test lib/company/documents/documents.test.mjs
+      - name: W6 — compras e APIs
+        run: node --experimental-strip-types --test lib/company/purchases/w6-domain.test.mjs lib/company/purchases/w6-http.test.mjs
+      - name: W7 — ledger e conservação
+        run: node --test lib/company/inventory/inventory.test.mjs
+      - name: W8 — financeiro e idempotência
+        run: node --test lib/company/finance/w8.test.mjs
+      - name: W10 — integrações
+        run: node --test scripts/empresas-w10-integration.test.mjs
+      - name: TypeScript
+        run: npm run typecheck
+  auth-firestore:
+    name: W0/W10 — Auth e Firestore Emulator, A/B, revogação
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w10
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: E2E integrado real sem serviços produtivos
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w10
+          --only auth,firestore
+          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs"
+  safety:
+    name: Regressão de núcleo e build sem publicação
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-emprovex-core-protection.mjs
+      - run: node scripts/verify-hybrid-auth-model.mjs
+      - run: npm run build

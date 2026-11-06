@@ -1,0 +1,31 @@
+name: EMPROVEX Empresas — W8 Financeiro QA
+on:
+  pull_request:
+    paths:
+      - 'lib/company/finance/**'
+      - 'features/company/finance/**'
+      - 'app/api/company/finance/**'
+      - '.github/workflows/emprovex-empresas-w8.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  finance-w8:
+    name: W8 • testes, tipagem e build sem deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: Contratos financeiros, concorrência, idempotência e A/B (mock determinístico, não Emulator)
+        run: node --test lib/company/finance/w8.test.mjs
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Build Next.js (não publica)
+        if: always()
+        run: npm run build
