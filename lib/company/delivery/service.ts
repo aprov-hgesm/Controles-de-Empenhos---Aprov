@@ -65,7 +65,7 @@ async function committed(store:W9Store,action:string,command:{token:string;finge
 }
 async function assertDocument(store:W9Store,documentId:unknown){
  const doc=mandatory(await store.get('documents',id(documentId)),'PROOF_DOCUMENT_MISSING');
- if(doc.data.status!=='active')return error('PROOF_DOCUMENT_MISSING',409);
+ if(doc.data.status!=='active'||doc.data.kind!=='proof')return error('PROOF_DOCUMENT_MISSING',409);
  return doc;
 }
 /** W7 dispatch precedes and limits W9 delivery. Two W9 CAS quotas prevent double assignment. */
@@ -193,6 +193,8 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
     return error('INVALID_OPERATION',400);
   if(['delivered','partial','refused','damaged','returned'].includes(body.kind)){
    const proof=await assertDocument(store,body.proofDocumentId);
+   if(proof.data.referenceType==='deliveries'&&proof.data.referenceId&&proof.data.referenceId!==deliveryId)
+    return error('PROOF_LINK_MISMATCH',409);
    checks.push({kind:'documents',id:proof.data.id,updateTime:proof.updateTime});
   }
   if(body.kind==='departed'){
@@ -237,7 +239,11 @@ export async function listSchedule(ctx:CompanyAuthorizedContext,limit:number,cur
     return {customerOrderId:order.id,customerOrderLineId:orderLineId,quantity:line.quantity,
       dispatched:{value:projection?.data.dispatched||'0',unit:line.quantity.unit},
       inboundSources:inbound.map((po:any)=>({purchaseOrderId:po.id,workflowState:po.workflowState,
-        desiredAt:po.desiredAt||null,supplierPromisedAt:po.supplierPromisedAt||null})),
+        desiredAt:po.desiredAt||null,supplierPromisedAt:po.supplierPromisedAt||null,
+        relatedLines:po.lines.filter((line:any)=>line.allocations?.some((a:any)=>
+          a.customerOrderId===order.id&&a.customerOrderLineId===orderLineId)).map((line:any)=>({
+          id:line.id,confirmedQuantity:line.confirmedQuantity,receivedQuantity:line.receivedQuantity})),
+        lastReceiptAt:po.history?.filter((e:any)=>e.operation==='receive').at(-1)?.at||null})),
       requestedDelivery:order.requestedDelivery||null,approvedPromise:plan?.data.approval||null,
       schedulePlanRevision:plan?.data.revision||0,
       risk, partialCoverage:purchases.nextCursor!==null};
