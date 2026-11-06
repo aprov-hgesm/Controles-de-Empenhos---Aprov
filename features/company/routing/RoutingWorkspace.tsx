@@ -49,7 +49,7 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
  const [form,setForm]=useState({orderId:'',lineId:'',deliveryId:'',address:'',lat:'',lon:'',
    weight:'',volume:'',units:'1',unload:'',start:'',end:''});
  const [fleetForm,setFleetForm]=useState({id:'',lat:'',lon:'',driver:'',weight:'',volume:'',
-   units:'',start:'',end:''});
+   units:'',start:'',end:'',breakStart:'',breakEnd:''});
  const call=useCallback(async<T,>(url:string,method='GET',payload?:unknown,write=false):Promise<T>=>{
   const t=await getIdToken(),r=await fetch(url,{method,cache:'no-store',
    headers:{authorization:'Bearer '+t,...(payload?{'content-type':'application/json'}:{}),
