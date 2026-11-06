@@ -15,8 +15,8 @@
 - `stockEvents/balance_{sha256(catalogItemId)}`: projeção materializada de `onHand` e `reserved`; reconstruível dos eventos. Livres = físicos - reservados. Não há `stockBalances` paralela.
 - `allocations/order_{sha256(orderId:lineId)}`: total da linha `stockReserved + purchasePlanned + dispatched <= ordered` e SKU/unit fixados na primeira operação.
 - `allocations/link_{sha256(...)}`: N:M por origem e linha do pedido: vínculo de estoque ou de compra; `reserved,planned,dispatched`.
-- `inboundShipments/inbound_{sha256(poId:lineId)}`: `purchaseQuantity, allocated,received,converted,directDispatched`. Material planejado/em trânsito **não** vira saldo físico. Receber exige documento de compra confirmada e evento W6 `purchase.received` verificados no mesmo commit.
-- `inboundShipments/receipt_{sha256(eventId:lineId)}`: marcador global por tenant de consumo exato do evento W6, criado com `exists:false` no **mesmo commit** que o saldo físico, o ledger, a auditoria e a chave idempotente. Impede dupla contabilização mesmo entre operadores com UIDs diferentes. A origem do W6 continua imutável.
+- `allocations/inbound_{sha256(poId:lineId)}`: `purchaseQuantity, allocated,received,converted,directDispatched`. Material planejado/em trânsito **não** vira saldo físico. Receber exige documento de compra confirmada e evento W6 `purchase.received` verificados no mesmo commit.
+- `allocations/receipt_{sha256(eventId:lineId)}`: marcador global por tenant de consumo exato do evento W6, criado com `exists:false` no **mesmo commit** que o saldo físico, o ledger, a auditoria e a chave idempotente. Impede dupla contabilização mesmo entre operadores com UIDs diferentes. A origem do W6 continua imutável. **W7 nunca escreve em `inboundShipments`**, pois a timeline W6 filtra essa coleção por `purchaseOrderId` e poderia confundir projeções W7 com eventos W6.
 
 ## Contrato 2 — integridade e unidade
 - Quantidade decimal string, no máximo três casas; cálculo interno em `BigInt` de milésimos. Não usar float em lógica de saldo; UI é apenas visualização.
