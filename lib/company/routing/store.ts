@@ -188,10 +188,20 @@ export async function createRoute(ctx:CompanyAuthorizedContext,body:unknown,k:un
  const candidates=(input.candidates as unknown[]).map(v=>candidateOf(v,ctx.companyId));
  const vehicles=(input.vehicles as unknown[]).map(vehicleOf);
  const id='route_'+randomUUID().replace(/-/g,'');
- const now=new Date().toISOString();
+ const now=new Date().toISOString(),requestHash=digest(JSON.stringify({
+  candidates,vehicles,assignments:input.assignments}));
+ const stopRecords=proposed.stops.map(stop=>{
+  const candidate=candidates.find(c=>c.deliveryId===stop.candidateDeliveryId)!;
+  return {...stop,companyId:ctx.companyId,workspaceId:ctx.companyId,revision:1,
+   source:'manual',createdByUid:ctx.uid,createdAt:now,updatedAt:now,
+   idempotencyKey:key(k),requestHash:digest(JSON.stringify({stop,candidate})),
+   destination:candidate.destination,receptionWindow:candidate.receptionWindow||null,
+   unloadMinutes:candidate.unloadMinutes??null,quantity:candidate.quantity,
+   weightKg:candidate.weightKg??null,volumeM3:candidate.volumeM3??null};
+ });
  const doc:RecordData={...provenance(ctx,id,now),status:'draft',source:'manual',proposal:proposed,
-  stops:proposed.stops,unassigned:proposed.unassigned,candidates,vehicles,
-  requiresHumanApproval:true,approvedByHuman:false,dispatched:false,
+  stops:stopRecords,unassigned:proposed.unassigned,candidates,vehicles,
+  idempotencyKey:key(k),requestHash,requiresHumanApproval:true,approvedByHuman:false,dispatched:false,
   warnings:proposed.warnings};
  // Token controls retries even if generated IDs vary: use fixed create ID derived from tenant/token.
  const stableId='route_'+digest(ctx.companyId+'|'+ctx.uid+'|'+key(k)).slice(0,40);
@@ -222,7 +232,12 @@ export async function changeRoute(ctx:CompanyAuthorizedContext,id:string,raw:unk
    if(prior.status!=='draft'&&prior.status!=='optimizedSuggestion')
      throw new RoutingError('ROUTE_NOT_EDITABLE',409);
    const plan=reorderStops(prior.proposal,input.orderedIds);
-   return {...prior,proposal:plan,stops:plan.stops,status:'draft',source:'manual',revision:rev+1,
+   const recorded=Array.isArray(prior.stops)?prior.stops as RecordData[]:[];
+   const priorStops=new Map(recorded.map(stop=>[String(stop.candidateDeliveryId),stop]));
+   const revised=plan.stops.map(stop=>({
+    ...(priorStops.get(stop.candidateDeliveryId)||{}),...stop,
+    revision:rev+1,updatedAt:now,source:'manual'}));
+   return {...prior,proposal:plan,stops:revised,status:'draft',source:'manual',revision:rev+1,
      approvedByHuman:false,updatedAt:now};
   }
   const reviewed=approvePlan({...prior,stops:prior.stops,unassigned:prior.unassigned},{
