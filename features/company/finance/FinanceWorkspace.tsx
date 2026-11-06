@@ -7,6 +7,7 @@ type Obligation={
   id:string;revision:number;direction:'payable'|'receivable';
   invoice:{number:string;issuedOn:string;totalCents:number;verification:'unverified'};
   counterparty:{id:string;label:string};dueOn:string;financialStatus:string;entries:Entry[];
+  installments?:Array<{id:string;dueOn:string;amountCents:number}>;
 };
 type Page={items:Obligation[];nextCursor:string|null;complete:boolean};
 const today=()=>new Date().toISOString().slice(0,10);
@@ -34,6 +35,7 @@ export function FinanceWorkspace({getIdToken}:{getIdToken:()=>Promise<string>}){
   const [invoiceValue,setInvoiceValue]=useState('');
   const [issuedOn,setIssuedOn]=useState(today);
   const [dueOn,setDueOn]=useState(today);
+  const [installmentText,setInstallmentText]=useState('');
   const [entryAmount,setEntryAmount]=useState('');
   const [entryReason,setEntryReason]=useState('');
   const [entryOn,setEntryOn]=useState(today);
@@ -60,10 +62,17 @@ export function FinanceWorkspace({getIdToken}:{getIdToken:()=>Promise<string>}){
   const create=async(e:FormEvent)=>{
     e.preventDefault();setBusy(true);setError('');setMessage('');
     try{
+      const installments=installmentText.trim()
+        ? installmentText.trim().split('\n').map((row,i)=>{
+            const [due,amount,...rest]=row.split(';').map(x=>x.trim());
+            if(!due||!amount||rest.length)throw new Error('Use uma parcela por linha: AAAA-MM-DD; 125,50');
+            return {id:'p'+(i+1),dueOn:due,amountCents:decimalToCents(amount)};
+          }) : undefined;
       const body={invoice:{number:invoiceNumber,issuedOn,totalCents:decimalToCents(invoiceValue)},
-        counterparty:{id:counterpartyId,label:counterpartyLabel},dueOn};
+        counterparty:{id:counterpartyId,label:counterpartyLabel},dueOn,
+        ...(installments?{installments}:{})};
       await call('/api/company/finance/'+book,{method:'POST',body:JSON.stringify(body)});
-      setInvoiceNumber('');setInvoiceValue('');
+      setInvoiceNumber('');setInvoiceValue('');setInstallmentText('');
       setMessage('NF e obrigação registradas manualmente. Não há confirmação fiscal ou bancária automática.');
       await refresh();
     }catch(err){setError(err instanceof Error?err.message:'Não foi possível registrar');}
@@ -105,7 +114,12 @@ export function FinanceWorkspace({getIdToken}:{getIdToken:()=>Promise<string>}){
         <label className="text-sm">Emissão<input type="date" required value={issuedOn} onChange={e=>setIssuedOn(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
         <label className="text-sm">Vencimento<input type="date" required value={dueOn} onChange={e=>setDueOn(e.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
       </div>
-      <p className="text-xs text-slate-500">Referência documental não validada automaticamente contra compra ou OM até integração W1/W2/W6/W7.</p>
+      <label className="block text-sm">Parcelas opcionais — uma por linha: AAAA-MM-DD; valor em reais
+        <textarea rows={3} value={installmentText} onChange={e=>setInstallmentText(e.target.value)}
+          placeholder={'2026-12-05; 500,00\n2027-01-05; 500,00'}
+          className="mt-1 w-full rounded-lg border p-2" />
+      </label>
+      <p className="text-xs text-slate-500">Se informar parcelas, a soma deve ser exatamente igual à NF e o primeiro vencimento deve coincidir com a data acima. Referências de pedido/contraparte serão verificadas após integração W1/W2/W6.</p>
       <button disabled={busy} className="rounded-lg bg-blue-700 px-4 py-2 font-medium text-white disabled:opacity-50">Registrar obrigação</button>
     </form>
     <div className="rounded-2xl border border-slate-200 p-4">
@@ -116,7 +130,7 @@ export function FinanceWorkspace({getIdToken}:{getIdToken:()=>Promise<string>}){
         const total=r.invoice.totalCents+r.entries.reduce((n,e)=>n+(e.kind==='adjustment'?e.amountCents:0),0);
         return <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
           <div><p className="font-semibold">{r.counterparty.label} · NF {r.invoice.number}</p>
-            <p className="text-sm text-slate-600">Vence {r.dueOn} · {r.financialStatus} · saldo {brl(total-settled)}</p></div>
+            <p className="text-sm text-slate-600">Primeiro vencimento {r.dueOn} · {r.installments?.length??1} parcela(s) · {r.financialStatus} · saldo {brl(total-settled)}</p></div>
           <button type="button" disabled={busy||r.financialStatus==='cancelled'} onClick={()=>setSelected(r)} className="rounded-lg border px-3 py-2 text-sm">Registrar baixa/ajuste</button>
         </li>;
       })}</ul>
