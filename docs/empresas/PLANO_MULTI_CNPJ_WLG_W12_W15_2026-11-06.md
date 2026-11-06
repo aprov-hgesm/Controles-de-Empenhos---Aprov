@@ -76,3 +76,9 @@ A WLG também anuncia *várias empresas na mesma conta* (https://wlgsistemas.com
 - Fontes WLG: https://wlgsistemas.com.br/api-emissao-nfe ; https://wlgsistemas.com.br/emissor-nfe-multiempresas ; https://wlgsistemas.com.br/termos-de-uso ; https://wlgsistemas.com.br/politica-de-privacidade ; https://fiscal.wlgsistemas.com.br/swagger .
 
 Este documento é um PLANO e não certificação de integração com fornecedor, autenticação de produção ou autorização comercial.
+
+## 8. Checkpoint de integração W10 — Etapa III (registrado em 06/11/2026)
+
+A integração fiscal **não** é executada pelos Workers W12/W13/W14 isolados. O integrador W10 deve criar **nova branch e PR Draft**, partindo do HEAD de W10 Etapa II PR #525 (referência `49c8670a66ad858724454eff0683696dcb7efcd3`). Importará módulos W12 PR #521, W13 PR #522 e W14 PR #526, respeitando que W14 **já deriva de W13**, sem duplicar o conector. O checkpoint cobre: identidade multi-CNPJ real, índices aditivos W0/W3, autorização live por tenant, conexão WLG segregada, reserva transacional e FSM NF-e, verificação confiável de XML/DANFE, testes Auth/Firestore Emulator A/B e CI. Na ausência de licença escrita WLG/segredos/provas fiscais, API de emissão fica **503/fail-closed** e piloto/produção **OFF**. UI W15 tem seu próprio checkpoint após contratos.
+
+**Prompt integral:** [W10_ETAPA_III_PROMPT_INTEGRACAO_MULTI_CNPJ_WLG_2026-11-06.md](./W10_ETAPA_III_PROMPT_INTEGRACAO_MULTI_CNPJ_WLG_2026-11-06.md), também transcrito no Memorial Oficial. Este é um registro documental; não houve implementação, CI, conta WLG ou emissão fiscal por este commit.
