@@ -63,7 +63,7 @@ export function parseFinanceDraft(raw: unknown, direction: FinanceDirection) {
 /** Exact integer-cent projection; never assumes bank credit or public-sector liquidation. */
 export function balance(record: Pick<FinanceObligation, 'invoice'|'entries'|'status'>) {
   let total = BigInt(cents(record.invoice.totalCents));
-  let applied = 0n;
+  let applied = BigInt(0);
   const settlements = new Map<string,FinanceEntry>();
   const reversed = new Set<string>();
   for (const entry of record.entries) {
@@ -80,11 +80,11 @@ export function balance(record: Pick<FinanceObligation, 'invoice'|'entries'|'sta
       reversed.add(original.id); applied -= BigInt(original.amountCents);
     } else return bad();
   }
-  if (total < 0n || applied < 0n || applied > total
+  if (total < BigInt(0) || applied < BigInt(0) || applied > total
       || total > BigInt(Number.MAX_SAFE_INTEGER)) return bad('FINANCE_INVALID_BALANCE');
   return { totalCents: Number(total), appliedCents: Number(applied), outstandingCents: Number(total-applied),
     status: record.status === 'cancelled' ? 'cancelled' as const :
-      applied === 0n ? 'open' as const : applied === total ? 'settled' as const : 'partial' as const };
+      applied === BigInt(0) ? 'open' as const : applied === total ? 'settled' as const : 'partial' as const };
 }
 export type EntryCommand = {
   kind: FinanceEntryKind; amountCents?: number; occurredOn: string;
@@ -116,10 +116,12 @@ export function applyEntry(record: FinanceObligation, command: EntryCommand, id:
   const entry: FinanceEntry = { id, kind: command.kind, amountCents: amount,
     occurredOn: command.occurredOn, reason: command.reason, recordedAt: at, actorUid: uid,
     ...(command.reversesEntryId ? {reversesEntryId:command.reversesEntryId} : {}) };
+  if (command.kind === 'settlement' && amount > before.outstandingCents) {
+    throw new FinanceError('FINANCE_OVERPAYMENT',409);
+  }
   const next = { ...record, entries: [...record.entries,entry], revision: record.revision + 1, updatedAt: at };
   let projection: ReturnType<typeof balance>;
   try { projection = balance(next); } catch { throw new FinanceError('FINANCE_INVALID_BALANCE',409); }
-  if (command.kind === 'settlement' && amount > before.outstandingCents) throw new FinanceError('FINANCE_OVERPAYMENT',409);
   return { ...next, financialStatus: projection.status };
 }
 export function cancelObligation(record: FinanceObligation, reason: string, at: string): FinanceObligation {
