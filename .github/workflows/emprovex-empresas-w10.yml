@@ -18,7 +18,7 @@ permissions:
   contents: read
 jobs:
   domain-contracts:
-    name: W1–W8 e W10 — suítes específicas reais
+    name: W1–W11 — suítes específicas reais
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -44,12 +44,18 @@ jobs:
         run: node --test lib/company/inventory/inventory.test.mjs
       - name: W8 — financeiro e idempotência
         run: node --test lib/company/finance/w8.test.mjs
+      - name: W9 — entregas e cronograma com domínio exato
+        run: node --test lib/company/delivery/domain.test.mjs
+      - name: W11 — 5 OMs, 2 veículos, limites e providers
+        run: node --test lib/company/routing/routing.test.mjs
+      - name: W10-II — vínculo W9/W11 e candidatos verificados
+        run: node --test lib/company/integration/*.test.mjs
       - name: W10 — integrações
         run: node --test scripts/empresas-w10-integration.test.mjs
       - name: TypeScript
         run: npm run typecheck
   auth-firestore:
-    name: W0/W10 — Auth e Firestore Emulator, A/B, revogação
+    name: W0/W10/W11 — Auth e Firestore Emulator, A/B, revogação e CAS
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -73,7 +79,7 @@ jobs:
           --config firebase.security-test.json
           --project demo-emprovex-company-w10
           --only auth,firestore
-          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs"
+          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs && node --test lib/company/routing/routing-emulator.test.mjs"
   safety:
     name: Regressão de núcleo e build sem publicação
     runs-on: ubuntu-latest
