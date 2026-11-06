@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { parseCompanyProvisioningInput } from '../../../../lib/companyProvisioning';
 import {
   CompanyProvisioningFailure,
+  assertCompanyPilotProvisioningEnabled,
   provisionCompanyWorkspaceWithAuth,
 } from '../../../../lib/server/companyProvisioningAdmin';
 import { SectorProvisioningFailure, verifyFounderSession } from '../../../../lib/server/sectorProvisioningAdmin';
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
     const founder = await verifyFounderSession(bearer);
     enforceAuthenticatedAdminBurstLimit(security, founder.uid, 'mutation');
     assertAdminMutationEnabled(security, 'company-provision');
+    assertCompanyPilotProvisioningEnabled();
 
     let input;
     try {

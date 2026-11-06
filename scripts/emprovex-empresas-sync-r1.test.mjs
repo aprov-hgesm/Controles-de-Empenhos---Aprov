@@ -139,3 +139,27 @@ test('empresa não herda Rules, coleções nem o ledger operacional', () => {
   assert.match(portal, /Em preparação/);
   assert.doesNotMatch(portal, /useOperationalData|warehouseDb/);
 });
+
+
+test('W0: falha empresarial não monta shell sem identidade setorial/fundadora verificada', () => {
+  const gateway = read('app/login/page.tsx');
+  assert.match(gateway, /resolveAuthenticatedWorkspaceContext\(user\)/);
+  assert.match(gateway, /institutional\.status === 'sector'/);
+  assert.match(gateway, /institutional\.status === 'platformAdmin'/);
+  assert.doesNotMatch(gateway, /catch\(\(\) => setStage\('operational'\)\)/);
+  assert.match(read('lib/platformAccess.ts'), /account\.accountType === 'sector'/);
+});
+
+test('W0: flag empresarial positiva, server guard, ownership e namespace isolado', () => {
+  const provision = read('lib/server/companyProvisioningAdmin.ts');
+  const route = read('app/api/admin/provision-company/route.ts');
+  const guard = read('lib/server/companyAuthz/index.ts');
+  const contracts = read('lib/company/contracts/index.ts');
+  assert.match(provision, /EMPROVEX_COMPANY_PILOT_ENABLED/);
+  assert.match(route, /assertCompanyPilotProvisioningEnabled/);
+  assert.match(guard, /verifyCompanySession/);
+  assert.match(guard, /COMPANY_SCOPE_FORBIDDEN/);
+  assert.match(contracts, /supplierCompanyWorkspaces/);
+  assert.match(contracts, /COMPANY_CONTRACT_VERSION = 'company-r1-v1'/);
+  assert.match(read('lib/server/companySession.ts'), /platformAuthUidIndex/);
+});

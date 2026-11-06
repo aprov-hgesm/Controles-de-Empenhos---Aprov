@@ -17,6 +17,8 @@ on:
       - 'lib/server/company*'
       - 'lib/server/requestSecurity.ts'
       - 'scripts/emprovex-empresas-sync-r1.test.mjs'
+      - 'scripts/emprovex-empresas-w0-*.mjs'
+      - 'docs/empresas/W0_*.md'
       - '.github/workflows/emprovex-empresas-sync-r1.yml'
   workflow_dispatch:
 jobs:
@@ -38,11 +40,36 @@ jobs:
         run: npm run typecheck
       - name: Contratos empresariais isolados
         run: node --test scripts/emprovex-empresas-sync-r1.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Auth/Firestore Emulator — fixtures empresariais demo isoladas
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w0
+          EMPROVEX_E2E_SERVER_AUTH: '1'
+          EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w0
+          --only auth,firestore
+          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs"
+      - name: Diagnóstico restrito Firestore Emulator (somente se falhar)
+        if: failure()
+        run: |
+          if [ -f firestore-debug.log ]; then
+            sed -n '/java.lang.IllegalArgumentException/,+22p' firestore-debug.log | head -n 70 | sed -E 's#(https?://)[^[:space:]]+#\1[redacted]#g' || true
+          fi
       - name: Proteções do núcleo
+        if: always()
         run: node scripts/verify-emprovex-core-protection.mjs
       - name: Regressão de identidade
+        if: always()
         run: node scripts/verify-hybrid-auth-model.mjs
       - name: Rotas críticas
+        if: always()
         run: node --test scripts/critical-cross-route-navigation.test.mjs
       - name: Build, sem deploy
+        if: always()
         run: npm run build

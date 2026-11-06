@@ -77,7 +77,7 @@ function readNestedString(doc: FireDocument, group: string, field: string): stri
  */
 async function readDirectoryDocument(
   serviceToken: string,
-  collection: 'platformAccounts' | 'workspaces',
+  collection: 'platformAccounts' | 'workspaces' | 'platformAuthUidIndex',
   documentId: string
 ): Promise<FireDocument | null> {
   const emulator = e2eEmulators();
@@ -92,6 +92,7 @@ async function readDirectoryDocument(
       ? { authorization: 'Bearer owner' }
       : { authorization: 'Bearer ' + serviceToken },
     cache: 'no-store',
+    signal: AbortSignal.timeout(8000),
   });
   if (result.status === 404) return null;
   if (!result.ok) throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
@@ -115,7 +116,9 @@ async function verifyActiveFirebaseUser(token: string, uid: string, email: strin
       : { 'content-type': 'application/json' },
     body: JSON.stringify(emulator ? { localId: [uid] } : { idToken: token }),
     cache: 'no-store',
+    signal: AbortSignal.timeout(8000),
   });
+  if (response.status >= 500) throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
   if (!response.ok) throw new CompanyAccessError('COMPANY_AUTH_INVALID', 401);
   const payload = await response.json() as AuthLookup;
   const candidate = payload.users?.[0];
@@ -134,6 +137,9 @@ async function verifyActiveFirebaseUser(token: string, uid: string, email: strin
  * mutating company resources. Frontend routing is never an authorization gate.
  */
 export async function verifyCompanySession(authorization: string | null): Promise<VerifiedCompanyContext> {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1' && !e2eEmulators()) {
+    throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
+  }
   let verified;
   try {
     verified = await verifyFirebaseRequest(authorization);
@@ -177,6 +183,19 @@ export async function verifyCompanySession(authorization: string | null): Promis
     accountEmail !== verified.email ||
     normalizedAccountAuthorizedEmail !== verified.email ||
     !isValidWorkspaceId(workspaceId)
+  ) {
+    throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+  }
+
+  // O índice UID é mantido por transação no provisionamento. Sem vínculo exato,
+  // não existe autorização para recursos empresariais.
+  const uidIndex = await readDirectoryDocument(serviceToken, 'platformAuthUidIndex', verified.uid);
+  if (
+    !uidIndex ||
+    readString(uidIndex, 'firebaseUid') !== verified.uid ||
+    readString(uidIndex, 'workspaceId') !== workspaceId ||
+    normalizePlatformEmail(readString(uidIndex, 'email')) !== verified.email ||
+    readString(uidIndex, 'accountType') !== 'company'
   ) {
     throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
   }
