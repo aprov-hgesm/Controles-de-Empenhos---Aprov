@@ -55,10 +55,14 @@ export async function eventList(request:Request){
 }
 export async function allocationList(request:Request){
  try{const ctx=await requireCompanyContext(request,{action:'allocations:read'});
-  const {n,cursor}=query(request),orderId=new URL(request.url).searchParams.get('orderId');
-  if(orderId)id(orderId);
+  const {n,cursor}=query(request),params=new URL(request.url).searchParams;
+  const orderId=params.get('orderId'),purchaseId=params.get('purchaseOrderId');
+  const view=params.get('view')||'orders';
+  if(!['orders','links'].includes(view))throw new InventoryError('INVALID_VIEW',400);
+  if(orderId)id(orderId);if(purchaseId)id(purchaseId);
   const page=await (await InventoryStore.connect(ctx)).list('allocations',n,cursor);
-  return ok({items:page.items.filter(v=>v.kind==='order_projection'&&(!orderId||v.customerOrderId===orderId)),
+  return ok({items:page.items.filter(v=>v.kind===(view==='links'?'allocation_link':'order_projection') &&
+    (!orderId||v.customerOrderId===orderId)&&(!purchaseId||v.purchaseOrderId===purchaseId)),
     nextCursor:page.nextCursor});
  }catch(error){return fail(error);}
 }
