@@ -1,0 +1,48 @@
+name: EMPROVEX Empresas - W6 QA isolado
+on:
+  pull_request:
+    paths:
+      - 'lib/company/purchases/**'
+      - 'features/company/purchases/**'
+      - 'features/company/inbound/**'
+      - 'app/api/company/purchases/**'
+      - '.github/workflows/emprovex-empresas-w6.yml'
+permissions:
+  contents: read
+jobs:
+  w6-qa:
+    name: W6 - dominio, Firestore Emulator, typecheck e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w6
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: Testes de estados e quantidades W6
+        run: node --experimental-strip-types --test lib/company/purchases/w6-domain.test.mjs
+      - name: Testes W6 API, guard e rate-limit
+        run: node --test lib/company/purchases/w6-http.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Integracao W6 com Firestore Emulator real (demo loopback)
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w6
+          --only auth,firestore
+          "node --test lib/company/purchases/w6-emulator.test.mjs"
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Build sem deploy
+        if: always()
+        run: npm run build
