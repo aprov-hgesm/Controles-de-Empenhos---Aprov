@@ -100,7 +100,8 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
  let canonicalQuantity:string;
  let purchaseEvent:Stored|null=null;
  if(kind==='consume_receipt') {
-   purchaseEvent=checkDoc(await store.get('inboundShipments',purchaseEventId),'PURCHASE_RECEIPT');
+   purchaseEvent=await store.get('inboundShipments',purchaseEventId);
+   if(!purchaseEvent)throw new InventoryError('PURCHASE_RECEIPT_UNAVAILABLE',409);
    const v=purchaseEvent.data;
    if(v.kind!=='purchase.received'||v.stockPosted!==false||v.purchaseOrderId!==purchaseOrderId||
       v.sourceSupplierId!==purchaseRecord?.data.sourceSupplierId||!Array.isArray(v.receivedDeltas) ||
@@ -108,7 +109,10 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
      throw new InventoryError('INVALID_INBOUND_EVENT',409);
    const matches=v.receivedDeltas.filter((delta:ObjectValue)=>delta.lineId===purchaseLineId && delta.catalogItemId===catalogItemId);
    if(matches.length!==1||matches[0].quantity?.unit!==purchaseLine?.quantity?.unit||
-      JSON.stringify(matches[0].conversion)!==JSON.stringify(purchaseLine?.conversion))
+      matches[0].conversion?.from!==purchaseLine?.conversion?.from||
+      matches[0].conversion?.to!==purchaseLine?.conversion?.to||
+      matches[0].conversion?.numerator!==purchaseLine?.conversion?.numerator||
+      matches[0].conversion?.denominator!==purchaseLine?.conversion?.denominator)
      throw new InventoryError('INBOUND_LINE_MISMATCH',409);
    canonicalQuantity=decimal(asQuantity(matches[0].quantity,unit,conversion));
    checks.push({collection:'inboundShipments',id:purchaseEventId,updateTime:purchaseEvent.updateTime});
@@ -128,6 +132,16 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
  const order=orderRow?.data||blankOrder(catalogItemId,unit);
  const link=linkRow?.data||blankLink(sourceType);
  const inbound=inboundId?(inboundRow?.data||blankInbound(purchaseQuantity)):null;
+ // W6 planning is only a proposal, not a stock reservation. Never assign its
+ // quantity to a different OM order/line than the immutable purchase plan permits.
+ if(purchaseLine && orderId){
+   const allowed=Array.isArray(purchaseLine.allocations)?
+     purchaseLine.allocations.find((a:ObjectValue)=>a.customerOrderId===orderId&&a.customerOrderLineId===orderLineId):null;
+   if(!allowed||allowed.quantity?.unit!==unit)throw new InventoryError('PURCHASE_ALLOCATION_NOT_PLANNED',409);
+   const used=parseMilli(link.planned||'0')+parseMilli(link.reserved||'0')+parseMilli(link.dispatched||'0');
+   if(kind==='plan_purchase'&&used+parseMilli(canonicalQuantity)>parseMilli(allowed.quantity.value))
+     throw new InventoryError('PURCHASE_ALLOCATION_EXCEEDS_PLAN',409);
+ }
  if(order.catalogItemId!==catalogItemId||order.canonicalUnit!==unit ||
    link.sourceType!==sourceType||(inbound&&inbound.purchaseQuantity!==purchaseQuantity))
    throw new InventoryError('PROJECTION_INTEGRITY_ERROR',503);
