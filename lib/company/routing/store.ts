@@ -173,17 +173,20 @@ async function mutate(ctx:CompanyAuthorizedContext,kind:'deliveryRoutes'|'vehicl
 }
 export async function previewRoute(ctx:CompanyAuthorizedContext,body:unknown){
  if(!object(body))throw new RoutingError('INVALID_BODY');
- if(body.mode==='optimized')return optimizedProposal(ctx.companyId,body.candidates,body.vehicles);
- if(body.mode!=='manual')throw new RoutingError('INVALID_MODE');
+ const input=body as RecordData;
+ if(input.mode==='optimized')return optimizedProposal(ctx.companyId,input.candidates,input.vehicles);
+ if(input.mode!=='manual')throw new RoutingError('INVALID_MODE');
  return manualProposal({companyId:ctx.companyId,workspaceId:ctx.companyId,
-  candidates:body.candidates,vehicles:body.vehicles,assignments:body.assignments});
+  candidates:input.candidates,vehicles:input.vehicles,assignments:input.assignments});
 }
 export async function createRoute(ctx:CompanyAuthorizedContext,body:unknown,k:unknown){
- if(!object(body)||body.mode!=='manual')throw new RoutingError('INVALID_BODY');
+ if(!object(body))throw new RoutingError('INVALID_BODY');
+ const input=body as RecordData;
+ if(input.mode!=='manual')throw new RoutingError('INVALID_BODY');
  // Only validated manual drafts are persisted; external optimized suggestions require manual review/replay.
  const proposed=await previewRoute(ctx,body);
- const candidates=(body.candidates as unknown[]).map(v=>candidateOf(v,ctx.companyId));
- const vehicles=(body.vehicles as unknown[]).map(vehicleOf);
+ const candidates=(input.candidates as unknown[]).map(v=>candidateOf(v,ctx.companyId));
+ const vehicles=(input.vehicles as unknown[]).map(vehicleOf);
  const id='route_'+randomUUID().replace(/-/g,'');
  const now=new Date().toISOString();
  const doc:RecordData={...provenance(ctx,id,now),status:'draft',source:'manual',proposal:proposed,
@@ -193,7 +196,7 @@ export async function createRoute(ctx:CompanyAuthorizedContext,body:unknown,k:un
  // Token controls retries even if generated IDs vary: use fixed create ID derived from tenant/token.
  const stableId='route_'+digest(ctx.companyId+'|'+ctx.uid+'|'+key(k)).slice(0,40);
  return mutate(ctx,'deliveryRoutes',stableId,'create',k,
-   {mode:body.mode,candidates,vehicles,assignments:body.assignments},()=>{
+   {mode:input.mode,candidates,vehicles,assignments:input.assignments},()=>{
      return{...doc,id:stableId};
    });
 }
@@ -208,7 +211,7 @@ export async function changeRoute(ctx:CompanyAuthorizedContext,id:string,raw:unk
  if(!object(raw)||!Number.isSafeInteger(raw.expectedRevision)||raw.expectedRevision<1
    ||!['reorder','approve'].includes(String(raw.action)))throw new RoutingError('INVALID_BODY');
  const action=String(raw.action),rev=Number(raw.expectedRevision);
- return mutate(ctx,'deliveryRoutes',identifier(id),action,k,raw,(prior)=>{
+ return mutate(ctx,'deliveryRoutes',identifier(id),action,k,input,(prior)=>{
    if(!prior)throw new RoutingError('ROUTE_NOT_FOUND',404);
    if(prior.status==='dispatched'||prior.status==='closed')
      throw new RoutingError('W9_ONLY_DELIVERY_STATE',403);
@@ -216,13 +219,13 @@ export async function changeRoute(ctx:CompanyAuthorizedContext,id:string,raw:unk
    if(action==='reorder'){
      if(prior.status!=='draft'&&prior.status!=='optimizedSuggestion')
        throw new RoutingError('ROUTE_NOT_EDITABLE',409);
-     const plan=reorderStops(prior.proposal,raw.orderedIds);
+     const plan=reorderStops(prior.proposal,input.orderedIds);
      return {...prior,proposal:plan,stops:plan.stops,status:'draft',source:'manual',revision:rev+1,
        approvedByHuman:false,updatedAt:now};
    }
    const reviewed=approvePlan({...prior,stops:prior.stops,unassigned:prior.unassigned},{
-    expectedRevision:rev,confirmedUnassignedIds:raw.confirmedUnassignedIds,
-    confirmedDestinationIds:raw.confirmedDestinationIds});
+    expectedRevision:rev,confirmedUnassignedIds:input.confirmedUnassignedIds,
+    confirmedDestinationIds:input.confirmedDestinationIds});
    return{...prior,status:reviewed.status,revision:reviewed.revision,
      approvedByHuman:true,approvedByUid:ctx.uid,approvedAt:now,updatedAt:now};
  },rev);
@@ -232,9 +235,10 @@ export async function listVehicles(ctx:CompanyAuthorizedContext,limit:number,cur
 }
 export async function saveVehicle(ctx:CompanyAuthorizedContext,raw:unknown,k:unknown,id?:string){
  if(!object(raw))throw new RoutingError('INVALID_BODY');
- const vehicle=vehicleOf(raw);
+ const input=raw as RecordData;
+ const vehicle=vehicleOf(input);
  if(id!==undefined&&vehicle.id!==identifier(id))throw new RoutingError('INVALID_IDENTIFIER');
- const expected=raw.expectedRevision;
+ const expected=input.expectedRevision;
  if(id!==undefined&&(!Number.isSafeInteger(expected)||Number(expected)<1))
    throw new RoutingError('REVISION_REQUIRED');
  if(id===undefined&&expected!==undefined)throw new RoutingError('INVALID_REVISION');
