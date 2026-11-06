@@ -12,6 +12,7 @@ import { CompanyPurchasesWorkspace } from '../../features/company/purchases/Comp
 import { InventoryWorkspace } from '../../features/company/inventory/InventoryWorkspace';
 import { AllocationWorkspace } from '../../features/company/allocation/AllocationWorkspace';
 import { FinanceWorkspace } from '../../features/company/finance/FinanceWorkspace';
+import { FiscalIssuanceWorkspace } from './fiscal/FiscalIssuanceWorkspace';
 import { FinanceInsights } from '../../features/company/finance/FinanceInsights';
 import { CompanyNeReview } from '../../features/company/documents/CompanyNeReview';
 import { CompanyTeamWorkspace } from './CompanyTeamWorkspace';
@@ -51,7 +52,15 @@ export function CompanyOperationalModule({ slug }: { slug: string }) {
     </div>; break;
     case 'estoque': content = <div className="space-y-7"><InventoryWorkspace getIdToken={getIdToken} />
       <AllocationWorkspace getIdToken={getIdToken} /></div>; break;
-    case 'notas-fiscais': content = <FinanceWorkspace getIdToken={getIdToken} />; break;
+    case 'notas-fiscais': content = <div className="space-y-8">
+      {/* W15 re-mounts and discards local fiscal drafts whenever the selected tenant changes. */}
+      <FiscalIssuanceWorkspace key={session?.workspaceId || 'sem-perfil'} getIdToken={getIdToken} />
+      <section aria-label="Registros financeiros de notas fiscais" className="border-t border-slate-200 pt-8">
+        <h2 className="text-lg font-semibold text-slate-900">Registros financeiros e notas manuais</h2>
+        <p className="mt-1 mb-5 text-sm text-slate-600">O registro financeiro W8 é independente da emissão fiscal. Lançamentos manuais não autorizam NF-e, atesto ou baixa automática.</p>
+        <FinanceWorkspace getIdToken={getIdToken} />
+      </section>
+    </div>; break;
     case 'financeiro': content = <div className="space-y-7"><FinanceWorkspace getIdToken={getIdToken} />
       <FinanceInsights getIdToken={getIdToken} /></div>; break;
     case 'clientes': content = <CompanyCustomersPanel />; break;
