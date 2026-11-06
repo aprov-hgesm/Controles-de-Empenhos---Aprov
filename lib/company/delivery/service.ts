@@ -86,11 +86,18 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
  const purchaseLineId=draft.source==='supplier_direct'?draft.purchaseLineId:'';
  const linkId=hashLink(draft.customerOrderId,draft.customerOrderLineId,source,purchaseId,purchaseLineId);
  const link=mandatory(await store.get('allocations',linkId),'W7_DISPATCH_SOURCE_REQUIRED');
+ let directEvent:Awaited<ReturnType<W9Store['get']>>=null;
  if(link.data.kind!=='allocation_link'||link.data.customerOrderId!==draft.customerOrderId||
    link.data.customerOrderLineId!==draft.customerOrderLineId||link.data.catalogItemId!==draft.catalogItemId||
    link.data.sourceType!==source||link.data.purchaseOrderId!==(purchaseId||null)||
    link.data.purchaseLineId!==(purchaseLineId||null))return error('W7_DISPATCH_SOURCE_MISMATCH',409);
  if(draft.source==='supplier_direct'){
+  directEvent=mandatory(await store.get('stockEvents',draft.w7DispatchEventId),'W7_DIRECT_EVENT_REQUIRED');
+  if(directEvent.data.kind!=='stock_movement'||directEvent.data.operation!=='direct_dispatch'||
+    directEvent.data.customerOrderId!==draft.customerOrderId||directEvent.data.customerOrderLineId!==draft.customerOrderLineId||
+    directEvent.data.purchaseOrderId!==draft.purchaseOrderId||directEvent.data.purchaseLineId!==draft.purchaseLineId||
+    directEvent.data.catalogItemId!==draft.catalogItemId||directEvent.data.quantity?.unit!==draft.quantity.unit)
+    return error('W7_DIRECT_EVENT_MISMATCH',409);
   const purchase=mandatory(await store.get('purchaseOrders',purchaseId),'DIRECT_PURCHASE_UNAVAILABLE');
   if(!['confirmed','partially_confirmed','partially_received','received'].includes(String(purchase.data.workflowState)))
    return error('DIRECT_PURCHASE_UNCONFIRMED',409);
@@ -102,7 +109,8 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
     inbound.data.purchaseLineId!==purchaseLineId)return error('DIRECT_DISPATCH_UNVERIFIED',409);
   if(milli(inbound.data.directDispatched||'0')<milli(draft.quantity.value))return error('DIRECT_DISPATCH_UNVERIFIED',409);
  }
- const totalId=quotaId(draft.customerOrderId,draft.customerOrderLineId),sourceId=sourceQuotaId(linkId);
+ const totalId=quotaId(draft.customerOrderId,draft.customerOrderLineId),
+  sourceId=draft.source==='supplier_direct'?sourceQuotaId(draft.w7DispatchEventId):sourceQuotaId(linkId);
  const [totalRow,sourceRow]=await Promise.all([store.get('deliveries',totalId),store.get('deliveries',sourceId)]);
  for(const q of [totalRow,sourceRow])if(q&&q.data.kind!=='delivery_quota')return error('QUOTA_INTEGRITY_ERROR',503);
  const totalUsed=totalRow?.data.assigned||'0',sourceUsed=sourceRow?.data.assigned||'0';
@@ -110,13 +118,20 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
  checkDispatchQuota({...base,dispatched:{value:qty(orderProj.data.dispatched,draft.quantity.unit),unit:draft.quantity.unit},
    alreadyAssigned:{value:totalUsed,unit:draft.quantity.unit},
    ...(draft.source==='supplier_direct'?{directEvidence:{value:qty(link.data.dispatched,draft.quantity.unit),unit:draft.quantity.unit}}:{})});
- checkDispatchQuota({...base,dispatched:{value:qty(link.data.dispatched,draft.quantity.unit),unit:draft.quantity.unit},
+ checkDispatchQuota({...base,dispatched:{value:draft.source==='supplier_direct'?
+    qty(directEvent?.data.quantity,draft.quantity.unit):qty(link.data.dispatched,draft.quantity.unit),unit:draft.quantity.unit},
    alreadyAssigned:{value:sourceUsed,unit:draft.quantity.unit},
    ...(draft.source==='supplier_direct'?{directEvidence:{value:qty(link.data.dispatched,draft.quantity.unit),unit:draft.quantity.unit}}:{})});
+ const customer=mandatory(await store.get('publicCustomers',order.data.publicCustomerId),'CUSTOMER_UNAVAILABLE');
  const deliveryId='delivery_'+randomUUID().replace(/-/g,'');
  const record=owned(ctx,deliveryId,'delivery',{...draft,deliveryState:'planned',
   deliveredQuantity:{value:'0',unit:draft.quantity.unit},history:[],routePlanId:null,
-  createdFromW7Dispatch:true,atesto:false,liquidacao:false,payment:false});
+  createdFromW7Dispatch:true,atesto:false,liquidacao:false,payment:false,
+  pdfSnapshot:{id:deliveryId,companyId:ctx.companyId,workspaceId:ctx.companyId,
+   documentNumber:deliveryId,customerName:customer.data.name,deliveryAddress:draft.destination.address,
+   issuedAt:new Date().toISOString(),lines:[{id:draft.customerOrderLineId,description:line.description,
+    quantity:draft.quantity.value,unit:draft.quantity.unit}],
+   notes:'Romaneio gerado antes de comprovação de entrega. Não comprova atesto ou pagamento.'}});
  const total=owned(ctx,totalId,'delivery_quota',{customerOrderId:draft.customerOrderId,
   customerOrderLineId:draft.customerOrderLineId,unit:draft.quantity.unit,
   assigned:decimal(milli(totalUsed)+milli(draft.quantity.value))},totalRow?.data);
@@ -126,20 +141,26 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
  const checks:DeliveryCheck[]=[
   {kind:'customerOrders',id:draft.customerOrderId,updateTime:order.updateTime},
   {kind:'allocations',id:orderProjectionId(draft.customerOrderId,draft.customerOrderLineId),updateTime:orderProj.updateTime},
-  {kind:'allocations',id:linkId,updateTime:link.updateTime}];
+  {kind:'allocations',id:linkId,updateTime:link.updateTime},
+  {kind:'publicCustomers',id:customer.data.id,updateTime:customer.updateTime},
+  ...(directEvent?[{kind:'stockEvents' as const,id:directEvent.data.id as string,updateTime:directEvent.updateTime}]:[])];
  return committed(store,'deliveries:create',command,[mutation(null,record),mutation(totalRow,total),mutation(sourceRow,sourceQuota)],checks,
    {delivery:record,romaneio:{id:deliveryId,manualSequence:draft.manualSequence,driverUid:draft.driverUid,
     source:draft.source,quantity:draft.quantity,destination:draft.destination,eta:null,estimatedDistanceMeters:null,
     status:'draft_manual',issued:false}},deliveryId,null);
 }
 export async function getDelivery(ctx:CompanyAuthorizedContext,deliveryId:string){
- const row=mandatory(await (await W9Store.connect(ctx)).get('deliveries',id(deliveryId)),'DELIVERY_NOT_FOUND');
+ const store=await W9Store.connect(ctx);
+ const row=mandatory(await store.get('deliveries',id(deliveryId)),'DELIVERY_NOT_FOUND');
  if(row.data.kind!=='delivery')return error('DELIVERY_NOT_FOUND',404);
+ const actor=await role(ctx,store);
+ if(actor.isDriverOnly && row.data.driverUid!==ctx.uid)return error('DRIVER_ASSIGNMENT_REQUIRED',403);
  return row.data;
 }
 export async function listDeliveries(ctx:CompanyAuthorizedContext,limit:number,cursor:string){
- const page=await(await W9Store.connect(ctx)).list('deliveries',limit,cursor);
- return {...page,items:page.items.filter((v:any)=>v.kind==='delivery')};
+ const store=await W9Store.connect(ctx),actor=await role(ctx,store);
+ const page=await store.list('deliveries',limit,cursor);
+ return {...page,items:page.items.filter((v:any)=>v.kind==='delivery'&&(!actor.isDriverOnly||v.driverUid===ctx.uid))};
 }
 export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:string,body:unknown,key:unknown){
  if(!obj(body)||!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<1)return error('EXPECTED_REVISION_REQUIRED',400);
@@ -218,6 +239,7 @@ export async function listSchedule(ctx:CompanyAuthorizedContext,limit:number,cur
       inboundSources:inbound.map((po:any)=>({purchaseOrderId:po.id,workflowState:po.workflowState,
         desiredAt:po.desiredAt||null,supplierPromisedAt:po.supplierPromisedAt||null})),
       requestedDelivery:order.requestedDelivery||null,approvedPromise:plan?.data.approval||null,
+      schedulePlanRevision:plan?.data.revision||0,
       risk, partialCoverage:purchases.nextCursor!==null};
    }):[]));
  return {items,nextCursor:orders.nextCursor||null,purchasesTruncated:purchases.nextCursor!==null};
