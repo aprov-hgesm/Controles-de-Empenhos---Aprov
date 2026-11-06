@@ -8,6 +8,7 @@ export interface FinanceEntry {
   id: string; kind: FinanceEntryKind; amountCents: number; occurredOn: string;
   reason: string; recordedAt: string; actorUid: string; reversesEntryId?: string;
 }
+export interface FinanceInstallment { id:string; dueOn:string; amountCents:number }
 export interface FinanceObligation extends CompanyOwnedRecord {
   direction: FinanceDirection;
   invoice: { number: string; series?: string; issuedOn: string; totalCents: number;
@@ -15,6 +16,8 @@ export interface FinanceObligation extends CompanyOwnedRecord {
   counterparty: { id: string; label: string };
   sourceOrderId?: string;
   dueOn: string;
+  /** Explicit contractual schedule; settlement allocation is a forecast FIFO, not bank matching. */
+  installments: FinanceInstallment[];
   notes?: string;
   entries: FinanceEntry[];
   financialStatus: FinanceStatus;
@@ -52,11 +55,27 @@ export function parseFinanceDraft(raw: unknown, direction: FinanceDirection) {
     currency: 'BRL' as const, source: 'manual' as const, verification: 'unverified' as const,
   };
   if (invoice.totalCents === 0) return bad();
+  const firstDue = date(raw.dueOn);
+  let installments:FinanceInstallment[];
+  if(raw.installments === undefined) {
+    installments = [{id:'p1',dueOn:firstDue,amountCents:invoice.totalCents}];
+  } else {
+    if(!Array.isArray(raw.installments)||raw.installments.length<1||raw.installments.length>36) return bad();
+    installments=raw.installments.map((p:unknown)=>{
+      if(!object(p))return bad();
+      const amount=cents(p.amountCents);
+      if(amount===0)return bad();
+      return {id:recordId(p.id),dueOn:date(p.dueOn),amountCents:amount};
+    });
+    if(new Set(installments.map(p=>p.id)).size!==installments.length
+      || installments.reduce((sum,p)=>sum+BigInt(p.amountCents),BigInt(0))!==BigInt(invoice.totalCents)
+      || installments.map(p=>p.dueOn).sort()[0]!==firstDue) return bad();
+  }
   return {
     direction, invoice,
     counterparty: { id: recordId(raw.counterparty.id), label: nonempty(raw.counterparty.label, 200) },
     ...(raw.sourceOrderId === undefined || raw.sourceOrderId === '' ? {} : { sourceOrderId: recordId(raw.sourceOrderId) }),
-    dueOn: date(raw.dueOn),
+    dueOn: firstDue, installments,
     ...(raw.notes === undefined || raw.notes === '' ? {} : { notes: nonempty(raw.notes, 2000) }),
   };
 }
@@ -140,18 +159,48 @@ export function estimateMargin(input: { revenueCents:number; materialCostCents?:
   if (value > BigInt(Number.MAX_SAFE_INTEGER) || value < BigInt(-Number.MAX_SAFE_INTEGER)) return bad();
   return { knownComponentMarginCents: Number(value), missing, complete:missing.length===0, basis:'estimate' as const };
 }
+/** Forecast waterfall: earlier due installment is projected first. Not evidence of paid parcel. */
+export function installmentProjection(record:FinanceObligation) {
+  const summary=balance(record);
+  if(record.status==='cancelled')return [];
+  const parts=(record.installments?.length ? record.installments :
+    [{id:'p1',dueOn:record.dueOn,amountCents:record.invoice.totalCents}])
+    .map(p=>({id:recordId(p.id),dueOn:date(p.dueOn),amountCents:cents(p.amountCents)}))
+    .sort((a,b)=>a.dueOn.localeCompare(b.dueOn)||a.id.localeCompare(b.id));
+  if(parts.reduce((sum,p)=>sum+BigInt(p.amountCents),BigInt(0))!==BigInt(record.invoice.totalCents))
+    throw new FinanceError('FINANCE_INSTALLMENTS_INVALID',503);
+  let diff=summary.totalCents-record.invoice.totalCents;
+  // Adjustments are provisionally placed on the last due date; actual rescheduling is manual.
+  if(diff>0) {
+    const last=parts[parts.length-1];last.amountCents+=diff;
+  } else if(diff<0) {
+    for(let i=parts.length-1;i>=0&&diff<0;i--) {
+      const reduction=Math.min(parts[i].amountCents,-diff);
+      parts[i].amountCents-=reduction;diff+=reduction;
+    }
+    if(diff!==0)throw new FinanceError('FINANCE_INSTALLMENTS_INVALID',503);
+  }
+  let toApply=summary.appliedCents;
+  return parts.map(p=>{
+    const allocated=Math.min(p.amountCents,toApply);toApply-=allocated;
+    return {id:p.id,dueOn:p.dueOn,amountCents:p.amountCents,
+      projectedAppliedCents:allocated,outstandingCents:p.amountCents-allocated,
+      allocationBasis:'forecast_fifo_not_reconciled' as const};
+  });
+}
 export function cashflow(records: readonly FinanceObligation[]) {
   const events = new Map<string,{payableCents:number;receivableCents:number}>();
   for (const r of records) {
-    if (r.status === 'cancelled') continue;
-    const b = balance(r);
-    const row = events.get(r.dueOn) ?? {payableCents:0,receivableCents:0};
-    const key = r.direction === 'payable' ? 'payableCents' : 'receivableCents';
-    row[key] += b.outstandingCents;
-    if (!Number.isSafeInteger(row[key])) return bad();
-    events.set(r.dueOn,row);
+    for(const installment of installmentProjection(r)) {
+      if(installment.outstandingCents===0)continue;
+      const row=events.get(installment.dueOn)??{payableCents:0,receivableCents:0};
+      const key=r.direction==='payable'?'payableCents':'receivableCents';
+      row[key]+=installment.outstandingCents;
+      if(!Number.isSafeInteger(row[key]))return bad();
+      events.set(installment.dueOn,row);
+    }
   }
-  return [...events].sort(([a],[b])=>a.localeCompare(b)).map(([dueOn,v]) => ({
+  return [...events].sort(([a],[b])=>a.localeCompare(b)).map(([dueOn,v])=>({
     dueOn,...v,netForecastCents:v.receivableCents-v.payableCents,
     basis:'open_obligations_not_confirmed_cash' as const,
   }));
