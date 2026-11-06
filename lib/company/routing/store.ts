@@ -234,7 +234,7 @@ export async function changeRoute(ctx:CompanyAuthorizedContext,id:string,raw:unk
    const plan=reorderStops(prior.proposal,input.orderedIds);
    const recorded=Array.isArray(prior.stops)?prior.stops as RecordData[]:[];
    const priorStops=new Map(recorded.map(stop=>[String(stop.candidateDeliveryId),stop]));
-   const revised=plan.stops.map(stop=>({
+   const revised=plan.stops.map((stop:{candidateDeliveryId:string;vehicleId:string;sequence:number})=>({
     ...(priorStops.get(stop.candidateDeliveryId)||{}),...stop,
     revision:rev+1,updatedAt:now,source:'manual'}));
    return {...prior,proposal:plan,stops:revised,status:'draft',source:'manual',revision:rev+1,
