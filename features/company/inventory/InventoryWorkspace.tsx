@@ -1,5 +1,6 @@
 'use client';
 import {useCallback,useEffect,useState, type FormEvent} from 'react';
+import {parseMilli,decimal} from '../../../lib/company/inventory/engine.mjs';
 
 type Props={getIdToken:()=>Promise<string|null>};
 type Projection={id:string;catalogItemId:string;canonicalUnit:string;onHand:string;reserved:string;revision:number};
@@ -8,7 +9,7 @@ const operations=[
  ['adjust_in','Registrar entrada/ajuste físico'],['adjust_out','Registrar saída/ajuste físico'],
  ['reserve','Reservar estoque para pedido OM'],['release','Liberar reserva'],
  ['dispatch','Expedir estoque reservado'],['return','Registrar devolução física'],
- ['plan_purchase','Vincular compra a pedido OM'],['receive_purchase','Confirmar recebimento físico de compra'],
+ ['plan_purchase','Vincular compra a pedido OM'],['consume_receipt','Contabilizar evento de recebimento W6'],
  ['convert_purchase','Converter compra recebida em reserva'],
  ['dispatch_converted','Expedir reserva convertida'],['release_converted','Liberar reserva convertida'],
  ['return_converted','Devolver expedição convertida'],
@@ -22,9 +23,10 @@ export function InventoryWorkspace({getIdToken}:Props){
  const [quantity,setQuantity]=useState(''),[unit,setUnit]=useState('UN'),[reason,setReason]=useState('');
  const [orderId,setOrderId]=useState(''),[orderLineId,setOrderLineId]=useState('');
  const [purchaseOrderId,setPurchaseOrderId]=useState(''),[purchaseLineId,setPurchaseLineId]=useState('');
+ const [purchaseEventId,setPurchaseEventId]=useState('');
  const needsOrder=['reserve','release','dispatch','return','plan_purchase','unplan_purchase',
    'convert_purchase','direct_dispatch','dispatch_converted','release_converted','return_converted'].includes(kind);
- const needsPurchase=['plan_purchase','unplan_purchase','receive_purchase','convert_purchase',
+ const needsPurchase=['plan_purchase','unplan_purchase','consume_receipt','convert_purchase',
    'direct_dispatch','dispatch_converted','release_converted','return_converted'].includes(kind);
  const load=useCallback(async(after?:string)=>{
   setBusy(true);setError('');
@@ -44,10 +46,11 @@ export function InventoryWorkspace({getIdToken}:Props){
   event.preventDefault();setBusy(true);setError('');setNotice('');
   try{
    const token=await getIdToken();if(!token)throw new Error('Sessão empresarial expirada.');
-   const body={kind,catalogItemId,quantity:{value:quantity,unit},
+   const body={kind,catalogItemId,...(kind==='consume_receipt'?{}:{quantity:{value:quantity,unit}}),
     ...(kind.startsWith('adjust')?{reason}:{}),
     ...(needsOrder?{customerOrderId:orderId,customerOrderLineId:orderLineId}:{}),
     ...(needsPurchase?{purchaseOrderId,purchaseLineId}:{}),
+    ...(kind==='consume_receipt'?{purchaseEventId}:{}),
    };
    const idem=globalThis.crypto.randomUUID();
    const response=await fetch('/api/company/inventory',{method:'POST',
@@ -72,7 +75,7 @@ export function InventoryWorkspace({getIdToken}:Props){
    <tbody>{items.map(item=><tr key={item.id} className="border-t">
      <td className="p-3">{item.catalogItemId}</td><td className="text-center">{item.canonicalUnit}</td>
      <td className="text-center">{item.onHand}</td><td className="text-center">{item.reserved}</td>
-     <td className="text-center">{Number(item.onHand)-Number(item.reserved)}</td>
+     <td className="text-center">{decimal(parseMilli(item.onHand)-parseMilli(item.reserved))}</td>
     </tr>)}
     {!items.length&&<tr><td colSpan={5} className="p-4 text-center opacity-70">Sem lançamentos físicos registrados.</td></tr>}
    </tbody></table></div>
@@ -85,10 +88,13 @@ export function InventoryWorkspace({getIdToken}:Props){
      {operations.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
     <label className="text-sm">ID do item no catálogo<input required value={catalogItemId}
      onChange={e=>setCatalogItemId(e.target.value)} className="block w-full rounded border p-2 bg-transparent"/></label>
-    <label className="text-sm">Quantidade<input required inputMode="decimal" pattern="(0|[1-9][0-9]*)(\\.[0-9]{1,3})?"
+    <label className="text-sm">Quantidade<input required={kind!=='consume_receipt'} inputMode="decimal" pattern="(0|[1-9][0-9]*)(\\.[0-9]{1,3})?"
      value={quantity} onChange={e=>setQuantity(e.target.value)} className="block w-full rounded border p-2 bg-transparent"/></label>
     <label className="text-sm">Unidade<select value={unit} onChange={e=>setUnit(e.target.value)} className="block w-full rounded border p-2 bg-transparent">
      {['UN','KG','G','L','ML','CX','FD','M'].map(v=><option key={v}>{v}</option>)}</select></label>
+    {kind==='consume_receipt'&&<label className="text-sm sm:col-span-2">ID do evento de recebimento W6
+     <input required value={purchaseEventId} onChange={e=>setPurchaseEventId(e.target.value)}
+      className="block w-full rounded border p-2 bg-transparent"/></label>}
     {kind.startsWith('adjust')&&<label className="text-sm sm:col-span-2">Justificativa auditável (mínimo 8 caracteres)
      <input required minLength={8} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}
       className="block w-full rounded border p-2 bg-transparent"/></label>}
