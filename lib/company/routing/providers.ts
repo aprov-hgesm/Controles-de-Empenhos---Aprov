@@ -49,7 +49,10 @@ export async function optimizedProposal(scope:string,candidatesInput:unknown,veh
   if(!Array.isArray(candidatesInput)||candidatesInput.length>50
     ||!Array.isArray(vehiclesInput)||vehiclesInput.length>8)throw new RoutingError('LIMIT_EXCEEDED');
   const candidates=candidatesInput.map(c=>candidateOf(c,scope));
-  const vehicles=vehiclesInput.map(vehicleOf);
+  type RoutingVehicle={id:string;origin:{latitude:number;longitude:number};
+    capacity:{weightKg?:number;volumeM3?:number;units?:number};
+    shift:{start:string;end:string};breaks:Array<{start:string;end:string}>};
+  const vehicles=vehiclesInput.map(v=>vehicleOf(v) as RoutingVehicle);
   if(new Set(candidates.map(c=>c.deliveryId)).size!==candidates.length
     ||new Set(vehicles.map(v=>v.id)).size!==vehicles.length)throw new RoutingError('DUPLICATE_ID');
   const usable:{candidate:typeof candidates[number];idx:number}[]=[],excluded:{candidateDeliveryId:string;reason:string}[]=[];
@@ -72,7 +75,7 @@ export async function optimizedProposal(scope:string,candidatesInput:unknown,veh
   }
   const jobs=usable.map(({candidate:c,idx})=>({
     id:idx+1,location:[c.destination.longitude,c.destination.latitude],
-    service:Math.ceil(c.unloadMinutes*60),
+    service:Math.ceil(c.unloadMinutes!*60),
     ...(c.receptionWindow?{time_windows:[[seconds(c.receptionWindow.start),seconds(c.receptionWindow.end)]]}:{ }),
     amount:[amount(c.weightKg||0,1000),amount(c.volumeM3||0,1000000),
       c.quantity.unit==='UN'?Number(c.quantity.value):0]
