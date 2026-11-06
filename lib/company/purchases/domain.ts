@@ -36,8 +36,10 @@ export interface PurchaseEvent {
   stockPosted: false;
 }
 export class PurchaseError extends Error {
-  constructor(public readonly code: string, public readonly status: 400 | 404 | 409 | 429 | 503) {
-    super(code); this.name = 'PurchaseError';
+  readonly code: string;
+  readonly status: 400 | 404 | 409 | 429 | 503;
+  constructor(code: string, status: 400 | 404 | 409 | 429 | 503) {
+    super(code); this.code = code; this.status = status; this.name = 'PurchaseError';
   }
 }
 const bad = (code = 'INVALID_INPUT'): never => { throw new PurchaseError(code,400); };
