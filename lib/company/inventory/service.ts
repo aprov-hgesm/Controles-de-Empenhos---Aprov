@@ -126,7 +126,7 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
    store.get('stockEvents',stockId),
    orderSummaryId?store.get('allocations',orderSummaryId):Promise.resolve(null),
    linkId?store.get('allocations',linkId):Promise.resolve(null),
-   inboundId?store.get('inboundShipments',inboundId):Promise.resolve(null),
+   inboundId?store.get('allocations',inboundId):Promise.resolve(null),
  ]);
  const stock=stockRow?.data||blankStock();
  const order=orderRow?.data||blankOrder(catalogItemId,unit);
@@ -170,13 +170,13 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
  if(linkId)mutations.push(mutable('allocations',linkRow,linkId,owned(ctx,linkRow,linkId,{
     ...result.link,catalogItemId,customerOrderId:orderId,customerOrderLineId:orderLineId,
     purchaseOrderId:purchaseOrderId||null,purchaseLineId:purchaseLineId||null})));
- if(inboundId&&result.inbound)mutations.push(mutable('inboundShipments',inboundRow,inboundId,
+ if(inboundId&&result.inbound)mutations.push(mutable('allocations',inboundRow,inboundId,
    owned(ctx,inboundRow,inboundId,{...result.inbound,catalogItemId,purchaseOrderId,purchaseLineId,canonicalUnit:unit})));
  // Event-specific marker is tenant-global, not UID-scoped; this avoids double stock posting
  // even if another authorized operator submits the same W6 receipt with a new key.
  if(kind==='consume_receipt'){
    const markerId=summaryId('receipt',purchaseEventId,purchaseLineId);
-   mutations.push(mutable('inboundShipments',null,markerId,owned(ctx,null,markerId,{
+   mutations.push(mutable('allocations',null,markerId,owned(ctx,null,markerId,{
       kind:'receipt_consumed',purchaseEventId,purchaseOrderId,purchaseLineId,catalogItemId,
       canonicalQuantity,sourceEventKind:'purchase.received'})));
  }
