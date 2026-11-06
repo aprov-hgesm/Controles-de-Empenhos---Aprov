@@ -19,7 +19,10 @@ function encode(x:unknown):V{
  if(x===null)return{nullValue:'NULL_VALUE'};
  if(typeof x==='string')return{stringValue:x};
  if(typeof x==='boolean')return{booleanValue:x};
- if(typeof x==='number' && Number.isSafeInteger(x))return{integerValue:String(x)};
+ // Coordinates are finite floating-point values; Firestore distinguishes integer/double.
+ // Reject NaN/Infinity rather than silently removing location evidence.
+ if(typeof x==='number' && Number.isFinite(x))return Number.isSafeInteger(x)
+   ? {integerValue:String(x)} : {doubleValue:x};
  if(Array.isArray(x))return{arrayValue:{values:x.map(v=>encode(v===undefined?null:v))}};
  if(x&&typeof x==='object')return{mapValue:{fields:fields(x as Record<string,unknown>)}};
  return error('INVALID_FIRESTORE_VALUE');
