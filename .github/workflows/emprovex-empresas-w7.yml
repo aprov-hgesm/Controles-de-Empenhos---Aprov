@@ -39,7 +39,7 @@ jobs:
           --config firebase.security-test.json
           --project demo-emprovex-company-w7
           --only auth,firestore
-          "node --test lib/company/inventory/firestore-emulator.test.mjs"
+          "node --test lib/company/inventory/firestore-emulator.test.mjs lib/company/inventory/service-emulator.test.mjs"
       - name: TypeScript
         if: always()
         run: npm run typecheck
