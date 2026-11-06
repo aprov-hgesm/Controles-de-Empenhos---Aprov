@@ -67,11 +67,14 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
   return()=>{active=false;};},[reload]);
  useEffect(()=>{if(!selectedVehicle&&vehicles[0])setSelectedVehicle(vehicles[0].id);},
   [vehicles,selectedVehicle]);
- const allAssignments=useMemo(()=>{
-  const selected=new Map(assignments.map(a=>[a.candidateDeliveryId,a.vehicleId]));
-  return candidates.map(c=>({candidateDeliveryId:c.deliveryId,
-   vehicleId:selected.get(c.deliveryId)||selectedVehicle||''})).filter(a=>a.vehicleId);
- },[assignments,candidates,selectedVehicle]);
+ const displayAssignments=useMemo(()=>{
+  const valid=new Set(candidates.map(c=>c.deliveryId));
+  const ordered=assignments.filter(a=>valid.has(a.candidateDeliveryId));
+  const seen=new Set(ordered.map(a=>a.candidateDeliveryId));
+  return [...ordered,...candidates.filter(c=>!seen.has(c.deliveryId)).map(c=>({
+   candidateDeliveryId:c.deliveryId,vehicleId:''}))];
+ },[assignments,candidates]);
+ const allAssignments=useMemo(()=>displayAssignments.filter(a=>a.vehicleId),[displayAssignments]);
  const filtered=useMemo(()=>routes.filter(r=>{
   const text=[r.id,...(r.candidates||[]).map(c=>c.destination.address)].join(' ').toLowerCase();
   return(!filters.query||text.includes(filters.query.toLowerCase()))
@@ -100,7 +103,9 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
     ...(form.unload?{unloadMinutes:Number(form.unload)}:{}),
     ...(form.start&&form.end?{receptionWindow:{start:iso(form.start),end:iso(form.end)}}:{})};
    if(candidates.some(c=>c.deliveryId===candidate.deliveryId))throw new Error('DUPLICATE_ID');
-   setCandidates(prev=>[...prev,candidate]);setProposal(null);setSaved(null);
+   setCandidates(prev=>[...prev,candidate]);
+   setAssignments(prev=>[...prev,{candidateDeliveryId:candidate.deliveryId,vehicleId:selectedVehicle||''}]);
+   setProposal(null);setSaved(null);
    setStatus('Destino inserido no rascunho. Confirme os dados originais com o W9 antes de qualquer expedição.');
   }catch(e){setStatus('Dados de destino incompletos: '+String(e));}
  }
@@ -143,11 +148,32 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
   setStatus('Plano aprovado para planejamento. Despacho e prova de entrega pertencem ao W9.');
   await reload();
  }
+ async function persistReorder(){
+  if(!saved||saved.status!=='draft')throw new Error('ROUTE_NOT_EDITABLE');
+  const wanted=displayAssignments.filter(a=>saved.stops.some(t=>t.candidateDeliveryId===a.candidateDeliveryId));
+  if(wanted.length!==saved.stops.length||wanted.some(a=>!saved.stops.some(t=>
+    t.candidateDeliveryId===a.candidateDeliveryId&&t.vehicleId===a.vehicleId)))
+   throw new Error('VEHICLE_OR_STOP_CHANGED_CREATE_NEW_PLAN');
+  const out=await call<{result:Stored}>('/api/company/routing/'+encodeURIComponent(saved.id),'PATCH',
+   {action:'reorder',expectedRevision:saved.revision,
+    orderedIds:wanted.map(a=>a.candidateDeliveryId)},true);
+  setSaved(out.result);setProposal(out.result.proposal);
+  setStatus('Sequência replanejada, revisão '+out.result.revision+'. Nenhum prazo externo foi modificado.');
+  await reload();
+ }
+ function adoptOptimized(){
+  if(!proposal||proposal.source!=='osrm-vroom')return;
+  setAssignments([...proposal.stops.map(t=>({candidateDeliveryId:t.candidateDeliveryId,
+   vehicleId:t.vehicleId})),...proposal.unassigned.map(t=>({
+   candidateDeliveryId:t.candidateDeliveryId,vehicleId:''}))]);
+  setProposal(null);setSaved(null);
+  setStatus('Sugestão copiada como edição manual. Refaça a prévia para conferir todas as restrições.');
+ }
  function move(index:number,direction:number){
-  const next=[...allAssignments];const to=index+direction;
+  const next=[...displayAssignments];const to=index+direction;
   if(to<0||to>=next.length)return;
   [next[index],next[to]]=[next[to],next[index]];
-  setAssignments(next);setProposal(null);setSaved(null);
+  setAssignments(next);setProposal(null);
  }
  const activeStops=proposal?.stops||saved?.stops||[];
  const byId=new Map(candidates.map(c=>[c.deliveryId,c]));
@@ -178,7 +204,10 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
     {filtered.map(r=><li key={r.id} className="rounded-lg bg-slate-50 p-3">
      <strong>{r.id}</strong> · {r.status} · {r.stops.length} parada(s) · {r.createdAt.slice(0,10)}
      <button className={actionClass+' ml-2'} onClick={()=>{setSaved(r);setCandidates(r.candidates);
-      setVehicles(r.vehicles);setProposal(r.proposal);setConfirm(false);}}>Abrir plano</button>
+      setVehicles(r.vehicles);setProposal(r.proposal);
+      setAssignments([...r.stops.map(stop=>({candidateDeliveryId:stop.candidateDeliveryId,
+       vehicleId:stop.vehicleId})),...r.unassigned.map(stop=>({candidateDeliveryId:stop.candidateDeliveryId,
+       vehicleId:''}))]);setConfirm(false);}}>Abrir plano</button>
     </li>)}
    </ul>
   </section>
@@ -224,25 +253,28 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
     <button className={actionClass} disabled={busy||!candidates.length}
      onClick={()=>void act(()=>preview('optimized'))}>Otimização opcional</button>
    </div>
+   {saved?.status==='draft'&&<button className={actionClass} disabled={busy}
+    onClick={()=>void act(persistReorder)}>Salvar nova ordem da rota existente</button>}
    <ol aria-label="Sequência manual acessível" className="space-y-2">
-    {allAssignments.map((a,i)=><li key={a.candidateDeliveryId} draggable
+    {displayAssignments.map((a,i)=><li key={a.candidateDeliveryId} draggable
      onDragStart={e=>e.dataTransfer.setData('text/plain',String(i))}
      onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();
-      const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&from>=0&&from<allAssignments.length){
-      const arr=[...allAssignments];const [item]=arr.splice(from,1);arr.splice(i,0,item);
-      setAssignments(arr);setProposal(null);setSaved(null);}}}
+      const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from)&&from>=0&&from<displayAssignments.length){
+      const arr=[...displayAssignments];const [item]=arr.splice(from,1);arr.splice(i,0,item);
+      setAssignments(arr);setProposal(null);}}}
      className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm">
      <span className="flex-1">{i+1}. {byId.get(a.candidateDeliveryId)?.destination.address||a.candidateDeliveryId}</span>
      <select aria-label={'Veículo para parada '+(i+1)} className={inputClass+' max-w-40'}
       value={a.vehicleId} onChange={e=>{
-       const next=[...allAssignments];next[i]={...a,vehicleId:e.target.value};
-       setAssignments(next);setProposal(null);setSaved(null);
+       const next=[...displayAssignments];next[i]={...a,vehicleId:e.target.value};
+       setAssignments(next);setProposal(null);
       }}>
+      <option value="">Não alocar</option>
       {vehicles.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
      </select>
      <button className={actionClass} aria-label={'Mover parada '+(i+1)+' para cima'} disabled={i===0}
       onClick={()=>move(i,-1)}>↑</button>
-     <button className={actionClass} aria-label={'Mover parada '+(i+1)+' para baixo'} disabled={i===allAssignments.length-1}
+     <button className={actionClass} aria-label={'Mover parada '+(i+1)+' para baixo'} disabled={i===displayAssignments.length-1}
       onClick={()=>move(i,1)}>↓</button></li>)}
    </ol>
   </section>
@@ -269,6 +301,8 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
       {byId.get(x.candidateDeliveryId)?.destination.address||x.candidateDeliveryId}: {msg[x.reason]||x.reason}
     </li>)}</ul></div>}
    {!!proposal.warnings?.length&&<p className="text-sm text-amber-900">{proposal.warnings.join(' · ')}</p>}
+   {proposal.source==='osrm-vroom'&&<button type="button" className={actionClass}
+    onClick={adoptOptimized}>Copiar sugestão para revisão manual</button>}
    <button className={actionClass} disabled={busy||proposal.source!=='manual'||saved!==null}
     onClick={()=>void act(save)}>Salvar rascunho manual</button>
    {saved&&saved.status==='draft'&&<div className="space-y-2 border-t pt-3">
