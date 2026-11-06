@@ -73,6 +73,9 @@ test('cross-tenant fiscal list and XML metadata are filtered',()=>{
  ]};
  const res=safeIssues(payload,A);assert.equal(res.length,2);assert.equal(res.some(x=>x.id==='b1'),false);
  assert.equal(res[1].accessKey,null);
+ assert.equal(res[0].authorizationProtocol,'100');
+ assert.match(displayIssueState(res[0]),/Autorizada/);
+ assert.match(displayIssueState(res[1]),/sem autorização/);
 });
 test('HTTP 202/processing is never presented as fiscal authorization',()=>{
  assert.match(displayIssueState({status:'processing'}),/sem autorização/);

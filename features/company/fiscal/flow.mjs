@@ -132,6 +132,7 @@ export function safeIssues(payload, profile) {
       id: issue.id, companyId: issue.companyId, issuerCnpj: issue.issuerCnpj,
       status: issue.status, createdAt: typeof issue.createdAt === 'string' ? issue.createdAt : '',
       accessKey: issueIsAuthorized(issue) ? issue.accessKey : null,
+      authorizationProtocol: issueIsAuthorized(issue) ? issue.authorizationProtocol : null,
       authorizationVerified: issueIsAuthorized(issue),
     }));
 }

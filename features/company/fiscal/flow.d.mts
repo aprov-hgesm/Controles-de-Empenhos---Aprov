@@ -3,7 +3,7 @@ export type FiscalProfile={companyId:string;workspaceId:string;cnpj:string;name:
 export type FiscalConnection={state:'unavailable'|'not_configured'|'integrity_error'|'connected'|'pending_verification'|'disconnected'|'revoked';environment?:'homologacao'|'producao';verifiedAt?:string|null;credentialVersion?:number|null};
 export type FiscalCapability={companyId:string;issuerCnpj:string;environment:string;canIssue:boolean};
 export type FiscalDraft={companyId:string;issuerCnpj:string;orderId:string;recipientCnpj:string;recipientName:string;series:number;number:number;items:unknown[]};
-export type FiscalIssueSummary={id:string;companyId:string;issuerCnpj:string;status:string;createdAt:string;accessKey:string|null;authorizationVerified:boolean};
+export type FiscalIssueSummary={id:string;companyId:string;issuerCnpj:string;status:string;createdAt:string;accessKey:string|null;authorizationProtocol:string|null;authorizationVerified:boolean};
 export const FISCAL_STATES:Readonly<Record<string,string>>;
 export function selectVerifiedProfile(payload:unknown,sessionWorkspaceId:string):FiscalProfile;
 export function safeConnection(payload:unknown,profile:FiscalProfile|null):FiscalConnection;
