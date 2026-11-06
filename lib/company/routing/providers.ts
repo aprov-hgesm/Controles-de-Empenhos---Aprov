@@ -1,41 +1,19 @@
 import 'server-only';
 import {candidateOf,vehicleOf,manualProposal,RoutingError} from '../geo/core.mjs';
 /** Optional, operator-configured VROOM/OSRM. No paid services and no client-supplied URLs. */
-const breakers=new Map<string,{failures:number;until:number;window:number;count:number}>();
+import {createProviderTransport} from '../geo/providerTransport.mjs';
+const transport=createProviderTransport();
 function endpoint(name:string){
-  const raw=name==='vroom'?process.env.EMPROVEX_COMPANY_VROOM_URL:process.env.EMPROVEX_COMPANY_OSRM_URL;
-  if(!raw)return null;
-  try{
-    const u=new URL(raw);
-    if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash||!u.hostname)
-      throw new Error('INVALID_PROVIDER_CONFIG');
-    return u;
-  }catch{throw new RoutingError('PROVIDER_NOT_CONFIGURED',503);}
+ const raw=name==='vroom'?process.env.EMPROVEX_COMPANY_VROOM_URL:process.env.EMPROVEX_COMPANY_OSRM_URL;
+ if(!raw)return null;
+ try{
+  const u=new URL(raw);
+  if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash||!u.hostname)
+   throw new Error('INVALID_PROVIDER_CONFIG');
+  return u;
+ }catch{throw new RoutingError('PROVIDER_NOT_CONFIGURED',503);}
 }
-function quota(name:string){
-  const n=Date.now(),b=breakers.get(name)||{failures:0,until:0,window:n,count:0};
-  if(n<b.until)throw new RoutingError('PROVIDER_CIRCUIT_OPEN',503);
-  if(n-b.window>60000){b.window=n;b.count=0;}
-  if(++b.count>10)throw new RoutingError('PROVIDER_QUOTA_REACHED',429);
-  breakers.set(name,b);
-}
-async function request(name:string,url:URL,init:RequestInit){
-  quota(name);
-  try{
-    const response=await fetch(url.toString(),{...init,cache:'no-store',redirect:'error',
-      signal:AbortSignal.timeout(4500),headers:{'content-type':'application/json',accept:'application/json'}});
-    if(!response.ok)throw new Error('PROVIDER_HTTP');
-    const body=await response.text();
-    if(body.length>256000)throw new Error('PROVIDER_RESPONSE_TOO_LARGE');
-    const value:unknown=JSON.parse(body);
-    const b=breakers.get(name)!;b.failures=0;b.until=0;
-    return value;
-  }catch{
-    const b=breakers.get(name)!;b.failures++;
-    if(b.failures>=3)b.until=Date.now()+60000;
-    throw new RoutingError('ROUTING_PROVIDER_UNAVAILABLE',503);
-  }
-}
+const request=(name:string,url:URL,init:RequestInit)=>transport.request(name,url,init);
 const seconds=(iso:string)=>Math.floor(Date.parse(iso)/1000);
 const amount=(n:number,scale:number)=>{
   const v=Math.ceil(n*scale);
