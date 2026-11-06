@@ -9,7 +9,7 @@ export const COMPANY_CONTRACT_VERSION = 'company-r1-v1' as const;
 export const COMPANY_ROOT_COLLECTION = 'supplierCompanyWorkspaces' as const;
 export const COMPANY_IDENTITY_COLLECTIONS = [
   'workspaces', 'platformAccounts', 'platformAuthUidIndex',
-  'platformCnpjIndex', 'platformProvisioningLocks', 'platformAuditEvents',
+  'platformCnpjIndex', 'platformProvisioningLocks', 'platformAuditEvents', 'companyMemberAuthIndex',
 ] as const;
 
 export const COMPANY_SUBCOLLECTIONS = [
