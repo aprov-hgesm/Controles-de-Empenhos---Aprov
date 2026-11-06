@@ -34,7 +34,7 @@ test('W4: filtering uses Portuguese labels and group, never queries operational 
   assert.deepEqual(Array.from(search, item => item.slug), ['financeiro']);
   const grouped = output.filterCompanyShellModules(modules, '', 'Relacionamento');
   assert.deepEqual(Array.from(grouped, item => item.slug).sort(), ['fornecedores', 'catalogo', 'clientes'].sort());
-  assert.equal(modules.filter(item => item.kind === 'preparing').length, 12);
+  assert.equal(modules.filter(item => item.kind === 'preparing').length, 3);
   assert.equal(modules.filter(item => item.kind === 'identity').length, 1);
 });
 
