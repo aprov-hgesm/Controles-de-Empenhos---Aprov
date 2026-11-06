@@ -146,7 +146,7 @@ function required(v:Stored|null,name:string):Stored{
   return v;
 }
 /** Read W1/W2 persisted contracts without importing unmerged branches or mutating their records. */
-async function validateDraft(c:Client,draft:DraftInput):Promise<Write[]>{
+async function validateDraft(c:Client,draft:DraftInput):Promise<{verifications:Write[];supplierName:string}>{
   const reads=new Map<string,{kind:'sourceSuppliers'|'catalogItems'|'customerOrders';id:string;doc:Stored}>();
   const load=async(kind:'sourceSuppliers'|'catalogItems'|'customerOrders',id:string):Promise<Stored>=>{
     const path=kind+'/'+id;
@@ -180,13 +180,14 @@ async function validateDraft(c:Client,draft:DraftInput):Promise<Write[]>{
   }
   // A Firestore commit verifies the exact W1/W2 revisions used. A suspension or
   // W1 order edit racing checkout fails; no write to W1/W2 records is necessary.
-  return[...reads.values()].map(v=>c.verify(v.kind,v.id,v.doc.updateTime));
+  return {verifications:[...reads.values()].map(v=>c.verify(v.kind,v.id,v.doc.updateTime)),
+    supplierName:typeof supplier.legalName==='string'?supplier.legalName:''};
 }
 export async function createPurchase(ctx:CompanyAuthorizedContext,body:unknown,keyHeader:unknown) {
   const token=key(keyHeader),draft=parseDraft(body),client=await Client.create(ctx);
   const action='purchaseOrders:create',fingerprint=hash(JSON.stringify(draft));
   const old=await replay(client,action,token,fingerprint);if(old)return{...old,replayed:true};
-  const verify=await validateDraft(client,draft);
+  const validation=await validateDraft(client,draft);
   const now=new Date().toISOString(),id='po_'+randomUUID().replace(/-/g,'');
   const order:PurchaseOrder={schemaVersion:COMPANY_CONTRACT_VERSION,id,companyId:ctx.companyId,workspaceId:ctx.companyId,
     createdByUid:ctx.uid,createdAt:now,updatedAt:now,revision:1,status:'draft',
@@ -196,14 +197,11 @@ export async function createPurchase(ctx:CompanyAuthorizedContext,body:unknown,k
       receivedQuantity:{value:'0',unit:line.quantity.unit}})),
     history:[],pdfSnapshot:{id,companyId:ctx.companyId,workspaceId:ctx.companyId,
       documentNumber:draft.reference,customerName:ctx.legalName||ctx.companyName,
-      supplierName:String((awaitSupplierNamePlaceholder(draft.sourceSupplierId))),
+      supplierName:validation.supplierName,
       issuedAt:now,lines:draft.lines.map(x=>({id:x.id,description:x.description,
         quantity:x.quantity.value,unit:x.quantity.unit,unitPriceCents:x.unitPriceCents}))}};
-  // Replace the placeholder supplier label using the same supplier document that is verified below.
-  const supplier=required(await client.get('sourceSuppliers',draft.sourceSupplierId),'SUPPLIER').data;
-  order.pdfSnapshot!.supplierName=typeof supplier.legalName==='string'?supplier.legalName:'';
   const result={result:order};
-  const writes=[...verify,client.put('purchaseOrders',id,order as unknown as Data,{exists:false}),
+  const writes=[...validation.verifications,client.put('purchaseOrders',id,order as unknown as Data,{exists:false}),
     ...auditWrites(client,action,token,fingerprint,result,null)];
   try{await client.commit(writes);}catch(e){
     if(e instanceof PurchaseError&&(e.status===409||e.status===503)){const done=await replay(client,action,token,fingerprint);if(done)return{...done,replayed:true};}
@@ -211,8 +209,6 @@ export async function createPurchase(ctx:CompanyAuthorizedContext,body:unknown,k
   }
   return{...result,replayed:false};
 }
-/** Internal placeholder avoids reading a real supplier name from the caller. */
-function awaitSupplierNamePlaceholder(_id:string):string{return'';}
 export async function updatePurchase(ctx:CompanyAuthorizedContext,id:string,body:unknown,keyHeader:unknown){
   const token=key(keyHeader),change=parseChange(body),client=await Client.create(ctx),purchaseId=identifier(id);
   const action='purchaseOrders:'+change.action+':'+purchaseId;
