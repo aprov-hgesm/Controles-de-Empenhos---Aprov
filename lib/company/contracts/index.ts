@@ -37,6 +37,7 @@ export const COMPANY_ACTIONS = [
   'deliveryRoutes:read', 'deliveryRoutes:write', 'vehicles:read', 'vehicles:write',
   'accountsPayable:read', 'accountsPayable:write',
   'accountsReceivable:read', 'accountsReceivable:write',
+  'fiscal:read', 'fiscal:write', 'fiscal:configure', 'fiscal:approve', 'fiscal:issue', 'fiscal:download',
   'auditEvents:read',
 ] as const;
 export type CompanyAction = typeof COMPANY_ACTIONS[number];

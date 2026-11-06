@@ -26,6 +26,7 @@ export const MEMBER_ROLE_ACTIONS: Record<CompanyMemberRole, readonly CompanyActi
     'deliveries:read', 'deliveries:write', 'accountsPayable:read', 'accountsPayable:write',
     'accountsReceivable:read', 'accountsReceivable:write', 'auditEvents:read',
     'deliveryRoutes:read', 'deliveryRoutes:write', 'vehicles:read', 'vehicles:write',
+    'fiscal:read', 'fiscal:write', 'fiscal:configure', 'fiscal:approve', 'fiscal:issue', 'fiscal:download',
   ],
   operations: [
     'company:read', 'publicCustomers:read', 'publicCustomers:write',
@@ -58,6 +59,7 @@ export const MEMBER_ROLE_ACTIONS: Record<CompanyMemberRole, readonly CompanyActi
     'customerOrders:read', 'purchaseOrders:read', 'documents:read',
     'accountsPayable:read', 'accountsPayable:write',
     'accountsReceivable:read', 'accountsReceivable:write',
+    'fiscal:read', 'fiscal:write', 'fiscal:download',
   ],
 };
 const allowedActions = new Set<CompanyAction>(MEMBER_ROLE_ACTIONS.admin);

@@ -6,6 +6,7 @@ import { Menu, ShieldAlert } from 'lucide-react';
 import { auth } from '../../lib/firebase';
 import { resolveCompanySession, type AuthorizedCompanySession } from '../../lib/company/companySessionClient';
 import { CompanyNavigation } from './CompanyNavigation';
+import { CompanyProfileSwitcher } from '../../features/company/profiles/CompanyProfileSwitcher';
 import { CompanySessionContext } from './CompanySessionContext';
 import { CompanyErrorState, CompanyLoadingState } from './CompanyFeedback';
 
@@ -53,10 +54,15 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
       if (auth.currentUser) { setGate({ stage: 'checking' }); void validate(); }
     };
     window.addEventListener('focus', onFocus);
+    const changedProfile = (event: StorageEvent) => {
+      if (event.key === 'emprovex.company.profile.changed') window.location.reload();
+    };
+    window.addEventListener('storage', changedProfile);
     return () => {
       ++sequenceRef.current;
       unsubscribe();
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', changedProfile);
     };
   }, [validate]);
 
@@ -122,6 +128,10 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[.15em] text-blue-700">EMPROVEX / Empresas</p>
             <p className="truncate text-sm font-semibold text-slate-700" title={gate.session.companyName}>{gate.session.companyName}</p>
+          </div>
+          <div className="hidden max-w-[17rem] lg:block"><CompanyProfileSwitcher
+            getIdToken={async () => { if (!auth.currentUser) throw new Error('AUTH_REQUIRED'); return auth.currentUser.getIdToken(); }}
+            onBeforeProfileSwitch={() => { ++sequenceRef.current; setGate({ stage: 'checking' }); }} />
           </div>
           <button type="button" role="switch" aria-checked={essential} onClick={toggleEssential}
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">

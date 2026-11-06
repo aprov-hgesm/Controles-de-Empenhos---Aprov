@@ -114,6 +114,12 @@ deps.contracts = loadTs('lib/company/contracts/index.ts', {
 deps.guard = loadTs('lib/server/companyAuthz/index.ts', {
   '../../company/contracts': deps.contracts,
   '../companySession': deps.session,
+  // W0 suite tests legacy-token/no-cookie guard against REAL Auth/Firestore Emulator.
+  // W10-III selected-profile resolution is covered separately by its own test.
+  '../companyProfiles/integration': {
+    verifySelectedCompanySession: async (req) => deps.session.verifyCompanySession(
+      req.headers.get('authorization')),
+  },
   '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 
@@ -364,6 +370,10 @@ test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogaç
   const memberGuard = loadTs('lib/server/companyAuthz/index.ts', {
     '../../company/contracts': deps.contracts,
     '../companySession': memberSession,
+    '../companyProfiles/integration': {
+      verifySelectedCompanySession: async (req) => memberSession.verifyCompanySession(
+        req.headers.get('authorization')),
+    },
     '../companyMembership': membership,
   });
   const employee = 'w10-worker40@example.invalid';

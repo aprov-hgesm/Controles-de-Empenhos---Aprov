@@ -1,0 +1,32 @@
+name: EMPROVEX Empresas — W14 NF-e isolado (QA)
+on:
+  pull_request:
+    paths:
+      - 'lib/company/fiscal/issuance/**'
+      - 'app/api/company/fiscal/nfe/**'
+      - '.github/workflows/emprovex-empresas-w14.yml'
+permissions:
+  contents: read
+jobs:
+  fiscal:
+    name: W14 — mock de NF-e, tipagem e build sem deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: W14 — contratos, FSM, isolamento e XML/DANFE (MOCK)
+        run: node --test lib/company/fiscal/issuance/w14.test.mjs
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Proteção das áreas militares
+        if: always()
+        run: node scripts/verify-emprovex-core-protection.mjs
+      - name: Build (sem deploy)
+        if: always()
+        run: npm run build
