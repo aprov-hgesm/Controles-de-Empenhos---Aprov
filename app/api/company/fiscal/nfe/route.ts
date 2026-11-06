@@ -3,16 +3,18 @@ import { companyErrorStatus, requireCompanyContext } from '@/lib/server/companyA
 
 /**
  * W14 fiscal endpoint intentionally fails closed until W10 installs:
- * - live multi-CNPJ fiscal RBAC and active-profile guards
+ * - explicit fiscal RBAC (read vs issue), live multi-CNPJ and active-profile guards
  * - durable Firestore CAS and idempotency indexes
  * - issuer-verification, WLG vault, signed XML validation and W5 private storage.
+ * GET and POST are deliberately 503 after authorization; never report a draft,
+ * success or fiscal capability until an independently homologated fiscal handler exists.
  * No server credentials, provider calls or real invoice mutations here.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const headers = { 'Cache-Control': 'no-store, max-age=0', 'X-Content-Type-Options': 'nosniff' };
-async function handle(request: Request, action: 'accountsReceivable:read' | 'accountsReceivable:write') {
+async function handle(request: Request, action: 'fiscal:read' | 'fiscal:issue') {
   try {
     await requireCompanyContext(request, { action });
     return NextResponse.json({
@@ -26,8 +28,8 @@ async function handle(request: Request, action: 'accountsReceivable:read' | 'acc
   }
 }
 export async function GET(request: Request) {
-  return handle(request, 'accountsReceivable:read');
+  return handle(request, 'fiscal:read');
 }
 export async function POST(request: Request) {
-  return handle(request, 'accountsReceivable:write');
+  return handle(request, 'fiscal:issue');
 }
