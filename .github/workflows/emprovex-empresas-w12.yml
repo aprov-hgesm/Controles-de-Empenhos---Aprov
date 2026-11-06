@@ -1,0 +1,42 @@
+name: EMPROVEX Empresas — W12 Multi-CNPJ isolado
+on:
+  pull_request:
+    paths:
+      - 'lib/company/profiles/**'
+      - 'features/company/profiles/**'
+      - 'app/api/company/profiles/**'
+      - '.github/workflows/emprovex-empresas-w12.yml'
+  push:
+    branches:
+      - 'feat/empresas-w12-multicnpj-profiles-20261106'
+permissions:
+  contents: read
+jobs:
+  contract:
+    name: W12 contratos e autorização mock
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: Contratos W12 — testes determinísticos (sem Firebase real)
+        run: node --test lib/company/profiles/profiles.test.mjs
+      - name: TypeScript global
+        run: npm run typecheck
+  regression:
+    name: W12 regressão Core e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/verify-emprovex-core-protection.mjs
+      - run: npm run build
