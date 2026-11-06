@@ -20,7 +20,7 @@
 
 ## Transições e garantias
 
-1. draft → ready_for_review: exigir dados fiscais explícitos do usuário/revisor, NCM, CFOP, CST/CSOSN, ICMS/PIS/COFINS e destinatário; validar ownership da referência de pedido via W1.
+1. draft → ready_for_review: validar via adapter W1 a titularidade e a disponibilidade/alocação de todas as linhas de uma NF parcial, guardar revisão do pedido, revalidar na submissão e bloquear POST se houve alteração; exigir dados fiscais explícitos do usuário/revisor, NCM, CFOP, CST/CSOSN, ICMS/PIS/COFINS e destinatário; validar ownership da referência de pedido via W1.
 2. ready_for_review → approved: aprovação humana **explícita** amarrada ao fingerprint do payload e ao CNPJ; papel fiscal:approve deve ser validado live pelo W10.
 3. approved → submitted: CAS **durável e obrigatório ANTES do POST**; a mesma intenção jamais reenvia automaticamente. O adapter W13 aceita somente homologação e depende de flags OFF por padrão.
 4. submitted → processing com operationId confirmado por WLG HTTP 202. O 202 **não** autoriza documento. Falha/timeout após envio vira uncertain; não tentar novo POST.
@@ -34,7 +34,7 @@ A reserva de número/série exige transação durável única no W10 para (compa
 ## Handoff W10
 
 - Integrar W12 e W13: guarda live multi-CNPJ de owner/member, papéis fiscal:read/write/approve/issue, workspace ativo, seleção assinada e CSRF; todo callback authorize() depende disso e **não pode receber dados do navegador**.
-- Criar implementações server-only de FiscalStore (Firestore transaction + CAS de revision e audit) e archivePrivate via W5 com ACL de workspace; validar orderId W1 e compatibilidade com faturamento parcial. Não tocar W8 automaticamente.
+- Criar implementações server-only de FiscalStore (Firestore transaction + CAS de revision e audit) e archivePrivate via W5 com ACL de workspace; verifyOrder deve validar ownership, linhas, quantidades parciais/limites ainda não faturados, devolver fiscalAllocationVerified=true e revision estável, revalidando antes do POST. O mock W14 não é prova de estoque/saldo real. Não tocar W8 automaticamente.
 - Resolver WlgConnection real vinculada ao CNPJ + referência Secret Manager + issuer proof verificada remotamente; uso não autorizado de empresaId do browser proibido. Manter flags de homologação e produção desligadas até gates.
 - Prover verificador XML autenticado (assinatura XMLDSig, cadeia/autoridade, protocolo SEFAZ, emitente, chave, ambiente, integridade). **Não usar a checagem lexical W14 como prova criptográfica**.
 - Só então conectar API fiscal e subcoleções, mantendo operação em homologação e kill switch. Sem integração, rota responde 503.
