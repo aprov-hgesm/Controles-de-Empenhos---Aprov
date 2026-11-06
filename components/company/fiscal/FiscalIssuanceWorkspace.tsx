@@ -260,7 +260,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
           className="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
           Gerar prévia para revisão
         </button>
-        <button type="button" disabled={busy} onClick={()=>{setForm({...initialForm});setReview(false);setConfirmed(false);setUncertain(false);}}
+        <button type="button" disabled={busy} onClick={()=>{setForm({...initialForm});setReview(false);setConfirmed(false);/* Do NOT clear uncertain POST outcome on reset. */}}
           className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Descartar rascunho</button>
       </div>
       {!previewValid&&<p className="mt-3 text-xs text-slate-500">Para gerar a prévia, informe os campos do pedido, destinatário, item, valores e classificação fiscal.</p>}

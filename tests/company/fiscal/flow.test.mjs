@@ -133,3 +133,12 @@ test('503 fail-closed de integração pendente é distinto de envio iniciado',as
  })});
  await assert.rejects(api.submit({orderId:'o1'},'once'),{code:'NFE_INTEGRATION_PENDING'});
 });
+
+test('malformed response after POST remains unknown; no second POST',async()=>{
+ let calls=0;
+ const api=createFiscalBrowserApi({getIdToken:async()=> 'token',fetchImpl:async()=>{
+   calls++;return {ok:true,status:202,json:async()=>{throw Error('truncated body')}};
+ }});
+ await assert.rejects(api.submit({orderId:'o1'},'once'),{code:'UNKNOWN_OUTCOME'});
+ assert.equal(calls,1);
+});

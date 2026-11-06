@@ -26,9 +26,13 @@ export function createFiscalBrowserApi({getIdToken,fetchImpl=fetch}) {
       throw new FiscalUiError(method==='POST'?'UNKNOWN_OUTCOME':'NETWORK_UNAVAILABLE',
         method==='POST'?'Resultado do envio desconhecido. Não reenviar; consulte o status.':'Serviço temporariamente indisponível.');
     }
+    const malformed = () => method === 'POST'
+      ? new FiscalUiError('UNKNOWN_OUTCOME',
+          'Resposta inválida após envio. Não reenviar; consulte o status fiscal.')
+      : new FiscalUiError('INVALID_RESPONSE');
     let payload;
-    try {payload=await response.json();} catch {throw new FiscalUiError('INVALID_RESPONSE');}
-    if (!payload || typeof payload !== 'object') throw new FiscalUiError('INVALID_RESPONSE');
+    try {payload=await response.json();} catch {throw malformed();}
+    if (!payload || typeof payload !== 'object') throw malformed();
     if (!response.ok || payload.ok !== true) {
       const code=typeof payload.code==='string' ? payload.code : 'SERVER_UNAVAILABLE';
       const status=response.status;
