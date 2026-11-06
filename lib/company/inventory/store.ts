@@ -1,3 +1,4 @@
+import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import config from '../../../firebase-applet-config.json';
 import {companyDocumentPath, companyCollectionPath, type CompanySubcollection} from '../contracts';
