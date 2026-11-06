@@ -109,7 +109,7 @@ export class InventoryStore{
  async commit(action:string,key:string,hash:string,mutations:Mutation[],event:Record<string,unknown>,result:Record<string,unknown>,checks:ReadCheck[]=[]){
    if(mutations.length>7||mutations.length<1||new Set(mutations.map(m=>m.collection+':'+m.id)).size!==mutations.length)
      throw new InventoryError('INVALID_COMMIT',503);
-   if(mutations.some(m=>!['stockEvents','allocations','inboundShipments'].includes(m.collection)))
+   if(mutations.some(m=>!['stockEvents','allocations'].includes(m.collection)))
      throw new InventoryError('INVALID_SCOPE',503);
    const now=new Date().toISOString();
    const idemId=createHash('sha256').update(this.ctx.uid+':'+action+':'+key).digest('hex');
