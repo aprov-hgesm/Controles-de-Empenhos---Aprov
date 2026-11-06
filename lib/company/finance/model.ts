@@ -20,7 +20,7 @@ export interface FinanceObligation extends CompanyOwnedRecord {
   financialStatus: FinanceStatus;
 }
 export class FinanceError extends Error {
-  constructor(public readonly code: string, public readonly status: 400 | 404 | 409 | 503) {
+  constructor(public readonly code: string, public readonly status: 400 | 403 | 404 | 409 | 503) {
     super(code); this.name = 'FinanceError';
   }
 }
