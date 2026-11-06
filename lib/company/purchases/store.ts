@@ -216,7 +216,10 @@ export async function updatePurchase(ctx:CompanyAuthorizedContext,id:string,body
   const old=await replay(client,action,token,fingerprint);if(old)return{...old,replayed:true};
   const stored=required(await client.get('purchaseOrders',purchaseId),'PURCHASE');
   const doc=stored.data as unknown as PurchaseOrder;
-  const eventId='w6_'+randomUUID().replace(/-/g,'');
+  // Mesmo comprovante da mesma compra nunca gera duas entradas, ainda que troquem a chave de retry.
+  const eventId=change.action==='receive'
+    ? 'w6_'+hash(ctx.companyId+'|'+purchaseId+'|receipt|'+change.reference).slice(0,48)
+    : 'w6_'+randomUUID().replace(/-/g,'');
   const {order,event}=transition(doc,change,ctx.uid,new Date().toISOString(),eventId,token);
   const result={result:order,event};
   const writes=[client.put('purchaseOrders',purchaseId,order as unknown as Data,{updateTime:stored.updateTime}),
