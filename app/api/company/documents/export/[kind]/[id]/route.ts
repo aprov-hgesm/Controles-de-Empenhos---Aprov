@@ -1,5 +1,6 @@
 import { requireCompanyContext } from '../../../../../../../lib/server/companyAuthz';
 import { companyEntity } from '../../../../../../../lib/company/documents/server';
+import { getDelivery } from '../../../../../../../lib/company/delivery/service';
 import { CompanyDocumentError } from '../../../../../../../lib/company/documents/model';
 import { generateCompanyPdf, validatePdfSource, type ExportKind } from '../../../../../../../lib/company/documents/exportPdf';
 import { companyDocumentErrorResponse, privateDocumentHeaders } from '../../../../../../../lib/company/documents/http';
@@ -13,7 +14,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
     if (kind !== 'purchase-order' && kind !== 'packing-list') throw new CompanyDocumentError('PDF_KIND_INVALID', 400);
     const collection = kind === 'purchase-order' ? 'purchaseOrders' : 'deliveries';
     const ctx = await requireCompanyContext(request, { action: kind === 'purchase-order' ? 'purchaseOrders:read' : 'deliveries:read' });
-    const record = await companyEntity(ctx, collection, id);
+    // W9 driver-scoped read blocks access to another driver's packing list.
+    const record = kind === 'packing-list' ? await getDelivery(ctx, id) : await companyEntity(ctx, collection, id);
     await requireCompanyContext(request, {
       action: kind === 'purchase-order' ? 'purchaseOrders:read' : 'deliveries:read',
       resource: { companyId: String(record.companyId), workspaceId: String(record.workspaceId) },
