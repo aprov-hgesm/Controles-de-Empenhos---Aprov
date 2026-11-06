@@ -114,6 +114,12 @@ Testes locais puros no workflow dedicado
 5 OMs/2 veículos, janela, capacidade, tenant A/B, aprovação, URL segura, provider
 mock com falha, quota e circuit breaker).
 CI também executa `npm ci`, `npm run typecheck` e `npm run build`.
+Teste integrado adicional: `node --test lib/company/routing/routing-emulator.test.mjs`
+via job `firestore-emulator` em projeto `demo-*` (loopback):
+Firestore real para rotas/veículos A/B, auditoria, replay e concorrência CAS.
+Esta é prova do serviço com contextos de QA, não teste de autenticação/membership
+de navegador; W10 mantém esse gate E2E separado. Somente marcar PASS após
+o job concluir no SHA vigente.
 Resultados finais devem ser consultados **no HEAD da PR**, não inferidos do código
 ou de runs antigos: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions .
 Não executados neste Worker: testes de credenciais de terceiros, solver VROOM real,
