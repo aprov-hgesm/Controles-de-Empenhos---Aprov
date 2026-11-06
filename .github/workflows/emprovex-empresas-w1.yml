@@ -1,0 +1,49 @@
+name: EMPROVEX Empresas — W1 isolado (QA)
+on:
+  pull_request:
+    paths:
+      - 'lib/company/customers/**'
+      - 'features/company/customers/**'
+      - 'features/company/commitments/**'
+      - 'features/company/customer-orders/**'
+      - 'app/api/company/customers/**'
+      - 'app/api/company/commitments/**'
+      - 'app/api/company/customer-orders/**'
+      - '.github/workflows/emprovex-empresas-w1.yml'
+permissions:
+  contents: read
+jobs:
+  qa:
+    name: W1 — domínio, Auth/Firestore Emulator, tipagem e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w1
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: Unidade W1 — modelos, quantidades, preços e ownership
+        run: node --test features/company/customers/w1-domain.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: E2E W1 Auth/Firestore — somente demo, hosts locais
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w1
+          --only auth,firestore
+          "node --test features/company/customers/w1-emulator.test.mjs"
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Build sem deploy
+        if: always()
+        run: npm run build
