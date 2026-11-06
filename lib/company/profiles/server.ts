@@ -37,7 +37,7 @@ export async function getLegacyAuthorizedProfile(request: Request): Promise<Comp
     cnpj, name, legalName, role:ctx.role };
 }
 /** The W0 CNPJ index is unique; this is a privileged server lookup only. */
-async function readCompanyCnpjBinding(cnpj: string): Promise<{workspaceId: unknown; cnpj: unknown} | null> {
+async function readCompanyCnpjBinding(cnpj: string): Promise<Record<string, unknown> | null> {
   // Do not change W0's directory or extend its shared collection union.
   const { getDocument } = await import('../../server/companyMembership/firestore');
   const doc = await getDocument<Record<string, unknown>>('platformCnpjIndex/' + cnpj);
