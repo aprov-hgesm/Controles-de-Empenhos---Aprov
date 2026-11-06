@@ -32,7 +32,11 @@ function decode(v:Value):any {
 }
 function data(d:Document):Record<string,any>{return Object.fromEntries(Object.entries(d.fields||{}).map(([k,v])=>[k,decode(v)]));}
 function emulator():{host:string;project:string}|null{
- if(process.env.EMPROVEX_E2E_SERVER_AUTH!=='1')return null;
+ if(process.env.EMPROVEX_E2E_SERVER_AUTH!=='1'){
+   if(process.env.FIRESTORE_EMULATOR_HOST||process.env.FIREBASE_AUTH_EMULATOR_HOST)
+     throw new InventoryError('EMULATOR_SCOPE_INVALID',503);
+   return null;
+ }
  const host=process.env.FIRESTORE_EMULATOR_HOST||'',auth=process.env.FIREBASE_AUTH_EMULATOR_HOST||'';
  const project=process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID||'';
  if(process.env.K_SERVICE||process.env.VERCEL||process.env.GAE_SERVICE||
