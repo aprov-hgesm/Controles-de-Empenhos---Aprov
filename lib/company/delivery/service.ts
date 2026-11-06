@@ -4,6 +4,7 @@ import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {COMPANY_CONTRACT_VERSION} from '../contracts';
 import {W9Store,type DeliveryCheck,type DeliveryMutation} from './store';
 import {readIdentityDocument} from '../../server/companyMembership/firestore';
+import {approvedStopForDelivery} from '../integration/approvedRoute.mjs';
 import {DeliveryError,parseDeliveryDraft,checkDispatchQuota,checkReturnQuota,transitionDelivery,assessSchedule,
   approvePromise,validId,validKey,milli,decimal} from './domain.mjs';
 
@@ -198,11 +199,11 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
   if(existing.data.deliveryState!=='planned')return error('ROUTE_ASSIGNMENT_TOO_LATE',409);
   const routeId=id(body.routePlanId);
   const plan=mandatory(await store.get('deliveryRoutes',routeId),'APPROVED_ROUTE_NOT_FOUND');
-  if(plan.data.planStatus!=='approved'&&plan.data.routeStatus!=='approved')return error('ROUTE_NOT_APPROVED',409);
-  const stop=Array.isArray(plan.data.stops)?plan.data.stops.find((v:any)=>v.candidateDeliveryId===deliveryId):null;
-  if(!stop||!Number.isSafeInteger(stop.sequence)||stop.sequence<1||
-    plan.data.unassigned?.some((x:any)=>x.candidateDeliveryId===deliveryId))return error('ROUTE_STOP_NOT_APPROVED',409);
-  next={...existing.data,routePlanId:routeId,manualSequence:stop.sequence,
+  // W11 stores status=approved only after explicit human approval.
+  // Never treat a client-supplied candidate or route proposal as a delivery.
+  const approved=approvedStopForDelivery(plan.data,existing.data);
+  if(!approved.ok)return error(approved.code,409);
+  next={...existing.data,routePlanId:routeId,manualSequence:approved.sequence,
     revision:existing.data.revision+1,updatedAt:new Date().toISOString(),
     history:[...(existing.data.history||[]),{kind:'route_attached',at:new Date().toISOString(),actorUid:ctx.uid,
       routePlanId:routeId,source:'approved_route'}]};
