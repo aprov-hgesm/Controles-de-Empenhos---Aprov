@@ -4,7 +4,7 @@ import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {COMPANY_CONTRACT_VERSION} from '../contracts';
 import {W9Store,type DeliveryCheck,type DeliveryMutation} from './store';
 import {readIdentityDocument} from '../../server/companyMembership/firestore';
-import {DeliveryError,parseDeliveryDraft,checkDispatchQuota,transitionDelivery,assessSchedule,
+import {DeliveryError,parseDeliveryDraft,checkDispatchQuota,checkReturnQuota,transitionDelivery,assessSchedule,
   approvePromise,validId,validKey,milli,decimal} from './domain.mjs';
 
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -191,6 +191,7 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
  if(existing.data.revision!==body.expectedRevision)return error('REVISION_CONFLICT',409);
  if(!who.canPlan && (!who.isDriverOnly||existing.data.driverUid!==ctx.uid))return error('DRIVER_ASSIGNMENT_REQUIRED',403);
  const checks:DeliveryCheck[]=[];
+ const extras:DeliveryMutation[]=[];
  let next:Record<string,unknown>;
  if(body.kind==='attach_route'){
   if(!who.canPlan)return error('LOGISTICS_ROLE_REQUIRED',403);
@@ -211,7 +212,7 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
     return error('INVALID_OPERATION',400);
   if(['delivered','partial','refused','damaged','returned'].includes(body.kind)){
    const proof=await assertDocument(store,body.proofDocumentId);
-   if(proof.data.referenceType==='deliveries'&&proof.data.referenceId&&proof.data.referenceId!==deliveryId)
+   if(proof.data.referenceType!=='deliveries'||proof.data.referenceId!==deliveryId)
     return error('PROOF_LINK_MISMATCH',409);
    checks.push({kind:'documents',id:proof.data.id,updateTime:proof.updateTime});
   }
@@ -227,12 +228,22 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
    const stockEvent=mandatory(await store.get('stockEvents',eventId),'W7_RETURN_REQUIRED');
    if(stockEvent.data.kind!=='stock_movement'||!['return','return_converted'].includes(stockEvent.data.operation)||
     stockEvent.data.customerOrderId!==existing.data.customerOrderId||
-    stockEvent.data.customerOrderLineId!==existing.data.customerOrderLineId)return error('W7_RETURN_MISMATCH',409);
+    stockEvent.data.customerOrderLineId!==existing.data.customerOrderLineId||
+    stockEvent.data.catalogItemId!==existing.data.catalogItemId)return error('W7_RETURN_MISMATCH',409);
+   const quotaId='w9_return_'+digest(eventId),row=await store.get('deliveries',quotaId);
+   if(row&&row.data.kind!=='return_quota')return error('RETURN_QUOTA_INTEGRITY',503);
+   const calculated=checkReturnQuota({shipment:existing.data.quantity,
+     delivered:existing.data.deliveredQuantity,
+     returnEventQuantity:stockEvent.data.quantity,
+     alreadyAssigned:{value:row?.data.assigned||'0',unit:existing.data.quantity.unit}});
+   const updated=owned(ctx,quotaId,'return_quota',{sourceEventId:eventId,unit:existing.data.quantity.unit,
+     assigned:calculated.assigned},row?.data);
+   extras.push(mutation(row,updated));
    checks.push({kind:'stockEvents',id:eventId,updateTime:stockEvent.updateTime});
   }
   next=transitionDelivery(existing.data,body,ctx.uid,new Date().toISOString());
  }
- return committed(store,action,command,[mutation(existing,next)],checks,
+ return committed(store,action,command,[mutation(existing,next),...extras],checks,
    {delivery:next,stockLedgerChanged:false,atesto:false,liquidacao:false,payment:false},
    deliveryId,existing.data.revision);
 }
