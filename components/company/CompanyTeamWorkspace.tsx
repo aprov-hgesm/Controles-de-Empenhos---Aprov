@@ -29,7 +29,7 @@ export function CompanyTeamWorkspace({getIdToken}:{getIdToken:()=>Promise<string
   const invite=async(e:FormEvent)=>{
     e.preventDefault();setBusy(true);setError('');setSecret('');
     try{
-      const result=await request('',{method:'POST',body:JSON.stringify({email,roles:[role]})})
+      const result=(await request('',{method:'POST',body:JSON.stringify({email,roles:[role]})}))
         as {invitationToken:string};
       setSecret(result.invitationToken);setEmail('');await refresh();
     }catch(e){setError(e instanceof Error?e.message:'Convite recusado');}

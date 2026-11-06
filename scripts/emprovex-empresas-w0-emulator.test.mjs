@@ -73,6 +73,7 @@ deps.serverProvision = loadTs('lib/server/companyProvisioningAdmin.ts', {
   '../../firebase-applet-config.json': demoConfig,
   '../companyProvisioning': deps.provision,
   '../platformIdentity': deps.identity,
+  './companyMembership': { checkLiveMemberCapability: async () => false },
   './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
 });
 
@@ -113,6 +114,7 @@ deps.contracts = loadTs('lib/company/contracts/index.ts', {
 deps.guard = loadTs('lib/server/companyAuthz/index.ts', {
   '../../company/contracts': deps.contracts,
   '../companySession': deps.session,
+  '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 
 async function emulatorJson(url, body, method = 'POST') {
