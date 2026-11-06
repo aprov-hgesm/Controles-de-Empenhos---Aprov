@@ -370,6 +370,10 @@ test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogaç
   const memberGuard = loadTs('lib/server/companyAuthz/index.ts', {
     '../../company/contracts': deps.contracts,
     '../companySession': memberSession,
+    '../companyProfiles/integration': {
+      verifySelectedCompanySession: async (req) => memberSession.verifyCompanySession(
+        req.headers.get('authorization')),
+    },
     '../companyMembership': membership,
   });
   const employee = 'w10-worker40@example.invalid';
