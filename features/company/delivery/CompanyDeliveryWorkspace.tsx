@@ -63,7 +63,7 @@ export function CompanyDeliveryWorkspace({getIdToken}:Props){
  const pdf=async(item:Shipment)=>{
   try{
    const token=await getIdToken();
-   const r=await fetch('/api/company/documents/export/packing-list/'+encodeURIComponent(item.id),
+   const r=await fetch('/api/company/deliveries/'+encodeURIComponent(item.id)+'/packing-list',
     {headers:{Authorization:'Bearer '+token},cache:'no-store'});
    if(!r.ok)throw new Error('Não foi possível gerar o romaneio');
    const url=URL.createObjectURL(await r.blob());const link=document.createElement('a');
