@@ -85,6 +85,9 @@ export interface NfeDependencies {
   verifyXml(bytes: Uint8Array, expected: NfeXmlInspection, ctx: IssuanceContext):
     Promise<{signatureValid: true; protocolValid: true; trustedSefaz: true;
       key: string; issuerCnpj: string; protocol: string; authorizedAt: string} | null>;
+  /** Trusted W10 server provenance: PDF must correspond to authorized XML/key. */
+  verifyDanfe(ctx: IssuanceContext, issue: FiscalIssue, bytes: Uint8Array):
+    Promise<{valid: true; accessKey: string; issuerCnpj: string} | null>;
   /** Never returns public URLs; archive under strictly authorized workspace only. */
   archivePrivate(ctx: IssuanceContext, issue: FiscalIssue, document: {
     kind: 'authorized_xml' | 'danfe'; bytes: Uint8Array;
