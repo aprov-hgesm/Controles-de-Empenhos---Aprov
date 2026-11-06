@@ -57,7 +57,7 @@ export class InventoryStore{
    if(!path.startsWith(this.ctx.rootPath+'/'))throw new InventoryError('INVALID_SCOPE',503);
    return path;
  }
- private full(path:string){return this.root.replace(/^https?:\/\/[^/]+\/v1/,'')+'/'+path;}
+ private full(path:string){return this.root.replace(/^https?:\/\/[^/]+\/v1\//,'')+'/'+path;}
  private url(path:string){return this.root+'/'+path.split('/').map(encodeURIComponent).join('/');}
  private async request(url:string,init:RequestInit):Promise<Response>{
    try{return await fetch(url,{...init,headers:{authorization:'Bearer '+this.token,
@@ -72,7 +72,7 @@ export class InventoryStore{
    const raw=await response.json() as Document;
    if(raw.name!==this.full(path)||!raw.updateTime)throw new InventoryError('INTEGRITY_ERROR',503);
    const record=data(raw);
-   if(record.companyId!==this.ctx.companyId||record.workspaceId!==this.ctx.companyId||
+   if(record.schemaVersion!=='company-r1-v1'||record.companyId!==this.ctx.companyId||record.workspaceId!==this.ctx.companyId||
    record.id!==id)throw new InventoryError('INTEGRITY_ERROR',503);
    return {data:record,updateTime:raw.updateTime};
  }
@@ -90,7 +90,7 @@ export class InventoryStore{
      if(!name.startsWith(this.full(path)+'/')||name.slice(this.full(path).length+1).includes('/'))
        throw new InventoryError('INTEGRITY_ERROR',503);
      const item=data(doc);
-     if(item.companyId!==this.ctx.companyId||item.workspaceId!==this.ctx.companyId||
+     if(item.schemaVersion!=='company-r1-v1'||item.companyId!==this.ctx.companyId||item.workspaceId!==this.ctx.companyId||
      item.id!==name.slice(name.lastIndexOf('/')+1))throw new InventoryError('INTEGRITY_ERROR',503);
      return item;
    });
