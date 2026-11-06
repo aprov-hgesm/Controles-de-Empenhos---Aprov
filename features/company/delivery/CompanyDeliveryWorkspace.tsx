@@ -10,6 +10,7 @@ export function CompanyDeliveryWorkspace({getIdToken}:Props){
  const [items,setItems]=useState<Shipment[]>([]),[cursor,setCursor]=useState<string|null>(null);
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const [selected,setSelected]=useState<Shipment|null>(null);
+ const [routeIds,setRouteIds]=useState<Record<string,string>>({});
  const [draft,setDraft]=useState({customerOrderId:'',customerOrderLineId:'',catalogItemId:'',
   quantity:'',unit:'KG',driverUid:'',address:'',manualSequence:'1',source:'company_stock',
   purchaseOrderId:'',purchaseLineId:'',w7DispatchEventId:''});
@@ -60,6 +61,18 @@ export function CompanyDeliveryWorkspace({getIdToken}:Props){
   }catch(e){setNotice(e instanceof Error?e.message:'Falha ao registrar evento');}
   finally{setBusy(false);}
  };
+ const attachApprovedRoute=async(item:Shipment)=>{
+  const routePlanId=(routeIds[item.id]||'').trim();
+  if(!routePlanId){setNotice('Informe o ID de um plano W11 aprovado.');return;}
+  setBusy(true);setNotice('');
+  try{
+   await request('/api/company/deliveries/'+encodeURIComponent(item.id),'PATCH',
+     {kind:'attach_route',routePlanId,expectedRevision:item.revision});
+   setRouteIds(prev=>({...prev,[item.id]:''}));await reload();
+   setNotice('Rota aprovada associada à entrega. Despacho continua separado.');
+  }catch(e){setNotice(e instanceof Error?e.message:'Não foi possível vincular a rota');}
+  finally{setBusy(false);}
+ };
  const pdf=async(item:Shipment)=>{
   try{
    const token=await getIdToken();
@@ -106,6 +119,18 @@ export function CompanyDeliveryWorkspace({getIdToken}:Props){
    <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={()=>setSelected(item)}
      className="rounded-xl border px-3 py-2 text-sm">Registrar fato</button>
     <button type="button" disabled={busy} onClick={()=>void pdf(item)} className="rounded-xl border px-3 py-2 text-sm">Romaneio PDF</button></div>
+   {item.deliveryState==='planned'&&<div className="mt-4 flex flex-wrap items-end gap-2 rounded-xl bg-slate-50 p-3">
+    <label className="min-w-[220px] flex-1 text-xs font-medium text-slate-700">Plano W11 aprovado
+     <input aria-label={'ID da rota aprovada para '+item.id} value={routeIds[item.id]||''}
+      onChange={e=>setRouteIds(prev=>({...prev,[item.id]:e.target.value}))}
+      placeholder="route_..." className="mt-1 block w-full rounded-lg border bg-white p-2 text-sm"/>
+    </label>
+    <button type="button" disabled={busy||!(routeIds[item.id]||'').trim()}
+     onClick={()=>void attachApprovedRoute(item)}
+     className="rounded-lg border border-blue-300 px-3 py-2 text-sm font-semibold text-blue-800">
+     Associar rota aprovada</button>
+    <p className="w-full text-xs text-slate-600">A aprovação da rota não registra saída, entrega ou atesto.</p>
+   </div>}
   </li>)}</ul>
   {cursor&&<button type="button" disabled={busy} className="rounded-lg border p-2" onClick={()=>void reload(cursor)}>Próxima página</button>}
   {selected&&<form onSubmit={e=>void record(e)} className="space-y-3 rounded-2xl border bg-slate-50 p-5">
