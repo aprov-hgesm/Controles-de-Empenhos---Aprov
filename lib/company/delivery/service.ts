@@ -202,7 +202,7 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
   // W11 stores status=approved only after explicit human approval.
   // Never treat a client-supplied candidate or route proposal as a delivery.
   const approved=approvedStopForDelivery(plan.data,existing.data);
-  if(!approved.ok)return error(approved.code,409);
+  if(!approved.ok)return error(approved.code || 'ROUTE_NOT_APPROVED',409);
   next={...existing.data,routePlanId:routeId,manualSequence:approved.sequence,
     revision:existing.data.revision+1,updatedAt:new Date().toISOString(),
     history:[...(existing.data.history||[]),{kind:'route_attached',at:new Date().toISOString(),actorUid:ctx.uid,
