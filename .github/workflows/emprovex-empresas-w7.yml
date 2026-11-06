@@ -1,0 +1,51 @@
+name: EMPROVEX Empresas — W7 Estoque QA
+on:
+  pull_request:
+    paths:
+      - 'lib/company/inventory/**'
+      - 'features/company/inventory/**'
+      - 'features/company/allocation/**'
+      - 'app/api/company/inventory/**'
+      - '.github/workflows/emprovex-empresas-w7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventory-w7:
+    name: W7 • invariantes, Firestore Emulator, tipagem e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: W7 exact quantities and allocations
+        run: node --test lib/company/inventory/inventory.test.mjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Firestore Emulator real (demo only, isolated)
+        env:
+          NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w7
+          EMPROVEX_E2E_SERVER_AUTH: '1'
+          EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w7
+          --only auth,firestore
+          "node --test lib/company/inventory/firestore-emulator.test.mjs lib/company/inventory/service-emulator.test.mjs"
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Core Protection (no military changes)
+        if: always()
+        run: node scripts/verify-emprovex-core-protection.mjs
+      - name: Next.js build (no deploy)
+        if: always()
+        run: npm run build
