@@ -208,26 +208,28 @@ export async function listRoutes(ctx:CompanyAuthorizedContext,limit:number,curso
  return(await Client.connect(ctx)).list('deliveryRoutes',limit,cursor);
 }
 export async function changeRoute(ctx:CompanyAuthorizedContext,id:string,raw:unknown,k:unknown){
- if(!object(raw)||!Number.isSafeInteger(raw.expectedRevision)||raw.expectedRevision<1
-   ||!['reorder','approve'].includes(String(raw.action)))throw new RoutingError('INVALID_BODY');
- const action=String(raw.action),rev=Number(raw.expectedRevision);
+ if(!object(raw))throw new RoutingError('INVALID_BODY');
+ const input=raw as RecordData;
+ if(!Number.isSafeInteger(input.expectedRevision)||Number(input.expectedRevision)<1
+   ||!['reorder','approve'].includes(String(input.action)))throw new RoutingError('INVALID_BODY');
+ const action=String(input.action),rev=Number(input.expectedRevision);
  return mutate(ctx,'deliveryRoutes',identifier(id),action,k,input,(prior)=>{
-   if(!prior)throw new RoutingError('ROUTE_NOT_FOUND',404);
-   if(prior.status==='dispatched'||prior.status==='closed')
-     throw new RoutingError('W9_ONLY_DELIVERY_STATE',403);
-   const now=new Date().toISOString();
-   if(action==='reorder'){
-     if(prior.status!=='draft'&&prior.status!=='optimizedSuggestion')
-       throw new RoutingError('ROUTE_NOT_EDITABLE',409);
-     const plan=reorderStops(prior.proposal,input.orderedIds);
-     return {...prior,proposal:plan,stops:plan.stops,status:'draft',source:'manual',revision:rev+1,
-       approvedByHuman:false,updatedAt:now};
-   }
-   const reviewed=approvePlan({...prior,stops:prior.stops,unassigned:prior.unassigned},{
-    expectedRevision:rev,confirmedUnassignedIds:input.confirmedUnassignedIds,
-    confirmedDestinationIds:input.confirmedDestinationIds});
-   return{...prior,status:reviewed.status,revision:reviewed.revision,
-     approvedByHuman:true,approvedByUid:ctx.uid,approvedAt:now,updatedAt:now};
+  if(!prior)throw new RoutingError('ROUTE_NOT_FOUND',404);
+  if(prior.status==='dispatched'||prior.status==='closed')
+    throw new RoutingError('W9_ONLY_DELIVERY_STATE',403);
+  const now=new Date().toISOString();
+  if(action==='reorder'){
+   if(prior.status!=='draft'&&prior.status!=='optimizedSuggestion')
+     throw new RoutingError('ROUTE_NOT_EDITABLE',409);
+   const plan=reorderStops(prior.proposal,input.orderedIds);
+   return {...prior,proposal:plan,stops:plan.stops,status:'draft',source:'manual',revision:rev+1,
+     approvedByHuman:false,updatedAt:now};
+  }
+  const reviewed=approvePlan({...prior,stops:prior.stops,unassigned:prior.unassigned},{
+   expectedRevision:rev,confirmedUnassignedIds:input.confirmedUnassignedIds,
+   confirmedDestinationIds:input.confirmedDestinationIds});
+  return{...prior,status:reviewed.status,revision:reviewed.revision,
+    approvedByHuman:true,approvedByUid:ctx.uid,approvedAt:now,updatedAt:now};
  },rev);
 }
 export async function listVehicles(ctx:CompanyAuthorizedContext,limit:number,cursor:string){
