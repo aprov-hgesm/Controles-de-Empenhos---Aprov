@@ -156,6 +156,7 @@ async function validateDraft(c:Client,draft:DraftInput):Promise<{verifications:W
     return doc;
   };
   const supplier=(await load('sourceSuppliers',draft.sourceSupplierId)).data;
+  const planned=new Map<string,bigint>();
   if(supplier.status!=='active'||supplier.lifecycle!=='active')return error('SUPPLIER_NOT_SELECTABLE',409);
   for(const line of draft.lines){
     const catalog=(await load('catalogItems',line.catalogItemId)).data;
@@ -174,8 +175,11 @@ async function validateDraft(c:Client,draft:DraftInput):Promise<{verifications:W
       if(!object(demand)||!object(demand.quantity)||!object(demand.fulfilledQuantity))return error('ORDER_LINE_NOT_FOUND',409);
       const need=needFromOrderLine(allocation.customerOrderId,{id:allocation.customerOrderLineId,
         quantity:positiveQuantity(demand.quantity),fulfilledQuantity:positiveQuantity(demand.fulfilledQuantity,true)});
-      if(need.outstanding.unit!==allocation.quantity.unit||milli(allocation.quantity.value)>milli(need.outstanding.value))
+      const allocationKey=allocation.customerOrderId+'|'+allocation.customerOrderLineId;
+      const nextPlanned=(planned.get(allocationKey)||BigInt(0))+milli(allocation.quantity.value);
+      if(need.outstanding.unit!==allocation.quantity.unit||nextPlanned>milli(need.outstanding.value))
         return error('ALLOCATION_EXCEEDS_OUTSTANDING',409);
+      planned.set(allocationKey,nextPlanned);
     }
   }
   // A Firestore commit verifies the exact W1/W2 revisions used. A suspension or
