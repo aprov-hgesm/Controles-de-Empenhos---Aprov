@@ -91,7 +91,7 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
  }
  // No arbitrary conversion submitted by the client: the validated W2 catalogue is authoritative.
  const canonicalQuantity=decimal(asQuantity(command.quantity,unit,conversion));
- const stockId='balance_'+catalogItemId;
+ const stockId=summaryId('balance',catalogItemId);
  const orderSummaryId=orderId?summaryId('order',orderId,orderLineId):'';
  const sourceType=purchaseOrderId?'purchase':'stock';
  const linkId=orderId?summaryId('link',orderId,orderLineId,sourceType,purchaseOrderId,purchaseLineId):'';
@@ -146,7 +146,7 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
 export async function getInventory(ctx:CompanyAuthorizedContext,catalogId:string){
  const store=await InventoryStore.connect(ctx);
  const catalogue=checkDoc(await store.get('catalogItems',id(catalogId)),'CATALOG_ITEM');
- const summary=await store.get('stockEvents','balance_'+catalogId);
+ const summary=await store.get('stockEvents',summaryId('balance',catalogId));
  return {catalogItemId:catalogId,canonicalUnit:catalogue.data.canonicalUnit,
   ...(summary?summary.data:blankStock()),free:decimal(
      parseMilli(summary?.data.onHand||'0')-parseMilli(summary?.data.reserved||'0'))};
