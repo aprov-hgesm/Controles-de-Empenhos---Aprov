@@ -15,11 +15,14 @@ import { FinanceWorkspace } from '../../features/company/finance/FinanceWorkspac
 import { FinanceInsights } from '../../features/company/finance/FinanceInsights';
 import { CompanyNeReview } from '../../features/company/documents/CompanyNeReview';
 import { CompanyTeamWorkspace } from './CompanyTeamWorkspace';
+import { CompanyScheduleWorkspace } from '../../features/company/schedule/CompanyScheduleWorkspace';
+import { CompanyDeliveryWorkspace } from '../../features/company/delivery/CompanyDeliveryWorkspace';
+import { RoutingWorkspace } from '../../features/company/routing/RoutingWorkspace';
 import { companyShellModuleBySlug } from '../../features/company/shell/navigation';
 
 export const COMPANY_ACTIVE_MODULE_SLUGS = [
   'pedidos-om', 'empenhos', 'compras', 'fornecedores', 'catalogo',
-  'estoque', 'notas-fiscais', 'financeiro', 'clientes', 'configuracoes',
+  'estoque', 'cronogramas', 'entregas', 'notas-fiscais', 'financeiro', 'clientes', 'configuracoes',
 ] as const;
 
 export function CompanyOperationalModule({ slug }: { slug: string }) {
@@ -39,6 +42,13 @@ export function CompanyOperationalModule({ slug }: { slug: string }) {
     case 'compras': content = <CompanyPurchasesWorkspace getIdToken={getIdToken} />; break;
     case 'fornecedores': content = <SourceSuppliersWorkspace getIdToken={getIdToken} />; break;
     case 'catalogo': content = <CatalogWorkspace getIdToken={getIdToken} />; break;
+    case 'cronogramas': content = <CompanyScheduleWorkspace getIdToken={getIdToken} />; break;
+    case 'entregas': content = <div className="space-y-8">
+      <CompanyDeliveryWorkspace getIdToken={getIdToken} />
+      <section aria-label="Planejamento de rotas" className="border-t border-slate-200 pt-8">
+        <RoutingWorkspace getIdToken={getIdToken} />
+      </section>
+    </div>; break;
     case 'estoque': content = <div className="space-y-7"><InventoryWorkspace getIdToken={getIdToken} />
       <AllocationWorkspace getIdToken={getIdToken} /></div>; break;
     case 'notas-fiscais': content = <FinanceWorkspace getIdToken={getIdToken} />; break;
