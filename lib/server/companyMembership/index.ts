@@ -271,6 +271,13 @@ export async function acceptCompanyInvitation(
   if (!existing || !invitationMatches(existing.value, companyId, principal.email, token)) {
     throw error('COMPANY_SCOPE_FORBIDDEN', 403);
   }
+  const index = await readIdentityDocument('companyMemberAuthIndex', principal.uid);
+  // A verified UID may not be mapped to a second tenant through an invitation.
+  if (index && (index.value.firebaseUid !== principal.uid
+    || index.value.companyId !== companyId || index.value.workspaceId !== companyId
+    || index.value.email !== principal.email)) {
+    throw error('COMPANY_ACCOUNT_FORBIDDEN', 403);
+  }
   const accepted: CompanyMember = {
     ...existing.value, status: 'active', firebaseUid: principal.uid,
     invitationHash: '', invitationExpiresAt: null,
@@ -278,8 +285,11 @@ export async function acceptCompanyInvitation(
   };
   const audit = makeAudit(companyId, principal.uid, id, existing.value.revision, accepted.revision);
   await commitMemberChange(companyId, id, accepted as unknown as Record<string, unknown>,
-    existing.updateTime, audit.eventId, audit.event);
-  return { member: memberPublic(accepted), accessPendingIntegration: true };
+    existing.updateTime, audit.eventId, audit.event, {
+      uid: principal.uid, email: principal.email, companyId,
+      existingUpdateTime: index?.updateTime || null,
+    });
+  return { member: memberPublic(accepted), accessPendingIntegration: false };
 }
 /** Hook for W0 integrator: must be invoked only after verifying company directory. */
 export async function checkLiveMemberCapability(

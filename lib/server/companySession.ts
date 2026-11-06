@@ -8,6 +8,7 @@ import {
   verifyFirebaseRequest,
 } from './firebaseFounderAuth';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
+import { checkLiveMemberCapability } from './companyMembership';
 
 const DB_ROOT = 'https://firestore.googleapis.com/v1/projects/'
   + encodeURIComponent(firebaseConfig.projectId)
@@ -54,6 +55,8 @@ export interface VerifiedCompanyContext {
   companyName: string;
   tradeName: string | null;
   legalName: string | null;
+  /** Present only for invited employees; not derived from the browser. */
+  accessRole?: 'member';
 }
 
 export class CompanyAccessError extends Error {
@@ -77,7 +80,7 @@ function readNestedString(doc: FireDocument, group: string, field: string): stri
  */
 async function readDirectoryDocument(
   serviceToken: string,
-  collection: 'platformAccounts' | 'workspaces' | 'platformAuthUidIndex',
+  collection: 'platformAccounts' | 'workspaces' | 'platformAuthUidIndex' | 'companyMemberAuthIndex',
   documentId: string
 ): Promise<FireDocument | null> {
   const emulator = e2eEmulators();
@@ -165,53 +168,61 @@ export async function verifyCompanySession(authorization: string | null): Promis
   }
 
   const account = await readDirectoryDocument(serviceToken, 'platformAccounts', verified.email);
-  if (!account) throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
-
-  const workspaceId = readString(account, 'workspaceId');
-  const accountUid = readString(account, 'firebaseUid');
-  const accountEmail = normalizePlatformEmail(readString(account, 'email'));
-  const accountAuthorizedEmail = readString(account, 'authorizedEmail');
-  const normalizedAccountAuthorizedEmail = accountAuthorizedEmail
-    ? normalizePlatformEmail(accountAuthorizedEmail)
-    : accountEmail;
-
-  if (
-    readString(account, 'accountType') !== 'company' ||
-    readString(account, 'status') !== 'active' ||
-    (readString(account, 'authProvider') || 'password') !== 'password' ||
-    accountUid !== verified.uid ||
-    accountEmail !== verified.email ||
-    normalizedAccountAuthorizedEmail !== verified.email ||
-    !isValidWorkspaceId(workspaceId)
-  ) {
-    throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+  // A known founder/sector/company identity must NEVER fall back to membership.
+  let workspaceId = '';
+  let accessRole: 'member' | undefined;
+  if (account) {
+    workspaceId = readString(account, 'workspaceId');
+    const accountEmail = normalizePlatformEmail(readString(account, 'email'));
+    const authorizedEmail = readString(account, 'authorizedEmail');
+    if (readString(account, 'accountType') !== 'company'
+      || readString(account, 'status') !== 'active'
+      || (readString(account, 'authProvider') || 'password') !== 'password'
+      || readString(account, 'firebaseUid') !== verified.uid
+      || accountEmail !== verified.email
+      || normalizePlatformEmail(authorizedEmail || accountEmail) !== verified.email
+      || !isValidWorkspaceId(workspaceId)) {
+      throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+    }
+    const index = await readDirectoryDocument(serviceToken, 'platformAuthUidIndex', verified.uid);
+    if (!index || readString(index, 'firebaseUid') !== verified.uid
+      || readString(index, 'workspaceId') !== workspaceId
+      || normalizePlatformEmail(readString(index, 'email')) !== verified.email
+      || readString(index, 'accountType') !== 'company') {
+      throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+    }
+  } else {
+    // Persisted atomically with invitation acceptance; never sufficient on its own.
+    const memberIndex = await readDirectoryDocument(serviceToken, 'companyMemberAuthIndex', verified.uid);
+    if (!memberIndex || readString(memberIndex, 'firebaseUid') !== verified.uid
+      || normalizePlatformEmail(readString(memberIndex, 'email')) !== verified.email) {
+      throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+    }
+    workspaceId = readString(memberIndex, 'companyId');
+    if (!isValidWorkspaceId(workspaceId)
+      || readString(memberIndex, 'workspaceId') !== workspaceId) {
+      throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+    }
+    // Never launder a sector or founder UID through a stale member selector.
+    if (await readDirectoryDocument(serviceToken, 'platformAuthUidIndex', verified.uid)) {
+      throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+    }
+    accessRole = 'member';
   }
-
-  // O índice UID é mantido por transação no provisionamento. Sem vínculo exato,
-  // não existe autorização para recursos empresariais.
-  const uidIndex = await readDirectoryDocument(serviceToken, 'platformAuthUidIndex', verified.uid);
-  if (
-    !uidIndex ||
-    readString(uidIndex, 'firebaseUid') !== verified.uid ||
-    readString(uidIndex, 'workspaceId') !== workspaceId ||
-    normalizePlatformEmail(readString(uidIndex, 'email')) !== verified.email ||
-    readString(uidIndex, 'accountType') !== 'company'
-  ) {
-    throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
-  }
-
   const workspace = await readDirectoryDocument(serviceToken, 'workspaces', workspaceId);
-  if (!workspace) throw new CompanyAccessError('COMPANY_WORKSPACE_FORBIDDEN', 403);
-
-  const workspaceEmail = normalizePlatformEmail(readString(workspace, 'authorizedEmail'));
-  if (
-    readString(workspace, 'id') !== workspaceId ||
-    readString(workspace, 'workspaceType') !== 'company' ||
-    readString(workspace, 'status') !== 'active' ||
-    workspaceEmail !== verified.email ||
-    readNestedString(workspace, 'companyProfile', 'accessEmail') !== verified.email ||
-    readNestedString(workspace, 'companyProfile', 'registrationStatus') !== 'active'
-  ) {
+  if (!workspace || readString(workspace, 'id') !== workspaceId
+    || readString(workspace, 'workspaceType') !== 'company'
+    || readString(workspace, 'status') !== 'active'
+    || readNestedString(workspace, 'companyProfile', 'registrationStatus') !== 'active') {
+    throw new CompanyAccessError('COMPANY_WORKSPACE_FORBIDDEN', 403);
+  }
+  if (accessRole === 'member') {
+    // Check live persisted status/UID/email/roles on every new session.
+    const permitted = await checkLiveMemberCapability(
+      workspaceId, { uid: verified.uid, email: verified.email }, 'company:read');
+    if (!permitted) throw new CompanyAccessError('COMPANY_ACCOUNT_FORBIDDEN', 403);
+  } else if (normalizePlatformEmail(readString(workspace, 'authorizedEmail')) !== verified.email
+    || readNestedString(workspace, 'companyProfile', 'accessEmail') !== verified.email) {
     throw new CompanyAccessError('COMPANY_WORKSPACE_FORBIDDEN', 403);
   }
 
@@ -236,5 +247,6 @@ export async function verifyCompanySession(authorization: string | null): Promis
     companyName,
     tradeName: tradeName || null,
     legalName: legalName || null,
+    ...(accessRole === 'member' ? { accessRole } : {}),
   };
 }

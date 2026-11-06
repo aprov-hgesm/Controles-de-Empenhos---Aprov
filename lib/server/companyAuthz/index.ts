@@ -5,6 +5,7 @@ import {
   type CompanyErrorCode,
   type CompanyPrincipalRole,
 } from '../../company/contracts';
+import { checkLiveMemberCapability } from '../companyMembership';
 import {
   CompanyAccessError,
   verifyCompanySession,
@@ -93,13 +94,17 @@ export async function requireCompanyContext(
   if (intent.requireCreator && !intent.resource) {
     throw new CompanyAuthorizationError('COMPANY_INVALID_RESOURCE', 403);
   }
-  // No W0 only the sole UID registered during founder provisioning can enter.
-  // W3 replaces this owner-only bootstrap with verified membership and RBAC.
+  if (session.accessRole === 'member') {
+    // Live role checks deny revoked/changed permissions without cached grants.
+    const permitted = await checkLiveMemberCapability(
+      companyId, { uid: session.firebaseUid, email: session.authorizedEmail }, intent.action);
+    if (!permitted) throw new CompanyAuthorizationError('COMPANY_OPERATION_FORBIDDEN', 403);
+  }
   return {
     ...session,
     companyId,
     uid: session.firebaseUid,
-    role: 'owner',
+    role: session.accessRole === 'member' ? 'member' : 'owner',
     action: intent.action,
     rootPath: `${COMPANY_ROOT_COLLECTION}/${companyId}`,
   };

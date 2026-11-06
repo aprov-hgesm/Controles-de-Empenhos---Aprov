@@ -16,7 +16,7 @@ export const COMPANY_SUBCOLLECTIONS = [
   'publicCustomers', 'commitments', 'customerOrders', 'sourceSuppliers',
   'catalogItems', 'members', 'documents', 'purchaseOrders',
   'stockEvents', 'allocations', 'inboundShipments', 'deliveries',
-  'accountsPayable', 'accountsReceivable', 'auditEvents', 'idempotencyKeys',
+  'accountsPayable', 'accountsReceivable', 'deliveryRoutes', 'vehicles', 'auditEvents', 'idempotencyKeys',
 ] as const;
 
 export type CompanySubcollection = typeof COMPANY_SUBCOLLECTIONS[number];
@@ -34,6 +34,7 @@ export const COMPANY_ACTIONS = [
   'allocations:read', 'allocations:write',
   'inboundShipments:read', 'inboundShipments:write',
   'deliveries:read', 'deliveries:write',
+  'deliveryRoutes:read', 'deliveryRoutes:write', 'vehicles:read', 'vehicles:write',
   'accountsPayable:read', 'accountsPayable:write',
   'accountsReceivable:read', 'accountsReceivable:write',
   'auditEvents:read',
@@ -41,7 +42,7 @@ export const COMPANY_ACTIONS = [
 export type CompanyAction = typeof COMPANY_ACTIONS[number];
 
 /** R1-M só permite o titular do provisionamento. W3 introduz memberships. */
-export type CompanyPrincipalRole = 'owner';
+export type CompanyPrincipalRole = 'owner' | 'member';
 export type CompanyRecordStatus = 'draft' | 'active' | 'suspended' | 'cancelled' | 'archived';
 export type CompanyErrorCode =
   | 'COMPANY_AUTH_INVALID' | 'COMPANY_ACCOUNT_FORBIDDEN'

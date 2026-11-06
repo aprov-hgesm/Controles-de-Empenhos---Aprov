@@ -120,6 +120,7 @@ export async function commitMemberChange(
   expectedUpdateTime: string | null,
   eventId: string,
   audit: Record<string, unknown>,
+  memberIndex?: { uid: string; email: string; companyId: string; existingUpdateTime: string | null },
 ): Promise<void> {
   const c = await access();
   const memberPath = companyDocumentPath(companyId, 'members', memberId);
@@ -135,6 +136,21 @@ export async function commitMemberChange(
     { update: { name: prefix + '/' + auditPath, fields: fields(audit) },
       currentDocument: { exists: false } },
   ];
+  // Atomic UID selector, not an authorization grant. The guard checks membership LIVE.
+  if (memberIndex) {
+    if (memberIndex.companyId !== companyId || !/^[^/.]{1,128}$/.test(memberIndex.uid)) {
+      throw new MembershipStoreError('UNAVAILABLE', 503);
+    }
+    writes.push({
+      update: {
+        name: prefix + '/companyMemberAuthIndex/' + memberIndex.uid,
+        fields: fields({ firebaseUid: memberIndex.uid, email: memberIndex.email,
+          companyId, workspaceId: companyId }),
+      },
+      currentDocument: memberIndex.existingUpdateTime
+        ? { updateTime: memberIndex.existingUpdateTime } : { exists: false },
+    });
+  }
   let response: Response;
   try {
     response = await fetch(c.url + ':commit', {
@@ -155,7 +171,7 @@ export async function commitMemberChange(
   }
   throw new MembershipStoreError('UNAVAILABLE', 503);
 }
-export async function readIdentityDocument(collection: 'platformAccounts' | 'platformAuthUidIndex' | 'workspaces', id: string) {
+export async function readIdentityDocument(collection: 'platformAccounts' | 'platformAuthUidIndex' | 'workspaces' | 'companyMemberAuthIndex', id: string) {
   if (!/^[^/]{1,256}$/.test(id) || id.includes('..')) throw new MembershipStoreError('UNAVAILABLE', 503);
   return getDocument<Record<string, unknown>>(`${collection}/${id}`);
 }

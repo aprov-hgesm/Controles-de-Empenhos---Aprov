@@ -25,6 +25,7 @@ export const MEMBER_ROLE_ACTIONS: Record<CompanyMemberRole, readonly CompanyActi
     'allocations:read', 'allocations:write', 'inboundShipments:read', 'inboundShipments:write',
     'deliveries:read', 'deliveries:write', 'accountsPayable:read', 'accountsPayable:write',
     'accountsReceivable:read', 'accountsReceivable:write', 'auditEvents:read',
+    'deliveryRoutes:read', 'deliveryRoutes:write', 'vehicles:read', 'vehicles:write',
   ],
   operations: [
     'company:read', 'publicCustomers:read', 'publicCustomers:write',
@@ -32,6 +33,7 @@ export const MEMBER_ROLE_ACTIONS: Record<CompanyMemberRole, readonly CompanyActi
     'sourceSuppliers:read', 'sourceSuppliers:write', 'catalogItems:read', 'catalogItems:write',
     'documents:read', 'documents:write', 'purchaseOrders:read', 'purchaseOrders:write',
     'stockEvents:read', 'allocations:read', 'inboundShipments:read', 'deliveries:read',
+    'deliveryRoutes:read', 'vehicles:read',
   ],
   stock: [
     'company:read', 'sourceSuppliers:read', 'catalogItems:read', 'customerOrders:read',
@@ -44,10 +46,12 @@ export const MEMBER_ROLE_ACTIONS: Record<CompanyMemberRole, readonly CompanyActi
     'purchaseOrders:read', 'stockEvents:read', 'allocations:read',
     'inboundShipments:read', 'inboundShipments:write',
     'deliveries:read', 'deliveries:write', 'documents:read',
+    'deliveryRoutes:read', 'deliveryRoutes:write', 'vehicles:read', 'vehicles:write',
   ],
   driver: [
     'company:read', 'publicCustomers:read', 'customerOrders:read',
     'deliveries:read', 'deliveries:write', 'documents:read',
+    'deliveryRoutes:read',
   ],
   finance: [
     'company:read', 'publicCustomers:read', 'commitments:read',
