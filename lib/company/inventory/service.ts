@@ -131,7 +131,18 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
  const stock=stockRow?.data||blankStock();
  const order=orderRow?.data||blankOrder(catalogItemId,unit);
  const link=linkRow?.data||blankLink(sourceType);
- const inbound=inboundId?(inboundRow?.data||blankInbound(purchaseQuantity)):null;
+ const inbound=inboundId?{...(inboundRow?.data||blankInbound(purchaseQuantity))}:null;
+ if(inbound&&inbound.kind!=='inbound_projection')throw new InventoryError('INBOUND_PROJECTION_INVALID',503);
+ // W6 may confirm additional quantities later. Reconcile new confirmation only if
+ // the existing immutable physical/allocated facts still fit in the new ceiling.
+ if(inbound&&inbound.purchaseQuantity!==purchaseQuantity){
+   const next=parseMilli(purchaseQuantity),old=parseMilli(inbound.purchaseQuantity);
+   const used=parseMilli(inbound.allocated)+parseMilli(inbound.directDispatched);
+   const physical=parseMilli(inbound.received)+parseMilli(inbound.directDispatched);
+   if(next<used||next<physical||next<parseMilli(inbound.converted))
+     throw new InventoryError('CONFIRMATION_BELOW_ALLOCATIONS',409);
+   inbound.purchaseQuantity=purchaseQuantity;
+ }
  // W6 planning is only a proposal, not a stock reservation. Never assign its
  // quantity to a different OM order/line than the immutable purchase plan permits.
  if(purchaseLine && orderId){
@@ -143,7 +154,7 @@ export async function executeInventory(ctx:CompanyAuthorizedContext, raw:unknown
      throw new InventoryError('PURCHASE_ALLOCATION_EXCEEDS_PLAN',409);
  }
  if(order.catalogItemId!==catalogItemId||order.canonicalUnit!==unit ||
-   link.sourceType!==sourceType||(inbound&&inbound.purchaseQuantity!==purchaseQuantity))
+   link.sourceType!==sourceType)
    throw new InventoryError('PROJECTION_INTEGRITY_ERROR',503);
  // Physical receipt checks the confirmed purchase; an allocation alone is not stock.
  const result=applyInventoryCommand({
