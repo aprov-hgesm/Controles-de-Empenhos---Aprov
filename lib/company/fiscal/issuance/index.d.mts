@@ -19,6 +19,8 @@ export interface FiscalIssue {
   series: number;
   number: number;
   orderId: string;
+  /** Revision of verified W1 order, rechecked before fiscal POST. */
+  orderRevision: number;
   payload: Record<string, unknown>;
   status: NfeState;
   revision: number;
@@ -62,8 +64,10 @@ export interface NfeDependencies {
   /** Source MUST be W10 server-side live guard, not any body/cookie selector. */
   authorize(action: 'fiscal:read' | 'fiscal:write' | 'fiscal:approve' | 'fiscal:issue'): Promise<IssuanceContext>;
   resolveConnection(context: IssuanceContext): Promise<NfeConnection>;
-  verifyOrder(context: IssuanceContext, orderId: string): Promise<{
-    companyId: string; workspaceId: string; id?: string
+  /** W10 must live-check ownership + remaining/partial item quantities against W1. */
+  verifyOrder(context: IssuanceContext, orderId: string, items: unknown[]): Promise<{
+    companyId: string; workspaceId: string; id?: string;
+    fiscalAllocationVerified: true; revision: number;
   } | null>;
   store: FiscalStore;
   provider: {
