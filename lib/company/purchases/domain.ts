@@ -163,7 +163,7 @@ export function transition(p:PurchaseOrder,c:PurchaseChange,uid:string,now:strin
     order.workflowState='sent';order.status='active';
     order.dispatchEvidence={channel:c.channel,reference:c.confirmationRef,confirmedByUid:uid,confirmedAt:now};
   } else if(c.action==='reply') {
-    if(!['sent','partially_confirmed','confirmed'].includes(p.workflowState)) return conflict('INVALID_STATE');
+    if(!['sent','partially_confirmed','confirmed','partially_received'].includes(p.workflowState)) return conflict('INVALID_STATE');
     if(c.confirmed.length!==p.lines.length) return bad('REPLY_MUST_COVER_LINES');
     for(const line of order.lines){
       const reply=c.confirmed.find(x=>x.lineId===line.id);
@@ -174,7 +174,8 @@ export function transition(p:PurchaseOrder,c:PurchaseChange,uid:string,now:strin
     }
     const total=order.lines.reduce((s,x)=>s+milli(x.confirmedQuantity.value),BigInt(0));
     const ordered=order.lines.reduce((s,x)=>s+milli(x.quantity.value),BigInt(0));
-    order.workflowState=total===BigInt(0)?'rejected':total===ordered?'confirmed':'partially_confirmed';
+    order.workflowState=total===BigInt(0)?'rejected':
+      p.workflowState==='partially_received'?'partially_received':total===ordered?'confirmed':'partially_confirmed';
     if(total===BigInt(0)) order.status='cancelled';
     order.supplierReplyReference=c.reference;
     if(c.promisedAt) order.supplierPromisedAt=temporal(c.promisedAt,'confirmed','supplier');
