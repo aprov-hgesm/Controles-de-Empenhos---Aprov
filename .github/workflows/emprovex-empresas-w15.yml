@@ -1,0 +1,33 @@
+name: EMPROVEX Empresas — W15 portal fiscal (QA isolado)
+on:
+  pull_request:
+    paths:
+      - 'features/company/fiscal/**'
+      - 'components/company/fiscal/**'
+      - 'tests/company/fiscal/**'
+      - '.github/workflows/emprovex-empresas-w15.yml'
+permissions:
+  contents: read
+jobs:
+  fiscal-ui:
+    name: W15 — isolamento UI/API, TypeScript, núcleo e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: W15 — isolamento A/B e estados fiscais (fixtures e fetch mockados)
+        run: node --test tests/company/fiscal/flow.test.mjs
+      - name: TypeScript
+        if: always()
+        run: npm run typecheck
+      - name: Core Protection (militar)
+        if: always()
+        run: node scripts/verify-emprovex-core-protection.mjs
+      - name: Build (sem deploy)
+        if: always()
+        run: npm run build
