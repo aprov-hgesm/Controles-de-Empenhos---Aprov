@@ -88,9 +88,9 @@ function owned(ctx:CompanyAuthorizedContext,d:Data){
     throw new FinanceError('FINANCE_DATA_INVALID',503);
 }
 function authenticated(ctx:CompanyAuthorizedContext,direction:FinanceDirection,write:boolean){
-  if(ctx.action!==(collection(direction)+(write?':write':':read'))) throw new FinanceError('FINANCE_FORBIDDEN',503);
+  if(ctx.action!==(collection(direction)+(write?':write':':read'))) throw new FinanceError('FINANCE_FORBIDDEN',403);
   // W0 admits only verified owner. After W3 integration, role comes strictly from live server membership.
-  if(!['owner','admin','finance'].includes(ctx.role))throw new FinanceError('FINANCE_FORBIDDEN',503);
+  if(!['owner','admin','finance'].includes(ctx.role))throw new FinanceError('FINANCE_FORBIDDEN',403);
 }
 function target(ctx:CompanyAuthorizedContext,direction:FinanceDirection,id:string){
   return companyDocumentPath(ctx.companyId,collection(direction),recordId(id));
