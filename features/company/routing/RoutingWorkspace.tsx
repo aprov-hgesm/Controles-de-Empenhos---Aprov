@@ -58,10 +58,12 @@ export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=fals
   return response<T>(r);
  },[getIdToken]);
  const reload=useCallback(async()=>{
-  const [r,v]=await Promise.all([
+  const [r,v,d]=await Promise.all([
    call<{items:Stored[]}>('/api/company/routing?limit=50'),
-   call<{items:Vehicle[]}>('/api/company/routing/vehicles?limit=50')]);
-  setRoutes(r.items);setVehicles(v.items);
+   call<{items:Vehicle[]}>('/api/company/routing/vehicles?limit=50'),
+   call<{items:DeliveryCandidate[];nextCursor:string|null}>('/api/company/routing/candidates?limit=50')]);
+  setRoutes(r.items);setVehicles(v.items);setCandidates(d.items);
+  if(d.nextCursor)setStatus('Apenas a primeira página de 50 entregas foi carregada.');
  },[call]);
  useEffect(()=>{let active=true;reload().catch(e=>{if(active)setStatus('Consulta: '+(msg[e.message]||e.message));});
   return()=>{active=false;};},[reload]);
