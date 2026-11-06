@@ -4,6 +4,11 @@
  * Legacy W0 directory remains immutable. No sector/founder fallback.
  */
 import { verifyFirebaseRequest } from '../firebaseFounderAuth';
+import firebaseConfig from '../../../firebase-applet-config.json';
+import { getGoogleAccessToken } from '../sectorProvisioningAdmin';
+import { createFiscalTransport } from '../../company/fiscal/issuance/firestoreTransport.mjs';
+import { requestAdditionalCompany } from '../../company/profiles/registration.mjs';
+import { createQaAdditionalCompanyRegistry } from '../../company/profiles/qaRegistration.mjs';
 import { CompanyAccessError, verifyCompanySession, type VerifiedCompanyContext } from '../companySession';
 import { assertCompanyPilotEnabled } from '../companyAuthz';
 import { getDocument } from '../companyMembership/firestore';
@@ -158,4 +163,44 @@ export async function selectCompanyProfile(request: Request, companyId: unknown)
     return { activeCompanyId: companyId,
       cookie: signProfileSelection(companyId, key, secret()) as string };
   } catch (e) { return normalizeError(e); }
+}
+
+/**
+ * Additional CNPJ is explicitly QA-only until legal-proof workflow is
+ * implemented and certified for production. No second Auth user is created.
+ * The approved representation is a privileged server-managed Firestore doc.
+ */
+export async function registerAdditionalCompanyQa(request: Request, body: {
+  proposedCompanyId?: unknown; legalName?: unknown; cnpj?: unknown;
+  idempotencyKey?: unknown;
+}) {
+  const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST || '';
+  const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '';
+  const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID || '';
+  if (process.env.EMPROVEX_COMPANY_PROFILE_QA_REGISTRATION_ENABLED !== '1'
+    || process.env.EMPROVEX_E2E_SERVER_AUTH !== '1'
+    || !projectId.startsWith('demo-')
+    || !['127.0.0.1:8080', 'localhost:8080'].includes(emulatorHost)
+    || !['127.0.0.1:9099', 'localhost:9099'].includes(authHost)
+    || process.env.K_SERVICE || process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    throw bad('PROFILE_REGISTRATION_DISABLED', 503);
+  }
+  const origin = request.headers.get('origin');
+  if (!origin || origin !== new URL(request.url).origin
+    || request.headers.get('x-emprovex-profile-register') !== '1') {
+    throw bad('PROFILE_CSRF_FORBIDDEN');
+  }
+  const { base, principal } = await identity(request);
+  if (base.accessRole) throw bad('PROFILE_OWNER_REQUIRED');
+  // No caller-provided primary workspace, UID or e-mail can elevate authority.
+  const transport = createFiscalTransport({ projectId,
+    emulatorHost, tokenProvider: async () => 'owner' });
+  const registry = createQaAdditionalCompanyRegistry(transport);
+  return requestAdditionalCompany(principal, {
+    primaryCompanyId: base.workspaceId,
+    proposedCompanyId: body.proposedCompanyId,
+    legalName: body.legalName,
+    cnpj: body.cnpj,
+    idempotencyKey: body.idempotencyKey,
+  }, { ...adapters(principal, base), ...registry });
 }

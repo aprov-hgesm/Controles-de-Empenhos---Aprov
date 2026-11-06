@@ -85,7 +85,7 @@ jobs:
           --config firebase.security-test.json
           --project demo-emprovex-company-w10
           --only auth,firestore
-          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs && node --test lib/company/routing/routing-emulator.test.mjs && node --test lib/company/integration/w10-stage2-emulator.test.mjs && node --test lib/company/fiscal/issuance/store-emulator.test.mjs"
+          "node --test scripts/emprovex-empresas-w0-emulator.test.mjs && node --test lib/company/routing/routing-emulator.test.mjs && node --test lib/company/integration/w10-stage2-emulator.test.mjs && node --test lib/company/fiscal/issuance/store-emulator.test.mjs && node --test lib/company/profiles/qa-registration-emulator.test.mjs"
   safety:
     name: Regressão de núcleo e build sem publicação
     runs-on: ubuntu-latest
