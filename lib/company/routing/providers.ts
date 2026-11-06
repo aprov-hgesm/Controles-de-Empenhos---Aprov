@@ -31,6 +31,9 @@ export async function optimizedProposal(scope:string,candidatesInput:unknown,veh
     capacity:{weightKg?:number;volumeM3?:number;units?:number};
     shift:{start:string;end:string};breaks:Array<{start:string;end:string}>};
   const vehicles=vehiclesInput.map(v=>vehicleOf(v) as RoutingVehicle);
+  // No invented upper bounds. Optimizer only runs with fully declared vehicle dimensions.
+  if(vehicles.some(v=>v.capacity.weightKg===undefined||v.capacity.volumeM3===undefined
+     ||v.capacity.units===undefined))throw new RoutingError('CAPACITY_UNVERIFIED',409);
   if(new Set(candidates.map(c=>c.deliveryId)).size!==candidates.length
     ||new Set(vehicles.map(v=>v.id)).size!==vehicles.length)throw new RoutingError('DUPLICATE_ID');
   const usable:{candidate:typeof candidates[number];idx:number}[]=[],excluded:{candidateDeliveryId:string;reason:string}[]=[];
@@ -60,9 +63,7 @@ export async function optimizedProposal(scope:string,candidatesInput:unknown,veh
   }));
   const fleet=vehicles.map((v,idx)=>({
     id:idx+1,start:[v.origin.longitude,v.origin.latitude],
-    capacity:[v.capacity.weightKg===undefined?1000000000:amount(v.capacity.weightKg,1000),
-      v.capacity.volumeM3===undefined?1000000000:amount(v.capacity.volumeM3,1000000),
-      v.capacity.units===undefined?1000000000:v.capacity.units],
+    capacity:[amount(v.capacity.weightKg!,1000),amount(v.capacity.volumeM3!,1000000),v.capacity.units!],
     time_window:[seconds(v.shift.start),seconds(v.shift.end)],
     ...(v.breaks.length?{breaks:v.breaks.map((b,i)=>({id:i+1,time_windows:[[seconds(b.start),seconds(b.end)]],
       service:0}))}:{})
