@@ -1,3 +1,4 @@
+import 'server-only';
 /** W7 independent company inventory service. Neither military warehouse nor billing is imported. */
 import {createHash,randomUUID} from 'node:crypto';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
