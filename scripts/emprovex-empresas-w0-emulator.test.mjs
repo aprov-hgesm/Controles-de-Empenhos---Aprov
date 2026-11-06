@@ -73,7 +73,6 @@ deps.serverProvision = loadTs('lib/server/companyProvisioningAdmin.ts', {
   '../../firebase-applet-config.json': demoConfig,
   '../companyProvisioning': deps.provision,
   '../platformIdentity': deps.identity,
-  './companyMembership': { checkLiveMemberCapability: async () => false },
   './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
 });
 
@@ -107,6 +106,7 @@ deps.session = loadTs('lib/server/companySession.ts', {
     verifyFirebaseRequest: localVerifiedRequest,
   },
   './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
+  './companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.contracts = loadTs('lib/company/contracts/index.ts', {
   '../../platformIdentity': deps.identity,

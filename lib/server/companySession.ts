@@ -173,12 +173,13 @@ export async function verifyCompanySession(authorization: string | null): Promis
   let accessRole: 'member' | undefined;
   if (account) {
     workspaceId = readString(account, 'workspaceId');
+    const accountUid = readString(account, 'firebaseUid');
     const accountEmail = normalizePlatformEmail(readString(account, 'email'));
     const authorizedEmail = readString(account, 'authorizedEmail');
     if (readString(account, 'accountType') !== 'company'
       || readString(account, 'status') !== 'active'
       || (readString(account, 'authProvider') || 'password') !== 'password'
-      || readString(account, 'firebaseUid') !== verified.uid
+      || accountUid !== verified.uid
       || accountEmail !== verified.email
       || normalizePlatformEmail(authorizedEmail || accountEmail) !== verified.email
       || !isValidWorkspaceId(workspaceId)) {

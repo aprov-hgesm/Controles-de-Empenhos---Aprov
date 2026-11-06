@@ -49,7 +49,6 @@ deps.provision=load('lib/server/companyProvisioningAdmin.ts',{
   '../../firebase-applet-config.json':config,
   '../companyProvisioning':deps.provisionModel,
   '../platformIdentity':deps.identity,
-  './companyMembership': { checkLiveMemberCapability: async () => false },
   './sectorProvisioningAdmin':{getGoogleAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
 });
 class StubFounderAuthError extends Error {
@@ -70,6 +69,7 @@ deps.session=load('lib/server/companySession.ts',{
   '../platformIdentity':deps.identity,
   './firebaseFounderAuth':{FounderAuthError:StubFounderAuthError,verifyFirebaseRequest:checkLocalToken},
   './sectorProvisioningAdmin':{getGoogleAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
+  './companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.contracts=load('lib/company/contracts/index.ts',{'../../platformIdentity':deps.identity});
 deps.guard=load('lib/server/companyAuthz/index.ts',{
