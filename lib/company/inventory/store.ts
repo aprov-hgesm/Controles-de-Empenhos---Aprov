@@ -9,6 +9,7 @@ type Value={stringValue?:string;integerValue?:string;doubleValue?:number;boolean
 type Document={name?:string;fields?:Record<string,Value>;updateTime?:string};
 export type Stored={data:Record<string,any>; updateTime:string};
 export type Mutation={collection:CompanySubcollection;id:string;data:Record<string,unknown>;updateTime?:string};
+export type ReadCheck={collection:CompanySubcollection;id:string;updateTime:string};
 const collections=new Set<CompanySubcollection>(['catalogItems','customerOrders','purchaseOrders','stockEvents','allocations','inboundShipments','auditEvents','idempotencyKeys']);
 const f=(value:Record<string,unknown>):Record<string,Value> => Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).map(([k,v])=>[k,encode(v)]));
 function encode(v:unknown):Value {
@@ -101,7 +102,7 @@ export class InventoryStore{
    if(row.data.requestHash!==hash||row.data.action!==action||row.data.uid!==this.ctx.uid)throw new InventoryError('IDEMPOTENCY_CONFLICT',409);
    return row.data.result as Record<string,unknown>;
  }
- async commit(action:string,key:string,hash:string,mutations:Mutation[],event:Record<string,unknown>,result:Record<string,unknown>){
+ async commit(action:string,key:string,hash:string,mutations:Mutation[],event:Record<string,unknown>,result:Record<string,unknown>,checks:ReadCheck[]=[]){
    if(mutations.length>7||mutations.length<1||new Set(mutations.map(m=>m.collection+':'+m.id)).size!==mutations.length)
      throw new InventoryError('INVALID_COMMIT',503);
    if(mutations.some(m=>!['stockEvents','allocations','inboundShipments'].includes(m.collection)))
@@ -118,8 +119,9 @@ export class InventoryStore{
        action:'stockEvents:write',operation:action,entityType:'stockEvents',entityId:event.id,
        correlationId:auditId,idempotencyKey:key,beforeRevision:null,afterRevision:1,occurredAt:now}},
    ];
-   const writes=records.map(m=>({update:{name:this.full(this.path(m.collection,m.id)),fields:f(m.data)},
-     currentDocument:m.updateTime?{updateTime:m.updateTime}:{exists:false}}));
+   const writes=[...records.map(m=>({update:{name:this.full(this.path(m.collection,m.id)),fields:f(m.data)},
+     currentDocument:m.updateTime?{updateTime:m.updateTime}:{exists:false}})),
+     ...checks.map(check=>({verify:this.full(this.path(check.collection,check.id)),currentDocument:{updateTime:check.updateTime}}))];
    const response=await this.request(this.root+':commit',{method:'POST',body:JSON.stringify({writes})});
    if(!response.ok){
      const message=(await response.text()).slice(0,500);
