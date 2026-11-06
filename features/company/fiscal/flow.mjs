@@ -51,6 +51,10 @@ export function displayIssueState(issue) {
   if (!issue || typeof issue !== 'object' || !own(FISCAL_STATES, issue.status)) {
     return 'Estado fiscal não verificado';
   }
+  // Unverified provider state alone MUST NEVER be displayed as SEFAZ authorization.
+  if (issue.status === 'authorized' && !issueIsAuthorized(issue)) {
+    return 'Autorização fiscal pendente de comprovação';
+  }
   return FISCAL_STATES[issue.status];
 }
 export function issueIsAuthorized(issue) {

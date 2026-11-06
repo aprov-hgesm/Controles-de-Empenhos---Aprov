@@ -32,6 +32,12 @@ export function createFiscalBrowserApi({getIdToken,fetchImpl=fetch}) {
     if (!response.ok || payload.ok !== true) {
       const code=typeof payload.code==='string' ? payload.code : 'SERVER_UNAVAILABLE';
       const status=response.status;
+      // Once a POST leaves the browser, a server 5xx may hide a successful side effect.
+      // Never invite a second emission attempt without reconciliation.
+      if (method === 'POST' && status >= 500 && code !== 'NFE_INTEGRATION_PENDING') {
+        throw new FiscalUiError('UNKNOWN_OUTCOME',
+          'Resultado do envio incerto. Não reenviar; consulte o status fiscal.');
+      }
       throw new FiscalUiError(code,
         status===401||status===403?'Acesso fiscal não autorizado ou revogado.':
         status===503?'Serviço fiscal em preparação. Nenhuma NF-e foi emitida.':

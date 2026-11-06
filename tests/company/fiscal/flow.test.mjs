@@ -111,3 +111,22 @@ test('abort on switching profiles prevents submitting to former tenant',async()=
  const api=createFiscalBrowserApi({getIdToken:async()=> 'token',fetchImpl:async()=>{throw Error('must not call')}});
  await assert.rejects(api.submit({},'once',snap.signal),{code:'ABORTED'});
 });
+
+test('status autorizado sem prova SEFAZ verificada não aparece como autorizada',()=>{
+ assert.match(displayIssueState({status:'authorized',authorizationVerified:false}),/pendente de comprovação/);
+ assert.match(displayIssueState({status:'authorized',authorizationVerified:true,accessKey:'1'.repeat(44),authorizationProtocol:'100'}),/Autorizada/);
+});
+test('HTTP 500 após POST é resultado incerto, sem retry automático',async()=>{
+ let calls=0;
+ const api=createFiscalBrowserApi({getIdToken:async()=> 'token',fetchImpl:async()=>{
+   calls++;return {ok:false,status:500,json:async()=>({ok:false,code:'PROVIDER_FAILED'})};
+ }});
+ await assert.rejects(api.submit({orderId:'o1'},'once'),{code:'UNKNOWN_OUTCOME'});
+ assert.equal(calls,1);
+});
+test('503 fail-closed de integração pendente é distinto de envio iniciado',async()=>{
+ const api=createFiscalBrowserApi({getIdToken:async()=> 'token',fetchImpl:async()=>({
+   ok:false,status:503,json:async()=>({ok:false,code:'NFE_INTEGRATION_PENDING'})
+ })});
+ await assert.rejects(api.submit({orderId:'o1'},'once'),{code:'NFE_INTEGRATION_PENDING'});
+});
