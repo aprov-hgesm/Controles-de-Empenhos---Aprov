@@ -198,7 +198,10 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
   if(!who.canPlan)return error('LOGISTICS_ROLE_REQUIRED',403);
   if(existing.data.deliveryState!=='planned')return error('ROUTE_ASSIGNMENT_TOO_LATE',409);
   const routeId=id(body.routePlanId);
-  const plan=mandatory(await store.get('deliveryRoutes',routeId),'APPROVED_ROUTE_NOT_FOUND');
+  // W11 routes have their own lifecycle (draft -> approved), unlike W9
+  // business entities that use status='active'. Evaluate approval separately.
+  const plan=await store.get('deliveryRoutes',routeId);
+  if(!plan)return error('APPROVED_ROUTE_NOT_FOUND',404);
   // W11 stores status=approved only after explicit human approval.
   // Never treat a client-supplied candidate or route proposal as a delivery.
   const approved=approvedStopForDelivery(plan.data,existing.data);
