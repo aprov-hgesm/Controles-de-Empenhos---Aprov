@@ -34,3 +34,29 @@ jobs:
         run: npm run typecheck
       - name: Production build (no deploy)
         run: npm run build
+  firestore-emulator:
+    name: W11 Firestore Emulator scoped routes, CAS and replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: demo-emprovex-company-w11
+      EMPROVEX_E2E_SERVER_AUTH: '1'
+      EMPROVEX_COMPANY_PILOT_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --no-audit --no-fund
+      - name: W11 real Firestore Emulator QA A/B and CAS
+        run: >-
+          npx --yes firebase-tools emulators:exec
+          --config firebase.security-test.json
+          --project demo-emprovex-company-w11
+          --only auth,firestore
+          "node --test lib/company/routing/routing-emulator.test.mjs"
