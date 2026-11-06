@@ -98,8 +98,9 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
     orderProj.data.customerOrderLineId!==draft.customerOrderLineId||
     orderProj.data.catalogItemId!==draft.catalogItemId)return error('W7_DISPATCH_MISMATCH',409);
  const source=draft.source==='supplier_direct'?'purchase':'stock';
- const purchaseId=draft.source==='supplier_direct'?draft.purchaseOrderId:'';
- const purchaseLineId=draft.source==='supplier_direct'?draft.purchaseLineId:'';
+ const purchaseId=draft.source==='supplier_direct'?id(draft.purchaseOrderId):'';
+ const purchaseLineId=draft.source==='supplier_direct'?id(draft.purchaseLineId):'';
+ const directEventId=draft.source==='supplier_direct'?id(draft.w7DispatchEventId):'';
  const linkId=hashLink(draft.customerOrderId,draft.customerOrderLineId,source,purchaseId,purchaseLineId);
  const link=mandatory(await store.get('allocations',linkId),'W7_DISPATCH_SOURCE_REQUIRED');
  let directEvent:Awaited<ReturnType<W9Store['get']>>=null;
@@ -108,7 +109,7 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
    link.data.sourceType!==source||link.data.purchaseOrderId!==(purchaseId||null)||
    link.data.purchaseLineId!==(purchaseLineId||null))return error('W7_DISPATCH_SOURCE_MISMATCH',409);
  if(draft.source==='supplier_direct'){
-  directEvent=mandatory(await store.get('stockEvents',draft.w7DispatchEventId),'W7_DIRECT_EVENT_REQUIRED');
+  directEvent=mandatory(await store.get('stockEvents',directEventId),'W7_DIRECT_EVENT_REQUIRED');
   if(directEvent.data.kind!=='stock_movement'||directEvent.data.operation!=='direct_dispatch'||
     directEvent.data.customerOrderId!==draft.customerOrderId||directEvent.data.customerOrderLineId!==draft.customerOrderLineId||
     directEvent.data.purchaseOrderId!==draft.purchaseOrderId||directEvent.data.purchaseLineId!==draft.purchaseLineId||
@@ -126,7 +127,7 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
   if(milli(inbound.data.directDispatched||'0')<milli(draft.quantity.value))return error('DIRECT_DISPATCH_UNVERIFIED',409);
  }
  const totalId=quotaId(draft.customerOrderId,draft.customerOrderLineId),
-  sourceId=draft.source==='supplier_direct'?sourceQuotaId(draft.w7DispatchEventId):sourceQuotaId(linkId);
+  sourceId=draft.source==='supplier_direct'?sourceQuotaId(directEventId):sourceQuotaId(linkId);
  const [totalRow,sourceRow]=await Promise.all([store.get('deliveries',totalId),store.get('deliveries',sourceId)]);
  for(const q of [totalRow,sourceRow])if(q&&q.data.kind!=='delivery_quota')return error('QUOTA_INTEGRITY_ERROR',503);
  const totalUsed=totalRow?.data.assigned||'0',sourceUsed=sourceRow?.data.assigned||'0';
@@ -252,7 +253,8 @@ export async function listSchedule(ctx:CompanyAuthorizedContext,limit:number,cur
     const requested=order.requestedDelivery?.value||null;
     const supplierPromised=inbound.map((p:any)=>p.supplierPromisedAt?.value).filter(Boolean).sort().at(-1)||null;
     const risk=assessSchedule({requestedAt:requested||undefined,supplierPromisedAt:supplierPromised||undefined,
-      dispatched:milli(projection?.data.dispatched||'0')>0n,now});
+      receiptConfirmedAt:undefined,deliveryWindow:undefined,
+      dispatched:milli(projection?.data.dispatched||'0')>BigInt(0),now});
     return {customerOrderId:order.id,customerOrderLineId:orderLineId,quantity:line.quantity,
       dispatched:{value:projection?.data.dispatched||'0',unit:line.quantity.unit},
       inboundSources:inbound.map((po:any)=>({purchaseOrderId:po.id,workflowState:po.workflowState,
@@ -292,5 +294,5 @@ export async function approveSchedule(ctx:CompanyAuthorizedContext,body:unknown,
  return committed(store,'schedule:approve',command,[mutation(existing,record)],
   [{kind:'customerOrders',id:orderId,updateTime:order.updateTime},
    {kind:'documents',id:evidence.data.id,updateTime:evidence.updateTime}],
-  {approval:record.approval,revision:record.revision,source:'manual_documented'},planId,existing?.data.revision||null);
+  {approval:(record as Record<string,unknown>).approval,revision:record.revision,source:'manual_documented'},planId,existing?.data.revision||null);
 }
