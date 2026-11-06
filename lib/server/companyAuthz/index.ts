@@ -1,3 +1,4 @@
+import { verifySelectedCompanySession } from '../companyProfiles/integration';
 import {
   COMPANY_ACTIONS,
   COMPANY_ROOT_COLLECTION,
@@ -74,7 +75,7 @@ export async function requireCompanyContext(
 
   let session: VerifiedCompanyContext;
   try {
-    session = await verifyCompanySession(request.headers.get('authorization'));
+    session = await verifySelectedCompanySession(request, intent.action);
   } catch (error) {
     if (error instanceof CompanyAccessError) throw error;
     throw new CompanyAuthorizationError('COMPANY_SESSION_UNAVAILABLE', 503);
@@ -94,7 +95,7 @@ export async function requireCompanyContext(
   if (intent.requireCreator && !intent.resource) {
     throw new CompanyAuthorizationError('COMPANY_INVALID_RESOURCE', 403);
   }
-  if (session.accessRole === 'member') {
+  if (session.accessRole === 'member' && !session.profileCapabilityVerified) {
     // Live role checks deny revoked/changed permissions without cached grants.
     const permitted = await checkLiveMemberCapability(
       companyId, { uid: session.firebaseUid, email: session.authorizedEmail }, intent.action);

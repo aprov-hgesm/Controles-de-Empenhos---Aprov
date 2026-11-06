@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getLegacyAuthorizedProfile } from '../../../../lib/company/profiles/server';
+import { getCompanyProfiles } from '../../../../lib/server/companyProfiles/integration';
 import { companyErrorStatus, requireCompanyContext } from '../../../../lib/server/companyAuthz';
 
 export const runtime = 'nodejs';
@@ -10,9 +10,7 @@ const reply = (payload: unknown, status = 200) => NextResponse.json(payload,{sta
 /** Read-only compatibility: W10's multi-link discovery is not integrated yet. */
 export async function GET(request: Request) {
   try {
-    const profile = await getLegacyAuthorizedProfile(request);
-    return reply({ ok:true, profiles:[profile], activeCompanyId:profile.companyId,
-      canSwitch:false, integrationPending:true });
+    return reply(await getCompanyProfiles(request));
   } catch(e) {
     const status = companyErrorStatus(e);
     return reply({ok:false,code:status===503?'PROFILE_UNAVAILABLE':'PROFILE_FORBIDDEN'},status);

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { CompanyAccessError, verifyCompanySession } from '../../../../lib/server/companySession';
+import { CompanyAccessError } from '../../../../lib/server/companySession';
+
+import { verifySelectedCompanySession } from '../../../../lib/server/companyProfiles/integration';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const session = await verifyCompanySession(request.headers.get('authorization'));
+    const session = await verifySelectedCompanySession(request);
     return NextResponse.json(session, {
       headers: { 'Cache-Control': 'private, no-store, max-age=0' },
     });

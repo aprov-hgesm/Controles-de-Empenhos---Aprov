@@ -58,7 +58,7 @@ export function CompanyProfileSwitcher({getIdToken,onBeforeProfileSwitch}: Props
     try {
       const token=await getIdToken();
       const response=await fetch('/api/company/profiles/select',{
-        method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+        method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','X-Emprovex-Profile-Switch':'1'},
         cache:'no-store',body:JSON.stringify({companyId:target}),
       });
       const payload=await response.json() as {ok?:boolean;activeCompanyId?:string};
@@ -68,6 +68,7 @@ export function CompanyProfileSwitcher({getIdToken,onBeforeProfileSwitch}: Props
       if (id!==generation.current) return;
       // A full reload also destroys component/query state from the previous CNPJ.
       onBeforeProfileSwitch?.();
+      try { window.localStorage.setItem('emprovex.company.profile.changed', String(Date.now())); } catch { /* optional notification */ }
       window.location.replace('/empresa');
     } catch {
       if (id!==generation.current) return;

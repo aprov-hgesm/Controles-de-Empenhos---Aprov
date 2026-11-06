@@ -57,6 +57,8 @@ export interface VerifiedCompanyContext {
   legalName: string | null;
   /** Present only for invited employees; not derived from the browser. */
   accessRole?: 'member';
+  /** Set only after W10-III revalidates selected profile and action LIVE. */
+  profileCapabilityVerified?: boolean;
 }
 
 export class CompanyAccessError extends Error {
