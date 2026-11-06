@@ -42,7 +42,7 @@ Estado: **Draft, NÃO mesclado, NÃO publicado; piloto continua desativado**.
 5. `features/company/routing/RoutingWorkspace.tsx`:
    destino e veículo informados e confirmados pelo operador, filtros de rotas
    por situação/data/motorista/endereço (região textual)/mínimo de destinos,
-   ordenação drag-and-drop + teclado (botões ↑↓), prévia de paradas inviáveis,
+   ordenação drag-and-drop + teclado (botões ↑↓), seleção por parada de veículo, pausas, prévia de paradas inviáveis,
    URLs de Waze e Google Maps apenas com coordenadas confirmadas, salvamento de
    rascunho e aprovação separada. Requer `getIdToken` da sessão existente;
    W9 deve fornecer candidatos persistidos e verificados para pilotar expedição.
@@ -117,7 +117,7 @@ CI também executa `npm ci`, `npm run typecheck` e `npm run build`.
 Resultados finais devem ser consultados **no HEAD da PR**, não inferidos do código
 ou de runs antigos: https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions .
 Não executados neste Worker: testes de credenciais de terceiros, solver VROOM real,
-rotas OSRM reais, Emulator W11 de mutação autenticada, browser E2E, mapa com tiles
+rotas OSRM reais, E2E W11 com Auth real de motorista, browser E2E, mapa com tiles
 licenciados e jornada W9 completa.
 
 **GO somente para revisão técnica e incorporação controlada pelo W10 quando CI
