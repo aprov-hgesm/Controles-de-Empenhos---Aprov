@@ -78,9 +78,14 @@ async function commit(c:Client,writes:Write[]):Promise<void>{
     body:JSON.stringify({writes}),cache:'no-store',signal:AbortSignal.timeout(12000)}));
 }
 function collection(direction:FinanceDirection){return direction==='payable'?'accountsPayable':'accountsReceivable';}
+function tenant(ctx:CompanyAuthorizedContext,d:Data){
+  if(d.companyId!==ctx.companyId||d.workspaceId!==ctx.companyId||d.schemaVersion!==COMPANY_CONTRACT_VERSION)
+    throw new FinanceError('FINANCE_SCOPE_INVALID',503);
+}
 function owned(ctx:CompanyAuthorizedContext,d:Data){
-  if(d.companyId!==ctx.companyId||d.workspaceId!==ctx.companyId||d.schemaVersion!==COMPANY_CONTRACT_VERSION
-    ||!Number.isSafeInteger(d.revision)||Number(d.revision)<1) throw new FinanceError('FINANCE_SCOPE_INVALID',503);
+  tenant(ctx,d);
+  if(!Number.isSafeInteger(d.revision)||Number(d.revision)<1)
+    throw new FinanceError('FINANCE_DATA_INVALID',503);
 }
 function authenticated(ctx:CompanyAuthorizedContext,direction:FinanceDirection,write:boolean){
   if(ctx.action!==(collection(direction)+(write?':write':':read'))) throw new FinanceError('FINANCE_FORBIDDEN',503);
@@ -103,7 +108,7 @@ async function replay(c:Client,ctx:CompanyAuthorizedContext,op:string,k:string,d
   const id='w8_'+hash(ctx.uid+'|'+op+'|'+k);
   const d=await get(c,companyDocumentPath(ctx.companyId,'idempotencyKeys',id));
   if(!d)return null;
-  owned(ctx,d.data);
+  tenant(ctx,d.data);
   if(d.data.requestHash!==digest||d.data.operation!==op)throw new FinanceError('FINANCE_CONFLICT',409);
   const snapshot=d.data.resultSnapshot as FinanceObligation;
   owned(ctx,snapshot as unknown as Data);
