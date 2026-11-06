@@ -6,11 +6,11 @@ import {InventoryError, id, key, asQuantity, decimal, parseMilli,
   blankStock,blankOrder,blankLink,blankInbound,applyInventoryCommand} from './engine.mjs';
 
 type ObjectValue=Record<string,any>;
-const kinds=new Set(['adjust_in','adjust_out','reserve','release','dispatch','return',
+const kinds=new Set(['adjust_in','adjust_out','reserve','release','dispatch','return','release_converted','dispatch_converted','return_converted',
   'plan_purchase','unplan_purchase','receive_purchase','convert_purchase','direct_dispatch']);
-const withOrder=new Set(['reserve','release','dispatch','return','plan_purchase',
+const withOrder=new Set(['reserve','release','dispatch','return','release_converted','dispatch_converted','return_converted','plan_purchase',
   'unplan_purchase','convert_purchase','direct_dispatch']);
-const withPurchase=new Set(['plan_purchase','unplan_purchase','receive_purchase','convert_purchase','direct_dispatch']);
+const withPurchase=new Set(['release_converted','dispatch_converted','return_converted','plan_purchase','unplan_purchase','receive_purchase','convert_purchase','direct_dispatch']);
 const toObj=(raw:unknown):ObjectValue=>{
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new InventoryError('INVALID_BODY',400);
  return raw as ObjectValue;
@@ -31,7 +31,7 @@ function summaryId(prefix:string,...parts:string[]){return prefix+'_'+createHash
 function mutable(collection:Mutation['collection'],record:Stored|null,recordId:string,data:ObjectValue):Mutation {
  return {collection,id:recordId,data, ...(record?{updateTime:record.updateTime}:{})};
 }
-function actionFor(kind:string){return ['reserve','release','dispatch','return','plan_purchase',
+function actionFor(kind:string){return ['reserve','release','dispatch','return','release_converted','dispatch_converted','return_converted','plan_purchase',
  'unplan_purchase','convert_purchase','direct_dispatch'].includes(kind)?'allocations:write':
  kind==='receive_purchase'?'inboundShipments:write':'stockEvents:write';}
 export function inventoryActionFor(kind:string):'allocations:write'|'inboundShipments:write'|'stockEvents:write' {
@@ -148,7 +148,7 @@ export async function getInventory(ctx:CompanyAuthorizedContext,catalogId:string
  const catalogue=checkDoc(await store.get('catalogItems',id(catalogId)),'CATALOG_ITEM');
  const summary=await store.get('stockEvents','balance_'+catalogId);
  return {catalogItemId:catalogId,canonicalUnit:catalogue.data.canonicalUnit,
-  ...summary?summary.data:blankStock(),free:decimal(
+  ...(summary?summary.data:blankStock()),free:decimal(
      parseMilli(summary?.data.onHand||'0')-parseMilli(summary?.data.reserved||'0'))};
 }
 export async function listInventoryEvents(ctx:CompanyAuthorizedContext,limit:number,cursor?:string){
