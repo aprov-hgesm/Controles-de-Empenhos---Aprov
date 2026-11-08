@@ -5,6 +5,7 @@ export type FiscalCapability={companyId:string;issuerCnpj:string;environment:str
 export type FiscalDraft={companyId:string;issuerCnpj:string;orderId:string;recipientCnpj:string;recipientName:string;series:number;number:number;items:unknown[]};
 export type FiscalIssueSummary={id:string;companyId:string;issuerCnpj:string;status:string;createdAt:string;accessKey:string|null;authorizationProtocol:string|null;authorizationVerified:boolean};
 export const FISCAL_STATES:Readonly<Record<string,string>>;
+export function cleanCnpj(value:unknown):string;
 export function selectVerifiedProfile(payload:unknown,sessionWorkspaceId:string):FiscalProfile;
 export function safeConnection(payload:unknown,profile:FiscalProfile|null):FiscalConnection;
 export function displayIssueState(issue:{status:string}|null):string;

@@ -62,5 +62,5 @@ test('W4: isolated portal has no operational military imports and states prepara
   }
   assert.match(read('components/company/CompanySessionGate.tsx'), /aria-checked=\{essential\}/);
   assert.match(read('components/company/CompanyNavigation.tsx'), /motion-reduce:transition-none/);
-  assert.match(read('components/company/CompanySessionGate.tsx'), /resolveCompanySession\(user\)/);
+  assert.match(read('components/company/CompanySessionGate.tsx'), /resolveCompanySession\(user,\s*controller\.signal\)/);
 });
