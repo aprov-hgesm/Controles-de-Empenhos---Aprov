@@ -16,7 +16,8 @@ export interface AuthorizedCompanySession {
 export type CompanySessionResult =
   | { kind: 'company'; session: AuthorizedCompanySession }
   | { kind: 'not-company' }
-  | { kind: 'invalid-auth' };
+  | { kind: 'invalid-auth' }
+  | { kind: 'select-profile' };
 
 /**
  * A client token only identifies the caller. The /api/company/session backend
@@ -35,7 +36,14 @@ export async function resolveCompanySession(
   });
 
   if (response.status === 401) return { kind: 'invalid-auth' };
-  if (response.status === 403) return { kind: 'not-company' };
+  if (response.status === 403) {
+    const payload: unknown = await response.json().catch(() => null);
+    if (payload && typeof payload === 'object'
+      && (payload as {code?: string}).code === 'PROFILE_SELECTION_REQUIRED') {
+      return { kind: 'select-profile' };
+    }
+    return { kind: 'not-company' };
+  }
   if (!response.ok) throw new Error('COMPANY_SESSION_UNAVAILABLE');
 
   const payload: unknown = await response.json();

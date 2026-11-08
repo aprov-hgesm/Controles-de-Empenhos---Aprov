@@ -18,7 +18,7 @@ import {
   type ProfileError,
 } from '../../company/profiles/core.mjs';
 import {
-  PROFILE_COOKIE, signProfileSelection, verifyProfileSelection,
+  PROFILE_COOKIE, signProfileSelection, verifyProfileSelection, resolveUnselectedCompany,
 } from '../../company/profiles/selection.mjs';
 
 type Principal = { uid: string; email: string; verified: true; active: true;
@@ -120,7 +120,10 @@ export async function verifySelectedCompanySession(
   try {
     const { base, principal, key } = await identity(request);
     const cookie = cookieValue(request.headers.get('cookie'));
-    if (!cookie) return base;
+    if (!cookie) {
+      resolveUnselectedCompany(base.workspaceId, await candidates(principal, base));
+      return base;
+    }
     const selected = verifyProfileSelection(cookie, key, secret()) as string;
     const p = await authorized(principal, base, selected, action);
     return { ...base, workspaceId: p.companyId, companyName: p.name,
@@ -134,11 +137,22 @@ export async function getCompanyProfiles(request: Request) {
     const { base, principal, key } = await identity(request);
     const profiles = await listAuthorizedCompanyProfiles(principal, adapters(principal, base)) as Profile[];
     const cookie = cookieValue(request.headers.get('cookie'));
-    const active = cookie
-      ? verifyProfileSelection(cookie, key, secret()) as string
-      : base.workspaceId;
-    if (!profiles.some(p => p.companyId === active)) throw bad('COMPANY_PROFILE_REVOKED');
+    // Listing verified profiles remains possible even after cookie expiry,
+    // so a user can explicitly reselect a tenant without granting data access.
+    let active: string | null = null;
+    if (cookie) {
+      try { active = verifyProfileSelection(cookie, key, secret()) as string; }
+      catch (error) {
+        const e = error as Partial<ProfileError> | null;
+        if (e?.name !== 'ProfileError' || e.code !== 'PROFILE_NOT_AUTHORIZED') throw error;
+      }
+    } else if ((await candidates(principal, base)).every(id => id === base.workspaceId)) {
+      active = base.workspaceId; // W0 legacy single-company case only.
+    }
+    if (active && !profiles.some(p => p.companyId === active)) active = null;
+    if (!profiles.length) throw bad('COMPANY_PROFILE_REVOKED');
     return { ok: true, profiles, activeCompanyId: active,
+      selectionRequired: active === null,
       canSwitch: profiles.length > 1 && Boolean(process.env.EMPROVEX_COMPANY_PROFILE_HMAC_SECRET),
       integrationPending: false };
   } catch (e) { return normalizeError(e); }
