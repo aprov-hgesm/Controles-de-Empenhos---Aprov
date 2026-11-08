@@ -5,6 +5,7 @@ import {COMPANY_CONTRACT_VERSION} from '../contracts';
 import {W9Store,type DeliveryCheck,type DeliveryMutation} from './store';
 import {readIdentityDocument} from '../../server/companyMembership/firestore';
 import {approvedStopForDelivery} from '../integration/approvedRoute.mjs';
+import {applyPhysicalDeliveryProjection,readPhysicalDeliveryProjection} from './physicalProjection.mjs';
 import {DeliveryError,parseDeliveryDraft,checkDispatchQuota,checkReturnQuota,transitionDelivery,assessSchedule,
   approvePromise,validId,validKey,milli,decimal} from './domain.mjs';
 
@@ -152,7 +153,9 @@ export async function createDelivery(ctx:CompanyAuthorizedContext,body:unknown,k
    notes:'Romaneio gerado antes de comprovação de entrega. Não comprova atesto ou pagamento.'}});
  const total=owned(ctx,totalId,'delivery_quota',{customerOrderId:draft.customerOrderId,
   customerOrderLineId:draft.customerOrderLineId,unit:draft.quantity.unit,
-  assigned:decimal(milli(totalUsed)+milli(draft.quantity.value))},totalRow?.data);
+  assigned:decimal(milli(totalUsed)+milli(draft.quantity.value)),
+  ...(totalRow ? (typeof totalRow.data.physicalDelivered==='string'
+    ? {physicalDelivered:totalRow.data.physicalDelivered} : {}) : {physicalDelivered:'0'})},totalRow?.data);
  const sourceQuota=owned(ctx,sourceId,'delivery_quota',{customerOrderId:draft.customerOrderId,
   customerOrderLineId:draft.customerOrderLineId,sourceLinkId:linkId,unit:draft.quantity.unit,
   assigned:decimal(milli(sourceUsed)+milli(draft.quantity.value))},sourceRow?.data);
@@ -246,6 +249,22 @@ export async function updateDelivery(ctx:CompanyAuthorizedContext,deliveryId:str
    checks.push({kind:'stockEvents',id:eventId,updateTime:stockEvent.updateTime});
   }
   next=transitionDelivery(existing.data,body,ctx.uid,new Date().toISOString());
+  // Physical delivery is a CAS-protected W9 projection, NOT W1 atesto/settlement.
+  // Legacy quota rows without this field remain "unknown", never re-based to zero.
+  const before=existing.data.deliveredQuantity,after=(next as Record<string,any>).deliveredQuantity;
+  if (before?.value!==after?.value) {
+   const qId=quotaId(existing.data.customerOrderId,existing.data.customerOrderLineId);
+   const row=mandatory(await store.get('deliveries',qId),'DELIVERY_QUOTA_MISSING');
+   if(row.data.kind!=='delivery_quota'||row.data.customerOrderId!==existing.data.customerOrderId||
+     row.data.customerOrderLineId!==existing.data.customerOrderLineId||
+     row.data.unit!==existing.data.quantity.unit)return error('QUOTA_INTEGRITY_ERROR',503);
+   if(typeof row.data.physicalDelivered==='string'){
+    const delivered=applyPhysicalDeliveryProjection({unit:row.data.unit,
+      assigned:row.data.assigned,committed:row.data.physicalDelivered,before,after});
+    const updated=owned(ctx,qId,'delivery_quota',{...row.data,physicalDelivered:delivered.value},row.data);
+    extras.push(mutation(row,updated)); // Same Firestore transaction as delivery event and replay key.
+   }
+  }
  }
  return committed(store,action,command,[mutation(existing,next),...extras],checks,
    {delivery:next,stockLedgerChanged:false,atesto:false,liquidacao:false,payment:false},
@@ -265,6 +284,13 @@ export async function listSchedule(ctx:CompanyAuthorizedContext,limit:number,cur
        Array.isArray(p.allocations)&&p.allocations.some((a:any)=>a.customerOrderId===order.id&&a.customerOrderLineId===orderLineId)));
     const projection=await store.get('allocations',orderProjectionId(order.id,orderLineId));
     const plan=await store.get('deliveries','w9_schedule_'+digest(order.id,orderLineId));
+    const physicalQuota=await store.get('deliveries',quotaId(order.id,orderLineId));
+    if(physicalQuota&&(physicalQuota.data.kind!=='delivery_quota'||
+      physicalQuota.data.customerOrderId!==order.id||
+      physicalQuota.data.customerOrderLineId!==orderLineId||
+      physicalQuota.data.unit!==line.quantity.unit))return error('QUOTA_INTEGRITY_ERROR',503);
+    const physical=readPhysicalDeliveryProjection({unit:line.quantity.unit,
+      ordered:line.quantity,quota:physicalQuota?.data??null});
     const requested=order.requestedDelivery?.value||null;
     const supplierPromised=inbound.map((p:any)=>p.supplierPromisedAt?.value).filter(Boolean).sort().at(-1)||null;
     const risk=assessSchedule({requestedAt:requested||undefined,supplierPromisedAt:supplierPromised||undefined,
@@ -272,6 +298,8 @@ export async function listSchedule(ctx:CompanyAuthorizedContext,limit:number,cur
       dispatched:milli(projection?.data.dispatched||'0')>BigInt(0),now});
     return {customerOrderId:order.id,customerOrderLineId:orderLineId,quantity:line.quantity,
       dispatched:{value:projection?.data.dispatched||'0',unit:line.quantity.unit},
+      physicalDelivery:physical, // physical W9 evidence; independent of W1 fulfilledQuantity/OM atesto.
+      orderFulfilledQuantity:line.fulfilledQuantity||null,
       inboundSources:inbound.map((po:any)=>({purchaseOrderId:po.id,workflowState:po.workflowState,
         desiredAt:po.desiredAt||null,supplierPromisedAt:po.supplierPromisedAt||null,
         relatedLines:po.lines.filter((line:any)=>line.allocations?.some((a:any)=>
