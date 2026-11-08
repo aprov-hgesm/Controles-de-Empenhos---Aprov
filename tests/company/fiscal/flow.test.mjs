@@ -142,3 +142,14 @@ test('malformed response after POST remains unknown; no second POST',async()=>{
  await assert.rejects(api.submit({orderId:'o1'},'once'),{code:'UNKNOWN_OUTCOME'});
  assert.equal(calls,1);
 });
+
+test('CNPJ alfanumérico não perde letras; emissão WLG segue bloqueada', () => {
+ const alpha={...A,cnpj:'00000000E08G12'};
+ const verified=selectVerifiedProfile(p(A.companyId,[alpha]),A.companyId);
+ assert.equal(verified.cnpj,'00000000E08G12');
+ assert.equal(safeConnection(connection(A.cnpj),verified).state,'integrity_error');
+ assert.equal(fiscalSubmissionGate({...ready(),profile:verified,draft:{...draft,issuerCnpj:verified.cnpj}}).code,'ALPHANUMERIC_PROVIDER_PENDING');
+});
+test('série 0 não passa gate fiscal mesmo com capability de teste',()=>{
+ assert.equal(fiscalSubmissionGate({...ready(),draft:{...draft,series:0}}).code,'DRAFT_INVALID');
+});

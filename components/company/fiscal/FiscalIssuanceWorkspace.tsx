@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useCompanySession } from '../CompanySessionContext';
 import {
   createTenantRequestBoundary, selectVerifiedProfile, safeConnection, safeIssues,
-  fiscalSubmissionGate, displayIssueState, type FiscalProfile, type FiscalConnection,
+  fiscalSubmissionGate, displayIssueState, cleanCnpj, type FiscalProfile, type FiscalConnection,
   type FiscalCapability, type FiscalIssueSummary, type FiscalDraft,
 } from '../../../features/company/fiscal/flow.mjs';
 import { createFiscalBrowserApi } from '../../../features/company/fiscal/api.mjs';
@@ -22,7 +22,7 @@ const initialForm:FormValues={
 const inputClass='mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-600';
 const cardClass='rounded-2xl border border-slate-200 bg-white p-5 sm:p-6';
 const digits=(value:string)=>value.replace(/\D/g,'');
-const formatCnpj=(raw:string)=>raw.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+const formatCnpj=(raw:string)=>raw.replace(/^([A-Z0-9]{2})([A-Z0-9]{3})([A-Z0-9]{3})([A-Z0-9]{4})(\d{2})$/,'$1.$2.$3/$4-$5');
 const formatBrl=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
 const errorText=(error:unknown)=>error instanceof Error?error.message:'Serviço fiscal temporariamente indisponível.';
 const makeIntentKey=()=>typeof crypto!=='undefined'&&'randomUUID' in crypto?crypto.randomUUID():'';
@@ -32,7 +32,7 @@ const isCapable=(data:Record<string,unknown>):FiscalCapability|null=>{
   const obj=c as Record<string,unknown>;
   return typeof obj.companyId==='string' && typeof obj.issuerCnpj==='string'
     && typeof obj.environment==='string' && obj.canIssue===true
-    ?{companyId:obj.companyId,issuerCnpj:digits(obj.issuerCnpj),
+    ?{companyId:obj.companyId,issuerCnpj:cleanCnpj(obj.issuerCnpj),
       environment:obj.environment,canIssue:true}:null;
 };
 
@@ -125,7 +125,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
     if(!profile)return null;
     return {
       companyId:profile.companyId,issuerCnpj:profile.cnpj,
-      orderId:form.orderId.trim(),recipientCnpj:digits(form.recipientCnpj),
+      orderId:form.orderId.trim(),recipientCnpj:cleanCnpj(form.recipientCnpj),
       recipientName:form.recipientName.trim(),series:Number(form.series),number:Number(form.number),
       items:[{itemId:form.itemId.trim(),description:form.description.trim(),
         quantity:Number(form.quantity),unitPrice:form.unitPrice,
@@ -133,7 +133,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
     };
   },[form,profile]);
   const previewValid=Boolean(draft && draft.orderId && draft.recipientCnpj.length===14 &&
-    draft.recipientName && form.itemId.trim() && form.description.trim() &&
+    /^\d{14}$/.test(draft.recipientCnpj) && draft.recipientName && form.itemId.trim() && form.description.trim() &&
     /^\d{8}$/.test(digits(form.ncm)) && /^\d{4}$/.test(digits(form.cfop)) &&
     form.taxation.trim() && Number.isSafeInteger(draft.series) && draft.series>=1 &&
     Number.isSafeInteger(draft.number) && draft.number>0 &&
@@ -260,6 +260,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
           className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Descartar rascunho</button>
       </div>
       {!previewValid&&<p className="mt-3 text-xs text-slate-500">Para gerar a prévia, informe os campos do pedido, destinatário, item, valores e classificação fiscal.</p>}
+      {profile && /[A-Z]/.test(profile.cnpj) && <p role="status" className="mt-4 text-sm text-amber-800">Este CNPJ alfanumérico é válido como identidade empresarial. O provedor fiscal ainda não confirmou suporte para emissão; nenhuma informação será convertida para dígitos.</p>}
       {review&&profile&&draft&&<section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5" aria-label="Confirmação fiscal">
         <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Etapa 2 · Revisar e confirmar</p>
         <h4 className="mt-1 text-lg font-semibold">Conferência explícita</h4>
