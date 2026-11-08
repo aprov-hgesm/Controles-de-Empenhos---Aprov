@@ -1,4 +1,16 @@
-export type PlatformAccountType = 'platformAdmin' | 'sector';
+export type PlatformAccountType = 'platformAdmin' | 'sector' | 'company';
+export type SectorType = 'aprovisionamento' | 'almoxarifado';
+
+/** Somente o campo ausente representa uma conta legada de Aprovisionamento. */
+export function resolveSectorType(type?: SectorType): SectorType {
+  return type ?? 'aprovisionamento';
+}
+export function isSectorType(value: unknown): value is SectorType {
+  return value === 'aprovisionamento' || value === 'almoxarifado';
+}
+export function sectorEntryPath(type?: SectorType): '/central-empenhos' | '/almoxarifado' {
+  return resolveSectorType(type) === 'almoxarifado' ? '/almoxarifado' : '/central-empenhos';
+}
 
 export type PlatformAccountStatus = 'active' | 'disabled';
 
@@ -48,6 +60,8 @@ export interface PlatformAdminAccount extends PlatformAccountBase {
 
 export interface SectorAccount extends PlatformAccountBase {
   accountType: 'sector';
+  /** Ausente nos registros históricos; significa Aprovisionamento. */
+  sectorType?: SectorType;
   /** Cada conta operacional de setor pertence a exatamente um workspace. */
   workspaceId: string;
   /**
@@ -57,7 +71,15 @@ export interface SectorAccount extends PlatformAccountBase {
   ug?: string;
 }
 
-export type PlatformAccount = PlatformAdminAccount | SectorAccount;
+/** Empresa contratante, independente de UG e de permissões operacionais militares. */
+export interface CompanyAccount extends PlatformAccountBase {
+  accountType: 'company';
+  workspaceId: string;
+  firebaseUid: string;
+  authProvider: 'password';
+}
+
+export type PlatformAccount = PlatformAdminAccount | SectorAccount | CompanyAccount;
 
 export interface WorkspaceInstitutionalProfile {
   /** Nome institucional usado em documentos e cabeçalhos. */
@@ -74,6 +96,10 @@ export interface WorkspaceInstitutionalProfile {
 
 export interface Workspace {
   id: string;
+  /** Campos legados sem workspaceType continuam setoriais. */
+  workspaceType?: 'sector';
+  /** Ausente nos workspaces históricos; significa Aprovisionamento. */
+  sectorType?: SectorType;
   name: string;
   status: WorkspaceStatus;
   /**
@@ -96,6 +122,48 @@ export interface Workspace {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+}
+
+/** Cadastro privado de uma empresa cliente. CNPJ é a chave fiscal única, sem pontuação (numérico ou alfanumérico). */
+export interface CompanyProfile {
+  legalName: string;
+  tradeName?: string;
+  cnpj: string;
+  responsibleName: string;
+  accessEmail: string;
+  companyEmail?: string;
+  postalCode?: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  phone?: string;
+  whatsapp?: string;
+  address?: string;
+  city: string;
+  state: string;
+  registrationStatus: 'active' | 'pending' | 'suspended';
+}
+
+export interface CompanyWorkspace {
+  id: string;
+  workspaceType: 'company';
+  name: string;
+  status: WorkspaceStatus;
+  authorizedEmail: string;
+  companyProfile: CompanyProfile;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export type PlatformWorkspace = Workspace | CompanyWorkspace;
+
+export function isCompanyWorkspace(workspace: PlatformWorkspace): workspace is CompanyWorkspace {
+  return workspace.workspaceType === 'company';
+}
+
+/** Workspaces anteriores à expansão são setores por padrão. */
+export function isSectorWorkspace(workspace: PlatformWorkspace): workspace is Workspace {
+  return workspace.workspaceType !== 'company';
 }
 
 const WORKSPACE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])?$/;
@@ -163,6 +231,10 @@ export function isSectorAccount(account: PlatformAccount): account is SectorAcco
   return account.accountType === 'sector';
 }
 
+export function isCompanyAccount(account: PlatformAccount): account is CompanyAccount {
+  return account.accountType === 'company';
+}
+
 /**
  * Validação estrutural mínima compartilhada pelos próximos blocos.
  * Regras de autorização efetivas também são aplicadas no Firestore.
@@ -174,12 +246,21 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
     errors.push('E-mail da conta da plataforma é inválido.');
   }
 
+  if (account.accountType === 'sector' && account.sectorType !== undefined && !isSectorType(account.sectorType)) {
+    errors.push('Modalidade da conta setorial é inválida.');
+  }
+
   if (account.accountType === 'sector' && !isValidWorkspaceId(account.workspaceId)) {
     errors.push('Conta de setor precisa possuir um workspaceId válido.');
   }
 
   if (account.accountType === 'sector' && account.ug !== undefined && !isValidUnitUg(account.ug)) {
     errors.push('UG da conta operacional deve possuir exatamente 6 dígitos.');
+  }
+
+  if (account.accountType === 'company') {
+    if (!isValidWorkspaceId(account.workspaceId)) errors.push('Workspace empresarial inválido.');
+    if (!account.firebaseUid?.trim() || account.authProvider !== 'password') errors.push('Conta empresarial exige UID e senha.');
   }
 
   if (account.status !== 'active' && account.status !== 'disabled') {
@@ -200,6 +281,11 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
 
 export function validateWorkspace(workspace: Workspace): string[] {
   const errors: string[] = [];
+  if ((workspace as PlatformWorkspace).workspaceType === 'company') return ['Workspace empresarial não pode ser setorial.'];
+
+  if (workspace.sectorType !== undefined && !isSectorType(workspace.sectorType)) {
+    errors.push('Modalidade do workspace é inválida.');
+  }
 
   if (!isValidWorkspaceId(workspace.id)) {
     errors.push('Identificador do workspace é inválido.');
@@ -229,5 +315,38 @@ export function validateWorkspace(workspace: Workspace): string[] {
     errors.push('Status do workspace é inválido.');
   }
 
+  return errors;
+}
+
+/** Validação independente: empresas não têm UG nem perfil institucional militar. */
+export function validateCompanyWorkspace(workspace: CompanyWorkspace): string[] {
+  const errors: string[] = [];
+  const p = workspace.companyProfile;
+  if (!isValidWorkspaceId(workspace.id) || workspace.workspaceType !== 'company') {
+    errors.push('Identificador ou tipo de workspace empresarial inválido.');
+  }
+  if (!workspace.name.trim() || !p.legalName.trim() || !p.responsibleName.trim()) {
+    errors.push('Razão social, nome e responsável são obrigatórios.');
+  }
+  if (!/^[A-Z0-9]{12}\d{2}$/.test(p.cnpj)) errors.push('CNPJ deve conter 14 caracteres válidos.');
+  if (!isValidPlatformEmail(workspace.authorizedEmail)
+      || p.accessEmail !== workspace.authorizedEmail) {
+    errors.push('E-mail empresarial inconsistente.');
+  }
+  if (p.companyEmail && !isValidPlatformEmail(p.companyEmail)) {
+    errors.push('E-mail comercial inválido.');
+  }
+  if (p.postalCode && !/^\d{8}$/.test(p.postalCode)) {
+    errors.push('CEP empresarial inválido.');
+  }
+  if (!p.city.trim() || !/^[A-Z]{2}$/.test(p.state)) {
+    errors.push('Cidade ou UF inválida.');
+  }
+  if (!['active', 'pending', 'suspended'].includes(p.registrationStatus)) {
+    errors.push('Situação cadastral inválida.');
+  }
+  if (!['active', 'disabled'].includes(workspace.status)) {
+    errors.push('Status empresarial inválido.');
+  }
   return errors;
 }

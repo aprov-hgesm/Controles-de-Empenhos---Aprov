@@ -19,7 +19,7 @@ const actions = read('features/avisos/hooks/useAvisosActions.ts');
 const view = read('features/avisos/components/CentralAvisosView.tsx');
 const rootEntry = read('app/page.tsx');
 const page = rootEntry.includes("export { default } from './login/page'")
-  ? read('app/login/page.tsx')
+  ? read('app/login/OperationalEntry.tsx')
   : rootEntry;
 const sidebar = read('components/layout/AppSidebar.tsx');
 const plan = read('lib/operationalSubscriptionPlan.ts');
