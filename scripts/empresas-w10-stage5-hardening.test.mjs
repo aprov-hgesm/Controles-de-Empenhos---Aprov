@@ -56,7 +56,9 @@ test('the client gate exposes a separate explicit selection state and aborts foc
   assert.match(ui,/void validate\(true\)/);
   assert.match(ui,/abortRef\.current\?\.abort\(\)/);
   assert.match(ui,/key=\{gate\.session\.firebaseUid \+ ':' \+ gate\.session\.workspaceId\}/);
-  assert.doesNotMatch(ui,/setGate\(\{ stage: 'checking' \}\); void validate\(\)/);
+  const focusHandler = ui.split('const onFocus = () => {')[1]?.split('};')[0] ?? '';
+  assert.match(focusHandler,/validate\(true\)/);
+  assert.doesNotMatch(focusHandler,/setGate\(/,'foco não pode desmontar o portal');
 });
 test('profile switcher has one global home and is available on mobile',()=>{
   const gate=read('components/company/CompanySessionGate.tsx');
