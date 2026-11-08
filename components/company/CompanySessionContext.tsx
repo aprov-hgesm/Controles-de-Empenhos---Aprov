@@ -8,3 +8,9 @@ export const CompanySessionContext = createContext<AuthorizedCompanySession | nu
 export function useCompanySession() {
   return useContext(CompanySessionContext);
 }
+
+/** Display preference only; never an authorization input. */
+export const CompanyEssentialModeContext = createContext(false);
+export function useCompanyEssentialMode() {
+  return useContext(CompanyEssentialModeContext);
+}

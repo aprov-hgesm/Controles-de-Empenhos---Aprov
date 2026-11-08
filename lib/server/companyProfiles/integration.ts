@@ -153,7 +153,7 @@ export async function getCompanyProfiles(request: Request) {
     if (!profiles.length) throw bad('COMPANY_PROFILE_REVOKED');
     return { ok: true, profiles, activeCompanyId: active,
       selectionRequired: active === null,
-      canSwitch: profiles.length > 1 && Boolean(process.env.EMPROVEX_COMPANY_PROFILE_HMAC_SECRET),
+      canSwitch: (profiles.length > 1 || active === null) && Boolean(process.env.EMPROVEX_COMPANY_PROFILE_HMAC_SECRET),
       integrationPending: false };
   } catch (e) { return normalizeError(e); }
 }

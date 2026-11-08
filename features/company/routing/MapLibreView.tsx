@@ -15,7 +15,7 @@ export function MapLibreView({stops,essential=false}:{stops:readonly Stop[];esse
   const asset=process.env.NEXT_PUBLIC_COMPANY_MAPLIBRE_ASSET_URL||'';
   const style=process.env.NEXT_PUBLIC_COMPANY_MAP_STYLE_URL||'';
   // Restrict asset to a same-origin audited vendor bundle. No runtime arbitrary CDN JS.
-  if(!asset.startsWith('/vendor/')||!style||!(style.startsWith('/')||style.startsWith('https://'))){
+  if(!asset.startsWith('/vendor/')||!style||!(style.startsWith('/')&&!style.startsWith('//'))){
    setState('unavailable');return;
   }
   let disposed=false,map:MapInstance|undefined;
