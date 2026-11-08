@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | P0-01 | B — sem cookie, `verifySelectedCompanySession` retornava `base.workspaceId` apesar de haver perfis A/B | Sem cookie em multiempresa, 403 `PROFILE_SELECTION_REQUIRED`; UI deve solicitar seleção ativa, endpoint de listagem é somente leitura com autorização live. Conta legada de apenas um workspace preservada. |
 | P1-02 | B — listener de foco desmontava todo o portal | AbortController, sequência por requisição, overlay de revalidação; formulários mantidos apenas quando UID e workspace persistem; mudança ou revogação desmonta e invalida cache React. |
-| P1-03 | B — W9 armazena `deliveredQuantity` por entrega, W1 mantém seu `fulfillmentState` próprio | Não reescrever W1 ou adulterar quantidade de atesto; sem projeção total W1↔W9 certificada nesta rodada; pendência de reconciliação idempotente e testes Firestore com provas de entrega/retorno. |
+| P1-03 | B — W9 armazena `deliveredQuantity` por entrega, W1 mantém seu `fulfillmentState` próprio | Projeção **física W9** adicionada à quota existente, com incremento atômico no evento, CAS e replay idempotente; cronograma distingue expedido W7, entregue fisicamente W9 e atendido W1. Linha legada sem campo exibe **desconhecido**, nunca zero enganoso. Sem alterar `fulfilledQuantity` W1 nem atesto sem fato independente. Teste real no Firestore Emulator A/B, prova documental e replay. |
 | P1-04 | B — fluxo de exibição fiscal removia letras do CNPJ | Identidade exibe alfanuméricos sem perda; WLG não é considerado compatível: emissão bloqueada e aviso. CNPJ alfanumérico permanece no núcleo de perfis. |
 | P1-05 | B — `reserve` aceitava string de chave apenas por prefixo; UI admitia série 0 | Reserva agora confere chave canônica imutável; série >=1; POST NFe/SEFAZ continua 503; intenção fiscal local não se apresenta como nota salva/autorizada. |
 | P1-06 | B — seletor global era apenas desktop e o W15 duplicava ID | Seletor único em cabeçalho mobile/desktop; identidade fiscal só leitura; seleção posterior ao cookie autorizado. |
@@ -25,9 +25,10 @@
 - Baseline #530 (SHA acima) confirmado: W10/W14/W15/Fast/Core/R1/W4/Visual-R2 `SUCCESS`; Application CI e Domain CI R2 `SKIPPED`.
 - Nova suíte W10-V: `scripts/empresas-w10-stage5-hardening.test.mjs` (assinatura HMAC, expiração 600s, fallback, reservas, alpha CNPJ, fluxo e mapas), adicionada ao workflow W10.
 - Store fiscal Emulator A/B/CAS: `lib/company/fiscal/issuance/store-emulator.test.mjs` reforçado com chave forjada, série inválida.
+- W1/W9: `lib/company/delivery/physicalProjection.mjs`, `service.ts`, `domain.test.mjs`, `features/company/schedule/CompanyScheduleWorkspace.tsx` e `lib/company/integration/w10-stage2-emulator.test.mjs` com projeção física diferenciada de atesto, quotas CAS, replay e prova em Firestore Emulator real A/B. Legado sem projeção anterior permanece `null` até conciliação controlada.
 - **Resultado deste HEAD:** consultar checks da nova PR; não afirmar PASS antes da conclusão e inspecionar jobs deste commit. A execução real do Auth/Firestore Emulator no CI é distinta dos testes com doubles locais.
 - **Playwright autenticado desktop/mobile/tablet e screenshots reais:** PENDING (nenhum screenshot inventado). Testes manuais de duas abas, cookie expirado, requisições concorrentes e contraste devem ser homologados com navegador real.
-- **Outros gaps:** projeção W1↔W9 não certificada; fluxo W14 completo versus formulario simplificado W15 continua sem emissão; contratos jurídicos/comerciais WLG/SEFAZ não validados.
+- **Outros gaps:** migração/reconciliação de quotas W9 históricas não executada nem mascarada; `fulfilledQuantity` W1 continua independente de prova logística e requer contrato de atesto; fluxo W14 completo versus formulário simplificado W15 continua sem emissão; contratos WLG/SEFAZ não validados. Build R1 mostrou falha intermitente do loader externo `next/font`, separada de TypeScript.
 
 ## Matriz de entrega e decisão
 | Gate | Estado inicial |
@@ -42,4 +43,10 @@
 
 **Rollback:** descartar/fechar esta PR Draft; nada foi incorporado à PR #530, main ou produção. Reversão sem migration ou alteração de dados.
 
-**SHA de código nesta documentação:** `50c00e84b271f8c0a4a7533aac22ee5629f146d5` (checkpoint anterior à inclusão da suíte/handoff). **SHA final do Worker:** usar o `head_sha` da PR Draft após a última correção/CI; o registro não congela um hash auto-referente.
+**SHA de código anterior ao handoff final:** `937f538d80b006f2c5b12d3f90ef21e4fdfd3b9f` (checkpoint anterior à inclusão da suíte/handoff). **SHA final do Worker:** usar o `head_sha` da PR Draft após a última correção/CI; o registro não congela um hash auto-referente.
+
+## Links dos testes desta PR
+- [PR #531 — checks associados ao HEAD](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/531/checks)
+- [Histórico GitHub Actions W10](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/workflows/emprovex-empresas-w10.yml)
+- Auth/Firestore Emulator: somente projetos `demo-*`, conexões locais; nenhum serviço produtivo.
+- Playwright específico da extensão e screenshots desktop/tablet/mobile: PENDING, gate de homologação visual permanece NO-GO.
