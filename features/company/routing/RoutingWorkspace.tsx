@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import type {DeliveryCandidate} from '../../../lib/company/integration/deliveryRoutingContract';
 import {externalNavigation} from '../../../lib/company/geo/core.mjs';
 import {MapLibreView} from './MapLibreView';
-import {useCompanySession} from '../../../components/company/CompanySessionContext';
+import {useCompanySession,useCompanyEssentialMode} from '../../../components/company/CompanySessionContext';
 type Vehicle={id:string;origin:{latitude:number;longitude:number;coordinateSource:string};
  capacity:{weightKg?:number;volumeM3?:number;units?:number};
  driverUid?:string;shift:{start:string;end:string};breaks:Array<{start:string;end:string}>;revision?:number};
@@ -32,10 +32,11 @@ const msg:Record<string,string>={
  ROUTING_PROVIDER_UNAVAILABLE:'O provedor não respondeu. Use a sequência manual.',
  REVISION_CONFLICT:'A rota foi alterada em outra sessão. Atualize antes de continuar.',
 };
-export function RoutingWorkspace({getIdToken,initialCandidates=[],essential=false}:{
- getIdToken:()=>Promise<string>;initialCandidates?:DeliveryCandidate[];essential?:boolean;
+export function RoutingWorkspace({getIdToken,initialCandidates=[]}:{
+ getIdToken:()=>Promise<string>;initialCandidates?:DeliveryCandidate[];
 }){
  const session=useCompanySession();
+ const essential=useCompanyEssentialMode();
  const [candidates,setCandidates]=useState<DeliveryCandidate[]>(initialCandidates);
  const [vehicles,setVehicles]=useState<Vehicle[]>([]);
  const [routes,setRoutes]=useState<Stored[]>([]);

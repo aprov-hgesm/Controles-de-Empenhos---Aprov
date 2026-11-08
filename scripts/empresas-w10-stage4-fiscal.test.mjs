@@ -25,7 +25,8 @@ test('W10-IV monta o W15 apenas na aba empresarial notas-fiscais', () => {
 test('ao trocar CNPJ a UI fiscal desmonta e descarta dados do tenant anterior', () => {
   assert.match(page, /key=\{session\?\.workspaceId\s*\|\|\s*'sem-perfil'\}/);
   assert.match(fiscal, /createTenantRequestBoundary/);
-  assert.match(fiscal, /onBeforeProfileSwitch=\{wipe\}/);
+  assert.doesNotMatch(fiscal, /<CompanyProfileSwitcher/);
+  assert.match(read('components/company/CompanySessionGate.tsx'), /<CompanyProfileSwitcher/);
   const boundary = createTenantRequestBoundary();
   boundary.rotate(profileA.companyId);
   const pendingA = boundary.capture(profileA.companyId);

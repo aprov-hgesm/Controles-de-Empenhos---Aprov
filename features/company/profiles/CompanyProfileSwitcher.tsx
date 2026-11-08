@@ -8,7 +8,7 @@ type Profile = {
 };
 type Payload = {
   ok: boolean; profiles?: Profile[]; activeCompanyId?: string;
-  canSwitch?: boolean; integrationPending?: boolean; code?: string;
+  canSwitch?: boolean; selectionRequired?: boolean; integrationPending?: boolean; code?: string;
 };
 type Props = {
   getIdToken: () => Promise<string>;
@@ -86,15 +86,16 @@ export function CompanyProfileSwitcher({getIdToken,onBeforeProfileSwitch}: Props
       <div className="flex flex-wrap items-center gap-2">
         <select id="emprovex-company-profile" value={target}
           onChange={e=>setTarget(e.target.value)} disabled={busy || !data?.canSwitch}
-          className="max-w-full rounded-md border px-3 py-2 text-sm">
+          className="min-h-11 max-w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
           {!data && <option value="">Carregando perfis…</option>}
+          {data?.selectionRequired && <option value="">Selecione uma empresa…</option>}
           {data?.profiles?.map(profile=><option key={profile.companyId} value={profile.companyId}>
             {profile.name} · CNPJ {profile.cnpj}
           </option>)}
         </select>
         {data?.canSwitch && <button type="button" onClick={()=>void change()}
           disabled={busy || target===data.activeCompanyId}
-          className="rounded-md border px-3 py-2 text-sm">
+          className="min-h-11 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
           {busy?'Validando…':'Trocar perfil'}
         </button>}
       </div>

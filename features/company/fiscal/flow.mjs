@@ -11,6 +11,10 @@ export const FISCAL_STATES = Object.freeze({
   authorized: 'Autorizada (conferir XML e protocolo)',
   rejected: 'Rejeitada', uncertain: 'Verificação pendente — não reenviar',
 });
+// Preserve the new Receita Federal alphanumeric CNPJ (12 alphanumeric + 2 DV).
+// WLG capability remains separately gated; never silently strip letters.
+export const cleanCnpj = value => typeof value === 'string'
+  ? value.toUpperCase().replace(/[.\/\-\s]/g, '') : '';
 const digits = value => String(value || '').replace(/\D/g, '');
 const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 export function selectVerifiedProfile(payload, sessionWorkspaceId) {
@@ -22,13 +26,13 @@ export function selectVerifiedProfile(payload, sessionWorkspaceId) {
   const profile = payload.profiles.find(p => p && p.companyId === payload.activeCompanyId);
   if (!profile || profile.workspaceId !== profile.companyId ||
       !/^[a-z0-9][a-z0-9_-]{1,79}$/.test(profile.companyId) ||
-      digits(profile.cnpj).length !== 14 ||
+      !/^[A-Z0-9]{12}[0-9]{2}$/.test(cleanCnpj(profile.cnpj)) ||
       typeof profile.name !== 'string' || !profile.name.trim()) {
     throw new FiscalUiError('PROFILE_INVALID', 'Não foi possível validar a identidade fiscal ativa.');
   }
   return Object.freeze({
     companyId: profile.companyId, workspaceId: profile.workspaceId,
-    cnpj: digits(profile.cnpj), name: profile.name.trim(),
+    cnpj: cleanCnpj(profile.cnpj), name: profile.name.trim(),
     legalName: String(profile.legalName || profile.name).trim(),
   });
 }
@@ -36,7 +40,7 @@ export function safeConnection(payload, profile) {
   if (!profile || !payload || payload.ok !== true) return Object.freeze({state:'unavailable'});
   if (!payload.connection) return Object.freeze({state:'not_configured'});
   const connection = payload.connection;
-  if (connection.provider !== 'wlg' || digits(connection.issuerCnpj) !== profile.cnpj ||
+  if (connection.provider !== 'wlg' || cleanCnpj(connection.issuerCnpj) !== profile.cnpj ||
       !['homologacao', 'producao'].includes(connection.environment) ||
       !['connected','pending_verification','disconnected','revoked'].includes(connection.status)) {
     return Object.freeze({state:'integrity_error'});
@@ -66,6 +70,10 @@ export function issueIsAuthorized(issue) {
 export function fiscalSubmissionGate({profile, connection, capabilities, draft, confirmed, busy, uncertain}) {
   const deny = (code, message) => ({allowed:false, code, message});
   if (!profile) return deny('NO_PROFILE', 'Selecione uma empresa validada.');
+  if (!/^\d{14}$/.test(profile.cnpj)) {
+    return deny('ALPHANUMERIC_PROVIDER_PENDING',
+      'CNPJ alfanumérico aceito na plataforma. Emissão WLG aguarda confirmação de suporte do provedor.');
+  }
   if (!connection || connection.state !== 'connected' ||
       !connection.verifiedAt || connection.environment !== 'homologacao') {
     return deny('WLG_UNAVAILABLE', 'Conexão WLG homologada e validada ainda indisponível.');
@@ -85,7 +93,7 @@ export function fiscalSubmissionGate({profile, connection, capabilities, draft, 
   if (typeof draft.orderId !== 'string' || !draft.orderId.trim() ||
       digits(draft.recipientCnpj).length !== 14 ||
       typeof draft.recipientName !== 'string' || !draft.recipientName.trim() ||
-      !Number.isSafeInteger(draft.series) || draft.series < 0 ||
+      !Number.isSafeInteger(draft.series) || draft.series < 1 ||
       !Number.isSafeInteger(draft.number) || draft.number <= 0 ||
       !Array.isArray(draft.items) || !draft.items.length) {
     return deny('DRAFT_INVALID', 'Preencha pedido, destinatário, série, número e itens fiscais.');

@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useCompanySession } from '../CompanySessionContext';
-import { CompanyProfileSwitcher } from '../../../features/company/profiles/CompanyProfileSwitcher';
 import {
   createTenantRequestBoundary, selectVerifiedProfile, safeConnection, safeIssues,
-  fiscalSubmissionGate, displayIssueState, type FiscalProfile, type FiscalConnection,
+  fiscalSubmissionGate, displayIssueState, cleanCnpj, type FiscalProfile, type FiscalConnection,
   type FiscalCapability, type FiscalIssueSummary, type FiscalDraft,
 } from '../../../features/company/fiscal/flow.mjs';
 import { createFiscalBrowserApi } from '../../../features/company/fiscal/api.mjs';
@@ -23,7 +22,7 @@ const initialForm:FormValues={
 const inputClass='mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-600';
 const cardClass='rounded-2xl border border-slate-200 bg-white p-5 sm:p-6';
 const digits=(value:string)=>value.replace(/\D/g,'');
-const formatCnpj=(raw:string)=>raw.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+const formatCnpj=(raw:string)=>raw.replace(/^([A-Z0-9]{2})([A-Z0-9]{3})([A-Z0-9]{3})([A-Z0-9]{4})(\d{2})$/,'$1.$2.$3/$4-$5');
 const formatBrl=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
 const errorText=(error:unknown)=>error instanceof Error?error.message:'Serviço fiscal temporariamente indisponível.';
 const makeIntentKey=()=>typeof crypto!=='undefined'&&'randomUUID' in crypto?crypto.randomUUID():'';
@@ -33,7 +32,7 @@ const isCapable=(data:Record<string,unknown>):FiscalCapability|null=>{
   const obj=c as Record<string,unknown>;
   return typeof obj.companyId==='string' && typeof obj.issuerCnpj==='string'
     && typeof obj.environment==='string' && obj.canIssue===true
-    ?{companyId:obj.companyId,issuerCnpj:digits(obj.issuerCnpj),
+    ?{companyId:obj.companyId,issuerCnpj:cleanCnpj(obj.issuerCnpj),
       environment:obj.environment,canIssue:true}:null;
 };
 
@@ -126,7 +125,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
     if(!profile)return null;
     return {
       companyId:profile.companyId,issuerCnpj:profile.cnpj,
-      orderId:form.orderId.trim(),recipientCnpj:digits(form.recipientCnpj),
+      orderId:form.orderId.trim(),recipientCnpj:cleanCnpj(form.recipientCnpj),
       recipientName:form.recipientName.trim(),series:Number(form.series),number:Number(form.number),
       items:[{itemId:form.itemId.trim(),description:form.description.trim(),
         quantity:Number(form.quantity),unitPrice:form.unitPrice,
@@ -134,9 +133,9 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
     };
   },[form,profile]);
   const previewValid=Boolean(draft && draft.orderId && draft.recipientCnpj.length===14 &&
-    draft.recipientName && form.itemId.trim() && form.description.trim() &&
+    /^\d{14}$/.test(draft.recipientCnpj) && draft.recipientName && form.itemId.trim() && form.description.trim() &&
     /^\d{8}$/.test(digits(form.ncm)) && /^\d{4}$/.test(digits(form.cfop)) &&
-    form.taxation.trim() && Number.isSafeInteger(draft.series) && draft.series>=0 &&
+    form.taxation.trim() && Number.isSafeInteger(draft.series) && draft.series>=1 &&
     Number.isSafeInteger(draft.number) && draft.number>0 &&
     Number.isFinite(Number(form.quantity)) && Number(form.quantity)>0 &&
     /^\d+(?:[.,]\d{1,2})?$/.test(form.unitPrice) && Number(form.unitPrice.replace(',','.'))>0);
@@ -189,7 +188,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
 
   return <section className="space-y-5 text-slate-900" aria-label="Portal fiscal empresarial">
     <header className="rounded-3xl border border-slate-200 bg-slate-950 px-5 py-6 text-white sm:px-7">
-      <p className="text-xs font-semibold uppercase tracking-[.18em] text-sky-300">EMPROVEX Empresas · Fiscal W15</p>
+      <p className="text-xs font-semibold uppercase tracking-[.18em] text-sky-300">EMPROVEX Empresas · Área fiscal</p>
       <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">Emissão e acompanhamento de NF-e</h2>
       <p className="mt-2 max-w-3xl text-sm text-slate-300">Uma empresa por vez. Revisão humana obrigatória, status fiscal verificável e documentos privados.</p>
       <div className="mt-4 inline-flex rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">
@@ -205,13 +204,10 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
           <p className="mt-1 text-sm">CNPJ {formatCnpj(profile.cnpj)}</p>
           <p className="mt-1 text-xs text-slate-500">Workspace: {profile.companyId}</p>
         </div>:<p className="mt-3 text-sm text-slate-600">{loading?'Validando perfil e autorização…':'Identidade fiscal indisponível. Nenhuma solicitação será enviada.'}</p>}
-        <div className="mt-5 border-t border-slate-200 pt-4">
-          <CompanyProfileSwitcher getIdToken={getIdToken} onBeforeProfileSwitch={wipe}/>
-        </div>
-        <p className="mt-2 text-xs text-slate-500">A troca de CNPJ descarta rascunhos desta tela e interrompe consultas anteriores.</p>
+        <p className="mt-3 text-xs text-slate-500">Para trocar de empresa, use o seletor único no cabeçalho. A troca descarta intenções locais anteriores.</p>
       </section>
       <section className={cardClass} aria-label="Conexão fiscal">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Conexão WLG deste CNPJ</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Conexão fiscal deste CNPJ</p>
         <h3 className="mt-2 text-lg font-semibold">{connection?.state==='connected'?'Credencial cadastrada':connection?.state==='not_configured'?'Não configurada':'Conexão não disponível'}</h3>
         <p className="mt-2 text-sm text-slate-600">Ambiente: {connection?.environment==='homologacao'?'Homologação':connection?.environment==='producao'?'Produção (envio bloqueado)':'Não identificado'}</p>
         <p className="mt-1 text-sm text-slate-600">Verificação: {connection?.verifiedAt?'Registrada no servidor':'Pendente ou indisponível'}</p>
@@ -225,7 +221,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
 
     {error&&<p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{error}</p>}
     {message&&<p className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900" role="status">{message}</p>}
-    {unavailable&&<p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">Backend de emissão W14/W10 em preparação: o portal permite preparar a conferência, mas não emite NF-e nem consulta XML autorizado neste estágio.</p>}
+    {unavailable&&<p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">O serviço de emissão ainda não está habilitado. A conferência é local, não salva notas e não consulta documentos fiscais autorizados.</p>}
 
     <form onSubmit={submit} className={cardClass} aria-label="Prévia e revisão da NF-e">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -236,7 +232,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
       <p className="mt-2 text-sm text-slate-600">Preencha para revisão. O pedido, o vínculo fiscal, os tributos e o estoque ainda devem ser validados pelo backend antes de qualquer envio.</p>
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {([
-          ['orderId','Pedido de origem (W1)','text'],['recipientCnpj','CNPJ do destinatário','text'],
+          ['orderId','Pedido de origem','text'],['recipientCnpj','CNPJ do destinatário','text'],
           ['recipientName','Razão social do destinatário','text'],['series','Série','number'],
           ['number','Número proposto','number'],['itemId','ID do item no pedido','text'],
           ['description','Descrição do item','text'],['quantity','Quantidade','number'],
@@ -258,12 +254,13 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
         <button type="button" disabled={!profile||!previewValid||busy}
           onClick={()=>{setReview(true);setConfirmed(false);setError('');}}
           className="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
-          Gerar prévia para revisão
+          Gerar conferência local
         </button>
         <button type="button" disabled={busy} onClick={()=>{setForm({...initialForm});setReview(false);setConfirmed(false);/* Do NOT clear uncertain POST outcome on reset. */}}
           className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">Descartar rascunho</button>
       </div>
       {!previewValid&&<p className="mt-3 text-xs text-slate-500">Para gerar a prévia, informe os campos do pedido, destinatário, item, valores e classificação fiscal.</p>}
+      {profile && /[A-Z]/.test(profile.cnpj) && <p role="status" className="mt-4 text-sm text-amber-800">Este CNPJ alfanumérico é válido como identidade empresarial. O provedor fiscal ainda não confirmou suporte para emissão; nenhuma informação será convertida para dígitos.</p>}
       {review&&profile&&draft&&<section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5" aria-label="Confirmação fiscal">
         <p className="text-xs font-bold uppercase tracking-wider text-blue-700">Etapa 2 · Revisar e confirmar</p>
         <h4 className="mt-1 text-lg font-semibold">Conferência explícita</h4>
@@ -283,7 +280,7 @@ export function FiscalIssuanceWorkspace({getIdToken}:{getIdToken:()=>Promise<str
         <button type="submit" disabled={!gate.allowed||busy}
           title={!gate.allowed?gate.message:undefined}
           className="mt-4 rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600">
-          {busy?'Enviando uma única solicitação…':'Solicitar emissão em homologação'}
+          {busy?'Enviando uma única solicitação…':'Envio indisponível nesta etapa'}
         </button>
         {!gate.allowed&&<p role="status" className="mt-2 text-sm text-blue-900">{gate.message}</p>}
       </section>}

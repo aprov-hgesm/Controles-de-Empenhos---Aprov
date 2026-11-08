@@ -1,7 +1,10 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 type Timeline={customerOrderId:string;customerOrderLineId:string;quantity:{value:string;unit:string};
- dispatched:{value:string;unit:string};requestedDelivery?:{value:string}|null;
+ dispatched:{value:string;unit:string};
+ physicalDelivery?:{value:string;unit:string;basis:string;atesto:boolean}|null;
+ orderFulfilledQuantity?:{value:string;unit:string}|null;
+ requestedDelivery?:{value:string}|null;
  approvedPromise?:{next:string;approvedByUid:string;approvalDocumentId:string}|null;
  schedulePlanRevision:number;risk:{risk:string;reasons:string[];eta:null};
  inboundSources:Array<{purchaseOrderId:string;workflowState:string;supplierPromisedAt?:{value:string}}>;partialCoverage:boolean};
@@ -58,6 +61,12 @@ export function CompanyScheduleWorkspace({getIdToken}:Props){
    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
     <p>Quantidade pedida: <strong>{x.quantity.value} {x.quantity.unit}</strong></p>
     <p>Expedida pelo W7: <strong>{x.dispatched.value} {x.dispatched.unit}</strong></p>
+    <p>Entrega física W9: <strong>{x.physicalDelivery ?
+      x.physicalDelivery.value+' '+x.physicalDelivery.unit : 'Histórico sem projeção certificada'}</strong>
+      <span className="block text-xs text-slate-500">Comprovantes logísticos; não significa atesto ou pagamento.</span></p>
+    <p>Atendimento no pedido W1: <strong>{x.orderFulfilledQuantity ?
+      x.orderFulfilledQuantity.value+' '+x.orderFulfilledQuantity.unit : 'Não registrado'}</strong>
+      <span className="block text-xs text-slate-500">Indicador do pedido, independente de entrega física W9.</span></p>
     <p>Data solicitada: {fmt(x.requestedDelivery?.value)}</p>
     <p>Promessa aprovada: {fmt(x.approvedPromise?.next)}</p>
     <p>Última previsão de fornecedor: {fmt(x.inboundSources.map(p=>p.supplierPromisedAt?.value||'').filter(Boolean).sort().at(-1))}</p>
