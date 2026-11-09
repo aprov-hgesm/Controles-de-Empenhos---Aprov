@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g9dea318b800d-41",
-  "sourceSha": "9dea318b800d7a2a6ab546af088f9e8010c23117",
-  "reason": "Publicação no site oficial expressamente solicitada em 04/11/2026 neste chat. PR #509 integrada à main. Melhorias em Acompanhar Notas Fiscais: NE no menu do cabeçalho, Certificado de Autenticidade e PDFs complementares opcionais, consolidado NE + NF + Espelho + Certificado + Outros + TR; regras anteriores de obrigatoriedade preservadas. CI PR e main PASS; stage Cloud Run 41889768267 PASS com revisão 41 sem tráfego. Autorizar promoção a 100% somente mediante verificações automáticas de imagem, identidade, saúde e rollback do workflow. Não alterar IAM, Firestore ou outros módulos."
+  "revision": "emprovex-cloudrun-candidate-g6c9b02062661-42",
+  "sourceSha": "6c9b020626619e8bdd844e598203c2f15cf8a4b4",
+  "reason": "Autorização expressa do usuário em 08/11/2026: corrigir imediatamente o incidente P0 que impede a abertura de /admin em desktop e celular. PR #532 integrada; CI Fast/Core/W4 PASS; stage run 42541424731 SUCCESS; Next build comprovou ƒ /admin e ƒ /admin/backups; revisão 42 Ready/saudável com 0% tráfego. Promover somente com checks de identidade/digest, saúde do domínio e rollback automático previstos. Sem IAM, Firestore ou extensões Empresas."
 }
