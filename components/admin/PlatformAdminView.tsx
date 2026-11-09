@@ -39,6 +39,7 @@ const AdminConsumptionHub = lazy(() =>
   import('./AdminConsumptionHub').then((module) => ({ default: module.AdminConsumptionHub }))
 );
 import { VisualModeControl } from '../visual-mode/VisualModeControl';
+import { AdminPanelErrorBoundary } from './AdminPanelErrorBoundary';
 import { useVisualMode } from '../visual-mode/VisualModeProvider';
 
 const AdminWorldHomePanel = lazy(() =>
@@ -289,7 +290,7 @@ export function PlatformAdminView({
   const reducedMotionPreference = useReducedMotion();
   const { mode, hydrated: visualModeReady, clear: clearVisualMode } = useVisualMode();
   const shouldReduceMotion = Boolean(reducedMotionPreference) || mode === 'essencial';
-  const [requestedAdminTab, setRequestedAdminTab] = useState<AdminTabId>('inicio');
+  const [requestedAdminTab, setRequestedAdminTab] = useState<AdminTabId>('overview');
   const activeTab: AdminTabId = mode === 'essencial' && requestedAdminTab === 'inicio'
     ? 'overview'
     : requestedAdminTab;
@@ -694,7 +695,8 @@ export function PlatformAdminView({
         )}
 
         {activeTab === 'inicio' && mode === 'premium' && (
-          <Suspense fallback={<div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">Abrindo visão administrativa...</div>}>
+          <AdminPanelErrorBoundary onOpenOverview={() => changeAdminTab('overview')}>
+            <Suspense fallback={<div role="status" className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-700">Abrindo visão administrativa...</div>}>
           <AdminWorldHomePanel
             accounts={accounts}
             workspaces={visibleWorkspaces}
@@ -707,7 +709,8 @@ export function PlatformAdminView({
             globalUsageDataThrough={globalUsageDataThrough}
             loadingGlobalUsage={loadingGlobalUsage}
           />
-          </Suspense>
+            </Suspense>
+          </AdminPanelErrorBoundary>
         )}
 
         {activeTab === 'overview' && (

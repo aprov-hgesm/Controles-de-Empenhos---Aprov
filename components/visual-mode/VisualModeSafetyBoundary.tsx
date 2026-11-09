@@ -26,11 +26,12 @@ class ModeRenderBoundary extends Component<BoundaryProps, BoundaryState> {
     return { failed: true };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Nunca envia telemetria ou conteúdo administrativo a terceiros. Registro local
+    // preserva causa e componente para identificar a exceção real do usuário.
+    console.error('EMPROVEX_RENDER_FAILURE', error, info.componentStack);
     if (this.props.mode === 'essencial') {
       this.props.onEssentialFailure();
-    } else {
-      console.error('EMPROVEX: falha de renderização no modo Normal.');
     }
   }
 

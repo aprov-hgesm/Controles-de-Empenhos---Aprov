@@ -169,3 +169,6 @@ test('clicar no prédio abre detalhes institucionais sem criar novas leituras',(
   assert.match(world,/resident\?\.label/);
   assert.doesNotMatch(panel,/\b(onSnapshot|getDoc|getDocs|setDoc|updateDoc|addDoc|runTransaction|fetch)\s*\(/);
 });
+
+// Cobertura P0 do painel fundador incorporada à suíte administrativa existente.
+import './admin-p0-resilient-entry.test.mjs';
