@@ -19,7 +19,8 @@ test('P0: fundador pode abrir Admin sem crash React e sem perder estilos', async
  const afterAuth = await page.evaluate(()=>({path:location.pathname,text:document.body.innerText.slice(0,650)}));
  console.log('ADMIN FOUNDER after login:',JSON.stringify(afterAuth));
  console.log('ADMIN FOUNDER login errors:',problems.slice(0,15).join('\\n'));
- if(page.url().endsWith('/central-empenhos')) await page.goto('/admin',{waitUntil:'domcontentloaded'});
+ await page.evaluate(()=>sessionStorage.setItem('emprovex_profile_mode_v1','platformAdmin'));
+ await page.goto('/admin',{waitUntil:'domcontentloaded'});
  await page.waitForTimeout(6500);
  const state=await page.evaluate(()=>({
    url:location.pathname,text:document.body.innerText.slice(0,500),
