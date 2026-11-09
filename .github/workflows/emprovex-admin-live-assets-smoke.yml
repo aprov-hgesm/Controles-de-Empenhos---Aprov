@@ -4,6 +4,7 @@ on:
     paths:
       - 'scripts/emprovex-admin-live-assets-smoke.mjs'
       - 'scripts/emprovex-admin-live-browser-smoke.mjs'
+      - 'tests/e2e/admin-founder-p0-render.spec.mjs'
       - '.github/workflows/emprovex-admin-live-assets-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -11,7 +12,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,6 +26,16 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser console, errors and render diagnostic (no authentication)
         run: node scripts/emprovex-admin-live-browser-smoke.mjs
+      - name: Prepare Firebase Emulator (isolated demo)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run founder admin auth/render with fake data (Firebase emulators only)
+        env:
+          GOOGLE_CLOUD_PROJECT: demo-emprovex-security
+          CI: 'true'
+        run: npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore "node scripts/e2e-browser-emulator.mjs tests/e2e/admin-founder-p0-render.spec.mjs"
       - name: Diagnostic screenshots
         if: always()
         uses: actions/upload-artifact@v4
