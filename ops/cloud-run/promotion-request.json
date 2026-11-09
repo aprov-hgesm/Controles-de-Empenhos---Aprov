@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g6c9b02062661-42",
-  "sourceSha": "6c9b020626619e8bdd844e598203c2f15cf8a4b4",
-  "reason": "Autorização expressa do usuário em 08/11/2026: corrigir imediatamente o incidente P0 que impede a abertura de /admin em desktop e celular. PR #532 integrada; CI Fast/Core/W4 PASS; stage run 42541424731 SUCCESS; Next build comprovou ƒ /admin e ƒ /admin/backups; revisão 42 Ready/saudável com 0% tráfego. Promover somente com checks de identidade/digest, saúde do domínio e rollback automático previstos. Sem IAM, Firestore ou extensões Empresas."
+  "revision": "emprovex-cloudrun-candidate-g686704c61cdc-43",
+  "sourceSha": "686704c61cdc9e26c0dd0bcb1ccf5e3898cb5707",
+  "reason": "Autorização explícita do usuário para corrigir imediatamente o incidente P0 /admin que persiste em desktop/mobile. Mitigação PR #534: overview padrão sem cena 3D, isolamento de render do bairro e log local do erro. Fast/Core/W4 e contrato admin/typecheck PASS; stage Cloud Run #42548411343 SUCCESS, revisão 43 com zero tráfego e health/billing gates aprovados. Promover com rollback automático, sem alterar IAM/Firestore/empresas/militar."
 }
