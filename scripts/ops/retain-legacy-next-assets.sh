@@ -17,7 +17,7 @@ mapfile -t images < <(jq -r --arg prefix "${IMAGE_BASE}@sha256:" '
   [ .[] | select((.metadata.name // "") | startswith("emprovex-cloudrun-candidate-"))
     | (.spec.containers[0].image // empty)
     | select(startswith($prefix))
-  ] | .[:16][]
+  ] | .[:8][]
 ' "$revisions_json")
 
 if (( ${#images[@]} == 0 )); then
