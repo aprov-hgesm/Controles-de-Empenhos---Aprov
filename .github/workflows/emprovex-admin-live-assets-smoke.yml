@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/emprovex-admin-live-assets-smoke.mjs'
+      - 'scripts/emprovex-admin-live-browser-smoke.mjs'
       - '.github/workflows/emprovex-admin-live-assets-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -10,7 +11,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,3 +19,17 @@ jobs:
           node-version: '24'
       - name: Read-only external checks on domain and Cloud Run
         run: node scripts/emprovex-admin-live-assets-smoke.mjs
+      - name: Install isolated Playwright
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser console, errors and render diagnostic (no authentication)
+        run: node scripts/emprovex-admin-live-browser-smoke.mjs
+      - name: Diagnostic screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-p0-public-browser
+          path: artifacts/admin-p0/*.png
+          if-no-files-found: warn
+          retention-days: 2
