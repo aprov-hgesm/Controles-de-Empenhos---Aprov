@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g686704c61cdc-43",
-  "sourceSha": "686704c61cdc9e26c0dd0bcb1ccf5e3898cb5707",
-  "reason": "Autorização explícita do usuário para corrigir imediatamente o incidente P0 /admin que persiste em desktop/mobile. Mitigação PR #534: overview padrão sem cena 3D, isolamento de render do bairro e log local do erro. Fast/Core/W4 e contrato admin/typecheck PASS; stage Cloud Run #42548411343 SUCCESS, revisão 43 com zero tráfego e health/billing gates aprovados. Promover com rollback automático, sem alterar IAM/Firestore/empresas/militar."
+  "revision": "emprovex-cloudrun-candidate-g75ab5fb1dd58-44",
+  "sourceSha": "75ab5fb1dd582f3c377e6e985120e9936721e2b3",
+  "reason": "Autorização explícita do fundador para corrigir imediatamente o erro /admin persistente. PR #535 integrada; Fast/Core/W4 PASS; stage run 42557034798 SUCCESS. O novo contêiner recuperou assets de 8 revisões anteriores (11.3 MB) e o preview confirmou HTTP/MIME corretos para app/admin/page-90bf4e32d0dfc3aa.js e css/3ebef08104e37cca.css. Promover somente pelo workflow oficial com verificação dos mesmos recursos no domínio canônico e rollback automático; sem mudanças IAM/Firestore/Firebase Hosting/Empresas/militar."
 }
