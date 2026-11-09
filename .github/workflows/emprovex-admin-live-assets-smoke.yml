@@ -1,0 +1,20 @@
+name: EMPROVEX P0 Admin Live Assets Diagnosis
+on:
+  pull_request:
+    paths:
+      - 'scripts/emprovex-admin-live-assets-smoke.mjs'
+      - '.github/workflows/emprovex-admin-live-assets-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Read-only external checks on domain and Cloud Run
+        run: node scripts/emprovex-admin-live-assets-smoke.mjs
