@@ -2,7 +2,7 @@
 // P0 diagnostic: public GET requests only, no cookies, tokens or user data.
 const targets = [
   ["official", "https://emprovex.com.br/admin"],
-  ["cloudrun42", "https://s6c9b02062661---emprovex-cloudrun-candidate-kvcz7oikxq-rj.a.run.app/admin"],
+  ["cloudrun43", "https://s686704c61cdc---emprovex-cloudrun-candidate-kvcz7oikxq-rj.a.run.app/admin"],
 ];
 function assets(html, tag) {
   const re=tag==="link" ? /<link\b[^>]*>/gi : /<script\b[^>]*>/gi;
@@ -27,7 +27,8 @@ for(const [kind,base] of targets) {
     const css=assets(body,"link"), js=assets(body,"script");
     console.log(kind,"stylesheet count",css.length,"scripts count",js.length,"admin text",body.includes("EMPROVEX // ADMIN"));
     if(!res.ok||css.length===0||js.length===0) bad=true;
-    for(const [type,files] of [["CSS",css.slice(0,6)],["JS",js.slice(0,5)]]) {
+    // Verificar todos os scripts, especialmente app/admin/page-*.js; antes apenas os 5 primeiros eram testados.
+    for(const [type,files] of [["CSS",css],["JS",js]]) {
       for(const file of files) {
         try{
           const target=new URL(file,base).href;
