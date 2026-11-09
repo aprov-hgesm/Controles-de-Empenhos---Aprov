@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g4b0afc57135a-23",
-  "sourceSha": "4b0afc57135a0ce02885924aa5d3054534944b41",
-  "reason": "hosting-p0: P0 autorizado por /goal do usuario; executar Firebase Hosting cache-policy pelo workflow confiavel apos correcoes #472/#473 com Cloud Run g4b0afc57135a-23 100%; PR #476 ajustou selecao do evento sem afrouxar WIF; somente Hosting, validacao fail-closed.",
-  "attempt": 3
+  "revision": "emprovex-cloudrun-candidate-g6c9b02062661-42",
+  "sourceSha": "6c9b020626619e8bdd844e598203c2f15cf8a4b4",
+  "reason": "hosting-p0: atualização expressamente solicitada em 08/11/2026 para restaurar /admin da conta fundadora em desktop e celular, após PR #532 e promoção Cloud Run revisão 42 (run 42541738870 SUCCESS). Aplicar apenas no Firebase Hosting a política no-store de /admin e /admin/**, preservando rewrite e cache de /_next; validar saúde e cabeçalhos sem alterar Firestore, IAM, DNS ou aplicações setoriais.",
+  "attempt": 4
 }
