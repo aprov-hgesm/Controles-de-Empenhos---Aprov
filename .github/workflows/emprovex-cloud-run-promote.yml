@@ -269,7 +269,7 @@ jobs:
           [[ "$REVISION" == "$SERVICE-g$(printf %.12s "$SOURCE")-"* ]]
           git merge-base --is-ancestor "$SOURCE" HEAD
           echo "REVISION=$REVISION" >> "$GITHUB_ENV"
-          jq -e --arg svc "$SERVICE" --arg reg "$REGION" --arg site "$SITE" '.hosting.site==$site and (.hosting.rewrites|length)==1 and .hosting.rewrites[0].run.serviceId==$svc and .hosting.rewrites[0].run.region==$reg and (.hosting.headers|length)==3 and ([.hosting.headers[]|select(.source=="/central-empenhos" or .source=="/admin" or .source=="/admin/**")]|length)==3 and ([.hosting.headers[]|select([.headers[]?|select(.key=="Cache-Control" and (.value|contains("no-store")))]|length==1)]|length)==3' ops/cloud-run-hosting/firebase.json >/dev/null
+          jq -e --arg svc "$SERVICE" --arg reg "$REGION" --arg site "$SITE" '.hosting.site==$site and (.hosting.rewrites|length)==1 and .hosting.rewrites[0].run.serviceId==$svc and .hosting.rewrites[0].run.region==$reg and (.hosting.headers|length)==3 and ([.hosting.headers[].source]|sort)==(["/admin","/admin/**","/central-empenhos"]|sort) and ([.hosting.headers[]|select([.headers[]?|select(.key=="Cache-Control" and (.value|contains("no-store")))]|length==1)]|length)==3' ops/cloud-run-hosting/firebase.json >/dev/null
       - uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.PROJECT }}
