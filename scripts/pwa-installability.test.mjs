@@ -155,3 +155,28 @@ test('Cloud Run R1: entrada canonica HTML dinamica e sem cache no Next e Hosting
   assert.equal(hosting.hosting.rewrites[0].run.serviceId, 'emprovex-cloudrun-candidate');
   assert.equal(hosting.hosting.rewrites[0].run.region, 'southamerica-east1');
 });
+
+test('P0 admin: HTML dinâmico e cache privado em Cloud Run + Hosting', () => {
+  const adminLayout = source('app/admin/layout.tsx');
+  const adminPage = source('app/admin/page.tsx');
+  const hosting = JSON.parse(source('ops/cloud-run-hosting/firebase.json'));
+  assert.match(adminLayout, /export const dynamic = 'force-dynamic';/);
+  assert.match(adminLayout, /export const revalidate = 0;/);
+  assert.match(adminLayout, /return children;/);
+  assert.match(adminPage, /resolveWorkspaceContext\(user\?\.email\)/, 'Não trocar autorização fundadora');
+  assert.match(adminPage, /context\.status !== 'platformAdmin'/, 'Não remover a guarda do admin');
+
+  const nextConfig = source('next.config.ts');
+  for (const route of ['/admin', '/admin/:path*']) {
+    const sourceRoute = route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(nextConfig, new RegExp("source: '" + sourceRoute + "',[\\s\\S]*?Cache-Control',[^\\n]*?private, no-store, max-age=0, must-revalidate"));
+  }
+  for (const route of ['/admin', '/admin/**']) {
+    const rule = hosting.hosting.headers.find(entry => entry.source === route);
+    assert.equal(rule?.headers.find(entry => entry.key === 'Cache-Control')?.value,
+      'private, no-store, max-age=0, must-revalidate', route + ': no-store obrigatório');
+  }
+  assert.equal(hosting.hosting.rewrites[0].run.serviceId, 'emprovex-cloudrun-candidate');
+  assert.ok(!hosting.hosting.headers.some(entry => /_next/.test(entry.source)),
+    'Assets de versão continuam com cache imutável');
+});
