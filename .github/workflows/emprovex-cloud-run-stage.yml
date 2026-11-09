@@ -98,6 +98,19 @@ jobs:
           jq -c '[.status.traffic[]? | select((.percent // 0) > 0) | {revisionName,percent}] | sort_by(.revisionName)' "${RUNNER_TEMP}/before.json" > "${RUNNER_TEMP}/before-traffic.json"
           test "$(jq '[.status.traffic[]? | select((.percent // 0) > 0) | .percent] | add // 0' "${RUNNER_TEMP}/before.json")" -eq 100
 
+      - name: Preserve prior Next.js CSS and JS in this immutable image (P0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Credentials only exist after the unprivileged app build;
+          # .dockerignore excludes gha-creds-*.json from overlay build context.
+          bash scripts/ops/retain-legacy-next-assets.sh
+          docker build \
+            --file ops/cloud-run/Dockerfile.legacy-static \
+            --build-arg EMPROVEX_SOURCE_IMAGE="${IMAGE_TAG}" \
+            --tag "${IMAGE_TAG}" .
+          rm -rf -- legacy-next-static
+
       - name: Push immutable SHA-tagged image to Artifact Registry
         shell: bash
         run: |
@@ -162,6 +175,23 @@ jobs:
             echo "::error::Unauthenticated billing route returned HTTP ${status}, expected 401."
             exit 1
           }
+          # P0: both previously missing admin assets must be served by this
+          # candidate (not merely the current build's asset manifest).
+          for item in "css/3ebef08104e37cca.css:text/css" "chunks/app/admin/page-90bf4e32d0dfc3aa.js:javascript"; do
+            asset="${item%%:*}"
+            kind="${item##*:}"
+            curl --fail --silent --show-error --retry 2 --retry-delay 2 \
+              --max-time 20 -D "${RUNNER_TEMP}/legacy.headers" \
+              -o "${RUNNER_TEMP}/legacy.body" \
+              "${PREVIEW_URL}/_next/static/${asset}"
+            if [[ "${kind}" == "text/css" ]]; then
+              grep -Eiq '^content-type: *text/css' "${RUNNER_TEMP}/legacy.headers" || exit 1
+            else
+              grep -Eiq '^content-type: *(application|text)/(javascript|x-javascript|ecmascript)' "${RUNNER_TEMP}/legacy.headers" || exit 1
+            fi
+            test -s "${RUNNER_TEMP}/legacy.body"
+          done
+
           # Branding R4: verificar o arquivo circular de verdade na revisão isolada.
           curl --fail --silent --show-error --retry 2 --retry-delay 2 --max-time 40 \
             -D "${RUNNER_TEMP}/favicon.headers" -o "${RUNNER_TEMP}/favicon.png" \

@@ -1,0 +1,6 @@
+# Exact application image plus historical immutable Next.js assets.
+ARG EMPROVEX_SOURCE_IMAGE
+FROM ${EMPROVEX_SOURCE_IMAGE}
+USER root
+COPY --chown=node:node legacy-next-static/ /app/.next/static/
+USER node

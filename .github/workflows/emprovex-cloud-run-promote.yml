@@ -194,6 +194,24 @@ jobs:
           done
           [[ "${health_ok}" == "1" ]] || { echo "::error::Live health failed."; exit 1; }
 
+          # A green /api/health is insufficient: founder's old admin HTML must
+          # also be able to load its former CSS and JS from the canonical CDN.
+          for item in "css/3ebef08104e37cca.css:text/css" "chunks/app/admin/page-90bf4e32d0dfc3aa.js:javascript"; do
+            asset="${item%%:*}"
+            kind="${item##*:}"
+            curl --fail --silent --show-error --retry 3 --retry-delay 4 \
+              --max-time 25 --resolve "${DOMAIN}:443:${HOSTING_IP}" \
+              -D "${RUNNER_TEMP}/prod-static.headers" \
+              -o "${RUNNER_TEMP}/prod-static.body" \
+              "https://${DOMAIN}/_next/static/${asset}"
+            test -s "${RUNNER_TEMP}/prod-static.body" || exit 1
+            if [[ "${kind}" == "text/css" ]]; then
+              grep -Eiq '^content-type: *text/css' "${RUNNER_TEMP}/prod-static.headers" || exit 1
+            else
+              grep -Eiq '^content-type: *(application|text)/(javascript|x-javascript|ecmascript)' "${RUNNER_TEMP}/prod-static.headers" || exit 1
+            fi
+          done
+
           finished=1
           trap - EXIT
           {

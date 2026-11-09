@@ -180,3 +180,33 @@ test('P0 admin: HTML dinâmico e cache privado em Cloud Run + Hosting', () => {
   assert.ok(!hosting.hosting.headers.some(entry => /_next/.test(entry.source)),
     'Assets de versão continuam com cache imutável');
 });
+
+test('P0 Cloud Run: arquivos JS/CSS de versões antigas permanecem disponíveis entre revisões', () => {
+  const stage = source('.github/workflows/emprovex-cloud-run-stage.yml');
+  const promotion = source('.github/workflows/emprovex-cloud-run-promote.yml');
+  const extraction = source('scripts/ops/retain-legacy-next-assets.sh');
+  const overlay = source('ops/cloud-run/Dockerfile.legacy-static');
+  const dockerfile = source('Dockerfile');
+
+  assert.ok(stage.indexOf('Build the existing production Dockerfile (no Google credentials)') <
+    stage.indexOf('Obtain temporary Google credentials through Workload Identity Federation'),
+    'Build do aplicativo deve continuar sem credenciais de produção');
+  assert.ok(stage.indexOf('Preserve prior Next.js CSS and JS') <
+    stage.indexOf('Push immutable SHA-tagged image'), 'Arquivamento precede publicação da imagem');
+  assert.match(stage, /retain-legacy-next-assets\.sh/);
+  assert.match(stage, /Dockerfile\.legacy-static/);
+  assert.match(stage, /page-90bf4e32d0dfc3aa\.js/);
+  assert.match(stage, /3ebef08104e37cca\.css/);
+  assert.match(promotion, /page-90bf4e32d0dfc3aa\.js/);
+  assert.match(promotion, /3ebef08104e37cca\.css/);
+  assert.ok(promotion.indexOf('prod-static.headers') <
+    promotion.indexOf('finished=1'), 'Rollback permanece ativo até validar JS e CSS no domínio');
+  assert.match(extraction, /gcloud run revisions list/);
+  assert.match(extraction, /docker pull/);
+  assert.match(extraction, /docker cp/);
+  assert.match(extraction, /test -s "\$target_dir\/chunks\/app\/admin\/page-90bf4e32d0dfc3aa\.js"/);
+  assert.match(extraction, /test -s "\$target_dir\/css\/3ebef08104e37cca\.css"/);
+  assert.match(overlay, /COPY --chown=node:node legacy-next-static\/ \/app\/\.next\/static\//);
+  assert.match(dockerfile, /COPY --chown=node:node --from=builder \/app\/\.next\/static \.\/\.next\/static/);
+  assert.match(source('.dockerignore'), /gha-creds-\*\.json/);
+});
