@@ -111,4 +111,5 @@ jobs:
       - run: npm ci
       - run: node scripts/verify-emprovex-core-protection.mjs
       - run: node scripts/verify-hybrid-auth-model.mjs
-      - run: npm run build
+      - name: Build com retry exclusivo para bug intermitente next/font
+        run: node scripts/next-build-google-font-retry.mjs
