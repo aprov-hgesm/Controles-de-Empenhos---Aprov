@@ -70,10 +70,10 @@ deps.provision = loadTs('lib/companyProvisioning.ts', {
   './platformIdentity': deps.identity,
 });
 deps.serverProvision = loadTs('lib/server/companyProvisioningAdmin.ts', {
-  '../../firebase-applet-config.json': demoConfig,
+  '../../config/empresas-firebase-web.json': demoConfig,
   '../companyProvisioning': deps.provision,
   '../platformIdentity': deps.identity,
-  './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
+  './companyFirebaseRuntime': { getCompanyAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
 });
 
 class StubFounderAuthError extends Error {
@@ -99,13 +99,13 @@ async function localVerifiedRequest(header) {
   };
 }
 deps.session = loadTs('lib/server/companySession.ts', {
-  '../../firebase-applet-config.json': demoConfig,
+  '../../config/empresas-firebase-web.json': demoConfig,
   '../platformIdentity': deps.identity,
-  './firebaseFounderAuth': {
+  './companyFirebaseAuth': {
     FounderAuthError: StubFounderAuthError,
-    verifyFirebaseRequest: localVerifiedRequest,
+    verifyCompanyFirebaseRequest: localVerifiedRequest,
   },
-  './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
+  './companyFirebaseRuntime': { getCompanyAccessToken: () => { throw new Error('REAL_GCP_FORBIDDEN'); } },
   './companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.contracts = loadTs('lib/company/contracts/index.ts', {
@@ -120,6 +120,7 @@ deps.guard = loadTs('lib/server/companyAuthz/index.ts', {
     verifySelectedCompanySession: async (req) => deps.session.verifyCompanySession(
       req.headers.get('authorization')),
   },
+  '../companyFirebaseRuntime': { isCompanyIsolatedRuntime: () => true },
   '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 
@@ -340,31 +341,29 @@ test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogaç
   const roles = loadTs('lib/company/roles/index.ts');
   const invitation = loadTs('lib/company/roles/invitation.ts');
   const memberStore = loadTs('lib/server/companyMembership/firestore.ts', {
-    '../../../firebase-applet-config.json': demoConfig,
-    '../sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
+    '../../../config/empresas-firebase-web.json': demoConfig,
+    '../companyFirebaseRuntime': { getCompanyAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
     '../../company/contracts': deps.contracts,
   });
   const membership = loadTs('lib/server/companyMembership/index.ts', {
-    '../../../firebase-applet-config.json': demoConfig,
+    '../../../config/empresas-firebase-web.json': demoConfig,
     '../../company/contracts': deps.contracts,
     '../../platformIdentity': deps.identity,
-    '../firebaseFounderAuth': {
-      FounderAuthError: StubFounderAuthError,
-      verifyFirebaseRequest: localVerifiedRequest,
-    },
+    '../firebaseFounderAuth': { FounderAuthError: StubFounderAuthError },
+    '../companyFirebaseAuth': { verifyCompanyFirebaseRequest: localVerifiedRequest },
     '../companyAuthz': { assertCompanyPilotEnabled: deps.guard.assertCompanyPilotEnabled },
     '../../company/roles': roles,
     '../../company/roles/invitation': invitation,
     './firestore': memberStore,
   });
   const memberSession = loadTs('lib/server/companySession.ts', {
-    '../../firebase-applet-config.json': demoConfig,
+    '../../config/empresas-firebase-web.json': demoConfig,
     '../platformIdentity': deps.identity,
-    './firebaseFounderAuth': {
+    './companyFirebaseAuth': {
       FounderAuthError: StubFounderAuthError,
-      verifyFirebaseRequest: localVerifiedRequest,
+      verifyCompanyFirebaseRequest: localVerifiedRequest,
     },
-    './sectorProvisioningAdmin': { getGoogleAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
+    './companyFirebaseRuntime': { getCompanyAccessToken: () => { throw Error('REAL_GCP_FORBIDDEN'); } },
     './companyMembership': membership,
   });
   const memberGuard = loadTs('lib/server/companyAuthz/index.ts', {
@@ -374,6 +373,7 @@ test('W10: convite, vínculo UID atômico, sessão, papéis live, A/B e revogaç
       verifySelectedCompanySession: async (req) => memberSession.verifyCompanySession(
         req.headers.get('authorization')),
     },
+    '../companyFirebaseRuntime': { isCompanyIsolatedRuntime: () => true },
     '../companyMembership': membership,
   });
   const employee = 'w10-worker40@example.invalid';
