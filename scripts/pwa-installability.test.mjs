@@ -163,7 +163,7 @@ test('P0 admin: HTML dinâmico e cache privado em Cloud Run + Hosting', () => {
   assert.match(adminLayout, /export const dynamic = 'force-dynamic';/);
   assert.match(adminLayout, /export const revalidate = 0;/);
   assert.match(adminLayout, /return children;/);
-  assert.match(adminPage, /resolveWorkspaceContext\(user\?\.email\)/, 'Não trocar autorização fundadora');
+  assert.match(adminPage, /resolveWorkspaceContext\(user\?\.email, 'platformAdmin'\)/, 'Preservar apenas o perfil fundador na rota Admin');
   assert.match(adminPage, /context\.status !== 'platformAdmin'/, 'Não remover a guarda do admin');
 
   const nextConfig = source('next.config.ts');
@@ -219,7 +219,7 @@ test('P0 Admin: auth resolver bounded and founder no longer depends on sessionSt
   assert.match(page, /EMPROVEX_ADMIN_AUTH_TIMEOUT/);
   assert.match(page, /Não foi possível confirmar a sessão/);
   assert.match(page, /resolveWorkspaceContext\(user\?\.email, 'platformAdmin'\)/);
-  assert.match(page, /context\.status === 'platformAdmin'/);
+  assert.match(page, /context\.status !== 'platformAdmin'/);
   assert.match(page, /return <AuthorizedAdminContent user=\{user\}/);
   assert.ok(page.indexOf('function AuthorizedAdminContent') > page.indexOf('if (phase ==='),
     'Data hooks must mount only after auth');
