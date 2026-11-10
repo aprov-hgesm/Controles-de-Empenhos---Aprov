@@ -1,13 +1,13 @@
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../config/empresas-firebase-web.json';
 import {
   isValidWorkspaceId,
   normalizePlatformEmail,
 } from '../platformIdentity';
 import {
   FounderAuthError,
-  verifyFirebaseRequest,
-} from './firebaseFounderAuth';
-import { getGoogleAccessToken } from './sectorProvisioningAdmin';
+  verifyCompanyFirebaseRequest,
+} from './companyFirebaseAuth';
+import { getCompanyAccessToken } from './companyFirebaseRuntime';
 import { checkLiveMemberCapability } from './companyMembership';
 
 const DB_ROOT = 'https://firestore.googleapis.com/v1/projects/'
@@ -147,7 +147,7 @@ export async function verifyCompanySession(authorization: string | null): Promis
   }
   let verified;
   try {
-    verified = await verifyFirebaseRequest(authorization);
+    verified = await verifyCompanyFirebaseRequest(authorization);
   } catch (error) {
     if (error instanceof FounderAuthError) {
       throw new CompanyAccessError('COMPANY_AUTH_INVALID', error.status);
@@ -164,7 +164,7 @@ export async function verifyCompanySession(authorization: string | null): Promis
   try {
     // No E2E, o diretório lido é somente o Firestore Emulator demo. Jamais
     // obter credenciais de produção ou tocar o banco real neste caminho.
-    serviceToken = e2eEmulators() ? '' : await getGoogleAccessToken();
+    serviceToken = e2eEmulators() ? '' : await getCompanyAccessToken();
   } catch {
     throw new CompanyAccessError('COMPANY_DIRECTORY_UNAVAILABLE', 503);
   }
