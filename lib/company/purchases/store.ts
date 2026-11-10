@@ -1,8 +1,8 @@
 /** W6 server-only Firestore adapter; never calls military data or stock ledger. */
 import 'server-only';
 import {createHash,randomUUID} from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
-import {getGoogleAccessToken} from '../../server/sectorProvisioningAdmin';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
+import {getCompanyAccessToken} from '../../server/companyFirebaseRuntime';
 import {COMPANY_CONTRACT_VERSION,companyDocumentPath} from '../contracts';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {
@@ -59,7 +59,7 @@ class Client {
   static async create(ctx:CompanyAuthorizedContext):Promise<Client>{
     const cfg=configuration();
     let auth=cfg.authorization;
-    if(!auth)try{auth='Bearer '+await getGoogleAccessToken();}catch{return error('COMPANY_DIRECTORY_UNAVAILABLE',503);}
+    if(!auth)try{auth='Bearer '+await getCompanyAccessToken();}catch{return error('COMPANY_DIRECTORY_UNAVAILABLE',503);}
     return new Client(cfg.root,auth,ctx);
   }
   path(kind:'purchaseOrders'|'sourceSuppliers'|'catalogItems'|'customerOrders'|'inboundShipments'|'idempotencyKeys'|'auditEvents',id:string){
