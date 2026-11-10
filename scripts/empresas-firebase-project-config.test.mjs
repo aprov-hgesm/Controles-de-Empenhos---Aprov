@@ -18,7 +18,7 @@ test('Empresas: projeto isolado do Firebase principal',()=>{
 });
 
 test('Empresas: SDK web nomeado sem substituicao de app/Auth/Firestore militar',()=>{
- assert.match(client,/getApp\(APP_NAME\)/);
+ assert.match(client,/getApps\(\)/);
  assert.match(client,/initializeApp\(activeConfig, APP_NAME\)/);
  assert.match(client,/getAuth\(companyFirebaseApp\)/);
  assert.match(client,/getFirestore\(companyFirebaseApp, COMPANY_FIRESTORE_DATABASE_ID\)/);
