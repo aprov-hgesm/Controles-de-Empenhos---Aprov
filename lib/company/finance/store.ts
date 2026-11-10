@@ -1,8 +1,8 @@
 /** W8 Firestore adapter: company-root only, server-guard required, no client SDK or military ledger. */
 import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
-import { getGoogleAccessToken } from '../../server/sectorProvisioningAdmin';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
+import { getCompanyAccessToken } from '../../server/companyFirebaseRuntime';
 import type { CompanyAuthorizedContext } from '../../server/companyAuthz';
 import { COMPANY_CONTRACT_VERSION, companyDocumentPath } from '../contracts';
 import { applyEntry, balance, cancelObligation, FinanceError, parseEntryCommand,
@@ -54,7 +54,7 @@ function cfg(){
 type Client={root:string;headers:Record<string,string>};
 async function client():Promise<Client>{
   const c=cfg();
-  try{return {root:c.root,headers:{Authorization:'Bearer '+(c.token||await getGoogleAccessToken()),
+  try{return {root:c.root,headers:{Authorization:'Bearer '+(c.token||await getCompanyAccessToken()),
     'Content-Type':'application/json'}};}catch{throw new FinanceError('FINANCE_BACKEND_UNAVAILABLE',503);}
 }
 async function checked<T>(r:Response):Promise<T>{
