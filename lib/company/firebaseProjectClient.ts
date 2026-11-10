@@ -8,7 +8,7 @@
  * ainda utiliza diversos acessos a firebase-applet-config.json (projeto principal).
  * NAO conectar este Auth ao portal ate separar todos os guards e stores de servidor.
  */
-import { getApp, initializeApp, type FirebaseApp } from 'firebase/app';
+import { getApps, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import config from '../../config/empresas-firebase-web.json';
@@ -26,19 +26,11 @@ const activeConfig = isDemo
 export const COMPANY_FIREBASE_PROJECT_ID = config.projectId;
 export const COMPANY_FIRESTORE_DATABASE_ID = config.firestoreDatabaseId;
 
-let companyFirebaseApp: FirebaseApp;
-try {
-  companyFirebaseApp = getApp(APP_NAME);
-  if (companyFirebaseApp.options.projectId !== activeConfig.projectId) {
-    throw new Error('COMPANY_FIREBASE_PROJECT_CONFLICT');
-  }
-} catch (error) {
-  if (error instanceof Error && error.message === 'COMPANY_FIREBASE_PROJECT_CONFLICT') {
-    throw error;
-  }
-  companyFirebaseApp = initializeApp(activeConfig, APP_NAME);
+const existingCompanyApp = getApps().find(app => app.name === APP_NAME);
+if (existingCompanyApp && existingCompanyApp.options.projectId !== activeConfig.projectId) {
+  throw new Error('COMPANY_FIREBASE_PROJECT_CONFLICT');
 }
-export { companyFirebaseApp };
+export const companyFirebaseApp = existingCompanyApp ?? initializeApp(activeConfig, APP_NAME);
 
 export const companyAuth = getAuth(companyFirebaseApp);
 export const companyDb = getFirestore(companyFirebaseApp, COMPANY_FIRESTORE_DATABASE_ID);
