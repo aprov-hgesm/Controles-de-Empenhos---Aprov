@@ -3,7 +3,7 @@
  * cookie, browser CNPJ or workspace ID as an authorization grant.
  * Legacy W0 directory remains immutable. No sector/founder fallback.
  */
-import { verifyFirebaseRequest } from '../firebaseFounderAuth';
+import { verifyCompanyFirebaseRequest } from '../companyFirebaseAuth';
 import { createFiscalTransport } from '../../company/fiscal/issuance/firestoreTransport.mjs';
 import { requestAdditionalCompany } from '../../company/profiles/registration.mjs';
 import { createQaAdditionalCompanyRegistry } from '../../company/profiles/qaRegistration.mjs';
@@ -32,7 +32,7 @@ type LinkIndex = { uid?: string; email?: string; companyIds?: string[]; revision
 const ID = /^[a-z0-9][a-z0-9_-]{1,79}$/;
 const bad = (code: string, status: 401 | 403 | 503 = 403) =>
   new CompanyAccessError(code, status);
-function currentSessionKey(token: Awaited<ReturnType<typeof verifyFirebaseRequest>>) {
+function currentSessionKey(token: Awaited<ReturnType<typeof verifyCompanyFirebaseRequest>>) {
   const authTime = token.claims.auth_time;
   if (typeof authTime !== 'number' || !Number.isSafeInteger(authTime) || authTime <= 0) {
     throw bad('COMPANY_AUTH_INVALID', 401);
@@ -53,7 +53,7 @@ async function identity(request: Request) {
   // Legacy session proves live Auth/email/password + immutable W0 indexes.
   // Do not weaken these checks for new owner/member links.
   const base = await verifyCompanySession(request.headers.get('authorization'));
-  const token = await verifyFirebaseRequest(request.headers.get('authorization'));
+  const token = await verifyCompanyFirebaseRequest(request.headers.get('authorization'));
   if (base.firebaseUid !== token.uid || base.authorizedEmail !== token.email
     || token.signInProvider !== 'password') throw bad('COMPANY_ACCOUNT_FORBIDDEN');
   const principal: Principal = { uid: token.uid, email: token.email, verified: true,
