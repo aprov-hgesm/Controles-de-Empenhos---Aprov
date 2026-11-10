@@ -100,7 +100,6 @@ export default function PlatformAdminPage() {
   // /admin is an explicit request for the administrative profile. Session
   // storage is only an interface preference, not an authorization gate.
   const context = resolveWorkspaceContext(user?.email, 'platformAdmin');
-  const authorized = phase === 'authenticated' && user !== null && context.status === 'platformAdmin';
 
   useEffect(() => {
     if (phase === 'signedOut') {
@@ -117,7 +116,9 @@ export default function PlatformAdminPage() {
   }, [phase, user, context.status]);
 
   if (phase === 'error') return <AdminAccessStatus failed />;
-  if (!authorized) return <AdminAccessStatus failed={false} />;
+  if (phase !== 'authenticated' || user === null || context.status !== 'platformAdmin') {
+    return <AdminAccessStatus failed={false} />;
+  }
 
   return <AuthorizedAdminContent user={user} adminEmail={context.email} />;
 }
