@@ -59,8 +59,13 @@ test('Portal EMPROVEX Empresas usa Auth independente; login militar fica isolado
 });
 test('Backend live exige runtime isolado e identidade Cloud Run dedicada',()=>{
  const txt=read('lib/server/companyFirebaseRuntime.ts');
- assert.match(txt,/EMPROVEX_COMPANY_ISOLATED_RUNTIME/);
- assert.match(txt,/EMPROVEX_COMPANY_RUNTIME_PROJECT_ID/);
+ const guards=read('lib/server/companyRuntimeGuards.mjs');
+ assert.match(guards,/EMPROVEX_COMPANY_ISOLATED_RUNTIME/);
+ assert.match(guards,/EMPROVEX_COMPANY_RUNTIME_PROJECT_ID/);
+ assert.match(guards,/K_SERVICE/);
+ assert.match(guards,/COMPANY_SERVICE_IDENTITY_MISMATCH/);
+ assert.match(txt,/isConfiguredCompanyRuntime/);
+ assert.match(txt,/assertAttachedCompanyServiceAccount/);
  assert.match(txt,/getCloudRunAccessToken/);
  assert.match(txt,/COMPANY_SERVICE_IDENTITY_REQUIRED/);
  assert.match(read('lib/server/companyAuthz/index.ts'),/isCompanyIsolatedRuntime/);
