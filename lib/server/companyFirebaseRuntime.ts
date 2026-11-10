@@ -1,6 +1,7 @@
 import 'server-only';
 import { getCloudRunAccessToken, isCloudRunRuntime } from './cloudRunServiceIdentity.mjs';
 import companyConfig from '../../config/empresas-firebase-web.json';
+import { isConfiguredCompanyRuntime, assertAttachedCompanyServiceAccount } from './companyRuntimeGuards.mjs';
 
 /** All company server transports target the new project. Never use the military database. */
 export const COMPANY_PROJECT_ID = companyConfig.projectId;
@@ -8,8 +9,7 @@ export const COMPANY_DATABASE_ID = companyConfig.firestoreDatabaseId;
 export const COMPANY_FIREBASE_API_KEY = companyConfig.apiKey;
 
 export function isCompanyIsolatedRuntime(): boolean {
-  return process.env.EMPROVEX_COMPANY_ISOLATED_RUNTIME === '1'
-    && process.env.EMPROVEX_COMPANY_RUNTIME_PROJECT_ID === COMPANY_PROJECT_ID
+  return isConfiguredCompanyRuntime(process.env)
     && COMPANY_PROJECT_ID === 'emprovex-empresas'
     && COMPANY_DATABASE_ID === '(default)';
 }
@@ -37,5 +37,6 @@ export function assertCompanyRuntime(): void {
 export async function getCompanyAccessToken(): Promise<string> {
   assertCompanyRuntime();
   if (!isCloudRunRuntime()) throw new Error('COMPANY_SERVICE_IDENTITY_REQUIRED');
+  await assertAttachedCompanyServiceAccount();
   return getCloudRunAccessToken();
 }
