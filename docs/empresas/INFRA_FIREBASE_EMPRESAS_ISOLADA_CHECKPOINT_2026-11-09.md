@@ -21,7 +21,7 @@
 
 O operador que dispõe de `gcloud` autenticado e permissões nos dois projetos:
 1. Confirmar Firestore location/edition, billing, orçamento/alertas, e `gcloud projects describe` nos dois projetos; confirmar que o Cloud Run principal usa outra identidade.
-2. Construir container **dessa branch e SHA revisados**, com `Dockerfile` existente, e publicar na registry do HOST; obter imagem imutável `...@sha256:...`. O build precisa passar; não reciclar imagem antiga do serviço militar.
+2. Construir container **dessa branch e SHA revisados**, com `Dockerfile.empresas` exclusivo (não usar o `Dockerfile` militar), e publicar na registry do HOST; obter imagem imutável `...@sha256:...`. O build precisa passar; não reciclar imagem antiga do serviço militar.
 3. Executar **sem mutações**: `HOST_PROJECT_ID=<id-do-host-faturado> COMPANY_IMAGE=<repo>@sha256:<digest> bash scripts/empresas-cloudrun-isolated.sh --plan`.
 4. Depois da autorização de GCP e validação do escopo, executar a mesma chamada com `--apply`. O script recusa sobrescrever um serviço pré-existente e NÃO chama deploy/patch do serviço militar. Ele mantém o novo Cloud Run privado e `EMPROVEX_COMPANY_PILOT_ENABLED=0`.
 5. Certificar `gcloud run services describe emprovex-empresas --project HOST --region southamerica-east1`, service account correta, projeto Firestore correto, regras fechadas, ausência de acesso do SA ao projeto militar e secrets delimitados. **Não assumir sucesso somente porque o script terminou.**
@@ -32,7 +32,7 @@ O operador que dispõe de `gcloud` autenticado e permissões nos dois projetos:
 ### Gates atuais
 - **GO**: revisão do código da PR e execução de testes sintéticos no GitHub; plano IAM/deploy preparado.
 - **NO-GO**: afirmar GCP criado, Firestore em uso real, Cloud Run publicado, bootstrap efetuado, homologação real, merge ou piloto público. O conector atual não concede acesso administrativo ao Google Cloud, portanto nenhuma dessas mutações foi executada nesta etapa.
-- Build CI inicial de #538 parou em `app/layout.tsx`, `next/font/google`, por resposta inesperada do loader na busca de fontes. Essa falha não prova um problema Firebase; deve ser resolvida/testada sem modificar a infraestrutura militar.
+- Build CI inicial de #538 parou em `app/layout.tsx`, `next/font/google`, por resposta inesperada do loader na busca de fontes. Foi incluído retry exclusivamente para essa assinatura conhecida em `scripts/next-build-google-font-retry.mjs`, nos workflows empresariais e em `Dockerfile.empresas`; não significa que todos os builds já passaram. Não modificar a infraestrutura militar.
 - Rollback operacional: manter piloto OFF e serviço privado; a PR Draft não altera `main`. Para recurso recém-criado, a eventual exclusão deve ocorrer somente após revisão humana dos identificadores.
 
 **Segurança:** não enviar senhas, chaves de service account ou tokens para o chat/repositório. Nunca conceder acesso global a `roles/editor` nem compartilhar service account militar.
