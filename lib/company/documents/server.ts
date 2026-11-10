@@ -1,8 +1,8 @@
 import { randomUUID, createHash } from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
 import { companyDocumentPath, companyCollectionPath, COMPANY_CONTRACT_VERSION } from '../contracts';
 import type { CompanyAuthorizedContext } from '../../server/companyAuthz';
-import { getGoogleAccessToken } from '../../server/sectorProvisioningAdmin';
+import { getCompanyAccessToken } from '../../server/companyFirebaseRuntime';
 import {
   CompanyDocumentError, type CompanyDocumentRecord, type CompanyDocumentKind,
   type CompanyReference, type NeReview, makeRecord, publicDocument, sha256,
@@ -49,13 +49,18 @@ const liveRoot = 'https://firestore.googleapis.com/v1/projects/'
   + encodeURIComponent(firebaseConfig.firestoreDatabaseId) + '/documents';
 async function access() {
   const emulator = emulatorRoot();
-  return { root: emulator || liveRoot, token: emulator ? 'owner' : await getGoogleAccessToken() };
+  return { root: emulator || liveRoot, token: emulator ? 'owner' : await getCompanyAccessToken() };
 }
 function storageSettings() {
   const test = emulatorRoot() !== null;
   const bucket = process.env.EMPROVEX_COMPANY_DOCUMENTS_BUCKET || '';
   if (!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(bucket) || bucket.includes('..')) {
     throw new CompanyDocumentError('DOCUMENT_STORAGE_NOT_CONFIGURED', 503);
+  }
+  // Live upload/download must never point at the EMPROVEX principal bucket.
+  // Only a bucket explicitly named for the independent corporate project is accepted.
+  if (!test && !/^emprovex-empresas[.-]/.test(bucket)) {
+    throw new CompanyDocumentError('DOCUMENT_STORAGE_PROJECT_FORBIDDEN', 503);
   }
   if (test) {
     const endpoint = process.env.EMPROVEX_COMPANY_GCS_EMULATOR_URL || '';

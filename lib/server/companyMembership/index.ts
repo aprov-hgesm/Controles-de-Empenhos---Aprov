@@ -1,8 +1,9 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
 import { COMPANY_CONTRACT_VERSION, companyDocumentPath, type CompanyAction } from '../../company/contracts';
 import { isValidPlatformEmail, normalizePlatformEmail } from '../../platformIdentity';
-import { verifyFirebaseRequest, FounderAuthError } from '../firebaseFounderAuth';
+import { FounderAuthError } from '../firebaseFounderAuth';
+import { verifyCompanyFirebaseRequest } from '../companyFirebaseAuth';
 import { assertCompanyPilotEnabled, type CompanyAuthorizedContext } from '../companyAuthz';
 import {
   normalizeMemberRoles, permitsCompanyAction, canGrantRoles,
@@ -193,7 +194,7 @@ export async function revokeCompanyMember(ctx: CompanyAuthorizedContext, id: str
 /** Confirm Auth is active *now*, not merely when ID token was issued. */
 async function verifyCurrentAuth(authorization: string | null) {
   let verified;
-  try { verified = await verifyFirebaseRequest(authorization); }
+  try { verified = await verifyCompanyFirebaseRequest(authorization); }
   catch (e) {
     if (e instanceof FounderAuthError) throw error('COMPANY_AUTH_INVALID', e.status === 401 ? 401 : 403);
     throw error('COMPANY_DIRECTORY_UNAVAILABLE', 503);

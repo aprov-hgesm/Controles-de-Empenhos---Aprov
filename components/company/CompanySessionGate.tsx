@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { Menu, ShieldAlert } from 'lucide-react';
-import { auth } from '../../lib/firebase';
+import { companyAuth as auth } from '../../lib/company/firebaseProjectClient';
 import { resolveCompanySession, type AuthorizedCompanySession } from '../../lib/company/companySessionClient';
 import { CompanyNavigation } from './CompanyNavigation';
 import { CompanyProfileSwitcher } from '../../features/company/profiles/CompanyProfileSwitcher';
@@ -118,7 +118,7 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
     setSigningOut(true);
     try {
       await signOut(auth);
-      window.location.replace('/login');
+      window.location.replace('/entrar-empresa');
     } catch {
       setSigningOut(false);
     }
@@ -151,7 +151,7 @@ export function CompanySessionGate({ children }: { children: ReactNode }) {
         {gate.stage === 'unavailable' && <div className="w-full max-w-md text-left">
           <CompanyErrorState message="O serviço de validação não respondeu. O acesso permanece bloqueado até nova verificação." onRetry={() => { setGate({ stage: 'checking' }); void validate(); }}/>
         </div>}
-        <a href="/login" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300">Ir para o login</a>
+        <a href="/entrar-empresa" className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300">Ir para o login</a>
       </>}
     </main>;
   }

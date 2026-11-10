@@ -1,7 +1,7 @@
 import 'server-only';
 import {createHash,randomUUID} from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
-import {getGoogleAccessToken} from '../../server/sectorProvisioningAdmin';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
+import {getCompanyAccessToken} from '../../server/companyFirebaseRuntime';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {companyDocumentPath,COMPANY_CONTRACT_VERSION} from '../contracts';
 import {RoutingError,identifier,object,vehicleOf,candidateOf,manualProposal,
@@ -57,7 +57,7 @@ class Client{
  static async connect(ctx:CompanyAuthorizedContext){
   const c=config();
   let token=c.token;
-  if(!token){try{token='Bearer '+await getGoogleAccessToken();}
+  if(!token){try{token='Bearer '+await getCompanyAccessToken();}
     catch{throw new RoutingError('COMPANY_DIRECTORY_UNAVAILABLE',503);}}
   return new Client(ctx,c.root,token);
  }

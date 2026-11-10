@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
 import { companyCollectionPath, companyDocumentPath, type CompanySubcollection } from '../contracts';
 import type { CompanyAuthorizedContext } from '../../server/companyAuthz';
-import { getGoogleAccessToken } from '../../server/sectorProvisioningAdmin';
+import { getCompanyAccessToken } from '../../server/companyFirebaseRuntime';
 import { ensureOwned, W1Error } from './model';
 
 /** Server-only Firestore REST; never expose a client SDK with privileges. */
@@ -63,7 +63,7 @@ export class W1Store {
       ? 'http://' + demo.host + '/v1/projects/' + demo.project + '/databases/(default)/documents'
       : 'https://firestore.googleapis.com/v1/projects/' + encodeURIComponent(firebaseConfig.projectId)
         + '/databases/' + encodeURIComponent(firebaseConfig.firestoreDatabaseId) + '/documents';
-    return new W1Store(root, demo ? 'owner' : await getGoogleAccessToken(), ctx);
+    return new W1Store(root, demo ? 'owner' : await getCompanyAccessToken(), ctx);
   }
   private check(domain: CompanySubcollection, id?:string):string {
     if (!domains.has(domain)) throw new W1Error('INVALID_SCOPE',503);

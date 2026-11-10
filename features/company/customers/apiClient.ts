@@ -1,5 +1,5 @@
 'use client';
-import { auth } from '../../../lib/firebase';
+import { companyAuth as auth } from '../../../lib/company/firebaseProjectClient';
 
 export async function companyApi(path:string, method:'GET'|'POST'|'PATCH'='GET', payload?:unknown) {
   const user=auth.currentUser;

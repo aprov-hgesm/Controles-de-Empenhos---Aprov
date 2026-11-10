@@ -64,6 +64,10 @@ jobs:
         run: node --test scripts/empresas-w10-stage5-hardening.test.mjs
       - name: W10-Firebase — projeto independente e configuração cliente
         run: node --test scripts/empresas-firebase-project-config.test.mjs
+      - name: W10-Firebase — isolamento backend e autenticação entre projetos
+        run: node --test scripts/empresas-firebase-backend-isolation.test.mjs
+      - name: W10-Firebase — Cloud Run identidade real e isolamento de rotas
+        run: node --test scripts/empresas-isolated-runtime.test.mjs
       - name: W10 — integrações
         run: node --test scripts/empresas-w10-integration.test.mjs
       - name: TypeScript
@@ -107,4 +111,5 @@ jobs:
       - run: npm ci
       - run: node scripts/verify-emprovex-core-protection.mjs
       - run: node scripts/verify-hybrid-auth-model.mjs
-      - run: npm run build
+      - name: Build com retry exclusivo para bug intermitente next/font
+        run: node scripts/next-build-google-font-retry.mjs

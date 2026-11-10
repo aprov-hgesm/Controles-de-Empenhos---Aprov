@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../config/empresas-firebase-web.json';
 import {
   buildProvisionedCompanyRecords,
   normalizeCompanyCnpj,
@@ -14,7 +14,7 @@ import {
   type CompanyAccount,
   type CompanyWorkspace,
 } from '../platformIdentity';
-import { getGoogleAccessToken } from './sectorProvisioningAdmin';
+import { getCompanyAccessToken } from './companyFirebaseRuntime';
 
 type FailureCode =
   | 'INVALID_INPUT' | 'CONFLICT' | 'UPSTREAM_ERROR' | 'RECOVERY_REQUIRED' | 'PILOT_DISABLED';
@@ -247,7 +247,7 @@ export async function provisionCompanyWorkspaceWithAuth(
   const errors = validateCompanyProvisioningInput(input);
   if (errors.length) throw new CompanyProvisioningFailure(errors[0], 'INVALID_INPUT', 400);
 
-  const token = demo ? '' : await getGoogleAccessToken();
+  const token = demo ? '' : await getCompanyAccessToken();
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
   const email = normalizePlatformEmail(input.authorizedEmail);
   const cnpj = normalizeCompanyCnpj(input.cnpj);
@@ -466,7 +466,7 @@ async function listCollection(
 
 export async function listCompanyDirectory(): Promise<CompanyDirectoryEntry[]> {
   if (process.env.EMPROVEX_E2E_SERVER_AUTH === '1' && !demo) throw new Error('EMULATOR_ENV_INVALID');
-  const token = demo ? '' : await getGoogleAccessToken();
+  const token = demo ? '' : await getCompanyAccessToken();
   const [workspaces, accounts] = await Promise.all([
     listCollection(token, 'workspaces'),
     listCollection(token, 'platformAccounts'),

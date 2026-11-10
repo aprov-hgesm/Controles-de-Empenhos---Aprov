@@ -1,5 +1,5 @@
-import firebaseConfig from '../../../firebase-applet-config.json';
-import { getGoogleAccessToken } from '../sectorProvisioningAdmin';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
+import { getCompanyAccessToken } from '../companyFirebaseRuntime';
 import { companyCollectionPath, companyDocumentPath } from '../../company/contracts';
 
 type Value =
@@ -72,7 +72,7 @@ function safePath(path: string): string {
 async function access() {
   const cfg = target();
   try {
-    return { ...cfg, token: cfg.emulator ? 'owner' : await getGoogleAccessToken() };
+    return { ...cfg, token: cfg.emulator ? 'owner' : await getCompanyAccessToken() };
   } catch {
     throw new MembershipStoreError('UNAVAILABLE', 503);
   }

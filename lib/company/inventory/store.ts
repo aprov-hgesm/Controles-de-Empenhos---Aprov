@@ -1,9 +1,9 @@
 import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
-import config from '../../../firebase-applet-config.json';
+import config from '../../../config/empresas-firebase-web.json';
 import {companyDocumentPath, companyCollectionPath, type CompanySubcollection} from '../contracts';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
-import {getGoogleAccessToken} from '../../server/sectorProvisioningAdmin';
+import {getCompanyAccessToken} from '../../server/companyFirebaseRuntime';
 import {InventoryError} from './engine.mjs';
 
 type Value={stringValue?:string;integerValue?:string;doubleValue?:number;booleanValue?:boolean;nullValue?:string;arrayValue?:{values?:Value[]};mapValue?:{fields?:Record<string,Value>}};
@@ -54,7 +54,7 @@ export class InventoryStore{
    const db=demo?'(default)':config.firestoreDatabaseId;
    const root=(demo?'http://'+demo.host+'/v1':'https://firestore.googleapis.com/v1')+
      '/projects/'+encodeURIComponent(project)+'/databases/'+encodeURIComponent(db)+'/documents';
-   return new InventoryStore(root,demo?'owner':await getGoogleAccessToken(),ctx);
+   return new InventoryStore(root,demo?'owner':await getCompanyAccessToken(),ctx);
  }
  private path(collection:CompanySubcollection,id:string):string{
    if(!collections.has(collection))throw new InventoryError('INVALID_SCOPE',503);

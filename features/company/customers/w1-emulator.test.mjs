@@ -46,10 +46,10 @@ function load(path, modules={}) {
 deps.identity=load('lib/platformIdentity.ts');
 deps.provisionModel=load('lib/companyProvisioning.ts',{'./platformIdentity':deps.identity});
 deps.provision=load('lib/server/companyProvisioningAdmin.ts',{
-  '../../firebase-applet-config.json':config,
+  '../../config/empresas-firebase-web.json':config,
   '../companyProvisioning':deps.provisionModel,
   '../platformIdentity':deps.identity,
-  './sectorProvisioningAdmin':{getGoogleAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
+  './companyFirebaseRuntime':{getCompanyAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
 });
 class StubFounderAuthError extends Error {
   constructor(message,status){super(message);this.status=status;}
@@ -65,22 +65,25 @@ async function checkLocalToken(bearer){
     signInProvider:p.firebase?.sign_in_provider || ''};
 }
 deps.session=load('lib/server/companySession.ts',{
-  '../../firebase-applet-config.json':config,
+  '../../config/empresas-firebase-web.json':config,
   '../platformIdentity':deps.identity,
-  './firebaseFounderAuth':{FounderAuthError:StubFounderAuthError,verifyFirebaseRequest:checkLocalToken},
-  './sectorProvisioningAdmin':{getGoogleAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
+  './companyFirebaseAuth':{FounderAuthError:StubFounderAuthError,verifyCompanyFirebaseRequest:checkLocalToken},
+  './companyFirebaseRuntime':{getCompanyAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
   './companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.contracts=load('lib/company/contracts/index.ts',{'../../platformIdentity':deps.identity});
 deps.guard=load('lib/server/companyAuthz/index.ts',{
   '../../company/contracts':deps.contracts,'../companySession':deps.session,
+  '../companyProfiles/integration': {verifySelectedCompanySession: async (request) =>
+    deps.session.verifyCompanySession(request.headers.get('authorization'))},
+  '../companyFirebaseRuntime': {isCompanyIsolatedRuntime: () => true},
   '../companyMembership': { checkLiveMemberCapability: async () => false },
 });
 deps.model=load('lib/company/customers/model.ts',{'../contracts':deps.contracts});
 deps.store=load('lib/company/customers/store.ts',{
-  '../../../firebase-applet-config.json':config,
+  '../../../config/empresas-firebase-web.json':config,
   '../contracts':deps.contracts,
-  '../../server/sectorProvisioningAdmin':{getGoogleAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
+  '../../server/companyFirebaseRuntime':{getCompanyAccessToken:()=>{throw Error('REAL_GCP_FORBIDDEN');}},
   './model':deps.model,
 });
 deps.service=load('lib/company/customers/service.ts',{'./store':deps.store,'./model':deps.model});

@@ -1,8 +1,8 @@
 import 'server-only';
 /** W9 Firestore REST adapter. All business records are scoped by verified company context. */
 import {createHash,randomUUID} from 'node:crypto';
-import cfg from '../../../firebase-applet-config.json';
-import {getGoogleAccessToken} from '../../server/sectorProvisioningAdmin';
+import cfg from '../../../config/empresas-firebase-web.json';
+import {getCompanyAccessToken} from '../../server/companyFirebaseRuntime';
 import {COMPANY_CONTRACT_VERSION,companyDocumentPath,companyCollectionPath,type CompanySubcollection} from '../contracts';
 import type {CompanyAuthorizedContext} from '../../server/companyAuthz';
 import {DeliveryError,validId,validKey} from './domain.mjs';
@@ -57,7 +57,7 @@ export class W9Store{
  private constructor(private root:string,private token:string,private ctx:CompanyAuthorizedContext){}
  static async connect(ctx:CompanyAuthorizedContext){
   const conf=endpoint();let token=conf.token;
-  if(!token)try{token=await getGoogleAccessToken();}catch{return error('DIRECTORY_UNAVAILABLE');}
+  if(!token)try{token=await getCompanyAccessToken();}catch{return error('DIRECTORY_UNAVAILABLE');}
   return new W9Store(conf.url,token,ctx);
  }
  private path(kind:CompanySubcollection,id?:string){

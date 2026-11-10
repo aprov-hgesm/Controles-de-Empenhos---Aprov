@@ -1,7 +1,7 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { companyAuth as auth } from '../../lib/company/firebaseProjectClient';
 
 export default function CompanyInvitationPage() {
   const [email,setEmail]=useState(''),[password,setPassword]=useState('');
@@ -57,7 +57,7 @@ export default function CompanyInvitationPage() {
       <button disabled={busy} className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-50">
         {busy?'Validando...':createAccount?'Criar conta e confirmar e-mail':'Validar e aceitar convite'}
       </button>
-      <a href="/login" className="block text-center text-sm text-blue-700 underline">Voltar ao login</a>
+      <a href="/entrar-empresa" className="block text-center text-sm text-blue-700 underline">Voltar ao login</a>
     </form>
   </main>;
 }

@@ -1,9 +1,9 @@
 /** W2 Firestore REST adapter. Server-only, privileged; always called AFTER W0 guard. */
 import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import firebaseConfig from '../../../config/empresas-firebase-web.json';
 import type { CompanyAuthorizedContext } from '../../server/companyAuthz';
-import { getGoogleAccessToken } from '../../server/sectorProvisioningAdmin';
+import { getCompanyAccessToken } from '../../server/companyFirebaseRuntime';
 import { COMPANY_CONTRACT_VERSION, companyDocumentPath, type CompanySubcollection } from '../contracts';
 import {
   assertSupplierSelectable, normalizedSupplierName, normalizedSku, parseCatalogItem,
@@ -57,7 +57,7 @@ function config(): { root: string; auth: string } {
 async function client(): Promise<{ root: string; headers: Record<string,string> }> {
   const c = config();
   try {
-    const auth = c.auth || ('Bearer ' + await getGoogleAccessToken());
+    const auth = c.auth || ('Bearer ' + await getCompanyAccessToken());
     return { root: c.root, headers: { authorization: auth, 'content-type': 'application/json' } };
   } catch { throw new SupplierServiceError('COMPANY_DIRECTORY_UNAVAILABLE', 503); }
 }
