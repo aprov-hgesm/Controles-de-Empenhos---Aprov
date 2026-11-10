@@ -72,6 +72,6 @@ jobs:
       - name: Rotas críticas
         if: always()
         run: node --test scripts/critical-cross-route-navigation.test.mjs
-      - name: Build, sem deploy
+      - name: Build, sem deploy (retry exclusivo para bug intermitente next/font)
         if: always()
-        run: npm run build
+        run: node scripts/next-build-google-font-retry.mjs
