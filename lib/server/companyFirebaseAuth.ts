@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { FounderAuthError, verifyFirebaseRequest, type VerifiedFirebaseRequest } from './firebaseFounderAuth';
+export { FounderAuthError } from './firebaseFounderAuth';
 import companyConfig from '../../config/empresas-firebase-web.json';
 import { assertCompanyRuntime } from './companyFirebaseRuntime';
 
