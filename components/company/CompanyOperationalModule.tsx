@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { auth } from '../../lib/firebase';
+import { companyAuth as auth } from '../../lib/company/firebaseProjectClient';
 import { useCompanySession } from './CompanySessionContext';
 import { CompanyOrdersPanel } from '../../features/company/customer-orders/CompanyOrdersPanel';
 import { CompanyCommitmentsPanel } from '../../features/company/commitments/CompanyCommitmentsPanel';
