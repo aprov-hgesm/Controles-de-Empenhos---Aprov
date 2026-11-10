@@ -36,6 +36,8 @@ jobs:
           cache: npm
       - name: Dependências
         run: npm ci
+      - name: Isolamento de rotas e identidade empresarial
+        run: node --test scripts/empresas-isolated-runtime.test.mjs
       - name: TypeScript
         run: npm run typecheck
       - name: Contratos empresariais isolados
