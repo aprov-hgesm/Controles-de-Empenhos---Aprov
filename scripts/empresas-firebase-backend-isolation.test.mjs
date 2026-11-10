@@ -12,10 +12,18 @@ function walk(folder) {
  for(const entry of readdirSync(path.join(root,folder))){
   const relative=path.posix.join(folder,entry),full=path.join(root,relative);
   if(statSync(full).isDirectory())files.push(...walk(relative));
-  else if(/\.(ts|tsx|mjs|js)$/.test(entry))files.push(relative);
+  else if(/\.(ts|tsx|mjs|js)$/.test(entry) && !/\.test\.(ts|tsx|mjs|js)$/.test(entry))files.push(relative);
  }
  return files;
 }
+const clientFiles=[ ...walk('features/company'), ...walk('components/company'),
+ ...walk('app/empresa'), ...walk('app/empresa-convite'), ...walk('app/entrar-empresa') ];
+test('Frontend empresarial jamais importa o Auth do Firebase principal',()=>{
+ for(const file of clientFiles) {
+  const source=read(file);
+  assert.doesNotMatch(source,/from\\s*['"][^'"]*lib\\/firebase['"]/, file);
+ }
+});
 const serverFiles=[
  ...walk('lib/company'),...walk('lib/server/companyMembership'),
  ...walk('lib/server/companyProfiles'),...walk('app/api/company'),
