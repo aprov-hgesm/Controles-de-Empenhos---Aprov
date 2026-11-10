@@ -32,7 +32,8 @@ export async function verifyCompanyFirebaseRequest(
   const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : '';
   const firebase = claims.firebase && typeof claims.firebase === 'object' && !Array.isArray(claims.firebase)
     ? claims.firebase as Record<string, unknown> : {};
-  const signInProvider = firebase.sign_in_provider;
+  const signInProvider = typeof firebase.sign_in_provider === 'string'
+    ? firebase.sign_in_provider : '';
   if (!uid || !email || claims.email_verified !== true
     || signInProvider !== 'password') {
     throw new FounderAuthError('Conta empresarial não autorizada.', 403);
