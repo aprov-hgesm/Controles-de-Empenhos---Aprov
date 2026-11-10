@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g75ab5fb1dd58-44",
-  "sourceSha": "75ab5fb1dd582f3c377e6e985120e9936721e2b3",
-  "reason": "Autorização explícita do fundador para corrigir imediatamente o erro /admin persistente. PR #535 integrada; Fast/Core/W4 PASS; stage run 42557034798 SUCCESS. O novo contêiner recuperou assets de 8 revisões anteriores (11.3 MB) e o preview confirmou HTTP/MIME corretos para app/admin/page-90bf4e32d0dfc3aa.js e css/3ebef08104e37cca.css. Promover somente pelo workflow oficial com verificação dos mesmos recursos no domínio canônico e rollback automático; sem mudanças IAM/Firestore/Firebase Hosting/Empresas/militar."
+  "revision": "emprovex-cloudrun-candidate-g9181e0e88f2a-45",
+  "sourceSha": "9181e0e88f2ad7167f09882dc92b9de1c84c3bd4",
+  "reason": "Usuário autorizou expressamente (/goal execute) correção imediata da tela /admin que ficava indefinidamente em Validando perfil administrativo. PR #536 integrada: remove dependência de sessionStorage da autorização fundadora, monta hooks administrativos só após Firebase Auth, aplica timeout e recuperação segura de 12s. Fast/Core/W4/Domain/Application PASS, 13 E2E de navegador Firebase Emulator incluindo fundador com preferência setorial PASS (run 42734392624), stage 42735301608 SUCCESS, revisão 45 Ready 0% tráfico e histórico JS/CSS recuperado. Promover apenas com health + JS/CSS no domínio e rollback automático; sem IAM, regras Firestore ou Empresas."
 }
