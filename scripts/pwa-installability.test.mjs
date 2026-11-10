@@ -163,7 +163,7 @@ test('P0 admin: HTML dinâmico e cache privado em Cloud Run + Hosting', () => {
   assert.match(adminLayout, /export const dynamic = 'force-dynamic';/);
   assert.match(adminLayout, /export const revalidate = 0;/);
   assert.match(adminLayout, /return children;/);
-  assert.match(adminPage, /resolveWorkspaceContext\(user\?\.email\)/, 'Não trocar autorização fundadora');
+  assert.match(adminPage, /resolveWorkspaceContext\(user\?\.email, 'platformAdmin'\)/, 'Preservar apenas o perfil fundador na rota Admin');
   assert.match(adminPage, /context\.status !== 'platformAdmin'/, 'Não remover a guarda do admin');
 
   const nextConfig = source('next.config.ts');
@@ -209,4 +209,22 @@ test('P0 Cloud Run: arquivos JS/CSS de versões antigas permanecem disponíveis 
   assert.match(overlay, /COPY --chown=node:node legacy-next-static\/ \/app\/\.next\/static\//);
   assert.match(dockerfile, /COPY --chown=node:node --from=builder \/app\/\.next\/static \.\/\.next\/static/);
   assert.match(source('.dockerignore'), /gha-creds-\*\.json/);
+});
+
+test('P0 Admin: auth resolver bounded and founder no longer depends on sessionStorage', () => {
+  const page = source('app/admin/page.tsx');
+  assert.match(page, /AUTH_WAIT_LIMIT_MS = 12000/);
+  assert.match(page, /onAuthStateChanged\(auth/);
+  assert.match(page, /window\.setTimeout/);
+  assert.match(page, /EMPROVEX_ADMIN_AUTH_TIMEOUT/);
+  assert.match(page, /Não foi possível confirmar a sessão/);
+  assert.match(page, /resolveWorkspaceContext\(user\?\.email, 'platformAdmin'\)/);
+  assert.match(page, /context\.status !== 'platformAdmin'/);
+  assert.match(page, /return <AuthorizedAdminContent user=\{user\}/);
+  assert.ok(page.indexOf('function AuthorizedAdminContent') > page.indexOf('if (phase ==='),
+    'Data hooks must mount only after auth');
+  assert.match(page, /usePlatformAdminDirectory\(adminUser\)/);
+  assert.match(page, /usePlatformAdminBilling\(/);
+  assert.doesNotMatch(page, /getActiveProfileMode/);
+  assert.match(page, /window\.location\.replace\('\/central-empenhos'\)/);
 });
