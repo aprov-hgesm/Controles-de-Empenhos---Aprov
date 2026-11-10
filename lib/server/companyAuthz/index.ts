@@ -1,4 +1,5 @@
 import { verifySelectedCompanySession } from '../companyProfiles/integration';
+import { isCompanyIsolatedRuntime } from '../companyFirebaseRuntime';
 import {
   COMPANY_ACTIONS,
   COMPANY_ROOT_COLLECTION,
@@ -52,7 +53,9 @@ export class CompanyAuthorizationError extends Error {
 export function isCompanyPilotEnabled(): boolean {
   return process.env.EMPROVEX_COMPANY_PILOT_ENABLED === '1'
     && process.env.EMPROVEX_DISABLE_COMPANY_PROVISIONING !== '1'
-    && process.env.EMPROVEX_DISABLE_ADMIN_MUTATIONS !== '1';
+    && process.env.EMPROVEX_DISABLE_ADMIN_MUTATIONS !== '1'
+    && (process.env.NODE_ENV !== 'production' && !process.env.K_SERVICE
+      && !process.env.VERCEL || isCompanyIsolatedRuntime());
 }
 export function assertCompanyPilotEnabled(): void {
   if (!isCompanyPilotEnabled()) {
