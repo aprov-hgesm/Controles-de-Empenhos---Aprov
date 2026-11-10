@@ -57,6 +57,11 @@ function storageSettings() {
   if (!/^[a-z0-9][a-z0-9._-]{2,62}$/.test(bucket) || bucket.includes('..')) {
     throw new CompanyDocumentError('DOCUMENT_STORAGE_NOT_CONFIGURED', 503);
   }
+  // Live upload/download must never point at the EMPROVEX principal bucket.
+  // Only a bucket explicitly named for the independent corporate project is accepted.
+  if (!test && !/^emprovex-empresas[.-]/.test(bucket)) {
+    throw new CompanyDocumentError('DOCUMENT_STORAGE_PROJECT_FORBIDDEN', 503);
+  }
   if (test) {
     const endpoint = process.env.EMPROVEX_COMPANY_GCS_EMULATOR_URL || '';
     if (!['http://127.0.0.1:4443', 'http://localhost:4443'].includes(endpoint)) {
