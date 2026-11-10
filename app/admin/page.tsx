@@ -81,7 +81,7 @@ export default function PlatformAdminPage() {
         if (!active) return;
         completed = true;
         window.clearTimeout(deadline);
-        console.error('EMPROVEX_ADMIN_AUTH_ERROR', error.code ?? 'unknown');
+        console.error('EMPROVEX_ADMIN_AUTH_ERROR', error.name);
         setPhase('error');
       });
     } catch (error) {
