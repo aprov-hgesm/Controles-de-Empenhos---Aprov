@@ -21,7 +21,7 @@ const clientFiles=[ ...walk('features/company'), ...walk('components/company'),
 test('Frontend empresarial jamais importa o Auth do Firebase principal',()=>{
  for(const file of clientFiles) {
   const source=read(file);
-  assert.doesNotMatch(source,/from\\s*['"][^'"]*lib\\/firebase['"]/, file);
+  assert.doesNotMatch(source,/from\s*['"][^'"]*lib\/firebase['"]/, file);
  }
 });
 const serverFiles=[
