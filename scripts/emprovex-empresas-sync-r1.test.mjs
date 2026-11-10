@@ -115,7 +115,7 @@ test('criação empresarial exige fundador, índice CNPJ e bloqueios transaciona
   assert.match(service, /platformCnpjIndex/);
   assert.match(service, /platformAuthUidIndex/);
   assert.match(service, /platformProvisioningLocks/);
-  assert.match(service, /getGoogleAccessToken/);
+  assert.match(service, /getCompanyAccessToken/);
   assert.match(read('lib/server/sectorProvisioningAdmin.ts'), /isCloudRunRuntime\(\)/);
 });
 
