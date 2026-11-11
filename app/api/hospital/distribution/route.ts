@@ -1,24 +1,48 @@
 import {NextResponse} from 'next/server';
-import {HospitalQAStore} from '@/lib/server/hospital/core/qa-store.mjs';
-import {createDistributionHandler} from '@/lib/server/hospital/distribution/handler.mjs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 
-let qaHandler: ReturnType<typeof createDistributionHandler> | undefined;
-function handler(){
-  // Explicit QA-only switch. Never open an operational or clinical production database.
+type DistributionResponse={
+  status:number;
+  headers:Record<string,string>;
+  html?:string;
+  body?:unknown;
+};
+type DistributionHandler=(args:{
+  authorization:string;organizationId:string;operation:string;payload:Record<string,unknown>
+})=>Promise<DistributionResponse>;
+let qaHandler:DistributionHandler|undefined;
+
+/** Source-only QA loader. This route is disabled in prod and does not bundle W0's
+ * pending firebase-admin/auth dependency into the EMPROVEX production build.
+ * Node resolves the checked-in modules from a fixed local path (never from HTTP).
+ */
+async function handler():Promise<DistributionHandler|null>{
   if(process.env.NODE_ENV==='production'||process.env.HOSPITAL_QA_DISTRIBUTION_ENABLED!=='1'||!process.env.HOSPITAL_QA_DB_PATH)
     return null;
   if(!qaHandler){
+    const root=process.cwd();
+    const coreUrl=pathToFileURL(resolve(root,'lib/server/hospital/core/qa-store.mjs')).href;
+    const distributionUrl=pathToFileURL(resolve(root,'lib/server/hospital/distribution/handler.mjs')).href;
+    // webpackIgnore intentionally leaves these QA-only dependencies for Node.js.
+    const [{HospitalQAStore},{createDistributionHandler}]=await Promise.all([
+      import(/* webpackIgnore: true */ coreUrl),
+      import(/* webpackIgnore: true */ distributionUrl)
+    ]);
     const store=new HospitalQAStore({filename:process.env.HOSPITAL_QA_DB_PATH,qa:true});
     qaHandler=createDistributionHandler({store});
   }
-  return qaHandler;
+  return qaHandler||null;
 }
 
 export async function POST(request:Request){
-  const h=handler();
+  let h:DistributionHandler|null;
+  try{h=await handler()}catch{
+    return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'QA hospitalar não configurado'}},{status:503,headers:{'cache-control':'no-store'}});
+  }
   if(!h)return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Distribuição indisponível fora de QA autorizado'}},{status:503,headers:{'cache-control':'no-store'}});
   const origin=request.headers.get('origin');
   if(origin){
