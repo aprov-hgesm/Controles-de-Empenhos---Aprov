@@ -131,3 +131,32 @@ Copiar a mensagem abaixo e alterar **somente o dígito após W**. O Worker local
 **Ordem de ativação:** executar **W0 primeiro** (publicar contrato e W0_BASE_SHA); então **W1 a W8 podem trabalhar em paralelo**, cada um em seu próprio chat/branch; **W9** executa a integração depois que as entregas necessárias estiverem disponíveis. Os Workers não são tarefas agendadas nem executam sozinhos em segundo plano.
 
 **Nenhum prompt concede permissão para acessar dados clínicos reais.** Apenas especifica código e testes em ambientes autorizados.
+
+
+---
+
+## 10. Adendo W10 — migração Firestore hospitalar operacional (11/11/2026)
+
+**Este adendo autoriza especificamente o novo Worker W10**, solicitado após a entrega do W09 e da PR #550. As regras anteriores de colaboração W0–W9 continuam válidas, salvo a exceção explícita de que **W10 é responsável pela integração transversal da persistência hospitalar** e poderá editar os serviços W0–W9 estritamente para migrar contratos síncronos SQLite a Firestore assíncrono em sua branch isolada. Ele não precisa acionar novamente os Workers anteriores nem criar outros Workers para concluir a missão.
+
+| Elemento | Base definitiva de execução |
+|---|---|
+| Prompt | [W10.md](workers/W10.md) |
+| Branch-base de código | `feat/cozinha-dietetica-firebase-isolado-r1`, **HEAD atual da PR #550** na hora da ativação |
+| PR W09 | #549, `integration/cozinha-dietetica-r1`; sistema hospitalar integrado em SQLite QA |
+| PR Firebase | #550, cliente Firebase isolado, JWT hospitalar e gateway REST **ainda sem handlers clínicos** |
+| Nova branch W10 | `feat/cozinha-dietetica-w10-firestore-operacional` |
+| Base da PR Draft W10 | `feat/cozinha-dietetica-firebase-isolado-r1`, sem merge na `main` |
+| Escopo | Persistência Firestore transacional de todas as áreas, Auth/IAM, emuladores, E2E, relatórios, PWA/portal e regressões |
+| Restrições | Sem pacientes reais, sem escrita no projeto Firebase real, sem mudar Rules/IAM/Cloud Run, sem merge/deploy |
+| Meta de qualidade | Fluxo real W0–W9 no emulador Firestore; checks e regressões efetivamente executados |
+
+**Aviso de segurança:** capturas do usuário confirmam projeto `cozinha-dietetica`, banco `(default)`, Auth e regras `allow read, write: if false;`. Estas informações não concedem credenciais de serviço. O Worker não deve presumir autorização institucional de uso clínico nem provisionamento GCP. Código com emuladores e dados fictícios primeiro.
+
+### Comando para ativar W10
+
+```text
+/goal Você é o Worker W10 do EMPROVEX Cozinha Dietética. Acesse o repositório aprov-hgesm/Controles-de-Empenhos---Aprov, na branch docs/cozinha-dietetica-memorial-oficial-20261111. Leia integralmente docs/cozinha-dietetica/workers/W10.md, o Plano Mestre e o Memorial Oficial. Use como base de código o HEAD atualizado da PR #550, execute toda a migração Firestore hospitalar com testes reais de emulador, segurança e regressões, corrija a pendência PWA e abra PR Draft isolada com SHA, handoff e GO/NO-GO. Seja direto, sem burocracia, sem protótipos de fachada. Não faça merge, deploy, altere produção ou use pacientes reais.
+```
+
+**Observação de execução:** os prompts W0–W9 continuam válidos historicamente; este comando adiciona W10 à sequência, sem substituir o trabalho concluído.
