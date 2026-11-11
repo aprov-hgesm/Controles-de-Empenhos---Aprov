@@ -94,7 +94,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const disabled=saving||loading;
  const updateMap=async()=>{
   await perform(async()=>{
-   const result=await request<MapRow>('maps','map.create',{unitId,localDate:date,cycleId});
+   const result=await request<MapRow>('maps','map.create',{unitId,localDate:date,cycleId:cycle});
    await loadMap(result.id);
   },'Mapa disponível para conferência');
  };
