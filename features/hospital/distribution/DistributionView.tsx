@@ -12,7 +12,7 @@ type Props={
   mealIds:readonly string[];
   getAuthorization:()=>Promise<string>;
 };
-type Operation='assembly.start'|'assembly.complete'|'assembly.check'|'batch.dispatch'|'batch.receive'|'meal.deliver'|'meal.return'|'meal.cancel'|'route.flag';
+type Operation='assembly.start'|'assembly.complete'|'assembly.check'|'assembly.reopen'|'meal.suspend'|'batch.dispatch'|'batch.receive'|'meal.deliver'|'meal.return'|'meal.cancel'|'route.flag';
 type Failure={ok:false;error:{code:string;message:string}};
 type Success<T>={ok:true;data:T};
 
@@ -138,6 +138,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
         <button type="button" disabled={loading} onClick={()=>void execute('assembly.start')} className="rounded border px-3 py-2">Iniciar montagem</button>
         <button type="button" disabled={loading} onClick={()=>void execute('assembly.complete',{preparedDietCode,ingredientCodes:ingredientCodes.split(',').map(s=>s.trim()).filter(Boolean)})} className="rounded border px-3 py-2">Concluir montagem</button>
         <button type="button" disabled={loading} onClick={()=>void execute('assembly.check')} className="rounded border px-3 py-2">Conferir segurança</button>
+        <button type="button" disabled={loading||!reason.trim()} onClick={()=>void execute('assembly.reopen',{reason})} className="rounded border px-3 py-2">Reabrir conferência</button>
         <label className="text-sm">Formato da etiqueta
           <select value={format} onChange={e=>setFormat(e.target.value as '80mm'|'A6'|'A4')} className="ml-2 rounded border p-2"><option value="80mm">80 mm</option><option value="A6">A6</option><option value="A4">A4</option></select>
         </label>
@@ -165,6 +166,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
         <label className="text-sm">Motivo obrigatório da ocorrência
           <input value={reason} onChange={e=>setReason(e.target.value)} maxLength={500} className="mt-1 w-full rounded border p-2"/>
         </label>
+        <button type="button" disabled={loading||!reason.trim()} onClick={()=>void execute('meal.suspend',{reason})} className="rounded border px-3 py-2">Suspender por segurança</button>
         <button type="button" disabled={loading||!reason.trim()} onClick={()=>void execute('meal.cancel',{reason})} className="rounded border px-3 py-2">Cancelar</button>
         <button type="button" disabled={loading||!reason.trim()} onClick={()=>void execute('meal.return',{reason})} className="rounded border px-3 py-2">Devolver</button>
         <button type="button" disabled={loading||!reason.trim()} onClick={()=>void execute('route.flag',{reason})} className="rounded border px-3 py-2">Sinalizar nova rota</button>
