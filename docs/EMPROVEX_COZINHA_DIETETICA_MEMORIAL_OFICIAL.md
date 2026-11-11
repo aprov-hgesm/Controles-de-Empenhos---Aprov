@@ -518,4 +518,36 @@ O desenvolvimento será dividido em **W0–W9**, com contrato arquitetural compa
 
 ---
 
+## 20. W11 — infraestrutura Firebase/Google Cloud hospitalar isolada (adendo 11/11/2026)
+
+**Missão oficial:** [W11 — prompt completo](cozinha-dietetica/workers/W11.md), com [comando pronto no Plano Mestre, seção 11](cozinha-dietetica/PLANO_MESTRE_WORKERS_R1.md).
+
+**Evidência que antecede W11:** PR Draft [#551](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/551), branch `feat/cozinha-dietetica-w10-firestore-operacional`, HEAD de referência `9572049742d9c9bfd4cd2265e999ab083728fd56`. A integração Firestore **passou no emulador**; os checks do HEAD final incluíram W10 QA, build, Fast CI, Core Protection e Visual-R2 com sucesso. **Isso não significa que o banco Firestore real, a identidade IAM ou um serviço Cloud Run estejam conectados.**
+
+O projeto Firebase real `cozinha-dietetica` já existe com Firestore `(default)`, Auth e-mail/senha e regras negando acesso direto pelo cliente. O W11 **não** deve duplicar este projeto nem reutilizar o projeto EMPROVEX logístico/Empresas.
+
+**Escopo W11:** desenvolver gateway Firestore real compatível com as operações assíncronas W10, preparar autenticação e IAM dedicados, fronteira Cloud Run **privada e isolada**, proteção contra acessos entre OMs/unidades, testes de Auth/Firestore em emulador e, **somente mediante autorização expressa e credenciais apropriadas**, smoke test no GCP hospitalar com dados fictícios. Nenhuma modificação real em IAM, regras, índices, serviço Cloud Run ou dados é autorizada apenas pela existência do prompt. Não declarar conectividade GCP como PASS se não executada.
+
+**Entrega:** branch `feat/cozinha-dietetica-w11-infra-hospitalar-isolada` baseada no HEAD atualizado da PR #551; PR Draft **contra a branch W10**, `docs/cozinha-dietetica/integration/W11_HANDOFF_GCP_R1.md`, evidências técnicas e GO/NO-GO distintos para emulador, GCP real e produção.
+
+**Não autorizado:** merge, deploy público, intervenção no Cloud Run do EMPROVEX principal, autorização clínica ou uso de pacientes reais.
+
+## 21. W12 — homologação técnica integral e preparação do piloto controlado (adendo 11/11/2026)
+
+**Missão oficial:** [W12 — prompt completo](cozinha-dietetica/workers/W12.md), com [comando no Plano Mestre, seção 12](cozinha-dietetica/PLANO_MESTRE_WORKERS_R1.md). **Ativar somente depois que W11 tiver branch, PR Draft, código e handoff verificáveis.**
+
+**Escopo W12:** homologar os perfis Unidade, Cozinha, Nutrição auditora e Administração; ciclos 06/10/16, pedidos principal/secundário, dieta médica, jejum, alergias, transferência, concorrência, preparação, conferência, expedição, identificação positiva na entrega, auditoria e relatórios. Testar segurança multi-OM, sessões revogadas, custos, dispositivo móvel, PWA, desempenho, queda de rede, contingência e restauração, sem usar pessoas ou informações clínicas reais.
+
+A homologação será informada em níveis independentes:
+- **QA por emulador:** ambiente local e CI com dados fictícios.
+- **QA no GCP hospitalar:** backend privado e banco Firestore real **somente com autorização expressa para o teste com dados sintéticos**.
+- **Prontidão técnica de produção:** checklist e plano reversível (kill switch, rollback sem apagar eventos e monitoramento), sem disponibilização pública automática.
+- **Piloto com pacientes reais:** **NO-GO até decisão institucional específica**, base legal/LGPD, plano de contingência aprovado e autorização posterior separada para qualquer ação de produção.
+
+**Entrega:** branch `feat/cozinha-dietetica-w12-homologacao-piloto` com base no HEAD verificado do W11 e PR Draft contra a branch W11, `docs/cozinha-dietetica/integration/W12_HANDOFF_HOMOLOGACAO_R1.md`, testes concretos PASS/FAIL/NOT RUN e parecer técnico por ambiente.
+
+**Planejamento consolidado:** W0–W10 entregues até teste de integração emulador; **W11 e W12 são os dois Workers adicionais previstos** para chegar à decisão de piloto. Código e CI não substituem autorização institucional de uso clínico.
+
+---
+
 **ENCERRAMENTO V1:** O futuro módulo EMPROVEX Cozinha Dietética será uma extensão hospitalar integrada ao portal comum, com operação manual inicial, produção e distribuição rastreáveis, auditoria nutricional não bloqueante, regras específicas do HGeSM e separação real de dados clínicos. O memorial é um contrato de planejamento e não constitui entrega de software.
