@@ -3,11 +3,12 @@ import { HospitalQAStore } from '@/lib/server/hospital/core/qa-store.mjs';
 import { createNutritionAuditHandler } from '@/lib/server/hospital/nutrition-audit/handler.mjs';
 import { createFirestoreNutritionAuditHandler } from '@/lib/server/hospital/nutrition-audit/firestore-handler.mjs';
 import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
+import {isHospitalGcpQaRuntime} from '@/lib/server/hospital/firebase/gcp-qa-runtime.mjs';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const jsonHeaders={'Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff'};
 async function respond(req:NextRequest,method:'GET'|'POST') {
-  if(process.env.NODE_ENV==='production'||(process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1'&&!process.env.HOSPITAL_QA_SQLITE_PATH)) return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Rota apenas para QA autorizado'}},{status:503,headers:jsonHeaders});
+  if((process.env.NODE_ENV==='production'&&!isHospitalGcpQaRuntime())||(process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1'&&!process.env.HOSPITAL_QA_SQLITE_PATH)) return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Rota apenas para QA autorizado'}},{status:503,headers:jsonHeaders});
   let payload:Record<string,unknown>,operation:string,organizationId:string;
   try {
     if(method==='GET') {
