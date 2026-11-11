@@ -88,6 +88,9 @@ withFixture('Mudança de prescrição vigente exige nova reconferência, sem exp
   assemble(c);
   c.core.recordMedicalDiet(c.unit,{referenceId:'rx-new',admissionId:c.admission.id,unitId:'uti',catalogItemId:'diet-a',sourceRef:'RX-NEW-SYNTHETIC',prescribedAt:'2099-02-01T00:00:00Z'});
   assert.throws(()=>c.cmd('batch.dispatch',{mealIds:[c.meal.id]}),{code:'PRECONDITION'});
+  const suspended=c.cmd('meal.suspend',{reason:'Aguardando correção do pedido após nova prescrição'});
+  assert.equal(suspended.meal.status,'SUSPENDED');
+  assert.ok(c.store.events('hospital-a','meal',c.meal.id).some(e=>e.eventType==='meal.suspended'&&e.payload.reason));
 });
 
 withFixture('Transferência confirmada durante rota impede entrega antiga e exige reconciliação',c=>{
@@ -121,6 +124,18 @@ withFixture('Concorrência/atomicidade: duas entregas com chaves diferentes, som
   const settled=await Promise.allSettled(['first','second'].map(key=>Promise.resolve().then(()=>c.distribution.command(c.kitchen,'meal.deliver',{...body,idempotencyKey:key}))));
   assert.equal(settled.filter(x=>x.status==='fulfilled').length,1);
   assert.equal(c.store.list('hospital-a','delivery_event','uti').filter(x=>x.type==='DELIVERED').length,1);
+});
+
+withFixture('Conferência reaberta exige nova montagem e nova checagem',c=>{
+  assemble(c);
+  const reopened=c.cmd('assembly.reopen',{reason:'Mudança de ingrediente na preparação sintética'});
+  assert.equal(reopened.state,'ASSEMBLING');
+  assert.equal(reopened.checkedBy,null);
+  assert.throws(()=>c.cmd('batch.dispatch',{mealIds:[c.meal.id]}),{code:'PRECONDITION'});
+  c.cmd('assembly.complete',{preparedDietCode:'diet-a',ingredientCodes:['new-ingredient-qa']});
+  c.cmd('assembly.check');
+  assert.equal(c.cmd('batch.dispatch',{mealIds:[c.meal.id]})[0].meal.status,'DISPATCHED');
+  assert.ok(c.store.events('hospital-a','meal',c.meal.id).some(e=>e.eventType==='meal.assembly.reopened'&&e.payload.reason));
 });
 
 withFixture('Lote com pedido inválido faz rollback integral; cancelamento/devolução auditáveis',c=>{
