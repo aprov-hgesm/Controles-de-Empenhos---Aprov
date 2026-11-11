@@ -1,0 +1,1 @@
+export function createFirestoreDistributionHandler(args:{store:any;verifyToken?:(token:string)=>Promise<any>}): (args:{authorization:string;organizationId:string;operation:string;payload:Record<string,unknown>})=>Promise<{status:number;headers:Record<string,string>;body?:any;html?:string}>;

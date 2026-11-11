@@ -1,5 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createHospitalW3Handler,getW3QAStore} from '@/lib/server/hospital/maps/handler.mjs';
+import {createHospitalW10Handler} from '@/lib/server/hospital/maps/firestore-handler.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff'};
@@ -13,7 +15,9 @@ export async function POST(request:NextRequest){
   try{body=JSON.parse(raw)}catch{return NextResponse.json({ok:false,error:{code:'INVALID',message:'JSON inválido'}},{status:400,headers})}
   if(!body||typeof body!=='object'||Array.isArray(body))return NextResponse.json({ok:false,error:{code:'INVALID',message:'Corpo inválido'}},{status:400,headers});
   const input=body as {operation?:unknown;payload?:unknown};
-  const handler=createHospitalW3Handler({store:getW3QAStore()});
+  const handler=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1'
+    ?createHospitalW10Handler({store:getHospitalW10Store()})
+    :createHospitalW3Handler({store:getW3QAStore()});
   const result=await handler({
     area:'maps',authorization:request.headers.get('authorization')??'',
     organizationId:request.headers.get('x-hospital-organization-id')??'',

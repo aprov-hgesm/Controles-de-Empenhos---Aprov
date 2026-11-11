@@ -2,6 +2,8 @@ import {NextRequest, NextResponse} from 'next/server';
 import {HospitalQAStore} from '@/lib/server/hospital/core/qa-store.mjs';
 import {resolveHospitalScope} from '@/lib/server/hospital/core/auth.mjs';
 import {ProductionService} from '@/lib/server/hospital/production/service.mjs';
+import {ProductionService as FirestoreProductionService} from '@/lib/server/hospital/production/firestore-service.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 import {HospitalError} from '@/features/hospital/core/domain.mjs';
 import type {KitchenQuery} from '@/features/hospital/production/contracts';
 
@@ -19,11 +21,12 @@ function openQA() {
   return new HospitalQAStore({filename:process.env.HOSPITAL_QA_DB_PATH,qa:true});
 }
 function organization(req:NextRequest) {return req.headers.get('x-hospital-organization-id') ?? '';}
-async function withService<T>(req:NextRequest,run:(service:ProductionService,scope:Awaited<ReturnType<typeof resolveHospitalScope>>)=>T|Promise<T>) {
-  const store=openQA();
+async function withService<T>(req:NextRequest,run:(service:ProductionService|FirestoreProductionService,scope:Awaited<ReturnType<typeof resolveHospitalScope>>)=>T|Promise<T>) {
+  const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
+  const store=useFirestore?getHospitalW10Store():openQA();
   try {
     const scope=await resolveHospitalScope({authorization:req.headers.get('authorization')??'',organizationId:organization(req),store});
-    const data=await run(new ProductionService(store),scope);
+    const data=await run(useFirestore?new FirestoreProductionService(store as never):new ProductionService(store as HospitalQAStore),scope);
     return NextResponse.json({ok:true,data},{headers:{'Cache-Control':'no-store'}});
   }finally{store.close();}
 }

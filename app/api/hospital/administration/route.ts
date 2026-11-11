@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HospitalQAStore } from '@/lib/server/hospital/core/qa-store.mjs';
 import { createHospitalAdministrationHandler } from '@/lib/server/hospital/administration/handler.mjs';
+import { createHospitalFirestoreAdministrationHandler } from '@/lib/server/hospital/administration/firestore-handler.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
+import {hospitalQaUserExists} from '@/lib/server/hospital/firebase/auth-emulator-account.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /** Explicitly disabled in production until a separate clinical datastore is approved. */
 async function dispatch(request: NextRequest, method: 'GET'|'POST') {
-  if (process.env.NODE_ENV === 'production' || process.env.HOSPITAL_QA_ADMIN_ENABLED !== '1' || !process.env.HOSPITAL_QA_DB_PATH) {
+  if (process.env.NODE_ENV === 'production' || (process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1' && (process.env.HOSPITAL_QA_ADMIN_ENABLED !== '1' || !process.env.HOSPITAL_QA_DB_PATH))) {
     return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Administração hospitalar indisponível até homologação do storage clínico'}},{status:503});
   }
   let store: HospitalQAStore | undefined;
   try {
-    store = new HospitalQAStore({ filename: process.env.HOSPITAL_QA_DB_PATH, qa: true });
+    const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
+    if(!useFirestore)store = new HospitalQAStore({ filename: process.env.HOSPITAL_QA_DB_PATH!, qa: true });
     const payload = method === 'POST' ? await request.json() : {};
     const operation = method === 'POST' ? payload?.operation : request.nextUrl.searchParams.get('view');
-    const handler = createHospitalAdministrationHandler({
-      store,
+    const handler = useFirestore?createHospitalFirestoreAdministrationHandler({
+      store:getHospitalW10Store(),
+      userExists:hospitalQaUserExists
+    }):createHospitalAdministrationHandler({
+      store:store!,
       userExists: async (uid: string) => {
         // Runtime-only QA integration. No Firebase Admin dependency is bundled into production.
         const authModuleName = ['firebase-admin','auth'].join('/');

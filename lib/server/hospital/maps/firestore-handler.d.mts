@@ -1,0 +1,1 @@
+export function createHospitalW10Handler(args:{store:any;verifyToken?:any}): (args:{authorization:string;organizationId:string;operation:string;payload?:Record<string,unknown>;area:'maps'|'diets'})=>Promise<{status:number;body:any}>;

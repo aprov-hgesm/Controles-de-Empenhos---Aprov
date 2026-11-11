@@ -13,7 +13,7 @@ const nextConfig = source('next.config.ts');
 
 test('R363: manifest standalone e icones Android, iOS e Windows', () => {
   assert.match(manifest, /short_name: 'EMPROVEX'/);
-  assert.match(manifest, /start_url: '\/central-empenhos'/);
+  assert.match(manifest, /start_url: '\/'/);
   assert.match(manifest, /scope: '\/'/);
   assert.match(manifest, /display: 'standalone'/);
   assert.match(manifest, /192x192/);
@@ -72,19 +72,33 @@ test('R363: manifest nao instala armazenamento offline de dados sensiveis', () =
   assert.doesNotMatch(manifest, /^\s*related_applications:/m);
 });
 
-test('R16: a vitrine substitui a rota raiz antes dos arquivos sem quebrar login ou retorno administrativo', () => {
+test('R16 W10: raiz instala portal e preserva vitrine, aliases e entradas protegidas', () => {
   const config = source('next.config.ts');
   const loginPage = source('app/login/page.tsx');
+  const portal = source('app/portal/page.tsx');
+  const info = source('app/info/page.tsx');
   const institucional = source('app/institucional/page.tsx');
   const adminPanel = source('components/admin/PlatformAdminView.tsx');
   assert.match(config, /beforeFiles:\s*\[/);
-  assert.match(config, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
-  assert.doesNotMatch(config, /return\s*\[\s*\{\s*source:\s*'\/'/);
+  assert.match(config, /source:\s*'\/',\s*destination:\s*'\/portal'/);
+  assert.doesNotMatch(config, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
+  for (const [alias, canonical] of [
+    ['/login', '/aprovisionamento'], ['/central-empenhos', '/aprovisionamento'],
+    ['/institucional', '/info'], ['/hospitalar', '/cozinha-dietetica'],
+  ]) {
+    assert.ok(config.includes(`source: '${alias}', destination: '${canonical}'`), `${alias}: alias perdido`);
+  }
+  for (const route of ['/aprovisionamento', '/almoxarifado', '/cozinha-dietetica', '/fornecedores']) {
+    assert.ok(portal.includes(`href: '${route}'`), `${route}: módulo ausente do portal`);
+  }
+  assert.match(info, /InstitutionalHome/);
   assert.match(loginPage, /<EmprovexLogin/);
   assert.match(institucional, /public\/institucional\/content\.html/);
-assert.match(adminPanel, /window\.location\.replace\('\/central-empenhos'\)/, 'Retorno administrativo deve ir ao login, não à vitrine.');
+  assert.match(adminPanel, /window\.location\.replace\('\/central-empenhos'\)/);
+  assert.match(config, /source: '\/cozinha-dietetica'[\s\S]*?Cache-Control'[\s\S]*?no-store/);
+  assert.match(manifest, /start_url: '\/'/);
+  assert.doesNotMatch(manifest, /serviceWorker|indexedDB|caches\.open/);
 });
-
 
 test('R16.1: retornos de admin, deposito, mobile e assinaturas abrem plataforma, nao vitrine', () => {
   const files = [

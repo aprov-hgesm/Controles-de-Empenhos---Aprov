@@ -15,7 +15,9 @@ export default function HospitalEntryPage() {
   // No clinic/production database or institutional approval has been supplied.
   // Even if an environment variable is accidentally set in production, fail closed.
   const qaEnabled = process.env.NODE_ENV !== 'production'
-    && Boolean(process.env.HOSPITAL_QA_ORGANIZATION_ID && process.env.HOSPITAL_QA_SQLITE_PATH)
+    && Boolean(process.env.HOSPITAL_QA_ORGANIZATION_ID && (
+      (process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1' && process.env.FIRESTORE_EMULATOR_HOST) || process.env.HOSPITAL_QA_SQLITE_PATH
+    ))
     && Boolean(process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID);
   return (
     <main className="min-h-screen bg-[#061324] px-5 py-10 text-white sm:py-16">

@@ -1,6 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {HospitalQAStore} from '@/lib/server/hospital/core/qa-store.mjs';
 import {createHospitalPatientsHandler} from '@/lib/server/hospital/patients/handler.mjs';
+import {createHospitalFirestorePatientsHandler} from '@/lib/server/hospital/patients/firestore-handler.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -17,9 +19,12 @@ function reply(status:number,body:unknown) {
 }
 async function dispatch(req:NextRequest,operation:string,payload:Record<string,unknown>) {
   try {
-    const database=store();
+    const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
+    const database=useFirestore?getHospitalW10Store():store();
     if(!database) return reply(503,{ok:false,error:{code:'UNAVAILABLE',message:'Pacientes indisponível fora do ambiente QA autorizado'}});
-    const handle=createHospitalPatientsHandler({store:database});
+    const handle=useFirestore
+      ?createHospitalFirestorePatientsHandler({store:database})
+      :createHospitalPatientsHandler({store:database as HospitalQAStore});
     const result=await handle({
       authorization:req.headers.get('authorization')??'',
       organizationId:req.headers.get('x-hospital-organization-id')??'',
