@@ -85,7 +85,7 @@ withFixture('E2E W0/W3/W4/W5/W8: mapa real, lote, montagem, recibo e entrega dis
  const report=f.reports.query(f.cook,{view:'production',filters:{from:localDate,to:localDate}});
  assert.ok(Array.isArray(report.rows));
  assert.ok(report.rows.length>0);
- assert.throws(()=>cmd(f,meal,'meal.deliver',{patientReferenceCode:'QA-REF-0001',patientDisplayName:'Paciente Fictício QA',identityMethod:'MANUAL'}),{code:'PRECONDITION'});
+ assert.throws(()=>cmd(f,meal,'meal.deliver',{patientReferenceCode:'QA-REF-0001',patientDisplayName:'Paciente Fictício QA',identityMethod:'MANUAL',idempotencyKey:'w9-delivery-attempt-2'}),{code:'PRECONDITION'});
 });
 withFixture('segurança integrada: outra OM, outra unidade e admin não acessam o pedido',async f=>{
  const {meal}=sentMeal(f);
