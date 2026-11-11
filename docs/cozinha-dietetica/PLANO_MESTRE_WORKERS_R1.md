@@ -160,3 +160,55 @@ Copiar a mensagem abaixo e alterar **somente o dígito após W**. O Worker local
 ```
 
 **Observação de execução:** os prompts W0–W9 continuam válidos historicamente; este comando adiciona W10 à sequência, sem substituir o trabalho concluído.
+
+
+---
+
+## 11. Adendo W11 — infraestrutura Firebase/GCP hospitalar isolada
+
+**Prompt oficial:** [W11.md](workers/W11.md).
+
+**Fonte executável:** PR #551 (`feat/cozinha-dietetica-w10-firestore-operacional`), HEAD verificado na hora de ativar, e `docs/cozinha-dietetica/integration/W10_HANDOFF_FIRESTORE_R1.md`. SHA de referência W10: `9572049742d9c9bfd4cd2265e999ab083728fd56`, não vincular a um SHA desatualizado se a branch avançar.
+
+| Campo | Valor |
+|---|---|
+| Worker | W11 — backend Firebase/Firestore GCP real isolado, IAM e QA técnico |
+| Base da branch | HEAD atualizado da PR #551 |
+| Branch nova | `feat/cozinha-dietetica-w11-infra-hospitalar-isolada` |
+| Base da PR Draft | `feat/cozinha-dietetica-w10-firestore-operacional` |
+| Missão | Preparar/implementar conexão Firestore hospitalar real, identidade de serviço exclusiva, autorização, Cloud Run privado de QA, testes de isolamento e conectividade autorizada |
+| Sem autorização extra | Implementar e testar em emuladores; preparar scripts, CI, IAM em modo dry-run e handoff, **sem efetuar mudanças no GCP real** |
+| Teste no GCP real | Somente se houver acesso técnico e autorização expressa para as operações de criação IAM/Cloud Run/gravação sintética; resultados realmente obtidos |
+| Bloqueios | Não tocar main, infraestrutura produtiva, regras Firebase reais, billing, dados de pacientes ou contas operacionais |
+
+**Comando de ativação W11 (próximo chat):**
+
+```text
+/goal Você é o Worker W11 do EMPROVEX Cozinha Dietética. Acesse o repositório aprov-hgesm/Controles-de-Empenhos---Aprov, na branch docs/cozinha-dietetica-memorial-oficial-20261111. Leia integralmente docs/cozinha-dietetica/workers/W11.md, o Plano Mestre e o Memorial Oficial, além do handoff W10. Use como base o HEAD atualizado da PR #551. Execute a integração técnica segura do Firebase/Firestore hospitalar no projeto cozinha-dietetica, prepare backend e IAM isolados, execute testes reais no ambiente permitido e entregue PR Draft em branch própria com SHA, handoff e GO/NO-GO. Se faltar acesso ou autorização específica ao Google Cloud, implemente o restante e indique somente as ações mínimas necessárias, sem inventar execução. Não faça merge, deploy público, alterações produtivas nem use pacientes reais.
+```
+
+## 12. Adendo W12 — homologação final e preparação do piloto
+
+**Prompt oficial:** [W12.md](workers/W12.md). **Sequência obrigatória:** iniciar W12 **após** W11 entregar PR Draft, handoff e código verificável. W12 não deve supor que o ambiente GCP esteja liberado apenas porque W11 escreveu scripts.
+
+| Campo | Valor |
+|---|---|
+| Worker | W12 — homologação técnica, segurança do paciente, contingência, desempenho e piloto |
+| Base da branch | HEAD atualizado da branch W11 |
+| Branch nova | `feat/cozinha-dietetica-w12-homologacao-piloto` |
+| Base da PR Draft | `feat/cozinha-dietetica-w11-infra-hospitalar-isolada` |
+| Missão | E2E por perfil/unidade, 06/10/16, transferências, jejuns, distribuição, auditoria, relatórios, PWA/mobile, backup/restore e regressões |
+| Teste real GCP | Quando existir QA privado autorizado, somente dados fictícios; registrar se não executado |
+| Produção clínica | **Não autorizada** por este plano; depende de decisão posterior e aprovação formal institucional |
+
+**Comando de ativação W12 (somente após W11):**
+
+```text
+/goal Você é o Worker W12 do EMPROVEX Cozinha Dietética. Acesse o repositório aprov-hgesm/Controles-de-Empenhos---Aprov, na branch docs/cozinha-dietetica-memorial-oficial-20261111. Leia integralmente docs/cozinha-dietetica/workers/W12.md, o Plano Mestre, o Memorial Oficial e os handoffs W10/W11. Utilize como base o HEAD atualizado da branch e PR do W11, verificando o que foi efetivamente aplicado ao Google Cloud. Execute a homologação operacional e técnica completa, E2E, segurança, desempenho, PWA/mobile, backup/contingência e regressões, preparando um piloto restrito e reversível. Abra PR Draft com SHA, handoff e parecer GO/NO-GO separado por QA, cloud e produção clínica. Não faça merge, deploy produtivo nem processe pacientes reais sem autorização posterior específica e homologação institucional.
+```
+
+### Ordem consolidada
+
+**W0–W9:** integração hospitalar original. **W10:** persistência operacional em Firestore Emulator (PR #551). **W11:** acesso real e isolado à infraestrutura Firebase/GCP, quando autorizado. **W12:** homologação E2E e preparação do piloto; eventual uso com dados clínicos reais permanece decisão institucional separada.
+
+**Princípio:** no máximo dois Workers adicionais planejados após W10. Não transformar pendências externas em novos Workers por burocracia. Um CI verde não autoriza uso clínico nem publicação.
