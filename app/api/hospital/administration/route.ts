@@ -4,13 +4,15 @@ import { createHospitalAdministrationHandler } from '@/lib/server/hospital/admin
 import { createHospitalFirestoreAdministrationHandler } from '@/lib/server/hospital/administration/firestore-handler.mjs';
 import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 import {hospitalQaUserExists} from '@/lib/server/hospital/firebase/auth-emulator-account.mjs';
+import {hospitalGcpUserExists} from '@/lib/server/hospital/firebase/verify-gcp-id-token.mjs';
+import {isHospitalGcpQaRuntime} from '@/lib/server/hospital/firebase/gcp-qa-runtime.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /** Explicitly disabled in production until a separate clinical datastore is approved. */
 async function dispatch(request: NextRequest, method: 'GET'|'POST') {
-  if (process.env.NODE_ENV === 'production' || (process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1' && (process.env.HOSPITAL_QA_ADMIN_ENABLED !== '1' || !process.env.HOSPITAL_QA_DB_PATH))) {
+  if ((process.env.NODE_ENV === 'production'&&!isHospitalGcpQaRuntime()) || (process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1' && (process.env.HOSPITAL_QA_ADMIN_ENABLED !== '1' || !process.env.HOSPITAL_QA_DB_PATH))) {
     return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Administração hospitalar indisponível até homologação do storage clínico'}},{status:503});
   }
   let store: HospitalQAStore | undefined;
@@ -21,7 +23,7 @@ async function dispatch(request: NextRequest, method: 'GET'|'POST') {
     const operation = method === 'POST' ? payload?.operation : request.nextUrl.searchParams.get('view');
     const handler = useFirestore?createHospitalFirestoreAdministrationHandler({
       store:getHospitalW10Store(),
-      userExists:hospitalQaUserExists
+      userExists:process.env.HOSPITAL_GCP_QA_ENABLED==='1'?hospitalGcpUserExists:hospitalQaUserExists
     }):createHospitalAdministrationHandler({
       store:store!,
       userExists: async (uid: string) => {
