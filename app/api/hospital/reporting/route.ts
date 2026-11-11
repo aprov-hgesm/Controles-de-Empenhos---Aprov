@@ -2,6 +2,7 @@ import {HospitalQAStore} from '../../../../lib/server/hospital/core/qa-store.mjs
 import {createHospitalReportingHandler} from '../../../../lib/server/hospital/reporting/handler.mjs';
 import {createHospitalFirestoreReportingHandler} from '../../../../lib/server/hospital/reporting/firestore-handler.mjs';
 import {getHospitalW10Store} from '../../../../lib/server/hospital/firebase/qa-store.mjs';
+import {isHospitalGcpQaRuntime} from '../../../../lib/server/hospital/firebase/gcp-qa-runtime.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -13,7 +14,7 @@ export async function GET(request:Request):Promise<Response>{
   // The W0 SQLite adapter is intentionally QA-only. Production stays CLOSED until W9
   // supplies the audited, isolated clinical adapter and institution authorizes access.
   const path=process.env.HOSPITAL_QA_SQLITE_PATH;
-  if(process.env.NODE_ENV==='production'||(process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1'&&(process.env.HOSPITAL_QA_REPORTING_ENABLED!=='true'||!path))){
+  if((process.env.NODE_ENV==='production'&&!isHospitalGcpQaRuntime())||(process.env.HOSPITAL_FIRESTORE_QA_ENABLED!=='1'&&(process.env.HOSPITAL_QA_REPORTING_ENABLED!=='true'||!path))){
     return Response.json({ok:false,error:{code:'UNAVAILABLE',message:'Relatórios hospitalares ainda não habilitados'}},{status:503,headers:noCache});
   }
   let store:HospitalQAStore|null=null;
