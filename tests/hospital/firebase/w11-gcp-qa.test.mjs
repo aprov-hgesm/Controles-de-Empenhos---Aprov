@@ -96,7 +96,10 @@ test('W11 production-shape IAM adapter transacts against actual Firestore Emulat
     assert.equal(options.headers.Authorization,'Bearer '+iam.accessToken);
     const emuUrl=url.replace('https://firestore.googleapis.com','http://'+emulator)
       .replaceAll('/projects/cozinha-dietetica/','/projects/demo-cozinha-dietetica/');
-    const opts={...options,body:typeof options.body==='string'?options.body
+    // The emulator uses its own synthetic elevated token; production still
+    // sends the real IAM OAuth token (asserted above), never this fixture.
+    const opts={...options,headers:{...options.headers,Authorization:'Bearer owner'},
+      body:typeof options.body==='string'?options.body
       .replaceAll('projects/cozinha-dietetica/','projects/demo-cozinha-dietetica/'):options.body};
     return fetch(emuUrl,opts);
   };
