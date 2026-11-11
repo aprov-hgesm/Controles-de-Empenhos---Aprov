@@ -10,22 +10,23 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/install-icon/*': ['./public/emprovex-logo favicon.png'],
   },
-  // Links históricos continuam abrindo o endereço canônico da Central de Depósitos.
-  // A raiz pública apresenta o institucional sem alterar o URL canônico.
-  // O shell operacional original permanece preservado para guardas históricos.
+  // O portal ocupa a raiz; a vitrine legada fica em /info.
+  // O shell operacional, as APIs e os guards permanecem intactos.
   async rewrites() {
     return {
-      // A vitrine substitui a rota '/' existente, preservando app/page.tsx
-      // intacto para os contratos operacionais e o acesso em /central-empenhos.
+      // Mantém app/page.tsx inalterado por proteção do núcleo operacional.
       beforeFiles: [
-        { source: '/', destination: '/institucional' },
+        { source: '/', destination: '/portal' },
       ],
     };
   },
   async redirects() {
     return [
-      // Alias temporario: favoritos antigos continuam funcionando e mantem a query string.
-      { source: '/login', destination: '/central-empenhos', permanent: false },
+      // Next.js preserva parâmetros da query nos redirects; sem loops.
+      { source: '/login', destination: '/aprovisionamento', permanent: false },
+      { source: '/central-empenhos', destination: '/aprovisionamento', permanent: false },
+      { source: '/institucional', destination: '/info', permanent: true },
+      { source: '/hospitalar', destination: '/cozinha-dietetica', permanent: false },
       { source: '/adm-deposito', destination: '/central-depositos', permanent: true },
       { source: '/adm-deposito/:path*', destination: '/central-depositos/:path*', permanent: true },
       { source: '/central-mobile', destination: '/operador-movel', permanent: true },
@@ -35,7 +36,19 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Somente HTML/RSC da entrada autenticada: scripts _next mantem cache imutavel.
+        source: '/aprovisionamento',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/cozinha-dietetica',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        // O alias histórico mantém no-store, mesmo antes do redirect.
         source: '/central-empenhos',
         headers: [
           { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },

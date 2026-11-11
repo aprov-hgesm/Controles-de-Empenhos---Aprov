@@ -1,0 +1,38 @@
+name: Cozinha Dietetica W5 — QA isolado
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "lib/server/hospital/distribution/**"
+      - "features/hospital/distribution/**"
+      - "app/api/hospital/distribution/**"
+      - "tests/hospital/distribution/**"
+      - ".github/workflows/hospital-w5-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  distribution-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout do PR
+        uses: actions/checkout@v4
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Testes SQLite W0 + W5
+        run: node --test tests/hospital/distribution/distribution.test.mjs
+      - name: Typecheck integral
+        run: npm run typecheck
+      - name: Build sem deploy
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
