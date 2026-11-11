@@ -471,4 +471,27 @@ Não impedir a elaboração nem o protótipo; resolver antes do piloto real:
 
 ---
 
+## 18. Plano Mestre e prompts de execução dos Workers (adendo documental 11/11/2026)
+
+O desenvolvimento será dividido em **W0–W9**, com contrato arquitetural compartilhado, arquivos reservados e integração única. A equipe deverá ler o **[Plano Mestre dos Workers R1](cozinha-dietetica/PLANO_MESTRE_WORKERS_R1.md)** antes de codificar.
+
+| Worker | Missão executável | Prompt oficial |
+|---|---|---|
+| W0 | Fundação, contratos, identidade, autorização e armazenamento QA | [W0](cozinha-dietetica/workers/W0.md) |
+| W1 | Portal, rotas, logins e compatibilidade | [W1](cozinha-dietetica/workers/W1.md) |
+| W2 | Pacientes, leitos, internações e movimentações | [W2](cozinha-dietetica/workers/W2.md) |
+| W3 | Dietas prescritas de referência e mapas manuais | [W3](cozinha-dietetica/workers/W3.md) |
+| W4 | Painel da cozinha e produção | [W4](cozinha-dietetica/workers/W4.md) |
+| W5 | Etiquetas, conferência, expedição e entrega | [W5](cozinha-dietetica/workers/W5.md) |
+| W6 | Nutrição auditora e comunicação médica | [W6](cozinha-dietetica/workers/W6.md) |
+| W7 | Administração hospitalar e permissões | [W7](cozinha-dietetica/workers/W7.md) |
+| W8 | Filtros, indicadores, relatórios e exportação | [W8](cozinha-dietetica/workers/W8.md) |
+| W9 | Integração de W0–W8, E2E, segurança e regressão | [W9](cozinha-dietetica/workers/W9.md) |
+
+**Execução:** W0 fixa `W0_BASE_SHA` e entrega contratos; W1–W8 iniciam em branches independentes após essa fundação e podem atuar em paralelo; W9 integra em branch separada. **Nenhum Worker deve fazer merge na main ou deploy**. O comando de ativação está no Plano Mestre; troca-se apenas o número do Worker.
+
+**Precedência:** os prompts detalham a execução deste memorial, **não** modificam suas decisões clínicas, o caráter manual inicial, os horários nem a obrigação de autorização institucional para o uso de dados reais. Todo adendo futuro terá status e evidências próprios.
+
+---
+
 **ENCERRAMENTO V1:** O futuro módulo EMPROVEX Cozinha Dietética será uma extensão hospitalar integrada ao portal comum, com operação manual inicial, produção e distribuição rastreáveis, auditoria nutricional não bloqueante, regras específicas do HGeSM e separação real de dados clínicos. O memorial é um contrato de planejamento e não constitui entrega de software.
