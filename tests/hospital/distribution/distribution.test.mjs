@@ -106,8 +106,9 @@ withFixture('Entrega duplicada, scanner indisponível, autenticação por OM/uni
   const idem=c.distribution.command(c.kitchen,'meal.deliver',p);
   assert.deepEqual(idem,first);
   assert.throws(()=>c.distribution.command(c.kitchen,'meal.deliver',{...p,idempotencyKey:'other-delivery'}),{code:'PRECONDITION'});
-  assert.throws(()=>c.distribution.command(await auth(c.store,'other'),'meal.cancel',{unitId:'uti',mealId:c.meal.id,idempotencyKey:'other-unit',reason:'No permission'}),{code:'FORBIDDEN'});
-  assert.throws(()=>c.distribution.status(await auth(c.store,'foreign','hospital-b'),{unitId:'uti',mealId:c.meal.id}),{code:'NOT_FOUND'});
+  const other=await auth(c.store,'other'),foreign=await auth(c.store,'foreign','hospital-b');
+  assert.throws(()=>c.distribution.command(other,'meal.cancel',{unitId:'uti',mealId:c.meal.id,idempotencyKey:'other-unit',reason:'No permission'}),{code:'FORBIDDEN'});
+  assert.throws(()=>c.distribution.status(foreign,{unitId:'uti',mealId:c.meal.id}),{code:'NOT_FOUND'});
   assert.throws(()=>c.distribution.command({uid:'kitchen',roles:['KITCHEN'],organizationId:'hospital-a',unitIds:['uti'],active:true},'meal.cancel',{unitId:'uti',mealId:c.meal.id,idempotencyKey:'forged',reason:'forged'}),{code:'UNAUTHORIZED'});
   assert.equal(c.store.list('hospital-a','delivery_event','uti').length,3);
 });
