@@ -226,5 +226,5 @@ run('inativacao do catalogo suspende pedido em preparo e bloqueia reconfirmacao 
  assert.equal(paused.revision,started.revision+1);
  assert.equal(c.maps.listVersions(c.s.a,{mapId:m.id}).length,2);
  assert.equal(c.db.get('hospital-a','map',m.id).revision,submitted.map.revision+1);
- assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(c.db.get('hospital-a','map',m.id),{idempotencyKey:'after-inactivation'})),{code:'PRECONDITION'});
+ assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(c.db.get('hospital-a','map',m.id),{idempotencyKey:'after-inactivation',reason:'Solicitação após alteração do catálogo'})),{code:'PRECONDITION'});
 });
