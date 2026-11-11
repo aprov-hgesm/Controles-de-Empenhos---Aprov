@@ -38,6 +38,6 @@ export async function authorizeHospitalEntry({ authorization, organizationId, st
   return Object.freeze({
     roles: Object.freeze([...scope.roles]),
     unitCount: scope.unitIds.length,
-    canOpenClinicalWorkspace: primaryRole !== 'HOSPITAL_ADMIN',
+    canOpenClinicalWorkspace: true, // W9: administrador hospitalar autenticado abre somente a área W7; APIs clínicas seguem protegidas.
   });
 }
