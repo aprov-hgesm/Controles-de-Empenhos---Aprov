@@ -140,14 +140,14 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const close=async()=>{
   if(!map)return;
   await perform(async()=>{
-   await request('maps','map.close',{mapId:map.map.id,expectedRevision:map.map.revision});
+   await request('maps','map.close',{mapId:map.map.id,expectedRevision:map.map.revision,idempotencyKey:crypto.randomUUID()});
    await loadMap(map.map.id);
   },'Mapa fechado no horário oficial; adendos permanecem possíveis');
  };
  const escalate=async()=>{
   if(!map||!selectedAdmission)return setError('Selecione a internação para registrar a exceção');
   await perform(async()=>{
-   await request('maps','exception.escalate',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,reason,contactReference:contact});
+   await request('maps','exception.escalate',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,reason,contactReference:contact,idempotencyKey:crypto.randomUUID()});
   },'Exceção pendente: contate imediatamente a assistência e a cozinha');
  };
  return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:16,maxWidth:1080,color:'#10213b'}}>
