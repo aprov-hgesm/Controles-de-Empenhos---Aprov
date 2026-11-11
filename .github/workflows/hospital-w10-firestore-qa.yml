@@ -4,6 +4,9 @@ on:
     branches: [feat/cozinha-dietetica-w10-firestore-operacional]
   pull_request:
     branches: [feat/cozinha-dietetica-firebase-isolado-r1]
+concurrency:
+  group: hospital-w10-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
