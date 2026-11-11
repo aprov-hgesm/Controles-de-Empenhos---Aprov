@@ -1,0 +1,2 @@
+import type {HospitalQAStore} from '../core/qa-store.mjs';
+export declare function createHospitalAdministrationHandler(options:{store:HospitalQAStore;verifyToken?:(token:string)=>Promise<{uid:string}>;userExists?:(uid:string)=>Promise<boolean>}): (request:{authorization:string;organizationId:string;operation:string;payload?:unknown;method?:'GET'|'POST'})=>Promise<{status:number;body:{ok:true;data:any}|{ok:false;error:{code:string;message:string}}}>;
