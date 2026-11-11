@@ -1,0 +1,31 @@
+name: Hospital W02 QA (isolated)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "features/hospital/patients/**"
+      - "lib/server/hospital/patients/**"
+      - "app/api/hospital/patients/**"
+      - "tests/hospital/patients/**"
+      - ".github/workflows/hospital-w02-qa.yml"
+permissions:
+  contents: read
+jobs:
+  patient-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: W0 SQLite core regression
+        run: node --test tests/hospital/core/core.test.mjs
+      - name: W02 real SQLite QA functional tests
+        run: node --test tests/hospital/patients/patients.test.mjs
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Build (QA only, no deployment)
+        run: npm run build
