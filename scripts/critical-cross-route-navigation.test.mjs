@@ -12,8 +12,13 @@ test('P0: Central de Empenhos e a rota canonica, com alias legado sem segundo ga
   const nextConfig = read('next.config.ts');
   const operational = read('app/login/page.tsx');
   assert.match(canonical, /export \{ default \} from '\.\.\/login\/page'/);
-  assert.match(nextConfig, /source:\s*'\/login',\s*destination:\s*'\/central-empenhos',\s*permanent:\s*false/);
-  assert.match(nextConfig, /source:\s*'\/',\s*destination:\s*'\/institucional'/);
+  // W1: a área canônica agora é /aprovisionamento e a raiz é o portal.
+  // O shell e os gates históricos continuam sendo os mesmos.
+  assert.match(nextConfig, /source:\s*'\/login',\s*destination:\s*'\/aprovisionamento',\s*permanent:\s*false/);
+  assert.match(nextConfig, /source:\s*'\/central-empenhos',\s*destination:\s*'\/aprovisionamento',\s*permanent:\s*false/);
+  assert.match(nextConfig, /source:\s*'\/',\s*destination:\s*'\/portal'/);
+  assert.match(nextConfig, /source:\s*'\/institucional',\s*destination:\s*'\/info'/);
+  assert.match(nextConfig, /source:\s*'\/hospitalar',\s*destination:\s*'\/cozinha-dietetica'/);
   assert.match(operational, /checkSectorBillingAccess/);
   assert.match(operational, /billingAccessIdentity === currentBillingIdentity/);
   assert.match(operational, /showBillingRequired/);
