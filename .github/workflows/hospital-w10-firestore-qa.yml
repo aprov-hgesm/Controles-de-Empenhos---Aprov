@@ -41,7 +41,7 @@ jobs:
           --project demo-cozinha-dietetica
           --config firebase.hospital-w10-test.json
           --only auth,firestore
-          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs"
+          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs"
       - name: W0-W9 functional regression (SQLite fixture only)
         run: >
           node --test
