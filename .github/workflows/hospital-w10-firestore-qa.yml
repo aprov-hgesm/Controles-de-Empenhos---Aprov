@@ -27,6 +27,13 @@ jobs:
           java-version: '21'
       - name: Reproducible install without postinstall side effects
         run: npm ci --ignore-scripts
+      - name: Native Firestore + Auth emulator transactions (strictly fictional)
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs"
       - name: Typecheck
         run: npm run typecheck
       - name: Build without hospital credentials
@@ -35,13 +42,6 @@ jobs:
         run: npm run test:pwa-installability
       - name: Firebase token and gateway unit tests
         run: node --test tests/hospital/firebase/firestore-gateway.test.mjs tests/hospital/firebase/identity.test.mjs
-      - name: Native Firestore + Auth emulator transactions (strictly fictional)
-        run: >
-          npx --yes firebase-tools emulators:exec
-          --project demo-cozinha-dietetica
-          --config firebase.hospital-w10-test.json
-          --only auth,firestore
-          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs"
       - name: W0-W9 functional regression (SQLite fixture only)
         run: >
           node --test
