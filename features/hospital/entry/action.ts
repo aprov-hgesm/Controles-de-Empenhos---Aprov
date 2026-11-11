@@ -1,6 +1,5 @@
 'use server';
 
-import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { HospitalQAStore } from '@/lib/server/hospital/core/qa-store.mjs';
 import { authorizeHospitalEntry } from './authorize.mjs';
 
@@ -25,13 +24,10 @@ export async function checkHospitalEntry(idToken: string): Promise<HospitalEntry
 
   let store: HospitalQAStore | null = null;
   try {
-    if (getApps().length === 0) {
-      if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
-        initializeApp({ projectId: process.env.HOSPITAL_QA_FIREBASE_PROJECT_ID || 'demo-emprovex-hospital' });
-      } else {
-        initializeApp({ credential: applicationDefault() });
-      }
-    }
+    // W0 owns server Firebase Admin verification and its default-app bootstrap.
+    // Fail closed until W0's Firebase Admin runtime dependency is installed
+    // and initialized by the integration environment. Do not downgrade to
+    // unrevoked/unverified client claims in this entry layer.
     store = new HospitalQAStore({ filename, qa: true });
     const access = await authorizeHospitalEntry({
       authorization: `Bearer ${idToken}`,
