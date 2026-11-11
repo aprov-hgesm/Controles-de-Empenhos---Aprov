@@ -1,6 +1,6 @@
 # W09 — Handoff e parecer técnico de integração R1
 
-**Estado:** integração técnica em branch isolada; **NO-GO para produção, dados clínicos reais ou implantação hospitalar**.
+**Estado:** **GO para integração técnica e revisão em QA** após CI; **NO-GO para produção, dados clínicos reais ou implantação hospitalar**.
 **Base documental:** docs/cozinha-dietetica-memorial-oficial-20261111.
 **Base imutável W0:** 4bcfee7730fc0da3177d9af8a81eabeb7f844abb.
 **main lida antes da integração:** 34654f47004679b93b876ce98e459d8104752a76.
@@ -62,8 +62,8 @@ A workflow **Hospital W09 - Integration QA** roda em GitHub Actions com Node 24,
 | --- | --- |
 | Integração de arquivos e commits | Executada, SHA dos componentes conferidos |
 | Shell e adaptação de serviços existentes | Implementados na branch W09, dependentes dos testes de CI |
-| Typecheck / build | Aferir no GitHub Actions; não presumir êxito |
-| Testes funcionais, E2E, segurança, regressões | Aferir no GitHub Actions; não presumir êxito |
+| Typecheck / build | **PASS / PASS** no GitHub Actions W09 |
+| Testes funcionais, E2E, segurança, regressões | **111/111 hospitalares e 29/29 regressões PASS** |
 | Teste visual em dispositivo móvel real | Pendente; não há dispositivo/QA homologado aqui |
 | Firebase Admin com token real e revogação | Pendente bootstrap e validação de serviço |
 | Datastore institucional isolado, IAM e LGPD | Pendente decisão institucional, sem produção |
@@ -75,6 +75,18 @@ A workflow **Hospital W09 - Integration QA** roda em GitHub Actions com Node 24,
 - Não promover para produção. O rollback de futura publicação deverá manter as rotas antigas de Aprovisionamento/Almoxarifado e permitir desligar o módulo hospitalar pela política central. Alterações clínicas jamais são revertidas apagando trilhas; registrar correções compensatórias com autoria e horário real.
 - Em indisponibilidade de mapa/serviço, a contingência deve ser **procedimento institucional externo** com documentação real, reentrada posteriormente auditável (horário efetivo declarado separado de horário de registro). Não forjar timestamps nem pressupor entrega.
 - Monitorar erros de API e duração de operações apenas com IDs técnicos minimizados; nunca incluir paciente, leito, prescrição ou dieta identificável em logs, screenshots ou URLs públicas.
-- Só declarar **GO para integração técnica** quando gates funcionais e regressões passarem sem falhas; até lá o status técnico é **condicional**. O parecer institucional é sempre **NO-GO** até autorização formal.
+- **GO para integração técnica e revisão do piloto sintético QA**: typecheck, build, 111 testes hospitalares, 29 regressões e proteção do núcleo passaram. **NO-GO para autenticação QA efetiva até configurar Firebase Admin**, e NO-GO para dados reais/produção até autorização institucional.
 
 **Sem merge, sem deploy, sem alteração de banco, regras ou identidades em produção.**
+
+## Evidências reais de CI e decisão
+
+- **Execução bem-sucedida:** https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43011873526
+- **SHA do código efetivamente testado:** `814ad51bc441b643d0d6bf31f8e51d9c791401c5` (o commit posterior deste handoff é exclusivamente documental).
+- Node 24, `npm ci --ignore-scripts`: PASS.
+- `npm run typecheck`: PASS.
+- `npm run build`: PASS, sem segredos de produção, sem deploy.
+- `node --test tests/hospital/{core,entry,patients,maps,production,distribution,nutrition-audit,administration,reporting,e2e}/*.test.mjs`: **111 PASS, 0 FAIL**.
+- `npm run verify:emprovex-core-protection`: **PASS**.
+- `node --experimental-vm-modules --test` regressões de rotas, warehouse, SaaS e NF: **29 PASS, 0 FAIL**.
+- **Parecer GO integração sintética QA / NO-GO uso clínico real e produção.** Sem merge e sem deploy.
