@@ -231,3 +231,22 @@ withFixture('SQLite: índice QA e leituras bounded sem segundo journal',async c=
   assert.ok(plan.length>0);
   assert.ok(c.reports.query(c.scope.cook,{view:'maps',filters:f}).estimatedReadRows>0);
 });
+
+withFixture('transferência confirmada não duplica pedido e mantém trilha histórica por OM',async c=>{
+  c.time('17:01');
+  const location=c.core.planTransfer(c.scope.cross,{eventId:'transfer-qa-1',admissionId:'ad1',fromUnitId:'uti-a',toUnitId:'upi-a'});
+  assert.equal(location.status,'PLANNED');
+  const before=c.reports.query(c.scope.cook,{view:'production',filters:f});
+  assert.equal(before.summary.planned,5);
+  c.time('17:03');
+  c.core.confirmTransfer(c.scope.cross,{eventId:location.id,fromUnitId:'uti-a',expectedRevision:location.revision});
+  assert.equal(c.store.get('om-a','admission','ad1').unitId,'upi-a');
+  const after=c.reports.query(c.scope.cook,{view:'production',filters:f});
+  assert.equal(after.summary.planned,5);
+  assert.equal(after.summary.delivered,1);
+  assert.ok(after.summary.suspended>=1);
+  const occur=c.reports.query(c.scope.cook,{view:'occurrences',filters:f});
+  assert.equal(occur.rows.some(row=>row.category==='CONFIRMED_TRANSFER'),true);
+  const foreign=c.reports.query(c.scope.foreign,{view:'production',filters:f});
+  assert.equal(foreign.summary.planned,1);
+});
