@@ -18,7 +18,7 @@ export async function POST(request:NextRequest){
     area:'diets',authorization:request.headers.get('authorization')??'',
     organizationId:request.headers.get('x-hospital-organization-id')??'',
     operation:typeof input.operation==='string'?input.operation:'',
-    payload:input.payload&&typeof input.payload==='object'&&!Array.isArray(input.payload)?input.payload:{},
+    payload:input.payload&&typeof input.payload==='object'&&!Array.isArray(input.payload)?input.payload as Record<string,unknown>:{},
   });
   return NextResponse.json(result.body,{status:result.status,headers});
  }catch{
