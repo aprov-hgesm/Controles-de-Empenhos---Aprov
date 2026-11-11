@@ -1,0 +1,45 @@
+name: Hospital W09 - Integration QA
+on:
+  push:
+    branches:
+      - integration/cozinha-dietetica-r1
+    paths:
+      - 'app/cozinha-dietetica/**'
+      - 'features/hospital/**'
+      - 'lib/server/hospital/**'
+      - 'tests/hospital/**'
+      - 'docs/cozinha-dietetica/integration/**'
+      - '.github/workflows/hospital-w09-integration-qa.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/cozinha-dietetica/**'
+      - 'features/hospital/**'
+      - 'lib/server/hospital/**'
+      - 'tests/hospital/**'
+      - 'docs/cozinha-dietetica/integration/**'
+      - '.github/workflows/hospital-w09-integration-qa.yml'
+permissions:
+  contents: read
+jobs:
+  hospital-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install reproducible dependencies (no production secrets)
+        run: npm ci --ignore-scripts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build without production secrets
+        run: npm run build
+      - name: W0-W9 QA SQLite + authentication + domain + integrated E2E
+        run: node --test tests/hospital/core/*.test.mjs tests/hospital/entry/*.test.mjs tests/hospital/patients/*.test.mjs tests/hospital/maps/*.test.mjs tests/hospital/production/*.test.mjs tests/hospital/distribution/*.test.mjs tests/hospital/nutrition-audit/*.test.mjs tests/hospital/administration/*.test.mjs tests/hospital/reporting/*.test.mjs tests/hospital/e2e/*.test.mjs
+      - name: Protect legacy EMPROVEX core
+        run: npm run verify:emprovex-core-protection
+      - name: Core regression samples
+        run: node --experimental-vm-modules --test scripts/critical-cross-route-navigation.test.mjs scripts/warehouse-ledger-contract.test.mjs scripts/saas-r1-billing.test.mjs scripts/invoice-identity.test.mjs
