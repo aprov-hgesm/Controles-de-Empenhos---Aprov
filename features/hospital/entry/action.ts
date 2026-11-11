@@ -40,7 +40,7 @@ export async function checkHospitalEntry(idToken: string): Promise<HospitalEntry
       unitCount: access.unitCount,
       // W9 is the sole owner of the operational hospital route.
       // No redirect to a non-existent app before integration.
-      nextPath: process.env.HOSPITAL_QA_APP_READY === '1'
+      nextPath: access.canOpenClinicalWorkspace && process.env.HOSPITAL_QA_APP_READY === '1'
         ? '/cozinha-dietetica/app'
         : null,
     };
