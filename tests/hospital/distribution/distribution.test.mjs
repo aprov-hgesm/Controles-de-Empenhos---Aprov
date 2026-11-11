@@ -54,7 +54,8 @@ withFixture('W5 E2E real SQLite: preparo -> montagem -> etiqueta -> conferência
   c.cmd('batch.dispatch',{mealIds:[c.meal.id]});
   assert.equal(c.core.get(c.kitchen,'meal',c.meal.id,'uti').status,'DISPATCHED');
   assert.throws(()=>c.cmd('meal.deliver',{patientReferenceCode:'REF-QA-001',patientDisplayName:'Paciente <Teste> QA',identityMethod:'MANUAL'}),{code:'PRECONDITION'});
-  c.cmd('batch.receive',{mealIds:[c.meal.id]});
+  c.distribution.command(c.unit,'batch.receive',{unitId:'uti',mealIds:[c.meal.id],idempotencyKey:'ward-receive'});
+  assert.throws(()=>c.distribution.command(c.unit,'meal.deliver',{unitId:'uti',mealId:c.meal.id,idempotencyKey:'ward-forbidden',patientReferenceCode:'REF-QA-001',patientDisplayName:'Paciente <Teste> QA',identityMethod:'MANUAL'}),{code:'FORBIDDEN'});
   assert.throws(()=>c.cmd('meal.deliver',{patientReferenceCode:'WRONG',patientDisplayName:'Paciente <Teste> QA',identityMethod:'MANUAL'}),{code:'PRECONDITION'});
   const done=c.cmd('meal.deliver',{patientReferenceCode:'REF-QA-001',patientDisplayName:'Paciente <Teste> QA',identityMethod:'MANUAL'});
   assert.equal(done.meal.status,'DELIVERED');
@@ -62,6 +63,7 @@ withFixture('W5 E2E real SQLite: preparo -> montagem -> etiqueta -> conferência
   const ev=c.store.events('hospital-a','meal',c.meal.id);
   assert.ok(ev.some(e=>e.eventType==='meal.assembly.checked'));
   assert.ok(ev.some(e=>e.eventType==='meal.delivered'&&e.actorUid==='kitchen'));
+  assert.ok(ev.some(e=>e.eventType==='meal.received'&&e.actorUid==='unit'));
   assert.ok(ev.every(e=>!Number.isNaN(Date.parse(e.occurredAt))));
   assert.equal(c.store.list('hospital-a','delivery_event','uti').length,3);
 });
