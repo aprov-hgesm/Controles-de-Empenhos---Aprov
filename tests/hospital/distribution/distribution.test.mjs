@@ -123,7 +123,7 @@ withFixture('Concorrência/atomicidade: duas entregas com chaves diferentes, som
 
 withFixture('Lote com pedido inválido faz rollback integral; cancelamento/devolução auditáveis',c=>{
   assemble(c);
-  assert.throws(()=>c.cmd('batch.dispatch',{mealIds:[c.meal.id,'missing']}),{code:'PRECONDITION'});
+  assert.throws(()=>c.cmd('batch.dispatch',{mealIds:[c.meal.id,'missing']}),{code:'NOT_FOUND'});
   assert.equal(c.store.get('hospital-a','meal',c.meal.id).status,'READY');
   c.cmd('batch.dispatch',{mealIds:[c.meal.id]});
   const returned=c.cmd('meal.return',{reason:'Ocorrência na rota de QA'});
