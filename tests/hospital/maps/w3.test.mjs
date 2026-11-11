@@ -77,7 +77,7 @@ for(const cycle of ['06','10','16']){
   c.clock.value=`${date}T${cycle}:29:00-03:00`;
   assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(m)),{code:'INVALID'});
   const add=c.maps.setMeal(c.s.a,mealInput(m,{reason:'Pedido extra conferido pela equipe'}));
-  assert.equal(add.extraordinary,true);assert.equal(add.meal.advisory,'KITCHEN_REVIEW');
+  assert.equal(add.extraordinary,true);assert.equal(add.meal.advisory,'KITCHEN_REVIEW');assert.equal(add.meal.status,'SUSPENDED');assert.equal(add.meal.requiresRecheck,true);
   c.clock.value=`${date}T${cycle}:31:00-03:00`;
   assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(add.map,{reason:'Principal fora da tolerância'})),{code:'PRECONDITION'});
   const secondary=c.maps.setMeal(c.s.a,mealInput(add.map,{mealType:'SECONDARY',reason:'Adendo após horário institucional'}));
@@ -199,4 +199,32 @@ run('SQLite persiste entre processos/conexões e eventos usam timestamp do servi
   assert.equal(events[0].actorUid,c.s.a.uid);
   assert.equal(events[0].occurredAt,new Date(c.clock.value).toISOString());
  }finally{reopened.close()}
+});
+
+run('envio do mapa atrasado suspende principal ja lancada e exige reconferencia',async c=>{
+ const m=c.maps.createDraft(c.s.a,{unitId:'uti-a',localDate:'2099-11-11',cycleId:'06'});
+ const add=c.maps.setMeal(c.s.a,mealInput(m));
+ assert.equal(add.meal.status,'REQUESTED');
+ c.clock.value='2099-11-11T06:10:00-03:00';
+ const sent=c.maps.submitMap(c.s.a,{mapId:m.id,expectedRevision:add.map.revision,idempotencyKey:'late-with-meal',lateReason:'Mapa enviado fora da janela prevista'});
+ assert.equal(sent.receipt.late,true);
+ const meal=c.db.get('hospital-a','meal',add.meal.id);
+ assert.equal(meal.status,'SUSPENDED');
+ assert.equal(meal.suspensionReason,'LATE_MAP_SUBMISSION_REVIEW');
+ assert.equal(c.maps.listVersions(c.s.a,{mapId:m.id})[0].snapshot.meals[0].status,'SUSPENDED');
+});
+run('inativacao do catalogo suspende pedido em preparo e bloqueia reconfirmacao automatica',async c=>{
+ const m=c.maps.createDraft(c.s.a,{unitId:'uti-a',localDate:'2099-11-11',cycleId:'10'});
+ const add=c.maps.setMeal(c.s.a,mealInput(m));
+ const submitted=c.maps.submitMap(c.s.a,{mapId:m.id,expectedRevision:add.map.revision,idempotencyKey:'sent-before-catalog'});
+ const started=c.core.advanceMeal(c.s.cook,{mealId:add.meal.id,unitId:'uti-a',next:'PREPARING',expectedRevision:add.meal.revision});
+ const old=c.diets.getCatalog(c.s.admin,{catalogItemId:'diet-1'});
+ c.diets.saveCatalog(c.s.admin,{catalogItemId:'diet-1',code:'DIET-QA-1',label:old.label,type:old.type,consistency:old.consistency,route:old.route,
+   allergenCodes:old.allergenCodes,restrictionCodes:old.restrictionCodes,status:'INACTIVE',expectedRevision:old.revision});
+ const paused=c.db.get('hospital-a','meal',add.meal.id);
+ assert.equal(paused.status,'SAFETY_BLOCKED');
+ assert.equal(paused.revision,started.revision+1);
+ assert.equal(c.maps.listVersions(c.s.a,{mapId:m.id}).length,2);
+ assert.equal(c.db.get('hospital-a','map',m.id).revision,submitted.map.revision+1);
+ assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(c.db.get('hospital-a','map',m.id),{idempotencyKey:'after-inactivation'})),{code:'PRECONDITION'});
 });
