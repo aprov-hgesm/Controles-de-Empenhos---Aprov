@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {onAuthStateChanged,signOut} from 'firebase/auth';
-import {auth} from '@/lib/firebase';
+import {getHospitalAuth} from '@/lib/hospital/firebase-client';
 import {PatientsView} from '@/features/hospital/patients/PatientsView';
 import {DietasView} from '@/features/hospital/diets/DietasView';
 import {MeusMapasView} from '@/features/hospital/maps/MeusMapasView';
@@ -29,7 +29,7 @@ export function HospitalShell(){
  const request=useRef(0);
  useEffect(()=>{
   let mounted=true;
-  const unsub=onAuthStateChanged(auth,async user=>{
+  const unsub=onAuthStateChanged(getHospitalAuth(),async user=>{
    const version=++request.current;
    setSession({phase:'checking'});
    if(!user){if(mounted)setSession({phase:'signed-out'});return;}
@@ -50,13 +50,13 @@ export function HospitalShell(){
   return ()=>{mounted=false;request.current++;unsub();};
  },[]);
  const getIdToken=useCallback(async()=>{
-  const user=auth.currentUser;
+  const user=getHospitalAuth().currentUser;
   if(!user)throw Error('Sessão expirada: entre novamente.');
   return user.getIdToken();
  },[]);
  const getAuthorization=useCallback(async()=> 'Bearer '+await getIdToken(),[getIdToken]);
  const logout=async()=>{
-  try{await signOut(auth);}catch{setNotification('Não foi possível encerrar a sessão.')}
+  try{await signOut(getHospitalAuth());}catch{setNotification('Não foi possível encerrar a sessão.')}
  };
  if(session.phase==='checking')return <main className="min-h-screen bg-slate-950 p-6 text-white"><p role="status">Validando sessão e vínculo hospitalar no servidor…</p></main>;
  if(session.phase==='signed-out')return <main className="min-h-screen bg-slate-950 p-6 text-white"><h1 className="text-xl font-bold">Sessão hospitalar encerrada</h1><p className="mt-2">Faça login institucional para continuar.</p><a className="mt-4 inline-block underline" href="/cozinha-dietetica">Ir ao login hospitalar</a></main>;
