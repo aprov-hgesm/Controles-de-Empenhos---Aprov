@@ -35,7 +35,7 @@ export async function GET(request:Request):Promise<Response>{
       return Number(input);
     };
     const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
-    if(!useFirestore)store=new HospitalQAStore({filename:path,qa:true});
+    if(!useFirestore)store=new HospitalQAStore({filename:path!,qa:true});
     const handler=useFirestore
       ?createHospitalFirestoreReportingHandler({store:getHospitalW10Store()})
       :createHospitalReportingHandler({store:store!});
