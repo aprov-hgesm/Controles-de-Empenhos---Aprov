@@ -15,9 +15,10 @@ export async function authorizeHospitalEntry({ authorization, organizationId, st
     store,
     ...(verifyToken ? { verifyToken } : {}),
   });
-  const primaryRole = scope.roles.find(role =>
-    role === 'UNIT' || role === 'KITCHEN' || role === 'NUTRITION' || role === 'HOSPITAL_ADMIN'
-  );
+  // A ordem dos papéis no cadastro não reduz o acesso clínico de um
+  // profissional que também possua atribuições administrativas.
+  const primaryRole = ['UNIT', 'KITCHEN', 'NUTRITION', 'HOSPITAL_ADMIN']
+    .find(role => scope.roles.includes(role));
   const permissionByRole = {
     UNIT: 'map:read',
     KITCHEN: 'meal:read',
