@@ -6,6 +6,12 @@ import {HospitalError} from '@/features/hospital/core/domain.mjs';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 export async function GET(req:NextRequest) {
+  // W10 keeps the authorized 20s polling in ProductionView. Do not read
+  // stale legacy SQLite or create high-cost Firestore event loops.
+  if(process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1'){
+    return Response.json({ok:false,error:{code:'UNAVAILABLE',message:'Atualização contínua indisponível; utilize polling autenticado'}},
+      {status:503,headers:{'Cache-Control':'no-store'}});
+  }
   if(process.env.NODE_ENV==='production' || !process.env.HOSPITAL_QA_DB_PATH) return Response.json({ok:false,error:{code:'UNAVAILABLE',message:'QA apenas'}},{status:503});
   let store:HospitalQAStore;
   try {store=new HospitalQAStore({filename:process.env.HOSPITAL_QA_DB_PATH,qa:true});}
