@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { ArrowRight, PackageCheck, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -18,12 +17,12 @@ export default function AlmoxarifadoEntry() {
           <ShieldCheck size={20} className="shrink-0" aria-hidden="true" /> Apenas contas autorizadas conseguem abrir o módulo.
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href="/central-depositos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-5 py-3 font-bold text-slate-950 transition hover:bg-sky-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+          <a href="/central-depositos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-5 py-3 font-bold text-slate-950 transition hover:bg-sky-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
             Abrir Central de Depósitos <ArrowRight size={17} aria-hidden="true" />
-          </Link>
-          <Link href="/aprovisionamento" className="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 font-semibold hover:bg-white/10">Entrar na minha conta</Link>
+          </a
+          <a href="/aprovisionamento" className="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 font-semibold hover:bg-white/10">Entrar na minha conta</a
         </div>
-        <Link href="/" className="mt-7 inline-block text-sm text-sky-200 underline underline-offset-4">Voltar ao portal</Link>
+        <a href="/" className="mt-7 inline-block text-sm text-sky-200 underline underline-offset-4">Voltar ao portal</a
       </section>
     </main>
   );
