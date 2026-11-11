@@ -1,0 +1,25 @@
+name: W03 Cozinha Dietética — QA isolado (temporário)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - feat/cozinha-dietetica-w0-fundacao
+    paths:
+      - 'tests/hospital/maps/**'
+      - 'lib/server/hospital/maps/**'
+      - 'lib/server/hospital/diets/**'
+      - '.github/workflows/hospital-w3-qa-temporary.yml'
+permissions:
+  contents: read
+jobs:
+  w03-sqlite:
+    if: ${{ github.head_ref == 'feat/cozinha-dietetica-w3-mapas' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - name: W0 + W03 SQLite transaction, safety and deadlines
+        run: node --test tests/hospital/core/core.test.mjs tests/hospital/maps/w3.test.mjs
