@@ -8,6 +8,13 @@ import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
  */
 export const HOSPITAL_FIREBASE_PROJECT_ID = 'cozinha-dietetica';
 const HOSPITAL_APP_NAME = 'emprovex-hospitalar';
+const HOSPITAL_EMULATOR_PROJECT_ID = 'demo-cozinha-dietetica';
+function qaEmulatorProjectAllowed() {
+  return process.env.NODE_ENV !== 'production'
+    && process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR === '1'
+    && process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID === HOSPITAL_EMULATOR_PROJECT_ID;
+}
+
 let emulatorConnected = false;
 
 export function isHospitalFirebaseConfigured(): boolean {
@@ -15,7 +22,8 @@ export function isHospitalFirebaseConfigured(): boolean {
     process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY?.trim()
     && process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID?.trim()
     && (!process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID
-      || process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID === HOSPITAL_FIREBASE_PROJECT_ID)
+      || process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID === HOSPITAL_FIREBASE_PROJECT_ID
+      || qaEmulatorProjectAllowed())
   );
 }
 
@@ -24,19 +32,19 @@ export function getHospitalFirebaseApp(): FirebaseApp {
     throw new Error('Firebase hospitalar não configurado.');
   }
   const configuredProject = process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID || HOSPITAL_FIREBASE_PROJECT_ID;
-  if (configuredProject !== HOSPITAL_FIREBASE_PROJECT_ID) {
+  if (configuredProject !== HOSPITAL_FIREBASE_PROJECT_ID && !qaEmulatorProjectAllowed()) {
     throw new Error('Projeto Firebase hospitalar divergente.');
   }
   if (getApps().some(app => app.name === HOSPITAL_APP_NAME)) {
     const app = getApp(HOSPITAL_APP_NAME);
-    if (app.options.projectId !== HOSPITAL_FIREBASE_PROJECT_ID) {
+    if (app.options.projectId !== configuredProject) {
       throw new Error('Identidade Firebase hospitalar divergente.');
     }
     return app;
   }
   return initializeApp({
-    projectId: HOSPITAL_FIREBASE_PROJECT_ID,
-    authDomain: 'cozinha-dietetica.firebaseapp.com',
+    projectId: configuredProject,
+    authDomain: `${configuredProject}.firebaseapp.com`,
     apiKey: process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY,
     appId: process.env.NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID,
   }, HOSPITAL_APP_NAME);
