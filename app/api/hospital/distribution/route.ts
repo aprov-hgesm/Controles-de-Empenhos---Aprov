@@ -1,6 +1,8 @@
 import {NextResponse} from 'next/server';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
+import {createFirestoreDistributionHandler} from '@/lib/server/hospital/distribution/firestore-handler.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -15,14 +17,19 @@ type DistributionHandler=(args:{
   authorization:string;organizationId:string;operation:string;payload:Record<string,unknown>
 })=>Promise<DistributionResponse>;
 let qaHandler:DistributionHandler|undefined;
+let firestoreHandler:DistributionHandler|undefined;
 
 /** Source-only QA loader. This route is disabled in prod and does not bundle W0's
  * pending firebase-admin/auth dependency into the EMPROVEX production build.
  * Node resolves the checked-in modules from a fixed local path (never from HTTP).
  */
 async function handler():Promise<DistributionHandler|null>{
-  if(process.env.NODE_ENV==='production'||process.env.HOSPITAL_QA_DISTRIBUTION_ENABLED!=='1'||!process.env.HOSPITAL_QA_DB_PATH)
-    return null;
+  if(process.env.NODE_ENV==='production')return null;
+  if(process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1'){
+    if(!firestoreHandler)firestoreHandler=createFirestoreDistributionHandler({store:getHospitalW10Store()});
+    return firestoreHandler;
+  }
+  if(process.env.HOSPITAL_QA_DISTRIBUTION_ENABLED!=='1'||!process.env.HOSPITAL_QA_DB_PATH)return null;
   if(!qaHandler){
     const root=process.cwd();
     const coreUrl=pathToFileURL(resolve(root,'lib/server/hospital/core/qa-store.mjs')).href;
