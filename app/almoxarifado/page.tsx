@@ -19,10 +19,10 @@ export default function AlmoxarifadoEntry() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <a href="/central-depositos" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-300 px-5 py-3 font-bold text-slate-950 transition hover:bg-sky-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
             Abrir Central de Depósitos <ArrowRight size={17} aria-hidden="true" />
-          </a
-          <a href="/aprovisionamento" className="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 font-semibold hover:bg-white/10">Entrar na minha conta</a
+          </a>
+          <a href="/aprovisionamento" className="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 font-semibold hover:bg-white/10">Entrar na minha conta</a>
         </div>
-        <a href="/" className="mt-7 inline-block text-sm text-sky-200 underline underline-offset-4">Voltar ao portal</a
+        <a href="/" className="mt-7 inline-block text-sm text-sky-200 underline underline-offset-4">Voltar ao portal</a>
       </section>
     </main>
   );
