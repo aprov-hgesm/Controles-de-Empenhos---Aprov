@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 
 type Cycle='06'|'10'|'16';
 type MealType='PRIMARY'|'SECONDARY';
-type AdmissionRow={admissionId:string;patientCode:string;bedId:string|null;medicalReferenceId:string|null;fasting:boolean;allergyCodes:string[]};
+type AdmissionRow={admissionId:string;patientId:string;patientCode:string;bedId:string|null;medicalReferenceId:string|null;fasting:boolean;allergyCodes:string[]};
 type DietRow={id:string;code:string;label:string;type?:string;active:boolean};
 type Reference={id:string;catalogItemId:string;sourceRef:string;sourceVersion?:string};
 type MapRow={id:string;unitId:string;localDate:string;cycleId:Cycle;status:'DRAFT'|'SUBMITTED'|'CLOSED';revision:number;late?:boolean};
