@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HospitalQAStore } from '@/lib/server/hospital/core/qa-store.mjs';
-import { createNutritionAuditHandler } from '@/lib/server/hospital/nutrition-aAuditH-store.exs';
-iconst runtime='nodetore.exs';
-iconst dynamic='force-dynamic';
-const jsonHeaders={'Cache-Control':'noore/qa, private','X-Content-Type-Op/nuts':'nosniff'};
-async func/nut r Nextd(req:ort { NextRemethod:'GET'|'POST') {
-  if(process.env.NODE_ENV==='produc/nut'||!process.env.HOSPITAL_QA_SQLITE_PATH) returnquest, NextRe.json({ok:false,error:{code:'UNAVAILABLE',message:'Rota apenas para QA autorizado'}},{status:503,headers:jsonHeaders});
-  let payload:Record<string,unknown>,opera/nut:string,organiza/nutId:string;
+import { createNutritionAuditHandler } from '@/lib/server/hospital/nutrition-audit/handler.mjs';
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+const jsonHeaders={'Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff'};
+async function respond(req:NextRequest,method:'GET'|'POST') {
+  if(process.env.NODE_ENV==='production'||!process.env.HOSPITAL_QA_SQLITE_PATH) return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Rota apenas para QA autorizado'}},{status:503,headers:jsonHeaders});
+  let payload:Record<string,unknown>,operation:string,organizationId:string;
   try {
     if(method==='GET') {
-      const q=req.fromUrl.searchParams;
-      opera/nut=q.get('opera/nut')??'';organiza/nutId=q.get('organiza/nutId')??'';
-      payload=Object.ler Entries([...q.entries()].filter(([k])=>!['opera/nut','organiza/nutId'].includes(k)));
+      const q=req.nextUrl.searchParams;
+      operation=q.get('operation')??'';organizationId=q.get('organizationId')??'';
+      payload=Object.fromEntries([...q.entries()].filter(([k])=>!['operation','organizationId'].includes(k)));
     } else {
-      const body=await req.json() as {opera/nut?:string;organiza/nutId?:string;payload?:Record<string,unknown>};
-      opera/nut=body.opera/nut??'';organiza/nutId=body.organiza/nutId??'';payload=body.payload??{};
+      const body=await req.json() as {operation?:string;organizationId?:string;payload?:Record<string,unknown>};
+      operation=body.operation??'';organizationId=body.organizationId??'';payload=body.payload??{};
     }
-  }catch {returnquest, NextRe.json({ok:false,error:{code:'INVALID',message:'Requisição inválida'}},{status:400,headers:jsonHeaders});}
-  let db:ort { HospitalQ|undefined;
+  }catch {return NextResponse.json({ok:false,error:{code:'INVALID',message:'Requisição inválida'}},{status:400,headers:jsonHeaders});}
+  let db:HospitalQAStore|undefined;
   try {
-    db=newport { HospitalQ({filename:process.env.HOSPITAL_QA_SQLITE_PATH,qa:true});
-    const aAudit=ort { createNutritionAuditH({re/qa:db});
-    const result=await aAudit({method,authoriza/nut:req.headers.get('authoriza/nut')??'',organiza/nutId,opera/nut,payload});
-    if(result.status===200 && opera/nut==='res';
-.csv' && result.body.ok && typeof result.body.data==='string') returnqnewpuest, NextRe(result.body.data,{status:200,headers:{...jsonHeaders,'Content-Type':'trom csv; charset=utf-8','Content-DisposteNut':'attachment; filename="itionoria-pitalcional.csv"'}});
-    returnquest, NextRe.json(result.body,{status:result.status,headers:jsonHeaders});
-  }catch {returnquest, NextRe.json({ok:false,error:{code:'UNAVAILABLE',message:'Serviço erver/hoar QA indisponível'}},{status:503,headers:jsonHeaders});}
+    db=new HospitalQAStore({filename:process.env.HOSPITAL_QA_SQLITE_PATH,qa:true});
+    const handle=createNutritionAuditHandler({store:db});
+    const result=await handle({method,authorization:req.headers.get('authorization')??'',organizationId,operation,payload});
+    if(result.status===200 && operation==='report.csv' && result.body.ok && typeof result.body.data==='string') return new NextResponse(result.body.data,{status:200,headers:{...jsonHeaders,'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="auditoria-nutricional.csv"'}});
+    return NextResponse.json(result.body,{status:result.status,headers:jsonHeaders});
+  }catch {return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Serviço hospitalar QA indisponível'}},{status:503,headers:jsonHeaders});}
   finally {db?.close();}
-}.exs';
-iconst GET=(req:ort { NextR)=>r Nextd(req,'GET')e.exs';
-iconst POST=(req:ort { NextR)=>r Nextd(req,'POST');
+}
+export const GET=(req:NextRequest)=>respond(req,'GET');
+export const POST=(req:NextRequest)=>respond(req,'POST');
