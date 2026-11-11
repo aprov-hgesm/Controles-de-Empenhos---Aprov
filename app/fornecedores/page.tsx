@@ -17,8 +17,8 @@ export default function FornecedoresEntry() {
           <LockKeyhole size={18} aria-hidden="true" /> Acesso empresarial aguardando integração autorizada.
         </p>
         <div className="mt-8 flex flex-wrap gap-5 text-sm font-semibold">
-          <a href="/" className="text-sky-200 underline underline-offset-4">Voltar ao portal</a
-          <a href="/info" className="text-sky-200 underline underline-offset-4">Conhecer o EMPROVEX</a
+          <a href="/" className="text-sky-200 underline underline-offset-4">Voltar ao portal</a>
+          <a href="/info" className="text-sky-200 underline underline-offset-4">Conhecer o EMPROVEX</a>
         </div>
       </section>
     </main>
