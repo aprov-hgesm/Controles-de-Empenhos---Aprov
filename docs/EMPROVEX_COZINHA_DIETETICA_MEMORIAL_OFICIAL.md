@@ -494,4 +494,28 @@ O desenvolvimento será dividido em **W0–W9**, com contrato arquitetural compa
 
 ---
 
+## 19. Worker W10 — Firestore hospitalar operacional e regressão PWA (adendo 11/11/2026)
+
+**Nova missão oficial:** [Worker W10 — prompt completo](cozinha-dietetica/workers/W10.md), incorporada ao [Plano Mestre dos Workers R1, seção 10](cozinha-dietetica/PLANO_MESTRE_WORKERS_R1.md). Este adendo **não revoga** os requisitos operacionais, perfis, horários e controles de segurança deste memorial.
+
+### Estado que motivou W10
+
+- **W09:** PR Draft [#549](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/549) integrou W0–W8, com **SQLite exclusivamente de QA** e testes sintéticos. Não houve deploy ou liberação clínica.
+- **Firebase hospitalar:** projeto `cozinha-dietetica`, Firestore `(default)`, Auth e-mail/senha, app Web e Rules de cliente fechadas (`allow read, write: if false;`) segundo as capturas fornecidas pelo usuário. Nenhum dado de paciente foi cadastrado.
+- **Fundação Firebase isolada:** PR Draft [#550](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/550) separou autenticação do projeto logístico e criou gateway Firestore por IAM. Seus handlers clínicos W0–W9 **ainda usam SQLite síncrono**, inclusive relatórios SQL; portanto o banco hospitalar real **não está operacionalmente integrado**.
+- **CI de referência da PR #550:** typecheck/build, 6 novos testes de Firebase, 111 testes hospitalares e 29 regressões passaram (146/146). A auditoria Visual-R2 relatou teste PWA histórico esperando redirecionamento de `/` para `/institucional`, incompatível com o novo portal planejado; corrigir teste/contrato sem desfazer portal.
+
+### Contrato de execução W10
+
+1. Migrar todos os serviços e handlers hospitalares para um datastore **Firestore transacional assíncrono**, preservando idempotência, versões imutáveis, unicidade, autorização por OM/UG/unidade e trilhas de auditoria.
+2. Cobrir entrada, pacientes, dietas, mapas manuais das 06/10/16, produção, distribuição, Nutrição, Administração, ocorrências, relatórios e exportações; testar o fluxo completo com **emuladores e dados fictícios**, sem criar cópias divergentes do ledger.
+3. Manter o projeto Firebase do hospital isolado do EMPROVEX principal, Firestore Rules negando leitura/escrita por SDK cliente, identidade de serviço com permissões mínimas e configuração segura quando institucionalmente autorizada.
+4. Atualizar o teste PWA para `/` como portal e `/info` como vitrine, preservando os aliases históricos e a segurança/capacidade de instalação PWA.
+5. Abrir **somente PR Draft W10**, partindo do HEAD atualizado da PR #550, contra a branch dessa mesma PR; não fazer merge, deploy, alteração de GCP produtivo, dados reais ou alterações na main.
+6. GO somente para integração técnica QA se todos os fluxos e testes efetivamente passarem. **NO-GO para uso com pacientes e publicação** até autorização institucional, validação de IAM e dados sensíveis, contingência e homologação do hospital.
+
+**Comando de ativação pronto:** consta na seção 10 do Plano Mestre. A pasta `docs/cozinha-dietetica/workers/` passa a conter **W0–W10** (onze prompts), mantendo os dez originais.
+
+---
+
 **ENCERRAMENTO V1:** O futuro módulo EMPROVEX Cozinha Dietética será uma extensão hospitalar integrada ao portal comum, com operação manual inicial, produção e distribuição rastreáveis, auditoria nutricional não bloqueante, regras específicas do HGeSM e separação real de dados clínicos. O memorial é um contrato de planejamento e não constitui entrega de software.
