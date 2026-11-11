@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { ArrowRight, ClipboardList, PackageCheck, ChefHat, Building2, Info } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -44,12 +43,12 @@ export default function PortalPage() {
     <main className="min-h-screen bg-[#061324] px-5 py-10 text-white sm:px-8 lg:py-20">
       <div className="mx-auto max-w-6xl">
         <header className="mb-12 flex flex-wrap items-center justify-between gap-5">
-          <Link href="/" aria-label="EMPROVEX: portal de acessos" className="text-xl font-extrabold tracking-[0.12em] text-blue-100">
+          <a href="/" aria-label="EMPROVEX: portal de acessos" className="text-xl font-extrabold tracking-[0.12em] text-blue-100">
             EMPROVEX
-          </Link>
-          <Link href="/info" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-blue-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">
+          </a
+          <a href="/info" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-blue-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">
             <Info size={16} aria-hidden="true" /> Conheça a plataforma
-          </Link>
+          </a
         </header>
         <section aria-labelledby="portal-title" className="mb-10 max-w-3xl">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-sky-300">Um acesso para cada atividade</p>
@@ -58,7 +57,7 @@ export default function PortalPage() {
         </section>
         <nav aria-label="Módulos EMPROVEX" className="grid gap-5 sm:grid-cols-2">
           {modules.map(({ name, description, href, icon: Icon, detail }) => (
-            <Link key={href} href={href} className="group flex min-h-56 flex-col rounded-3xl border border-white/10 bg-white/[0.055] p-6 shadow-xl transition hover:border-sky-300/60 hover:bg-white/[0.09] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 sm:p-8">
+            <a key={href} href={href} className="group flex min-h-56 flex-col rounded-3xl border border-white/10 bg-white/[0.055] p-6 shadow-xl transition hover:border-sky-300/60 hover:bg-white/[0.09] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 sm:p-8">
               <span className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-400/15 text-sky-200">
                 <Icon size={25} aria-hidden="true" />
               </span>
@@ -68,7 +67,7 @@ export default function PortalPage() {
               <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-sky-200">
                 Acessar <ArrowRight size={16} aria-hidden="true" className="transition group-hover:translate-x-1" />
               </span>
-            </Link>
+            </a
           ))}
         </nav>
         <footer className="mt-10 text-sm text-slate-400">Os módulos protegidos exigem credenciais válidas e autorização para o setor correspondente.</footer>
