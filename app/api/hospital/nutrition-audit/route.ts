@@ -22,7 +22,7 @@ async function respond(req:NextRequest,method:'GET'|'POST') {
   let db:HospitalQAStore|undefined;
   try {
     const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
-    if(!useFirestore)db=new HospitalQAStore({filename:process.env.HOSPITAL_QA_SQLITE_PATH,qa:true});
+    if(!useFirestore)db=new HospitalQAStore({filename:process.env.HOSPITAL_QA_SQLITE_PATH!,qa:true});
     const handle=useFirestore
       ?createFirestoreNutritionAuditHandler({store:getHospitalW10Store()})
       :createNutritionAuditHandler({store:db!});
