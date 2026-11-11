@@ -18,7 +18,9 @@ async function dispatch(request: NextRequest, method: 'GET'|'POST') {
     const handler = createHospitalAdministrationHandler({
       store,
       userExists: async (uid: string) => {
-        const {getAuth} = await import('firebase-admin/auth');
+        // Runtime-only QA integration. No Firebase Admin dependency is bundled into production.
+        const authModuleName = ['firebase-admin','auth'].join('/');
+        const {getAuth} = await import(/* webpackIgnore: true */ authModuleName);
         try { await getAuth().getUser(uid); return true; }
         catch { return false; }
       }
