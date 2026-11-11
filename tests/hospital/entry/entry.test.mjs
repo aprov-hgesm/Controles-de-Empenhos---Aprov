@@ -46,10 +46,12 @@ test('KITCHEN and NUTRITION have independent valid entry', async t => {
   assert.deepEqual((await grant('uid-nutri')).roles, ['NUTRITION']);
 });
 
-test('hospital admin can manage but cannot open clinical workspace by default', async t => {
+test('hospital admin opens isolated W7 shell without clinical-unit privileges', async t => {
   const { store, grant } = fixtures(); t.after(() => store.close());
   const result = await grant('uid-admin');
-  assert.equal(result.canOpenClinicalWorkspace, false);
+  assert.equal(result.canOpenClinicalWorkspace, true);
+  assert.deepEqual(result.roles, ['HOSPITAL_ADMIN']);
+  assert.equal(result.unitCount, 0);
 });
 
 test('UID of another OM is denied even with valid token', async t => {
