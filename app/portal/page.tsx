@@ -45,10 +45,10 @@ export default function PortalPage() {
         <header className="mb-12 flex flex-wrap items-center justify-between gap-5">
           <a href="/" aria-label="EMPROVEX: portal de acessos" className="text-xl font-extrabold tracking-[0.12em] text-blue-100">
             EMPROVEX
-          </a
+          </a>
           <a href="/info" className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-blue-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">
             <Info size={16} aria-hidden="true" /> Conheça a plataforma
-          </a
+          </a>
         </header>
         <section aria-labelledby="portal-title" className="mb-10 max-w-3xl">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-sky-300">Um acesso para cada atividade</p>
@@ -67,7 +67,7 @@ export default function PortalPage() {
               <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-sky-200">
                 Acessar <ArrowRight size={16} aria-hidden="true" className="transition group-hover:translate-x-1" />
               </span>
-            </a
+            </a>
           ))}
         </nav>
         <footer className="mt-10 text-sm text-slate-400">Os módulos protegidos exigem credenciais válidas e autorização para o setor correspondente.</footer>
