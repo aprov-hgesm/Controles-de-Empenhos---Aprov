@@ -94,8 +94,15 @@ test('W10 EMULATOR: three maps, medical diet, patient, production, custody, nutr
 
   const snap=await production.snapshot(sKitchen,{unitIds:[unit],localDate:targetDate,cycleId:'10'});
   assert.equal(snap.meals.length,1);
-  const batch=await production.createBatch(sKitchen,{unitId:unit,localDate:targetDate,cycleId:'10',
-    mealIds:[request.id],preparationLabel:'Preparação fictícia',idempotencyKey:uid('batch')});
+  const batchAttempts=await Promise.allSettled([
+    production.createBatch(sKitchen,{unitId:unit,localDate:targetDate,cycleId:'10',
+      mealIds:[request.id],preparationLabel:'Preparação fictícia',idempotencyKey:uid('chef1')}),
+    production.createBatch(sKitchen,{unitId:unit,localDate:targetDate,cycleId:'10',
+      mealIds:[request.id],preparationLabel:'Preparação fictícia',idempotencyKey:uid('chef2')}),
+  ]);
+  assert.equal(batchAttempts.filter(x=>x.status==='fulfilled').length,1,
+    'Two concurrent cooks may allocate only one canonical meal batch');
+  const batch=batchAttempts.find(x=>x.status==='fulfilled').value;
   assert.equal(batch.status,'PENDING');
   const started=await production.startBatch(sKitchen,{unitId:unit,batchId:batch.id,
     expectedRevision:batch.revision,idempotencyKey:uid('start')});
