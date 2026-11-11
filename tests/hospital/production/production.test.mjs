@@ -54,7 +54,7 @@ test('dez pedidos compatíveis: lote persistente, iniciar e completar com evento
   const completed=c.service.completeBatch(c.kitchen,{unitId:'uti',batchId:b.id,expectedRevision:started.revision,confirmedQuantity:10,idempotencyKey:'complete_10'});
   assert.equal(completed.status,'COMPLETE');assert.equal(completed.preparedQuantity,10);
   assert.equal(c.service.snapshot(c.kitchen,{unitIds:['uti'],localDate,cycleId:'10'}).counts.ready,10);
-  assert.equal(c.db.events('om1','meal','meal-1').filter(e=>e.type==='meal.production.completed').length,1);
+  assert.equal(c.db.events('om1','meal','meal-1').filter(e=>e.eventType==='meal.production.completed').length,1);
   assert.equal(c.db.get('om1','meal','meal-10').status,'READY');
   assert.equal(c.db.get('om1','meal','meal-10').status==='DELIVERED',false);
 }finally{c.close();}});
