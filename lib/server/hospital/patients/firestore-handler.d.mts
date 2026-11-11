@@ -1,0 +1,1 @@
+export function createHospitalFirestorePatientsHandler(args:{store:any;verifyToken?:any}): (args:{authorization:string;organizationId:string;operation:string;payload?:Record<string,unknown>})=>Promise<{status:number;body:any}>;
