@@ -91,10 +91,11 @@ run('mapa da véspera: envio antes do prazo, recibo sem PHI, fechamento só apó
  assert.equal(meal.meal.status,'REQUESTED');
  const sent=c.maps.submitMap(c.s.a,{mapId:map.id,expectedRevision:meal.map.revision,idempotencyKey:'send-day-before'});
  assert.equal(sent.timing.mapOnTime,true);assert.equal(sent.receipt.late,false);
- assert.throws(()=>c.maps.closeDue(c.s.a,{mapId:map.id,expectedRevision:sent.map.revision}),{code:'PRECONDITION'});
+ assert.throws(()=>c.maps.closeDue(c.s.a,{mapId:map.id,expectedRevision:sent.map.revision,idempotencyKey:'close-on-time'}),{code:'PRECONDITION'});
  c.clock.value='2099-11-11T06:00:00-03:00';
- const closed=c.maps.closeDue(c.s.a,{mapId:map.id,expectedRevision:sent.map.revision});
+ const closed=c.maps.closeDue(c.s.a,{mapId:map.id,expectedRevision:sent.map.revision,idempotencyKey:'close-on-time'});
  assert.equal(closed.map.status,'CLOSED');
+ assert.deepEqual(c.maps.closeDue(c.s.a,{mapId:map.id,expectedRevision:sent.map.revision,idempotencyKey:'close-on-time'}),closed);
  const receipt=c.maps.receipt(c.s.a,{mapId:map.id});
  assert.ok(receipt.submittedByUid);assert.equal(receipt.submissionVersion,1);
  assert.ok(!JSON.stringify(receipt).includes('SINTETICO-001'));assert.ok(!JSON.stringify(receipt).includes('bed-QA'));
@@ -155,8 +156,10 @@ run('jejum e alérgeno: pedido não liberável mesmo quando registrado; exceçã
  const blocked=c.db.get('hospital-a','meal',a.meal.id);
  assert.equal(blocked.status,'SAFETY_BLOCKED');
  c.clock.value='2099-11-11T16:31:00-03:00';
- const ex=c.maps.escalateClinicalException(c.s.a,{mapId:m.id,admissionId:'admission-1',mealType:'PRIMARY',reason:'Avaliação clínica necessária em atraso',contactReference:'Contato registrado com equipe assistencial QA'});
+ const ex=c.maps.escalateClinicalException(c.s.a,{mapId:m.id,admissionId:'admission-1',mealType:'PRIMARY',reason:'Avaliação clínica necessária em atraso',contactReference:'Contato registrado com equipe assistencial QA',idempotencyKey:'clinical-escalation'});
  assert.equal(ex.status,'PENDING_ASSISTANCE');
+ assert.deepEqual(c.maps.escalateClinicalException(c.s.a,{mapId:m.id,admissionId:'admission-1',mealType:'PRIMARY',reason:'Avaliação clínica necessária em atraso',contactReference:'Contato registrado com equipe assistencial QA',idempotencyKey:'clinical-escalation'}),ex);
+ assert.equal(c.db.list('hospital-a','incident','uti-a').length,1);
  assert.equal(c.db.get('hospital-a','incident',ex.incidentId).status,'OPEN');
  assert.equal(c.db.list('hospital-a','meal','uti-a').length,1);
 });
@@ -227,4 +230,19 @@ run('inativacao do catalogo suspende pedido em preparo e bloqueia reconfirmacao 
  assert.equal(c.maps.listVersions(c.s.a,{mapId:m.id}).length,2);
  assert.equal(c.db.get('hospital-a','map',m.id).revision,submitted.map.revision+1);
  assert.throws(()=>c.maps.setMeal(c.s.a,mealInput(c.db.get('hospital-a','map',m.id),{idempotencyKey:'after-inactivation',reason:'Solicitação após alteração do catálogo'})),{code:'PRECONDITION'});
+});
+
+run('fila da cozinha: rascunhos e pedidos suspensos nunca entram em producao',async c=>{
+ const map=c.maps.createDraft(c.s.a,{unitId:'uti-a',localDate:'2099-11-11',cycleId:'06'});
+ const added=c.maps.setMeal(c.s.a,mealInput(map));
+ assert.deepEqual(c.maps.listKitchenQueue(c.s.cook,{unitId:'uti-a',cycleId:'06'}),[]);
+ assert.throws(()=>c.maps.listKitchenQueue(c.s.a,{unitId:'uti-a'}),{code:'FORBIDDEN'});
+ assert.throws(()=>c.maps.listKitchenQueue(c.s.cook,{unitId:'uti-b'}),{code:'FORBIDDEN'});
+ const sent=c.maps.submitMap(c.s.a,{mapId:map.id,expectedRevision:added.map.revision,idempotencyKey:'queue-submit'});
+ const queue=c.maps.listKitchenQueue(c.s.cook,{unitId:'uti-a',localDate:'2099-11-11',cycleId:'06'});
+ assert.equal(queue.length,1);assert.equal(queue[0].mealId,added.meal.id);
+ assert.equal(queue[0].version,1);
+ c.diets.recordReference(c.s.a,refInput({referenceId:'ref-queue-changed',sourceVersion:'v2'}));
+ assert.deepEqual(c.maps.listKitchenQueue(c.s.cook,{unitId:'uti-a',cycleId:'06'}),[]);
+ assert.equal(c.db.get('hospital-a','meal',added.meal.id).status,'SAFETY_BLOCKED');
 });
