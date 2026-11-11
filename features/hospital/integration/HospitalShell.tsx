@@ -12,7 +12,7 @@ import {ReportingView} from '@/features/hospital/reporting/ReportingView';
 import {TrackingView} from './TrackingView';
 import {DistributionQueue} from './DistributionQueue';
 import {getHospitalWorkspaceAccess,type HospitalWorkspaceAccess} from './access';
-import {canOpenPage,firstPage,menuForRoles} from './navigation';
+import {canOpenPage,firstPage,menuForRoles} from './navigation.mjs';
 
 type Allowed=Extract<HospitalWorkspaceAccess,{status:200}>;
 type Session=
