@@ -11,6 +11,7 @@ export type ReportingViewProps={
   organizationId:string;
   unitIds:readonly string[];
   getAccessToken:()=>Promise<string>;
+  initialView?:ReportView;
 };
 const reports:{id:ReportView;label:string}[]=[
   {id:'maps',label:'Mapas diários'},
@@ -39,8 +40,8 @@ function display(value:unknown){
   return String(value);
 }
 /** W9 composes this view inside an authenticated hospital shell. No secrets or QA fixtures in UI. */
-export function ReportingView({organizationId,unitIds,getAccessToken}:ReportingViewProps){
-  const [view,setView]=useState<ReportView>('maps');
+export function ReportingView({organizationId,unitIds,getAccessToken,initialView='maps'}:ReportingViewProps){
+  const [view,setView]=useState<ReportView>(initialView);
   const [filter,setFilter]=useState<FilterFields>(()=>({from:localToday(),to:localToday(),unitId:'',cycleId:'',mealType:'',status:'',dietCode:'',late:''}));
   const [result,setResult]=useState<ReportResult|null>(null);
   const [busy,setBusy]=useState(false);
