@@ -1,0 +1,32 @@
+name: Hospital Firebase Isolation - QA only
+on:
+  push:
+    branches: [feat/cozinha-dietetica-firebase-isolado-r1]
+  pull_request:
+    branches: [integration/cozinha-dietetica-r1]
+permissions:
+  contents: read
+jobs:
+  hospital-firebase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install reproducible dependencies
+        run: npm ci --ignore-scripts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Next.js build (without hospital credentials)
+        run: npm run build
+      - name: Firebase isolation and Firestore gateway tests (synthetic only)
+        run: node --test tests/hospital/firebase/*.test.mjs
+      - name: Hospital integration regression W0-W9
+        run: node --test tests/hospital/core/*.test.mjs tests/hospital/entry/*.test.mjs tests/hospital/patients/*.test.mjs tests/hospital/maps/*.test.mjs tests/hospital/production/*.test.mjs tests/hospital/distribution/*.test.mjs tests/hospital/nutrition-audit/*.test.mjs tests/hospital/administration/*.test.mjs tests/hospital/reporting/*.test.mjs tests/hospital/e2e/*.test.mjs
+      - name: Protect main operational core
+        run: npm run verify:emprovex-core-protection
+      - name: EMPROVEX critical regressions
+        run: node --experimental-vm-modules --test scripts/critical-cross-route-navigation.test.mjs scripts/warehouse-ledger-contract.test.mjs scripts/saas-r1-billing.test.mjs scripts/invoice-identity.test.mjs
