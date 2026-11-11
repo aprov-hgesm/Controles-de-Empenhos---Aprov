@@ -49,6 +49,14 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [filter,setFilter]=useState('');
+ const [mapStatus,setMapStatus]=useState('');
+ const [lateFilter,setLateFilter]=useState('');
+ const [mealFilter,setMealFilter]=useState('');
+ const [dietFilter,setDietFilter]=useState('');
+ const [bedFilter,setBedFilter]=useState('');
+ const [patientFilter,setPatientFilter]=useState('');
+ const [restrictionFilter,setRestrictionFilter]=useState('');
+ const [versionFilter,setVersionFilter]=useState('');
  const request=useCallback(async<T,>(path:'maps'|'diets',operation:string,payload:Record<string,unknown>):Promise<T>=>{
   const token=await getIdToken();
   if(!token)throw new Error('Sessão expirada; autentique-se novamente');
@@ -63,14 +71,24 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   setLoading(true);setError('');
   try{
    const [maps,people,diets]=await Promise.all([
-    request<MapRow[]>('maps','map.list',{unitId,localDate:date,cycleId:cycle}),
+    request<MapRow[]>('maps','map.list',{
+     unitId,localDate:date,cycleId:cycle,
+     ...(mapStatus?{status:mapStatus}:{}),
+     ...(lateFilter?{late:lateFilter==='late'}:{}),
+     ...(mealFilter?{mealType:mealFilter}:{}),
+     ...(dietFilter?{dietCode:dietFilter}:{}),
+     ...(bedFilter?{bedId:bedFilter}:{}),
+     ...(patientFilter?{patientId:patientFilter}:{}),
+     ...(restrictionFilter?{restrictionCode:restrictionFilter}:{}),
+     ...(versionFilter?{version:Number(versionFilter)}:{}),
+    }),
     request<AdmissionRow[]>('maps','admission.list',{unitId}),
     request<DietRow[]>('diets','diet.list',{unitId}),
    ]);
    setAvailable(maps);setAdmissions(people);setCatalog(diets);
   }catch(e){setError(e instanceof Error?e.message:'Falha ao consultar mapas')}
   finally{setLoading(false)}
- },[request,unitId,date,cycle]);
+ },[request,unitId,date,cycle,mapStatus,lateFilter,mealFilter,dietFilter,bedFilter,patientFilter,restrictionFilter,versionFilter]);
  useEffect(()=>{void reload();setMap(null);setReference(null);setSelectedAdmission('')},[reload]);
  const loadMap=useCallback(async(mapId:string)=>{
   const detail=await request<MapDetail>('maps','map.get',{mapId});setMap(detail);return detail;
@@ -145,6 +163,19 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
     <button style={actionStyle} type="button" disabled={disabled} onClick={()=>void reload()}>Atualizar</button>
     <button style={actionStyle} type="button" disabled={disabled} onClick={()=>void updateMap()}>Abrir rascunho</button>
    </div>
+   <details style={{marginTop:12,marginBottom:10}}>
+     <summary style={{cursor:'pointer',fontWeight:600}}>Filtros avançados de mapas</summary>
+     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginTop:12}}>
+      <label>Status<select style={inputStyle} value={mapStatus} onChange={e=>setMapStatus(e.target.value)}><option value="">Todos</option><option value="DRAFT">Rascunho</option><option value="SUBMITTED">Enviado</option><option value="CLOSED">Fechado</option></select></label>
+      <label>Pontualidade<select style={inputStyle} value={lateFilter} onChange={e=>setLateFilter(e.target.value)}><option value="">Todos</option><option value="late">Atrasados</option><option value="on-time">Sem atraso</option></select></label>
+      <label>Refeição<select style={inputStyle} value={mealFilter} onChange={e=>setMealFilter(e.target.value)}><option value="">Todas</option><option value="PRIMARY">Principal</option><option value="SECONDARY">Secundária</option></select></label>
+      <label>Dieta<select style={inputStyle} value={dietFilter} onChange={e=>setDietFilter(e.target.value)}><option value="">Todas</option>{catalog.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
+      <label>Paciente<select style={inputStyle} value={patientFilter} onChange={e=>setPatientFilter(e.target.value)}><option value="">Todos</option>{admissions.map(a=><option key={a.admissionId} value={a.patientId}>{a.patientCode}</option>)}</select></label>
+      <label>Leito<input style={inputStyle} value={bedFilter} onChange={e=>setBedFilter(e.target.value)} placeholder="Identificador do leito"/></label>
+      <label>Restrição<input style={inputStyle} value={restrictionFilter} onChange={e=>setRestrictionFilter(e.target.value)} placeholder="Código da restrição"/></label>
+      <label>Versão do snapshot<input style={inputStyle} type="number" min={1} value={versionFilter} onChange={e=>setVersionFilter(e.target.value)} placeholder="Todas"/></label>
+     </div>
+    </details>
    <small>06h, 10h e 16h são prazos dos mapas. A tolerância de 30 minutos é apenas para a principal, não para enviar no prazo.</small>
    <p style={{marginBottom:0}}>Mapas existentes: {available.length===0?'nenhum para o período':available.map(m=><button key={m.id} style={{...actionStyle,margin:4}} disabled={disabled} onClick={()=>void loadMap(m.id).catch(e=>setError(e instanceof Error?e.message:'Erro de leitura'))}>{m.status} · revisão {m.revision}</button>)}</p>
   </section>
