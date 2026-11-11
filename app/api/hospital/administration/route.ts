@@ -16,7 +16,7 @@ async function dispatch(request: NextRequest, method: 'GET'|'POST') {
   let store: HospitalQAStore | undefined;
   try {
     const useFirestore=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1';
-    if(!useFirestore)store = new HospitalQAStore({ filename: process.env.HOSPITAL_QA_DB_PATH, qa: true });
+    if(!useFirestore)store = new HospitalQAStore({ filename: process.env.HOSPITAL_QA_DB_PATH!, qa: true });
     const payload = method === 'POST' ? await request.json() : {};
     const operation = method === 'POST' ? payload?.operation : request.nextUrl.searchParams.get('view');
     const handler = useFirestore?createHospitalFirestoreAdministrationHandler({
