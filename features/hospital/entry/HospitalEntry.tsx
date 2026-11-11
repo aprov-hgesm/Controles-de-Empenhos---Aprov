@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { ArrowRight, LogOut, Mail, RefreshCw, ShieldCheck } from 'lucide-react';
 
-import { auth } from '@/lib/firebase';
+import {getHospitalAuth} from '@/lib/hospital/firebase-client';
 import { checkHospitalEntry, type HospitalEntryDecision } from './action';
 
 type AccessState =
@@ -23,7 +23,7 @@ export function HospitalEntry() {
 
   useEffect(() => {
     let mounted = true;
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(getHospitalAuth(), async (user) => {
       const version = ++requestVersion.current;
       setMessage(null);
       if (!user) {
@@ -59,7 +59,7 @@ export function HospitalEntry() {
     setSigning(true);
     setMessage(null);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(getHospitalAuth(), email.trim(), password);
       setPassword('');
     } catch {
       setMessage('Não foi possível autenticar. Confira suas credenciais ou tente novamente.');
@@ -75,7 +75,7 @@ export function HospitalEntry() {
     }
     setSigning(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(getHospitalAuth(), email.trim());
     } catch {
       // Same response to avoid disclosing whether an account exists.
     } finally {
@@ -88,7 +88,7 @@ export function HospitalEntry() {
     setState({ phase: 'checking' });
     setMessage(null);
     try {
-      await signOut(auth);
+      await signOut(getHospitalAuth());
     } catch {
       setState({ phase: 'denied', status: 503, message: 'Não foi possível encerrar a sessão.' });
     }
