@@ -4,6 +4,7 @@ import {initializeApp, deleteApp} from 'firebase/app';
 import {getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc} from 'firebase/firestore';
 import {getAuth, connectAuthEmulator, createUserWithEmailAndPassword} from 'firebase/auth';
 import {HospitalFirestoreStore} from '../../../lib/server/hospital/firebase/firestore-store.mjs';
+import {verifyHospitalEmulatorIdToken} from '../../../lib/server/hospital/firebase/verify-auth-emulator.mjs';
 import {resolveHospitalScope, requireHospitalPermission} from '../../../lib/server/hospital/core/auth.mjs';
 
 const QA_PROJECT='demo-cozinha-dietetica';
@@ -37,7 +38,9 @@ test('emulator: Firestore Rules deny anonymous and authenticated client SDK read
   await assert.rejects(setDoc(ref,{unsafe:true}),/permission|insufficient/i);
   const auth=getAuth(app);
   connectAuthEmulator(auth,'http://'+process.env.FIREBASE_AUTH_EMULATOR_HOST,{disableWarnings:true});
-  await createUserWithEmailAndPassword(auth,'synthetic-'+suffix+'@example.invalid','test-only-password-123');
+  const credential=await createUserWithEmailAndPassword(auth,'synthetic-'+suffix+'@example.invalid','test-only-password-123');
+  const token=await credential.user.getIdToken();
+  assert.deepEqual(await verifyHospitalEmulatorIdToken(token),{uid:credential.user.uid});
   await assert.rejects(getDoc(ref),/permission|insufficient/i);
   await assert.rejects(setDoc(ref,{unsafe:true}),/permission|insufficient/i);
 });
