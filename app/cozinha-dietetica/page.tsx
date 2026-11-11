@@ -21,7 +21,7 @@ export default function HospitalEntryPage() {
       <div className="mx-auto max-w-3xl">
         <a href="/" className="inline-flex rounded-lg px-1 py-2 text-sm text-sky-200 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-200">
           Voltar ao portal
-        </a
+        </a>
         <div className="mt-8 rounded-3xl border border-white/15 bg-white/[0.05] p-6 sm:p-10">
           <ChefHat size={38} aria-hidden="true" className="mb-5 text-sky-300" />
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Ambiente hospitalar</p>
