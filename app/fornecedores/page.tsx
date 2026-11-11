@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { Building2, LockKeyhole } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -18,8 +17,8 @@ export default function FornecedoresEntry() {
           <LockKeyhole size={18} aria-hidden="true" /> Acesso empresarial aguardando integração autorizada.
         </p>
         <div className="mt-8 flex flex-wrap gap-5 text-sm font-semibold">
-          <Link href="/" className="text-sky-200 underline underline-offset-4">Voltar ao portal</Link>
-          <Link href="/info" className="text-sky-200 underline underline-offset-4">Conhecer o EMPROVEX</Link>
+          <a href="/" className="text-sky-200 underline underline-offset-4">Voltar ao portal</a
+          <a href="/info" className="text-sky-200 underline underline-offset-4">Conhecer o EMPROVEX</a
         </div>
       </section>
     </main>
