@@ -5,7 +5,7 @@ import {onAuthStateChanged,signOut} from 'firebase/auth';
 import {
   Activity,ArrowRight,BadgeCheck,BookOpenCheck,ChefHat,ChevronRight,ClipboardCheck,
   ClipboardList,FileChartColumn,HeartPulse,Home,LogOut,Menu,PackageCheck,
-  PanelLeftClose,ShieldCheck,Stethoscope,UserRound,Users,UtensilsCrossed,X,
+  ShieldCheck,Stethoscope,UserRound,Users,UtensilsCrossed,X,
   type LucideIcon
 } from 'lucide-react';
 import {AppShellLogo} from '@/components/layout/chrome/AppShellLogo';
