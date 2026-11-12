@@ -29,9 +29,9 @@ function todayLocal(){
  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 function dateTime(s:string|null|undefined){return s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'—'}
-const panel:React.CSSProperties={border:'1px solid #cbd5e1',borderRadius:12,padding:16,background:'#fff'};
-const inputStyle:React.CSSProperties={width:'100%',padding:'9px 10px',border:'1px solid #94a3b8',borderRadius:7,background:'#fff',color:'#10213b'};
-const actionStyle:React.CSSProperties={padding:'10px 14px',borderRadius:8,border:'1px solid #64748b',background:'#eff6ff',color:'#132846',cursor:'pointer'};
+const panel:React.CSSProperties={border:'1px solid #e1e9f4',borderRadius:18,padding:22,background:'#fff',boxShadow:'0 12px 36px rgba(17,44,87,.045)'};
+const inputStyle:React.CSSProperties={width:'100%',padding:'11px 12px',border:'1px solid #cddbef',borderRadius:11,background:'#fff',color:'#19365c',minHeight:42};
+const actionStyle:React.CSSProperties={padding:'11px 15px',borderRadius:11,border:'1px solid #d5e2f6',background:'#f4f8ff',color:'#164785',fontWeight:650,cursor:'pointer'};
 export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusMapasProps){
  const [date,setDate]=useState(todayLocal);
  const [cycle,setCycle]=useState<Cycle>('06');
@@ -150,18 +150,19 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
    await request('maps','exception.escalate',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,reason,contactReference:contact,idempotencyKey:crypto.randomUUID()});
   },'Exceção pendente: contate imediatamente a assistência e a cozinha');
  };
- return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:16,maxWidth:1080,color:'#10213b'}}>
+ return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:18,width:'100%',color:'#173151'}}>
   <style>{`@media print { .w3-no-print {display:none !important} .w3-print-only {display:block !important} .w3-receipt {border:0 !important;padding:0 !important} } @media screen {.w3-print-only{display:none !important}}`}</style>
   <header className="w3-no-print">
-   <h2 style={{fontSize:23,marginBottom:4}}>Meus Mapas</h2>
+   <h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',marginBottom:4,color:'#173b69'}}>Planejamento e envio de mapas</h2>
    <p style={{margin:0,color:'#475569'}}>Unidade: {unitLabel??unitId}. Envio manual; a Nutrição audita sem homologação obrigatória.</p>
   </header>
   <section className="w3-no-print" style={panel}>
+   <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Selecionar ciclo do mapa">{CYCLES.map(c=><button key={c.value} type="button" aria-pressed={cycle===c.value} onClick={()=>setCycle(c.value)} className={cycle===c.value?'hospital-primary-action':'hospital-secondary-action'}>{c.value}h</button>)}</div>
    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12,alignItems:'end'}}>
     <label>Data local<input style={inputStyle} type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
     <label>Mapa<select style={inputStyle} value={cycle} onChange={e=>setCycle(e.target.value as Cycle)}>{CYCLES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
     <button style={actionStyle} type="button" disabled={disabled} onClick={()=>void reload()}>Atualizar</button>
-    <button style={actionStyle} type="button" disabled={disabled} onClick={()=>void updateMap()}>Abrir rascunho</button>
+    <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} type="button" disabled={disabled} onClick={()=>void updateMap()}>Abrir rascunho</button>
    </div>
    <details style={{marginTop:12,marginBottom:10}}>
      <summary style={{cursor:'pointer',fontWeight:600}}>Filtros avançados de mapas</summary>
@@ -198,8 +199,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
      <label>Motivo de adendo, atraso ou alteração (obrigatório quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe motivo e comunicação assistencial, quando necessária"/></label>
      <label>Contato assistencial para exceção clínica<input style={inputStyle} value={contact} onChange={e=>setContact(e.target.value)} placeholder="Referência do contato efetuado"/></label>
      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
-      <button style={actionStyle} disabled={disabled||!reference} onClick={()=>void addMeal()}>Adicionar/atualizar refeição</button>
-      {map.map.status==='DRAFT'&&<button style={actionStyle} disabled={disabled} onClick={()=>void send()}>Enviar mapa explicitamente</button>}
+      <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} disabled={disabled||!reference} onClick={()=>void addMeal()>Adicionar/atualizar refeição</button>
+      {map.map.status==='DRAFT'&&<button style={{...actionStyle,background:'#0a338d',color:'#fff',borderColor:'#0a338d'}} disabled={disabled} onClick={()=>void send()>Enviar mapa explicitamente</button>}
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
       <button style={actionStyle} disabled={disabled||!selectedAdmission} onClick={()=>void escalate()}>Registrar exceção clínica</button>
      </div>
