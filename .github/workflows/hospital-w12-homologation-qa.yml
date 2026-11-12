@@ -37,7 +37,7 @@ jobs:
           --project demo-cozinha-dietetica
           --config firebase.hospital-w10-test.json
           --only auth,firestore
-          "node --test --test-concurrency=1 tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs"
+          "node --test --test-concurrency=1 tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs tests/hospital/firebase/w12-contingency-recovery.test.mjs"
       - name: W12 private PWA, report provenance and W11 identity guards
         run: >
           node --test
@@ -64,6 +64,13 @@ jobs:
           tests/hospital/administration/*.test.mjs
           tests/hospital/reporting/*.test.mjs
           tests/hospital/e2e/*.test.mjs
+      - name: W12 backup seed and genuine Firestore Emulator export (synthetic only)
+        run: |
+          npx --yes firebase-tools emulators:exec --project demo-cozinha-dietetica --config firebase.hospital-w10-test.json --only auth,firestore --export-on-exit="$RUNNER_TEMP/w12-hospital-synthetic-backup" "node tests/hospital/firebase/w12-backup-restore.mjs seed"
+          test -s "$RUNNER_TEMP/w12-hospital-synthetic-backup/firebase-export-metadata.json"
+      - name: W12 restart emulator, import actual backup, verify audit and idempotency
+        run: >
+          npx --yes firebase-tools emulators:exec --project demo-cozinha-dietetica --config firebase.hospital-w10-test.json --only auth,firestore --import="$RUNNER_TEMP/w12-hospital-synthetic-backup" "node tests/hospital/firebase/w12-backup-restore.mjs verify"
       - name: EMPROVEX core isolation
         run: npm run verify:emprovex-core-protection
       - name: Financial, billing, NF, warehouse and route regression
@@ -73,3 +80,22 @@ jobs:
           scripts/warehouse-ledger-contract.test.mjs
           scripts/saas-r1-billing.test.mjs
           scripts/invoice-identity.test.mjs
+
+      - name: Install Chromium test tooling (ephemeral QA only)
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Visual responsive mobile desktop and locked hospital PWA (Chromium)
+        run: |
+          npm run start -- --port 3333 > "$RUNNER_TEMP/w12-next-server.log" 2>&1 &
+          for i in {1..35}; do if curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null; then break; fi; sleep 2; done
+          curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null
+          npx playwright test tests/hospital/browser/w12-closed-qa.spec.mjs --reporter=line --workers=1
+      - name: Save only screenshots of deliberately LOCKED anonymous QA screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-w12-synthetic-visual
+          path: ${{ runner.temp }}/hospital-w12-visual/
+          if-no-files-found: ignore
+          retention-days: 3
