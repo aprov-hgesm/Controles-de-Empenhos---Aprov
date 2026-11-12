@@ -110,3 +110,9 @@ gcloud.cmd --account=marcoa.r.aquino@gmail.com run services get-iam-policy cozin
 ```
 
 Parecer: **GO implantação técnica da imagem / NO-GO acesso clínico ou testes reais ainda não executados**.
+
+## 9. Prova real de IAM e Firestore — Cloud Run Job `w11-firestore-smoke`
+
+O operador confirmou via PowerShell que o Cloud Run Job temporário `w11-firestore-smoke` foi criado e a execução `w11-firestore-smoke-vkwld` terminou **com êxito, 1/1 tarefa concluída**, projeto `cozinha-dietetica`, região `southamerica-east1`. O script Node executado pelo Job obtém a identidade no metadata server, exige email `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`, obtém OAuth token e faz `POST .../documents:listCollectionIds` no Firestore `(default)`, com `pageSize:1` e sem gravar documentos; lança exceção e sai com status 1 em caso de erro IAM/HTTP.
+
+**Prova da execução concluída não substitui o log do payload.** Evidência final pendente: ler Cloud Logging da execução para registrar `PASS: identidade hospitalar e leitura Firestore; HTTP 200`. Em seguida apagar somente o **Job temporário** `w11-firestore-smoke` (não o serviço `cozinha-dietetica-qa`). Firebase Authentication real, invocação interna autenticada, provisionamento de usuário/organização 100% sintéticos e QA funcional ainda não testados; acesso clínico segue fechado.
