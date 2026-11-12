@@ -1,6 +1,6 @@
 # W12 — Homologação E2E, contingência e decisão de piloto controlado — Handoff R1
 
-**Data:** 12/11/2026. **Branch:** `feat/cozinha-dietetica-w12-homologacao-piloto`. **PR-base W11:** [#552](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/552), HEAD consultado imediatamente antes da criação da branch: `de770c4d15dba0f4d105f2f70aa1785f8e84aecd`. **Destino exclusivo:** `feat/cozinha-dietetica-w11-infra-hospitalar-isolada`. **SHA de entrega:** consultar HEAD da PR W12 após o último commit documental; não copiar o SHA da base como se fosse o resultado.
+**Data:** 12/11/2026. **Branch:** `feat/cozinha-dietetica-w12-homologacao-piloto`. **PR-base W11:** [#552](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/552), HEAD consultado imediatamente antes da criação da branch: `de770c4d15dba0f4d105f2f70aa1785f8e84aecd`. **Destino exclusivo:** `feat/cozinha-dietetica-w11-infra-hospitalar-isolada`. **SHA de código testado:** `7536409636ce770bf850ef99561f5c5599b7ec57`; o SHA final da entrega, incluindo esta atualização documental, é o HEAD da PR W12 #553, registrado no corpo da PR.
 
 > **Distinção obrigatória:** as evidências reais W11 de Cloud Run privado, IAM, Firestore HTTP 200, Auth HTTP 200 e Workflows OIDC SUCCEEDED/PASS são aceitas **sem reprovisionar ou refazer**. Elas comprovam infraestrutura, **não** E2E clínico. O código W12 não foi implantado no Cloud Run: este worker não tem sessão GCP/autorização para deploy e a missão proíbe deploy. Nenhum paciente, usuário ou prontuário real foi utilizado.
 
@@ -19,9 +19,9 @@
 | Ambiente / gate | Resultado | Evidência e limite |
 |---|---|---|
 | W11 Cloud Run privado, IAM, Firestore e Auth | **PASS herdado do W11** | [Handoff W11](W11_HANDOFF_GCP_R1.md), seções 12–13; não repetido |
-| W12 Firestore/Auth Emulator E2E + W10/W11 | **EM EXECUÇÃO** | [Workflow W12 #43148731085](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43148731085); atualizar conclusão conforme CI |
-| W12 PWA, isolamento do middleware, fonte de relatório | **EM EXECUÇÃO** | Workflow W12 |
-| Typecheck, build, PWA histórico, W0–W9 e regressões EMPROVEX | **EM EXECUÇÃO** | Workflow W12 |
+| W12 Firestore/Auth Emulator E2E + W10/W11 | **PASS (14/14)** | [Workflow W12 #43149776747](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776747); transações Firestore Emulator e cenários sintéticos |
+| W12 PWA, isolamento do middleware, fonte de relatório, identidade | **PASS (10/10)** | [Workflow W12 #43149776747](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776747) |
+| Typecheck, build, PWA histórico, W0–W9 e regressões EMPROVEX | **PASS** | Typecheck e build; PWA **12/12**, W0–W9 **111/111**, financeiro/logística **29/29**, Core Protection **PASS**, mesmo [workflow](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776747) |
 | Browser visual real Android/desktop, acessibilidade com dispositivo | **NÃO EXECUTADO** | Sem browser/cliente QA remoto autorizado nesta sessão; asserts PWA não substituem teste visual |
 | W12 E2E via Cloud Run privado + Firebase Auth/Firestore GCP com 8 perfis sintéticos | **NÃO EXECUTADO** | Branch W12 ainda não presente no Cloud Run; nenhuma sessão de invocador interno/credenciais de QA disponível; deploy não autorizado |
 | Teste de pico 06/10/16, latência/cota/firestore GCP e recuperação após reinício | **NÃO EXECUTADO** | Exige execução no ambiente hospitalar privado com instrumentação, sem dados reais |
@@ -69,9 +69,11 @@
 
 | Fronteira | Parecer | Razão |
 |---|---|---|
-| (a) QA/emulador | **PENDENTE CI W12** | Há implementação funcional e cobertura W10/W11 comprovada; aguarda resultado atualizado da execução W12 |
+| (a) QA/emulador | **GO para revisão técnica sintética** | CI W12 [SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776747): 14/14 E2E, 10/10 segurança/PWA, 12/12 PWA, 111/111 hospital, 29/29 regressões e typecheck/build PASS |
 | (b) Cloud Run QA hospitalar com contas sintéticas | **NO-GO para declarar W12 homologado remotamente** | W11 infra PASS, mas nenhum fluxo W12 ponta a ponta no serviço privado foi executado |
 | (c) Preparação de produção | **NO-GO** | Backup/restauração, observabilidade, latência de pico, contingência e aceite institucional ainda não evidenciados |
 | (d) Piloto clínico com pacientes reais | **NO-GO** | Falta autorização institucional e validação clínica/privacidade; esta missão proíbe dados reais |
+
+**Gates externos no SHA de código testado:** [Core Protection SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776738); [Fast CI SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776791); [Hospital W08 QA SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776729); [W4 Evidence SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776694). Application CI e Domain CI R2: **SKIPPED** na branch. Visual-R2 real, QA remoto GCP, sessão Android e backup/restore: **NÃO EXECUTADO**, não equivalem a PASS.
 
 **Mudanças externas realizadas pelo W12: nenhuma.** Sem IAM, deploy, Rules, faturamento, alteração da main, dados clínicos ou sistemas do EMPROVEX. Evidência e próxima decisão permanecem nesta PR Draft, sem criar W13.
