@@ -13,10 +13,10 @@ type Audit = {id:number;aggregateId:string;type:string;actorUid:string;occurredA
 type Overview = {organizationId:string;ug:string;counts:{unit:number;bed:number;map:number;meal:number;members:number};scope:string};
 
 const tabs: Array<[Tab,string]> = [['overview','Visão geral'],['units','Unidades e leitos'],['members','Usuários e permissões'],['diets','Dietas e parâmetros'],['audit','Relatórios / auditoria'],['settings','Configurações']];
-const surface = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
-const input = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:opacity-60';
-const button = 'rounded-lg bg-blue-800 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50';
-const secondary = 'rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50 disabled:opacity-50';
+const surface = 'hospital-panel p-5';
+const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 disabled:opacity-60';
+const button = 'hospital-primary-action disabled:cursor-not-allowed disabled:opacity-50';
+const secondary = 'hospital-secondary-action disabled:opacity-50';
 
 /** Composable W7 component: W9 supplies verified Firebase ID token from the existing session. */
 export function AdministrationView({organizationId,getToken}: {organizationId:string;getToken:()=>Promise<string>}) {
@@ -73,13 +73,13 @@ export function AdministrationView({organizationId,getToken}: {organizationId:st
   const setRoles=(role:string,checked:boolean)=>setMemberForm(s=>({...s,roles:checked?[...new Set([...s.roles,role])]:s.roles.filter(r=>r!==role)}));
   const setUnitAccess=(id:string,checked:boolean)=>setMemberForm(s=>({...s,unitIds:checked?[...new Set([...s.unitIds,id])]:s.unitIds.filter(x=>x!==id)}));
 
-  return <section className="mx-auto max-w-6xl space-y-4 px-3 py-5 text-slate-900 sm:px-6" aria-label="Administração hospitalar">
+  return <section className="space-y-5 text-slate-900" aria-label="Administração hospitalar">
     <header className="flex flex-wrap items-start justify-between gap-3">
-      <div><h1 className="text-2xl font-bold tracking-tight">Administração Hospitalar</h1><p className="mt-1 text-sm text-slate-500">Gestão institucional da OM {overview?.ug??'—'} · acesso administrativo sem prontuários</p></div>
+      <div><h2 className="text-xl font-extrabold tracking-tight text-[#173b69]">Gestão e configuração hospitalar</h2><p className="mt-1 text-sm text-slate-500">Gestão institucional da OM {overview?.ug??'—'} · acesso administrativo sem prontuários</p></div>
       <button type="button" className={secondary} disabled={busy} onClick={()=>void refresh()}>Atualizar</button>
     </header>
-    <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Abas de administração">
-      {tabs.map(([id,title])=><button type="button" key={id} aria-current={id===tab?'page':undefined} onClick={()=>setTab(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm ${id===tab?'bg-blue-800 font-semibold text-white':'bg-slate-100 text-slate-800'}`}>{title}</button>)}
+    <nav className="hospital-panel flex gap-2 overflow-x-auto p-2" aria-label="Abas de administração">
+      {tabs.map(([id,title])=><button type="button" key={id} aria-current={id===tab?'page':undefined} onClick={()=>setTab(id)} className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm ${id===tab?'bg-[#124da8] font-semibold text-white':'bg-transparent text-slate-600 hover:bg-blue-50'}`}>{title}</button>)}
     </nav>
     {error&&<div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
     {notice&&<div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
