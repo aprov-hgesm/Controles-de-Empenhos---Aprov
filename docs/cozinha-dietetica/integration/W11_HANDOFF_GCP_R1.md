@@ -154,3 +154,11 @@ O operador confirmou por saída PowerShell que `workflows.googleapis.com` e `wor
 **Pendente de execução:** teste com Workflows na mesma região e projeto, HTTPS `run.app`, OIDC audience da raiz do serviço, `GET /cozinha-dietetica`, retorno 200 e indicação literal de que o acesso clínico não está habilitado. O workflow não receberá dados de pacientes, nem usará usuários do Firebase. Não remover a role invoker antes da prova concluída.
 
 **Atenção:** apenas habilitar API/criar SA/conceder Invoker não comprova invocação interna; manter a verificação como pendente até haver execução real `SUCCEEDED`.
+
+### Incidente de autenticação do probe Workflows (11/11/2026)
+
+O operador implantou com sucesso o Workflows `w11-private-probe`, revisão `000001-895`, com conta `hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com`, e executou o ID `69ac90c5-33ad-4ea2-aa41-8710e544beae`, que terminou **FAILED** na etapa `consultar_hospital` (linha 4) com `AuthError: IAM permission denied for service account hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com`.
+
+Isso significa que a chamada OIDC não chegou a comprovar conectividade com o serviço; não alterar Cloud Run `internal` nem tornar público. A conta `hospital-w11-probe` já recebeu `roles/run.invoker` **somente no serviço `cozinha-dietetica-qa`**. Causas sob investigação: propagação de IAM de conta recém-criada ou função `roles/workflows.serviceAgent` ausente da conta gerenciada `service-947369899527@gcp-sa-workflows.iam.gserviceaccount.com`. Primeiro repetir execução após propagação; em caso de nova falha, consultar IAM do service agent e corrigir **somente se ausente**.
+
+A definição implantada também mostra texto `"Acesso hospitalar n?o habilitado"` alterado por encoding no envio Windows. Antes de declarar PASS, substituir o teste por fragmentos ASCII inequívocos (ex.: `"Acesso hospitalar n"` + `"habilitado"`) ou corrigir o encoding. **Parecer do probe Workflows: NO-GO pendente; testes IAM Firestore e Firebase Auth anteriores permanecem aprovados.**
