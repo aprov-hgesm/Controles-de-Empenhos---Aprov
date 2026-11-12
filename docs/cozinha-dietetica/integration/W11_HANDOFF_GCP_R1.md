@@ -60,3 +60,37 @@ O proprietário **autorizou expressamente** a preparação da conta de serviço 
 **Gates após executar:** coletar o project ID, billing habilitado, e-mail da conta de serviço, papéis IAM, serviço/ingress e digest de imagem, sem publicar tokens ou chaves privadas. A documentação e PR permanecem **NO-GO para Cloud GCP real** até tais resultados serem efetivamente obtidos.
 
 **Custo:** orçamento e alertas são orientação, não limite rígido de despesas. Spark → Blaze requer vincular billing; não efetuar alterações em conta financeira do EMPROVEX principal.
+
+
+## 7. Preparação da imagem Cloud Build para PowerShell (11/11/2026)
+
+O usuário confirmou **API Cloud Run, Artifact Registry e Cloud Build habilitadas**, e **repositório Docker `hospital-qa` criado em `southamerica-east1`** no projeto `cozinha-dietetica`. A conta hospitalar `hospital-qa-runtime@` recebeu `roles/datastore.user` e `roles/firebaseauth.viewer`, e o faturamento do projeto está ativo. Estas verificações vieram das saídas do PowerShell fornecidas pelo usuário. **O serviço Cloud Run ainda não existe; imagem e smoke test remotos continuam não executados.**
+
+**Correções pré-build nesta PR:** página de login e workspace agora aceitam **somente Cloud Run hospitalar privado** com guard GCP W11, `HOSPITAL_QA_ORGANIZATION_ID` sintético `qa_*`, app Firebase correto e opt-ins; ações de entrada e autorização do shell usam a **mesma store Firestore** do W10/W11, não SQLite, sob esse guard. Ambiente de produção normal do EMPROVEX continua fechado. Testes `tests/hospital/firebase/w11-qa-ui-gate.test.mjs` vinculados ao CI. A aplicação permanece **indisponível se `HOSPITAL_QA_ORGANIZATION_ID` e membership sintéticos não forem provisionados e `HOSPITAL_QA_APP_READY` não for ativado**.
+
+O repositório inclui `ops/Dockerfile.hospital-qa`, `ops/hospital-w11-cloudbuild-qa.yaml` e `.gcloudignore`. O Dockerfile exige Web API key e Web App ID públicos **do projeto hospitalar**, injetados no build do Next.js (e disponíveis na etapa runner); não aceita build sem ambos. Não usar tokens de admin ou arquivos de service account.
+
+### Comandos PowerShell para gerar a imagem (não executar antes de revisar CI W11)
+
+```powershell
+# Checkout somente do código hospitalar aprovado
+git clone https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov.git "$HOME\\hospital-qa-w11"
+Set-Location "$HOME\\hospital-qa-w11"
+git switch feat/cozinha-dietetica-w11-infra-hospitalar-isolada
+git status --short
+git rev-parse HEAD
+
+# Obter apiKey e appId do aplicativo WEB no console Firebase
+# Project Settings > General > Your apps > SDK setup and configuration.
+$hospitalApiKey = Read-Host 'Firebase web apiKey do projeto cozinha-dietetica'
+$hospitalAppId = Read-Host 'Firebase web appId do projeto cozinha-dietetica'
+
+# Gerar imagem com tag exclusiva do BUILD_ID e enviar ao Artifact Registry hospitalar.
+# Atenção: build pode ter cobrança. Valores acima são config PUBLICA do app Web.
+gcloud.cmd --account=marcoa.r.aquino@gmail.com builds submit . --project=cozinha-dietetica --region=southamerica-east1 --config=ops/hospital-w11-cloudbuild-qa.yaml --substitutions="_HOSPITAL_API_KEY=$hospitalApiKey,_HOSPITAL_APP_ID=$hospitalAppId"
+Remove-Variable hospitalApiKey,hospitalAppId
+```
+
+**Pontos de verificação:** confirmar no log que a imagem foi enviada a `southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web`, registrar **digest `sha256:...`** gerado, confirmar custo/faturamento e identidade do Cloud Build. Se houver erro de permissão de Cloud Build/Artifact Registry, **não conceder Owner/Editor**: identificar a conta efetiva e conceder somente os papéis necessários. Não executar `gcloud run deploy` antes de aprovação do digest e preparação do invocador interno/organização sintética.
+
+**Regra de acesso:** ingresso `internal` requer chamada de infraestrutura interna autorizada (ou proxy institucional posterior). Um navegador doméstico não abrirá diretamente o Cloud Run privado. Sem `HOSPITAL_QA_ORGANIZATION_ID=qa_...`, conta e vínculo fictícios, a interface continuará fechada, deliberadamente. O build e o push da imagem **não publicam nem ativam o serviço clínico**.
