@@ -138,3 +138,11 @@ O teste lê email e OAuth token do metadata server, exige a identidade hospitala
 **Pendente de registro conclusivo:** conferir log do Job `w11-auth-smoke-9p959` com `PASS: Firebase Authentication IAM; HTTP 200` e, apenas após confirmação, excluir o Job temporário. O resultado de execução `SUCCESS` é evidência positiva, mas o log literal deve ser arquivado antes de certificar o teste específico.
 
 **Permanece NO-GO clínico** até invocação interna autenticada, seed sintética e fluxo funcional QA em ambiente remoto, com segurança e custo verificados. Não liberar publicamente o serviço.
+
+### Confirmação conclusiva Firebase Authentication IAM — 12/11/2026
+
+**Log real fornecido pelo operador:** `2026-11-12 02:48:08 PASS: Firebase Authentication IAM; HTTP 200` da execução `w11-auth-smoke-9p959`, Google Cloud Run Job sob `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`. O script consultou por OAuth IAM o endpoint `POST /v1/projects/cozinha-dietetica/accounts:lookup` com UID fictício inexistente e exigiu retorno 2xx sem contas correspondentes. **Resultado PASS** para consulta autenticada à API do Firebase Authentication; nenhum usuário criado nem modificado.
+
+**Limpeza confirmada:** `Deleted job [w11-auth-smoke]`, após execução bem-sucedida. O serviço hospitalar `cozinha-dietetica-qa` permanece privado e independente.
+
+**Balanço W11:** Cloud Run privado `Ready=True`, política de invocação sem membros públicos, ingresso `internal` e verificação externa HTTP 404; service account correta, limite de uma instância, imagens no Artifact Registry isolado; Cloud Run Job Firestore e Authentication ambos com `HTTP 200`; Jobs temporários apagados. **GO para provisionamento e conectividade técnica W11; NO-GO para uso clínico**. Ainda pendem invocação real autenticada ao serviço interno, dados de teste sintéticos, testes de fluxo hospitalar E2E e checklist W12. Não fazer merge, exposição pública ou carga de pacientes reais.
