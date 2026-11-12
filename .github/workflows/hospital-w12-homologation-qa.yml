@@ -37,7 +37,7 @@ jobs:
           --project demo-cozinha-dietetica
           --config firebase.hospital-w10-test.json
           --only auth,firestore
-          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs"
+          "node --test --test-concurrency=1 tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs"
       - name: W12 private PWA, report provenance and W11 identity guards
         run: >
           node --test
