@@ -1,0 +1,21 @@
+# Source submitted to Google Cloud Build must not include local credentials.
+.git/
+.github/
+.next/
+node_modules/
+coverage/
+.vercel/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
+gha-creds-*.json
+*.log
+.DS_Store
+emprovex-snapshots/
+.local-snapshots/
+.performance-r3/
