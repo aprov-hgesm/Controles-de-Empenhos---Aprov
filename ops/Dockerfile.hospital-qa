@@ -1,0 +1,35 @@
+# Independent hospital QA image. Not used by EMPROVEX main production.
+FROM node:24-bookworm-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+FROM node:24-bookworm-slim AS builder
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID=cozinha-dietetica
+ENV NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY=$NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID=$NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID
+ENV NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN test -n "$NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY" \
+ && test -n "$NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID" \
+ && test "$NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID" = "cozinha-dietetica" \
+ && npm run typecheck \
+ && npm run build
+
+FROM node:24-bookworm-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8080
+ENV HOSTNAME=0.0.0.0
+COPY --chown=node:node --from=builder /app/public ./public
+COPY --chown=node:node --from=builder /app/.next/standalone ./
+COPY --chown=node:node --from=builder /app/.next/static ./.next/static
+USER node
+EXPOSE 8080
+CMD ["node","server.js"]
