@@ -81,3 +81,13 @@
 **Gates externos no SHA de código testado anterior (referência histórica):** [Core Protection SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776738); [Fast CI SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776791); [Hospital W08 QA SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776729); [W4 Evidence SUCCESS](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/actions/runs/43149776694). Application CI e Domain CI R2: **SKIPPED** na branch. Visual-R2 real, QA remoto GCP, sessão Android e backup/restore: **NÃO EXECUTADO**, não equivalem a PASS.
 
 **Mudanças externas realizadas pelo W12: nenhuma.** Sem IAM, deploy, Rules, faturamento, alteração da main, dados clínicos ou sistemas do EMPROVEX. Evidência e próxima decisão permanecem nesta PR Draft, sem criar W13.
+
+## 7. Autorização de revisão QA privada — 12/11/2026
+
+O titular autorizou explicitamente a **implantação de uma revisão W12 exclusivamente no serviço privado Cloud Run `cozinha-dietetica-qa`**, no projeto `cozinha-dietetica`, e a execução posterior de testes com **organizações, contas e pacientes integralmente sintéticos**. Isso **não** autoriza merge, deploy público, alterações no serviço EMPROVEX principal, uso clínico real ou acesso a prontuários.
+
+Preparação versionada na própria PR W12:
+- `ops/hospital-w12-cloudbuild-qa.yaml`: Dockerfile hospitalar já testado no W11, imagem `hospital-web:w12-$BUILD_ID` no Artifact Registry exclusivo e argumentos de Firebase Web público no momento do build.
+- `ops/hospital-w12-private-qa.ps1`: confere branch/HEAD remoto, working tree limpo, serviço/IAM de ingresso `internal`, identidade `hospital-qa-runtime`, maxScale=1 e nenhum invocador público; usa Cloud Build com digest imutável; faz `gcloud run deploy --no-traffic --tag=w12qa`, preserva 100% do tráfego W11, restringe a uma instância, configura somente `HOSPITAL_QA_ORGANIZATION_ID=qa_hgesm_w12_20261112` e `HOSPITAL_QA_APP_READY=1` para login de teste **sem cadastros automáticos**; confere o tráfego após a operação. O serviço segue interno por IAM; `--no-traffic` evita promover a revisão para o URL principal.
+
+**Situação factual neste commit: PREPARADO, NÃO IMPLANTADO.** Sem credenciais Google Cloud disponíveis diretamente ao agente, o arquivo PowerShell requer execução pelo operador no terminal Google Cloud já autenticado. O script não cria contas Firebase ou documentos de pacientes. A etapa seguinte exige comprovar o novo digest/revisão/URL tagged e então preparar usuários sintéticos, invocador temporário e E2E remoto real de forma controlada. Não converter GO local em GO remoto antes da evidência.
