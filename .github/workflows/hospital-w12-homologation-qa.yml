@@ -31,6 +31,10 @@ jobs:
           java-version: '21'
       - name: Reproducible install (no postinstall)
         run: npm ci --ignore-scripts
+      - name: Local synthetic preview scripts syntax
+        run: |
+          node --check scripts/hospital-w12-preview-seed.mjs
+          node --check scripts/hospital-w12-preview-local.mjs
       - name: W12 native Firestore/Auth emulator and W10-W11 E2E
         run: >
           npx --yes firebase-tools emulators:exec
