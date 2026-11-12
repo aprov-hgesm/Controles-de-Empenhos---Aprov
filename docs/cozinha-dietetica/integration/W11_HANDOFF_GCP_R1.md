@@ -177,3 +177,15 @@ Com isso, **OIDC + invocação interna do Cloud Run privado + barreira de entrad
 **Resumo final da infraestrutura W11: GO técnico**: Cloud Run privado pronto, IAM `hospital-qa-runtime` e `hospital-w11-probe` corretos, acesso externo bloqueado, Firestore (default) acessado por OAuth IAM (`HTTP 200`), Firebase Authentication por IAM (`HTTP 200`), Workflows OIDC real (`SUCCEEDED`/`PASS`), instância máxima global e revisão = 1. Sem pacientes reais, sem merge e sem alteração de serviços do EMPROVEX principal. **NO-GO clínico** até homologação W12 com contas e dados sintéticos, controles de autorização e testes de fluxo E2E.
 
 **Limpeza pendente, após registro de evidências**: excluir somente o workflow temporário `w11-private-probe`, remover a vinculação `roles/run.invoker` da conta `hospital-w11-probe` no serviço `cozinha-dietetica-qa`, e excluir a service account `hospital-w11-probe`. Não remover `hospital-qa-runtime`, imagem Docker nem serviço `cozinha-dietetica-qa`.
+
+## 13. Encerramento do W11 e limpeza dos recursos de diagnóstico — 12/11/2026
+
+O operador forneceu evidências de execução em PowerShell para os três passos de cleanup **após o teste OIDC PASS**:
+
+1. `gcloud workflows delete w11-private-probe --project=cozinha-dietetica --location=southamerica-east1 --quiet` → `Deleted workflow [w11-private-probe]`.
+2. `gcloud run services remove-iam-policy-binding cozinha-dietetica-qa ... --member=serviceAccount:hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com --role=roles/run.invoker` → `Updated IAM policy for service [cozinha-dietetica-qa]`.
+3. `gcloud iam service-accounts delete hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com ... --quiet` → `deleted service account [hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com]`.
+
+**STATUS W11: GO TÉCNICO / HANDOFF W12 APTO.** Evidências de Cloud Build por digest, serviço privado Ready, bloqueio externo, IAM/Firestore HTTP 200, Firebase Auth IAM HTTP 200, Workflows OIDC SUCCEEDED e remoção dos dois Jobs e do Workflow/identidade temporários. A identidade de runtime `hospital-qa-runtime`, o Firestore e o serviço Cloud Run `cozinha-dietetica-qa` continuam preservados. Nenhum dado real de pacientes, merge, exposição pública ou deploy no serviço principal foi autorizado/executado nesta sequência.
+
+**W12 ainda não homologado:** confirmar branch base e SHA; testar usuários/organizações/pacientes **sintéticos**, perfis, segurança de leitura/escrita, ciclo completo, contingência, PWA e regressões. Um PASS de IAM/connectividade **não** equivale a aprovação para produção clínica.
