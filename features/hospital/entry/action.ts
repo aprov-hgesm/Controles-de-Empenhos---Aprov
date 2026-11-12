@@ -1,6 +1,8 @@
 'use server';
 
 import { HospitalQAStore } from '@/lib/server/hospital/core/qa-store.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
+import {isHospitalQaUiReady} from '@/lib/server/hospital/firebase/qa-ui-gate.mjs';
 import { authorizeHospitalEntry } from './authorize.mjs';
 
 export type HospitalEntryDecision =
@@ -15,20 +17,20 @@ export type HospitalEntryDecision =
 export async function checkHospitalEntry(idToken: string): Promise<HospitalEntryDecision> {
   const organizationId = process.env.HOSPITAL_QA_ORGANIZATION_ID?.trim();
   const filename = process.env.HOSPITAL_QA_SQLITE_PATH?.trim();
-  if (process.env.NODE_ENV === 'production' || !organizationId || !filename) {
+  if (!isHospitalQaUiReady() || !organizationId) {
     return { status: 503, message: 'Acesso hospitalar ainda não habilitado para esta instalação.' };
   }
   if (typeof idToken !== 'string' || idToken.length < 20 || idToken.length > 16000) {
     return { status: 401, message: 'A identidade precisa ser autenticada novamente.' };
   }
 
-  let store: HospitalQAStore | null = null;
+  let store: HospitalQAStore | ReturnType<typeof getHospitalW10Store> | null = null;
   try {
-    // W0 owns server Firebase Admin verification and its default-app bootstrap.
-    // Fail closed until W0's Firebase Admin runtime dependency is installed
-    // and initialized by the integration environment. Do not downgrade to
-    // unrevoked/unverified client claims in this entry layer.
-    store = new HospitalQAStore({ filename, qa: true });
+    // The same scoped Firestore repository serves entry and clinical APIs.
+    // SQLite is restricted to explicit non-production QA fixtures.
+    store = process.env.HOSPITAL_FIRESTORE_QA_ENABLED === '1'
+      ? getHospitalW10Store()
+      : new HospitalQAStore({ filename: filename!, qa: true });
     const access = await authorizeHospitalEntry({
       authorization: `Bearer ${idToken}`,
       organizationId,
