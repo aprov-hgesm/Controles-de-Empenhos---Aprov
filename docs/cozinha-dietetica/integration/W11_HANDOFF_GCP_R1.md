@@ -128,3 +128,13 @@ Log Cloud Logging fornecido pelo operador:
 A configuração do Cloud Run foi validada: `Ready=True`, `run.googleapis.com/ingress=internal`, IAM invoker sem `allUsers` ou `allAuthenticatedUsers`; ambos `run.googleapis.com/maxScale=1` (serviço) e `autoscaling.knative.dev/maxScale=1` (revisão). Requisição de máquina externa retornou `HTTP 404`, coerente com ingresso restrito.
 
 **Parecer W11:** GO técnico para deploy privado, leitura Firestore IAM e isolamento de rede testados; NO-GO para uso clínico (não foi feita verificação live de Firebase Auth, invocação interna autorizada, seed de organização/usuário sintéticos e testes de fluxo funcional). Sem dados de pacientes reais.
+
+## 10. Firebase Auth IAM real — teste de consulta (12/11/2026, UTC)
+
+Segundo as saídas do PowerShell fornecidas pelo operador, foi criado e executado o Cloud Run Job temporário `w11-auth-smoke`, execution `w11-auth-smoke-9p959`, região `southamerica-east1`, projeto `cozinha-dietetica`. **Concluiu com sucesso, 1/1 tarefa**, via imagem W11 `sha256:c91e420a1613a44216dac7949db23f9ef944eb706a68a81ecafd0b3013be6ef2`, conta de serviço `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`.
+
+O teste lê email e OAuth token do metadata server, exige a identidade hospitalar e consulta `POST https://identitytoolkit.googleapis.com/v1/projects/cozinha-dietetica/accounts:lookup` com UID fictício presumidamente inexistente `qa_smoke_inexistente_w11_20261112`. Lança erro em qualquer HTTP não-2xx ou se o usuário fictício existir. **Nenhum usuário foi criado nem modificado.**
+
+**Pendente de registro conclusivo:** conferir log do Job `w11-auth-smoke-9p959` com `PASS: Firebase Authentication IAM; HTTP 200` e, apenas após confirmação, excluir o Job temporário. O resultado de execução `SUCCESS` é evidência positiva, mas o log literal deve ser arquivado antes de certificar o teste específico.
+
+**Permanece NO-GO clínico** até invocação interna autenticada, seed sintética e fluxo funcional QA em ambiente remoto, com segurança e custo verificados. Não liberar publicamente o serviço.
