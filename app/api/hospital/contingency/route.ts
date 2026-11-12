@@ -23,7 +23,7 @@ export async function POST(req:NextRequest) {
   const result=await handler({authorization:req.headers.get('authorization')??'',
    organizationId:req.headers.get('x-hospital-organization-id')??'',
    operation:typeof operation==='string'?operation:'',
-   payload});
+   payload:payload as Record<string,unknown>});
   return response(result.status,result.body);
  }catch{
   return response(503,{ok:false,error:{code:'UNAVAILABLE',message:'Serviço hospitalar indisponível'}});
