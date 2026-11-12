@@ -107,9 +107,21 @@ test('W12 E2E native Firestore: five care units, role guards, two OMs, retries, 
      maps.submitMap(s.UTI,{...args,idempotencyKey:keyB})
    ]);
    const won=attempts.filter(r=>r.status==='fulfilled');
-   assert.equal(won.length,1,'duas abas não podem registrar dois envios: '+JSON.stringify(attempts.map(r=>r.status==='rejected'?{code:r.reason?.code,message:r.reason?.message}:{status:r.status})));
-   const receipt=won[0].value;
-   const winnerKey=attempts[0].status==='fulfilled'?keyA:keyB;
+   assert.ok(won.length<=1,'concorrência jamais permite dois envios');
+   // Under heavy emulator lock contention BOTH transactions can abort with
+   // retryable CONFLICT. The client must explicitly retry, never infer delivery.
+   let receipt,winnerKey;
+   if(won.length===0){
+    assert.ok(attempts.every(r=>r.status==='rejected'&&r.reason?.code==='CONFLICT'),
+     'failure must be an explicit concurrency conflict, not lost write');
+    receipt=await maps.submitMap(s.UTI,{...args,idempotencyKey:keyA});
+    winnerKey=keyA;
+    await assert.rejects(maps.submitMap(s.UTI,{...args,idempotencyKey:keyB}),{code:'CONFLICT'});
+   }else{
+    receipt=won[0].value;
+    winnerKey=attempts[0].status==='fulfilled'?keyA:keyB;
+    assert.equal(attempts.filter(r=>r.status==='rejected').length,1);
+   }
    assert.deepEqual(await maps.submitMap(s.UTI,{...args,idempotencyKey:winnerKey}),receipt,
     'retry pós-timeout retorna exatamente a resposta original');
    await assert.rejects(maps.submitMap(s.UTI,{...args,idempotencyKey:winnerKey,lateReason:'Outra solicitação'}),
