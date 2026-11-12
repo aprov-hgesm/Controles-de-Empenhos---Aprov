@@ -199,8 +199,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
      <label>Motivo de adendo, atraso ou alteração (obrigatório quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe motivo e comunicação assistencial, quando necessária"/></label>
      <label>Contato assistencial para exceção clínica<input style={inputStyle} value={contact} onChange={e=>setContact(e.target.value)} placeholder="Referência do contato efetuado"/></label>
      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
-      <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} disabled={disabled||!reference} onClick={()=>void addMeal()>Adicionar/atualizar refeição</button>
-      {map.map.status==='DRAFT'&&<button style={{...actionStyle,background:'#0a338d',color:'#fff',borderColor:'#0a338d'}} disabled={disabled} onClick={()=>void send()>Enviar mapa explicitamente</button>}
+      <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} disabled={disabled||!reference} onClick={()=>void addMeal()}>Adicionar/atualizar refeição</button>
+      {map.map.status==='DRAFT'&&<button style={{...actionStyle,background:'#0a338d',color:'#fff',borderColor:'#0a338d'}} disabled={disabled} onClick={()=>void send()}>Enviar mapa explicitamente</button>}
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
       <button style={actionStyle} disabled={disabled||!selectedAdmission} onClick={()=>void escalate()}>Registrar exceção clínica</button>
      </div>
