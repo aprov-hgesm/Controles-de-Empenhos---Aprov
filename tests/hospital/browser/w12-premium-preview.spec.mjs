@@ -19,7 +19,7 @@ async function login(page,email){
   await page.getByRole('button',{name:/Entrar e validar vínculo/}).click();
   await expect(page.getByText('Vínculo verificado pelo servidor')).toBeVisible({timeout:30000});
   await page.getByRole('link',{name:/Acessar módulo hospitalar/}).click();
-  await expect(page.getByRole('heading',{name:'EMPROVEX'})).toBeVisible({timeout:30000});
+  await expect(page.getByText('EMPROVEX',{exact:true})).toBeVisible({timeout:30000});
 }
 
 for(const profile of accounts){
