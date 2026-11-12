@@ -95,8 +95,8 @@ async function main(){
     const patients=new HospitalPatientsService(store);
     const diets=new HospitalDietsService(store);
     const maps=new HospitalMapsService(store);
-    let entry=(await patients.searchPatients(nurseScope,{unitId:'UTI',query:'PREVIEW',page:1,pageSize:10}))
-      ?.rows?.find(p=>p.referenceCode==='PREVIEW_UTI_001');
+    const found=await patients.search(nurseScope,{unitId:'UTI',q:'PREVIEW_UTI_001',status:'ALL'});
+    const entry=found.items.find(row=>row.patient.referenceCode==='PREVIEW_UTI_001');
     if(!entry){
       const bed=await patients.saveBed(adminScope,{unitId:'UTI',
         bedId:'PREVIEW_BED_01',label:'Leito fictício 01'});
