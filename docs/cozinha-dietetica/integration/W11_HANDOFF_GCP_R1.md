@@ -116,3 +116,15 @@ Parecer: **GO implantação técnica da imagem / NO-GO acesso clínico ou testes
 O operador confirmou via PowerShell que o Cloud Run Job temporário `w11-firestore-smoke` foi criado e a execução `w11-firestore-smoke-vkwld` terminou **com êxito, 1/1 tarefa concluída**, projeto `cozinha-dietetica`, região `southamerica-east1`. O script Node executado pelo Job obtém a identidade no metadata server, exige email `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`, obtém OAuth token e faz `POST .../documents:listCollectionIds` no Firestore `(default)`, com `pageSize:1` e sem gravar documentos; lança exceção e sai com status 1 em caso de erro IAM/HTTP.
 
 **Prova da execução concluída não substitui o log do payload.** Evidência final pendente: ler Cloud Logging da execução para registrar `PASS: identidade hospitalar e leitura Firestore; HTTP 200`. Em seguida apagar somente o **Job temporário** `w11-firestore-smoke` (não o serviço `cozinha-dietetica-qa`). Firebase Authentication real, invocação interna autenticada, provisionamento de usuário/organização 100% sintéticos e QA funcional ainda não testados; acesso clínico segue fechado.
+
+### Verificação final do Job Firestore (11/11/2026, 23h38 BRT)
+
+Log Cloud Logging fornecido pelo operador:
+```text
+2026-11-12 02:38:56 PASS: identidade hospitalar e leitura Firestore; HTTP 200
+```
+**PASS confirmado** para identidade no metadata server, OAuth da service account `hospital-qa-runtime` e leitura real no Firestore do projeto `cozinha-dietetica` (database `(default)`). O operador executou `gcloud run jobs delete w11-firestore-smoke ... --quiet` e obteve `Deleted job [w11-firestore-smoke]`, sem remover o Cloud Run Service.
+
+A configuração do Cloud Run foi validada: `Ready=True`, `run.googleapis.com/ingress=internal`, IAM invoker sem `allUsers` ou `allAuthenticatedUsers`; ambos `run.googleapis.com/maxScale=1` (serviço) e `autoscaling.knative.dev/maxScale=1` (revisão). Requisição de máquina externa retornou `HTTP 404`, coerente com ingresso restrito.
+
+**Parecer W11:** GO técnico para deploy privado, leitura Firestore IAM e isolamento de rede testados; NO-GO para uso clínico (não foi feita verificação live de Firebase Auth, invocação interna autorizada, seed de organização/usuário sintéticos e testes de fluxo funcional). Sem dados de pacientes reais.
