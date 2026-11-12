@@ -107,3 +107,24 @@ node .\scripts\hospital-w12-preview-local.mjs
 ```
 
 Abrir `http://127.0.0.1:3100/cozinha-dietetica`, usar contas `qa-<perfil>@example.test` e senha local exibida no terminal, depois acessar `/cozinha-dietetica/app` pelo link autenticado. **Preview local não é aprovação do Cloud Run QA**, não promove a revisão privada, não substitui W12 GCP E2E, não faz merge nem utiliza dados reais.
+
+## 9. Cloud Run privado W12 — revisão implantada sem tráfego
+
+**Evidência operacional fornecida pelo operador, 12/11/2026:** o PowerShell `ops/hospital-w12-private-qa.ps1` concluiu o Cloud Build e a implantação privada com:
+
+```text
+Source HEAD: 44ecc7f0075fc6be8082d916ca565331b04d679b
+Current active traffic: cozinha-dietetica-qa-00001-j42:100
+Build ID: 5fbb2d0b-bc5d-4619-ac0b-ffbb2a24bf88
+revision: cozinha-dietetica-qa-00003-tot
+deployed and is serving 0 percent of traffic
+PASS: W12 private tagged revision deployed; live W11 traffic unchanged
+Image: southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web@sha256:c06d9b1e6f34d2ff2c06006f9caf5c7185bb728c21b70ea43e756128fc0bbfda
+Private tag URL: https://w12qa---cozinha-dietetica-qa-kvxk7z2meq-rj.a.run.app
+Synthetic org: qa_hgesm_w12_20261112
+Synthetic accounts/Firestore clinical flows NOT YET TESTED
+```
+
+**Estado:** GO restrito a **build + implantação da revisão privada sem tráfego**. O script verificou previamente e posteriormente ingress `internal`, ausência de `allUsers`/`allAuthenticatedUsers`, service account hospitalar e tráfego padrão inalterado. **Nenhum teste funcional E2E de conta Firebase, vínculo sintético, API clínica, leitura/escrita Firestore nem teste de backup/restauração GCP foi executado nesta etapa.** URL com tag continua sujeita a ingress interno e IAM; não é prévia pública para navegador doméstico. A implementação implantada corresponde ao SHA **44ecc7f0**, anterior aos commits posteriores de **prévia local** na PR W12; não declarar que esses últimos commits estão na imagem implantada.
+
+**Próxima prova:** verificar a revisão e variáveis QA obrigatórias sem expor credenciais, provisionar exclusivamente identidades/organização sintéticas no projeto `cozinha-dietetica` sob escopo autorizado, executar E2E internamente por invocador temporário mínimo e registrar resultados e limpeza. Preservar 0% de tráfego por padrão e não liberar uso clínico real.
