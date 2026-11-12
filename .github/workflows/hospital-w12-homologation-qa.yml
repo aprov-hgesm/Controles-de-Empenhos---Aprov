@@ -35,6 +35,17 @@ jobs:
         run: |
           node --check scripts/hospital-w12-preview-seed.mjs
           node --check scripts/hospital-w12-preview-local.mjs
+      - name: Live synthetic preview seed on local Auth and Firestore Emulators
+        env:
+          HOSPITAL_QA_ORGANIZATION_ID: qa_hgesm_preview
+          NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID: demo-cozinha-dietetica
+          NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR: '1'
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node scripts/hospital-w12-preview-seed.mjs"
       - name: W12 native Firestore/Auth emulator and W10-W11 E2E
         run: >
           npx --yes firebase-tools emulators:exec
