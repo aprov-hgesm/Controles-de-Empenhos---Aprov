@@ -107,7 +107,7 @@ test('W12 E2E native Firestore: five care units, role guards, two OMs, retries, 
      maps.submitMap(s.UTI,{...args,idempotencyKey:keyB})
    ]);
    const won=attempts.filter(r=>r.status==='fulfilled');
-   assert.equal(won.length,1,'duas abas não podem registrar dois envios');
+   assert.equal(won.length,1,'duas abas não podem registrar dois envios: '+JSON.stringify(attempts.map(r=>r.status==='rejected'?{code:r.reason?.code,message:r.reason?.message}:{status:r.status})));
    const receipt=won[0].value;
    const winnerKey=attempts[0].status==='fulfilled'?keyA:keyB;
    assert.deepEqual(await maps.submitMap(s.UTI,{...args,idempotencyKey:winnerKey}),receipt,
