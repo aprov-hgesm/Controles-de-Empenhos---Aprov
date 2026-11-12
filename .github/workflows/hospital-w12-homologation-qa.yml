@@ -106,6 +106,30 @@ jobs:
           for i in {1..35}; do if curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null; then break; fi; sleep 2; done
           curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null
           npx playwright test tests/hospital/browser/w12-closed-qa.spec.mjs --reporter=line --workers=1
+      - name: W12 premium local authenticated browser QA (all four profiles)
+        run: |
+          node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/w12-premium-preview.log" 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() { kill "$PREVIEW_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          ready=0
+          for i in {1..110}; do
+            if curl --fail --silent http://127.0.0.1:3100/cozinha-dietetica > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/w12-premium-preview.log"
+            exit 1
+          fi
+          npx playwright test tests/hospital/browser/w12-premium-preview.spec.mjs --reporter=line --workers=1
+      - name: Save only synthetic authenticated premium screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-w12-premium-visual
+          path: ${{ runner.temp }}/hospital-w12-premium-visual/
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Save only screenshots of deliberately LOCKED anonymous QA screens
         if: always()
         uses: actions/upload-artifact@v4
