@@ -31,6 +31,10 @@ for(const profile of accounts){
    await expect(page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:label,exact:true})).toBeVisible();
   }
   await expect(page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:profile.denied,exact:true})).toHaveCount(0);
+  if(profile.name==='cozinha')await expect(page.getByText('Consultando mapas autorizados…')).toBeHidden({timeout:30000});
+  if(profile.name==='administracao')await expect(page.getByText('Carregando / salvando informações reais…')).toBeHidden({timeout:30000});
+  if(profile.name==='nutricao')await expect(page.getByText('Carregando…',{exact:true})).toBeHidden({timeout:30000});
+  await page.waitForTimeout(350); // allow visual transitions to finish before taking QA evidence
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(2);
   mkdirSync(screenshots,{recursive:true});
@@ -41,6 +45,7 @@ for(const profile of accounts){
    await page.getByRole('button',{name:'Produção',exact:true}).click();
    await expect(page.locator('[data-mode="operations"]')).toBeVisible();
    await expect(page.locator('[data-testid="hospital-page-producao"]')).toBeVisible();
+   await expect(page.getByText('Consultando mapas autorizados…')).toBeHidden({timeout:30000});
    await page.screenshot({path:join(screenshots,'cozinha-producao-desktop.png'),fullPage:true});
   }
   if(profile.name==='unidade-uti'){
@@ -65,6 +70,7 @@ test('W12 premium mobile drawer, keyboard close and navigation',async({browser})
  await page.getByRole('button',{name:'Abrir menu'}).click();
  await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Distribuição',exact:true}).click();
  await expect(page.locator('[data-testid="hospital-page-distribuicao"]')).toBeVisible();
+ await expect(page.getByText('Consultando pedidos autorizados…')).toBeHidden({timeout:30000});
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
  expect(overflow).toBeLessThanOrEqual(2);
  mkdirSync(screenshots,{recursive:true});
