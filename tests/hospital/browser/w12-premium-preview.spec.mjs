@@ -59,11 +59,11 @@ test('W12 premium mobile drawer, keyboard close and navigation',async({browser})
  const page=await context.newPage();
  await login(page,'qa-cozinha@example.test');
  await page.getByRole('button',{name:'Abrir menu'}).click();
- await expect(page.getByRole('button',{name:'Distribuição',exact:true})).toBeVisible();
+ await expect(page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Distribuição',exact:true})).toBeVisible();
  await page.keyboard.press('Escape');
  await expect(page.getByRole('button',{name:'Abrir menu'})).toBeVisible();
  await page.getByRole('button',{name:'Abrir menu'}).click();
- await page.getByRole('button',{name:'Distribuição',exact:true}).click();
+ await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Distribuição',exact:true}).click();
  await expect(page.locator('[data-testid="hospital-page-distribuicao"]')).toBeVisible();
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
  expect(overflow).toBeLessThanOrEqual(2);
