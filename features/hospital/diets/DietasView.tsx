@@ -6,9 +6,9 @@ type CatalogItem={id:string;code:string;label:string;type:'ORAL'|'ENTERAL'|'SUPP
 type Admission={admissionId:string;patientCode:string;bedId:string|null;medicalReferenceId:string|null};
 type MedicalReference={id:string;sourceRef:string;sourceVersion?:string;prescriberAsRecorded?:string;prescribedAt:string;catalogItemId:string;enteredByUid:string};
 export type DietasViewProps={organizationId:string;unitId?:string;roles:readonly ScopeRole[];getIdToken:()=>Promise<string>};
-const input:React.CSSProperties={width:'100%',padding:8,border:'1px solid #94a3b8',borderRadius:7};
-const button:React.CSSProperties={padding:'9px 14px',border:'1px solid #64748b',borderRadius:8,background:'#eef2ff',cursor:'pointer'};
-const container:React.CSSProperties={display:'grid',gap:12,padding:16,border:'1px solid #cbd5e1',borderRadius:12};
+const input:React.CSSProperties={width:'100%',padding:'11px 12px',border:'1px solid #cfdbed',borderRadius:11,minHeight:42,color:'#173657',background:'#fff'};
+const button:React.CSSProperties={padding:'11px 15px',border:'1px solid #bdd3f5',borderRadius:11,background:'#ebf3ff',color:'#164785',fontWeight:700,cursor:'pointer'};
+const container:React.CSSProperties={display:'grid',gap:14,padding:22,border:'1px solid #e1e9f4',borderRadius:18,background:'#fff',boxShadow:'0 12px 36px rgba(17,44,87,.045)'};
 export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewProps){
  const [catalog,setCatalog]=useState<CatalogItem[]>([]);
  const [admissions,setAdmissions]=useState<Admission[]>([]);
@@ -66,11 +66,11 @@ export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewPr
   finally{setBusy(false)}
  }
  const splitCodes=(v:string)=>v.split(',').map(x=>x.trim()).filter(Boolean);
- return <section aria-label="Dietas e prescrições de referência" style={{display:'grid',gap:16,maxWidth:920}}>
-  <header><h2>Dietas e referências médicas</h2><p>O médico prescreve no sistema assistencial. A unidade apenas registra a referência conforme a prescrição; a Nutrição audita.</p></header>
+ return <section aria-label="Dietas e prescrições de referência" className="hospital-dietas" style={{display:'grid',gap:18,width:'100%'}}>
+  <header><h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',color:'#173b69'}}>Dietas e referências médicas</h2><p style={{marginTop:8,color:'#5d7291',fontSize:14}}>O médico prescreve no sistema assistencial. A unidade registra a referência; a Nutrição audita sem aprovar mapas rotineiros.</p></header>
   {error&&<p role="alert" style={{color:'#b91c1c'}}>{error}</p>}
   {notice&&<p role="status" style={{color:'#166534'}}>{notice}</p>}
-  <article style={container}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><h3>Catálogo institucional</h3><button disabled={busy} style={button} onClick={()=>void reload()}>Atualizar</button></div>
+  <article style={container}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><h3 style={{fontSize:17,fontWeight:750,color:'#1c436f'}}>Catálogo institucional</h3><button disabled={busy} style={button} onClick={()=>void reload()}>Atualizar</button></div>
    {catalog.length===0?<p>Não há dietas autorizadas cadastradas.</p>:<div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr><th align="left">Código</th><th align="left">Dieta</th><th align="left">Tipo</th><th align="left">Consistência</th><th align="left">Estado</th></tr></thead><tbody>{catalog.map(item=><tr key={item.id} style={{borderTop:'1px solid #e2e8f0'}}><td>{item.code}</td><td>{item.label}</td><td>{item.type??'A revisar'}</td><td>{item.consistency??'A revisar'}</td><td>{item.active?'Ativa':'Inativa'}</td></tr>)}</tbody></table></div>}
   </article>
   {isAdmin&&<form style={container} onSubmit={e=>{e.preventDefault();void run(()=>request('diets','diet.save',{catalogItemId:code,code,label,type,consistency,route,device:device||null,restrictionCodes:splitCodes(restrictions),allergenCodes:splitCodes(allergens),volumeMl:volume?Number(volume):null,unit:volume?'mL':'portion',preparations:[],status:'ACTIVE'}),'Dieta registrada no catálogo com auditoria')}}>
