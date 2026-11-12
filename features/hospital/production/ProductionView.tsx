@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 
-type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialDate?:string;initialCycle?:CycleId};
+type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialDate?:string;initialCycle?:CycleId;mode?:'overview'|'operations'};
 type Result<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 const dateInHospital=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const cycleLabels:Record<CycleId,string>={'06':'06h · Café / lanche','10':'10h · Almoço / lanche','16':'16h · Jantar / ceia'};
@@ -14,7 +14,7 @@ const button='hospital-secondary-action disabled:cursor-not-allowed disabled:opa
 const heading='text-xs font-extrabold uppercase tracking-[0.14em] text-[#516f97]';
 
 /** UI só recebe dados de endpoint autorizado. Nenhuma fixture clínica e nenhuma aceitação individual. */
-export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10'}:Props){
+export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',mode='operations'}:Props){
   const [localDate,setLocalDate]=useState(initialDate??dateInHospital);
   const [cycleId,setCycleId]=useState<CycleId>(initialCycle);
   const [unitId,setUnitId]=useState('');
@@ -87,7 +87,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
   const create=()=>{if(!chosen.length||!sameGroup)return;void act('create',{unitId:chosen[0].unitId,localDate,cycleId,mealIds:chosen.map(m=>m.id),preparationLabel});};
   const reconcile=(batch:KitchenBatch)=>void act('reconcile',{unitId:batch.unitId,batchId:batch.id,expectedRevision:batch.revision,excludedMealIds:batch.invalid.map(x=>x.mealId)});
 
-  return <section className="space-y-5 text-slate-900" aria-label="Painel da Cozinha Dietética">
+  return <section className="space-y-5 text-slate-900" data-mode={mode} aria-label="Painel da Cozinha Dietética">
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div><h2 className="text-xl font-extrabold text-[#193c6a]">Fila operacional e preparo</h2><p className="mt-1 text-sm text-slate-500">Mapas recebidos, lotes e conferência. A entrega é confirmada separadamente em Distribuição.</p></div>
       <button className={button} disabled={busy} onClick={()=>void load()}>Atualizar fila</button>
@@ -107,7 +107,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
       <p className="text-xs text-slate-500">Última leitura: {time(data.at)} (horário local). Mapas não enviados não entram na fila.</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">{([['Mapas recebidos',data.maps.length],['Aguardando',data.counts.requested],['Preparando',data.counts.preparing],['Prontos',data.counts.ready],['Tardios',data.counts.late],['Bloqueados',data.counts.blocked],['Suspensos',data.counts.suspended]] as const).map(([label,count])=><div key={label} className="rounded-xl border bg-white p-3 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="text-2xl font-bold tabular-nums">{count}</p></div>)}</div>
       <div className="hospital-panel p-5"><h2 className={heading}>Mapas efetivamente enviados</h2>{data.maps.length===0?<p className="mt-3 text-sm text-slate-500">Nenhum mapa enviado neste ciclo. Rascunhos não são pedidos recebidos.</p>:<div className="mt-2 flex flex-wrap gap-2">{data.maps.map(m=><span className="rounded-lg border bg-slate-50 p-2 text-xs" key={m.id}>{m.unitId} · {stageNames[m.status]??m.status} · recebido {time(m.submittedAt)}</span>)}</div>}</div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="hospital-production-operations grid gap-4 lg:grid-cols-2">
         <section className="hospital-panel min-w-0 p-5"><h2 className={heading}>Fila individual</h2><p className="my-2 text-xs text-slate-500">Marque pedidos compatíveis para formar um lote; não há aceite individual.</p>
           <div className="max-h-[420px] space-y-2 overflow-y-auto">{data.meals.length===0?<p className="p-3 text-sm">Sem pedidos nesta consulta.</p>:data.meals.map(m=><MealRow key={m.id} meal={m} selected={selected.includes(m.id)} busy={busy||offline} onSelect={checked=>setSelected(prev=>checked?[...prev,m.id]:prev.filter(x=>x!==m.id))}/>)}</div>
           <div className="mt-3 space-y-2 border-t pt-3"><p className="text-sm font-semibold">Selecionados: {chosen.length} {chosen.length>0&&!sameGroup?'· dietas, unidades ou restrições incompatíveis':''}</p>
@@ -118,7 +118,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">Dieta / tipo</th><th className="p-2">Preparações</th><th className="p-2">Restrições</th><th className="p-2">Total</th><th className="p-2">Preparo</th><th className="p-2">Pronto</th></tr></thead><tbody>{data.groups.map(g=><tr key={`${g.dietCode}:${g.mealType}:${g.restrictionCodes.join('|')}`} className="border-b"><td className="p-2">{g.dietCode} · {g.mealType==='PRIMARY'?'Principal':'Secundária'}</td><td className="p-2">{g.preparationLabels.join(', ')||'A definir no lote'}</td><td className="p-2">{g.restrictionCodes.join(', ')||'—'}</td><td className="p-2 tabular-nums">{g.total}</td><td className="p-2">{g.preparing}</td><td className="p-2">{g.ready}</td></tr>)}</tbody></table>{data.groups.length===0&&<p className="p-3 text-sm">Sem produção elegível.</p>}</div>
         </section>
       </div>
-      <section className="rounded-xl border bg-white p-4"><h2 className={heading}>Lotes de preparo e reconferência</h2>{activeBatches.length===0?<p className="mt-3 text-sm">Nenhum lote formado neste ciclo.</p>:<div className="mt-3 grid gap-3 lg:grid-cols-2">{activeBatches.map(b=><article key={b.id} className="space-y-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><strong>{b.preparationLabel}</strong><span className={`rounded-md px-2 py-1 text-xs ${b.effectiveStatus==='NEEDS_REVIEW'?'bg-rose-100 text-rose-900':'bg-slate-100'}`}>{stageNames[b.effectiveStatus]??b.effectiveStatus}</span></div><p className="text-sm">{b.unitId} · {b.dietCode} · {b.quantity} pedidos · {b.mealType==='PRIMARY'?'principal':'secundária'}</p><p className="text-xs text-slate-500">Início {time(b.startedAt)} · fim {time(b.completedAt)} · quantidade conferida {b.preparedQuantity}</p>
+      <section className="hospital-production-operations hospital-panel p-5"><h2 className={heading}>Lotes de preparo e reconferência</h2>{activeBatches.length===0?<p className="mt-3 text-sm">Nenhum lote formado neste ciclo.</p>:<div className="mt-3 grid gap-3 lg:grid-cols-2">{activeBatches.map(b=><article key={b.id} className="space-y-2 rounded-xl border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><strong>{b.preparationLabel}</strong><span className={`rounded-md px-2 py-1 text-xs ${b.effectiveStatus==='NEEDS_REVIEW'?'bg-rose-100 text-rose-900':'bg-slate-100'}`}>{stageNames[b.effectiveStatus]??b.effectiveStatus}</span></div><p className="text-sm">{b.unitId} · {b.dietCode} · {b.quantity} pedidos · {b.mealType==='PRIMARY'?'principal':'secundária'}</p><p className="text-xs text-slate-500">Início {time(b.startedAt)} · fim {time(b.completedAt)} · quantidade conferida {b.preparedQuantity}</p>
             {b.invalid.length>0&&<p role="alert" className="rounded-lg bg-rose-50 p-2 text-sm text-rose-900">Reconferência obrigatória: {b.invalid.map(x=>x.reason).join(', ')}. Não liberar a preparação incompatível.</p>}
             <div className="flex flex-wrap items-center gap-2">
               {b.effectiveStatus==='PENDING'&&<button className={button} disabled={busy||offline} onClick={()=>void act('start',{unitId:b.unitId,batchId:b.id,expectedRevision:b.revision})}>Iniciar lote</button>}
