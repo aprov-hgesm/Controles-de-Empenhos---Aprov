@@ -176,6 +176,7 @@
 .hospital-operational .hospital-content :where([role="status"]) {
   max-width: 100%;
 }
+.hospital-operational [data-mode="overview"] .hospital-production-operations {display:none}
 .hospital-operational .hospital-hint-label {
   font-size: .67rem;
   font-weight: 800;
