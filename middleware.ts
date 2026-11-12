@@ -15,6 +15,8 @@ export function middleware(request:NextRequest) {
   const permitted=path==='/cozinha-dietetica'
     ||path.startsWith('/cozinha-dietetica/')
     ||path.startsWith('/api/hospital/')
+    // Manifest install icons are public assets inside the already IAM-private QA service.
+    ||path.startsWith('/api/install-icon/')
     ||path.startsWith('/_next/')
     ||path==='/favicon.ico'
     ||path==='/manifest.webmanifest'
