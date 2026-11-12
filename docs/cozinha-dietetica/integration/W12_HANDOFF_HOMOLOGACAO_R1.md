@@ -128,3 +128,22 @@ Synthetic accounts/Firestore clinical flows NOT YET TESTED
 **Estado:** GO restrito a **build + implantação da revisão privada sem tráfego**. O script verificou previamente e posteriormente ingress `internal`, ausência de `allUsers`/`allAuthenticatedUsers`, service account hospitalar e tráfego padrão inalterado. **Nenhum teste funcional E2E de conta Firebase, vínculo sintético, API clínica, leitura/escrita Firestore nem teste de backup/restauração GCP foi executado nesta etapa.** URL com tag continua sujeita a ingress interno e IAM; não é prévia pública para navegador doméstico. A implementação implantada corresponde ao SHA **44ecc7f0**, anterior aos commits posteriores de **prévia local** na PR W12; não declarar que esses últimos commits estão na imagem implantada.
 
 **Próxima prova:** verificar a revisão e variáveis QA obrigatórias sem expor credenciais, provisionar exclusivamente identidades/organização sintéticas no projeto `cozinha-dietetica` sob escopo autorizado, executar E2E internamente por invocador temporário mínimo e registrar resultados e limpeza. Preservar 0% de tráfego por padrão e não liberar uso clínico real.
+
+## 10. Redesign visual EMPROVEX hospitalar — 12/11/2026
+
+**Solicitação do operador:** atualizar a prévia local porque a interface W12 estava visualmente confusa e não refletia o nível do EMPROVEX. **Implementação na mesma PR Draft #553** (não criar produto concorrente e não alterar IAM/GCP).
+
+**Reaproveitamento concreto do EMPROVEX principal:**
+- `components/layout/chrome/AppShellLogo.tsx` é utilizado **diretamente** pela nova `features/hospital/integration/HospitalShell.tsx` (marca e componente originais EMPROVEX).
+- Tokens de `app/globals.css`, notadamente `--emprovex-accent` e fontes/shell, informam o `hospital-premium.css`, que é **isolado por `.hospital-operational`** e não afeta o app financeiro/Almox/Empresas.
+- Padrão de layout do EMPROVEX: topbar navy, sidebar escura, item ativo com acento azul, painel claro com filtros, inputs e ações com hierarquia, estados e responsividade. O cabeçalho financeiro (com login, cobrança e indicadores da área logística) **não** é importado para não conectar inadvertidamente os sistemas.
+
+**Mudanças aplicadas sem reescrever serviços e comandos clínicos:**
+- `HospitalShell.tsx`: navegação lateral por papel com ícones, mobile drawer fechado/tecla Escape, título e descrição contextual, seletor de unidade existente, login/logout e verificação de `HospitalScope` preservados, atalhos para a unidade; rotas, autorização de servidor e componentes já existentes continuam os mesmos.
+- `PatientsView.tsx`: cadastro rápido recolhível, listagem com identificação organizada, detalhes e ações de transferência/alta recolhidas em `details`; estados/avisos e confirmações originais preservados.
+- `MeusMapasView.tsx`: formulário e painéis reestilizados, seletor rápido dos ciclos 06/10/16, controles/versões/recibos mantidos.
+- `ProductionView.tsx`: filtros e contadores organizados em superfícies homogêneas; formação de lote destaca ação principal; sem mudar concorrência, contagens, preparação ou bloqueios.
+- `DistributionQueue.tsx`, `TrackingView.tsx`, `DietasView.tsx`, `NutritionAuditView.tsx`, `AdministrationView.tsx`, `ReportingView.tsx`: ajustes visuais e tipográficos, sem novos endpoints nem alterações do modelo de permissão.
+- Teste browser real `tests/hospital/browser/w12-premium-preview.spec.mjs`: perfis Cozinha/UTI/Nutrição/Admin com Firebase Auth e Firestore Emulator, menus autorizados, navegação, cadastro recolhível, drawer móvel e capturas **exclusivamente sintéticas**. Workflow W12 registra artefato `hospital-w12-premium-visual` quando aprovado.
+
+**Status técnico atual do redesign:** código versionado na PR #553; testes GitHub Actions executados por commit. Não afirmar PASS até consultar o resultado do SHA final. A revisão privada GCP `cozinha-dietetica-qa-00003-tot` foi construída anteriormente a partir de `44ecc7f0`, **não contém o redesign** e deve permanecer 0% de tráfego. A validação visual ocorrerá exclusivamente na prévia local, sem novo deploy.
