@@ -1,0 +1,22 @@
+# W12 private hospital QA only. Built manually using a checked-out W12 branch.
+# Public Firebase Web configuration is embedded at build time (never SA keys).
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-w12-private-hospital-qa
+    args:
+      - build
+      - --file
+      - ops/Dockerfile.hospital-qa
+      - --build-arg
+      - NEXT_PUBLIC_HOSPITAL_FIREBASE_API_KEY=${_HOSPITAL_API_KEY}
+      - --build-arg
+      - NEXT_PUBLIC_HOSPITAL_FIREBASE_APP_ID=${_HOSPITAL_APP_ID}
+      - --build-arg
+      - NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID=cozinha-dietetica
+      - --tag
+      - southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web:w12-$BUILD_ID
+      - .
+images:
+  - southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web:w12-$BUILD_ID
+options:
+  logging: CLOUD_LOGGING_ONLY
