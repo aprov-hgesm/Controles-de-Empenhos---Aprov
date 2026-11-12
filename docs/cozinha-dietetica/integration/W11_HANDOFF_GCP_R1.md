@@ -162,3 +162,18 @@ O operador implantou com sucesso o Workflows `w11-private-probe`, revisão `0000
 Isso significa que a chamada OIDC não chegou a comprovar conectividade com o serviço; não alterar Cloud Run `internal` nem tornar público. A conta `hospital-w11-probe` já recebeu `roles/run.invoker` **somente no serviço `cozinha-dietetica-qa`**. Causas sob investigação: propagação de IAM de conta recém-criada ou função `roles/workflows.serviceAgent` ausente da conta gerenciada `service-947369899527@gcp-sa-workflows.iam.gserviceaccount.com`. Primeiro repetir execução após propagação; em caso de nova falha, consultar IAM do service agent e corrigir **somente se ausente**.
 
 A definição implantada também mostra texto `"Acesso hospitalar n?o habilitado"` alterado por encoding no envio Windows. Antes de declarar PASS, substituir o teste por fragmentos ASCII inequívocos (ex.: `"Acesso hospitalar n"` + `"habilitado"`) ou corrigir o encoding. **Parecer do probe Workflows: NO-GO pendente; testes IAM Firestore e Firebase Auth anteriores permanecem aprovados.**
+
+## 12. Invocação interna OIDC concluída — 11/11/2026 23h11 BRT
+
+**Evidência fornecida pelo operador (Google Cloud Workflows real)**: Workflows `w11-private-probe` (projeto `cozinha-dietetica`, região `southamerica-east1`), revisão `000002-5a8`, conta `hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com` com `roles/run.invoker` somente no serviço `cozinha-dietetica-qa`. Execução `ab6220eb-45ae-4241-93e2-c340f5e57609` retornou:
+
+```text
+result: '{"http":200,"resultado":"PASS","seguranca":"Entrada clinica desabilitada"}'
+state: SUCCEEDED
+```
+
+Com isso, **OIDC + invocação interna do Cloud Run privado + barreira de entrada clínica fechada** foram verificados. A primeira execução `69ac90c5-33ad-4ea2-aa41-8710e544beae` apresentou `AuthError` logo após a criação da conta de serviço; a revisão posterior (após propagação das permissões), sem relaxamento de rede ou IAM, passou. Um ajuste adicional tornou a checagem de texto independente de acentos no YAML enviado por PowerShell.
+
+**Resumo final da infraestrutura W11: GO técnico**: Cloud Run privado pronto, IAM `hospital-qa-runtime` e `hospital-w11-probe` corretos, acesso externo bloqueado, Firestore (default) acessado por OAuth IAM (`HTTP 200`), Firebase Authentication por IAM (`HTTP 200`), Workflows OIDC real (`SUCCEEDED`/`PASS`), instância máxima global e revisão = 1. Sem pacientes reais, sem merge e sem alteração de serviços do EMPROVEX principal. **NO-GO clínico** até homologação W12 com contas e dados sintéticos, controles de autorização e testes de fluxo E2E.
+
+**Limpeza pendente, após registro de evidências**: excluir somente o workflow temporário `w11-private-probe`, remover a vinculação `roles/run.invoker` da conta `hospital-w11-probe` no serviço `cozinha-dietetica-qa`, e excluir a service account `hospital-w11-probe`. Não remover `hospital-qa-runtime`, imagem Docker nem serviço `cozinha-dietetica-qa`.
