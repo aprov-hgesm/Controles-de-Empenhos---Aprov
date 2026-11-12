@@ -1,0 +1,75 @@
+name: Hospital W12 - E2E Homologation QA (emulator only)
+on:
+  push:
+    branches: [feat/cozinha-dietetica-w12-homologacao-piloto]
+  pull_request:
+    branches: [feat/cozinha-dietetica-w11-infra-hospitalar-isolada]
+concurrency:
+  group: hospital-w12-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  hospital-w12:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Reproducible install (no postinstall)
+        run: npm ci --ignore-scripts
+      - name: W12 native Firestore/Auth emulator and W10-W11 E2E
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs"
+      - name: W12 private PWA, report provenance and W11 identity guards
+        run: >
+          node --test
+          tests/hospital/firebase/w12-pwa-boundary.test.mjs
+          tests/hospital/firebase/w11-qa-ui-gate.test.mjs
+          tests/hospital/firebase/identity.test.mjs
+          tests/hospital/firebase/firestore-gateway.test.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build without GCP credentials
+        run: npm run build
+      - name: PWA installability regression
+        run: npm run test:pwa-installability
+      - name: W0-W9 functional regression
+        run: >
+          node --test
+          tests/hospital/core/*.test.mjs
+          tests/hospital/entry/*.test.mjs
+          tests/hospital/patients/*.test.mjs
+          tests/hospital/maps/*.test.mjs
+          tests/hospital/production/*.test.mjs
+          tests/hospital/distribution/*.test.mjs
+          tests/hospital/nutrition-audit/*.test.mjs
+          tests/hospital/administration/*.test.mjs
+          tests/hospital/reporting/*.test.mjs
+          tests/hospital/e2e/*.test.mjs
+      - name: EMPROVEX core isolation
+        run: npm run verify:emprovex-core-protection
+      - name: Financial, billing, NF, warehouse and route regression
+        run: >
+          node --experimental-vm-modules --test
+          scripts/critical-cross-route-navigation.test.mjs
+          scripts/warehouse-ledger-contract.test.mjs
+          scripts/saas-r1-billing.test.mjs
+          scripts/invoice-identity.test.mjs
