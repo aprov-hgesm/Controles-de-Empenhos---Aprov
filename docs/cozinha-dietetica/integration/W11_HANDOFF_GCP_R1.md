@@ -94,3 +94,19 @@ Remove-Variable hospitalApiKey,hospitalAppId
 **Pontos de verificação:** confirmar no log que a imagem foi enviada a `southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web`, registrar **digest `sha256:...`** gerado, confirmar custo/faturamento e identidade do Cloud Build. Se houver erro de permissão de Cloud Build/Artifact Registry, **não conceder Owner/Editor**: identificar a conta efetiva e conceder somente os papéis necessários. Não executar `gcloud run deploy` antes de aprovação do digest e preparação do invocador interno/organização sintética.
 
 **Regra de acesso:** ingresso `internal` requer chamada de infraestrutura interna autorizada (ou proxy institucional posterior). Um navegador doméstico não abrirá diretamente o Cloud Run privado. Sem `HOSPITAL_QA_ORGANIZATION_ID=qa_...`, conta e vínculo fictícios, a interface continuará fechada, deliberadamente. O build e o push da imagem **não publicam nem ativam o serviço clínico**.
+
+## 8. Evidência de implantação real em GCP — 11/11/2026 23h28 (Brasília)
+
+O operador executou via PowerShell o `gcloud run deploy cozinha-dietetica-qa` no projeto isolado `cozinha-dietetica`, região `southamerica-east1`, sem intervenções no EMPROVEX principal. A CLI respondeu **Deploying new service... Done**, revisão `cozinha-dietetica-qa-00001-j42`, servindo 100% do tráfego **do próprio serviço**, URL `https://cozinha-dietetica-qa-947369899527.southamerica-east1.run.app`.
+
+Imagem implantada por digest imutável `southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-web@sha256:c91e420a1613a44216dac7949db23f9ef944eb706a68a81ecafd0b3013be6ef2`, construída via Cloud Build `dc04beca-8c10-4b9b-a39e-aff5d4237a9d`, com resultado `SUCCESS` e push comprovado. O deploy solicitou `--ingress=internal --no-allow-unauthenticated --min-instances=0 --max-instances=1 --concurrency=10 --cpu=1 --memory=512Mi` e `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`, além dos guard flags `HOSPITAL_GCP_QA_ENABLED=1`, `HOSPITAL_GCP_QA_PRIVATE=1`, `HOSPITAL_FIRESTORE_QA_ENABLED=1` e identidade/projeto fixos.
+
+**Limite da evidência:** ainda é necessário consultar a configuração Cloud Run e política invoker no GCP, testar a negativa de acesso externo, executar smoke test autenticado por caminho interno válido e confirmar conectividade real IAM/Firestore/Auth. O deploy não incluiu `HOSPITAL_QA_ORGANIZATION_ID` sintético nem `HOSPITAL_QA_APP_READY=1`: UI e workspace devem permanecer **fechados por padrão**. Não há evidência de uso de pacientes reais ou dados clínicos. Não declarar homologação/GO clínico com base apenas no sucesso da implantação.
+
+**Próxima verificação somente leitura:**
+```powershell
+gcloud.cmd --account=marcoa.r.aquino@gmail.com run services describe cozinha-dietetica-qa --project=cozinha-dietetica --region=southamerica-east1 --format="yaml(metadata.annotations.run.googleapis.com/ingress,spec.template.spec.serviceAccountName,spec.template.metadata.annotations,status.conditions)"
+gcloud.cmd --account=marcoa.r.aquino@gmail.com run services get-iam-policy cozinha-dietetica-qa --project=cozinha-dietetica --region=southamerica-east1 --format=yaml
+```
+
+Parecer: **GO implantação técnica da imagem / NO-GO acesso clínico ou testes reais ainda não executados**.
