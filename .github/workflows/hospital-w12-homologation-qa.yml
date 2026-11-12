@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   hospital-w12:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     env:
       HOSPITAL_FIRESTORE_QA_ENABLED: '1'
@@ -83,7 +83,7 @@ jobs:
 
       - name: Install Chromium test tooling (ephemeral QA only)
         run: |
-          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npm install --no-save --package-lock=false @playwright/test@1.65.0
           npx playwright install --with-deps chromium
       - name: Visual responsive mobile desktop and locked hospital PWA (Chromium)
         run: |
