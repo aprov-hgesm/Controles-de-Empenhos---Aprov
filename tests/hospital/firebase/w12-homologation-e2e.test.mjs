@@ -152,7 +152,7 @@ test('W12 E2E native Firestore: five care units, role guards, two OMs, retries, 
    assert.equal(out.total,2,'duas modalidades de refeição aparecem na reconciliação');
    await assert.rejects(reports.query(s.KITCHEN,{view:'production',filters:{
      from:localDate,to:localDate,unitId:'UTI',organizationId:another}}),{code:'FORBIDDEN'});
-   await assert.rejects(reports.query(s.KITCHEN,{view:'production',filters:{
+   await assert.rejects(reports.query(s.UTI,{view:'production',filters:{
      from:localDate,to:localDate,unitId:'UPI'}}),{code:'FORBIDDEN'});
   }
   const revoked=await store.findMembership(org,users.UTI);
