@@ -91,3 +91,19 @@ Preparação versionada na própria PR W12:
 - `ops/hospital-w12-private-qa.ps1`: confere branch/HEAD remoto, working tree limpo, serviço/IAM de ingresso `internal`, identidade `hospital-qa-runtime`, maxScale=1 e nenhum invocador público; usa Cloud Build com digest imutável; faz `gcloud run deploy --no-traffic --tag=w12qa`, preserva 100% do tráfego W11, restringe a uma instância, configura somente `HOSPITAL_QA_ORGANIZATION_ID=qa_hgesm_w12_20261112` e `HOSPITAL_QA_APP_READY=1` para login de teste **sem cadastros automáticos**; confere o tráfego após a operação. O serviço segue interno por IAM; `--no-traffic` evita promover a revisão para o URL principal.
 
 **Situação factual neste commit: PREPARADO, NÃO IMPLANTADO.** Sem credenciais Google Cloud disponíveis diretamente ao agente, o arquivo PowerShell requer execução pelo operador no terminal Google Cloud já autenticado. O script não cria contas Firebase ou documentos de pacientes. A etapa seguinte exige comprovar o novo digest/revisão/URL tagged e então preparar usuários sintéticos, invocador temporário e E2E remoto real de forma controlada. Não converter GO local em GO remoto antes da evidência.
+
+## 8. Prévia interativa local de interface — 12/11/2026
+
+A captura do operador confirmou que a rota `http://localhost:3000/cozinha-dietetica` carrega, mas exibe corretamente `Acesso hospitalar não habilitado` por ausência de configuração de QA local. Foi preparado na **branch W12** um inicializador independente do Cloud Run:
+
+- `scripts/hospital-w12-preview-local.mjs`: inicia Firebase Auth e Firestore Emulator **somente em loopback**, projeto `demo-cozinha-dietetica`, confere Java/portas/ambiente e inicia Next dev no `127.0.0.1:3100` com flags exclusivas de QA. Nenhuma credencial JSON, produção hospitalar, projeto financeiro ou GCP é utilizada.
+- `scripts/hospital-w12-preview-seed.mjs`: cria oito **usuários inteiramente fictícios** (UTI, UPI, PAM, Oncologia, Bloco, Cozinha, Nutrição e Administração), uma organização demonstrativa `qa_hgesm_preview`, cinco unidades e um cenário ficcional de paciente + internação + dieta + mapa 10h de D+2. Rejeita execução se flags de emulação/ambiente local não forem exatas.
+- `.github/workflows/hospital-w12-homologation-qa.yml`: valida a sintaxe dos dois scripts junto à suíte do W12.
+
+**Modo de uso no Windows**, dentro do clone na branch W12 atualizada, com `npm.cmd ci` já realizado:
+
+```powershell
+node .\scripts\hospital-w12-preview-local.mjs
+```
+
+Abrir `http://127.0.0.1:3100/cozinha-dietetica`, usar contas `qa-<perfil>@example.test` e senha local exibida no terminal, depois acessar `/cozinha-dietetica/app` pelo link autenticado. **Preview local não é aprovação do Cloud Run QA**, não promove a revisão privada, não substitui W12 GCP E2E, não faz merge nem utiliza dados reais.
