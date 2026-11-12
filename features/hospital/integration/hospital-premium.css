@@ -222,3 +222,31 @@
   .hospital-operational *::before,
   .hospital-operational *::after {transition-duration:0.01ms!important;animation-duration:0.01ms!important}
 }
+
+/* Real event-driven order timeline; motion communicates progress but never advances data. */
+.hospital-order-progress{overflow:hidden;border:1px solid #deebfa;background:linear-gradient(130deg,#fff 0%,#f6faff 100%);border-radius:22px;box-shadow:0 12px 40px rgba(26,55,99,.045)}
+.hospital-order-progress__hero{display:flex;align-items:center;gap:15px;padding:22px 22px 14px}
+.hospital-order-progress__eyebrow{color:#7c93b0;font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;margin-bottom:4px}
+.hospital-order-progress__pulse{height:48px;width:48px;border-radius:16px;background:linear-gradient(140deg,#dcecff,#b6d9ff);color:#0854b9;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.hospital-order-progress__pulse:not([data-complete="true"]):after{content:"";position:absolute;inset:-5px;border:1.5px solid rgba(61,144,245,.4);border-radius:19px;animation:hospital-order-pulse 2.8s ease-out infinite}
+.hospital-order-progress__pulse[data-complete="true"]{background:#e3f8e9;color:#11834a}
+.hospital-order-progress__counter{border:1px solid #d6e6fa;background:#fff;border-radius:999px;padding:7px 12px;font-size:11px;color:#3264a4;font-weight:750;white-space:nowrap}
+.hospital-order-progress__steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:20px 16px 22px;border-top:1px solid #ebf1fa}
+.hospital-order-progress__step{min-width:0;display:flex;flex-direction:column;align-items:center;position:relative;text-align:center;gap:9px}
+.hospital-order-progress__step:not(:last-child)::after{content:"";height:2px;background:#dfE9f6;position:absolute;left:calc(50% + 23px);right:calc(-50% + 23px);top:18px;z-index:0}
+.hospital-order-progress__step[data-state="done"]:not(:last-child)::after{background:#2b77d7}
+.hospital-order-progress__node{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:#f0f5fc;color:#99abc5;border:1px solid #dce6f5;z-index:1}
+.hospital-order-progress__step[data-state="done"] .hospital-order-progress__node{color:#fff;background:#125abc;border-color:#125abc}
+.hospital-order-progress__step[data-state="active"] .hospital-order-progress__node{color:#fff;background:#146de5;border-color:#146de5;box-shadow:0 0 0 5px rgba(54,133,241,.12);animation:hospital-order-active 2.8s ease-in-out infinite}
+.hospital-order-progress__label{font-size:11px;line-height:1.4;font-weight:600;color:#8ca1bb;max-width:125px}
+.hospital-order-progress__step[data-state="done"] .hospital-order-progress__label{color:#355d92}
+.hospital-order-progress__step[data-state="active"] .hospital-order-progress__label{color:#0c51b4;font-weight:800}
+.hospital-order-progress__foot{padding:0 20px 18px;font-size:10px;line-height:1.6;color:#91a3b9}
+.hospital-order-progress--compact .hospital-order-progress__hero{padding:14px 15px 9px;gap:10px}
+.hospital-order-progress--compact .hospital-order-progress__pulse{width:36px;height:36px;border-radius:11px}
+.hospital-order-progress--compact .hospital-order-progress__steps{padding:14px 10px 14px}
+.hospital-order-progress--compact .hospital-order-progress__foot{padding:0 14px 12px}
+@keyframes hospital-order-pulse{0%{opacity:.8;transform:scale(.91)}70%,100%{opacity:0;transform:scale(1.2)}}
+@keyframes hospital-order-active{0%,100%{box-shadow:0 0 0 3px rgba(54,133,241,.12)}50%{box-shadow:0 0 0 7px rgba(54,133,241,.12)}}
+@media(max-width:600px){.hospital-order-progress__hero{flex-wrap:wrap;padding:15px 13px}.hospital-order-progress__counter{margin-left:55px}.hospital-order-progress__steps{padding:15px 6px 20px}.hospital-order-progress__node{height:32px;width:32px}.hospital-order-progress__step:not(:last-child)::after{left:calc(50% + 18px);right:calc(-50% + 18px);top:16px}.hospital-order-progress__label{font-size:9px;max-width:70px}.hospital-order-progress__foot{padding:0 12px 12px}}
+@media(prefers-reduced-motion:reduce){.hospital-order-progress__pulse:after,.hospital-order-progress__step[data-state="active"] .hospital-order-progress__node{animation:none!important}}
