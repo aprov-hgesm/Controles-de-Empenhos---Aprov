@@ -13,8 +13,8 @@ export interface PatientsViewProps {
   getIdToken:()=>Promise<string>;
   endpoint?:string;
 }
-const inputClass='rounded border border-slate-300 bg-white p-2 text-slate-900';
-const actionClass='rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-50';
+const inputClass='min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-[#19365c] shadow-sm';
+const actionClass='rounded-xl border border-blue-200 bg-[#1049ad] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#073a96] disabled:opacity-50';
 export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/hospital/patients'}:PatientsViewProps) {
   const [rows,setRows]=useState<Row[]>([]);
   const [beds,setBeds]=useState<Bed[]>([]);
@@ -30,6 +30,7 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
   const [history,setHistory]=useState<Array<{id:number,eventType:string,occurredAt:string,actorUid:string}>>([]);
   const [referenceCode,setReferenceCode]=useState('');
   const [displayName,setDisplayName]=useState('');
+  const [showNew,setShowNew]=useState(false);
   const [editName,setEditName]=useState('');
   const [chosenBed,setChosenBed]=useState('');
   const [transferUnit,setTransferUnit]=useState('');
@@ -86,18 +87,18 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
   };
   const current=rows.find(r=>r.patient.id===selected?.patient.id && r.admission?.id===selected?.admission?.id)??selected;
   const active=current?.admission?.status==='ACTIVE';
-  return <section className="space-y-4 p-4 text-sm" aria-label="Pacientes da unidade">
-    <header className="space-y-1">
-      <h1 className="text-xl font-semibold">Pacientes e internações</h1>
-      <p className="text-slate-600">Unidade {unitId}. Cadastro e movimentações não substituem prescrição médica. A previsão não suspende refeições.</p>
-    </header>
-    <form onSubmit={submitNew} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_1fr_auto]" aria-label="Cadastro rápido de paciente">
+  return <section className="hospital-panel space-y-5 p-4 text-sm sm:p-6" aria-label="Pacientes da unidade">
+    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4"><div className="space-y-1">
+      <h2 className="text-xl font-extrabold tracking-tight text-[#17375f]">Pacientes e internações</h2>
+      <p className="text-sm text-slate-500">Unidade {unitId} · Cadastro e movimentações auditáveis. Previsões não suspendem refeições.</p>
+     </div><button type="button" className="hospital-primary-action" aria-expanded={showNew} onClick={()=>setShowNew(open=>!open)}>{showNew?'Fechar cadastro':'+ Novo paciente'}</button></header>
+    {showNew&&<form onSubmit={submitNew} className="grid gap-3 rounded-2xl border border-sky-100 bg-[#f6f9ff] p-4 sm:grid-cols-[1fr_1fr_auto]" aria-label="Cadastro rápido de paciente">
       <input required maxLength={80} className={inputClass} value={referenceCode} onChange={e=>setReferenceCode(e.target.value)} placeholder="Identificador institucional" aria-label="Identificador institucional"/>
       <input required maxLength={160} className={inputClass} value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Nome do paciente" aria-label="Nome do paciente"/>
       <button disabled={saving} className={actionClass} type="submit">Cadastrar</button>
-    </form>
-    <div className="flex flex-wrap items-center gap-2">
-      <input className={inputClass} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nome, identificação ou leito" aria-label="Pesquisar pacientes"/>
+    </form>}
+    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50/90 p-3">
+      <input className={inputClass+" flex-1"} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nome, identificação ou leito" aria-label="Pesquisar pacientes"/>
       <select className={inputClass} aria-label="Situação da internação" value={status} onChange={e=>setStatus(e.target.value)}>
         <option value="ACTIVE">Internados</option><option value="DISCHARGED">Altas</option><option value="ALL">Todos</option>
       </select>
@@ -107,11 +108,11 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
     {error&&<div role="alert" className="rounded border border-red-500 p-2 text-red-700">{error}</div>}
     {notice&&<div role="status" className="rounded border border-emerald-500 p-2">{notice}</div>}
     {!loading&&rows.length===0&&<p role="status">Nenhum paciente encontrado para este filtro.</p>}
-    <ul className="divide-y rounded border">
+    <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
       {rows.map((r,i)=><li key={r.patient.id+'-'+(r.admission?.id??i)}>
-        <button type="button" className="w-full p-3 text-left hover:bg-slate-100 focus-visible:outline" onClick={()=>void select(r)}>
-          <strong>{r.patient.displayName||'Paciente sem nome'}</strong>
-          <span className="ml-2 text-slate-600">{r.patient.referenceCode} · {r.bedLabel||'Sem leito'} · {r.admission?.status??'Sem internação'}</span>
+        <button type="button" className="flex w-full flex-wrap items-center justify-between gap-2 p-3.5 text-left hover:bg-[#f1f6ff] focus-visible:outline" onClick={()=>void select(r)}>
+          <strong className="font-semibold text-[#153b74]">{r.patient.displayName||'Paciente sem nome'}</strong>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{r.patient.referenceCode} · {r.bedLabel||'Sem leito'} · {r.admission?.status??'Sem internação'}</span>
         </button>
       </li>)}
     </ul>
@@ -120,9 +121,9 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
       <span>Página {page+1}</span>
       <button className={actionClass} disabled={(page+1)*20>=total||loading} onClick={()=>setPage(p=>p+1)}>Próxima</button>
     </nav>
-    {current&&<article className="space-y-3 rounded border p-3" aria-label="Detalhes do paciente">
+    {current&&<article className="space-y-4 rounded-2xl border border-blue-100 bg-[#fbfdff] p-4 sm:p-5" aria-label="Detalhes do paciente">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{current.patient.displayName||current.patient.referenceCode}</h2>
+        <h2 className="text-lg font-extrabold text-[#173b6a]">{current.patient.displayName||current.patient.referenceCode}</h2>
         <button type="button" onClick={()=>setSelected(null)}>Fechar</button>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -138,7 +139,7 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
       </div>}
       {current.admission&&<div className="space-y-2">
         <p>Internação {current.admission.id} · {current.admission.status} · revisão {current.admission.revision}</p>
-        {active&&<>
+        {active&&<details className="group rounded-xl border border-slate-200 bg-white p-3"><summary className="cursor-pointer py-2 font-bold text-[#1b4b91]">Movimentação, transferência e alta — abrir ações</summary><div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-2">
             <select className={inputClass} value={chosenBed} onChange={e=>setChosenBed(e.target.value)} aria-label="Trocar leito">
               <option value="">Sem leito</option>{beds.filter(b=>b.active&&(!b.occupied||b.id===current.admission?.bedId)).map(b=><option key={b.id} value={b.id}>{b.label}</option>)}
@@ -164,8 +165,8 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
             {current.admission.plannedDischargeAt&&<button className={actionClass} disabled={saving} onClick={()=>void act('admission.cancelDischarge',{admissionId:current.admission?.id,expectedRevision:current.admission?.revision})}>Cancelar previsão</button>}
             <button className="rounded border border-red-500 px-3 py-2 text-red-700" disabled={saving} onClick={()=>{if(window.confirm('Confirmar alta efetiva? Refeições pendentes serão suspensas.'))void act('admission.confirmDischarge',{admissionId:current.admission?.id,expectedRevision:current.admission?.revision});}}>Confirmar alta</button>
           </div>
-        </>}
-        <details><summary>Histórico de alterações</summary><ul>{history.map(e=><li key={e.id}>{e.occurredAt} · {e.eventType} · {e.actorUid}</li>)}</ul></details>
+        </div></details>}
+        <details className="rounded-lg border border-slate-200 bg-white p-3"><summary className="cursor-pointer font-semibold">Histórico de alterações</summary><ul>{history.map(e=><li key={e.id}>{e.occurredAt} · {e.eventType} · {e.actorUid}</li>)}</ul></details>
       </div>}
     </article>}
   </section>;
