@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   hospital-w12:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       HOSPITAL_FIRESTORE_QA_ENABLED: '1'
