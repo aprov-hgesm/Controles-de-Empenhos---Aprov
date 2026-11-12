@@ -10,8 +10,8 @@ const dateInHospital=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_
 const cycleLabels:Record<CycleId,string>={'06':'06h · Café / lanche','10':'10h · Almoço / lanche','16':'16h · Jantar / ceia'};
 const stageNames:Record<string,string>={REQUESTED:'Aguardando',PREPARING:'Em preparo',READY:'Pronto',SUSPENDED:'Suspenso',SAFETY_BLOCKED:'Bloqueado',CANCELLED:'Cancelado',NEEDS_REVIEW:'Revisão necessária',PENDING:'Lote pendente',IN_PROGRESS:'Lote em preparo',COMPLETE:'Lote concluído',DISPATCHED:'Expedido',DELIVERED:'Entregue',RECEIVED_BY_UNIT:'Recebido na unidade'};
 const time=(value:string|null|undefined)=>value?new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'2-digit'}).format(new Date(value)):'—';
-const button='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40';
-const heading='text-sm font-bold uppercase tracking-wide text-slate-600';
+const button='hospital-secondary-action disabled:cursor-not-allowed disabled:opacity-40';
+const heading='text-xs font-extrabold uppercase tracking-[0.14em] text-[#516f97]';
 
 /** UI só recebe dados de endpoint autorizado. Nenhuma fixture clínica e nenhuma aceitação individual. */
 export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10'}:Props){
@@ -87,18 +87,18 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
   const create=()=>{if(!chosen.length||!sameGroup)return;void act('create',{unitId:chosen[0].unitId,localDate,cycleId,mealIds:chosen.map(m=>m.id),preparationLabel});};
   const reconcile=(batch:KitchenBatch)=>void act('reconcile',{unitId:batch.unitId,batchId:batch.id,expectedRevision:batch.revision,excludedMealIds:batch.invalid.map(x=>x.mealId)});
 
-  return <section className="mx-auto max-w-7xl space-y-5 px-3 py-5 text-slate-900 sm:px-6" aria-label="Painel da Cozinha Dietética">
+  return <section className="space-y-5 text-slate-900" aria-label="Painel da Cozinha Dietética">
     <header className="flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-2xl font-bold">Painel da Cozinha</h1><p className="text-sm text-slate-600">Mapas recebidos, preparo e conferência. Entrega é registrada em Distribuição.</p></div>
+      <div><h2 className="text-xl font-extrabold text-[#193c6a]">Fila operacional e preparo</h2><p className="mt-1 text-sm text-slate-500">Mapas recebidos, lotes e conferência. A entrega é confirmada separadamente em Distribuição.</p></div>
       <button className={button} disabled={busy} onClick={()=>void load()}>Atualizar fila</button>
     </header>
-    <div className="grid gap-3 sm:grid-cols-4">
+    <div className="hospital-panel grid gap-3 p-4 sm:grid-cols-4">
       <label className="text-sm font-medium">Data<input aria-label="Data do mapa" type="date" className="mt-1 w-full rounded-lg border p-2" value={localDate} onChange={e=>setLocalDate(e.target.value)}/></label>
       <label className="text-sm font-medium">Ciclo<select aria-label="Ciclo" className="mt-1 w-full rounded-lg border p-2" value={cycleId} onChange={e=>setCycleId(e.target.value as CycleId)}>{(Object.keys(cycleLabels) as CycleId[]).map(c=><option key={c} value={c}>{cycleLabels[c]}</option>)}</select></label>
       <label className="text-sm font-medium">Unidade<select aria-label="Unidade" className="mt-1 w-full rounded-lg border p-2" value={unitId} onChange={e=>{setUnitId(e.target.value);setSelected([]);}}><option value="">Todas autorizadas</option>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
       <label className="text-sm font-medium">Dieta<input aria-label="Código da dieta" className="mt-1 w-full rounded-lg border p-2" value={dietCode} onChange={e=>setDietCode(e.target.value)} placeholder="Filtrar código"/></label>
     </div>
-    <div className="flex flex-wrap gap-4 text-sm"><label className="flex gap-2"><input type="checkbox" checked={lateOnly} onChange={e=>setLateOnly(e.target.checked)}/>Somente extraordinários/tardios</label><label className="flex gap-2"><input type="checkbox" checked={includeSuspended} onChange={e=>setIncludeSuspended(e.target.checked)}/>Mostrar suspensos e cancelados</label></div>
+    <div className="flex flex-wrap gap-4 rounded-xl border border-slate-200 bg-white p-3 text-sm"><label className="flex gap-2"><input type="checkbox" checked={lateOnly} onChange={e=>setLateOnly(e.target.checked)}/>Somente extraordinários/tardios</label><label className="flex gap-2"><input type="checkbox" checked={includeSuspended} onChange={e=>setIncludeSuspended(e.target.checked)}/>Mostrar suspensos e cancelados</label></div>
     {loading&&<p role="status">Consultando mapas autorizados…</p>}
     {offline&&<p role="status" className="rounded-lg border border-amber-300 p-3 text-amber-900">Sem conexão confirmada. Dados exibidos podem estar desatualizados; operações exigem reconexão.</p>}
     {error&&<p role="alert" className="rounded-lg border border-rose-300 p-3 text-rose-900">{error}</p>}
@@ -106,13 +106,13 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     {data&&<>
       <p className="text-xs text-slate-500">Última leitura: {time(data.at)} (horário local). Mapas não enviados não entram na fila.</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">{([['Mapas recebidos',data.maps.length],['Aguardando',data.counts.requested],['Preparando',data.counts.preparing],['Prontos',data.counts.ready],['Tardios',data.counts.late],['Bloqueados',data.counts.blocked],['Suspensos',data.counts.suspended]] as const).map(([label,count])=><div key={label} className="rounded-xl border bg-white p-3 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="text-2xl font-bold tabular-nums">{count}</p></div>)}</div>
-      <div className="rounded-xl border bg-white p-4"><h2 className={heading}>Mapas efetivamente enviados</h2>{data.maps.length===0?<p className="mt-3 text-sm text-slate-500">Nenhum mapa enviado neste ciclo. Rascunhos não são pedidos recebidos.</p>:<div className="mt-2 flex flex-wrap gap-2">{data.maps.map(m=><span className="rounded-lg border bg-slate-50 p-2 text-xs" key={m.id}>{m.unitId} · {stageNames[m.status]??m.status} · recebido {time(m.submittedAt)}</span>)}</div>}</div>
+      <div className="hospital-panel p-5"><h2 className={heading}>Mapas efetivamente enviados</h2>{data.maps.length===0?<p className="mt-3 text-sm text-slate-500">Nenhum mapa enviado neste ciclo. Rascunhos não são pedidos recebidos.</p>:<div className="mt-2 flex flex-wrap gap-2">{data.maps.map(m=><span className="rounded-lg border bg-slate-50 p-2 text-xs" key={m.id}>{m.unitId} · {stageNames[m.status]??m.status} · recebido {time(m.submittedAt)}</span>)}</div>}</div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="min-w-0 rounded-xl border bg-white p-4"><h2 className={heading}>Fila individual</h2><p className="my-2 text-xs text-slate-500">Marque pedidos compatíveis para formar um lote; não há aceite individual.</p>
+        <section className="hospital-panel min-w-0 p-5"><h2 className={heading}>Fila individual</h2><p className="my-2 text-xs text-slate-500">Marque pedidos compatíveis para formar um lote; não há aceite individual.</p>
           <div className="max-h-[420px] space-y-2 overflow-y-auto">{data.meals.length===0?<p className="p-3 text-sm">Sem pedidos nesta consulta.</p>:data.meals.map(m=><MealRow key={m.id} meal={m} selected={selected.includes(m.id)} busy={busy||offline} onSelect={checked=>setSelected(prev=>checked?[...prev,m.id]:prev.filter(x=>x!==m.id))}/>)}</div>
           <div className="mt-3 space-y-2 border-t pt-3"><p className="text-sm font-semibold">Selecionados: {chosen.length} {chosen.length>0&&!sameGroup?'· dietas, unidades ou restrições incompatíveis':''}</p>
             <label className="block text-sm">Preparação / prato conferido<input className="mt-1 w-full rounded-lg border p-2" maxLength={120} placeholder="Ex.: arroz e acompanhamento sem lactose" value={preparationLabel} onChange={e=>setPreparationLabel(e.target.value)}/></label>
-            <button className={button} disabled={busy||offline||!sameGroup||!preparationLabel.trim()} onClick={create}>Formar lote de {chosen.length}</button></div>
+            <button className="hospital-primary-action" disabled={busy||offline||!sameGroup||!preparationLabel.trim()} onClick={create}>Formar lote de {chosen.length}</button></div>
         </section>
         <section className="min-w-0 rounded-xl border bg-white p-4"><h2 className={heading}>Mapa consolidado de produção</h2><p className="my-2 text-xs text-slate-500">Quantidades por dieta, principal/secundária e restrição; sem duplicação por adendo/transferência.</p>
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">Dieta / tipo</th><th className="p-2">Preparações</th><th className="p-2">Restrições</th><th className="p-2">Total</th><th className="p-2">Preparo</th><th className="p-2">Pronto</th></tr></thead><tbody>{data.groups.map(g=><tr key={`${g.dietCode}:${g.mealType}:${g.restrictionCodes.join('|')}`} className="border-b"><td className="p-2">{g.dietCode} · {g.mealType==='PRIMARY'?'Principal':'Secundária'}</td><td className="p-2">{g.preparationLabels.join(', ')||'A definir no lote'}</td><td className="p-2">{g.restrictionCodes.join(', ')||'—'}</td><td className="p-2 tabular-nums">{g.total}</td><td className="p-2">{g.preparing}</td><td className="p-2">{g.ready}</td></tr>)}</tbody></table>{data.groups.length===0&&<p className="p-3 text-sm">Sem produção elegível.</p>}</div>
