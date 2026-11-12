@@ -205,9 +205,11 @@
   }
   .hospital-operational .hospital-sidebar[data-open="false"] {
     transform: translateX(-110%);
+    visibility: hidden;
   }
   .hospital-operational .hospital-sidebar[data-open="true"] {
     transform: translateX(0);
+    visibility: visible;
   }
   .hospital-operational .hospital-mobile-mask {
     background: rgba(1,10,27,.67);
