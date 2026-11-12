@@ -1,0 +1,1 @@
+export function createHospitalContingencyHandler(args:{store:any;verifyToken?:any}): (input:{authorization:string;organizationId:string;operation:string;payload:Record<string,unknown>})=>Promise<{status:number;body:any}>;
