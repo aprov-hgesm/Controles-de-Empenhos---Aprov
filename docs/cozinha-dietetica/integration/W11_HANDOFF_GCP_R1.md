@@ -146,3 +146,11 @@ O teste lê email e OAuth token do metadata server, exige a identidade hospitala
 **Limpeza confirmada:** `Deleted job [w11-auth-smoke]`, após execução bem-sucedida. O serviço hospitalar `cozinha-dietetica-qa` permanece privado e independente.
 
 **Balanço W11:** Cloud Run privado `Ready=True`, política de invocação sem membros públicos, ingresso `internal` e verificação externa HTTP 404; service account correta, limite de uma instância, imagens no Artifact Registry isolado; Cloud Run Job Firestore e Authentication ambos com `HTTP 200`; Jobs temporários apagados. **GO para provisionamento e conectividade técnica W11; NO-GO para uso clínico**. Ainda pendem invocação real autenticada ao serviço interno, dados de teste sintéticos, testes de fluxo hospitalar E2E e checklist W12. Não fazer merge, exposição pública ou carga de pacientes reais.
+
+## 11. Identidade Workflows para teste de invocação interna (11/11/2026)
+
+O operador confirmou por saída PowerShell que `workflows.googleapis.com` e `workflowexecutions.googleapis.com` foram habilitadas no projeto `cozinha-dietetica`; que `hospital-w11-probe@cozinha-dietetica.iam.gserviceaccount.com` foi criada; e que esta identidade recebeu `roles/run.invoker` especificamente no serviço Cloud Run `cozinha-dietetica-qa` (política com o único membro `hospital-w11-probe`).
+
+**Pendente de execução:** teste com Workflows na mesma região e projeto, HTTPS `run.app`, OIDC audience da raiz do serviço, `GET /cozinha-dietetica`, retorno 200 e indicação literal de que o acesso clínico não está habilitado. O workflow não receberá dados de pacientes, nem usará usuários do Firebase. Não remover a role invoker antes da prova concluída.
+
+**Atenção:** apenas habilitar API/criar SA/conceder Invoker não comprova invocação interna; manter a verificação como pendente até haver execução real `SUCCEEDED`.
