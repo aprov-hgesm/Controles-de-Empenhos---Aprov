@@ -35,6 +35,8 @@ jobs:
         run: node ops/hospital-w11-qa-plan.mjs plan
       - name: Validate authorized hospital Cloud Shell provisioning script (syntax only)
         run: bash -n ops/hospital-w11-qa-cloudshell.sh
+      - name: Private Cloud Run hospital login and workspace guards
+        run: node --test tests/hospital/firebase/w11-qa-ui-gate.test.mjs
       - name: W10 + W11 Auth/Firestore Emulator with synthetic patients
         run: >
           npx --yes firebase-tools emulators:exec
