@@ -36,7 +36,10 @@ for(const profile of accounts){
   mkdirSync(screenshots,{recursive:true});
   await page.screenshot({path:join(screenshots,profile.name+'-desktop.png'),fullPage:true});
   if(profile.name==='cozinha'){
+   await expect(page.locator('[data-mode="overview"]')).toBeVisible();
+   await expect(page.getByRole('button',{name:'Abrir Produção'})).toBeVisible();
    await page.getByRole('button',{name:'Produção',exact:true}).click();
+   await expect(page.locator('[data-mode="operations"]')).toBeVisible();
    await expect(page.locator('[data-testid="hospital-page-producao"]')).toBeVisible();
    await page.screenshot({path:join(screenshots,'cozinha-producao-desktop.png'),fullPage:true});
   }
