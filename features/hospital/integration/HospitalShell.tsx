@@ -19,6 +19,7 @@ import {AdministrationView} from '@/features/hospital/administration/Administrat
 import {ReportingView} from '@/features/hospital/reporting/ReportingView';
 import {TrackingView} from './TrackingView';
 import {DistributionQueue} from './DistributionQueue';
+import {KitchenMapsBoard} from './KitchenMapsBoard';
 import {getHospitalWorkspaceAccess,type HospitalWorkspaceAccess} from './access';
 import {canOpenPage,firstPage,menuForRoles} from './navigation.mjs';
 import './hospital-premium.css';
@@ -63,6 +64,7 @@ export function HospitalShell(){
  const [unit,setUnit]=useState('');
  const [notification,setNotification]=useState('');
  const [mobileMenu,setMobileMenu]=useState(false);
+ const [kitchenFocus,setKitchenFocus]=useState<{unitId:string;cycleId:'06'|'10'|'16';localDate:string}|null>(null);
  const request=useRef(0);
 
  useEffect(()=>{
@@ -123,6 +125,7 @@ export function HospitalShell(){
  const navigate=(target:string)=>{
   if(!canOpenPage(access.roles,target))return;
   setPage(target);
+  setKitchenFocus(null);
   setMobileMenu(false);
  };
 
@@ -234,9 +237,12 @@ export function HospitalShell(){
       {selected==='dietas'&&clinical&&<DietasView key={authorizedUnit} organizationId={org} unitId={authorizedUnit} roles={access.roles} getIdToken={getIdToken}/>}
       {selected==='mapas'&&clinical&&<MeusMapasView key={authorizedUnit} organizationId={org} unitId={authorizedUnit} getIdToken={getIdToken}/>}
       {selected==='acompanhamento'&&clinical&&<TrackingView key={authorizedUnit} organizationId={org} unitId={authorizedUnit} getIdToken={getIdToken}/>}
-      {selected==='painel'&&kitchen&&<div className="hospital-panel mb-4 flex flex-wrap items-center justify-between gap-4 p-5"><div><p className="hospital-hint-label">Ações operacionais</p><p className="mt-1 text-sm text-slate-500">Consulte os indicadores do ciclo e avance para as etapas específicas.</p></div><div className="flex flex-wrap gap-2"><button className="hospital-primary-action" onClick={()=>navigate('producao')}>Abrir Produção</button><button className="hospital-secondary-action" onClick={()=>navigate('distribuicao')}>Distribuição</button><button className="hospital-secondary-action" onClick={()=>navigate('relatorios')}>Relatórios</button></div></div>}
-      {(selected==='painel'||selected==='producao')&&kitchen&&<ProductionView key={selected} mode={selected==='painel'?'overview':'operations'} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>}
-      {selected==='distribuicao'&&kitchen&&<DistributionQueue organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>}
+      {selected==='painel'&&kitchen&&<KitchenMapsBoard organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}
+      onOpenProduction={target=>{setKitchenFocus(target);setPage('producao')}} onOpenDistribution={target=>{setKitchenFocus(target);setPage('distribuicao')}}/>}
+      {selected==='producao'&&kitchen&&<ProductionView key={kitchenFocus?'production-'+kitchenFocus.unitId+'-'+kitchenFocus.cycleId:'production-all'} mode="operations"
+       initialDate={kitchenFocus?.localDate} initialCycle={kitchenFocus?.cycleId??'10'} initialUnitId={kitchenFocus?.unitId} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>}
+      {selected==='distribuicao'&&kitchen&&<DistributionQueue key={kitchenFocus?'distribution-'+kitchenFocus.unitId+'-'+kitchenFocus.cycleId:'distribution-all'} initialDate={kitchenFocus?.localDate}
+       initialCycle={kitchenFocus?.cycleId} initialUnitId={kitchenFocus?.unitId} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>} 
       {(selected==='ocorrencias'||selected==='relatorios')&&kitchen&&<ReportingView key={selected} organizationId={org} unitIds={access.unitIds} initialView={selected==='ocorrencias'?'occurrences':'maps'} getAccessToken={getIdToken}/>}
       {selected==='nutricao'&&nutrition&&<NutritionAuditView organizationId={org} unitIds={access.unitIds} getAccessToken={getIdToken}/>}
       {selected==='administracao'&&admin&&<AdministrationView organizationId={org} getToken={getIdToken}/>}
