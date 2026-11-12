@@ -38,19 +38,19 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
   catch(e){setError(e instanceof Error?e.message:'Falha ao consultar andamento');}
   finally{setLoading(false)}
  };
- return <section className="space-y-4 rounded-xl border bg-white p-4 text-slate-900" aria-label="Acompanhamento da unidade">
-   <h2 className="text-lg font-bold">Acompanhamento de mapas e refeições</h2>
+ return <section className="hospital-panel space-y-5 p-5 text-slate-900 sm:p-6" aria-label="Acompanhamento da unidade">
+   <h2 className="text-xl font-extrabold text-[#173b69]">Rastreabilidade de mapas e refeições</h2>
    <p className="text-sm text-slate-600">Enviado, em preparo, pronto, expedido, recebido e entregue são registros distintos.</p>
-   <div className="flex flex-wrap items-end gap-3">
+   <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-[#f9fbff] p-4">
     <label className="grid gap-1 text-sm">Data<input type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded border p-2"/></label>
     <label className="grid gap-1 text-sm">Mapa<select value={cycle} onChange={e=>setCycle(e.target.value as Cycle)} className="rounded border p-2"><option value="06">06h</option><option value="10">10h</option><option value="16">16h</option></select></label>
-    <button type="button" onClick={()=>void load()} disabled={loading} className="rounded bg-slate-800 px-3 py-2 text-white">Atualizar</button>
+    <button type="button" onClick={()=>void load()} disabled={loading} className="hospital-primary-action">Atualizar</button>
    </div>
    {loading&&<p role="status">Consultando dados do servidor…</p>}
    {error&&<p role="alert" className="text-red-700">{error}</p>}
    {!loading&&!error&&maps.length===0&&<p>Nenhum mapa criado nesta unidade e período.</p>}
-   <div className="grid gap-2">{maps.map(m=><button type="button" key={m.id} onClick={()=>void inspect(m.id)} className="rounded border p-3 text-left text-sm"><strong>{m.cycleId}h · {m.status}</strong> · {m.total} refeições · revisão {m.revision}{m.late?' · envio tardio':''}</button>)}</div>
-   {details&&<div className="space-y-3 rounded border p-3"><h3 className="font-bold">Mapa selecionado</h3>
+   <div className="grid gap-2">{maps.map(m=><button type="button" key={m.id} onClick={()=>void inspect(m.id)} className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-4 text-left text-sm text-[#23456e] hover:bg-blue-50"><strong>{m.cycleId}h · {m.status}</strong> · {m.total} refeições · revisão {m.revision}{m.late?' · envio tardio':''}</button>)}</div>
+   {details&&<div className="space-y-3 rounded-2xl border border-sky-100 bg-[#fbfdff] p-4"><h3 className="font-bold">Mapa selecionado</h3>
     <p className="text-sm">Recibo: {details.receipt?new Date(details.receipt.submittedAt).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Não enviado'}</p>
     {details.meals.length===0?<p>Sem refeições.</p>:<ul className="space-y-2">{details.meals.map(m=><li key={m.id} className="rounded bg-slate-50 p-2 text-sm">{m.mealType==='PRIMARY'?'Principal':'Secundária'} · <strong>{m.status}</strong> {m.advisory==='KITCHEN_REVIEW'?'· avaliação da cozinha pendente':''}</li>)}</ul>}
    </div>}
