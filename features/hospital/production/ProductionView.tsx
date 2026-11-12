@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 
-type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialDate?:string;initialCycle?:CycleId;mode?:'overview'|'operations'};
+type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;mode?:'overview'|'operations'};
 type Result<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 const dateInHospital=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const cycleLabels:Record<CycleId,string>={'06':'06h · Café / lanche','10':'10h · Almoço / lanche','16':'16h · Jantar / ceia'};
@@ -14,10 +14,10 @@ const button='hospital-secondary-action disabled:cursor-not-allowed disabled:opa
 const heading='text-xs font-extrabold uppercase tracking-[0.14em] text-[#516f97]';
 
 /** UI só recebe dados de endpoint autorizado. Nenhuma fixture clínica e nenhuma aceitação individual. */
-export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',mode='operations'}:Props){
+export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',initialUnitId='',mode='operations'}:Props){
   const [localDate,setLocalDate]=useState(initialDate??dateInHospital);
   const [cycleId,setCycleId]=useState<CycleId>(initialCycle);
-  const [unitId,setUnitId]=useState('');
+  const [unitId,setUnitId]=useState(initialUnitId);
   const [dietCode,setDietCode]=useState('');
   const [lateOnly,setLateOnly]=useState(false);
   const [includeSuspended,setIncludeSuspended]=useState(true);
