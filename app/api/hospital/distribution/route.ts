@@ -3,6 +3,7 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 import {createFirestoreDistributionHandler} from '@/lib/server/hospital/distribution/firestore-handler.mjs';
+import {isHospitalGcpQaRuntime} from '@/lib/server/hospital/firebase/gcp-qa-runtime.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -24,7 +25,7 @@ let firestoreHandler:DistributionHandler|undefined;
  * Node resolves the checked-in modules from a fixed local path (never from HTTP).
  */
 async function handler():Promise<DistributionHandler|null>{
-  if(process.env.NODE_ENV==='production')return null;
+  if(process.env.NODE_ENV==='production'&&!isHospitalGcpQaRuntime())return null;
   if(process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1'){
     if(!firestoreHandler)firestoreHandler=createFirestoreDistributionHandler({store:getHospitalW10Store()});
     return firestoreHandler;

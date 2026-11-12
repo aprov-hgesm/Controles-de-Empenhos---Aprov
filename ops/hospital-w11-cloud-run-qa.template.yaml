@@ -1,0 +1,35 @@
+# PLAN ONLY. DO NOT APPLY without separate institutional/GCP approval.
+# A private Cloud Run service in the hospital project, not EMPROVEX production.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: cozinha-dietetica-qa
+  annotations:
+    run.googleapis.com/ingress: internal
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '2'
+    spec:
+      serviceAccountName: hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com
+      containerConcurrency: 10
+      containers:
+        - image: REPLACE_WITH_APPROVED_IMAGE_DIGEST
+          env:
+            - name: HOSPITAL_GCP_QA_ENABLED
+              value: '1'
+            - name: HOSPITAL_GCP_QA_PRIVATE
+              value: '1'
+            - name: HOSPITAL_FIRESTORE_QA_ENABLED
+              value: '1'
+            - name: HOSPITAL_FIRESTORE_PROJECT_ID
+              value: cozinha-dietetica
+            - name: HOSPITAL_FIRESTORE_SERVICE_ACCOUNT_EMAIL
+              value: hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com
+            - name: GOOGLE_CLOUD_PROJECT
+              value: cozinha-dietetica
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: '1'

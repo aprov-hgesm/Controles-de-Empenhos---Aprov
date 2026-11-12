@@ -1,5 +1,7 @@
 'use server';
 import {HospitalQAStore} from '@/lib/server/hospital/core/qa-store.mjs';
+import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
+import {isHospitalQaUiReady} from '@/lib/server/hospital/firebase/qa-ui-gate.mjs';
 import {resolveHospitalScope,requireHospitalPermission} from '@/lib/server/hospital/core/auth.mjs';
 import type {HospitalRole} from '@/features/hospital/core/contracts';
 
@@ -11,13 +13,15 @@ export type HospitalWorkspaceAccess =
 export async function getHospitalWorkspaceAccess(idToken:string):Promise<HospitalWorkspaceAccess>{
   const organizationId=process.env.HOSPITAL_QA_ORGANIZATION_ID?.trim();
   const filename=process.env.HOSPITAL_QA_SQLITE_PATH?.trim();
-  if(process.env.NODE_ENV==='production'||process.env.HOSPITAL_QA_APP_READY!=='1'||!organizationId||!filename)
+  if(!isHospitalQaUiReady(process.env,{workspace:true})||!organizationId)
     return {status:503,message:'Área hospitalar indisponível fora do QA autorizado.'};
   if(typeof idToken!=='string'||idToken.length<20||idToken.length>16000)
     return {status:401,message:'Entre novamente para verificar sua identidade.'};
-  let store:HospitalQAStore|null=null;
+  let store:HospitalQAStore|ReturnType<typeof getHospitalW10Store>|null=null;
   try{
-    store=new HospitalQAStore({filename,qa:true});
+    store=process.env.HOSPITAL_FIRESTORE_QA_ENABLED==='1'
+      ?getHospitalW10Store()
+      :new HospitalQAStore({filename:filename!,qa:true});
     const scope=await resolveHospitalScope({authorization:'Bearer '+idToken,organizationId,store});
     const granted=scope.roles.filter((role:HospitalRole)=>{
       if(role==='HOSPITAL_ADMIN'){

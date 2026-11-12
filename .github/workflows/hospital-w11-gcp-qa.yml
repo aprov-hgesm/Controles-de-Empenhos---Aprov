@@ -1,0 +1,76 @@
+name: Hospital W11 - Isolated GCP QA Guard (no deployment)
+on:
+  push:
+    branches: [feat/cozinha-dietetica-w11-infra-hospitalar-isolada]
+  pull_request:
+    branches: [feat/cozinha-dietetica-w10-firestore-operacional]
+concurrency:
+  group: hospital-w11-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  w11:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Reproducible install, no postinstall side effects
+        run: npm ci --ignore-scripts
+      - name: Read-only GCP deployment plan (never apply)
+        run: node ops/hospital-w11-qa-plan.mjs plan
+      - name: Validate authorized hospital Cloud Shell provisioning script (syntax only)
+        run: bash -n ops/hospital-w11-qa-cloudshell.sh
+      - name: Private Cloud Run hospital login and workspace guards
+        run: node --test tests/hospital/firebase/w11-qa-ui-gate.test.mjs
+      - name: W10 + W11 Auth/Firestore Emulator with synthetic patients
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs"
+      - name: Firebase JWT and IAM gateways
+        run: node --test tests/hospital/firebase/identity.test.mjs tests/hospital/firebase/firestore-gateway.test.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production-mode build without GCP credentials
+        run: npm run build
+      - name: PWA route and protected navigation regression
+        run: npm run test:pwa-installability
+      - name: W0-W9 domain regressions
+        run: >
+          node --test
+          tests/hospital/core/*.test.mjs
+          tests/hospital/entry/*.test.mjs
+          tests/hospital/patients/*.test.mjs
+          tests/hospital/maps/*.test.mjs
+          tests/hospital/production/*.test.mjs
+          tests/hospital/distribution/*.test.mjs
+          tests/hospital/nutrition-audit/*.test.mjs
+          tests/hospital/administration/*.test.mjs
+          tests/hospital/reporting/*.test.mjs
+          tests/hospital/e2e/*.test.mjs
+      - name: EMPROVEX core protection
+        run: npm run verify:emprovex-core-protection
+      - name: EMPROVEX operation regressions
+        run: >
+          node --experimental-vm-modules --test
+          scripts/critical-cross-route-navigation.test.mjs
+          scripts/warehouse-ledger-contract.test.mjs
+          scripts/saas-r1-billing.test.mjs
+          scripts/invoice-identity.test.mjs
