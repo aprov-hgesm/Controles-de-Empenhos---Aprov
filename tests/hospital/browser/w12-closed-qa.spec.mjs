@@ -29,7 +29,7 @@ for(const device of devices){
   await page.screenshot({path:join(out,device.name+'-locked.png'),fullPage:true});
   const workspace=await page.goto(origin+'/cozinha-dietetica/app',{waitUntil:'domcontentloaded'});
   expect(workspace.status()).toBe(200);
-  await expect(page.getByRole('alert')).toContainText('Ambiente hospitalar indisponível');
+  await expect(page.getByRole('alert').filter({hasText:'Ambiente hospitalar indisponível'})).toBeVisible();
   await page.screenshot({path:join(out,device.name+'-workspace-closed.png'),fullPage:true});
   await context.close();
  });
