@@ -41,3 +41,22 @@
 - **GO condicional para revisão do código/QA local:** somente depois que CI de W11 ficar verde.
 - **NO-GO para IAM GCP real, conectividade remota, implantação QA, produção, pacientes reais e homologação clínica:** sem autorização e evidência remota.
 - **W12:** homologação institucional, testes reais IAM/Firestore em QA autorizado, backup/contingência, LGPD, UI móvel, fronteira de acesso institucional e decisão de produção. Nunca inferir GO clínico de PASS no emulador.
+
+
+## 6. Autorização posterior e procedimento executável de provisionamento (11/11/2026)
+
+O proprietário **autorizou expressamente** a preparação da conta de serviço hospitalar, IAM restrito, Cloud Run privado de QA e smoke tests exclusivamente com dados fictícios, aceitando a possibilidade de custos. Essa autorização **não inclui** deploy público, escrita de pacientes reais, alteração do EMPROVEX principal ou regras clínicas.
+
+**Execução nesta conversa:** o acesso GitHub está disponível, mas **não existe uma ação de administração do Google Cloud utilizável nesta sessão**. Por isso **nenhum comando IAM/Cloud Run/Firestore real foi executado**. O script `ops/hospital-w11-qa-cloudshell.sh` foi incluído na branch W11 para execução por operador autorizado no **Google Cloud Shell**. O CI somente valida `bash -n` sem efetuar mutação.
+
+### Sequência mínima no Cloud Shell
+
+1. Conferir conta de cobrança do projeto. **Cloud Run exige billing, mesmo com cota gratuita; vincular billing ao projeto Firebase Spark o muda para Blaze.** Definir alertas de orçamento antes de executar.
+2. No terminal Cloud Shell autenticado como administrador do projeto hospitalar: `gcloud config set project cozinha-dietetica`. Estando no checkout da branch W11, executar `bash ops/hospital-w11-qa-cloudshell.sh plan` (somente leitura).
+3. Após validar a saída, `bash ops/hospital-w11-qa-cloudshell.sh setup-iam`. Isso cria/reutiliza `hospital-qa-runtime@cozinha-dietetica.iam.gserviceaccount.com`, concede `roles/datastore.user` e `roles/firebaseauth.viewer` **somente neste projeto**, habilita Cloud Run API e **não** cria usuários/documentos clínicos.
+4. **Deploy privado separado somente após a imagem hospitalar estar construída, testada e aprovada pelo SHA256 de um repositório Artifact Registry próprio:** `bash ops/hospital-w11-qa-cloudshell.sh deploy-private southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/IMAGEM@sha256:DIGEST_VALIDO`. O script recusa tags mutáveis, URLs de outros projetos, identidades divergentes, acesso público ou serviço já existente com configuração insegura.
+5. **Não presumir sucesso do QA remoto com o deploy:** a revisão ainda precisa do cliente Firebase compilado com o projeto correto, invocador interno autorizado, usuários/OM de testes e smoke tests de leitura/gravação exclusivamente com dados `qa_*`, além da conferência de logs e custos. Frontend externo não acessa diretamente Cloud Run com ingress `internal`.
+
+**Gates após executar:** coletar o project ID, billing habilitado, e-mail da conta de serviço, papéis IAM, serviço/ingress e digest de imagem, sem publicar tokens ou chaves privadas. A documentação e PR permanecem **NO-GO para Cloud GCP real** até tais resultados serem efetivamente obtidos.
+
+**Custo:** orçamento e alertas são orientação, não limite rígido de despesas. Spark → Blaze requer vincular billing; não efetuar alterações em conta financeira do EMPROVEX principal.
