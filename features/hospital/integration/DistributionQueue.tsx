@@ -8,10 +8,10 @@ const localToday=()=>{
  const v=(k:string)=>p.find(x=>x.type===k)?.value??'';
  return v('year')+'-'+v('month')+'-'+v('day');
 };
-export function DistributionQueue({organizationId,unitIds,getAuthorization}:{organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>}){
- const [unitId,setUnitId]=useState(unitIds[0]??'');
- const [cycle,setCycle]=useState<Cycle>('10');
- const [date,setDate]=useState(localToday);
+export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
+ const [unitId,setUnitId]=useState(initialUnitId??unitIds[0]??'');
+ const [cycle,setCycle]=useState<Cycle>(initialCycle);
+ const [date,setDate]=useState(initialDate??localToday);
  const [snapshot,setSnapshot]=useState<KitchenSnapshot|null>(null);
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState('');
