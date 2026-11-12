@@ -191,14 +191,15 @@ export function HospitalShell(){
        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#627894]">{pageDescriptions[selected]??'Operação hospitalar auditável e restrita.'}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-       {access.unitIds.length>1&&
+       {clinical&&access.unitIds.length>1&&
         <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm">
          <span>Unidade</span>
          <select aria-label="Unidade assistencial" className="rounded-lg border-0 bg-transparent px-2 py-2 text-sm font-semibold text-slate-900" value={authorizedUnit} onChange={event=>setUnit(event.target.value)}>
           {access.unitIds.map(id=><option key={id} value={id}>{id}</option>)}
          </select>
         </label>}
-       {access.unitIds.length===1&&<span className="hospital-secondary-action inline-flex items-center gap-2"><BadgeCheck size={16} className="text-[#1456bc]"/>{authorizedUnit}</span>}
+       {clinical&&access.unitIds.length===1&&<span className="hospital-secondary-action inline-flex items-center gap-2"><BadgeCheck size={16} className="text-[#1456bc]"/>{authorizedUnit}</span>}
+       {!clinical&&access.unitIds.length>0&&<span className="hospital-secondary-action inline-flex items-center gap-2"><BadgeCheck size={16} className="text-[#1456bc]"/>{access.unitIds.length} unidades autorizadas</span>}
       </div>
      </div>
 
