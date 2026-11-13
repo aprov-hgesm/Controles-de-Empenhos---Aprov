@@ -101,7 +101,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
   const active=current;
   const allChecked=selected.length>0&&selected.every(id=>statuses[id]?.distributionState==='CHECKED'&&statuses[id]?.mealStatus==='READY');
   const allDispatched=selected.length>0&&selected.every(id=>statuses[id]?.distributionState==='DISPATCHED'&&statuses[id]?.mealStatus==='DISPATCHED');
-  const ingredients=ingredientCodes.split(',').map(x=>x.trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')).filter(Boolean);
+  const ingredients=ingredientCodes.split(',').map(x=>x.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')).filter(Boolean);
   const identityValid=!!patientDisplayName.trim()&&(active?.needsBirthDate?!!patientBirthDate:!!patientReferenceCode.trim());
   return <section aria-label="Distribuição de refeições hospitalares" className="hospital-panel space-y-5 p-4 text-slate-900 sm:p-6">
    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
