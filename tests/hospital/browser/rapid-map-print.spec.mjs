@@ -1,5 +1,7 @@
 import {test,expect} from '@playwright/test';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdirSync} from 'node:fs';
+import {join} from 'node:path';
+const screenshots=join(process.env.RUNNER_TEMP||process.cwd(),'hospital-rapid-map-visual');
 import {PDFDocument} from 'pdf-lib';
 
 const origin='http://127.0.0.1:3100';
@@ -35,6 +37,8 @@ test('Recibo isolado: PDF A4 retrato, download funcional e status de envio corre
  await expect(receipt).toContainText('Enviado pela unidade');
  await expect(receipt).toContainText('Recebido pela Cozinha');
  await expect(receipt).not.toContainText('Paciente Totalmente Fictício');
+ mkdirSync(screenshots,{recursive:true});
+ await receipt.screenshot({path:join(screenshots,'comprovante-envio-premium.png')});
  await expect(page.getByRole('button',{name:'Imprimir somente recibo'})).toHaveCount(0);
  const pending=page.waitForEvent('download');
  await page.locator('[data-testid="map-receipt-download"]').click();
@@ -62,6 +66,8 @@ test('Cadastro de textura pastosa não exige item pastoso no catálogo',async({b
  await form.getByLabel('Consistência da dieta').selectOption('PASTOSA');
  await expect(form.getByText(/Cadastre ou habilite no catálogo/)).toHaveCount(0);
  await expect(form.getByText(/Nenhuma base oral ativa/)).toHaveCount(0);
+ mkdirSync(screenshots,{recursive:true});
+ await form.screenshot({path:join(screenshots,'consistencia-pastosa-sem-bloqueio.png')});
  await form.getByLabel('Nome completo do paciente').fill('Pessoa Fictícia Teste Pastosa');
  await form.getByLabel('Data de nascimento').fill('1995-02-15');
  await form.getByLabel('Número do leito').fill('99-TESTE');
