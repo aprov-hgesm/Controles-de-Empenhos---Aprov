@@ -168,7 +168,7 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
   if(allergy){d.setTextColor(151,38,38);d.setFont('helvetica','bold');d.setFontSize(7.1);
     d.text('ALERGIA REGISTRADA - CONFERIR COMPOSIÇÃO',x+8,y+48,{maxWidth:w-16});}
   d.setFont('helvetica','bold');d.setFontSize(7.5);
-  d.setTextColor(...(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO'?[153,78,22] as const:ink));
+  if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
   d.text(phaseNote(r.phase),x+8,y+54,{maxWidth:w-16});
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
@@ -208,11 +208,11 @@ export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle
    const alert=safe(r.allergyNote,180);
    d.text('ALERGIA: '+alert,x+8,y+49,{maxWidth:w-17});
   }else if(r.identityIncomplete||r.corrected){
-   d.setTextColor(...(r.identityIncomplete?[160,75,17] as const:blue));
+   if(r.identityIncomplete)d.setTextColor(160,75,17);else d.setTextColor(...blue);
    d.setFont('helvetica','bold');d.setFontSize(7);
    d.text(r.identityIncomplete?'IDENTIFICAÇÃO PENDENTE - CONFERIR':'DIETA CORRIGIDA - CONFERIR VERSÃO',x+8,y+49,{maxWidth:w-17});
   }
-  d.setTextColor(...(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO'?[153,78,22] as const:ink));
+  if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
   d.setFont('helvetica','bold');d.setFontSize(7.3);
   d.text(phaseNote(r.phase),x+8,y+55,{maxWidth:w-16});
  }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
