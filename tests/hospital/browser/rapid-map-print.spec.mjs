@@ -147,3 +147,54 @@ test('Cozinha imprime etiquetas definitivas antes de READY, pareadas com identif
  expect((await PDFDocument.load(readFileSync(await patientPdf.path()))).getPageCount()).toBeGreaterThan(0);
  await context.close();
 });
+
+
+test('Distribuição: fluxo visível da montagem à entrega com horário, sem erro de origem',async({browser})=>{
+ test.setTimeout(150_000);
+ const ctx=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true});
+ const page=await ctx.newPage();
+ await page.goto(origin+'/cozinha-dietetica',{waitUntil:'domcontentloaded'});
+ await page.getByLabel('E-mail institucional').fill('qa-cozinha@example.test');
+ await page.getByLabel('Senha').fill('DemoLocal!2026');
+ await page.getByRole('button',{name:/Entrar e validar vínculo/}).click();
+ await expect(page.getByText('Vínculo verificado pelo servidor')).toBeVisible({timeout:30000});
+ await page.getByRole('link',{name:/Acessar módulo hospitalar/}).click();
+ const nav=page.getByRole('navigation',{name:'Navegação hospitalar por perfil'});
+ await nav.getByRole('button',{name:'Produção',exact:true}).click();
+ const prod=page.locator('[data-mode="operations"]');
+ await prod.getByRole('button',{name:'Lanche da tarde',exact:true}).click();
+ await expect(prod.locator('[data-testid="production-diet-group"]').first()).toBeVisible({timeout:30000});
+ const start=prod.getByRole('button',{name:/Iniciar preparo \(/}).first();
+ await expect(start).toBeVisible({timeout:30000});
+ await start.click();
+ const complete=prod.getByRole('button',{name:/Conferi \d+ dietas/}).first();
+ await expect(complete).toBeVisible({timeout:30000});
+ await complete.click();
+ await nav.getByRole('button',{name:'Distribuição',exact:true}).click();
+ const dist=page.locator('[data-testid="hospital-page-distribuicao"]');
+ await dist.locator('[data-testid="distribution-meal-secondary"]').click();
+ const flow=dist.locator('[data-testid="distribution-workflow"]');
+ await expect(flow).toBeVisible({timeout:30000});
+ await expect(flow.getByRole('alert',{name:/Origem não autorizada/})).toHaveCount(0);
+ await expect(flow.getByText(/Etapa 1/)).toBeVisible({timeout:30000});
+ await expect(flow.getByRole('heading',{name:'Montar e conferir bandejas'})).toBeVisible();
+ await expect(flow.getByRole('heading',{name:'Enviar para distribuição'})).toBeVisible();
+ await expect(flow.getByRole('heading',{name:'Registrar horário e entrega'})).toBeVisible();
+ await expect(flow.getByRole('heading',{name:/Entregas concluídas/})).toBeVisible();
+ mkdirSync(screenshots,{recursive:true});
+ await flow.screenshot({path:join(screenshots,'distribuicao-fluxo-sequencial.png')});
+
+ await flow.getByRole('checkbox',{name:/Selecionar Paciente Totalmente Fictício/}).check();
+ await flow.getByRole('textbox',{name:/Ingredientes da preparação/}).fill('arroz, legumes');
+ await flow.getByRole('checkbox',{name:/Conferi ingredientes/}).check();
+ await flow.getByRole('button',{name:/Confirmar montagem de 1 bandeja/}).click();
+ await expect(flow.getByRole('button',{name:'Registrar saída'})).toBeVisible({timeout:30000});
+ await flow.getByRole('button',{name:'Registrar saída'}).click();
+ await expect(flow.getByRole('button',{name:'Confirmar entrega'})).toBeVisible({timeout:30000});
+ const now=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+ await flow.getByLabel(/Hora exata da entrega/).fill(now);
+ await flow.getByRole('button',{name:'Confirmar entrega'}).click();
+ await expect(flow.getByRole('heading',{name:/Entregas concluídas · 1/})).toBeVisible({timeout:30000});
+ await flow.screenshot({path:join(screenshots,'distribuicao-entrega-confirmada.png')});
+ await ctx.close();
+});
