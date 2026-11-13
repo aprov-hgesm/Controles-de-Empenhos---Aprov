@@ -110,9 +110,9 @@ function save(d:jsPDF,filename:string){
  d.save(filename);
 }
 const pill=(d:jsPDF,title:string,x:number,y:number,alert=false)=>{
- d.setFillColor(...(alert?[254,226,226] as const:[232,242,255] as const));
+ if(alert)d.setFillColor(254,226,226);else d.setFillColor(232,242,255);
  d.roundedRect(x,y,40,7,2,2,'F');
- d.setTextColor(...(alert?[139,31,31] as const:blue));
+ if(alert)d.setTextColor(139,31,31);else d.setTextColor(...blue);
  d.setFont('helvetica','bold');d.setFontSize(6.7);
  d.text(safe(title,27),x+2,y+4.8);
 };
@@ -137,7 +137,7 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
  const many=rows.flatMap(r=>Array.from({length:Math.max(0,r.quantity)},()=>r));
  save(labels(many,(d,r,x,y,w)=>{
   const allergy=/ALERGIA:/i.test(r.observation);
-  d.setFillColor(...(allergy?[151,38,38] as const:navy));d.rect(x+2.5,y+3,2,47,'F');
+  if(allergy)d.setFillColor(151,38,38);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,47,'F');
   d.setTextColor(...muted);d.setFont('helvetica','bold');d.setFontSize(7.5);
   d.text('EMPROVEX  /  PREPARO DE DIETA',x+8,y+8);
   pill(d,r.mealType==='SECONDARY'?'SECUNDÁRIA':'PRINCIPAL',x+w-45,y+3);
@@ -147,7 +147,7 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
   d.text('UNIDADE: '+safe(r.unit,30),x+8,y+30);
   d.setFont('helvetica','normal');d.setFontSize(7.7);
   d.text(compact(d,'OBS.: '+safe(r.observation,450),w-17,2),x+8,y+38);
-  d.setTextColor(...(allergy?[151,38,38] as const:muted));d.setFont('helvetica','bold');d.setFontSize(6.9);
+  if(allergy)d.setTextColor(151,38,38);else d.setTextColor(...muted);d.setFont('helvetica','bold');d.setFontSize(6.9);
   d.text((allergy?'ALERGIA REGISTRADA · CONFERIR FICHA  /  ':'')+date+' · '+cycle+'h',x+8,y+49,{maxWidth:w-16});
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
@@ -168,7 +168,7 @@ export function printDistributionReport(rows:DistributionPrintRow[],date:string,
 export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
  save(labels(rows,(d,r,x,y,w)=>{
   const allergy=!!r.allergyAlert;
-  d.setFillColor(...(allergy?[147,35,35] as const:navy));d.rect(x+2.5,y+3,2,47,'F');
+  if(allergy)d.setFillColor(147,35,35);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,47,'F');
   d.setFont('helvetica','bold');d.setFontSize(7.2);d.setTextColor(...muted);
   d.text('EMPROVEX  /  IDENTIFICAÇÃO DE REFEIÇÃO',x+8,y+8);
   pill(d,r.recipientType==='COMPANION'?'ACOMPANHANTE':mealLabel||'PACIENTE',x+w-45,y+3,allergy);
