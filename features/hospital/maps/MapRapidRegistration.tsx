@@ -25,6 +25,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
  const [restrictions,setRestrictions]=useState<string[]>([]);
  const [primary,setPrimary]=useState(true),[secondary,setSecondary]=useState(true);
  const [companion,setCompanion]=useState(false);
+ const [careChecked,setCareChecked]=useState(false);
  const [selectedDiet,setSelectedDiet]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const change=(key:keyof ReturnType<typeof empty>,value:string)=>setForm(p=>({...p,[key]:value}));
@@ -39,7 +40,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
  const extraordinary=timing.stage!=='ON_TIME';
  const submitted=map.status!=='DRAFT';
  const chosen=tube?[]:[...(primary?['PRIMARY']:[]),...(secondary?['SECONDARY']:[])];
- const canSave=!!form.fullName.trim()&&!!form.birthDate&&!!form.bedLabel.trim()&&(chosen.length>0||companion)&&
+ const canSave=careChecked&&!!form.fullName.trim()&&!!form.birthDate&&!!form.bedLabel.trim()&&(chosen.length>0||companion)&&
   (!chosen.length||!!diet)&&(!companion||!!companionDiet)&&(!extraordinary||form.reason.trim().length>=5);
  async function save(finish:boolean){
   if(!canSave){setError('Complete os campos e confirme uma dieta do catálogo compatível com a consistência.');return}
@@ -52,12 +53,12 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    },body:JSON.stringify({operation:'map.patient.add',payload:{
     mapId:map.id,expectedMapRevision:map.revision,idempotencyKey:crypto.randomUUID(),
     ...form,restrictions,meals:chosen,companion,catalogItemId:diet?.id,companionCatalogItemId:companionDiet?.id,
-    confirmedAgainstCareInstruction:true
+    confirmedAgainstCareInstruction:careChecked
    }})});
    const result=await response.json() as Api<unknown>;
    if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao salvar');
    const completedReason=form.reason;
-   setForm(empty());setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');
+   setForm(empty());setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');setCareChecked(false);
    await onSaved(finish,completedReason);
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar paciente e dieta')}
   finally{setBusy(false)}
@@ -99,7 +100,10 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
   </div>}
   <label className="grid gap-1 text-sm font-semibold">Observações complementares da dieta (opcional)<textarea className={field} rows={2} maxLength={180} value={form.observation} onChange={e=>change('observation',e.target.value)} placeholder="Informações para a preparação e a etiqueta"/></label>
   {extraordinary&&<label className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold">Justificativa da solicitação {submitted?'extra ':''}fora do prazo<textarea className={field} rows={2} value={form.reason} onChange={e=>change('reason',e.target.value)}/></label>}
-  <p className="text-xs text-slate-500">Ao salvar, a unidade confirma a transcrição da orientação assistencial vigente. O sistema não emite prescrições médicas. Os dados são registrados no ambiente hospitalar isolado.</p>
+  <label className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-950">
+   <input type="checkbox" className="mt-1" checked={careChecked} onChange={e=>setCareChecked(e.target.checked)}/>
+   Confirmo que esta dieta foi conferida com a orientação assistencial vigente. Isto é uma transcrição para a Cozinha, não uma prescrição médica.
+  </label>
   {submitted&&<p role="status" className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-900">Mapa já enviado: esta inclusão será registrada como dieta extra, com atualização do acompanhamento, dos relatórios e das etiquetas.</p>}
   {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
   <div className="flex flex-wrap gap-2">
