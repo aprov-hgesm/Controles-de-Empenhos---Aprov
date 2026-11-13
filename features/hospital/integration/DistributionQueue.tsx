@@ -34,7 +34,7 @@ const record=(m:KitchenMeal):DistributionPrintRow=>({
 export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
  initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];
  getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
- const [unit,setUnit]=useState(initialUnitId??'');
+ const [unit,setUnit]=useState(initialUnitId&&unitIds.includes(initialUnitId)?initialUnitId:unitIds[0]??'');
  const [cycle,setCycle]=useState<Cycle>(initialCycle);
  const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>('PRIMARY');
  const [date,setDate]=useState(initialDate??today);
@@ -67,6 +67,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  const missing=records.filter(r=>r.identityIncomplete).length;
  const excluded=useMemo(()=>plannedPrintability((snapshot?.meals??[]).filter(m=>m.mealType===mealType)),[snapshot,mealType]);
  const shown=unit?queue.filter(m=>m.unitId===unit):queue;
+ const activeMealIds=useMemo(()=>queue.filter(m=>!unit||m.unitId===unit).slice(0,50).map(m=>m.id),[queue,unit]);
  const unitCounts=unitIds.map(id=>({unitId:id,count:queue.filter(m=>m.unitId===id).length,
   prepared:queue.filter(m=>m.unitId===id&&m.status==='READY').length,
   route:queue.filter(m=>m.unitId===id&&['DISPATCHED','RECEIVED_BY_UNIT'].includes(m.status)).length,
@@ -83,9 +84,9 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  return <section className="space-y-5 text-slate-900" aria-label="Distribuição hospitalar">
   <div className="hospital-panel space-y-4 p-5 sm:p-6">
    <header className="flex flex-wrap items-start justify-between gap-3">
-    <div><p className="hospital-hint-label">Etiqueta de identificação · paciente ou acompanhante</p>
-     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Organizar e distribuir · {mealName(cycle,mealType)}</h2>
-     <p className="mt-1 text-sm text-slate-500">Imprima a mesma etiqueta definitiva de identificação que será utilizada no porcionamento junto à etiqueta de dieta da Produção. Acompanhantes recebem apenas a refeição principal.</p></div>
+    <div><p className="hospital-hint-label">Escolha a entrega e a unidade</p>
+     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Distribuição · {mealName(cycle,mealType)}</h2>
+     <p className="mt-1 text-sm text-slate-500">Selecione a unidade e acompanhe, logo abaixo, o fluxo completo: montar, enviar e confirmar a entrega com o horário real.</p></div>
     <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>void load()}>
      <RefreshCw size={16} className="inline"/> Atualizar</button>
    </header>
@@ -99,7 +100,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
     <div className="grid gap-2 sm:grid-cols-2">{(['PRIMARY','SECONDARY'] as const).map(type=><button type="button" key={type} aria-pressed={mealType===type} data-testid={'distribution-meal-'+type.toLowerCase()} onClick={()=>{setMealType(type);setNotice('');setError('')}} className={(mealType===type?'border-blue-400 bg-blue-50 text-[#164680] shadow-sm':'border-slate-200 bg-white text-slate-700')+' rounded-xl border-2 p-3 text-left font-semibold'}>
       <span className="block text-sm">{mealName(cycle,type)}</span><span className="mt-1 block text-xs font-normal">{allMeals.filter(m=>m.mealType===type).length} dietas · distribuição independente</span>
      </button>)}</div>
-    <p className="mt-2 text-xs text-slate-600">Os relatórios, as etiquetas e as confirmações serão gerados apenas para <strong>{mealName(cycle,mealType)}</strong>.</p>
+    <p className="mt-2 text-xs text-slate-600">A refeição principal e a secundária têm montagem, saída e horário de entrega independentes. A seleção atual é <strong>{mealName(cycle,mealType)}</strong>.</p>
    </div>
    <div className="flex flex-wrap gap-2">
     <button type="button" className="hospital-primary-action" disabled={loading} onClick={()=>download('labels')}>
@@ -138,7 +139,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   {unit&&snapshot&&<div className="space-y-3">
    <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
    <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
-    mealIds={shown.slice(0,50).map(m=>m.id)} getAuthorization={getAuthorization}/>
+    mealIds={activeMealIds} getAuthorization={getAuthorization}/>
    {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
   </div>}
   <p className="text-xs text-slate-500">As etiquetas antecipadas são as mesmas utilizadas no porcionamento e distribuição. A impressão não altera o estado das dietas. Antes de sair, confira autorização de distribuição, identidade, restrições e alergias. A folha física registra hora e rubrica da entrega real.</p>
