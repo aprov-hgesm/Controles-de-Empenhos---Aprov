@@ -32,7 +32,7 @@ export function MealProgressPair({map,meals=[],compact=false}:Props){
     </div>
     {extras.length>0&&<div role="alert" className={'flex gap-2 rounded-xl border p-3 text-xs font-semibold '+(after?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-300 bg-amber-50 text-amber-900')}>
      <AlertTriangle size={15} className="shrink-0" aria-hidden="true"/>
-     <span>{extras.length} solicitação(ões) extraordinária(s): {after?'após os 30 minutos':'até 30 minutos após o prazo'}. Justificativa registrada e alerta prioritário encaminhado à cozinha. O atraso não impede a produção, salvo restrição de segurança real.</span>
+     <span>{extras.length} solicitação(ões) extraordinária(s): {after?'após os 30 minutos':'até 30 minutos após o prazo'}. {map?.status==='DRAFT'?'Justificativa registrada; envie o mapa para avisar a cozinha.':'Justificativa registrada e alerta prioritário visível para a cozinha.'} O atraso não impede a produção, salvo restrição de segurança real.</span>
     </div>}
     {suspended>0&&!extras.length&&<p role="alert" className="text-xs font-semibold text-rose-800">Atenção: {suspended} dieta(s) suspensa(s) ou bloqueada(s).</p>}
     {subset.length?<OrderProgress map={map} meals={subset} compact/>:
