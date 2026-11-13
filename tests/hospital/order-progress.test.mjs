@@ -34,3 +34,19 @@ test('a kitchen read without explicit receipt is NOT a confirmation',()=>{
  assert.match(result.headline,/Aguardando confirmação/);
  assert.equal(result.received,false);
 });
+
+test('principal may be delivered while the secondary remains in route on the same map',()=>{
+ const map={status:'SUBMITTED',submittedAt:'2026-11-12T13:00:00Z',receivedAt:'2026-11-12T13:01:00Z'};
+ const meals=[
+  {mealType:'PRIMARY',status:'DELIVERED'},
+  {mealType:'SECONDARY',status:'DISPATCHED'}
+ ];
+ const primary=getOrderProgress(map,meals.filter(x=>x.mealType==='PRIMARY'));
+ const secondary=getOrderProgress(map,meals.filter(x=>x.mealType==='SECONDARY'));
+ assert.equal(primary.completed,true);
+ assert.equal(primary.delivered,1);
+ assert.equal(secondary.completed,false);
+ assert.equal(secondary.delivered,0);
+ assert.equal(secondary.stage,3);
+ assert.equal(getOrderProgress(map,meals).completed,false,'o mapa inteiro só conclui após as duas entregas');
+});
