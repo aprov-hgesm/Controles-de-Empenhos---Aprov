@@ -61,7 +61,7 @@ jobs:
           tests/hospital/firebase/identity.test.mjs
           tests/hospital/firebase/firestore-gateway.test.mjs
       - name: Paper-first map journey pure-state safety tests
-        run: node --test tests/hospital/order-progress.test.mjs
+        run: node --test tests/hospital/order-progress.test.mjs tests/hospital/meal-period-deadlines.test.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Build without GCP credentials
