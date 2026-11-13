@@ -1,6 +1,6 @@
 'use client';
 
-import {useMemo,useState} from 'react';
+import {useState} from 'react';
 import {mealName,timeSituation} from '../integration/meal-period.mjs';
 
 type Cycle='06'|'10'|'16';
