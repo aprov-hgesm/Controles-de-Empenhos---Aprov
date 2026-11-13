@@ -153,3 +153,55 @@ test('W12 two-stage printed food and patient labels and landscape route PDFs',as
  await checkPdf(await route);
  await ctx.close();
 });
+
+test('W12 independently tracks principal and secondary; overdue map highlights urgency for unit',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:1440,height:900}});
+ const page=await context.newPage();
+ await login(page,'qa-uti@example.test');
+ const nav=page.getByRole('navigation',{name:'Navegação hospitalar por perfil'});
+ await nav.getByRole('button',{name:'Acompanhamento',exact:true}).click();
+ await expect(page.locator('[data-testid="meal-journey-primary"]')).toBeVisible({timeout:30000});
+ await expect(page.locator('[data-testid="meal-journey-secondary"]')).toBeVisible({timeout:30000});
+ await nav.getByRole('button',{name:'Meus Mapas',exact:true}).click();
+ await expect(page.getByText('Café da manhã',{exact:true}).first()).toBeVisible({timeout:30000});
+ const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
+  .formatToParts(new Date(Date.now()-86400000));
+ const v=key=>d.find(x=>x.type===key)?.value??'';
+ const yesterday=v('year')+'-'+v('month')+'-'+v('day');
+ await page.getByLabel('Data local').fill(yesterday);
+ await expect(page.locator('[data-testid="map-deadline-indicator"]')).toContainText('Extra urgente');
+ await page.getByRole('button',{name:'Iniciar mapa de dietas'}).click();
+ await expect(page.getByRole('button',{name:'Café da manhã',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Lanche da manhã',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Lanche da manhã',exact:true}).click();
+ await expect(page.locator('[data-testid="late-meal-warning"]')).toContainText('secundária');
+ await page.getByRole('button',{name:'Café da manhã',exact:true}).click();
+ await expect(page.locator('[data-testid="late-meal-warning"]')).toContainText('suspensa');
+ await page.screenshot({path:join(screenshots,'unidade-mapa-fora-prazo-duas-refeicoes.png'),fullPage:true});
+ await context.close();
+});
+
+test('W12 distribution prints each meal in a separate PDF, never mixes principal and secondary',async({browser})=>{
+ const ctx=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true});
+ const page=await ctx.newPage();
+ const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
+  .formatToParts(new Date(Date.now()+2*86400000));
+ const v=key=>d.find(x=>x.type===key)?.value??'';
+ const target=v('year')+'-'+v('month')+'-'+v('day');
+ await login(page,'qa-cozinha@example.test');
+ const nav=page.getByRole('navigation',{name:'Navegação hospitalar por perfil'});
+ await nav.getByRole('button',{name:'Distribuição',exact:true}).click();
+ await page.getByLabel('Dia',{exact:true}).fill(target);
+ await expect(page.locator('[data-testid="distribution-meal-primary"]')).toBeVisible();
+ await expect(page.locator('[data-testid="distribution-meal-secondary"]')).toBeVisible();
+ await page.locator('[data-testid="distribution-meal-primary"]').click();
+ await expect(page.getByRole('button',{name:/Relatório de distribuição/})).toBeEnabled({timeout:30000});
+ const pending=page.waitForEvent('download');
+ await page.getByRole('button',{name:/Relatório de distribuição/}).click();
+ const pdf=await pending;
+ expect(pdf.suggestedFilename()).toContain('PRIMARY.pdf');
+ await page.locator('[data-testid="distribution-meal-secondary"]').click();
+ await expect(page.getByRole('button',{name:/Relatório de distribuição/})).toBeDisabled({timeout:30000});
+ await page.screenshot({path:join(screenshots,'cozinha-duas-distribuicoes-independentes.png'),fullPage:true});
+ await ctx.close();
+});
