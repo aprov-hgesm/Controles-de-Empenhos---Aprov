@@ -5,6 +5,7 @@ import {ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,ShieldAlert} fro
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 import {printProductionLabels,printProductionReport,type ProductionPrintRow} from '../printing/hospital-diet-print';
+import {mealName} from '../integration/meal-period.mjs';
 
 type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;
  initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;mode?:'overview'|'operations'};
@@ -62,7 +63,7 @@ function familiesOf(groups:DietGroup[]):DietFamily[]{
  return [...families.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR'));
 }
 const printRows=(groups:DietGroup[],onlyReady=false):ProductionPrintRow[]=>groups
- .map(g=>({unit:g.unitId,diet:g.dietLabel,observation:g.observation,
+ .map(g=>({unit:g.unitId,diet:g.dietLabel,observation:g.observation,mealType:g.mealType,
    quantity:onlyReady?g.ready.length:g.meals.length}))
  .filter(row=>row.quantity>0);
 
@@ -77,6 +78,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [filter,setFilter]=useState<'all'|'pending'|'preparing'|'ready'>('all');
+ const [mealFilter,setMealFilter]=useState<'ALL'|'PRIMARY'|'SECONDARY'>('ALL');
  const [reviewNote,setReviewNote]=useState<Record<string,string>>({});
  const seq=useRef(0);
  const visibleUnits=useMemo(()=>unit&&unitIds.includes(unit)?[unit]:unitIds,[unit,unitIds]);
@@ -144,10 +146,11 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  };
  const groups=useMemo(()=>groupsOf(data),[data]);
  const families=useMemo(()=>familiesOf(groups),[groups]);
- const rows=printRows(groups);
- const readyRows=printRows(groups,true);
- const filtered=families.filter(g=>filter==='all'||filter==='pending'&&g.pending>0
-  ||filter==='preparing'&&g.preparing>0||filter==='ready'&&g.ready>0);
+ const groupsInMeal=groups.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter);
+ const rows=printRows(groupsInMeal);
+ const readyRows=printRows(groupsInMeal,true);
+ const filtered=families.filter(g=>(mealFilter==='ALL'||g.mealType===mealFilter)&&(filter==='all'||filter==='pending'&&g.pending>0
+  ||filter==='preparing'&&g.preparing>0||filter==='ready'&&g.ready>0));
  const safety=(data?.counts.blocked??0)+(data?.counts.suspended??0);
  const doPrint=(kind:'report'|'labels')=>{
   try{
@@ -172,12 +175,13 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Mapa<select value={cycle} onChange={e=>setCycle(e.target.value as CycleId)} className="rounded-xl border border-slate-200 p-2.5">{CYCLES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Unidades<select value={unit} onChange={e=>setUnit(e.target.value)} className="rounded-xl border border-slate-200 p-2.5"><option value="">Todas</option>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
    </div>
+   <div className="flex flex-wrap gap-2" role="group" aria-label="Separar produção por refeição">{(['ALL','PRIMARY','SECONDARY'] as const).map(type=><button key={type} type="button" aria-pressed={mealFilter===type} onClick={()=>setMealFilter(type)} className={mealFilter===type?'hospital-primary-action':'hospital-secondary-action'}>{type==='ALL'?'Todas as dietas':mealName(cycle,type)}</button>)}</div>
    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Resumo da produção">
     {[
       ['Dietas solicitadas',rows.reduce((n,r)=>n+r.quantity,0)],
-      ['Aguardando',families.reduce((n,g)=>n+g.pending,0)],
-      ['Produzindo',families.reduce((n,g)=>n+g.preparing,0)],
-      ['Prontas',families.reduce((n,g)=>n+g.ready,0)]
+      ['Aguardando',families.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter).reduce((n,g)=>n+g.pending,0)],
+      ['Produzindo',families.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter).reduce((n,g)=>n+g.preparing,0)],
+      ['Prontas',families.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter).reduce((n,g)=>n+g.ready,0)]
     ].map(([label,value])=><div className="hospital-kpi" key={String(label)}><p className="text-xs text-slate-600">{label}</p><p className="mt-1 text-2xl font-extrabold text-[#174680] tabular-nums">{value}</p></div>)}
    </div>
    {safety>0&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -205,7 +209,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     <div className="flex flex-wrap items-start justify-between gap-3">
      <div><p className="hospital-hint-label">Dieta / observações</p><h3 className="mt-1 text-lg font-extrabold text-[#173b69]">{g.dietLabel}</h3>
       <p className="mt-1 text-sm text-slate-600">{g.observation}</p></div>
-     <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{g.mealType==='PRIMARY'?'Principal':'Secundária'}</p>
+     <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{mealName(cycle,g.mealType)}</p>
       <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.total}</p><p className="text-xs text-slate-500">porções</p></div>
     </div>
     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
