@@ -4,7 +4,7 @@
  */
 import {jsPDF} from 'jspdf';
 
-export type ProductionPrintRow={unit:string;diet:string;observation:string;quantity:number};
+export type ProductionPrintRow={unit:string;diet:string;observation:string;quantity:number;mealType?:string};
 export type DistributionPrintRow={unit:string;bed:string;patient:string;diet:string;observation:string};
 type ReportOptions={title:string;subtitle:string;headers:string[];columnWidths:number[];
   lines:string[][];filename:string;blankColumns?:number[];footer:string};
@@ -75,7 +75,7 @@ export function printProductionReport(rows:ProductionPrintRow[],date:string,cycl
   title:'MAPA DE PRODUÇÃO · COZINHA DIETÉTICA',
   subtitle:'Data: '+date+'  |  Mapa: '+cycle+'h  |  Total: '+rows.reduce((n,r)=>n+r.quantity,0)+' dietas',
   headers:['Dieta','Observações / restrições','Unidade','Quantidade','Conferência da produção'],
-  columnWidths:[72,95,32,27,51],lines:rows.map(r=>[r.diet,r.observation,r.unit,String(r.quantity),'']),
+  columnWidths:[72,95,32,27,51],lines:rows.map(r=>[r.diet+(r.mealType==='PRIMARY'?' · PRINCIPAL':r.mealType==='SECONDARY'?' · SECUNDÁRIA':''),r.observation,r.unit,String(r.quantity),'']),
   blankColumns:[4],filename:'producao-dietas-'+date+'-'+cycle+'h.pdf',
   footer:'Etiqueta de produção sem nome de paciente ou leito · Conferir as restrições antes de preparar'
  }), 'producao-dietas-'+date+'-'+cycle+'h.pdf');
@@ -92,25 +92,25 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
   d.setFontSize(10);d.text('UNIDADE: '+text(r.unit),x+5,y+32);
   d.setFont('helvetica','normal');d.setFontSize(8.5);
   d.text('OBS.: '+text(r.observation),x+5,y+41,{maxWidth:w-10});
-  d.setFontSize(7);d.text(date+' · '+cycle+'h · Conferir preparo e restrições',x+5,y+50);
+  d.setFontSize(7);d.text(date+' · '+cycle+'h · '+(r.mealType==='SECONDARY'?'SECUNDÁRIA':'PRINCIPAL')+' · Conferir restrições',x+5,y+50);
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
-export function printDistributionReport(rows:DistributionPrintRow[],date:string,cycle:string){
+export function printDistributionReport(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
  if(!rows.length)throw Error('Nenhum paciente na fila de distribuição');
  save(report({
   title:'CONTROLE DE DISTRIBUIÇÃO · COZINHA DIETÉTICA',
-  subtitle:'Data: '+date+'  |  Mapa: '+cycle+'h  |  Anotar a hora real da entrega com caneta',
+  subtitle:'Data: '+date+'  |  Mapa: '+cycle+'h  |  '+mealLabel+'  |  Hora real da entrega à caneta',
   headers:['Unidade','Leito','Paciente','Dieta','Observações','Hora exata','Rubrica'],
   columnWidths:[25,22,67,52,55,30,26],
   lines:rows.map(r=>[r.unit,r.bed,r.patient,r.diet,r.observation,'','']),
-  blankColumns:[5,6],filename:'distribuicao-dietas-'+date+'-'+cycle+'h.pdf',
+  blankColumns:[5,6],filename:'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf',
   footer:'Conferir nome e nascimento na pulseira/ficha antes da entrega · Uso interno restrito'
- }), 'distribuicao-dietas-'+date+'-'+cycle+'h.pdf');
+ }), 'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
-export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string){
+export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
  save(labels(rows,(d,r,x,y,w)=>{
   d.setTextColor(31,80,134);d.setFontSize(8);d.setFont('helvetica','bold');
-  d.text('EMPROVEX · IDENTIFICAÇÃO DO PACIENTE',x+5,y+8);
+  d.text('EMPROVEX · IDENTIFICAÇÃO DO PACIENTE · '+mealLabel,x+5,y+8,{maxWidth:w-10});
   d.setTextColor(16,45,82);d.setFontSize(13);
   d.text((d.splitTextToSize(text(r.patient),w-11) as string[]).slice(0,2),x+5,y+19);
   d.setFontSize(10);
@@ -119,5 +119,5 @@ export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle
   d.text('DIETA: '+text(r.diet),x+5,y+40,{maxWidth:w-10});
   d.setFontSize(8);d.text('OBS.: '+text(r.observation),x+5,y+47,{maxWidth:w-10});
   d.setFontSize(7);d.text('Conferir 2 identificadores antes de entregar',x+5,y+52);
- }), 'etiquetas-pacientes-'+date+'-'+cycle+'h.pdf');
+ }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
