@@ -47,7 +47,6 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const [reason,setReason]=useState('');
  const [timeTick,setTimeTick]=useState(()=>Date.now());
  const [observation,setObservation]=useState('');
- const [contact,setContact]=useState('');
  const [loading,setLoading]=useState(false);
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState('');
@@ -155,12 +154,6 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
    await loadMap(map.map.id);
   },'Mapa fechado no horário oficial; adendos permanecem possíveis');
  };
- const escalate=async()=>{
-  if(!map||!selectedAdmission)return setError('Selecione a internação para registrar a exceção');
-  await perform(async()=>{
-   await request('maps','exception.escalate',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,reason,contactReference:contact,idempotencyKey:crypto.randomUUID()});
-  },'Exceção pendente: contate imediatamente a assistência e a cozinha');
- };
  return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:18,width:'100%',color:'#173151'}}>
   <style>{`@media print { .w3-no-print {display:none !important} .w3-print-only {display:block !important} .w3-receipt {border:0 !important;padding:0 !important} } @media screen {.w3-print-only{display:none !important}}`}</style>
   <header className="w3-no-print">
@@ -208,7 +201,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
     </div>
     {!!mapLateLabel(map.map)&&<p role="alert" data-testid="late-map-banner"
        className={'mt-3 rounded-xl border p-3 text-sm font-bold '+(map.map.submissionTimingStage==='AFTER_TOLERANCE'||map.map.latestExtraTimingStage==='AFTER_TOLERANCE'?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-300 bg-amber-50 text-amber-900')}>
-       {mapLateLabel(map.map)}. A cozinha será avisada para conferir as dietas afetadas; nenhuma refeição principal é liberada automaticamente após o prazo.
+       {mapLateLabel(map.map)}. A justificativa e o alerta prioritário ficam visíveis para a cozinha. O atraso não suspende a dieta por si só.
       </p>}
     <div className="w3-no-print" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
      <label>Paciente/internação<select style={inputStyle} value={selectedAdmission} onChange={e=>setSelectedAdmission(e.target.value)}><option value="">Selecione um paciente ativo</option>{admissions.map(a=><option key={a.admissionId} value={a.admissionId}>{a.patientName??'Paciente'} · leito {a.bedLabel??'a conferir'}</option>)}</select></label>
@@ -220,18 +213,14 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
     <div className="w3-no-print" style={{marginTop:10}}>
      <label>Observação da dieta (se houver)<textarea style={inputStyle} rows={2} maxLength={180} value={observation} onChange={e=>setObservation(e.target.value)} placeholder="Ex.: sem açúcar; manter consistência pastosa. Será impressa na etiqueta."/></label>
      {extraordinary&&<p role="alert" data-testid="late-meal-warning" className={'rounded-xl border p-3 text-sm font-semibold '+(urgent?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-300 bg-amber-50 text-amber-900')}>
-       {timingLabel(timing.stage,selectedType)}. {selectedType==='PRIMARY'?
-        (urgent?'A solicitação será registrada, mas permanecerá suspensa; contate a equipe assistencial e informe a cozinha.':'A solicitação será registrada para conferência pela cozinha, sem aprovação automática.'):
-        'A refeição secundária será solicitada de modo independente e destacada como extraordinária.'}
+       {timingLabel(timing.stage,selectedType)}. Informe a justificativa. A cozinha receberá um alerta prioritário e a dieta poderá seguir normalmente, se não houver bloqueio de segurança.
       </p>}
-     <label>Motivo de adendo, atraso ou alteração (obrigatório quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe motivo e comunicação assistencial, quando necessária"/></label>
-     <label>Contato assistencial para exceção clínica<input style={inputStyle} value={contact} onChange={e=>setContact(e.target.value)} placeholder="Referência do contato efetuado"/></label>
-     <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
+     <label>Justificativa da dieta ou do mapa fora do prazo (obrigatória quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Ex.: solicitação da unidade após o horário; encaminhar com prioridade à cozinha"/></label>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
       <button className="hospital-primary-action" disabled={disabled||!reference||(extraordinary&&reason.trim().length<5)} onClick={()=>void addMeal()}>{extraordinary?'Registrar dieta extraordinária':'Incluir '+mealName(cycle,selectedType).toLowerCase()}</button>
       {map.map.status==='DRAFT'&&<button className="hospital-primary-action" disabled={disabled||(extraordinary&&reason.trim().length<5)} onClick={()=>void send()}>{extraordinary?'Enviar mapa extraordinário à cozinha':'Enviar mapa à cozinha'}</button>}
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
-      {urgent&&selectedType==='PRIMARY'&&<button className="hospital-secondary-action" disabled={disabled||!selectedAdmission||reason.trim().length<5||contact.trim().length<5} onClick={()=>void escalate()}>Registrar contato e exceção assistencial</button>}
-     </div>
+           </div>
     </div>
     <h4 className="w3-no-print">Pedidos e situação</h4>
     <label className="w3-no-print">Filtrar por internação, dieta ou status<input style={inputStyle} value={filter} onChange={e=>setFilter(e.target.value)}/></label>
