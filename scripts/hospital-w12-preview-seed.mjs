@@ -99,10 +99,10 @@ async function main(){
     const entry=found.items.find(row=>row.patient.referenceCode==='PREVIEW_UTI_001');
     if(!entry){
       const bed=await patients.saveBed(adminScope,{unitId:'UTI',
-        bedId:'PREVIEW_BED_01',label:'Leito fictício 01'});
+        bedId:'PREVIEW_BED_01',label:'01'});
       const patient=await patients.registerPatient(nurseScope,{
         unitId:'UTI',referenceCode:'PREVIEW_UTI_001',
-        displayName:'Paciente Totalmente Fictício'
+        displayName:'Paciente Totalmente Fictício',birthDate:'2000-01-01'
       });
       const admission=await patients.admit(nurseScope,{
         patientId:patient.id,unitId:'UTI',bedId:bed.id
