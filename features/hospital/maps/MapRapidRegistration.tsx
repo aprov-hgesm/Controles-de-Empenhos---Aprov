@@ -17,8 +17,6 @@ const consistencies=[
  ['LIQUIDA_RESTRITA','Líquida restrita'],['LIQUIDA_COMPLETA','Líquida completa'],
  ['LIQUIDA_SEM_RESIDUOS','Líquida sem resíduos'],['OUTRA','Outra']
 ] as const;
-const compatible:Record<string,string[]>={LIVRE:['NORMAL'],BRANDA:['SOFT'],PASTOSA:['PUREED'],
- LIQUIDA_RESTRITA:['LIQUID'],LIQUIDA_COMPLETA:['LIQUID'],LIQUIDA_SEM_RESIDUOS:['LIQUID'],OUTRA:['NOT_APPLICABLE']};
 const empty=()=>({fullName:'',birthDate:'',bedLabel:'',consistency:'LIVRE',route:'ORAL',otherRestriction:'',allergyNote:'',observation:'',reason:''});
 export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSaved,onCancel}:Props){
  const [form,setForm]=useState(empty);
@@ -31,11 +29,11 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
  const change=(key:keyof ReturnType<typeof empty>,value:string)=>setForm(p=>({...p,[key]:value}));
  const toggle=(code:string)=>setRestrictions(p=>p.includes(code)?p.filter(x=>x!==code):[...p,code]);
  const tube=form.route==='SONDA'||restrictions.includes('NPVO')||restrictions.includes('SNE');
- const eligible=catalog.filter(x=>x.active&&x.type==='ORAL'&&x.route==='ORAL'&&
-  (compatible[form.consistency]??[]).includes(x.consistency??'NORMAL'));
- const diet=eligible.find(x=>x.id===selectedDiet)??eligible[0];
- const companionDiet=catalog.find(x=>x.active&&x.type==='ORAL'&&x.route==='ORAL'&&
-  x.consistency==='NORMAL')??catalog.find(x=>x.active&&x.type==='ORAL'&&x.route==='ORAL');
+ // Uma base oral institucional atende às texturas selecionadas no pedido.
+ // A consistência não precisa ser duplicada como item do catálogo.
+ const oralCatalog=catalog.filter(x=>x.active&&x.type==='ORAL'&&x.route==='ORAL');
+ const diet=oralCatalog.find(x=>x.id===selectedDiet)??oralCatalog[0];
+ const companionDiet=oralCatalog.find(x=>x.consistency==='NORMAL')??oralCatalog[0];
  const timing=timeSituation(map.cycleId,map.localDate);
  const extraordinary=timing.stage!=='ON_TIME';
  const submitted=map.status!=='DRAFT';
@@ -43,7 +41,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
  const canSave=careChecked&&!!form.fullName.trim()&&!!form.birthDate&&!!form.bedLabel.trim()&&(chosen.length>0||companion)&&
   (!chosen.length||!!diet)&&(!companion||!!companionDiet)&&(!extraordinary||form.reason.trim().length>=5);
  async function save(finish:boolean){
-  if(!canSave){setError('Complete os campos e confirme uma dieta do catálogo compatível com a consistência.');return}
+  if(!canSave){setError('Confira identificação, refeições, orientação assistencial e disponibilidade de uma dieta oral institucional.');return}
   setBusy(true);setError('');
   try{
    const token=await getIdToken();
@@ -74,7 +72,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    <label className="grid gap-1 text-sm font-semibold">Número do leito<input className={field} value={form.bedLabel} maxLength={60} onChange={e=>change('bedLabel',e.target.value)} placeholder="Ex.: 05-A"/></label>
   </div>
   <div className="grid gap-3 sm:grid-cols-2">
-   <label className="grid gap-1 text-sm font-semibold">Consistência da dieta<select className={field} value={form.consistency} onChange={e=>{change('consistency',e.target.value);setSelectedDiet('')}}>{consistencies.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+   <label className="grid gap-1 text-sm font-semibold">Consistência da dieta<select className={field} value={form.consistency} onChange={e=>change('consistency',e.target.value)}>{consistencies.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
    <label className="grid gap-1 text-sm font-semibold">Via de administração<select className={field} value={form.route} onChange={e=>change('route',e.target.value)}><option value="ORAL">Oral</option><option value="SONDA">Sonda</option></select></label>
   </div>
   <fieldset className="rounded-xl border border-slate-200 p-3"><legend className="px-1 text-sm font-bold">Restrições alimentares</legend>
@@ -90,14 +88,18 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={primary} onChange={e=>setPrimary(e.target.checked)}/>{mealName(map.cycleId,'PRIMARY')}</label>
    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={secondary} onChange={e=>setSecondary(e.target.checked)}/>{mealName(map.cycleId,'SECONDARY')}</label></div>}
    <label className="mt-3 flex items-center gap-2 border-t border-blue-100 pt-3 text-sm font-semibold"><input type="checkbox" checked={companion} onChange={e=>setCompanion(e.target.checked)}/>Enviar refeição ao acompanhante (somente {mealName(map.cycleId,'PRIMARY')})</label>
-   {companion&&!companionDiet&&<p role="alert" className="mt-2 text-xs text-red-800">Não há dieta oral livre autorizada para o acompanhante no catálogo institucional.</p>}
+   {companion&&!companionDiet&&<p role="alert" className="mt-2 text-xs text-red-800">Nenhuma base oral está disponível para a refeição do acompanhante.</p>}
   </fieldset>
-  {chosen.length>0&&<div className="rounded-xl bg-slate-50 p-3 text-sm">
-   <label className="grid gap-1 font-semibold">Dieta institucional correspondente à consistência
-    <select className={field} value={diet?.id??''} onChange={e=>setSelectedDiet(e.target.value)}>{eligible.length?eligible.map(d=><option key={d.id} value={d.id}>{d.label}</option>):<option value="">Nenhuma dieta compatível</option>}</select>
-   </label>
-   {!eligible.length&&<p role="alert" className="mt-2 text-red-800">Cadastre ou habilite no catálogo a consistência selecionada; não será substituída silenciosamente por outra dieta.</p>}
-  </div>}
+  {chosen.length>0&&oralCatalog.length>1&&<details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+    <summary className="cursor-pointer font-semibold text-[#28486f]">Base institucional da dieta (opcional)</summary>
+    <label className="mt-3 grid gap-1 font-medium">Tipo autorizado no catálogo
+      <select className={field} value={diet?.id??''} onChange={e=>setSelectedDiet(e.target.value)}>
+        {oralCatalog.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}
+      </select>
+    </label>
+    <p className="mt-2 text-xs text-slate-600">A consistência selecionada acima será preservada no preparo, no relatório e na etiqueta.</p>
+  </details>}
+  {chosen.length>0&&oralCatalog.length===0&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">Nenhuma base oral ativa está disponível para registrar refeições do paciente.</p>}
   <label className="grid gap-1 text-sm font-semibold">Observações complementares da dieta (opcional)<textarea className={field} rows={2} maxLength={180} value={form.observation} onChange={e=>change('observation',e.target.value)} placeholder="Informações para a preparação e a etiqueta"/></label>
   {extraordinary&&<label className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold">Justificativa da solicitação {submitted?'extra ':''}fora do prazo<textarea className={field} rows={2} value={form.reason} onChange={e=>change('reason',e.target.value)}/></label>}
   <label className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-950">
