@@ -30,7 +30,7 @@ export function classifyMealTiming({cycleId,localDate,at,mealType='PRIMARY'}) {
   const pastTolerance=delta>0||(delta===0&&clock.minuteOfDay>tolerance);
   const stage=onTime?'ON_TIME':pastTolerance?'AFTER_TOLERANCE':'LATE_BEFORE_TOLERANCE';
   return {cycleId,localDate,stage,mapOnTime:onTime,principalDeliveryTolerancePassed:pastTolerance,
-    recommendation:onTime?'ROUTINE':pastTolerance?'SECONDARY_OR_CLINICAL_ESCALATION':'KITCHEN_REVIEW',
+    recommendation:onTime?'ROUTINE':pastTolerance?'PRIORITY_KITCHEN_ALERT':'KITCHEN_REVIEW',
     requestedMealType:mealType,
     /** Deadline for map submission is never moved by the 30-minute primary delivery tolerance. */
     requiresAmendment:!onTime};
