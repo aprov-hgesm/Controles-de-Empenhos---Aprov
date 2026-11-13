@@ -212,6 +212,8 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
      <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{mealName(cycle,g.mealType)}</p>
       <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.total}</p><p className="text-xs text-slate-500">porções</p></div>
     </div>
+    {g.units.some(u=>u.meals.some(m=>m.allergyAlert))&&<p role="alert" className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-xs font-extrabold text-amber-950">ALERGIA ALIMENTAR — conferir os alérgenos informados e os ingredientes antes da preparação.</p>}
+    {g.units.some(u=>u.meals.some(m=>m.correctionAcknowledgedAt))&&<p role="alert" className="rounded-xl border border-blue-300 bg-blue-50 p-2 text-xs font-bold text-blue-900">DIETA CORRIGIDA — produzir de acordo com a versão atual e descartar etiquetas anteriores.</p>}
     {g.units.some(u=>u.meals.some(m=>m.timingStage&&m.timingStage!=='ON_TIME'))&&<p role="alert" className={'rounded-xl border p-2 text-xs font-bold '+(g.units.some(u=>u.meals.some(m=>m.timingStage==='AFTER_TOLERANCE'))?'border-rose-200 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>
       Solicitação extraordinária: {g.units.flatMap(u=>u.meals).filter(m=>m.timingStage&&m.timingStage!=='ON_TIME').length} dieta(s) após o prazo do mapa. Conferir observações e horário antes de preparar.
      </p>}
