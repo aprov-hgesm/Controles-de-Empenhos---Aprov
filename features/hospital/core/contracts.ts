@@ -14,7 +14,7 @@ export interface HospitalOrganization { id: string; ug: string; name: string; ti
 export interface HospitalUnit { id: string; organizationId: string; code: string; name: string; type: 'CARE' | 'KITCHEN' | 'NUTRITION'; active: boolean; }
 export interface HospitalMembership { id: string; organizationId: string; ug: string; uid: string; unitIds: string[]; roles: HospitalRole[]; active: boolean; }
 export interface Bed { id: string; organizationId: string; unitId: string; label: string; active: boolean; }
-export interface Patient { id: string; organizationId: string; referenceCode: string; displayName?: string; createdAt: string; }
+export interface Patient { id: string; organizationId: string; referenceCode: string; displayName?: string; birthDate?:string|null; createdAt: string; }
 export interface Admission { id: string; organizationId: string; patientId: string; unitId: string; bedId: string | null; status: 'ACTIVE' | 'DISCHARGED'; fasting: boolean; allergyCodes: string[]; revision: number; }
 export interface PatientLocationEvent { id: string; admissionId: string; organizationId: string; fromUnitId: string; toUnitId: string; status: LocationStatus; effectiveAt: string | null; recordedAt: string; actorUid: string; }
 export interface MedicalDietReference { id: string; admissionId: string; organizationId: string; sourceRef: string; prescribedAt: string; enteredByUid: string; catalogItemId: string; validUntil?: string; }
@@ -23,7 +23,7 @@ export interface AllergyRestriction { code: string; severity: 'CRITICAL' | 'OTHE
 export interface MealCycleConfig { id: CycleId; timezone: 'America/Sao_Paulo'; mapDue: string; primaryTolerance: string; primaryName: string; secondaryName: string; }
 export interface DietMap { id: string; organizationId: string; unitId: string; localDate: string; cycleId: CycleId; status: MapStatus; revision: number; createdAt: string; submittedAt: string | null; closedAt: string | null; }
 export interface DietMapVersion { mapId: string; version: number; kind: 'SUBMISSION' | 'CLOSE' | 'AMENDMENT'; snapshot: unknown; reason: string | null; actorUid: string; recordedAt: string; }
-export interface MealRequest { id: string; organizationId: string; unitId: string; mapId: string; admissionId: string; localDate: string; cycleId: CycleId; mealType: MealType; dietCode: string; medicalReferenceId: string; status: MealStatus; revision: number; requestedAt: string; effectiveAt: string | null; advisory: string; }
+export interface MealRequest { id: string; organizationId: string; unitId: string; mapId: string; admissionId: string; localDate: string; cycleId: CycleId; mealType: MealType; dietCode: string; observation?:string; timingStage?:'ON_TIME'|'LATE_BEFORE_TOLERANCE'|'AFTER_TOLERANCE'; lateReason?:string|null; medicalReferenceId: string; status: MealStatus; revision: number; requestedAt: string; effectiveAt: string | null; advisory: string; }
 export interface ProductionBatch { id: string; organizationId: string; cycleId: CycleId; localDate: string; mealIds: string[]; status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETE'; }
 export interface MealLabel { id: string; mealId: string; destinationUnitId: string; destinationBed: string | null; dietCode: string; restrictionCodes: string[]; printedAt: string; }
 export interface DeliveryEvent { id: string; mealId: string; type: 'DISPATCHED' | 'RECEIVED_BY_UNIT' | 'DELIVERED'; actorUid: string; occurredAt: string; effectiveAt: string | null; }

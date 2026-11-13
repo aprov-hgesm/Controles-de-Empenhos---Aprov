@@ -13,10 +13,10 @@ type Audit = {id:number;aggregateId:string;type:string;actorUid:string;occurredA
 type Overview = {organizationId:string;ug:string;counts:{unit:number;bed:number;map:number;meal:number;members:number};scope:string};
 
 const tabs: Array<[Tab,string]> = [['overview','Visão geral'],['units','Unidades e leitos'],['members','Usuários e permissões'],['diets','Dietas e parâmetros'],['audit','Relatórios / auditoria'],['settings','Configurações']];
-const surface = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm';
-const input = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:opacity-60';
-const button = 'rounded-lg bg-blue-800 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-50';
-const secondary = 'rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 hover:bg-slate-50 disabled:opacity-50';
+const surface = 'hospital-panel p-5';
+const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 disabled:opacity-60';
+const button = 'hospital-primary-action disabled:cursor-not-allowed disabled:opacity-50';
+const secondary = 'hospital-secondary-action disabled:opacity-50';
 
 /** Composable W7 component: W9 supplies verified Firebase ID token from the existing session. */
 export function AdministrationView({organizationId,getToken}: {organizationId:string;getToken:()=>Promise<string>}) {
@@ -73,13 +73,13 @@ export function AdministrationView({organizationId,getToken}: {organizationId:st
   const setRoles=(role:string,checked:boolean)=>setMemberForm(s=>({...s,roles:checked?[...new Set([...s.roles,role])]:s.roles.filter(r=>r!==role)}));
   const setUnitAccess=(id:string,checked:boolean)=>setMemberForm(s=>({...s,unitIds:checked?[...new Set([...s.unitIds,id])]:s.unitIds.filter(x=>x!==id)}));
 
-  return <section className="mx-auto max-w-6xl space-y-4 px-3 py-5 text-slate-900 sm:px-6" aria-label="Administração hospitalar">
+  return <section className="space-y-5 text-slate-900" aria-label="Administração hospitalar">
     <header className="flex flex-wrap items-start justify-between gap-3">
-      <div><h1 className="text-2xl font-bold tracking-tight">Administração Hospitalar</h1><p className="mt-1 text-sm text-slate-500">Gestão institucional da OM {overview?.ug??'—'} · acesso administrativo sem prontuários</p></div>
+      <div><h2 className="text-xl font-extrabold tracking-tight text-[#173b69]">Gestão e configuração hospitalar</h2><p className="mt-1 text-sm text-slate-500">Gestão institucional da OM {overview?.ug??'—'} · acesso administrativo sem prontuários</p></div>
       <button type="button" className={secondary} disabled={busy} onClick={()=>void refresh()}>Atualizar</button>
     </header>
-    <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Abas de administração">
-      {tabs.map(([id,title])=><button type="button" key={id} aria-current={id===tab?'page':undefined} onClick={()=>setTab(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm ${id===tab?'bg-blue-800 font-semibold text-white':'bg-slate-100 text-slate-800'}`}>{title}</button>)}
+    <nav className="hospital-panel flex gap-2 overflow-x-auto p-2" aria-label="Abas de administração">
+      {tabs.map(([id,title])=><button type="button" key={id} aria-current={id===tab?'page':undefined} onClick={()=>setTab(id)} className={`whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm ${id===tab?'bg-[#124da8] font-semibold text-white':'bg-transparent text-slate-600 hover:bg-blue-50'}`}>{title}</button>)}
     </nav>
     {error&&<div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
     {notice&&<div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</div>}
@@ -96,11 +96,11 @@ export function AdministrationView({organizationId,getToken}: {organizationId:st
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={unitForm.active} onChange={e=>setUnitForm(s=>({...s,active:e.target.checked}))}/> Unidade ativa</label>
         <div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={()=>void mutate('unit.save',{...unitForm,id:unitForm.id||undefined},'Unidade salva após confirmação do servidor.',!!unitForm.id)}>Salvar unidade</button><button className={secondary} onClick={()=>setUnitForm({id:'',code:'',name:'',type:'CARE',active:true,expectedRevision:0})}>Limpar</button></div>
       </div>
-      <div className={`${surface} space-y-3`}><h2 className="font-semibold">{bedForm.id?'Editar leito':'Cadastrar leito'}</h2>
+      <div className={`${surface} space-y-3`}><h2 className="font-semibold">{bedForm.id?'Editar leito':'Adicionar número de leito'}</h2><p className="text-xs text-slate-500">Use apenas o número que já existe na unidade, por exemplo 01 ou 02. O sistema registra o identificador interno automaticamente.</p>
         <label className="block text-sm">Unidade<select className={input} value={bedForm.unitId} onChange={e=>setBedForm(s=>({...s,unitId:e.target.value,id:'',expectedRevision:0}))}><option value="">Selecione</option>{units.filter(u=>u.type==='CARE'&&u.active).map(u=><option key={u.id} value={u.id}>{u.code} — {u.name}</option>)}</select></label>
-        <label className="block text-sm">Identificação do leito<input className={input} value={bedForm.label} onChange={e=>setBedForm(s=>({...s,label:e.target.value}))}/></label>
+        <label className="block text-sm">Número do leito<input className={input} inputMode="numeric" placeholder="Ex.: 01" maxLength={3} value={bedForm.label} onChange={e=>setBedForm(s=>({...s,label:e.target.value.replace(/[^0-9]/g,'')}))}/></label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={bedForm.active} onChange={e=>setBedForm(s=>({...s,active:e.target.checked}))}/> Leito ativo</label>
-        <div className="flex gap-2"><button disabled={busy||!bedForm.unitId} className={button} onClick={()=>void mutate('bed.save',{...bedForm,id:bedForm.id||undefined},'Leito salvo.',!!bedForm.id)}>Salvar leito</button><button className={secondary} onClick={()=>setBedForm({id:'',unitId:'',label:'',active:true,expectedRevision:0})}>Limpar</button></div>
+        <div className="flex gap-2"><button disabled={busy||!bedForm.unitId||!/^[0-9]{1,3}$/.test(bedForm.label)} className={button} onClick={()=>void mutate('bed.save',{...bedForm,label:bedForm.label.padStart(2,'0'),id:bedForm.id||undefined},'Leito salvo.',!!bedForm.id)}>Salvar leito</button><button className={secondary} onClick={()=>setBedForm({id:'',unitId:'',label:'',active:true,expectedRevision:0})}>Limpar</button></div>
       </div>
       <div className={`${surface} space-y-3 lg:col-span-2`}><h2 className="font-semibold">Unidades e leitos existentes</h2>{units.length===0&&<p className="text-sm text-slate-500">Nenhuma unidade cadastrada nesta OM.</p>}
         {units.map(u=><article key={u.id} className="rounded-lg border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="text-sm font-semibold">{u.code} · {u.name} <span className="font-normal text-slate-500">({u.type}, {u.active?'ativa':'inativa'})</span></div><button className={secondary} onClick={()=>setUnitForm({id:u.id,code:u.code,name:u.name,type:u.type,active:u.active,expectedRevision:u.revision})}>Editar</button></div><div className="mt-2 flex flex-wrap gap-2">{u.beds.map(b=><button title="Editar leito" className="rounded border px-2 py-1 text-xs" key={b.id} onClick={()=>setBedForm({id:b.id,unitId:b.unitId,label:b.label,active:b.active,expectedRevision:b.revision})}>{b.label} {b.active?'':'(inativo)'}</button>)}{u.beds.length===0&&<span className="text-xs text-slate-500">Sem leitos.</span>}</div></article>)}

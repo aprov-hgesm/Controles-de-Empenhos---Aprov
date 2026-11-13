@@ -88,13 +88,13 @@ export function ReportingView({organizationId,unitIds,getAccessToken,initialView
     }catch(err){setError(err instanceof Error?err.message:'Exportação indisponível')}
     finally{setExporting(false)}
   };
-  const controls='rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white';
-  return <section aria-label="Relatórios da Cozinha Dietética" className="mx-auto max-w-7xl space-y-5 p-4 text-slate-900 dark:text-slate-100">
-    <header><h2 className="text-xl font-semibold">Relatórios operacionais</h2><p className="mt-1 text-sm opacity-80">Dados registrados, sem inferência automática de culpa. Fuso local: America/Sao_Paulo; auditoria: UTC.</p></header>
+  const controls='rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900';
+  return <section aria-label="Relatórios da Cozinha Dietética" className="hospital-panel space-y-5 p-5 text-slate-900 sm:p-6">
+    <header className="border-b border-slate-100 pb-4"><h2 className="text-xl font-extrabold text-[#173b69]">Consultas e relatórios operacionais</h2><p className="mt-1 text-sm opacity-80">Dados registrados, sem inferência automática de culpa. Fuso local: America/Sao_Paulo; auditoria: UTC.</p></header>
     <div role="group" aria-label="Visão do relatório" className="flex flex-wrap gap-2">
-      {reports.map(item=><button type="button" key={item.id} aria-pressed={view===item.id} onClick={()=>{setView(item.id);setResult(null);setError('')}} className={'rounded-md border px-3 py-2 text-sm '+(view===item.id?'bg-blue-900 text-white':'border-slate-400')}>{item.label}</button>)}
+      {reports.map(item=><button type="button" key={item.id} aria-pressed={view===item.id} onClick={()=>{setView(item.id);setResult(null);setError('')}} className={'rounded-md border px-3 py-2 text-sm '+(view===item.id?'bg-[#1454b9] text-white':'border-slate-200 bg-white text-[#35516f] hover:bg-blue-50')}>{item.label}</button>)}
     </div>
-    <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 rounded-2xl border border-slate-200 bg-[#f9fbff] p-4 sm:grid-cols-2 lg:grid-cols-4">
       <label className="grid gap-1 text-sm">Data inicial<input type="date" className={controls} value={filter.from} onChange={e=>update('from',e.target.value)}/></label>
       <label className="grid gap-1 text-sm">Data final<input type="date" className={controls} value={filter.to} onChange={e=>update('to',e.target.value)}/></label>
       <label className="grid gap-1 text-sm">Unidade<select className={controls} value={filter.unitId} onChange={e=>update('unitId',e.target.value)}><option value="">Minhas unidades</option>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
@@ -104,7 +104,7 @@ export function ReportingView({organizationId,unitIds,getAccessToken,initialView
       <label className="grid gap-1 text-sm">Dieta<input className={controls} value={filter.dietCode} onChange={e=>update('dietCode',e.target.value)} placeholder="Código da dieta" maxLength={128}/></label>
       <label className="grid gap-1 text-sm">Status<input className={controls} value={filter.status} onChange={e=>update('status',e.target.value)} placeholder="Status" maxLength={128}/></label>
       <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-4">
-        <button type="button" disabled={busy} onClick={()=>void load(1)} className="rounded-md bg-blue-900 px-4 py-2 text-white disabled:opacity-60">Consultar</button>
+        <button type="button" disabled={busy} onClick={()=>void load(1)} className="hospital-primary-action disabled:opacity-60">Consultar</button>
         <button type="button" disabled={busy||exporting} onClick={()=>void download('csv')} className={controls}>Exportar CSV</button>
         <button type="button" disabled={busy||exporting} onClick={()=>void download('pdf')} className={controls}>Exportar PDF</button>
         {exporting&&<span role="status" className="text-sm">Gerando arquivo…</span>}

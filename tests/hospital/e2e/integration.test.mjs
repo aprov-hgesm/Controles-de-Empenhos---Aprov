@@ -115,7 +115,7 @@ test('três ciclos: envio regular não inclui tolerância, 06h admite preparo na
   const at=(hour,minute)=>d+'T'+hour+':'+minute+':00-03:00';
   assert.equal(classifyMealTiming({cycleId,localDate:d,at:at(cycleId,'00')}).mapOnTime,true);
   assert.equal(classifyMealTiming({cycleId,localDate:d,at:at(cycleId,'10')}).mapOnTime,false);
-  assert.equal(classifyMealTiming({cycleId,localDate:d,at:at(cycleId,'31')}).recommendation,'SECONDARY_OR_CLINICAL_ESCALATION');
+  assert.equal(classifyMealTiming({cycleId,localDate:d,at:at(cycleId,'31')}).recommendation,'PRIORITY_KITCHEN_ALERT');
   assert.equal(due+30/60>due,true);
  }
  assert.equal(classifyMealTiming({cycleId:'06',localDate,at:'2099-11-10T23:00:00-03:00'}).mapOnTime,true);

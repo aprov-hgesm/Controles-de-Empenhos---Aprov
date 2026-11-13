@@ -5,8 +5,8 @@ type Contact={id:string;findingId:string;physicianRef:string;channel:string;cont
 type Props={organizationId:string;unitIds:string[];getAccessToken:()=>Promise<string>};
 type AnyObject=Record<string,unknown>;
 const tabs=['Painel de Auditoria','Pacientes e Dietas','Inconformidades','Comunicação Médica','Relatórios'] as const;
-const field='w-full rounded-md border border-slate-300 bg-white p-2 text-sm text-slate-900';
-const btn='rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white disabled:opacity-40';
+const field='w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900';
+const btn='rounded-xl bg-[#1253b4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0c3d91] disabled:opacity-40';
 export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props){
  const [unitId,setUnitId]=useState(unitIds[0]||'');
  const [tab,setTab]=useState<(typeof tabs)[number]>(tabs[0]);
@@ -42,10 +42,10 @@ export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props
  if(!unitIds.length)return <section role="alert">Sem unidade autorizada para Nutrição.</section>;
  const current=rows.find(r=>r.id===selected),currentContact=contacts.find(c=>c.id===response.contactId);
  const date=(s:unknown)=>typeof s==='string'&&s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'—';
- return <section className="space-y-4 rounded-xl bg-slate-50 p-3 text-slate-900 sm:p-6" aria-label="Nutrição auditora">
-  <header><h1 className="text-xl font-bold">Nutrição • Auditoria</h1><p className="text-sm text-slate-600">Auditoria não aprova mapas rotineiros. A prescrição é médica e registrada pela unidade. Contatos médicos são feitos fora da plataforma.</p></header>
+ return <section className="hospital-panel space-y-5 p-4 text-slate-900 sm:p-6" aria-label="Nutrição auditora">
+  <header className="border-b border-slate-100 pb-4"><h2 className="text-xl font-extrabold text-[#173b69]">Centro de auditoria nutricional</h2><p className="mt-1 text-sm text-slate-500">Auditoria não aprova mapas rotineiros. A prescrição é médica e registrada pela unidade. Contatos médicos são feitos fora da plataforma.</p></header>
   <label className="block text-sm">Unidade autorizada<select className={field} value={unitId} onChange={e=>setUnitId(e.target.value)}>{unitIds.map(u=><option key={u}>{u}</option>)}</select></label>
-  <nav className="flex flex-wrap gap-2" aria-label="Abas de Nutrição">{tabs.map(t=><button type="button" key={t} aria-current={t===tab?'page':undefined} className={t===tab?btn:field} onClick={()=>setTab(t)}>{t}</button>)}</nav>
+  <nav className="flex flex-wrap gap-2 border-b border-slate-100 pb-3" aria-label="Abas de Nutrição">{tabs.map(t=><button type="button" key={t} aria-current={t===tab?'page':undefined} className={t===tab?btn:'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100'} onClick={()=>setTab(t)}>{t}</button>)}</nav>
   {loading&&<p role="status">Carregando…</p>}{error&&<p role="alert" className="text-red-700">{error}</p>}{ok&&<p role="status">{ok}</p>}
   {['Painel de Auditoria','Inconformidades','Relatórios'].includes(tab)&&<div className="grid grid-cols-2 gap-2 md:grid-cols-5">
    <label className="text-xs">Situação<select className={field} value={filters.status} onChange={e=>setFilters(p=>({...p,status:e.target.value}))}><option value="">Todas</option>{['IDENTIFIED','CONTACTED','FOLLOW_UP','CLOSED'].map(s=><option key={s}>{s}</option>)}</select></label>
@@ -54,7 +54,7 @@ export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props
    <label className="text-xs">Desde<input type="date" className={field} value={filters.from} onChange={e=>setFilters(p=>({...p,from:e.target.value}))}/></label>
    <label className="text-xs">Até<input type="date" className={field} value={filters.to} onChange={e=>setFilters(p=>({...p,to:e.target.value}))}/></label>
   </div>}
-  {tab==='Painel de Auditoria'&&<div><div className="grid grid-cols-2 gap-2 md:grid-cols-5">{[['Achados',summary.total],['Pendentes',summary.pending],['Críticos',summary.critical],['Aguardando médico',summary.contactsPending],['Retorno médio (h)',summary.averageResponseHours]].map(([label,value])=><article className="rounded border bg-white p-3" key={String(label)}><p className="text-xs">{String(label)}</p><b className="text-xl">{value==null?'—':String(value)}</b></article>)}</div><h2 className="mt-3 font-semibold">Alertas informativos</h2>{alerts.length?alerts.map((a,i)=><p key={i} className="border-b p-2 text-sm">{String(a.type)} • {date(a.occurredAt)}</p>):<p className="text-sm">Nenhuma alteração pendente.</p>}</div>}
+  {tab==='Painel de Auditoria'&&<div><div className="grid grid-cols-2 gap-2 md:grid-cols-5">{[['Achados',summary.total],['Pendentes',summary.pending],['Críticos',summary.critical],['Aguardando médico',summary.contactsPending],['Retorno médio (h)',summary.averageResponseHours]].map(([label,value])=><article className="hospital-kpi" key={String(label)}><p className="text-xs">{String(label)}</p><b className="text-xl">{value==null?'—':String(value)}</b></article>)}</div><h2 className="mt-3 font-semibold">Alertas informativos</h2>{alerts.length?alerts.map((a,i)=><p key={i} className="border-b p-2 text-sm">{String(a.type)} • {date(a.occurredAt)}</p>):<p className="text-sm">Nenhuma alteração pendente.</p>}</div>}
   {tab==='Pacientes e Dietas'&&<article className="space-y-3 rounded border bg-white p-3"><p className="text-sm">Consulta de referência médica vigente, somente leitura. Consistência/via aguardam DTO W3. SNE e jejum não são consistências.</p><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void inspect()}}><input required aria-label="ID da internação" placeholder="Internação" className={field} value={admissionId} onChange={e=>setAdmissionId(e.target.value)}/><button className={btn}>Consultar</button></form>{diet&&<pre className="overflow-x-auto whitespace-pre-wrap text-xs">{JSON.stringify(diet,null,2)}</pre>}</article>}
   {tab==='Inconformidades'&&<div className="space-y-3"><form className="grid gap-2 rounded border bg-white p-3 md:grid-cols-2" onSubmit={e=>{e.preventDefault();void action('finding.create',{...finding,medicalReferenceId:finding.medicalReferenceId||null,idempotencyKey:crypto.randomUUID()})}}>
    <h2 className="font-semibold md:col-span-2">Registrar achado</h2>

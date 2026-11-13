@@ -1,0 +1,142 @@
+name: Hospital W12 - E2E Homologation QA (emulator only)
+on:
+  push:
+    branches: [feat/cozinha-dietetica-w12-homologacao-piloto]
+  pull_request:
+    branches: [feat/cozinha-dietetica-w11-infra-hospitalar-isolada]
+concurrency:
+  group: hospital-w12-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  hospital-w12:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Reproducible install (no postinstall)
+        run: npm ci --ignore-scripts
+      - name: Local synthetic preview scripts syntax
+        run: |
+          node --check scripts/hospital-w12-preview-seed.mjs
+          node --check scripts/hospital-w12-preview-local.mjs
+      - name: Live synthetic preview seed on local Auth and Firestore Emulators
+        env:
+          HOSPITAL_QA_ORGANIZATION_ID: qa_hgesm_preview
+          NEXT_PUBLIC_HOSPITAL_FIREBASE_PROJECT_ID: demo-cozinha-dietetica
+          NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR: '1'
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node scripts/hospital-w12-preview-seed.mjs"
+      - name: W12 native Firestore/Auth emulator and W10-W11 E2E
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test --test-concurrency=1 tests/hospital/firebase/firestore-store-emulator.test.mjs tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w11-gcp-qa.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs tests/hospital/firebase/w12-contingency-recovery.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs"
+      - name: W12 private PWA, report provenance and W11 identity guards
+        run: >
+          node --test
+          tests/hospital/firebase/w12-pwa-boundary.test.mjs
+          tests/hospital/firebase/w11-qa-ui-gate.test.mjs
+          tests/hospital/firebase/identity.test.mjs
+          tests/hospital/firebase/firestore-gateway.test.mjs
+      - name: Paper-first map journey pure-state safety tests
+        run: node --test tests/hospital/order-progress.test.mjs tests/hospital/meal-period-deadlines.test.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build without GCP credentials
+        run: npm run build
+      - name: PWA installability regression
+        run: npm run test:pwa-installability
+      - name: W0-W9 functional regression
+        run: >
+          node --test
+          tests/hospital/core/*.test.mjs
+          tests/hospital/entry/*.test.mjs
+          tests/hospital/patients/*.test.mjs
+          tests/hospital/maps/*.test.mjs
+          tests/hospital/production/*.test.mjs
+          tests/hospital/distribution/*.test.mjs
+          tests/hospital/nutrition-audit/*.test.mjs
+          tests/hospital/administration/*.test.mjs
+          tests/hospital/reporting/*.test.mjs
+          tests/hospital/e2e/*.test.mjs
+      - name: W12 backup seed and genuine Firestore Emulator export (synthetic only)
+        run: |
+          npx --yes firebase-tools emulators:exec --project demo-cozinha-dietetica --config firebase.hospital-w10-test.json --only auth,firestore --export-on-exit="$RUNNER_TEMP/w12-hospital-synthetic-backup" "node tests/hospital/firebase/w12-backup-restore.mjs seed"
+          test -s "$RUNNER_TEMP/w12-hospital-synthetic-backup/firebase-export-metadata.json"
+      - name: W12 restart emulator, import actual backup, verify audit and idempotency
+        run: >
+          npx --yes firebase-tools emulators:exec --project demo-cozinha-dietetica --config firebase.hospital-w10-test.json --only auth,firestore --import="$RUNNER_TEMP/w12-hospital-synthetic-backup" "node tests/hospital/firebase/w12-backup-restore.mjs verify"
+      - name: EMPROVEX core isolation
+        run: npm run verify:emprovex-core-protection
+      - name: Financial, billing, NF, warehouse and route regression
+        run: >
+          node --experimental-vm-modules --test
+          scripts/critical-cross-route-navigation.test.mjs
+          scripts/warehouse-ledger-contract.test.mjs
+          scripts/saas-r1-billing.test.mjs
+          scripts/invoice-identity.test.mjs
+
+      - name: Install Chromium test tooling (ephemeral QA only)
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.65.0
+          npx playwright install --with-deps chromium
+      - name: Visual responsive mobile desktop and locked hospital PWA (Chromium)
+        run: |
+          npm run start -- --port 3333 > "$RUNNER_TEMP/w12-next-server.log" 2>&1 &
+          for i in {1..35}; do if curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null; then break; fi; sleep 2; done
+          curl --fail --silent http://127.0.0.1:3333/cozinha-dietetica >/dev/null
+          npx playwright test tests/hospital/browser/w12-closed-qa.spec.mjs --reporter=line --workers=1
+      - name: W12 premium local authenticated browser QA (all four profiles)
+        run: |
+          node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/w12-premium-preview.log" 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() { kill "$PREVIEW_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          ready=0
+          for i in {1..110}; do
+            if curl --fail --silent http://127.0.0.1:3100/cozinha-dietetica > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/w12-premium-preview.log"
+            exit 1
+          fi
+          npx playwright test tests/hospital/browser/w12-premium-preview.spec.mjs --reporter=line --workers=1
+      - name: Save only synthetic authenticated premium screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-w12-premium-visual
+          path: ${{ runner.temp }}/hospital-w12-premium-visual/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Save only screenshots of deliberately LOCKED anonymous QA screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-w12-synthetic-visual
+          path: ${{ runner.temp }}/hospital-w12-visual/
+          if-no-files-found: ignore
+          retention-days: 3
