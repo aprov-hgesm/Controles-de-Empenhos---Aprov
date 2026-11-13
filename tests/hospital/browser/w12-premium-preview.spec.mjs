@@ -137,16 +137,16 @@ test('W12 two-stage printed food and patient labels and landscape route PDFs',as
  }
  const done=page.getByRole('button',{name:/Conferi \d+ dietas/}).first();
  if(await done.isVisible())await done.click();
- await expect(page.getByRole('button',{name:/Etiquetas das dietas prontas/})).toBeEnabled({timeout:30000});
+ await expect(page.getByRole('button',{name:/Etiquetas para preparo e porcionamento/})).toBeEnabled({timeout:30000});
  const food=page.waitForEvent('download');
- await page.getByRole('button',{name:/Etiquetas das dietas prontas/}).click();
+ await page.getByRole('button',{name:/Etiquetas para preparo e porcionamento/}).click();
  await checkPdf(await food);
 
  await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Distribuição',exact:true}).click();
  await page.getByLabel('Dia',{exact:true}).fill(target);
- await expect(page.getByRole('button',{name:/Etiquetas dos pacientes/})).toBeEnabled({timeout:30000});
+ await expect(page.getByRole('button',{name:/Etiquetas de pacientes e acompanhantes/})).toBeEnabled({timeout:30000});
  const patient=page.waitForEvent('download');
- await page.getByRole('button',{name:/Etiquetas dos pacientes/}).click();
+ await page.getByRole('button',{name:/Etiquetas de pacientes e acompanhantes/}).click();
  await checkPdf(await patient);
  const route=page.waitForEvent('download');
  await page.getByRole('button',{name:/Relatório de distribuição/}).click();
