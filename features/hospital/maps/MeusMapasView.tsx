@@ -25,7 +25,7 @@ const CYCLES:{value:Cycle;label:string}[]=[
  {value:'16',label:'16h — Jantar e ceia'},
 ];
 function todayLocal(){
- const items=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const items=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()+(process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR==='1'?2:0)*86400000));
  const part=(type:string)=>items.find(x=>x.type===type)?.value??'';
  return `${part('year')}-${part('month')}-${part('day')}`;
 }
