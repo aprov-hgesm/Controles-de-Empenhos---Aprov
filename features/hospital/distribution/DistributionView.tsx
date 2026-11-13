@@ -2,14 +2,15 @@
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {Check,ClipboardCheck,Clock3,PackageCheck,RefreshCw,ShieldCheck,Truck} from 'lucide-react';
+import {timingLabel} from '../integration/meal-period.mjs';
 
 type Status={
  mealId:string;mealStatus:string;distributionState:string;jobRevision:number|null;
  destinationUnitId:string|null;destinationBedNumber?:string|null;patientName?:string|null;
- needsBirthDate?:boolean;dietCode?:string;dietLabel?:string;observation?:string;deliveredAt?:string|null;
+ needsBirthDate?:boolean;dietCode?:string;dietLabel?:string;observation?:string;mealType?:string;timingStage?:string;deliveredAt?:string|null;
  routeReconciliationRequired:boolean;mainMealAlert:string|null
 };
-type Props={organizationId:string;unitId:string;mealIds:readonly string[];getAuthorization:()=>Promise<string>};
+type Props={organizationId:string;unitId:string;mealIds:readonly string[];getAuthorization:()=>Promise<string>;mealTitle?:string};
 type Api<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 type Operation='assembly.start'|'assembly.complete'|'assembly.check'|'batch.dispatch'|'meal.deliver.paper';
 
@@ -24,7 +25,7 @@ const stage=(item:Status)=>{
  if(['ASSEMBLED','ASSEMBLING'].includes(item.distributionState))return 'Montagem em andamento';
  return 'Dieta pronta para montagem';
 };
-export function DistributionView({organizationId,unitId,mealIds,getAuthorization}:Props){
+export function DistributionView({organizationId,unitId,mealIds,getAuthorization,mealTitle}:Props){
  const [status,setStatus]=useState<Record<string,Status>>({});
  const [selected,setSelected]=useState<string[]>([]);
  const [ingredients,setIngredients]=useState('');
@@ -94,7 +95,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
 
  return <section className="hospital-panel space-y-5 p-4 sm:p-6" aria-label="Separação e distribuição de dietas">
   <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
-   <div><p className="hospital-hint-label">Identificação, saída e retorno</p><h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Distribuição · {unitId}</h2>
+   <div><p className="hospital-hint-label">Identificação, saída e retorno</p><h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Distribuição · {unitId}{mealTitle?' · '+mealTitle:''}</h2>
     <p className="mt-1 text-sm text-slate-500">Cole a etiqueta do paciente ao lado da etiqueta da dieta. Confira antes de sair. Ao voltar, registre a hora escrita no relatório.</p></div>
    <button className="hospital-secondary-action" type="button" disabled={loading||busy} onClick={()=>void load()}>
     <RefreshCw size={15} className="inline"/> Atualizar</button>
@@ -120,6 +121,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
      <div className="min-w-0 flex-1">
       <p className="text-sm font-extrabold text-[#1c4579]">{unitId} · Leito {m.destinationBedNumber??'a conferir'} · {m.patientName??'Paciente sem nome'}</p>
       <p className="mt-1 text-xs text-slate-700">{m.dietLabel??'Dieta'}{m.observation?' · '+m.observation:''}</p>
+      {m.timingStage&&m.timingStage!=='ON_TIME'&&<p role="alert" className={'mt-1 inline-flex rounded-full px-2 py-1 text-[11px] font-bold '+(m.timingStage==='AFTER_TOLERANCE'?'bg-rose-100 text-rose-900':'bg-amber-100 text-amber-900')}>{timingLabel(m.timingStage,m.mealType)}</p>}
       <p className="mt-1 text-xs font-semibold text-[#2768af]">{stage(m)}</p>
      </div>
      {m.mealStatus==='DELIVERED'&&<Check size={19} className="text-emerald-700" aria-hidden="true"/>}
