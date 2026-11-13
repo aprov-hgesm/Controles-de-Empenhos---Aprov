@@ -163,7 +163,7 @@ test('W12 independently tracks principal and secondary; overdue map highlights u
  await expect(page.locator('[data-testid="meal-journey-primary"]')).toBeVisible({timeout:30000});
  await expect(page.locator('[data-testid="meal-journey-secondary"]')).toBeVisible({timeout:30000});
  await nav.getByRole('button',{name:'Meus Mapas',exact:true}).click();
- await expect(page.getByText('Café da manhã',{exact:true}).first()).toBeVisible({timeout:30000});
+ await expect(page.getByRole('button',{name:'06h',exact:true})).toBeVisible({timeout:30000});
  const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
   .formatToParts(new Date(Date.now()-86400000));
  const v=key=>d.find(x=>x.type===key)?.value??'';
