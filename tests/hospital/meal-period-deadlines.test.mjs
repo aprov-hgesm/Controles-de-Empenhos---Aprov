@@ -6,7 +6,7 @@ const date='2026-11-12';
 const when=(hour,minute)=>new Date('2026-11-12T'+hour+':'+minute+':00-03:00');
 
 test('three maps pair main/secondary without sharing delivery identity',()=>{
- assert.deepEqual(Object.keys(CYCLES),['06','10','16']);
+ assert.deepEqual(Object.keys(CYCLES).sort(),['06','10','16']);
  assert.equal(mealName('06','PRIMARY'),'Café da manhã');
  assert.equal(mealName('06','SECONDARY'),'Lanche da manhã');
  assert.equal(mealName('10','PRIMARY'),'Almoço');
