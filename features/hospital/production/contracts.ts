@@ -36,7 +36,7 @@ export interface KitchenMeal extends MealRequest {
   safetyIssue: KitchenReviewReason|null;
   isLate: boolean;
 }
-export interface KitchenMapReceipt {id:string;unitId:string;localDate:string;cycleId:CycleId;status:'SUBMITTED'|'CLOSED';revision:number;submittedAt:string|null;receivedAt?:string|null;receivedByUid?:string|null;needsKitchenReview?:boolean;late?:boolean;closedAt:string|null;}
+export interface KitchenMapReceipt {id:string;unitId:string;localDate:string;cycleId:CycleId;status:'SUBMITTED'|'CLOSED';revision:number;submittedAt:string|null;receivedAt?:string|null;receivedByUid?:string|null;needsKitchenReview?:boolean;late?:boolean;submissionTimingStage?:string;hasLateAmendment?:boolean;latestExtraTimingStage?:string|null;closedAt:string|null;}
 export interface KitchenGroup {dietCode:string;mealType:MealType;restrictionCodes:string[];preparationLabels:string[];requested:number;preparing:number;ready:number;total:number;}
 export interface KitchenSnapshot {
   at: string; localDate: string; cycleId: CycleId;
