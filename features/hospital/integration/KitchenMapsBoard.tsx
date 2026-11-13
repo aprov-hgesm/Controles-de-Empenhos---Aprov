@@ -12,7 +12,7 @@ type Response<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const cycles=['06','10','16'] as const;
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
  .formatToParts(new Date()).reduce((r,x)=>({...r,[x.type]:x.value}),{} as Record<string,string>);
-function localDay(){const d=today();return `${d.year}-${d.month}-${d.day}`;}
+function localDay(){const base=process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR==='1'?new Date(Date.now()+2*86400000):new Date();const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(base);const x=(name:string)=>p.find(v=>v.type===name)?.value??'';return x('year')+'-'+x('month')+'-'+x('day');}
 const iconFor=(stage:number)=>stage===4?Check:stage>=3?Truck:stage>=1?UtensilsCrossed:Clock3;
 
 export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpenProduction,onOpenDistribution}:{
