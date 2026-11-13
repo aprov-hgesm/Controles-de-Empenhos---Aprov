@@ -32,11 +32,13 @@ const record=(m:KitchenMeal):DistributionPrintRow=>({
 });
 
 export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
- initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];
- getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
+ initialCycle='10',initialMealType='PRIMARY',initialDate,onOpenProduction}:{organizationId:string;unitIds:string[];
+ getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;
+ initialMealType?:'PRIMARY'|'SECONDARY';initialDate?:string;
+ onOpenProduction?:(focus:{unitId:string;cycleId:Cycle;localDate:string;mealType:'PRIMARY'|'SECONDARY'})=>void;}){
  const [unit,setUnit]=useState(initialUnitId&&unitIds.includes(initialUnitId)?initialUnitId:unitIds[0]??'');
  const [cycle,setCycle]=useState<Cycle>(initialCycle);
- const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>('PRIMARY');
+ const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>(initialMealType);
  const [date,setDate]=useState(initialDate??today);
  const [snapshot,setSnapshot]=useState<KitchenSnapshot|null>(null);
  const [loading,setLoading]=useState(true);
@@ -139,7 +141,8 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   {unit&&snapshot&&<div className="space-y-3">
    <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
    <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
-    mealIds={activeMealIds} getAuthorization={getAuthorization}/>
+    mealIds={activeMealIds} getAuthorization={getAuthorization}
+    onOpenProduction={onOpenProduction?()=>onOpenProduction({unitId:unit,cycleId:cycle,localDate:date,mealType}):undefined}/>
    {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
   </div>}
   <p className="text-xs text-slate-500">As etiquetas antecipadas são as mesmas utilizadas no porcionamento e distribuição. A impressão não altera o estado das dietas. Antes de sair, confira autorização de distribuição, identidade, restrições e alergias. A folha física registra hora e rubrica da entrega real.</p>
