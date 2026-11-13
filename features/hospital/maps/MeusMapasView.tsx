@@ -1,13 +1,14 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
+import {OrderProgress} from '../integration/OrderProgress';
 
 type Cycle='06'|'10'|'16';
 type MealType='PRIMARY'|'SECONDARY';
-type AdmissionRow={admissionId:string;patientId:string;patientCode:string;bedId:string|null;medicalReferenceId:string|null;fasting:boolean;allergyCodes:string[]};
+type AdmissionRow={admissionId:string;patientId:string;patientCode:string;patientName?:string;bedLabel?:string|null;bedId:string|null;medicalReferenceId:string|null;fasting:boolean;allergyCodes:string[]};
 type DietRow={id:string;code:string;label:string;type?:string;active:boolean};
 type Reference={id:string;catalogItemId:string;sourceRef:string;sourceVersion?:string};
-type MapRow={id:string;unitId:string;localDate:string;cycleId:Cycle;status:'DRAFT'|'SUBMITTED'|'CLOSED';revision:number;late?:boolean};
+type MapRow={id:string;unitId:string;localDate:string;cycleId:Cycle;status:'DRAFT'|'SUBMITTED'|'CLOSED';revision:number;late?:boolean;submittedAt?:string|null;receivedAt?:string|null};
 type MealRow={id:string;admissionId:string;mealType:MealType;dietCode:string;status:string;revision:number;advisory:string};
 type Receipt={mapId:string;unitId:string;localDate:string;cycleId:Cycle;submittedAt:string;submittedByUid:string;submissionVersion:number;currentVersion:number;late:boolean;needsKitchenReview:boolean;status:string};
 type MapDetail={map:MapRow;meals:MealRow[];summary:{dietCode:string;mealType:MealType;count:number;blocked:number}[];receipt:Receipt|null};
@@ -153,19 +154,19 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:18,width:'100%',color:'#173151'}}>
   <style>{`@media print { .w3-no-print {display:none !important} .w3-print-only {display:block !important} .w3-receipt {border:0 !important;padding:0 !important} } @media screen {.w3-print-only{display:none !important}}`}</style>
   <header className="w3-no-print">
-   <h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',marginBottom:4,color:'#173b69'}}>Planejamento e envio de mapas</h2>
-   <p style={{margin:0,color:'#475569'}}>Unidade: {unitLabel??unitId}. Envio manual; a Nutrição audita sem homologação obrigatória.</p>
+   <h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',marginBottom:4,color:'#173b69'}}>Solicitar dietas à cozinha</h2>
+   <p style={{margin:0,color:'#475569'}}>Unidade: {unitLabel??unitId}. Escolha o horário, inclua as dietas dos leitos e envie o mapa à cozinha.</p>
   </header>
   <section className="w3-no-print" style={panel}>
    <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Selecionar ciclo do mapa">{CYCLES.map(c=><button key={c.value} type="button" aria-pressed={cycle===c.value} onClick={()=>setCycle(c.value)} className={cycle===c.value?'hospital-primary-action':'hospital-secondary-action'}>{c.value}h</button>)}</div>
    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12,alignItems:'end'}}>
     <label>Data local<input style={inputStyle} type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-    <label>Mapa<select style={inputStyle} value={cycle} onChange={e=>setCycle(e.target.value as Cycle)}>{CYCLES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
+    <label>Horário do mapa<select style={inputStyle} value={cycle} onChange={e=>setCycle(e.target.value as Cycle)}>{CYCLES.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
     <button style={actionStyle} type="button" disabled={disabled} onClick={()=>void reload()}>Atualizar</button>
-    <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} type="button" disabled={disabled} onClick={()=>void updateMap()}>Abrir rascunho</button>
+    <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} type="button" disabled={disabled} onClick={()=>void updateMap()}>Iniciar mapa de dietas</button>
    </div>
    <details style={{marginTop:12,marginBottom:10}}>
-     <summary style={{cursor:'pointer',fontWeight:600}}>Filtros avançados de mapas</summary>
+     <summary style={{cursor:'pointer',fontWeight:600}}>Mais filtros (opcional)</summary>
      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginTop:12}}>
       <label>Status<select style={inputStyle} value={mapStatus} onChange={e=>setMapStatus(e.target.value)}><option value="">Todos</option><option value="DRAFT">Rascunho</option><option value="SUBMITTED">Enviado</option><option value="CLOSED">Fechado</option></select></label>
       <label>Pontualidade<select style={inputStyle} value={lateFilter} onChange={e=>setLateFilter(e.target.value)}><option value="">Todos</option><option value="late">Atrasados</option><option value="on-time">Sem atraso</option></select></label>
@@ -183,15 +184,16 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   {loading&&<p role="status">Carregando mapas autorizados…</p>}
   {error&&<div role="alert" className="w3-no-print" style={{...panel,borderColor:'#b91c1c',color:'#991b1b'}}>{error} {error.includes('CONFLICT')&&'Recarregue antes de tentar novamente.'}</div>}
   {notice&&<p className="w3-no-print" role="status" style={{color:'#166534'}}>{notice}</p>}
+  {map&&<OrderProgress map={map.map} meals={map.meals}/>}
   {map&&<section style={panel}>
     <div className="w3-no-print" style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
      <h3 style={{margin:0}}>Mapa {map.map.cycleId}h · {map.map.localDate} · {map.map.status}</h3>
-     <span>Revisão {map.map.revision} · {map.meals.filter(m=>m.status!=='CANCELLED').length} refeições</span>
+     <span>{map.meals.filter(m=>m.status!=='CANCELLED').length} dietas cadastradas</span>
     </div>
     <div className="w3-no-print" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
-     <label>Paciente/internação<select style={inputStyle} value={selectedAdmission} onChange={e=>setSelectedAdmission(e.target.value)}><option value="">Selecione um paciente ativo</option>{admissions.map(a=><option key={a.admissionId} value={a.admissionId}>{a.patientCode} · leito {a.bedId??'a conferir'}</option>)}</select></label>
+     <label>Paciente/internação<select style={inputStyle} value={selectedAdmission} onChange={e=>setSelectedAdmission(e.target.value)}><option value="">Selecione um paciente ativo</option>{admissions.map(a=><option key={a.admissionId} value={a.admissionId}>{a.patientName??'Paciente'} · leito {a.bedLabel??'a conferir'}</option>)}</select></label>
      <label>Refeição<select style={inputStyle} value={selectedType} onChange={e=>setSelectedType(e.target.value as MealType)}><option value="PRIMARY">Principal</option><option value="SECONDARY">Secundária</option></select></label>
-     <label>Prescrição vigente<input style={inputStyle} readOnly value={reference?`${reference.sourceRef} · ${catalog.find(x=>x.id===reference.catalogItemId)?.label??reference.catalogItemId}`:'Sem referência registrada'}/></label>
+     <label>Dieta anotada no papel<input style={inputStyle} readOnly value={reference?`${reference.sourceRef} · ${catalog.find(x=>x.id===reference.catalogItemId)?.label??reference.catalogItemId}`:'Sem referência registrada'}/></label>
     </div>
     {patient?.fasting&&<p role="alert" style={{color:'#991b1b'}}>Jejum ativo: pedido será bloqueado para liberação até reconferência assistencial.</p>}
     {(patient?.allergyCodes.length??0)>0&&<p role="alert" style={{color:'#991b1b'}}>Alergias registradas: conferir compatibilidade antes de preparar ou distribuir.</p>}
@@ -199,8 +201,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
      <label>Motivo de adendo, atraso ou alteração (obrigatório quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe motivo e comunicação assistencial, quando necessária"/></label>
      <label>Contato assistencial para exceção clínica<input style={inputStyle} value={contact} onChange={e=>setContact(e.target.value)} placeholder="Referência do contato efetuado"/></label>
      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
-      <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} disabled={disabled||!reference} onClick={()=>void addMeal()}>Adicionar/atualizar refeição</button>
-      {map.map.status==='DRAFT'&&<button style={{...actionStyle,background:'#0a338d',color:'#fff',borderColor:'#0a338d'}} disabled={disabled} onClick={()=>void send()}>Enviar mapa explicitamente</button>}
+      <button style={{...actionStyle,background:'#1452ba',color:'#fff',borderColor:'#1452ba'}} disabled={disabled||!reference} onClick={()=>void addMeal()}>Incluir dieta no mapa</button>
+      {map.map.status==='DRAFT'&&<button style={{...actionStyle,background:'#0a338d',color:'#fff',borderColor:'#0a338d'}} disabled={disabled} onClick={()=>void send()}>Enviar mapa à cozinha</button>}
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
       <button style={actionStyle} disabled={disabled||!selectedAdmission} onClick={()=>void escalate()}>Registrar exceção clínica</button>
      </div>
