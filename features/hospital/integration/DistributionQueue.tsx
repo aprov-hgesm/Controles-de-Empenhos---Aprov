@@ -25,7 +25,9 @@ function printable(m:KitchenMeal):m is KitchenMeal&{patientName:string;bedNumber
  &&typeof m.bedNumber==='string'&&m.bedNumber.trim()!=='';
 }
 const record=(m:KitchenMeal):DistributionPrintRow=>({unit:m.unitId,bed:m.bedNumber??'',
- patient:m.patientName??'',diet:m.dietLabel??'Dieta',observation:observation(m)});
+ patient:m.patientName??'',diet:m.dietLabel??'Dieta',observation:observation(m),
+ recipientType:m.recipientType??'PATIENT',allergyAlert:!!m.allergyAlert,
+ allergyNote:m.allergyNote??'',corrected:!!m.correctionAcknowledgedAt});
 
 export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
  initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];
