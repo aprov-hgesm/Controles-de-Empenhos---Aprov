@@ -179,6 +179,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
        <p className="mt-2 text-sm font-semibold text-[#285b9e]" role="status">{progress.headline}</p>
        
        {feedback.some(x=>x.status==='OPEN')&&<p className="mt-2 text-xs font-bold text-rose-700">{feedback.filter(x=>x.status==='OPEN').length} ocorrência(s) aguardando análise</p>}
+       {requests.some(m=>m.allergyAlert)&&<p role="alert" className="mt-2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-extrabold text-amber-950">ALERGIA — verificar os pedidos destacados no preparo e distribuição</p>}
        {pendingCorrections.length>0&&<p role="alert" className="mt-2 rounded-lg bg-rose-100 px-2 py-1 text-xs font-extrabold text-rose-900">CORREÇÃO DE DIETA · {pendingCorrections.length} aguardando ciência da Cozinha</p>}
       </div>
       <button type="button" className="hospital-secondary-action shrink-0 px-2.5" aria-expanded={open} aria-label={'Detalhes do mapa '+map.unitId+' '+map.cycleId+'h'} onClick={()=>setExpanded(open?'':map.id)}><ChevronDown size={16}/></button>
