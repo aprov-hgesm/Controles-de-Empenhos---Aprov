@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {FileDown,Printer,RefreshCw,Truck} from 'lucide-react';
 import {DistributionView} from '@/features/hospital/distribution/DistributionView';
+import {mealName} from './meal-period.mjs';
 import type {KitchenMeal,KitchenSnapshot} from '@/features/hospital/production/contracts';
 import {
  printDistributionReport,printPatientLabels,type DistributionPrintRow
@@ -31,6 +32,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
  const [unit,setUnit]=useState(initialUnitId??'');
  const [cycle,setCycle]=useState<Cycle>(initialCycle);
+ const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>('PRIMARY');
  const [date,setDate]=useState(initialDate??today);
  const [snapshot,setSnapshot]=useState<KitchenSnapshot|null>(null);
  const [loading,setLoading]=useState(true);
@@ -54,7 +56,8 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   const interval=setInterval(()=>{if(document.visibilityState==='visible')void load(true)},20000);
   return()=>clearInterval(interval);
  },[load]);
- const queue=useMemo(()=>snapshot?.meals.filter(suitable)??[],[snapshot]);
+ const allMeals=useMemo(()=>snapshot?.meals.filter(suitable)??[],[snapshot]);
+ const queue=useMemo(()=>allMeals.filter(m=>m.mealType===mealType),[allMeals,mealType]);
  const records=useMemo(()=>queue.filter(printable).map(record).sort((a,b)=>
   a.unit.localeCompare(b.unit,'pt-BR')||a.bed.localeCompare(b.bed,'pt-BR',{numeric:true})),[queue]);
  const missing=queue.filter(m=>!printable(m)).length;
@@ -67,8 +70,8 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   setError('');setNotice('');
   try{
    const selected=unit?records.filter(r=>r.unit===unit):records;
-   if(type==='report')printDistributionReport(selected,date,cycle);
-   else printPatientLabels(selected,date,cycle);
+   if(type==='report')printDistributionReport(selected,date,cycle,mealName(cycle,mealType),mealType);
+   else printPatientLabels(selected,date,cycle,mealName(cycle,mealType),mealType);
    setNotice('PDF preparado no seu dispositivo. A impressão não marca dietas como entregues.');
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível gerar o PDF');}
  };
@@ -76,7 +79,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   <div className="hospital-panel space-y-4 p-5 sm:p-6">
    <header className="flex flex-wrap items-start justify-between gap-3">
     <div><p className="hospital-hint-label">Segunda etiqueta · conferência dos leitos</p>
-     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Organizar e distribuir</h2>
+     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Organizar e distribuir · {mealName(cycle,mealType)}</h2>
      <p className="mt-1 text-sm text-slate-500">Imprima a etiqueta do paciente, coloque junto à etiqueta da dieta e leve a folha com campo de horário para o copeiro preencher.</p></div>
     <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>void load()}>
      <RefreshCw size={16} className="inline"/> Atualizar</button>
@@ -85,6 +88,13 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Dia<input type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-xl border border-slate-200 p-2.5"/></label>
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Mapa<select value={cycle} onChange={e=>setCycle(e.target.value as Cycle)} className="rounded-xl border border-slate-200 p-2.5"><option value="06">06h</option><option value="10">10h</option><option value="16">16h</option></select></label>
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Unidade<select value={unit} onChange={e=>setUnit(e.target.value)} className="rounded-xl border border-slate-200 p-2.5"><option value="">Todas as unidades</option>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
+   </div>
+   <div className="rounded-2xl border border-blue-100 bg-[#f6f9fe] p-4" aria-label="Selecionar refeição para entrega separada">
+    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#4d6c91]">Duas entregas distintas do mesmo mapa</p>
+    <div className="grid gap-2 sm:grid-cols-2">{(['PRIMARY','SECONDARY'] as const).map(type=><button type="button" key={type} aria-pressed={mealType===type} data-testid={'distribution-meal-'+type.toLowerCase()} onClick={()=>{setMealType(type);setNotice('');setError('')}} className={(mealType===type?'border-blue-400 bg-blue-50 text-[#164680] shadow-sm':'border-slate-200 bg-white text-slate-700')+' rounded-xl border-2 p-3 text-left font-semibold'}>
+      <span className="block text-sm">{mealName(cycle,type)}</span><span className="mt-1 block text-xs font-normal">{allMeals.filter(m=>m.mealType===type).length} dietas · distribuição independente</span>
+     </button>)}</div>
+    <p className="mt-2 text-xs text-slate-600">Os relatórios, as etiquetas e as confirmações serão gerados apenas para <strong>{mealName(cycle,mealType)}</strong>.</p>
    </div>
    <div className="flex flex-wrap gap-2">
     <button type="button" className="hospital-primary-action" disabled={!records.length} onClick={()=>download('labels')}>
@@ -118,7 +128,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   </div>}
   {unit&&snapshot&&<div className="space-y-3">
    <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
-   <DistributionView key={unit+'-'+date+'-'+cycle} organizationId={organizationId} unitId={unit}
+   <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
     mealIds={shown.slice(0,50).map(m=>m.id)} getAuthorization={getAuthorization}/>
    {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
   </div>}
