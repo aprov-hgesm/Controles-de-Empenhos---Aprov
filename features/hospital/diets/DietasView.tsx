@@ -63,7 +63,7 @@ export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewPr
   try{await fn();setNotice(ok);await reload()}catch(e){setError(e instanceof Error?e.message:'Falha na gravação')}
   finally{setBusy(false)}
  }
- const splitCodes=(v:string)=>v.split(',').map(x=>x.trim()).filter(Boolean);
+ const splitCodes=(v:string)=>v.split(',').map(x=>x.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,63)).filter(Boolean);
  return <section aria-label="Dietas e prescrições de referência" className="hospital-dietas" style={{display:'grid',gap:18,width:'100%'}}>
   <header><h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',color:'#173b69'}}>Registrar dieta do paciente</h2><p style={{marginTop:8,color:'#5d7291',fontSize:14}}>Copie apenas as informações da prescrição em papel ou do SIGH. A plataforma não cria nem modifica prescrições médicas.</p></header>
   {error&&<p role="alert" style={{color:'#b91c1c'}}>{error}</p>}
@@ -99,7 +99,7 @@ export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewPr
    <label>Médico responsável (se estiver legível)<input style={input} value={prescriber} onChange={e=>setPrescriber(e.target.value)} placeholder="Nome que consta no papel"/></label>
    <label>Data e hora da prescrição em papel<input style={input} type="datetime-local" required value={prescribedAt} onChange={e=>setPrescribedAt(e.target.value)}/></label>
    <label>Dieta institucional vinculada<select style={input} required value={catalogItemId} onChange={e=>setCatalogItemId(e.target.value)}><option value="">Escolher conforme prescrição</option>{catalog.filter(x=>x.active).map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>
-   <label>Alergias conforme a prescrição (separadas por vírgula)<input style={input} value={allergyCodes} onChange={e=>setAllergyCodes(e.target.value)}/></label>
+   <label>Alergias conforme a prescrição (separadas por vírgula)<input style={input} value={allergyCodes} onChange={e=>setAllergyCodes(e.target.value)} placeholder="Ex.: leite, ovo"/></label><p className="text-xs text-amber-800">Registre os alimentos conforme o papel e confira as restrições da dieta. Não há liberação automática de refeições com risco.</p>
    <label><input type="checkbox" checked={fasting} onChange={e=>setFasting(e.target.checked)}/> Prescrição indica jejum/NPVO</label>
    <label className="flex items-start gap-2 rounded-xl bg-sky-50 p-3 text-sm text-slate-700"><input type="checkbox" checked={paperConfirmed} onChange={e=>setPaperConfirmed(e.target.checked)}/> Conferi as informações na prescrição médica em papel ou no SIGH. Sei que este registro não substitui a prescrição médica.</label>
    <button className="hospital-primary-action" type="submit" disabled={busy||!paperConfirmed||!prescribedAt||!catalogItemId}>Salvar dieta do paciente</button>
