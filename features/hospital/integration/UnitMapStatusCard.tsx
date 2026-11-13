@@ -1,9 +1,10 @@
 'use client';
 
 import {useCallback,useEffect,useState} from 'react';
-import {OrderProgress} from './OrderProgress';
+import {MealProgressPair} from './MealProgressPair';
+import {mealName} from './meal-period.mjs';
 type MapItem={id:string;cycleId:string;localDate:string;status:string;submittedAt?:string|null;receivedAt?:string|null};
-type MapDetail={map:MapItem;meals:{status:string}[]};
+type MapDetail={map:MapItem;meals:{status:string;mealType:string;timingStage?:string}[]};
 type Api<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const localDate=()=>{
  const delta=process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR==='1'?2:0;
@@ -39,8 +40,8 @@ export function UnitMapStatusCard({organizationId,unitId,getIdToken,onOpen,onReq
    <button className="hospital-secondary-action" type="button" onClick={()=>void refresh()}>Atualizar andamento</button>
   </div>
   {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}
-  {current?<><p className="text-xs font-semibold text-slate-500">Unidade {unitId} · Mapa {current.map.cycleId}h</p>
-   <OrderProgress map={current.map} meals={current.meals} compact/>
+  {current?<><p className="text-xs font-semibold text-slate-500">Unidade {unitId} · Mapa {current.map.cycleId}h · {mealName(current.map.cycleId,'PRIMARY')} e {mealName(current.map.cycleId,'SECONDARY')}</p>
+   <MealProgressPair map={current.map} meals={current.meals} compact/>
    <button type="button" className="hospital-primary-action" onClick={onOpen}>Ver acompanhamento completo</button></>:
    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
     <p className="text-sm font-semibold text-[#234e80]">Nenhum mapa enviado neste dia.</p>
