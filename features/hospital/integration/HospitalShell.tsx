@@ -213,7 +213,7 @@ export function HospitalShell(){
      {selected==='inicio'&&clinical&&
       <section className="hospital-panel overflow-hidden p-5 sm:p-7" aria-label="Atalhos para operação da unidade">
        <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><p className="hospital-hint-label">Sua unidade · {authorizedUnit}</p><h2 className="mt-2 text-xl font-extrabold tracking-tight">Próximas ações</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Cadastre pacientes e transcreva referências da prescrição vigente antes de montar e enviar o mapa manualmente.</p></div>
+        <div><p className="hospital-hint-label">Sua unidade · {authorizedUnit}</p><h2 className="mt-2 text-xl font-extrabold tracking-tight">Próximas ações</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Inicie o mapa do horário e cadastre paciente e dieta no mesmo formulário. Revise as refeições antes de enviar à Cozinha.</p></div>
         <BookOpenCheck size={27} className="text-[#1d5fcb]" aria-hidden="true"/>
        </div>
        <div className="mt-6 grid gap-3 sm:grid-cols-3">
