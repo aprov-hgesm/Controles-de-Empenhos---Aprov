@@ -9,7 +9,7 @@ type MealItem={id:string;mealType:string;status:string;advisory:string};
 type MapDetail={map:MapItem;meals:MealItem[];receipt:{submittedAt:string;submissionVersion:number}|null};
 type ApiResult<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const today=()=>{
- const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()+(process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR==='1'?2:0)*86400000));
  const value=(type:string)=>p.find(x=>x.type===type)?.value??'';
  return value('year')+'-'+value('month')+'-'+value('day');
 };
