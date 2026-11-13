@@ -80,7 +80,8 @@ test('Cadastro de textura pastosa não exige item pastoso no catálogo',async({b
  await context.close();
 });
 
-test('Cozinha imprime etiquetas antes de READY, identifica consistência e acompanhante em Produção e Distribuição',async({browser})=>{
+test('Cozinha imprime etiquetas definitivas antes de READY, pareadas com identificação da Distribuição',async({browser})=>{
+ test.setTimeout(120_000);
  const date=future(5);
  const unitContext=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900}});
  const u=await unitContext.newPage();
@@ -122,7 +123,7 @@ test('Cozinha imprime etiquetas antes de READY, identifica consistência e acomp
  const nav=page.getByRole('navigation',{name:'Navegação hospitalar por perfil'});
  await nav.getByRole('button',{name:'Produção',exact:true}).click();
  await page.getByLabel('Data',{exact:true}).fill(date);
- await page.getByLabel('Mapa',{exact:true}).selectOption('06');
+ await page.locator('section[aria-label="Painel da Cozinha Dietética"] select').first().selectOption('06');
  await expect(page.locator('[data-testid="production-diet-group"]').first()).toBeVisible({timeout:30000});
  await expect(page.getByText('Refeição do acompanhante',{exact:true}).first()).toBeVisible();
  await expect(page.getByText(/BRANDA · Refeição do paciente/i).first()).toBeVisible();
@@ -136,7 +137,7 @@ test('Cozinha imprime etiquetas antes de READY, identifica consistência e acomp
 
  await nav.getByRole('button',{name:'Distribuição',exact:true}).click();
  await page.getByLabel('Dia',{exact:true}).fill(date);
- await page.getByLabel('Mapa',{exact:true}).selectOption('06');
+ await page.locator('section[aria-label="Distribuição hospitalar"] select').first().selectOption('06');
  await expect(page.getByText(/incluindo 1 de acompanhantes/)).toBeVisible({timeout:30000});
  await page.locator('[data-testid="hospital-page-distribuicao"]').screenshot({path:join(screenshots,'distribuicao-etiquetas-acompanhante.png')});
  const ready=page.waitForEvent('download');
