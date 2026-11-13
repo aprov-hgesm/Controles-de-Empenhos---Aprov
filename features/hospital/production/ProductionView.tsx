@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,ShieldAlert} from 'lucide-react';
+import {ArrowRight,ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,ShieldAlert} from 'lucide-react';
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 import {printProductionLabels,printProductionReport,type ProductionPrintRow} from '../printing/hospital-diet-print';
@@ -9,7 +9,8 @@ import {mealName} from '../integration/meal-period.mjs';
 import {eligibleForOrganizationLabel,plannedPrintability,printRecipientType} from '../printing/meal-print-selection';
 
 type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;
- initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;mode?:'overview'|'operations'};
+ initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;initialMealType?:'ALL'|'PRIMARY'|'SECONDARY';mode?:'overview'|'operations';
+ onOpenDistribution?:(focus:{unitId:string;cycleId:CycleId;localDate:string;mealType:'PRIMARY'|'SECONDARY'})=>void;};
 type Api<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 type DietGroup={key:string;unitId:string;dietCode:string;dietLabel:string;observation:string;
  mealType:string;consistency:string;recipientType:'PATIENT'|'COMPANION';
@@ -79,7 +80,7 @@ const printRows=(groups:DietGroup[]):ProductionPrintRow[]=>groups
  .filter(row=>row.quantity>0);
 
 export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',
- initialUnitId='',mode='operations'}:Props){
+ initialUnitId='',initialMealType='ALL',mode='operations',onOpenDistribution}:Props){
  const [date,setDate]=useState(initialDate??today);
  const [cycle,setCycle]=useState<CycleId>(initialCycle);
  const [unit,setUnit]=useState(initialUnitId);
@@ -89,7 +90,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [filter,setFilter]=useState<'all'|'pending'|'preparing'|'ready'>('all');
- const [mealFilter,setMealFilter]=useState<'ALL'|'PRIMARY'|'SECONDARY'>('ALL');
+ const [mealFilter,setMealFilter]=useState<'ALL'|'PRIMARY'|'SECONDARY'>(initialMealType);
  const [reviewNote,setReviewNote]=useState<Record<string,string>>({});
  const seq=useRef(0);
  const visibleUnits=useMemo(()=>unit&&unitIds.includes(unit)?[unit]:unitIds,[unit,unitIds]);
@@ -205,6 +206,12 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>doPrint('labels')}>
      <Printer size={16} className="inline" aria-hidden="true"/> Etiquetas para preparo e porcionamento
     </button>
+    {onOpenDistribution&&<button type="button" className="hospital-primary-action" onClick={()=>onOpenDistribution({
+      unitId:unit||groupsInMeal[0]?.unitId||unitIds[0]||'',cycleId:cycle,localDate:date,
+      mealType:mealFilter==='SECONDARY'?'SECONDARY':'PRIMARY'
+    })}>
+     Próxima etapa: Distribuição <ArrowRight size={16} className="ml-1 inline"/>
+    </button>}
    </div>
    <p className="text-xs text-slate-600">
     As etiquetas definitivas de dieta já podem ser impressas desde o recebimento dos pedidos: {organizationRows.reduce((n,r)=>n+r.quantity,0)} porções
