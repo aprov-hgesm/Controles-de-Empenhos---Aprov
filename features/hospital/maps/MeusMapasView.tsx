@@ -2,6 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {MealProgressPair} from '../integration/MealProgressPair';
+import {MapRapidRegistration} from './MapRapidRegistration';
 import {mealName,mealTitle,timeSituation,timingLabel,mapLateLabel} from '../integration/meal-period.mjs';
 
 type Cycle='06'|'10'|'16';
@@ -38,6 +39,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const [date,setDate]=useState(todayLocal);
  const [cycle,setCycle]=useState<Cycle>('06');
  const [map,setMap]=useState<MapDetail|null>(null);
+ const [quickMode,setQuickMode]=useState(false);
  const [available,setAvailable]=useState<MapRow[]>([]);
  const [admissions,setAdmissions]=useState<AdmissionRow[]>([]);
  const [catalog,setCatalog]=useState<DietRow[]>([]);
@@ -121,6 +123,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   await perform(async()=>{
    const result=await request<MapRow>('maps','map.create',{unitId,localDate:date,cycleId:cycle});
    await loadMap(result.id);
+   setQuickMode(true);
   },'Mapa disponível para conferência');
  };
  const addMeal=async()=>{
@@ -188,12 +191,27 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
      </div>
     </details>
    <small>06h, 10h e 16h são prazos dos mapas. Os 30 minutos seguintes são tolerância da entrega principal, não extensão do prazo regular de envio.</small>
-   <p style={{marginBottom:0}}>Mapas existentes: {available.length===0?'nenhum para o período':available.map(m=><button key={m.id} style={{...actionStyle,margin:4}} disabled={disabled} onClick={()=>void loadMap(m.id).catch(e=>setError(e instanceof Error?e.message:'Erro de leitura'))}>{m.status==='DRAFT'?'Em preenchimento':'Enviado'} · {mapLateLabel(m)||'No prazo'}</button>)}</p>
+   <p style={{marginBottom:0}}>Mapas existentes: {available.length===0?'nenhum para o período':available.map(m=><button key={m.id} style={{...actionStyle,margin:4}} disabled={disabled} onClick={()=>{setQuickMode(false);void loadMap(m.id).catch(e=>setError(e instanceof Error?e.message:'Erro de leitura'))}}>{m.status==='DRAFT'?'Em preenchimento':'Enviado'} · {mapLateLabel(m)||'No prazo'}</button>)}</p>
   </section>
   {loading&&<p role="status">Carregando mapas autorizados…</p>}
   {error&&<div role="alert" className="w3-no-print" style={{...panel,borderColor:'#b91c1c',color:'#991b1b'}}>{error} {error.includes('CONFLICT')&&'Recarregue antes de tentar novamente.'}</div>}
   {notice&&<p className="w3-no-print" role="status" style={{color:'#166534'}}>{notice}</p>}
   {map&&<MealProgressPair map={map.map} meals={map.meals}/>}
+  {map&&<section className="w3-no-print" style={panel}>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+     <div><h3 className="text-lg font-bold text-[#17447a]">Mapa {map.map.cycleId}h · {map.map.localDate}</h3>
+      <p className="text-sm text-slate-600">{map.meals.filter(x=>x.status!=='CANCELLED').length} refeições cadastradas · {map.map.status==='DRAFT'?'Em preenchimento':'Enviado à cozinha'}</p>
+     </div>
+     <div className="flex flex-wrap gap-2">
+      <button className="hospital-secondary-action" type="button" disabled={disabled} onClick={()=>setQuickMode(true)}>{map.map.status==='DRAFT'?'Cadastrar paciente e dieta':'Incluir dieta extra'}</button>
+      {map.map.status==='DRAFT'&&!quickMode&&<button className="hospital-primary-action" type="button" disabled={disabled||map.meals.length===0||(extraordinary&&reason.trim().length<5)} onClick={()=>void send()}>Enviar mapa de dietas à cozinha</button>}
+     </div>
+    </div>
+    {!quickMode&&map.map.status==='DRAFT'&&<p className="mt-2 text-sm text-slate-500">Confira as dietas na lista abaixo, faça as alterações necessárias e depois envie o mapa.</p>}
+  </section>}
+  {map&&quickMode&&<MapRapidRegistration organizationId={organizationId} getIdToken={getIdToken}
+    map={map.map} catalog={catalog} onCancel={()=>setQuickMode(false)}
+    onSaved={async finish=>{await loadMap(map.map.id);await reload();setQuickMode(!finish)}}/>}
   {map&&<section style={panel}>
     <div className="w3-no-print" style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
      <h3 style={{margin:0}}>Mapa {map.map.cycleId}h · {map.map.localDate} · {map.map.status}</h3>
@@ -203,7 +221,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
        className={'mt-3 rounded-xl border p-3 text-sm font-bold '+(map.map.submissionTimingStage==='AFTER_TOLERANCE'||map.map.latestExtraTimingStage==='AFTER_TOLERANCE'?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-300 bg-amber-50 text-amber-900')}>
        {mapLateLabel(map.map)}. A justificativa e o alerta prioritário ficam visíveis para a cozinha. O atraso não suspende a dieta por si só.
       </p>}
-    <div className="w3-no-print" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
+    <details className="w3-no-print mt-4 rounded-xl border border-slate-200 p-3"><summary className="cursor-pointer text-sm font-semibold text-slate-500">Editor técnico anterior (opcional)</summary>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginTop:16}}>
      <label>Paciente/internação<select style={inputStyle} value={selectedAdmission} onChange={e=>setSelectedAdmission(e.target.value)}><option value="">Selecione um paciente ativo</option>{admissions.map(a=><option key={a.admissionId} value={a.admissionId}>{a.patientName??'Paciente'} · leito {a.bedLabel??'a conferir'}</option>)}</select></label>
      <fieldset className="grid gap-2 rounded-xl border border-[#d6e5f4] bg-[#f8fbff] p-3"><legend className="px-1 text-xs font-bold text-[#275284]">Qual refeição será solicitada?</legend><div className="grid grid-cols-2 gap-2">{(['PRIMARY','SECONDARY'] as const).map(type=><button key={type} type="button" aria-pressed={selectedType===type} className={selectedType===type?'hospital-primary-action':'hospital-secondary-action'} onClick={()=>setSelectedType(type)}>{mealName(cycle,type)}</button>)}</div><p className="text-[11px] text-slate-500">Cada refeição segue para distribuição e confirmação no leito separadamente.</p></fieldset>
      <label>Dieta anotada no papel<input style={inputStyle} readOnly value={reference?`${reference.sourceRef} · ${catalog.find(x=>x.id===reference.catalogItemId)?.label??reference.catalogItemId}`:'Sem referência registrada'}/></label>
@@ -221,7 +240,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
       {map.map.status==='DRAFT'&&<button className="hospital-primary-action" disabled={disabled||(extraordinary&&reason.trim().length<5)} onClick={()=>void send()}>{extraordinary?'Enviar mapa extraordinário à cozinha':'Enviar mapa à cozinha'}</button>}
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
            </div>
-    </div>
+    </div></details>
     <h4 className="w3-no-print">Pedidos e situação</h4>
     <label className="w3-no-print">Filtrar por internação, dieta ou status<input style={inputStyle} value={filter} onChange={e=>setFilter(e.target.value)}/></label>
     <div className="w3-no-print" style={{overflowX:'auto'}}>
