@@ -4,6 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {getHospitalW10Store} from '@/lib/server/hospital/firebase/qa-store.mjs';
 import {createFirestoreDistributionHandler} from '@/lib/server/hospital/distribution/firestore-handler.mjs';
 import {isHospitalGcpQaRuntime} from '@/lib/server/hospital/firebase/gcp-qa-runtime.mjs';
+import {distributionOriginAllowed} from '@/lib/server/hospital/distribution/origin-guard.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -53,11 +54,12 @@ export async function POST(request:Request){
   }
   if(!h)return NextResponse.json({ok:false,error:{code:'UNAVAILABLE',message:'Distribuição indisponível fora de QA autorizado'}},{status:503,headers:{'cache-control':'no-store'}});
   const origin=request.headers.get('origin');
-  if(origin){
-    let isSameOrigin=false;
-    try{isSameOrigin=new URL(origin).origin===new URL(request.url).origin}catch{}
-    if(!isSameOrigin)return NextResponse.json({ok:false,error:{code:'FORBIDDEN',message:'Origem não autorizada'}},{status:403});
-  }
+  if(!distributionOriginAllowed(origin,request.url,{
+    nodeEnv:process.env.NODE_ENV,
+    firestoreQaEnabled:process.env.HOSPITAL_FIRESTORE_QA_ENABLED,
+    authEmulatorEnabled:process.env.NEXT_PUBLIC_HOSPITAL_AUTH_EMULATOR
+  }))return NextResponse.json({ok:false,error:{code:'FORBIDDEN',message:'Origem não autorizada'}},{status:403});
+
   let parsed:{operation?:string;payload?:Record<string,unknown>};
   try{
     const source=await request.text();
