@@ -8,6 +8,7 @@ type Status={
  mealId:string;mealStatus:string;distributionState:string;jobRevision:number|null;
  destinationUnitId:string|null;destinationBedNumber?:string|null;patientName?:string|null;
  needsBirthDate?:boolean;dietCode?:string;dietLabel?:string;observation?:string;mealType?:string;timingStage?:string;deliveredAt?:string|null;
+ recipientType?:'PATIENT'|'COMPANION';allergyAlert?:boolean;allergyNote?:string;
  routeReconciliationRequired:boolean;mainMealAlert:string|null
 };
 type Props={organizationId:string;unitId:string;mealIds:readonly string[];getAuthorization:()=>Promise<string>;mealTitle?:string};
@@ -18,7 +19,10 @@ const decode=(input:string)=>input.split(',').map(s=>s.trim().normalize('NFD').r
  .toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')).filter(Boolean);
 const clock=(when:string|null|undefined)=>when?new Date(when).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}):'—';
 const stage=(item:Status)=>{
- if(item.mealStatus==='DELIVERED')return 'Distribuído no leito · '+clock(item.deliveredAt);
+ if(item.mealStatus==='REQUESTED')return 'Solicitado à Cozinha · aguardando início do preparo';
+ if(item.mealStatus==='PREPARING')return 'Em preparo · etiqueta disponível apenas para organização';
+ if(['SUSPENDED','CANCELLED','SAFETY_BLOCKED'].includes(item.mealStatus))return 'Pedido sem liberação de distribuição';
+ if(item.mealStatus==='DELIVERED')return 'Distribuído no destino · '+clock(item.deliveredAt);
  if(item.distributionState==='RECEIVED')return 'Aguardando registro da entrega';
  if(item.distributionState==='DISPATCHED')return 'Saiu para distribuição';
  if(item.distributionState==='CHECKED')return 'Bandeja conferida';
@@ -61,7 +65,8 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
  const enRoute=records.filter(m=>['DISPATCHED','RECEIVED_BY_UNIT'].includes(m.mealStatus)&&!m.routeReconciliationRequired);
  const delivered=records.filter(m=>m.mealStatus==='DELIVERED');
  const selection=selected.map(id=>status[id]).filter((x):x is Status=>!!x);
- const compatible=selection.length>0&&selection.every(s=>s.dietCode===selection[0].dietCode&&s.observation===selection[0].observation);
+ const compatible=selection.length>0&&selection.every(s=>s.dietCode===selection[0].dietCode&&
+   s.observation===selection[0].observation&&s.recipientType===selection[0].recipientType);
  const canPack=compatible&&selection.every(s=>preparing.some(m=>m.mealId===s.mealId))&&physicalChecked&&decode(ingredients).length>0;
  const canDispatch=selection.length>0&&selection.every(s=>checked.some(m=>m.mealId===s.mealId));
  const act=async(task:()=>Promise<unknown>,message:string)=>{
@@ -87,7 +92,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
   await send('batch.dispatch',{mealIds:selection.map(x=>x.mealId),idempotencyKey:crypto.randomUUID()});
  },'Saída para distribuição registrada. A entrega nos leitos ainda não foi confirmada.');
  const deliver=(meal:Status)=>void act(async()=>{
-  if(!paperChecked)throw Error('Confirme que o copeiro conferiu nome e nascimento no leito usando a ficha.');
+  if(!paperChecked)throw Error('Confirme que o copeiro conferiu o destinatário e o leito conforme a ficha de entrega física.');
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(hours[meal.mealId]??''))throw Error('Copie a hora real de entrega que está anotada na folha.');
   await send('meal.deliver.paper',{mealId:meal.mealId,deliveryTime:hours[meal.mealId],
    paperConfirmed:true,identityChecked:true,idempotencyKey:crypto.randomUUID()});
@@ -96,7 +101,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
  return <section className="hospital-panel space-y-5 p-4 sm:p-6" aria-label="Separação e distribuição de dietas">
   <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
    <div><p className="hospital-hint-label">Identificação, saída e retorno</p><h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Distribuição · {unitId}{mealTitle?' · '+mealTitle:''}</h2>
-    <p className="mt-1 text-sm text-slate-500">Cole a etiqueta do paciente ao lado da etiqueta da dieta. Confira antes de sair. Ao voltar, registre a hora escrita no relatório.</p></div>
+    <p className="mt-1 text-sm text-slate-500">Identifique separadamente paciente e acompanhante. Etiquetas de organização não significam refeição pronta ou entrega autorizada. Registre a hora real anotada pelo copeiro.</p></div>
    <button className="hospital-secondary-action" type="button" disabled={loading||busy} onClick={()=>void load()}>
     <RefreshCw size={15} className="inline"/> Atualizar</button>
   </header>
@@ -119,8 +124,10 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
      {['READY'].includes(m.mealStatus)&&<input type="checkbox" aria-label={'Selecionar '+(m.patientName??'paciente')} checked={selected.includes(m.mealId)} disabled={busy||m.routeReconciliationRequired}
       onChange={e=>setSelected(xs=>e.target.checked?[...xs,m.mealId]:xs.filter(id=>id!==m.mealId))}/>}
      <div className="min-w-0 flex-1">
-      <p className="text-sm font-extrabold text-[#1c4579]">{unitId} · Leito {m.destinationBedNumber??'a conferir'} · {m.patientName??'Paciente sem nome'}</p>
+      <p className="text-sm font-extrabold text-[#1c4579]">{unitId} · Leito {m.destinationBedNumber??'a conferir'} · {m.patientName??'Identificação pendente'}</p>
+      <p className="mt-1 text-[11px] font-extrabold tracking-wide text-[#32629c]">{m.recipientType==='COMPANION'?'ACOMPANHANTE · REFEIÇÃO PRINCIPAL':'PACIENTE'}</p>
       <p className="mt-1 text-xs text-slate-700">{m.dietLabel??'Dieta'}{m.observation?' · '+m.observation:''}</p>
+      {m.allergyAlert&&<p role="alert" className="mt-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-extrabold text-rose-900">ALERGIA ALIMENTAR: {m.allergyNote??'CONFERIR FICHA'}</p>}
       {m.timingStage&&m.timingStage!=='ON_TIME'&&<p role="alert" className={'mt-1 inline-flex rounded-full px-2 py-1 text-[11px] font-bold '+(m.timingStage==='AFTER_TOLERANCE'?'bg-rose-100 text-rose-900':'bg-amber-100 text-amber-900')}>{timingLabel(m.timingStage,m.mealType)}</p>}
       <p className="mt-1 text-xs font-semibold text-[#2768af]">{stage(m)}</p>
      </div>
@@ -160,9 +167,9 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
   </section>}
   {enRoute.length>0&&<section className="rounded-xl border border-sky-200 bg-sky-50 p-4">
    <h3 className="flex items-center gap-2 font-extrabold text-[#1a467e]"><Clock3 size={17}/> Retorno do copeiro · registro pelo papel</h3>
-   <p className="mt-1 text-xs leading-5 text-slate-700">Copie a hora exata escrita à caneta para cada paciente. O registro será feito pelo usuário atual com data e hora de lançamento próprias.</p>
+   <p className="mt-1 text-xs leading-5 text-slate-700">Copie a hora exata registrada à caneta para cada destinatário, paciente ou acompanhante. O sistema diferencia essa hora do momento do lançamento.</p>
    <label className="mt-3 flex items-start gap-2 text-sm text-slate-800"><input type="checkbox" checked={paperChecked} onChange={e=>setPaperChecked(e.target.checked)}/>
-    Confirmo que a entrega foi efetuada, e o nome completo e a data de nascimento foram conferidos na pulseira/ficha do paciente no momento da entrega, conforme o relatório físico.</label>
+    Confirmo a entrega efetiva e a conferência do destinatário correto (paciente ou acompanhante), unidade e leito, com identificação apropriada ao destinatário, conforme o registro físico.</label>
   </section>}
   <p className="flex items-start gap-2 text-xs leading-5 text-slate-500"><ShieldCheck size={16} className="shrink-0"/> A emissão de etiqueta ou PDF não constitui confirmação de entrega. Refeições suspensas, com jejum, alergias conflitantes ou leito alterado continuam bloqueadas.</p>
  </section>;
