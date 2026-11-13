@@ -6,7 +6,7 @@ import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 import {printProductionLabels,printProductionReport,type ProductionPrintRow} from '../printing/hospital-diet-print';
 import {mealName} from '../integration/meal-period.mjs';
-import {eligibleForOrganizationLabel,printPhase,plannedPrintability,printRecipientType} from '../printing/meal-print-selection';
+import {eligibleForOrganizationLabel,plannedPrintability,printRecipientType} from '../printing/meal-print-selection';
 
 type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;
  initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;mode?:'overview'|'operations'};
@@ -69,16 +69,13 @@ function familiesOf(groups:DietGroup[]):DietFamily[]{
  }
  return [...families.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR'));
 }
-const printRows=(groups:DietGroup[],mode:'ALL'|'READY'='ALL'):ProductionPrintRow[]=>groups
- .flatMap(g=>{
-  const stages=mode==='READY'?['READY']:['REQUESTED','PREPARING','READY'];
-  return stages.map(status=>({
-    unit:g.unitId,diet:g.dietLabel,consistency:g.consistency,
-    recipientType:g.recipientType,phase:printPhase(status),
-    observation:g.observation,mealType:g.mealType,
-    quantity:g.meals.filter(m=>m.status===status&&eligibleForOrganizationLabel(m)).length
-  }));
- })
+const printRows=(groups:DietGroup[]):ProductionPrintRow[]=>groups
+ .map(g=>({
+  unit:g.unitId,diet:g.dietLabel,consistency:g.consistency,
+  recipientType:g.recipientType,
+  observation:g.observation,mealType:g.mealType,
+  quantity:g.meals.filter(eligibleForOrganizationLabel).length
+ }))
  .filter(row=>row.quantity>0);
 
 export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',
@@ -162,7 +159,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const families=useMemo(()=>familiesOf(groups),[groups]);
  const groupsInMeal=groups.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter);
  const rows=printRows(groupsInMeal);
- const organizationRows=printRows(groupsInMeal);
+ const organizationRows=rows;
  const printableStats=plannedPrintability((data?.meals??[]).filter(m=>mealFilter==='ALL'||m.mealType===mealFilter));
  const filtered=families.filter(g=>(mealFilter==='ALL'||g.mealType===mealFilter)&&(filter==='all'||filter==='pending'&&g.pending>0
   ||filter==='preparing'&&g.preparing>0||filter==='ready'&&g.ready>0));
@@ -210,8 +207,8 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     </button>
    </div>
    <p className="text-xs text-slate-600">
-    As etiquetas podem ser impressas desde o recebimento dos pedidos: {organizationRows.reduce((n,r)=>n+r.quantity,0)} porções
-    no mapa/horário selecionado. As não prontas levam identificação de planejamento ou preparo.
+    As etiquetas definitivas de dieta já podem ser impressas desde o recebimento dos pedidos: {organizationRows.reduce((n,r)=>n+r.quantity,0)} porções
+    no mapa e horário selecionados, para uso junto às etiquetas de identificação na Distribuição.
     {printableStats.skippedForSafety>0&&` ${printableStats.skippedForSafety} pedidos cancelados, suspensos ou com bloqueio de segurança permanecem fora das etiquetas de preparo.`}
    </p>
   </div>
@@ -255,7 +252,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
       onClick={()=>void performBatches(g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS'),'complete')}>
        <Check size={15} className="inline"/> Conferi {g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS').reduce((n,b)=>n+b.quantity,0)} dietas · prontas
       </button>}
-     {g.total>0&&<span className="flex items-center gap-2 text-xs font-bold text-blue-800"><ClipboardCheck size={16}/> {g.total} etiquetas disponíveis para organização</span>}
+     {g.total>0&&<span className="flex items-center gap-2 text-xs font-bold text-blue-800"><ClipboardCheck size={16}/> {g.total} etiquetas de dieta disponíveis para imprimir</span>}
     </div>
     {g.batches.some(b=>b.effectiveStatus==='NEEDS_REVIEW')&&<details className="rounded-xl border border-amber-200 bg-amber-50 p-3">
      <summary className="cursor-pointer text-sm font-semibold text-amber-900">Conferência de segurança obrigatória</summary>
@@ -269,6 +266,6 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     </details>}
    </article>)}
   </div>
-  <p className="text-xs leading-5 text-slate-500">Etiquetas de produção identificam consistência, refeição, unidade e se a porção é para paciente ou acompanhante. Nome e leito ficam na etiqueta da Distribuição. Imprimir antes de concluir o preparo serve apenas para organização: pedidos com bloqueio clínico não entram na fila liberada.</p>
+  <p className="text-xs leading-5 text-slate-500">Etiquetas de produção identificam consistência, refeição, unidade e se a porção é para paciente ou acompanhante. Nome e leito ficam na etiqueta da Distribuição. As mesmas etiquetas são utilizadas no porcionamento, junto às etiquetas de identificação da Distribuição. A impressão não altera o estado do preparo ou da entrega.</p>
  </section>;
 }
