@@ -22,6 +22,7 @@ const CYCLES:{value:CycleId;label:string}[]=[
 ];
 const noteOf=(meal:KitchenMeal)=>[
  (meal.observation??'').trim(),
+ meal.allergyAlert?'ALERGIA: '+(meal.allergyNote??'conferir ficha'):'',
  meal.dietRestrictionCodes?.length?'Restrições: '+meal.dietRestrictionCodes.join(', '):''
 ].filter(Boolean).join(' · ')||'Sem observações';
 const groupKey=(m:KitchenMeal)=>JSON.stringify([m.unitId,m.dietCode,m.mealType,m.observation??'',
