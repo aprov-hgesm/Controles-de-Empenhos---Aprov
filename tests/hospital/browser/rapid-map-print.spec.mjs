@@ -126,6 +126,8 @@ test('Cozinha imprime etiquetas antes de READY, identifica consistência e acomp
  await expect(page.locator('[data-testid="production-diet-group"]').first()).toBeVisible({timeout:30000});
  await expect(page.getByText('Refeição do acompanhante',{exact:true}).first()).toBeVisible();
  await expect(page.getByText(/BRANDA · Refeição do paciente/i).first()).toBeVisible();
+ mkdirSync(screenshots,{recursive:true});
+ await page.locator('[data-testid="production-diet-group"]').first().screenshot({path:join(screenshots,'cozinha-consistencia-e-destinatario.png')});
  const food=page.waitForEvent('download');
  await page.getByRole('button',{name:/Etiquetas para preparo e porcionamento/}).click();
  const foodPdf=await food;
@@ -136,6 +138,7 @@ test('Cozinha imprime etiquetas antes de READY, identifica consistência e acomp
  await page.getByLabel('Dia',{exact:true}).fill(date);
  await page.getByLabel('Mapa',{exact:true}).selectOption('06');
  await expect(page.getByText(/incluindo 1 de acompanhantes/)).toBeVisible({timeout:30000});
+ await page.locator('[data-testid="hospital-page-distribuicao"]').screenshot({path:join(screenshots,'distribuicao-etiquetas-acompanhante.png')});
  const ready=page.waitForEvent('download');
  await page.getByRole('button',{name:/Etiquetas de pacientes e acompanhantes/}).click();
  const patientPdf=await ready;
