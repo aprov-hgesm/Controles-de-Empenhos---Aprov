@@ -4,14 +4,13 @@
  * Printing a PDF never changes a meal or delivery state.
  */
 import {jsPDF} from 'jspdf';
-import type {PrintPhase} from './meal-print-selection';
 
 export type ProductionPrintRow={unit:string;diet:string;observation:string;quantity:number;mealType?:string;
- consistency?:string;recipientType?:'PATIENT'|'COMPANION';phase?:PrintPhase};
+ consistency?:string;recipientType?:'PATIENT'|'COMPANION'};
 export type DistributionPrintRow={
  unit:string;bed:string;patient:string;diet:string;observation:string;
  recipientType?:'PATIENT'|'COMPANION';allergyAlert?:boolean;allergyNote?:string;corrected?:boolean;
- phase?:PrintPhase;identityIncomplete?:boolean;
+ identityIncomplete?:boolean;
 };
 type ReportOptions={
  title:string;subtitle:string;headers:string[];columnWidths:number[];
@@ -112,16 +111,6 @@ function save(d:jsPDF,filename:string){
  if(typeof window==='undefined')throw Error('Emissão de PDF exige sessão local no navegador.');
  d.save(filename);
 }
-const phaseNote=(phase?:PrintPhase)=>{
- switch(phase){
-  case 'PLANEJAMENTO':return 'PLANEJAMENTO - NÃO LIBERADA';
-  case 'PREPARO':return 'EM PREPARO - NÃO LIBERADA';
-  case 'PRONTA':return 'PRONTA - CONFERIR ANTES DA ENTREGA';
-  case 'EM_ROTA':return 'EM ROTA - CONFERIR DESTINATÁRIO';
-  case 'ENTREGUE':return 'ENTREGA REGISTRADA';
-  default:return 'CONFERIR ESTADO ANTES DE UTILIZAR';
- }
-};
 const pill=(d:jsPDF,title:string,x:number,y:number,alert=false)=>{
  if(alert)d.setFillColor(254,226,226);else d.setFillColor(232,242,255);
  d.roundedRect(x,y,40,7,2,2,'F');
@@ -141,7 +130,7 @@ export function printProductionReport(rows:ProductionPrintRow[],date:string,cycl
   lines:rows.map(r=>[
    r.diet+(r.mealType==='PRIMARY'?' · PRINCIPAL':r.mealType==='SECONDARY'?' · SECUNDÁRIA':'')+
      (r.recipientType==='COMPANION'?' · ACOMPANHANTE':' · PACIENTE'),
-   [r.consistency&&r.consistency!=='NÃO INFORMADA'?'Consistência: '+r.consistency.replaceAll('_',' '):'',r.observation,phaseNote(r.phase)].filter(Boolean).join(' · '),
+   [r.consistency&&r.consistency!=='NÃO INFORMADA'?'Consistência: '+r.consistency.replaceAll('_',' '):'',r.observation].filter(Boolean).join(' · '),
    r.unit,String(r.quantity),''
   ]),
   blankColumns:[4],
@@ -168,8 +157,8 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
   if(allergy){d.setTextColor(151,38,38);d.setFont('helvetica','bold');d.setFontSize(7.1);
     d.text('ALERGIA REGISTRADA - CONFERIR COMPOSIÇÃO',x+8,y+48,{maxWidth:w-16});}
   d.setFont('helvetica','bold');d.setFontSize(7.5);
-  if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
-  d.text(phaseNote(r.phase)+'  ·  '+date+'  ·  '+cycle+'h',x+8,y+54,{maxWidth:w-16});
+  d.setTextColor(...ink);d.setFont('helvetica','bold');
+  d.text('ETIQUETA DE DIETA  ·  '+date+'  ·  '+cycle+'h',x+8,y+54,{maxWidth:w-16});
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
 export function printDistributionReport(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
@@ -183,10 +172,10 @@ export function printDistributionReport(rows:DistributionPrintRow[],date:string,
    [r.recipientType==='COMPANION'?'ACOMPANHANTE':null,
     r.allergyAlert?'ALERGIA: '+(r.allergyNote||'CONFERIR PRONTUÁRIO'):null,
     r.corrected?'DIETA CORRIGIDA':null,r.identityIncomplete?'IDENTIFICAÇÃO PENDENTE - CONFERIR':null,
-    phaseNote(r.phase),r.observation].filter(Boolean).join(' · '),
+    r.observation].filter(Boolean).join(' · '),
    '','']),
   blankColumns:[5,6],alertRows:rows.map(r=>!!r.allergyAlert),
-  footer:'Planejamento/organização: pedidos não liberados não podem ser distribuídos · Conferir identidade e alergias'
+  footer:'Conferir destinatário, leito, dieta, restrições e alergias antes da entrega · Impressão não registra entrega'
  }), 'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
 export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
@@ -212,8 +201,7 @@ export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle
    d.setFont('helvetica','bold');d.setFontSize(7);
    d.text(r.identityIncomplete?'IDENTIFICAÇÃO PENDENTE - CONFERIR':'DIETA CORRIGIDA - CONFERIR VERSÃO',x+8,y+49,{maxWidth:w-17});
   }
-  if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
-  d.setFont('helvetica','bold');d.setFontSize(7.3);
-  d.text(phaseNote(r.phase)+'  ·  '+date+'  ·  '+cycle+'h',x+8,y+55,{maxWidth:w-16});
+  d.setTextColor(...ink);d.setFont('helvetica','bold');d.setFontSize(7.3);
+  d.text('ETIQUETA DE IDENTIFICAÇÃO  ·  '+date+'  ·  '+cycle+'h',x+8,y+55,{maxWidth:w-16});
  }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
