@@ -88,10 +88,13 @@ test('quick map: two independent meals, NPVO companion only, extras, correction 
   assert.equal((await maps.listCorrections(k,{unitId:ward})).length,0);
   const extra=await maps.rapidEnroll(u,{
    ...common,fullName:'Paciente Ficticio Extra',birthDate:'1960-01-04',bedLabel:'03',
-   meals:['PRIMARY'],allergyNote:'',expectedMapRevision:ack.map.revision,
+   consistency:'PASTOSA',meals:['PRIMARY'],allergyNote:'',expectedMapRevision:ack.map.revision,
    idempotencyKey:id('extra')
   });
   assert.equal(extra.extra,true);assert.equal(extra.added,1);
+  assert.equal((await db.get(org,'meal',extra.mealIds[0])).consistency,'PASTOSA');
+  assert.equal((await dist.status(k,{unitId:ward,mealId:extra.mealIds[0]})).dietLabel,'Dieta pastosa');
+  assert.equal((await production.snapshot(k,{unitIds:[ward],localDate:date,cycleId:'06'})).meals.find(x=>x.id===extra.mealIds[0]).dietLabel,'Dieta pastosa');
   const after=await maps.getMap(u,{mapId:draft.id});
   assert.equal(after.meals.filter(x=>x.status!=='CANCELLED').length,4);
   assert.ok(after.versions.some(x=>x.kind==='AMENDMENT'));
