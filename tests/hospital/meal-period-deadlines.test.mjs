@@ -25,7 +25,7 @@ for(const h of ['06','10','16']){
    assert.equal(timeSituation(h,date,when(h,'31'),type).severity,'urgent');
    assert.equal(timeSituation(h,date,when(h,'01'),type).severity,'warning');
    assert.equal(timeSituation(h,date,when(h,'00'),type).severity,'normal');
-   assert.match(timingLabel('AFTER_TOLERANCE',type),/Extra após tolerância/);
+   assert.match(timingLabel('AFTER_TOLERANCE',type),/Extra urgente após tolerância/);
   });
  }
 }
