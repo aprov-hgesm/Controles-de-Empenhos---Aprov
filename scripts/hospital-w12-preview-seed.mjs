@@ -131,6 +131,23 @@ async function main(){
         mapId:draft.id,expectedRevision:inserted.map.revision,
         idempotencyKey:'preview_local_submit_1'
       });
+      // A second, today-only SECONDARY sample permits physical paper-route
+      // delivery rehearsal without inventing a future bedside handoff time.
+      const routeMap=await maps.createDraft(nurseScope,{
+        unitId:'UTI',localDate:localDate(0),cycleId:'10'
+      });
+      const routeMeal=await maps.setMeal(nurseScope,{
+        mapId:routeMap.id,admissionId:admission.id,mealType:'SECONDARY',
+        medicalReferenceId:ref.id,dietCode:diet.id,
+        observation:'Sem açúcar - conferência fictícia',
+        reason:'Exercício local de distribuição em papel',expectedMapRevision:routeMap.revision,
+        idempotencyKey:'preview_route_meal_today'
+      });
+      await maps.submitMap(nurseScope,{
+        mapId:routeMap.id,expectedRevision:routeMeal.map.revision,
+        lateReason:'Exercício de treinamento local sem pacientes reais',
+        idempotencyKey:'preview_route_submit_today'
+      });
     }
     console.log('\n=== PREVIA LOCAL W12 (SOMENTE DADOS FICTICIOS) ===');
     for(const person of users)console.log(person.key.padEnd(12),person.email);
