@@ -36,7 +36,6 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
   const [editBirthDate,setEditBirthDate]=useState('');
   const [chosenBed,setChosenBed]=useState('');
   const [transferUnit,setTransferUnit]=useState('');
-  const [transferBed,setTransferBed]=useState('');
   const [pendingTransfer,setPendingTransfer]=useState<Event|null>(null);
   const [plannedAt,setPlannedAt]=useState('');
   const [temporaryUnit,setTemporaryUnit]=useState('');
@@ -160,7 +159,7 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
         <button className={actionClass} disabled={saving} onClick={()=>void act('admission.admit',{patientId:current.patient.id,bedId:chosenBed||null})}>Admitir</button>
       </div>}
       {current.admission&&<div className="space-y-2">
-        <p>Internação {current.admission.id} · {current.admission.status} · revisão {current.admission.revision}</p>
+        <p className="text-xs font-semibold text-slate-500">Situação: {current.admission.status==='ACTIVE'?'Internado':'Alta registrada'} · Alterações registradas no histórico</p>
         {active&&<details className="group rounded-xl border border-slate-200 bg-white p-3"><summary className="cursor-pointer py-2 font-bold text-[#1b4b91]">Movimentação, transferência e alta — abrir ações</summary><div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-2">
             <select className={inputClass} value={chosenBed} onChange={e=>setChosenBed(e.target.value)} aria-label="Trocar leito">
@@ -169,14 +168,14 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
             <button className={actionClass} disabled={saving} onClick={()=>void act('admission.changeBed',{admissionId:current.admission?.id,toBedId:chosenBed||null,expectedRevision:current.admission?.revision})}>Atualizar leito</button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <input className={inputClass} value={transferUnit} onChange={e=>setTransferUnit(e.target.value)} placeholder="ID unidade de destino" aria-label="Unidade de destino"/>
-            <input className={inputClass} value={transferBed} onChange={e=>setTransferBed(e.target.value)} placeholder="ID leito de destino (opcional)" aria-label="Leito de destino"/>
-            <button className={actionClass} disabled={saving||!transferUnit} onClick={()=>void act<Event>('admission.planTransfer',{admissionId:current.admission?.id,toUnitId:transferUnit,toBedId:transferBed||null},setPendingTransfer)}>Prever transferência</button>
+            <label className="grid gap-1 text-xs font-semibold">Unidade de destino<select className={inputClass} value={transferUnit} onChange={e=>setTransferUnit(e.target.value)} aria-label="Unidade de destino"><option value="">Selecione</option>{[['UPI','UPI'],['UTI','UTI'],['BLOCO','Bloco Cirúrgico'],['ONCOLOGIA','Oncologia'],['PAM','PAM']].filter(([id])=>id!==unitId).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+            <p className="self-center text-xs text-slate-500">O leito de destino será confirmado pela unidade que receber o paciente.</p>
+            <button className={actionClass} disabled={saving||!transferUnit} onClick={()=>void act<Event>('admission.planTransfer',{admissionId:current.admission?.id,toUnitId:transferUnit,toBedId:null},setPendingTransfer)}>Prever transferência</button>
             {pendingTransfer&&<><button className={actionClass} disabled={saving} onClick={()=>void act('admission.confirmTransfer',{eventId:pendingTransfer.id,expectedRevision:pendingTransfer.revision,admissionRevision:current.admission?.revision},()=>setPendingTransfer(null))}>Confirmar transferência</button>
               <button className={actionClass} disabled={saving} onClick={()=>void act('admission.cancelTransfer',{eventId:pendingTransfer.id,expectedRevision:pendingTransfer.revision},()=>setPendingTransfer(null))}>Cancelar previsão</button></>}
           </div>
           <div className="flex flex-wrap gap-2">
-            <input className={inputClass} value={temporaryUnit} onChange={e=>setTemporaryUnit(e.target.value)} placeholder="Destino temporário" aria-label="Destino temporário"/>
+            <label className="grid gap-1 text-xs font-semibold">Destino temporário<select className={inputClass} value={temporaryUnit} onChange={e=>setTemporaryUnit(e.target.value)} aria-label="Destino temporário"><option value="">Selecione</option>{[['UPI','UPI'],['UTI','UTI'],['BLOCO','Bloco Cirúrgico'],['ONCOLOGIA','Oncologia'],['PAM','PAM']].filter(([id])=>id!==unitId).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
             {!current.admission.temporaryUnitId
               ?<button className={actionClass} disabled={saving||!temporaryUnit} onClick={()=>void act('admission.temporaryDeparture',{admissionId:current.admission?.id,toUnitId:temporaryUnit,expectedRevision:current.admission?.revision})}>Saída temporária</button>
               :<button className={actionClass} disabled={saving} onClick={()=>void act('admission.temporaryReturn',{admissionId:current.admission?.id,expectedRevision:current.admission?.revision})}>Registrar retorno</button>}
@@ -188,7 +187,7 @@ export function PatientsView({organizationId,unitId,getIdToken,endpoint='/api/ho
             <button className="rounded border border-red-500 px-3 py-2 text-red-700" disabled={saving} onClick={()=>{if(window.confirm('Confirmar alta efetiva? Refeições pendentes serão suspensas.'))void act('admission.confirmDischarge',{admissionId:current.admission?.id,expectedRevision:current.admission?.revision});}}>Confirmar alta</button>
           </div>
         </div></details>}
-        <details className="rounded-lg border border-slate-200 bg-white p-3"><summary className="cursor-pointer font-semibold">Histórico de alterações</summary><ul>{history.map(e=><li key={e.id}>{e.occurredAt} · {e.eventType} · {e.actorUid}</li>)}</ul></details>
+        <details className="rounded-lg border border-slate-200 bg-white p-3"><summary className="cursor-pointer font-semibold">Histórico de alterações</summary><ul className="mt-2 space-y-1 text-xs">{history.map(e=><li key={e.id}>{new Date(e.occurredAt).toLocaleString('pt-BR')} · {e.eventType.replaceAll('_',' ')} · usuário autorizado</li>)}</ul></details>
       </div>}
     </article>}
   </section>;
