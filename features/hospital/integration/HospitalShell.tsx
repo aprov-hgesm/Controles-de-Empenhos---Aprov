@@ -20,6 +20,7 @@ import {ReportingView} from '@/features/hospital/reporting/ReportingView';
 import {TrackingView} from './TrackingView';
 import {DistributionQueue} from './DistributionQueue';
 import {KitchenMapsBoard} from './KitchenMapsBoard';
+import {UnitMapStatusCard} from './UnitMapStatusCard';
 import {getHospitalWorkspaceAccess,type HospitalWorkspaceAccess} from './access';
 import {canOpenPage,firstPage,menuForRoles} from './navigation.mjs';
 import './hospital-premium.css';
@@ -208,6 +209,7 @@ export function HospitalShell(){
 
      {notification&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{notification}</div>}
 
+     {selected==='inicio'&&clinical&&<UnitMapStatusCard key={authorizedUnit} organizationId={org} unitId={authorizedUnit} getIdToken={getIdToken} onOpen={()=>navigate('acompanhamento')} onRequest={()=>navigate('mapas')}/>}
      {selected==='inicio'&&clinical&&
       <section className="hospital-panel overflow-hidden p-5 sm:p-7" aria-label="Atalhos para operação da unidade">
        <div className="flex flex-wrap items-start justify-between gap-3">
