@@ -53,9 +53,14 @@ jobs:
       - name: Typecheck
         if: success() || failure()
         run: npm run typecheck
-      - name: Build
+      - name: Build (retry on transient remote font loader failures)
         if: success() || failure()
-        run: npm run build
+        run: |
+          npm run build || {
+            echo 'Repetindo build após possível instabilidade temporária de next/font.'
+            sleep 8
+            npm run build
+          }
       - name: Install browser tooling for isolated visual QA
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.65.0
