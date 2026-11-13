@@ -39,7 +39,7 @@
 | Acesso cruzado entre OMs, unidades ou por papel comercial | Escopo montado no servidor via token + membership, unidade/UG e objeto; testes negativos W12; IAM/Rules do W11 permanecem fechados |
 | Paciente em jejum, alergia, transferência, mudança de prescrição | Rechecagem antes de preparar/expedir/entregar; W10 cobre transferência/entrega, W12 bloqueia novo jejum e preserva snapshot. Identificação positiva com dois identificadores continua obrigatória |
 | Requisição duplicada após timeout, dupla aba/cozinheiros | Transação Firestore, ETag, idempotencyKey, versão create-only e reservas únicas; asserts W10/W12 contra duplicidade |
-| Pedido tardio após 06/10/16 | Motor diferencia horário do mapa de tolerância de entrega +30 minutos; não libera automaticamente principal após tolerância; exceção clínica é ocorrência/contato, não aprovação nutricional de rotina |
+| Pedido tardio após 06/10/16 | Justificativa obrigatória e alerta prioritário visível para a Cozinha, com destaque até +30 minutos e após +30 minutos. O atraso, isoladamente, NÃO suspende refeições nem exige avaliação/contato assistencial; jejum, alergias e incompatibilidade clínica permanecem bloqueadores independentes. |
 | PWA privado com asset ausente | Rota de ícones permitida apenas no serviço QA IAM; sem introduzir Service Worker que armazene dados clínicos |
 | Perda de rede, indisponibilidade GCP ou restart | Operação falha fechada sem cache clínico local e sem SQLite de fallback; protocolo externo institucional necessário para continuidade |
 | Backup/restore, retenção e LGPD | Export/import real no emulador **PASS**; backup/restauração do Firestore GCP, retenção e aprovação institucional **pendentes/bloqueadores clínicos** |
@@ -147,3 +147,9 @@ Synthetic accounts/Firestore clinical flows NOT YET TESTED
 - Teste browser real `tests/hospital/browser/w12-premium-preview.spec.mjs`: perfis Cozinha/UTI/Nutrição/Admin com Firebase Auth e Firestore Emulator, menus autorizados, navegação, cadastro recolhível, drawer móvel e capturas **exclusivamente sintéticas**. Workflow W12 registra artefato `hospital-w12-premium-visual` quando aprovado.
 
 **Status técnico atual do redesign:** código versionado na PR #553; testes GitHub Actions executados por commit. Não afirmar PASS até consultar o resultado do SHA final. A revisão privada GCP `cozinha-dietetica-qa-00003-tot` foi construída anteriormente a partir de `44ecc7f0`, **não contém o redesign** e deve permanecer 0% de tráfego. A validação visual ocorrerá exclusivamente na prévia local, sem novo deploy.
+
+### Ajuste operacional — solicitação fora do horário sem burocracia assistencial (12/11/2026)
+
+A partir desta revisão W12, os horários 06h/10h/16h e as tolerâncias 06h30/10h30/16h30 determinam **somente o nível do alerta prioritário à Cozinha**. A Unidade informa a **justificativa**, inclusive após 30 minutos, e a dieta principal/secundária permanece `REQUESTED` (quando clinicamente segura), podendo seguir para produção e distribuição. Não há necessidade de contato, avaliação ou aprovação assistencial **em razão exclusiva do atraso**; os botões e campos correspondentes foram removidos do cadastro. O mapa e a dieta continuam com trilha auditável do atraso. Bloqueios reais (jejum, alergias, divergência de prescrição, mudança clínica durante preparo) continuam vigentes e separados da regra de horário.
+
+Teste W12 atualizado: refeição principal após tolerância é aceita no Firestore Emulator, permanece solicitada e permite lote da Cozinha; fluxo de navegador verifica a presença do alerta e a ausência dos controles de exceção assistencial. Não há alteração de deploy nem autorização para pacientes reais.
