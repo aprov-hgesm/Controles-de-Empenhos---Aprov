@@ -75,7 +75,7 @@ test('Cadastro de textura pastosa não exige item pastoso no catálogo',async({b
  await expect(form.getByRole('button',{name:'Salvar e concluir mapa'})).toBeEnabled();
  await form.getByRole('button',{name:'Salvar e concluir mapa'}).click();
  await expect(form).toHaveCount(0,{timeout:30000});
- await expect(maps.getByText('Pessoa Fictícia Teste Pastosa')).toBeVisible({timeout:30000});
+ await expect(maps.getByRole('cell',{name:/Pessoa Fictícia Teste Pastosa/}).first()).toBeVisible({timeout:30000});
  await expect(maps.getByRole('button',{name:'Enviar mapa de dietas à cozinha'})).toBeVisible();
  await context.close();
 });
