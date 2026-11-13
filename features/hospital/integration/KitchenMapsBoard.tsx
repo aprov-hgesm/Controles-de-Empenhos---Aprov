@@ -55,7 +55,8 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
    }));
    const unique=new Map<string,KitchenMapReceipt>();
    for(const batch of batches)for(const row of batch.maps)unique.set(row.id,row);
-   setMaps([...unique.values()].sort((a,b)=>a.cycleId.localeCompare(b.cycleId)||a.unitId.localeCompare(b.unitId)));
+   const priority=(m:KitchenMapReceipt)=>m.submissionTimingStage==='AFTER_TOLERANCE'||m.latestExtraTimingStage==='AFTER_TOLERANCE'?2:m.late||m.hasLateAmendment?1:0;
+   setMaps([...unique.values()].sort((a,b)=>priority(b)-priority(a)||a.cycleId.localeCompare(b.cycleId)||a.unitId.localeCompare(b.unitId)));
    setMeals(batches.flatMap(x=>x.meals));
    setIssues(feedback.flat());
    setError('');
@@ -148,9 +149,9 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
        <p className="font-extrabold text-[#1a3b6c]">{map.unitId} · Mapa {map.cycleId}h</p>
        <p className="mt-1 text-xs text-slate-500">{requests.filter(x=>x.status!=='CANCELLED').length} dietas · {mapLateLabel(map)||'Enviado pela unidade'}</p>
        <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[#315b91]">{(['PRIMARY','SECONDARY'] as const).map(type=><span key={type} className="rounded-full bg-blue-50 px-2.5 py-1">{mealName(map.cycleId,type)}: {requests.filter(m=>m.mealType===type&&m.status!=='CANCELLED').length}</span>)}</div>
-       {hasLate&&<p role="alert" className={'mt-2 rounded-xl border p-2 text-xs font-extrabold '+(urgent?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>{mapLateLabel(map)||'Contém dieta extraordinária'}{extras.length?' · '+extras.length+' pedido(s) extras':''}{urgent?' · atenção à tolerância de 30 minutos':''}</p>}
+       {hasLate&&<p role="alert" className={'mt-2 rounded-xl border p-2 text-xs font-extrabold '+(urgent?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>ALERTA PRIORITÁRIO · {mapLateLabel(map)||'Contém dieta extraordinária'}{extras.length?' · '+extras.length+' pedido(s) extras':''}{urgent?' · após os 30 minutos':''}</p>}
        <p className="mt-2 text-sm font-semibold text-[#285b9e]" role="status">{progress.headline}</p>
-       {!!map.needsKitchenReview&&<p className="mt-2 flex items-center gap-1 text-xs font-bold text-amber-700"><AlertCircle size={14}/> Atenção: mapa com alteração tardia. Reconferir antes de liberar.</p>}
+       
        {feedback.some(x=>x.status==='OPEN')&&<p className="mt-2 text-xs font-bold text-rose-700">{feedback.filter(x=>x.status==='OPEN').length} ocorrência(s) aguardando análise</p>}
       </div>
       <button type="button" className="hospital-secondary-action shrink-0 px-2.5" aria-expanded={open} aria-label={'Detalhes do mapa '+map.unitId+' '+map.cycleId+'h'} onClick={()=>setExpanded(open?'':map.id)}><ChevronDown size={16}/></button>
@@ -163,7 +164,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
      </div>
      {open&&<div className="mt-4 space-y-3">
       <MealProgressPair map={map} meals={requests} compact/>
-      {extras.length>0&&<div className="space-y-1 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{extras.map(m=><p key={m.id}>{mealName(map.cycleId,m.mealType)} · {timingLabel(m.timingStage,m.mealType)}{m.status==='SUSPENDED'?' · aguardando revisão':''}</p>)}</div>}
+      {extras.length>0&&<div className="space-y-1 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{extras.map(m=><p key={m.id}>{mealName(map.cycleId,m.mealType)} · {timingLabel(m.timingStage,m.mealType)}{m.status==='SUSPENDED'?' · bloqueio de segurança':''}</p>)}</div>}
       {feedback.map(issue=><div key={issue.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
        <p className="text-xs font-bold text-slate-700">{issue.status==='OPEN'?'Ocorrência pendente':'Ocorrência tratada'} · {issue.unitId}</p>
        <p className="mt-1 text-sm text-slate-700">{issue.note}</p>
