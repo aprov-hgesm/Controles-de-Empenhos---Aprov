@@ -169,7 +169,7 @@ export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycl
     d.text('ALERGIA REGISTRADA - CONFERIR COMPOSIÇÃO',x+8,y+48,{maxWidth:w-16});}
   d.setFont('helvetica','bold');d.setFontSize(7.5);
   if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
-  d.text(phaseNote(r.phase),x+8,y+54,{maxWidth:w-16});
+  d.text(phaseNote(r.phase)+'  ·  '+date+'  ·  '+cycle+'h',x+8,y+54,{maxWidth:w-16});
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
 export function printDistributionReport(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
@@ -214,6 +214,6 @@ export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle
   }
   if(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO')d.setTextColor(153,78,22);else d.setTextColor(...ink);
   d.setFont('helvetica','bold');d.setFontSize(7.3);
-  d.text(phaseNote(r.phase),x+8,y+55,{maxWidth:w-16});
+  d.text(phaseNote(r.phase)+'  ·  '+date+'  ·  '+cycle+'h',x+8,y+55,{maxWidth:w-16});
  }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
