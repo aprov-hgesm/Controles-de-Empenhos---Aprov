@@ -196,5 +196,16 @@ test('Distribuição: fluxo visível da montagem à entrega com horário, sem er
  await flow.getByRole('button',{name:'Confirmar entrega'}).click();
  await expect(flow.getByRole('heading',{name:/Entregas concluídas · 1/})).toBeVisible({timeout:30000});
  await flow.screenshot({path:join(screenshots,'distribuicao-entrega-confirmada.png')});
+ // A submitted future sample stays in production; switching tabs keeps unit/date/cycle/meal.
+ await dist.getByLabel('Dia',{exact:true}).fill(future(2));
+ await dist.locator('[data-testid="distribution-meal-primary"]').click();
+ await expect(flow.getByRole('button',{name:'Abrir Produção deste mapa'})).toBeVisible({timeout:30000});
+ await flow.getByRole('button',{name:'Abrir Produção deste mapa'}).click();
+ await expect(page.locator('[data-testid="hospital-page-producao"]')).toBeVisible();
+ await expect(page.locator('[data-mode="operations"]').getByLabel('Data',{exact:true})).toHaveValue(future(2));
+ await expect(page.getByRole('button',{name:/Próxima etapa: Distribuição/})).toBeVisible();
+ await page.getByRole('button',{name:/Próxima etapa: Distribuição/}).click();
+ await expect(dist.getByLabel('Dia',{exact:true})).toHaveValue(future(2));
+ await expect(dist.locator('[data-testid="distribution-meal-primary"]')).toHaveAttribute('aria-pressed','true');
  await ctx.close();
 });
