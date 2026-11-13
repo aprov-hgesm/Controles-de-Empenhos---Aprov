@@ -1,11 +1,12 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import {AlertCircle,MessageCircle,RefreshCw} from 'lucide-react';
-import {OrderProgress} from './OrderProgress';
+import {MealProgressPair} from './MealProgressPair';
+import {mapLateLabel,mealName,timingLabel} from './meal-period.mjs';
 
 type Cycle='06'|'10'|'16';
-type MapItem={id:string;unitId:string;localDate:string;cycleId:Cycle;status:string;revision:number;total?:number;late?:boolean;submittedAt?:string|null;receivedAt?:string|null};
-type MealItem={id:string;mealType:string;status:string;advisory:string};
+type MapItem={id:string;unitId:string;localDate:string;cycleId:Cycle;status:string;revision:number;total?:number;late?:boolean;submissionTimingStage?:string;hasLateAmendment?:boolean;latestExtraTimingStage?:string;submittedAt?:string|null;receivedAt?:string|null};
+type MealItem={id:string;mealType:string;status:string;advisory:string;timingStage?:string;lateReason?:string|null};
 type MapDetail={map:MapItem;meals:MealItem[];receipt:{submittedAt:string;submissionVersion:number}|null};
 type ApiResult<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const today=()=>{
@@ -72,7 +73,7 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
     <label className="grid gap-1 text-xs font-semibold text-slate-600">Data do mapa<input type="date" aria-label="Data do mapa" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={date} onChange={e=>{setDate(e.target.value);setSelectedId('');setDetails(null);}}/></label>
    </div>
    <div className="mt-5 flex flex-wrap items-center gap-2" role="group" aria-label="Selecionar horário do mapa">
-    {(['06','10','16'] as const).map(hour=><button type="button" key={hour} aria-pressed={cycle===hour} className={cycle===hour?'hospital-primary-action':'hospital-secondary-action'} onClick={()=>{setCycle(hour);setSelectedId('');setDetails(null);}}>{hour}h</button>)}
+    {(['06','10','16'] as const).map(hour=><button type="button" key={hour} aria-pressed={cycle===hour} className={cycle===hour?'hospital-primary-action':'hospital-secondary-action'} onClick={()=>{setCycle(hour);setSelectedId('');setDetails(null);}}>{hour}h · {mealName(hour,'PRIMARY')} + {mealName(hour,'SECONDARY')}</button>)}
     <button type="button" className="hospital-secondary-action ml-auto" disabled={loading} onClick={()=>void load()}><RefreshCw size={15} className="inline" aria-hidden="true"/> Atualizar</button>
    </div>
   </div>
@@ -84,8 +85,8 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
   {maps.length>1&&<div className="flex flex-wrap gap-2">{maps.map(m=><button key={m.id} type="button" onClick={()=>void inspect(m.id)} aria-pressed={details?.map.id===m.id}
    className={details?.map.id===m.id?'hospital-primary-action':'hospital-secondary-action'}>Mapa {m.cycleId}h · {m.status==='DRAFT'?'Em edição':'Enviado'}</button>)}</div>}
   {details&&<div className="space-y-4">
-   <OrderProgress map={details.map} meals={details.meals}/>
-   {details.map.late&&<p role="alert" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><AlertCircle size={17}/> Mapa enviado fora do horário. A cozinha precisa reconferir os pedidos afetados.</p>}
+   <MealProgressPair map={details.map} meals={details.meals}/>
+   {!!mapLateLabel(details.map)&&<p role="alert" className={'flex items-center gap-2 rounded-xl border p-3 text-sm font-semibold '+(details.map.submissionTimingStage==='AFTER_TOLERANCE'||details.map.latestExtraTimingStage==='AFTER_TOLERANCE'?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-800')}><AlertCircle size={17}/> {mapLateLabel(details.map)}. As refeições permanecem acompanhadas separadamente.</p>}
    {details.map.status!=='DRAFT'&&<div className="hospital-panel p-4 sm:p-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
      <div><h3 className="font-extrabold text-[#1c456f]">Houve alguma alteração?</h3><p className="mt-1 text-xs text-slate-600">Informe o leito e o que aconteceu. A cozinha receberá a ocorrência para verificar.</p></div>
@@ -98,7 +99,7 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
    </div>}
    <details className="hospital-panel p-4"><summary className="cursor-pointer text-sm font-bold text-[#1d4b83]">Ver os registros das refeições ({details.meals.length})</summary>
     <ul className="mt-3 space-y-2 text-sm">{details.meals.map(m=><li className="flex justify-between gap-2 rounded-lg bg-slate-50 p-3" key={m.id}>
-     <span>{m.mealType==='PRIMARY'?'Refeição principal':'Refeição secundária'}</span>
+     <span>{mealName(cycle,m.mealType)}{m.timingStage&&m.timingStage!=='ON_TIME'&&<small className={'block font-bold '+(m.timingStage==='AFTER_TOLERANCE'?'text-rose-800':'text-amber-800')}>{timingLabel(m.timingStage,m.mealType)}</small>}</span>
      <span className="font-semibold">{m.status==='DELIVERED'?'Entregue':m.status==='DISPATCHED'?'Em rota':m.status==='READY'?'Pronta':m.status==='PREPARING'?'Em preparo':m.status==='REQUESTED'?'Aguardando':m.status==='RECEIVED_BY_UNIT'?'Recebida na unidade':m.status==='SUSPENDED'?'Suspensa':m.status==='SAFETY_BLOCKED'?'Bloqueada':m.status==='CANCELLED'?'Cancelada':'Em análise'}</span>
     </li>)}</ul>
    </details>
