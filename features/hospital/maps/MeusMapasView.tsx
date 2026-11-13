@@ -11,7 +11,7 @@ type AdmissionRow={admissionId:string;patientId:string;patientCode:string;patien
 type DietRow={id:string;code:string;label:string;type?:string;active:boolean};
 type Reference={id:string;catalogItemId:string;sourceRef:string;sourceVersion?:string};
 type MapRow={id:string;unitId:string;localDate:string;cycleId:Cycle;status:'DRAFT'|'SUBMITTED'|'CLOSED';revision:number;late?:boolean;submissionTimingStage?:string;hasLateAmendment?:boolean;latestExtraTimingStage?:string;submittedAt?:string|null;receivedAt?:string|null};
-type MealRow={id:string;admissionId:string;mealType:MealType;dietCode:string;observation?:string;status:string;revision:number;advisory:string;timingStage?:string;lateReason?:string|null};
+type MealRow={id:string;admissionId:string;mealType:MealType;dietCode:string;observation?:string;status:string;revision:number;advisory:string;timingStage?:string;lateReason?:string|null;allergyAlert?:boolean;allergyNote?:string;recipientType?:string};
 type Receipt={mapId:string;unitId:string;localDate:string;cycleId:Cycle;submittedAt:string;submittedByUid:string;submissionVersion:number;currentVersion:number;late:boolean;needsKitchenReview:boolean;status:string};
 type MapDetail={map:MapRow;meals:MealRow[];summary:{dietCode:string;mealType:MealType;count:number;blocked:number}[];receipt:Receipt|null};
 type CommandResult<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
@@ -40,6 +40,10 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const [cycle,setCycle]=useState<Cycle>('06');
  const [map,setMap]=useState<MapDetail|null>(null);
  const [quickMode,setQuickMode]=useState(false);
+ const [editingMeal,setEditingMeal]=useState<MealRow|null>(null);
+ const [editDiet,setEditDiet]=useState('');
+ const [editObservation,setEditObservation]=useState('');
+ const [editReason,setEditReason]=useState('');
  const [available,setAvailable]=useState<MapRow[]>([]);
  const [admissions,setAdmissions]=useState<AdmissionRow[]>([]);
  const [catalog,setCatalog]=useState<DietRow[]>([]);
@@ -150,6 +154,22 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
    await loadMap(map.map.id);
   },'Mapa enviado. Recibo disponível');
  };
+ const openEdit=(meal:MealRow)=>{
+  setEditingMeal(meal);setEditDiet(meal.dietCode);setEditObservation(meal.observation??'');
+  setEditReason('');setQuickMode(false);
+ };
+ const saveEdit=async()=>{
+  if(!map||!editingMeal)return;
+  if(map.map.status!=='DRAFT'&&editReason.trim().length<5){setError('Informe o motivo da correção enviada à Cozinha.');return}
+  await perform(async()=>{
+   await request('maps',map.map.status==='DRAFT'?'map.meal.draftEdit':'map.correction.request',{
+    mapId:map.map.id,mealId:editingMeal.id,newDietCode:editDiet,observation:editObservation,
+    expectedMapRevision:map.map.revision,expectedMealRevision:editingMeal.revision,
+    idempotencyKey:crypto.randomUUID(),...(map.map.status==='DRAFT'?{}:{reason:editReason.trim()})
+   });
+   await loadMap(map.map.id);setEditingMeal(null);
+  },map.map.status==='DRAFT'?'Dieta atualizada no rascunho':'Correção enviada à Cozinha. A refeição original ficou suspensa até a ciência.');
+ };
  const close=async()=>{
   if(!map)return;
   await perform(async()=>{
@@ -207,11 +227,14 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
       {map.map.status==='DRAFT'&&!quickMode&&<button className="hospital-primary-action" type="button" disabled={disabled||map.meals.length===0||(extraordinary&&reason.trim().length<5)} onClick={()=>void send()}>Enviar mapa de dietas à cozinha</button>}
      </div>
     </div>
-    {!quickMode&&map.map.status==='DRAFT'&&<p className="mt-2 text-sm text-slate-500">Confira as dietas na lista abaixo, faça as alterações necessárias e depois envie o mapa.</p>}
+    {!quickMode&&map.map.status==='DRAFT'&&<div className="mt-2 space-y-2 text-sm text-slate-500">
+      <p>Confira as dietas na lista abaixo, faça as alterações necessárias e depois envie o mapa.</p>
+      {extraordinary&&<label className="grid gap-1 font-semibold text-amber-900">Justificativa do envio fora do prazo<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Motivo do envio extraordinário (mínimo 5 caracteres)"/></label>}
+    </div>}
   </section>}
   {map&&quickMode&&<MapRapidRegistration organizationId={organizationId} getIdToken={getIdToken}
     map={map.map} catalog={catalog} onCancel={()=>setQuickMode(false)}
-    onSaved={async finish=>{await loadMap(map.map.id);await reload();setQuickMode(!finish)}}/>}
+    onSaved={async (finish,savedReason)=>{await loadMap(map.map.id);await reload();if(savedReason)setReason(savedReason);setQuickMode(!finish)}}/>}
   {map&&<section style={panel}>
     <div className="w3-no-print" style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
      <h3 style={{margin:0}}>Mapa {map.map.cycleId}h · {map.map.localDate} · {map.map.status}</h3>
@@ -241,11 +264,25 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
       {map.map.status==='SUBMITTED'&&<button style={actionStyle} disabled={disabled} onClick={()=>void close()}>Fechar no horário oficial</button>}
            </div>
     </div></details>
+    {editingMeal&&<div className="w3-no-print mt-4 space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-4" data-testid="map-meal-editor">
+      <h4 className="font-extrabold text-[#174680]">{map.map.status==='DRAFT'?'Editar dieta antes do envio':'Solicitar correção à Cozinha'}</h4>
+      <p className="text-sm text-slate-600">{mealName(cycle,editingMeal.mealType)} · {admissions.find(x=>x.admissionId===editingMeal.admissionId)?.patientName??'Paciente'}</p>
+      <label className="grid gap-1 text-sm font-semibold">Dieta correta no catálogo<select style={inputStyle} value={editDiet} onChange={e=>setEditDiet(e.target.value)}>{catalog.map(d=><option value={d.id} key={d.id}>{d.label}</option>)}</select></label>
+      <label className="grid gap-1 text-sm font-semibold">Observação<textarea style={inputStyle} rows={2} maxLength={180} value={editObservation} onChange={e=>setEditObservation(e.target.value)}/></label>
+      {map.map.status!=='DRAFT'&&<label className="grid gap-1 text-sm font-semibold">Motivo da correção<textarea style={inputStyle} rows={2} value={editReason} onChange={e=>setEditReason(e.target.value)} placeholder="Descreva a dieta enviada incorretamente e a alteração necessária"/></label>}
+      {map.map.status!=='DRAFT'&&<p className="text-xs font-semibold text-amber-800">A refeição incorreta será suspensa imediatamente. A nova dieta somente poderá retornar à produção após ciência da Cozinha, conferência do prazo e recolhimento físico, quando já expedida.</p>}
+      <div className="flex flex-wrap gap-2">
+       <button type="button" className="hospital-primary-action" disabled={disabled||(map.map.status!=='DRAFT'&&(editReason.trim().length<5||editDiet===editingMeal.dietCode))} onClick={()=>void saveEdit()}>{map.map.status==='DRAFT'?'Salvar alteração':'Solicitar correção e suspender dieta incorreta'}</button>
+       <button type="button" className="hospital-secondary-action" onClick={()=>setEditingMeal(null)}>Cancelar edição</button>
+      </div>
+    </div>}
     <h4 className="w3-no-print">Pedidos e situação</h4>
     <label className="w3-no-print">Filtrar por internação, dieta ou status<input style={inputStyle} value={filter} onChange={e=>setFilter(e.target.value)}/></label>
     <div className="w3-no-print" style={{overflowX:'auto'}}>
      <table style={{width:'100%',borderCollapse:'collapse',marginTop:12}}><thead><tr><th align="left">Internação</th><th align="left">Refeição</th><th align="left">Dieta</th><th align="left">Estado</th><th>Ação</th></tr></thead>
-      <tbody>{menu.map(meal=><tr key={meal.id} style={{borderTop:'1px solid #cbd5e1'}}><td>{admissions.find(a=>a.admissionId===meal.admissionId)?.patientName??'Paciente'} · leito {admissions.find(a=>a.admissionId===meal.admissionId)?.bedLabel??'a conferir'}</td><td>{mealName(cycle,meal.mealType)}</td><td>{catalog.find(x=>x.id===meal.dietCode)?.label??'Dieta'}</td><td><span className="block text-xs font-semibold">{meal.status==='DELIVERED'?'Entregue':meal.status==='SUSPENDED'?'Suspensa · conferir':meal.status==='SAFETY_BLOCKED'?'Bloqueada':meal.status==='PREPARING'?'Em preparo':meal.status==='READY'?'Pronta':meal.status==='DISPATCHED'?'Em distribuição':meal.status==='RECEIVED_BY_UNIT'?'Em distribuição':meal.status==='REQUESTED'?'Aguardando cozinha':meal.status==='CANCELLED'?'Cancelada':'Em análise'}</span>{meal.timingStage&&meal.timingStage!=='ON_TIME'&&<span className={'mt-1 inline-block rounded-full px-2 py-1 text-[11px] font-extrabold '+(meal.timingStage==='AFTER_TOLERANCE'?'bg-rose-100 text-rose-900':'bg-amber-100 text-amber-900')}>{timingLabel(meal.timingStage,meal.mealType)}</span>}</td><td align="center"><button type="button" disabled={disabled||['CANCELLED','DELIVERED'].includes(meal.status)} onClick={()=>void removeMeal(meal)}>Remover/suspender</button></td></tr>)}</tbody>
+      <tbody>{menu.map(meal=><tr key={meal.id} style={{borderTop:'1px solid #cbd5e1'}}><td>{admissions.find(a=>a.admissionId===meal.admissionId)?.patientName??'Paciente'} · leito {admissions.find(a=>a.admissionId===meal.admissionId)?.bedLabel??'a conferir'}</td><td>{mealName(cycle,meal.mealType)}</td><td>{catalog.find(x=>x.id===meal.dietCode)?.label??'Dieta'}</td><td><span className="block text-xs font-semibold">{meal.status==='DELIVERED'?'Entregue':meal.status==='SUSPENDED'?'Suspensa · conferir':meal.status==='SAFETY_BLOCKED'?'Bloqueada':meal.status==='PREPARING'?'Em preparo':meal.status==='READY'?'Pronta':meal.status==='DISPATCHED'?'Em distribuição':meal.status==='RECEIVED_BY_UNIT'?'Em distribuição':meal.status==='REQUESTED'?'Aguardando cozinha':meal.status==='CANCELLED'?'Cancelada':'Em análise'}</span>{meal.timingStage&&meal.timingStage!=='ON_TIME'&&<span className={'mt-1 inline-block rounded-full px-2 py-1 text-[11px] font-extrabold '+(meal.timingStage==='AFTER_TOLERANCE'?'bg-rose-100 text-rose-900':'bg-amber-100 text-amber-900')}>{timingLabel(meal.timingStage,meal.mealType)}</span>}</td><td align="center"><div className="flex flex-wrap justify-center gap-2">
+ <button type="button" disabled={disabled||['CANCELLED','DELIVERED','SUSPENDED'].includes(meal.status)} onClick={()=>openEdit(meal)}>{map.map.status==='DRAFT'?'Editar':'Solicitar correção'}</button>
+ <button type="button" disabled={disabled||['CANCELLED','DELIVERED'].includes(meal.status)} onClick={()=>void removeMeal(meal)}>Remover/suspender</button></div></td></tr>)}</tbody>
      </table>
      {menu.length===0&&<p>Nenhum pedido corresponde ao filtro.</p>}
     </div>
