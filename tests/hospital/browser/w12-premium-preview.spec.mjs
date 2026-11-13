@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
+import {readFileSync} from 'node:fs';
+import {PDFDocument} from 'pdf-lib';
 
 const origin='http://127.0.0.1:3100';
 const screenshots=join(process.env.RUNNER_TEMP||process.cwd(),'hospital-w12-premium-visual');
@@ -104,4 +106,50 @@ test('W12 premium mobile drawer, keyboard close and navigation',async({browser})
  mkdirSync(screenshots,{recursive:true});
  await page.screenshot({path:join(screenshots,'cozinha-distribuicao-mobile.png'),fullPage:true});
  await context.close();
+});
+
+test('W12 two-stage printed food and patient labels and landscape route PDFs',async({browser})=>{
+ const ctx=await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true});
+ const page=await ctx.newPage();
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
+   .formatToParts(new Date(Date.now()+2*86400000));
+ const part=key=>parts.find(x=>x.type===key)?.value??'';
+ const target=part('year')+'-'+part('month')+'-'+part('day');
+ const checkPdf=async(download)=>{
+  const bytes=readFileSync(await download.path());
+  expect(bytes.subarray(0,4).toString()).toBe('%PDF');
+  const pdf=await PDFDocument.load(bytes);
+  expect(pdf.getPageCount()).toBeGreaterThan(0);
+  const size=pdf.getPage(0).getSize();
+  expect(size.width).toBeGreaterThan(size.height);
+ };
+ await login(page,'qa-cozinha@example.test');
+ await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Produção',exact:true}).click();
+ await page.getByLabel('Data',{exact:true}).fill(target);
+ await expect(page.locator('[data-testid="production-diet-group"]')).toBeVisible({timeout:30000});
+ const file1=page.waitForEvent('download');
+ await page.getByRole('button',{name:/Relatório de produção/}).click();
+ await checkPdf(await file1);
+ const start=page.getByRole('button',{name:/Iniciar preparo \(/}).first();
+ if(await start.isVisible()){
+  await start.click();
+  await expect(page.getByRole('button',{name:/Conferi \d+ dietas/})).toBeVisible({timeout:30000});
+ }
+ const done=page.getByRole('button',{name:/Conferi \d+ dietas/}).first();
+ if(await done.isVisible())await done.click();
+ await expect(page.getByRole('button',{name:/Etiquetas das dietas prontas/})).toBeEnabled({timeout:30000});
+ const food=page.waitForEvent('download');
+ await page.getByRole('button',{name:/Etiquetas das dietas prontas/}).click();
+ await checkPdf(await food);
+
+ await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Distribuição',exact:true}).click();
+ await page.getByLabel('Dia',{exact:true}).fill(target);
+ await expect(page.getByRole('button',{name:/Etiquetas dos pacientes/})).toBeEnabled({timeout:30000});
+ const patient=page.waitForEvent('download');
+ await page.getByRole('button',{name:/Etiquetas dos pacientes/}).click();
+ await checkPdf(await patient);
+ const route=page.waitForEvent('download');
+ await page.getByRole('button',{name:/Relatório de distribuição/}).click();
+ await checkPdf(await route);
+ await ctx.close();
 });
