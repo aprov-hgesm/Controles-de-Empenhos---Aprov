@@ -1,0 +1,54 @@
+name: Hospital Rapid Map QA (synthetic only)
+on:
+  pull_request:
+    branches: [feat/cozinha-dietetica-w12-homologacao-piloto]
+  push:
+    branches: [feat/cozinha-dietetica-mapa-cadastro-direto-20261112]
+permissions:
+  contents: read
+concurrency:
+  group: hospital-rapid-map-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hospital-rapid-map:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    env:
+      CI: '1'
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install
+        run: npm ci --ignore-scripts
+      - name: Server code syntax
+        run: |
+          node --check lib/server/hospital/maps/rapid-registration.mjs
+          node --check lib/server/hospital/maps/correction.mjs
+          node --check lib/server/hospital/maps/firestore-service.mjs
+          node --check lib/server/hospital/distribution/firestore-service.mjs
+      - name: Firestore Emulator E2E - patient companion extras correction security
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test --test-concurrency=1 tests/hospital/firebase/rapid-map-e2e.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs"
+      - name: Contract, previous W12 regression
+        run: |
+          node --test tests/hospital/meal-period-deadlines.test.mjs tests/hospital/order-progress.test.mjs
+          npm run verify:emprovex-core-protection
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
