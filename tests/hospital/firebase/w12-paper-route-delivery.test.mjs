@@ -85,5 +85,35 @@ test('W12 real Emulator: paper observation, kitchen production, patient label an
   assert.equal(finalStatus.mealStatus,'DELIVERED');
   assert.ok(finalStatus.deliveredAt);
   await assert.rejects(cmd('meal.deliver.paper',{deliveryTime,paperConfirmed:true,identityChecked:true}),{code:'PRECONDITION'});
+
+  // Distinct meals from the same 06h map, submitted after the primary's 30-minute limit.
+  // A late main meal must be recorded and visible, never silently authorized.
+  const overdueDate=sao(new Date(Date.now()-86400000));
+  const overdueMap=await maps.createDraft(u,{unitId:unit,localDate:overdueDate,cycleId:'06'});
+  const overdueMain=await maps.setMeal(u,{mapId:overdueMap.id,admissionId:adm.id,mealType:'PRIMARY',
+   medicalReferenceId:ref.id,dietCode:diet.id,observation:'Dieta principal ficticia',
+   expectedMapRevision:overdueMap.revision,idempotencyKey:id('late_main'),
+   reason:'Solicitação principal registrada após a tolerância para avaliação'});
+  assert.equal(overdueMain.meal.status,'SUSPENDED');
+  assert.equal(overdueMain.meal.timingStage,'AFTER_TOLERANCE');
+  assert.equal(overdueMain.requiresAssistanceEscalation,true);
+  assert.equal(overdueMain.meal.suspensionReason,'LATE_PRIMARY_AFTER_TOLERANCE_ASSISTANCE');
+  const overdueSnack=await maps.setMeal(u,{mapId:overdueMap.id,admissionId:adm.id,mealType:'SECONDARY',
+   medicalReferenceId:ref.id,dietCode:diet.id,observation:'Lanche ficticio',
+   expectedMapRevision:overdueMain.map.revision,idempotencyKey:id('late_snack'),
+   reason:'Refeição secundária fora do horário com cozinha comunicada'});
+  assert.equal(overdueSnack.meal.status,'REQUESTED');
+  assert.equal(overdueSnack.meal.timingStage,'AFTER_TOLERANCE');
+  assert.notEqual(overdueSnack.meal.id,overdueMain.meal.id);
+  const sentOverdue=await maps.submitMap(u,{mapId:overdueMap.id,expectedRevision:overdueSnack.map.revision,
+   idempotencyKey:id('late_submit'),lateReason:'Mapa atrasado de teste para comunicação assistencial'});
+  assert.equal(sentOverdue.map.late,true);
+  assert.equal(sentOverdue.map.submissionTimingStage,'AFTER_TOLERANCE');
+  const verify=await maps.getMap(u,{mapId:overdueMap.id});
+  assert.equal(verify.meals.filter(x=>x.mealType==='PRIMARY').length,1);
+  assert.equal(verify.meals.filter(x=>x.mealType==='SECONDARY').length,1);
+  assert.equal(verify.meals.find(x=>x.mealType==='PRIMARY').status,'SUSPENDED');
+  await assert.rejects(production.createBatch(k,{unitId:unit,localDate:overdueDate,cycleId:'06',
+   mealIds:[overdueMain.meal.id],preparationLabel:'Ficticio indevido',idempotencyKey:id('blocked_batch')}),{code:'PRECONDITION'});
  }finally{store.close()}
 });
