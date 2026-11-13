@@ -27,7 +27,7 @@ for(const [cycle,base] of [['06','06'],['10','10'],['16','16']]){
    assert.equal(check(String(Number(base)-1).padStart(2,'0'),'59').stage,'ON_TIME');
    assert.equal(check(base,'00').stage,'ON_TIME');assert.equal(check(base,'10').stage,'LATE_BEFORE_TOLERANCE');assert.equal(check(base,'31').stage,'AFTER_TOLERANCE');
    assert.equal(check(base,'10').mapOnTime,false);assert.equal(check(base,'10').principalDeliveryTolerancePassed,false);
-   assert.equal(check(base,'31').recommendation,'SECONDARY_OR_CLINICAL_ESCALATION');
+   assert.equal(check(base,'31').recommendation,'PRIORITY_KITCHEN_ALERT');
  });
 }
 test('06h pode ser preparada no dia anterior e aplica timezone oficial',()=>{assert.equal(classifyMealTiming({cycleId:'06',localDate:'2026-11-11',at:'2026-11-10T23:00:00-03:00'}).stage,'ON_TIME');assert.equal(classifyMealTiming({cycleId:'06',localDate:'2026-11-11',at:'2026-11-11T09:10:00Z'}).stage,'LATE_BEFORE_TOLERANCE')});
