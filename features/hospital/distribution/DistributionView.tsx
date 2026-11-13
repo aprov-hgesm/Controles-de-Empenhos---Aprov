@@ -11,7 +11,7 @@ type Status={
  recipientType?:'PATIENT'|'COMPANION';allergyAlert?:boolean;allergyNote?:string;
  routeReconciliationRequired:boolean;mainMealAlert:string|null
 };
-type Props={organizationId:string;unitId:string;mealIds:readonly string[];getAuthorization:()=>Promise<string>;mealTitle?:string};
+type Props={organizationId:string;unitId:string;mealIds:readonly string[];getAuthorization:()=>Promise<string>;mealTitle?:string;onOpenProduction?:()=>void};
 type Api<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 type Operation='assembly.start'|'assembly.complete'|'assembly.check'|'batch.dispatch'|'meal.deliver.paper';
 
@@ -29,7 +29,7 @@ const stage=(item:Status)=>{
  if(['ASSEMBLED','ASSEMBLING'].includes(item.distributionState))return 'Montagem em andamento';
  return 'Dieta pronta para montagem';
 };
-export function DistributionView({organizationId,unitId,mealIds,getAuthorization,mealTitle}:Props){
+export function DistributionView({organizationId,unitId,mealIds,getAuthorization,mealTitle,onOpenProduction}:Props){
  const [status,setStatus]=useState<Record<string,Status>>({});
  const [selected,setSelected]=useState<string[]>([]);
  const [ingredients,setIngredients]=useState('');
@@ -148,9 +148,12 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
      </div>
      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-800">{preparing.length} para conferir</span>
     </div>
-    {pendingProduction.length>0&&<p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-     <Clock3 size={15} className="mr-1 inline"/> {pendingProduction.length} refeição(ões) ainda na Produção. As etiquetas definitivas já podem ser impressas, mas as bandejas só entram nesta etapa quando estiverem prontas.
-    </p>}
+    {pendingProduction.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+     <p className="min-w-[175px] flex-1 text-xs text-slate-700"><Clock3 size={15} className="mr-1 inline"/>
+      {pendingProduction.length} refeição(ões) ainda na Produção. As etiquetas definitivas estão disponíveis; a montagem começa quando a dieta fica pronta.
+     </p>
+     {onOpenProduction&&<button type="button" className="hospital-secondary-action" onClick={onOpenProduction}>Abrir Produção deste mapa</button>}
+    </div>}
     {preparing.length===0&&<p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Nenhuma bandeja aguardando conferência.</p>}
     <div className="grid gap-2">
      {preparing.map(m=><div key={m.mealId} className="flex flex-wrap items-start gap-3 rounded-xl border border-slate-200 bg-[#fbfdff] p-3">
