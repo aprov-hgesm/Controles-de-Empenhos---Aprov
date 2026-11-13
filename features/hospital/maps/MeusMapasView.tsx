@@ -9,7 +9,7 @@ type AdmissionRow={admissionId:string;patientId:string;patientCode:string;patien
 type DietRow={id:string;code:string;label:string;type?:string;active:boolean};
 type Reference={id:string;catalogItemId:string;sourceRef:string;sourceVersion?:string};
 type MapRow={id:string;unitId:string;localDate:string;cycleId:Cycle;status:'DRAFT'|'SUBMITTED'|'CLOSED';revision:number;late?:boolean;submittedAt?:string|null;receivedAt?:string|null};
-type MealRow={id:string;admissionId:string;mealType:MealType;dietCode:string;status:string;revision:number;advisory:string};
+type MealRow={id:string;admissionId:string;mealType:MealType;dietCode:string;observation?:string;status:string;revision:number;advisory:string};
 type Receipt={mapId:string;unitId:string;localDate:string;cycleId:Cycle;submittedAt:string;submittedByUid:string;submissionVersion:number;currentVersion:number;late:boolean;needsKitchenReview:boolean;status:string};
 type MapDetail={map:MapRow;meals:MealRow[];summary:{dietCode:string;mealType:MealType;count:number;blocked:number}[];receipt:Receipt|null};
 type CommandResult<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
@@ -44,6 +44,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const [selectedType,setSelectedType]=useState<MealType>('PRIMARY');
  const [reference,setReference]=useState<Reference|null>(null);
  const [reason,setReason]=useState('');
+ const [observation,setObservation]=useState('');
  const [contact,setContact]=useState('');
  const [loading,setLoading]=useState(false);
  const [saving,setSaving]=useState(false);
@@ -120,7 +121,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
  const addMeal=async()=>{
   if(!map||!selectedAdmission||!reference)return setError('Selecione uma internação com prescrição médica vigente');
   await perform(async()=>{
-   await request('maps','meal.set',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,medicalReferenceId:reference.id,dietCode:reference.catalogItemId,expectedMapRevision:map.map.revision,idempotencyKey:crypto.randomUUID(),reason:reason.trim()||null});
+   await request('maps','meal.set',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,medicalReferenceId:reference.id,dietCode:reference.catalogItemId,expectedMapRevision:map.map.revision,idempotencyKey:crypto.randomUUID(),reason:reason.trim()||null,observation:observation.trim()});
+   setObservation('');
    await loadMap(map.map.id);
   },'Refeição registrada; confira os avisos de segurança');
  };
@@ -198,6 +200,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
     {patient?.fasting&&<p role="alert" style={{color:'#991b1b'}}>Jejum ativo: pedido será bloqueado para liberação até reconferência assistencial.</p>}
     {(patient?.allergyCodes.length??0)>0&&<p role="alert" style={{color:'#991b1b'}}>Alergias registradas: conferir compatibilidade antes de preparar ou distribuir.</p>}
     <div className="w3-no-print" style={{marginTop:10}}>
+     <label>Observação da dieta (se houver)<textarea style={inputStyle} rows={2} maxLength={180} value={observation} onChange={e=>setObservation(e.target.value)} placeholder="Ex.: sem açúcar; manter consistência pastosa. Será impressa na etiqueta."/></label>
      <label>Motivo de adendo, atraso ou alteração (obrigatório quando aplicável)<textarea style={inputStyle} rows={2} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Informe motivo e comunicação assistencial, quando necessária"/></label>
      <label>Contato assistencial para exceção clínica<input style={inputStyle} value={contact} onChange={e=>setContact(e.target.value)} placeholder="Referência do contato efetuado"/></label>
      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
