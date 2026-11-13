@@ -48,6 +48,7 @@ jobs:
         if: success() || failure()
         run: |
           node --test tests/hospital/meal-period-deadlines.test.mjs tests/hospital/order-progress.test.mjs
+          node --test tests/hospital/reporting/premium-print-export.test.mjs
           npm run verify:emprovex-core-protection
       - name: Typecheck
         if: success() || failure()
