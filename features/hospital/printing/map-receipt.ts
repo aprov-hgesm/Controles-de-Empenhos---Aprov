@@ -59,7 +59,7 @@ export function createMapReceiptPdf(r:MapReceiptDocument){
  // Submission / receipt status
  const received=Boolean(r.receivedAt&&Number.isFinite(Date.parse(r.receivedAt)));
  pdf.setFillColor(...PALE);pdf.roundedRect(16,57,178,28,3,3,'F');
- pdf.setFillColor(...(received?[34,128,91] as const:BLUE));pdf.roundedRect(22,63,2,16,1,1,'F');
+ if(received)pdf.setFillColor(34,128,91);else pdf.setFillColor(...BLUE);pdf.roundedRect(22,63,2,16,1,1,'F');
  kicker('Situação do documento',29,65);
  pdf.setTextColor(...INK);pdf.setFont('helvetica','bold');pdf.setFontSize(12.8);
  pdf.text(received?'Recebimento confirmado pela Cozinha':'Enviado à Cozinha · recebimento pendente',29,74);
