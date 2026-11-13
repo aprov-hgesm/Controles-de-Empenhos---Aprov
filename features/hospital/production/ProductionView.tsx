@@ -28,6 +28,7 @@ const groupKey=(m:KitchenMeal)=>JSON.stringify([m.unitId,m.dietCode,m.mealType,m
 function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
  if(!snapshot)return [];
  const grouped=new Map<string,DietGroup>();
+ const reserved=new Set(snapshot.batches.filter(b=>b.status!=='CANCELLED').flatMap(b=>b.mealIds));
  const eligible=['REQUESTED','PREPARING','READY'];
  for(const m of snapshot.meals){
   if(!eligible.includes(m.status)||m.safetyIssue)continue;
@@ -36,7 +37,7 @@ function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
     dietLabel:m.dietLabel??'Dieta',observation:noteOf(m),mealType:m.mealType,meals:[],pending:[],preparing:[],ready:[],batches:[]});
   const g=grouped.get(key)!;
   g.meals.push(m);
-  if(m.status==='REQUESTED')g.pending.push(m);
+  if(m.status==='REQUESTED'&&!reserved.has(m.id))g.pending.push(m);
   if(m.status==='PREPARING')g.preparing.push(m);
   if(m.status==='READY')g.ready.push(m);
  }
