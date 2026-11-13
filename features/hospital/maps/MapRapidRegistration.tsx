@@ -58,7 +58,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    const result=await response.json() as Api<unknown>;
    if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao salvar');
    const completedReason=form.reason;
-   setForm(empty());setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');setCareChecked(false);
+   setForm({...empty(),reason:completedReason});setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');setCareChecked(false);
    await onSaved(finish,completedReason);
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar paciente e dieta')}
   finally{setBusy(false)}
