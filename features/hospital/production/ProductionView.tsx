@@ -212,6 +212,9 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
      <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{mealName(cycle,g.mealType)}</p>
       <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.total}</p><p className="text-xs text-slate-500">porções</p></div>
     </div>
+    {g.units.some(u=>u.meals.some(m=>m.timingStage&&m.timingStage!=='ON_TIME'))&&<p role="alert" className={'rounded-xl border p-2 text-xs font-bold '+(g.units.some(u=>u.meals.some(m=>m.timingStage==='AFTER_TOLERANCE'))?'border-rose-200 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>
+      Solicitação extraordinária: {g.units.flatMap(u=>u.meals).filter(m=>m.timingStage&&m.timingStage!=='ON_TIME').length} dieta(s) após o prazo do mapa. Conferir observações e horário antes de preparar.
+     </p>}
     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
      {g.pending>0&&<span className="rounded-full bg-slate-100 px-3 py-1">{g.pending} aguardando</span>}
      {g.preparing>0&&<span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{g.preparing} preparando</span>}
