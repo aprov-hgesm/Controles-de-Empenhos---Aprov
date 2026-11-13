@@ -129,7 +129,7 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   if(extraordinary&&reason.trim().length<5)return setError('Informe um motivo objetivo para a solicitação extraordinária.');
   await perform(async()=>{
    await request('maps','meal.set',{mapId:map.map.id,admissionId:selectedAdmission,mealType:selectedType,medicalReferenceId:reference.id,dietCode:reference.catalogItemId,expectedMapRevision:map.map.revision,idempotencyKey:crypto.randomUUID(),reason:reason.trim()||null,observation:observation.trim()});
-   setObservation('');setReason('');
+   setObservation('');
    await loadMap(map.map.id);
   },'Refeição registrada; confira os avisos de segurança');
  };
