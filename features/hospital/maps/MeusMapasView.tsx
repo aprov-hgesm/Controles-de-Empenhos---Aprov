@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {MealProgressPair} from '../integration/MealProgressPair';
 import {MapRapidRegistration} from './MapRapidRegistration';
+import {MapReceiptPreview} from './MapReceiptPreview';
 import {mealName,mealTitle,timeSituation,timingLabel,mapLateLabel} from '../integration/meal-period.mjs';
 
 type Cycle='06'|'10'|'16';
@@ -178,7 +179,6 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   },'Mapa fechado no horário oficial; adendos permanecem possíveis');
  };
  return <div aria-label="Meus Mapas — Cozinha Dietética" style={{display:'grid',gap:18,width:'100%',color:'#173151'}}>
-  <style>{`@media print { .w3-no-print {display:none !important} .w3-print-only {display:block !important} .w3-receipt {border:0 !important;padding:0 !important} } @media screen {.w3-print-only{display:none !important}}`}</style>
   <header className="w3-no-print">
    <h2 style={{fontSize:23,fontWeight:800,letterSpacing:'-.03em',marginBottom:4,color:'#173b69'}}>Solicitar dietas à cozinha</h2>
    <p style={{margin:0,color:'#475569'}}>Unidade: {unitLabel??unitId}. Escolha o horário, inclua as dietas dos leitos e envie o mapa à cozinha.</p>
@@ -289,15 +289,8 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
     <h4 className="w3-no-print">Totais por dieta</h4>
     <div className="w3-no-print" style={{display:'flex',gap:12,flexWrap:'wrap'}}>{map.summary.length===0?'Sem refeições':map.summary.map(s=><span key={s.dietCode+s.mealType} style={{...panel,padding:8}}>{catalog.find(x=>x.id===s.dietCode)?.label??s.dietCode} · {s.mealType==='PRIMARY'?'principal':'secundária'}: {s.count} ({s.blocked} bloqueados)</span>)}</div>
    </section>}
-   {map?.receipt&&<section className="w3-receipt" style={panel}>
-    <h3>Recibo de envio de mapa</h3>
-    <p>Unidade: {map.receipt.unitId} · Data: {map.receipt.localDate} · Ciclo: {map.receipt.cycleId}h</p>
-    <p>Mapa: {map.receipt.mapId} · Versão de envio: {map.receipt.submissionVersion} · Versão atual: {map.receipt.currentVersion}</p>
-    <p>Recebido em: {dateTime(map.receipt.submittedAt)} · Responsável (UID): {map.receipt.submittedByUid}</p>
-    <p>{map.receipt.late?'Envio extraordinário fora do prazo — requer conferência da cozinha':'Enviado no prazo regular'} · Status: {map.receipt.status}</p>
-    <p>Sem nome de paciente, leito, diagnóstico ou dados de prescrição neste recibo.</p>
-    <button className="w3-no-print" style={actionStyle} type="button" onClick={()=>window.print()}>Imprimir somente recibo</button>
-    <div className="w3-print-only"><small>Registro institucional sujeito à auditoria; não comprova entrega de refeição ao paciente.</small></div>
-   </section>}
+   {map?.receipt&&<MapReceiptPreview receipt={map.receipt} meals={map.meals} unitLabel={unitLabel??unitId}
+     receivedAt={map.map.receivedAt} hasLateAmendment={map.map.hasLateAmendment}/>}
+
  </div>;
 }
