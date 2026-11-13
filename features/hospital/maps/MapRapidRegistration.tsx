@@ -7,7 +7,7 @@ type Cycle='06'|'10'|'16';
 type Catalog={id:string;label:string;code:string;consistency?:string;route?:string;type?:string;active:boolean};
 type MapRef={id:string;revision:number;cycleId:Cycle;localDate:string;status:string};
 type Props={organizationId:string;getIdToken:()=>Promise<string>;map:MapRef;catalog:Catalog[];
- onSaved:(finish:boolean)=>Promise<void>;onCancel:()=>void;};
+ onSaved:(finish:boolean,reason:string)=>Promise<void>;onCancel:()=>void;};
 type Api<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const field='w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900';
 const sections=['HIPOSSODICA','HIPOLIPIDICA','HIPOPROTEICA','DIABETICO','NPVO','SNE','OUTRO'] as const;
@@ -56,8 +56,9 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    }})});
    const result=await response.json() as Api<unknown>;
    if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao salvar');
+   const completedReason=form.reason;
    setForm(empty());setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');
-   await onSaved(finish);
+   await onSaved(finish,completedReason);
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar paciente e dieta')}
   finally{setBusy(false)}
  }
