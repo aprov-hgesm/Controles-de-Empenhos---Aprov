@@ -87,17 +87,18 @@ test('W12 real Emulator: paper observation, kitchen production, patient label an
   await assert.rejects(cmd('meal.deliver.paper',{deliveryTime,paperConfirmed:true,identityChecked:true}),{code:'PRECONDITION'});
 
   // Distinct meals from the same 06h map, submitted after the primary's 30-minute limit.
-  // A late main meal must be recorded and visible, never silently authorized.
+  // A late main meal is accepted with justification and kitchen priority; clinical holds remain independent.
   const overdueDate=sao(new Date(Date.now()-86400000));
   const overdueMap=await maps.createDraft(u,{unitId:unit,localDate:overdueDate,cycleId:'06'});
   const overdueMain=await maps.setMeal(u,{mapId:overdueMap.id,admissionId:adm.id,mealType:'PRIMARY',
    medicalReferenceId:ref.id,dietCode:diet.id,observation:'Dieta principal ficticia',
    expectedMapRevision:overdueMap.revision,idempotencyKey:id('late_main'),
    reason:'Solicitação principal registrada após a tolerância para avaliação'});
-  assert.equal(overdueMain.meal.status,'SUSPENDED');
+  assert.equal(overdueMain.meal.status,'REQUESTED');
   assert.equal(overdueMain.meal.timingStage,'AFTER_TOLERANCE');
-  assert.equal(overdueMain.requiresAssistanceEscalation,true);
-  assert.equal(overdueMain.meal.suspensionReason,'LATE_PRIMARY_AFTER_TOLERANCE_ASSISTANCE');
+  assert.equal(overdueMain.priorityKitchenAlert,true);
+  assert.equal(overdueMain.meal.suspensionReason,null);
+  assert.equal(overdueMain.meal.lateReason,'Solicitação principal registrada após a tolerância para avaliação');
   const overdueSnack=await maps.setMeal(u,{mapId:overdueMap.id,admissionId:adm.id,mealType:'SECONDARY',
    medicalReferenceId:ref.id,dietCode:diet.id,observation:'Lanche ficticio',
    expectedMapRevision:overdueMain.map.revision,idempotencyKey:id('late_snack'),
@@ -112,8 +113,9 @@ test('W12 real Emulator: paper observation, kitchen production, patient label an
   const verify=await maps.getMap(u,{mapId:overdueMap.id});
   assert.equal(verify.meals.filter(x=>x.mealType==='PRIMARY').length,1);
   assert.equal(verify.meals.filter(x=>x.mealType==='SECONDARY').length,1);
-  assert.equal(verify.meals.find(x=>x.mealType==='PRIMARY').status,'SUSPENDED');
-  await assert.rejects(production.createBatch(k,{unitId:unit,localDate:overdueDate,cycleId:'06',
-   mealIds:[overdueMain.meal.id],preparationLabel:'Ficticio indevido',idempotencyKey:id('blocked_batch')}),{code:'PRECONDITION'});
+  assert.equal(verify.meals.find(x=>x.mealType==='PRIMARY').status,'REQUESTED');
+  const validBatch=await production.createBatch(k,{unitId:unit,localDate:overdueDate,cycleId:'06',
+   mealIds:[overdueMain.meal.id],preparationLabel:'Dieta extra prioritaria de teste',idempotencyKey:id('late_batch')});
+  assert.equal(validBatch.mealIds.length,1,'Atraso isolado não bloqueia a produção');
  }finally{store.close()}
 });
