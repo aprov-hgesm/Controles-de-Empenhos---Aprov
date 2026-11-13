@@ -105,8 +105,8 @@ export function ReportingView({organizationId,unitIds,getAccessToken,initialView
       <label className="grid gap-1 text-sm">Status<input className={controls} value={filter.status} onChange={e=>update('status',e.target.value)} placeholder="Status" maxLength={128}/></label>
       <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-4">
         <button type="button" disabled={busy} onClick={()=>void load(1)} className="hospital-primary-action disabled:opacity-60">Consultar</button>
-        <button type="button" disabled={busy||exporting} onClick={()=>void download('csv')} className={controls}>Exportar CSV</button>
-        <button type="button" disabled={busy||exporting} onClick={()=>void download('pdf')} className={controls}>Exportar PDF</button>
+        <button type="button" disabled={busy||exporting} onClick={()=>void download('csv')} className={controls}>Baixar planilha CSV</button>
+        <button type="button" disabled={busy||exporting} onClick={()=>void download('pdf')} className={controls}>Baixar relatório PDF</button>
         {exporting&&<span role="status" className="text-sm">Gerando arquivo…</span>}
       </div>
     </div>

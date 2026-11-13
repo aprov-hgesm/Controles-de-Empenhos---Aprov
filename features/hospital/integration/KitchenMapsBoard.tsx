@@ -9,6 +9,7 @@ import {mealName,mapLateLabel,timingLabel} from './meal-period.mjs';
 
 type Focus={unitId:string;cycleId:'06'|'10'|'16';localDate:string};
 type Issue={id:string;mapId:string;unitId:string;note:string;status:string;revision:number;createdAt:string;resolutionNote?:string};
+type Correction={id:string;mapId:string;unitId:string;mealId:string;note:string;status:string;revision:number;createdAt:string;previousStatus:string;previousDietCode:string;proposedDietCode:string;routeRecallRequired:boolean;previousDietLabel?:string;proposedDietLabel?:string};
 type Response<T>={ok:true;data:T}|{ok:false;error:{message:string}};
 const cycles=['06','10','16'] as const;
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'})
@@ -24,6 +25,8 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
  const [maps,setMaps]=useState<KitchenMapReceipt[]>([]);
  const [meals,setMeals]=useState<KitchenMeal[]>([]);
  const [issues,setIssues]=useState<Issue[]>([]);
+ const [corrections,setCorrections]=useState<Correction[]>([]);
+ const [recall,setRecall]=useState<Record<string,boolean>>({});
  const [filter,setFilter]=useState<'all'|'pending'|'active'|'finished'|'extra'>('all');
  const [expanded,setExpanded]=useState('');
  const [resolution,setResolution]=useState<Record<string,string>>({});
@@ -53,12 +56,20 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
     if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao consultar ocorrências');
     return result.data;
    }));
+   const correctionsResponse=await Promise.all(unitIds.map(async unitId=>{
+    const response=await fetch('/api/hospital/maps',{method:'POST',cache:'no-store',headers:{...auth,'Content-Type':'application/json'},
+     body:JSON.stringify({operation:'map.correction.list',payload:{unitId,status:'OPEN'}})});
+    const result=await response.json() as Response<Correction[]>;
+    if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao consultar correções pendentes');
+    return result.data;
+   }));
    const unique=new Map<string,KitchenMapReceipt>();
    for(const batch of batches)for(const row of batch.maps)unique.set(row.id,row);
    const priority=(m:KitchenMapReceipt)=>m.submissionTimingStage==='AFTER_TOLERANCE'||m.latestExtraTimingStage==='AFTER_TOLERANCE'?2:m.late||m.hasLateAmendment?1:0;
    setMaps([...unique.values()].sort((a,b)=>priority(b)-priority(a)||a.cycleId.localeCompare(b.cycleId)||a.unitId.localeCompare(b.unitId)));
    setMeals(batches.flatMap(x=>x.meals));
    setIssues(feedback.flat());
+   setCorrections(correctionsResponse.flat());
    setError('');
   }catch(e){setError(e instanceof Error?e.message:'Falha de conexão com a cozinha');}
   finally{if(!silent)setLoading(false);}
@@ -70,8 +81,8 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
  },[load]);
  const grouped=useMemo(()=>maps.map(map=>{
   const requests=meals.filter(m=>m.mapId===map.id);
-  return {map,requests,progress:getOrderProgress(map,requests),feedback:issues.filter(i=>i.mapId===map.id)};
- }),[maps,meals,issues]);
+  return {map,requests,progress:getOrderProgress(map,requests),feedback:issues.filter(i=>i.mapId===map.id),pendingCorrections:corrections.filter(i=>i.mapId===map.id)};
+ }),[maps,meals,issues,corrections]);
  const visible=grouped.filter(({progress,map,requests})=>filter==='all'
   ||filter==='pending'&&progress.stage<=0
   ||filter==='active'&&progress.stage>0&&progress.stage<4
@@ -106,6 +117,21 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
   }catch(e){setError(e instanceof Error?e.message:'Falha no registro');}
   finally{setBusy(false);}
  };
+ const acknowledgeCorrection=async(issue:Correction)=>{
+  setBusy(true);setError('');setNotice('');
+  try{
+   const response=await fetch('/api/hospital/maps',{method:'POST',cache:'no-store',
+    headers:{...(await headers()),'Content-Type':'application/json'},
+    body:JSON.stringify({operation:'map.correction.ack',payload:{unitId:issue.unitId,issueId:issue.id,
+      expectedRevision:issue.revision,idempotencyKey:crypto.randomUUID(),physicalRecallConfirmed:!!recall[issue.id]}})});
+   const result=await response.json() as Response<unknown>;
+   if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Não foi possível efetivar a correção');
+   setNotice('Ciência registrada. A dieta correta voltou à fila de produção, se clinicamente segura.');
+   setRecall(x=>({...x,[issue.id]:false}));
+   await load(true);
+  }catch(e){setError(e instanceof Error?e.message:'Falha ao confirmar a correção')}
+  finally{setBusy(false)}
+ };
  return <section className="space-y-4" aria-label="Mapas recebidos de todas as unidades">
   <div className="hospital-panel p-5 sm:p-6">
    <header className="flex flex-wrap items-start justify-between gap-4">
@@ -135,7 +161,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
   {loading&&<p role="status" className="text-sm text-slate-600">Consultando os mapas recebidos…</p>}
   {!loading&&!error&&visible.length===0&&<p role="status" className="hospital-panel p-5 text-sm text-slate-500">Nenhum mapa enviado para este filtro. Rascunhos ainda não aparecem para a cozinha.</p>}
   <div className="grid gap-3 xl:grid-cols-2">
-   {visible.map(({map,requests,progress,feedback})=>{
+   {visible.map(({map,requests,progress,feedback,pendingCorrections})=>{
     const Icon=iconFor(progress.stage),open=expanded===map.id;
     const focus:Focus={unitId:map.unitId,cycleId:map.cycleId,localDate:map.localDate};
     const ready=requests.some(x=>x.status==='READY');
@@ -153,6 +179,8 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
        <p className="mt-2 text-sm font-semibold text-[#285b9e]" role="status">{progress.headline}</p>
        
        {feedback.some(x=>x.status==='OPEN')&&<p className="mt-2 text-xs font-bold text-rose-700">{feedback.filter(x=>x.status==='OPEN').length} ocorrência(s) aguardando análise</p>}
+       {requests.some(m=>m.allergyAlert)&&<p role="alert" className="mt-2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-extrabold text-amber-950">ALERGIA — verificar os pedidos destacados no preparo e distribuição</p>}
+       {pendingCorrections.length>0&&<p role="alert" className="mt-2 rounded-lg bg-rose-100 px-2 py-1 text-xs font-extrabold text-rose-900">CORREÇÃO DE DIETA · {pendingCorrections.length} aguardando ciência da Cozinha</p>}
       </div>
       <button type="button" className="hospital-secondary-action shrink-0 px-2.5" aria-expanded={open} aria-label={'Detalhes do mapa '+map.unitId+' '+map.cycleId+'h'} onClick={()=>setExpanded(open?'':map.id)}><ChevronDown size={16}/></button>
      </div>
@@ -165,6 +193,14 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
      {open&&<div className="mt-4 space-y-3">
       <MealProgressPair map={map} meals={requests} compact/>
       {extras.length>0&&<div className="space-y-1 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{extras.map(m=><p key={m.id}>{mealName(map.cycleId,m.mealType)} · {timingLabel(m.timingStage,m.mealType)}{m.status==='SUSPENDED'?' · bloqueio de segurança':''}</p>)}</div>}
+      {pendingCorrections.map(issue=><div key={issue.id} className="rounded-xl border-2 border-rose-300 bg-rose-50 p-3" data-testid="kitchen-diet-correction">
+       <p className="text-sm font-extrabold text-rose-900">Dieta incorreta — aguardando ciência</p>
+       <p className="mt-1 text-xs text-slate-800">De: {issue.previousDietLabel??issue.previousDietCode} · Para: {issue.proposedDietLabel??issue.proposedDietCode}</p>
+       <p className="mt-1 text-sm text-slate-700">Motivo: {issue.note}</p>
+       <p className="mt-1 text-xs font-semibold text-rose-800">A refeição anterior permanece suspensa. Não produzir ou entregar até corrigir.</p>
+       {issue.routeRecallRequired&&<label className="mt-2 flex items-center gap-2 text-xs font-semibold text-red-900"><input type="checkbox" checked={!!recall[issue.id]} onChange={e=>setRecall(s=>({...s,[issue.id]:e.target.checked}))}/>Confirmo que a refeição anterior foi fisicamente recolhida da rota</label>}
+       <button type="button" className="hospital-primary-action mt-3" disabled={busy||(issue.routeRecallRequired&&!recall[issue.id])} onClick={()=>void acknowledgeCorrection(issue)}>Ciente — aplicar correção e reencaminhar à produção</button>
+      </div>)}
       {feedback.map(issue=><div key={issue.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
        <p className="text-xs font-bold text-slate-700">{issue.status==='OPEN'?'Ocorrência pendente':'Ocorrência tratada'} · {issue.unitId}</p>
        <p className="mt-1 text-sm text-slate-700">{issue.note}</p>

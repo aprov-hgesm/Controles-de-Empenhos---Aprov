@@ -5,6 +5,7 @@ import {FileDown,Printer,RefreshCw,Truck} from 'lucide-react';
 import {DistributionView} from '@/features/hospital/distribution/DistributionView';
 import {mealName} from './meal-period.mjs';
 import type {KitchenMeal,KitchenSnapshot} from '@/features/hospital/production/contracts';
+import {eligibleForOrganizationLabel,plannedPrintability} from '@/features/hospital/printing/meal-print-selection';
 import {
  printDistributionReport,printPatientLabels,type DistributionPrintRow
 } from '@/features/hospital/printing/hospital-diet-print';
@@ -15,24 +16,29 @@ const today=()=>{
  const v=(k:string)=>p.find(x=>x.type===k)?.value??'';
  return v('year')+'-'+v('month')+'-'+v('day');
 };
-const suitable=(m:KitchenMeal)=>['READY','DISPATCHED','RECEIVED_BY_UNIT','DELIVERED'].includes(m.status)
- &&(!m.safetyIssue||m.status==='DELIVERED');
+const suitable=(m:KitchenMeal)=>eligibleForOrganizationLabel(m);
 const observation=(m:KitchenMeal)=>[
  (m.observation??'').trim(),m.dietRestrictionCodes?.length?'Restrições: '+m.dietRestrictionCodes.join(', '):''
 ].filter(Boolean).join(' · ')||'Sem observações';
-function printable(m:KitchenMeal):m is KitchenMeal&{patientName:string;bedNumber:string}{
- return suitable(m)&&typeof m.patientName==='string'&&m.patientName.trim()!==''
- &&typeof m.bedNumber==='string'&&m.bedNumber.trim()!=='';
-}
-const record=(m:KitchenMeal):DistributionPrintRow=>({unit:m.unitId,bed:m.bedNumber??'',
- patient:m.patientName??'',diet:m.dietLabel??'Dieta',observation:observation(m)});
+const needsIdentity=(m:KitchenMeal)=>!m.patientName?.trim()||!m.bedNumber?.trim();
+const record=(m:KitchenMeal):DistributionPrintRow=>({
+ unit:m.unitId,bed:m.bedNumber?.trim()||'LEITO A CONFERIR',
+ patient:m.patientName?.trim()||(m.recipientType==='COMPANION'?'ACOMPANHANTE - CONFERIR REFERÊNCIA':'PACIENTE - CONFERIR IDENTIFICAÇÃO'),
+ diet:m.dietLabel??'Dieta',observation:observation(m),
+ recipientType:m.recipientType==='COMPANION'?'COMPANION':'PATIENT',
+ allergyAlert:!!m.allergyAlert,allergyNote:m.allergyNote??'',
+ corrected:!!m.correctionAcknowledgedAt,
+ identityIncomplete:needsIdentity(m)
+});
 
 export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
- initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];
- getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
- const [unit,setUnit]=useState(initialUnitId??'');
+ initialCycle='10',initialMealType='PRIMARY',initialDate,onOpenProduction}:{organizationId:string;unitIds:string[];
+ getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;
+ initialMealType?:'PRIMARY'|'SECONDARY';initialDate?:string;
+ onOpenProduction?:(focus:{unitId:string;cycleId:Cycle;localDate:string;mealType:'PRIMARY'|'SECONDARY'})=>void;}){
+ const [unit,setUnit]=useState(initialUnitId&&unitIds.includes(initialUnitId)?initialUnitId:unitIds[0]??'');
  const [cycle,setCycle]=useState<Cycle>(initialCycle);
- const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>('PRIMARY');
+ const [mealType,setMealType]=useState<'PRIMARY'|'SECONDARY'>(initialMealType);
  const [date,setDate]=useState(initialDate??today);
  const [snapshot,setSnapshot]=useState<KitchenSnapshot|null>(null);
  const [loading,setLoading]=useState(true);
@@ -58,10 +64,12 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  },[load]);
  const allMeals=useMemo(()=>snapshot?.meals.filter(suitable)??[],[snapshot]);
  const queue=useMemo(()=>allMeals.filter(m=>m.mealType===mealType),[allMeals,mealType]);
- const records=useMemo(()=>queue.filter(printable).map(record).sort((a,b)=>
+ const records=useMemo(()=>queue.map(record).sort((a,b)=>
   a.unit.localeCompare(b.unit,'pt-BR')||a.bed.localeCompare(b.bed,'pt-BR',{numeric:true})),[queue]);
- const missing=queue.filter(m=>!printable(m)).length;
+ const missing=records.filter(r=>r.identityIncomplete).length;
+ const excluded=useMemo(()=>plannedPrintability((snapshot?.meals??[]).filter(m=>m.mealType===mealType)),[snapshot,mealType]);
  const shown=unit?queue.filter(m=>m.unitId===unit):queue;
+ const activeMealIds=useMemo(()=>queue.filter(m=>!unit||m.unitId===unit).slice(0,50).map(m=>m.id),[queue,unit]);
  const unitCounts=unitIds.map(id=>({unitId:id,count:queue.filter(m=>m.unitId===id).length,
   prepared:queue.filter(m=>m.unitId===id&&m.status==='READY').length,
   route:queue.filter(m=>m.unitId===id&&['DISPATCHED','RECEIVED_BY_UNIT'].includes(m.status)).length,
@@ -78,9 +86,9 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  return <section className="space-y-5 text-slate-900" aria-label="Distribuição hospitalar">
   <div className="hospital-panel space-y-4 p-5 sm:p-6">
    <header className="flex flex-wrap items-start justify-between gap-3">
-    <div><p className="hospital-hint-label">Segunda etiqueta · conferência dos leitos</p>
-     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Organizar e distribuir · {mealName(cycle,mealType)}</h2>
-     <p className="mt-1 text-sm text-slate-500">Imprima a etiqueta do paciente, coloque junto à etiqueta da dieta e leve a folha com campo de horário para o copeiro preencher.</p></div>
+    <div><p className="hospital-hint-label">Escolha a entrega e a unidade</p>
+     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Distribuição · {mealName(cycle,mealType)}</h2>
+     <p className="mt-1 text-sm text-slate-500">Selecione a unidade e acompanhe, logo abaixo, o fluxo completo: montar, enviar e confirmar a entrega com o horário real.</p></div>
     <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>void load()}>
      <RefreshCw size={16} className="inline"/> Atualizar</button>
    </header>
@@ -94,21 +102,25 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
     <div className="grid gap-2 sm:grid-cols-2">{(['PRIMARY','SECONDARY'] as const).map(type=><button type="button" key={type} aria-pressed={mealType===type} data-testid={'distribution-meal-'+type.toLowerCase()} onClick={()=>{setMealType(type);setNotice('');setError('')}} className={(mealType===type?'border-blue-400 bg-blue-50 text-[#164680] shadow-sm':'border-slate-200 bg-white text-slate-700')+' rounded-xl border-2 p-3 text-left font-semibold'}>
       <span className="block text-sm">{mealName(cycle,type)}</span><span className="mt-1 block text-xs font-normal">{allMeals.filter(m=>m.mealType===type).length} dietas · distribuição independente</span>
      </button>)}</div>
-    <p className="mt-2 text-xs text-slate-600">Os relatórios, as etiquetas e as confirmações serão gerados apenas para <strong>{mealName(cycle,mealType)}</strong>.</p>
+    <p className="mt-2 text-xs text-slate-600">A refeição principal e a secundária têm montagem, saída e horário de entrega independentes. A seleção atual é <strong>{mealName(cycle,mealType)}</strong>.</p>
    </div>
    <div className="flex flex-wrap gap-2">
-    <button type="button" className="hospital-primary-action" disabled={!records.length} onClick={()=>download('labels')}>
-     <Printer size={16} className="inline"/> Etiquetas dos pacientes
+    <button type="button" className="hospital-primary-action" disabled={loading} onClick={()=>download('labels')}>
+     <Printer size={16} className="inline"/> Etiquetas de pacientes e acompanhantes
     </button>
-    <button type="button" className="hospital-secondary-action" disabled={!records.length} onClick={()=>download('report')}>
+    <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>download('report')}>
      <FileDown size={16} className="inline"/> Relatório de distribuição · PDF A4 horizontal
     </button>
    </div>
    {missing>0&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
-    {missing} dieta(s) aguardam identificação válida de paciente/leito e não entram nas etiquetas nem no relatório até correção.</p>}
+    {missing} identificação(ões) incompleta(s): as etiquetas serão impressas com aviso de conferência obrigatória de nome/leito antes da distribuição.</p>}
+   {excluded.skippedForSafety>0&&<p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-900">
+    {excluded.skippedForSafety} pedido(s) cancelados, suspensos ou clinicamente bloqueados não são impressos como refeições válidas para entrega.</p>}
+   <p className="text-xs text-slate-600">As mesmas etiquetas definitivas podem ser impressas desde o recebimento do pedido: {queue.length}, incluindo {queue.filter(m=>m.recipientType==='COMPANION').length} de acompanhantes.
+    A impressão não registra preparo ou entrega; os controles de conferência continuam no fluxo operacional.</p>
    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Resumo da distribuição">
     {[
-     ['Dietas disponíveis',queue.length],['Aguardando montagem',queue.filter(x=>x.status==='READY').length],
+     ['Etiquetas disponíveis',queue.length],['Aguardando produção',queue.filter(x=>['REQUESTED','PREPARING'].includes(x.status)).length],
      ['Em rota',queue.filter(x=>['DISPATCHED','RECEIVED_BY_UNIT'].includes(x.status)).length],
      ['Entregues',queue.filter(x=>x.status==='DELIVERED').length]
     ].map(([label,value])=><div key={String(label)} className="hospital-kpi">
@@ -129,9 +141,10 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   {unit&&snapshot&&<div className="space-y-3">
    <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
    <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
-    mealIds={shown.slice(0,50).map(m=>m.id)} getAuthorization={getAuthorization}/>
+    mealIds={activeMealIds} getAuthorization={getAuthorization}
+    onOpenProduction={onOpenProduction?()=>onOpenProduction({unitId:unit,cycleId:cycle,localDate:date,mealType}):undefined}/>
    {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
   </div>}
-  <p className="text-xs text-slate-500">Relatório para preenchimento com caneta: hora exata no leito e rubrica. Após o retorno, abra a unidade e marque cada entrega com o horário registrado. O sistema grava também quando você lançou a informação.</p>
+  <p className="text-xs text-slate-500">As etiquetas antecipadas são as mesmas utilizadas no porcionamento e distribuição. A impressão não altera o estado das dietas. Antes de sair, confira autorização de distribuição, identidade, restrições e alergias. A folha física registra hora e rubrica da entrega real.</p>
  </section>;
 }

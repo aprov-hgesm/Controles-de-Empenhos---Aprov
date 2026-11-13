@@ -1,0 +1,91 @@
+name: Hospital Rapid Map QA (synthetic only)
+on:
+  pull_request:
+    branches: [feat/cozinha-dietetica-w12-homologacao-piloto]
+  push:
+    branches: [feat/cozinha-dietetica-mapa-cadastro-direto-20261112]
+permissions:
+  contents: read
+concurrency:
+  group: hospital-rapid-map-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  hospital-rapid-map:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 35
+    env:
+      CI: '1'
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install
+        run: npm ci --ignore-scripts
+      - name: Server code syntax
+        run: |
+          node --check lib/server/hospital/maps/rapid-registration.mjs
+          node --check lib/server/hospital/maps/correction.mjs
+          node --check lib/server/hospital/maps/firestore-service.mjs
+          node --check lib/server/hospital/distribution/firestore-service.mjs
+      - name: Firestore Emulator E2E - patient companion extras correction security
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test --test-concurrency=1 tests/hospital/firebase/rapid-map-e2e.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs"
+      - name: Contract, previous W12 regression
+        if: success() || failure()
+        run: |
+          node --test tests/hospital/meal-period-deadlines.test.mjs tests/hospital/order-progress.test.mjs
+          node --test tests/hospital/reporting/premium-print-export.test.mjs
+          node --test tests/hospital/distribution-origin-guard.test.mjs
+          npm run verify:emprovex-core-protection
+      - name: Typecheck
+        if: success() || failure()
+        run: npm run typecheck
+      - name: Build (retry on transient remote font loader failures)
+        if: success() || failure()
+        run: |
+          npm run build || {
+            echo 'Repetindo build após possível instabilidade temporária de next/font.'
+            sleep 8
+            npm run build
+          }
+      - name: Install browser tooling for isolated visual QA
+        if: success() || failure()
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.65.0
+          npx playwright install --with-deps chromium
+      - name: Authenticated browser smoke - labels, distribution workflow and receipt PDFs
+        if: success() || failure()
+        run: |
+          node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/hospital-rapid-map-preview.log" 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() { kill "$PREVIEW_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          ready=0
+          for i in {1..110}; do
+            if curl --fail --silent http://127.0.0.1:3100/cozinha-dietetica > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/hospital-rapid-map-preview.log"; exit 1; fi
+          npx playwright test tests/hospital/browser/rapid-map-print.spec.mjs --reporter=line --workers=1
+      - name: Keep only synthetic receipt and texture QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-rapid-map-visual
+          path: ${{ runner.temp }}/hospital-rapid-map-visual/
+          if-no-files-found: ignore
+          retention-days: 3

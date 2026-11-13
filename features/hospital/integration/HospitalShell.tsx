@@ -65,7 +65,7 @@ export function HospitalShell(){
  const [unit,setUnit]=useState('');
  const [notification,setNotification]=useState('');
  const [mobileMenu,setMobileMenu]=useState(false);
- const [kitchenFocus,setKitchenFocus]=useState<{unitId:string;cycleId:'06'|'10'|'16';localDate:string}|null>(null);
+ const [kitchenFocus,setKitchenFocus]=useState<{unitId:string;cycleId:'06'|'10'|'16';localDate:string;mealType?:'PRIMARY'|'SECONDARY'}|null>(null);
  const request=useRef(0);
 
  useEffect(()=>{
@@ -213,7 +213,7 @@ export function HospitalShell(){
      {selected==='inicio'&&clinical&&
       <section className="hospital-panel overflow-hidden p-5 sm:p-7" aria-label="Atalhos para operação da unidade">
        <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><p className="hospital-hint-label">Sua unidade · {authorizedUnit}</p><h2 className="mt-2 text-xl font-extrabold tracking-tight">Próximas ações</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Cadastre pacientes e transcreva referências da prescrição vigente antes de montar e enviar o mapa manualmente.</p></div>
+        <div><p className="hospital-hint-label">Sua unidade · {authorizedUnit}</p><h2 className="mt-2 text-xl font-extrabold tracking-tight">Próximas ações</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Inicie o mapa do horário e cadastre paciente e dieta no mesmo formulário. Revise as refeições antes de enviar à Cozinha.</p></div>
         <BookOpenCheck size={27} className="text-[#1d5fcb]" aria-hidden="true"/>
        </div>
        <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -242,9 +242,13 @@ export function HospitalShell(){
       {selected==='painel'&&kitchen&&<KitchenMapsBoard organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}
       onOpenProduction={target=>{setKitchenFocus(target);setPage('producao')}} onOpenDistribution={target=>{setKitchenFocus(target);setPage('distribuicao')}}/>}
       {selected==='producao'&&kitchen&&<ProductionView key={kitchenFocus?'production-'+kitchenFocus.unitId+'-'+kitchenFocus.cycleId:'production-all'} mode="operations"
-       initialDate={kitchenFocus?.localDate} initialCycle={kitchenFocus?.cycleId??'10'} initialUnitId={kitchenFocus?.unitId} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>}
+       initialDate={kitchenFocus?.localDate} initialCycle={kitchenFocus?.cycleId??'10'} initialUnitId={kitchenFocus?.unitId}
+       initialMealType={kitchenFocus?.mealType??'ALL'} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}
+       onOpenDistribution={target=>{setKitchenFocus(target);setPage('distribuicao')}}/>}
       {selected==='distribuicao'&&kitchen&&<DistributionQueue key={kitchenFocus?'distribution-'+kitchenFocus.unitId+'-'+kitchenFocus.cycleId:'distribution-all'} initialDate={kitchenFocus?.localDate}
-       initialCycle={kitchenFocus?.cycleId} initialUnitId={kitchenFocus?.unitId} organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}/>} 
+       initialCycle={kitchenFocus?.cycleId} initialUnitId={kitchenFocus?.unitId} initialMealType={kitchenFocus?.mealType}
+       organizationId={org} unitIds={access.unitIds} getAuthorization={getAuthorization}
+       onOpenProduction={target=>{setKitchenFocus(target);setPage('producao')}}/>} 
       {(selected==='ocorrencias'||selected==='relatorios')&&kitchen&&<ReportingView key={selected} organizationId={org} unitIds={access.unitIds} initialView={selected==='ocorrencias'?'occurrences':'maps'} getAccessToken={getIdToken}/>}
       {selected==='nutricao'&&nutrition&&<NutritionAuditView organizationId={org} unitIds={access.unitIds} getAccessToken={getIdToken}/>}
       {selected==='administracao'&&admin&&<AdministrationView organizationId={org} getToken={getIdToken}/>}

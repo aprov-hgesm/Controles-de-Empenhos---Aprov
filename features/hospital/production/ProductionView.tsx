@@ -1,17 +1,20 @@
 'use client';
 
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,ShieldAlert} from 'lucide-react';
+import {ArrowRight,ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,ShieldAlert} from 'lucide-react';
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 import {printProductionLabels,printProductionReport,type ProductionPrintRow} from '../printing/hospital-diet-print';
 import {mealName} from '../integration/meal-period.mjs';
+import {eligibleForOrganizationLabel,plannedPrintability,printRecipientType} from '../printing/meal-print-selection';
 
 type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;
- initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;mode?:'overview'|'operations'};
+ initialDate?:string;initialCycle?:CycleId;initialUnitId?:string;initialMealType?:'ALL'|'PRIMARY'|'SECONDARY';mode?:'overview'|'operations';
+ onOpenDistribution?:(focus:{unitId:string;cycleId:CycleId;localDate:string;mealType:'PRIMARY'|'SECONDARY'})=>void;};
 type Api<T>={ok:true;data:T}|{ok:false;error:{code:string;message:string}};
 type DietGroup={key:string;unitId:string;dietCode:string;dietLabel:string;observation:string;
- mealType:string;meals:KitchenMeal[];pending:KitchenMeal[];preparing:KitchenMeal[];ready:KitchenMeal[];batches:KitchenBatch[]};
+ mealType:string;consistency:string;recipientType:'PATIENT'|'COMPANION';
+ meals:KitchenMeal[];pending:KitchenMeal[];preparing:KitchenMeal[];ready:KitchenMeal[];batches:KitchenBatch[]};
 const today=()=>{
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const get=(s:string)=>parts.find(p=>p.type===s)?.value??'';
@@ -22,10 +25,11 @@ const CYCLES:{value:CycleId;label:string}[]=[
 ];
 const noteOf=(meal:KitchenMeal)=>[
  (meal.observation??'').trim(),
+ meal.allergyAlert?'ALERGIA: '+(meal.allergyNote??'conferir ficha'):'',
  meal.dietRestrictionCodes?.length?'Restrições: '+meal.dietRestrictionCodes.join(', '):''
 ].filter(Boolean).join(' · ')||'Sem observações';
-const groupKey=(m:KitchenMeal)=>JSON.stringify([m.unitId,m.dietCode,m.mealType,m.observation??'',
- [...(m.dietRestrictionCodes??[])].sort()]);
+const groupKey=(m:KitchenMeal)=>JSON.stringify([m.unitId,m.dietCode,m.mealType,m.consistency??null,printRecipientType(m),
+ m.observation??'',m.allergyNote??'', [...(m.dietRestrictionCodes??[])].sort()]);
 function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
  if(!snapshot)return [];
  const grouped=new Map<string,DietGroup>();
@@ -35,7 +39,9 @@ function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
   if(!eligible.includes(m.status)||m.safetyIssue)continue;
   const key=groupKey(m);
   if(!grouped.has(key))grouped.set(key,{key,unitId:m.unitId,dietCode:m.dietCode,
-    dietLabel:m.dietLabel??'Dieta',observation:noteOf(m),mealType:m.mealType,meals:[],pending:[],preparing:[],ready:[],batches:[]});
+    dietLabel:m.dietLabel??'Dieta',observation:noteOf(m),mealType:m.mealType,
+    consistency:m.consistency??'NÃO INFORMADA',recipientType:printRecipientType(m),
+    meals:[],pending:[],preparing:[],ready:[],batches:[]});
   const g=grouped.get(key)!;
   g.meals.push(m);
   if(m.status==='REQUESTED'&&!reserved.has(m.id))g.pending.push(m);
@@ -48,13 +54,15 @@ function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
  }
  return [...grouped.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR')||a.unitId.localeCompare(b.unitId));
 }
-type DietFamily={key:string;dietCode:string;dietLabel:string;observation:string;mealType:string;units:DietGroup[];
+type DietFamily={key:string;dietCode:string;dietLabel:string;observation:string;mealType:string;consistency:string;
+ recipientType:'PATIENT'|'COMPANION';units:DietGroup[];
  pending:number;preparing:number;ready:number;total:number;batches:KitchenBatch[]};
 function familiesOf(groups:DietGroup[]):DietFamily[]{
  const families=new Map<string,DietFamily>();
  for(const g of groups){
-  const key=JSON.stringify([g.dietCode,g.mealType,g.observation]);
+  const key=JSON.stringify([g.dietCode,g.mealType,g.consistency,g.recipientType,g.observation]);
   if(!families.has(key))families.set(key,{key,dietCode:g.dietCode,dietLabel:g.dietLabel,
+   consistency:g.consistency,recipientType:g.recipientType,
    observation:g.observation,mealType:g.mealType,units:[],pending:0,preparing:0,ready:0,total:0,batches:[]});
   const f=families.get(key)!;
   f.units.push(g);f.pending+=g.pending.length;f.preparing+=g.preparing.length;
@@ -62,13 +70,17 @@ function familiesOf(groups:DietGroup[]):DietFamily[]{
  }
  return [...families.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR'));
 }
-const printRows=(groups:DietGroup[],onlyReady=false):ProductionPrintRow[]=>groups
- .map(g=>({unit:g.unitId,diet:g.dietLabel,observation:g.observation,mealType:g.mealType,
-   quantity:onlyReady?g.ready.length:g.meals.length}))
+const printRows=(groups:DietGroup[]):ProductionPrintRow[]=>groups
+ .map(g=>({
+  unit:g.unitId,diet:g.dietLabel,consistency:g.consistency,
+  recipientType:g.recipientType,
+  observation:g.observation,mealType:g.mealType,
+  quantity:g.meals.filter(eligibleForOrganizationLabel).length
+ }))
  .filter(row=>row.quantity>0);
 
 export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',
- initialUnitId='',mode='operations'}:Props){
+ initialUnitId='',initialMealType='ALL',mode='operations',onOpenDistribution}:Props){
  const [date,setDate]=useState(initialDate??today);
  const [cycle,setCycle]=useState<CycleId>(initialCycle);
  const [unit,setUnit]=useState(initialUnitId);
@@ -78,7 +90,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [filter,setFilter]=useState<'all'|'pending'|'preparing'|'ready'>('all');
- const [mealFilter,setMealFilter]=useState<'ALL'|'PRIMARY'|'SECONDARY'>('ALL');
+ const [mealFilter,setMealFilter]=useState<'ALL'|'PRIMARY'|'SECONDARY'>(initialMealType);
  const [reviewNote,setReviewNote]=useState<Record<string,string>>({});
  const seq=useRef(0);
  const visibleUnits=useMemo(()=>unit&&unitIds.includes(unit)?[unit]:unitIds,[unit,unitIds]);
@@ -148,14 +160,15 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const families=useMemo(()=>familiesOf(groups),[groups]);
  const groupsInMeal=groups.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter);
  const rows=printRows(groupsInMeal);
- const readyRows=printRows(groupsInMeal,true);
+ const organizationRows=rows;
+ const printableStats=plannedPrintability((data?.meals??[]).filter(m=>mealFilter==='ALL'||m.mealType===mealFilter));
  const filtered=families.filter(g=>(mealFilter==='ALL'||g.mealType===mealFilter)&&(filter==='all'||filter==='pending'&&g.pending>0
   ||filter==='preparing'&&g.preparing>0||filter==='ready'&&g.ready>0));
  const safety=(data?.counts.blocked??0)+(data?.counts.suspended??0);
  const doPrint=(kind:'report'|'labels')=>{
   try{
    if(kind==='report')printProductionReport(rows,date,cycle);
-   else printProductionLabels(readyRows,date,cycle);
+   else printProductionLabels(organizationRows,date,cycle);
    setNotice('PDF gerado no dispositivo. Imprimir não confirma preparo nem entrega.');
    setError('');
   }catch(e){setError(e instanceof Error?e.message:'Falha ao preparar PDF');}
@@ -190,10 +203,21 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     <button type="button" className="hospital-primary-action" disabled={!rows.length} onClick={()=>doPrint('report')}>
      <FileDown size={16} className="inline" aria-hidden="true"/> Relatório de produção · PDF A4 horizontal
     </button>
-    <button type="button" className="hospital-secondary-action" disabled={!readyRows.length} onClick={()=>doPrint('labels')}>
-     <Printer size={16} className="inline" aria-hidden="true"/> Etiquetas das dietas prontas
+    <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>doPrint('labels')}>
+     <Printer size={16} className="inline" aria-hidden="true"/> Etiquetas para preparo e porcionamento
     </button>
+    {onOpenDistribution&&<button type="button" className="hospital-primary-action" onClick={()=>onOpenDistribution({
+      unitId:unit||groupsInMeal[0]?.unitId||unitIds[0]||'',cycleId:cycle,localDate:date,
+      mealType:mealFilter==='SECONDARY'?'SECONDARY':'PRIMARY'
+    })}>
+     Próxima etapa: Distribuição <ArrowRight size={16} className="ml-1 inline"/>
+    </button>}
    </div>
+   <p className="text-xs text-slate-600">
+    As etiquetas definitivas de dieta já podem ser impressas desde o recebimento dos pedidos: {organizationRows.reduce((n,r)=>n+r.quantity,0)} porções
+    no mapa e horário selecionados, para uso junto às etiquetas de identificação na Distribuição.
+    {printableStats.skippedForSafety>0&&` ${printableStats.skippedForSafety} pedidos cancelados, suspensos ou com bloqueio de segurança permanecem fora das etiquetas de preparo.`}
+   </p>
   </div>
   {loading&&<p role="status" className="text-sm text-slate-600">Carregando quantidades autorizadas…</p>}
   {error&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
@@ -207,11 +231,15 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
   <div className="grid gap-3 lg:grid-cols-2">
    {filtered.map(g=><article key={g.key} className="hospital-panel space-y-3 p-5" data-testid="production-diet-group">
     <div className="flex flex-wrap items-start justify-between gap-3">
-     <div><p className="hospital-hint-label">Dieta / observações</p><h3 className="mt-1 text-lg font-extrabold text-[#173b69]">{g.dietLabel}</h3>
+     <div><p className="hospital-hint-label">Consistência e tipo · {g.recipientType==='COMPANION'?'ACOMPANHANTE':'PACIENTE'}</p>
+      <h3 className="mt-1 text-lg font-extrabold text-[#173b69]">{g.dietLabel}</h3>
+      <p className="mt-1 text-xs font-semibold text-[#37639b]">{g.consistency.replaceAll('_',' ')} · {g.recipientType==='COMPANION'?'Refeição principal do acompanhante':'Refeição do paciente'}</p>
       <p className="mt-1 text-sm text-slate-600">{g.observation}</p></div>
      <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{mealName(cycle,g.mealType)}</p>
       <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.total}</p><p className="text-xs text-slate-500">porções</p></div>
     </div>
+    {g.units.some(u=>u.meals.some(m=>m.allergyAlert))&&<p role="alert" className="rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-xs font-extrabold text-amber-950">ALERGIA ALIMENTAR — conferir os alérgenos informados e os ingredientes antes da preparação.</p>}
+    {g.units.some(u=>u.meals.some(m=>m.correctionAcknowledgedAt))&&<p role="alert" className="rounded-xl border border-blue-300 bg-blue-50 p-2 text-xs font-bold text-blue-900">DIETA CORRIGIDA — produzir de acordo com a versão atual e descartar etiquetas anteriores.</p>}
     {g.units.some(u=>u.meals.some(m=>m.timingStage&&m.timingStage!=='ON_TIME'))&&<p role="alert" className={'rounded-xl border p-2 text-xs font-bold '+(g.units.some(u=>u.meals.some(m=>m.timingStage==='AFTER_TOLERANCE'))?'border-rose-200 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>
       Solicitação extraordinária: {g.units.flatMap(u=>u.meals).filter(m=>m.timingStage&&m.timingStage!=='ON_TIME').length} dieta(s) após o prazo do mapa. Conferir observações e horário antes de preparar.
      </p>}
@@ -231,7 +259,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
       onClick={()=>void performBatches(g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS'),'complete')}>
        <Check size={15} className="inline"/> Conferi {g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS').reduce((n,b)=>n+b.quantity,0)} dietas · prontas
       </button>}
-     {g.ready>0&&<span className="flex items-center gap-2 text-xs font-bold text-emerald-800"><ClipboardCheck size={16}/> {g.ready} etiquetas liberadas para imprimir</span>}
+     {g.total>0&&<span className="flex items-center gap-2 text-xs font-bold text-blue-800"><ClipboardCheck size={16}/> {g.total} etiquetas de dieta disponíveis para imprimir</span>}
     </div>
     {g.batches.some(b=>b.effectiveStatus==='NEEDS_REVIEW')&&<details className="rounded-xl border border-amber-200 bg-amber-50 p-3">
      <summary className="cursor-pointer text-sm font-semibold text-amber-900">Conferência de segurança obrigatória</summary>
@@ -245,6 +273,6 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     </details>}
    </article>)}
   </div>
-  <p className="text-xs leading-5 text-slate-500">As etiquetas desta fase contêm somente dieta, observação e unidade. Identificação do paciente e leito é impressa na Distribuição. Dietas com jejum, alergia ou alteração clínica bloqueada não entram no preparo.</p>
+  <p className="text-xs leading-5 text-slate-500">Etiquetas de produção identificam consistência, refeição, unidade e se a porção é para paciente ou acompanhante. Nome e leito ficam na etiqueta da Distribuição. As mesmas etiquetas são utilizadas no porcionamento, junto às etiquetas de identificação da Distribuição. A impressão não altera o estado do preparo ou da entrega.</p>
  </section>;
 }

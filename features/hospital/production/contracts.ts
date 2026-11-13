@@ -33,6 +33,8 @@ export interface KitchenBatch {
 export interface KitchenMeal extends MealRequest {
   patientName?:string|null;bedNumber?:string|null;dietLabel?:string;
   dietRestrictionCodes: string[];
+  recipientType?:'PATIENT'|'COMPANION';consistency?:string;catalogDietLabel?:string;
+  allergyAlert?:boolean;allergyNote?:string;correctionAcknowledgedAt?:string;
   safetyIssue: KitchenReviewReason|null;
   isLate: boolean;
 }
