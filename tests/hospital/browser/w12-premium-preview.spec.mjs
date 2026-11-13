@@ -40,9 +40,13 @@ for(const profile of accounts){
   mkdirSync(screenshots,{recursive:true});
   await page.screenshot({path:join(screenshots,profile.name+'-desktop.png'),fullPage:true});
   if(profile.name==='cozinha'){
-   await expect(page.locator('[data-mode="overview"]')).toBeVisible();
-   await expect(page.getByRole('button',{name:'Abrir Produção'})).toBeVisible();
-   await page.getByRole('button',{name:'Produção',exact:true}).click();
+   await expect(page.getByRole('heading',{name:'Mapas das unidades'})).toBeVisible();
+   const card=page.locator('[data-testid="kitchen-map-UTI-10"]');
+   await expect(card).toBeVisible({timeout:30000});
+   await expect(card.getByRole('button',{name:'Confirmar recebimento'})).toBeVisible();
+   await card.getByRole('button',{name:'Confirmar recebimento'}).click();
+   await expect(card.getByText('A cozinha recebeu o mapa',{exact:true})).toBeVisible({timeout:20000});
+   await card.getByRole('button',{name:'Abrir produção'}).click();
    await expect(page.locator('[data-mode="operations"]')).toBeVisible();
    await expect(page.locator('[data-testid="hospital-page-producao"]')).toBeVisible();
    await expect(page.getByText('Consultando mapas autorizados…')).toBeHidden({timeout:30000});
@@ -54,10 +58,34 @@ for(const profile of accounts){
    await page.getByRole('button',{name:'+ Novo paciente'}).click();
    await expect(page.getByRole('form',{name:'Cadastro rápido de paciente'})).toBeVisible();
    await page.screenshot({path:join(screenshots,'unidade-cadastro-desktop.png'),fullPage:true});
+   await expect(page.getByRole('textbox',{name:'Identificador institucional'})).toHaveCount(0);
+   await page.getByRole('navigation',{name:'Navegação hospitalar por perfil'}).getByRole('button',{name:'Acompanhamento',exact:true}).click();
+   await expect(page.getByText('A cozinha recebeu o mapa',{exact:true})).toBeVisible({timeout:30000});
+   await page.getByRole('button',{name:'Registrar alteração'}).click();
+   await page.getByRole('textbox',{name:'Descrição da alteração'}).fill('Leito 01: solicitação de alteração de refeição; conferir com a equipe.');
+   await page.getByRole('button',{name:'Enviar ocorrência à cozinha'}).click();
+   await expect(page.getByText(/Alteração registrada e encaminhada/)).toBeVisible();
+   await page.screenshot({path:join(screenshots,'unidade-acompanhamento-desktop.png'),fullPage:true});
   }
   await context.close();
  });
 }
+
+test('Kitchen receives and resolves feedback with a real audit, no automatic delivery',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:1440,height:900}});
+ const page=await context.newPage();
+ await login(page,'qa-cozinha@example.test');
+ const card=page.locator('[data-testid="kitchen-map-UTI-10"]');
+ await expect(card).toBeVisible({timeout:30000});
+ await card.getByRole('button',{name:'Acompanhar mapa'}).click();
+ await expect(card.getByText('Ocorrência pendente')).toBeVisible({timeout:30000});
+ await card.getByRole('textbox',{name:'Como a ocorrência foi tratada'}).fill('Recebida pela cozinha e corrigida após contato telefônico com a unidade fictícia.');
+ await card.getByRole('button',{name:'Registrar solução'}).click();
+ await expect(card.getByText('Ocorrência tratada')).toBeVisible({timeout:30000});
+ await expect(card.getByText('Dietas entregues nos leitos')).toHaveCount(0);
+ await page.screenshot({path:join(screenshots,'cozinha-tratamento-ocorrencia.png'),fullPage:true});
+ await context.close();
+});
 
 test('W12 premium mobile drawer, keyboard close and navigation',async({browser})=>{
  const context=await browser.newContext({viewport:{width:393,height:852},isMobile:true,hasTouch:true});
