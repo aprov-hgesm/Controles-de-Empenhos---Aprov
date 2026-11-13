@@ -162,7 +162,6 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
  const families=useMemo(()=>familiesOf(groups),[groups]);
  const groupsInMeal=groups.filter(g=>mealFilter==='ALL'||g.mealType===mealFilter);
  const rows=printRows(groupsInMeal);
- const readyRows=printRows(groupsInMeal,'READY');
  const organizationRows=printRows(groupsInMeal);
  const printableStats=plannedPrintability((data?.meals??[]).filter(m=>mealFilter==='ALL'||m.mealType===mealFilter));
  const filtered=families.filter(g=>(mealFilter==='ALL'||g.mealType===mealFilter)&&(filter==='all'||filter==='pending'&&g.pending>0
