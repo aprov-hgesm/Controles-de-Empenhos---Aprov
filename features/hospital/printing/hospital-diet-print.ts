@@ -100,17 +100,17 @@ export function printDistributionReport(rows:DistributionPrintRow[],date:string,
  save(report({
   title:'CONTROLE DE DISTRIBUIÇÃO · COZINHA DIETÉTICA',
   subtitle:'Data: '+date+'  |  Mapa: '+cycle+'h  |  '+mealLabel+'  |  Hora real da entrega à caneta',
-  headers:['Unidade','Leito','Paciente','Dieta','Observações','Hora exata','Rubrica'],
+  headers:['Unidade','Leito','Destinatário','Dieta','Observações','Hora exata','Rubrica'],
   columnWidths:[25,22,67,52,55,30,26],
   lines:rows.map(r=>[r.unit,r.bed,r.patient,r.diet,r.observation,'','']),
   blankColumns:[5,6],filename:'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf',
-  footer:'Conferir nome e nascimento na pulseira/ficha antes da entrega · Uso interno restrito'
+  footer:'Conferir identidade do paciente ou acompanhante, conforme a etiqueta, antes da entrega · Uso interno restrito'
  }), 'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
 export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
  save(labels(rows,(d,r,x,y,w)=>{
   d.setTextColor(31,80,134);d.setFontSize(8);d.setFont('helvetica','bold');
-  d.text('EMPROVEX · IDENTIFICAÇÃO DO PACIENTE · '+mealLabel,x+5,y+8,{maxWidth:w-10});
+  d.text('EMPROVEX · IDENTIFICAÇÃO DA REFEIÇÃO · '+mealLabel,x+5,y+8,{maxWidth:w-10});
   d.setTextColor(16,45,82);d.setFontSize(13);
   d.text((d.splitTextToSize(text(r.patient),w-11) as string[]).slice(0,2),x+5,y+19);
   d.setFontSize(10);
@@ -118,6 +118,6 @@ export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle
   d.setFont('helvetica','normal');d.setFontSize(9);
   d.text('DIETA: '+text(r.diet),x+5,y+40,{maxWidth:w-10});
   d.setFontSize(8);d.text('OBS.: '+text(r.observation),x+5,y+47,{maxWidth:w-10});
-  d.setFontSize(7);d.text('Conferir 2 identificadores antes de entregar',x+5,y+52);
+  d.setFontSize(7);d.text('Confirmar destinatário e leito antes de entregar',x+5,y+52);
  }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
