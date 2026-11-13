@@ -49,6 +49,7 @@ jobs:
         run: |
           node --test tests/hospital/meal-period-deadlines.test.mjs tests/hospital/order-progress.test.mjs
           node --test tests/hospital/reporting/premium-print-export.test.mjs
+          node --test tests/hospital/distribution-origin-guard.test.mjs
           npm run verify:emprovex-core-protection
       - name: Typecheck
         if: success() || failure()
@@ -66,7 +67,7 @@ jobs:
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.65.0
           npx playwright install --with-deps chromium
-      - name: Authenticated browser smoke - consistency and A4 receipt PDF
+      - name: Authenticated browser smoke - labels, distribution workflow and receipt PDFs
         if: success() || failure()
         run: |
           node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/hospital-rapid-map-preview.log" 2>&1 &
