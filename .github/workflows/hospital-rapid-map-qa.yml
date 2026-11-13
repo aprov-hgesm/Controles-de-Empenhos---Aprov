@@ -55,3 +55,28 @@ jobs:
       - name: Build
         if: success() || failure()
         run: npm run build
+      - name: Install browser tooling for isolated visual QA
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.65.0
+          npx playwright install --with-deps chromium
+      - name: Authenticated browser smoke - consistency and A4 receipt PDF
+        run: |
+          node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/hospital-rapid-map-preview.log" 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() { kill "$PREVIEW_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          ready=0
+          for i in {1..110}; do
+            if curl --fail --silent http://127.0.0.1:3100/cozinha-dietetica > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/hospital-rapid-map-preview.log"; exit 1; fi
+          npx playwright test tests/hospital/browser/rapid-map-print.spec.mjs --reporter=line --workers=1
+      - name: Keep only synthetic receipt and texture QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-rapid-map-visual
+          path: ${{ runner.temp }}/hospital-rapid-map-visual/
+          if-no-files-found: ignore
+          retention-days: 3
