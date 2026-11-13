@@ -62,10 +62,12 @@ jobs:
             npm run build
           }
       - name: Install browser tooling for isolated visual QA
+        if: success() || failure()
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.65.0
           npx playwright install --with-deps chromium
       - name: Authenticated browser smoke - consistency and A4 receipt PDF
+        if: success() || failure()
         run: |
           node scripts/hospital-w12-preview-local.mjs > "$RUNNER_TEMP/hospital-rapid-map-preview.log" 2>&1 &
           PREVIEW_PID=$!
