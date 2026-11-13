@@ -4,7 +4,8 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import {AlertCircle,Check,ChevronDown,ChefHat,Clock3,RefreshCw,Truck,UtensilsCrossed} from 'lucide-react';
 import type {KitchenMapReceipt,KitchenMeal,KitchenSnapshot} from '../production/contracts';
 import {getOrderProgress} from './order-progress.mjs';
-import {OrderProgress} from './OrderProgress';
+import {MealProgressPair} from './MealProgressPair';
+import {mealName,mapLateLabel,timingLabel} from './meal-period.mjs';
 
 type Focus={unitId:string;cycleId:'06'|'10'|'16';localDate:string};
 type Issue={id:string;mapId:string;unitId:string;note:string;status:string;revision:number;createdAt:string;resolutionNote?:string};
@@ -23,7 +24,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
  const [maps,setMaps]=useState<KitchenMapReceipt[]>([]);
  const [meals,setMeals]=useState<KitchenMeal[]>([]);
  const [issues,setIssues]=useState<Issue[]>([]);
- const [filter,setFilter]=useState<'all'|'pending'|'active'|'finished'>('all');
+ const [filter,setFilter]=useState<'all'|'pending'|'active'|'finished'|'extra'>('all');
  const [expanded,setExpanded]=useState('');
  const [resolution,setResolution]=useState<Record<string,string>>({});
  const [loading,setLoading]=useState(true);
@@ -70,10 +71,11 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
   const requests=meals.filter(m=>m.mapId===map.id);
   return {map,requests,progress:getOrderProgress(map,requests),feedback:issues.filter(i=>i.mapId===map.id)};
  }),[maps,meals,issues]);
- const visible=grouped.filter(({progress})=>filter==='all'
+ const visible=grouped.filter(({progress,map,requests})=>filter==='all'
   ||filter==='pending'&&progress.stage<=0
   ||filter==='active'&&progress.stage>0&&progress.stage<4
-  ||filter==='finished'&&progress.stage===4);
+  ||filter==='finished'&&progress.stage===4
+  ||filter==='extra'&&(!!mapLateLabel(map)||requests.some(m=>m.timingStage&&m.timingStage!=='ON_TIME')));
  const receive=async(map:KitchenMapReceipt)=>{
   setBusy(true);setError('');setNotice('');
   try{
@@ -122,7 +124,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
     ].map(([label,count])=><div key={String(label)} className="hospital-kpi"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-1 text-2xl font-extrabold text-[#164589]">{count}</p></div>)}
    </div>
    <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Filtrar mapas">
-    {([['all','Todos'],['pending','Aguardando'],['active','Em andamento'],['finished','Entregues']] as const).map(([id,label])=>
+    {([['all','Todos'],['pending','Aguardando'],['active','Em andamento'],['finished','Entregues'],['extra','Extraordinários']] as const).map(([id,label])=>
      <button type="button" key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}
       className={filter===id?'hospital-primary-action':'hospital-secondary-action'}>{label}</button>)}
    </div>
@@ -136,12 +138,17 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
     const Icon=iconFor(progress.stage),open=expanded===map.id;
     const focus:Focus={unitId:map.unitId,cycleId:map.cycleId,localDate:map.localDate};
     const ready=requests.some(x=>x.status==='READY');
-    return <article key={map.id} className="hospital-panel min-w-0 p-4 sm:p-5" data-testid={'kitchen-map-'+map.unitId+'-'+map.cycleId}>
+    const extras=requests.filter(x=>x.timingStage&&x.timingStage!=='ON_TIME');
+    const urgent=map.submissionTimingStage==='AFTER_TOLERANCE'||map.latestExtraTimingStage==='AFTER_TOLERANCE'||extras.some(x=>x.timingStage==='AFTER_TOLERANCE');
+    const hasLate=!!mapLateLabel(map)||extras.length>0;
+    return <article key={map.id} className={'hospital-panel min-w-0 p-4 sm:p-5 '+(urgent?'border-2 border-rose-300':hasLate?'border-2 border-amber-300':'')} data-testid={'kitchen-map-'+map.unitId+'-'+map.cycleId}>
      <div className="flex items-start gap-3">
       <span className="hospital-kpi-icon shrink-0"><Icon size={20}/></span>
       <div className="min-w-0 flex-1">
        <p className="font-extrabold text-[#1a3b6c]">{map.unitId} · Mapa {map.cycleId}h</p>
-       <p className="mt-1 text-xs text-slate-500">{requests.filter(x=>x.status!=='CANCELLED').length} dietas · {map.late?'Enviado fora do horário':'Enviado pela unidade'}</p>
+       <p className="mt-1 text-xs text-slate-500">{requests.filter(x=>x.status!=='CANCELLED').length} dietas · {mapLateLabel(map)||'Enviado pela unidade'}</p>
+       <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[#315b91]">{(['PRIMARY','SECONDARY'] as const).map(type=><span key={type} className="rounded-full bg-blue-50 px-2.5 py-1">{mealName(map.cycleId,type)}: {requests.filter(m=>m.mealType===type&&m.status!=='CANCELLED').length}</span>)}</div>
+       {hasLate&&<p role="alert" className={'mt-2 rounded-xl border p-2 text-xs font-extrabold '+(urgent?'border-rose-300 bg-rose-50 text-rose-900':'border-amber-200 bg-amber-50 text-amber-900')}>{mapLateLabel(map)||'Contém dieta extraordinária'}{extras.length?' · '+extras.length+' pedido(s) extras':''}{urgent?' · atenção à tolerância de 30 minutos':''}</p>}
        <p className="mt-2 text-sm font-semibold text-[#285b9e]" role="status">{progress.headline}</p>
        {!!map.needsKitchenReview&&<p className="mt-2 flex items-center gap-1 text-xs font-bold text-amber-700"><AlertCircle size={14}/> Atenção: mapa com alteração tardia. Reconferir antes de liberar.</p>}
        {feedback.some(x=>x.status==='OPEN')&&<p className="mt-2 text-xs font-bold text-rose-700">{feedback.filter(x=>x.status==='OPEN').length} ocorrência(s) aguardando análise</p>}
@@ -155,7 +162,8 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
       <button type="button" className="hospital-secondary-action" onClick={()=>setExpanded(open?'':map.id)}>{open?'Ocultar detalhes':'Acompanhar mapa'}</button>
      </div>
      {open&&<div className="mt-4 space-y-3">
-      <OrderProgress map={map} meals={requests} compact/>
+      <MealProgressPair map={map} meals={requests} compact/>
+      {extras.length>0&&<div className="space-y-1 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{extras.map(m=><p key={m.id}>{mealName(map.cycleId,m.mealType)} · {timingLabel(m.timingStage,m.mealType)}{m.status==='SUSPENDED'?' · aguardando revisão':''}</p>)}</div>}
       {feedback.map(issue=><div key={issue.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
        <p className="text-xs font-bold text-slate-700">{issue.status==='OPEN'?'Ocorrência pendente':'Ocorrência tratada'} · {issue.unitId}</p>
        <p className="mt-1 text-sm text-slate-700">{issue.note}</p>
