@@ -4,11 +4,14 @@
  * Printing a PDF never changes a meal or delivery state.
  */
 import {jsPDF} from 'jspdf';
+import type {PrintPhase} from './meal-print-selection';
 
-export type ProductionPrintRow={unit:string;diet:string;observation:string;quantity:number;mealType?:string};
+export type ProductionPrintRow={unit:string;diet:string;observation:string;quantity:number;mealType?:string;
+ consistency?:string;recipientType?:'PATIENT'|'COMPANION';phase?:PrintPhase};
 export type DistributionPrintRow={
  unit:string;bed:string;patient:string;diet:string;observation:string;
  recipientType?:'PATIENT'|'COMPANION';allergyAlert?:boolean;allergyNote?:string;corrected?:boolean;
+ phase?:PrintPhase;identityIncomplete?:boolean;
 };
 type ReportOptions={
  title:string;subtitle:string;headers:string[];columnWidths:number[];
@@ -93,13 +96,13 @@ function report(options:ReportOptions){
 }
 function labels<T>(records:T[],draw:(d:jsPDF,r:T,x:number,y:number,w:number)=>void){
  if(!records.length)throw Error('Nenhuma etiqueta disponível para este filtro.');
- if(records.length>500)throw Error('Mais de 500 etiquetas: selecione um período menor.');
+ if(records.length>5000)throw Error('Solicitação excepcional de mais de 5 mil etiquetas: divida por unidade e refeição.');
  const d=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
  // Two columns, three labels per column. Millimetre dimensions stay inside A4.
- const w=136,h=54,perPage=6;
+ const w=136,h=60,perPage=6;
  records.forEach((r,i)=>{
   if(i&&i%perPage===0)d.addPage();
-  const slot=i%perPage,x=10+(slot%2)*141,y=10+Math.floor(slot/2)*60;
+  const slot=i%perPage,x=10+(slot%2)*141,y=7+Math.floor(slot/2)*64;
   d.setDrawColor(179,198,222);d.setLineWidth(.3);d.roundedRect(x,y,w,h,2,2,'S');
   draw(d,r,x,y,w);
  });
@@ -109,6 +112,16 @@ function save(d:jsPDF,filename:string){
  if(typeof window==='undefined')throw Error('Emissão de PDF exige sessão local no navegador.');
  d.save(filename);
 }
+const phaseNote=(phase?:PrintPhase)=>{
+ switch(phase){
+  case 'PLANEJAMENTO':return 'PLANEJAMENTO - NÃO LIBERADA';
+  case 'PREPARO':return 'EM PREPARO - NÃO LIBERADA';
+  case 'PRONTA':return 'PRONTA - CONFERIR ANTES DA ENTREGA';
+  case 'EM_ROTA':return 'EM ROTA - CONFERIR DESTINATÁRIO';
+  case 'ENTREGUE':return 'ENTREGA REGISTRADA';
+  default:return 'CONFERIR ESTADO ANTES DE UTILIZAR';
+ }
+};
 const pill=(d:jsPDF,title:string,x:number,y:number,alert=false)=>{
  if(alert)d.setFillColor(254,226,226);else d.setFillColor(232,242,255);
  d.roundedRect(x,y,40,7,2,2,'F');
@@ -125,30 +138,38 @@ export function printProductionReport(rows:ProductionPrintRow[],date:string,cycl
   subtitle:'Data: '+date+'   •   Ciclo: '+cycle+'h   •   '+count+' porções   •   Impressão A4 horizontal',
   headers:['DIETA / REFEIÇÃO','CONSISTÊNCIA, RESTRIÇÕES E OBSERVAÇÕES','UNIDADE','QTDE.','CONFERÊNCIA'],
   columnWidths:[73,94,33,24,53],
-  lines:rows.map(r=>[r.diet+(r.mealType==='PRIMARY'?' · PRINCIPAL':r.mealType==='SECONDARY'?' · SECUNDÁRIA':''),r.observation,r.unit,String(r.quantity),'']),
+  lines:rows.map(r=>[
+   r.diet+(r.mealType==='PRIMARY'?' · PRINCIPAL':r.mealType==='SECONDARY'?' · SECUNDÁRIA':'')+
+     (r.recipientType==='COMPANION'?' · ACOMPANHANTE':' · PACIENTE'),
+   [r.consistency&&r.consistency!=='NÃO INFORMADA'?'Consistência: '+r.consistency.replaceAll('_',' '):'',r.observation,phaseNote(r.phase)].filter(Boolean).join(' · '),
+   r.unit,String(r.quantity),''
+  ]),
   blankColumns:[4],
   alertRows:rows.map(r=>/ALERGIA:/i.test(r.observation)),
-  footer:'Somente dietas liberadas para preparo · Documento sem nomes ou leitos'
+  footer:'Mapa para organização e conferência · Imprimir não significa preparo ou entrega · Sem nomes/leitos'
  }), 'producao-dietas-'+date+'-'+cycle+'h.pdf');
 }
 export function printProductionLabels(rows:ProductionPrintRow[],date:string,cycle:string){
  const count=rows.reduce((n,r)=>n+r.quantity,0);
- if(count>500)throw Error('Mais de 500 etiquetas: divida o período.');
+ if(count>5000)throw Error('Solicitação excepcional de mais de 5 mil etiquetas: divida por unidade e refeição.');
  const many=rows.flatMap(r=>Array.from({length:Math.max(0,r.quantity)},()=>r));
  save(labels(many,(d,r,x,y,w)=>{
   const allergy=/ALERGIA:/i.test(r.observation);
-  if(allergy)d.setFillColor(151,38,38);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,47,'F');
+  if(allergy)d.setFillColor(151,38,38);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,54,'F');
   d.setTextColor(...muted);d.setFont('helvetica','bold');d.setFontSize(7.5);
-  d.text('EMPROVEX  /  PREPARO DE DIETA',x+8,y+8);
-  pill(d,r.mealType==='SECONDARY'?'SECUNDÁRIA':'PRINCIPAL',x+w-45,y+3);
-  d.setTextColor(...ink);d.setFont('helvetica','bold');d.setFontSize(13);
+  d.text('EMPROVEX  /  PREPARO E PORCIONAMENTO',x+8,y+8);
+  pill(d,r.recipientType==='COMPANION'?'ACOMPANHANTE':'PACIENTE',x+w-45,y+3);
+  d.setTextColor(...ink);d.setFont('helvetica','bold');d.setFontSize(12.5);
   d.text(compact(d,r.diet,w-17,2),x+8,y+17);
-  d.setFont('helvetica','bold');d.setFontSize(9.3);
-  d.text('UNIDADE: '+safe(r.unit,30),x+8,y+30);
-  d.setFont('helvetica','normal');d.setFontSize(7.7);
+  d.setFont('helvetica','bold');d.setFontSize(8.6);
+  d.text('UNIDADE: '+safe(r.unit,25)+'  ·  '+(r.mealType==='SECONDARY'?'SECUNDÁRIA':'PRINCIPAL'),x+8,y+30,{maxWidth:w-16});
+  d.setFont('helvetica','normal');d.setFontSize(7.6);
   d.text(compact(d,'OBS.: '+safe(r.observation,450),w-17,2),x+8,y+38);
-  if(allergy)d.setTextColor(151,38,38);else d.setTextColor(...muted);d.setFont('helvetica','bold');d.setFontSize(6.9);
-  d.text((allergy?'ALERGIA REGISTRADA · CONFERIR FICHA  /  ':'')+date+' · '+cycle+'h',x+8,y+49,{maxWidth:w-16});
+  if(allergy){d.setTextColor(151,38,38);d.setFont('helvetica','bold');d.setFontSize(7.1);
+    d.text('ALERGIA REGISTRADA - CONFERIR COMPOSIÇÃO',x+8,y+48,{maxWidth:w-16});}
+  d.setFont('helvetica','bold');d.setFontSize(7.5);
+  d.setTextColor(...(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO'?[153,78,22] as const:ink));
+  d.text(phaseNote(r.phase),x+8,y+54,{maxWidth:w-16});
  }), 'etiquetas-preparo-'+date+'-'+cycle+'h.pdf');
 }
 export function printDistributionReport(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
@@ -159,34 +180,40 @@ export function printDistributionReport(rows:DistributionPrintRow[],date:string,
   headers:['UNIDADE','LEITO','DESTINATÁRIO','DIETA','OBSERVAÇÕES / ALERGIAS','HORA','RUBRICA'],
   columnWidths:[23,22,66,50,60,28,28],
   lines:rows.map(r=>[r.unit,r.bed,r.patient,r.diet,
-   [r.allergyAlert?'ALERGIA: '+(r.allergyNote||'CONFERIR PRONTUÁRIO'):'',r.corrected?'DIETA CORRIGIDA':'',r.observation].filter(Boolean).join(' · '),
+   [r.recipientType==='COMPANION'?'ACOMPANHANTE':null,
+    r.allergyAlert?'ALERGIA: '+(r.allergyNote||'CONFERIR PRONTUÁRIO'):null,
+    r.corrected?'DIETA CORRIGIDA':null,r.identityIncomplete?'IDENTIFICAÇÃO PENDENTE - CONFERIR':null,
+    phaseNote(r.phase),r.observation].filter(Boolean).join(' · '),
    '','']),
   blankColumns:[5,6],alertRows:rows.map(r=>!!r.allergyAlert),
-  footer:'Conferir identificação e o leito antes da entrega · Preenchimento físico não confirma entrega no sistema'
+  footer:'Planejamento/organização: pedidos não liberados não podem ser distribuídos · Conferir identidade e alergias'
  }), 'distribuicao-dietas-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
 export function printPatientLabels(rows:DistributionPrintRow[],date:string,cycle:string,mealLabel='',mealType=''){
  save(labels(rows,(d,r,x,y,w)=>{
   const allergy=!!r.allergyAlert;
-  if(allergy)d.setFillColor(147,35,35);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,47,'F');
+  if(allergy)d.setFillColor(147,35,35);else d.setFillColor(...navy);d.rect(x+2.5,y+3,2,54,'F');
   d.setFont('helvetica','bold');d.setFontSize(7.2);d.setTextColor(...muted);
   d.text('EMPROVEX  /  IDENTIFICAÇÃO DE REFEIÇÃO',x+8,y+8);
-  pill(d,r.recipientType==='COMPANION'?'ACOMPANHANTE':mealLabel||'PACIENTE',x+w-45,y+3,allergy);
+  pill(d,r.recipientType==='COMPANION'?'ACOMPANHANTE':'PACIENTE',x+w-45,y+3,allergy);
   d.setTextColor(...ink);d.setFont('helvetica','bold');d.setFontSize(12);
   d.text(compact(d,r.patient,w-17,2),x+8,y+17);
-  d.setFontSize(9);d.text('UNIDADE: '+safe(r.unit,25)+'   LEITO: '+safe(r.bed,25),x+8,y+30);
+  d.setFontSize(9);d.text('UNIDADE: '+safe(r.unit,25)+'   LEITO: '+safe(r.bed,25),x+8,y+29,{maxWidth:w-16});
   d.setFont('helvetica','bold');d.setFontSize(8.5);
-  d.text(compact(d,r.diet,w-17,1),x+8,y+37);
-  d.setFont('helvetica','normal');d.setFontSize(7.3);d.setTextColor(...muted);
-  d.text(compact(d,safe(r.observation,400),w-17,1),x+8,y+43);
+  d.text(compact(d,r.diet,w-17,1),x+8,y+36);
+  d.setFont('helvetica','normal');d.setFontSize(7.2);d.setTextColor(...muted);
+  d.text(compact(d,safe(r.observation,400),w-17,1),x+8,y+42);
   if(allergy){
-   d.setTextColor(148,35,35);d.setFont('helvetica','bold');d.setFontSize(7.2);
+   d.setTextColor(148,35,35);d.setFont('helvetica','bold');d.setFontSize(7.1);
    const alert=safe(r.allergyNote,180);
-   const full=d.getTextWidth(alert);
-   d.text(full>w-17?'ALERGIA — CONFERIR LISTA COMPLETA NO RELATÓRIO':'ALERGIA: '+alert,x+8,y+50,{maxWidth:w-17});
-  }else{
-   d.setTextColor(...muted);d.setFontSize(7);
-   d.text((r.corrected?'DIETA CORRIGIDA  ·  ':'')+date+' · '+cycle+'h · Conferir o destinatário',x+8,y+50,{maxWidth:w-17});
+   d.text('ALERGIA: '+alert,x+8,y+49,{maxWidth:w-17});
+  }else if(r.identityIncomplete||r.corrected){
+   d.setTextColor(...(r.identityIncomplete?[160,75,17] as const:blue));
+   d.setFont('helvetica','bold');d.setFontSize(7);
+   d.text(r.identityIncomplete?'IDENTIFICAÇÃO PENDENTE - CONFERIR':'DIETA CORRIGIDA - CONFERIR VERSÃO',x+8,y+49,{maxWidth:w-17});
   }
+  d.setTextColor(...(r.phase==='PLANEJAMENTO'||r.phase==='PREPARO'?[153,78,22] as const:ink));
+  d.setFont('helvetica','bold');d.setFontSize(7.3);
+  d.text(phaseNote(r.phase),x+8,y+55,{maxWidth:w-16});
  }), 'etiquetas-pacientes-'+date+'-'+cycle+'h-'+mealType+'.pdf');
 }
