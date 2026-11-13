@@ -45,10 +45,13 @@ jobs:
           --only auth,firestore
           "node --test --test-concurrency=1 tests/hospital/firebase/rapid-map-e2e.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs"
       - name: Contract, previous W12 regression
+        if: success() || failure()
         run: |
           node --test tests/hospital/meal-period-deadlines.test.mjs tests/hospital/order-progress.test.mjs
           npm run verify:emprovex-core-protection
       - name: Typecheck
+        if: success() || failure()
         run: npm run typecheck
       - name: Build
+        if: success() || failure()
         run: npm run build
