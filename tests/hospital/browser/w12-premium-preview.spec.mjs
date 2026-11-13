@@ -176,7 +176,9 @@ test('W12 independently tracks principal and secondary; overdue map highlights u
  await page.getByRole('button',{name:'Lanche da manhã',exact:true}).click();
  await expect(page.locator('[data-testid="late-meal-warning"]')).toContainText('secundária');
  await page.getByRole('button',{name:'Café da manhã',exact:true}).click();
- await expect(page.locator('[data-testid="late-meal-warning"]')).toContainText('suspensa');
+ await expect(page.locator('[data-testid="late-meal-warning"]')).toContainText('alerta prioritário');
+ await expect(page.getByRole('button',{name:/Registrar contato e exceção assistencial/})).toHaveCount(0);
+ await expect(page.getByLabel(/Contato assistencial/)).toHaveCount(0);
  await page.screenshot({path:join(screenshots,'unidade-mapa-fora-prazo-duas-refeicoes.png'),fullPage:true});
  await context.close();
 });
