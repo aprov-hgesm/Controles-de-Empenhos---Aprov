@@ -1,49 +1,127 @@
 'use client';
+
 import {useCallback,useEffect,useMemo,useState} from 'react';
+import {FileDown,Printer,RefreshCw,Truck} from 'lucide-react';
 import {DistributionView} from '@/features/hospital/distribution/DistributionView';
-import type {KitchenSnapshot} from '@/features/hospital/production/contracts';
+import type {KitchenMeal,KitchenSnapshot} from '@/features/hospital/production/contracts';
+import {
+ printDistributionReport,printPatientLabels,type DistributionPrintRow
+} from '@/features/hospital/printing/hospital-diet-print';
+
 type Cycle='06'|'10'|'16';
-const localToday=()=>{
+const today=()=>{
  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
  const v=(k:string)=>p.find(x=>x.type===k)?.value??'';
  return v('year')+'-'+v('month')+'-'+v('day');
 };
-export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
- const [unitId,setUnitId]=useState(initialUnitId??unitIds[0]??'');
+const suitable=(m:KitchenMeal)=>['READY','DISPATCHED','RECEIVED_BY_UNIT','DELIVERED'].includes(m.status)
+ &&(!m.safetyIssue||m.status==='DELIVERED');
+const observation=(m:KitchenMeal)=>[
+ (m.observation??'').trim(),m.dietRestrictionCodes?.length?'Restrições: '+m.dietRestrictionCodes.join(', '):''
+].filter(Boolean).join(' · ')||'Sem observações';
+function printable(m:KitchenMeal):m is KitchenMeal&{patientName:string;bedNumber:string}{
+ return suitable(m)&&typeof m.patientName==='string'&&m.patientName.trim()!==''
+ &&typeof m.bedNumber==='string'&&m.bedNumber.trim()!=='';
+}
+const record=(m:KitchenMeal):DistributionPrintRow=>({unit:m.unitId,bed:m.bedNumber??'',
+ patient:m.patientName??'',diet:m.dietLabel??'Dieta',observation:observation(m)});
+
+export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
+ initialCycle='10',initialDate}:{organizationId:string;unitIds:string[];
+ getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;initialDate?:string}){
+ const [unit,setUnit]=useState(initialUnitId??'');
  const [cycle,setCycle]=useState<Cycle>(initialCycle);
- const [date,setDate]=useState(initialDate??localToday);
+ const [date,setDate]=useState(initialDate??today);
  const [snapshot,setSnapshot]=useState<KitchenSnapshot|null>(null);
- const [loading,setLoading]=useState(false);
+ const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
- const load=useCallback(async()=>{
-  if(!unitId)return;
-  setLoading(true);setError('');
+ const [notice,setNotice]=useState('');
+ const load=useCallback(async(silent=false)=>{
+  if(!silent)setLoading(true);
   try{
-   const qs=new URLSearchParams({unitId,localDate:date,cycleId:cycle});
-   const res=await fetch('/api/hospital/production?'+qs.toString(),{cache:'no-store',headers:{authorization:await getAuthorization(),'x-hospital-organization-id':organizationId}});
-   const answer=await res.json();
-   if(!res.ok||!answer.ok)throw Error(answer.error?.message||'Fila não disponível');
-   setSnapshot(answer.data as KitchenSnapshot);
-  }catch(e){setSnapshot(null);setError(e instanceof Error?e.message:'Falha ao consultar pedidos');}
-  finally{setLoading(false)}
- },[unitId,cycle,date,organizationId,getAuthorization]);
- useEffect(()=>{void load()},[load]);
- const filtered=useMemo(()=>snapshot?.meals.filter(m=>m.unitId===unitId&&['READY','DISPATCHED','RECEIVED_BY_UNIT'].includes(m.status)&&!m.safetyIssue)??[],[snapshot,unitId]);
- const mealIds=useMemo(()=>filtered.slice(0,50).map(m=>m.id),[filtered]);
- return <section className="space-y-5 text-slate-900">
-  <div className="hospital-panel p-5 sm:p-6">
-   <h2 className="text-xl font-extrabold text-[#173b69]">Fila de distribuição</h2>
-   <p className="text-sm text-slate-600">Somente refeições com preparo concluído ou distribuição já iniciada. Não existe aceite por pedido.</p>
-   <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-[#f9fbff] p-4">
-    <label className="grid gap-1 text-sm">Unidade<select value={unitId} onChange={e=>setUnitId(e.target.value)} className="rounded border p-2">{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
-    <label className="grid gap-1 text-sm">Data<input type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded border p-2"/></label>
-    <label className="grid gap-1 text-sm">Ciclo<select value={cycle} onChange={e=>setCycle(e.target.value as Cycle)} className="rounded border p-2"><option value="06">06h</option><option value="10">10h</option><option value="16">16h</option></select></label>
-    <button className="hospital-primary-action disabled:opacity-50" type="button" disabled={loading} onClick={()=>void load()}>Atualizar pedidos</button>
+   const q=new URLSearchParams({localDate:date,cycleId:cycle,includeSuspended:'true'});
+   unitIds.forEach(u=>q.append('unitId',u));
+   const res=await fetch('/api/hospital/production?'+q,{cache:'no-store',
+    headers:{authorization:await getAuthorization(),'x-hospital-organization-id':organizationId}});
+   const data=await res.json() as {ok:boolean;data?:KitchenSnapshot;error?:{message:string}};
+   if(!res.ok||!data.ok||!data.data)throw Error(data.error?.message||'Fila indisponível');
+   setSnapshot(data.data);setError('');
+  }catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar distribuição');}
+  finally{if(!silent)setLoading(false)}
+ },[date,cycle,unitIds,organizationId,getAuthorization]);
+ useEffect(()=>{
+  void load();
+  const interval=setInterval(()=>{if(document.visibilityState==='visible')void load(true)},20000);
+  return()=>clearInterval(interval);
+ },[load]);
+ const queue=useMemo(()=>snapshot?.meals.filter(suitable)??[],[snapshot]);
+ const records=useMemo(()=>queue.filter(printable).map(record).sort((a,b)=>
+  a.unit.localeCompare(b.unit,'pt-BR')||a.bed.localeCompare(b.bed,'pt-BR',{numeric:true})),[queue]);
+ const missing=queue.filter(m=>!printable(m)).length;
+ const shown=unit?queue.filter(m=>m.unitId===unit):queue;
+ const unitCounts=unitIds.map(id=>({unitId:id,count:queue.filter(m=>m.unitId===id).length,
+  prepared:queue.filter(m=>m.unitId===id&&m.status==='READY').length,
+  route:queue.filter(m=>m.unitId===id&&['DISPATCHED','RECEIVED_BY_UNIT'].includes(m.status)).length,
+  delivered:queue.filter(m=>m.unitId===id&&m.status==='DELIVERED').length}));
+ const download=(type:'labels'|'report')=>{
+  setError('');setNotice('');
+  try{
+   const selected=unit?records.filter(r=>r.unit===unit):records;
+   if(type==='report')printDistributionReport(selected,date,cycle);
+   else printPatientLabels(selected,date,cycle);
+   setNotice('PDF preparado no seu dispositivo. A impressão não marca dietas como entregues.');
+  }catch(e){setError(e instanceof Error?e.message:'Não foi possível gerar o PDF');}
+ };
+ return <section className="space-y-5 text-slate-900" aria-label="Distribuição hospitalar">
+  <div className="hospital-panel space-y-4 p-5 sm:p-6">
+   <header className="flex flex-wrap items-start justify-between gap-3">
+    <div><p className="hospital-hint-label">Segunda etiqueta · conferência dos leitos</p>
+     <h2 className="mt-1 text-xl font-extrabold text-[#173b69]">Organizar e distribuir</h2>
+     <p className="mt-1 text-sm text-slate-500">Imprima a etiqueta do paciente, coloque junto à etiqueta da dieta e leve a folha com campo de horário para o copeiro preencher.</p></div>
+    <button type="button" className="hospital-secondary-action" disabled={loading} onClick={()=>void load()}>
+     <RefreshCw size={16} className="inline"/> Atualizar</button>
+   </header>
+   <div className="grid gap-3 sm:grid-cols-3">
+    <label className="grid gap-1 text-xs font-semibold text-slate-600">Dia<input type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-xl border border-slate-200 p-2.5"/></label>
+    <label className="grid gap-1 text-xs font-semibold text-slate-600">Mapa<select value={cycle} onChange={e=>setCycle(e.target.value as Cycle)} className="rounded-xl border border-slate-200 p-2.5"><option value="06">06h</option><option value="10">10h</option><option value="16">16h</option></select></label>
+    <label className="grid gap-1 text-xs font-semibold text-slate-600">Unidade<select value={unit} onChange={e=>setUnit(e.target.value)} className="rounded-xl border border-slate-200 p-2.5"><option value="">Todas as unidades</option>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select></label>
    </div>
-   {loading&&<p role="status">Consultando pedidos autorizados…</p>}
-   {error&&<p role="alert" className="text-red-700">{error}</p>}
-   {!loading&&!error&&filtered.length>50&&<p role="status">Exibindo 50 refeições por vez para limitar consultas; filtre por unidade e ciclo.</p>}
+   <div className="flex flex-wrap gap-2">
+    <button type="button" className="hospital-primary-action" disabled={!records.length} onClick={()=>download('labels')}>
+     <Printer size={16} className="inline"/> Etiquetas dos pacientes
+    </button>
+    <button type="button" className="hospital-secondary-action" disabled={!records.length} onClick={()=>download('report')}>
+     <FileDown size={16} className="inline"/> Relatório de distribuição · PDF A4 horizontal
+    </button>
+   </div>
+   {missing>0&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+    {missing} dieta(s) aguardam identificação válida de paciente/leito e não entram nas etiquetas nem no relatório até correção.</p>}
+   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Resumo da distribuição">
+    {[
+     ['Dietas disponíveis',queue.length],['Aguardando montagem',queue.filter(x=>x.status==='READY').length],
+     ['Em rota',queue.filter(x=>['DISPATCHED','RECEIVED_BY_UNIT'].includes(x.status)).length],
+     ['Entregues',queue.filter(x=>x.status==='DELIVERED').length]
+    ].map(([label,value])=><div key={String(label)} className="hospital-kpi">
+     <p className="text-xs text-slate-600">{label}</p><p className="mt-1 text-2xl font-extrabold text-[#174680]">{value}</p>
+    </div>)}
+   </div>
   </div>
-  {!loading&&!error&&snapshot&&unitId&&<DistributionView key={unitId+'-'+date+'-'+cycle} organizationId={organizationId} unitId={unitId} mealIds={mealIds} getAuthorization={getAuthorization}/>}
+  {loading&&<p role="status" className="text-sm text-slate-500">Consultando pedidos autorizados…</p>}
+  {error&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
+  {notice&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+  {!unit&&<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Filas por unidade">
+   {unitCounts.map(r=><button key={r.unitId} type="button" onClick={()=>setUnit(r.unitId)}
+     className="hospital-panel flex items-center justify-between gap-3 p-5 text-left transition-colors hover:border-blue-300 hover:bg-blue-50">
+     <div><p className="font-extrabold text-[#173b69]">{r.unitId}</p><p className="mt-1 text-xs text-slate-600">{r.prepared} prontas · {r.route} em rota · {r.delivered} entregues</p></div>
+     <span className="hospital-kpi-icon"><Truck size={17}/></span>
+    </button>)}
+  </div>}
+  {unit&&snapshot&&<div className="space-y-3">
+   <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
+   <DistributionView key={unit+'-'+date+'-'+cycle} organizationId={organizationId} unitId={unit}
+    mealIds={shown.slice(0,50).map(m=>m.id)} getAuthorization={getAuthorization}/>
+   {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
+  </div>}
+  <p className="text-xs text-slate-500">Relatório para preenchimento com caneta: hora exata no leito e rubrica. Após o retorno, abra a unidade e marque cada entrega com o horário registrado. O sistema grava também quando você lançou a informação.</p>
  </section>;
 }
