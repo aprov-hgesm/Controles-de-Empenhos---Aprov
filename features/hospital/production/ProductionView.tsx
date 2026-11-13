@@ -46,6 +46,20 @@ function groupsOf(snapshot:KitchenSnapshot|null):DietGroup[]{
  }
  return [...grouped.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR')||a.unitId.localeCompare(b.unitId));
 }
+type DietFamily={key:string;dietCode:string;dietLabel:string;observation:string;mealType:string;units:DietGroup[];
+ pending:number;preparing:number;ready:number;total:number;batches:KitchenBatch[]};
+function familiesOf(groups:DietGroup[]):DietFamily[]{
+ const families=new Map<string,DietFamily>();
+ for(const g of groups){
+  const key=JSON.stringify([g.dietCode,g.mealType,g.observation]);
+  if(!families.has(key))families.set(key,{key,dietCode:g.dietCode,dietLabel:g.dietLabel,
+   observation:g.observation,mealType:g.mealType,units:[],pending:0,preparing:0,ready:0,total:0,batches:[]});
+  const f=families.get(key)!;
+  f.units.push(g);f.pending+=g.pending.length;f.preparing+=g.preparing.length;
+  f.ready+=g.ready.length;f.total+=g.meals.length;f.batches.push(...g.batches);
+ }
+ return [...families.values()].sort((a,b)=>a.dietLabel.localeCompare(b.dietLabel,'pt-BR'));
+}
 const printRows=(groups:DietGroup[],onlyReady=false):ProductionPrintRow[]=>groups
  .map(g=>({unit:g.unitId,diet:g.dietLabel,observation:g.observation,
    quantity:onlyReady?g.ready.length:g.meals.length}))
@@ -98,14 +112,16 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
   catch(e){setError(e instanceof Error?e.message:'Não foi possível concluir a ação');}
   finally{await load(true);setBusy(false)}
  };
- const start=async(g:DietGroup)=>{
-  if(!g.pending.length)return;
+ const start=async(family:DietFamily)=>{
+  if(!family.pending)return;
   await work(async()=>{
-   const group=g.pending.slice(0,50);
-   const label=(g.dietLabel+(g.observation==='Sem observações'?'':' · '+g.observation)).slice(0,120);
-   const b=await command<KitchenBatch>('create',{unitId:g.unitId,localDate:date,cycleId:cycle,mealIds:group.map(x=>x.id),preparationLabel:label});
-   await command('start',{unitId:g.unitId,batchId:b.id,expectedRevision:b.revision});
-  },'Preparo iniciado para '+g.dietLabel+' · '+g.unitId+'.');
+   for(const g of family.units.filter(x=>x.pending.length)){
+    const meals=g.pending.slice(0,50);
+    const label=(g.dietLabel+(g.observation==='Sem observações'?'':' · '+g.observation)).slice(0,120);
+    const b=await command<KitchenBatch>('create',{unitId:g.unitId,localDate:date,cycleId:cycle,mealIds:meals.map(x=>x.id),preparationLabel:label});
+    await command('start',{unitId:g.unitId,batchId:b.id,expectedRevision:b.revision});
+   }
+  },'Preparo iniciado por tipo de dieta e separado por unidade no histórico.');
  };
  const actBatch=async(b:KitchenBatch,action:'start'|'complete'|'acknowledge'|'reconcile'|'cancel')=>{
   await work(async()=>{
@@ -116,11 +132,21 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
    await command(action,args);
   },action==='complete'?'Dietas prontas. Agora podem seguir para montagem e distribuição.':'Operação registrada na produção.');
  };
+ const performBatches=async(batches:KitchenBatch[],action:'start'|'complete')=>{
+  await work(async()=>{
+   for(const b of batches){
+    const args:Record<string,unknown>={unitId:b.unitId,batchId:b.id,expectedRevision:b.revision};
+    if(action==='complete')args.confirmedQuantity=b.quantity;
+    await command(action,args);
+   }
+  },action==='complete'?'Quantidades conferidas. Dietas prontas para identificar e distribuir.':'Produção iniciada para as unidades correspondentes.');
+ };
  const groups=useMemo(()=>groupsOf(data),[data]);
+ const families=useMemo(()=>familiesOf(groups),[groups]);
  const rows=printRows(groups);
  const readyRows=printRows(groups,true);
- const filtered=groups.filter(g=>filter==='all'||filter==='pending'&&g.pending.length>0
-  ||filter==='preparing'&&g.preparing.length>0||filter==='ready'&&g.ready.length>0);
+ const filtered=families.filter(g=>filter==='all'||filter==='pending'&&g.pending>0
+  ||filter==='preparing'&&g.preparing>0||filter==='ready'&&g.ready>0);
  const safety=(data?.counts.blocked??0)+(data?.counts.suspended??0);
  const doPrint=(kind:'report'|'labels')=>{
   try{
@@ -148,9 +174,9 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Resumo da produção">
     {[
       ['Dietas solicitadas',rows.reduce((n,r)=>n+r.quantity,0)],
-      ['Aguardando',groups.reduce((n,g)=>n+g.pending.length,0)],
-      ['Produzindo',groups.reduce((n,g)=>n+g.preparing.length,0)],
-      ['Prontas',groups.reduce((n,g)=>n+g.ready.length,0)]
+      ['Aguardando',families.reduce((n,g)=>n+g.pending,0)],
+      ['Produzindo',families.reduce((n,g)=>n+g.preparing,0)],
+      ['Prontas',families.reduce((n,g)=>n+g.ready,0)]
     ].map(([label,value])=><div className="hospital-kpi" key={String(label)}><p className="text-xs text-slate-600">{label}</p><p className="mt-1 text-2xl font-extrabold text-[#174680] tabular-nums">{value}</p></div>)}
    </div>
    {safety>0&&<p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -178,25 +204,26 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     <div className="flex flex-wrap items-start justify-between gap-3">
      <div><p className="hospital-hint-label">Dieta / observações</p><h3 className="mt-1 text-lg font-extrabold text-[#173b69]">{g.dietLabel}</h3>
       <p className="mt-1 text-sm text-slate-600">{g.observation}</p></div>
-     <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{g.unitId} · {g.mealType==='PRIMARY'?'Principal':'Secundária'}</p>
-      <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.meals.length}</p><p className="text-xs text-slate-500">porções</p></div>
+     <div className="text-right"><p className="text-[11px] font-bold text-[#4d76a9]">{g.mealType==='PRIMARY'?'Principal':'Secundária'}</p>
+      <p className="text-3xl font-extrabold text-[#174680] tabular-nums">{g.total}</p><p className="text-xs text-slate-500">porções</p></div>
     </div>
     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-     {g.pending.length>0&&<span className="rounded-full bg-slate-100 px-3 py-1">{g.pending.length} aguardando</span>}
-     {g.preparing.length>0&&<span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{g.preparing.length} preparando</span>}
-     {g.ready.length>0&&<span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{g.ready.length} prontas</span>}
+     {g.pending>0&&<span className="rounded-full bg-slate-100 px-3 py-1">{g.pending} aguardando</span>}
+     {g.preparing>0&&<span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{g.preparing} preparando</span>}
+     {g.ready>0&&<span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">{g.ready} prontas</span>}
+     {g.units.map(u=><span key={u.unitId} className="rounded-full border border-blue-100 px-3 py-1 text-[#37639b]">{u.unitId}: {u.meals.length}</span>)}
     </div>
     <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-     {g.pending.length>0&&<button type="button" className="hospital-primary-action" disabled={busy||loading} onClick={()=>void start(g)}>
-      <ChefHat className="inline" size={16}/> Iniciar preparo ({Math.min(50,g.pending.length)})
+     {g.pending>0&&<button type="button" className="hospital-primary-action" disabled={busy||loading} onClick={()=>void start(g)}>
+      <ChefHat className="inline" size={16}/> Iniciar preparo ({g.pending})
      </button>}
-     {g.batches.filter(b=>b.effectiveStatus==='PENDING').map(b=>
-      <button type="button" key={b.id} className="hospital-primary-action" disabled={busy||loading} onClick={()=>void actBatch(b,'start')}>Iniciar lote pendente</button>)}
-     {g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS').map(b=>
-      <button type="button" key={b.id} className="hospital-primary-action" disabled={busy||loading} onClick={()=>void actBatch(b,'complete')}>
-       <Check size={15} className="inline"/> Conferi {b.quantity} dietas · prontas
-      </button>)}
-     {g.ready.length>0&&<span className="flex items-center gap-2 text-xs font-bold text-emerald-800"><ClipboardCheck size={16}/> {g.ready.length} etiquetas liberadas para imprimir</span>}
+     {g.batches.some(b=>b.effectiveStatus==='PENDING')&&<button type="button" className="hospital-primary-action" disabled={busy||loading}
+      onClick={()=>void performBatches(g.batches.filter(b=>b.effectiveStatus==='PENDING'),'start')}>Retomar início do preparo</button>}
+     {g.batches.some(b=>b.effectiveStatus==='IN_PROGRESS')&&<button type="button" className="hospital-primary-action" disabled={busy||loading}
+      onClick={()=>void performBatches(g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS'),'complete')}>
+       <Check size={15} className="inline"/> Conferi {g.batches.filter(b=>b.effectiveStatus==='IN_PROGRESS').reduce((n,b)=>n+b.quantity,0)} dietas · prontas
+      </button>}
+     {g.ready>0&&<span className="flex items-center gap-2 text-xs font-bold text-emerald-800"><ClipboardCheck size={16}/> {g.ready} etiquetas liberadas para imprimir</span>}
     </div>
     {g.batches.some(b=>b.effectiveStatus==='NEEDS_REVIEW')&&<details className="rounded-xl border border-amber-200 bg-amber-50 p-3">
      <summary className="cursor-pointer text-sm font-semibold text-amber-900">Conferência de segurança obrigatória</summary>
