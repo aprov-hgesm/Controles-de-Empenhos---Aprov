@@ -31,6 +31,7 @@ export interface KitchenBatch {
   cancelReason?: string;
 }
 export interface KitchenMeal extends MealRequest {
+  patientName?:string|null;bedNumber?:string|null;dietLabel?:string;
   dietRestrictionCodes: string[];
   safetyIssue: KitchenReviewReason|null;
   isLate: boolean;
