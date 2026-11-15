@@ -76,8 +76,15 @@ if (-not $hosting.hosting -or $hosting.hosting.target -ne $Target -or
 }
 if ($hosting.hosting.PSObject.Properties['rewrites']) {
     foreach ($rewrite in @($hosting.hosting.rewrites)) {
-        if ($rewrite.PSObject.Properties['run'] -or $rewrite.PSObject.Properties['function']) {
-            throw 'Encontrado rewrite dinamico nao auditado. Revise antes de provisionar.'
+        if ($rewrite.PSObject.Properties['function']) {
+            throw 'Cloud Function nao autorizada na configuracao de Hosting hospitalar.'
+        }
+        if ($rewrite.PSObject.Properties['run']) {
+            if ($rewrite.source -ne '/api/hospital/**' -or
+                $rewrite.run.serviceId -ne 'cozinha-dietetica-api' -or
+                $rewrite.run.region -ne 'southamerica-east1') {
+                throw 'Rewrite Cloud Run divergente: apenas o novo backend hospitalar e autorizado.'
+            }
         }
     }
 }
