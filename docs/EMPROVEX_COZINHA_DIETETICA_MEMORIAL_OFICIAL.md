@@ -1,15 +1,17 @@
-# EMPROVEX — COZINHA DIETÉTICA | MEMORIAL OFICIAL V1
+# MEMORIAL OFICIAL V2 — Produto hospitalar autônomo (originado da Cozinha Dietética EMPROVEX)
 
 **Data-base:** 11/11/2026  
 **Identificador:** EMPROVEX-DIETAS-MEM-001  
-**Status:** PLANEJAMENTO FUNCIONAL E ARQUITETURAL CONSOLIDADO — NÃO IMPLEMENTADO / NÃO HOMOLOGADO / NÃO PUBLICADO  
-**Produto:** EMPROVEX — extensão Cozinha Dietética para Organizações Militares Hospitalares  
+**Status em 15/11/2026:** CÓDIGO HOSPITALAR EM QA E PRs DRAFT; TRANSIÇÃO PARA PRODUTO AUTÔNOMO APROVADA COMO DIREÇÃO; FIREBASE HOSTING LIVE AINDA NÃO PUBLICADO NESTA REVISÃO; USO CLÍNICO REAL NÃO AUTORIZADO  
+**Produto:** sistema independente de gestão de dietas hospitalares; origem técnica: extensão EMPROVEX Cozinha Dietética; nome e identidade comercial próprios pendentes de aprovação final  
 **Unidade-piloto de referência:** Hospital Geral de Santa Maria (HGeSM).  
 **Repositório de referência:** aprov-hgesm/Controles-de-Empenhos---Aprov  
 **Fonte:** requisitos e decisões de produto definidos nas conversas de planejamento; observações das capturas do SIGOM legado.  
 **Natureza:** memorial de referência para desenvolvimento, testes, homologação e futuras revisões. Não substitui prescrição médica, protocolo assistencial, ato institucional, parecer jurídico ou autorização de tratamento de dados pessoais.
 
-> **Regra de precedência:** este memorial é a referência do módulo Cozinha Dietética e da navegação de entrada aqui planejada; não altera as regras operacionais produtivas do EMPROVEX, os memoriais de Aprovisionamento, Almoxarifado, EMPRESAS e Segurança, nem o procedimento canônico de publicação Cloud Run. Qualquer conflito com contrato vigente de segurança ou de produção deve ser resolvido em PR separada, com teste de não regressão. Este commit é apenas documental.
+> **Regra de precedência (atualizada):** a decisão vinculante de 15/11/2026 é descrita na **seção 22**, que prevalece sobre as seções históricas 1–21 quando elas pressupõem dependência de marca, portal, hospedagem ou operação do EMPROVEX. Este memorial é a referência do módulo Cozinha Dietética e da navegação de entrada aqui planejada; não altera as regras operacionais produtivas do EMPROVEX, os memoriais de Aprovisionamento, Almoxarifado, EMPRESAS e Segurança, nem o procedimento canônico de publicação Cloud Run. Qualquer conflito com contrato vigente de segurança ou de produção deve ser resolvido em PR separada, com teste de não regressão. Este commit é apenas documental. O projeto não recebeu nenhuma implantação com esta edição.
+
+> **Leitura da versão V2:** as seções 1–21 ficam preservadas como histórico funcional, arquitetural e de execução W0–W12. A nova seção 22 inaugura o produto independente e contém a primeira etapa obrigatória da sua nova trajetória. Onde houver conflito histórico, prevalece a seção 22.
 
 ---
 
@@ -550,4 +552,77 @@ A homologação será informada em níveis independentes:
 
 ---
 
-**ENCERRAMENTO V1:** O futuro módulo EMPROVEX Cozinha Dietética será uma extensão hospitalar integrada ao portal comum, com operação manual inicial, produção e distribuição rastreáveis, auditoria nutricional não bloqueante, regras específicas do HGeSM e separação real de dados clínicos. O memorial é um contrato de planejamento e não constitui entrega de software.
+> **Encerramento histórico da V1 (11/11/2026, superado quanto à identidade e hospedagem):** O futuro módulo EMPROVEX Cozinha Dietética será uma extensão hospitalar integrada ao portal comum, com operação manual inicial, produção e distribuição rastreáveis, auditoria nutricional não bloqueante, regras específicas do HGeSM e separação real de dados clínicos. O memorial é um contrato de planejamento e não constitui entrega de software.
+---
+
+## 22. Virada de produto — sistema hospitalar independente e publicação sintética no Firebase Hosting (decisão de 15/11/2026)
+
+**Natureza:** atualização oficial V2, com prevalência sobre V1 em identidade, marca, endereço, hospedagem, arquitetura de implantação e fluxo de lançamento. **Decisão do proprietário:** a Cozinha Dietética deixa de ser extensão comercial/operacional do EMPROVEX; passa a ser um produto hospitalar autônomo, preservando o trabalho de código executado. O **primeiro marco obrigatório** é isolar o produto tecnicamente, visualmente e operacionalmente. A publicação inicial ocorrerá no **canal live/produção do Firebase Hosting**, mas **somente para simulações**, sem pacientes, prontuários, prescrições ou dietas reais. Esta autorização não constitui autorização para operação clínica ou tratamento de dados reais de saúde.
+
+### 22.1. Identidade, nome e posicionamento comercial
+
+- **Marca de origem:** EMPROVEX Cozinha Dietética, somente na documentação histórica e na atribuição de código preexistente; não utilizar EMPROVEX como marca visível do novo site, domínio ou produto.
+- **Nome provisório para discussão visual:** **VitaMapa — Gestão de Dietas Hospitalares**. É **proposta de naming**, não decisão comercial definitiva, registro de marca ou comprovação de domínio. Substituir somente após validação do proprietário, checagem de marcas no INPI e disponibilidade de domínio. Não publicar identidade provisória como se fosse nome definitivo sem aceite.
+- **Marca própria obrigatória:** logotipo e símbolo próprios, tipografia e cores próprias, favicon, PWA/manifest próprios, microtextos, títulos de telas, comprovantes, etiquetas, PDFs, e-mails transacionais e página institucional sem herança visual de EMPROVEX. O sistema novo não deve importar o logotipo de \`AppShellLogo\` nem texto comercial de EMPROVEX; reaproveitamento técnico de componentes visuais exige remoção de dependência da marca de origem.
+- **Domínio personalizado próprio:** a definir após aprovação do nome e verificação de disponibilidade. O subdomínio inicial \`<SITE_ID>.web.app\` somente poderá ser afirmado como ativo após deploy confirmado pelo Firebase; não inventar endereço publicado. O domínio \`emprovex.com.br\` não será o endereço canônico.
+- **Autonomia comercial:** contratação, usuários, permissões, fluxos, faturamento futuro, suporte e versionamento independentes; nenhuma exigência de cadastro, licença, assinatura ou vínculo ao portal EMPROVEX para acesso à operação hospitalar.
+- **Público e finalidade:** hospitais e equipes assistenciais; manter HGeSM como unidade de referência dos requisitos, não como prova de adesão institucional formal nem como fonte de dados reais.
+
+### 22.2. Fronteiras de independência que a Fase 0 deve entregar
+
+1. **Código:** estabelecer projeto/repositório próprio do produto ou, transitoriamente, uma árvore independente que permita build/deploy isolados e evolução sem importar módulos financeiros, empresariais, almoxarifado, login central, páginas públicas ou regras de cobrança do EMPROVEX. O código histórico permanece preservado nas PRs originais; não fazer cherry-pick cego da \`main\`.
+2. **Infraestrutura:** conservar o projeto Firebase hospitalar \`cozinha-dietetica\` como referência técnica independente, com Auth e Firestore hospitalares próprios; não utilizar projetos Firebase de logística ou Empresas. O Firestore permanece no acesso via servidor; regras de cliente devem permanecer fechadas enquanto essa arquitetura for adotada.
+3. **Hospedagem:** **Firebase Hosting tradicional** como frontend e canal público live, com site/target exclusivamente deste produto, configuração \`firebase.json\` própria e DNS/domínio próprios. Não misturar o \`firebase.json\` do EMPROVEX financeiro com o projeto hospitalar.
+4. **Backend:** reaproveitar os módulos de negócio Firestore W10–W12 e correções da PR #554 em um backend hospitalar dedicado. O Cloud Run atual \`cozinha-dietetica-qa\` foi deliberadamente configurado como **privado** (ingresso internal e invocação autenticada) e **não pode ser exposto por simples rewrite público**. A Fase 0 deve prover uma **fronteira HTTP adequada ao site live**: gateway autenticado com verificação server-side do Firebase ID Token, OM/UG, perfis, unidades e objeto, que faça chamada OIDC ao serviço privado; ou alternativa arquitetural equivalente validada em teste. Nunca remover \`internal\`, desabilitar IAM ou adicionar \`allUsers\` ao serviço QA para acelerar a publicação.
+5. **Aplicação:** a base atual é **Next.js com \`output: 'standalone'\`, middleware e endpoints \`/api/hospital/*\`**, portanto não se transforma automaticamente em site estático. Separar frontend SPA/SSG (React) do backend ou usar uma abordagem de Hosting compatível, com provas de segurança e execução. A arquitetura final deve preservar o funcionamento real, não trocar os módulos por uma vitrine demonstrativa falsa.
+6. **Autenticação e isolamento:** Auth com contas hospitalares próprias; vínculo e autorização no servidor; separação por organização e unidade; sem tráfego para \`emprovex.com.br\` nem APIs operacionais do EMPROVEX. CI/CD exclusivo, release independente, rollback e logs minimizados.
+7. **Persistência:** no teste live, permitir somente organizações/contas/dados inteiramente sintéticos, em namespace/escopo técnico \`qa_*\` protegido e com inventário para limpeza. Avaliar projeto Firebase separado para simulação antes de qualquer transição clínica, evitando mistura de dados de homologação com dados reais futuros.
+
+### 22.3. Publicação no canal live do Firebase Hosting — modo SIMULAÇÃO
+
+**Autorização de objetivo:** publicar um site verdadeiro, acessível via HTTPS no canal de **produção do Firebase Hosting**, para usuários de teste previamente autorizados executarem fluxos reais de software com dados falsos. **Não é apenas canal preview e não é produção clínica.** A liberação do site somente ocorre após o build operacional e as verificações mínimas abaixo; não inferir que a publicação já aconteceu pelo registro desta decisão.
+
+**Regras vinculantes do ambiente:**
+
+- Todos os nomes, datas, leitos, dietas, alergias e incidentes do teste devem ser **claramente fictícios**. Não importar bases do HGeSM, pacientes, relatórios, prescrições, prints identificáveis, prontuários, e-mails operacionais ou fotos com dados de pessoas. Nunca copiar dados reais para torná-los fictícios.
+- Login obrigatório para toda a área operacional; criação de contas públicas desabilitada; **allowlist somente de usuários sintéticos**. Perfis sintéticos: UTI, UPI, PAM, Oncologia, Bloco Cirúrgico, Cozinha Dietética, Nutrição e Administração. Usar \`example.test\` em contas de simulação, não contas pessoais para representar usuários de teste.
+- **Gate server-side de simulação:** toda leitura e gravação operacional deve exigir projeto hospitalar correto + sessão verificada + organização \`qa_*\` + membership habilitado + perfil/unidade/objeto autorizado, com rejeição explícita de organizações não sintéticas. Colocar um banner inequívoco em todas as telas operacionais: **"AMBIENTE DE SIMULAÇÃO — DADOS FICTÍCIOS — NÃO USAR PACIENTES REAIS"**. Banner isoladamente não substitui esse gate.
+- Não construir botão de cadastro aberto nem incluir opção de importar dados externos; não gerar ou enviar comunicações reais a pacientes ou profissionais; logs, analytics e erros não podem registrar identificadores clínicos. Impedir indexação de rotas de teste quando possível, sem tratar \`noindex\` como medida de controle de acesso.
+- O processo clínico de referência continua exigindo prescrição/orientação institucional; a simulação não concede poderes de prescrição médica à aplicação. Não afirmar que entrega física ocorreu apenas porque PDF foi impresso ou lote saiu para distribuição.
+- Separar dois indicadores de status: **(A) Firebase Hosting LIVE: NÃO PUBLICADO / PUBLICADO, com URL, release ID e data reais**; **(B) produção clínica: NÃO AUTORIZADA**, até homologação/aceite futuro específico. Erros 401/403, leitura entre organizações, tentativas de criação fora de \`qa_*\` e vazamento de API devem bloquear o GO técnico.
+- Ao alterar o status do live, anexar prova real de publicação, HTTPS, logo/manifest sem EMPROVEX, login/logout funcional, perfil revogado negado, isolamentos entre dois hospitais fictícios, três ciclos completos, PDFs/etiquetas e rollback. Sem prova de \`deploy\` e smoke-test do site publicado, status deve permanecer **NÃO PUBLICADO**.
+
+**Condição de prontidão para liberar o live:** build e typecheck corretos; execução do E2E sintético de cadastro → mapa → Cozinha → produção → distribuição → entrega simulada → relatórios; permissões verificadas no servidor; vedação de dados reais; identidade própria; frontend sem referências ao sistema principal; gateway seguro e funcional; operação reversível. Pode haver defeitos menores de aparência a corrigir em uso, nunca falhas P0 de segurança, autorização, isolamento, integridade ou funcionalidades essenciais.
+
+### 22.4. Sequência executiva nova — início imediato pela separação
+
+| Passo | Entrega objetiva | Critério para avançar |
+|---|---|---|
+| **F0.1 Inventário e extração** | Basear-se no HEAD verificado da PR #554 e toda cadeia W09→W12; listar dependências cruzadas e criar árvore/repositório autônomo sem eliminar histórico. | Build isolado sem componentes EMPROVEX não hospitalares. |
+| **F0.2 Identidade e navegação** | Substituir marca, logo, favicon, título, URLs, menus, PWA, PDFs e etiquetas; nome final após validação. | Nenhuma dependência visível da marca de origem. |
+| **F0.3 Firebase Hosting** | Site/target/configuração Hosting exclusivos, frontend estático funcional e CI de publicação restrito ao produto. | Build estático correto, HTTPS e caminhos/refresh funcionando; sem deploy no domínio EMPROVEX. |
+| **F0.4 Backend/API** | Preservar Firestore hospitalar e transações, fornecer passagem HTTP segura entre Hosting público e serviço privado por gateway/autorização adequada; sem exposição pública indiscriminada do Cloud Run QA. | Login sintético; 401/403, token revogado e cross-tenant bloqueados; gravação/releitura reais apenas em \`qa_*\`. |
+| **F0.5 Live sintético** | Implantação no canal live do Hosting + smoke-test com oito perfis fictícios, desktop/Android, três ciclos, impressão e correções. | Evidência de URL/release reais + PASS de fluxos/segurança; NO-GO clínico preservado. |
+| **F0.6 Estabilização** | Corrigir defeitos observados no site real, controlar custos/erros/performance, definir backup/restauração, retirar dados sintéticos quando necessário. | Decisão documentada posterior sobre homologação institucional e clínica; nunca automática. |
+
+**Estado técnico de partida:** PR [#554](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/554) em Draft, HEAD verificado na auditoria de 15/11/2026: \`07555afcc2044a58c7b053363acaffdda4bf2e12\`. Testes específicos do mapa rápido, impressão e distribuição em emulador/Chromium tiveram PASS; isso não significa Hosting publicado. W11 documenta Cloud Run QA privado e testes IAM/Firestore/Auth, e W12 documenta uma revisão de 0% de tráfego anterior ao código #554. **Não promover revisão antiga ou reaproveitar o deploy financeiro.**
+
+**Não exigir reexecução burocrática integral de W0–W12:** aproveitar seus módulos e testes, revisar os poucos pontos críticos aplicáveis (alergias, referência médica, acompanhantes, identidade do paciente, recuperação, limites de acesso), registrar evidência nova somente onde houver mudança de arquitetura ou risco.
+
+### 22.5. Estado da decisão e responsabilidades
+
+| Decisão | Situação em 15/11/2026 |
+|---|---|
+| Produto autônomo do EMPROVEX | **DECIDIDO** |
+| Hospedagem pública no Firebase Hosting tradicional | **DECIDIDO, NÃO IMPLEMENTADO NESTE MEMORIAL** |
+| Canal de produção do Hosting para testes com dados fictícios | **AUTORIZADO COMO META DE PUBLICAÇÃO; AINDA NÃO EXECUTADO** |
+| Nome final, logotipo, domínio e eventual registro | **PENDENTES DE VALIDAÇÃO**, com \`VitaMapa\` somente como sugestão de trabalho |
+| Firebase Auth/Firestore hospitalares separados dos projetos EMPROVEX | **CÓDIGO EXISTENTE EM QA**; conexão live pendente |
+| Serviço QA privado W11 | **PRESERVAR**; não expor publicamente por atalho |
+| Pacientes/dietas reais, implantação assistencial no hospital | **NÃO AUTORIZADOS** |
+| Código \`main\` EMPROVEX e serviços financeiros/logísticos | **NÃO ALTERAR** pela separação |
+| Plano original e prompts W0–W12 | **HISTÓRICO CONSERVADO**; novas instruções específicas V2 prevalecem |
+
+**Próxima tarefa técnica canônica (Fase 0):** executar F0.1–F0.5 diretamente sobre o código funcional da PR #554, entregar fonte autônoma, identidade visual própria aprovada, deploy Firebase Hosting live com prova de URL/versão e testes sintéticos na origem publicada. Caso falte acesso ao Firebase/Cloud Shell ou nome/domínio não confirmado, concluir todos os artefatos de código e CI possíveis, declarar o bloqueio preciso e **não relatar publicação inexistente**.
+
+**ENCERRAMENTO V2:** sistema autônomo de nutrição e dietas hospitalares, com marca, domínio, hospedagem e autenticação próprios, que evolui do código hospitalar já construído, preserva a segurança dos fluxos e pode ser publicado na origem live do Firebase Hosting para uso exclusivamente fictício antes de qualquer liberação clínica.
