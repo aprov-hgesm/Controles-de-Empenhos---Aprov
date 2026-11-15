@@ -1,0 +1,49 @@
+name: Hospital F0 Web — Build independent Hosting
+on:
+  push:
+    branches:
+      - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+  pull_request:
+    paths:
+      - 'apps/hospital-web/**'
+      - 'ops/hospital-f0-*.ps1'
+      - '.github/workflows/hospital-f0-web-build.yml'
+permissions:
+  contents: read
+jobs:
+  build-hospital-web:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Extract hospital modules without EMPROVEX shell
+        shell: pwsh
+        run: |
+          .\ops\hospital-f0-extract-web.ps1
+          if (Test-Path apps/hospital-web/src/features/hospital/integration/HospitalShell.tsx) { throw 'Legacy shell was copied' }
+          if (Test-Path apps/hospital-web/src/features/hospital/integration/access.ts) { throw 'Server action leaked to frontend' }
+      - name: Install frontend dependencies
+        working-directory: apps/hospital-web
+        run: npm install --no-audit --no-fund
+      - name: Build React hospital modules for Hosting
+        working-directory: apps/hospital-web
+        run: npm run build
+      - name: Verify output and branding
+        shell: pwsh
+        run: |
+          if (-not (Test-Path apps/hospital-web/dist/index.html)) { throw 'Missing Hosting index.html' }
+          $js = @(Get-ChildItem apps/hospital-web/dist/assets -Filter *.js -File)
+          if ($js.Count -eq 0) { throw 'Missing hospital frontend bundles' }
+          foreach ($file in $js) {
+            if (Select-String -Path $file.FullName -Pattern 'EMPROVEX' -Quiet) { throw "Legacy brand in $($file.Name)" }
+          }
+          Write-Host "PASS: emitted $($js.Count) JS asset(s)."
+      - name: Preserve static build for QA review
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-f0-hosting-static
+          path: apps/hospital-web/dist
+          retention-days: 3
