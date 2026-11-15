@@ -23,7 +23,7 @@ Pode trocar `-SiteId cozinha-dietetica-web` por outro ID disponível. O ID técn
 
 ## Publicação
 
-**Não execute `firebase deploy` na raiz do monorepo.** Use somente o diretório `apps/hospital-web`, depois que o frontend tiver sido compilado e o backend hospitalar estiver autenticado e operacional. A configuração atual contém **somente** o Hosting estático; nenhum rewrite para `cozinha-dietetica-qa` foi adicionado. O deploy de um frontend vazio ou de fachada não é a finalidade desta etapa.
+**Não execute `firebase deploy` na raiz do monorepo.** Use somente o diretório `apps/hospital-web`, depois que o frontend tiver sido compilado e o backend hospitalar estiver autenticado e operacional. A configuração atual contém o frontend estático e um rewrite **somente** de `/api/hospital/**` para o serviço dedicado `cozinha-dietetica-api` em `southamerica-east1`. O serviço privado `cozinha-dietetica-qa` nunca é exposto por esse rewrite. O deploy funcional exige que a nova API tenha sido compilada e implantada, com autenticação/organização verificadas.
 
 Depois da etapa de build e gateway, a publicação autorizada será:
 
@@ -33,3 +33,9 @@ firebase.cmd deploy --only hosting:hospital-web --project cozinha-dietetica
 ```
 
 **Status atual:** configuração e provisionamento preparados; a URL publicada só deve ser informada depois da execução e verificação de HTTPS e fluxos reais. Não há autorização para publicar dados ou prontuários de pacientes por esta operação de configuração.
+
+## Compilação do frontend real
+
+Na raiz do repositório, execute `powershell.exe -ExecutionPolicy Bypass -File .\ops\hospital-f0-extract-web.ps1`, depois `cd apps/hospital-web`, copie `.env.example` para `.env.local` e preencha exclusivamente o `apiKey` e `appId` públicos do app Web Firebase de `cozinha-dietetica`. Execute `npm.cmd install` e `npm.cmd run build`. Esses arquivos são gerados no diretório independente, sem compilar os módulos financeiros.
+
+O backend próprio está em `apps/hospital-api`, com extração por `ops/hospital-f0-extract-api.ps1`. Não use `firebase deploy` antes de ter API real acessível e validada.
