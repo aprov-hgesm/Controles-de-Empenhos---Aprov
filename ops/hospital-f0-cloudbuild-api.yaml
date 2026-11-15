@@ -1,0 +1,14 @@
+substitutions:
+  _IMAGE_TAG: f0
+steps:
+  - id: Build isolated hospital API
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/hospital-api/Dockerfile
+      - -t
+      - southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-api:${_IMAGE_TAG}
+      - .
+images:
+  - southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-api:${_IMAGE_TAG}
