@@ -151,7 +151,7 @@ export function App(){
   if(!allowed)return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
     <div className="w-full max-w-md rounded-2xl bg-white p-7 text-slate-900">
       <h1 className="text-xl font-bold">Acesso não concluído</h1>
-      <p role="alert" className="my-4 rounded-lg bg-amber-50 p-4 text-sm">{access.message}</p>
+      <p role="alert" className="my-4 rounded-lg bg-amber-50 p-4 text-sm">{'message' in access?access.message:'Não foi possível validar seu acesso.'}</p>
       <button type="button" className="rounded-lg bg-blue-900 px-4 py-3 text-white" onClick={()=>setRetry(v=>v+1)}>Tentar novamente</button>
       <button type="button" className="ml-3 rounded-lg border px-4 py-3" onClick={()=>void logout()}>Sair</button>
     </div>
