@@ -3,10 +3,11 @@ substitutions:
 steps:
   - id: Build isolated hospital API
     name: gcr.io/cloud-builders/docker
+    dir: apps/hospital-api
     args:
       - build
       - -f
-      - apps/hospital-api/Dockerfile
+      - Dockerfile
       - -t
       - southamerica-east1-docker.pkg.dev/cozinha-dietetica/hospital-qa/hospital-api:${_IMAGE_TAG}
       - .
