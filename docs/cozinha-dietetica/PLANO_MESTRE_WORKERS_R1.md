@@ -212,3 +212,19 @@ Copiar a mensagem abaixo e alterar **somente o dígito após W**. O Worker local
 **W0–W9:** integração hospitalar original. **W10:** persistência operacional em Firestore Emulator (PR #551). **W11:** acesso real e isolado à infraestrutura Firebase/GCP, quando autorizado. **W12:** homologação E2E e preparação do piloto; eventual uso com dados clínicos reais permanece decisão institucional separada.
 
 **Princípio:** no máximo dois Workers adicionais planejados após W10. Não transformar pendências externas em novos Workers por burocracia. Um CI verde não autoriza uso clínico nem publicação.
+
+
+---
+
+## 13. Nova prioridade executiva — Fase 0 de produto independente (15/11/2026)
+
+> **PRECEDÊNCIA TEMPORAL:** o [Memorial Oficial V2, seção 22](../EMPROVEX_COZINHA_DIETETICA_MEMORIAL_OFICIAL.md) determina que o sistema hospitalar deixe de ser extensão do EMPROVEX, tenha marca e domínio próprios, frontend público em Firebase Hosting e testes com dados exclusivamente fictícios no canal live. Esta atualização substitui as antigas ordens de hospedar no portal EMPROVEX e de impedir *qualquer* deploy: **está autorizado o objetivo de publicação live isolada para SIMULAÇÃO**, com gates de segurança. Continua proibido deploy do EMPROVEX principal ou liberação clínica real.
+
+**Novo primeiro passo:** [FASE0_SEPARACAO_AUTONOMA_FIREBASE_HOSTING.md](FASE0_SEPARACAO_AUTONOMA_FIREBASE_HOSTING.md).
+
+- **Origem do código:** PR #554 e dependências W09→W12; não iniciar do \`main\` atual, que não possui os módulos clínicos.
+- **Ordem:** extração independente → marca própria → Hosting estático → gateway seguro para backend privado → live com \`qa_*\` → testes reais sintéticos e estabilização.
+- **Não criar W13 ou refazer W0–W12 como ritual**; reutilizar código testado, abrir PR de separação e corrigir apenas riscos concretos.
+- **Nome "VitaMapa":** apenas proposta provisória, a confirmar pelo proprietário e por verificação de marca/domínio.
+- **Estados:** Memorial atualizado ≠ código extraído ≠ Hosting publicado ≠ produção clínica autorizada. Registrar os quatro separadamente.
+- **Preservação:** a instrução histórica de nenhuma publicação das PRs Draft W0–W12 continua adequada àquelas branches/execuções; a autorização V2 vale **somente para novo site independente em modo sintético**, com segurança comprovada.
