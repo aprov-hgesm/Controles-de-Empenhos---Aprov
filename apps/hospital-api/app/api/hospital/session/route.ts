@@ -21,6 +21,7 @@ export async function POST(req:NextRequest){
   try{data=JSON.parse(raw)}catch{return NextResponse.json({status:400,message:'JSON inválido.'},{status:400,headers})}
   if(!data||typeof data!=='object'||Array.isArray(data))return NextResponse.json({status:400,message:'Corpo inválido.'},{status:400,headers});
   const body=data as {organizationId?:unknown};
+  if(typeof body.organizationId!=='string')return NextResponse.json({status:400,message:'Organização inválida.'},{status:400,headers});
   const organizationId=body.organizationId;
   assertIdentifier(organizationId,'organizationId');
   if(req.headers.get('x-hospital-organization-id')!==organizationId)
