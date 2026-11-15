@@ -37,7 +37,7 @@ async function requestAccess(user:User,hospital:string):Promise<ResponseAccess>{
   if(response.ok&&row.status===200&&typeof row.organizationId==='string'&&Array.isArray(row.roles)&&Array.isArray(row.unitIds)){
     const roles=row.roles.filter(x=>['UNIT','KITCHEN','NUTRITION','HOSPITAL_ADMIN'].includes(String(x))) as Role[];
     const unitIds=row.unitIds.filter((x):x is string=>typeof x==='string');
-    if(!roles.length||!unitIds.length)throw Error('Nenhuma unidade e perfil foram vinculados à sua conta.');
+    if(!roles.length||(!unitIds.length&&!roles.includes('HOSPITAL_ADMIN')))throw Error('Nenhuma unidade e perfil foram vinculados à sua conta.');
     return {status:200,organizationId:row.organizationId,roles,unitIds};
   }
   const status=response.status===401?401:response.status===403?403:503;
@@ -52,6 +52,7 @@ export function App(){
   const [access,setAccess]=useState<ResponseAccess|null>(null);
   const [checking,setChecking]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [retry,setRetry]=useState(0);
   const [notice,setNotice]=useState('');
   const [page,setPage]=useState('');
   const [unit,setUnit]=useState('');
@@ -79,7 +80,7 @@ export function App(){
       if(active)setAccess({status:503,message:error instanceof Error?error.message:'API hospitalar indisponível'});
     }).finally(()=>{if(active)setChecking(false)});
     return ()=>{active=false};
-  },[user,hospital]);
+  },[user,hospital,retry]);
 
   const login=async(event:FormEvent)=>{
     event.preventDefault();if(busy)return;
@@ -96,10 +97,9 @@ export function App(){
   };
   const logout=async()=>{await signOut(auth);setUser(null);setAccess(null);setPage('');};
 
-  const isAllowed=access?.status===200;
-  const roleNames=useMemo(()=>isAllowed?access.roles:[],[isAllowed,access]);
-  const menu=useMemo(()=>menuForRoles(roleNames),[roleNames]);
   const allowed=access&&access.status===200?access:null;
+  const roleNames=useMemo(()=>allowed?.roles??[],[allowed]);
+  const menu=useMemo(()=>menuForRoles(roleNames),[roleNames]);
   const organizationId=allowed?.organizationId??'';
   const unitId=allowed?.unitIds.includes(unit)?unit:allowed?.unitIds[0]??'';
   const unitIds=allowed?.unitIds??[];
@@ -152,7 +152,7 @@ export function App(){
     <div className="w-full max-w-md rounded-2xl bg-white p-7 text-slate-900">
       <h1 className="text-xl font-bold">Acesso não concluído</h1>
       <p role="alert" className="my-4 rounded-lg bg-amber-50 p-4 text-sm">{access.message}</p>
-      <button type="button" className="rounded-lg bg-blue-900 px-4 py-3 text-white" onClick={()=>setAccess(null)}>Tentar novamente</button>
+      <button type="button" className="rounded-lg bg-blue-900 px-4 py-3 text-white" onClick={()=>setRetry(v=>v+1)}>Tentar novamente</button>
       <button type="button" className="ml-3 rounded-lg border px-4 py-3" onClick={()=>void logout()}>Sair</button>
     </div>
   </main>;
