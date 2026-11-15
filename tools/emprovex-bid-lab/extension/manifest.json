@@ -1,0 +1,1 @@
+{"manifest_version":3,"name":"EMPROVEX Lances — Laboratório","version":"0.1.0","description":"Protótipo exclusivamente local. Não opera portais de licitação reais.","content_scripts":[{"matches":["http://127.0.0.1/*"],"js":["content.js"],"run_at":"document_idle"}],"web_accessible_resources":[{"resources":["engine.mjs","panel.mjs"],"matches":["http://127.0.0.1/*"]}]}
