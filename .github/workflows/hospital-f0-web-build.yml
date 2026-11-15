@@ -49,7 +49,7 @@ jobs:
           retention-days: 3
 
   build-hospital-api:
-    runs-on: windows-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
