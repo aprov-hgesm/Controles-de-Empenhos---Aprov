@@ -14,7 +14,7 @@ const headers={'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Op
 export async function POST(req:NextRequest){
  try{
   const authorization=req.headers.get('authorization')??'';
-  if(!/^Bearer [^\\s]+$/.test(authorization))return NextResponse.json({status:401,message:'Autenticação necessária.'},{status:401,headers});
+  if(!authorization.startsWith('Bearer ')||authorization.length<=27||/[\s]/.test(authorization.slice(7)))return NextResponse.json({status:401,message:'Autenticação necessária.'},{status:401,headers});
   const raw=await req.text();
   if(raw.length>2048)return NextResponse.json({status:400,message:'Solicitação inválida.'},{status:400,headers});
   let data:unknown;
