@@ -1,9 +1,9 @@
 FROM node:24-bookworm-slim AS builder
 WORKDIR /srv
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY apps/hospital-api/package.json ./package.json
+COPY package.json ./package.json
 RUN npm install --no-audit --no-fund
-COPY apps/hospital-api/ ./
+COPY . ./
 RUN npm run build
 
 FROM node:24-bookworm-slim
