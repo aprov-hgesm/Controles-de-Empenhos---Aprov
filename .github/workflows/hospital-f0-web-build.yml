@@ -47,3 +47,31 @@ jobs:
           name: hospital-f0-hosting-static
           path: apps/hospital-web/dist
           retention-days: 3
+
+  build-hospital-api:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Extract authenticated hospital API independently
+        shell: pwsh
+        run: |
+          .\ops\hospital-f0-extract-api.ps1
+          if (Test-Path apps/hospital-api/app/api/hospital/session/page.tsx) { throw 'Wrong clinical route artifact' }
+      - name: Install independent API dependencies
+        working-directory: apps/hospital-api
+        run: npm install --no-audit --no-fund
+      - name: Build isolated Next API
+        working-directory: apps/hospital-api
+        run: npm run build
+      - name: Validate standalone API output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path apps/hospital-api/.next/standalone/server.js)) { throw 'Missing standalone API server' }
+          if (-not (Test-Path apps/hospital-api/app/api/hospital/session/route.ts)) { throw 'Missing server-verified session endpoint' }
+          $runtime = Get-Content apps/hospital-api/lib/server/hospital/firebase/gcp-qa-runtime.mjs -Raw
+          if ($runtime -notmatch 'cozinha-dietetica-api') { throw 'Incorrect GCP service boundary' }
+          Write-Host 'PASS: backend compiled with dedicated hospital runtime and source.'
