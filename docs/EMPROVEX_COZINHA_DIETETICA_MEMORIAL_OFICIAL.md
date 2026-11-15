@@ -626,3 +626,25 @@ A homologação será informada em níveis independentes:
 **Próxima tarefa técnica canônica (Fase 0):** executar F0.1–F0.5 diretamente sobre o código funcional da PR #554, entregar fonte autônoma, identidade visual própria aprovada, deploy Firebase Hosting live com prova de URL/versão e testes sintéticos na origem publicada. Caso falte acesso ao Firebase/Cloud Shell ou nome/domínio não confirmado, concluir todos os artefatos de código e CI possíveis, declarar o bloqueio preciso e **não relatar publicação inexistente**.
 
 **ENCERRAMENTO V2:** sistema autônomo de nutrição e dietas hospitalares, com marca, domínio, hospedagem e autenticação próprios, que evolui do código hospitalar já construído, preserva a segurança dos fluxos e pode ser publicado na origem live do Firebase Hosting para uso exclusivamente fictício antes de qualquer liberação clínica.
+
+
+---
+
+## 23. Retificação executiva — GOV-SIMP-01 e prontidão para dados clínicos reais (15/11/2026)
+
+**Decisão do proprietário:** o produto autônomo não será uma versão de demonstração limitada. Deve ser **desenvolvido desde a primeira versão com capacidade integral para cadastrar, editar, armazenar, consultar, produzir e distribuir dietas de pacientes reais**, conforme os perfis e as regras operacionais hospitalares. A diretriz **GOV-SIMP-01 — mínima burocracia com segurança necessária** torna-se vinculante também para o novo produto.
+
+**Esta seção prevalece sobre as restrições de ambiente \`qa_*\` e "somente contas fictícias" das seções 22.2, 22.3, 22.4 e do plano Fase 0, onde forem incompatíveis.** O teste de lançamento continua utilizando **dados sintéticos**, mas isso é a **escolha do conteúdo da homologação**, não uma limitação artificial embutida na aplicação ou no servidor. O canal live do Firebase Hosting deve entregar o produto real, não uma vitrine sem operações ou uma aplicação que rejeita hospitais por não terem prefixo \`qa_\`.
+
+### Diretrizes técnicas obrigatórias
+
+1. **Sem travas de demonstração:** remover exigências fixas de \`qa_*\`, contas \`example.test\`, textos "QA exclusivo", mapas somente fictícios e bloqueadores por nomenclatura. A lógica hospitalar deve operar por organização real, perfis autorizados, unidades e dados legítimos em Firestore; ambientes de teste podem continuar isolados e receber somente entradas sintéticas.
+2. **Cadastro prático:** uma unidade poderá registrar paciente real, data de nascimento, leito, restrições, alergias, via, refeições e acompanhante a partir do mapa, sem telas intermediárias ou exigência de pré-cadastrar o mesmo dado em catálogos redundantes. Preservar os controles de segurança clínica pertinentes; não adicionar aprovação nutricional obrigatória para cada pedido.
+3. **GOV-SIMP-01:** somente validações necessárias a identidade, integridade, prevenção de acesso indevido, jejum/alergias, consistência de prescrição, rastreio e entrega. Evitar campos obrigatórios sem propósito operacional, etapas de aprovação duplicadas, bloqueios arbitrários por prazo ou dependências artificiais do EMPROVEX.
+4. **Produção real:** Firebase Hosting live no domínio do produto; APIs e banco hospitalar com arquitetura operacional, não mock. Autenticação por Firebase Auth e autorização server-side por OM/hospital, perfil e unidade; Firestore protegido contra leitura direta indevida. Pacientes reais são **suportados tecnicamente** pela aplicação, sem exigir código novo posterior.
+5. **Fase de validação:** na **primeira publicação e nos testes**, criar e utilizar apenas registros integralmente fictícios. Não importar pacientes de HGeSM, prontuários ou dietas reais antes de validar segurança, disponibilidade, confiabilidade e responsabilidades institucionais aplicáveis. A liberação para uso assistencial real continua sendo decisão posterior, **sem travas de produto**.
+6. **Sem exposição insegura:** a diretriz de desburocratização **não** autoriza remover autenticação, validação clínica, segregação de hospitais, auditoria, backups proporcionais ou tornar Cloud Run QA privado acessível indiscriminadamente. Esses controles são parte da capacidade de operar no mundo real.
+
+**Estado atual:** diretriz decidida e registrada, implementação F0 ainda em andamento; nenhuma configuração Firebase Hosting live ou autorização clínica é presumida como concluída por este registro.
+
+**ENCERRAMENTO V2.1:** produto independente, hospeda o frontend no Firebase Hosting, backend próprio, com a mesma qualidade esperada para pacientes reais desde o início. Testes iniciais são sintéticos por escolha operacional, e não por bloqueio de código. Diretriz GOV-SIMP-01 adotada sem sacrificar segurança fundamental.
