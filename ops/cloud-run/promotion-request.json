@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g9181e0e88f2a-45",
-  "sourceSha": "9181e0e88f2ad7167f09882dc92b9de1c84c3bd4",
-  "reason": "Usuário autorizou expressamente (/goal execute) correção imediata da tela /admin que ficava indefinidamente em Validando perfil administrativo. PR #536 integrada: remove dependência de sessionStorage da autorização fundadora, monta hooks administrativos só após Firebase Auth, aplica timeout e recuperação segura de 12s. Fast/Core/W4/Domain/Application PASS, 13 E2E de navegador Firebase Emulator incluindo fundador com preferência setorial PASS (run 42734392624), stage 42735301608 SUCCESS, revisão 45 Ready 0% tráfico e histórico JS/CSS recuperado. Promover apenas com health + JS/CSS no domínio e rollback automático; sem IAM, regras Firestore ou Empresas."
+  "revision": "emprovex-cloudrun-candidate-g4077be425a2a-47",
+  "sourceSha": "4077be425a2ab1e5ca072a5ceaafc94dc91efbff",
+  "reason": "Usuário autorizou expressamente nesta conversa em 16/11/2026 verificar e publicar em produção a correção de PDF do cronograma EMPROVEX (PR #556 orientação A4 automática; PR #557 correção de sobreposição em campos longos). SHA main 4077be425a2ab1e5ca072a5ceaafc94dc91efbff, Cloud Run stage run #47 (43911536991) SUCCESS com revisão Ready em 0% tráfego, saúde e verificação de assets PASS; PR #557 Fast CI/Core/Domain/Application/W4/VISUAL PASS. Promover exatamente revisão g4077be425a2a-47, exigindo validação do digest, identidade de serviço, 100% tráfego, health e assets no domínio oficial com rollback automático. Não modificar Firestore, IAM, regras ou configurações de dados."
 }
