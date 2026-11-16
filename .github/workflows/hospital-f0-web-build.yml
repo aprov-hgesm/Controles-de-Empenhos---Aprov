@@ -51,6 +51,8 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path apps/hospital-web/dist/index.html)) { throw 'Missing Hosting index.html' }
+          if (-not (Test-Path apps/hospital-web/dist/emblema-nutricao.webp)) { throw 'Emblema institucional nao foi empacotado' }
+          if ((Get-Item apps/hospital-web/dist/emblema-nutricao.webp).Length -lt 1000) { throw 'Emblema institucional invalido' }
           $js = @(Get-ChildItem apps/hospital-web/dist/assets -Filter *.js -File)
           if ($js.Count -eq 0) { throw 'Missing hospital frontend bundles' }
           foreach ($file in $js) {
