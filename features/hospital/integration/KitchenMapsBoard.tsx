@@ -22,7 +22,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
  onOpenProduction:(focus:Focus)=>void;onOpenDistribution:(focus:Focus)=>void;
 }){
  const [date,setDate]=useState(localDay);
- const [cycleFocus,setCycleFocus]=useState<string>(()=>currentWorkCycle());
+
  const [maps,setMaps]=useState<KitchenMapReceipt[]>([]);
  const [meals,setMeals]=useState<KitchenMeal[]>([]);
  const [issues,setIssues]=useState<Issue[]>([]);
@@ -67,7 +67,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
    const unique=new Map<string,KitchenMapReceipt>();
    for(const batch of batches)for(const row of batch.maps)unique.set(row.id,row);
    const priority=(m:KitchenMapReceipt)=>m.submissionTimingStage==='AFTER_TOLERANCE'||m.latestExtraTimingStage==='AFTER_TOLERANCE'?2:m.late||m.hasLateAmendment?1:0;
-   setMaps([...unique.values()].sort((a,b)=>priority(b)-priority(a)||a.cycleId.localeCompare(b.cycleId)||a.unitId.localeCompare(b.unitId)));
+   setMaps([...unique.values()].sort((a,b)=>priority(b)-priority(a)||Number(b.cycleId===currentWorkCycle())-Number(a.cycleId===currentWorkCycle())||a.cycleId.localeCompare(b.cycleId)||a.unitId.localeCompare(b.unitId)));
    setMeals(batches.flatMap(x=>x.meals));
    setIssues(feedback.flat());
    setCorrections(correctionsResponse.flat());
