@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from 'react';
 import {onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,type User} from 'firebase/auth';
-import {ChefHat,LogOut,Menu,ShieldCheck,Activity,Users,ClipboardList,PackageCheck} from 'lucide-react';
+import {LogOut,Menu,ShieldCheck,Activity,Users,ClipboardList,PackageCheck,LockKeyhole,Mail,Eye,EyeOff,ArrowRight,ArrowUpRight,LayoutDashboard,UserRound,Utensils,FileText,Settings2,Stethoscope,Truck,CalendarClock,X} from 'lucide-react';
 import {auth} from './firebase';
 import {menuForRoles} from './features/hospital/integration/navigation.mjs';
 import {PatientsView} from './features/hospital/patients/PatientsView';
@@ -23,6 +23,25 @@ type ResponseAccess=Access|ErrorAccess;
 type Focus={unitId:string;cycleId:'06'|'10'|'16';localDate:string;mealType?:'PRIMARY'|'SECONDARY'};
 type Profile={id:string;role:Role;label:string;detail:string;unitId?:string};
 const clinicalUnits:Record<string,string>={upi:'UPI',uti:'UTI',pam:'PAM',onco:'Oncologia',bloco:'Bloco Cirúrgico'};
+const emblem='/emblema-nutricao.webp';
+function ProfileIcon({role}:{role:Role}){
+  if(role==='HOSPITAL_ADMIN')return <ShieldCheck size={20}/>;
+  if(role==='KITCHEN')return <Utensils size={20}/>;
+  if(role==='NUTRITION')return <Stethoscope size={20}/>;
+  return <UserRound size={20}/>;
+}
+function MenuIcon({id}:{id:string}){
+  if(id==='inicio'||id==='painel')return <LayoutDashboard className="hospital-nav-icon"/>;
+  if(id==='pacientes')return <Users className="hospital-nav-icon"/>;
+  if(id==='dietas'||id==='nutricao')return <Stethoscope className="hospital-nav-icon"/>;
+  if(id==='mapas')return <ClipboardList className="hospital-nav-icon"/>;
+  if(id==='acompanhamento')return <CalendarClock className="hospital-nav-icon"/>;
+  if(id==='producao')return <Utensils className="hospital-nav-icon"/>;
+  if(id==='distribuicao')return <Truck className="hospital-nav-icon"/>;
+  if(id==='administracao')return <Settings2 className="hospital-nav-icon"/>;
+  return <FileText className="hospital-nav-icon"/>;
+}
+
 function profileOptions(access:Access):Profile[]{
   const choices:Profile[]=[];
   const {roles,unitIds}=access;
@@ -73,6 +92,7 @@ export function App(){
   const [hospital,setHospital]=useState(preset);
   const [email,setEmail]=useState('');
   const [password,setPassword]=useState('');
+  const [showPassword,setShowPassword]=useState(false);
   const [access,setAccess]=useState<ResponseAccess|null>(null);
   const [checking,setChecking]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -142,73 +162,136 @@ export function App(){
   };
   const open=(id:string)=>{if(menu.some(item=>item.id===id)){setPage(id);setMobileMenu(false);}};
   const heading=(title:string)=> <header className="mb-5 flex items-center gap-3">
-    <ChefHat size={24} className="text-blue-800"/><h1 className="text-xl font-extrabold text-slate-800">{title}</h1>
+    <span className="hospital-profile-icon !mb-0"><ClipboardList size={20}/></span>
+    <h1 className="text-xl font-extrabold text-slate-800">{title}</h1>
   </header>;
 
-  if(user===undefined)return <main className="grid min-h-screen place-items-center bg-slate-950 text-white">Verificando autenticação…</main>;
-  if(!user)return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
-    <div className="w-full max-w-md rounded-2xl bg-white p-7 shadow-2xl">
-      <div className="flex items-center gap-3"><ChefHat size={34} className="text-blue-900"/>
-        <div><p className="text-xs font-bold uppercase tracking-widest text-blue-700">Gestão hospitalar independente</p>
-        <h1 className="text-2xl font-black text-slate-900">Cozinha Dietética</h1></div>
-      </div>
-      <p className="mt-4 text-sm text-slate-600">Mapas, produção, distribuição e rastreabilidade em um único sistema.</p>
-      <form onSubmit={login} className="mt-6 space-y-3">
-        <label className="block text-sm font-semibold">E-mail
-          <input className="mt-1 w-full rounded-lg border p-3" autoComplete="username" type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
-        <label className="block text-sm font-semibold">Senha
-          <input className="mt-1 w-full rounded-lg border p-3" autoComplete="current-password" type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label>
-        <button className="w-full rounded-lg bg-blue-900 p-3 font-bold text-white disabled:opacity-50" type="submit" disabled={busy}>Entrar</button>
-      </form>
-      <button type="button" onClick={()=>void resetPassword()} className="mt-4 text-sm font-semibold text-blue-800">Recuperar senha</button>
-      {notice&&<p role="status" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
-      <p className="mt-6 flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={15}/> Acesso individual por hospital e unidade.</p>
+  if(user===undefined)return <main className="hospital-selection">
+    <div className="flex flex-col items-center gap-5 text-center text-white" role="status" aria-live="polite">
+      <span className="hospital-logo-medallion"><img src={emblem} alt="Emblema da Cozinha Dietética"/></span>
+      <p className="text-sm font-semibold tracking-wide">Verificando sua sessão hospitalar…</p>
     </div>
   </main>;
 
-  if(!hospital.trim())return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
+  if(!user)return <main className="hospital-login">
+    <div className="hospital-login-shell">
+      <section className="hospital-login-hero" aria-label="Identidade Cozinha Dietética">
+        <div className="hospital-hero-top">
+          <span className="hospital-logo-medallion">
+            <img src={emblem} alt="Emblema de Nutrição Hospitalar" width={108} height={108}/>
+          </span>
+          <p className="hospital-hero-eyebrow">Hospital Geral de Santa Maria</p>
+          <h1 className="hospital-hero-title">Cada dieta,<em> um cuidado.</em></h1>
+          <p className="hospital-hero-lead">Inteligência e precisão na gestão nutricional hospitalar. Do mapa alimentar à distribuição, cada etapa importa.</p>
+        </div>
+        <div className="hospital-hero-bottom">
+          <div className="hospital-hero-separator"/>
+          <p>COZINHA DIETÉTICA · HGESM</p>
+          <p>Organização, segurança e cuidado no mesmo ambiente.</p>
+        </div>
+      </section>
+      <section className="hospital-login-form-side" aria-labelledby="hospital-login-title">
+        <span className="hospital-login-caption">Portal institucional</span>
+        <h2 className="hospital-form-title" id="hospital-login-title">Bem-vindo de volta.</h2>
+        <p className="hospital-form-subtitle">Acesse sua área de trabalho com as credenciais autorizadas pelo hospital.</p>
+        <form onSubmit={login} className="hospital-login-form">
+          <label className="hospital-field-label" htmlFor="hospital-login-email">E-mail institucional ou cadastrado
+            <span className="hospital-input-wrap">
+              <Mail size={18} aria-hidden="true"/>
+              <input id="hospital-login-email" className="hospital-input" autoComplete="username" type="email"
+                placeholder="seu.email@hospital.br" required value={email} onChange={e=>setEmail(e.target.value)}/>
+            </span>
+          </label>
+          <label className="hospital-field-label" htmlFor="hospital-login-password">Senha de acesso
+            <span className="hospital-input-wrap">
+              <LockKeyhole size={18} aria-hidden="true"/>
+              <input id="hospital-login-password" className="hospital-input" autoComplete="current-password"
+                type={showPassword?'text':'password'} placeholder="Digite sua senha"
+                required value={password} onChange={e=>setPassword(e.target.value)}/>
+              <button type="button" className="hospital-reveal-password"
+                aria-label={showPassword?'Ocultar senha':'Mostrar senha'} aria-pressed={showPassword}
+                onClick={()=>setShowPassword(v=>!v)}>
+                {showPassword?<EyeOff size={19}/>:<Eye size={19}/>}
+              </button>
+            </span>
+          </label>
+          <button className="hospital-login-primary" type="submit" disabled={busy}>
+            {busy?'Autenticando…':'Entrar no sistema'}{!busy&&<ArrowRight size={18} aria-hidden="true"/>}
+          </button>
+        </form>
+        <div className="mt-5 text-right"><button type="button" onClick={()=>void resetPassword()} disabled={busy} className="hospital-login-link">Esqueceu a senha?</button></div>
+        {notice&&<p role="status" className="hospital-auth-message">{notice}</p>}
+        <div className="hospital-login-note"><ShieldCheck size={18} aria-hidden="true"/>
+          <span>Autenticação protegida pelo Firebase. Seus perfis e unidades são validados pelo servidor.</span>
+        </div>
+      </section>
+    </div>
+  </main>;
+
+  if(!hospital.trim())return <main className="hospital-selection">
     <form onSubmit={e=>{e.preventDefault();setHospital((e.currentTarget.elements.namedItem('hospital') as HTMLInputElement).value.trim())}}
-      className="w-full max-w-md rounded-2xl bg-white p-7">
-      <h1 className="text-xl font-bold">Selecionar hospital</h1>
-      <p className="mt-2 text-sm text-slate-600">Informe o código fornecido pela administração. Esta etapa pode ser pré-configurada na instalação.</p>
-      <input name="hospital" className="mt-5 w-full rounded-lg border p-3" placeholder="Código do hospital" required/>
-      <button className="mt-4 rounded-lg bg-blue-900 px-5 py-3 font-bold text-white">Continuar</button>
-      <button type="button" className="ml-4 text-sm text-blue-900" onClick={()=>void logout()}>Sair</button>
+      className="hospital-selection-panel" style={{maxWidth:520}}>
+      <div className="mb-5 flex items-center gap-4">
+        <span className="hospital-profile-mark"><img src={emblem} alt="Emblema de Nutrição Hospitalar"/></span>
+        <div><span className="hospital-workspace-kicker">Identificação institucional</span>
+          <h1 className="hospital-selection-title">Selecionar hospital</h1></div>
+      </div>
+      <p className="hospital-selection-subtitle">Informe o código fornecido pela administração. Esta etapa pode ser pré-configurada.</p>
+      <input name="hospital" className="hospital-input mt-5 !pl-4" placeholder="Código do hospital" required/>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button className="hospital-login-primary !w-auto px-6">Continuar <ArrowRight size={17}/></button>
+        <button type="button" className="hospital-selection-exit" onClick={()=>void logout()}>Sair</button>
+      </div>
     </form>
   </main>;
 
-  if(checking||!access)return <main className="grid min-h-screen place-items-center bg-[#061429] text-white">
-    <p role="status">Verificando vínculo e permissões no servidor…</p>
-  </main>;
-  if(!allowed)return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
-    <div className="w-full max-w-md rounded-2xl bg-white p-7 text-slate-900">
-      <h1 className="text-xl font-bold">Acesso não concluído</h1>
-      <p role="alert" className="my-4 rounded-lg bg-amber-50 p-4 text-sm">{'message' in access?access.message:'Não foi possível validar seu acesso.'}</p>
-      <button type="button" className="rounded-lg bg-blue-900 px-4 py-3 text-white" onClick={()=>setRetry(v=>v+1)}>Tentar novamente</button>
-      <button type="button" className="ml-3 rounded-lg border px-4 py-3" onClick={()=>void logout()}>Sair</button>
+  if(checking||!access)return <main className="hospital-selection">
+    <div className="flex flex-col items-center gap-5 text-center text-white" role="status">
+      <span className="hospital-logo-medallion"><img src={emblem} alt="Emblema de Nutrição Hospitalar"/></span>
+      <p className="text-sm font-semibold">Verificando vínculo e permissões no servidor…</p>
     </div>
   </main>;
 
+  if(!allowed)return <main className="hospital-selection">
+    <section className="hospital-selection-panel" style={{maxWidth:520}}>
+      <div className="mb-5 flex items-center gap-4">
+        <span className="hospital-profile-mark"><img src={emblem} alt="Emblema de Nutrição Hospitalar"/></span>
+        <div><span className="hospital-workspace-kicker">Acesso institucional</span>
+          <h1 className="hospital-selection-title">Acesso não concluído</h1></div>
+      </div>
+      <p role="alert" className="hospital-auth-message">{'message' in access?access.message:'Não foi possível validar seu acesso.'}</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button type="button" className="hospital-login-primary !w-auto px-6" onClick={()=>setRetry(v=>v+1)}>Tentar novamente <ArrowRight size={17}/></button>
+        <button type="button" className="hospital-selection-exit" onClick={()=>void logout()}>Sair</button>
+      </div>
+    </section>
+  </main>;
+
   if(!profile || !profileOptions(allowed).some(option=>option.id===profile.id)){
-    return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl md:p-8">
-        <div className="flex items-center justify-between gap-4">
-          <div><p className="text-xs font-bold uppercase tracking-widest text-blue-700">Cozinha Dietética</p>
-            <h1 className="mt-1 text-2xl font-black text-slate-900">Escolha o perfil de acesso</h1>
-            <p className="mt-2 text-sm text-slate-600">Hospital Geral de Santa Maria · {user.email}</p></div>
-          <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void logout()}>Sair</button>
+    return <main className="hospital-selection">
+      <section className="hospital-selection-panel">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="hospital-profile-mark"><img src={emblem} alt="Emblema de Nutrição Hospitalar"/></span>
+            <div className="min-w-0">
+              <span className="hospital-workspace-kicker">Cozinha Dietética · HGeSM</span>
+              <h1 className="hospital-selection-title mt-1">Escolha seu ambiente</h1>
+              <p className="hospital-selection-subtitle break-words">Olá, {user.email}. Selecione o perfil que deseja acessar.</p>
+            </div>
+          </div>
+          <button type="button" className="hospital-selection-exit" onClick={()=>void logout()}>Sair <LogOut className="ml-1 inline-block" size={15}/></button>
         </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="hospital-profile-grid">
           {profileOptions(allowed).map(choice=><button type="button" key={choice.id}
-            onClick={()=>chooseProfile(choice)}
-            className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700">
-            <p className="font-bold text-slate-900">{choice.label}</p>
-            <p className="mt-2 text-sm text-slate-600">{choice.detail}</p>
-            <p className="mt-3 text-sm font-semibold text-blue-800">Entrar neste perfil</p>
+            onClick={()=>chooseProfile(choice)} className="hospital-profile-card">
+            <span className="hospital-profile-icon"><ProfileIcon role={choice.role}/></span>
+            <strong>{choice.label}</strong>
+            <small>{choice.detail}</small>
+            <span className="hospital-profile-enter">Acessar ambiente <ArrowUpRight size={15} aria-hidden="true"/></span>
           </button>)}
         </div>
-        <p className="mt-5 text-xs text-slate-500">Os acessos disponíveis são definidos pelas permissões do seu usuário no servidor.</p>
-      </div>
+        <p className="mt-6 text-xs leading-relaxed text-slate-500"><ShieldCheck size={15} className="mr-2 inline-block text-emerald-700"/>Os ambientes disponíveis são determinados pelas suas permissões no servidor.</p>
+      </section>
     </main>;
   }
 
