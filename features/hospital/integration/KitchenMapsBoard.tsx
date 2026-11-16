@@ -5,7 +5,7 @@ import {AlertCircle,Check,ChevronDown,ChefHat,Clock3,RefreshCw,Truck,UtensilsCro
 import type {KitchenMapReceipt,KitchenMeal,KitchenSnapshot} from '../production/contracts';
 import {getOrderProgress} from './order-progress.mjs';
 import {MealProgressPair} from './MealProgressPair';
-import {mealName,mapLateLabel,timingLabel} from './meal-period.mjs';
+import {mealName,mapLateLabel,timingLabel,currentWorkCycle} from './meal-period.mjs';
 
 type Focus={unitId:string;cycleId:'06'|'10'|'16';localDate:string};
 type Issue={id:string;mapId:string;unitId:string;note:string;status:string;revision:number;createdAt:string;resolutionNote?:string};
@@ -22,6 +22,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
  onOpenProduction:(focus:Focus)=>void;onOpenDistribution:(focus:Focus)=>void;
 }){
  const [date,setDate]=useState(localDay);
+ const [cycleFocus,setCycleFocus]=useState<string>(()=>currentWorkCycle());
  const [maps,setMaps]=useState<KitchenMapReceipt[]>([]);
  const [meals,setMeals]=useState<KitchenMeal[]>([]);
  const [issues,setIssues]=useState<Issue[]>([]);
@@ -158,7 +159,7 @@ export function KitchenMapsBoard({organizationId,unitIds,getAuthorization,onOpen
   </div>
   {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
   {notice&&<p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-900">{notice}</p>}
-  {loading&&<p role="status" className="text-sm text-slate-600">Consultando os mapas recebidos…</p>}
+  {loading&&<div className="hospital-loading" role="status">Buscando novos pedidos das unidades…</div>}
   {!loading&&!error&&visible.length===0&&<p role="status" className="hospital-panel p-5 text-sm text-slate-500">Nenhum mapa enviado para este filtro. Rascunhos ainda não aparecem para a cozinha.</p>}
   <div className="grid gap-3 xl:grid-cols-2">
    {visible.map(({map,requests,progress,feedback,pendingCorrections})=>{
