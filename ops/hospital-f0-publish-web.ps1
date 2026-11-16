@@ -84,13 +84,7 @@ function Check-HospitalDenials([string]$base,[hashtable]$headers){
   }
 }
 
-Write-Host 'Verificando servico QA independente...' -ForegroundColor Cyan
-$qa = (Run-Gcloud -arguments @('run','services','describe','cozinha-dietetica-qa',
-  '--project='+$project,'--region='+$region,'--format=json')) | Out-String | ConvertFrom-Json
-if($qa.metadata.annotations.'run.googleapis.com/ingress' -ne 'internal'){
-  throw 'Cloud Run QA nao retornou ingress internal: operacao abortada sem alteracoes.'
-}
-Write-Host 'PASS: cozinha-dietetica-qa continua com ingress internal.' -ForegroundColor Green
+# O servico QA nao faz parte desta publicacao: nenhuma consulta ou alteracao a ele.
 
 Write-Host 'Atualizando os componentes hospitalares e compilando o frontend...' -ForegroundColor Cyan
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'ops\hospital-f0-extract-web.ps1')
@@ -102,8 +96,8 @@ try{
 }finally{Pop-Location}
 if(-not(Test-Path (Join-Path $web 'dist\index.html'))){throw 'dist/index.html nao encontrado.'}
 
-$base = ((Run-Gcloud -arguments @('run','services','describe',$service,'--project='+$project,
- '--region='+$region,'--format=value(status.url)')) | Out-String).Trim()
+$base = ((Run-Gcloud -arguments @('run','services','describe',$service,"--project=$project",
+ "--region=$region",'--format=value(status.url)')) | Out-String).Trim()
 $token = ((Run-Gcloud -arguments @('auth','print-identity-token')) | Out-String).Trim()
 if(-not $base -or -not $token){throw 'Nao foi possivel obter a URL ou identidade para teste privado.'}
 $privateHeaders=@{'X-Serverless-Authorization'='Bearer '+$token}
@@ -115,7 +109,7 @@ Check-HospitalDenials $base $privateHeaders
 # Firebase Hosting -> Cloud Run nao envia identidade Google IAM de usuario.
 # A invocacao HTTP sera publica; cada endpoint clinico continua exigindo token Firebase.
 $policy = (Run-Gcloud -arguments @('run','services','get-iam-policy',$service,
- '--project='+$project,'--region='+$region,'--format=json')) | Out-String | ConvertFrom-Json
+ "--project=$project","--region=$region",'--format=json')) | Out-String | ConvertFrom-Json
 $alreadyPublic=$false
 $bindingsProp=$policy.PSObject.Properties['bindings']
 $bindings = if($null -eq $bindingsProp){@()}else{@($bindingsProp.Value)}
@@ -128,7 +122,7 @@ try{
   if(-not $alreadyPublic){
     Write-Host 'Habilitando invocacao HTTP na nova API (autorizacao clinica continua obrigatoria)...' -ForegroundColor Cyan
     $null=Run-Gcloud -arguments @('run','services','add-iam-policy-binding',$service,
-      '--project='+$project,'--region='+$region,
+      "--project=$project","--region=$region",
       '--member=allUsers','--role=roles/run.invoker','--quiet','--format=none')
     $added=$true
   }else{
@@ -173,7 +167,7 @@ try{
   $failure=$_.Exception.Message
   if($added){
     Write-Warning 'Falha na validacao/publicacao. Restaurando IAM privado da API.'
-    & gcloud.cmd run services remove-iam-policy-binding $service '--project='+$project ('--region='+$region) '--member=allUsers' '--role=roles/run.invoker' '--quiet' '--format=none'
+    & gcloud.cmd run services remove-iam-policy-binding $service "--project=$project" ("--region=$region") '--member=allUsers' '--role=roles/run.invoker' '--quiet' '--format=none'
     if($LASTEXITCODE -ne 0){Write-Warning 'NAO FOI POSSIVEL reverter IAM. Revise o acesso da API imediatamente.'}
   }
   throw $failure
