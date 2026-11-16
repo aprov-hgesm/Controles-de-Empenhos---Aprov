@@ -70,6 +70,18 @@ function Check-HospitalDenials([string]$base,[hashtable]$headers){
     }
     Write-Host "PASS $path sem Firebase token: HTTP $status" -ForegroundColor Green
   }
+  # Operacoes inexistentes e corpo controlado: nunca cria ou modifica dados clinicos.
+  $postPaths=@('/api/hospital/patients','/api/hospital/diets','/api/hospital/maps',
+    '/api/hospital/production','/api/hospital/distribution','/api/hospital/administration',
+    '/api/hospital/contingency','/api/hospital/nutrition-audit')
+  foreach($path in $postPaths){
+    $body='{"operation":"__auth_probe__","payload":{},"organizationId":"smoke-test"}'
+    $status=Get-HttpStatus ($base+$path) 'POST' $testHeaders $body
+    if($status -ge 200 -and $status -lt 300){
+      throw "Comando clinico $path aceitou requisicao sem Firebase Auth: HTTP $status"
+    }
+    Write-Host "PASS POST $path sem Firebase token: HTTP $status" -ForegroundColor Green
+  }
 }
 
 Write-Host 'Verificando servico QA independente...' -ForegroundColor Cyan
