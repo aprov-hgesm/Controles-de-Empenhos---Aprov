@@ -104,7 +104,7 @@ jobs:
         run: npm run test:cronograma-email
 
       - name: Cronograma sent-history and NF-week tests
-        run: node --test scripts/cronograma-tracking.test.mjs
+        run: node --test scripts/cronograma-tracking.test.mjs scripts/cronograma-pdf-layout.test.mjs
 
       - name: EMPROVEX core operational protection
         run: npm run verify:emprovex-core-protection
