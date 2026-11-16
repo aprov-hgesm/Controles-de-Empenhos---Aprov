@@ -6,6 +6,7 @@ import type { User } from 'firebase/auth';
 import type { CronogramaEmpenho, CronogramaEmailEnvio, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import { recordCronogramaEmailSend, saveCronograma } from '../../../lib/firebaseSync';
 import { snapshotCronogramaRemessas } from '../domain/cronogramaDeliveryTracking';
+import { getCronogramaPdfLayout, splitCronogramaRemessas } from '../domain/cronogramaPdfLayout';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
@@ -233,13 +234,14 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   // PDF Generator for Cronograma
   const handleGenerateCronogramaPDF = async (emp: Empenho, action: 'download' | 'print' | 'blob' = 'download') => {
     const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
+    const pdfLayout = getCronogramaPdfLayout(cronogramaColunas.length);
     const doc = new jsPDF({
-      orientation: 'portrait',
+      orientation: pdfLayout.orientation,
       unit: 'mm',
       format: 'a4',
     });
      const primaryColor: [number, number, number] = [0, 40, 142]; // #00288e
-    const margin = 12;
+    const margin = pdfLayout.margin;
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 14;
      // 1. OFFICIAL MILITARY / HOSPITAL HEADER
@@ -293,8 +295,17 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.setFontSize(7);
     doc.setTextColor(50, 50, 50);
      const col1X = margin + 3;
-    const col2X = margin + 65;
-    const col3X = margin + 125;
+    const metadataColumnWidth = (pageWidth - 2 * margin) / 3;
+    const col2X = col1X + metadataColumnWidth;
+    const col3X = col2X + metadataColumnWidth;
+    const fitPdfText = (value: string, maxWidth: number): string => {
+      let output = value;
+      if (doc.getTextWidth(output) <= maxWidth) return output;
+      while (output.length > 0 && doc.getTextWidth(output + '...') > maxWidth) {
+        output = output.slice(0, -1);
+      }
+      return output + '...';
+    };
      // Row 1
     doc.text(`Nota de Empenho:`, col1X, yPos + 9);
     doc.setFont('helvetica', 'bold');
@@ -311,7 +322,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
      // Row 2
     doc.text(`Fornecedor Credor:`, col1X, yPos + 14);
     doc.setFont('helvetica', 'bold');
-    doc.text(emp.supplier.length > 32 ? emp.supplier.substring(0, 32) + '...' : emp.supplier, col1X + 23, yPos + 14);
+    doc.text(fitPdfText(emp.supplier, metadataColumnWidth - 26), col1X + 23, yPos + 14);
     doc.setFont('helvetica', 'normal');
      doc.text(`Data de Emissão NE:`, col2X, yPos + 14);
     doc.setFont('helvetica', 'bold');
@@ -323,29 +334,48 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.setFont('helvetica', 'normal');
      // Row 3
     doc.text(`Objeto Resumido:`, col1X, yPos + 19);
-    doc.text(emp.description.length > 80 ? emp.description.substring(0, 80) + '...' : emp.description, col1X + 22, yPos + 19);
-     // Row 4 - Financial snapshot
+    doc.text(fitPdfText(emp.description, pageWidth - margin - (col1X + 24)), col1X + 22, yPos + 19);
+     // Valores em duas linhas para evitar sobreposição em qualquer orientação.
     doc.setFillColor(235, 242, 255);
     doc.roundedRect(margin + 2, yPos + 22, pageWidth - (margin * 2) - 4, 8, 1.5, 1.5, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(30, 41, 59);
-     doc.text(`TOTAL EMPENHADO: ${totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, col1X + 1, yPos + 26.8);
-    doc.text(`JÁ RECEBIDO (NFs): ${totalReceived.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, col2X - 5, yPos + 26.8);
-    doc.setTextColor(0, 110, 50);
-    doc.text(`SALDO ATUAL: ${saldoDisponivelTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, col3X - 5, yPos + 26.8);
-    doc.setTextColor(0, 40, 142);
-    doc.text(`TOTAL NO CRONOGRAMA: ${totalProgramadoGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, col3X + 28, yPos + 26.8);
-     yPos += infoBoxHeight + 6;
+    const financialMetrics = [
+      { label: 'TOTAL EMPENHADO', value: totalCommitted, color: [30, 41, 59] },
+      { label: 'JÁ RECEBIDO (NFs)', value: totalReceived, color: [30, 41, 59] },
+      { label: 'SALDO ATUAL', value: saldoDisponivelTotal, color: [0, 110, 50] },
+      { label: 'TOTAL NO CRONOGRAMA', value: totalProgramadoGeral, color: [0, 40, 142] },
+    ];
+    const metricWidth = (pageWidth - 2 * margin - 6) / financialMetrics.length;
+    financialMetrics.forEach((metric, index) => {
+      const x = margin + 3.5 + index * metricWidth;
+      doc.setTextColor(metric.color[0], metric.color[1], metric.color[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(5.6);
+      doc.text(metric.label, x, yPos + 25.2);
+      doc.setFontSize(7);
+      doc.text(metric.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), x, yPos + 28.5);
+    });
+    yPos += infoBoxHeight + 6;
      // 3. TABLE OF SCHEDULED DELIVERIES
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.text('2. DISTRIBUIÇÃO DAS REMESSAS DE ENTREGA', margin, yPos);
     yPos += 3;
-     // Build headers dynamically
+     // Remessas muito numerosas são divididas em blocos: não comprimir descrições a letras empilhadas.
+    const remessaGroups = splitCronogramaRemessas(cronogramaColunas, pdfLayout.maxRemessasPerTable);
+    remessaGroups.forEach((currentRemessas, groupIndex) => {
+      if (groupIndex > 0) {
+        doc.addPage();
+        yPos = 16;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text('2. DISTRIBUIÇÃO DAS REMESSAS DE ENTREGA (CONTINUAÇÃO)', margin, yPos);
+        yPos += 7;
+      }
+      // Build headers dynamically
     const headers: string[] = ['Item compra / Descrição', 'Und', 'Emp.', 'Rec.', 'Saldo Disp.'];
-    cronogramaColunas.forEach((col) => {
+    currentRemessas.forEach((col) => {
       headers.push(`${col.titulo}\n${formatDateOnly(col.dataPrevista)}`);
     });
     headers.push('Total Prog.', 'Val. Unit.', 'Total (R$)');
@@ -363,7 +393,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         String(it.received),
         String(saldoDisponivel),
       ];
-       cronogramaColunas.forEach(col => {
+       currentRemessas.forEach(col => {
         const val = Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0;
         row.push(val > 0 ? String(val) : '—');
       });
@@ -376,7 +406,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     });
      // Summary row for table footer
     const summaryRow: string[] = ['TOTAIS GERAIS', '—', '—', '—', '—'];
-    cronogramaColunas.forEach(col => {
+    currentRemessas.forEach(col => {
       const totalColQty = emp.items.reduce((sum, it) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       const totalColVal = emp.items.reduce((sum, it) => sum + ((Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0) * it.unitPrice), 0);
       summaryRow.push(`${totalColQty}\n(${totalColVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`);
@@ -389,7 +419,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
      tableRows.push(summaryRow);
      autoTable(doc, {
       startY: yPos,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, top: 14, bottom: 16 },
+      rowPageBreak: 'avoid',
+      styles: { overflow: 'linebreak', cellPadding: 1.4 },
       head: [headers],
       body: tableRows,
       theme: 'grid',
@@ -407,11 +439,15 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         valign: 'middle',
       },
       columnStyles: {
-        0: { cellWidth: 'auto', fontStyle: 'bold', textColor: [10, 25, 50], halign: 'left' },
-        1: { cellWidth: 10, halign: 'center' },
+        0: { cellWidth: pdfLayout.pageContentWidth - 97 - currentRemessas.length * pdfLayout.remessaWidth, fontStyle: 'bold', textColor: [10, 25, 50], halign: 'left' },
+        1: { cellWidth: 9, halign: 'center' },
         2: { cellWidth: 10, halign: 'center' },
         3: { cellWidth: 10, halign: 'center' },
         4: { cellWidth: 14, halign: 'center', fontStyle: 'bold', textColor: [0, 100, 50] },
+        ...Object.fromEntries(currentRemessas.map((_, index) => [index + 5, { cellWidth: pdfLayout.remessaWidth, halign: 'center' as const }])),
+        [5 + currentRemessas.length]: { cellWidth: 14, halign: 'center' },
+        [6 + currentRemessas.length]: { cellWidth: 16, halign: 'center' },
+        [7 + currentRemessas.length]: { cellWidth: 24, halign: 'right' },
       },
       didParseCell: (data) => {
         if (data.row.index === tableRows.length - 1) {
@@ -423,6 +459,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       didDrawPage: (data) => {
         yPos = data.cursor ? data.cursor.y + 6 : yPos + 8;
       },
+    });
     });
      // 4. DELIVERY INSTRUCTIONS AND CONDITIONS
     if (yPos > doc.internal.pageSize.getHeight() - 55) {
