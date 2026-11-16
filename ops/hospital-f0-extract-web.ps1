@@ -50,9 +50,18 @@ foreach($entry in (Get-ChildItem $dest -Recurse -File -Include $types)) {
     $original=[System.IO.File]::ReadAllText($entry.FullName)
     $changed=$original.Replace('EMPROVEX','COZINHA DIETETICA').Replace('Emprovex','Cozinha Dietetica')
     $changed=$changed.Replace('--emprovex-accent','--hospital-accent')
+    # Alinhar o cabecalho de acesso administrativo ao contrato unico da API.
+    $changed=$changed.Replace("'x-hospital-organization':organizationId", "'x-hospital-organization-id':organizationId")
     if($changed -ne $original){
         [System.IO.File]::WriteAllText($entry.FullName,$changed,[System.Text.UTF8Encoding]::new($false))
     }
+}
+$adminView=Join-Path $dest 'administration\AdministrationView.tsx'
+if(-not(Test-Path $adminView)){throw 'Administracao hospitalar ausente na extracao.'}
+$adminCode=[IO.File]::ReadAllText($adminView)
+if($adminCode.Contains("'x-hospital-organization':organizationId") -or
+   -not $adminCode.Contains("'x-hospital-organization-id':organizationId")){
+  throw 'Frontend administrativo nao usa o cabecalho de organizacao correto.'
 }
 $forbidden=@('HospitalShell.tsx','access.ts')
 foreach($file in $forbidden){
