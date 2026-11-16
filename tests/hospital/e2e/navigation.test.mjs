@@ -4,13 +4,14 @@ import {menuForRoles,canOpenPage,firstPage} from '../../../features/hospital/int
 
 test('menus segregados por papel hospitalar; nenhum perfil herda menus de outro',()=>{
  const unit=menuForRoles(['UNIT']);
- assert.deepEqual(unit.map(x=>x.id),['inicio','pacientes','dietas','mapas','acompanhamento']);
+ assert.deepEqual(unit.map(x=>x.id),['mapas','acompanhamento','pacientes','dietas']);
  assert.equal(canOpenPage(['UNIT'],'distribuicao'),false);
  assert.equal(canOpenPage(['KITCHEN'],'mapas'),false);
  assert.equal(canOpenPage(['NUTRITION'],'administracao'),false);
  assert.equal(canOpenPage(['HOSPITAL_ADMIN'],'pacientes'),false);
  assert.deepEqual(menuForRoles(['KITCHEN']).map(x=>x.id),['painel','producao','distribuicao','ocorrencias','relatorios']);
  assert.equal(firstPage(['HOSPITAL_ADMIN']),'administracao');
+ assert.deepEqual(menuForRoles(['HOSPITAL_ADMIN']).map(x=>x.id),['administracao','catalogo']);
  assert.equal(firstPage(['NUTRITION']),'nutricao');
 });
 test('sem perfil ou papel inesperado, a navegação não expõe páginas',()=>{
