@@ -147,8 +147,8 @@ try{
   }finally{Pop-Location}
 
   $hosting='https://'+$site+'.web.app'
-  $home=Get-HttpStatus ($hosting+'/')
-  if($home -ne 200){throw "Site Firebase retornou HTTP $home."}
+  $siteHttpStatus=Get-HttpStatus ($hosting+'/')
+  if($siteHttpStatus -ne 200){throw "Site Firebase retornou HTTP $siteHttpStatus."}
   $sessionHosting=0
   for($attempt=0;$attempt -lt 5;$attempt++){
     if($attempt -gt 0){Start-Sleep -Seconds 3}
