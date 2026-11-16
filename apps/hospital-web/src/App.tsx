@@ -20,6 +20,29 @@ type Access={status:200;organizationId:string;roles:Role[];unitIds:string[]};
 type ErrorAccess={status:401|403|503;message:string};
 type ResponseAccess=Access|ErrorAccess;
 type Focus={unitId:string;cycleId:'06'|'10'|'16';localDate:string;mealType?:'PRIMARY'|'SECONDARY'};
+type Profile={id:string;role:Role;label:string;detail:string;unitId?:string};
+const clinicalUnits:Record<string,string>={upi:'UPI',uti:'UTI',pam:'PAM',onco:'Oncologia',bloco:'Bloco Cirúrgico'};
+function profileOptions(access:Access):Profile[]{
+  const choices:Profile[]=[];
+  const {roles,unitIds}=access;
+  if(roles.includes('HOSPITAL_ADMIN'))choices.push({
+    id:'admin',role:'HOSPITAL_ADMIN',label:'Administrador',detail:'Gestão hospitalar e permissões'
+  });
+  if(roles.includes('UNIT')){
+    for(const id of unitIds.filter(id=>id!=='copa'&&id!=='nutricao')){
+      choices.push({id:'unit:'+id,role:'UNIT',label:clinicalUnits[id]??id.toUpperCase(),
+        detail:'Pacientes, dietas, mapas e acompanhamento',unitId:id});
+    }
+  }
+  if(roles.includes('KITCHEN'))choices.push({
+    id:'kitchen',role:'KITCHEN',label:'Cozinha Dietética',detail:'Painel, produção e distribuição'
+  });
+  if(roles.includes('NUTRITION'))choices.push({
+    id:'nutrition',role:'NUTRITION',label:'Nutrição',detail:'Auditoria nutricional'
+  });
+  return choices;
+}
+
 const preset=import.meta.env.VITE_HOSPITAL_ORGANIZATION_ID?.trim()??'';
 
 async function requestAccess(user:User,hospital:string):Promise<ResponseAccess>{
@@ -55,6 +78,7 @@ export function App(){
   const [retry,setRetry]=useState(0);
   const [notice,setNotice]=useState('');
   const [page,setPage]=useState('');
+  const [profile,setProfile]=useState<Profile|null>(null);
   const [unit,setUnit]=useState('');
   const [focus,setFocus]=useState<Focus|null>(null);
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -66,7 +90,7 @@ export function App(){
   const getAuthorization=useCallback(async()=> 'Bearer '+await getIdToken(),[getIdToken]);
 
   useEffect(()=>onAuthStateChanged(auth,next=>{
-    setUser(next);setAccess(null);setPage('');setUnit('');setNotice('');
+    setUser(next);setAccess(null);setPage('');setUnit('');setProfile(null);setNotice('');
   }),[]);
   useEffect(()=>{
     if(!user||!hospital.trim())return;
@@ -75,7 +99,7 @@ export function App(){
     void requestAccess(user,hospital.trim()).then(data=>{
       if(!active)return;
       setAccess(data);
-      if(data.status===200){setUnit(data.unitIds[0]||'');setPage(menuForRoles(data.roles)[0]?.id??'inicio');}
+      if(data.status===200){setProfile(null);setUnit('');setPage('');}
     }).catch(error=>{
       if(active)setAccess({status:503,message:error instanceof Error?error.message:'API hospitalar indisponível'});
     }).finally(()=>{if(active)setChecking(false)});
@@ -95,19 +119,26 @@ export function App(){
     try{await sendPasswordResetEmail(auth,email.trim())}catch{}
     finally{setBusy(false);setNotice('Se o e-mail estiver cadastrado, receberá instruções de recuperação.');}
   };
-  const logout=async()=>{await signOut(auth);setUser(null);setAccess(null);setPage('');};
+  const logout=async()=>{await signOut(auth);setUser(null);setAccess(null);setProfile(null);setPage('');};
 
   const allowed=access&&access.status===200?access:null;
-  const roleNames=useMemo(()=>allowed?.roles??[],[allowed]);
+  const roleNames=useMemo(()=>profile?[profile.role]:[],[profile]);
   const menu=useMemo(()=>menuForRoles(roleNames),[roleNames]);
   const organizationId=allowed?.organizationId??'';
-  const unitId=allowed?.unitIds.includes(unit)?unit:allowed?.unitIds[0]??'';
-  const unitIds=allowed?.unitIds??[];
-  const roles=allowed?.roles??[];
+  const careIds=(allowed?.unitIds??[]).filter(id=>id!=='copa'&&id!=='nutricao');
+  const unitIds=profile?.role==='UNIT'&&profile.unitId?[profile.unitId]:
+    profile?.role==='KITCHEN'||profile?.role==='NUTRITION'?careIds:[];
+  const unitId=unitIds.includes(unit)?unit:unitIds[0]??'';
+  const roles=roleNames;
   const canUnit=roles.includes('UNIT')&&!!unitId;
   const kitchen=roles.includes('KITCHEN')&&unitIds.length>0;
   const nutrition=roles.includes('NUTRITION')&&unitIds.length>0;
   const admin=roles.includes('HOSPITAL_ADMIN');
+  const chooseProfile=(choice:Profile)=>{
+    setProfile(choice);setUnit(choice.unitId??'');
+    setPage(menuForRoles([choice.role])[0]?.id??'');
+    setFocus(null);setMobileMenu(false);
+  };
   const open=(id:string)=>{if(menu.some(item=>item.id===id)){setPage(id);setMobileMenu(false);}};
   const heading=(title:string)=> <header className="mb-5 flex items-center gap-3">
     <ChefHat size={24} className="text-blue-800"/><h1 className="text-xl font-extrabold text-slate-800">{title}</h1>
@@ -157,6 +188,29 @@ export function App(){
     </div>
   </main>;
 
+  if(!profile || !profileOptions(allowed).some(option=>option.id===profile.id)){
+    return <main className="grid min-h-screen place-items-center bg-[#061429] p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl md:p-8">
+        <div className="flex items-center justify-between gap-4">
+          <div><p className="text-xs font-bold uppercase tracking-widest text-blue-700">Cozinha Dietética</p>
+            <h1 className="mt-1 text-2xl font-black text-slate-900">Escolha o perfil de acesso</h1>
+            <p className="mt-2 text-sm text-slate-600">Hospital Geral de Santa Maria · {user.email}</p></div>
+          <button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void logout()}>Sair</button>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {profileOptions(allowed).map(choice=><button type="button" key={choice.id}
+            onClick={()=>chooseProfile(choice)}
+            className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700">
+            <p className="font-bold text-slate-900">{choice.label}</p>
+            <p className="mt-2 text-sm text-slate-600">{choice.detail}</p>
+            <p className="mt-3 text-sm font-semibold text-blue-800">Entrar neste perfil</p>
+          </button>)}
+        </div>
+        <p className="mt-5 text-xs text-slate-500">Os acessos disponíveis são definidos pelas permissões do seu usuário no servidor.</p>
+      </div>
+    </main>;
+  }
+
   return <div className="hospital-operational min-h-screen">
     <header className="hospital-topbar sticky top-0 z-40 flex items-center justify-between px-4 text-white md:px-7">
       <div className="flex items-center gap-3">
@@ -166,8 +220,9 @@ export function App(){
           <p className="text-xs text-slate-300">Gestão hospitalar</p></div>
       </div>
       <div className="flex items-center gap-3 text-sm">
-        <span className="hidden max-w-48 truncate text-slate-300 sm:inline">{organizationId}</span>
-        <button type="button" onClick={()=>void logout()} className="rounded-lg border border-white/20 p-2" title="Sair"><LogOut size={18}/></button>
+        <span className="hidden max-w-48 truncate text-slate-300 sm:inline">{organizationId} · {profile.label}</span>
+        <button type="button" onClick={()=>{setProfile(null);setPage('');setFocus(null);}} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">Trocar perfil</button>
+        <button type="button" onClick={()=>void logout() className="rounded-lg border border-white/20 p-2" title="Sair"><LogOut size={18}/></button>
       </div>
     </header>
     <div className="flex">
@@ -181,7 +236,7 @@ export function App(){
         </nav>
         <div className="mt-5 border-t border-white/10 pt-4 text-xs text-slate-300">
           <p>Hospital: {organizationId}</p>
-          {canUnit&&<select className="mt-2 w-full rounded bg-white p-2 text-slate-900" aria-label="Unidade assistencial" value={unitId}
+          {canUnit&&unitIds.length>1&&<select className="mt-2 w-full rounded bg-white p-2 text-slate-900" aria-label="Unidade assistencial" value={unitId}
             onChange={e=>setUnit(e.target.value)}>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select>}
         </div>
       </aside>
