@@ -24,9 +24,9 @@ if(-not $match.Success){throw 'Chave publica Firebase Web ausente do arquivo loc
 $apiKey=$match.Groups[1].Value
 
 function Send-Json([System.Net.Http.HttpClient]$client,[string]$url,[string]$json,[hashtable]$extraHeaders=@{}) {
-  $request=New-Object System.Net.Http.HttpRequestMessage ([System.Net.Http.HttpMethod]::Post),$url
+  $request=[System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post,$url)
   try {
-    $request.Content=New-Object System.Net.Http.StringContent ($json,[Text.Encoding]::UTF8,'application/json')
+    $request.Content=[System.Net.Http.StringContent]::new($json,[Text.Encoding]::UTF8,'application/json')
     foreach($name in $extraHeaders.Keys){
       $null=$request.Headers.TryAddWithoutValidation($name,[string]$extraHeaders[$name])
     }
@@ -42,9 +42,9 @@ function Send-Json([System.Net.Http.HttpClient]$client,[string]$url,[string]$jso
     }finally{$response.Dispose()}
   }finally{$request.Dispose()}
 }
-$handler=New-Object System.Net.Http.HttpClientHandler
+$handler=[System.Net.Http.HttpClientHandler]::new()
 $handler.AllowAutoRedirect=$false
-$client=New-Object System.Net.Http.HttpClient ($handler)
+$client=[System.Net.Http.HttpClient]::new($handler)
 $client.Timeout=[TimeSpan]::FromSeconds(35)
 $idToken=$null
 try {
