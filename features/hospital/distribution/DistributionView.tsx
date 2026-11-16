@@ -18,6 +18,7 @@ type Operation='assembly.start'|'assembly.complete'|'assembly.check'|'batch.disp
 const decode=(input:string)=>input.split(',').map(s=>s.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
  .toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')).filter(Boolean);
 const clock=(when:string|null|undefined)=>when?new Date(when).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}):'—';
+const localTime=()=>new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false});
 const stage=(item:Status)=>{
  if(item.mealStatus==='REQUESTED')return 'Solicitado à Cozinha · aguardando início do preparo';
  if(item.mealStatus==='PREPARING')return 'Em preparo na Cozinha';
@@ -220,7 +221,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#173b69] text-lg font-extrabold text-white">3</span>
      <div className="flex-1">
       <h3 className="text-base font-extrabold text-[#173b69]">Registrar horário e entrega</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-600">No retorno do copeiro, copie a hora real da entrega anotada na folha física. Cada refeição tem seu próprio horário e confirmação.</p>
+      <p className="mt-1 text-xs leading-5 text-slate-600">Informe a hora efetiva anotada na folha; se estiver registrando a entrega no momento, toque em “Usar hora atual”. Cada leito é confirmado separadamente.</p>
      </div>
     </div>
     {enRoute.length===0&&<p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Nenhuma refeição enviada aguardando registro de entrega.</p>}
@@ -239,6 +240,7 @@ export function DistributionView({organizationId,unitId,mealIds,getAuthorization
        <input type="time" aria-label={'Hora exata da entrega '+(m.patientName??'refeição')} className="rounded-lg border border-blue-200 bg-white px-3 py-2.5 text-base text-slate-900"
         value={hours[m.mealId]??''} onChange={e=>setHours(v=>({...v,[m.mealId]:e.target.value}))}/>
       </label>
+      <button type="button" className="hospital-secondary-action" disabled={busy} onClick={()=>setHours(v=>({...v,[m.mealId]:localTime()}))}>Usar hora atual</button>
       <button type="button" className="hospital-primary-action" disabled={busy||!/^([01]\d|2[0-3]):[0-5]\d$/.test(hours[m.mealId]??'')} onClick={()=>deliver(m)}>
        <Check size={16} className="mr-1 inline"/> Confirmar entrega
       </button>
