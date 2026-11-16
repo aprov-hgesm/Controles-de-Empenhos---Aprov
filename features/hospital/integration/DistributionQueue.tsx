@@ -3,7 +3,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {FileDown,Printer,RefreshCw,Truck} from 'lucide-react';
 import {DistributionView} from '@/features/hospital/distribution/DistributionView';
-import {mealName} from './meal-period.mjs';
+import {mealName,currentWorkCycle} from './meal-period.mjs';
 import type {KitchenMeal,KitchenSnapshot} from '@/features/hospital/production/contracts';
 import {eligibleForOrganizationLabel,plannedPrintability} from '@/features/hospital/printing/meal-print-selection';
 import {
@@ -32,7 +32,7 @@ const record=(m:KitchenMeal):DistributionPrintRow=>({
 });
 
 export function DistributionQueue({organizationId,unitIds,getAuthorization,initialUnitId,
- initialCycle='10',initialMealType='PRIMARY',initialDate,onOpenProduction}:{organizationId:string;unitIds:string[];
+ initialCycle=currentWorkCycle() as Cycle,initialMealType='PRIMARY',initialDate,onOpenProduction}:{organizationId:string;unitIds:string[];
  getAuthorization:()=>Promise<string>;initialUnitId?:string;initialCycle?:Cycle;
  initialMealType?:'PRIMARY'|'SECONDARY';initialDate?:string;
  onOpenProduction?:(focus:{unitId:string;cycleId:Cycle;localDate:string;mealType:'PRIMARY'|'SECONDARY'})=>void;}){
@@ -128,7 +128,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
     </div>)}
    </div>
   </div>
-  {loading&&<p role="status" className="text-sm text-slate-500">Consultando pedidos autorizados…</p>}
+  {loading&&<div className="hospital-loading" role="status">Preparando a fila de distribuição…</div>}
   {error&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
   {notice&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
   {!unit&&<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Filas por unidade">
