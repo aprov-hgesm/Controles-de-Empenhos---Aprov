@@ -129,7 +129,13 @@ try{
     '--project='+$project,'--region='+$region,
     '--member=allUsers','--role=roles/run.invoker','--quiet','--format=none')
   $added=$true
-  $healthPublic=Get-HttpStatus ($base+'/health')
+  # IAM pode levar alguns segundos para propagar.
+  $healthPublic=0
+  for($attempt=0;$attempt -lt 5;$attempt++){
+    if($attempt -gt 0){Start-Sleep -Seconds 3}
+    $healthPublic=Get-HttpStatus ($base+'/health')
+    if($healthPublic -eq 200){break}
+  }
   if($healthPublic -ne 200){throw "Apos liberar invocacao, /health retornou HTTP $healthPublic."}
   Write-Host 'PASS: health publico (200) - sem dados clinicos' -ForegroundColor Green
   Check-HospitalDenials $base @{}
@@ -144,9 +150,14 @@ try{
   $hosting='https://'+$site+'.web.app'
   $home=Get-HttpStatus ($hosting+'/')
   if($home -ne 200){throw "Site Firebase retornou HTTP $home."}
-  $sessionHosting=Get-HttpStatus ($hosting+'/api/hospital/session') 'POST' @{
-    'x-hospital-organization-id'='smoke-test'
-  } '{"organizationId":"smoke-test"}'
+  $sessionHosting=0
+  for($attempt=0;$attempt -lt 5;$attempt++){
+    if($attempt -gt 0){Start-Sleep -Seconds 3}
+    $sessionHosting=Get-HttpStatus ($hosting+'/api/hospital/session') 'POST' @{
+      'x-hospital-organization-id'='smoke-test'
+    } '{"organizationId":"smoke-test"}'
+    if($sessionHosting -eq 401){break}
+  }
   if($sessionHosting -ne 401){
     throw "Rewrite Firebase Hosting/API retornou HTTP $sessionHosting (esperado 401)."
   }
