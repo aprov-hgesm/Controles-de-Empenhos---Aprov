@@ -14,17 +14,24 @@ $serviceUrl=(& gcloud.cmd run services describe cozinha-dietetica-api --project=
 if($LASTEXITCODE -ne 0 -or -not $serviceUrl){throw 'Nao foi possivel consultar URL da API no Cloud Run.'}
 $serviceUrl=($serviceUrl | Out-String).Trim()
 $targets=@(
-  @{name='Cloud Run direto';url=($serviceUrl+'/api/hospital/session')}
-  @{name='Firebase Hosting (proxy)';url='https://cozinha-dietetica-web.web.app/api/hospital/session'}
+  @{name='Cloud Run sem token';url=($serviceUrl+'/api/hospital/session');auth=$false}
+  @{name='Hosting sem token';url='https://cozinha-dietetica-web.web.app/api/hospital/session';auth=$false}
+  @{name='Cloud Run com token falso de teste';url=($serviceUrl+'/api/hospital/session');auth=$true}
+  @{name='Hosting com token falso de teste';url='https://cozinha-dietetica-web.web.app/api/hospital/session';auth=$true}
 )
 $results=@()
 foreach($target in $targets){
   $status=0
   $contentType=''
   $body=''
+  $requestHeaders=@{'x-hospital-organization-id'='hgesm'}
+  if($target.auth){
+    # Apenas valor invalido de teste, nunca um token ou senha de usuario.
+    $requestHeaders['Authorization']='Bearer diagnostico-not-a-firebase-id-token-0000000000000000'
+  }
   try{
     $response=Invoke-WebRequest -Uri $target.url -Method POST -UseBasicParsing -TimeoutSec 40 -ErrorAction Stop `
-      -Headers @{'x-hospital-organization-id'='hgesm'} -ContentType 'application/json' `
+      -Headers $requestHeaders -ContentType 'application/json' `
       -Body '{"organizationId":"hgesm"}'
     $status=[int]$response.StatusCode
     $contentType=[string]$response.Headers['Content-Type']
@@ -56,10 +63,10 @@ foreach($target in $targets){
   }
   $results+=@{name=$target.name;pass=$isExpected;http=$status}
 }
-if($results.Count -ne 2){throw 'Nem todos os destinos responderam. Verifique o erro de rede acima.'}
+if($results.Count -ne 4){throw 'Nem todos os destinos responderam. Verifique o erro de rede acima.'}
 if(@($results|Where-Object {-not $_.pass}).Count -gt 0){
   Write-Warning 'A resposta sem login nao esta consistente entre API e Hosting. Nao altere contas nem IAM: envie este resultado para diagnostico.'
 }else{
-  Write-Host 'Ambos os destinos entregam JSON 401: proxy basico funcionando.' -ForegroundColor Green
-  Write-Host 'Se o navegador ainda falhar apos o login, sera necessario examinar apenas o HTTP da requisicao autenticada (sem compartilhar token).'
+  Write-Host 'API e Hosting entregam JSON 401, inclusive ao rejeitar token invalido: proxy basico funcionando.' -ForegroundColor Green
+  Write-Host 'Se o navegador ainda falhar apos o login, examine somente o HTTP da requisicao autenticada (sem compartilhar token).'
 }
