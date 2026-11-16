@@ -52,6 +52,12 @@ foreach($entry in (Get-ChildItem $dest -Recurse -File -Include $types)) {
     $changed=$changed.Replace('--emprovex-accent','--hospital-accent')
     # Alinhar o cabecalho de acesso administrativo ao contrato unico da API.
     $changed=$changed.Replace("'x-hospital-organization':organizationId", "'x-hospital-organization-id':organizationId")
+    if($entry.Name -eq 'AdministrationView.tsx'){
+        # Os codigos de permissao permanecem tecnicos, os rotulos da interface sao brasileiros.
+        $changed=$changed.Replace("['UNIT','Unidade']", "['UNIT','Unidade Assistencial']")
+        $changed=$changed.Replace("['KITCHEN','Cozinha']", "['KITCHEN','Cozinha Dietética']")
+        $changed=$changed.Replace("m.roles.join(' / ')", "m.roles.map(role=>({UNIT:'Unidade Assistencial',KITCHEN:'Cozinha Dietética',NUTRITION:'Nutrição',HOSPITAL_ADMIN:'Administrador'} as Record<string,string>)[role]??role).join(' / ')")
+    }
     if($changed -ne $original){
         [System.IO.File]::WriteAllText($entry.FullName,$changed,[System.Text.UTF8Encoding]::new($false))
     }
