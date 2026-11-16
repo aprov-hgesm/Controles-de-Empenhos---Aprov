@@ -16,6 +16,7 @@ import {AdministrationView} from './features/hospital/administration/Administrat
 import {UnitMapStatusCard} from './features/hospital/integration/UnitMapStatusCard';
 
 type Role='UNIT'|'KITCHEN'|'NUTRITION'|'HOSPITAL_ADMIN';
+const roleLabels:Record<Role,string>={UNIT:'Unidade Assistencial',KITCHEN:'Cozinha Dietética',NUTRITION:'Nutrição',HOSPITAL_ADMIN:'Administrador'};
 type Access={status:200;organizationId:string;roles:Role[];unitIds:string[]};
 type ErrorAccess={status:401|403|503;message:string};
 type ResponseAccess=Access|ErrorAccess;
@@ -274,7 +275,7 @@ export function App(){
         {notice&&<p role="status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm">{notice}</p>}
         <footer className="mt-8 flex flex-wrap items-center gap-2 border-t pt-4 text-xs text-slate-500">
           <Activity size={14}/> Gestão hospitalar independente · sessão individual e eventos auditáveis
-          <Users size={14} className="ml-3"/> {roles.join(', ')} <PackageCheck size={14} className="ml-3"/>
+          <Users size={14} className="ml-3"/> {roles.map(role=>roleLabels[role]).join(', ')} <PackageCheck size={14} className="ml-3"/>
         </footer>
       </main>
     </div>
