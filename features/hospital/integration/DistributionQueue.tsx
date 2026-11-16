@@ -44,6 +44,7 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ const [page,setPage]=useState(0);
  const load=useCallback(async(silent=false)=>{
   if(!silent)setLoading(true);
   try{
@@ -69,7 +70,20 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
  const missing=records.filter(r=>r.identityIncomplete).length;
  const excluded=useMemo(()=>plannedPrintability((snapshot?.meals??[]).filter(m=>m.mealType===mealType)),[snapshot,mealType]);
  const shown=unit?queue.filter(m=>m.unitId===unit):queue;
- const activeMealIds=useMemo(()=>queue.filter(m=>!unit||m.unitId===unit).slice(0,50).map(m=>m.id),[queue,unit]);
+ // Evitar o bloqueio operacional acima de 50 leitos: paginacao automatica e prioridade
+ // para entregas ainda pendentes, sem perder o historico de entregas concluidas.
+ const unitMeals=useMemo(()=>{
+  const priority=(status:string)=>status==='READY'?0:status==='DISPATCHED'||status==='RECEIVED_BY_UNIT'?1:
+   status==='PREPARING'?2:status==='REQUESTED'?3:status==='DELIVERED'?4:5;
+  return queue.filter(m=>!unit||m.unitId===unit).slice().sort((a,b)=>
+   priority(a.status)-priority(b.status)||
+   (a.bedNumber??'').localeCompare(b.bedNumber??'','pt-BR',{numeric:true}));
+ },[queue,unit]);
+ const pageCount=Math.max(1,Math.ceil(unitMeals.length/50));
+ const activePage=Math.min(page,pageCount-1);
+ const activeMealIds=useMemo(()=>unitMeals.slice(activePage*50,(activePage+1)*50).map(m=>m.id),
+  [unitMeals,activePage]);
+ useEffect(()=>setPage(0),[unit,date,cycle,mealType]);
  const unitCounts=unitIds.map(id=>({unitId:id,count:queue.filter(m=>m.unitId===id).length,
   prepared:queue.filter(m=>m.unitId===id&&m.status==='READY').length,
   route:queue.filter(m=>m.unitId===id&&['DISPATCHED','RECEIVED_BY_UNIT'].includes(m.status)).length,
@@ -140,10 +154,17 @@ export function DistributionQueue({organizationId,unitIds,getAuthorization,initi
   </div>}
   {unit&&snapshot&&<div className="space-y-3">
    <button type="button" className="hospital-secondary-action" onClick={()=>setUnit('')}>Ver todas as unidades</button>
-   <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
+   {unitMeals.length>50&&<div className="hospital-panel flex flex-wrap items-center justify-between gap-3 p-4" aria-label="Navegação de dietas da unidade">
+      <p className="text-sm font-semibold text-slate-700">Dietas {activePage*50+1}–{Math.min(unitMeals.length,(activePage+1)*50)} de {unitMeals.length} · página {activePage+1}/{pageCount}</p>
+      <div className="flex gap-2">
+        <button type="button" className="hospital-secondary-action" disabled={activePage===0} onClick={()=>setPage(p=>Math.max(0,p-1))}>Anteriores</button>
+        <button type="button" className="hospital-primary-action" disabled={activePage>=pageCount-1} onClick={()=>setPage(p=>Math.min(pageCount-1,p+1))}>Próximas dietas</button>
+      </div>
+    </div>}
+   <DistributionView key={unit+'-'+date+'-'+cycle+'-'+mealType+'-'+activePage} organizationId={organizationId} unitId={unit} mealTitle={mealName(cycle,mealType)}
     mealIds={activeMealIds} getAuthorization={getAuthorization}
     onOpenProduction={onOpenProduction?()=>onOpenProduction({unitId:unit,cycleId:cycle,localDate:date,mealType}):undefined}/>
-   {shown.length>50&&<p className="text-xs text-amber-800">Exibindo 50 dietas por vez. Utilize outros horários ou divida o controle da unidade antes de confirmar todas.</p>}
+   {shown.length>50&&<p className="text-xs text-slate-500">As dietas são exibidas em grupos de até 50, com acesso às páginas seguintes. As pendentes ficam antes das concluídas.</p>}
   </div>}
   <p className="text-xs text-slate-500">As etiquetas antecipadas são as mesmas utilizadas no porcionamento e distribuição. A impressão não altera o estado das dietas. Antes de sair, confira autorização de distribuição, identidade, restrições e alergias. A folha física registra hora e rubrica da entrega real.</p>
  </section>;
