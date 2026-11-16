@@ -25,7 +25,15 @@ if(-not(Test-Path $envPath)){throw 'Falta .env.local: execute hospital-f0-config
 if(-not(Test-Path $rc)){throw 'Falta .firebaserc: execute hospital-f0-setup-hosting.ps1 -Provision.'}
 if(-not(Test-Path (Join-Path $web 'firebase.json'))){throw 'firebase.json nao encontrado.'}
 $mapping = Get-Content -LiteralPath $rc -Raw | ConvertFrom-Json
-$actual = @($mapping.targets.$project.hosting.'hospital-web')
+$targetRoot = $mapping.PSObject.Properties['targets']
+if($null -eq $targetRoot){throw 'Falta targets no .firebaserc.'}
+$projectTarget = $targetRoot.Value.PSObject.Properties[$project]
+if($null -eq $projectTarget){throw 'Falta projeto no .firebaserc.'}
+$hostingTarget = $projectTarget.Value.PSObject.Properties['hosting']
+if($null -eq $hostingTarget){throw 'Falta mapeamento hosting no .firebaserc.'}
+$siteTarget = $hostingTarget.Value.PSObject.Properties['hospital-web']
+if($null -eq $siteTarget){throw 'Falta target hospital-web no .firebaserc.'}
+$actual = @($siteTarget.Value)
 if($actual -notcontains $site){throw 'Site/target do Firebase Hosting nao corresponde ao projeto isolado.'}
 
 function Run-Gcloud([string[]]$arguments){
@@ -34,10 +42,10 @@ function Run-Gcloud([string[]]$arguments){
   return $result
 }
 function Get-HttpStatus([string]$address,[string]$method='GET',[hashtable]$headers=@{},[string]$payload=''){
-  $args = @{Uri=$address;Method=$method;Headers=$headers;UseBasicParsing=$true;TimeoutSec=35;ErrorAction='Stop'}
-  if($method -eq 'POST'){$args.ContentType='application/json';$args.Body=$payload}
+  $requestParams = @{Uri=$address;Method=$method;Headers=$headers;UseBasicParsing=$true;TimeoutSec=35;ErrorAction='Stop'}
+  if($method -eq 'POST'){$requestParams.ContentType='application/json';$requestParams.Body=$payload}
   try {
-    $r = Invoke-WebRequest @args
+    $r = Invoke-WebRequest @requestParams
     return [int]$r.StatusCode
   }catch{
     if($null -ne $_.Exception.Response){
@@ -95,7 +103,9 @@ Check-HospitalDenials $base $privateHeaders
 $policy = (Run-Gcloud @('run','services','get-iam-policy',$service,
  '--project='+$project,'--region='+$region,'--format=json')) | Out-String | ConvertFrom-Json
 $alreadyPublic=$false
-foreach($binding in @($policy.bindings)){
+$bindingsProp=$policy.PSObject.Properties['bindings']
+$bindings = if($null -eq $bindingsProp){@()}else{@($bindingsProp.Value)}
+foreach($binding in $bindings){
   if($null -ne $binding -and $binding.role -eq 'roles/run.invoker' -and
     @($binding.members) -contains 'allUsers'){$alreadyPublic=$true}
 }
