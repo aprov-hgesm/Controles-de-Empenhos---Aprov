@@ -347,6 +347,45 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   .hospital-operational .hospital-topbar {padding-inline:12px}
   .hospital-top-action {padding:8px 9px;font-size:.67rem}
 }
+/* Fluxos de producao, progresso e monitoramento: substituir azul legado.
+   Estados de erro/alerta permanecem vermelhos e amarelos por semantica clinica. */
+.hospital-operational .hospital-order-progress {
+  border-color:#dbe9de;
+  background:linear-gradient(135deg,#fff,#f6fbf6);
+  box-shadow:0 10px 35px rgba(9,71,39,.04);
+}
+.hospital-operational .hospital-order-progress__eyebrow {color:#778e7e}
+.hospital-operational .hospital-order-progress__pulse {
+  background:linear-gradient(135deg,#e6f3e8,#c9e4ce);color:#106b48;
+}
+.hospital-operational .hospital-order-progress__pulse:not([data-complete="true"]):after {
+  border-color:rgba(18,119,73,.38);
+}
+.hospital-operational .hospital-order-progress__counter {
+  border-color:#d1e8d5;color:#216748;
+}
+.hospital-operational .hospital-order-progress__steps {border-top-color:#e5efe5}
+.hospital-operational .hospital-order-progress__node {background:#eff6ef;color:#8ba892;border-color:#dcebdc}
+.hospital-operational .hospital-order-progress__step:not(:last-child)::after {background:#d9e8db}
+.hospital-operational .hospital-order-progress__step[data-state="done"]:not(:last-child)::after {background:#208154}
+.hospital-operational .hospital-order-progress__step[data-state="done"] .hospital-order-progress__node {
+  background:#0d7850;border-color:#0d7850;color:white;
+}
+.hospital-operational .hospital-order-progress__step[data-state="active"] .hospital-order-progress__node {
+  background:#0c8657;border-color:#0c8657;color:white;animation:none;
+  box-shadow:0 0 0 5px rgba(20,141,83,.12);
+}
+.hospital-operational .hospital-order-progress__step[data-state="done"] .hospital-order-progress__label {color:#347858}
+.hospital-operational .hospital-order-progress__step[data-state="active"] .hospital-order-progress__label {color:#096c46}
+.hospital-operational .hospital-content :where(.bg-sky-50,.bg-blue-50) {background-color:#eef8ef}
+.hospital-operational .hospital-content :where(.border-sky-100,.border-blue-100,.border-blue-200,.border-blue-300,.border-blue-400) {
+  border-color:#cde3d2;
+}
+.hospital-operational .hospital-content :where(.text-blue-700,.text-blue-800,.text-blue-900,.text-sky-700,.text-sky-800) {color:#0e704b}
+.hospital-operational .hospital-content :where([class*="text-[#145"],[class*="text-[#124"],[class*="text-[#285"],[class*="text-[#315"],[class*="text-[#275"],[class*="text-[#1b4"]) {
+  color:#0c6747;
+}
+
 @media(prefers-reduced-motion:reduce) {
   .hospital-login *, .hospital-selection *, .hospital-operational * {animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
