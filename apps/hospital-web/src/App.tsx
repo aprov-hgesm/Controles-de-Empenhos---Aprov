@@ -296,35 +296,68 @@ export function App(){
   }
 
   return <div className="hospital-operational min-h-screen">
-    <header className="hospital-topbar sticky top-0 z-40 flex items-center justify-between px-4 text-white md:px-7">
-      <div className="flex items-center gap-3">
-        <button type="button" aria-label="Alternar menu" className="rounded-lg p-2 lg:hidden" onClick={()=>setMobileMenu(!mobileMenu)}><Menu/></button>
-        <ChefHat size={26} className="text-sky-300"/>
-        <div><p className="text-sm font-black tracking-wide">COZINHA DIETÉTICA</p>
-          <p className="text-xs text-slate-300">Gestão hospitalar</p></div>
+    <header className="hospital-topbar sticky top-0 z-40 flex items-center justify-between gap-3 px-4 text-white md:px-7">
+      <div className="flex min-w-0 items-center gap-3">
+        <button type="button" aria-label={mobileMenu?'Fechar navegação':'Abrir navegação'}
+          aria-expanded={mobileMenu} className="hospital-top-action !p-2 lg:hidden"
+          onClick={()=>setMobileMenu(!mobileMenu)}>{mobileMenu?<X size={20}/>:<Menu size={20}/>}</button>
+        <span className="hospital-header-mark"><img src={emblem} alt="Emblema da Cozinha Dietética"/></span>
+        <div className="min-w-0">
+          <p className="hospital-topbar-title truncate">COZINHA DIETÉTICA</p>
+          <p className="hospital-topbar-subtitle">Hospital Geral de Santa Maria</p>
+        </div>
       </div>
-      <div className="flex items-center gap-3 text-sm">
-        <span className="hidden max-w-48 truncate text-slate-300 sm:inline">{organizationId} · {profile.label}</span>
-        <button type="button" onClick={()=>{setProfile(null);setPage('');setFocus(null);}} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">Trocar perfil</button>
-        <button type="button" onClick={()=>void logout()} className="rounded-lg border border-white/20 p-2" title="Sair"><LogOut size={18}/></button>
+      <div className="flex flex-shrink-0 items-center gap-2 text-sm">
+        <span className="hospital-top-profile hidden md:inline">{profile.label}</span>
+        <button type="button" onClick={()=>{setProfile(null);setPage('');setFocus(null);}}
+          className="hospital-top-action" title="Selecionar outro perfil">
+          <ArrowRight size={15} aria-hidden="true"/><span className="hidden sm:inline">Trocar perfil</span><span className="sm:hidden">Perfis</span>
+        </button>
+        <button type="button" onClick={()=>void logout()} className="hospital-top-action !p-[10px]"
+          aria-label="Encerrar sessão" title="Sair"><LogOut size={18}/></button>
       </div>
     </header>
     <div className="flex">
-      <aside className={"hospital-sidebar fixed bottom-0 top-[72px] z-30 w-64 p-4 text-white lg:sticky lg:h-[calc(100vh-72px)] "+(mobileMenu?'left-0':'-left-72 lg:left-0')}>
+      {mobileMenu&&<button type="button" className="hospital-mobile-mask lg:hidden"
+        aria-label="Fechar o menu lateral" onClick={()=>setMobileMenu(false)}/>}
+      <aside data-open={mobileMenu?'true':'false'}
+        className={"hospital-sidebar fixed bottom-0 top-[76px] z-50 w-64 overflow-y-auto p-4 text-white lg:sticky lg:h-[calc(100vh-76px)] "+(mobileMenu?'left-0':'-left-80 lg:left-0')}>
+        <div className="hospital-sidebar-head">
+          <span>Ambiente selecionado</span>
+          <strong>{profile.label}</strong>
+        </div>
+        <p className="hospital-hint-label mb-3 !text-[#bfa96c]">Navegação</p>
         <nav aria-label="Navegação hospitalar" className="space-y-1">
           {menu.map(item=><button key={item.id} type="button" onClick={()=>open(item.id)}
             aria-current={item.id===page?'page':undefined}
-            className={"hospital-sidebar-item block w-full rounded-lg px-4 py-3 text-left text-sm font-semibold "+(page===item.id?'bg-blue-600/30 text-white':'text-slate-300 hover:bg-white/10')}>
-            {item.label}
+            className="hospital-sidebar-item">
+            <MenuIcon id={item.id}/>
+            <span>{item.label}</span>
           </button>)}
         </nav>
-        <div className="mt-5 border-t border-white/10 pt-4 text-xs text-slate-300">
-          <p>Hospital: {organizationId}</p>
-          {canUnit&&unitIds.length>1&&<select className="mt-2 w-full rounded bg-white p-2 text-slate-900" aria-label="Unidade assistencial" value={unitId}
-            onChange={e=>setUnit(e.target.value)}>{unitIds.map(id=><option key={id} value={id}>{id}</option>)}</select>}
+        <div className="mt-6 border-t border-white/10 pt-5 text-xs text-slate-300">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#bfa96c]">Organização</p>
+          <p className="mt-2 font-semibold text-white">Hospital Geral de Santa Maria</p>
+          <p className="mt-1 text-[#b8d1c1]">Código: {organizationId.toUpperCase()}</p>
+          {canUnit&&unitIds.length>1&&<select className="mt-3 w-full rounded-lg bg-white p-2.5 font-semibold text-emerald-900"
+            aria-label="Unidade assistencial" value={unitId}
+            onChange={e=>setUnit(e.target.value)}>
+            {unitIds.map(id=><option key={id} value={id}>{clinicalUnits[id]??id.toUpperCase()}</option>)}
+          </select>}
+        </div>
+        <div className="mt-8 flex items-center gap-2 border-t border-white/10 pt-5 text-xs text-[#b8d1c1]">
+          <ShieldCheck size={17} className="text-[#e4c26b]"/> Acesso restrito e autorizado
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-7">
+      <main className="hospital-content min-w-0 flex-1 p-4 md:p-7">
+        <div className="hospital-workspace-banner">
+          <div>
+            <span className="hospital-workspace-kicker">Operação hospitalar · HGeSM</span>
+            <h2 className="hospital-workspace-title">{profile.label}</h2>
+            <p className="hospital-workspace-desc">{menu.find(item=>item.id===page)?.label??'Gestão de dietas hospitalares'} · Ambiente autorizado</p>
+          </div>
+          <span className="hospital-workspace-seal"><img src={emblem} alt="" className="h-full w-full object-contain rounded-full"/></span>
+        </div>
         {page==='inicio'&&canUnit&&<section>{heading('Visão da unidade')}
           <div className="grid gap-3 md:grid-cols-3">
             {(['06','10','16'] as const).map(c=><button key={c} className="hospital-panel p-4 text-left" type="button" onClick={()=>open('mapas')}>
@@ -356,7 +389,7 @@ export function App(){
         {page==='nutricao'&&nutrition&&<NutritionAuditView organizationId={organizationId} unitIds={unitIds} getAccessToken={getIdToken}/>}
         {page==='administracao'&&admin&&<AdministrationView organizationId={organizationId} getToken={getIdToken}/>}
         {notice&&<p role="status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm">{notice}</p>}
-        <footer className="mt-8 flex flex-wrap items-center gap-2 border-t pt-4 text-xs text-slate-500">
+        <footer className="hospital-content-footer mt-8 flex flex-wrap items-center gap-2 pt-4">
           <Activity size={14}/> Gestão hospitalar independente · sessão individual e eventos auditáveis
           <Users size={14} className="ml-3"/> {roles.map(role=>roleLabels[role]).join(', ')} <PackageCheck size={14} className="ml-3"/>
         </footer>
