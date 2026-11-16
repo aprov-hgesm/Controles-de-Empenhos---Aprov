@@ -41,8 +41,12 @@ function Invoke-JsonPost([string]$url,[object]$obj) {
 }
 function Find-AuthUser([string]$email) {
   $result=Invoke-JsonPost $authLookup @{email=@($email);targetProjectId=$project}
-  $users=@($result.users)
-  return @($users | Where-Object {$null -ne $_ -and $_.email -eq $email} | Select-Object -First 1)[0]
+  $property=$result.PSObject.Properties['users']
+  if($null -eq $property){return $null}
+  $users=@($property.Value)
+  $found=@($users | Where-Object {$null -ne $_ -and $_.email -eq $email})
+  if($found.Count -eq 0){return $null}
+  return $found[0]
 }
 function Get-FirestoreDocument([string]$path) {
   try {
@@ -57,8 +61,10 @@ function Queue-FirestoreDocument([string]$path,[object]$value,[string]$kind='') 
   if($null -ne $prior){
     $stored=$null
     try {$stored=$prior.fields.json.stringValue | ConvertFrom-Json}catch{throw "Registro existente com estrutura inesperada: $path"}
-    if($stored.organizationId -and $stored.organizationId -ne $hospital){throw "Organizacao divergente: $path"}
-    if($stored.active -eq $false){throw "Registro existente desativado: $path"}
+    $orgProp=$stored.PSObject.Properties['organizationId']
+    if($null -ne $orgProp -and $orgProp.Value -ne $hospital){throw "Organizacao divergente: $path"}
+    $activeProp=$stored.PSObject.Properties['active']
+    if($null -ne $activeProp -and $activeProp.Value -eq $false){throw "Registro existente desativado: $path"}
     if($path -like '*/memberships/*' -and $stored.uid -ne $value.uid){throw "UID divergente: $path"}
     if($path -like '*/memberships/*'){
       $rolesOld=@($stored.roles) | Sort-Object
@@ -112,6 +118,7 @@ foreach($entry in $functional){
 
 Write-Host 'Projeto Firebase: cozinha-dietetica | Organizacao: hgesm | UG: 160416' -ForegroundColor Cyan
 Write-Host 'Contas existentes serao preservadas. Senhas de novos usuarios serao digitadas sem eco no terminal.'
+Write-Warning 'Senhas compartilhadas/fracas servem somente para acesso inicial de teste. Troque-as antes de utilizar dados reais.'
 $accounts=@()
 foreach($user in $users){
   $account=Find-AuthUser $user.email
@@ -123,7 +130,7 @@ foreach($user in $users){
     try{
       $ptr=[Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
       $password=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
-      if($password.Length -lt 8){throw 'Utilize uma senha de pelo menos 8 caracteres.'}
+      if($password.Length -lt 6){throw 'O Firebase exige pelo menos 6 caracteres de senha.'}
       $body=@{email=$user.email;password=$password;displayName=$user.name}
       $account=Invoke-JsonPost $authCreate $body
       if(-not $account.localId){throw ('Firebase nao retornou UID para '+$user.email)}
