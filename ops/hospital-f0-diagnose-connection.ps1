@@ -52,8 +52,9 @@ foreach($target in $targets){
   }
   $parsed=$null
   try{$parsed=$body|ConvertFrom-Json}catch{}
-  $isJson=$contentType -match 'application/json' -and $null -ne $parsed
-  $isExpected=$isJson -and $status -eq 401 -and $parsed.status -eq 401
+  # PowerShell 5.1 pode consumir o corpo de respostas HTTP 4xx antes deste catch.
+  # Aqui verificamos apenas status e Content-Type, sem afirmar que o JSON foi lido.
+  $isExpected=($contentType -match 'application/json') -and $status -eq 401
   $result=if($isExpected){'OK'}else{'FALHA'}
   Write-Host ($target.name+': '+$result+' | HTTP '+$status+' | Content-Type '+$contentType) -ForegroundColor $(if($isExpected){'Green'}else{'Yellow'})
   if(-not $isExpected){
@@ -65,8 +66,8 @@ foreach($target in $targets){
 }
 if($results.Count -ne 4){throw 'Nem todos os destinos responderam. Verifique o erro de rede acima.'}
 if(@($results|Where-Object {-not $_.pass}).Count -gt 0){
-  Write-Warning 'A resposta sem login nao esta consistente entre API e Hosting. Nao altere contas nem IAM: envie este resultado para diagnostico.'
+  Write-Warning 'HTTP/status de conteudo divergentes. Nao altere contas nem IAM apenas por este teste.'
 }else{
-  Write-Host 'API e Hosting entregam JSON 401, inclusive ao rejeitar token invalido: proxy basico funcionando.' -ForegroundColor Green
+  Write-Host 'API e Hosting respondem HTTP 401 com Content-Type JSON: roteamento basico confirmado.' -ForegroundColor Green
   Write-Host 'Se o navegador ainda falhar apos o login, examine somente o HTTP da requisicao autenticada (sem compartilhar token).'
 }
