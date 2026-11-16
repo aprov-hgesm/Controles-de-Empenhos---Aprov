@@ -371,7 +371,9 @@ export function App(){
         </section>}
         {page==='pacientes'&&canUnit&&<PatientsView organizationId={organizationId} unitId={unitId} getIdToken={getIdToken}/>}
         {page==='dietas'&&canUnit&&<DietasView organizationId={organizationId} unitId={unitId} roles={roles} getIdToken={getIdToken}/>}
-        {page==='mapas'&&canUnit&&<MeusMapasView organizationId={organizationId} unitId={unitId} unitLabel={unitId} getIdToken={getIdToken}/>}
+        {canUnit&&<section hidden={page!=='mapas'} aria-label="Solicitação de dietas em andamento">
+          <MeusMapasView organizationId={organizationId} unitId={unitId} unitLabel={clinicalUnits[unitId]??unitId} getIdToken={getIdToken}/>
+        </section>}
         {page==='acompanhamento'&&canUnit&&<TrackingView organizationId={organizationId} unitId={unitId} getIdToken={getIdToken}/>}
         {page==='painel'&&kitchen&&<KitchenMapsBoard organizationId={organizationId} unitIds={unitIds}
           getAuthorization={getAuthorization}
