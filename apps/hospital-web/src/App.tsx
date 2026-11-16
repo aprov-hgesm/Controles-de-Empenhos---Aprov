@@ -39,6 +39,7 @@ function MenuIcon({id}:{id:string}){
   if(id==='producao')return <Utensils className="hospital-nav-icon"/>;
   if(id==='distribuicao')return <Truck className="hospital-nav-icon"/>;
   if(id==='administracao')return <Settings2 className="hospital-nav-icon"/>;
+  if(id==='catalogo')return <Utensils className="hospital-nav-icon"/>;
   return <FileText className="hospital-nav-icon"/>;
 }
 
@@ -388,6 +389,7 @@ export function App(){
           unitIds={unitIds} getAccessToken={getIdToken} initialView={page==='ocorrencias'?'occurrences':'maps'}/>}
         {page==='nutricao'&&nutrition&&<NutritionAuditView organizationId={organizationId} unitIds={unitIds} getAccessToken={getIdToken}/>}
         {page==='administracao'&&admin&&<AdministrationView organizationId={organizationId} getToken={getIdToken}/>}
+        {page==='catalogo'&&admin&&<DietasView organizationId={organizationId} roles={['HOSPITAL_ADMIN']} getIdToken={getIdToken}/>} 
         {notice&&<p role="status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm">{notice}</p>}
         <footer className="hospital-content-footer mt-8 flex flex-wrap items-center gap-2 pt-4">
           <Activity size={14}/> Gestão hospitalar independente · sessão individual e eventos auditáveis
