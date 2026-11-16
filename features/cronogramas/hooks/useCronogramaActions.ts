@@ -6,7 +6,7 @@ import type { User } from 'firebase/auth';
 import type { CronogramaEmpenho, CronogramaEmailEnvio, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import { recordCronogramaEmailSend, saveCronograma } from '../../../lib/firebaseSync';
 import { snapshotCronogramaRemessas } from '../domain/cronogramaDeliveryTracking';
-import { getCronogramaPdfLayout, splitCronogramaRemessas } from '../domain/cronogramaPdfLayout';
+import { getCronogramaPdfLayout, splitCronogramaRemessas, wrapCronogramaPdfLines } from '../domain/cronogramaPdfLayout';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
@@ -244,6 +244,12 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     const margin = pdfLayout.margin;
     const pageWidth = doc.internal.pageSize.getWidth();
     let yPos = 14;
+    // Mede e quebra textos antes de imprimir: nenhuma informação avança sobre a próxima coluna.
+    const wrapText = (value: string, width: number, size = 7, weight: 'normal' | 'bold' = 'normal'): string[] => {
+      doc.setFont('helvetica', weight);
+      doc.setFontSize(size);
+      return wrapCronogramaPdfLines(value, width, (line, maxWidth) => doc.splitTextToSize(line, maxWidth));
+    };
      // 1. OFFICIAL MILITARY / HOSPITAL HEADER
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
@@ -282,77 +288,98 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const qProgramada = cronogramaColunas.reduce((sum, col) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       return acc + (qProgramada * it.unitPrice);
     }, 0);
-     const infoBoxHeight = 32;
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(210, 220, 235);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), infoBoxHeight, 2, 2, 'FD');
-     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('1. DADOS DA CONTRATAÇÃO E FORNECEDOR', margin + 3, yPos + 4.5);
-     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(50, 50, 50);
-     const col1X = margin + 3;
-    const metadataColumnWidth = (pageWidth - 2 * margin) / 3;
-    const col2X = col1X + metadataColumnWidth;
-    const col3X = col2X + metadataColumnWidth;
-    const fitPdfText = (value: string, maxWidth: number): string => {
-      let output = value;
-      if (doc.getTextWidth(output) <= maxWidth) return output;
-      while (output.length > 0 && doc.getTextWidth(output + '...') > maxWidth) {
-        output = output.slice(0, -1);
-      }
-      return output + '...';
-    };
-     // Row 1
-    doc.text(`Nota de Empenho:`, col1X, yPos + 9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(emp.id, col1X + 23, yPos + 9);
-    doc.setFont('helvetica', 'normal');
-     doc.text(`Pregão Eletrônico:`, col2X, yPos + 9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(emp.pregao || 'Não informado', col2X + 24, yPos + 9);
-    doc.setFont('helvetica', 'normal');
-     doc.text(`Classe / Categoria:`, col3X, yPos + 9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(emp.classification || 'QR', col3X + 25, yPos + 9);
-    doc.setFont('helvetica', 'normal');
-     // Row 2
-    doc.text(`Fornecedor Credor:`, col1X, yPos + 14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(fitPdfText(emp.supplier, metadataColumnWidth - 26), col1X + 23, yPos + 14);
-    doc.setFont('helvetica', 'normal');
-     doc.text(`Data de Emissão NE:`, col2X, yPos + 14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatDateOnly(emp.date), col2X + 26, yPos + 14);
-    doc.setFont('helvetica', 'normal');
-     doc.text(`Data do Cronograma:`, col3X, yPos + 14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(new Date().toLocaleDateString('pt-BR'), col3X + 27, yPos + 14);
-    doc.setFont('helvetica', 'normal');
-     // Row 3
-    doc.text(`Objeto Resumido:`, col1X, yPos + 19);
-    doc.text(fitPdfText(emp.description, pageWidth - margin - (col1X + 24)), col1X + 22, yPos + 19);
-     // Valores em duas linhas para evitar sobreposição em qualquer orientação.
-    doc.setFillColor(235, 242, 255);
-    doc.roundedRect(margin + 2, yPos + 22, pageWidth - (margin * 2) - 4, 8, 1.5, 1.5, 'F');
+
+    // Cabeçalho com campos independentes e altura calculada pelo conteúdo.
+    // Rótulos ficam acima dos valores; descrições e fornecedores NÃO ficam na mesma linha de datas.
+    const details = [
+      [
+        { label: 'Nota de Empenho', value: emp.id },
+        { label: 'Pregão Eletrônico', value: emp.pregao || 'Não informado' },
+        { label: 'Classe / Categoria', value: emp.classification || 'QR' },
+      ],
+      [
+        { label: 'Fornecedor Credor', value: emp.supplier || 'Não informado' },
+        { label: 'Data de Emissão NE', value: formatDateOnly(emp.date) },
+        { label: 'Data do Cronograma', value: new Date().toLocaleDateString('pt-BR') },
+      ],
+    ];
+    const innerX = margin + 3;
+    const innerWidth = pageWidth - margin * 2 - 6;
+    const metadataGap = 4;
+    const metadataCellWidth = (innerWidth - 2 * metadataGap) / 3;
+    const detailRows = details.map((fields) => {
+      const cells = fields.map((field) => ({
+        labelLines: wrapText(field.label, metadataCellWidth - 1, 6.2, 'bold'),
+        valueLines: wrapText(field.value, metadataCellWidth - 1, 7, 'bold'),
+      }));
+      return {
+        cells,
+        height: Math.max(...cells.map((cell) => cell.labelLines.length * 3 + cell.valueLines.length * 3.6 + 1)),
+      };
+    });
+    const objectLabelLines = wrapText('OBJETO RESUMIDO', innerWidth, 6.2, 'bold');
+    const objectValueLines = wrapText(emp.description || 'Não informado', innerWidth, 7);
+    const objectHeight = objectLabelLines.length * 3 + objectValueLines.length * 3.6 + 2;
     const financialMetrics = [
       { label: 'TOTAL EMPENHADO', value: totalCommitted, color: [30, 41, 59] },
       { label: 'JÁ RECEBIDO (NFs)', value: totalReceived, color: [30, 41, 59] },
       { label: 'SALDO ATUAL', value: saldoDisponivelTotal, color: [0, 110, 50] },
       { label: 'TOTAL NO CRONOGRAMA', value: totalProgramadoGeral, color: [0, 40, 142] },
     ];
-    const metricWidth = (pageWidth - 2 * margin - 6) / financialMetrics.length;
-    financialMetrics.forEach((metric, index) => {
-      const x = margin + 3.5 + index * metricWidth;
-      doc.setTextColor(metric.color[0], metric.color[1], metric.color[2]);
+    const metricGap = 3;
+    const metricWidth = (innerWidth - 3 * metricGap) / financialMetrics.length;
+    const metricLayouts = financialMetrics.map((metric) => ({
+      ...metric,
+      labelLines: wrapText(metric.label, metricWidth - 1, 6, 'bold'),
+      valueLines: wrapText(metric.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), metricWidth - 1, 7, 'bold'),
+    }));
+    const financialHeight = 4 + Math.max(...metricLayouts.map((metric) => metric.labelLines.length * 2.8 + metric.valueLines.length * 3.5)) + 2;
+    const infoBoxHeight = 9 + detailRows.reduce((sum, row) => sum + row.height + 2, 0) + objectHeight + 2 + financialHeight + 3;
+    if (yPos + infoBoxHeight > doc.internal.pageSize.getHeight() - 16) {
+      doc.addPage();
+      yPos = 14;
+    }
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(210, 220, 235);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, infoBoxHeight, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('1. DADOS DA CONTRATAÇÃO E FORNECEDOR', innerX, yPos + 5);
+    let detailY = yPos + 9;
+    detailRows.forEach((row) => {
+      row.cells.forEach((cell, index) => {
+        const x = innerX + index * (metadataCellWidth + metadataGap);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.2);
+        doc.setTextColor(85, 95, 108);
+        doc.text(cell.labelLines, x, detailY + 2.5);
+        doc.setFontSize(7);
+        doc.setTextColor(30, 41, 59);
+        doc.text(cell.valueLines, x, detailY + 2.5 + cell.labelLines.length * 3.0);
+      });
+      detailY += row.height + 2;
+    });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.2);
+    doc.setTextColor(85, 95, 108);
+    doc.text(objectLabelLines, innerX, detailY + 2.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 41, 59);
+    doc.text(objectValueLines, innerX, detailY + 2.5 + objectLabelLines.length * 3);
+    detailY += objectHeight + 2;
+    doc.setFillColor(235, 242, 255);
+    doc.roundedRect(margin + 2, detailY, pageWidth - 2 * margin - 4, financialHeight, 1.5, 1.5, 'F');
+    metricLayouts.forEach((metric, index) => {
+      const x = innerX + index * (metricWidth + metricGap);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(5.6);
-      doc.text(metric.label, x, yPos + 25.2);
+      doc.setFontSize(6);
+      doc.setTextColor(metric.color[0], metric.color[1], metric.color[2]);
+      doc.text(metric.labelLines, x, detailY + 3.2);
       doc.setFontSize(7);
-      doc.text(metric.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), x, yPos + 28.5);
+      doc.text(metric.valueLines, x, detailY + 3.2 + metric.labelLines.length * 2.8);
     });
     yPos += infoBoxHeight + 6;
      // 3. TABLE OF SCHEDULED DELIVERIES
@@ -461,71 +488,74 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       },
     });
     });
-     // 4. DELIVERY INSTRUCTIONS AND CONDITIONS
-    if (yPos > doc.internal.pageSize.getHeight() - 55) {
+
+    // Condições e assinaturas com altura dinâmica: nenhuma observação invade outro campo.
+    const conditions = [
+      { label: 'Local de Entrega', value: cronogramaLocalEntrega || defaultDeliveryLocation },
+      { label: 'Horário de Recebimento', value: cronogramaHorarioEntrega || 'Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30' },
+      { label: 'Observações e Instruções', value: cronogramaObservacoes || 'As entregas deverão ser efetuadas nas datas programadas acompanhadas das Notas Fiscais.' },
+    ];
+    const conditionLabelWidth = 40;
+    const conditionValueWidth = pageWidth - margin * 2 - 48;
+    const conditionLayouts = conditions.map((condition) => {
+      const labelLines = wrapText(condition.label, conditionLabelWidth, 6.8, 'bold');
+      const valueLines = wrapText(condition.value, conditionValueWidth, 6.8);
+      return { labelLines, valueLines, height: 2 + Math.max(labelLines.length, valueLines.length) * 3.5 };
+    });
+    const instBoxH = 5 + conditionLayouts.reduce((sum, row) => sum + row.height, 0);
+    if (yPos + instBoxH + 13 > doc.internal.pageSize.getHeight() - 16) {
       doc.addPage();
       yPos = 16;
     }
-     doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.text('3. DIRETRIZES E CONDIÇÕES DE RECEBIMENTO', margin, yPos);
-    yPos += 3.5;
-     const instBoxH = 26;
+    yPos += 4;
     doc.setFillColor(252, 253, 255);
     doc.setDrawColor(220, 228, 240);
     doc.setLineWidth(0.2);
-    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), instBoxH, 1.5, 1.5, 'FD');
-     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.8);
-    doc.setTextColor(50, 50, 50);
-    doc.text('Local de Entrega:', margin + 3, yPos + 4.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(cronogramaLocalEntrega || defaultDeliveryLocation, margin + 26, yPos + 4.5);
-     doc.setFont('helvetica', 'bold');
-    doc.text('Horário de Recebimento:', margin + 3, yPos + 9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(cronogramaHorarioEntrega || 'Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30', margin + 34, yPos + 9);
-     doc.setFont('helvetica', 'bold');
-    doc.text('Observações e Instruções:', margin + 3, yPos + 13.5);
-    doc.setFont('helvetica', 'normal');
-    const obsLines = doc.splitTextToSize(cronogramaObservacoes || 'As entregas deverão ser efetuadas nas datas programadas acompanhadas das Notas Fiscais.', pageWidth - (margin * 2) - 38);
-    doc.text(obsLines, margin + 35, yPos + 13.5);
-     yPos += instBoxH + 8;
-     // 5. SIGNATURES & DE ACORDO BLOCK
-    if (yPos > doc.internal.pageSize.getHeight() - 40) {
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, instBoxH, 1.5, 1.5, 'FD');
+    let conditionY = yPos + 4;
+    conditionLayouts.forEach((row) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.8);
+      doc.setTextColor(50, 50, 50);
+      doc.text(row.labelLines, margin + 3, conditionY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(row.valueLines, margin + 45, conditionY);
+      conditionY += row.height;
+    });
+    yPos += instBoxH + 8;
+
+    // Duas assinaturas em colunas fixas, com cargos/razões sociais quebrados em linhas.
+    const boxWidth = (pageWidth - margin * 2 - 10) / 2;
+    const sigNameLeft = wrapText(cronogramaResponsavelNome || 'Encarregado do Aprovisionamento', boxWidth - 10, 7.5, 'bold');
+    const sigNameRight = wrapText('DE ACORDO / CIÊNCIA DO FORNECEDOR', boxWidth - 10, 7.5, 'bold');
+    const sigTitleLeft = wrapText(cronogramaResponsavelCargo || defaultResponsibleRole, boxWidth - 10, 6.8);
+    const sigTitleRight = wrapText((emp.supplier || 'Fornecedor') + ' • Assinatura e Carimbo', boxWidth - 10, 6.8);
+    const signatureNameHeight = Math.max(sigNameLeft.length, sigNameRight.length) * 3.8;
+    const signatureTitleHeight = Math.max(sigTitleLeft.length, sigTitleRight.length) * 3.4;
+    if (yPos + 15 + signatureNameHeight + signatureTitleHeight > doc.internal.pageSize.getHeight() - 16) {
       doc.addPage();
       yPos = 16;
     }
-     const boxWidth = (pageWidth - (margin * 2) - 10) / 2;
-    const sigY = yPos + 12;
-     // Left Signature (workspace fiscal)
+    const sigY = yPos + 10;
+    const rightBoxX = margin + boxWidth + 10;
     doc.setDrawColor(160, 160, 160);
     doc.setLineWidth(0.25);
     doc.line(margin + 5, sigY, margin + boxWidth - 5, sigY);
-     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    const sig1Text = cronogramaResponsavelNome || 'Encarregado do Aprovisionamento';
-    doc.text(sig1Text, margin + (boxWidth / 2), sigY + 4, { align: 'center' });
-     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.8);
-    doc.setTextColor(90, 90, 90);
-    const cargo1Text = cronogramaResponsavelCargo || defaultResponsibleRole;
-    doc.text(cargo1Text, margin + (boxWidth / 2), sigY + 7.5, { align: 'center' });
-     // Right Signature (Fornecedor / De Acordo)
-    const rightBoxX = margin + boxWidth + 10;
     doc.line(rightBoxX + 5, sigY, rightBoxX + boxWidth - 5, sigY);
-     doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    const sig2Text = 'DE ACORDO / CIÊNCIA DO FORNECEDOR';
-    doc.text(sig2Text, rightBoxX + (boxWidth / 2), sigY + 4, { align: 'center' });
-     doc.setFont('helvetica', 'normal');
+    doc.text(sigNameLeft, margin + boxWidth / 2, sigY + 4, { align: 'center' });
+    doc.text(sigNameRight, rightBoxX + boxWidth / 2, sigY + 4, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.8);
     doc.setTextColor(90, 90, 90);
-    const cargo2Text = `${emp.supplier} • Assinatura e Carimbo`;
-    doc.text(cargo2Text.length > 40 ? cargo2Text.substring(0, 40) + '...' : cargo2Text, rightBoxX + (boxWidth / 2), sigY + 7.5, { align: 'center' });
+    doc.text(sigTitleLeft, margin + boxWidth / 2, sigY + 4 + signatureNameHeight, { align: 'center' });
+    doc.text(sigTitleRight, rightBoxX + boxWidth / 2, sigY + 4 + signatureNameHeight, { align: 'center' });
      // Footers across all pages
     const pageCount = (doc.internal as any).getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
