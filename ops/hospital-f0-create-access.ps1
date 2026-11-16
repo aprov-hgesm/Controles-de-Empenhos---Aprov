@@ -37,6 +37,27 @@ function Invoke-JsonPost([string]$url,[object]$obj) {
   $json=ConvertTo-Json -InputObject $obj -Depth 30 -Compress
   try {
     return Invoke-RestMethod -Uri $url -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+  } catch {
+    $status=if($null -ne $_.Exception.Response){[int]$_.Exception.Response.StatusCode}else{0}
+    $message='Nao foi possivel consultar o servico Google.'
+    if($null -ne $_.Exception.Response){
+      try{
+        $stream=$_.Exception.Response.GetResponseStream()
+        if($null -ne $stream){
+          $reader=New-Object System.IO.StreamReader($stream)
+          try{
+            $errorJson=$reader.ReadToEnd() | ConvertFrom-Json
+            if($errorJson.error.message){$message=[string]$errorJson.error.message}
+          }finally{$reader.Dispose()}
+        }
+      }catch{}
+    }
+    $message=($message -replace 'key=[A-Za-z0-9_-]+','key=[oculta]')
+    if($message.Length -gt 700){$message=$message.Substring(0,700)}
+    if($status -eq 403){
+      throw "Firebase/Google HTTP 403: $message. Confira o motivo acima: API desabilitada ou permissao firebaseauth.users.get ausente para o usuario gcloud."
+    }
+    throw "Firebase/Google HTTP $status : $message"
   } finally { $json=$null }
 }
 function Find-AuthUser([string]$email) {
