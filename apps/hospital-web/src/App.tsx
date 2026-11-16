@@ -223,7 +223,7 @@ export function App(){
       <div className="flex items-center gap-3 text-sm">
         <span className="hidden max-w-48 truncate text-slate-300 sm:inline">{organizationId} · {profile.label}</span>
         <button type="button" onClick={()=>{setProfile(null);setPage('');setFocus(null);}} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">Trocar perfil</button>
-        <button type="button" onClick={()=>void logout() className="rounded-lg border border-white/20 p-2" title="Sair"><LogOut size={18}/></button>
+        <button type="button" onClick={()=>void logout()} className="rounded-lg border border-white/20 p-2" title="Sair"><LogOut size={18}/></button>
       </div>
     </header>
     <div className="flex">
