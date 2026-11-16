@@ -26,7 +26,7 @@ if(-not $m.Success){throw 'API key publica do Firebase Web ausente no .env.local
 $apiKey=$m.Groups[1].Value
 $token=(& gcloud.cmd auth print-access-token)
 if($LASTEXITCODE -ne 0 -or -not $token){throw 'Nao foi possivel autenticar no Google Cloud.'}
-$headers=@{Authorization='Bearer '+($token | Out-String).Trim()}
+$headers=@{Authorization='Bearer '+($token | Out-String).Trim();'x-goog-user-project'=$project}
 $authLookup='https://identitytoolkit.googleapis.com/v1/projects/'+$project+'/accounts:lookup'
 $authCreate='https://identitytoolkit.googleapis.com/v1/projects/'+$project+'/accounts?key='+[uri]::EscapeDataString($apiKey)
 $fsRoot='https://firestore.googleapis.com/v1/projects/'+$project+'/databases/(default)/documents'
@@ -55,7 +55,7 @@ function Invoke-JsonPost([string]$url,[object]$obj) {
     $message=($message -replace 'key=[A-Za-z0-9_-]+','key=[oculta]')
     if($message.Length -gt 700){$message=$message.Substring(0,700)}
     if($status -eq 403){
-      throw "Firebase/Google HTTP 403: $message. Confira o motivo acima: API desabilitada ou permissao firebaseauth.users.get ausente para o usuario gcloud."
+      throw "Firebase/Google HTTP 403: $message. Projeto de cota informado: $project. Consulte o motivo exibido pelo Google antes de modificar permissoes."
     }
     throw "Firebase/Google HTTP $status : $message"
   } finally { $json=$null }
