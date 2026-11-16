@@ -22,3 +22,16 @@ export function splitCronogramaRemessas<T>(remessas: readonly T[], maxPerTable: 
   }
   return groups;
 }
+
+/** Mantém todas as palavras e quebras explícitas dentro da largura da célula. */
+export function wrapCronogramaPdfLines(
+  text: string,
+  maxWidth: number,
+  splitLine: (line: string, width: number) => string[],
+): string[] {
+  const normalized = String(text || '—').replace(/\r\n?/g, '\n');
+  return normalized.split('\n').flatMap((line) => {
+    const lines = splitLine(line || ' ', Math.max(1, maxWidth));
+    return lines.length ? lines : [''];
+  });
+}

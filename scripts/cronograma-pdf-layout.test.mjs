@@ -35,3 +35,20 @@ test('mais de 8 remessas são divididas sem perda, repetição ou reordenação'
   assert.deepEqual(Array.from(groups.flat()), remessas);
   assert.equal(splitCronogramaRemessas([], 8).length, 1);
 });
+
+test('campos longos preservam o conteúdo e respeitam cada quebra de linha', () => {
+  const { wrapCronogramaPdfLines } = mod.exports;
+  const splitter = (line, width) => {
+    const max = Math.max(1, Math.floor(width));
+    const chunks = [];
+    for (let i = 0; i < line.length; i += max) chunks.push(line.slice(i, i + max));
+    return chunks;
+  };
+  const original = 'AMC COMERCIO DE ALIMENTOS LTDA COM NOME EMPRESARIAL EXTENSO';
+  const lines = wrapCronogramaPdfLines(original, 15, splitter);
+  assert.ok(lines.length > 1);
+  assert.ok(lines.every((line) => line.length <= 15));
+  assert.equal(lines.join(''), original);
+  const paragraphs = wrapCronogramaPdfLines('Primeira instrução\nSegunda instrução', 30, splitter);
+  assert.deepEqual(Array.from(paragraphs), ['Primeira instrução', 'Segunda instrução']);
+});
