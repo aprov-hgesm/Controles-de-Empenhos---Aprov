@@ -27,7 +27,7 @@ $apiKey=$m.Groups[1].Value
 $token=(& gcloud.cmd auth print-access-token)
 if($LASTEXITCODE -ne 0 -or -not $token){throw 'Nao foi possivel autenticar no Google Cloud.'}
 $headers=@{Authorization='Bearer '+($token | Out-String).Trim()}
-$authLookup='https://identitytoolkit.googleapis.com/v1/accounts:lookup'
+$authLookup='https://identitytoolkit.googleapis.com/v1/projects/'+$project+'/accounts:lookup'
 $authCreate='https://identitytoolkit.googleapis.com/v1/projects/'+$project+'/accounts?key='+[uri]::EscapeDataString($apiKey)
 $fsRoot='https://firestore.googleapis.com/v1/projects/'+$project+'/databases/(default)/documents'
 $writes=New-Object 'System.Collections.Generic.List[object]'
@@ -40,7 +40,7 @@ function Invoke-JsonPost([string]$url,[object]$obj) {
   } finally { $json=$null }
 }
 function Find-AuthUser([string]$email) {
-  $result=Invoke-JsonPost $authLookup @{email=@($email);targetProjectId=$project}
+  $result=Invoke-JsonPost $authLookup @{email=@($email)}
   $property=$result.PSObject.Properties['users']
   if($null -eq $property){return $null}
   $users=@($property.Value)
