@@ -28,6 +28,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: apps/hospital-web
         run: npm install --no-audit --no-fund
+      - name: Report frontend runtime security advisories (non-blocking)
+        working-directory: apps/hospital-web
+        shell: bash
+        run: npm audit --omit=dev --audit-level=moderate || true
       - name: Build React hospital modules for Hosting
         working-directory: apps/hospital-web
         run: npm run build
@@ -64,6 +68,10 @@ jobs:
       - name: Install independent API dependencies
         working-directory: apps/hospital-api
         run: npm install --no-audit --no-fund
+      - name: Report backend runtime security advisories (non-blocking)
+        working-directory: apps/hospital-api
+        shell: bash
+        run: npm audit --omit=dev --audit-level=moderate || true
       - name: Build isolated Next API
         working-directory: apps/hospital-api
         run: npm run build
