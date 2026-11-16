@@ -79,6 +79,7 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path apps/hospital-api/.next/standalone/server.js)) { throw 'Missing standalone API server' }
+          if (-not (Test-Path apps/hospital-api/app/health/route.ts)) { throw 'Missing Cloud Run safe /health endpoint' }
           if (-not (Test-Path apps/hospital-api/app/api/hospital/session/route.ts)) { throw 'Missing server-verified session endpoint' }
           $runtime = Get-Content apps/hospital-api/lib/server/hospital/firebase/gcp-qa-runtime.mjs -Raw
           if ($runtime -notmatch 'cozinha-dietetica-api') { throw 'Incorrect GCP service boundary' }
