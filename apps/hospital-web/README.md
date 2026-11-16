@@ -34,6 +34,18 @@ firebase.cmd deploy --only hosting:hospital-web --project cozinha-dietetica
 
 **Status atual:** configuração e provisionamento preparados; a URL publicada só deve ser informada depois da execução e verificação de HTTPS e fluxos reais. Não há autorização para publicar dados ou prontuários de pacientes por esta operação de configuração.
 
+## Configuracao automatica do aplicativo Web Firebase existente
+
+O Firebase Web App **Cozinha Dietetica** do projeto `cozinha-dietetica` ja foi localizado. Em vez de copiar a API key manualmente, na raiz do repositorio execute:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\ops\hospital-f0-configure-web.ps1 -Build
+```
+
+O script usa `firebase apps:sdkconfig WEB` para obter apenas a configuracao publica do aplicativo Web (ID `1:947369899527:web:d2da054f7b9ce707195ca2`), valida os identificadores e grava `apps/hospital-web/.env.local`, que e ignorado pelo Git. O ID da organizacao pode ser digitado na interface ou passado como `-OrganizationId` se ja estiver configurado. Nenhum segredo IAM, conta de servico ou dado clinico e incluido.
+
+**Nao execute firebase deploy apenas por ter o build.** O novo Cloud Run `cozinha-dietetica-api`, a autorizacao do Firebase Auth e a integracao Hosting/API precisam estar operacionais e verificados primeiro. O script acima nao faz deploy.
+
 ## Compilação do frontend real
 
 Na raiz do repositório, execute `powershell.exe -ExecutionPolicy Bypass -File .\ops\hospital-f0-extract-web.ps1`, depois `cd apps/hospital-web`, copie `.env.example` para `.env.local` e preencha exclusivamente o `apiKey` e `appId` públicos do app Web Firebase de `cozinha-dietetica`. Execute `npm.cmd install` e `npm.cmd run build`. Esses arquivos são gerados no diretório independente, sem compilar os módulos financeiros.
