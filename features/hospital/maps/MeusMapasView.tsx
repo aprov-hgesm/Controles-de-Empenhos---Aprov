@@ -21,6 +21,7 @@ export type MeusMapasProps={
  unitId:string;
  unitLabel?:string;
  getIdToken:()=>Promise<string>;
+ onTrack?:()=>void;
 };
 const CYCLES:{value:Cycle;label:string}[]=[
  {value:'06',label:'06h — Café e lanche da manhã'},
@@ -36,7 +37,7 @@ function dateTime(s:string|null|undefined){return s?new Date(s).toLocaleString('
 const panel:React.CSSProperties={border:'1px solid #e1e9f4',borderRadius:18,padding:22,background:'#fff',boxShadow:'0 12px 36px rgba(17,44,87,.045)'};
 const inputStyle:React.CSSProperties={width:'100%',padding:'11px 12px',border:'1px solid #cddbef',borderRadius:11,background:'#fff',color:'#19365c',minHeight:42};
 const actionStyle:React.CSSProperties={padding:'11px 15px',borderRadius:11,border:'1px solid #d5e2f6',background:'#f4f8ff',color:'#164785',fontWeight:650,cursor:'pointer'};
-export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusMapasProps){
+export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken,onTrack}:MeusMapasProps){
  const [date,setDate]=useState(todayLocal);
  const [cycle,setCycle]=useState<Cycle>(()=>currentWorkCycle() as Cycle);
  const [map,setMap]=useState<MapDetail|null>(null);
@@ -227,6 +228,9 @@ export function MeusMapasView({organizationId,unitId,unitLabel,getIdToken}:MeusM
   {loading&&<p role="status">Carregando mapas autorizados…</p>}
   {error&&<div role="alert" className="w3-no-print" style={{...panel,borderColor:'#b91c1c',color:'#991b1b'}}>{error} {error.includes('CONFLICT')&&'Recarregue antes de tentar novamente.'}</div>}
   {notice&&<p className="w3-no-print" role="status" style={{color:'#166534'}}>{notice}</p>}
+  {map&&map.map.status!=='DRAFT'&&onTrack&&<button type="button" className="hospital-primary-action w-full sm:w-auto" onClick={onTrack}>
+    Acompanhar preparo e entrega deste pedido
+  </button>}
   {map&&<MealProgressPair map={map.map} meals={map.meals}/>}
   {map&&<section className="w3-no-print" style={panel}>
     <div className="flex flex-wrap items-center justify-between gap-3">
