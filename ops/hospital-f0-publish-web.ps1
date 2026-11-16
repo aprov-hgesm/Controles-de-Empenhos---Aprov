@@ -85,14 +85,16 @@ function Check-HospitalDenials([string]$base,[hashtable]$headers){
 }
 
 Write-Host 'Verificando servico QA independente...' -ForegroundColor Cyan
-$qa = (Run-Gcloud @('run','services','describe','cozinha-dietetica-qa',
+$qa = (Run-Gcloud -arguments @('run','services','describe','cozinha-dietetica-qa',
   '--project='+$project,'--region='+$region,'--format=json')) | Out-String | ConvertFrom-Json
 if($qa.metadata.annotations.'run.googleapis.com/ingress' -ne 'internal'){
   throw 'Cloud Run QA nao retornou ingress internal: operacao abortada sem alteracoes.'
 }
 Write-Host 'PASS: cozinha-dietetica-qa continua com ingress internal.' -ForegroundColor Green
 
-Write-Host 'Verificando e compilando o frontend isolado...' -ForegroundColor Cyan
+Write-Host 'Atualizando os componentes hospitalares e compilando o frontend...' -ForegroundColor Cyan
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'ops\hospital-f0-extract-web.ps1')
+if($LASTEXITCODE -ne 0){throw 'Falha ao atualizar os componentes hospitalares.'}
 Push-Location $web
 try{
   & npm.cmd run build
@@ -100,9 +102,9 @@ try{
 }finally{Pop-Location}
 if(-not(Test-Path (Join-Path $web 'dist\index.html'))){throw 'dist/index.html nao encontrado.'}
 
-$base = ((Run-Gcloud @('run','services','describe',$service,'--project='+$project,
+$base = ((Run-Gcloud -arguments @('run','services','describe',$service,'--project='+$project,
  '--region='+$region,'--format=value(status.url)')) | Out-String).Trim()
-$token = ((Run-Gcloud @('auth','print-identity-token')) | Out-String).Trim()
+$token = ((Run-Gcloud -arguments @('auth','print-identity-token')) | Out-String).Trim()
 if(-not $base -or -not $token){throw 'Nao foi possivel obter a URL ou identidade para teste privado.'}
 $privateHeaders=@{'X-Serverless-Authorization'='Bearer '+$token}
 $healthy=Get-HttpStatus ($base+'/health') 'GET' $privateHeaders
@@ -112,7 +114,7 @@ Check-HospitalDenials $base $privateHeaders
 
 # Firebase Hosting -> Cloud Run nao envia identidade Google IAM de usuario.
 # A invocacao HTTP sera publica; cada endpoint clinico continua exigindo token Firebase.
-$policy = (Run-Gcloud @('run','services','get-iam-policy',$service,
+$policy = (Run-Gcloud -arguments @('run','services','get-iam-policy',$service,
  '--project='+$project,'--region='+$region,'--format=json')) | Out-String | ConvertFrom-Json
 $alreadyPublic=$false
 $bindingsProp=$policy.PSObject.Properties['bindings']
@@ -121,14 +123,17 @@ foreach($binding in $bindings){
   if($null -ne $binding -and $binding.role -eq 'roles/run.invoker' -and
     @($binding.members) -contains 'allUsers'){$alreadyPublic=$true}
 }
-if($alreadyPublic){throw 'A API ja possui allUsers como invoker; revisar estado antes de publicar.'}
 $added=$false
 try{
-  Write-Host 'Liberando SOMENTE invocacao HTTP da nova API, nao autorizacao clinica...' -ForegroundColor Cyan
-  $null=Run-Gcloud @('run','services','add-iam-policy-binding',$service,
-    '--project='+$project,'--region='+$region,
-    '--member=allUsers','--role=roles/run.invoker','--quiet','--format=none')
-  $added=$true
+  if(-not $alreadyPublic){
+    Write-Host 'Habilitando invocacao HTTP na nova API (autorizacao clinica continua obrigatoria)...' -ForegroundColor Cyan
+    $null=Run-Gcloud -arguments @('run','services','add-iam-policy-binding',$service,
+      '--project='+$project,'--region='+$region,
+      '--member=allUsers','--role=roles/run.invoker','--quiet','--format=none')
+    $added=$true
+  }else{
+    Write-Host 'A invocacao HTTP ja esta configurada na nova API.' -ForegroundColor Green
+  }
   # IAM pode levar alguns segundos para propagar.
   $healthPublic=0
   for($attempt=0;$attempt -lt 5;$attempt++){
