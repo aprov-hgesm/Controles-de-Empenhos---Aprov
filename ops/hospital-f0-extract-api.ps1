@@ -41,6 +41,8 @@ foreach($f in $files){
     $after=$before.Replace('HOSPITAL_GCP_QA_ENABLED','HOSPITAL_GCP_ENABLED')
     $after=$after.Replace('HOSPITAL_FIRESTORE_QA_ENABLED','HOSPITAL_FIRESTORE_ENABLED')
     $after=$after.Replace('HOSPITAL_GCP_QA_PRIVATE','HOSPITAL_API_PUBLIC')
+    # O modulo administrativo legado usava um cabecalho diferente do frontend.
+    $after=$after.Replace("headers.get('x-hospital-organization')", "headers.get('x-hospital-organization-id')")
     $after=$after.Replace("HOSPITAL_SERVICE='cozinha-dietetica-qa'","HOSPITAL_SERVICE='cozinha-dietetica-api'")
     if($after -ne $before){
         [System.IO.File]::WriteAllText($f.FullName,$after,[System.Text.UTF8Encoding]::new($false))
