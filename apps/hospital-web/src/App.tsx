@@ -1,19 +1,18 @@
-import {useCallback,useEffect,useMemo,useState,type FormEvent} from 'react';
+import {lazy,Suspense,useCallback,useEffect,useMemo,useState,type FormEvent} from 'react';
 import {onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail,type User} from 'firebase/auth';
 import {LogOut,Menu,ShieldCheck,Activity,Users,ClipboardList,PackageCheck,LockKeyhole,Mail,Eye,EyeOff,ArrowRight,ArrowUpRight,LayoutDashboard,UserRound,Utensils,FileText,Settings2,Stethoscope,Truck,CalendarClock,X} from 'lucide-react';
 import {auth} from './firebase';
 import {menuForRoles} from './features/hospital/integration/navigation.mjs';
-import {PatientsView} from './features/hospital/patients/PatientsView';
-import {DietasView} from './features/hospital/diets/DietasView';
-import {MeusMapasView} from './features/hospital/maps/MeusMapasView';
-import {TrackingView} from './features/hospital/integration/TrackingView';
-import {ProductionView} from './features/hospital/production/ProductionView';
-import {DistributionQueue} from './features/hospital/integration/DistributionQueue';
-import {KitchenMapsBoard} from './features/hospital/integration/KitchenMapsBoard';
-import {ReportingView} from './features/hospital/reporting/ReportingView';
-import {NutritionAuditView} from './features/hospital/nutrition-audit/NutritionAuditView';
-import {AdministrationView} from './features/hospital/administration/AdministrationView';
-import {UnitMapStatusCard} from './features/hospital/integration/UnitMapStatusCard';
+const PatientsView=lazy(()=>import('./features/hospital/patients/PatientsView').then(m=>({default:m.PatientsView})));
+const DietasView=lazy(()=>import('./features/hospital/diets/DietasView').then(m=>({default:m.DietasView})));
+const MeusMapasView=lazy(()=>import('./features/hospital/maps/MeusMapasView').then(m=>({default:m.MeusMapasView})));
+const TrackingView=lazy(()=>import('./features/hospital/integration/TrackingView').then(m=>({default:m.TrackingView})));
+const ProductionView=lazy(()=>import('./features/hospital/production/ProductionView').then(m=>({default:m.ProductionView})));
+const DistributionQueue=lazy(()=>import('./features/hospital/integration/DistributionQueue').then(m=>({default:m.DistributionQueue})));
+const KitchenMapsBoard=lazy(()=>import('./features/hospital/integration/KitchenMapsBoard').then(m=>({default:m.KitchenMapsBoard})));
+const ReportingView=lazy(()=>import('./features/hospital/reporting/ReportingView').then(m=>({default:m.ReportingView})));
+const NutritionAuditView=lazy(()=>import('./features/hospital/nutrition-audit/NutritionAuditView').then(m=>({default:m.NutritionAuditView})));
+const AdministrationView=lazy(()=>import('./features/hospital/administration/AdministrationView').then(m=>({default:m.AdministrationView})));
 
 type Role='UNIT'|'KITCHEN'|'NUTRITION'|'HOSPITAL_ADMIN';
 const roleLabels:Record<Role,string>={UNIT:'Unidade Assistencial',KITCHEN:'Cozinha Dietética',NUTRITION:'Nutrição',HOSPITAL_ADMIN:'Administrador'};
@@ -162,10 +161,6 @@ export function App(){
     setFocus(null);setMobileMenu(false);
   };
   const open=(id:string)=>{if(menu.some(item=>item.id===id)){setPage(id);setMobileMenu(false);}};
-  const heading=(title:string)=> <header className="mb-5 flex items-center gap-3">
-    <span className="hospital-profile-icon !mb-0"><ClipboardList size={20}/></span>
-    <h1 className="text-xl font-extrabold text-slate-800">{title}</h1>
-  </header>;
 
   if(user===undefined)return <main className="hospital-selection">
     <div className="flex flex-col items-center gap-5 text-center text-white" role="status" aria-live="polite">
@@ -359,16 +354,7 @@ export function App(){
           </div>
           <span className="hospital-workspace-seal"><img src={emblem} alt="" className="h-full w-full object-contain rounded-full"/></span>
         </div>
-        {page==='inicio'&&canUnit&&<section>{heading('Visão da unidade')}
-          <div className="grid gap-3 md:grid-cols-3">
-            {(['06','10','16'] as const).map(c=><button key={c} className="hospital-panel p-4 text-left" type="button" onClick={()=>open('mapas')}>
-              <ClipboardList size={22} className="mb-2 text-blue-900"/>
-              <p className="text-xl font-black">{c}h</p><p className="text-sm">Abrir mapa alimentar</p>
-            </button>)}
-          </div>
-          <div className="mt-5"><UnitMapStatusCard organizationId={organizationId} unitId={unitId} getIdToken={getIdToken}
-            onOpen={()=>open('acompanhamento')} onRequest={()=>open('mapas')}/></div>
-        </section>}
+        <Suspense fallback={<div className="hospital-loading" role="status" aria-live="polite">Carregando seu ambiente de trabalho…</div>}>
         {page==='pacientes'&&canUnit&&<PatientsView organizationId={organizationId} unitId={unitId} getIdToken={getIdToken}/>}
         {page==='dietas'&&canUnit&&<DietasView organizationId={organizationId} unitId={unitId} roles={roles} getIdToken={getIdToken}/>}
         {canUnit&&<section hidden={page!=='mapas'} aria-label="Solicitação de dietas em andamento">
@@ -392,6 +378,7 @@ export function App(){
         {page==='nutricao'&&nutrition&&<NutritionAuditView organizationId={organizationId} unitIds={unitIds} getAccessToken={getIdToken}/>}
         {page==='administracao'&&admin&&<AdministrationView organizationId={organizationId} getToken={getIdToken}/>}
         {page==='catalogo'&&admin&&<DietasView organizationId={organizationId} roles={['HOSPITAL_ADMIN']} getIdToken={getIdToken}/>} 
+        </Suspense>
         {notice&&<p role="status" className="mt-4 rounded-lg bg-blue-50 p-3 text-sm">{notice}</p>}
         <footer className="hospital-content-footer mt-8 flex flex-wrap items-center gap-2 pt-4">
           <Activity size={14}/> Gestão hospitalar independente · sessão individual e eventos auditáveis
