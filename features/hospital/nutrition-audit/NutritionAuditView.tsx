@@ -2,6 +2,8 @@
 import {useCallback,useEffect,useState} from 'react';
 type Case={id:string;unitId:string;category:string;risk:string;status:string;evidence:string;recommendation:string;revision:number;createdAt:string};
 type Contact={id:string;findingId:string;physicianRef:string;channel:string;contactedAt:string;requestNote:string;status:string;revision:number;respondedAt:string|null;responseNote:string|null};
+type AdmissionOption={admissionId:string;status:string;fasting:boolean;medicalReferenceId:string|null};
+type DietInspection={admissionId:string;unitId:string;referenceCode:string;fasting:boolean;allergyCodes:string[];activeMedicalReferenceId:string|null;versions:{id:string;catalogItemId:string;sourceRef:string;prescribedAt:string}[];events:{eventType:string;occurredAt:string}[]};
 type Props={organizationId:string;unitIds:string[];getAccessToken:()=>Promise<string>};
 type AnyObject=Record<string,unknown>;
 const tabs=['Visão geral','Consultar dieta','Pendências','Contato com médico','Relatórios'] as const;
@@ -15,7 +17,8 @@ export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props
  const [summary,setSummary]=useState<AnyObject>({}),[alerts,setAlerts]=useState<AnyObject[]>([]);
  const [filters,setFilters]=useState({status:'',category:'',risk:'',from:'',to:''});
  const [loading,setLoading]=useState(false),[error,setError]=useState(''),[ok,setOk]=useState('');
- const [admissionId,setAdmissionId]=useState(''),[diet,setDiet]=useState<AnyObject|null>(null);
+ const [admissionId,setAdmissionId]=useState(''),[diet,setDiet]=useState<DietInspection|null>(null);
+ const [admissions,setAdmissions]=useState<AdmissionOption[]>([]);
  const [finding,setFinding]=useState({admissionId:'',medicalReferenceId:'',category:'',risk:'',evidence:'',recommendation:'',escalation:''});
  const [selected,setSelected]=useState(''),[reason,setReason]=useState(''),[history,setHistory]=useState<AnyObject[]>([]);
  const [contact,setContact]=useState({findingId:'',physicianRef:'',channel:'PHONE',contactedAt:'',requestNote:'',contactConfirmed:false});
@@ -35,6 +38,15 @@ export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props
   catch(e){setError(e instanceof Error?e.message:'Erro na consulta');}finally{setLoading(false)}
  },[api,unitId,filters]);
  useEffect(()=>{void refresh()},[refresh]);
+ useEffect(()=>{
+  let active=true;
+  setAdmissions([]);setAdmissionId('');setDiet(null);
+  if(tab!=='Consultar dieta'||!unitId)return()=>{active=false};
+  void api('patients.list',{unitId,limit:50})
+    .then((rows:AdmissionOption[])=>{if(active)setAdmissions(rows.filter(row=>row.status==='ACTIVE'));})
+    .catch(e=>{if(active)setError(e instanceof Error?e.message:'Não foi possível listar internações')});
+  return()=>{active=false};
+ },[tab,unitId,api]);
  async function action(operation:string,payload:AnyObject){setError('');setOk('');setLoading(true);try{await api(operation,{unitId,...payload},'POST');setOk('Registro gravado com autoria e horário.');await refresh()}catch(e){setError(e instanceof Error?e.message:'Falha no registro')}finally{setLoading(false)}}
  async function inspect(){setError('');setDiet(null);try{setDiet(await api('patient.diet',{unitId,admissionId}))}catch(e){setError(e instanceof Error?e.message:'Consulta negada')}}
  async function inspectHistory(kind:string,id:string){try{setHistory(await api('history.read',{unitId,kind,id}))}catch(e){setError(e instanceof Error?e.message:'Histórico indisponível')}}
@@ -58,7 +70,42 @@ export function NutritionAuditView({organizationId,unitIds,getAccessToken}:Props
     </div>
   </details>}
   {tab==='Visão geral'&&<div><div className="grid grid-cols-2 gap-2 md:grid-cols-5">{[['Achados',summary.total],['Pendentes',summary.pending],['Críticos',summary.critical],['Aguardando médico',summary.contactsPending],['Retorno médio (h)',summary.averageResponseHours]].map(([label,value])=><article className="hospital-kpi" key={String(label)}><p className="text-xs">{String(label)}</p><b className="text-xl">{value==null?'—':String(value)}</b></article>)}</div><h2 className="mt-3 font-semibold">Alertas informativos</h2>{alerts.length?alerts.map((a,i)=><p key={i} className="border-b p-2 text-sm">{String(a.type)} • {date(a.occurredAt)}</p>):<p className="text-sm">Nenhuma alteração pendente.</p>}</div>}
-  {tab==='Consultar dieta'&&<article className="space-y-3 rounded border bg-white p-3"><p className="text-sm">Consulta de referência médica vigente, somente leitura. Consistência/via aguardam DTO W3. SNE e jejum não são consistências.</p><form className="flex gap-2" onSubmit={e=>{e.preventDefault();void inspect()}}><input required aria-label="ID da internação" placeholder="Internação" className={field} value={admissionId} onChange={e=>setAdmissionId(e.target.value)}/><button className={btn}>Consultar</button></form>{diet&&<pre className="overflow-x-auto whitespace-pre-wrap text-xs">{JSON.stringify(diet,null,2)}</pre>}</article>}
+  {tab==='Consultar dieta'&&<article className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+    <div><h3 className="font-bold text-emerald-950">Conferir prescrição registrada</h3>
+      <p className="mt-1 text-sm text-slate-600">Consulta de referências registradas pela unidade; não altera a prescrição médica.</p></div>
+    <form className="flex flex-wrap items-end gap-3" onSubmit={e=>{e.preventDefault();void inspect()}}>
+      <label className="min-w-[210px] flex-1 text-sm font-semibold text-slate-700">Internação ativa
+        <select required className={field+' mt-1'} value={admissionId} onChange={e=>{setAdmissionId(e.target.value);setDiet(null)}}>
+          <option value="">Escolha a internação</option>
+          {admissions.map((item,index)=><option key={item.admissionId} value={item.admissionId}>
+            {'Internação '+(index+1)+' · '+item.admissionId.slice(-8)}{item.fasting?' · Jejum':''}
+          </option>)}
+        </select>
+      </label>
+      <button className={btn} disabled={!admissionId||loading}>Conferir dieta</button>
+    </form>
+    {admissions.length===0&&!loading&&<p className="text-sm text-slate-500">Não há internações ativas disponíveis nesta unidade.</p>}
+    {diet&&<div className="space-y-3" aria-label="Resumo da prescrição registrada">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className={'rounded-xl border p-4 '+(diet.fasting?'border-amber-300 bg-amber-50':'border-emerald-100 bg-emerald-50')}>
+          <p className="text-xs font-bold text-slate-600">Jejum registrado</p>
+          <p className={'mt-1 font-extrabold '+(diet.fasting?'text-amber-900':'text-emerald-800')}>{diet.fasting?'SIM — conferência assistencial necessária':'Não registrado'}</p>
+        </div>
+        <div className={'rounded-xl border p-4 '+(diet.allergyCodes.length?'border-amber-300 bg-amber-50':'border-emerald-100 bg-emerald-50')}>
+          <p className="text-xs font-bold text-slate-600">Alergias registradas</p>
+          <p className="mt-1 font-semibold text-slate-900">{diet.allergyCodes.length?diet.allergyCodes.join(', '):'Nenhuma cadastrada'}</p>
+        </div>
+      </div>
+      <div className="rounded-xl border border-slate-200 p-4">
+        <h4 className="font-semibold text-slate-800">Histórico de referências médicas ({diet.versions.length})</h4>
+        {diet.versions.length===0?<p className="mt-2 text-sm text-slate-500">Nenhuma referência registrada nesta internação.</p>:
+          <ul className="mt-3 space-y-2">{diet.versions.slice().reverse().map(v=><li key={v.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+            <strong className="text-slate-800">{v.id===diet.activeMedicalReferenceId?'Referência vigente':'Referência anterior'}</strong>
+            <span className="mt-1 block break-words text-slate-600">{v.sourceRef||'Transcrição assistencial'} · {date(v.prescribedAt)}</span>
+          </li>)}</ul>}
+      </div>
+    </div>}
+   </article>}
   {tab==='Pendências'&&<div className="space-y-3"><form className="grid gap-2 rounded border bg-white p-3 md:grid-cols-2" onSubmit={e=>{e.preventDefault();void action('finding.create',{...finding,medicalReferenceId:finding.medicalReferenceId||null,idempotencyKey:crypto.randomUUID()})}}>
    <h2 className="font-semibold md:col-span-2">Registrar achado</h2>
    <label className="text-sm">Internação<input required className={field} value={finding.admissionId} onChange={e=>setFinding(p=>({...p,admissionId:e.target.value}))}/></label>
