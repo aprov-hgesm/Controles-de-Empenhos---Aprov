@@ -96,7 +96,7 @@ if (-not $firebase) {
     throw 'Firebase CLI ausente. Instale Node.js e: npm.cmd install -g firebase-tools'
 }
 Write-Host ''
-Write-Host '=== FIREBASE HOSTING HOSPITALAR — INSPECAO ===' -ForegroundColor Cyan
+Write-Host '=== FIREBASE HOSTING HOSPITALAR - INSPECAO ===' -ForegroundColor Cyan
 Write-Host "Projeto: $ProjectId | Site: $SiteId | Target: $Target"
 Write-Host "Pasta: $webPath"
 Write-Host "Acao: $(if($Provision){'PROVISIONAMENTO'}else{'SOMENTE LEITURA'})"
@@ -115,16 +115,18 @@ Write-Host "Sites encontrados: $($sites.Count)"
 foreach ($site in $sites) { Write-Host " - $site" }
 
 try {
-    $ingress = Invoke-Checked $gcloud @('run','services','describe','cozinha-dietetica-qa',
-        '--project',$ProjectId,'--region','southamerica-east1',
-        '--format=value(metadata.annotations.run.googleapis.com/ingress)')
+    $serviceJson = Invoke-Checked $gcloud @('run','services','describe','cozinha-dietetica-qa',
+        '--project',$ProjectId,'--region','southamerica-east1','--format=json')
+    $service = $serviceJson | ConvertFrom-Json
+    $ingressProp = $service.metadata.annotations.PSObject.Properties['run.googleapis.com/ingress']
+    $ingress = if ($null -eq $ingressProp) { 'not-reported' } else { [string]$ingressProp.Value }
     if ($ingress -eq 'internal') {
         Write-Host 'PASS: Cloud Run QA preservado com ingress internal.' -ForegroundColor Green
     } else {
         Write-Warning "Cloud Run QA com ingress '$ingress' (esperado: internal). Nada foi modificado."
     }
 } catch {
-    Write-Warning 'Nao foi possivel verificar o Cloud Run QA. O script nao vai alterá-lo.'
+    Write-Warning 'Nao foi possivel verificar o Cloud Run QA. O script nao vai altera-lo.'
 }
 
 if (-not $Provision) {
@@ -145,9 +147,19 @@ try {
     $rc = Join-Path $webPath '.firebaserc'
     if (-not (Test-Path -LiteralPath $rc)) { throw 'Firebase nao gravou .firebaserc.' }
     $mapping = Get-Content -LiteralPath $rc -Raw | ConvertFrom-Json
-    $targetValue = $mapping.targets.$ProjectId.$Target
-    if (@($targetValue) -notcontains $SiteId) {
-        throw 'Target Hosting divergente apos aplicacao.'
+    # Estrutura canonica: targets -> PROJECT_ID -> hosting -> TARGET -> [SITE_ID].
+    # Nao usar $mapping.targets.$ProjectId.$Target: falta o nivel 'hosting'.
+    $targetsProp = $mapping.PSObject.Properties['targets']
+    if ($null -eq $targetsProp) { throw '.firebaserc sem targets.' }
+    $projectProp = $targetsProp.Value.PSObject.Properties[$ProjectId]
+    if ($null -eq $projectProp) { throw ".firebaserc sem targets para o projeto $ProjectId." }
+    $hostingProp = $projectProp.Value.PSObject.Properties['hosting']
+    if ($null -eq $hostingProp) { throw ".firebaserc sem bloco hosting para $ProjectId." }
+    $targetProp = $hostingProp.Value.PSObject.Properties[$Target]
+    if ($null -eq $targetProp) { throw ".firebaserc sem target hosting $Target." }
+    $targetValue = @($targetProp.Value)
+    if ($targetValue -notcontains $SiteId) {
+        throw "Target $Target esta vinculado a outro site: $($targetValue -join ', ')."
     }
     $final = Site-Ids (Invoke-Checked $firebase @('hosting:sites:list','--project',$ProjectId,'--json'))
     if (@($final) -notcontains $SiteId) { throw 'Site nao confirmado no projeto apos criacao.' }
