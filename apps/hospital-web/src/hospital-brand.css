@@ -347,6 +347,55 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
   .hospital-operational .hospital-topbar {padding-inline:12px}
   .hospital-top-action {padding:8px 9px;font-size:.67rem}
 }
+/* Resposta imediata e elegante aos carregamentos sem animacao pesada. */
+.hospital-loading {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:18px 19px;
+  min-height:60px;
+  border:1px solid #dbe9dc;
+  border-radius:15px;
+  color:#37624a;
+  font-size:.83rem;
+  font-weight:640;
+  background:linear-gradient(105deg,#fff,#f5faf6);
+  box-shadow:0 5px 18px rgba(10,65,38,.035);
+}
+.hospital-loading::before {
+  content:"";
+  width:21px;
+  height:21px;
+  border-radius:50%;
+  border:2.5px solid #cce4d1;
+  border-top-color:#0a7950;
+  flex-shrink:0;
+  animation:hospital-loader .75s linear infinite;
+}
+.hospital-selection-panel,.hospital-login-shell {animation:hospital-enter 300ms cubic-bezier(.2,.72,.3,1) both}
+.hospital-operational .hospital-content {animation:hospital-enter 220ms ease-out both}
+.hospital-operational .hospital-workspace-banner {position:relative;overflow:hidden}
+.hospital-operational .hospital-workspace-banner::before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:3px;
+  background:linear-gradient(#d8b457,#087b53);
+}
+.hospital-operational .hospital-sidebar-item:active,
+.hospital-profile-card:active,.hospital-login-primary:active:not(:disabled) {
+  transform:translateY(1px);
+}
+.hospital-operational .hospital-content :where(button):disabled {cursor:not-allowed}
+.hospital-operational .hospital-content :where([role="status"]) {line-height:1.6}
+@keyframes hospital-loader {to{transform:rotate(360deg)}}
+@keyframes hospital-enter {
+  from{opacity:.42;transform:translateY(7px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
 /* Fluxos de producao, progresso e monitoramento: substituir azul legado.
    Estados de erro/alerta permanecem vermelhos e amarelos por semantica clinica. */
 .hospital-operational .hospital-order-progress {
@@ -388,6 +437,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 
 @media(prefers-reduced-motion:reduce) {
   .hospital-login *, .hospital-selection *, .hospital-operational * {animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .hospital-loading::before {animation:none!important;border-color:#0a7950}
 }
 @media print {
   .hospital-operational .hospital-sidebar,.hospital-operational .hospital-topbar,.hospital-workspace-banner,.hospital-content-footer,.hospital-mobile-mask {display:none!important}
