@@ -76,6 +76,8 @@ jobs:
           node-version: '24'
       - name: Validate Cloud Shell Bash publisher syntax
         run: bash -n ops/hospital-f0-publish-cloud-shell.sh
+      - name: Validate one-time GitHub OIDC provisioner (Bash)
+        run: bash -n ops/hospital-f0-provision-github-wif.sh
       - name: Extract authenticated hospital API independently
         shell: pwsh
         run: |
