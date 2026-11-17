@@ -10,6 +10,41 @@ Configurar o site Firebase Hosting vinculado ao projeto `cozinha-dietetica`, pre
 
 O produto será preparado para operar com dados hospitalares reais por meio de autenticação, autorização por organização/unidade e APIs próprias. **Primeiros testes publicados: dados sintéticos**; não se trata de uma trava que limita a aplicação a `qa_*`.
 
+## Publicação via chat — identidade GitHub exclusiva e temporária
+
+É necessário configurar **uma única vez** a federação GitHub → Google Cloud no projeto hospitalar.
+Usar o Cloud Shell com o clone do repositório na branch hospitalar:
+
+```bash
+cd "$HOME/CozinhaDietetica-F0"
+git pull --ff-only
+bash ops/hospital-f0-provision-github-wif.sh
+```
+
+O script valida o número do projeto `947369899527`, configura a conta de serviço
+`hospital-hosting-deployer@cozinha-dietetica.iam.gserviceaccount.com`,
+o pool `hospital-github` e o provedor `hosting-promotion`.
+A autenticação OIDC é restrita aos IDs permanentes do repositório GitHub e do proprietário,
+ao workflow hospitalar, ao evento `push` e aos refs autorizados (branch hospitalar e `main`).
+
+Concede somente `roles/firebasehosting.admin`, `roles/serviceusage.apiKeysViewer`
+e `roles/run.viewer` **no projeto hospitalar**; `roles/iam.workloadIdentityUser` é
+concedido na conta de serviço somente para o repositório autorizado.
+Não cria chaves privadas, acesso de escrita à API Cloud Run, Firebase Auth, Firestore ou EMPROVEX.
+O papel Hosting Admin é limitado ao **projeto hospitalar**, não a um único site.
+
+**O provisionamento não publica o site.** A publicação exige um commit que altere
+exclusivamente `ops/hospital-f0-hosting-promotion-request.json` após
+autorização explícita pelo chat, indicando SHA de código, motivo e destino.
+O workflow `.github/workflows/hospital-f0-hosting-promote.yml` verifica pedido
+e ator, reexecuta testes sintéticos, compila com a configuração pública oficial
+e publica somente o Hosting. Valida o site e o proxy clínico e, se falhar
+após iniciar o deploy, tenta restaurar a versão anterior via API REST.
+
+**Estado:** arquivos preparados no GitHub; identidade ainda não comprovada como
+provisionada até aparecer `SUCESSO: identidade de publicacao configurada` no Cloud Shell.
+A primeira promoção deverá também confirmar na prática o uso do Firebase CLI com WIF.
+
 ## Publicação pelo Google Cloud Shell (Linux / Bash)
 
 O terminal em `shell.cloud.google.com` **não é** PowerShell do Windows: não usar
