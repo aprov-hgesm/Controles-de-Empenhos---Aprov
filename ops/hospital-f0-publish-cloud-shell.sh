@@ -78,8 +78,9 @@ PY
 
 cd "$WEB"
 printf '2/4 — Obtendo configuracao publica do Firebase Web...\n'
-TMP="$(mktemp)"
-trap 'rm -f "$TMP"' EXIT
+TMPDIR_SDK="$(mktemp -d)"
+TMP="$TMPDIR_SDK/firebase-web-sdk.json"
+trap 'rm -rf "$TMPDIR_SDK"' EXIT
 if ! "${FB[@]}" apps:sdkconfig WEB "$APP_ID" --project "$PROJECT" --out "$TMP"; then
   printf '\nAutentique o Firebase CLI neste Cloud Shell e repita:\n  %s login --no-localhost\n' "${FB[*]}" >&2
   exit 1
