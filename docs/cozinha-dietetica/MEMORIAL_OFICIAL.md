@@ -9,6 +9,37 @@
 
 > **Leitura canônica:** este documento reúne a visão do produto e o ponto de retomada operacional atual. Os handoffs W0–W12 continuam como histórico técnico imutável. Decisões posteriores verificadas no código prevalecem sobre descrições de estágio anterior. A Cozinha Dietética é um produto hospitalar independente e não deve afetar a produção financeira/logística do EMPROVEX.
 
+## Atualização de infraestrutura — publicação via GitHub sem chave privada (16/11/2026)
+
+**Decisão:** preservar Firebase Hosting para a interface React e Cloud Run para a API clínica.
+O usuário confirmou visualmente `Deploy complete!` no Cloud Shell e HTTP 200 do site,
+além da revisão pronta da API `cozinha-dietetica-api-00002-87n`. Isso **não substitui**
+o teste completo de operações clínicas reais.
+
+**Novo mecanismo preparado em código:**
+- Script de provisionamento único `ops/hospital-f0-provision-github-wif.sh` para criar,
+  **somente quando executado pelo responsável no Cloud Shell**, a identidade
+  `hospital-hosting-deployer@cozinha-dietetica.iam.gserviceaccount.com`,
+  pool `hospital-github` e provider `hosting-promotion`.
+- Federação GitHub OIDC restrita aos IDs permanentes do repositório e proprietário,
+  refs da branch hospitalar/`main`, evento push e workflow hospitalar único.
+  Papéis limitados ao projeto hospitalar: Firebase Hosting Admin, API Keys Viewer
+  e Cloud Run Viewer; sem chaves JSON e sem direitos de alteração do Firestore,
+  Firebase Auth ou Cloud Run. Hosting Admin ainda cobre o Hosting do **projeto** inteiro.
+- Workflow `.github/workflows/hospital-f0-hosting-promote.yml` condicionado
+  à alteração **exclusiva** de `ops/hospital-f0-hosting-promotion-request.json`
+  por pedido explícito do responsável no chat, com SHA exato do código anterior.
+  Inclui testes sintéticos, build isolado, deploy apenas do Hosting, verificação
+  HTTP do site/proxy e tentativa de rollback pela API do Hosting.
+- O arquivo de solicitação começa **não autorizado** (`not_requested`).
+  Um simples commit de código não publica automaticamente a produção.
+
+**Fronteira do estado real:** os scripts/workflow foram **versionados**, mas a identidade
+**não foi provisionada nem testada em GitHub → GCP** nesta etapa pelo assistente.
+Somente o resultado posterior do comando no Cloud Shell comprovará a configuração;
+o primeiro workflow de promoção executado comprovará a federação end-to-end.
+Este mecanismo é independente do publicador do EMPROVEX financeiro.
+
 ## 1. Propósito e princípio permanente de experiência
 
 Disponibilizar às unidades assistenciais, Cozinha Dietética e Nutrição um sistema que economize tempo dos profissionais. O fluxo deve funcionar com a familiaridade de um aplicativo de pedidos de refeições: **pedir → receber → preparar → distribuir → acompanhar**. A auditoria ocorre em paralelo, sem fila obrigatória de aprovação nutricional.
