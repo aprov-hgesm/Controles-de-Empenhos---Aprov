@@ -37,7 +37,7 @@ export function UnitMapStatusCard({organizationId,unitId,getIdToken,onOpen,onReq
  return <section className="hospital-panel space-y-4 p-5 sm:p-6" aria-label="Último mapa da unidade">
   <div className="flex flex-wrap items-center justify-between gap-3">
    <div><p className="hospital-hint-label">Acompanhamento da unidade</p><h2 className="mt-1 text-lg font-extrabold text-[#173b69]">Último mapa enviado</h2></div>
-   <button className="hospital-secondary-action" type="button" onClick={()=>void refresh()}>Atualizar andamento</button>
+   <button className="hospital-secondary-action" type="button" onClick={()=>void refresh()}>Atualizar</button>
   </div>
   {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}
   {current?<><p className="text-xs font-semibold text-slate-500">Unidade {unitId} · Mapa {current.map.cycleId}h · {mealName(current.map.cycleId,'PRIMARY')} e {mealName(current.map.cycleId,'SECONDARY')}</p>

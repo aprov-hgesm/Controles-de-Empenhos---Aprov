@@ -5,7 +5,7 @@ import {ArrowRight,ChefHat,Check,ClipboardCheck,FileDown,Printer,RefreshCw,Shiel
 import type {CycleId} from '../core/contracts';
 import type {KitchenBatch,KitchenMeal,KitchenSnapshot} from './contracts';
 import {printProductionLabels,printProductionReport,type ProductionPrintRow} from '../printing/hospital-diet-print';
-import {mealName} from '../integration/meal-period.mjs';
+import {mealName,currentWorkCycle} from '../integration/meal-period.mjs';
 import {eligibleForOrganizationLabel,plannedPrintability,printRecipientType} from '../printing/meal-print-selection';
 
 type Props={organizationId:string;unitIds:string[];getAuthorization:()=>Promise<string>;
@@ -79,7 +79,7 @@ const printRows=(groups:DietGroup[]):ProductionPrintRow[]=>groups
  }))
  .filter(row=>row.quantity>0);
 
-export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle='10',
+export function ProductionView({organizationId,unitIds,getAuthorization,initialDate,initialCycle=currentWorkCycle() as CycleId,
  initialUnitId='',initialMealType='ALL',mode='operations',onOpenDistribution}:Props){
  const [date,setDate]=useState(initialDate??today);
  const [cycle,setCycle]=useState<CycleId>(initialCycle);
@@ -219,7 +219,7 @@ export function ProductionView({organizationId,unitIds,getAuthorization,initialD
     {printableStats.skippedForSafety>0&&` ${printableStats.skippedForSafety} pedidos cancelados, suspensos ou com bloqueio de segurança permanecem fora das etiquetas de preparo.`}
    </p>
   </div>
-  {loading&&<p role="status" className="text-sm text-slate-600">Carregando quantidades autorizadas…</p>}
+  {loading&&<div className="hospital-loading" role="status">Organizando os pedidos por tipo de dieta…</div>}
   {error&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
   {notice&&<p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
   <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar produção">

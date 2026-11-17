@@ -1,0 +1,52 @@
+name: Hospital F0 - Jornada operacional sintética
+on:
+  push:
+    branches:
+      - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hospital-f0-clinical-flow-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  clinical-flow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Instalar dependencias para testes locais
+        run: npm ci --ignore-scripts
+      - name: Validar fluxo simples e passos independentes
+        run: node --test tests/hospital/f0-operational-ux.test.mjs tests/hospital/order-progress.test.mjs tests/hospital/meal-period-deadlines.test.mjs
+      - name: Fluxo clinico ponta a ponta com pacientes totalmente ficticios
+        run: >
+          npx --yes firebase-tools emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test --test-concurrency=1 tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs tests/hospital/firebase/w12-contingency-recovery.test.mjs"
+      - name: Protecoes e autorizacoes clinicas de W0-W9
+        run: >
+          node --test
+          tests/hospital/core/*.test.mjs
+          tests/hospital/maps/*.test.mjs
+          tests/hospital/production/*.test.mjs
+          tests/hospital/distribution/*.test.mjs
+          tests/hospital/nutrition-audit/*.test.mjs
+          tests/hospital/administration/*.test.mjs
+          tests/hospital/e2e/*.test.mjs

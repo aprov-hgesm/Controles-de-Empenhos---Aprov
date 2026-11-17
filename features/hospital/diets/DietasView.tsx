@@ -69,20 +69,26 @@ export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewPr
   {error&&<p role="alert" style={{color:'#b91c1c'}}>{error}</p>}
   {notice&&<p role="status" style={{color:'#166534'}}>{notice}</p>}
   <article style={container}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><h3 style={{fontSize:17,fontWeight:750,color:'#1c436f'}}>Dietas disponíveis para solicitar</h3><button disabled={busy} style={button} onClick={()=>void reload()}>Atualizar</button></div>
-   {catalog.length===0?<p>Não há dietas autorizadas cadastradas.</p>:<div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr><th align="left">Dieta</th><th align="left">Tipo</th><th align="left">Consistência</th><th align="left">Estado</th></tr></thead><tbody>{catalog.map(item=><tr key={item.id} style={{borderTop:'1px solid #e2e8f0'}}><td>{item.label}</td><td>{item.type??'A revisar'}</td><td>{item.consistency??'A revisar'}</td><td>{item.active?'Ativa':'Inativa'}</td></tr>)}</tbody></table></div>}
+   {catalog.length===0?<p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Ainda não há dietas disponíveis. {isAdmin?'Cadastre abaixo a base oral aprovada para que as unidades possam solicitar refeições.':'Solicite à administração a habilitação do catálogo institucional.'}</p>:<div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr><th align="left">Dieta</th><th align="left">Tipo</th><th align="left">Consistência</th><th align="left">Estado</th></tr></thead><tbody>{catalog.map(item=><tr key={item.id} style={{borderTop:'1px solid #e2e8f0'}}><td>{item.label}</td><td>{item.type??'A revisar'}</td><td>{item.consistency??'A revisar'}</td><td>{item.active?'Ativa':'Inativa'}</td></tr>)}</tbody></table></div>}
   </article>
   {isAdmin&&<form style={container} onSubmit={e=>{e.preventDefault();void run(()=>{const id='DIETA_'+crypto.randomUUID().replaceAll('-','').slice(0,16).toUpperCase();return request('diets','diet.save',{catalogItemId:id,code:id,label,type,consistency,route,device:device||null,restrictionCodes:splitCodes(restrictions),allergenCodes:splitCodes(allergens),volumeMl:volume?Number(volume):null,unit:volume?'mL':'portion',preparations:[],status:'ACTIVE'});},'Dieta registrada no catálogo com auditoria')}}>
-   <h3>Cadastrar nova dieta autorizada</h3>
-   <small>Alteração de item existente exige revisão/ETag; não é realizada por este formulário rápido.</small>
+   <h3 className="text-lg font-bold text-emerald-950">Habilitar dieta para solicitações</h3>
+   <p className="text-sm text-slate-600">Configuração inicial: cadastre a base oral aprovada pelo hospital. As unidades escolhem consistência, restrições e alergias diretamente nos mapas, sem duplicar cada textura.</p>
+   <small className="text-amber-800">Este cadastro não substitui a prescrição médica nem a verificação de alergias e composição.</small>
    <label>Nome completo<input required style={input} value={label} onChange={e=>setLabel(e.target.value)}/></label>
    <label>Tipo<select style={input} value={type} onChange={e=>setType(e.target.value as CatalogItem['type'])}><option value="ORAL">Oral</option><option value="ENTERAL">Enteral</option><option value="SUPPLEMENT">Suplemento</option><option value="OTHER">Outro</option></select></label>
    <label>Consistência<select style={input} value={consistency} onChange={e=>setConsistency(e.target.value)}><option value="NORMAL">Normal</option><option value="SOFT">Branda</option><option value="PUREED">Pastosa</option><option value="LIQUID">Líquida</option><option value="THICKENED">Espessada</option><option value="NOT_APPLICABLE">Não aplicável</option></select></label>
-   <label>Via<input required style={input} value={route} onChange={e=>setRoute(e.target.value)}/></label>
-   <label>Dispositivo, se aplicável (SNE não é consistência)<input style={input} value={device} onChange={e=>setDevice(e.target.value)}/></label>
-   <label>Restrições (códigos separados por vírgula)<input style={input} value={restrictions} onChange={e=>setRestrictions(e.target.value)}/></label>
-   <label>Alérgenos (códigos separados por vírgula)<input style={input} value={allergens} onChange={e=>setAllergens(e.target.value)}/></label>
-   <label>Volume mL, se aplicável<input type="number" min={1} max={10000} style={input} value={volume} onChange={e=>setVolume(e.target.value)}/></label>
-   <button style={button} disabled={busy} type="submit">Salvar no catálogo</button>
+   <details className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+    <summary className="cursor-pointer text-sm font-semibold text-emerald-900">Opções adicionais de composição e via</summary>
+    <div className="mt-3 grid gap-3">
+      <label>Via<input required style={input} value={route} onChange={e=>setRoute(e.target.value)}/></label>
+      <label>Dispositivo, se aplicável (SNE não é consistência)<input style={input} value={device} onChange={e=>setDevice(e.target.value)}/></label>
+      <label>Restrições (códigos separados por vírgula)<input style={input} value={restrictions} onChange={e=>setRestrictions(e.target.value)}/></label>
+      <label>Alérgenos conhecidos (códigos separados por vírgula)<input style={input} value={allergens} onChange={e=>setAllergens(e.target.value)}/></label>
+      <label>Volume mL, se aplicável<input type="number" min={1} max={10000} style={input} value={volume} onChange={e=>setVolume(e.target.value)}/></label>
+    </div>
+   </details>
+   <button className="hospital-primary-action" disabled={busy||!label.trim()} type="submit">Habilitar dieta no catálogo</button>
   </form>}
   {!isAdmin&&unitId&&<article style={container}>
    <h3>Escolha o paciente e confira as dietas anteriores</h3>

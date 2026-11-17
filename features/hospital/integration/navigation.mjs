@@ -1,21 +1,20 @@
 /** Apresentação apenas: toda autorização real acontece nas APIs W0. */
 const menus=Object.freeze({
   UNIT:[
-    {id:'inicio',label:'Início'},
-    {id:'pacientes',label:'Pacientes'},
-    {id:'dietas',label:'Dietas prescritas'},
-    {id:'mapas',label:'Meus Mapas'},
-    {id:'acompanhamento',label:'Acompanhamento'},
+    {id:'mapas',label:'Solicitar dietas'},
+    {id:'acompanhamento',label:'Acompanhar pedidos'},
+    {id:'pacientes',label:'Pacientes e leitos'},
+    {id:'dietas',label:'Prescrições e dietas'},
   ],
   KITCHEN:[
-    {id:'painel',label:'Painel da Cozinha'},
+    {id:'painel',label:'Pedidos recebidos'},
     {id:'producao',label:'Produção'},
     {id:'distribuicao',label:'Distribuição'},
     {id:'ocorrencias',label:'Ocorrências'},
     {id:'relatorios',label:'Relatórios'},
   ],
   NUTRITION:[{id:'nutricao',label:'Auditoria nutricional'}],
-  HOSPITAL_ADMIN:[{id:'administracao',label:'Administração hospitalar'}],
+  HOSPITAL_ADMIN:[{id:'administracao',label:'Administração'},{id:'catalogo',label:'Catálogo de dietas'}],
 });
 const order=['UNIT','KITCHEN','NUTRITION','HOSPITAL_ADMIN'];
 export function menuForRoles(roles){

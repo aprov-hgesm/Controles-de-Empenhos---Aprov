@@ -1,0 +1,104 @@
+name: Hospital F0 Web — Build independent Hosting
+on:
+  push:
+    branches:
+      - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+  pull_request:
+    paths:
+      - 'apps/hospital-web/**'
+      - 'ops/hospital-f0-*.ps1'
+      - '.github/workflows/hospital-f0-web-build.yml'
+permissions:
+  contents: read
+jobs:
+  build-hospital-web:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate publication script PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($script in @('ops/hospital-f0-publish-web.ps1','ops/hospital-f0-create-access.ps1','ops/hospital-f0-activate-logins.ps1','ops/hospital-f0-diagnose-connection.ps1','ops/hospital-f0-test-authenticated-session.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script).Path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }
+          Write-Host 'PASS: publication script parses successfully.'
+      - name: Extract hospital modules without EMPROVEX shell
+        shell: pwsh
+        run: |
+          .\ops\hospital-f0-extract-web.ps1
+          if (Test-Path apps/hospital-web/src/features/hospital/integration/HospitalShell.tsx) { throw 'Legacy shell was copied' }
+          if (Test-Path apps/hospital-web/src/features/hospital/integration/access.ts) { throw 'Server action leaked to frontend' }
+      - name: Install frontend dependencies
+        working-directory: apps/hospital-web
+        run: npm install --no-audit --no-fund
+      - name: Report frontend runtime security advisories (non-blocking)
+        working-directory: apps/hospital-web
+        shell: bash
+        run: npm audit --omit=dev --audit-level=moderate || true
+      - name: Build React hospital modules for Hosting
+        working-directory: apps/hospital-web
+        run: npm run build
+      - name: Verify output and branding
+        shell: pwsh
+        run: |
+          if (-not (Test-Path apps/hospital-web/dist/index.html)) { throw 'Missing Hosting index.html' }
+          if (-not (Test-Path apps/hospital-web/dist/emblema-nutricao.webp)) { throw 'Emblema institucional nao foi empacotado' }
+          if ((Get-Item apps/hospital-web/dist/emblema-nutricao.webp).Length -lt 1000) { throw 'Emblema institucional invalido' }
+          $js = @(Get-ChildItem apps/hospital-web/dist/assets -Filter *.js -File)
+          if ($js.Count -eq 0) { throw 'Missing hospital frontend bundles' }
+          foreach ($file in $js) {
+            if (Select-String -Path $file.FullName -Pattern 'EMPROVEX' -Quiet) { throw "Legacy brand in $($file.Name)" }
+          }
+          Write-Host "PASS: emitted $($js.Count) JS asset(s)."
+      - name: Preserve static build for QA review
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-f0-hosting-static
+          path: apps/hospital-web/dist
+          retention-days: 3
+
+  build-hospital-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate Cloud Shell Bash publisher syntax
+        run: bash -n ops/hospital-f0-publish-cloud-shell.sh
+      - name: Validate one-time GitHub OIDC provisioner (Bash)
+        run: bash -n ops/hospital-f0-provision-github-wif.sh
+      - name: Extract authenticated hospital API independently
+        shell: pwsh
+        run: |
+          .\ops\hospital-f0-extract-api.ps1
+          if (Test-Path apps/hospital-api/app/api/hospital/session/page.tsx) { throw 'Wrong clinical route artifact' }
+      - name: Install independent API dependencies
+        working-directory: apps/hospital-api
+        run: npm install --no-audit --no-fund
+      - name: Report backend runtime security advisories (non-blocking)
+        working-directory: apps/hospital-api
+        shell: bash
+        run: npm audit --omit=dev --audit-level=moderate || true
+      - name: Build isolated Next API
+        working-directory: apps/hospital-api
+        run: npm run build
+      - name: Validate standalone API output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path apps/hospital-api/.next/standalone/server.js)) { throw 'Missing standalone API server' }
+          if (-not (Test-Path apps/hospital-api/app/health/route.ts)) { throw 'Missing Cloud Run safe /health endpoint' }
+          if (-not (Test-Path apps/hospital-api/app/api/hospital/session/route.ts)) { throw 'Missing server-verified session endpoint' }
+          $runtime = Get-Content apps/hospital-api/lib/server/hospital/firebase/gcp-qa-runtime.mjs -Raw
+          if ($runtime -notmatch 'cozinha-dietetica-api') { throw 'Incorrect GCP service boundary' }
+          Write-Host 'PASS: backend compiled with dedicated hospital runtime and source.'

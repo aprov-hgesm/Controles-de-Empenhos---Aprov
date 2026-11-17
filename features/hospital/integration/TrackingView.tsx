@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {AlertCircle,MessageCircle,RefreshCw} from 'lucide-react';
 import {MealProgressPair} from './MealProgressPair';
-import {mapLateLabel,mealName,timingLabel} from './meal-period.mjs';
+import {mapLateLabel,mealName,timingLabel,currentWorkCycle} from './meal-period.mjs';
 
 type Cycle='06'|'10'|'16';
 type MapItem={id:string;unitId:string;localDate:string;cycleId:Cycle;status:string;revision:number;total?:number;late?:boolean;submissionTimingStage?:string;hasLateAmendment?:boolean;latestExtraTimingStage?:string;submittedAt?:string|null;receivedAt?:string|null};
@@ -16,7 +16,7 @@ const today=()=>{
 };
 export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:string;unitId:string;getIdToken:()=>Promise<string>}){
  const [date,setDate]=useState(today);
- const [cycle,setCycle]=useState<Cycle>('10');
+ const [cycle,setCycle]=useState<Cycle>(()=>currentWorkCycle() as Cycle);
  const [maps,setMaps]=useState<MapItem[]>([]);
  const [details,setDetails]=useState<MapDetail|null>(null);
  const [selectedId,setSelectedId]=useState('');
@@ -26,6 +26,7 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ const [lastRefresh,setLastRefresh]=useState('');
  const command=useCallback(async<T,>(operation:string,payload:Record<string,unknown>):Promise<T>=>{
   const token=await getIdToken();
   const res=await fetch('/api/hospital/maps',{method:'POST',cache:'no-store',headers:{'content-type':'application/json',authorization:'Bearer '+token,'x-hospital-organization-id':organizationId},body:JSON.stringify({operation,payload})});
@@ -41,6 +42,7 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
    const pick=rows.find(m=>m.id===selectedId)??rows.find(m=>m.status==='SUBMITTED'||m.status==='CLOSED')??rows[0];
    setDetails(pick?await command<MapDetail>('map.get',{mapId:pick.id}):null);
    setError('');
+   setLastRefresh(new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}));
   }catch(e){setError(e instanceof Error?e.message:'Falha ao consultar mapas');if(!silent){setMaps([]);setDetails(null);}}
   finally{if(!silent)setLoading(false);}
  },[command,unitId,date,cycle,selectedId]);
@@ -77,7 +79,8 @@ export function TrackingView({organizationId,unitId,getIdToken}:{organizationId:
     <button type="button" className="hospital-secondary-action ml-auto" disabled={loading} onClick={()=>void load()}><RefreshCw size={15} className="inline" aria-hidden="true"/> Atualizar</button>
    </div>
   </div>
-  {loading&&<p role="status" className="text-sm text-slate-500">Atualizando andamento do mapa…</p>}
+  <p className="text-xs text-slate-500">{lastRefresh?'Última atualização às '+lastRefresh+' · ':''}Atualização automática enquanto esta tela estiver aberta.</p>
+  {loading&&<div className="hospital-loading" role="status">Consultando o andamento das dietas…</div>}
   {error&&<p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</p>}
   {notice&&<p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-emerald-900">{notice}</p>}
   {!loading&&!error&&maps.length===0&&<div className="hospital-panel p-5"><p className="font-semibold text-[#275382]">Nenhum mapa para {cycle}h</p>

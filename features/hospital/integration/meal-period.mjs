@@ -2,6 +2,14 @@ import {CYCLES,classifyMealTiming} from '../core/domain.mjs';
 
 /** Meal-specific display and deadline tiers. These are labels, not permission checks. */
 export const MEAL_TYPES=Object.freeze(['PRIMARY','SECONDARY']);
+
+/** Escolhe o mapa operacional provavel pelo relogio do hospital. Apenas preferencia visual. */
+export function currentWorkCycle(at=new Date()){
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',hour:'2-digit',hourCycle:'h23'})
+  .formatToParts(at);
+ const hour=Number(parts.find(part=>part.type==='hour')?.value??'0');
+ return hour<9?'06':hour<15?'10':'16';
+}
 export function mealName(cycleId,mealType){
  const cycle=CYCLES[cycleId];
  if(!cycle)throw Error('Mapa desconhecido');

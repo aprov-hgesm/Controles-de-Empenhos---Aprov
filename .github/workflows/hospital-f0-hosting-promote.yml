@@ -1,0 +1,223 @@
+name: Cozinha Dietetica - publicacao Hosting autorizada por chat
+
+on:
+  push:
+    branches:
+      - main
+      - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+    paths:
+      - ops/hospital-f0-hosting-promotion-request.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cozinha-dietetica-hosting-live
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Validar pedido explicito e fluxo clinico sintetico
+    if: github.repository == 'aprov-hgesm/Controles-de-Empenhos---Aprov' && github.actor == 'Moriark'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    env:
+      HOSPITAL_FIRESTORE_QA_ENABLED: '1'
+      FIRESTORE_EMULATOR_HOST: 127.0.0.1:8080
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      W11_TEST_EMULATOR_HOST: 127.0.0.1:8080
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Autorizar exclusivamente commit do arquivo de pedido
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          files="$(git diff-tree --no-commit-id --name-only -r HEAD)"
+          [[ "$files" == "ops/hospital-f0-hosting-promotion-request.json" ]] || {
+            echo "::error::Apenas o arquivo de autorizacao pode ser alterado neste commit."; exit 1;
+          }
+          SOURCE="$(git rev-parse HEAD^)"
+          jq -e --arg sha "$SOURCE" '
+            .schemaVersion == 1 and .authorizationMode == "explicit_chat_request"
+            and .authorizedBy == "Moriark" and .target == "cozinha-dietetica-web"
+            and .sourceSha == $sha and (.reason|type=="string" and length>=15)
+          ' ops/hospital-f0-hosting-promotion-request.json >/dev/null || {
+            echo "::error::Pedido de promocao nao autorizado ou SHA anterior divergente."; exit 1;
+          }
+          echo "PASS: pedido exato e explicitamente autorizado, sobre o SHA $SOURCE"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Dependencias para testes isolados
+        run: npm ci --ignore-scripts
+      - name: Testar UX, fluxo operacional e isolamento
+        run: >
+          node --test tests/hospital/f0-operational-ux.test.mjs
+          tests/hospital/order-progress.test.mjs
+          tests/hospital/meal-period-deadlines.test.mjs
+      - name: Testar jornada clinica real com emuladores, sem dados de pacientes
+        run: >
+          npx --yes firebase-tools@15.22.1 emulators:exec
+          --project demo-cozinha-dietetica
+          --config firebase.hospital-w10-test.json
+          --only auth,firestore
+          "node --test --test-concurrency=1 tests/hospital/firebase/w10-emulator-operational-e2e.test.mjs tests/hospital/firebase/w12-homologation-e2e.test.mjs tests/hospital/firebase/w12-paper-route-delivery.test.mjs tests/hospital/firebase/w12-contingency-recovery.test.mjs"
+      - name: Regressoes clinicas W0-W9
+        run: >
+          node --test tests/hospital/core/*.test.mjs
+          tests/hospital/maps/*.test.mjs
+          tests/hospital/production/*.test.mjs
+          tests/hospital/distribution/*.test.mjs
+          tests/hospital/nutrition-audit/*.test.mjs
+          tests/hospital/administration/*.test.mjs
+          tests/hospital/e2e/*.test.mjs
+
+  deploy:
+    name: Publicar apenas Firebase Hosting com rollback
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PROJECT_ID: cozinha-dietetica
+      APP_ID: '1:947369899527:web:d2da054f7b9ce707195ca2'
+      SITE_ID: cozinha-dietetica-web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Extrair apenas modulo React hospitalar
+        shell: pwsh
+        run: ./ops/hospital-f0-extract-web.ps1
+      - name: Autenticar sem chave privada na conta exclusiva
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: cozinha-dietetica
+          workload_identity_provider: projects/947369899527/locations/global/workloadIdentityPools/hospital-github/providers/hosting-promotion
+          service_account: hospital-hosting-deployer@cozinha-dietetica.iam.gserviceaccount.com
+          create_credentials_file: true
+          export_environment_variables: true
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Ler config Firebase Web e release anterior (somente leitura)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          TOKEN="$(gcloud auth print-access-token)"
+          curl -fSs --retry 3 --retry-delay 2 \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://firebase.googleapis.com/v1beta1/projects/$PROJECT_ID/webApps/$APP_ID/config" \
+            -o "$RUNNER_TEMP/hospital-sdk.json"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,json
+          sdk=json.loads((Path(os.environ["RUNNER_TEMP"])/"hospital-sdk.json").read_text())
+          project=os.environ["PROJECT_ID"]
+          app=os.environ["APP_ID"]
+          if sdk.get("projectId")!=project or sdk.get("appId")!=app or not sdk.get("apiKey"):
+              raise SystemExit("Firebase Web SDK retornou app/projeto divergentes.")
+          web=Path("apps/hospital-web")
+          (web/".env.local").write_text(
+              "VITE_HOSPITAL_FIREBASE_PROJECT_ID="+project+"\n"
+              "VITE_HOSPITAL_FIREBASE_API_KEY="+sdk["apiKey"]+"\n"
+              "VITE_HOSPITAL_FIREBASE_APP_ID="+app+"\n"
+              "VITE_HOSPITAL_ORGANIZATION_ID=hgesm\n",encoding="utf-8")
+          hosting=json.loads((web/"firebase.json").read_text())
+          hosting["hosting"].pop("target",None)
+          hosting["hosting"]["site"]=os.environ["SITE_ID"]
+          (web/"firebase.json").write_text(json.dumps(hosting,indent=2)+"\n")
+          print("PASS: configuracao publica do Firebase e site exclusivo prontos.")
+          PY
+          curl -fSs --retry 3 --retry-delay 2 \
+            -H "Authorization: Bearer $TOKEN" \
+            "https://firebasehosting.googleapis.com/v1beta1/sites/$SITE_ID/releases?pageSize=1" \
+            -o "$RUNNER_TEMP/hospital-previous-release.json"
+          PREVIOUS="$(jq -er '.releases[0].version.name' "$RUNNER_TEMP/hospital-previous-release.json")"
+          [[ "$PREVIOUS" == sites/$SITE_ID/versions/* ]] || exit 1
+          echo "PREVIOUS_VERSION=$PREVIOUS" >> "$GITHUB_ENV"
+          echo "PASS: release anterior registrada para recuperacao."
+      - name: Compilar interface hospitalar com configuracao correta
+        working-directory: apps/hospital-web
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          npm install --no-audit --no-fund
+          npm run build
+          test -s dist/index.html
+          test -s dist/emblema-nutricao.webp
+          ! grep -R -q 'EMPROVEX' dist/assets/ || {
+            echo "::error::Marca financeira apareceu no build clinico."; exit 1;
+          }
+      - name: Publicar somente Hosting, validar frontend e proxy, recuperar se falhar
+        working-directory: apps/hospital-web
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ATTEMPTED=0
+          rollback(){
+            echo "::warning::Publicacao nao validada. Restaurando release anterior do Hosting..."
+            TOKEN="$(gcloud auth print-access-token)"
+            curl -fSs --retry 3 -X POST \
+              -H "Authorization: Bearer $TOKEN" \
+              "https://firebasehosting.googleapis.com/v1beta1/sites/$SITE_ID/releases?versionName=$PREVIOUS_VERSION" \
+              -o "$RUNNER_TEMP/hospital-rollback.json" || {
+                echo "::error::Rollback falhou; restaurar manualmente pelo Firebase Console."; return 1;
+              }
+            echo "Release anterior restaurada."
+          }
+          finish(){
+            code=$?
+            trap - EXIT
+            if [ "$code" -ne 0 ] && [ "$ATTEMPTED" = 1 ]; then
+              rollback || true
+            fi
+            exit "$code"
+          }
+          trap finish EXIT
+          ATTEMPTED=1
+          # Pino defensivo: Firebase CLI 15.22.2 teve regressao de ADC/WIF.
+          npx --yes firebase-tools@15.22.1 deploy --only hosting \
+            --project "$PROJECT_ID" --non-interactive
+          VERIFIED=0
+          for check in 1 2 3 4 5 6; do
+            curl -fSs --retry 2 --retry-delay 2 \
+              -H "Cache-Control: no-cache" \
+              "https://$SITE_ID.web.app/?verification=$GITHUB_SHA" \
+              -o "$RUNNER_TEMP/hospital-live-index.html"
+            if cmp -s dist/index.html "$RUNNER_TEMP/hospital-live-index.html"; then
+              VERIFIED=1
+              break
+            fi
+            sleep 4
+          done
+          [[ "$VERIFIED" == 1 ]] || {
+            echo "::error::HTML live nao corresponde ao build aprovado."; exit 1;
+          }
+          HTTP="$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+            -X POST "https://$SITE_ID.web.app/api/hospital/session" \
+            -H 'Content-Type: application/json' \
+            -H 'x-hospital-organization-id: hgesm' \
+            -d '{"organizationId":"hgesm"}')"
+          [[ "$HTTP" == 401 ]] || {
+            echo "::error::Proxy clinico nao rejeitou acesso sem token como esperado (HTTP $HTTP)."; exit 1;
+          }
+          ATTEMPTED=0
+          echo "## Cozinha Dietetica — Hosting publicado e proxy validado" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projeto: $PROJECT_ID; site: https://$SITE_ID.web.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit de autorizacao: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Restauracao anterior preservada. Cloud Run, Auth e Firestore nao alterados." >> "$GITHUB_STEP_SUMMARY"

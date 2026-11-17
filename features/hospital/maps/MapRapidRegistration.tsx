@@ -21,7 +21,7 @@ const empty=()=>({fullName:'',birthDate:'',bedLabel:'',consistency:'LIVRE',route
 export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSaved,onCancel}:Props){
  const [form,setForm]=useState(empty);
  const [restrictions,setRestrictions]=useState<string[]>([]);
- const [primary,setPrimary]=useState(true),[secondary,setSecondary]=useState(true);
+ const [primary,setPrimary]=useState(true),[secondary,setSecondary]=useState(false);
  const [companion,setCompanion]=useState(false);
  const [careChecked,setCareChecked]=useState(false);
  const [selectedDiet,setSelectedDiet]=useState('');
@@ -43,6 +43,7 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
  async function save(finish:boolean){
   if(!canSave){setError('Confira identificação, refeições, orientação assistencial e disponibilidade de uma dieta oral institucional.');return}
   setBusy(true);setError('');
+  let entrySaved=false;
   try{
    const token=await getIdToken();
    if(!token)throw Error('Sessão expirada');
@@ -55,16 +56,17 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    }})});
    const result=await response.json() as Api<unknown>;
    if(!response.ok||!result.ok)throw Error(!result.ok?result.error.message:'Falha ao salvar');
+   entrySaved=true;
    const completedReason=form.reason;
-   setForm({...empty(),reason:completedReason});setRestrictions([]);setPrimary(true);setSecondary(true);setCompanion(false);setSelectedDiet('');setCareChecked(false);
    await onSaved(finish,completedReason);
-  }catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar paciente e dieta')}
+   setForm({...empty(),reason:completedReason});setRestrictions([]);setPrimary(true);setSecondary(false);setCompanion(false);setSelectedDiet('');setCareChecked(false);
+  }catch(e){setError(entrySaved?'Dieta cadastrada. Não foi possível atualizar a tela; volte ao mapa para conferir se o pedido foi enviado.':e instanceof Error?e.message:'Não foi possível cadastrar a dieta')}
   finally{setBusy(false)}
  }
  return <section className="hospital-panel space-y-5 p-5 sm:p-6" aria-label="Cadastro direto de dietas no mapa" data-testid="map-rapid-entry">
   <header><p className="hospital-hint-label">Cadastro direto · Mapa {map.cycleId}h</p>
    <h3 className="mt-1 text-xl font-extrabold text-[#173b69]">Cadastrar paciente e refeições</h3>
-   <p className="mt-1 text-sm text-slate-600">Tudo em uma tela. Salve e continue para outro leito ou conclua para conferir o mapa antes do envio.</p>
+   <p className="mt-1 text-sm text-slate-600">Informe os dados do leito e a dieta prescrita. Salve o próximo paciente ou envie o pedido à Cozinha em um toque.</p>
   </header>
   <div className="grid gap-3 sm:grid-cols-3">
    <label className="grid gap-1 text-sm font-semibold">Nome completo do paciente<input className={field} autoComplete="off" value={form.fullName} maxLength={160} onChange={e=>change('fullName',e.target.value)}/></label>
@@ -87,7 +89,8 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
    {tube?<p className="text-sm font-semibold text-amber-900">NPVO / SNE / sonda: sem refeição oral para o paciente. É possível solicitar somente a principal para o acompanhante.</p>:
    <div className="flex flex-wrap gap-5"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={primary} onChange={e=>setPrimary(e.target.checked)}/>{mealName(map.cycleId,'PRIMARY')}</label>
    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={secondary} onChange={e=>setSecondary(e.target.checked)}/>{mealName(map.cycleId,'SECONDARY')}</label></div>}
-   <label className="mt-3 flex items-center gap-2 border-t border-blue-100 pt-3 text-sm font-semibold"><input type="checkbox" checked={companion} onChange={e=>setCompanion(e.target.checked)}/>Enviar refeição ao acompanhante (somente {mealName(map.cycleId,'PRIMARY')})</label>
+   <p className="mt-2 text-xs text-slate-600">A segunda refeição é opcional. Cada refeição terá preparo e entrega independentes.</p>
+   <label className="mt-3 flex items-center gap-2 border-t border-blue-100 pt-3 text-sm font-semibold"><input type="checkbox" checked={companion} onChange={e=>setCompanion(e.target.checked)}/>Refeição do acompanhante ({mealName(map.cycleId,'PRIMARY')})</label>
    {companion&&!companionDiet&&<p role="alert" className="mt-2 text-xs text-red-800">Nenhuma base oral está disponível para a refeição do acompanhante.</p>}
   </fieldset>
   {chosen.length>0&&oralCatalog.length>1&&<details className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
@@ -104,13 +107,13 @@ export function MapRapidRegistration({organizationId,getIdToken,map,catalog,onSa
   {extraordinary&&<label className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold">Justificativa da solicitação {submitted?'extra ':''}fora do prazo<textarea className={field} rows={2} value={form.reason} onChange={e=>change('reason',e.target.value)}/></label>}
   <label className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-950">
    <input type="checkbox" className="mt-1" checked={careChecked} onChange={e=>setCareChecked(e.target.checked)}/>
-   Confirmo que esta dieta foi conferida com a orientação assistencial vigente. Isto é uma transcrição para a Cozinha, não uma prescrição médica.
+   Conferi a dieta na prescrição ou orientação assistencial vigente. Estou registrando o pedido à Cozinha, não emitindo uma nova prescrição.
   </label>
   {submitted&&<p role="status" className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-900">Mapa já enviado: esta inclusão será registrada como dieta extra, com atualização do acompanhamento, dos relatórios e das etiquetas.</p>}
   {error&&<p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
   <div className="flex flex-wrap gap-2">
    <button className="hospital-secondary-action" type="button" disabled={busy||!canSave} onClick={()=>void save(false)}>{busy?'Salvando…':'Salvar e próximo paciente'}</button>
-   <button className="hospital-primary-action" type="button" disabled={busy||!canSave} onClick={()=>void save(true)}>{submitted?'Salvar dieta extra e voltar ao mapa':'Salvar e concluir mapa'}</button>
+   <button className="hospital-primary-action" type="button" disabled={busy||!canSave} onClick={()=>void save(true)}>{busy?'Salvando…':submitted?'Salvar dieta extra':'Salvar e enviar à Cozinha'}</button>
    <button className="hospital-secondary-action" type="button" disabled={busy} onClick={onCancel}>Voltar ao detalhamento</button>
   </div>
  </section>;

@@ -16,7 +16,7 @@ export function OrderProgress({map,meals=[],compact=false}:{
     {state.completed?<Check size={23} aria-hidden="true"/>:<ChefHat size={23} aria-hidden="true"/>}
    </div>
    <div className="min-w-0 flex-1">
-    <p className="hospital-order-progress__eyebrow">Acompanhamento em tempo real*</p>
+    <p className="hospital-order-progress__eyebrow">Acompanhamento atualizado automaticamente</p>
     <h3 className="text-base font-extrabold text-[#173b69] sm:text-lg" role="status">{state.headline}</h3>
     <p className="mt-1 text-xs leading-5 text-[#607690]">{state.description}</p>
    </div>
@@ -33,6 +33,6 @@ export function OrderProgress({map,meals=[],compact=false}:{
     </li>;
    })}
   </ol>
-  <p className="hospital-order-progress__foot">*O acompanhamento consulta eventos registrados no servidor; a tela não confirma preparo ou entrega automaticamente.</p>
+  <p className="hospital-order-progress__foot">Etapas registradas pela equipe, consultadas automaticamente. Preparo e entrega nunca são confirmados sem registro real.</p>
  </div>
 }
