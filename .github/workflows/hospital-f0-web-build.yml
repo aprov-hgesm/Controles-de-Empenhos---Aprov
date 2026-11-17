@@ -74,6 +74,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Validate Cloud Shell Bash publisher syntax
+        run: bash -n ops/hospital-f0-publish-cloud-shell.sh
       - name: Extract authenticated hospital API independently
         shell: pwsh
         run: |
