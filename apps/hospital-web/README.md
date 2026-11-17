@@ -2,6 +2,8 @@
 
 Este diretório é **exclusivo** do sistema de dietas hospitalares e não substitui o `firebase.json` do EMPROVEX.
 
+**Memorial canônico do produto e última auditoria de fluxo:** [Cozinha Dietética — Memorial Oficial](../../docs/cozinha-dietetica/MEMORIAL_OFICIAL.md). Inclui a experiência da Unidade, recebimento, produção, distribuição, auditoria, avanços testados e pendências reais sem etapas burocráticas adicionais.
+
 ## Objetivo imediato
 
 Configurar o site Firebase Hosting vinculado ao projeto `cozinha-dietetica`, preservando o Cloud Run privado `cozinha-dietetica-qa` e os recursos financeiros do EMPROVEX.
