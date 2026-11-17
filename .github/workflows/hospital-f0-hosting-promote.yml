@@ -193,12 +193,20 @@ jobs:
           # Pino defensivo: Firebase CLI 15.22.2 teve regressao de ADC/WIF.
           npx --yes firebase-tools@15.22.1 deploy --only hosting \
             --project "$PROJECT_ID" --non-interactive
-          curl -fSs --retry 3 --retry-delay 2 \
-            -H "Cache-Control: no-cache" \
-            "https://$SITE_ID.web.app/?verification=$GITHUB_SHA" \
-            -o "$RUNNER_TEMP/hospital-live-index.html"
-          cmp -s dist/index.html "$RUNNER_TEMP/hospital-live-index.html" || {
-            echo "::error::HTML live diverge do build aprovado."; exit 1;
+          VERIFIED=0
+          for check in 1 2 3 4 5 6; do
+            curl -fSs --retry 2 --retry-delay 2 \
+              -H "Cache-Control: no-cache" \
+              "https://$SITE_ID.web.app/?verification=$GITHUB_SHA" \
+              -o "$RUNNER_TEMP/hospital-live-index.html"
+            if cmp -s dist/index.html "$RUNNER_TEMP/hospital-live-index.html"; then
+              VERIFIED=1
+              break
+            fi
+            sleep 4
+          done
+          [[ "$VERIFIED" == 1 ]] || {
+            echo "::error::HTML live nao corresponde ao build aprovado."; exit 1;
           }
           HTTP="$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
             -X POST "https://$SITE_ID.web.app/api/hospital/session" \
