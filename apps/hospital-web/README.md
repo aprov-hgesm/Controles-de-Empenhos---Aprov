@@ -10,6 +10,32 @@ Configurar o site Firebase Hosting vinculado ao projeto `cozinha-dietetica`, pre
 
 O produto será preparado para operar com dados hospitalares reais por meio de autenticação, autorização por organização/unidade e APIs próprias. **Primeiros testes publicados: dados sintéticos**; não se trata de uma trava que limita a aplicação a `qa_*`.
 
+## Publicação pelo Google Cloud Shell (Linux / Bash)
+
+O terminal em `shell.cloud.google.com` **não é** PowerShell do Windows: não usar
+`npm.cmd`, `powershell.exe`, `$LASTEXITCODE` ou caminhos `C:\\...`.
+
+No Cloud Shell, autentique primeiro o acesso ao repositório GitHub privado
+(com a conta autorizada). Faça checkout **somente** da branch hospitalar:
+
+```bash
+git clone --single-branch --branch feat/cozinha-dietetica-f0-firebase-hosting-20261115 \
+  https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov.git \
+  "$HOME/CozinhaDietetica-F0"
+cd "$HOME/CozinhaDietetica-F0"
+bash ops/hospital-f0-publish-cloud-shell.sh
+```
+
+O publicador extrai os módulos hospitalares em Linux, busca a configuração
+**pública** do app Firebase Web `cozinha-dietetica`, compila o frontend, configura
+o alvo `hospital-web` e faz deploy **somente desse Hosting**, nunca da API,
+Firestore, QA ou EMPROVEX. Se o Firebase CLI ainda não estiver autenticado,
+ele exibirá a orientação `firebase login --no-localhost`.
+
+Se a pasta já existir em uma sessão posterior, use `cd ...; git pull --ff-only`
+e depois repita apenas o comando `bash ops/hospital-f0-publish-cloud-shell.sh`.
+Não colocar tokens GitHub, chaves de serviço ou senhas no script ou no chat.
+
 ## Começar pelo PowerShell
 
 No terminal com `git`, `gcloud` e `firebase` disponíveis, na raiz do repositório:
