@@ -8,6 +8,9 @@ on:
       - 'apps/hospital-web/**'
       - 'ops/hospital-f0-*.ps1'
       - '.github/workflows/hospital-f0-web-build.yml'
+      - 'tsconfig.json'
+      - 'tests/hospital/f1-type-boundaries.test.mjs'
+      - '.github/workflows/hospital-f0-operational-flow-qa.yml'
 permissions:
   contents: read
 jobs:

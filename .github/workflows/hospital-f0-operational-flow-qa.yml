@@ -3,6 +3,17 @@ on:
   push:
     branches:
       - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+  pull_request:
+    branches:
+      - feat/cozinha-dietetica-f0-firebase-hosting-20261115
+    paths:
+      - 'tsconfig.json'
+      - 'apps/hospital-web/**'
+      - 'apps/hospital-api/**'
+      - 'features/hospital/**'
+      - 'lib/server/hospital/**'
+      - 'tests/hospital/**'
+      - '.github/workflows/hospital-f0-operational-flow-qa.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +42,10 @@ jobs:
           java-version: '21'
       - name: Instalar dependencias para testes locais
         run: npm ci --ignore-scripts
+      - name: F1 — confirmar fronteiras de compilacao sem retirar features compartilhadas
+        run: node --test tests/hospital/f1-type-boundaries.test.mjs
+      - name: F1 — typecheck da raiz EMPROVEX e codigo hospitalar compartilhado
+        run: npm run typecheck
       - name: Validar fluxo simples e passos independentes
         run: node --test tests/hospital/f0-operational-ux.test.mjs tests/hospital/order-progress.test.mjs tests/hospital/meal-period-deadlines.test.mjs
       - name: Fluxo clinico ponta a ponta com pacientes totalmente ficticios

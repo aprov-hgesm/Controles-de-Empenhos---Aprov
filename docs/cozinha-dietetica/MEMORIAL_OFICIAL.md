@@ -1,13 +1,43 @@
 # COZINHA DIETÉTICA — MEMORIAL OFICIAL DO SISTEMA
 
-**Atualizado em:** 16/11/2026 (Brasília)  
+**Atualizado em:** 18/11/2026 (Brasília)  
 **Projeto:** Cozinha Dietética — gestão de mapas, preparo e distribuição hospitalar  
 **Repositório:** `aprov-hgesm/Controles-de-Empenhos---Aprov`  
-**Frente vigente:** PR [#555](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/555), branch `feat/cozinha-dietetica-f0-firebase-hosting-20261115`  
-**Código auditado nesta atualização:** `967da1b805753e69deea86b28fab2f6ee6045daf` (SHA anterior ao commit exclusivamente documental deste memorial).  
+**Base funcional F0:** PR [#555](https://github.com/aprov-hgesm/Controles-de-Empenhos---Aprov/pull/555), branch `feat/cozinha-dietetica-f0-firebase-hosting-20261115`  
+**Frente F1 em revisão:** `feat/cozinha-dietetica-f1-estabilizacao-ci-20261118` (PR Draft, sem publicação)  
+**Código da revisão operacional de 16/11:** `967da1b805753e69deea86b28fab2f6ee6045daf` (histórico).  
+**Base exata da F1:** `294ca1366afc89e4960b52516960520f7d2c4966` (HEAD F0 consultado em 18/11).  
 **Situação:** melhorias implementadas e aprovadas por testes automatizados sintéticos; **não confundir build aprovado, branch pronta ou site provisionado com implantação da versão ou homologação clínica**.
 
 > **Leitura canônica:** este documento reúne a visão do produto e o ponto de retomada operacional atual. Os handoffs W0–W12 continuam como histórico técnico imutável. Decisões posteriores verificadas no código prevalecem sobre descrições de estágio anterior. A Cozinha Dietética é um produto hospitalar independente e não deve afetar a produção financeira/logística do EMPROVEX.
+
+## F1 — estabilização de CI e preparo da homologação operacional (18/11/2026)
+
+**Estado:** alterações técnicas propostas em branch/PR Draft isolados. Não representam merge, deploy, novo acesso clínico ou homologação assistencial. **GOV-SIMP-01:** corrigir somente atritos reais, sem cadastros, aprovações ou camadas adicionais.
+
+### Fronteiras e testes automáticos
+
+- O `tsconfig.json` da raiz verifica EMPROVEX e os módulos hospitalares compartilhados, mas exclui os dois projetos independentes `apps/hospital-web` e `apps/hospital-api`, que mantêm seus próprios `tsconfig.json`, dependências e builds.
+- `tests/hospital/f1-type-boundaries.test.mjs` comprova a separação, sem retirar os componentes hospitalares compartilhados do escopo de tipos da raiz.
+- A jornada operacional sintética e o typecheck da raiz passam a integrar a validação de PRs F1 direcionados à F0. O build independente da interface React e da API Next é reexecutado pelo workflow hospitalar.
+- Não são fornecidas credenciais GCP/Firebase reais aos testes; Auth/Firestore Emulator usam exclusivamente o projeto demonstrativo `demo-cozinha-dietetica`.
+- Falhas do CI **não são consideradas solucionadas** até o resultado dos runs do commit final do PR confirmar os gates exigidos.
+
+### Roteiro de homologação — somente pacientes fictícios
+
+| Jornada | Aceite mínimo observável |
+|---|---|
+| Acesso | Unidade, Cozinha, Nutrição e Admin entram somente nas suas áreas; token inválido e hospital/unidade alheios são rejeitados pela API |
+| Solicitação | Em 06h/10h/16h, cadastrar paciente/leito/dieta no mapa, salvar próximo, enviar e consultar recibo; principal e secundária independentes |
+| Recebimento e preparo | Cozinha vê somente mapas enviados, confirma recebimento real, agrupa as dietas e registra lote/preparo sem criar etapas fictícias |
+| Distribuição | Gerar etiquetas e lista, conferir identificação/alergias, montar, expedir e registrar **hora física efetiva** da entrega; imprimir nunca confirma distribuição |
+| Segurança e exceções | Testar jejum/NPVO, alergia, acompanhante, mudança de leito, atraso, adendo, correção pós-envio e idempotência sem duplicações |
+| Nutrição | Consultar, auditar e tratar achados sem aprovação rotineira de mapas |
+| Resiliência e UX | Executar recuperação de dados sintéticos no emulador, verificar uso móvel/desktop, erros de rede e rastreio sem dados clínicos nos artefatos |
+
+**Fora do escopo dos testes de CI:** comprovação de uso clínico com pacientes reais, proteção e backup/restore do ambiente GCP real, dispositivo físico, aceite assistencial institucional e publicação automatizada efetiva. Essas decisões exigem verificação no ambiente pertinente, sem converter resultados sintéticos em autorização assistencial.
+
+**Próxima decisão de publicação:** somente após os gates do PR e, separadamente, autorização explícita para a versão identificada; a F1 não edita `ops/hospital-f0-hosting-promotion-request.json` e não executa merge nem deploy.
 
 ## Atualização de infraestrutura — publicação via GitHub sem chave privada (16/11/2026)
 
