@@ -1,0 +1,2 @@
+export type NutritionAuditResult = {status:number;body:{ok:true;data:any}|{ok:false;error:{code:string;message:string}}};
+export declare function createNutritionAuditHandler(options:{store:unknown;verifyToken?:(token:string)=>Promise<{uid:string}>}): (request:{method?:'GET'|'POST';authorization:string;organizationId:string;operation:string;payload?:Record<string,unknown>})=>Promise<NutritionAuditResult>;

@@ -1,0 +1,32 @@
+name: Hospital W08 QA (isolated)
+
+on:
+  pull_request:
+    paths:
+      - "app/api/hospital/reporting/**"
+      - "features/hospital/reporting/**"
+      - "lib/server/hospital/reporting/**"
+      - "tests/hospital/reporting/**"
+      - ".github/workflows/hospital-w08-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  w08:
+    name: W08 SQLite QA behavioral suite and typecheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+      - run: npm ci
+      - name: W0 + W08 real SQLite tests
+        run: node --test tests/hospital/core/core.test.mjs tests/hospital/reporting/reporting.test.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build (not a deployment)
+        run: npm run build

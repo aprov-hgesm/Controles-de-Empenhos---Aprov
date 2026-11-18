@@ -1,0 +1,112 @@
+'use client';
+
+import {useCallback,useEffect,useState} from 'react';
+type ScopeRole='UNIT'|'KITCHEN'|'NUTRITION'|'HOSPITAL_ADMIN';
+type CatalogItem={id:string;code:string;label:string;type:'ORAL'|'ENTERAL'|'SUPPLEMENT'|'OTHER';consistency:string;route:string;device:string|null;restrictionCodes:string[];allergenCodes:string[];active:boolean;revision:number};
+type Admission={admissionId:string;patientCode:string;bedId:string|null;medicalReferenceId:string|null};
+type MedicalReference={id:string;sourceRef:string;sourceVersion?:string;prescriberAsRecorded?:string;prescribedAt:string;catalogItemId:string;enteredByUid:string};
+export type DietasViewProps={organizationId:string;unitId?:string;roles:readonly ScopeRole[];getIdToken:()=>Promise<string>};
+const input:React.CSSProperties={width:'100%',padding:8,border:'1px solid #94a3b8',borderRadius:7};
+const button:React.CSSProperties={padding:'9px 14px',border:'1px solid #64748b',borderRadius:8,background:'#eef2ff',cursor:'pointer'};
+const container:React.CSSProperties={display:'grid',gap:12,padding:16,border:'1px solid #cbd5e1',borderRadius:12};
+export function DietasView({organizationId,unitId,roles,getIdToken}:DietasViewProps){
+ const [catalog,setCatalog]=useState<CatalogItem[]>([]);
+ const [admissions,setAdmissions]=useState<Admission[]>([]);
+ const [history,setHistory]=useState<MedicalReference[]>([]);
+ const [selected,setSelected]=useState('');
+ const [error,setError]=useState('');
+ const [notice,setNotice]=useState('');
+ const [busy,setBusy]=useState(false);
+ const [code,setCode]=useState('');
+ const [label,setLabel]=useState('');
+ const [type,setType]=useState<CatalogItem['type']>('ORAL');
+ const [consistency,setConsistency]=useState('NORMAL');
+ const [route,setRoute]=useState('ORAL');
+ const [device,setDevice]=useState('');
+ const [restrictions,setRestrictions]=useState('');
+ const [allergens,setAllergens]=useState('');
+ const [volume,setVolume]=useState('');
+ const [sourceRef,setSourceRef]=useState('');
+ const [sourceVersion,setSourceVersion]=useState('');
+ const [prescriber,setPrescriber]=useState('');
+ const [prescribedAt,setPrescribedAt]=useState('');
+ const [catalogItemId,setCatalogItemId]=useState('');
+ const [fasting,setFasting]=useState(false);
+ const [allergyCodes,setAllergyCodes]=useState('');
+ const isAdmin=roles.includes('HOSPITAL_ADMIN'),canRecord=roles.includes('UNIT');
+ const request=useCallback(async<T,>(area:'maps'|'diets',operation:string,payload:Record<string,unknown>)=>{
+  const token=await getIdToken();
+  if(!token)throw Error('Acesso expirado');
+  const resp=await fetch(`/api/hospital/${area}`,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'x-hospital-organization-id':organizationId},body:JSON.stringify({operation,payload})});
+  const result=await resp.json() as {ok:boolean;data:T;error?:{message:string;code:string}};
+  if(!result.ok)throw Error(`${result.error?.code??'ERROR'}: ${result.error?.message??'Falha na solicitação'}`);
+  return result.data;
+ },[organizationId,getIdToken]);
+ const reload=useCallback(async()=>{
+  setBusy(true);setError('');
+  try{
+   const [items,patients]=await Promise.all([
+    request<CatalogItem[]>('diets','diet.list',isAdmin?{includeInactive:true}:{unitId}),
+    unitId&&!isAdmin?request<Admission[]>('maps','admission.list',{unitId}):Promise.resolve([]),
+   ]);
+   setCatalog(items);setAdmissions(patients);
+  }catch(e){setError(e instanceof Error?e.message:'Falha de leitura')}
+  finally{setBusy(false)}
+ },[request,unitId,isAdmin]);
+ useEffect(()=>{void reload()},[reload]);
+ useEffect(()=>{
+  if(!selected||!unitId||isAdmin){setHistory([]);return}
+  let cancelled=false;
+  request<MedicalReference[]>('diets','reference.list',{unitId,admissionId:selected}).then(rows=>{if(!cancelled)setHistory(rows)}).catch(e=>{if(!cancelled)setError(e instanceof Error?e.message:'Falha ao consultar histórico')});
+  return ()=>{cancelled=true};
+ },[selected,unitId,isAdmin,request]);
+ async function run(fn:()=>Promise<unknown>,ok:string){
+  setBusy(true);setError('');setNotice('');
+  try{await fn();setNotice(ok);await reload()}catch(e){setError(e instanceof Error?e.message:'Falha na gravação')}
+  finally{setBusy(false)}
+ }
+ const splitCodes=(v:string)=>v.split(',').map(x=>x.trim()).filter(Boolean);
+ return <section aria-label="Dietas e prescrições de referência" style={{display:'grid',gap:16,maxWidth:920}}>
+  <header><h2>Dietas e referências médicas</h2><p>O médico prescreve no sistema assistencial. A unidade apenas registra a referência conforme a prescrição; a Nutrição audita.</p></header>
+  {error&&<p role="alert" style={{color:'#b91c1c'}}>{error}</p>}
+  {notice&&<p role="status" style={{color:'#166534'}}>{notice}</p>}
+  <article style={container}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><h3>Catálogo institucional</h3><button disabled={busy} style={button} onClick={()=>void reload()}>Atualizar</button></div>
+   {catalog.length===0?<p>Não há dietas autorizadas cadastradas.</p>:<div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse'}}><thead><tr><th align="left">Código</th><th align="left">Dieta</th><th align="left">Tipo</th><th align="left">Consistência</th><th align="left">Estado</th></tr></thead><tbody>{catalog.map(item=><tr key={item.id} style={{borderTop:'1px solid #e2e8f0'}}><td>{item.code}</td><td>{item.label}</td><td>{item.type??'A revisar'}</td><td>{item.consistency??'A revisar'}</td><td>{item.active?'Ativa':'Inativa'}</td></tr>)}</tbody></table></div>}
+  </article>
+  {isAdmin&&<form style={container} onSubmit={e=>{e.preventDefault();void run(()=>request('diets','diet.save',{catalogItemId:code,code,label,type,consistency,route,device:device||null,restrictionCodes:splitCodes(restrictions),allergenCodes:splitCodes(allergens),volumeMl:volume?Number(volume):null,unit:volume?'mL':'portion',preparations:[],status:'ACTIVE'}),'Dieta registrada no catálogo com auditoria')}}>
+   <h3>Cadastrar nova dieta autorizada</h3>
+   <small>Alteração de item existente exige revisão/ETag; não é realizada por este formulário rápido.</small>
+   <label>Código institucional<input required style={input} value={code} onChange={e=>setCode(e.target.value)}/></label>
+   <label>Nome completo<input required style={input} value={label} onChange={e=>setLabel(e.target.value)}/></label>
+   <label>Tipo<select style={input} value={type} onChange={e=>setType(e.target.value as CatalogItem['type'])}><option value="ORAL">Oral</option><option value="ENTERAL">Enteral</option><option value="SUPPLEMENT">Suplemento</option><option value="OTHER">Outro</option></select></label>
+   <label>Consistência<select style={input} value={consistency} onChange={e=>setConsistency(e.target.value)}><option value="NORMAL">Normal</option><option value="SOFT">Branda</option><option value="PUREED">Pastosa</option><option value="LIQUID">Líquida</option><option value="THICKENED">Espessada</option><option value="NOT_APPLICABLE">Não aplicável</option></select></label>
+   <label>Via<input required style={input} value={route} onChange={e=>setRoute(e.target.value)}/></label>
+   <label>Dispositivo, se aplicável (SNE não é consistência)<input style={input} value={device} onChange={e=>setDevice(e.target.value)}/></label>
+   <label>Restrições (códigos separados por vírgula)<input style={input} value={restrictions} onChange={e=>setRestrictions(e.target.value)}/></label>
+   <label>Alérgenos (códigos separados por vírgula)<input style={input} value={allergens} onChange={e=>setAllergens(e.target.value)}/></label>
+   <label>Volume mL, se aplicável<input type="number" min={1} max={10000} style={input} value={volume} onChange={e=>setVolume(e.target.value)}/></label>
+   <button style={button} disabled={busy} type="submit">Salvar no catálogo</button>
+  </form>}
+  {!isAdmin&&unitId&&<article style={container}>
+   <h3>Internação e histórico da prescrição</h3>
+   <label>Paciente ativo<select style={input} value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Selecionar</option>{admissions.map(a=><option key={a.admissionId} value={a.admissionId}>{a.patientCode} · {a.bedId??'leito pendente'}</option>)}</select></label>
+   {selected&&<div><h4>Referências anteriores (registro imutável)</h4>{history.length===0?<p>Sem referência registrada.</p>:<ol>{history.map(ref=><li key={ref.id}>{ref.sourceRef} · versão {ref.sourceVersion??'não informada'} · {ref.prescribedAt} · transcrito por {ref.enteredByUid}</li>)}</ol>}</div>}
+  </article>}
+  {canRecord&&unitId&&selected&&<form style={container} onSubmit={e=>{e.preventDefault();void run(async()=>{
+    await request('diets','reference.record',{unitId,admissionId:selected,referenceId:`rx_${crypto.randomUUID()}`,catalogItemId,sourceRef,sourceVersion,prescriberAsRecorded:prescriber,prescribedAt:new Date(prescribedAt).toISOString(),fasting,allergyCodes:splitCodes(allergyCodes),restrictionCodes:[]});
+    setSourceRef('');setSourceVersion('');setPrescribedAt('');
+    setHistory(await request<MedicalReference[]>('diets','reference.list',{unitId,admissionId:selected}));
+   },'Referência registrada; refeições anteriores poderão exigir reconferência')}}>
+   <h3>Transcrever referência da prescrição vigente</h3>
+   <p>Não cria prescrição médica. Confira os dados na fonte clínica oficial antes de registrar.</p>
+   <label>Identificador da prescrição de origem<input style={input} required value={sourceRef} onChange={e=>setSourceRef(e.target.value)}/></label>
+   <label>Versão da prescrição de origem<input style={input} required value={sourceVersion} onChange={e=>setSourceVersion(e.target.value)}/></label>
+   <label>Médico conforme documento de origem<input style={input} required value={prescriber} onChange={e=>setPrescriber(e.target.value)}/></label>
+   <label>Data/hora da prescrição<input style={input} type="datetime-local" required value={prescribedAt} onChange={e=>setPrescribedAt(e.target.value)}/></label>
+   <label>Dieta institucional vinculada<select style={input} required value={catalogItemId} onChange={e=>setCatalogItemId(e.target.value)}><option value="">Escolher conforme prescrição</option>{catalog.filter(x=>x.active).map(c=><option key={c.id} value={c.id}>{c.label} · {c.code}</option>)}</select></label>
+   <label>Alergias registradas (códigos separados por vírgula)<input style={input} value={allergyCodes} onChange={e=>setAllergyCodes(e.target.value)}/></label>
+   <label><input type="checkbox" checked={fasting} onChange={e=>setFasting(e.target.checked)}/> Prescrição indica jejum/NPVO</label>
+   <button style={button} type="submit" disabled={busy}>Registrar versão conforme a prescrição</button>
+  </form>}
+ </section>;
+}
