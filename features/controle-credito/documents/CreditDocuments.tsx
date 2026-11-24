@@ -19,20 +19,27 @@ function ensureGis():Promise<void>{
     document.head.appendChild(script);
   });
 }
+function assertDocumentIdentity(user:User,signal?:AbortSignal|null){
+  if(signal?.aborted)throw new DOMException('Operação cancelada','AbortError');
+  if(auth.currentUser?.uid!==user.uid)throw new Error('Sessão alterada. Entre novamente.');
+}
 async function checkedFetch(user:User,path:string,init:RequestInit={}){
-  if(auth.currentUser?.uid!==user.uid)throw new Error('Sessão alterada. Entre novamente.');
+  assertDocumentIdentity(user,init.signal);
   const headers=new Headers(init.headers);
-  headers.set('Authorization','Bearer '+await user.getIdToken());
+  const token=await user.getIdToken();
+  assertDocumentIdentity(user,init.signal);
+  headers.set('Authorization','Bearer '+token);
   const res=await fetch(api+path,{...init,headers,cache:'no-store'});
-  if(auth.currentUser?.uid!==user.uid)throw new Error('Sessão alterada. Entre novamente.');
+  assertDocumentIdentity(user,init.signal);
   if(!res.ok){
     const body=await res.json().catch(()=>null);
     throw new Error(typeof body?.error==='string'?body.error:'Não foi possível concluir a operação.');
   }
   return res;
 }
-async function download(res:Response,name:string){
+async function download(res:Response,name:string,user:User,signal?:AbortSignal){
   const blob=await res.blob();
+  assertDocumentIdentity(user,signal);
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=name;a.rel='noopener noreferrer';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -54,7 +61,8 @@ function DocumentPanel({entityType,entityId,user,canUpload,ug}:Props){
   async function refresh(signal:AbortSignal){
     const res=await checkedFetch(user,'/documentos'+query,{signal});
     const payload=await res.json();
-    if(!signal.aborted)setDocs(payload.documents);
+    assertDocumentIdentity(user,signal);
+    setDocs(payload.documents);
   }
   useEffect(()=>{
     const abort=new AbortController();controller.current=abort;
@@ -104,7 +112,7 @@ function DocumentPanel({entityType,entityId,user,canUpload,ug}:Props){
     const signal=controller.current.signal;
     try{
       const res=await checkedFetch(user,'/documentos/'+encodeURIComponent(doc.id)+'?download=1',{headers:doc.generated?{}:driveHeaders(),signal});
-      if(!signal.aborted)await download(res,doc.filename);
+      if(!signal.aborted)await download(res,doc.filename,user,signal);
     }catch(e){if(!signal.aborted)setError(e instanceof Error?e.message:'Falha ao baixar.');}
     finally{if(!signal.aborted)setBusy(false);}
   }
@@ -133,7 +141,7 @@ export function CreditReportControls({user,year}:{user:User;year:number}){
   const [error,setError]=useState('');
   async function exportPdf(){
     setBusy(true);setError('');
-    try{await download(await checkedFetch(user,'/relatorios?type='+type+'&year='+year),'credito-'+type+'-'+year+'.pdf');}
+    try{await download(await checkedFetch(user,'/relatorios?type='+type+'&year='+year),'credito-'+type+'-'+year+'.pdf',user);}
     catch(e){setError(e instanceof Error?e.message:'Falha ao gerar relatório.');}
     finally{setBusy(false);}
   }
