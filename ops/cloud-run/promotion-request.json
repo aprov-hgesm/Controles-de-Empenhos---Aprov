@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g4077be425a2a-47",
-  "sourceSha": "4077be425a2ab1e5ca072a5ceaafc94dc91efbff",
-  "reason": "Usuário autorizou expressamente nesta conversa em 16/11/2026 verificar e publicar em produção a correção de PDF do cronograma EMPROVEX (PR #556 orientação A4 automática; PR #557 correção de sobreposição em campos longos). SHA main 4077be425a2ab1e5ca072a5ceaafc94dc91efbff, Cloud Run stage run #47 (43911536991) SUCCESS com revisão Ready em 0% tráfego, saúde e verificação de assets PASS; PR #557 Fast CI/Core/Domain/Application/W4/VISUAL PASS. Promover exatamente revisão g4077be425a2a-47, exigindo validação do digest, identidade de serviço, 100% tráfego, health e assets no domínio oficial com rollback automático. Não modificar Firestore, IAM, regras ou configurações de dados."
+  "revision": "emprovex-cloudrun-candidate-g3fc0bbeee5d4-48",
+  "sourceSha": "3fc0bbeee5d44642f17b81577465fc6af9c15359",
+  "reason": "Autorização expressa do proprietário para Worker 09 publicar Controle de Crédito R1, administração de acessos e homologação operacional posterior. PR #559 merged. Stage 45506055772 SUCCESS, revisão Ready 0% tráfego, digest sha256:da64032b10cd811b2973ad499d6ed2a05f7279a77468b2303cbd2e41729cf2da, saúde/assets/proteção aprovadas; Application CI 45506055614 e todos os gates finais, Core Protection 45506055885 SUCCESS no SHA main. PR SAAS-DL build/TypeScript/diff hygiene e VISUAL-R2 incluindo Firestore crédito emulado aprovados. Fast CI PR pós-merge falhou por diff vazio/base indisponível; execução anterior cancelada, não certificados como aprovados. Promover apenas revisão exata via pipeline oficial com rollback automático. Não alterar IAM, Firestore, billing ou credenciais."
 }
