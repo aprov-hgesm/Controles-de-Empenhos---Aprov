@@ -66,7 +66,7 @@ function DocumentPanel({entityType,entityId,user,canUpload}:Props){
     setBusy(true);setError('');
     const signal=controller.current.signal;
     try{
-      const form=new FormData();form.set('entityType',entityType);form.set('entityId',entityId);form.set('file',file);
+      const form=new FormData();form.set('entityType',entityType);form.set('entityId',entityId);form.set('file',file.type?file:new File([file],file.name,{type:entityType==='nc'?'text/html':'application/pdf'}));
       await checkedFetch(user,'/documentos',{method:'POST',headers:drive.headers(),body:form,signal});
       if(!signal.aborted){setFile(null);await refresh(signal);}
     }catch(e){if(!signal.aborted){setError(e instanceof Error?e.message:'Falha ao anexar.');await refresh(signal).catch(()=>undefined);}}

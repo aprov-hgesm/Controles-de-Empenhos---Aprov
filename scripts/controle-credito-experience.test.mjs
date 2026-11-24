@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
+import {inflateSync} from 'node:zlib';
+import ts from 'typescript';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+test('credit uses a named app and per-tab auth throughout, without signing out operational Auth',()=>{
+  const auth=read('features/controle-credito/auth/creditFirebase.ts');
+  assert.match(auth,/emprovex-credit-control/);
+  assert.match(auth,/initializeApp\([\s\S]*?,name\)/);
+  assert.match(auth,/persistence:browserSessionPersistence/);
+  for(const path of ['auth/useCreditSession.ts','auth/CreditLogin.tsx','client.ts','documents/CreditDocuments.tsx','documents/CreditDriveProvider.tsx']){
+    const code=read('features/controle-credito/'+path);
+    assert.match(code,/creditAuth/);
+    assert.doesNotMatch(code,/from ['"]@\/lib\/firebase['"]/);
+  }
+  assert.doesNotMatch(read('app/controle-credito/page.tsx'),/sessão compartilhada/);
+});
+test('NC-first workflow retains server revision and confirmation, correct search and password minimum',()=>{
+  const workspace=read('features/controle-credito/ui/Workspace.tsx'),forms=read('features/controle-credito/ui/Forms.tsx');
+  assert.match(workspace,/beginNe\(c\)/);
+  assert.match(workspace,/initialCreditId=\{selectedNc\?\.id\}/);
+  assert.match(workspace,/Número da NC ou finalidade/);
+  assert.match(workspace,/Prazo para empenho/);
+  assert.match(workspace,/emprovex-app-sidebar/);
+  assert.match(forms,/1 · Selecionar NC/);
+  assert.match(forms,/selected&&<><div/);
+  assert.match(forms,/expectedCreditRevision:selected.credit.revision/);
+  assert.match(forms,/acknowledgeDeficit:ack/);
+  assert.match(forms,/archiveImported\(user,'nc'/);
+  assert.match(forms,/archiveImported\(user,'ne'/);
+  assert.match(read('app/api/admin/controle-credito/route.ts'),/password.length<8/);
+  assert.match(read('components/admin/AdminCreditAccessPanel.tsx'),/minLength=\{8\}/);
+});
+test('document connection checks manager and original download preserves private hash verification',()=>{
+  const server=read('lib/server/creditControlDocuments.ts'),route=read('app/api/controle-credito/drive/route.ts');
+  assert.match(route,/requireCreditMember\(request,true\)/);
+  assert.match(server,/const token=await checkedToken\(m,request\);await ensureFolder/);
+  assert.match(server,/const bytes=await verifyFile\(m,token,d\);\s*if\(d.entityType==='nc'/);
+  assert.match(server,/parseSagCreditHtml\(new TextDecoder/);
+  assert.match(server,/PDF textual reconstruído/);
+  assert.match(server,/creditPdfResponse\(creditPdf/);
+});
+test('PDF generator emits real selectable text rather than a screenshot',async()=>{
+  const require=createRequire(import.meta.url);
+  const jspdf=pathToFileURL(require.resolve('jspdf')).href;
+  const code=read('lib/controle-credito/reports/creditPdf.ts').replace("import { jsPDF } from 'jspdf';",`import pkg from ${JSON.stringify(jspdf)}; const {jsPDF}=pkg;`);
+  const js=ts.transpileModule(code,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+  const {creditPdf}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
+  const pdf=Buffer.from(creditPdf({uid:'demo',email:'demo@example.invalid',ug:'654321',role:'gestor',centerId:null},'Nota de Crédito',[{label:'NC',value:'2026NC000001'}]));
+  assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+  const text=pdf.toString('latin1');let decoded='';
+  for(const m of text.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)){try{decoded+=inflateSync(Buffer.from(m[1],'latin1')).toString('latin1');}catch{}}
+  assert.match(decoded,/2026NC000001/);
+  assert.match(decoded,/Tj/);
+});
