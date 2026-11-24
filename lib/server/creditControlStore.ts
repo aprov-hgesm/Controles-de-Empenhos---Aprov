@@ -12,9 +12,10 @@ type Obj = Record<string, unknown>;
 type StoredCredit = CreditRecord & {
   year: string; source: 'html'|'manual'; originalFingerprint: string;
   cellAdjustments: Record<string, number>;
+  projection?: Pick<CreditDetail,'balance'|'cells'>;
 };
 type StoredCommitment = CommitmentRecord & {
-  year: string; originalFingerprint: string;
+  year: string; centerYear: string; originalFingerprint: string;
 };
 const invalid = (message: string): never => { throw new CreditStoreError(422,'CREDIT_INVALID_INPUT',message); };
 const forbidden = (): never => { throw new CreditStoreError(403,'CREDIT_FORBIDDEN','Perfil não autorizado para esta operação.'); };
@@ -127,11 +128,11 @@ function readCommitment(member:CreditMember,raw:StoredCommitment|undefined|null,
   return raw;
 }
 function publicCredit(record:StoredCredit):CreditRecord {
-  const {year,source,originalFingerprint,cellAdjustments,...result}=record;
+  const {year,source,originalFingerprint,cellAdjustments,projection,...result}=record;
   return result;
 }
 function publicCommitment(record:StoredCommitment):CommitmentRecord {
-  const {year,originalFingerprint,...result}=record;
+  const {year,centerYear,originalFingerprint,...result}=record;
   return result;
 }
 function balanceFor(record:StoredCredit,commitments:readonly CommitmentRecord[]):CreditBalance {
@@ -157,21 +158,31 @@ function cellsFor(record:StoredCredit,commitments:readonly CommitmentRecord[]):C
     result.reduce((n,c)=>sum(n,c.cents),0)!==record.totalCents)return corrupt();
   return result;
 }
-function detail(member:CreditMember,record:StoredCredit,commitments:readonly CommitmentRecord[]):CreditDetail {
-  if(member.role==='gestor')return {credit:publicCredit(record),balance:balanceFor(record,commitments),cells:cellsFor(record,commitments)};
-  // O cálculo do rateio precisa dos pesos, mas nunca da lista de empenhos de outros centros.
-  const ownCommitments=commitments.filter(ne=>ne.centerId===member.centerId);
-  const full=balanceFor(record,ownCommitments);
-  const center=full.centers.find(c=>c.centerId===member.centerId);
+function restrictDetail(member:CreditMember,record:StoredCredit,balance:CreditBalance,cells:CreditCellBalance[]):CreditDetail {
+  if(member.role==='gestor')return {credit:publicCredit(record),balance,cells};
+  const center=balance.centers.find(c=>c.centerId===member.centerId);
   if(!center||(!center.basisPoints&&!center.commitmentCount))return absent();
-  const credit={...publicCredit(record),totalCents:center.allocatedCents,documentTotalCents:null,
+  const credit:CreditRecord={...publicCredit(record),totalCents:center.allocatedCents,documentTotalCents:null,
     sequences:[],allocations:record.allocations.filter(a=>a.centerId===member.centerId)};
-  const balance:CreditBalance={
+  const restricted:CreditBalance={
     creditCents:center.allocatedCents,committedCents:center.committedCents,availableCents:center.availableCents,
     commitmentCount:center.commitmentCount,unallocatedBasisPoints:0,unallocatedCents:0,centers:[center],
     overdrawn:center.availableCents<0,overdrawnCenterIds:center.availableCents<0?[center.centerId]:[],
   };
-  return {credit,balance,cells:[]};
+  return {credit,balance:restricted,cells:[]};
+}
+function detail(member:CreditMember,record:StoredCredit,commitments:readonly CommitmentRecord[]):CreditDetail {
+  return restrictDetail(member,record,balanceFor(record,commitments),cellsFor(record,commitments));
+}
+/** Projeção atômica: toda mutação financeira recalcula pelo núcleo e grava junto da NC. */
+function withProjection(record:StoredCredit,detail:CreditDetail):StoredCredit {
+  return {...record,projection:{balance:detail.balance,cells:detail.cells}};
+}
+function projectedDetail(member:CreditMember,record:StoredCredit):CreditDetail {
+  const p=record.projection;
+  if(!p||p.balance.creditCents!==record.totalCents||
+    p.balance.availableCents!==record.totalCents-p.balance.committedCents)return corrupt();
+  return restrictDetail(member,record,p.balance,p.cells);
 }
 async function getStoredCredit(tx:CreditTransaction,member:CreditMember,key:string) {
   return readCredit(member,(await tx.get<StoredCredit>(path(member,'credits',key)))?.data,key);
@@ -259,7 +270,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     const record:StoredCredit={...fields,year,source,originalFingerprint,cellAdjustments:{},revision:1,createdAt:at,updatedAt:at};
     const result=detail(member,record,[]);
     await audit(tx,member,'nc',record.id,1,'create',null,{...auditSummary(result),source,allocations:shares},at);
-    tx.set(key,record);
+    tx.set(key,withProjection(record,result));
     return result;
   });
 }
@@ -286,7 +297,7 @@ export async function updateCredit(member:CreditMember,input:unknown):Promise<Cr
       {...auditSummary(before),allocations:record.allocations,deadline:record.deadline,description:record.description},
       {...auditSummary(after),allocations:next.allocations,deadline:next.deadline,description:next.description,
         acknowledgedDeficit:data.acknowledgeDeficit===true},at);
-    tx.set(path(member,'credits',key),next);
+    tx.set(path(member,'credits',key),withProjection(next,after));
     return after;
   });
 }
@@ -334,7 +345,7 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
     if(cell.nd!==codes.nd||cell.ptres!==codes.ptres||cell.fonte!==codes.fonte||cell.ugr!==codes.ugr||cell.pi!==codes.pi)
       return invalid('ND, PTRES, fonte, UGR ou PI da NE divergem da célula da NC. Concilie antes de registrar.');
     // Não presumir que uma ND agregada seja compatível com outra detalhada.
-    const at=now(),ne:StoredCommitment={...fields,year,originalFingerprint,revision:1,createdAt:at,updatedAt:at};
+    const at=now(),ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,revision:1,createdAt:at,updatedAt:at};
     const next={...record,revision:sum(record.revision,1),updatedAt:at};
     const after=detail(member,next,[...nes,ne]);
     reconcile(before,after,data.acknowledgeDeficit);
@@ -343,7 +354,7 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
         acknowledgedDeficit:data.acknowledgeDeficit===true},at);
     tx.set(key,ne);
     // A revisão da NC serializa NEs concorrentes e ajustes de suas células.
-    tx.set(path(member,'credits',record.id),next);
+    tx.set(path(member,'credits',record.id),withProjection(next,after));
     return {commitment:publicCommitment(ne),balance:after.balance,cells:after.cells};
   });
 }
@@ -401,7 +412,7 @@ export async function registerMovement(member:CreditMember,input:unknown):Promis
         entityCents:nextNe?.netCents??sum(cell.cents,deltaCents),movementId,reference,reason,
         acknowledgedDeficit:data.acknowledgeDeficit===true},at);
     tx.set(key,movement);
-    tx.set(path(member,'credits',record.id),next);
+    tx.set(path(member,'credits',record.id),withProjection(next,after));
     if(nextNe)tx.set(path(member,'commitments',nextNe.id),nextNe);
     return {movement,credit:after.credit,...(nextNe?{commitment:publicCommitment(nextNe)}:{}),balance:after.balance,cells:after.cells};
   });
@@ -411,8 +422,7 @@ export async function getCredit(member:CreditMember,key:string):Promise<CreditDe
   const validated=id(key);
   return creditTransaction(async tx=>{
     const record=await getStoredCredit(tx,member,validated);
-    const nes=await linked(tx,member,validated);
-    return detail(member,record,nes);
+    return projectedDetail(member,record);
   },true);
 }
 export async function getCommitment(member:CreditMember,key:string):Promise<{commitment:CommitmentRecord}> {
@@ -425,29 +435,29 @@ export async function getCommitment(member:CreditMember,key:string):Promise<{com
 }
 export async function listFinance(member:CreditMember,filters:FinanceFilters={}):Promise<FinanceView> {
   own(member);
-  const year=filters.year===undefined||filters.year===''?String(new Date().getFullYear()):pattern(String(filters.year),/^20\d{2}$/,'Exercício');
+  const year=filters.year===undefined||filters.year===''?today().slice(0,4):pattern(String(filters.year),/^20\d{2}$/,'Exercício');
   const limit=filters.limit===undefined||filters.limit===''?50:integer(Number(filters.limit),'Limite',1);
   if(limit>200)return invalid('Limite máximo de 200 registros.');
-  // Cursor vinculado ao filtro/identidade, não utilizado como fonte de autorização.
-  let offset=0;
+  // Dois cursores por chave estável, vinculados à identidade/exercício.
+  // "~" indica que a respectiva lista terminou; não voltar à primeira página.
+  let creditAfter='',neAfter='';
   const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit]).slice(0,20);
   if(filters.cursor){
-    const match=/^([a-f0-9]{20})_(\d{1,5})$/.exec(filters.cursor);
+    const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
     if(!match||match[1]!==scope)return invalid('Cursor inválido para esta consulta.');
-    offset=Number(match[2]);
+    creditAfter=match[2];neAfter=match[3];
   }
   return creditTransaction(async tx=>{
+    // Uma passagem pelas NCs projetadas, sem consultas N+1 ou leitura integral de NEs.
+    // Totais e alertas abrangem o exercício todo, inclusive em páginas posteriores.
     const creditDocs=await tx.list<StoredCredit>(member.ug,'credits',{field:'year',value:year});
-    const neDocs=await tx.list<StoredCommitment>(member.ug,'commitments',member.role==='centro'?
-      {field:'centerId',value:member.centerId!}:{field:'year',value:year});
+    const nePage=neAfter==='~'?{docs:[] as import('./creditControlFirestore').CreditDocument<StoredCommitment>[],nextAfter:undefined}:
+      await tx.listCommitmentPage<StoredCommitment>(member.ug,
+        member.role==='centro'?{field:'centerYear',value:year+'_'+member.centerId}:{field:'year',value:year},limit,neAfter);
     const centers=member.role==='gestor'?(await tx.list<CostCenter>(member.ug,'centers')).map(d=>d.data):
       [(await tx.get<CostCenter>(path(member,'centers',member.centerId!)))?.data].filter((x):x is CostCenter=>!!x);
-    const allNe=neDocs.map(d=>readCommitment(member,d.data,d.path.split('/').pop()!))
-      .filter(ne=>ne.year===year&&(member.role==='gestor'||ne.centerId===member.centerId));
-    const grouped=new Map<string,StoredCommitment[]>();
-    for(const ne of allNe){
-      const list=grouped.get(ne.creditId)??[];list.push(ne);grouped.set(ne.creditId,list);
-    }
+    const pageNe=nePage.docs.map(d=>readCommitment(member,d.data,d.path.split('/').pop()!));
+    if(pageNe.some(ne=>ne.year!==year||(member.role==='centro'&&ne.centerId!==member.centerId)))return corrupt();
     const credits:FinanceCredit[]=[],alerts:FinanceAlert[]=[];
     const totals:FinanceView['totals']={creditCents:0,committedCents:0,availableCents:0,creditCount:0,
       commitmentCount:0,noCommitmentsCount:0,unallocatedCents:0};
@@ -456,10 +466,9 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={})
     for(const doc of creditDocs){
       const record=readCredit(member,doc.data,doc.path.split('/').pop()!);
       if(record.year!==year)return corrupt();
+      if(member.role==='centro'&&!record.projection?.balance.centers.some(c=>c.centerId===member.centerId&&(c.basisPoints>0||c.commitmentCount>0)))continue;
+      const d=projectedDetail(member,record),b=d.balance;
       allCreditIds.add(record.id);
-      const nes=grouped.get(record.id)??[];
-      if(member.role==='centro'&&!record.allocations.some(a=>a.centerId===member.centerId&&a.basisPoints>0)&&!nes.length)continue;
-      const d=detail(member,record,nes),b=d.balance;
       totals.creditCents=sum(totals.creditCents,b.creditCents);
       totals.committedCents=sum(totals.committedCents,b.committedCents);
       totals.availableCents=sum(totals.availableCents,b.availableCents);
@@ -474,14 +483,17 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={})
         alert.overdrawn||alert.overdrawnCenterIds.length||alert.overdrawnCellIds.length)alerts.push(alert);
       credits.push({...d.credit,balance:b,cells:d.cells});
     }
-    if(allNe.some(ne=>!allCreditIds.has(ne.creditId)))return corrupt();
-    const order=(a:{issueDate:string;id:string},b:{issueDate:string;id:string})=>b.issueDate.localeCompare(a.issueDate)||a.id.localeCompare(b.id);
-    credits.sort(order);
-    const commitments=allNe.map(publicCommitment).sort(order);
-    const size=Math.max(credits.length,commitments.length);
+    if(pageNe.some(ne=>!allCreditIds.has(ne.creditId)))return corrupt();
+    // Ordenação canônica, estável mesmo quando novos registros entram no exercício.
+    credits.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+    const remaining=creditAfter==='~'?[]:credits.filter(c=>c.id>creditAfter);
+    const creditPage=remaining.slice(0,limit);
+    const creditNext=remaining.length>limit?creditPage[creditPage.length-1].id:'~';
+    const neNext=nePage.nextAfter??'~';
     return {member:{uid:member.uid,email:member.email,ug:member.ug,role:member.role,centerId:member.centerId},
-      totals,credits:credits.slice(offset,offset+limit),commitments:commitments.slice(offset,offset+limit),
+      totals,credits:creditPage,commitments:pageNe.map(publicCommitment),
       centers:centers.filter(c=>member.role==='gestor'||c.id===member.centerId).map(c=>({id:c.id,name:c.name,active:c.active})),
-      alerts,...(offset+limit<size?{nextCursor:scope+'_'+(offset+limit)}:{})};
+      alerts,...(creditNext!=='~'||neNext!=='~'?{nextCursor:scope+'.'+creditNext+'.'+neNext}:{})};
+
   },true);
 }

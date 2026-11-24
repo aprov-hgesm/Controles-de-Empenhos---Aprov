@@ -111,7 +111,7 @@ export class CreditTransaction {
         const n = found?.name ?? row.missing;
         if (typeof n!=='string' || !expected.has(n) || seen.has(n)) throw unavailable();
         seen.add(n);
-        this.read.set(expected.get(n)!,found ? document(n && found,n) : null);
+        this.read.set(expected.get(n)!,found ? document<Record<string, unknown>>(found,n) : null);
       }
       if (seen.size!==expected.size) throw unavailable();
     }
@@ -147,6 +147,32 @@ export class CreditTransaction {
       }
       if (count<structuredQuery.limit) return result;
     }
+  }
+  /** Página de NEs no snapshot, sem reler todo o exercício. */
+  async listCommitmentPage<T>(ug: string, filter: {field:'year'|'centerYear'; value:string}, limit:number, after=''): Promise<{docs:CreditDocument<T>[];nextAfter?:string}> {
+    if(!/^\d{6}$/.test(ug)||this.writes.size||!Number.isInteger(limit)||limit<1||limit>200)throw unavailable();
+    const parent='creditUnits/'+ug, collectionPrefix=name(parent+'/commitments/probe').slice(0,-5);
+    const start=after?name(parent+'/commitments/'+after):'';
+    const structuredQuery={
+      from:[{collectionId:'commitments'}],
+      where:{fieldFilter:{field:{fieldPath:filter.field},op:'EQUAL',value:{stringValue:filter.value}}},
+      orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],
+      ...(start?{startAt:{values:[{referenceValue:start}],before:false}}:{}),
+      limit:limit+1,
+    };
+    const rows=stream(await (await this.db.request('/'+parent+':runQuery',{structuredQuery,transaction:this.transaction})).text());
+    const docs:CreditDocument<T>[]=[];
+    let last=start;
+    for(const row of rows){
+      if(!row.document)continue;
+      const n=(row.document as {name?:string}).name;
+      if(!n||!n.startsWith(collectionPrefix)||!/^[A-Za-z0-9_-]{1,180}$/.test(n.slice(collectionPrefix.length))||n<=last)throw unavailable();
+      docs.push(document<T>(row.document,n));last=n;
+    }
+    if(docs.length>limit+1)throw unavailable();
+    const hasMore=docs.length>limit;
+    if(hasMore)docs.pop();
+    return {docs,...(hasMore?{nextAfter:docs[docs.length-1].path.split('/').pop()!}:{})};
   }
   set(path: string, data: object) {
     if (this.readOnly || !this.read.has(path) || this.writes.has(path) || this.writes.size>=450) throw unavailable();

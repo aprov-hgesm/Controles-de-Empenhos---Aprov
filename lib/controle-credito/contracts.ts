@@ -16,7 +16,8 @@ export interface CreditRecord {
   id: string; number: string; fullNumber: string; issuingUg: string; beneficiaryUg: string;
   issueDate: string; description: string; deadline: string | null;
   operation: string; decentralization: string; sourceSystem: string;
-  documentTotalCents: number; totalCents: number; sequences: CreditSequence[];
+  /** Total original do documento: null na projeção restrita ao centro. */
+  documentTotalCents: number | null; totalCents: number; sequences: CreditSequence[];
   allocations: CreditAllocation[]; revision: number; createdAt: string; updatedAt: string;
 }
 export interface CommitmentRecord {
@@ -42,13 +43,14 @@ export interface FinanceView {
   alerts: FinanceAlert[]; nextCursor?: string;
 }
 export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number }
-export type CreditDraft = Omit<CreditRecord, 'id'|'allocations'|'revision'|'createdAt'|'updatedAt'|'sequences'> & {
+export type CreditDraft = Omit<CreditRecord, 'id'|'allocations'|'revision'|'createdAt'|'updatedAt'|'sequences'|'documentTotalCents'> & {
+  documentTotalCents: number;
   sequences: SagHtmlCreditSequence[];
 };
 export interface CommitmentDraft {
   number: string; ug: string; issueDate: string; description: string; supplier: string;
   supplierCnpj: string; netCents: number; nd: string; ptres: string; fonte: string;
-  ugr: string; pi: string;
+  ugr: string; pi: string | null;
 }
 export interface CreateCreditInput {
   source: 'html' | 'manual'; draft: CreditDraft; allocations: CreditAllocation[];
