@@ -4,6 +4,7 @@ import { CreditAccessError, type CreditMember } from './creditControlAuth';
 import { FounderAuthError } from './firebaseFounderAuth';
 import { parseSagCreditHtml } from '@/lib/controle-credito/sagCreditHtml.mjs';
 import { parseEmpenhoPdfBytes } from './empenhoPdfParser';
+import type { CreateCreditInput, CreateCommitmentInput } from '@/lib/controle-credito/contracts';
 import type { SagHtmlCreditDraft } from '@/lib/controle-credito/sagCreditHtml.mjs';
 
 export class CreditImportError extends Error {
@@ -135,7 +136,7 @@ export function parseNc(bytes: Uint8Array, member: CreditMember): SagHtmlCreditD
 function checkPdf(bytes: Uint8Array) {
   const binary = Buffer.from(bytes).toString('latin1');
   if (!binary.startsWith('%PDF-') || /\/Encrypt\b/.test(binary)) invalid('Selecione uma NE SIAFI em PDF não criptografado.','NE_FORMAT');
-  let total = 0, count = 0;
+  let total = 0, count = 0, summaries = 0;
   for (const match of binary.matchAll(/(\d+)\s+0\s+obj\b([\s\S]*?)\bendobj\b/g)) {
     if (++count > 10000) invalid('PDF com estrutura excessiva.','NE_LIMIT');
     const body = match[2], marker = body.indexOf('stream'), end = body.lastIndexOf('endstream');
@@ -171,6 +172,8 @@ function checkPdf(bytes: Uint8Array) {
       } else if (c===']') array=-1;
       if (array>=0 && i-array>65536) invalid('Texto PDF excede o limite seguro.','NE_LIMIT');
     }
+    const compact=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+    if(compact.includes('notadeempenho') && compact.includes('celulaorcamentaria') && !compact.includes('listadeitens') && ++summaries>1) invalid('PDF contém múltiplas notas ou células; concilie antes de registrar.','NE_MULTIPLE_SUMMARIES');
     if (literal || array>=0) invalid('Texto PDF incompleto.','NE_FORMAT');
     if (/\b(?:anula[cç][aã]o|refor[cç]o|cancelamento)\b/i.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g,''))) {
       invalid('PDF contém indicação de ajuste. Use a conciliação de movimentações.','NE_MOVEMENT_REQUIRED');
@@ -249,7 +252,7 @@ export function manualNc(draft: Input, member: CreditMember): SagHtmlCreditDraft
     description:string(draft.description,'Descrição'),deadline:deadline(draft.deadline,issueDate),
     documentTotalCents,totalCents,sequences,warnings:[],requiresReview:true};
 }
-export function confirmNc(body: Input, member: CreditMember) {
+export function confirmNc(body: Input, member: CreditMember): CreateCreditInput {
   const draft=object(body.draft);
   const source=body.source;
   if(source!=='html'&&source!=='manual') invalid('Origem da NC inválida.');
@@ -269,9 +272,10 @@ export function confirmNc(body: Input, member: CreditMember) {
   if(parsed.sequences.some(s=>s.destination.some(c=>!c.pi))) invalid('Confirme os PIs de destino ausentes.','NC_PI_REQUIRED');
   const description=body.description===undefined?string(parsed.description,'Descrição'):string(body.description,'Descrição');
   const due=body.deadline===undefined?parsed.deadline:deadline(body.deadline,parsed.issueDate);
-  return {source,draft:{...parsed,description,deadline:due},allocations:allocations(body.allocations),deadline:due,description,expectedRevision:optionalRevision(body.expectedRevision)};
+  const {warnings: _warnings, requiresReview: _review, ...record}=parsed;
+  return {source,draft:{...record,description,deadline:due},allocations:allocations(body.allocations),deadline:due,description,expectedRevision:optionalRevision(body.expectedRevision)};
 }
-export function confirmNe(body: Input, member: CreditMember) {
+export function confirmNe(body: Input, member: CreditMember): CreateCommitmentInput {
   const draft=object(body.draft),parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
   const confirmed= draft.budget === undefined ? {} : object(draft.budget);
   function field(extracted: string|null, key: string, label: string, re: RegExp) {
@@ -291,7 +295,7 @@ export function confirmNe(body: Input, member: CreditMember) {
   return {
     draft:{number:parsed.number,ug:member.ug,issueDate:parsed.issueDate,description:string(parsed.description,'Descrição'),
       supplier:string(parsed.supplier,'Fornecedor'),supplierCnpj:pattern(parsed.supplierCnpj,'CNPJ',/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/),
-      netCents:parsed.netCents,nd,ptres,fonte,ugr,pi,notaCredito:parsed.notaCredito,tipoEmpenho:parsed.tipoEmpenho},
+      netCents:parsed.netCents,nd,ptres,fonte,ugr,pi},
     creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),
     cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),
     expectedCreditRevision:optionalRevision(body.expectedCreditRevision),
