@@ -8,7 +8,10 @@ export class CreditAccessError extends Error {
 export type CreditMember = {
   uid: string; email: string; ug: string; role: 'gestor' | 'centro'; centerId: string | null;
 };
-/** Module access is opt-in, server-only, and independent from existing workspace privileges. */
+/** Module access is free of charge: never consult billing or subscription status.
+ * Authorization is opt-in, server-only, independent of existing workspace privileges.
+ * The environment gate is technical, not commercial.
+ */
 export async function requireCreditMember(request: Request, managerOnly = false): Promise<CreditMember> {
   if (process.env.EMPROVEX_CREDIT_CONTROL_ENABLED !== '1') {
     throw new CreditAccessError(503, 'Controle de Crédito ainda não habilitado neste ambiente.');
