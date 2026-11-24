@@ -16,7 +16,7 @@ export type Commitment = {id:string;number:string;creditId:string;centerId:strin
 export type Balance = ReturnType<typeof calculateCreditBalance>;
 export type FinanceView = {
   member:Member; totals:{creditCents:number;committedCents:number;availableCents:number;creditCount:number;commitmentCount:number;noCommitmentsCount:number;unallocatedCents?:number};
-  credits:Credit[];commitments:Commitment[];centers:Center[];alerts:unknown;nextCursor?:string|null;
+  credits:(Credit & {balance:Balance})[];commitments:Commitment[];centers:Center[];alerts:unknown;nextCursor?:string|null;
 };
 export type Preview<T> = {result:T; draftToken?:string; token?:string; proof?:unknown};
 export type NcPreview = Preview<SagHtmlCreditDraft>;
