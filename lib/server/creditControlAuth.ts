@@ -24,7 +24,7 @@ export async function requireCreditMember(request: Request, managerOnly = false)
   const current = (await lookup.json()).users?.[0];
   if (!current || current.disabled === true || current.emailVerified !== true || current.localId !== identity.uid
     || String(current.email).toLowerCase() !== identity.email) throw new CreditAccessError(403,'Identidade não autorizada.');
-  const root = 'https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(firebaseConfig.projectId)+'/databases/'+encodeURIComponent(firebaseConfig.firestoreDatabaseId)+'/documents';
+  const root = 'https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(firebaseConfig.projectId)+'/databases/'+encodeURIComponent('emprovex-credito')+'/documents';
   const response = await fetch(root+'/creditControlMembers/'+encodeURIComponent(identity.uid), {
     headers:{authorization:'Bearer '+await getGoogleAccessToken()}, cache:'no-store',
   });
