@@ -1,25 +1,32 @@
 import type {Metadata} from 'next';
 import Script from 'next/script';
-import { Inter, JetBrains_Mono, Montserrat } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css'; // Global styles
 import './visual-mode-essential.css'; // Escopo exclusivo do modo Essencial
 import { VisualModeProvider } from '../components/visual-mode/VisualModeProvider';
 import { VisualModeSafetyBoundary } from '../components/visual-mode/VisualModeSafetyBoundary';
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: './fonts/inter.woff2',
   variable: '--font-sans',
+  weight: '100 900',
+  display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrainsmono.woff2',
   variable: '--font-mono',
+  weight: '100 800',
+  display: 'swap',
+  adjustFontFallback: false,
+  fallback: ['monospace'],
 });
 
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: ['600', '700', '800', '900'],
+const montserrat = localFont({
+  src: './fonts/montserrat.woff2',
   variable: '--font-montserrat',
+  weight: '600 900',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
