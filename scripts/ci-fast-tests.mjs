@@ -130,6 +130,10 @@ if (files.some((p) => /^(?:firestore(?:\.warehouse)?[.-].*\.rules|lib\/operation
 if (files.some((p) => /^(?:scripts\/firestore-recovery|ops\/firestore-recovery|scripts\/verify-backup-recovery)/.test(p))) {
   add('test:recovery');
 }
+// Controle de Crédito: domínio, parsers e transações REST sintéticas, sem produção.
+if(files.some(p=>/^(?:app\/(?:api\/)?controle-cr[eé]dito\/|features\/controle-credito\/|lib\/controle-credito\/|lib\/server\/creditControl|scripts\/controle-credito-)/.test(p))){
+  add('test:controle-credito');
+}
 const selected = [...tests].sort();
 console.log('[CI LEAN] Arquivos alterados:', plan.files.length, '| importadores:', plan.importers.length, '| Warehouse:', warehouseFiles.length);
 console.log('[CI LEAN] Domínios (fallback conservador):', plan.domains.join(', ') || '(somente documentação)');

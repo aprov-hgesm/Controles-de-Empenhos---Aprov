@@ -57,6 +57,7 @@ const AdminBillingPanel = lazy(() =>
 const AdminAccessRequestsPanel = lazy(() =>
   import('./AdminAccessRequestsPanel').then((module) => ({ default: module.AdminAccessRequestsPanel }))
 );
+const AdminCreditAccessPanel = lazy(() => import('./AdminCreditAccessPanel'));
 const AdminSessionsPanel = lazy(() =>
   import('./AdminSessionsPanel').then((module) => ({ default: module.AdminSessionsPanel }))
 );
@@ -98,7 +99,8 @@ type AdminTabId =
   | 'sessoes'
   | 'assinaturas'
   | 'backups'
-  | 'seguranca';
+  | 'seguranca'
+  | 'controle-credito';
 
 const ADMIN_TABS = [
   {
@@ -161,6 +163,12 @@ const ADMIN_TABS = [
     description: 'Isolamento multi-tenant, integridade e postura de segurança da plataforma.',
     icon: ShieldAlert,
   },
+  {
+    id: 'controle-credito',
+    label: 'Controle de Crédito',
+    description: 'Acessos gratuitos do gestor e dos centros de custos.',
+    icon: UserCog,
+  },
 ] satisfies Array<{
   id: AdminTabId;
   label: string;
@@ -169,12 +177,11 @@ const ADMIN_TABS = [
 }>;
 
 /**
- * Preserva as OITO abas originais e adiciona uma nona aba visual (Início). O contrato, os IDs,
- * as rotas e seus handlers permanecem iguais aos da main.
+ * Mantém as abas e handlers anteriores; Controle de Crédito acrescenta uma superfície isolada.
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
   { label: 'Central', tabs: ['inicio', 'overview'] },
-  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'interessados', 'assinaturas'] },
+  { label: 'Setores e clientes', tabs: ['setores', 'novo-setor', 'interessados', 'assinaturas', 'controle-credito'] },
   { label: 'Operação', tabs: ['consumo', 'sessoes', 'backups'] },
   { label: 'Governança', tabs: ['seguranca'] },
 ];
@@ -976,6 +983,10 @@ export function PlatformAdminView({
             onSetStatus={billing.setStatus}
             onSetCycleStatus={billing.setCycleStatus}
           />
+        )}
+
+        {activeTab === 'controle-credito' && (
+          <AdminCreditAccessPanel key={adminUser.uid} adminUser={adminUser} />
         )}
 
         {activeTab === 'interessados' && (
