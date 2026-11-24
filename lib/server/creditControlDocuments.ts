@@ -6,7 +6,7 @@ import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { getCredit, getCommitment } from './creditControlStore';
 import { parseSagCreditHtml } from '../controle-credito/sagCreditHtml.mjs';
 import { parseNe } from './creditControlImport';
-import { creditPdf, displayDate, money } from '../controle-credito/reports/creditPdf';
+import { creditPdf, creditPdfResponse, displayDate, money } from '../controle-credito/reports/creditPdf';
 
 type Kind = 'nc' | 'ne';
 type Fields = Record<string, {stringValue?: string; integerValue?: string; booleanValue?: boolean}>;
@@ -155,6 +155,9 @@ async function ensureFolder(m:CreditMember,token:string) {
   if(privateOwned(meta,folderId,folderProps(m)).mimeType!==folderMime)fail(409,'Pasta documental inválida.');
   return folderId;
 }
+export async function connectCreditStorage(m:CreditMember,request:Request){
+  const token=await checkedToken(m,request);await ensureFolder(m,token);
+}
 const mime=(kind:Kind)=>kind==='nc'?'text/html':'application/pdf';
 const maxSize=(kind:Kind)=>kind==='nc'?1_000_000:10*1024*1024;
 function safeFilename(name:string,kind:Kind) {
@@ -292,8 +295,17 @@ export async function downloadDocument(m:CreditMember,request:Request,id:string)
   if(d.id!==id||d.status!=='ready'||d.ownerEmail!==m.email)fail(404,'Documento não disponível para esta conta.');
   const token=await checkedToken(m,request);
   const bytes=await verifyFile(m,token,d);
+  if(d.entityType==='nc'&&new URL(request.url).searchParams.get('format')==='pdf'){
+    // Parse the verified original, never execute HTML or make remote requests for its assets.
+    const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),m.ug);
+    const lines=[{label:'Nota de crédito',value:parsed.fullNumber},{label:'UG emitente',value:parsed.issuingUg},{label:'UG favorecida',value:parsed.beneficiaryUg},{label:'Emissão',value:displayDate(parsed.issueDate)},{label:'Prazo original',value:displayDate(parsed.deadline)},{label:'Operação',value:parsed.operation},{label:'Descentralização',value:parsed.decentralization},{label:'Sistema de origem',value:parsed.sourceSystem},{label:'Total do documento',value:money(parsed.documentTotalCents)},{label:'Total favorecido',value:money(parsed.totalCents)}];
+    for(let i=0;i<parsed.description.length;i+=800)lines.push({label:'Finalidade',value:parsed.description.slice(i,i+800)});
+    for(const seq of parsed.sequences){lines.push({label:'Sequencial '+seq.sequence,value:money(seq.totalCents)});for(const [label,rows] of [['Origem',seq.origin],['Destino',seq.destination]] as const){for(const cell of rows)lines.push({label,value:'UG '+cell.ug+' | Item '+cell.item+' | Num '+cell.num+' | Esfera '+cell.esfera+' | PTRES '+cell.ptres+' | Fonte '+cell.fonte+' | ND '+cell.nd+' | UGR '+cell.ugr+' | PI '+cell.pi+' | '+money(cell.cents)});}}
+    lines.push({label:'Integridade',value:'SHA-256 do HTML: '+d.sha256},{label:'Natureza',value:'PDF textual reconstruído do HTML original; não é reprodução oficial do layout SAG.'});
+    return creditPdfResponse(creditPdf(m,'Nota de Crédito — conversão textual do SAG',lines),safeFilename(d.filename,'nc').replace(/\\.html$/i,'.pdf'));
+  }
   return new Response(new Uint8Array(bytes),{headers:{...headers,
-    'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="'+safeFilename(d.filename,d.entityType)+'"',
+    'Content-Type':d.entityType==='ne'?'application/pdf':'application/octet-stream','Content-Disposition':'attachment; filename="'+safeFilename(d.filename,d.entityType)+'"',
     'Content-Security-Policy':"default-src 'none'; sandbox",
   }});
 }

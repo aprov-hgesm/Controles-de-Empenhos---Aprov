@@ -2,11 +2,11 @@
 
 import { useState, type FormEvent } from 'react';
 import { sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { creditAuth as auth, creditGoogleProvider as googleProvider } from './creditFirebase';
 import type { CreditSession } from './useCreditSession';
 
 const input='mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900';
-const action='w-full rounded-lg bg-[#16334d] px-4 py-2 font-semibold text-white disabled:opacity-50';
+const action='w-full rounded-lg bg-blue-700 hover:bg-blue-800 px-4 py-2 font-semibold text-white disabled:opacity-50';
 function loginError(e:unknown){
   const code=typeof e==='object'&&e!==null&&'code' in e?String(e.code):'';
   if(code==='auth/too-many-requests')return 'Muitas tentativas. Tente novamente mais tarde.';
@@ -44,8 +44,8 @@ export function CreditLogin({session}:{session:CreditSession}){
       setMessage('Se a conta permitir recuperação, você receberá as instruções no e-mail informado.');
     });
   }
-  return <section className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm">
-    <h2 className="text-xl font-bold">Acesso ao Controle de Crédito</h2>
+  return <section className="mx-auto w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl sm:p-8">
+    <h2 className="font-montserrat text-xl font-extrabold">Acesso ao Controle de Crédito</h2>
     <p className="mt-2 text-sm text-slate-600">Exclusivo para gestores e centros de custos autorizados. Acesso gratuito.</p>
     {(error||session.error)&&<p className="mt-3 text-red-700" role="alert">{error||session.error}</p>}
     {message&&<p className="mt-3 text-sm text-emerald-800" role="status">{message}</p>}
@@ -53,7 +53,7 @@ export function CreditLogin({session}:{session:CreditSession}){
       <p className="mt-4 break-words text-sm">Conta conectada: {session.user.email}</p>
       <button type="button" disabled={busy} className={action+' mt-4'} onClick={()=>session.retry()}>Verificar acesso novamente</button>
       <button type="button" disabled={busy} className="mt-3 w-full rounded-lg border p-2" onClick={()=>void execute(session.signOut)}>Sair da conta</button>
-      <p className="mt-2 text-xs text-slate-600">A sessão é compartilhada com os demais módulos do EMPROVEX. Sair encerra essa sessão também.</p>
+      <p className="mt-2 text-xs text-slate-600">Esta sessão é independente dos demais módulos e das outras abas.</p>
       <p className="mt-2 text-sm text-slate-600">Se necessário, solicite a autorização ao gestor da sua UG.</p>
     </>:<>
       <form className="mt-5 space-y-3" onSubmit={login}>

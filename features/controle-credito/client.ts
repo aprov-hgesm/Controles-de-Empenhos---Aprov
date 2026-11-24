@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { creditAuth as auth } from '@/features/controle-credito/auth/creditFirebase';
 import type { SagHtmlCreditDraft, SagHtmlCreditSequence } from '@/lib/controle-credito/sagCreditHtml.mjs';
 import type { SagCreditCell } from '@/lib/controle-credito/sagCreditText';
 import type { ParsedEmpenhoPdfResult } from '@/lib/server/empenhoPdfParser';
