@@ -104,12 +104,6 @@ type AdminTabId =
 
 const ADMIN_TABS = [
   {
-    id: 'controle-credito',
-    label: 'Controle de Crédito',
-    description: 'Acessos gratuitos do gestor e dos centros de custos.',
-    icon: UserCog,
-  },
-  {
     id: 'inicio',
     label: 'Início',
     description: 'Bairro digital 3D com presença por conta e reservatório visual do Firestore.',
@@ -169,6 +163,12 @@ const ADMIN_TABS = [
     description: 'Isolamento multi-tenant, integridade e postura de segurança da plataforma.',
     icon: ShieldAlert,
   },
+  {
+    id: 'controle-credito',
+    label: 'Controle de Crédito',
+    description: 'Acessos gratuitos do gestor e dos centros de custos.',
+    icon: UserCog,
+  },
 ] satisfies Array<{
   id: AdminTabId;
   label: string;
@@ -177,8 +177,7 @@ const ADMIN_TABS = [
 }>;
 
 /**
- * Preserva as OITO abas originais e adiciona uma nona aba visual (Início). O contrato, os IDs,
- * as rotas e seus handlers permanecem iguais aos da main.
+ * Mantém as abas e handlers anteriores; Controle de Crédito acrescenta uma superfície isolada.
  */
 const ADMIN_TAB_GROUPS: Array<{ label: string; tabs: AdminTabId[] }> = [
   { label: 'Central', tabs: ['inicio', 'overview'] },
