@@ -107,7 +107,7 @@ export function NeForm({user,run,busy,done,credits,centers}:{credits:(Credit & {
   const selectedCell=selected&&cells(selected.credit).find(c=>c.cellId===cellId);
   const centerBalance=selected?.balance.centers.find(c=>c.centerId===centerId);
   const amount=draft?Math.round(draft.valorTotal*100):0;
-  const deficit=!!selected&&!!centerId&&(amount>selected.balance.availableCents||amount>(centerBalance?.availableCents??0));
+  const deficit=!!selected&&!!centerId&&(amount>selected.balance.availableCents||amount>(centerBalance?.availableCents??0)||(selectedCell?.availableCents!==undefined&&amount>selectedCell.availableCents));
   const fields=[['naturezaDespesa','nd','ND'],['planoInterno','pi','PI'],['ptres','ptres','PTRES'],['fonteRecurso','fonte','Fonte'],['ugr','ugr','UGR']] as const;
   const mismatches=draft&&selectedCell?fields.filter(([a,b])=>!draft[a]||draft[a]!==selectedCell[b]):[];
   async function load(file:File){setPreview(null);setDraft(null);setReview(false);setAck(false);await run(async signal=>{const p=await importDocument<ParsedEmpenhoPdfResult>(user,'ne',file,signal);setPreview(p);setOriginalFile(file);setDraft(p.result);});}
@@ -120,7 +120,7 @@ export function NeForm({user,run,busy,done,credits,centers}:{credits:(Credit & {
   <Field label="Célula orçamentária"><select className={input} required value={cellId} onChange={e=>{setCellId(e.target.value);setReview(false);}}><option value="">Selecione</option>{selected&&cells(selected.credit).map(c=><option key={c.cellId} value={c.cellId}>{c.nd} · {c.pi} · {c.ptres} · {money(c.cents)}</option>)}</select></Field>
   <div className="grid gap-2 sm:grid-cols-3">{fields.map(([k,b,label])=><Field key={k} label={label+' da NE'}><input className={input} required value={draft[k]||''} readOnly={(k==='planoInterno'?/^[A-Z0-9]{1,20}$/:k==='fonteRecurso'?/^[0-9]{10}$/:/^[0-9]{6}$/).test(preview?.result[k]||'')} onChange={e=>{setDraft({...draft,[k]:e.target.value});setReview(false);}}/>{selectedCell&&<span className="text-xs text-slate-500">NC: {selectedCell[b]||'Não informado'}</span>}</Field>)}</div>
   {mismatches.length>0&&<Notice>Confira divergências ou campos ausentes: {mismatches.map(x=>x[2]).join(', ')}. A validação final é feita pelo servidor.</Notice>}
-  {selected&&<p>Saldo global: {money(selected.balance.availableCents)} · Saldo do centro: {money(centerBalance?.availableCents??0)}</p>}
+  {selected&&<p>Saldo global: {money(selected.balance.availableCents)} · Saldo do centro: {money(centerBalance?.availableCents??0)}{selectedCell?.availableCents!==undefined?' · Saldo da célula: '+money(selectedCell.availableCents):''}</p>}
   {deficit&&<label className="flex gap-2"><input type="checkbox" checked={ack} required onChange={e=>setAck(e.target.checked)}/> A NE já foi emitida e exige registro com conciliação explícita do déficit; não é planejamento de novo gasto.</label>}
   <label className="flex gap-2"><input type="checkbox" checked={review} required onChange={e=>setReview(e.target.checked)}/> Conferi o documento, o centro, a NC e a célula.</label><button className={button} disabled={busy||!selectedCell||!review||deficit&&!ack}>Registrar empenho</button></fieldset></form>}</section>;
 }

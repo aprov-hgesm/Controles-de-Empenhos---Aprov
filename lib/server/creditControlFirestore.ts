@@ -17,7 +17,7 @@ export type CreditDocument<T = Record<string, unknown>> = { path: string; data: 
 export type CreditCollection = 'credits'|'commitments'|'centers'|'movements'|'audit'|'documents';
 const docPattern = /^creditUnits\/\d{6}\/(?:credits|commitments|centers|movements|audit|documents|settings)\/[A-Za-z0-9_-]{1,180}$/;
 function name(path: string) {
-  if (!docPattern.test(path)) throw new CreditStoreError(422, 'CREDIT_INVALID_PATH', 'Identificador financeiro inválido.');
+  if (!docPattern.test(path) && !/^creditControlMembers\/[A-Za-z0-9_-]{1,128}$/.test(path)) throw new CreditStoreError(422, 'CREDIT_INVALID_PATH', 'Identificador financeiro inválido.');
   return prefix + '/' + path;
 }
 function encode(value: unknown): Wire {

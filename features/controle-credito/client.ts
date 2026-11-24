@@ -7,9 +7,9 @@ import type { CreditAllocation, calculateCreditBalance } from '@/lib/controle-cr
 
 export type Member = { uid:string; email:string; ug:string; role:'gestor'|'centro'; centerId:string|null; active?:boolean };
 export type Center = { id:string; name:string; active:boolean };
-export type Cell = SagCreditCell & {cellId?:string};
-export type Credit = Omit<SagHtmlCreditDraft,'warnings'|'requiresReview'|'sequences'> & {
-  id:string; revision:number; createdAt:string; updatedAt:string; allocations:CreditAllocation[];
+export type Cell = SagCreditCell & {cellId?:string; availableCents?:number; committedCents?:number};
+export type Credit = Omit<SagHtmlCreditDraft,'warnings'|'requiresReview'|'sequences'|'documentTotalCents'> & {
+  id:string; revision:number; createdAt:string; updatedAt:string; allocations:CreditAllocation[]; documentTotalCents:number|null; cells?:Cell[];
   sequences:(Omit<SagHtmlCreditSequence,'destination'> & {destination:Cell[]})[];
 };
 export type Commitment = {id:string;number:string;creditId:string;centerId:string;cellId:string;ug:string;issueDate:string;description:string;supplier:string;supplierCnpj:string;netCents:number;revision:number};
@@ -76,4 +76,4 @@ export function localDate(value:string|null|undefined){return value?(/^\d{4}-\d{
 export function isoDate(value:string){return /^\d{2}\/\d{2}\/\d{4}$/.test(value)?value.split('/').reverse().join('-'):value;}
 export const currentYear=()=>new Intl.DateTimeFormat('pt-BR',{year:'numeric',timeZone:'America/Sao_Paulo'}).format(new Date());
 export function cents(value:string){if(!/^\d+(?:[.,]\d{1,2})?$/.test(value.trim()))throw new Error('Informe um valor válido, com até duas casas decimais.');const [whole,fraction='']=value.trim().replace(',','.').split('.');const n=Number(whole)*100+Number(fraction.padEnd(2,'0'));if(!Number.isSafeInteger(n)||n<=0)throw new Error('O valor deve ser positivo.');return n;}
-export function cells(credit:Pick<Credit,'sequences'>){return credit.sequences.flatMap(s=>s.destination.map((cell,index)=>({...cell,cellId:cell.cellId??s.sequence+':'+index})));}
+export function cells(credit:Pick<Credit,'sequences'|'cells'>){if(credit.cells)return credit.cells;return credit.sequences.flatMap(s=>s.destination.map((cell,index)=>({...cell,cellId:cell.cellId??s.sequence+':'+index})));}

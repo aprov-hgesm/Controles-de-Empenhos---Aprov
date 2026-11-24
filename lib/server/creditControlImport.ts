@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { inflateSync } from 'node:zlib';
 import { CreditAccessError, type CreditMember } from './creditControlAuth';
 import { FounderAuthError } from './firebaseFounderAuth';
+import { CreditStoreError } from './creditControlFirestore';
 import { parseSagCreditHtml } from '@/lib/controle-credito/sagCreditHtml.mjs';
 import { parseEmpenhoPdfBytes } from './empenhoPdfParser';
 import type { CreateCreditInput, CreateCommitmentInput } from '@/lib/controle-credito/contracts';
@@ -17,7 +18,7 @@ export function response(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
 }
 export function failure(error: unknown) {
-  if (error instanceof CreditImportError) return response({ error: error.message, code: error.code }, error.status);
+  if (error instanceof CreditImportError || error instanceof CreditStoreError) return response({ error: error.message, code: error.code }, error.status);
   if (error instanceof CreditAccessError || error instanceof FounderAuthError) {
     return response({ error: error.message, code: error.status === 401 ? 'AUTH_REQUIRED' : error.status === 403 ? 'ACCESS_DENIED' : 'ACCESS_UNAVAILABLE' }, error.status);
   }

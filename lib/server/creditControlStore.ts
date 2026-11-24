@@ -67,6 +67,11 @@ function own(member:CreditMember,manager=false) {
       (member.role==='centro'&&!/^[A-Za-z0-9_-]{1,64}$/.test(member.centerId??''))||
       (member.role==='gestor'&&member.centerId!==null)||(manager&&member.role!=='gestor')) return forbidden();
 }
+async function verifyWriter(tx:CreditTransaction,member:CreditMember) {
+  const actor=(await tx.get<CreditMember & {active:boolean}>('creditControlMembers/'+member.uid))?.data;
+  if(!actor||actor.active!==true||actor.uid!==member.uid||actor.email!==member.email||
+     actor.ug!==member.ug||actor.role!=='gestor'||actor.centerId!==null) return forbidden();
+}
 const path=(member:CreditMember,collection:string,key:string)=>'creditUnits/'+member.ug+'/'+collection+'/'+key;
 const now=()=>new Date().toISOString();
 const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -257,6 +262,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     documentTotalCents,totalCents,sequences:seqs,allocations:shares};
   const originalFingerprint=fingerprint({source,...fields});
   return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
     const key=path(member,'credits',fields.id);
     const existing=await tx.get<StoredCredit>(key);
     if(existing){
@@ -280,6 +286,7 @@ export async function updateCredit(member:CreditMember,input:unknown):Promise<Cr
   if(data.allocations===undefined&&data.description===undefined&&data.deadline===undefined)
     return invalid('Nenhuma alteração informada.');
   return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
     const record=await getStoredCredit(tx,member,key);
     revision(data.expectedRevision,record.revision);
     const nes=await linked(tx,member,key),before=detail(member,record,nes);
@@ -325,6 +332,7 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
   own(member,true);
   const {data,fields,codes,year,originalFingerprint}=commitmentInput(member,input);
   return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
     const key=path(member,'commitments',fields.id),existing=await tx.get<StoredCommitment>(key);
     if(existing){
       const ne=readCommitment(member,existing.data,fields.id);
@@ -373,6 +381,7 @@ export async function registerMovement(member:CreditMember,input:unknown):Promis
   const expectedRevision=integer(data.expectedRevision,'Revisão',1);
   const movementId='mov_'+fingerprint([entityType,entityId,normalized(reference).replace(/\s+/g,' ')]);
   return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
     const key=path(member,'movements',movementId),previous=await tx.get<MovementRecord>(key);
     const ne=entityType==='ne'?await getStoredCommitment(tx,member,entityId):undefined;
     const record=await getStoredCredit(tx,member,ne?.creditId??entityId);
