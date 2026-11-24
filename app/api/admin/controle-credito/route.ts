@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import firebaseConfig from '@/firebase-applet-config.json';
 import { verifyFirebaseRequest } from '@/lib/server/firebaseFounderAuth';
-import { verifyFounderSession, getGoogleAccessToken } from '@/lib/server/sectorProvisioningAdmin';
+import { getGoogleAccessToken } from '@/lib/server/sectorProvisioningAdmin';
 import { HGESM_SECTOR_EMAIL } from '@/lib/hgesmWorkspace';
 import { isFounderSignInProvider } from '@/lib/platformIdentity';
 import { CreditAccessError, creditAuthFailure, creditAdminFetch, creditDocuments, readCreditAuthDocument, validCreditUid, stringField, type CreditFields, type CreditAuthDocument } from '@/lib/server/creditControlAuth';
@@ -30,7 +30,6 @@ async function authRequest(token:string,method:string,body:Record<string,unknown
 async function authorize(request:Request){
   const identity=await verifyFirebaseRequest(request.headers.get('authorization'));
   if(identity.email!==HGESM_SECTOR_EMAIL||!isFounderSignInProvider(identity.signInProvider))throw new CreditAccessError(403,'Acesso exclusivo da administração do EMPROVEX.');
-  try{await verifyFounderSession(identity.idToken);}catch{throw new CreditAccessError(403,'Sessão administrativa inválida. Entre novamente.');}
   const token=await getGoogleAccessToken();
   const data=await authRequest(token,'accounts:lookup',{localId:[identity.uid]});
   const current=(data.users as Identity[]|undefined)?.find(u=>u.localId===identity.uid);
@@ -77,17 +76,20 @@ export async function POST(request:Request){
     const password=typeof body.password==='string'?body.password:'';
     const role=body.role;
     const centerId=typeof body.centerId==='string'?body.centerId:'';
-    if(email.length>254||!/^\S+@\S+\.\S+$/.test(email)||(role!=='gestor'&&role!=='centro')||(role==='gestor'&&centerId)||(role==='centro'&&!Object.hasOwn(centers,centerId)))throw new CreditAccessError(422,'Informe e-mail e perfil válidos.');
+    if(email.length>254||!/^\S+@\S+\.\S+$/.test(email)||(role!=='gestor'&&role!=='centro')||(role==='gestor'&&centerId)||(role==='centro'&&!Object.prototype.hasOwnProperty.call(centers,centerId)))throw new CreditAccessError(422,'Informe e-mail e perfil válidos.');
     if(password&&(password.length<12||password.length>128||body.confirmInstitutionalEmail!==true))throw new CreditAccessError(422,'Use senha de 12 a 128 caracteres e confirme a titularidade institucional do e-mail.');
     const found=await authRequest(token,'accounts:lookup',{email:[email]});
     let target=(found.users as Identity[]|undefined)?.[0];
     if(target&&password)throw new CreditAccessError(409,'A conta já existe. Para preservar a senha dos outros módulos, vincule-a sem preencher a senha.');
     if(!target){
       if(!password)throw new CreditAccessError(422,'Conta não localizada. Informe a senha inicial para criar um novo acesso.');
-      target=await authRequest(token,'accounts',{email,password,emailVerified:true,disabled:false}) as Identity;
+      const created=await authRequest(token,'accounts',{email,password,emailVerified:true,disabled:false}) as Identity;
+      if(!validCreditUid(created.localId))throw new CreditAccessError(503,'Conta criada sem confirmação de identidade. Tente vincular o e-mail sem senha.');
+      const confirmed=await authRequest(token,'accounts:lookup',{localId:[created.localId]});
+      target=(confirmed.users as Identity[]|undefined)?.find(u=>u.localId===created.localId);
     }
     const uid=target?.localId;
-    if(!validCreditUid(uid)||target.disabled===true||target.emailVerified!==true||target.email?.toLowerCase()!==email)throw new CreditAccessError(422,'Conta Firebase precisa estar ativa e com e-mail verificado.');
+    if(!target||!validCreditUid(uid)||target.disabled===true||target.emailVerified!==true||target.email?.toLowerCase()!==email)throw new CreditAccessError(422,'Conta Firebase precisa estar ativa e com e-mail verificado.');
     const path='creditControlMembers/'+uid;
     const old=await readCreditAuthDocument(path,token);
     if(old&&(stringField(old,'uid')!==uid||stringField(old,'ug')!==ug||stringField(old,'role')!==role||(role==='centro'&&stringField(old,'centerId')!==centerId)))throw new CreditAccessError(409,'Este usuário já possui outro vínculo. Não é permitido alterar automaticamente sua UG ou perfil.');
