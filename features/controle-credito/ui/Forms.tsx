@@ -94,16 +94,16 @@ export function EditNc({user,run,busy,done,credit,balance,centers}:{credit:Credi
   async function save(e:FormEvent){e.preventDefault();if(!preview||deficit&&!ack)return;await run(async signal=>{await api(user,'/notas-credito',signal,json('PATCH',{id:credit.id,expectedRevision:credit.revision,allocations,deadline:deadline||null,description,acknowledgeDeficit:ack}));done();});}
   return <form className={panel+' space-y-4'} onSubmit={save}><h2 className="font-bold text-xl">Editar {credit.number}</h2><fieldset disabled={busy} className="space-y-4"><Field label="Prazo"><input className={input} type="date" value={deadline} onChange={e=>setDeadline(e.target.value)}/></Field><Field label="Observações"><textarea className={input} value={description} onChange={e=>setDescription(e.target.value)}/></Field><Rateio centers={centers} total={credit.totalCents} initial={credit.allocations} commitments={commitments} onChange={(a,b)=>{setAllocations(a);setPreview(b);setAck(false);}}/>{deficit&&<label className="flex gap-2"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} required/>Confirmo a conciliação do déficit decorrente do rateio.</label>}<button className={button} disabled={busy||!preview||deficit&&!ack}>Salvar alterações</button></fieldset></form>;
 }
-export function NeForm({user,run,busy,done,credits,centers}:{credits:Credit[];centers:Center[]}&Common){
+export function NeForm({user,run,busy,done,credits,centers}:{credits:(Credit & {balance:Balance})[];centers:Center[]}&Common){
   const [preview,setPreview]=useState<NePreview|null>(null);const [originalFile,setOriginalFile]=useState<File|null>(null);
   const [draft,setDraft]=useState<ParsedEmpenhoPdfResult|null>(null);
   const [creditId,setCreditId]=useState('');
   const [centerId,setCenterId]=useState('');
   const [cellId,setCellId]=useState('');
-  const [detail,setDetail]=useState<{credit:Credit;balance:Balance}|null>(null);
+  
   const [review,setReview]=useState(false);
   const [ack,setAck]=useState(false);
-  const selected=detail?.credit.id===creditId?detail:null;
+  const matching=credits.find(c=>c.id===creditId);const selected=matching?{credit:matching,balance:matching.balance}:null;
   const selectedCell=selected&&cells(selected.credit).find(c=>c.cellId===cellId);
   const centerBalance=selected?.balance.centers.find(c=>c.centerId===centerId);
   const amount=draft?Math.round(draft.valorTotal*100):0;
@@ -111,11 +111,11 @@ export function NeForm({user,run,busy,done,credits,centers}:{credits:Credit[];ce
   const fields=[['naturezaDespesa','nd','ND'],['planoInterno','pi','PI'],['ptres','ptres','PTRES'],['fonteRecurso','fonte','Fonte'],['ugr','ugr','UGR']] as const;
   const mismatches=draft&&selectedCell?fields.filter(([a,b])=>!draft[a]||draft[a]!==selectedCell[b]):[];
   async function load(file:File){setPreview(null);setDraft(null);setReview(false);setAck(false);await run(async signal=>{const p=await importDocument<ParsedEmpenhoPdfResult>(user,'ne',file,signal);setPreview(p);setOriginalFile(file);setDraft(p.result);});}
-  async function selectCredit(id:string){setCreditId(id);setCellId('');setDetail(null);setReview(false);setAck(false);if(id)await run(async signal=>{setDetail(await api(user,'/notas-credito?id='+encodeURIComponent(id),signal));});}
+  function selectCredit(id:string){setCreditId(id);setCellId('');setReview(false);setAck(false);}
   async function save(e:FormEvent){e.preventDefault();if(!draft||!originalFile||!selected||!selectedCell||!centerId||!review||deficit&&!ack)return;await run(async signal=>{await api(user,'/notas-empenho',signal,json('POST',{draft:{fileBase64:await fileBase64(originalFile!,signal),budget:{nd:draft.naturezaDespesa,pi:draft.planoInterno,ptres:draft.ptres,fonte:draft.fonteRecurso,ugr:draft.ugr}},creditId,centerId,cellId,acknowledgeDeficit:ack,expectedCreditRevision:selected.credit.revision}));done();});}
   return <section className={panel+' space-y-4'}><h2 className="text-xl font-bold">Registrar nota de empenho</h2><Field label="PDF da NE"><input className={input} type="file" accept=".pdf,application/pdf" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void load(f);e.target.value='';}}/></Field>
-  {draft&&<form onSubmit={save} className="space-y-4"><fieldset disabled={busy} className="space-y-4"><p className="font-bold">{draft.id} · {money(amount)}</p><p>{draft.supplier} · {draft.supplierCnpj} · {localDate(draft.date)}</p><p className="whitespace-pre-wrap">{draft.description}</p><p>NC sugerida pelo PDF: {draft.notaCredito||'Não identificada'}. Selecione e confira o vínculo.</p>{draft.warnings.map((w,i)=><Notice key={i}>{w}</Notice>)}
-  <Field label="Nota de crédito"><select className={input} required value={creditId} onChange={e=>void selectCredit(e.target.value)}><option value="">Selecione</option>{credits.map(c=><option key={c.id} value={c.id}>{c.number} — {money(c.totalCents)}</option>)}</select></Field>
+  {draft&&<form onSubmit={save} className="space-y-4"><fieldset disabled={busy} className="space-y-4"><p className="font-bold">{draft.id} · {money(amount)}</p><p>{draft.supplier} · {draft.supplierCnpj} · {localDate(draft.date)}</p><p className="whitespace-pre-wrap">{draft.description}</p><p>NC sugerida pelo PDF: {draft.notaCredito||'Não identificada'}. Selecione e confira o vínculo. Se a NC estiver em outra página, retorne à lista e navegue até ela antes de iniciar o registro.</p>{draft.warnings.map((w,i)=><Notice key={i}>{w}</Notice>)}
+  <Field label="Nota de crédito (página atual)"><select className={input} required value={creditId} onChange={e=>void selectCredit(e.target.value)}><option value="">Selecione</option>{credits.map(c=><option key={c.id} value={c.id}>{c.number} — {money(c.totalCents)}</option>)}</select></Field>
   <Field label="Centro de custos"><select className={input} required value={centerId} onChange={e=>{setCenterId(e.target.value);setReview(false);setAck(false);}}><option value="">Selecione</option>{centers.filter(c=>c.active).map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></Field>
   <Field label="Célula orçamentária"><select className={input} required value={cellId} onChange={e=>{setCellId(e.target.value);setReview(false);}}><option value="">Selecione</option>{selected&&cells(selected.credit).map(c=><option key={c.cellId} value={c.cellId}>{c.nd} · {c.pi} · {c.ptres} · {money(c.cents)}</option>)}</select></Field>
   <div className="grid gap-2 sm:grid-cols-3">{fields.map(([k,b,label])=><Field key={k} label={label+' da NE'}><input className={input} required value={draft[k]||''} readOnly={k==='planoInterno'?/^[A-Z0-9]{1,20}$/.test(preview?.result[k]||''):new RegExp(k==='fonteRecurso'?'^[0-9]{10} onChange={e=>{setDraft({...draft,[k]:e.target.value});setReview(false);}}/>{selectedCell&&<span className="text-xs text-slate-500">NC: {selectedCell[b]||'Não informado'}</span>}</Field>)}</div>
