@@ -8,6 +8,7 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "test:controle-credito": "node --test scripts/controle-credito-*.test.mjs",
+    "test:controle-credito:emulator": "npx --yes firebase-tools emulators:exec --config firebase.credit-test.json --project demo-credit-r1 --only auth,firestore \"node --test scripts/controle-credito-emulator.mjs\"",
     "test:warehouse-react-tab-navigation": "node --test scripts/warehouse-react-tab-navigation.test.mjs",
     "test:mobile-server-barcode-read": "node --test scripts/mobile-server-barcode-read.test.mjs",
     "test:warehouse-stock-report-ux": "node --test scripts/warehouse-stock-report-ux.test.mjs",

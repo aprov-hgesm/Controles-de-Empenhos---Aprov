@@ -189,6 +189,11 @@ jobs:
         run: npm run test:central-depositos-external-security
       - name: "Testar regras Warehouse apenas no servidor"
         run: npm run test:warehouse-server-only-rules
+      - name: "Controle de Crédito — banco exclusivo emulado"
+        if: github.event_name == 'workflow_dispatch' || github.head_ref == 'feat/controle-credito-r1'
+        env:
+          GOOGLE_CLOUD_PROJECT: demo-credit-r1
+        run: npm run test:controle-credito:emulator
 
   authenticated-browser-e2e:
     name: "Browser E2E — login real no Firebase Emulator e tarefas operacionais"
