@@ -45,7 +45,11 @@ export function decodeCreditMember(doc:CreditAuthDocument|null,uid:string):Credi
 }
 /** No billing, subscription, workspace or founder gate. Membership is read afresh. */
 export async function requireCreditMember(request:Request,managerOnly=false):Promise<CreditMember>{
-  if(process.env.EMPROVEX_CREDIT_CONTROL_ENABLED!=='1')
+  // Production rollout is explicit for the existing Cloud Run service; 0 remains a kill switch.
+  // All non-production services remain disabled unless explicitly opted in.
+  const gate=process.env.EMPROVEX_CREDIT_CONTROL_ENABLED;
+  const enabled=gate==='1'||(gate===undefined&&process.env.NODE_ENV==='production'&&process.env.K_SERVICE==='emprovex-cloudrun-candidate');
+  if(!enabled)
     throw new CreditAccessError(503,'Controle de Crédito ainda não habilitado neste ambiente.');
   const identity=await verifyFirebaseRequest(request.headers.get('authorization'));
   if(!validCreditUid(identity.uid)||!['password','google.com'].includes(identity.signInProvider))
