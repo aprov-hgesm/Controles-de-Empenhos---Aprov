@@ -77,7 +77,7 @@ export async function POST(request:Request){
     const role=body.role;
     const centerId=typeof body.centerId==='string'?body.centerId:'';
     if(email.length>254||!/^\S+@\S+\.\S+$/.test(email)||(role!=='gestor'&&role!=='centro')||(role==='gestor'&&centerId)||(role==='centro'&&!Object.prototype.hasOwnProperty.call(centers,centerId)))throw new CreditAccessError(422,'Informe e-mail e perfil válidos.');
-    if(password&&(password.length<12||password.length>128||body.confirmInstitutionalEmail!==true))throw new CreditAccessError(422,'Use senha de 12 a 128 caracteres e confirme a titularidade institucional do e-mail.');
+    if(password&&(password.length<8||password.length>128||body.confirmInstitutionalEmail!==true))throw new CreditAccessError(422,'Use senha de 8 a 128 caracteres e confirme a titularidade institucional do e-mail.');
     const found=await authRequest(token,'accounts:lookup',{email:[email]});
     let target=(found.users as Identity[]|undefined)?.[0];
     if(target&&password)throw new CreditAccessError(409,'A conta já existe. Para preservar a senha dos outros módulos, vincule-a sem preencher a senha.');

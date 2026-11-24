@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { onIdTokenChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { creditAuth as auth } from '@/features/controle-credito/auth/creditFirebase';
 import type { CreditMember } from '@/lib/server/creditControlAuth';
 
 export function useCreditSession(){
