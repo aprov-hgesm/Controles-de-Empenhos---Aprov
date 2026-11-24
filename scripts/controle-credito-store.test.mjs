@@ -1,0 +1,146 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import ts from 'typescript';
+
+// Synthetic REST transport only: executes the actual adapter/store, without IAM,
+// production credentials, external requests, or claiming an emulator/GCP test.
+const read = path => readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const moduleUrl = source => 'data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{
+  compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
+}).outputText).toString('base64');
+const balanceUrl=moduleUrl(read('lib/controle-credito/creditBalance.ts'));
+const firestoreUrl=moduleUrl(read('lib/server/creditControlFirestore.ts')
+  .replace("import firebaseConfig from '../../firebase-applet-config.json';","const firebaseConfig={projectId:'demo-credit-r1'};")
+  .replace("import { getGoogleAccessToken } from './sectorProvisioningAdmin';","const getGoogleAccessToken=async()=> 'synthetic-test-token';"));
+const store=await import(moduleUrl(read('lib/server/creditControlStore.ts')
+  .replace("'./creditControlFirestore'",JSON.stringify(firestoreUrl))
+  .replace("'../controle-credito/creditBalance'",JSON.stringify(balanceUrl))));
+const {encodeFields}=await import(firestoreUrl);
+const prefix='projects/demo-credit-r1/databases/emprovex-credito/documents';
+const root='https://firestore.googleapis.com/v1/'+prefix;
+const manager={uid:'test-manager',email:'manager@example.invalid',ug:'999999',role:'gestor',centerId:null};
+const centerA={uid:'test-center-a',email:'a@example.invalid',ug:'999999',role:'centro',centerId:'A'};
+const other={...manager,uid:'other-manager',ug:'999998'};
+const base='creditUnits/'+manager.ug+'/';
+function transport(){
+  const docs=new Map(), snapshots=new Map(), calls=[];
+  let version=0, sequence=0, abortOnce=false;
+  const seed=(path,data)=>docs.set(prefix+'/'+path,{name:prefix+'/'+path,fields:encodeFields(data),updateTime:'v'+(++version)});
+  seed('creditControlMembers/'+manager.uid,{...manager,active:true});
+  seed(base+'centers/A',{id:'A',name:'Centro A',active:true});
+  seed(base+'centers/B',{id:'B',name:'Centro B',active:true});
+  const fetch=async(url,init)=>{
+    assert.equal(typeof url,'string');
+    assert.ok(url.startsWith(root),'external requests are forbidden');
+    assert.equal(init.method,'POST');
+    assert.equal(init.headers.authorization,'Bearer synthetic-test-token');
+    const op=url.slice(root.length), body=JSON.parse(init.body);
+    calls.push({op,body});
+    if(op===':beginTransaction'){
+      const id='tx'+(++sequence);
+      snapshots.set(id,{docs:structuredClone(docs),readOnly:!!body.options.readOnly});
+      return Response.json({transaction:id});
+    }
+    const snapshot=snapshots.get(body.transaction);
+    assert.ok(snapshot,'all data access must use a transaction');
+    if(op===':rollback'){snapshots.delete(body.transaction);return Response.json({});}
+    if(op===':batchGet'){
+      return Response.json(body.documents.map(name=>snapshot.docs.has(name)?{found:snapshot.docs.get(name)}:{missing:name}));
+    }
+    if(op.endsWith(':runQuery')){
+      const parent=op.slice(1,-':runQuery'.length), q=body.structuredQuery;
+      assert.match(parent,/^creditUnits\/\d{6}$/);
+      const collection=prefix+'/'+parent+'/'+q.from[0].collectionId+'/';
+      const filter=q.where?.fieldFilter, after=q.startAt?.values[0].referenceValue??'';
+      const found=[...snapshot.docs.values()].filter(d=>d.name.startsWith(collection)&&d.name>after&&
+        (!filter||d.fields[filter.field.fieldPath]?.stringValue===filter.value.stringValue))
+        .sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0).slice(0,q.limit);
+      return Response.json(found.map(document=>({document})));
+    }
+    if(op===':commit'){
+      assert.equal(snapshot.readOnly,false);
+      if(abortOnce){abortOnce=false;return Response.json({error:{status:'ABORTED'}},{status:409});}
+      for(const w of body.writes){
+        const existing=docs.get(w.update.name);
+        if(w.currentDocument.exists===false)assert.equal(existing,undefined);
+        else assert.equal(existing?.updateTime,w.currentDocument.updateTime);
+      }
+      for(const w of body.writes)docs.set(w.update.name,{...w.update,updateTime:'v'+(++version)});
+      snapshots.delete(body.transaction);
+      return Response.json({});
+    }
+    throw new Error('unexpected REST operation '+op);
+  };
+  return {fetch,seed,calls,abortNextCommit:()=>{abortOnce=true;}};
+}
+const cell={ug:manager.ug,item:'1',num:'1',esfera:'1',ptres:'123456',fonte:'1234567890',nd:'339030',ugr:'999999',pi:'TESTE',cents:10000};
+const allocation=[{centerId:'A',basisPoints:6000},{centerId:'B',basisPoints:4000}];
+const ncInput=(number='2026NC000001')=>({source:'manual',draft:{number,issuingUg:'888888',beneficiaryUg:manager.ug,
+  issueDate:'2026-01-02',description:'Synthetic NC',totalCents:10000,sequences:[{sequence:'1',totalCents:10000,origin:[],destination:[cell]}]},allocations:allocation});
+const neInput=(creditId,number,centerId,netCents,expectedCreditRevision)=>({creditId,centerId,cellId:'s1_l1',expectedCreditRevision,
+  draft:{ug:manager.ug,number,issueDate:'2026-01-03',description:'Synthetic NE',supplier:'Synthetic supplier',supplierCnpj:'00000000000000',
+    netCents,nd:cell.nd,ptres:cell.ptres,fonte:cell.fonte,ugr:cell.ugr,pi:cell.pi}});
+const status=n=>e=>e.status===n;
+test('store + REST adapter: identity, money, idempotency, revisions, deficits, retry and isolation',async t=>{
+  const db=transport(), originalFetch=globalThis.fetch;
+  globalThis.fetch=db.fetch;
+  t.after(()=>{globalThis.fetch=originalFetch;});
+  const nc=await store.createCredit(manager,ncInput()), id=nc.credit.id;
+  assert.equal(nc.balance.availableCents,10000);
+  assert.equal((await store.createCredit(manager,ncInput())).credit.id,id);
+  await assert.rejects(store.createCredit(centerA,ncInput()),status(403));
+  await assert.rejects(store.getCredit(other,id),status(404));
+  const first=neInput(id,'2026NE000001','A',3000,1);
+  db.abortNextCommit();
+  const a=await store.createCommitment(manager,first);
+  assert.equal(a.balance.availableCents,7000);
+  assert.equal((await store.createCommitment(manager,first)).balance.committedCents,3000);
+  await assert.rejects(store.createCommitment(manager,neInput(id,'2026NE000002','B',4000,1)),status(409));
+  await assert.rejects(store.createCommitment(manager,neInput(id,'2026NE000002','B',5000,2)),status(409));
+  const b=await store.createCommitment(manager,neInput(id,'2026NE000002','B',4000,2));
+  assert.equal(b.balance.availableCents,3000);
+  await assert.rejects(store.getCommitment(centerA,b.commitment.id),status(404));
+  const restricted=await store.getCredit(centerA,id);
+  assert.equal(restricted.balance.creditCents,6000);
+  assert.equal(restricted.balance.committedCents,3000);
+  assert.deepEqual(restricted.cells,[]);
+  assert.deepEqual(restricted.credit.sequences,[]);
+  assert.equal(restricted.credit.documentTotalCents,null);
+  assert.deepEqual(restricted.balance.centers.map(c=>c.centerId),['A']);
+  const patch={id,expectedRevision:3,allocations:[{centerId:'A',basisPoints:2000},{centerId:'B',basisPoints:8000}]};
+  await assert.rejects(store.updateCredit(manager,patch),status(409));
+  const edited=await store.updateCredit(manager,{...patch,acknowledgeDeficit:true});
+  assert.equal(edited.balance.centers.find(c=>c.centerId==='A').availableCents,-1000);
+  const mov={entityType:'ne',entityId:b.commitment.id,kind:'anulacao',amountCents:1000,reference:'SYNTHETIC-001',reason:'Synthetic adjustment',expectedRevision:1};
+  const moved=await store.registerMovement(manager,mov);
+  assert.equal(moved.balance.committedCents,6000);
+  assert.equal(moved.balance.availableCents,4000);
+  assert.equal((await store.registerMovement(manager,mov)).balance.committedCents,6000);
+  await store.createCredit(manager,ncInput('2026NC000002'));
+  const callsBefore=db.calls.length;
+  const report=await store.listFinance(manager,{year:'2026',limit:1},true);
+  const queries=db.calls.slice(callsBefore).filter(c=>c.op.endsWith(':runQuery'));
+  assert.equal(report.credits.length,2);
+  assert.equal(report.commitments.length,2);
+  assert.equal(report.totals.creditCents,20000);
+  assert.equal(report.totals.committedCents,6000);
+  assert.equal(report.totals.availableCents,14000);
+  assert.equal(report.nextCursor,undefined);
+  assert.equal(queries.filter(c=>c.body.structuredQuery.from[0].collectionId==='credits').length,1);
+  assert.equal(new Set(queries.map(c=>c.body.transaction)).size,1);
+  const p1=await store.listFinance(manager,{year:'2026',limit:1});
+  assert.ok(p1.nextCursor);
+  assert.equal(p1.credits.length,1);
+  assert.equal(p1.commitments.length,1);
+  const p2=await store.listFinance(manager,{year:'2026',limit:1,cursor:p1.nextCursor});
+  assert.notEqual(p1.credits[0].id,p2.credits[0].id);
+  assert.notEqual(p1.commitments[0].id,p2.commitments[0].id);
+  await assert.rejects(store.listFinance(centerA,{year:'2026',limit:1,cursor:p1.nextCursor}),status(422));
+  const centerReport=await store.listFinance(centerA,{year:'2026',limit:1},true);
+  assert.equal(centerReport.totals.creditCents,8000);
+  assert.equal(centerReport.totals.committedCents,3000);
+  assert.deepEqual(centerReport.commitments.map(n=>n.centerId),['A']);
+  db.seed('creditControlMembers/'+manager.uid,{...manager,active:false});
+  await assert.rejects(store.createCredit(manager,ncInput('2026NC000003')),status(403));
+});
