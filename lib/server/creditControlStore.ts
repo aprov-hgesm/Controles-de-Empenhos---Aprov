@@ -442,7 +442,7 @@ export async function getCommitment(member:CreditMember,key:string):Promise<{com
     return {commitment:publicCommitment(ne)};
   },true);
 }
-export async function listFinance(member:CreditMember,filters:FinanceFilters={}):Promise<FinanceView> {
+export async function listFinance(member:CreditMember,filters:FinanceFilters={},completeReport=false):Promise<FinanceView> {
   own(member);
   const year=filters.year===undefined||filters.year===''?today().slice(0,4):pattern(String(filters.year),/^20\d{2}$/,'Exercício');
   const limit=filters.limit===undefined||filters.limit===''?50:integer(Number(filters.limit),'Limite',1);
@@ -451,6 +451,7 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={})
   // "~" indica que a respectiva lista terminou; não voltar à primeira página.
   let creditAfter='',neAfter='';
   const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit]).slice(0,20);
+  if(completeReport&&filters.cursor)return invalid('Relatório integral não aceita cursor externo.');
   if(filters.cursor){
     const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
     if(!match||match[1]!==scope)return invalid('Cursor inválido para esta consulta.');
@@ -463,6 +464,19 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={})
     const nePage=neAfter==='~'?{docs:[] as import('./creditControlFirestore').CreditDocument<StoredCommitment>[],nextAfter:undefined}:
       await tx.listCommitmentPage<StoredCommitment>(member.ug,
         member.role==='centro'?{field:'centerYear',value:year+'_'+member.centerId}:{field:'year',value:year},limit,neAfter);
+    // Relatório: todas as páginas de NEs no MESMO snapshot das NCs e dos totais.
+    // Não refazer a consulta anual de NCs a cada página, nem misturar revisões concorrentes.
+    if(completeReport){
+      let next=nePage.nextAfter;
+      for(let page=1;next;page++){
+        if(page>=100)throw new CreditStoreError(422,'CREDIT_REPORT_LIMIT','Relatório excede o limite seguro de registros.');
+        const more=await tx.listCommitmentPage<StoredCommitment>(member.ug,
+          member.role==='centro'?{field:'centerYear',value:year+'_'+member.centerId}:{field:'year',value:year},limit,next);
+        nePage.docs.push(...more.docs);
+        next=more.nextAfter;
+      }
+      nePage.nextAfter=undefined;
+    }
     const centers=member.role==='gestor'?(await tx.list<CostCenter>(member.ug,'centers')).map(d=>d.data):
       [(await tx.get<CostCenter>(path(member,'centers',member.centerId!)))?.data].filter((x):x is CostCenter=>!!x);
     const pageNe=nePage.docs.map(d=>readCommitment(member,d.data,d.path.split('/').pop()!));
@@ -496,8 +510,8 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={})
     // Ordenação canônica, estável mesmo quando novos registros entram no exercício.
     credits.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
     const remaining=creditAfter==='~'?[]:credits.filter(c=>c.id>creditAfter);
-    const creditPage=remaining.slice(0,limit);
-    const creditNext=remaining.length>limit?creditPage[creditPage.length-1].id:'~';
+    const creditPage=completeReport?remaining:remaining.slice(0,limit);
+    const creditNext=!completeReport&&remaining.length>limit?creditPage[creditPage.length-1].id:'~';
     const neNext=nePage.nextAfter??'~';
     return {member:{uid:member.uid,email:member.email,ug:member.ug,role:member.role,centerId:member.centerId},
       totals,credits:creditPage,commitments:pageNe.map(publicCommitment),
