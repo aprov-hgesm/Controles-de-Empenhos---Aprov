@@ -117,6 +117,15 @@ test('store + REST adapter: identity, money, idempotency, revisions, deficits, r
   assert.equal(moved.balance.committedCents,6000);
   assert.equal(moved.balance.availableCents,4000);
   assert.equal((await store.registerMovement(manager,mov)).balance.committedCents,6000);
+  const reinforcement={entityType:'nc',entityId:id,kind:'reforco',amountCents:1000,reference:'SYNTHETIC-002',reason:'Synthetic reinforcement',expectedRevision:5};
+  const reinforced=await store.registerMovement(manager,reinforcement);
+  assert.equal(reinforced.balance.creditCents,11000);
+  assert.equal(reinforced.balance.availableCents,5000);
+  const recollection={...reinforcement,kind:'recolhimento',reference:'SYNTHETIC-003',expectedRevision:6};
+  await assert.rejects(store.registerMovement(manager,recollection),status(409));
+  const restored=await store.registerMovement(manager,{...recollection,acknowledgeDeficit:true});
+  assert.equal(restored.balance.creditCents,10000);
+  assert.equal(restored.balance.availableCents,4000);
   await store.createCredit(manager,ncInput('2026NC000002'));
   const callsBefore=db.calls.length;
   const report=await store.listFinance(manager,{year:'2026',limit:1},true);
