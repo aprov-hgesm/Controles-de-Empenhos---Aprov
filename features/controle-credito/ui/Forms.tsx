@@ -100,7 +100,7 @@ export function NeForm({user,run,busy,done,credits,centers}:{credits:(Credit & {
   const [creditId,setCreditId]=useState('');
   const [centerId,setCenterId]=useState('');
   const [cellId,setCellId]=useState('');
-  
+
   const [review,setReview]=useState(false);
   const [ack,setAck]=useState(false);
   const matching=credits.find(c=>c.id===creditId);const selected=matching?{credit:matching,balance:matching.balance}:null;

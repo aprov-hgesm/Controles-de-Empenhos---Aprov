@@ -1,6 +1,6 @@
 # Worker 03 — integração NC/NE
 A prévia permanece POST /api/controle-credito/importacao com bytes originais e x-credit-document-kind nc/ne; GET legado continua retornando member. O resultado NE mantém os campos do parser existente e acrescenta number (seis dígitos), issueDate ISO, netCents, requiresReview e warnings.
- 
+
 ## Confirmação (Worker 04 / 06)
 - NC HTML: POST /notas-credito JSON {source:"html",draft:{fileBase64,piCorrections?},allocations,deadline,description,expectedRevision?}. fileBase64 = base64 padrão dos bytes originais, sem prefixo data:. Manter o File no cliente até confirmação; não armazenar em localStorage. piCorrections opcional [{sequence,row,pi}], índice zero-based da linha de destino, somente quando PI ausente. O servidor reinterpreta o arquivo e ignora valores/identidade da prévia enviada pelo cliente.
 - NC manual: mesmo POST com source:"manual" e draft contendo number,fullNumber,issuingUg,issueDate,description,deadline,operation:"DESCENTRALIZACAO",decentralization:"PROVISAO",documentTotalCents,sequences:[{sequence,origin,destination}]. Cada célula contém item,num,esfera,ptres,fonte,nd,ugr,pi,cents; UG vem da sessão. totalCents é calculado das células; origem e destino precisam coincidir. sourceSystem é MANUAL. Não inventar célula de origem; usuário informa os dados do documento.
