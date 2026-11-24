@@ -5,7 +5,7 @@ import { FounderAuthError } from './firebaseFounderAuth';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { getCredit, getCommitment } from './creditControlStore';
 import { parseSagCreditHtml } from '../controle-credito/sagCreditHtml.mjs';
-import { parseEmpenhoPdfBytes } from './empenhoPdfParser';
+import { parseNe } from './creditControlImport';
 import { creditPdf, displayDate, money } from '../controle-credito/reports/creditPdf';
 
 type Kind = 'nc' | 'ne';
@@ -186,8 +186,10 @@ function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
       if(!e.fullNumber||normalizeNumber(parsed.fullNumber)!==normalizeNumber(e.fullNumber)||parsed.beneficiaryUg!==m.ug)throw new Error();
     } else {
       if(Buffer.from(bytes.subarray(0,5)).toString('ascii')!=='%PDF-')throw new Error();
-      const parsed=parseEmpenhoPdfBytes(bytes);
-      if(parsed.ug!==m.ug||normalizeNumber(parsed.id)!==normalizeNumber(e.number))throw new Error();
+      // O anexo precisa passar pelas mesmas verificações de tamanho expandido,
+      // estrutura, identidade e emissão original da importação financeira.
+      const parsed=parseNe(bytes,m);
+      if(parsed.ug!==m.ug||normalizeNumber(parsed.number)!==normalizeNumber(e.number))throw new Error();
     }
   }catch {fail(422,'O arquivo original não corresponde à UG e ao número do registro financeiro. Confira o documento.');}
 }
