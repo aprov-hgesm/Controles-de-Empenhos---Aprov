@@ -1,7 +1,7 @@
 import { requireCreditMember, CreditAccessError } from '@/lib/server/creditControlAuth';
 import { listFinance } from '@/lib/server/creditControlStore';
 import { documentError } from '@/lib/server/creditControlDocuments';
-import { creditPdf, creditPdfResponse } from '@/lib/controle-credito/reports/creditPdf';
+import { creditReportPdf, creditPdfResponse } from '@/lib/controle-credito/reports/creditPdf';
 import { REPORT_TITLES,buildCreditReport } from '@/lib/controle-credito/reports/reportLines';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -19,6 +19,6 @@ export async function GET(request:Request) {
     const year=Number(yearText),view=await listFinance(member,{year,limit:100},true);
     if(member.role==='centro'&&view.commitments.some(n=>n.centerId!==member.centerId))throw new CreditAccessError(503,'Projeção financeira inconsistente.');
     const lines=buildCreditReport(view,{type,nc,center,from,to});
-    return creditPdfResponse(creditPdf(member,REPORT_TITLES[type],lines,year),'credito-'+type+'-'+year+'.pdf');
+    return creditPdfResponse(creditReportPdf(member,REPORT_TITLES[type],lines,year),'credito-'+type+'-'+year+'.pdf');
   }catch(e){return documentError(e);}
 }
