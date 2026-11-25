@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g1c06fe5a3d3c-55",
-  "sourceSha": "1c06fe5a3d3c365352cb01b18963b6790be52f27",
-  "reason": "Autorização expressa do proprietário para concluir desenvolvimento e publicar Controle de Crédito R1.6, com homologação operacional em produção. PR #565: seis workflows aprovados no commit 334d2061a7679f4e12b0ead00c56dda0f784fbb0, árvore Git idêntica à main 209599b21a04967c2d42ff62307c892bef1fb029. Stage 45537929738 SUCCESS, revisão Ready 0% tráfego, digest sha256:f37a035088d5a3ad09e9a1bf63ac88bfef401405a5e00f8a36600f474c2d9172; verificação de cache no-store e 15 assets concluída. Core Protection 45537929663 e Application CI 45537929681 SUCCESS. Promover exclusivamente a revisão validada, pelo pipeline oficial com rollback automático e verificação do domínio público. Sem alterar IAM, Firestore rules, billing ou credenciais. Homologação Google Drive com contas reais permanece pendente; se houver concessão de ACLs reais, qualquer rollback posterior à R1.5 exige conciliação dessas permissões."
+  "revision": "emprovex-cloudrun-candidate-g809879149ec2-57",
+  "sourceSha": "809879149ec2abbdaefc78742ae8abf3e90482d5",
+  "reason": "Autorização expressa do proprietário para publicar Controle de Crédito R2 (PR #567). Stage 45634838333 SUCCESS, revisão Ready com 0% tráfego, digest sha256:ca1c43fb96240bda8e86d7d8d090ffb1f94bb6fc8c638303a3ede7ae34235bf4; cache no-store, 15 assets e seis marcadores de interface verificados. Application CI 45634838327 e Core Protection 45634838489 SUCCESS. Promover exclusivamente esta revisão pelo pipeline oficial com rollback automático. Sem alteração de IAM, regras Firestore, billing ou credenciais. Homologação operacional autenticada em produção permanece pendente."
 }
