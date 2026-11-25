@@ -14,7 +14,7 @@ export interface CreditSessionMember {
 }
 export interface CreditRecord {
   id: string; number: string; fullNumber: string; issuingUg: string; beneficiaryUg: string;
-  issueDate: string; description: string; deadline: string | null;
+  issueDate: string; description: string; deadline: string | null; adminDeadline?: string | null;
   operation: string; decentralization: string; sourceSystem: string;
   /** Total original do documento: null na projeção restrita ao centro. */
   documentTotalCents: number | null; totalCents: number; sequences: CreditSequence[];
@@ -59,11 +59,11 @@ export interface CommitmentDraft {
 }
 export interface CreateCreditInput {
   source: 'html' | 'manual'; draft: CreditDraft; allocations: CreditAllocation[];
-  deadline?: string | null; description?: string; expectedRevision?: number;
+  deadline?: string | null; adminDeadline?: string | null; description?: string; expectedRevision?: number;
 }
 export interface UpdateCreditInput {
   id: string; expectedRevision: number; allocations?: CreditAllocation[];
-  deadline?: string | null; description?: string; acknowledgeDeficit?: boolean;
+  deadline?: string | null; adminDeadline?: string | null; description?: string; acknowledgeDeficit?: boolean;
 }
 export interface CreateCommitmentInput {
   draft: CommitmentDraft; creditId: string; centerId: string; cellId: string;

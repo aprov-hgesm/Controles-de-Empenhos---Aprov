@@ -263,6 +263,8 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     deadline:deadline(data.deadline!==undefined?data.deadline:draft.deadline??null,issueDate),
     operation,decentralization,sourceSystem:string(draft.sourceSystem??(manual?'MANUAL':undefined),'Sistema de origem'),
     documentTotalCents,totalCents,sequences:seqs,allocations:shares};
+  const adminDeadline=deadline(data.adminDeadline??null,issueDate);
+  if(adminDeadline&&fields.deadline&&adminDeadline>=fields.deadline)return invalid('Prazo administrativo deve anteceder o prazo da NC.');
   const originalFingerprint=fingerprint({source,...fields});
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
@@ -278,7 +280,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     await ensureCenters(tx,member,shares);
     const at=now();
     const rev=prior?sum(prior.revision,1):1;
-    const record:StoredCredit={...fields,year,source,originalFingerprint,cellAdjustments:{},revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
+    const record:StoredCredit={...fields,adminDeadline,year,source,originalFingerprint,cellAdjustments:{},revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
     const result=detail(member,record,[]);
     await audit(tx,member,'nc',record.id,rev,prior?'recreate':'create',prior?{deletedAt:prior.deletedAt,revision:prior.revision}:null,{...auditSummary(result),source,allocations:shares},at);
     tx.set(key,withProjection(record,result));
@@ -288,7 +290,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
 export async function updateCredit(member:CreditMember,input:unknown):Promise<CreditDetail> {
   own(member,true);
   const data=object(input),key=id(data.id);
-  if(data.allocations===undefined&&data.description===undefined&&data.deadline===undefined)
+  if(data.allocations===undefined&&data.description===undefined&&data.deadline===undefined&&data.adminDeadline===undefined)
     return invalid('Nenhuma alteração informada.');
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
@@ -300,14 +302,16 @@ export async function updateCredit(member:CreditMember,input:unknown):Promise<Cr
     const at=now(),next:StoredCredit={...record,allocations:shares,
       description:data.description===undefined?record.description:string(data.description,'Descrição',12000,true),
       deadline:data.deadline===undefined?record.deadline:deadline(data.deadline,record.issueDate),
+      adminDeadline:data.adminDeadline===undefined?record.adminDeadline??null:deadline(data.adminDeadline,record.issueDate),
       revision:sum(record.revision,1),updatedAt:at};
-    if(next.description===record.description&&next.deadline===record.deadline&&
+    if(next.adminDeadline&&next.deadline&&next.adminDeadline>=next.deadline)return invalid('Prazo administrativo deve anteceder o prazo da NC.');
+    if(next.description===record.description&&next.deadline===record.deadline&&(next.adminDeadline??null)===(record.adminDeadline??null)&&
       JSON.stringify(next.allocations)===JSON.stringify(record.allocations))return before;
     const after=detail(member,next,nes);
     reconcile(before,after,data.acknowledgeDeficit);
     await audit(tx,member,'nc',key,next.revision,'update',
-      {...auditSummary(before),allocations:record.allocations,deadline:record.deadline,description:record.description},
-      {...auditSummary(after),allocations:next.allocations,deadline:next.deadline,description:next.description,
+      {...auditSummary(before),allocations:record.allocations,deadline:record.deadline,adminDeadline:record.adminDeadline??null,description:record.description},
+      {...auditSummary(after),allocations:next.allocations,deadline:next.deadline,adminDeadline:next.adminDeadline??null,description:next.description,
         acknowledgedDeficit:data.acknowledgeDeficit===true},at);
     tx.set(path(member,'credits',key),withProjection(next,after));
     return after;
