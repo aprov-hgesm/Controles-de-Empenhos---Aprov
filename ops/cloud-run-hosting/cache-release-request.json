@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g6c9b02062661-42",
-  "sourceSha": "6c9b020626619e8bdd844e598203c2f15cf8a4b4",
-  "reason": "hosting-p0: atualização expressamente solicitada em 08/11/2026 para restaurar /admin da conta fundadora em desktop e celular, após PR #532 e promoção Cloud Run revisão 42 (run 42541738870 SUCCESS). Aplicar apenas no Firebase Hosting a política no-store de /admin e /admin/**, preservando rewrite e cache de /_next; validar saúde e cabeçalhos sem alterar Firestore, IAM, DNS ou aplicações setoriais.",
-  "attempt": 4
+  "revision": "emprovex-cloudrun-candidate-g233b89053b34-54",
+  "sourceSha": "233b89053b34edd5d41cd6f08c2a21bb45095d88",
+  "reason": "hosting-p0: concluir publicação R1.5 expressamente autorizada. Promoção 45534702373 SUCCESS, 100% de tráfego, versão e bundles do Controle de Crédito confirmados no domínio público com URL nova. Aplicar configuração no-store de /controle-credito já aprovada na PR #564, invalidar cache anterior via release Hosting e verificar URL canônica. Preservar rewrite, cabeçalhos existentes, DNS, Firestore, IAM e cobrança.",
+  "attempt": 5
 }
