@@ -84,6 +84,7 @@ function stored(doc:RecordDoc):Stored {
   if(!/^[a-f0-9]{64}$/.test(d.id)||!/^[a-f0-9]{64}$/.test(d.sha256)||!Number.isSafeInteger(d.sizeBytes)||d.sizeBytes<=0||
     d.sizeBytes>maxSize(d.entityType)||d.mimeType!==mime(d.entityType)||!['pending','ready','failed'].includes(d.status)||
     !(d.entityKey===d.entityType+':'+d.entityId||new RegExp('^'+d.entityType+':'+d.entityId+':r[1-9][0-9]*$').test(d.entityKey))||!validDriveId(d.driveId)||!validDriveId(d.folderId)) fail(503,'Referência documental inválida.');
+  if(d.shareRecipients.length&&(d.entityType!=='ne'||!d.shareCenter||!d.shareCreditId||!/^[-A-Za-z0-9_]{1,180}$/.test(d.shareCreditId)||!/^[-A-Za-z0-9_]{1,64}$/.test(d.shareCenter)||d.shareRecipients.some(e=>e!==e.trim().toLowerCase())))return fail(503,'Escopo do compartilhamento inválido.');
   return d;
 }
 function publicRef(d:Stored) {
@@ -207,7 +208,7 @@ function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
   }catch(error) {if(error instanceof CreditAccessError)throw error;fail(422,'O arquivo original não corresponde à identidade do registro (UG, número, emissão ou favorecido). Confira o documento.');}
 }
 function fileProps(m:CreditMember,d:Stored) {return {ownerApp:'EMPROVEX',creditUg:m.ug,creditRole:'original',creditDocument:d.id,creditHash:d.sha256};}
-async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Array> {
+async function verifyFileMetadata(m:CreditMember,token:string,d:Stored,revoking=false):Promise<void> {
   const folder=privateOwned(await metadata(token,d.folderId),d.folderId,folderProps(m));
   if(folder.mimeType!==folderMime)fail(409,'Pasta documental inválida.');
   const raw=await metadata(token,d.driveId);
@@ -218,7 +219,10 @@ async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Arr
     if(readers.some(p=>!d.shareRecipients.includes(p.emailAddress)))return fail(409,'Permissões do arquivo divergentes do registro.');
     meta=raw;
   }else meta=privateOwned(raw,d.driveId,fileProps(m,d));
-  if(meta.mimeType!==d.mimeType||meta.name!==d.filename||Number(meta.size)!==d.sizeBytes||meta.parents?.length!==1||meta.parents[0]!==d.folderId)fail(409,'Metadados do arquivo divergem do registro.');
+  if(meta.parents?.length!==1||meta.parents[0]!==d.folderId||!revoking&&(meta.mimeType!==d.mimeType||meta.name!==d.filename||Number(meta.size)!==d.sizeBytes))fail(409,'Metadados do arquivo divergem do registro.');
+}
+async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Array>{
+  await verifyFileMetadata(m,token,d);
   const res=await driveRequest(token,drive+'/files/'+d.driveId+'?alt=media');
   if(!res.ok)fail(503,'Não foi possível conferir o arquivo no Drive.');
   const bytes=await boundedBytes(res.body,maxSize(d.entityType));
@@ -317,16 +321,17 @@ async function persistShare(m:CreditMember,doc:RecordDoc,state:ShareState,recipi
   if(!r.ok)return fail(409,'Compartilhamento alterado simultaneamente. Repita a operação.');
   return r.json();
 }
-async function reconcileShare(m:CreditMember,token:string,doc:RecordDoc,desired:string[],center:string,creditId:string,verified=false):Promise<Stored>{
+async function reconcileShare(m:CreditMember,token:string,doc:RecordDoc,desired:string[],center:string,creditId:string,verified=false,allowGrant=true):Promise<Stored>{
   const d=stored(doc);
   if(d.entityType!=='ne'||d.ownerEmail!==m.email||d.status!=='ready')return fail(409,'Somente a NE original arquivada pode ser compartilhada.');
   // Verify the bytes, ownership, private folder, and previous known ACL before mutation.
-  if(!verified)await verifyFile(m,token,d);
+  if(!verified){if(allowGrant)await verifyFile(m,token,d);else await verifyFileMetadata(m,token,d,true);}
   const known=[...new Set([...d.shareRecipients,...desired])];
   const reserved=await persistShare(m,doc,'pending',known,center,creditId);
   try{
-    await createCreditDrivePermissionAdapter(token,m.email).reconcile(d.driveId,desired,known);
-    return stored(await persistShare(m,reserved,desired.length?'shared':'private',desired,center,creditId));
+    const confirmed=await createCreditDrivePermissionAdapter(token,m.email).reconcile(d.driveId,desired,known,allowGrant);
+    const actual=confirmed.map(p=>p.emailAddress).sort();
+    return stored(await persistShare(m,reserved,actual.length?'shared':'private',actual,center,creditId));
   }catch(e){
     if(e instanceof CreditDrivePermissionError)throw new CreditAccessError(409,e.message+' O registro está pendente; sincronize novamente.');
     throw e;
@@ -349,7 +354,7 @@ async function syncShareLocked(m:CreditMember,token:string,docId:string,record:E
   validateSource(bytes,'ne',m,record);
   // Keep only one shared version for each live NE. Archived versions remain private.
   const others=(await documentRows(m,'entityKey',d.entityKey)).filter(r=>str(r,'id')!==docId).filter(r=>stored(r).shareRecipients.length>0);
-  for(const previous of others)await reconcileShare(m,token,previous,[],record.centerId!,record.creditId!);
+  for(const previous of others)await reconcileShare(m,token,previous,[],record.centerId!,record.creditId!,false,false);
   const desired=await desiredReaders(m,record);
   return reconcileShare(m,token,row,desired,record.centerId!,record.creditId!,true);
 }
@@ -364,6 +369,12 @@ export async function synchronizeCreditShare(m:CreditMember,request:Request,id:s
     return publicRef(await syncShareLocked(m,token,id,record));
   });
 }
+/** Founder has no owner's Drive token. Never bypass an existing external ACL. */
+export async function requireNoExternalCreditShare(m:CreditMember,centerId:string,email?:string){
+  manager(m);
+  const rows=await documentRows(m,'shareCenter',centerId);
+  if(rows.some(row=>{const d=stored(row);return d.entityType==='ne'&&d.shareRecipients.length>0&&(!email||d.shareRecipients.includes(email.trim().toLowerCase()));}))fail(409,'Este vínculo possui PDFs compartilhados. Revogue pelo Controle de Crédito com o Drive do gestor conectado.');
+}
 /** Must run under the same UG lock as the subsequent financial/admin mutation. */
 export async function revokeCreditShares(m:CreditMember,request:Request,scope:{entityKey:string}|{creditId:string}|{centerId:string;email?:string}){
   manager(m);
@@ -376,7 +387,7 @@ export async function revokeCreditShares(m:CreditMember,request:Request,scope:{e
   if(!request.headers.get('x-credit-drive-token'))return fail(409,'Conecte o Google Drive do gestor para revogar o acesso aos PDFs antes de concluir esta operação.');
   const token=await checkedToken(m,request);
   // Bound each request; repeat the operation to finish large cascades safely.
-  for(const row of rows.slice(0,12)){const d=stored(row);await reconcileShare(m,token,row,email&&d.shareState==='shared'?d.shareRecipients.filter(e=>e!==email):[],d.shareCenter,d.shareCreditId);}
+  for(const row of rows.slice(0,12)){const d=stored(row);await reconcileShare(m,token,row,email&&d.shareState==='shared'?d.shareRecipients.filter(e=>e!==email):[],d.shareCenter,d.shareCreditId,false,false);}
   if(rows.length>12)return fail(409,'Parte dos acessos foi revogada. Repita a operação para concluir a revogação dos demais documentos.');
 }
 export async function listDocuments(m:CreditMember,kind:Kind,id:string) {

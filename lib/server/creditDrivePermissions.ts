@@ -89,7 +89,7 @@ export function createCreditDrivePermissionAdapter(accessToken:string,ownerEmail
    * Refuse externally created reader grants instead of silently legitimizing them.
    * Operations are sequential per file; caller owns the durable mutation lock.
    */
-  async function reconcile(fileId:string,desiredRecipients:readonly string[],knownRecipients:readonly string[]):Promise<ReaderPermission[]>{
+  async function reconcile(fileId:string,desiredRecipients:readonly string[],knownRecipients:readonly string[],allowGrant=true):Promise<ReaderPermission[]>{
     const desired=new Set(desiredRecipients.map(email)),known=new Set(knownRecipients.map(email));
     if(desired.size>100||known.size>100||desired.has(owner)||known.has(owner))err('INVALID','Lista de destinatários inválida.');
     const before=await list(fileId);
@@ -97,11 +97,12 @@ export function createCreditDrivePermissionAdapter(accessToken:string,ownerEmail
     // Reserve desired addresses durably BEFORE calling reconcile, so a crash
     // following a successful grant is recoverable and cannot orphan an ACL.
     if([...desired].some(addr=>!known.has(addr)))err('INVALID','Destinatário ainda não reservado no registro de compartilhamento.');
+    if(!allowGrant){const present=new Set(before.map(p=>p.emailAddress));for(const addr of desired)if(!present.has(addr))desired.delete(addr);}
     for(const p of before)if(!desired.has(p.emailAddress))await remove(fileId,p.id);
     const remaining=await list(fileId);
     if(remaining.some(p=>!desired.has(p.emailAddress)))err('INCOMPLETE','A revogação não foi confirmada.');
     const present=new Set(remaining.map(p=>p.emailAddress));
-    for(const addr of desired)if(!present.has(addr))await grant(fileId,addr);
+    for(const addr of desired)if(!present.has(addr)){if(!allowGrant)err('INCOMPLETE','Permissão mudou durante a revogação.');await grant(fileId,addr);}
     const after=await list(fileId);
     if(after.length!==desired.size||after.some(p=>!desired.has(p.emailAddress)))err('INCOMPLETE','Compartilhamento não confirmado integralmente.');
     return after;

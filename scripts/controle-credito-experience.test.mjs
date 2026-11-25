@@ -73,7 +73,8 @@ test('R1.3 official images, direct edit, deletion confirmation and document gene
   assert.match(workspace,/Detalhar/);
   const docs=read('lib/server/creditControlDocuments.ts');
   assert.match(docs,/d.entityKey!==entityKey\(d.entityType,record\)/);
-  assert.match(docs,/value:\{stringValue:entityKey\(kind,record\)\}/);
+  assert.match(docs,/documentRows\(m,'entityKey',entityKey\(kind,record\)\)/);
+  assert.match(docs,/value:\{stringValue:value\}/);
   assert.match(read('app/api/controle-credito/notas-credito/route.ts'),/export async function DELETE[\s\S]*requireCreditMember\(request,true\)/);
   assert.match(read('app/api/controle-credito/notas-empenho/route.ts'),/export async function DELETE[\s\S]*requireCreditMember\(request,true\)/);
 });
@@ -143,7 +144,8 @@ test('R1.6 original NE sharing has a manager-only sync endpoint, current generat
   assert.match(docs,/withCreditSharingLock\(m,'upload-ne'/);
   assert.match(docs,/validateSource\(bytes,'ne',m,record\)/);
   assert.match(docs,/persistShare\(m,doc,'pending',known/);
-  assert.match(docs,/reconcile\(d.driveId,desired,known\)/);
+  assert.match(docs,/reconcile\(d.driveId,desired,known,allowGrant\)/);
+  const founder=read('app/api/admin/controle-credito/route.ts');assert.match(founder,/withCreditSharingLock\(actor,'founder-access'/);assert.match(founder,/await requireNoExternalCreditShare\(actor,center,email\)/);
   assert.match(docs,/m.role==='centro'&&kind==='nc'\)return \[projected\]/);
   assert.match(ui,/Visualizar NE original/);
   const route=read('app/api/controle-credito/documentos/[id]/route.ts');assert.match(route,/export async function POST[\s\S]*requireCreditMember\(request,true\)/);

@@ -74,3 +74,9 @@ test('R1.6 provider rejection never reports share as successful',async()=>{
   const {adapter}=mock([own],{failGrant:true});
   await assert.rejects(adapter.reconcile(file,[aprov],[aprov]),e=>e.code==='PROVIDER');
 });
+
+test('R1.6 revocation never restores an externally removed recipient',async()=>{
+  const {adapter,calls,permissions}=mock([own,reader('old',farm)]);
+  const actual=await adapter.reconcile(file,[aprov],[farm,aprov],false);
+  assert.deepEqual(actual,[]);assert.deepEqual(permissions,[own]);assert.ok(!calls.some(c=>c.method==='POST'));
+});
