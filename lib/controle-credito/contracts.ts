@@ -19,6 +19,8 @@ export interface CreditRecord {
   /** Total original do documento: null na projeção restrita ao centro. */
   documentTotalCents: number | null; totalCents: number; sequences: CreditSequence[];
   allocations: CreditAllocation[]; revision: number; createdAt: string; updatedAt: string;
+  /** Generation is set only after an excluded record is registered again. */
+  generation?: string;
 }
 export type BudgetDifference = { field: string; credit: string|null; commitment: string|null };
 export interface CommitmentRecord {
@@ -26,6 +28,7 @@ export interface CommitmentRecord {
   ug: string; issueDate: string; description: string; supplier: string; supplierCnpj: string;
   netCents: number; revision: number; createdAt: string; updatedAt: string;
   budgetDifferences?: BudgetDifference[];
+  generation?: string;
 }
 export interface CostCenter { id: string; name: string; active: boolean }
 export interface CreditCellBalance extends BudgetCell {

@@ -192,3 +192,44 @@ test('R1.2: budget differences require acknowledgement; replacement returns exac
     await assert.rejects(store.listFinance(centerA,{year:'2026',center:'B'}),status(403));
   }finally{globalThis.fetch=previousFetch;}
 });
+
+test('R1.3: manager-only deletion returns credit, checks cascade count and revision, hides records and allows safe re-registration',async()=>{
+  const db=transport(),previousFetch=globalThis.fetch;globalThis.fetch=db.fetch;
+  try{
+    const nc=await store.createCredit(manager,ncInput('2026NC000071'));
+    const input=neInput(nc.credit.id,'2026NE000071','A',3000,1);
+    const saved=await store.createCommitment(manager,input);
+    const second=await store.createCommitment(manager,neInput(nc.credit.id,'2026NE000072','B',2000,2));
+    const target={id:saved.commitment.id,expectedRevision:1,confirmed:true};
+    await assert.rejects(store.deleteCommitment(centerA,target),status(403));
+    await assert.rejects(store.deleteCommitment(manager,{...target,confirmed:false}),status(422));
+    await assert.rejects(store.deleteCommitment(manager,{...target,expectedRevision:2}),status(409));
+    const removed=await store.deleteCommitment(manager,target);assert.equal(removed.returnedCents,3000);
+    assert.equal((await store.getCredit(manager,nc.credit.id)).balance.availableCents,8000);
+    await assert.rejects(store.getCommitment(manager,target.id),status(404));
+    await assert.rejects(store.getCommitment(centerA,target.id),status(404));
+    const report=await store.listFinance(manager,{year:'2026'},true);
+    assert.deepEqual(report.commitments.map(n=>n.id),[second.commitment.id]);
+    assert.equal(report.totals.committedCents,2000);
+    const recreate=await store.createCommitment(manager,{...input,expectedCreditRevision:4});
+    assert.equal(recreate.commitment.revision,3);assert.equal(recreate.commitment.generation,'r3');
+    assert.equal(recreate.balance.committedCents,5000);
+    await assert.rejects(store.deleteCommitment(manager,target),status(409));
+    const cascade={id:nc.credit.id,expectedRevision:5,expectedCommitmentCount:2,confirmed:true};
+    await assert.rejects(store.deleteCredit(centerA,cascade),status(403));
+    await assert.rejects(store.deleteCredit(manager,{...cascade,expectedCommitmentCount:1}),status(409));
+    await assert.rejects(store.deleteCredit(manager,{...cascade,expectedRevision:4}),status(409));
+    await assert.rejects(store.deleteCredit(manager,{...cascade,confirmed:false}),status(422));
+    const result=await store.deleteCredit(manager,cascade);assert.equal(result.deletedCommitments,2);
+    await assert.rejects(store.getCredit(manager,nc.credit.id),status(404));
+    await assert.rejects(store.getCommitment(manager,second.commitment.id),status(404));
+    const empty=await store.listFinance(manager,{year:'2026'},true);
+    assert.equal(empty.totals.creditCents,0);assert.equal(empty.totals.committedCents,0);assert.equal(empty.totals.commitmentCount,0);
+    assert.deepEqual(empty.credits,[]);assert.deepEqual(empty.commitments,[]);
+    const newNc=await store.createCredit(manager,ncInput('2026NC000071'));
+    assert.equal(newNc.credit.revision,7);assert.equal(newNc.credit.generation,'r7');assert.equal(newNc.balance.availableCents,10000);
+    const newNe=await store.createCommitment(manager,{...input,expectedCreditRevision:7});
+    assert.equal(newNe.commitment.revision,5);assert.equal(newNe.commitment.generation,'r5');
+    assert.equal(newNe.balance.availableCents,7000);
+  }finally{globalThis.fetch=previousFetch;}
+});

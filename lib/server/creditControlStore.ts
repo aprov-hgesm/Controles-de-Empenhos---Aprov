@@ -9,12 +9,13 @@ import type {
 } from '../controle-credito/contracts';
 
 type Obj = Record<string, unknown>;
-type StoredCredit = CreditRecord & {
+type DeletedState={deletedAt?:string;deletedBy?:string};
+type StoredCredit = CreditRecord & DeletedState & {
   year: string; source: 'html'|'manual'; originalFingerprint: string;
   cellAdjustments: Record<string, number>;
   projection?: Pick<CreditDetail,'balance'|'cells'>;
 };
-type StoredCommitment = CommitmentRecord & {
+type StoredCommitment = CommitmentRecord & DeletedState & {
   year: string; centerYear: string; originalFingerprint: string; lastReplacementHash?: string;
 };
 const invalid = (message: string): never => { throw new CreditStoreError(422,'CREDIT_INVALID_INPUT',message); };
@@ -122,22 +123,24 @@ function sequences(input:unknown,expectedUg:string,manual:boolean):CreditSequenc
   return seqs;
 }
 const normalized=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-function readCredit(member:CreditMember,raw:StoredCredit|undefined|null,key:string):StoredCredit {
+function readCredit(member:CreditMember,raw:StoredCredit|undefined|null,key:string,includeDeleted=false):StoredCredit {
   if(!raw)return absent();
   if(raw.id!==key||raw.beneficiaryUg!==member.ug||!raw.originalFingerprint||!raw.cellAdjustments) return corrupt();
+  if(raw.deletedAt&&!includeDeleted)return absent();
   return raw;
 }
-function readCommitment(member:CreditMember,raw:StoredCommitment|undefined|null,key:string):StoredCommitment {
+function readCommitment(member:CreditMember,raw:StoredCommitment|undefined|null,key:string,includeDeleted=false):StoredCommitment {
   if(!raw)return absent();
   if(raw.id!==key||raw.ug!==member.ug||!raw.originalFingerprint)return corrupt();
+  if(raw.deletedAt&&!includeDeleted)return absent();
   return raw;
 }
 function publicCredit(record:StoredCredit):CreditRecord {
-  const {year,source,originalFingerprint,cellAdjustments,projection,...result}=record;
+  const {year,source,originalFingerprint,cellAdjustments,projection,deletedAt,deletedBy,...result}=record;
   return result;
 }
 function publicCommitment(record:StoredCommitment):CommitmentRecord {
-  const {year,centerYear,originalFingerprint,lastReplacementHash,...result}=record;
+  const {year,centerYear,originalFingerprint,lastReplacementHash,deletedAt,deletedBy,...result}=record;
   return result;
 }
 function balanceFor(record:StoredCredit,commitments:readonly CommitmentRecord[]):CreditBalance {
@@ -265,17 +268,19 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     await verifyWriter(tx,member);
     const key=path(member,'credits',fields.id);
     const existing=await tx.get<StoredCredit>(key);
-    if(existing){
-      const record=readCredit(member,existing.data,fields.id);
+    const prior=existing?readCredit(member,existing.data,fields.id,true):null;
+    if(prior&&!prior.deletedAt){
+      const record=prior;
       if(record.originalFingerprint!==originalFingerprint)return conflict('NC já cadastrada com dados diferentes. Utilize edição ou conciliação.');
       return detail(member,record,await linked(tx,member,record.id));
     }
     if(data.expectedRevision!==undefined)return conflict('NC inexistente para a revisão informada.');
     await ensureCenters(tx,member,shares);
     const at=now();
-    const record:StoredCredit={...fields,year,source,originalFingerprint,cellAdjustments:{},revision:1,createdAt:at,updatedAt:at};
+    const rev=prior?sum(prior.revision,1):1;
+    const record:StoredCredit={...fields,year,source,originalFingerprint,cellAdjustments:{},revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
     const result=detail(member,record,[]);
-    await audit(tx,member,'nc',record.id,1,'create',null,{...auditSummary(result),source,allocations:shares},at);
+    await audit(tx,member,'nc',record.id,rev,prior?'recreate':'create',prior?{deletedAt:prior.deletedAt,revision:prior.revision}:null,{...auditSummary(result),source,allocations:shares},at);
     tx.set(key,withProjection(record,result));
     return result;
   });
@@ -334,8 +339,9 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
     const key=path(member,'commitments',fields.id),existing=await tx.get<StoredCommitment>(key);
-    if(existing){
-      const ne=readCommitment(member,existing.data,fields.id);
+    const prior=existing?readCommitment(member,existing.data,fields.id,true):null;
+    if(prior&&!prior.deletedAt){
+      const ne=prior;
       if(ne.originalFingerprint!==originalFingerprint)return conflict('NE já cadastrada com dados ou vínculo diferentes. Registre conciliação.');
       const nc=await getStoredCredit(tx,member,ne.creditId);
       const result=detail(member,nc,await linked(tx,member,nc.id));
@@ -353,11 +359,11 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
     const differences:BudgetDifference[]=(['nd','ptres','fonte','ugr','pi'] as const).filter(k=>cell[k]!==codes[k]).map(k=>({field:k.toUpperCase(),credit:cell[k],commitment:codes[k]}));
     if(differences.length&&data.acknowledgeBudgetDifference!==true)throw new CreditStoreError(409,'CREDIT_BUDGET_ACK_REQUIRED','Confira as diferenças: '+differences.map(d=>({ND:'Natureza da despesa (ND)',PTRES:'Programa de trabalho (PTRES)',FONTE:'Fonte de recursos',UGR:'UG responsável (UGR)',PI:'Plano interno (PI)'} as Record<string,string>)[d.field]+' — NC: '+(d.credit??'não informado')+'; NE: '+(d.commitment??'não informado')).join(' | ')+'. Confirme a ciência para registrar o empenho.');
     // A célula escolhida permanece o vínculo financeiro; os códigos da NE divergentes ficam registrados, sem alterar a NC.
-    const at=now(),ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,budgetDifferences:differences,revision:1,createdAt:at,updatedAt:at};
+    const at=now(),rev=prior?sum(prior.revision,1):1,ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,budgetDifferences:differences,revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
     const next={...record,revision:sum(record.revision,1),updatedAt:at};
     const after=detail(member,next,[...nes,ne]);
     reconcile(before,after,data.acknowledgeDeficit);
-    await audit(tx,member,'ne',ne.id,1,'create',auditSummary(before),
+    await audit(tx,member,'ne',ne.id,rev,prior?'recreate':'create',auditSummary(before),
       {...auditSummary(after),creditId:ne.creditId,centerId:ne.centerId,cellId:ne.cellId,netCents:ne.netCents,
         acknowledgedDeficit:data.acknowledgeDeficit===true,budgetDifferences:differences,acknowledgedBudgetDifference:data.acknowledgeBudgetDifference===true},at);
     tx.set(key,ne);
@@ -391,7 +397,7 @@ export async function replaceCommitmentPdf(member:CreditMember,input:unknown):Pr
     let movement:MovementRecord|undefined;
     let movementKey:string|undefined;
     if(delta>0){
-      const movementId='mov_'+fingerprint(['ne',ne.id,'pdf',documentHash]);
+      const movementId='mov_'+fingerprint(['ne',ne.id,'pdf',documentHash,...(ne.generation?[ne.generation]:[])]);
       movementKey=path(member,'movements',movementId);
       if(await tx.get(movementKey))return conflict('Este documento já foi utilizado para uma anulação. Confira o histórico.');
       movement={id:movementId,entityType:'ne',entityId:ne.id,kind:'anulacao',amountCents:delta,deltaCents:-delta,reference:'PDF '+documentHash,reason:'Substituição por NE atualizada — redução do valor líquido',expectedRevision,acknowledgeDeficit:false,creditId:nc.id,cellId:ne.cellId,authorUid:member.uid,createdAt:at};
@@ -416,12 +422,13 @@ export async function registerMovement(member:CreditMember,input:unknown):Promis
   const deltaCents=kind==='anulacao'||kind==='recolhimento'?-amountCents:amountCents;
   const reference=string(data.reference,'Referência',180),reason=string(data.reason,'Motivo',4000);
   const expectedRevision=integer(data.expectedRevision,'Revisão',1);
-  const movementId='mov_'+fingerprint([entityType,entityId,normalized(reference).replace(/\s+/g,' ')]);
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
-    const key=path(member,'movements',movementId),previous=await tx.get<MovementRecord>(key);
     const ne=entityType==='ne'?await getStoredCommitment(tx,member,entityId):undefined;
     const record=await getStoredCredit(tx,member,ne?.creditId??entityId);
+    const generation=ne?ne.generation:record.generation;
+    const movementId='mov_'+fingerprint([entityType,entityId,normalized(reference).replace(/\s+/g,' '),...(generation?[generation]:[])]);
+    const key=path(member,'movements',movementId),previous=await tx.get<MovementRecord>(key);
     const nes=await linked(tx,member,record.id),before=detail(member,record,nes);
     const cellId=ne?ne.cellId:data.cellId!==undefined?id(data.cellId,'Célula'):
       before.cells.length===1?before.cells[0].cellId:invalid('Selecione a célula do movimento da NC.');
@@ -461,6 +468,60 @@ export async function registerMovement(member:CreditMember,input:unknown):Promis
     tx.set(path(member,'credits',record.id),withProjection(next,after));
     if(nextNe)tx.set(path(member,'commitments',nextNe.id),nextNe);
     return {movement,credit:after.credit,...(nextNe?{commitment:publicCommitment(nextNe)}:{}),balance:after.balance,cells:after.cells};
+  });
+}
+/** Exclusion is a logical removal, never an official SIAFI cancellation. All active indexes are removed atomically.
+ * Retain the tombstone and an immutable audit snapshot; re-registration uses a new revision/document generation.
+ */
+function excludedNe(ne:StoredCommitment,member:CreditMember,at:string):StoredCommitment {
+  return {...ne,year:'deleted_'+ne.year,centerYear:'deleted_'+ne.centerYear,creditId:'deleted_'+ne.creditId,deletedAt:at,deletedBy:member.uid,revision:sum(ne.revision,1),updatedAt:at};
+}
+export async function deleteCommitment(member:CreditMember,input:unknown):Promise<{deleted:true;returnedCents:number}> {
+  own(member,true);
+  const data=object(input),key=id(data.id);
+  if(data.confirmed!==true)return invalid('Confirme a exclusão da NE.');
+  return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
+    const ne=await getStoredCommitment(tx,member,key);
+    revision(data.expectedRevision,ne.revision);
+    const nc=await getStoredCredit(tx,member,ne.creditId),nes=await linked(tx,member,nc.id);
+    if(!nes.some(n=>n.id===ne.id))return corrupt();
+    const before=detail(member,nc,nes),at=now(),removed=excludedNe(ne,member,at);
+    const next={...nc,revision:sum(nc.revision,1),updatedAt:at};
+    const after=detail(member,next,nes.filter(n=>n.id!==ne.id));
+    await audit(tx,member,'ne',ne.id,removed.revision,'delete',{record:ne,...auditSummary(before)},{...auditSummary(after),deleted:true,returnedCents:ne.netCents},at);
+    tx.set(path(member,'commitments',ne.id),removed);
+    tx.set(path(member,'credits',nc.id),withProjection(next,after));
+    return {deleted:true,returnedCents:ne.netCents};
+  });
+}
+export async function deleteCredit(member:CreditMember,input:unknown):Promise<{deleted:true;deletedCommitments:number}> {
+  own(member,true);
+  const data=object(input),key=id(data.id);
+  if(data.confirmed!==true)return invalid('Confirme a exclusão da NC e dos empenhos vinculados.');
+  const expectedCommitmentCount=integer(data.expectedCommitmentCount,'Quantidade de empenhos');
+  return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
+    const nc=await getStoredCredit(tx,member,key);
+    revision(data.expectedRevision,nc.revision);
+    const nes=await linked(tx,member,nc.id);
+    if(nes.length!==expectedCommitmentCount)return conflict('A quantidade de empenhos mudou. Atualize a lista e confirme novamente.');
+    // 2 writes per child + NC + NC audit; stay inside the adapter and Firestore transaction bounds.
+    if(nes.length>200||JSON.stringify([nc,...nes]).length>1_500_000)return invalid('Esta NC possui muitos registros vinculados para exclusão de uma vez. Exclua parte dos empenhos primeiro e confirme novamente.');
+    const before=detail(member,nc,nes),at=now(),rev=sum(nc.revision,1);
+    const removed=nes.map(n=>excludedNe(n,member,at));
+    const auditKeys=[path(member,'audit','nc_'+nc.id+'_r'+rev),...removed.map(n=>path(member,'audit','ne_'+n.id+'_r'+n.revision))];
+    const audits=await tx.getMany(auditKeys);
+    if([...audits.values()].some(Boolean))return corrupt();
+    // All record and audit reads completed before any write.
+    await audit(tx,member,'nc',nc.id,rev,'delete',{record:nc,...auditSummary(before)},{deleted:true,deletedCommitments:nes.length,commitmentIds:nes.map(n=>n.id)},at);
+    for(let i=0;i<nes.length;i++){
+      const n=nes[i],t=removed[i];
+      await audit(tx,member,'ne',n.id,t.revision,'cascadeDelete',{record:n},{deleted:true,creditId:nc.id},at);
+      tx.set(path(member,'commitments',n.id),t);
+    }
+    tx.set(path(member,'credits',nc.id),{...nc,year:'deleted_'+nc.year,deletedAt:at,deletedBy:member.uid,revision:rev,updatedAt:at});
+    return {deleted:true,deletedCommitments:nes.length};
   });
 }
 export async function getCredit(member:CreditMember,key:string):Promise<CreditDetail> {

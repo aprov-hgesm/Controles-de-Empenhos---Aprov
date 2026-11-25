@@ -75,7 +75,7 @@ function stored(doc:RecordDoc):Stored {
   };
   if(!/^[a-f0-9]{64}$/.test(d.id)||!/^[a-f0-9]{64}$/.test(d.sha256)||!Number.isSafeInteger(d.sizeBytes)||d.sizeBytes<=0||
     d.sizeBytes>maxSize(d.entityType)||d.mimeType!==mime(d.entityType)||!['pending','ready','failed'].includes(d.status)||
-    d.entityKey!==d.entityType+':'+d.entityId||!validDriveId(d.driveId)||!validDriveId(d.folderId)) fail(503,'Referência documental inválida.');
+    !(d.entityKey===d.entityType+':'+d.entityId||new RegExp('^'+d.entityType+':'+d.entityId+':r[1-9][0-9]*$').test(d.entityKey))||!validDriveId(d.driveId)||!validDriveId(d.folderId)) fail(503,'Referência documental inválida.');
   return d;
 }
 function publicRef(d:Stored) {
@@ -165,7 +165,7 @@ function safeFilename(name:string,kind:Kind) {
   const ext=kind==='nc'?'.html':'.pdf';
   return (base.replace(/\.(?:html?|pdf)$/i,'')||'documento')+ext;
 }
-type Entity = {id:string;number:string;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
+type Entity = {id:string;number:string;generation?:string;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
 function asEntity(value:unknown,kind:Kind,id:string):Entity {
   if(!value||typeof value!=='object')return fail(404,'Registro financeiro não encontrado.');
   const obj=value as Record<string,unknown>;
@@ -181,6 +181,7 @@ async function entity(m:CreditMember,kind:Kind,id:string) {
   if(m.role==='centro'&&kind==='ne'&&record.centerId!==m.centerId)fail(404,'Registro financeiro não encontrado.');
   return record;
 }
+function entityKey(kind:Kind,e:Entity){return kind+':'+e.id+(e.generation?':'+e.generation:'');}
 function normalizeNumber(s:string) {return s.toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
   try {
@@ -231,12 +232,12 @@ export async function saveDocument(m:CreditMember,request:Request,form:FormData)
   const record=await entity(m,kind,id);
   const bytes=new Uint8Array(await file.arrayBuffer());
   validateSource(bytes,kind,m,record);
-  const sha256=hash(bytes),docId=hash(kind+':'+id+':'+sha256),path=unit(m)+'/documents/'+docId;
+  const sha256=hash(bytes),key=entityKey(kind,record),docId=hash(key+':'+sha256),path=unit(m)+'/documents/'+docId;
   const token=await checkedToken(m,request),folderId=await ensureFolder(m,token);
   let doc=await read(path);
   if(!doc) {
     await create(unit(m)+'/documents',docId,{
-      id:docId,entityType:kind,entityId:id,entityKey:kind+':'+id,filename:safeFilename(file.name,kind),mimeType:mime(kind),
+      id:docId,entityType:kind,entityId:id,entityKey:key,filename:safeFilename(file.name,kind),mimeType:mime(kind),
       sizeBytes:bytes.byteLength,sha256,status:'pending',createdAt:new Date().toISOString(),driveId:await generateId(token),
       folderId,ownerEmail:m.email,uploadedBy:m.uid,version:sha256,
     });
@@ -244,7 +245,7 @@ export async function saveDocument(m:CreditMember,request:Request,form:FormData)
   }
   if(!doc)return fail(503,'Reserva documental indisponível.');
   const d=stored(doc);
-  if(d.ownerEmail!==m.email||d.folderId!==folderId||d.id!==docId||d.sha256!==sha256||d.entityId!==id||d.entityType!==kind)fail(409,'Reserva documental divergente.');
+  if(d.ownerEmail!==m.email||d.folderId!==folderId||d.id!==docId||d.sha256!==sha256||d.entityId!==id||d.entityType!==kind||d.entityKey!==key)fail(409,'Reserva documental divergente.');
   try {
     if(d.status!=='ready'&&!await metadata(token,d.driveId)) {
       const boundary='credit_'+hash(docId+Date.now()+Math.random());
@@ -270,7 +271,7 @@ export async function listDocuments(m:CreditMember,kind:Kind,id:string) {
   // Centers receive no original metadata or Drive identifier; only a live, authorized projection.
   if(m.role==='centro')return [{id:'projection-'+kind+'-'+id,entityType:kind,entityId:id,filename:kind+'-consulta.pdf',mimeType:'application/pdf',status:'ready',generated:true}];
   const res=await db(unit(m)+':runQuery',{method:'POST',body:JSON.stringify({structuredQuery:{
-    from:[{collectionId:'documents'}],where:{fieldFilter:{field:{fieldPath:'entityKey'},op:'EQUAL',value:{stringValue:kind+':'+record.id}}},limit:100
+    from:[{collectionId:'documents'}],where:{fieldFilter:{field:{fieldPath:'entityKey'},op:'EQUAL',value:{stringValue:entityKey(kind,record)}}},limit:100
   }})});
   if(!res.ok)fail(503,'Não foi possível listar os documentos.');
   const rows=await res.json() as {document?:RecordDoc}[];
@@ -292,7 +293,8 @@ export async function downloadDocument(m:CreditMember,request:Request,id:string)
   const doc=await read(unit(m)+'/documents/'+id);
   if(!doc)return fail(404,'Documento não encontrado.');
   const d=stored(doc);
-  await entity(m,d.entityType,d.entityId);
+  const record=await entity(m,d.entityType,d.entityId);
+  if(d.entityKey!==entityKey(d.entityType,record))fail(404,'Documento de um cadastro anterior excluído.');
   if(d.id!==id||d.status!=='ready'||d.ownerEmail!==m.email)fail(404,'Documento não disponível para esta conta.');
   const token=await checkedToken(m,request);
   const bytes=await verifyFile(m,token,d);
