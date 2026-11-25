@@ -22,7 +22,8 @@ test('NC-first workflow retains server revision and confirmation, correct search
   const workspace=read('features/controle-credito/ui/Workspace.tsx'),forms=read('features/controle-credito/ui/Forms.tsx');
   assert.match(workspace,/beginNe\(c\)/);
   assert.match(workspace,/initialCreditId=\{selectedNc\?\.id\}/);
-  assert.match(workspace,/Número da NC ou finalidade/);
+  assert.match(workspace,/Buscar NC no exercício/);
+  assert.match(workspace,/search:appliedSearch/);
   assert.match(workspace,/Prazo para empenho/);
   assert.match(workspace,/emprovex-app-sidebar/);
   assert.match(forms,/1 · Selecionar NC/);
@@ -30,7 +31,9 @@ test('NC-first workflow retains server revision and confirmation, correct search
   assert.match(forms,/expectedCreditRevision:selected.credit.revision/);
   assert.match(forms,/acknowledgeDeficit:ack/);
   assert.match(forms,/archiveImported\(user,'nc'/);
-  assert.match(forms,/archiveImported\(user,'ne'/);
+  assert.doesNotMatch(forms,/archiveImported\(user,'ne'/);
+  assert.match(forms,/Importar HTML \/ PDF/);
+  assert.match(read('app/api/controle-credito/documentos/route.ts'),/form.get\('entityType'\)==='ne'/);
   assert.match(read('app/api/admin/controle-credito/route.ts'),/password.length<8/);
   assert.match(read('components/admin/AdminCreditAccessPanel.tsx'),/minLength=\{8\}/);
 });
@@ -70,7 +73,7 @@ test('R1.3 official images, direct edit, deletion confirmation and document gene
   assert.match(workspace,/open\('nc',c.id,'edit'\)/);
   assert.match(workspace,/expectedCommitmentCount:target.count/);
   assert.match(workspace,/role="alertdialog"/);
-  assert.match(workspace,/Detalhar/);
+  assert.match(read('features/controle-credito/ui/CreditNcCard.tsx'),/Detalhar NC/);
   const docs=read('lib/server/creditControlDocuments.ts');
   assert.match(docs,/d.entityKey!==entityKey\(d.entityType,record\)/);
   assert.match(docs,/documentRows\(m,'entityKey',entityKey\(kind,record\)\)/);
@@ -98,15 +101,16 @@ test('R1.4 reuses operational auth loader, circular profile art and single Drive
   assert.match(w,/<CreditDriveControl compact\/>/);
   assert.doesNotMatch(docs,/<CreditDriveControl\b/);
   assert.match(drive,/d\.disconnect\(\);setMenu\(false\)/);
-  assert.match(w,/documentMode==='reports'/);
-  assert.match(w,/docKind\+':'\+selectedDoc.id/); // document key includes note type
-  assert.match(w,/entityType=\{docKind\} entityId=\{selectedDoc.id\}/);
-  assert.match(w,/visibleDocs\.map/);
-  for(const key of ['saldo','prazos','nc','nc-detalhe','ne-centro'])assert.ok(w.includes("id:'"+key+"'"));
-  assert.match(w,/type:report,year,nc:/);
-  assert.match(w,/center:report==='ne-centro'\?reportCenter/);
-  assert.match(w,/from:report==='ne-centro'\?from/);
-  assert.match(w,/to:report==='ne-centro'\?to/);
+  assert.doesNotMatch(w,/documentMode===/);
+  assert.match(w,/Relatório geral resumido/);
+  assert.match(w,/Relatório geral detalhado/);
+  assert.match(w,/type:detailed\?'nc-detalhe':'nc',year,nc:nc\?\.id,center:sector/);
+  assert.match(w,/currentCenters\.map\(c=>\['centro:'/);
+  assert.match(w,/setBrowsedNc\(c\)/);
+  assert.match(w,/setBrowsedCenter\(x.centerId\)/);
+  const card=read('features/controle-credito/ui/CreditNcCard.tsx');
+  assert.match(card,/Prazo da Administração/);
+  assert.match(card,/mode:'nc-linked'/);
   assert.match(w,/t.availableCents<0\?'deficit':'available'/);
 });
 
@@ -117,7 +121,7 @@ test('R1.5 compact picker, no full list teardown and cache protection',()=>{
   assert.match(form,/useCreditChoices\(user,year,catalogOpen/);
   assert.match(form,/expectedCreditRevision:selected.credit.revision/);
   assert.match(w,/aria-busy=\{!ready\}/);assert.match(w,/Atualizando somente os registros/);
-  assert.match(w,/tab==='ne'\?'ne-list':tab==='nc'\?'nc-list'/);
+  assert.match(w,/mode:'nc-list'/);
   assert.doesNotMatch(w,/setLoading\(true\);setLoadError\(''\);setView\(null\)/);
   assert.match(read('app/controle-credito/layout.tsx'),/dynamic='force-dynamic'/);
   assert.match(read('next.config.ts'),/source: '\/controle-credito',[\s\S]{0,150}no-store/);

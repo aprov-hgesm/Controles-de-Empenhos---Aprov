@@ -9,7 +9,7 @@ export type Member = { uid:string; email:string; ug:string; role:'gestor'|'centr
 export type Center = { id:string; name:string; active:boolean };
 export type Cell = SagCreditCell & {cellId?:string; availableCents?:number; committedCents?:number};
 export type Credit = Omit<SagHtmlCreditDraft,'warnings'|'requiresReview'|'sequences'|'documentTotalCents'> & {
-  id:string; revision:number; createdAt:string; updatedAt:string; allocations:CreditAllocation[]; documentTotalCents:number|null; cells?:Cell[];
+  id:string; adminDeadline?:string|null; revision:number; createdAt:string; updatedAt:string; allocations:CreditAllocation[]; documentTotalCents:number|null; cells?:Cell[];
   sequences:(Omit<SagHtmlCreditSequence,'destination'> & {destination:Cell[]})[];
 };
 export type Commitment = {id:string;number:string;creditId:string;centerId:string;cellId:string;ug:string;issueDate:string;description:string;supplier:string;supplierCnpj:string;netCents:number;revision:number;createdAt:string;updatedAt:string;budgetDifferences?:{field:string;credit:string|null;commitment:string|null}[]};

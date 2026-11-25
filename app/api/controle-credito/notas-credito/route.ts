@@ -27,11 +27,12 @@ export async function PATCH(request: Request) {
   try {
     const member=await requireCreditMember(request,true);
     const body=await json(request);
-    if(body.allocations===undefined&&body.deadline===undefined&&body.description===undefined) invalid('Informe o que deseja alterar.');
+    if(body.allocations===undefined&&body.deadline===undefined&&body.adminDeadline===undefined&&body.description===undefined) invalid('Informe o que deseja alterar.');
     const input={
       id:id(body.id),expectedRevision:integer(body.expectedRevision,'Revisão'),
       ...(body.allocations!==undefined?{allocations:allocations(body.allocations)}:{}),
       ...(body.deadline!==undefined?{deadline:deadline(body.deadline)}:{}),
+      ...(body.adminDeadline!==undefined?{adminDeadline:deadline(body.adminDeadline)}:{}),
       ...(body.description!==undefined?{description:string(body.description,'Descrição')}:{}),
       acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),
     };

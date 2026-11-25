@@ -4,6 +4,7 @@ import { CreditAccessError, type CreditMember } from './creditControlAuth';
 import { FounderAuthError } from './firebaseFounderAuth';
 import { CreditStoreError } from './creditControlFirestore';
 import { parseSagCreditHtml } from '@/lib/controle-credito/sagCreditHtml.mjs';
+import { parseSagCommitmentHtml } from '@/lib/controle-credito/sagCommitmentHtml.mjs';
 import { parseEmpenhoPdfBytes } from './empenhoPdfParser';
 import type { CreateCreditInput, CreateCommitmentInput } from '@/lib/controle-credito/contracts';
 import type { SagHtmlCreditDraft } from '@/lib/controle-credito/sagCreditHtml.mjs';
@@ -187,6 +188,12 @@ function decimalCents(value: number): number {
   return integer(Number(match[1]+(match[2]??'').padEnd(2,'0')),'Valor da NE',1);
 }
 export function parseNe(bytes: Uint8Array, member: CreditMember, updated=false) {
+  if(!Buffer.from(bytes.subarray(0,5)).equals(Buffer.from('%PDF-'))){
+    if(updated) invalid('Use a impressão PDF consolidada para substituir uma NE existente.','NE_FORMAT');
+    if(bytes.length>NC_MAX) invalid('HTML excede o limite permitido.','NE_LIMIT');
+    try{return parseSagCommitmentHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),member.ug);}
+    catch{return invalid('HTML de NE SAG inválido, UG incompatível, valores divergentes ou operação não suportada. Confira o original.','NE_IMPORT_INVALID');}
+  }
   checkPdf(bytes,updated);
   let result: ReturnType<typeof parseEmpenhoPdfBytes>;
   try { result = parseEmpenhoPdfBytes(bytes); }
@@ -273,8 +280,10 @@ export function confirmNc(body: Input, member: CreditMember): CreateCreditInput 
   if(parsed.sequences.some(s=>s.destination.some(c=>!c.pi))) invalid('Confirme os PIs de destino ausentes.','NC_PI_REQUIRED');
   const description=body.description===undefined?string(parsed.description,'Descrição'):string(body.description,'Descrição');
   const due=body.deadline===undefined?parsed.deadline:deadline(body.deadline,parsed.issueDate);
+  const adminDeadline=body.adminDeadline===undefined?null:deadline(body.adminDeadline,parsed.issueDate);
+  if(adminDeadline&&due&&adminDeadline>=due)invalid('Prazo administrativo deve anteceder o prazo da NC.');
   const {warnings: _warnings, requiresReview: _review, ...record}=parsed;
-  return {source,draft:{...record,description,deadline:due},allocations:allocations(body.allocations),deadline:due,description,expectedRevision:optionalRevision(body.expectedRevision)};
+  return {source,draft:{...record,description,deadline:due},allocations:allocations(body.allocations),deadline:due,adminDeadline,description,expectedRevision:optionalRevision(body.expectedRevision)};
 }
 export function confirmNe(body: Input, member: CreditMember): CreateCommitmentInput {
   const draft=object(body.draft);
@@ -285,7 +294,9 @@ export function confirmNe(body: Input, member: CreditMember): CreateCommitmentIn
     if(!/^(?:\d{11}|\d{14})$/.test(supplierCnpj))invalid('Informe o CPF ou CNPJ do favorecido.');
     return {draft:{number,ug:member.ug,issueDate,description:string(draft.description,'Finalidade'),supplier:string(draft.supplier,'Fornecedor'),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1),nd:pattern(draft.nd,'ND',/^\d{6}$/),ptres:pattern(draft.ptres,'PTRES',/^\d{6}$/),fonte:pattern(draft.fonte,'Fonte',/^\d{10}$/),ugr:pattern(draft.ugr,'UGR',/^\d{6}$/),pi:pattern(draft.pi,'PI',/^[A-Z0-9]{1,20}$/)},creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,expectedCreditRevision:optionalRevision(body.expectedCreditRevision)};
   }
-  const parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
+  const bytes=fileFromDraft(draft,NE_MAX);
+  const parsed=parseNe(bytes,member);
+  if(!Buffer.from(bytes.subarray(0,5)).equals(Buffer.from('%PDF-'))&&parsed.notaCredito&&!id(body.creditId).endsWith('_'+parsed.notaCredito))invalid('A NC selecionada diverge da referência expressa no HTML. Confira o vínculo.','NE_NC_MISMATCH');
   const confirmed= draft.budget === undefined ? {} : object(draft.budget);
   function field(extracted: string|null, key: string, label: string, re: RegExp) {
     if(extracted&&re.test(extracted)) {

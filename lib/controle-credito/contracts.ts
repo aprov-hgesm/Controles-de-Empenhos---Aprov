@@ -14,7 +14,7 @@ export interface CreditSessionMember {
 }
 export interface CreditRecord {
   id: string; number: string; fullNumber: string; issuingUg: string; beneficiaryUg: string;
-  issueDate: string; description: string; deadline: string | null;
+  issueDate: string; description: string; deadline: string | null; adminDeadline?: string | null;
   operation: string; decentralization: string; sourceSystem: string;
   /** Total original do documento: null na projeção restrita ao centro. */
   documentTotalCents: number | null; totalCents: number; sequences: CreditSequence[];
@@ -47,7 +47,7 @@ export interface FinanceView {
   credits: FinanceCredit[]; commitments: CommitmentRecord[]; centers: CostCenter[];
   alerts: FinanceAlert[]; nextCursor?: string;
 }
-export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number; sort?: string; center?: string; kind?: 'nc' }
+export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number; sort?: string; center?: string; kind?: 'nc'; search?: string }
 export type CreditDraft = Omit<CreditRecord, 'id'|'allocations'|'revision'|'createdAt'|'updatedAt'|'sequences'|'documentTotalCents'> & {
   documentTotalCents: number;
   sequences: SagHtmlCreditSequence[];
@@ -59,11 +59,11 @@ export interface CommitmentDraft {
 }
 export interface CreateCreditInput {
   source: 'html' | 'manual'; draft: CreditDraft; allocations: CreditAllocation[];
-  deadline?: string | null; description?: string; expectedRevision?: number;
+  deadline?: string | null; adminDeadline?: string | null; description?: string; expectedRevision?: number;
 }
 export interface UpdateCreditInput {
   id: string; expectedRevision: number; allocations?: CreditAllocation[];
-  deadline?: string | null; description?: string; acknowledgeDeficit?: boolean;
+  deadline?: string | null; adminDeadline?: string | null; description?: string; acknowledgeDeficit?: boolean;
 }
 export interface CreateCommitmentInput {
   draft: CommitmentDraft; creditId: string; centerId: string; cellId: string;

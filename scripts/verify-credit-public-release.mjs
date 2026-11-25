@@ -11,7 +11,7 @@ const html=await r.text(),cache=r.headers.get('cache-control')||'';
 if(!/no-store/i.test(cache))throw new Error('Credit HTML lacks no-store: '+cache);
 const scripts=[...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(m=>new URL(m[1].replaceAll('&amp;','&'),url)).filter(u=>u.origin===url.origin&&u.pathname.startsWith('/_next/static/')&&u.pathname.endsWith('.js'));
 if(!scripts.length||scripts.some(s=>s.searchParams.get('dpl')!==expected))throw new Error('Credit HTML references a different deployment: '+scripts.map(s=>s.searchParams.get('dpl')).join(','));
-const required=['Localizar e selecionar NC','Atualizando somente os registros','nc-choices'];
+const required=['Localizar e selecionar NC','Atualizando somente os registros','nc-choices','Prazo da Administração','Relatório geral resumido','nc-linked'];
 const found=new Set();
 for(let i=0;i<scripts.length;i+=6){
   await Promise.all(scripts.slice(i,i+6).map(async s=>{const res=await fetch(s,{signal:AbortSignal.timeout(20000)});if(!res.ok)throw new Error('Asset '+res.status+' '+s.pathname);const text=await res.text();for(const mark of required)if(text.includes(mark))found.add(mark);}));

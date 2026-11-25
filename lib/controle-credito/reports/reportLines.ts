@@ -1,13 +1,13 @@
 import type {FinanceView,FinanceCredit,CommitmentRecord} from '../contracts';
 import {money,displayDate,type CreditReportLine} from './creditPdf';
-export const REPORT_TITLES:Record<string,string>={saldo:'Relatório de Execução do Crédito Registrado',prazos:'Relatório de Prazos e Pendências',nc:'Relatório de NCs Cadastradas','nc-detalhe':'Relatório Detalhado de NC','ne-centro':'Relatório Detalhado de NEs por Centro de Custos',ne:'Relatório Detalhado de NEs por Centro de Custos'};
+export const REPORT_TITLES:Record<string,string>={saldo:'Relatório de Execução do Crédito Registrado',prazos:'Relatório de Prazos e Pendências',nc:'Relatório Resumido de Notas de Crédito','nc-detalhe':'Relatório Detalhado de Notas de Crédito','ne-centro':'Relatório Detalhado de NEs por Centro de Custos',ne:'Relatório Detalhado de NEs por Centro de Custos'};
 type Filters={type:string;nc?:string;center?:string;from?:string;to?:string};
 const dateOfRegistration=(n:CommitmentRecord)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(n.createdAt));
-const deadlineOrder=(a:FinanceCredit,b:FinanceCredit)=>(a.deadline??'9999-12-31').localeCompare(b.deadline??'9999-12-31')||a.id.localeCompare(b.id);
+const deadlineOrder=(a:FinanceCredit,b:FinanceCredit)=>(a.adminDeadline||a.deadline||'9999-12-31').localeCompare(b.adminDeadline||b.deadline||'9999-12-31')||a.id.localeCompare(b.id);
 export function buildCreditReport(view:FinanceView,filters:Filters):CreditReportLine[]{
   const {type,nc,center,from,to}=filters;
   const allCredits=view.credits.filter(c=>!nc||c.id===nc||c.number===nc||c.fullNumber===nc);
-  const credits=[...allCredits].sort(deadlineOrder);
+  const credits=allCredits.filter(c=>!center||c.balance.centers.some(x=>x.centerId===center&&(x.basisPoints>0||x.commitmentCount>0))).sort(deadlineOrder);
   const byCredit=new Map(credits.map(c=>[c.id,c]));
   const notes=view.commitments.filter(n=>byCredit.has(n.creditId)&&(!center||n.centerId===center)&&(!from||dateOfRegistration(n)>=from)&&(!to||dateOfRegistration(n)<=to));
   const lines:CreditReportLine[]=[];
@@ -15,8 +15,15 @@ export function buildCreditReport(view:FinanceView,filters:Filters):CreditReport
   const description=(label:string,value:string)=>{for(let i=0;i<value.length;i+=850)add(i===0?label:label+' (continuação)',value.slice(i,i+850));};
   const totals=(credit:number,committed:number,available:number)=>{add('Crédito registrado',money(credit),'metric');add('Empenhado',money(committed),'metric');add('Saldo disponível',money(available),'metric');};
   function summary(c:FinanceCredit){
-    add('NC '+c.number,'Emissão '+displayDate(c.issueDate)+' | Prazo para empenho '+displayDate(c.deadline),'section');
-    add('Execução',money(c.balance.creditCents)+' recebido/destinado | '+money(c.balance.committedCents)+' empenhado | '+money(c.balance.availableCents)+' disponível','fields',[{label:'Recebido / destinado',value:money(c.balance.creditCents)},{label:'Empenhado',value:money(c.balance.committedCents)},{label:'Saldo disponível',value:money(c.balance.availableCents)}]);
+    add('NC '+c.number,'Emissão '+displayDate(c.issueDate)+' | Prazo para empenho '+displayDate(c.deadline)+' | Prazo administração '+displayDate(c.adminDeadline),'section');
+    const selected=center?c.balance.centers.find(x=>x.centerId===center):undefined;
+    const pct=(n:number,d:number)=>d>0?(100*n/d).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'Não aplicável';
+    const total=selected?.allocatedCents??c.balance.creditCents,committed=selected?.committedCents??c.balance.committedCents,available=selected?.availableCents??c.balance.availableCents;
+    add('Execução',money(total)+' destinado | '+money(committed)+' empenhado ('+pct(committed,total)+') | '+money(available)+' disponível ('+pct(available,total)+')');
+    for(const x of c.balance.centers.filter(x=>!center||x.centerId===center)){
+      add('Centro '+x.centerId,(x.basisPoints/100).toLocaleString('pt-BR')+'% do rateio | '+money(x.allocatedCents)+' | Empenhado '+money(x.committedCents)+' ('+pct(x.committedCents,x.allocatedCents)+') | Saldo '+money(x.availableCents)+' ('+pct(x.availableCents,x.allocatedCents)+')');
+    }
+    if(!center&&view.member.role==='gestor')add('Não distribuído',money(c.balance.unallocatedCents));
   }
   function ne(n:CommitmentRecord){
     add('NE '+n.number,'NC '+(byCredit.get(n.creditId)?.number||n.creditId)+' | Centro '+n.centerId+' | '+money(n.netCents),'section');
@@ -43,10 +50,10 @@ export function buildCreditReport(view:FinanceView,filters:Filters):CreditReport
     add('Resumo da consulta','','section');if(nc)add('Filtro de NC',nc);
     add('Notas de crédito',String(credits.length),'metric');
     const byNe=new Map<string,CommitmentRecord[]>();for(const n of notes){const list=byNe.get(n.creditId)??[];list.push(n);byNe.set(n.creditId,list);}
-    for(const c of credits){summary(c);description('Finalidade',c.description);
-      if(view.member.role==='gestor')for(const cell of c.cells)add('Célula orçamentária','ND '+cell.nd+' | PI '+(cell.pi??'não informado')+' | PTRES '+cell.ptres+' | '+money(cell.cents));
+    for(const c of credits){summary(c);if(type==='nc-detalhe'){description('Finalidade',c.description);add('Identificação','UG emitente '+c.issuingUg+' | UG favorecida '+c.beneficiaryUg+' | '+c.operation+' | '+c.decentralization+' | '+c.sourceSystem);
+      if(view.member.role==='gestor'){add('Número completo',c.fullNumber);add('Total original do documento',c.documentTotalCents===null?'Não informado':money(c.documentTotalCents));for(const seq of c.sequences){add('Sequencial '+seq.sequence,money(seq.totalCents));for(const cell of seq.origin)add('Origem','UG '+cell.ug+' | Item '+cell.item+' | Num '+cell.num+' | Esfera '+cell.esfera+' | ND '+cell.nd+' | PI '+(cell.pi??'não informado')+' | PTRES '+cell.ptres+' | Fonte '+cell.fonte+' | UGR '+cell.ugr+' | '+money(cell.cents));}for(const cell of c.cells)add('Célula orçamentária','ND '+cell.nd+' | PI '+(cell.pi??'não informado')+' | PTRES '+cell.ptres+' | Fonte '+cell.fonte+' | UGR '+cell.ugr+' | Esfera '+cell.esfera+' | '+money(cell.cents));}
       if(view.member.role==='centro')add('Células orçamentárias','Dados globais reservados à gestão; valores limitados ao centro autorizado.');
-      if(type==='nc-detalhe'){const entries=byNe.get(c.id)??[];add('Empenhos vinculados',String(entries.length));for(const n of entries)ne(n);}
+      const entries=byNe.get(c.id)??[];add('Empenhos vinculados',String(entries.length));for(const centerId of [...new Set(entries.map(n=>n.centerId))].sort()){add('Centro '+centerId,'Empenhos vinculados','section');for(const n of entries.filter(n=>n.centerId===centerId))ne(n);}}
     }
     if(!credits.length)add('Resultado','Nenhuma NC encontrada para os filtros.');
   }else{

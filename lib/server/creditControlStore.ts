@@ -263,6 +263,8 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     deadline:deadline(data.deadline!==undefined?data.deadline:draft.deadline??null,issueDate),
     operation,decentralization,sourceSystem:string(draft.sourceSystem??(manual?'MANUAL':undefined),'Sistema de origem'),
     documentTotalCents,totalCents,sequences:seqs,allocations:shares};
+  const adminDeadline=deadline(data.adminDeadline??null,issueDate);
+  if(adminDeadline&&fields.deadline&&adminDeadline>=fields.deadline)return invalid('Prazo administrativo deve anteceder o prazo da NC.');
   const originalFingerprint=fingerprint({source,...fields});
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
@@ -278,7 +280,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
     await ensureCenters(tx,member,shares);
     const at=now();
     const rev=prior?sum(prior.revision,1):1;
-    const record:StoredCredit={...fields,year,source,originalFingerprint,cellAdjustments:{},revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
+    const record:StoredCredit={...fields,adminDeadline,year,source,originalFingerprint,cellAdjustments:{},revision:rev,createdAt:at,updatedAt:at,...(prior?{generation:'r'+rev}:{})};
     const result=detail(member,record,[]);
     await audit(tx,member,'nc',record.id,rev,prior?'recreate':'create',prior?{deletedAt:prior.deletedAt,revision:prior.revision}:null,{...auditSummary(result),source,allocations:shares},at);
     tx.set(key,withProjection(record,result));
@@ -288,7 +290,7 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
 export async function updateCredit(member:CreditMember,input:unknown):Promise<CreditDetail> {
   own(member,true);
   const data=object(input),key=id(data.id);
-  if(data.allocations===undefined&&data.description===undefined&&data.deadline===undefined)
+  if(data.allocations===undefined&&data.description===undefined&&data.deadline===undefined&&data.adminDeadline===undefined)
     return invalid('Nenhuma alteração informada.');
   return creditTransaction(async tx=>{
     await verifyWriter(tx,member);
@@ -300,14 +302,16 @@ export async function updateCredit(member:CreditMember,input:unknown):Promise<Cr
     const at=now(),next:StoredCredit={...record,allocations:shares,
       description:data.description===undefined?record.description:string(data.description,'Descrição',12000,true),
       deadline:data.deadline===undefined?record.deadline:deadline(data.deadline,record.issueDate),
+      adminDeadline:data.adminDeadline===undefined?record.adminDeadline??null:deadline(data.adminDeadline,record.issueDate),
       revision:sum(record.revision,1),updatedAt:at};
-    if(next.description===record.description&&next.deadline===record.deadline&&
+    if(next.adminDeadline&&next.deadline&&next.adminDeadline>=next.deadline)return invalid('Prazo administrativo deve anteceder o prazo da NC.');
+    if(next.description===record.description&&next.deadline===record.deadline&&(next.adminDeadline??null)===(record.adminDeadline??null)&&
       JSON.stringify(next.allocations)===JSON.stringify(record.allocations))return before;
     const after=detail(member,next,nes);
     reconcile(before,after,data.acknowledgeDeficit);
     await audit(tx,member,'nc',key,next.revision,'update',
-      {...auditSummary(before),allocations:record.allocations,deadline:record.deadline,description:record.description},
-      {...auditSummary(after),allocations:next.allocations,deadline:next.deadline,description:next.description,
+      {...auditSummary(before),allocations:record.allocations,deadline:record.deadline,adminDeadline:record.adminDeadline??null,description:record.description},
+      {...auditSummary(after),allocations:next.allocations,deadline:next.deadline,adminDeadline:next.adminDeadline??null,description:next.description,
         acknowledgedDeficit:data.acknowledgeDeficit===true},at);
     tx.set(path(member,'credits',key),withProjection(next,after));
     return after;
@@ -532,6 +536,18 @@ export async function getCredit(member:CreditMember,key:string):Promise<CreditDe
     return projectedDetail(member,record);
   },true);
 }
+export async function listCreditCommitments(member:CreditMember,key:string,requestedCenter?:string){
+  own(member);
+  const center=requestedCenter?centerId(requestedCenter):member.centerId;
+  if(member.role==='centro'&&center!==member.centerId)return forbidden();
+  return creditTransaction(async tx=>{
+    const record=await getStoredCredit(tx,member,id(key));
+    const detail=projectedDetail(member,record);
+    if(center&&!detail.balance.centers.some(c=>c.centerId===center&&(c.basisPoints>0||c.commitmentCount>0)))return absent();
+    const notes=await linked(tx,member,record.id);
+    return {commitments:notes.filter(n=>!center||n.centerId===center).map(publicCommitment)};
+  },true);
+}
 export async function getCommitment(member:CreditMember,key:string):Promise<{commitment:CommitmentRecord}> {
   own(member);
   return creditTransaction(async tx=>{
@@ -591,9 +607,12 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
   if(!['deadline','issue','id'].includes(sort))return invalid('Ordenação inválida.');
   const selectedCenter=filters.center?centerId(filters.center):'';
   if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
-  const ncOnly=filters.kind==='nc'&&!completeReport;
+  const ncOnly=filters.kind==='nc';
+  const search=filters.search?.trim().slice(0,200)??'';
+  const normalizeSearch=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const term=normalizeSearch(search);
   let creditAfter='',neAfter='';
-  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter,...(ncOnly?['nc-only']:[])]).slice(0,20);
+  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter,term,...(ncOnly?['nc-only']:[])]).slice(0,20);
   if(completeReport&&filters.cursor)return invalid('Relatório integral não aceita cursor externo.');
   if(filters.cursor){
     const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
@@ -651,8 +670,8 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
     }
     if(pageNe.some(ne=>!allCreditIds.has(ne.creditId)))return corrupt();
     // Ordenação canônica, estável mesmo quando novos registros entram no exercício.
-    const ordered=credits.filter(c=>!selectedCenter||c.balance.centers.some(x=>x.centerId===selectedCenter&&(x.basisPoints>0||x.commitmentCount>0)));
-    ordered.sort((a,b)=>(sort==='deadline'?(a.deadline??'9999-12-31').localeCompare(b.deadline??'9999-12-31'):sort==='issue'?b.issueDate.localeCompare(a.issueDate):0)||a.id.localeCompare(b.id));
+    const ordered=credits.filter(c=>(!selectedCenter||c.balance.centers.some(x=>x.centerId===selectedCenter&&(x.basisPoints>0||x.commitmentCount>0)))&&(!term||normalizeSearch([c.number,c.fullNumber,c.issuingUg,c.beneficiaryUg,c.description,c.issueDate,c.issueDate.split('-').reverse().join('/'),c.deadline,c.adminDeadline,...c.cells.flatMap(x=>[x.nd,x.pi,x.ptres,x.fonte,x.ugr])].join(' ')).includes(term)));
+    ordered.sort((a,b)=>(sort==='deadline'?(a.adminDeadline||a.deadline||'9999-12-31').localeCompare(b.adminDeadline||b.deadline||'9999-12-31'):sort==='issue'?b.issueDate.localeCompare(a.issueDate):0)||a.id.localeCompare(b.id));
     const afterIndex=creditAfter&&creditAfter!=='~'?ordered.findIndex(c=>c.id===creditAfter):-1;
     if(creditAfter&&creditAfter!=='~'&&afterIndex<0)return invalid('A lista foi atualizada. Retorne à primeira página.');
     const remaining=creditAfter==='~'?[]:ordered.slice(afterIndex+1);
