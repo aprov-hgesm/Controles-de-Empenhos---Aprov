@@ -388,14 +388,16 @@ export async function replaceCommitmentPdf(member:CreditMember,input:unknown):Pr
     const nextNe:StoredCommitment={...ne,netCents,lastReplacementHash:documentHash,revision:sum(ne.revision,1),updatedAt:at};
     const nextNc={...nc,revision:sum(nc.revision,1),updatedAt:at};
     const after=detail(member,nextNc,nes.map(n=>n.id===ne.id?nextNe:n));
+    let movement:MovementRecord|undefined;
+    let movementKey:string|undefined;
     if(delta>0){
       const movementId='mov_'+fingerprint(['ne',ne.id,'pdf',documentHash]);
-      const movementKey=path(member,'movements',movementId);
+      movementKey=path(member,'movements',movementId);
       if(await tx.get(movementKey))return conflict('Este documento já foi utilizado para uma anulação. Confira o histórico.');
-      const movement:MovementRecord={id:movementId,entityType:'ne',entityId:ne.id,kind:'anulacao',amountCents:delta,deltaCents:-delta,reference:'PDF '+documentHash,reason:'Substituição por NE atualizada — redução do valor líquido',expectedRevision,acknowledgeDeficit:false,creditId:nc.id,cellId:ne.cellId,authorUid:member.uid,createdAt:at};
-      tx.set(movementKey,movement);
+      movement={id:movementId,entityType:'ne',entityId:ne.id,kind:'anulacao',amountCents:delta,deltaCents:-delta,reference:'PDF '+documentHash,reason:'Substituição por NE atualizada — redução do valor líquido',expectedRevision,acknowledgeDeficit:false,creditId:nc.id,cellId:ne.cellId,authorUid:member.uid,createdAt:at};
     }
     await audit(tx,member,'ne',ne.id,nextNe.revision,'replacePdf',{...auditSummary(before),entityCents:ne.netCents},{...auditSummary(after),entityCents:netCents,returnedCents:delta,documentHash},at);
+    if(movementKey&&movement)tx.set(movementKey,movement);
     tx.set(path(member,'commitments',ne.id),nextNe);
     tx.set(path(member,'credits',nc.id),withProjection(nextNc,after));
     return {commitment:publicCommitment(nextNe),balance:after.balance,cells:after.cells};
