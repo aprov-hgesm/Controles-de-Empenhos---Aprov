@@ -165,7 +165,7 @@ function safeFilename(name:string,kind:Kind) {
   const ext=kind==='nc'?'.html':'.pdf';
   return (base.replace(/\.(?:html?|pdf)$/i,'')||'documento')+ext;
 }
-type Entity = {id:string;number:string;fullNumber?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;netCents?:number;totalCents?:number};
+type Entity = {id:string;number:string;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;netCents?:number;totalCents?:number};
 function asEntity(value:unknown,kind:Kind,id:string):Entity {
   if(!value||typeof value!=='object')return fail(404,'Registro financeiro não encontrado.');
   const obj=value as Record<string,unknown>;
@@ -186,15 +186,16 @@ function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
   try {
     if(kind==='nc') {
       const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),m.ug);
-      if(!e.fullNumber||normalizeNumber(parsed.fullNumber)!==normalizeNumber(e.fullNumber)||parsed.beneficiaryUg!==m.ug)throw new Error();
+      if(normalizeNumber(parsed.number)!==normalizeNumber(e.number)||parsed.issuingUg!==e.issuingUg||parsed.beneficiaryUg!==m.ug)throw new Error();
     } else {
       if(Buffer.from(bytes.subarray(0,5)).toString('ascii')!=='%PDF-')throw new Error();
       // O anexo precisa passar pelas mesmas verificações de tamanho expandido,
       // estrutura, identidade e emissão original da importação financeira.
-      const parsed=parseNe(bytes,m);
+      const parsed=parseNe(bytes,m,true);
       if(parsed.ug!==m.ug||normalizeNumber(parsed.number)!==normalizeNumber(e.number))throw new Error();
+      if(parsed.netCents!==e.netCents)fail(422,'O valor do PDF difere do valor registrado. Use Substituir NE para atualizar o saldo, ou registre a anulação em Registrar ajuste.');
     }
-  }catch {fail(422,'O arquivo original não corresponde à UG e ao número do registro financeiro. Confira o documento.');}
+  }catch(error) {if(error instanceof CreditAccessError)throw error;fail(422,'O arquivo original não corresponde à UG e ao número do registro financeiro. Confira o documento.');}
 }
 function fileProps(m:CreditMember,d:Stored) {return {ownerApp:'EMPROVEX',creditUg:m.ug,creditRole:'original',creditDocument:d.id,creditHash:d.sha256};}
 async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Array> {

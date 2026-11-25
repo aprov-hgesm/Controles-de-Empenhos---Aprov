@@ -20,10 +20,12 @@ export interface CreditRecord {
   documentTotalCents: number | null; totalCents: number; sequences: CreditSequence[];
   allocations: CreditAllocation[]; revision: number; createdAt: string; updatedAt: string;
 }
+export type BudgetDifference = { field: string; credit: string|null; commitment: string|null };
 export interface CommitmentRecord {
   id: string; number: string; creditId: string; centerId: string; cellId: string;
   ug: string; issueDate: string; description: string; supplier: string; supplierCnpj: string;
   netCents: number; revision: number; createdAt: string; updatedAt: string;
+  budgetDifferences?: BudgetDifference[];
 }
 export interface CostCenter { id: string; name: string; active: boolean }
 export interface CreditCellBalance extends BudgetCell {
@@ -42,7 +44,7 @@ export interface FinanceView {
   credits: FinanceCredit[]; commitments: CommitmentRecord[]; centers: CostCenter[];
   alerts: FinanceAlert[]; nextCursor?: string;
 }
-export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number }
+export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number; sort?: string; center?: string }
 export type CreditDraft = Omit<CreditRecord, 'id'|'allocations'|'revision'|'createdAt'|'updatedAt'|'sequences'|'documentTotalCents'> & {
   documentTotalCents: number;
   sequences: SagHtmlCreditSequence[];
@@ -62,7 +64,7 @@ export interface UpdateCreditInput {
 }
 export interface CreateCommitmentInput {
   draft: CommitmentDraft; creditId: string; centerId: string; cellId: string;
-  acknowledgeDeficit?: boolean; expectedCreditRevision?: number;
+  acknowledgeDeficit?: boolean; acknowledgeBudgetDifference?: boolean; expectedCreditRevision?: number;
 }
 export type MovementKind = 'reforco' | 'anulacao' | 'recolhimento' | 'correcao';
 export interface MovementInput {

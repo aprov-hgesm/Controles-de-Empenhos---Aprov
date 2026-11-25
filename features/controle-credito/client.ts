@@ -12,7 +12,7 @@ export type Credit = Omit<SagHtmlCreditDraft,'warnings'|'requiresReview'|'sequen
   id:string; revision:number; createdAt:string; updatedAt:string; allocations:CreditAllocation[]; documentTotalCents:number|null; cells?:Cell[];
   sequences:(Omit<SagHtmlCreditSequence,'destination'> & {destination:Cell[]})[];
 };
-export type Commitment = {id:string;number:string;creditId:string;centerId:string;cellId:string;ug:string;issueDate:string;description:string;supplier:string;supplierCnpj:string;netCents:number;revision:number};
+export type Commitment = {id:string;number:string;creditId:string;centerId:string;cellId:string;ug:string;issueDate:string;description:string;supplier:string;supplierCnpj:string;netCents:number;revision:number;createdAt:string;updatedAt:string;budgetDifferences?:{field:string;credit:string|null;commitment:string|null}[]};
 export type Balance = ReturnType<typeof calculateCreditBalance>;
 export type FinanceView = {
   member:Member; totals:{creditCents:number;committedCents:number;availableCents:number;creditCount:number;commitmentCount:number;noCommitmentsCount:number;unallocatedCents?:number};
@@ -36,7 +36,7 @@ function assertIdentity(user:User,signal:AbortSignal){
   if(signal.aborted||auth.currentUser?.uid!==user.uid)throw new DOMException('Operação cancelada','AbortError');
 }
 export function cancelled(error:unknown){return error instanceof Error&&error.name==='AbortError';}
-export function errorText(error:unknown){return error instanceof CreditApiError?error.message+(error.code?' (Código: '+error.code+')':''):error instanceof Error?error.message:'Não foi possível concluir a operação.';}
+export function errorText(error:unknown){return error instanceof CreditApiError?error.message:error instanceof Error?error.message:'Não foi possível concluir a operação.';}
 async function request(user:User,path:string,signal:AbortSignal,init:RequestInit={}){
   assertIdentity(user,signal);
   const token=await user.getIdToken();
@@ -60,8 +60,8 @@ export async function api<T>(user:User,path:string,signal:AbortSignal,init:Reque
 }
 export function json(method:string,data:unknown):RequestInit{return {method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)};}
 export function query(values:Record<string,string|undefined>){const params=new URLSearchParams();Object.entries(values).forEach(([key,value])=>{if(value)params.set(key,value);});return '?'+params.toString();}
-export function importDocument<T>(user:User,kind:'nc'|'ne',file:File,signal:AbortSignal){
-  return api<Preview<T>>(user,'/importacao',signal,{method:'POST',headers:{'x-credit-document-kind':kind},body:file});
+export function importDocument<T>(user:User,kind:'nc'|'ne',file:File,signal:AbortSignal,updated=false){
+  return api<Preview<T>>(user,'/importacao'+(updated?'?updated=1':''),signal,{method:'POST',headers:{'x-credit-document-kind':kind},body:file});
 }
 export async function download(user:User,path:string,filename:string,signal:AbortSignal){
   const response=await request(user,path,signal);
