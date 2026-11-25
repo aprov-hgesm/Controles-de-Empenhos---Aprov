@@ -233,3 +233,37 @@ test('R1.3: manager-only deletion returns credit, checks cascade count and revis
     assert.equal(newNe.balance.availableCents,7000);
   }finally{globalThis.fetch=previousFetch;}
 });
+
+test('R1.5: independent list queries and whole-year catalogue keep scoped cursors and avoid unrelated collection reads',async()=>{
+  const db=transport(),old=globalThis.fetch;globalThis.fetch=db.fetch;
+  try{
+    const a=await store.createCredit(manager,ncInput('2026NC000081'));
+    await store.createCredit(manager,ncInput('2026NC000082'));
+    const neA=await store.createCommitment(manager,neInput(a.credit.id,'2026NE000081','A',1000,1));
+    const neB=await store.createCommitment(manager,neInput(a.credit.id,'2026NE000082','B',1000,2));
+    db.calls.length=0;
+    const first=await store.listFinanceCommitments(manager,{year:'2026',limit:1});
+    assert.equal(first.commitments.length,1);assert.ok(first.nextCursor);
+    assert.ok(!db.calls.some(x=>x.body.structuredQuery?.from[0].collectionId==='credits'));
+    assert.equal(db.calls.filter(x=>x.op===':batchGet').length,1);
+    const second=await store.listFinanceCommitments(manager,{year:'2026',limit:1,cursor:first.nextCursor});
+    assert.equal(second.commitments.length,1);
+    assert.notEqual(first.commitments[0].id,second.commitments[0].id);
+    await assert.rejects(store.listFinanceCommitments(manager,{year:'2026',limit:1,center:'A',cursor:first.nextCursor}),status(422));
+    const sector=await store.listFinanceCommitments(centerA,{year:'2026'});
+    assert.deepEqual(sector.commitments.map(n=>n.id),[neA.commitment.id]);
+    await assert.rejects(store.listFinanceCommitments(centerA,{year:'2026',center:'B'}),status(403));
+    assert.deepEqual((await store.listFinanceCommitments(manager,{year:'2026',center:'B'})).commitments.map(n=>n.id),[neB.commitment.id]);
+    db.calls.length=0;
+    const ncPage=await store.listFinance(manager,{year:'2026',kind:'nc',limit:1});
+    assert.equal(ncPage.credits.length,1);assert.equal(ncPage.commitments.length,0);assert.equal(ncPage.totals.creditCount,2);
+    assert.ok(!db.calls.some(x=>x.body.structuredQuery?.from[0].collectionId==='commitments'));
+    db.calls.length=0;
+    const catalog=await store.listCreditChoices(manager,'2026');
+    assert.equal(catalog.choices.length,2);
+    assert.ok(catalog.choices.every(c=>!('cells' in c)&&!('allocations' in c)));
+    assert.deepEqual(db.calls.filter(x=>x.body.structuredQuery).map(x=>x.body.structuredQuery.from[0].collectionId),['credits']);
+    assert.equal((await store.listCreditChoices(other,'2026')).choices.length,0);
+    assert.equal((await store.listCreditChoices(centerA,'2026')).choices.length,2);
+  }finally{globalThis.fetch=old;}
+});

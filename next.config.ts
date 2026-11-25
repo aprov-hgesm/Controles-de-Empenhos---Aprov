@@ -43,6 +43,10 @@ const nextConfig: NextConfig = {
       },
       {
         // Painel fundador: HTML/RSC nunca pode ser reaproveitado entre revisões.
+        source: '/controle-credito',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' }],
+      },
+      {
         source: '/admin',
         headers: [
           { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
