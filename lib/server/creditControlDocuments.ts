@@ -4,6 +4,9 @@ import { CreditAccessError, type CreditMember } from './creditControlAuth';
 import { FounderAuthError } from './firebaseFounderAuth';
 import { getGoogleAccessToken } from './sectorProvisioningAdmin';
 import { getCredit, getCommitment } from './creditControlStore';
+import { listCreditAdministration } from './creditControlMembers';
+import { createCreditDrivePermissionAdapter, creditDriveViewUrl, CreditDrivePermissionError } from './creditDrivePermissions';
+import { withCreditSharingLock } from './creditSharingLock';
 import { parseSagCreditHtml } from '../controle-credito/sagCreditHtml.mjs';
 import { parseNe } from './creditControlImport';
 import { creditPdf, creditPdfResponse, displayDate, money } from '../controle-credito/reports/creditPdf';
@@ -12,10 +15,12 @@ type Kind = 'nc' | 'ne';
 type Fields = Record<string, {stringValue?: string; integerValue?: string; booleanValue?: boolean}>;
 type RecordDoc = {name: string; fields: Fields; updateTime: string};
 type Metadata = {id: string; name: string; mimeType: string; size?: string; parents?: string[]; ownedByMe?: boolean; trashed?: boolean; appProperties?: Record<string,string>; permissions?: {type:string;role:string}[]};
+type ShareState='pending'|'shared'|'private';
 type Stored = {
   id:string; entityType:Kind; entityId:string; entityKey:string; filename:string; mimeType:string;
   sizeBytes:number; sha256:string; status:'pending'|'ready'|'failed'; createdAt:string;
   driveId:string; folderId:string; ownerEmail:string; version:string; uploadedBy:string;
+  shareState:ShareState;shareRecipients:string[];shareCenter:string;shareCreditId:string;
 };
 const fail = (status:number, message:string): never => { throw new CreditAccessError(status,message); };
 const hash = (bytes:Uint8Array|string) => createHash('sha256').update(bytes).digest('hex');
@@ -67,7 +72,10 @@ function encode(value:Record<string,string|number>):Fields {
 }
 function str(doc:RecordDoc,key:string) {return doc.fields[key]?.stringValue||'';}
 function stored(doc:RecordDoc):Stored {
-  const d={
+  const shareState=(str(doc,'shareState')||'private') as ShareState;
+  let shareRecipients:unknown;try{shareRecipients=JSON.parse(str(doc,'shareRecipients')||'[]');}catch{return fail(503,'Registro de compartilhamento inválido.');}
+  if(!['private','pending','shared'].includes(shareState)||!Array.isArray(shareRecipients)||shareRecipients.length>100||shareRecipients.some(e=>typeof e!=='string'||e.length>254||!/^\S+@\S+\.\S+$/.test(e))||new Set(shareRecipients).size!==shareRecipients.length||shareState==='private'&&shareRecipients.length||shareState==='shared'&&!shareRecipients.length)return fail(503,'Registro de compartilhamento inválido.');
+  const d={shareState,shareRecipients:shareRecipients as string[],shareCenter:str(doc,'shareCenter'),shareCreditId:str(doc,'shareCreditId'),
     id:str(doc,'id'),entityType:documentKind(str(doc,'entityType')),entityId:documentEntityId(str(doc,'entityId')),
     entityKey:str(doc,'entityKey'),filename:str(doc,'filename'),mimeType:str(doc,'mimeType'),sizeBytes:Number(doc.fields.sizeBytes?.integerValue),
     sha256:str(doc,'sha256'),status:str(doc,'status') as Stored['status'],createdAt:str(doc,'createdAt'),driveId:str(doc,'driveId'),
@@ -76,11 +84,12 @@ function stored(doc:RecordDoc):Stored {
   if(!/^[a-f0-9]{64}$/.test(d.id)||!/^[a-f0-9]{64}$/.test(d.sha256)||!Number.isSafeInteger(d.sizeBytes)||d.sizeBytes<=0||
     d.sizeBytes>maxSize(d.entityType)||d.mimeType!==mime(d.entityType)||!['pending','ready','failed'].includes(d.status)||
     !(d.entityKey===d.entityType+':'+d.entityId||new RegExp('^'+d.entityType+':'+d.entityId+':r[1-9][0-9]*$').test(d.entityKey))||!validDriveId(d.driveId)||!validDriveId(d.folderId)) fail(503,'Referência documental inválida.');
+  if(d.shareRecipients.length&&(d.entityType!=='ne'||!d.shareCenter||!d.shareCreditId||!/^[-A-Za-z0-9_]{1,180}$/.test(d.shareCreditId)||!/^[-A-Za-z0-9_]{1,64}$/.test(d.shareCenter)||d.shareRecipients.some(e=>e!==e.trim().toLowerCase())))return fail(503,'Escopo do compartilhamento inválido.');
   return d;
 }
 function publicRef(d:Stored) {
   const {id,entityType,entityId,filename,mimeType,sizeBytes,sha256,status,createdAt,version}=d;
-  return {id,entityType,entityId,filename,mimeType,sizeBytes,sha256,status,createdAt,version};
+  return {id,entityType,entityId,filename,mimeType,sizeBytes,sha256,status,createdAt,version,shareState:d.shareState,shareCount:d.shareState==='shared'?d.shareRecipients.length:0};
 }
 function validDriveId(s:string){return /^[A-Za-z0-9_-]{5,200}$/.test(s);}
 async function create(path:string,id:string,value:Record<string,string|number>):Promise<boolean> {
@@ -165,7 +174,7 @@ function safeFilename(name:string,kind:Kind) {
   const ext=kind==='nc'?'.html':'.pdf';
   return (base.replace(/\.(?:html?|pdf)$/i,'')||'documento')+ext;
 }
-type Entity = {id:string;number:string;generation?:string;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
+type Entity = {id:string;number:string;generation?:string;creditId?:string;revision?:number;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
 function asEntity(value:unknown,kind:Kind,id:string):Entity {
   if(!value||typeof value!=='object')return fail(404,'Registro financeiro não encontrado.');
   const obj=value as Record<string,unknown>;
@@ -199,11 +208,21 @@ function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
   }catch(error) {if(error instanceof CreditAccessError)throw error;fail(422,'O arquivo original não corresponde à identidade do registro (UG, número, emissão ou favorecido). Confira o documento.');}
 }
 function fileProps(m:CreditMember,d:Stored) {return {ownerApp:'EMPROVEX',creditUg:m.ug,creditRole:'original',creditDocument:d.id,creditHash:d.sha256};}
-async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Array> {
+async function verifyFileMetadata(m:CreditMember,token:string,d:Stored,revoking=false):Promise<void> {
   const folder=privateOwned(await metadata(token,d.folderId),d.folderId,folderProps(m));
   if(folder.mimeType!==folderMime)fail(409,'Pasta documental inválida.');
-  const meta=privateOwned(await metadata(token,d.driveId),d.driveId,fileProps(m,d));
-  if(meta.mimeType!==d.mimeType||meta.name!==d.filename||Number(meta.size)!==d.sizeBytes||meta.parents?.length!==1||meta.parents[0]!==d.folderId)fail(409,'Metadados do arquivo divergem do registro.');
+  const raw=await metadata(token,d.driveId);
+  let meta:Metadata;
+  if(d.entityType==='ne'&&d.shareRecipients.length){
+    if(!raw||raw.id!==d.driveId||raw.trashed||raw.ownedByMe!==true||Object.entries(fileProps(m,d)).some(([k,v])=>raw.appProperties?.[k]!==v))return fail(409,'Propriedade ou vínculo documental divergente.');
+    const readers=await createCreditDrivePermissionAdapter(token,m.email).list(d.driveId);
+    if(readers.some(p=>!d.shareRecipients.includes(p.emailAddress)))return fail(409,'Permissões do arquivo divergentes do registro.');
+    meta=raw;
+  }else meta=privateOwned(raw,d.driveId,fileProps(m,d));
+  if(meta.parents?.length!==1||meta.parents[0]!==d.folderId||!revoking&&(meta.mimeType!==d.mimeType||meta.name!==d.filename||Number(meta.size)!==d.sizeBytes))fail(409,'Metadados do arquivo divergem do registro.');
+}
+async function verifyFile(m:CreditMember,token:string,d:Stored):Promise<Uint8Array>{
+  await verifyFileMetadata(m,token,d);
   const res=await driveRequest(token,drive+'/files/'+d.driveId+'?alt=media');
   if(!res.ok)fail(503,'Não foi possível conferir o arquivo no Drive.');
   const bytes=await boundedBytes(res.body,maxSize(d.entityType));
@@ -225,7 +244,11 @@ export async function readDocumentForm(request:Request) {
   try{return await new Response(new Uint8Array(bytes),{headers:{'Content-Type':contentType}}).formData();}
   catch{return fail(422,'Formulário documental inválido.');}
 }
-export async function saveDocument(m:CreditMember,request:Request,form:FormData) {
+export async function saveDocument(m:CreditMember,request:Request,form:FormData){
+  if(documentKind(form.get('entityType'))==='nc')return saveDocumentLocked(m,request,form);
+  return withCreditSharingLock(m,'upload-ne',()=>saveDocumentLocked(m,request,form));
+}
+async function saveDocumentLocked(m:CreditMember,request:Request,form:FormData) {
   manager(m);
   const kind=documentKind(form.get('entityType')),id=documentEntityId(form.get('entityId')),file=form.get('file');
   if(!file||typeof file==='string'||file.size<=0||file.size>maxSize(kind)||file.type!==mime(kind))return fail(422,'Formato ou tamanho do documento inválido.');
@@ -260,22 +283,124 @@ export async function saveDocument(m:CreditMember,request:Request,form:FormData)
       const confirmed=await read(path);
       if(!confirmed||str(confirmed,'status')!=='ready')fail(409,'Confirmação concorrente. Repita a operação.');
     }
+    if(kind==='ne'){
+      try{return publicRef(await syncShareLocked(m,token,docId,record));}
+      catch{return {...publicRef({...d,status:'ready'}),shareState:'pending' as const,shareWarning:'Original arquivado. Compartilhamento não confirmado. Use Sincronizar acesso no documento.'};}
+    }
     return publicRef({...d,status:'ready'});
   } catch(e) {
     if(d.status!=='ready')await setStatus(doc,path,'failed').catch(()=>undefined);
     throw e;
   }
 }
+/** Bounded, cursor-based query. Fail closed rather than silently skip grants. */
+async function documentRows(m:CreditMember,field:'entityKey'|'shareCenter'|'shareCreditId',value:string):Promise<RecordDoc[]>{
+  const docs:RecordDoc[]=[];let after='';
+  for(let page=0;page<51;page++){
+    const res=await db(unit(m)+':runQuery',{method:'POST',body:JSON.stringify({structuredQuery:{
+      from:[{collectionId:'documents'}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:value}}},
+      orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],...(after?{startAt:{values:[{referenceValue:after}],before:false}}:{}),limit:100
+    }})});
+    if(!res.ok)fail(503,'Não foi possível listar os documentos.');
+    const rows=await res.json() as {document?:RecordDoc}[];
+    const batch=rows.flatMap(row=>row.document?[row.document]:[]);
+    for(const row of batch){
+      const key=str(row,'id');
+      if(!/^[a-f0-9]{64}$/.test(key)||row.name!==root.slice('https://firestore.googleapis.com/v1/'.length)+unit(m)+'/documents/'+key||row.name<=after)fail(503,'Consulta documental inconsistente.');
+      after=row.name;docs.push(row);
+    }
+    if(batch.length<100)return docs;
+  }
+  return fail(422,'Quantidade de documentos acima do limite seguro. Solicite conciliação técnica.');
+}
+async function persistShare(m:CreditMember,doc:RecordDoc,state:ShareState,recipients:string[],center:string,creditId:string):Promise<RecordDoc>{
+  const path=unit(m)+'/documents/'+str(doc,'id');
+  const values={shareState:state,shareRecipients:JSON.stringify(recipients),shareCenter:center,shareCreditId:creditId};
+  const mask=Object.keys(values).map(k=>'updateMask.fieldPaths='+k).join('&');
+  const r=await db(path+'?'+mask+'&currentDocument.updateTime='+encodeURIComponent(doc.updateTime),{method:'PATCH',body:JSON.stringify({fields:encode(values)})});
+  if(!r.ok)return fail(409,'Compartilhamento alterado simultaneamente. Repita a operação.');
+  return r.json();
+}
+async function reconcileShare(m:CreditMember,token:string,doc:RecordDoc,desired:string[],center:string,creditId:string,verified=false,allowGrant=true):Promise<Stored>{
+  const d=stored(doc);
+  if(d.entityType!=='ne'||d.ownerEmail!==m.email||d.status!=='ready')return fail(409,'Somente a NE original arquivada pode ser compartilhada.');
+  // Verify the bytes, ownership, private folder, and previous known ACL before mutation.
+  if(!verified){if(allowGrant)await verifyFile(m,token,d);else await verifyFileMetadata(m,token,d,true);}
+  const known=[...new Set([...d.shareRecipients,...desired])];
+  const reserved=await persistShare(m,doc,'pending',known,center,creditId);
+  try{
+    const confirmed=await createCreditDrivePermissionAdapter(token,m.email).reconcile(d.driveId,desired,known,allowGrant);
+    const actual=confirmed.map(p=>p.emailAddress).sort();
+    return stored(await persistShare(m,reserved,actual.length?'shared':'private',actual,center,creditId));
+  }catch(e){
+    if(e instanceof CreditDrivePermissionError)throw new CreditAccessError(409,e.message+' O registro está pendente; sincronize novamente.');
+    throw e;
+  }
+}
+async function desiredReaders(m:CreditMember,record:Entity):Promise<string[]>{
+  if(!record.centerId||!record.creditId)return fail(409,'NE sem centro de custos ou NC vinculada.');
+  const admin=await listCreditAdministration(m);
+  if(!('members' in admin)||admin.truncated)return fail(409,'Cadastro de acessos incompleto. Não foi possível confirmar o compartilhamento.');
+  if(!admin.centers.some((c:{id:string;active:boolean}|null)=>c!==null&&c.id===record.centerId&&c.active))return [];
+  return [...new Set((admin.members??[]).flatMap(x=>x?.role==='centro'&&x.active&&x.centerId===record.centerId?[x.email.trim().toLowerCase()]:[]))].filter(e=>e!==m.email.trim().toLowerCase()).sort();
+}
+async function syncShareLocked(m:CreditMember,token:string,docId:string,record:Entity):Promise<Stored>{
+  const path=unit(m)+'/documents/'+docId;
+  const row=await read(path);
+  if(!row)return fail(404,'Documento não encontrado.');
+  const d=stored(row);
+  if(d.id!==docId||d.entityType!=='ne'||d.entityId!==record.id||d.entityKey!==entityKey('ne',record)||d.ownerEmail!==m.email||d.status!=='ready')return fail(409,'Documento não corresponde à NE atual.');
+  const bytes=await verifyFile(m,token,d);
+  validateSource(bytes,'ne',m,record);
+  // Keep only one shared version for each live NE. Archived versions remain private.
+  const others=(await documentRows(m,'entityKey',d.entityKey)).filter(r=>str(r,'id')!==docId).filter(r=>stored(r).shareRecipients.length>0);
+  for(const previous of others)await reconcileShare(m,token,previous,[],record.centerId!,record.creditId!,false,false);
+  const desired=await desiredReaders(m,record);
+  return reconcileShare(m,token,row,desired,record.centerId!,record.creditId!,true);
+}
+export async function synchronizeCreditShare(m:CreditMember,request:Request,id:string){
+  return withCreditSharingLock(m,'sync-ne',async()=>{
+    if(!/^[a-f0-9]{64}$/.test(id))return fail(404,'Documento não encontrado.');
+    const row=await read(unit(m)+'/documents/'+id);
+    if(!row)return fail(404,'Documento não encontrado.');
+    const d=stored(row);
+    if(d.entityType!=='ne')return fail(422,'Somente PDFs originais de NE podem ser compartilhados.');
+    const record=await entity(m,'ne',d.entityId),token=await checkedToken(m,request);
+    return publicRef(await syncShareLocked(m,token,id,record));
+  });
+}
+/** Founder has no owner's Drive token. Never bypass an existing external ACL. */
+export async function requireNoExternalCreditShare(m:CreditMember,centerId:string,email?:string){
+  manager(m);
+  const rows=await documentRows(m,'shareCenter',centerId);
+  if(rows.some(row=>{const d=stored(row);return d.entityType==='ne'&&d.shareRecipients.length>0&&(!email||d.shareRecipients.includes(email.trim().toLowerCase()));}))fail(409,'Este vínculo possui PDFs compartilhados. Revogue pelo Controle de Crédito com o Drive do gestor conectado.');
+}
+/** Must run under the same UG lock as the subsequent financial/admin mutation. */
+export async function revokeCreditShares(m:CreditMember,request:Request,scope:{entityKey:string}|{creditId:string}|{centerId:string;email?:string}){
+  manager(m);
+  const field='entityKey' in scope?'entityKey':'creditId' in scope?'shareCreditId':'shareCenter';
+  const value='entityKey' in scope?scope.entityKey:'creditId' in scope?scope.creditId:scope.centerId;
+  const email='email' in scope?scope.email?.trim().toLowerCase():undefined;
+  const rows=(await documentRows(m,field,value)).filter(row=>{const d=stored(row);return d.entityType==='ne'&&d.shareRecipients.length>0&&(!email||d.shareRecipients.includes(email));});
+  if(!rows.length)return;
+  // Connection is needed only if there are ACLs to revoke.
+  if(!request.headers.get('x-credit-drive-token'))return fail(409,'Conecte o Google Drive do gestor para revogar o acesso aos PDFs antes de concluir esta operação.');
+  const token=await checkedToken(m,request);
+  // Bound each request; repeat the operation to finish large cascades safely.
+  for(const row of rows.slice(0,12)){const d=stored(row);await reconcileShare(m,token,row,email&&d.shareState==='shared'?d.shareRecipients.filter(e=>e!==email):[],d.shareCenter,d.shareCreditId,false,false);}
+  if(rows.length>12)return fail(409,'Parte dos acessos foi revogada. Repita a operação para concluir a revogação dos demais documentos.');
+}
 export async function listDocuments(m:CreditMember,kind:Kind,id:string) {
   const record=await entity(m,kind,id);
-  // Centers receive no original metadata or Drive identifier; only a live, authorized projection.
-  if(m.role==='centro')return [{id:'projection-'+kind+'-'+id,entityType:kind,entityId:id,filename:kind+'-consulta.pdf',mimeType:'application/pdf',status:'ready',generated:true}];
-  const res=await db(unit(m)+':runQuery',{method:'POST',body:JSON.stringify({structuredQuery:{
-    from:[{collectionId:'documents'}],where:{fieldFilter:{field:{fieldPath:'entityKey'},op:'EQUAL',value:{stringValue:entityKey(kind,record)}}},limit:100
-  }})});
-  if(!res.ok)fail(503,'Não foi possível listar os documentos.');
-  const rows=await res.json() as {document?:RecordDoc}[];
-  return rows.flatMap(row=>row.document?[publicRef(stored(row.document))]:[]).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const projected={id:'projection-'+kind+'-'+id,entityType:kind,entityId:id,filename:kind+'-consulta.pdf',mimeType:'application/pdf',status:'ready' as const,generated:true};
+  if(m.role==='centro'&&kind==='nc')return [projected];
+  const rows=(await documentRows(m,'entityKey',entityKey(kind,record))).map(stored).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  if(m.role==='centro'){
+    const shared=rows.find(d=>d.entityType==='ne'&&d.status==='ready'&&d.shareState==='shared'&&d.shareCenter===m.centerId&&d.shareCreditId===record.creditId&&d.shareRecipients.includes(m.email.trim().toLowerCase()));
+    // Only the currently authorized account sees an individual Google Drive URL.
+    return shared?[{id:shared.id,entityType:kind,entityId:id,filename:shared.filename,mimeType:shared.mimeType,status:'ready' as const,sharedUrl:creditDriveViewUrl(shared.driveId)},projected]:[projected];
+  }
+  return rows.map(publicRef);
 }
 export async function downloadDocument(m:CreditMember,request:Request,id:string):Promise<Response> {
   const projection=/^projection-(nc|ne)-([A-Za-z0-9_-]{1,160})$/.exec(id);

@@ -7,6 +7,8 @@ import { HGESM_SECTOR_EMAIL } from '@/lib/hgesmWorkspace';
 import { isFounderSignInProvider } from '@/lib/platformIdentity';
 import { CreditAccessError, creditAuthFailure, creditAdminFetch, creditDocuments, readCreditAuthDocument, validCreditUid, stringField, type CreditFields, type CreditAuthDocument } from '@/lib/server/creditControlAuth';
 import { listCreditAdministration } from '@/lib/server/creditControlMembers';
+import {withCreditSharingLock} from '@/lib/server/creditSharingLock';
+import {requireNoExternalCreditShare} from '@/lib/server/creditControlDocuments';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const ug='160416';
@@ -64,10 +66,14 @@ export async function POST(request:Request){
   try{
     const {identity,token}=await authorize(request);
     const body=await bodyOf(request);
+    const actor={uid:identity.uid,email:identity.email,ug,role:'gestor' as const,centerId:null};
+    return await withCreditSharingLock(actor,'founder-access',async()=>{
     if(body.action==='revoke'){
       if(Object.keys(body).some(k=>!['action','uid'].includes(k))||!validCreditUid(body.uid))throw new CreditAccessError(422,'Usuário inválido.');
       const path='creditControlMembers/'+body.uid;const old=await readCreditAuthDocument(path,token);
       if(!old||stringField(old,'ug')!==ug||stringField(old,'uid')!==body.uid)throw new CreditAccessError(404,'Vínculo não encontrado.');
+      const center=stringField(old,'centerId'),email=stringField(old,'email');
+      if(stringField(old,'role')==='centro'&&center&&email)await requireNoExternalCreditShare(actor,center,email);
       await commit(token,[write(path,{active:bool(false)},old),audit(identity.uid,body.uid,'revoke')]);
       return reply({ok:true});
     }
@@ -93,6 +99,7 @@ export async function POST(request:Request){
     const path='creditControlMembers/'+uid;
     const old=await readCreditAuthDocument(path,token);
     if(old&&(stringField(old,'uid')!==uid||stringField(old,'ug')!==ug||stringField(old,'role')!==role||(role==='centro'&&stringField(old,'centerId')!==centerId)))throw new CreditAccessError(409,'Este usuário já possui outro vínculo. Não é permitido alterar automaticamente sua UG ou perfil.');
+    if(old&&role==='centro'&&stringField(old,'email')!==email){const previous=stringField(old,'email');if(previous)await requireNoExternalCreditShare(actor,centerId,previous);}
     const writes:ReturnType<typeof write>[]=[];
     // Only initialize absent default centers; never overwrite names or inactive state.
     for(const [id,name] of Object.entries(centers)){
@@ -105,5 +112,6 @@ export async function POST(request:Request){
     writes.push(write(path,fields,old),audit(identity.uid,uid,'grant'));
     await commit(token,writes);
     return reply({ok:true,uid});
+    });
   }catch(error){const f=creditAuthFailure(error);return reply({error:f.error},f.status);}
 }
