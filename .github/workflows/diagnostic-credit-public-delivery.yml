@@ -1,4 +1,4 @@
-name: Diagnóstico pontual da entrega pública R1.4
+name: Diagnóstico pontual da entrega pública R1.6
 on:
   push:
     branches: [diagnostic/credito-r14-public-delivery]
@@ -25,10 +25,10 @@ jobs:
               with urllib.request.urlopen(req,timeout=15) as r:
                   return r.read().decode('utf-8','replace'),dict((k.lower(),v) for k,v in r.headers.items()),r.geturl()
           root='https://emprovex.com.br/controle-credito'
-          preview='https://s0d6f357b1345---emprovex-cloudrun-candidate-kvcz7oikxq-rj.a.run.app/controle-credito'
+          preview='https://s1c06fe5a3d3c---emprovex-cloudrun-candidate-kvcz7oikxq-rj.a.run.app/controle-credito'
           nonce=str(time.time_ns())
-          markers=['Documento de registro nesta página','Google Drive · Armazenamento privado','Documentos das notas','Relatórios financeiros','Crédito R1.4','Acesso reservado aos perfis cadastrados','Acesso autorizado · Gratuito · Sessão independente']
-          for label,url in [('public-normal',root),('public-unique',root+'?releasecheck='+nonce),('hosting-default','https://emprovex-cloudrun-943599311487.web.app/controle-credito?releasecheck='+nonce),('exact-preview',preview+'?releasecheck='+nonce)]:
+          markers=['Visualizar NE original','Sincronizar acesso','sharedUrl','Baixar consulta','Conecte novamente o Google Drive do gestor.','Crédito R1.6','Crédito R1.5']
+          for label,url in [('public-normal',root),('public-unique',root+'?releasecheck='+nonce),('hosting-default-normal','https://emprovex-cloudrun-943599311487.web.app/controle-credito'),('hosting-default-fresh','https://emprovex-cloudrun-943599311487.web.app/controle-credito?releasecheck='+nonce),('exact-preview',preview+'?releasecheck='+nonce)]:
               try:
                   body,h,final=fetch(url)
                   p=Parser();p.feed(body)
