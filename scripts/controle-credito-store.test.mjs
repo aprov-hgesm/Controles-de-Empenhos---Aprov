@@ -153,3 +153,42 @@ test('store + REST adapter: identity, money, idempotency, revisions, deficits, r
   db.seed('creditControlMembers/'+manager.uid,{...manager,active:false});
   await assert.rejects(store.createCredit(manager,ncInput('2026NC000003')),status(403));
 });
+
+test('R1.2: budget differences require acknowledgement; replacement returns exact balance without duplicate movements; scoped order and reports',async()=>{
+  const db=transport(),previousFetch=globalThis.fetch;globalThis.fetch=db.fetch;
+  try{
+    const first=await store.createCredit(manager,{...ncInput(),deadline:'2026-12-01'});
+    const second=await store.createCredit(manager,{...ncInput('2026NC000002'),deadline:'2026-02-01',draft:{...ncInput('2026NC000002').draft,issueDate:'2026-01-05'}});
+    const third=await store.createCredit(manager,ncInput('2026NC000003'));
+    const list1=await store.listFinance(manager,{year:'2026',limit:1,sort:'deadline'});
+    assert.equal(list1.credits[0].id,second.credit.id);
+    const list2=await store.listFinance(manager,{year:'2026',limit:1,sort:'deadline',cursor:list1.nextCursor});
+    assert.equal(list2.credits[0].id,first.credit.id);
+    const list3=await store.listFinance(manager,{year:'2026',limit:1,sort:'deadline',cursor:list2.nextCursor});
+    assert.equal(list3.credits[0].id,third.credit.id);
+    await assert.rejects(store.listFinance(manager,{year:'2026',limit:1,sort:'issue',cursor:list1.nextCursor}),status(422));
+    assert.equal((await store.listFinance(manager,{year:'2026',sort:'issue'})).credits[0].id,second.credit.id);
+    const input=neInput(first.credit.id,'2026NE000011','A',5000,1);
+    input.draft.nd='339039';input.draft.pi='DIFERENTE';
+    await assert.rejects(store.createCommitment(manager,input),e=>e.status===409&&e.message.includes('339039')&&e.message.includes('339030'));
+    const saved=await store.createCommitment(manager,{...input,acknowledgeBudgetDifference:true});
+    assert.equal(saved.balance.availableCents,5000);
+    assert.equal(saved.commitment.budgetDifferences.length,2);
+    assert.equal(saved.commitment.budgetDifferences[0].commitment,'339039');
+    const replacement={id:saved.commitment.id,number:saved.commitment.number,issueDate:saved.commitment.issueDate,supplierCnpj:saved.commitment.supplierCnpj,netCents:3000,expectedRevision:1,confirmed:true,documentHash:'a'.repeat(64)};
+    await assert.rejects(store.replaceCommitmentPdf(centerA,replacement),status(403));
+    await assert.rejects(store.replaceCommitmentPdf(manager,{...replacement,number:'2026NE000012'}),status(422));
+    await assert.rejects(store.replaceCommitmentPdf(manager,{...replacement,netCents:6000}),status(422));
+    const adjusted=await store.replaceCommitmentPdf(manager,replacement);
+    assert.equal(adjusted.commitment.netCents,3000);
+    assert.equal(adjusted.balance.availableCents,7000);
+    assert.equal(adjusted.balance.centers.find(x=>x.centerId==='A').availableCents,3000);
+    assert.equal((await store.replaceCommitmentPdf(manager,replacement)).commitment.revision,2);
+    await assert.rejects(store.replaceCommitmentPdf(manager,{...replacement,documentHash:'b'.repeat(64),netCents:1000}),status(409));
+    const report=await store.listFinance(manager,{year:'2026',center:'A',sort:'deadline'},true);
+    assert.equal(report.commitments.length,1);
+    assert.equal(report.commitments[0].netCents,3000);
+    assert.equal((await store.listFinance(manager,{year:'2026',center:'B'})).commitments.length,0);
+    await assert.rejects(store.listFinance(centerA,{year:'2026',center:'B'}),status(403));
+  }finally{globalThis.fetch=previousFetch;}
+});
