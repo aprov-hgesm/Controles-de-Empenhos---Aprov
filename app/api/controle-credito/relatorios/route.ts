@@ -16,7 +16,7 @@ export async function GET(request:Request) {
     const from=['ne-centro','ne'].includes(type)?readDate(q.get('from')):undefined,to=['ne-centro','ne'].includes(type)?readDate(q.get('to')):undefined;
     if(nc&&!/^[A-Z0-9_]{1,160}$/.test(nc)||center&&!/^[A-Za-z0-9_-]{1,64}$/.test(center)||from&&to&&from>to)throw new CreditAccessError(422,'Confira o número da NC, centro e período informados.');
     if(member.role==='centro'&&center&&center!==member.centerId)throw new CreditAccessError(403,'Seu perfil só pode consultar o próprio centro de custos.');
-    const year=Number(yearText),view=await listFinance(member,{year,limit:100,center},true);
+    const year=Number(yearText),view=await listFinance(member,{year,limit:100,center,...(type==='nc'?{kind:'nc' as const}:{})},true);
     if(member.role==='centro'&&view.commitments.some(n=>n.centerId!==member.centerId))throw new CreditAccessError(503,'Projeção financeira inconsistente.');
     const lines=buildCreditReport(view,{type,nc,center,from,to});
     return creditPdfResponse(creditReportPdf(member,REPORT_TITLES[type],lines,year),'credito-'+type+'-'+year+'.pdf');

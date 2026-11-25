@@ -607,7 +607,7 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
   if(!['deadline','issue','id'].includes(sort))return invalid('Ordenação inválida.');
   const selectedCenter=filters.center?centerId(filters.center):'';
   if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
-  const ncOnly=filters.kind==='nc'&&!completeReport;
+  const ncOnly=filters.kind==='nc';
   const search=filters.search?.trim().slice(0,200)??'';
   const normalizeSearch=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const term=normalizeSearch(search);
