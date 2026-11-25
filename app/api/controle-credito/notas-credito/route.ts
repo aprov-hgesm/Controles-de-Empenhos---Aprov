@@ -1,5 +1,5 @@
 import { requireCreditMember } from '@/lib/server/creditControlAuth';
-import { getCredit, createCredit, updateCredit } from '@/lib/server/creditControlStore';
+import { getCredit, createCredit, updateCredit , deleteCredit } from '@/lib/server/creditControlStore';
 import { response, failure, json, id, integer, allocations, deadline, string, optionalAck, confirmNc, invalid, NC_MAX, CreditImportError } from '@/lib/server/creditControlImport';
 
 export const runtime = 'nodejs';
@@ -35,4 +35,12 @@ export async function PATCH(request: Request) {
     };
     return response(await updateCredit(member,input));
   } catch(error) { return failure(error); }
+}
+
+export async function DELETE(request:Request) {
+  try {
+    const member=await requireCreditMember(request,true);
+    const body=await json(request);
+    return response(await deleteCredit(member,{id:id(body.id),expectedRevision:integer(body.expectedRevision,'Revisão',1),confirmed:body.confirmed===true,expectedCommitmentCount:integer(body.expectedCommitmentCount,'Quantidade de empenhos')}));
+  }catch(error){return failure(error);}
 }
