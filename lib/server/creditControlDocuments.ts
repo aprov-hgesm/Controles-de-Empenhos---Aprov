@@ -376,7 +376,7 @@ export async function revokeCreditShares(m:CreditMember,request:Request,scope:{e
   if(!request.headers.get('x-credit-drive-token'))return fail(409,'Conecte o Google Drive do gestor para revogar o acesso aos PDFs antes de concluir esta operação.');
   const token=await checkedToken(m,request);
   // Bound each request; repeat the operation to finish large cascades safely.
-  for(const row of rows.slice(0,12)){const d=stored(row);await reconcileShare(m,token,row,email?d.shareRecipients.filter(e=>e!==email):[],d.shareCenter,d.shareCreditId);}
+  for(const row of rows.slice(0,12)){const d=stored(row);await reconcileShare(m,token,row,email&&d.shareState==='shared'?d.shareRecipients.filter(e=>e!==email):[],d.shareCenter,d.shareCreditId);}
   if(rows.length>12)return fail(409,'Parte dos acessos foi revogada. Repita a operação para concluir a revogação dos demais documentos.');
 }
 export async function listDocuments(m:CreditMember,kind:Kind,id:string) {

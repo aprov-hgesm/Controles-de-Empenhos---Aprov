@@ -135,3 +135,19 @@ test('R1.5 structured report handles multiple pages and retains selectable text'
   assert.ok((text.match(/\/Type \/Page\b/g)||[]).length>1);
   assert.match(decoded,/2026NC000001/);assert.match(decoded,/REGISTRO-FINAL/);assert.match(decoded,/1.234,56/);assert.match(decoded,/Tj/);
 });
+
+test('R1.6 original NE sharing has a manager-only sync endpoint, current generation and centre isolation',()=>{
+  const docs=read('lib/server/creditControlDocuments.ts'),ui=read('features/controle-credito/documents/CreditDocuments.tsx');
+  assert.match(docs,/shareCenter===m.centerId/);
+  assert.match(docs,/shareRecipients.includes\(m.email.trim\(\).toLowerCase\(\)\)/);
+  assert.match(docs,/withCreditSharingLock\(m,'upload-ne'/);
+  assert.match(docs,/validateSource\(bytes,'ne',m,record\)/);
+  assert.match(docs,/persistShare\(m,doc,'pending',known/);
+  assert.match(docs,/reconcile\(d.driveId,desired,known\)/);
+  assert.match(docs,/m.role==='centro'&&kind==='nc'\)return \[projected\]/);
+  assert.match(ui,/Visualizar NE original/);
+  const route=read('app/api/controle-credito/documentos/[id]/route.ts');assert.match(route,/export async function POST[\s\S]*requireCreditMember\(request,true\)/);
+  for(const path of ['notas-empenho','notas-credito','administracao']){
+    const s=read('app/api/controle-credito/'+path+'/route.ts');assert.match(s,/withCreditSharingLock\(member,/);assert.match(s,/await revokeCreditShares\(member,request,/);
+  }
+});
