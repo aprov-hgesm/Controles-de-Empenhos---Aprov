@@ -47,7 +47,7 @@ export interface FinanceView {
   credits: FinanceCredit[]; commitments: CommitmentRecord[]; centers: CostCenter[];
   alerts: FinanceAlert[]; nextCursor?: string;
 }
-export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number; sort?: string; center?: string }
+export interface FinanceFilters { year?: string | number; cursor?: string; limit?: string | number; sort?: string; center?: string; kind?: 'nc' }
 export type CreditDraft = Omit<CreditRecord, 'id'|'allocations'|'revision'|'createdAt'|'updatedAt'|'sequences'|'documentTotalCents'> & {
   documentTotalCents: number;
   sequences: SagHtmlCreditSequence[];

@@ -540,6 +540,43 @@ export async function getCommitment(member:CreditMember,key:string):Promise<{com
     return {commitment:publicCommitment(ne)};
   },true);
 }
+/** Compact catalogue: one annual credit scan, no NE or centre reads, no detail payload. */
+export async function listCreditChoices(member:CreditMember,yearText:string) {
+  own(member);
+  const year=pattern(yearText,/^20\d{2}$/,'Exercício');
+  return creditTransaction(async tx=>{
+    const docs=await tx.list<StoredCredit>(member.ug,'credits',{field:'year',value:year});
+    const choices=[];
+    for(const doc of docs){
+      const c=readCredit(member,doc.data,doc.path.split('/').pop()!);
+      if(c.year!==year)return corrupt();
+      if(member.role==='centro'&&!c.projection?.balance.centers.some(x=>x.centerId===member.centerId&&(x.basisPoints>0||x.commitmentCount>0)))continue;
+      const d=projectedDetail(member,c);
+      choices.push({id:c.id,number:c.number,description:c.description,deadline:c.deadline,availableCents:d.balance.availableCents});
+    }
+    return {choices:choices.sort((a,b)=>b.number.localeCompare(a.number,'pt-BR',{numeric:true}))};
+  },true);
+}
+/** List only NEs for the manager's list: avoid reading all annual NCs and projections on every centre change. */
+export async function listFinanceCommitments(member:CreditMember,filters:FinanceFilters={}):Promise<Pick<FinanceView,'member'|'commitments'|'centers'|'nextCursor'>>{
+  own(member);
+  const year=pattern(String(filters.year||today().slice(0,4)),/^20\d{2}$/,'Exercício');
+  const limit=filters.limit===undefined||filters.limit===''?50:integer(Number(filters.limit),'Limite',1);
+  if(limit>200)return invalid('Limite máximo de 200 registros.');
+  const selectedCenter=filters.center?centerId(filters.center):'';
+  if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
+  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,selectedCenter,'ne-list']).slice(0,20);
+  let after='';
+  if(filters.cursor){const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180})$/.exec(filters.cursor);if(!match||match[1]!==scope)return invalid('Cursor inválido para esta consulta.');after=match[2];}
+  return creditTransaction(async tx=>{
+    const scopedCenter=member.role==='centro'?member.centerId:selectedCenter;
+    const page=await tx.listCommitmentPage<StoredCommitment>(member.ug,scopedCenter?{field:'centerYear',value:year+'_'+scopedCenter}:{field:'year',value:year},limit,after);
+    const commitments=page.docs.map(d=>readCommitment(member,d.data,d.path.split('/').pop()!));
+    if(commitments.some(n=>n.year!==year||scopedCenter&&n.centerId!==scopedCenter))return corrupt();
+    const centers=member.role==='gestor'?(await tx.list<CostCenter>(member.ug,'centers')).map(d=>d.data):[(await tx.get<CostCenter>(path(member,'centers',member.centerId!)))?.data].filter((x):x is CostCenter=>!!x);
+    return {member:{uid:member.uid,email:member.email,ug:member.ug,role:member.role,centerId:member.centerId},commitments:commitments.map(publicCommitment),centers:centers.map(c=>({id:c.id,name:c.name,active:c.active})),...(page.nextAfter?{nextCursor:scope+'.'+page.nextAfter}:{})};
+  },true);
+}
 export async function listFinance(member:CreditMember,filters:FinanceFilters={},completeReport=false):Promise<FinanceView> {
   own(member);
   const year=filters.year===undefined||filters.year===''?today().slice(0,4):pattern(String(filters.year),/^20\d{2}$/,'Exercício');
@@ -551,8 +588,9 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
   if(!['deadline','issue','id'].includes(sort))return invalid('Ordenação inválida.');
   const selectedCenter=filters.center?centerId(filters.center):'';
   if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
+  const ncOnly=filters.kind==='nc'&&!completeReport;
   let creditAfter='',neAfter='';
-  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter]).slice(0,20);
+  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter,...(ncOnly?['nc-only']:[])]).slice(0,20);
   if(completeReport&&filters.cursor)return invalid('Relatório integral não aceita cursor externo.');
   if(filters.cursor){
     const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
@@ -563,7 +601,7 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
     // Uma passagem pelas NCs projetadas, sem consultas N+1 ou leitura integral de NEs.
     // Totais e alertas abrangem o exercício todo, inclusive em páginas posteriores.
     const creditDocs=await tx.list<StoredCredit>(member.ug,'credits',{field:'year',value:year});
-    const nePage=neAfter==='~'?{docs:[] as import('./creditControlFirestore').CreditDocument<StoredCommitment>[],nextAfter:undefined}:
+    const nePage=ncOnly||neAfter==='~'?{docs:[] as import('./creditControlFirestore').CreditDocument<StoredCommitment>[],nextAfter:undefined}:
       await tx.listCommitmentPage<StoredCommitment>(member.ug,
         member.role==='centro'||selectedCenter?{field:'centerYear',value:year+'_'+(member.role==='centro'?member.centerId:selectedCenter)}:{field:'year',value:year},limit,neAfter);
     // Relatório: todas as páginas de NEs no MESMO snapshot das NCs e dos totais.
