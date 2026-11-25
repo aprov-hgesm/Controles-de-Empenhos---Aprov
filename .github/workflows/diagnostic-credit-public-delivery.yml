@@ -1,0 +1,49 @@
+name: Diagnóstico pontual da entrega pública R1.4
+on:
+  push:
+    branches: [diagnostic/credito-r14-public-delivery]
+permissions:
+  contents: read
+jobs:
+  inspect-public:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Compare HTML, cache and client bundle of public and exact revision
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.parse, html.parser, concurrent.futures, re, time, json
+          class Parser(html.parser.HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.scripts=[]
+              def handle_starttag(self,tag,attrs):
+                  a=dict(attrs)
+                  if tag=='script' and a.get('src'): self.scripts.append(a['src'])
+          def fetch(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Accept-Encoding':'identity'})
+              with urllib.request.urlopen(req,timeout=15) as r:
+                  return r.read().decode('utf-8','replace'),dict((k.lower(),v) for k,v in r.headers.items()),r.geturl()
+          root='https://emprovex.com.br/controle-credito'
+          preview='https://s0d6f357b1345---emprovex-cloudrun-candidate-kvcz7oikxq-rj.a.run.app/controle-credito'
+          nonce=str(time.time_ns())
+          markers=['Documento de registro nesta página','Google Drive · Armazenamento privado','Documentos das notas','Relatórios financeiros','Crédito R1.4','Acesso reservado aos perfis cadastrados','Acesso autorizado · Gratuito · Sessão independente']
+          for label,url in [('public-normal',root),('public-unique',root+'?releasecheck='+nonce),('hosting-default','https://emprovex-cloudrun-943599311487.web.app/controle-credito?releasecheck='+nonce),('exact-preview',preview+'?releasecheck='+nonce)]:
+              try:
+                  body,h,final=fetch(url)
+                  p=Parser();p.feed(body)
+                  print('CASE',label,'final',final,'headers',json.dumps({k:h.get(k) for k in ['cache-control','age','date','etag','x-cache','x-served-by','x-nextjs-cache','server','vary']},ensure_ascii=False),'scripts',len(p.scripts),flush=True)
+                  print('DEPLOYMENT IDS',re.findall(r'dpl=([a-zA-Z0-9_-]+)',body)[:12],flush=True)
+                  def inspect(src):
+                      u=urllib.parse.urljoin(final,src)
+                      try:
+                          content,hh,_=fetch(u)
+                          found=[m for m in markers if m in content or json.dumps(m,ensure_ascii=True)[1:-1] in content]
+                          if found or 'controle-credito/page-' in src:
+                              return (src,found,hh.get('cache-control'))
+                      except Exception as e: return (src,str(e))
+                  with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                      for result in pool.map(inspect,p.scripts):
+                          if result:print('BUNDLE',json.dumps(result,ensure_ascii=False),flush=True)
+              except Exception as e: print('ERROR',label,str(e),flush=True)
+          PY
