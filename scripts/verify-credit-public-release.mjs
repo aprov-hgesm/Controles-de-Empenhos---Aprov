@@ -14,7 +14,7 @@ if(!scripts.length||scripts.some(s=>s.searchParams.get('dpl')!==expected))throw 
 const required=['Localizar e selecionar NC','Atualizando somente os registros','nc-choices','Prazo da Administração','Relatório geral resumido','nc-linked'];
 const found=new Set();
 for(let i=0;i<scripts.length;i+=6){
-  await Promise.all(scripts.slice(i,i+6).map(async s=>{const res=await fetch(s,{signal:AbortSignal.timeout(20000)});if(!res.ok)throw new Error('Asset '+res.status+' '+s.pathname);const text=await res.text();for(const mark of required)if(text.includes(mark))found.add(mark);}));
+  await Promise.all(scripts.slice(i,i+6).map(async s=>{const res=await fetch(s,{signal:AbortSignal.timeout(20000)});if(!res.ok)throw new Error('Asset '+res.status+' '+s.pathname);const text=await res.text();const decoded=text.replace(/\\u\{([0-9a-fA-F]{1,6})\}|\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})/g,(match,point,unit,byte)=>{const n=parseInt(point||unit||byte,16);return n<=0x10ffff?String.fromCodePoint(n):match;});for(const mark of required)if(decoded.includes(mark))found.add(mark);}));
 }
 if(required.some(m=>!found.has(m)))throw new Error('Missing expected credit UI markers: '+required.filter(m=>!found.has(m)).join(', '));
 console.log('CREDIT RELEASE VERIFIED',url.origin,expected,cache,'assets='+scripts.length,'markers='+[...found].join('|'));
