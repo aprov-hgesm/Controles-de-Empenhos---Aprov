@@ -15,7 +15,7 @@ export function creditPdf(member: CreditMember, title: string, lines: CreditRepo
   const issued = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   let y = 0;
   const header = () => {
-    
+
     pdf.setTextColor(0); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14);
     pdf.text('EMPROVEX | Controle de Crédito', 15, 17);
     pdf.setFontSize(11); pdf.text(clean(title), 15, 24);
@@ -56,7 +56,7 @@ export function creditPdfResponse(bytes: Uint8Array, filename: string): Response
 export function creditReportPdf(member:CreditMember,title:string,lines:CreditReportLine[],year:number):Uint8Array{
   const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
   const issued=new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'});
-  const left=12,right=198,width=186,bottom=276,step=4.1;
+  const left=12,right=198,width=186,bottom=269,step=4.1;
   let y=0,section='';
   function font(size:number,bold=false){pdf.setFont('helvetica',bold?'bold':'normal');pdf.setFontSize(size);pdf.setTextColor(0);}
   function wrap(value:string,w:number,size:number,bold=false):string[]{font(size,bold);return pdf.splitTextToSize(clean(value),w) as string[];}
@@ -142,6 +142,6 @@ export function creditReportPdf(member:CreditMember,title:string,lines:CreditRep
   }
   if(!lines.length)detail({label:'Resultado',value:'Nenhum registro encontrado.'});
   const pages=pdf.getNumberOfPages();
-  for(let n=1;n<=pages;n++){pdf.setPage(n);rule(280);font(8);pdf.text('Valores registrados no EMPROVEX. Não substituem o saldo oficial do SIAFI.',left,284);pdf.text('Prazo vencido não comprova recolhimento. Confirme a disponibilidade no SIAFI.',left,288);font(8,true);pdf.text('Página '+n+' / '+pages,right,292,{align:'right'});}
+  for(let n=1;n<=pages;n++){pdf.setPage(n);rule(273);font(8);pdf.text('Valores registrados no EMPROVEX. Não substituem o saldo oficial do SIAFI.',left,277);pdf.text('Prazo vencido não comprova recolhimento. Confirme a disponibilidade no SIAFI.',left,281);font(8,true);pdf.text('Página '+n+' / '+pages,right,285,{align:'right'});}
   return new Uint8Array(pdf.output('arraybuffer'));
 }
