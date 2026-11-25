@@ -56,3 +56,25 @@ test('PDF generator emits real selectable text rather than a screenshot',async()
   assert.match(decoded,/2026NC000001/);
   assert.match(decoded,/Tj/);
 });
+
+test('R1.3 official images, direct edit, deletion confirmation and document generation isolation',()=>{
+  const fs=requireForProfileTest();
+  const avatar=read('features/controle-credito/ui/CreditProfileAvatar.tsx');
+  for(const name of ['Gestor','Aprov','Almox','Farm','LAC','Odonto']){
+    const file='Imagem  - Perfil '+name+'.png';
+    assert.ok(avatar.includes(file));
+    assert.ok(fs(file).subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])));
+  }
+  assert.match(avatar,/from 'next\/image'/);
+  const workspace=read('features/controle-credito/ui/Workspace.tsx');
+  assert.match(workspace,/open\('nc',c.id,'edit'\)/);
+  assert.match(workspace,/expectedCommitmentCount:target.count/);
+  assert.match(workspace,/role="alertdialog"/);
+  assert.match(workspace,/Detalhar/);
+  const docs=read('lib/server/creditControlDocuments.ts');
+  assert.match(docs,/d.entityKey!==entityKey\(d.entityType,record\)/);
+  assert.match(docs,/value:\{stringValue:entityKey\(kind,record\)\}/);
+  assert.match(read('app/api/controle-credito/notas-credito/route.ts'),/export async function DELETE[\s\S]*requireCreditMember\(request,true\)/);
+  assert.match(read('app/api/controle-credito/notas-empenho/route.ts'),/export async function DELETE[\s\S]*requireCreditMember\(request,true\)/);
+});
+function requireForProfileTest(){return name=>readFileSync(new URL('../public/branding/'+encodeURIComponent(name),import.meta.url));}
