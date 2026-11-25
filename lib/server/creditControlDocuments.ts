@@ -341,7 +341,7 @@ async function desiredReaders(m:CreditMember,record:Entity):Promise<string[]>{
   if(!record.centerId||!record.creditId)return fail(409,'NE sem centro de custos ou NC vinculada.');
   const admin=await listCreditAdministration(m);
   if(!('members' in admin)||admin.truncated)return fail(409,'Cadastro de acessos incompleto. Não foi possível confirmar o compartilhamento.');
-  if(!admin.centers.some(c=>c?.id===record.centerId&&c.active))return [];
+  if(!admin.centers.some((c:{id:string;active:boolean}|null)=>c?.id===record.centerId&&c.active))return [];
   return [...new Set((admin.members??[]).flatMap(x=>x?.role==='centro'&&x.active&&x.centerId===record.centerId?[x.email.trim().toLowerCase()]:[]))].filter(e=>e!==m.email.trim().toLowerCase()).sort();
 }
 async function syncShareLocked(m:CreditMember,token:string,docId:string,record:Entity):Promise<Stored>{
