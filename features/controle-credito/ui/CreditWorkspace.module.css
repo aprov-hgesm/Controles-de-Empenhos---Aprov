@@ -1,0 +1,26 @@
+/* Local to Controle de Crédito: contrast and hierarchy without overriding the shared shell. */
+.financeCard{position:relative;isolation:isolate;overflow:hidden;min-height:176px;padding:1.4rem;border-radius:1.125rem;border:1px solid var(--edge);color:#f8fafc;background:linear-gradient(135deg,var(--start),var(--end));box-shadow:0 12px 28px -12px var(--shadow);}
+.financeCard[data-tone="credit"]{--start:#08182e;--end:#235486;--edge:#2f608e;--shadow:#102e5d;--accent:#f4cf73;}
+.financeCard[data-tone="committed"]{--start:#163657;--end:#285f96;--edge:#3777a8;--shadow:#1a4d83;--accent:#9fd6ff;}
+.financeCard[data-tone="available"]{--start:#063b35;--end:#087c6a;--edge:#149881;--shadow:#085d51;--accent:#a2efce;}
+.financeCard[data-tone="deficit"]{--start:#591c29;--end:#a02b3b;--edge:#c34b5a;--shadow:#821d36;--accent:#ffc6bb;}
+.financeCard::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 88% 12%,#ffffff25,transparent 50%),repeating-linear-gradient(135deg,transparent 0 17px,#ffffff08 17px 18px,transparent 18px 36px);}
+.financeCard::after{content:"";position:absolute;right:-36px;bottom:-96px;width:220px;height:220px;border:1px solid #ffffff20;border-radius:50%;box-shadow:0 0 0 24px #ffffff08,0 0 0 48px #ffffff06;pointer-events:none;z-index:-1;}
+.financeIcon{display:grid;place-items:center;width:44px;height:44px;flex:none;border:1px solid #ffffff33;border-radius:14px;background:#ffffff12;color:var(--accent);}
+.financeAccent{display:block;width:48px;height:3px;border-radius:8px;background:var(--accent);margin-top:16px;}
+.countCard{display:flex;align-items:center;gap:14px;min-height:104px;padding:1rem 1.15rem;background:linear-gradient(120deg,#ffffff,var(--wash));border:1px solid var(--edge);border-left:4px solid var(--ink);border-radius:1rem;box-shadow:0 6px 18px -12px #33415577;color:#152d46;}
+.countCard[data-tone="blue"]{--wash:#e7f0fb;--ink:#225a8c;--edge:#b6cbe3;}
+.countCard[data-tone="violet"]{--wash:#eeedf8;--ink:#65518f;--edge:#c9c2e0;}
+.countCard[data-tone="amber"]{--wash:#fff2dc;--ink:#a56c19;--edge:#e3c898;}
+.countIcon{display:grid;place-items:center;width:43px;height:43px;flex:none;border-radius:12px;background:var(--wash);border:1px solid var(--edge);color:var(--ink);}
+.executionCard,.documentPanel{border:1px solid #c5d1df;border-radius:1.125rem;padding:clamp(1rem,2.5vw,1.5rem);background:#fff;color:#10243f;box-shadow:0 8px 24px -18px #18365677;}
+.documentHero{position:relative;isolation:isolate;overflow:hidden;border:1px solid #315b81;border-radius:1.25rem;padding:clamp(1rem,3vw,1.65rem);background:linear-gradient(115deg,#0a1b34,#183b61 65%,#26547d);box-shadow:0 10px 24px -16px #16334d;}
+.documentHero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(circle at 85% 10%,#ffffff20,transparent 42%),repeating-linear-gradient(130deg,transparent 0 26px,#ffffff08 26px 27px);}
+.reportOption{display:flex;align-items:center;gap:12px;min-height:96px;padding:14px;text-align:left;color:#17324f;border:1px solid #cbd5e1;border-radius:14px;background:linear-gradient(135deg,#fff,#f0f5fb);transition:border-color .15s,box-shadow .15s,background .15s;}
+.reportOption:not(:disabled):hover{border-color:#5b8bb5;box-shadow:0 4px 16px -10px #16334d;}
+.reportOption:disabled{opacity:.6;}
+.reportIcon{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:12px;background:#dceaf8;color:#204e80;}
+.reportSelected{background:linear-gradient(135deg,#123451,#24547e);border-color:#326c9d;color:#fff;box-shadow:0 6px 14px -8px #16334d;}
+.reportSelected .reportIcon{background:#ffffff18;color:#cce6ff;}
+.reportOption:focus-visible{outline:2px solid #3b82f6;outline-offset:3px;}
+@media(prefers-reduced-motion:reduce){.reportOption{transition:none;}}
