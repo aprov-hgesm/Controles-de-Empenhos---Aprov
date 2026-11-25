@@ -608,8 +608,11 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
   const selectedCenter=filters.center?centerId(filters.center):'';
   if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
   const ncOnly=filters.kind==='nc'&&!completeReport;
+  const search=filters.search?.trim().slice(0,200)??'';
+  const normalizeSearch=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const term=normalizeSearch(search);
   let creditAfter='',neAfter='';
-  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter,...(ncOnly?['nc-only']:[])]).slice(0,20);
+  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter,term,...(ncOnly?['nc-only']:[])]).slice(0,20);
   if(completeReport&&filters.cursor)return invalid('Relatório integral não aceita cursor externo.');
   if(filters.cursor){
     const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
@@ -667,8 +670,8 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
     }
     if(pageNe.some(ne=>!allCreditIds.has(ne.creditId)))return corrupt();
     // Ordenação canônica, estável mesmo quando novos registros entram no exercício.
-    const ordered=credits.filter(c=>!selectedCenter||c.balance.centers.some(x=>x.centerId===selectedCenter&&(x.basisPoints>0||x.commitmentCount>0)));
-    ordered.sort((a,b)=>(sort==='deadline'?(a.deadline??'9999-12-31').localeCompare(b.deadline??'9999-12-31'):sort==='issue'?b.issueDate.localeCompare(a.issueDate):0)||a.id.localeCompare(b.id));
+    const ordered=credits.filter(c=>(!selectedCenter||c.balance.centers.some(x=>x.centerId===selectedCenter&&(x.basisPoints>0||x.commitmentCount>0)))&&(!term||normalizeSearch([c.number,c.fullNumber,c.issuingUg,c.beneficiaryUg,c.description,c.issueDate,c.issueDate.split('-').reverse().join('/'),c.deadline,c.adminDeadline,...c.cells.flatMap(x=>[x.nd,x.pi,x.ptres,x.fonte,x.ugr])].join(' ')).includes(term)));
+    ordered.sort((a,b)=>(sort==='deadline'?(a.adminDeadline||a.deadline||'9999-12-31').localeCompare(b.adminDeadline||b.deadline||'9999-12-31'):sort==='issue'?b.issueDate.localeCompare(a.issueDate):0)||a.id.localeCompare(b.id));
     const afterIndex=creditAfter&&creditAfter!=='~'?ordered.findIndex(c=>c.id===creditAfter):-1;
     if(creditAfter&&creditAfter!=='~'&&afterIndex<0)return invalid('A lista foi atualizada. Retorne à primeira página.');
     const remaining=creditAfter==='~'?[]:ordered.slice(afterIndex+1);

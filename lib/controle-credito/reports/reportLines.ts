@@ -3,7 +3,7 @@ import {money,displayDate,type CreditReportLine} from './creditPdf';
 export const REPORT_TITLES:Record<string,string>={saldo:'Relatório de Execução do Crédito Registrado',prazos:'Relatório de Prazos e Pendências',nc:'Relatório Resumido de Notas de Crédito','nc-detalhe':'Relatório Detalhado de Notas de Crédito','ne-centro':'Relatório Detalhado de NEs por Centro de Custos',ne:'Relatório Detalhado de NEs por Centro de Custos'};
 type Filters={type:string;nc?:string;center?:string;from?:string;to?:string};
 const dateOfRegistration=(n:CommitmentRecord)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(n.createdAt));
-const deadlineOrder=(a:FinanceCredit,b:FinanceCredit)=>(a.deadline??'9999-12-31').localeCompare(b.deadline??'9999-12-31')||a.id.localeCompare(b.id);
+const deadlineOrder=(a:FinanceCredit,b:FinanceCredit)=>(a.adminDeadline||a.deadline||'9999-12-31').localeCompare(b.adminDeadline||b.deadline||'9999-12-31')||a.id.localeCompare(b.id);
 export function buildCreditReport(view:FinanceView,filters:Filters):CreditReportLine[]{
   const {type,nc,center,from,to}=filters;
   const allCredits=view.credits.filter(c=>!nc||c.id===nc||c.number===nc||c.fullNumber===nc);

@@ -8,7 +8,7 @@ export async function GET(request:Request){
   try{
     const member=await requireCreditMember(request);
     const params=new URL(request.url).searchParams;
-    const filters={year:params.get('year')??undefined,cursor:params.get('cursor')??undefined,limit:params.get('limit')??undefined,sort:params.get('sort')??undefined,center:params.get('center')??undefined};
+    const filters={year:params.get('year')??undefined,cursor:params.get('cursor')??undefined,limit:params.get('limit')??undefined,sort:params.get('sort')??undefined,center:params.get('center')??undefined,search:params.get('search')??undefined};
     const mode=params.get('mode');
     if(mode==='nc-linked')return creditJson(await listCreditCommitments(member,params.get('creditId')||'',filters.center));
     if(mode==='nc-choices')return creditJson(await listCreditChoices(member,filters.year||new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',year:'numeric'}).format(new Date())));

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseSagCommitmentHtml} from '../lib/controle-credito/sagCommitmentHtml.mjs';
+const field=(k,v)=>'<div class="ne-field"><span class="ne-label">'+k+'</span><span class="ne-value">'+v+'</span></div>';
+const html='<!DOCTYPE html><html><body><div class="doc-wrapper"><div class="doc-header-tipo">Nota de Empenho</div><div class="doc-header-numero">2026NE000001</div>'+Object.entries({'Número NE':'999999000012026NE000001','UG Emitente':'999999','Data Emissão':'01/02/26','Valor':'100,00','Tipo Empenho':'GLOBAL','Favorecido':'00.000.000/0000-00','Observação':'Despesa 2026NC000001','Mod. Licitação':'179 - PREGAO','Processo':'12345','Nat. Despesa':'339030','PTRES':'123456','Fonte':'1000000000','UG Responsável':'999998','Plano Interno':'TESTE'}).map(([k,v])=>field(k,v)).join('')+'<div class="ne-section"><div class="ne-section-header itens">Lista de Itens</div><table><tbody><tr>'+['1','04','item','INCLUSAO','01/02/26','1','100,00','100,00'].map(x=>'<td>'+x+'</td>').join('')+'</tr></tbody></table></div></div></body></html>';
+test('extrai NE, NC, valor e orçamento',()=>{const x=parseSagCommitmentHtml(html,'999999');assert.equal(x.number,'2026NE000001');assert.equal(x.netCents,10000);assert.equal(x.notaCredito,'2026NC000001');assert.equal(x.planoInterno,'TESTE');});
+test('rejeita UG divergente',()=>assert.throws(()=>parseSagCommitmentHtml(html,'111111')));
+test('rejeita total divergente',()=>assert.throws(()=>parseSagCommitmentHtml(html.replace('>100,00</span>','>200,00</span>'),'999999')));
+test('rejeita operações de ajuste não conciliadas',()=>assert.throws(()=>parseSagCommitmentHtml(html.replace('INCLUSAO','ANULACAO'),'999999')));
+test('ignora scripts, sem executar conteúdo',()=>assert.equal(parseSagCommitmentHtml(html.replace('</body>','<script>throw new Error("never");</script></body>'),'999999').netCents,10000));

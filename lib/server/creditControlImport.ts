@@ -294,7 +294,9 @@ export function confirmNe(body: Input, member: CreditMember): CreateCommitmentIn
     if(!/^(?:\d{11}|\d{14})$/.test(supplierCnpj))invalid('Informe o CPF ou CNPJ do favorecido.');
     return {draft:{number,ug:member.ug,issueDate,description:string(draft.description,'Finalidade'),supplier:string(draft.supplier,'Fornecedor'),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1),nd:pattern(draft.nd,'ND',/^\d{6}$/),ptres:pattern(draft.ptres,'PTRES',/^\d{6}$/),fonte:pattern(draft.fonte,'Fonte',/^\d{10}$/),ugr:pattern(draft.ugr,'UGR',/^\d{6}$/),pi:pattern(draft.pi,'PI',/^[A-Z0-9]{1,20}$/)},creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,expectedCreditRevision:optionalRevision(body.expectedCreditRevision)};
   }
-  const parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
+  const bytes=fileFromDraft(draft,NE_MAX);
+  const parsed=parseNe(bytes,member);
+  if(!Buffer.from(bytes.subarray(0,5)).equals(Buffer.from('%PDF-'))&&parsed.notaCredito&&!id(body.creditId).endsWith('_'+parsed.notaCredito))invalid('A NC selecionada diverge da referência expressa no HTML. Confira o vínculo.','NE_NC_MISMATCH');
   const confirmed= draft.budget === undefined ? {} : object(draft.budget);
   function field(extracted: string|null, key: string, label: string, re: RegExp) {
     if(extracted&&re.test(extracted)) {
