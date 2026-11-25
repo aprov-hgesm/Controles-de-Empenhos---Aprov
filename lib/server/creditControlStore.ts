@@ -351,7 +351,7 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
     const cell=before.cells.find(c=>c.cellId===fields.cellId);
     if(!cell)return invalid('Célula de destino não pertence à NC.');
     const differences:BudgetDifference[]=(['nd','ptres','fonte','ugr','pi'] as const).filter(k=>cell[k]!==codes[k]).map(k=>({field:k.toUpperCase(),credit:cell[k],commitment:codes[k]}));
-    if(differences.length&&data.acknowledgeBudgetDifference!==true)throw new CreditStoreError(409,'CREDIT_BUDGET_ACK_REQUIRED','Confira as diferenças: '+differences.map(d=>d.field+' — NC: '+(d.credit??'não informado')+'; NE: '+(d.commitment??'não informado')).join(' | ')+'. Confirme a ciência para registrar o empenho.');
+    if(differences.length&&data.acknowledgeBudgetDifference!==true)throw new CreditStoreError(409,'CREDIT_BUDGET_ACK_REQUIRED','Confira as diferenças: '+differences.map(d=>({ND:'Natureza da despesa (ND)',PTRES:'Programa de trabalho (PTRES)',FONTE:'Fonte de recursos',UGR:'UG responsável (UGR)',PI:'Plano interno (PI)'} as Record<string,string>)[d.field]+' — NC: '+(d.credit??'não informado')+'; NE: '+(d.commitment??'não informado')).join(' | ')+'. Confirme a ciência para registrar o empenho.');
     // A célula escolhida permanece o vínculo financeiro; os códigos da NE divergentes ficam registrados, sem alterar a NC.
     const at=now(),ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,budgetDifferences:differences,revision:1,createdAt:at,updatedAt:at};
     const next={...record,revision:sum(record.revision,1),updatedAt:at};
