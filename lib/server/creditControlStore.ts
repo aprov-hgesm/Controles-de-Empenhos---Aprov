@@ -575,7 +575,7 @@ export async function listFinanceCommitments(member:CreditMember,filters:Finance
     if(commitments.some(n=>n.year!==year||scopedCenter&&n.centerId!==scopedCenter))return corrupt();
     // One batched lookup of the distinct linked NCs only, in the same transaction.
     const linked=await tx.getMany<StoredCredit>([...new Set(commitments.map(n=>path(member,'credits',n.creditId)))]);
-    for(const [key,doc] of linked){if(!doc)return corrupt();const c=readCredit(member,doc.data,key.split('/').pop()!);if(c.year!==year||member.role==='centro'&&!c.projection?.balance.centers.some(x=>x.centerId===member.centerId&&(x.basisPoints>0||x.commitmentCount>0)))return corrupt();}
+    for(const [key,doc] of linked){if(!doc)return corrupt();const c=readCredit(member,doc.data,key.split('/').pop()!);if(c.year!==year||member.role==='centro'&&!c.projection?.balance.centers.some(x=>x.centerId===member.centerId&&(x.basisPoints>0||x.commitmentCount>0)))return corrupt();projectedDetail(member,c);}
     const centers=member.role==='gestor'?(await tx.list<CostCenter>(member.ug,'centers')).map(d=>d.data):[(await tx.get<CostCenter>(path(member,'centers',member.centerId!)))?.data].filter((x):x is CostCenter=>!!x);
     return {member:{uid:member.uid,email:member.email,ug:member.ug,role:member.role,centerId:member.centerId},commitments:commitments.map(publicCommitment),centers:centers.map(c=>({id:c.id,name:c.name,active:c.active})),...(page.nextAfter?{nextCursor:scope+'.'+page.nextAfter}:{})};
   },true);

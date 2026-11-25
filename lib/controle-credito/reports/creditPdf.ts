@@ -66,7 +66,7 @@ export function creditReportPdf(member:CreditMember,title:string,lines:CreditRep
     pdf.setFillColor(...navy);pdf.rect(0,0,210,5,'F');pdf.setFillColor(198,156,68);pdf.rect(14,5,27,1.5,'F');
     font(10,true);pdf.setTextColor(...blue);pdf.text('EMPROVEX  /  CONTROLE DE CRÉDITO',left,14);
     font(8);pdf.setTextColor(...gray);pdf.text('GESTÃO ORÇAMENTÁRIA',right,14,{align:'right'});
-    const heading=wrap(title,width,15,true);pdf.setTextColor(...navy);pdf.text(heading,left,23);y=23+heading.length*6;
+    const heading=wrap(title,width,15,true);pdf.setTextColor(...navy);pdf.text(heading,left,23,{lineHeightFactor:1.13});y=23+heading.length*6;
     font(9);pdf.setTextColor(...gray);pdf.text(clean('UG '+member.ug+'  |  Exercício '+year+'  |  '+(member.role==='centro'?'Centro '+member.centerId:'Gestão')),left,y+1);
     pdf.text('Emissão: '+issued,left,y+6);y+=11;
     pdf.setDrawColor(201,212,224);pdf.setLineWidth(.35);pdf.line(left,y,right,y);y+=6;
@@ -81,8 +81,8 @@ export function creditReportPdf(member:CreditMember,title:string,lines:CreditRep
     if(y+h+15>bottom){section='';page();}
     section=row.label;stripe=0;
     pdf.setFillColor(232,239,247);pdf.roundedRect(left,y,width,h,2,2,'F');pdf.setFillColor(...blue);pdf.rect(left,y,1.2,h,'F');
-    font(11,true);pdf.setTextColor(...navy);pdf.text(hLines,left+4,y+5.5);
-    if(vLines.length){font(8.5);pdf.setTextColor(...gray);pdf.text(vLines,left+4,y+5.5+hLines.length*4.6);}
+    font(11,true);pdf.setTextColor(...navy);pdf.text(hLines,left+4,y+5.5,{lineHeightFactor:1.18});
+    if(vLines.length){font(8.5);pdf.setTextColor(...gray);pdf.text(vLines,left+4,y+5.5+hLines.length*4.6,{lineHeightFactor:1.25});}
     y+=h+3;
   }
   function metrics(fields:{label:string;value:string}[]){
@@ -103,8 +103,8 @@ export function creditReportPdf(member:CreditMember,title:string,lines:CreditRep
       const count=Math.min(total-offset,Math.max(1,Math.floor((bottom-y-5)/step)));
       const h=count*step+5;
       if(stripe%2===0){pdf.setFillColor(246,248,251);pdf.rect(left,y,width,h,'F');}
-      font(8.5,true);pdf.setTextColor(...blue);pdf.text(label.slice(offset,offset+count),left+3,y+4.5);
-      font(9);pdf.setTextColor(...navy);pdf.text(value.slice(offset,offset+count),left+45,y+4.5);
+      font(8.5,true);pdf.setTextColor(...blue);if(offset<label.length)pdf.text(label.slice(offset,offset+count),left+3,y+4.5);
+      font(9);pdf.setTextColor(...navy);if(offset<value.length)pdf.text(value.slice(offset,offset+count),left+45,y+4.5);
       pdf.setDrawColor(226,232,240);pdf.setLineWidth(.15);pdf.line(left,y+h,right,y+h);y+=h;offset+=count;
       if(offset<total)page();
     }

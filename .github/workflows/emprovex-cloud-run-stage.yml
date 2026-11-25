@@ -192,6 +192,9 @@ jobs:
             test -s "${RUNNER_TEMP}/legacy.body"
           done
 
+          # Credit shell must serve the exact revision and no-store HTML.
+          node scripts/verify-credit-public-release.mjs "$PREVIEW_URL" "$SOURCE_SHA"
+
           # Branding R4: verificar o arquivo circular de verdade na revisão isolada.
           curl --fail --silent --show-error --retry 2 --retry-delay 2 --max-time 40 \
             -D "${RUNNER_TEMP}/favicon.headers" -o "${RUNNER_TEMP}/favicon.png" \
