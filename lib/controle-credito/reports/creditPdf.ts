@@ -15,13 +15,14 @@ export function creditPdf(member: CreditMember, title: string, lines: CreditRepo
   const issued = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   let y = 0;
   const header = () => {
-    pdf.setTextColor(35); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14);
+    pdf.setFillColor(11,28,48); pdf.rect(0,0,210,4,'F');
+    pdf.setTextColor(11,28,48); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14);
     pdf.text('EMPROVEX | Controle de Crédito', 15, 17);
     pdf.setFontSize(11); pdf.text(clean(title), 15, 24);
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
     pdf.text(clean('UG ' + member.ug + (year ? ' | Exercício ' + year : '') + (member.role === 'centro' ? ' | Centro ' + member.centerId : ' | Gestão')), 15, 31);
     pdf.text('Emissão: ' + issued, 15, 36);
-    pdf.setDrawColor(140); pdf.line(15, 40, 195, 40); y = 47;
+    pdf.setDrawColor(42,93,157); pdf.setLineWidth(0.5); pdf.line(15, 40, 195, 40); y = 47;
   };
   header();
   for (const row of lines) {

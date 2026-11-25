@@ -5,7 +5,7 @@ import { calculateCreditBalance, creditAlerts, type CreditAllocation } from '../
 import type {
   BudgetCell, CreditSequence, CreditRecord, CommitmentRecord, CostCenter, CreditDetail,
   CreditBalance, CreditCellBalance, FinanceView, FinanceCredit, FinanceFilters, FinanceAlert,
-  MovementKind, MovementRecord,
+  MovementKind, MovementRecord, BudgetDifference,
 } from '../controle-credito/contracts';
 
 type Obj = Record<string, unknown>;
@@ -15,7 +15,7 @@ type StoredCredit = CreditRecord & {
   projection?: Pick<CreditDetail,'balance'|'cells'>;
 };
 type StoredCommitment = CommitmentRecord & {
-  year: string; centerYear: string; originalFingerprint: string;
+  year: string; centerYear: string; originalFingerprint: string; lastReplacementHash?: string;
 };
 const invalid = (message: string): never => { throw new CreditStoreError(422,'CREDIT_INVALID_INPUT',message); };
 const forbidden = (): never => { throw new CreditStoreError(403,'CREDIT_FORBIDDEN','Perfil não autorizado para esta operação.'); };
@@ -137,7 +137,7 @@ function publicCredit(record:StoredCredit):CreditRecord {
   return result;
 }
 function publicCommitment(record:StoredCommitment):CommitmentRecord {
-  const {year,centerYear,originalFingerprint,...result}=record;
+  const {year,centerYear,originalFingerprint,lastReplacementHash,...result}=record;
   return result;
 }
 function balanceFor(record:StoredCredit,commitments:readonly CommitmentRecord[]):CreditBalance {
@@ -350,20 +350,57 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
     if(!center||center.id!==fields.centerId||center.active!==true)return invalid('Centro de custos inexistente ou inativo.');
     const cell=before.cells.find(c=>c.cellId===fields.cellId);
     if(!cell)return invalid('Célula de destino não pertence à NC.');
-    if(cell.nd!==codes.nd||cell.ptres!==codes.ptres||cell.fonte!==codes.fonte||cell.ugr!==codes.ugr||cell.pi!==codes.pi)
-      return invalid('ND, PTRES, fonte, UGR ou PI da NE divergem da célula da NC. Concilie antes de registrar.');
-    // Não presumir que uma ND agregada seja compatível com outra detalhada.
-    const at=now(),ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,revision:1,createdAt:at,updatedAt:at};
+    const differences:BudgetDifference[]=(['nd','ptres','fonte','ugr','pi'] as const).filter(k=>cell[k]!==codes[k]).map(k=>({field:k.toUpperCase(),credit:cell[k],commitment:codes[k]}));
+    if(differences.length&&data.acknowledgeBudgetDifference!==true)throw new CreditStoreError(409,'CREDIT_BUDGET_ACK_REQUIRED','Confira as diferenças: '+differences.map(d=>({ND:'Natureza da despesa (ND)',PTRES:'Programa de trabalho (PTRES)',FONTE:'Fonte de recursos',UGR:'UG responsável (UGR)',PI:'Plano interno (PI)'} as Record<string,string>)[d.field]+' — NC: '+(d.credit??'não informado')+'; NE: '+(d.commitment??'não informado')).join(' | ')+'. Confirme a ciência para registrar o empenho.');
+    // A célula escolhida permanece o vínculo financeiro; os códigos da NE divergentes ficam registrados, sem alterar a NC.
+    const at=now(),ne:StoredCommitment={...fields,year,centerYear:year+'_'+fields.centerId,originalFingerprint,budgetDifferences:differences,revision:1,createdAt:at,updatedAt:at};
     const next={...record,revision:sum(record.revision,1),updatedAt:at};
     const after=detail(member,next,[...nes,ne]);
     reconcile(before,after,data.acknowledgeDeficit);
     await audit(tx,member,'ne',ne.id,1,'create',auditSummary(before),
       {...auditSummary(after),creditId:ne.creditId,centerId:ne.centerId,cellId:ne.cellId,netCents:ne.netCents,
-        acknowledgedDeficit:data.acknowledgeDeficit===true},at);
+        acknowledgedDeficit:data.acknowledgeDeficit===true,budgetDifferences:differences,acknowledgedBudgetDifference:data.acknowledgeBudgetDifference===true},at);
     tx.set(key,ne);
     // A revisão da NC serializa NEs concorrentes e ajustes de suas células.
     tx.set(path(member,'credits',record.id),withProjection(next,after));
     return {commitment:publicCommitment(ne),balance:after.balance,cells:after.cells};
+  });
+}
+/** Replace only the consolidated PDF of the same NE; record its reduction atomically. */
+export async function replaceCommitmentPdf(member:CreditMember,input:unknown):Promise<{commitment:CommitmentRecord;balance:CreditBalance;cells:CreditCellBalance[]}> {
+  own(member,true);
+  const data=object(input),keyId=id(data.id),documentHash=pattern(data.documentHash,/^[a-f0-9]{64}$/,'Identificação do documento');
+  const netCents=integer(data.netCents,'Novo valor líquido'),expectedRevision=integer(data.expectedRevision,'Revisão',1);
+  const number=pattern(data.number,/^20\d{2}NE\d{6}$/,'Número da NE');
+  const supplierCnpj=string(data.supplierCnpj,'CNPJ/CPF do favorecido',24).replace(/[.\/-]/g,'');
+  const issueDate=date(data.issueDate,'Data de emissão');
+  if(data.confirmed!==true)return invalid('Confirme o novo valor e a devolução ao crédito.');
+  return creditTransaction(async tx=>{
+    await verifyWriter(tx,member);
+    const ne=await getStoredCommitment(tx,member,keyId);
+    if(ne.number!==number||ne.supplierCnpj!==supplierCnpj||ne.issueDate!==issueDate)return invalid('O PDF deve corresponder à mesma NE, ao mesmo favorecido e à mesma data de emissão.');
+    const nc=await getStoredCredit(tx,member,ne.creditId),nes=await linked(tx,member,nc.id);
+    const before=detail(member,nc,nes);
+    if(ne.lastReplacementHash===documentHash&&ne.netCents===netCents)return {commitment:publicCommitment(ne),balance:before.balance,cells:before.cells};
+    revision(expectedRevision,ne.revision);
+    if(netCents>ne.netCents)return invalid('O novo PDF tem valor maior que o saldo registrado da NE. Para reforço, utilize Registrar ajuste.');
+    const at=now(),delta=ne.netCents-netCents;
+    const nextNe:StoredCommitment={...ne,netCents,lastReplacementHash:documentHash,revision:sum(ne.revision,1),updatedAt:at};
+    const nextNc={...nc,revision:sum(nc.revision,1),updatedAt:at};
+    const after=detail(member,nextNc,nes.map(n=>n.id===ne.id?nextNe:n));
+    let movement:MovementRecord|undefined;
+    let movementKey:string|undefined;
+    if(delta>0){
+      const movementId='mov_'+fingerprint(['ne',ne.id,'pdf',documentHash]);
+      movementKey=path(member,'movements',movementId);
+      if(await tx.get(movementKey))return conflict('Este documento já foi utilizado para uma anulação. Confira o histórico.');
+      movement={id:movementId,entityType:'ne',entityId:ne.id,kind:'anulacao',amountCents:delta,deltaCents:-delta,reference:'PDF '+documentHash,reason:'Substituição por NE atualizada — redução do valor líquido',expectedRevision,acknowledgeDeficit:false,creditId:nc.id,cellId:ne.cellId,authorUid:member.uid,createdAt:at};
+    }
+    await audit(tx,member,'ne',ne.id,nextNe.revision,'replacePdf',{...auditSummary(before),entityCents:ne.netCents},{...auditSummary(after),entityCents:netCents,returnedCents:delta,documentHash},at);
+    if(movementKey&&movement)tx.set(movementKey,movement);
+    tx.set(path(member,'commitments',ne.id),nextNe);
+    tx.set(path(member,'credits',nc.id),withProjection(nextNc,after));
+    return {commitment:publicCommitment(nextNe),balance:after.balance,cells:after.cells};
   });
 }
 export async function registerMovement(member:CreditMember,input:unknown):Promise<{movement:MovementRecord;credit:CreditRecord;commitment?:CommitmentRecord;balance:CreditBalance;cells:CreditCellBalance[]}> {
@@ -449,8 +486,12 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
   if(limit>200)return invalid('Limite máximo de 200 registros.');
   // Dois cursores por chave estável, vinculados à identidade/exercício.
   // "~" indica que a respectiva lista terminou; não voltar à primeira página.
+  const sort=filters.sort||'deadline';
+  if(!['deadline','issue','id'].includes(sort))return invalid('Ordenação inválida.');
+  const selectedCenter=filters.center?centerId(filters.center):'';
+  if(selectedCenter&&member.role==='centro'&&selectedCenter!==member.centerId)return forbidden();
   let creditAfter='',neAfter='';
-  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit]).slice(0,20);
+  const scope=fingerprint([member.uid,member.ug,member.role,member.centerId,year,limit,sort,selectedCenter]).slice(0,20);
   if(completeReport&&filters.cursor)return invalid('Relatório integral não aceita cursor externo.');
   if(filters.cursor){
     const match=/^([a-f0-9]{20})\.([A-Za-z0-9_-]{1,180}|~)\.([A-Za-z0-9_-]{1,180}|~)$/.exec(filters.cursor);
@@ -463,7 +504,7 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
     const creditDocs=await tx.list<StoredCredit>(member.ug,'credits',{field:'year',value:year});
     const nePage=neAfter==='~'?{docs:[] as import('./creditControlFirestore').CreditDocument<StoredCommitment>[],nextAfter:undefined}:
       await tx.listCommitmentPage<StoredCommitment>(member.ug,
-        member.role==='centro'?{field:'centerYear',value:year+'_'+member.centerId}:{field:'year',value:year},limit,neAfter);
+        member.role==='centro'||selectedCenter?{field:'centerYear',value:year+'_'+(member.role==='centro'?member.centerId:selectedCenter)}:{field:'year',value:year},limit,neAfter);
     // Relatório: todas as páginas de NEs no MESMO snapshot das NCs e dos totais.
     // Não refazer a consulta anual de NCs a cada página, nem misturar revisões concorrentes.
     if(completeReport){
@@ -471,7 +512,7 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
       for(let page=1;next;page++){
         if(page>=100)throw new CreditStoreError(422,'CREDIT_REPORT_LIMIT','Relatório excede o limite seguro de registros.');
         const more=await tx.listCommitmentPage<StoredCommitment>(member.ug,
-          member.role==='centro'?{field:'centerYear',value:year+'_'+member.centerId}:{field:'year',value:year},limit,next);
+          member.role==='centro'||selectedCenter?{field:'centerYear',value:year+'_'+(member.role==='centro'?member.centerId:selectedCenter)}:{field:'year',value:year},limit,next);
         nePage.docs.push(...more.docs);
         next=more.nextAfter;
       }
@@ -508,8 +549,11 @@ export async function listFinance(member:CreditMember,filters:FinanceFilters={},
     }
     if(pageNe.some(ne=>!allCreditIds.has(ne.creditId)))return corrupt();
     // Ordenação canônica, estável mesmo quando novos registros entram no exercício.
-    credits.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
-    const remaining=creditAfter==='~'?[]:credits.filter(c=>c.id>creditAfter);
+    const ordered=credits.filter(c=>!selectedCenter||c.balance.centers.some(x=>x.centerId===selectedCenter&&(x.basisPoints>0||x.commitmentCount>0)));
+    ordered.sort((a,b)=>(sort==='deadline'?(a.deadline??'9999-12-31').localeCompare(b.deadline??'9999-12-31'):sort==='issue'?b.issueDate.localeCompare(a.issueDate):0)||a.id.localeCompare(b.id));
+    const afterIndex=creditAfter&&creditAfter!=='~'?ordered.findIndex(c=>c.id===creditAfter):-1;
+    if(creditAfter&&creditAfter!=='~'&&afterIndex<0)return invalid('A lista foi atualizada. Retorne à primeira página.');
+    const remaining=creditAfter==='~'?[]:ordered.slice(afterIndex+1);
     const creditPage=completeReport?remaining:remaining.slice(0,limit);
     const creditNext=!completeReport&&remaining.length>limit?creditPage[creditPage.length-1].id:'~';
     const neNext=nePage.nextAfter??'~';

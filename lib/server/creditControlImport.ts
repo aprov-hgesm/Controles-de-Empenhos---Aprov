@@ -134,7 +134,7 @@ export function parseNc(bytes: Uint8Array, member: CreditMember): SagHtmlCreditD
 }
 // Preflight matches the stream/object extraction used by the existing parser.
 // Bound inflation before allocation; reject incomplete/unsupported streams rather than silently skipping them.
-function checkPdf(bytes: Uint8Array) {
+function checkPdf(bytes: Uint8Array,updated=false) {
   const binary = Buffer.from(bytes).toString('latin1');
   if (!binary.startsWith('%PDF-') || /\/Encrypt\b/.test(binary)) invalid('Selecione uma NE SIAFI em PDF não criptografado.','NE_FORMAT');
   let total = 0, count = 0, summaries = 0;
@@ -176,7 +176,7 @@ function checkPdf(bytes: Uint8Array) {
     const compact=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();
     if(compact.includes('notadeempenho') && compact.includes('celulaorcamentaria') && !compact.includes('listadeitens') && ++summaries>1) invalid('PDF contém múltiplas notas ou células; concilie antes de registrar.','NE_MULTIPLE_SUMMARIES');
     if (literal || array>=0) invalid('Texto PDF incompleto.','NE_FORMAT');
-    if (/\b(?:anula[cç][aã]o|refor[cç]o|cancelamento)\b/i.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g,''))) {
+    if (!updated && /\b(?:anula[cç][aã]o|refor[cç]o|cancelamento)\b/i.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g,''))) {
       invalid('PDF contém indicação de ajuste. Use a conciliação de movimentações.','NE_MOVEMENT_REQUIRED');
     }
   }
@@ -186,8 +186,8 @@ function decimalCents(value: number): number {
   if (!match) invalid('Valor da NE não representa centavos inteiros.','NE_AMOUNT');
   return integer(Number(match[1]+(match[2]??'').padEnd(2,'0')),'Valor da NE',1);
 }
-export function parseNe(bytes: Uint8Array, member: CreditMember) {
-  checkPdf(bytes);
+export function parseNe(bytes: Uint8Array, member: CreditMember, updated=false) {
+  checkPdf(bytes,updated);
   let result: ReturnType<typeof parseEmpenhoPdfBytes>;
   try { result = parseEmpenhoPdfBytes(bytes); }
   catch { return invalid('NE SIAFI não reconhecida. Utilize a impressão completa.','NE_IMPORT_INVALID'); }
@@ -199,7 +199,7 @@ export function parseNe(bytes: Uint8Array, member: CreditMember) {
   const type = result.tipoEmpenho.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
   if (!/^(ORDINARIO|ESTIMATIVO|GLOBAL)$/.test(type)) invalid('Tipo de NE não reconhecido como emissão original. Utilize a conciliação.','NE_MOVEMENT_REQUIRED');
   const netCents = decimalCents(result.valorTotal);
-  const warnings = [...result.warnings];
+  const warnings = result.warnings.filter(w=>!/(unidade de fornecimento|número da contratação não identificado|classe do empenho não foi inferida)/i.test(w));
   for (const [label,value,re] of [
     ['ND',result.naturezaDespesa,/^\d{6}$/],
     ['PTRES',result.ptres,/^\d{6}$/],
@@ -277,7 +277,15 @@ export function confirmNc(body: Input, member: CreditMember): CreateCreditInput 
   return {source,draft:{...record,description,deadline:due},allocations:allocations(body.allocations),deadline:due,description,expectedRevision:optionalRevision(body.expectedRevision)};
 }
 export function confirmNe(body: Input, member: CreditMember): CreateCommitmentInput {
-  const draft=object(body.draft),parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
+  const draft=object(body.draft);
+  if(body.source==='manual'){
+    const number=pattern(draft.number,'Número da NE',/^20\d{2}NE\d{6}$/);
+    const issueDate=date(draft.issueDate,'Emissão');
+    const supplierCnpj=string(draft.supplierCnpj,'CNPJ/CPF').replace(/[.\/-]/g,'');
+    if(!/^(?:\d{11}|\d{14})$/.test(supplierCnpj))invalid('Informe o CPF ou CNPJ do favorecido.');
+    return {draft:{number,ug:member.ug,issueDate,description:string(draft.description,'Finalidade'),supplier:string(draft.supplier,'Fornecedor'),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1),nd:pattern(draft.nd,'ND',/^\d{6}$/),ptres:pattern(draft.ptres,'PTRES',/^\d{6}$/),fonte:pattern(draft.fonte,'Fonte',/^\d{10}$/),ugr:pattern(draft.ugr,'UGR',/^\d{6}$/),pi:pattern(draft.pi,'PI',/^[A-Z0-9]{1,20}$/)},creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,expectedCreditRevision:optionalRevision(body.expectedCreditRevision)};
+  }
+  const parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
   const confirmed= draft.budget === undefined ? {} : object(draft.budget);
   function field(extracted: string|null, key: string, label: string, re: RegExp) {
     if(extracted&&re.test(extracted)) {
@@ -298,7 +306,7 @@ export function confirmNe(body: Input, member: CreditMember): CreateCommitmentIn
       supplier:string(parsed.supplier,'Fornecedor'),supplierCnpj:pattern(parsed.supplierCnpj,'CNPJ',/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/),
       netCents:parsed.netCents,nd,ptres,fonte,ugr,pi},
     creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),
-    cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),
+    cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,
     expectedCreditRevision:optionalRevision(body.expectedCreditRevision),
   };
 }

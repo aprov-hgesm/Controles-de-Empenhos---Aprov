@@ -9,6 +9,6 @@ export async function GET(request:Request){
     const member=await requireCreditMember(request);
     const params=new URL(request.url).searchParams;
     return creditJson(await listFinance(member,{year:params.get('year')??undefined,
-      cursor:params.get('cursor')??undefined,limit:params.get('limit')??undefined}));
+      cursor:params.get('cursor')??undefined,limit:params.get('limit')??undefined,sort:params.get('sort')??undefined,center:params.get('center')??undefined}));
   }catch(error){return creditFailure(error);}
 }
