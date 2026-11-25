@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g233b89053b34-54",
-  "sourceSha": "233b89053b34edd5d41cd6f08c2a21bb45095d88",
-  "reason": "Autorização expressa do proprietário para publicar Controle de Crédito R1.5. PR #564: seis workflows aprovados no commit 5e4e926271ff97fcb9c01337434d2973ad1fe8aa, árvore Git idêntica à main 28cf6dfd597b090143a7313311d4598d780a36f6. Stage 45533749560 SUCCESS, revisão Ready 0% tráfego, digest sha256:0288c94e731de74317ec15c8367e5e3ddbbd10432833469333eb07bc4730c7fe; saúde, proteção de cobrança, HTML no-store e 15 assets da revisão exata confirmados, com marcadores da nova interface. Core Protection 45533749581 e Application CI 45533749539 SUCCESS. GOV-SIMP: promoção pelo pipeline oficial com rollback automático e verificação do domínio público. Release de Hosting separado após confirmação do tráfego. Sem alterar IAM, Firestore, billing ou credenciais. Homologação visual e operacional real permanece pendente."
+  "revision": "emprovex-cloudrun-candidate-g1c06fe5a3d3c-55",
+  "sourceSha": "1c06fe5a3d3c365352cb01b18963b6790be52f27",
+  "reason": "Autorização expressa do proprietário para concluir desenvolvimento e publicar Controle de Crédito R1.6, com homologação operacional em produção. PR #565: seis workflows aprovados no commit 334d2061a7679f4e12b0ead00c56dda0f784fbb0, árvore Git idêntica à main 209599b21a04967c2d42ff62307c892bef1fb029. Stage 45537929738 SUCCESS, revisão Ready 0% tráfego, digest sha256:f37a035088d5a3ad09e9a1bf63ac88bfef401405a5e00f8a36600f474c2d9172; verificação de cache no-store e 15 assets concluída. Core Protection 45537929663 e Application CI 45537929681 SUCCESS. Promover exclusivamente a revisão validada, pelo pipeline oficial com rollback automático e verificação do domínio público. Sem alterar IAM, Firestore rules, billing ou credenciais. Homologação Google Drive com contas reais permanece pendente; se houver concessão de ACLs reais, qualquer rollback posterior à R1.5 exige conciliação dessas permissões."
 }
