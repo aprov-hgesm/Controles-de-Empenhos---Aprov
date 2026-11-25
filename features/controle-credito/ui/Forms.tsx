@@ -6,6 +6,7 @@ import type {ParsedEmpenhoPdfResult} from '@/lib/server/empenhoPdfParser';
 import {api,json,importDocument,money,cents,cells,isoDate,localDate,errorText,type Credit,type Center,type Commitment,type Balance,type Member,type NcPreview,type NePreview} from '../client';
 import type {User} from 'firebase/auth';
 import {useCreditDrive} from '../documents/CreditDriveProvider';
+import {CreditProfileAvatar} from './CreditProfileAvatar';
 
 export const panel='rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-[0_4px_24px_rgba(15,23,42,0.045)]';
 export const input='block w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
@@ -34,7 +35,7 @@ export function Rateio({centers,total,initial=[],commitments=[],onChange}:{cente
   function update(values:Record<string,string>){setShares(values);const {a,b}=compute(values);onChange(a,b);}
   return <fieldset className="space-y-2"><legend className="font-bold">Distribuição entre centros de custos</legend>
     {!ids.length&&<Notice>Cadastre centros de custos para distribuir o crédito. É possível manter saldo não distribuído.</Notice>}
-    {ids.map(id=><div key={id} className="grid grid-cols-[minmax(0,1fr)_100px_minmax(0,1fr)] items-center gap-2 text-sm"><label htmlFor={'rateio-'+id}>{centers.find(c=>c.id===id)?.name||id}</label><input id={'rateio-'+id} className={input} type="number" min="0" max="100" step="0.01" value={shares[id]||''} placeholder="0" onChange={e=>update({...shares,[id]:e.target.value})}/><span className="text-right">{result.b?money(result.b.centers.find(c=>c.centerId===id)?.allocatedCents??0):'—'}</span></div>)}
+    {ids.map(id=><div key={id} className="grid grid-cols-[minmax(0,1fr)_100px_minmax(0,1fr)] items-center gap-2 text-sm"><label htmlFor={'rateio-'+id} className="flex min-w-0 items-center gap-2"><CreditProfileAvatar profile={id} size={32}/><span className="break-words">{centers.find(c=>c.id===id)?.name||id}</span></label><input id={'rateio-'+id} className={input} type="number" min="0" max="100" step="0.01" value={shares[id]||''} placeholder="0" onChange={e=>update({...shares,[id]:e.target.value})}/><span className="text-right">{result.b?money(result.b.centers.find(c=>c.centerId===id)?.allocatedCents??0):'—'}</span></div>)}
     <button type="button" className={secondary} disabled={!centers.some(c=>c.active)} onClick={()=>{const active=centers.filter(c=>c.active);const q=Math.floor(10000/active.length),r=10000%active.length;update(Object.fromEntries(active.map((c,i)=>[c.id,String((q+(i<r?1:0))/100)])));}}>Distribuir igualmente</button>
     {result.b?<><p>Saldo não distribuído: <strong>{money(result.b.unallocatedCents)}</strong></p>{result.b.overdrawnCenterIds.length>0&&<Notice>Déficit previsto nos centros: {result.b.overdrawnCenterIds.join(', ')}. Confira antes de confirmar.</Notice>}</>:<Notice>Rateio inválido. O limite total é 100%.</Notice>}
   </fieldset>;
