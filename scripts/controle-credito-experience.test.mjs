@@ -139,6 +139,7 @@ test('R1.5 structured report handles multiple pages and retains selectable text'
   for(const m of text.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)){try{decoded+=inflateSync(Buffer.from(m[1],'latin1')).toString('latin1');}catch{}}
   assert.ok((text.match(/\/Type \/Page\b/g)||[]).length>1);
   assert.match(decoded,/2026NC000001/);assert.match(decoded,/REGISTRO-FINAL/);assert.match(decoded,/1.234,56/);assert.match(decoded,/Tj/);
+  assert.doesNotMatch(decoded,/(?:^|\n)\s*\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+(?:rg|RG)\b/m);
 });
 
 test('R1.6 original NE sharing has a manager-only sync endpoint, current generation and centre isolation',()=>{

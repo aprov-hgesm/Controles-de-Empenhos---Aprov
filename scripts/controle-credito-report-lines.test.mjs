@@ -14,12 +14,31 @@ test('five reports and exact São Paulo registration day, NC and center filters'
   const result=buildCreditReport(view,{type:'ne-centro',nc:'2026NC000001',center:'A',from:'2026-11-23',to:'2026-11-23'});
   assert.ok(result.some(r=>r.label==='NE NE-A'));assert.ok(!result.some(r=>r.label==='NE NE-B'||r.label==='NE NE-C'));
   assert.ok(result.some(r=>r.label==='Total líquido selecionado'&&r.value==='R$ 10.00'));
-  const summary=buildCreditReport(view,{type:'nc'});
+  const summary=buildCreditReport(view,{type:'nc'},'2026-01-27');
   assert.ok(summary.some(r=>r.value.includes('Prazo administração 2026-01-25')));
-  assert.ok(summary.some(r=>r.value.includes('30%')&&r.value.includes('70%')));
+  assert.ok(summary.some(r=>r.kind==='progress'&&r.value.includes('30%')&&r.value.includes('70%')));
+  assert.ok(summary.some(r=>r.label==='Prazo administrativo crítico'&&r.value.includes('R$ 140.00')));
+  assert.ok(summary.some(r=>r.label==='Consolidado por centro de custos'&&r.table.rows[0].join('|').includes('200.00|60.00|140.00')));
   assert.ok(!summary.some(r=>r.label.startsWith('NE ')||r.label==='Célula orçamentária'));
   assert.ok(buildCreditReport(view,{type:'nc-detalhe'}).some(r=>r.value.includes('ND 339030')&&r.value.includes('PI TESTE')));
   assert.ok(buildCreditReport(view,{type:'prazos'}).some(r=>r.value.includes('Prazo vencido')));
   assert.ok(buildCreditReport(view,{type:'nc-detalhe',nc:'2026NC000002'}).some(r=>r.label==='NE NE-C'));
   assert.ok(buildCreditReport(view,{type:'saldo'}).some(r=>r.label==='Percentual empenhado'));
+});
+
+test('NC summary uses filtered quota only and does not expose other centers',()=>{
+  const a=credit('a','2026NC000001');a.balance={...balance,creditCents:20000,committedCents:5000,availableCents:15000,centers:[{...balance.centers[0],basisPoints:5000},{centerId:'B',basisPoints:5000,commitmentCount:1,allocatedCents:10000,committedCents:2000,availableCents:8000}]};
+  const scoped={...view,credits:[a]};
+  const rows=buildCreditReport(scoped,{type:'nc',center:'A'},'2026-02-03');
+  assert.ok(rows.find(r=>r.kind==='fields').fields.some(f=>f.value==='R$ 100.00'));
+  assert.ok(rows.some(r=>r.label==='PRAZO OFICIAL VENCIDO'&&r.value.includes('R$ 70.00')));
+  assert.ok(rows.filter(r=>r.kind==='table').every(r=>r.table.rows.every(x=>x[0]==='A')));
+  assert.ok(rows.filter(r=>r.kind==='progress').every(r=>r.percent===30));
+});
+test('zero credit and deficit remain truthful without a fabricated percentage',()=>{
+  const c=credit('z','2026NC000003');c.balance={...balance,creditCents:0,committedCents:100,availableCents:-100,centers:[{centerId:'A',basisPoints:10000,commitmentCount:1,allocatedCents:0,committedCents:100,availableCents:-100}]};
+  const rows=buildCreditReport({...view,credits:[c]},{type:'nc'},'2026-02-03');
+  assert.ok(rows.filter(r=>r.kind==='progress').every(r=>r.percent===null));
+  assert.ok(rows.some(r=>r.label==='DÉFICIT'));
+  assert.ok(rows.some(r=>r.kind==='fields'&&r.fields.some(f=>f.label==='Déficit'&&f.value==='R$ -1.00')));
 });

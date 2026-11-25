@@ -4,8 +4,9 @@ export const REPORT_TITLES:Record<string,string>={saldo:'Relatório de Execuçã
 type Filters={type:string;nc?:string;center?:string;from?:string;to?:string};
 const dateOfRegistration=(n:CommitmentRecord)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(n.createdAt));
 const deadlineOrder=(a:FinanceCredit,b:FinanceCredit)=>(a.adminDeadline||a.deadline||'9999-12-31').localeCompare(b.adminDeadline||b.deadline||'9999-12-31')||a.id.localeCompare(b.id);
-export function buildCreditReport(view:FinanceView,filters:Filters):CreditReportLine[]{
-  const {type,nc,center,from,to}=filters;
+export function buildCreditReport(view:FinanceView,filters:Filters,today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())):CreditReportLine[]{
+  const {type,nc,from,to}=filters;
+  const center=view.member.role==='centro'?view.member.centerId||undefined:filters.center;
   const allCredits=view.credits.filter(c=>!nc||c.id===nc||c.number===nc||c.fullNumber===nc);
   const credits=allCredits.filter(c=>!center||c.balance.centers.some(x=>x.centerId===center&&(x.basisPoints>0||x.commitmentCount>0))).sort(deadlineOrder);
   const byCredit=new Map(credits.map(c=>[c.id,c]));
@@ -13,17 +14,46 @@ export function buildCreditReport(view:FinanceView,filters:Filters):CreditReport
   const lines:CreditReportLine[]=[];
   const add=(label:string,value:string,kind?:CreditReportLine['kind'],fields?:CreditReportLine['fields'])=>lines.push({label,value,...(kind?{kind}:{}),...(fields?{fields}:{})});
   const description=(label:string,value:string)=>{for(let i=0;i<value.length;i+=850)add(i===0?label:label+' (continuação)',value.slice(i,i+850));};
-  const totals=(credit:number,committed:number,available:number)=>{add('Crédito registrado',money(credit),'metric');add('Empenhado',money(committed),'metric');add('Saldo disponível',money(available),'metric');};
+  const pct=(n:number,d:number)=>d>0?(100*n/d).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'N/A';
+  const amounts=(c:FinanceCredit)=>{const x=center?c.balance.centers.find(x=>x.centerId===center):undefined;return {credit:x?.allocatedCents??c.balance.creditCents,used:x?.committedCents??c.balance.committedCents,rest:x?.availableCents??c.balance.availableCents};};
+  const sum=(a:number,b:number)=>{const n=a+b;if(!Number.isSafeInteger(n))throw new Error('Total financeiro inválido.');return n;};
+  const totals=(credit:number,used:number,rest:number)=>lines.push({label:'Valores financeiros',value:'',kind:'fields',fields:[{label:center?'Cota recebida':'Crédito recebido',value:money(credit)},{label:'Valor empenhado',value:money(used)},{label:rest<0?'Déficit':'Saldo não empenhado',value:money(rest)}]});
+  const progress=(credit:number,used:number,rest:number)=>lines.push({label:'Percentual empenhado',value:pct(used,credit)+' empenhado | '+pct(rest,credit)+' de saldo'+(rest<0?' (DÉFICIT)':''),kind:'progress',percent:credit>0?100*used/credit:null});
+  const days=(d:string|null|undefined)=>d?Math.round((Date.parse(d+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000):null;
+  const state=(d:string|null|undefined)=>{const n=days(d);return n===null?'Não definido':n<0?'VENCIDO há '+(-n)+' dia(s)':n===0?'VENCE HOJE':n<=7?'VENCE EM '+n+' DIA(S)':'No prazo';};
+  const urgency=(c:FinanceCredit)=>{const a=amounts(c);if(a.rest<0)return 0;if(a.rest===0)return 5;const d=days(c.deadline),adm=days(c.adminDeadline);return d!==null&&d<0?1:adm!==null&&adm<0?2:[d,adm].some(n=>n!==null&&n<=7)?3:4;};
+  credits.sort((a,b)=>urgency(a)-urgency(b)||deadlineOrder(a,b));
+  type CenterRow={id:string;share?:number;credit:number;used:number;rest:number};
+  const cash=(n:number)=>money(n).replace(/^R\$\s*/,'');
+  const table=(label:string,rows:CenterRow[],share:boolean)=>{
+    if(!rows.length){add(label,'Nenhum centro com cota ou empenho registrado.');return;}
+    lines.push({label,value:'',kind:'table',table:{headers:share?['Centro','Rateio','Cota (R$)','Empenh. (R$)','Saldo (R$)','Uso %','Saldo %']:['Centro','Cota (R$)','Empenh. (R$)','Saldo (R$)','Uso %','Saldo %'],weights:share?[25,15,33,33,34,22,24]:[34,37,37,38,19,21],rows:rows.map(x=>[x.id,...(share?[pct(x.share??0,10000)]:[]),cash(x.credit),cash(x.used),cash(x.rest),pct(x.used,x.credit),pct(x.rest,x.credit)])}});
+  };
+  const centerRows=(c:FinanceCredit):CenterRow[]=>c.balance.centers.filter(x=>(!center||x.centerId===center)&&(x.basisPoints>0||x.commitmentCount>0)).map(x=>({id:x.centerId,share:x.basisPoints,credit:x.allocatedCents,used:x.committedCents,rest:x.availableCents}));
+  function consolidated(){
+    const a=credits.reduce((v,c)=>{const x=amounts(c);return {credit:sum(v.credit,x.credit),used:sum(v.used,x.used),rest:sum(v.rest,x.rest)};},{credit:0,used:0,rest:0});
+    totals(a.credit,a.used,a.rest);progress(a.credit,a.used,a.rest);
+    add('Notas de crédito',String(credits.length));
+    const overdue=credits.filter(c=>amounts(c).rest>0&&(days(c.deadline)??0)<0);
+    const soon=credits.filter(c=>amounts(c).rest>0&&days(c.deadline)!==null&&days(c.deadline)!>=0&&days(c.deadline)!<=7);
+    const administrative=credits.filter(c=>amounts(c).rest>0&&days(c.adminDeadline)!==null&&days(c.adminDeadline)!<=7);
+    const missing=credits.filter(c=>amounts(c).rest>0&&!c.deadline);
+    const attention=(label:string,items:FinanceCredit[])=>{if(items.length)add(label,items.length+' NC(s) | '+money(items.reduce((v,c)=>sum(v,amounts(c).rest),0))+' não empenhados');};
+    attention('PRAZO OFICIAL VENCIDO',overdue);attention('Vence em até 7 dias',soon);attention('Prazo administrativo crítico',administrative);attention('Prazo oficial não definido',missing);
+    const deficit=credits.filter(c=>amounts(c).rest<0);if(deficit.length)add('DÉFICIT',deficit.length+' NC(s) | '+money(deficit.reduce((v,c)=>sum(v,-amounts(c).rest),0)));
+    if(!overdue.length&&!soon.length&&!administrative.length&&!missing.length&&!deficit.length)add('Prazos','Nenhuma pendência de prazo com saldo ou déficit nesta seleção.');
+    const map=new Map<string,CenterRow>();for(const c of credits)for(const x of centerRows(c)){const v=map.get(x.id)??{id:x.id,credit:0,used:0,rest:0};map.set(x.id,{id:x.id,credit:sum(v.credit,x.credit),used:sum(v.used,x.used),rest:sum(v.rest,x.rest)});}
+    table('Consolidado por centro de custos',[...map.values()].sort((a,b)=>a.id.localeCompare(b.id)),false);
+    if(!center&&view.member.role==='gestor'){const n=credits.reduce((v,c)=>sum(v,c.balance.unallocatedCents),0);if(n)add('Crédito não distribuído',money(n));}
+  }
   function summary(c:FinanceCredit){
+    const a=amounts(c);
     add('NC '+c.number,'Emissão '+displayDate(c.issueDate)+' | Prazo para empenho '+displayDate(c.deadline)+' | Prazo administração '+displayDate(c.adminDeadline),'section');
-    const selected=center?c.balance.centers.find(x=>x.centerId===center):undefined;
-    const pct=(n:number,d:number)=>d>0?(100*n/d).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'Não aplicável';
-    const total=selected?.allocatedCents??c.balance.creditCents,committed=selected?.committedCents??c.balance.committedCents,available=selected?.availableCents??c.balance.availableCents;
-    add('Execução',money(total)+' destinado | '+money(committed)+' empenhado ('+pct(committed,total)+') | '+money(available)+' disponível ('+pct(available,total)+')');
-    for(const x of c.balance.centers.filter(x=>!center||x.centerId===center)){
-      add('Centro '+x.centerId,(x.basisPoints/100).toLocaleString('pt-BR')+'% do rateio | '+money(x.allocatedCents)+' | Empenhado '+money(x.committedCents)+' ('+pct(x.committedCents,x.allocatedCents)+') | Saldo '+money(x.availableCents)+' ('+pct(x.availableCents,x.allocatedCents)+')');
-    }
-    if(!center&&view.member.role==='gestor')add('Não distribuído',money(c.balance.unallocatedCents));
+    add('Situação dos prazos','Oficial: '+state(c.deadline)+' | Administrativo: '+state(c.adminDeadline));
+    totals(a.credit,a.used,a.rest);progress(a.credit,a.used,a.rest);
+    if(type!=='nc-detalhe'&&c.description){const desc=c.description.trim().replace(/\s+/g,' ');add('Finalidade',desc.length>200?desc.slice(0,197)+'...':desc);}
+    table('Distribuição por centro de custos',centerRows(c),true);
+    if(!center&&view.member.role==='gestor'&&c.balance.unallocatedCents)add('Crédito não distribuído',money(c.balance.unallocatedCents));
   }
   function ne(n:CommitmentRecord){
     add('NE '+n.number,'NC '+(byCredit.get(n.creditId)?.number||n.creditId)+' | Centro '+n.centerId+' | '+money(n.netCents),'section');
@@ -32,14 +62,8 @@ export function buildCreditReport(view:FinanceView,filters:Filters):CreditReport
     for(const d of n.budgetDifferences??[])add('Diferença com ciência — '+d.field,'NC '+(d.credit??'não informado')+' | NE '+(d.commitment??'não informado'));
   }
   if(type==='saldo'){
-    const t=view.totals;
-    add('Resumo financeiro do exercício','','section');totals(t.creditCents,t.committedCents,t.availableCents);
-    add('Percentual empenhado',t.creditCents>0?(100*t.committedCents/t.creditCents).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%':'Não aplicável');
-    add('Registros',t.creditCount+' NCs | '+t.commitmentCount+' NEs | '+t.noCommitmentsCount+' NCs sem empenho');
-    if(view.member.role==='gestor')add('Não distribuído',money(t.unallocatedCents));
-    const perCenter=new Map<string,{credit:number;committed:number;available:number}>();
-    for(const c of credits)for(const x of c.balance.centers){const acc=perCenter.get(x.centerId)??{credit:0,committed:0,available:0};acc.credit+=x.allocatedCents;acc.committed+=x.committedCents;acc.available+=x.availableCents;perCenter.set(x.centerId,acc);}
-    add('Distribuição por centro de custos','','section');for(const [id,x] of [...perCenter].sort(([a],[b])=>a.localeCompare(b))){add('Centro '+id,view.centers?.find(c=>c.id===id)?.name||'','section');add('Execução do centro',money(x.credit)+' destinado | '+money(x.committed)+' empenhado | '+money(x.available)+' disponível','fields',[{label:'Destinado',value:money(x.credit)},{label:'Empenhado',value:money(x.committed)},{label:'Saldo disponível',value:money(x.available)}]);}
+    add('Resumo financeiro do exercício','','section');consolidated();
+    const t=view.totals;add('Registros',t.creditCount+' NCs | '+t.commitmentCount+' NEs | '+t.noCommitmentsCount+' NCs sem empenho');
   }else if(type==='prazos'){
     const alerts=new Map(view.alerts.map(a=>[a.creditId,a]));
     const pending=credits.filter(c=>alerts.has(c.id));
@@ -48,7 +72,7 @@ export function buildCreditReport(view:FinanceView,filters:Filters):CreditReport
     add('Observação','Prazo vencido não representa recolhimento efetivo.');
   }else if(type==='nc'||type==='nc-detalhe'){
     add('Resumo da consulta','','section');if(nc)add('Filtro de NC',nc);
-    add('Notas de crédito',String(credits.length),'metric');
+    consolidated();
     const byNe=new Map<string,CommitmentRecord[]>();for(const n of notes){const list=byNe.get(n.creditId)??[];list.push(n);byNe.set(n.creditId,list);}
     for(const c of credits){summary(c);if(type==='nc-detalhe'){description('Finalidade',c.description);add('Identificação','UG emitente '+c.issuingUg+' | UG favorecida '+c.beneficiaryUg+' | '+c.operation+' | '+c.decentralization+' | '+c.sourceSystem);
       if(view.member.role==='gestor'){add('Número completo',c.fullNumber);add('Total original do documento',c.documentTotalCents===null?'Não informado':money(c.documentTotalCents));for(const seq of c.sequences){add('Sequencial '+seq.sequence,money(seq.totalCents));for(const cell of seq.origin)add('Origem','UG '+cell.ug+' | Item '+cell.item+' | Num '+cell.num+' | Esfera '+cell.esfera+' | ND '+cell.nd+' | PI '+(cell.pi??'não informado')+' | PTRES '+cell.ptres+' | Fonte '+cell.fonte+' | UGR '+cell.ugr+' | '+money(cell.cents));}for(const cell of c.cells)add('Célula orçamentária','ND '+cell.nd+' | PI '+(cell.pi??'não informado')+' | PTRES '+cell.ptres+' | Fonte '+cell.fonte+' | UGR '+cell.ugr+' | Esfera '+cell.esfera+' | '+money(cell.cents));}
