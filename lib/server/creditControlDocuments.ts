@@ -174,7 +174,7 @@ function safeFilename(name:string,kind:Kind) {
   const ext=kind==='nc'?'.html':'.pdf';
   return (base.replace(/\.(?:html?|pdf)$/i,'')||'documento')+ext;
 }
-type Entity = {id:string;number:string;generation?:string;creditId?:string;revision?:number;fullNumber?:string;issuingUg?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
+type Entity = {id:string;number:string;generation?:string;creditId?:string;revision?:number;fullNumber?:string;issuingUg?:string;beneficiaryUg?:string;ug?:string;issueDate:string;deadline?:string|null;description?:string;centerId?:string;supplierCnpj?:string;netCents?:number;totalCents?:number};
 function asEntity(value:unknown,kind:Kind,id:string):Entity {
   if(!value||typeof value!=='object')return fail(404,'Registro financeiro não encontrado.');
   const obj=value as Record<string,unknown>;
@@ -195,14 +195,14 @@ function normalizeNumber(s:string) {return s.toUpperCase().replace(/[^A-Z0-9]/g,
 function validateSource(bytes:Uint8Array,kind:Kind,m:CreditMember,e:Entity) {
   try {
     if(kind==='nc') {
-      const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),m.ug);
-      if(normalizeNumber(parsed.number)!==normalizeNumber(e.number)||parsed.issuingUg!==e.issuingUg||parsed.beneficiaryUg!==m.ug)throw new Error();
+      const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),e.beneficiaryUg!);
+      if(normalizeNumber(parsed.number)!==normalizeNumber(e.number)||parsed.issuingUg!==e.issuingUg||parsed.beneficiaryUg!==e.beneficiaryUg)throw new Error();
     } else {
       if(Buffer.from(bytes.subarray(0,5)).toString('ascii')!=='%PDF-')throw new Error();
       // O anexo precisa passar pelas mesmas verificações de tamanho expandido,
       // estrutura, identidade e emissão original da importação financeira.
       const parsed=parseNe(bytes,m,true);
-      if(parsed.ug!==m.ug||normalizeNumber(parsed.number)!==normalizeNumber(e.number)||parsed.issueDate!==e.issueDate||parsed.supplierCnpj.replace(/\D/g,'')!==e.supplierCnpj?.replace(/\D/g,''))throw new Error();
+      if(parsed.ug!==e.ug||normalizeNumber(parsed.number)!==normalizeNumber(e.number)||parsed.issueDate!==e.issueDate||parsed.supplierCnpj.replace(/\D/g,'')!==e.supplierCnpj?.replace(/\D/g,''))throw new Error();
       if(parsed.netCents!==e.netCents)fail(422,'O valor do PDF difere do valor registrado. Use Substituir NE para atualizar o saldo, ou registre a anulação em Registrar ajuste.');
     }
   }catch(error) {if(error instanceof CreditAccessError)throw error;fail(422,'O arquivo original não corresponde à identidade do registro (UG, número, emissão ou favorecido). Confira o documento.');}
@@ -425,7 +425,7 @@ export async function downloadDocument(m:CreditMember,request:Request,id:string)
   const bytes=await verifyFile(m,token,d);
   if(d.entityType==='nc'&&new URL(request.url).searchParams.get('format')==='pdf'){
     // Parse the verified original, never execute HTML or make remote requests for its assets.
-    const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),m.ug);
+    const parsed=parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),record.beneficiaryUg!);
     const lines=[{label:'Nota de crédito',value:parsed.fullNumber},{label:'UG emitente',value:parsed.issuingUg},{label:'UG favorecida',value:parsed.beneficiaryUg},{label:'Emissão',value:displayDate(parsed.issueDate)},{label:'Prazo original',value:displayDate(parsed.deadline)},{label:'Operação',value:parsed.operation},{label:'Descentralização',value:parsed.decentralization},{label:'Sistema de origem',value:parsed.sourceSystem},{label:'Total do documento',value:money(parsed.documentTotalCents)},{label:'Total favorecido',value:money(parsed.totalCents)}];
     for(let i=0;i<parsed.description.length;i+=800)lines.push({label:'Finalidade',value:parsed.description.slice(i,i+800)});
     for(const seq of parsed.sequences){lines.push({label:'Sequencial '+seq.sequence,value:money(seq.totalCents)});for(const [label,rows] of [['Origem',seq.origin],['Destino',seq.destination]] as const){for(const cell of rows)lines.push({label,value:'UG '+cell.ug+' | Item '+cell.item+' | Num '+cell.num+' | Esfera '+cell.esfera+' | PTRES '+cell.ptres+' | Fonte '+(cell.fonte||'Não informada')+' | ND '+cell.nd+' | UGR '+cell.ugr+' | PI '+(cell.pi||'Não informado')+' | '+money(cell.cents)});}}

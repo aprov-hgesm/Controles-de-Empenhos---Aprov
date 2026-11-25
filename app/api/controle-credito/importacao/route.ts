@@ -12,6 +12,6 @@ export async function POST(request: Request) {
     const kind=request.headers.get('x-credit-document-kind');
     if(kind!=='nc'&&kind!=='ne') invalid('Tipo de documento inválido.','DOCUMENT_KIND');
     const bytes=await readBounded(request,kind==='nc'?NC_MAX:NE_MAX);
-    return response({result:kind==='nc'?parseNc(bytes,member):parseNe(bytes,member,new URL(request.url).searchParams.get('updated')==='1')});
+    return response({result:kind==='nc'?parseNc(bytes,member,new URL(request.url).searchParams.get('beneficiaryUg')??undefined):parseNe(bytes,member,new URL(request.url).searchParams.get('updated')==='1')});
   } catch(error) { return failure(error); }
 }

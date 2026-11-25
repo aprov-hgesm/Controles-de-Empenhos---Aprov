@@ -60,8 +60,8 @@ export async function api<T>(user:User,path:string,signal:AbortSignal,init:Reque
 }
 export function json(method:string,data:unknown):RequestInit{return {method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)};}
 export function query(values:Record<string,string|undefined>){const params=new URLSearchParams();Object.entries(values).forEach(([key,value])=>{if(value)params.set(key,value);});return '?'+params.toString();}
-export function importDocument<T>(user:User,kind:'nc'|'ne',file:File,signal:AbortSignal,updated=false){
-  return api<Preview<T>>(user,'/importacao'+(updated?'?updated=1':''),signal,{method:'POST',headers:{'x-credit-document-kind':kind},body:file});
+export function importDocument<T>(user:User,kind:'nc'|'ne',file:File,signal:AbortSignal,updated=false,beneficiaryUg?:string){
+  return api<Preview<T>>(user,'/importacao'+query({updated:updated?'1':undefined,beneficiaryUg}),signal,{method:'POST',headers:{'x-credit-document-kind':kind},body:file});
 }
 export async function download(user:User,path:string,filename:string,signal:AbortSignal){
   const response=await request(user,path,signal);

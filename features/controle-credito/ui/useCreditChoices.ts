@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import type {User} from 'firebase/auth';
 import {api,cancelled,errorText,query} from '../client';
-export type CreditChoice={id:string;number:string;description:string;deadline:string|null;availableCents:number};
+export type CreditChoice={id:string;number:string;beneficiaryUg:string;description:string;deadline:string|null;availableCents:number};
 export function useCreditChoices(user:User,year:string,enabled:boolean,version=0){
   const [state,setState]=useState<{key:string;choices:CreditChoice[];loading:boolean;error:string}>({key:'',choices:[],loading:false,error:''});
   const [retry,setRetry]=useState(0);

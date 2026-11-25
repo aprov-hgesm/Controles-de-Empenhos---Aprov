@@ -1,3 +1,4 @@
+import { allowsCreditDocumentUg, creditRecordId } from '../controle-credito/documentUgs.mjs';
 import { createHash } from 'node:crypto';
 import type { CreditMember } from './creditControlAuth';
 import { creditTransaction, CreditStoreError, type CreditTransaction } from './creditControlFirestore';
@@ -125,13 +126,13 @@ function sequences(input:unknown,expectedUg:string,manual:boolean):CreditSequenc
 const normalized=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
 function readCredit(member:CreditMember,raw:StoredCredit|undefined|null,key:string,includeDeleted=false):StoredCredit {
   if(!raw)return absent();
-  if(raw.id!==key||raw.beneficiaryUg!==member.ug||!raw.originalFingerprint||!raw.cellAdjustments) return corrupt();
+  if(raw.id!==key||!allowsCreditDocumentUg(member.ug,raw.beneficiaryUg)||raw.id!==creditRecordId(member.ug,raw.issuingUg,raw.number,raw.beneficiaryUg)||!raw.originalFingerprint||!raw.cellAdjustments) return corrupt();
   if(raw.deletedAt&&!includeDeleted)return absent();
   return raw;
 }
 function readCommitment(member:CreditMember,raw:StoredCommitment|undefined|null,key:string,includeDeleted=false):StoredCommitment {
   if(!raw)return absent();
-  if(raw.id!==key||raw.ug!==member.ug||!raw.originalFingerprint)return corrupt();
+  if(raw.id!==key||!allowsCreditDocumentUg(member.ug,raw.ug)||raw.id!==raw.ug+'_'+raw.number||!raw.originalFingerprint)return corrupt();
   if(raw.deletedAt&&!includeDeleted)return absent();
   return raw;
 }
@@ -242,7 +243,8 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
   if(data.source!=='html'&&data.source!=='manual')return invalid('Informe a origem da NC.');
   const source=data.source,manual=source==='manual';
   const issuingUg=ug(draft.issuingUg);
-  if(ug(draft.beneficiaryUg)!==member.ug)return forbidden();
+  const beneficiaryUg=ug(draft.beneficiaryUg);
+  if(!allowsCreditDocumentUg(member.ug,beneficiaryUg))return forbidden();
   const number=pattern(draft.number,/^20\d{2}NC\d{6}$/,'Número da NC');
   const fullNumber=pattern(draft.fullNumber??(manual?issuingUg+number:undefined),/^\d{6,20}20\d{2}NC\d{6}$/,'Identificador completo da NC');
   if(!fullNumber.startsWith(issuingUg)||!fullNumber.endsWith(number))return invalid('Identificadores da NC divergentes.');
@@ -255,10 +257,10 @@ export async function createCredit(member:CreditMember,input:unknown):Promise<Cr
   const totalCents=integer(draft.totalCents,'Valor favorecido',1);
   const documentTotalCents=integer(draft.documentTotalCents??(manual?totalCents:undefined),'Valor do documento',1);
   if(documentTotalCents<totalCents)return invalid('Valor favorecido superior ao valor do documento.');
-  const seqs=sequences(draft.sequences,member.ug,manual);
+  const seqs=sequences(draft.sequences,beneficiaryUg,manual);
   if(seqs.reduce((n,s)=>sum(n,s.totalCents),0)!==totalCents)return invalid('Sequenciais não conciliam com o valor favorecido.');
   const shares=allocations(data.allocations);
-  const fields={id:issuingUg+'_'+number,number,fullNumber,issuingUg,beneficiaryUg:member.ug,
+  const fields={id:creditRecordId(member.ug,issuingUg,number,beneficiaryUg),number,fullNumber,issuingUg,beneficiaryUg,
     issueDate,description:string(data.description??draft.description,'Descrição',12000,true),
     deadline:deadline(data.deadline!==undefined?data.deadline:draft.deadline??null,issueDate),
     operation,decentralization,sourceSystem:string(draft.sourceSystem??(manual?'MANUAL':undefined),'Sistema de origem'),
@@ -315,18 +317,19 @@ export async function updateCredit(member:CreditMember,input:unknown):Promise<Cr
 }
 function commitmentInput(member:CreditMember,input:unknown) {
   const data=object(input),draft=object(data.draft);
-  if(ug(draft.ug)!==member.ug)return forbidden();
+  const documentUg=ug(draft.ug);
+  if(!allowsCreditDocumentUg(member.ug,documentUg))return forbidden();
   const rawNumber=string(draft.number??draft.id,'Número da NE');
-  const number=rawNumber.startsWith(member.ug)&&rawNumber.length>12?rawNumber.slice(-12):rawNumber;
-  if(!/^20\d{2}NE\d{6}$/.test(number)||!(rawNumber===number||rawNumber===member.ug+number))return invalid('Número da NE inválido.');
+  const number=rawNumber.startsWith(documentUg)&&rawNumber.length>12?rawNumber.slice(-12):rawNumber;
+  if(!/^20\d{2}NE\d{6}$/.test(number)||!(rawNumber===number||rawNumber===documentUg+number))return invalid('Número da NE inválido.');
   const rawDate=string(draft.issueDate??draft.date,'Data de emissão');
   const issueDate=date(/^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)?rawDate.slice(6)+'-'+rawDate.slice(3,5)+'-'+rawDate.slice(0,2):rawDate,'Data de emissão');
   const year=number.slice(0,4);
   if(issueDate.slice(0,4)!==year)return invalid('Exercício da NE incompatível com a data de emissão.');
   const supplierCnpj=string(draft.supplierCnpj,'CNPJ/CPF do favorecido',24).replace(/[.\/-]/g,'');
   if(!/^(?:\d{14}|\d{11})$/.test(supplierCnpj))return invalid('CNPJ/CPF do favorecido inválido.');
-  const fields={id:member.ug+'_'+number,number,creditId:id(data.creditId,'NC'),centerId:centerId(data.centerId),
-    cellId:id(data.cellId,'Célula'),ug:member.ug,issueDate,description:string(draft.description,'Descrição',12000,true),
+  const fields={id:documentUg+'_'+number,number,creditId:id(data.creditId,'NC'),centerId:centerId(data.centerId),
+    cellId:id(data.cellId,'Célula'),ug:documentUg,issueDate,description:string(draft.description,'Descrição',12000,true),
     supplier:string(draft.supplier,'Favorecido',300),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1)};
   const codes={nd:pattern(draft.nd??draft.naturezaDespesa,/^\d{6}$/,'ND'),
     ptres:pattern(draft.ptres,/^\d{6}$/,'PTRES'),fonte:pattern(draft.fonte??draft.fonteRecurso,/^\d{10}$/,'Fonte'),
@@ -348,6 +351,7 @@ export async function createCommitment(member:CreditMember,input:unknown):Promis
       return {commitment:publicCommitment(ne),balance:result.balance,cells:result.cells};
     }
     const record=await getStoredCredit(tx,member,fields.creditId);
+    if(record.beneficiaryUg!==fields.ug)return invalid('A UG da NE deve corresponder à UG favorecida da NC.');
     if(record.year!==year)return invalid('NC e NE de exercícios diferentes exigem conciliação antes do registro.');
     if(data.expectedCreditRevision!==undefined)revision(data.expectedCreditRevision,record.revision);
     const nes=await linked(tx,member,record.id);
@@ -552,7 +556,7 @@ export async function listCreditChoices(member:CreditMember,yearText:string) {
       if(c.year!==year)return corrupt();
       if(member.role==='centro'&&!c.projection?.balance.centers.some(x=>x.centerId===member.centerId&&(x.basisPoints>0||x.commitmentCount>0)))continue;
       const d=projectedDetail(member,c);
-      choices.push({id:c.id,number:c.number,description:c.description,deadline:c.deadline,availableCents:d.balance.availableCents});
+      choices.push({id:c.id,number:c.number,beneficiaryUg:c.beneficiaryUg,description:c.description,deadline:c.deadline,availableCents:d.balance.availableCents});
     }
     return {choices:choices.sort((a,b)=>b.number.localeCompare(a.number,'pt-BR',{numeric:true}))};
   },true);

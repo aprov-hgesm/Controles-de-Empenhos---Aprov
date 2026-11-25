@@ -22,4 +22,4 @@ export interface SagHtmlCreditDraft {
   warnings: string[];
   requiresReview: true;
 }
-export function parseSagCreditHtml(html: string, expectedUg: string): SagHtmlCreditDraft;
+export function parseSagCreditHtml(html: string, expectedUg: string | readonly string[]): SagHtmlCreditDraft;

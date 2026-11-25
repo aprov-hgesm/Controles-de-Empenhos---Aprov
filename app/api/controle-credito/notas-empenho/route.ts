@@ -35,7 +35,7 @@ export async function PATCH(request:Request){
     const input={id:id(body.id),expectedRevision:integer(body.expectedRevision,'Revisão',1),confirmed:body.confirmed===true,documentHash:createHash('sha256').update(bytes).digest('hex'),number:parsed.number,issueDate:parsed.issueDate,supplierCnpj:parsed.supplierCnpj,netCents:parsed.netCents};
     return response(await withCreditSharingLock(member,'replace-ne',async()=>{
       const {commitment:n}=await getCommitment(member,input.id);
-      if(!input.confirmed||n.revision!==input.expectedRevision||n.number!==input.number||n.issueDate!==input.issueDate||n.supplierCnpj.replace(/\D/g,'')!==input.supplierCnpj.replace(/\D/g,'')||input.netCents>n.netCents)invalid('Confira a revisão, identidade e novo valor da NE antes de substituir.');
+      if(!input.confirmed||n.revision!==input.expectedRevision||n.ug!==parsed.ug||n.number!==input.number||n.issueDate!==input.issueDate||n.supplierCnpj.replace(/\D/g,'')!==input.supplierCnpj.replace(/\D/g,'')||input.netCents>n.netCents)invalid('Confira a revisão, identidade e novo valor da NE antes de substituir.');
       await revokeCreditShares(member,request,{entityKey:'ne:'+n.id+(n.generation?':'+n.generation:'')});
       return replaceCommitmentPdf(member,input);
     }));
