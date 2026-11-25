@@ -1,7 +1,7 @@
 'use client';
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react';
 import type {User} from 'firebase/auth';
-import {Cloud,CloudOff,Loader2} from 'lucide-react';
+import {Cloud,CloudOff,Loader2,ChevronDown,RefreshCw,Unplug} from 'lucide-react';
 import {creditAuth} from '../auth/creditFirebase';
 import {connectGoogleDriveForWorkspace,isWorkspaceGoogleDriveSessionExpired,GOOGLE_IDENTITY_SERVICES_URL,type WorkspaceGoogleDriveSession} from '@/lib/googleDriveWorkspace';
 
@@ -44,6 +44,9 @@ export function CreditDriveProvider({user,ug,children}:{user:User;ug:string;chil
 }
 export function CreditDriveControl({compact=false}:{compact?:boolean}){
   const d=useCreditDrive();
+  const [menu,setMenu]=useState(false);const menuRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{if(!compact||!menu)return;const outside=(e:PointerEvent)=>{if(!menuRef.current?.contains(e.target as Node))setMenu(false);};const escape=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false);};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};},[compact,menu]);
+  if(compact)return <div ref={menuRef} className="relative flex items-center"><button type="button" className="emprovex-header-control inline-flex items-center gap-1.5" aria-expanded={menu} aria-label={d.connected?'Gerenciar Google Drive':'Google Drive'} disabled={d.busy} onClick={()=>setMenu(v=>!v)} title="Gerenciar armazenamento privado">{d.busy?<Loader2 className="h-4 w-4 animate-spin"/>:d.connected?<Cloud className="h-4 w-4 text-emerald-400"/>:<CloudOff className="h-4 w-4"/>}<span className="hidden sm:inline">{d.busy?'Conectando':d.connected?'Drive conectado':'Conectar Drive'}</span><ChevronDown className="h-3 w-3"/></button>{menu&&<div className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl"><div><p className="text-sm font-extrabold">Google Drive</p><p className="mt-1 text-xs text-slate-600">{d.connected?'Conectado à pasta privada.':'Conecte a conta para enviar ou baixar documentos originais.'}</p></div>{d.error&&<p role="alert" className="rounded-lg bg-red-50 p-2 text-xs text-red-800">{d.error}</p>}<button type="button" disabled={d.busy||!d.ready} onClick={()=>void d.connect()} className="flex w-full items-center gap-2 rounded-lg bg-[#16334d] px-3 py-2 text-sm font-bold text-white disabled:opacity-50"><RefreshCw className="h-4 w-4"/>{d.busy?'Conectando…':d.connected?'Reconectar':'Conectar Drive'}</button>{d.connected&&<button type="button" onClick={()=>{d.disconnect();setMenu(false);}} className="flex w-full items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"><Unplug className="h-4 w-4"/> Desconectar</button>}</div>}</div>;
   return <div className={compact?'flex items-center gap-2':'space-y-3'}>
     <button type="button" disabled={d.busy||!d.ready} onClick={()=>void d.connect()} title={d.error||'Conectar a conta Google do gestor'} className={compact?'emprovex-header-control':'inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50'}>
       {d.busy?<Loader2 className="h-4 w-4 animate-spin"/>:d.connected?<Cloud className="h-4 w-4 text-emerald-400"/>:<CloudOff className="h-4 w-4"/>}
