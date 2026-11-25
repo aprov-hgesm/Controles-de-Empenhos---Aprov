@@ -14,6 +14,7 @@ const firestoreUrl=moduleUrl(read('lib/server/creditControlFirestore.ts')
   .replace("import firebaseConfig from '../../firebase-applet-config.json';","const firebaseConfig={projectId:'demo-credit-r1'};")
   .replace("import { getGoogleAccessToken } from './sectorProvisioningAdmin';","const getGoogleAccessToken=async()=> 'owner';"));
 const store=await import(moduleUrl(read('lib/server/creditControlStore.ts')
+  .replace("'../controle-credito/documentUgs.mjs'",JSON.stringify(new URL('../lib/controle-credito/documentUgs.mjs',import.meta.url).href))
   .replace("'./creditControlFirestore'",JSON.stringify(firestoreUrl))
   .replace("'../controle-credito/creditBalance'",JSON.stringify(balanceUrl))));
 const {encodeFields}=await import(firestoreUrl);

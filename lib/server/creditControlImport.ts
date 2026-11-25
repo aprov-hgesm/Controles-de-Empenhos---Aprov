@@ -1,3 +1,4 @@
+import { allowsCreditDocumentUg, creditDocumentUgs } from '../controle-credito/documentUgs.mjs';
 import { NextResponse } from 'next/server';
 import { inflateSync } from 'node:zlib';
 import { CreditAccessError, type CreditMember } from './creditControlAuth';
@@ -123,12 +124,15 @@ export function fileFromDraft(draft: Input, max: number): Uint8Array {
   if (!bytes.length || bytes.length > max || bytes.toString('base64') !== value) invalid('Arquivo original inválido.','ORIGINAL_INVALID');
   return bytes;
 }
-export function parseNc(bytes: Uint8Array, member: CreditMember): SagHtmlCreditDraft {
+export function parseNc(bytes: Uint8Array, member: CreditMember, requestedUg?: unknown): SagHtmlCreditDraft {
+  if(requestedUg!==undefined&&!allowsCreditDocumentUg(member.ug,requestedUg))invalid('UG favorecida não autorizada para esta gestão.','NC_UG');
+  const allowed=typeof requestedUg==='string'?requestedUg:creditDocumentUgs(member.ug);
   try {
-    const result = parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),member.ug);
+    const result = parseSagCreditHtml(new TextDecoder('utf-8',{fatal:true}).decode(bytes),allowed);
     if (result.issueDate.slice(0,4) !== result.number.slice(0,4)) invalid('Exercício da NC incompatível com emissão.');
     return result;
-  } catch {
+  } catch(error) {
+    if(error instanceof Error&&error.message.includes('mais de uma UG autorizada'))return invalid('O HTML contém mais de uma UG autorizada. Escolha a UG favorecida e selecione o arquivo novamente.','NC_SELECT_UG');
     return invalid('HTML SAG inválido, divergente, não destinado à UG ou operação não suportada. Confira o original.','NC_IMPORT_INVALID');
   }
 }
@@ -191,7 +195,7 @@ export function parseNe(bytes: Uint8Array, member: CreditMember, updated=false) 
   let result: ReturnType<typeof parseEmpenhoPdfBytes>;
   try { result = parseEmpenhoPdfBytes(bytes); }
   catch { return invalid('NE SIAFI não reconhecida. Utilize a impressão completa.','NE_IMPORT_INVALID'); }
-  if (result.ug !== member.ug) invalid('UG da NE incompatível com a sessão.','NE_UG');
+  if (!allowsCreditDocumentUg(member.ug,result.ug)) invalid('UG da NE incompatível com a sessão.','NE_UG');
   const match = /^(20\d{2})NE(\d{1,6})$/.exec(result.id);
   const d = /^(\d{2})\/(\d{2})\/(20\d{2})$/.exec(result.date);
   if (!match || !d || match[1]!==d[3]) invalid('Número, exercício ou data da NE inválidos.','NE_IDENTITY');
@@ -209,11 +213,11 @@ export function parseNe(bytes: Uint8Array, member: CreditMember, updated=false) 
   ] as const) if (!value || !re.test(value)) warnings.push(label+' ausente ou inválido; confirme no original.');
   return {...result, number:match[1]+'NE'+match[2].padStart(6,'0'),issueDate,netCents,warnings,requiresReview:true as const};
 }
-function cell(raw: unknown, member: CreditMember) {
+function cell(raw: unknown, beneficiaryUg: string) {
   const c=object(raw);
-  if (c.ug!==undefined && c.ug!==member.ug) invalid('UG da célula incompatível.');
+  if (c.ug!==undefined && c.ug!==beneficiaryUg) invalid('UG da célula incompatível.');
   return {
-    ug:member.ug,item:pattern(c.item,'Item',/^\d{1,20}$/),num:pattern(c.num,'Número',/^\d{1,20}$/),
+    ug:beneficiaryUg,item:pattern(c.item,'Item',/^\d{1,20}$/),num:pattern(c.num,'Número',/^\d{1,20}$/),
     esfera:pattern(c.esfera,'Esfera',/^\d{1,3}$/),ptres:pattern(c.ptres,'PTRES',/^\d{6}$/),
     fonte:pattern(c.fonte,'Fonte',/^\d{10}$/),nd:pattern(c.nd,'ND',/^\d{6}$/),
     ugr:pattern(c.ugr,'UGR',/^\d{6}$/),pi:pattern(c.pi,'PI',/^[A-Z0-9]{1,20}$/),
@@ -228,7 +232,8 @@ export function manualNc(draft: Input, member: CreditMember): SagHtmlCreditDraft
   const issuingUg=pattern(draft.issuingUg,'UG emitente',/^\d{6}$/);
   const fullNumber=pattern(draft.fullNumber,'Número completo da NC',/^\d+20\d{2}NC\d{6}$/);
   if (!fullNumber.startsWith(issuingUg)||!fullNumber.endsWith(number)) invalid('Identificadores da NC divergentes.');
-  if (draft.beneficiaryUg!==undefined && draft.beneficiaryUg!==member.ug) invalid('UG favorecida incompatível.');
+  const beneficiaryUg=draft.beneficiaryUg??member.ug;
+  if(!allowsCreditDocumentUg(member.ug,beneficiaryUg))invalid('UG favorecida não autorizada.');
   const issueDate=date(draft.issueDate,'Emissão');
   if(issueDate.slice(0,4)!==number.slice(0,4)) invalid('Exercício incompatível com emissão.');
   if (!Array.isArray(draft.sequences)||!draft.sequences.length||draft.sequences.length>100) invalid('Informe os sequenciais da NC.');
@@ -239,7 +244,7 @@ export function manualNc(draft: Input, member: CreditMember): SagHtmlCreditDraft
     seen.add(sequence);
     if (!Array.isArray(s.destination)||!s.destination.length||s.destination.length>100||
         !Array.isArray(s.origin)||!s.origin.length||s.origin.length>100) invalid('Informe células de origem e destino.');
-    const origin=s.origin.map(c=>cell(c,member)),destination=s.destination.map(c=>cell(c,member));
+    const origin=s.origin.map(c=>cell(c,beneficiaryUg)),destination=s.destination.map(c=>cell(c,beneficiaryUg));
     const totalCents=sum(destination.map(c=>c.cents));
     if(sum(origin.map(c=>c.cents))!==totalCents) invalid('Origem e destino têm valores divergentes.');
     return {sequence,totalCents,origin,destination};
@@ -248,7 +253,7 @@ export function manualNc(draft: Input, member: CreditMember): SagHtmlCreditDraft
   const documentTotalCents=integer(draft.documentTotalCents,'Total do documento',totalCents);
   if(draft.totalCents!==undefined&&draft.totalCents!==totalCents) invalid('Total das células divergente.');
   if(draft.operation!=='DESCENTRALIZACAO'||draft.decentralization!=='PROVISAO') invalid('Ajustes de crédito exigem movimentação separada.');
-  return {number,fullNumber,issuingUg,beneficiaryUg:member.ug,issueDate,
+  return {number,fullNumber,issuingUg,beneficiaryUg,issueDate,
     operation:'DESCENTRALIZACAO',decentralization:'PROVISAO',sourceSystem:'MANUAL',
     description:string(draft.description,'Descrição'),deadline:deadline(draft.deadline,issueDate),
     documentTotalCents,totalCents,sequences,warnings:[],requiresReview:true};
@@ -257,7 +262,7 @@ export function confirmNc(body: Input, member: CreditMember): CreateCreditInput 
   const draft=object(body.draft);
   const source=body.source;
   if(source!=='html'&&source!=='manual') invalid('Origem da NC inválida.');
-  const parsed=source==='html'?parseNc(fileFromDraft(draft,NC_MAX),member):manualNc(draft,member);
+  const parsed=source==='html'?parseNc(fileFromDraft(draft,NC_MAX),member,draft.beneficiaryUg):manualNc(draft,member);
   // Imported amounts/identity are immutable. Resolve only missing PI, by explicit
   // sequence and row index; never accept arbitrary replacement of parsed rows.
   if(source==='html' && draft.piCorrections!==undefined) {
@@ -283,7 +288,9 @@ export function confirmNe(body: Input, member: CreditMember): CreateCommitmentIn
     const issueDate=date(draft.issueDate,'Emissão');
     const supplierCnpj=string(draft.supplierCnpj,'CNPJ/CPF').replace(/[.\/-]/g,'');
     if(!/^(?:\d{11}|\d{14})$/.test(supplierCnpj))invalid('Informe o CPF ou CNPJ do favorecido.');
-    return {draft:{number,ug:member.ug,issueDate,description:string(draft.description,'Finalidade'),supplier:string(draft.supplier,'Fornecedor'),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1),nd:pattern(draft.nd,'ND',/^\d{6}$/),ptres:pattern(draft.ptres,'PTRES',/^\d{6}$/),fonte:pattern(draft.fonte,'Fonte',/^\d{10}$/),ugr:pattern(draft.ugr,'UGR',/^\d{6}$/),pi:pattern(draft.pi,'PI',/^[A-Z0-9]{1,20}$/)},creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,expectedCreditRevision:optionalRevision(body.expectedCreditRevision)};
+    const documentUg=draft.ug??member.ug;
+    if(!allowsCreditDocumentUg(member.ug,documentUg))invalid('UG da NE não autorizada.','NE_UG');
+    return {draft:{number,ug:documentUg,issueDate,description:string(draft.description,'Finalidade'),supplier:string(draft.supplier,'Fornecedor'),supplierCnpj,netCents:integer(draft.netCents,'Valor líquido',1),nd:pattern(draft.nd,'ND',/^\d{6}$/),ptres:pattern(draft.ptres,'PTRES',/^\d{6}$/),fonte:pattern(draft.fonte,'Fonte',/^\d{10}$/),ugr:pattern(draft.ugr,'UGR',/^\d{6}$/),pi:pattern(draft.pi,'PI',/^[A-Z0-9]{1,20}$/)},creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),cellId:id(body.cellId),acknowledgeDeficit:optionalAck(body.acknowledgeDeficit),acknowledgeBudgetDifference:body.acknowledgeBudgetDifference===true,expectedCreditRevision:optionalRevision(body.expectedCreditRevision)};
   }
   const parsed=parseNe(fileFromDraft(draft,NE_MAX),member);
   const confirmed= draft.budget === undefined ? {} : object(draft.budget);
@@ -302,7 +309,7 @@ export function confirmNe(body: Input, member: CreditMember): CreateCommitmentIn
   // Reconcile ambiguous amounts before registration; never let a supplied amount override PDF.
   if(parsed.warnings.some(w=>/diverge|divergência/i.test(w))) invalid('Valores do PDF divergentes. Concilie antes de registrar.','NE_AMOUNT_CONFLICT');
   return {
-    draft:{number:parsed.number,ug:member.ug,issueDate:parsed.issueDate,description:string(parsed.description,'Descrição'),
+    draft:{number:parsed.number,ug:parsed.ug,issueDate:parsed.issueDate,description:string(parsed.description,'Descrição'),
       supplier:string(parsed.supplier,'Fornecedor'),supplierCnpj:pattern(parsed.supplierCnpj,'CNPJ',/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/),
       netCents:parsed.netCents,nd,ptres,fonte,ugr,pi},
     creditId:id(body.creditId),centerId:pattern(body.centerId,'Centro',/^[A-Za-z0-9_-]{1,64}$/),

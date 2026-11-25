@@ -14,6 +14,7 @@ const firestoreUrl=moduleUrl(read('lib/server/creditControlFirestore.ts')
   .replace("import firebaseConfig from '../../firebase-applet-config.json';","const firebaseConfig={projectId:'demo-credit-r1'};")
   .replace("import { getGoogleAccessToken } from './sectorProvisioningAdmin';","const getGoogleAccessToken=async()=> 'synthetic-test-token';"));
 const store=await import(moduleUrl(read('lib/server/creditControlStore.ts')
+  .replace("'../controle-credito/documentUgs.mjs'",JSON.stringify(new URL('../lib/controle-credito/documentUgs.mjs',import.meta.url).href))
   .replace("'./creditControlFirestore'",JSON.stringify(firestoreUrl))
   .replace("'../controle-credito/creditBalance'",JSON.stringify(balanceUrl))));
 const {encodeFields}=await import(firestoreUrl);
@@ -266,4 +267,26 @@ test('R1.5: independent list queries and whole-year catalogue keep scoped cursor
     assert.equal((await store.listCreditChoices(other,'2026')).choices.length,0);
     assert.equal((await store.listCreditChoices(centerA,'2026')).choices.length,2);
   }finally{globalThis.fetch=old;}
+});
+
+test('HGeSM document UGs share only authorized tenant, keep independent NC identity and match NE UG',async t=>{
+ const db=transport(), originalFetch=globalThis.fetch;globalThis.fetch=db.fetch;t.after(()=>{globalThis.fetch=originalFetch;});
+ const h={...manager,uid:'hgesm-manager',ug:'160416'};
+ db.seed('creditControlMembers/'+h.uid,{...h,active:true});
+ db.seed('creditUnits/160416/centers/A',{id:'A',name:'Centro A',active:true});
+ db.seed('creditUnits/160416/centers/B',{id:'B',name:'Centro B',active:true});
+ const make=ug=>{const a=ncInput();return {...a,draft:{...a.draft,beneficiaryUg:ug,sequences:[{sequence:'1',totalCents:10000,origin:[],destination:[{...cell,ug}]}]}};};
+ const first=await store.createCredit(h,make('160416'));
+ const second=await store.createCredit(h,make('167416'));
+ assert.equal(first.credit.id,'888888_2026NC000001');
+ assert.equal(second.credit.id,'888888_2026NC000001_167416');
+ assert.equal(second.credit.beneficiaryUg,'167416');
+ assert.equal((await store.createCredit(h,make('167416'))).credit.id,second.credit.id);
+ await assert.rejects(store.createCredit(h,make('167417')),status(403));
+ await assert.rejects(store.getCredit({...h,ug:'167416'},second.credit.id),status(404));
+ const n=neInput(second.credit.id,'2026NE000001','A',3000,1);
+ await assert.rejects(store.createCommitment(h,{...n,draft:{...n.draft,ug:'160416'}}),status(422));
+ const saved=await store.createCommitment(h,{...n,draft:{...n.draft,ug:'167416'}});
+ assert.equal(saved.commitment.id,'167416_2026NE000001');assert.equal(saved.balance.availableCents,7000);
+ assert.equal((await store.getCredit(h,first.credit.id)).balance.availableCents,10000);
 });

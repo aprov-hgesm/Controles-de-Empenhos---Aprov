@@ -44,3 +44,14 @@ test('unknown or competing deadlines require review',()=>{
  const r2=parse(fixture().replace('30 NOV 26.','30 NOV 26. PRAZO DE EMPENHO 01 DEZ 26.'),'654321');
  assert.equal(r2.deadline,null);
 });
+
+test('authorized document UGs: auto-select single authorized group, explicit choice on multiple, refuse unrelated',()=>{
+ const html=fixture(group('167416','2,00',oneSeq('167416',1,'2,00')),'2,00');
+ assert.equal(parse(html,['160416','167416']).beneficiaryUg,'167416');
+ assert.equal(parse(html,['160416','167416']).totalCents,200);
+ assert.throws(()=>parse(html,['160417']));
+ const both=fixture(group('160416','3,00',oneSeq('160416',1,'3,00'))+group('167416','2,00',oneSeq('167416',1,'2,00')),'5,00','2');
+ assert.throws(()=>parse(both,['160416','167416']),/mais de uma UG autorizada/);
+ assert.equal(parse(both,'160416').totalCents,300);
+ assert.equal(parse(both,'167416').totalCents,200);
+});
