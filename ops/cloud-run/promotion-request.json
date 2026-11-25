@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "authorizationMode": "explicit_chat_request",
   "authorizedBy": "Moriark",
-  "revision": "emprovex-cloudrun-candidate-g8c28c9ed8166-50",
-  "sourceSha": "8c28c9ed8166fd2fd04d8d2f6cb4a4cf19067c11",
-  "reason": "Autorização expressa do proprietário para publicar Controle de Crédito R1.2. PR #561: seis workflows aprovados no commit e024417071c28613a1086bb50c96e6477102dde7, árvore Git idêntica à main 0f08d9419df47335368ff3f9f7826356a4974451. Stage 45519728996 SUCCESS, revisão Ready 0% tráfego, digest sha256:c2fb5891f2e2794be766f8f3e395063706661162bb4f4bafd90fe1bc561117e6; saúde e proteção de cobrança aprovadas. Core Protection 45519728994 e Application CI 45519729188, incluindo gates finais, SUCCESS. GOV-SIMP: reaproveitar evidências, promover exclusivamente revisão exata pelo pipeline oficial com rollback automático. Não alterar IAM, Firestore, billing ou credenciais. Homologação operacional com documentos e contas reais permanece pendente."
+  "revision": "emprovex-cloudrun-candidate-g31573557a870-52",
+  "sourceSha": "31573557a8704ef2027b26e57e8c8cc6b6ca917f",
+  "reason": "Autorização expressa do proprietário para publicar Controle de Crédito R1.3. PR #562: seis workflows aprovados no commit 232770d89b3c6985d1957e645ed99810ad20bc20, árvore Git idêntica à main 279d70f4a0db1355c3ed793da43574f9ec64b588. Stage 45525656292 SUCCESS, revisão Ready 0% tráfego, digest sha256:078031eab9e317b4d13c1ddea0e3e22f14a484419fff2a5fbc5a6d91911d316b; saúde e proteção de cobrança aprovadas. Core Protection 45525656532 e Application CI 45525656287 SUCCESS. GOV-SIMP: reaproveitar evidências e promover exclusivamente revisão exata pelo pipeline oficial com rollback automático. Não alterar IAM, Firestore, billing ou credenciais. Homologação operacional com documentos e contas reais permanece pendente."
 }
