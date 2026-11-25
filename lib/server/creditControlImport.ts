@@ -211,7 +211,7 @@ export function parseNe(bytes: Uint8Array, member: CreditMember, updated=false) 
     ['UGR',result.ugr,/^\d{6}$/],
     ['PI',result.planoInterno,/^[A-Z0-9]{1,20}$/],
   ] as const) if (!value || !re.test(value)) warnings.push(label+' ausente ou inválido; confirme no original.');
-  return {...result, number:match[1]+'NE'+match[2].padStart(6,'0'),issueDate,netCents,warnings,requiresReview:true as const};
+  return {...result, ug:result.ug, number:match[1]+'NE'+match[2].padStart(6,'0'),issueDate,netCents,warnings,requiresReview:true as const};
 }
 function cell(raw: unknown, beneficiaryUg: string) {
   const c=object(raw);
