@@ -84,11 +84,11 @@ function DocumentPanel({entityType,entityId,user,canUpload}:Props){
   const change=(e:ChangeEvent<HTMLInputElement>)=>{setFile(e.target.files?.[0]||null);e.target.value='';};
   return <section className="rounded-xl border border-slate-200 p-4 space-y-3">
     <h3 className="font-semibold">Documentos</h3>
-    {canUpload?<><p className="text-sm text-slate-600">Anexe o original após salvar o registro financeiro. O arquivo permanece privado na conta Google autorizada.</p>
+    {canUpload?<><p className="text-sm text-slate-600">Anexe agora ou depois o documento original. Cada versão fica preservada na pasta privada da UG. Para alterar o valor de uma NE após anulação, use Substituir PDF da NE na consulta financeira.</p>
       <CreditDriveControl/>
       <input aria-label="Arquivo original" type="file" accept={entityType==='nc'?'.html,.htm,text/html':'.pdf,application/pdf'} onChange={change} disabled={busy}/>
       {file&&<p className="text-sm break-all">{file.name}</p>}
-      <button type="button" className={action} disabled={!file||busy||!drive.connected} onClick={()=>void save()}>Anexar / tentar novamente</button>
+      <button type="button" className={action} disabled={!file||busy||!drive.connected} onClick={()=>void save()}>Anexar documento</button>
     </>:<p className="text-sm text-slate-600">Consulta reconstruída apenas com os dados autorizados do seu centro.</p>}
     {docs.length===0&&<p className="text-sm text-slate-500">Nenhum documento disponível.</p>}
     {docs.map(d=><div key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
