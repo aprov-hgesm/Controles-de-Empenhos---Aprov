@@ -78,3 +78,33 @@ test('R1.3 official images, direct edit, deletion confirmation and document gene
   assert.match(read('app/api/controle-credito/notas-empenho/route.ts'),/export async function DELETE[\s\S]*requireCreditMember\(request,true\)/);
 });
 function requireForProfileTest(){return name=>readFileSync(new URL('../public/branding/'+encodeURIComponent(name),import.meta.url));}
+
+test('R1.4 reuses operational auth loader, circular profile art and single Drive control while preserving report filters',()=>{
+  const page=read('app/controle-credito/page.tsx');
+  const w=read('features/controle-credito/ui/Workspace.tsx');
+  const docs=read('features/controle-credito/documents/CreditDocuments.tsx');
+  const avatar=read('features/controle-credito/ui/CreditProfileAvatar.tsx');
+  const drive=read('features/controle-credito/documents/CreditDriveProvider.tsx');
+  assert.match(page,/if\(loading\)return <EmprovexAuthLoading hasAuthenticatedIdentity=\{Boolean\(user\)\}/);
+  assert.match(read('app/login/page.tsx'),/<EmprovexAuthLoading hasAuthenticatedIdentity/);
+  assert.match(avatar,/overflow-hidden rounded-full/);
+  assert.match(avatar,/rounded-full object-contain/);
+  assert.doesNotMatch(avatar,/rounded-xl border/);
+  const sidebar=w.slice(w.indexOf('<aside aria-label='),w.indexOf('</aside>'));
+  assert.doesNotMatch(sidebar,/member\.email|member\.ug|Autorizado/);
+  assert.match(sidebar,/creditProfileName\(profile\)/);
+  assert.equal((w.match(/<CreditDriveControl\b/g)||[]).length,1);
+  assert.match(w,/<CreditDriveControl compact\/>/);
+  assert.doesNotMatch(docs,/<CreditDriveControl\b/);
+  assert.match(drive,/d\.disconnect\(\);setMenu\(false\)/);
+  assert.match(w,/documentMode==='reports'/);
+  assert.match(w,/docKind\+':'\+selectedDoc.id/); // document key includes note type
+  assert.match(w,/entityType=\{docKind\} entityId=\{selectedDoc.id\}/);
+  assert.match(w,/visibleDocs\.map/);
+  for(const key of ['saldo','prazos','nc','nc-detalhe','ne-centro'])assert.ok(w.includes("id:'"+key+"'"));
+  assert.match(w,/type:report,year,nc:/);
+  assert.match(w,/center:report==='ne-centro'\?reportCenter/);
+  assert.match(w,/from:report==='ne-centro'\?from/);
+  assert.match(w,/to:report==='ne-centro'\?to/);
+  assert.match(w,/t.availableCents<0\?'deficit':'available'/);
+});
