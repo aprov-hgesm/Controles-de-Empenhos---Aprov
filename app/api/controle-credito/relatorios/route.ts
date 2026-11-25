@@ -11,12 +11,12 @@ export async function GET(request:Request) {
     const member=await requireCreditMember(request),q=new URL(request.url).searchParams;
     const type=q.get('type')||'saldo',yearText=q.get('year')||new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',year:'numeric'}).format(new Date());
     if(!Object.prototype.hasOwnProperty.call(REPORT_TITLES,type)||!/^20\d{2}$/.test(yearText))throw new CreditAccessError(422,'Filtro de relatório inválido.');
-    const nc=['nc-detalhe','ne-centro','ne'].includes(type)?q.get('nc')?.trim().toUpperCase()||undefined:undefined;
-    const center=['ne-centro','ne'].includes(type)?q.get('center')||undefined:undefined;
+    const nc=['nc','nc-detalhe','ne-centro','ne'].includes(type)?q.get('nc')?.trim().toUpperCase()||undefined:undefined;
+    const center=['nc','nc-detalhe','ne-centro','ne'].includes(type)?q.get('center')||undefined:undefined;
     const from=['ne-centro','ne'].includes(type)?readDate(q.get('from')):undefined,to=['ne-centro','ne'].includes(type)?readDate(q.get('to')):undefined;
     if(nc&&!/^[A-Z0-9_]{1,160}$/.test(nc)||center&&!/^[A-Za-z0-9_-]{1,64}$/.test(center)||from&&to&&from>to)throw new CreditAccessError(422,'Confira o número da NC, centro e período informados.');
     if(member.role==='centro'&&center&&center!==member.centerId)throw new CreditAccessError(403,'Seu perfil só pode consultar o próprio centro de custos.');
-    const year=Number(yearText),view=await listFinance(member,{year,limit:100},true);
+    const year=Number(yearText),view=await listFinance(member,{year,limit:100,center},true);
     if(member.role==='centro'&&view.commitments.some(n=>n.centerId!==member.centerId))throw new CreditAccessError(503,'Projeção financeira inconsistente.');
     const lines=buildCreditReport(view,{type,nc,center,from,to});
     return creditPdfResponse(creditReportPdf(member,REPORT_TITLES[type],lines,year),'credito-'+type+'-'+year+'.pdf');

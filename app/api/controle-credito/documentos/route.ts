@@ -13,7 +13,7 @@ export async function POST(request:Request) {
   try {
     const member=await requireCreditMember(request,true);
     const form=await readDocumentForm(request);
-    if(form.entityType==='ne')return documentJson({error:'O arquivamento de NE foi desativado.'},422);
+    if(form.get('entityType')==='ne')return documentJson({error:'O arquivamento de NE foi desativado.'},422);
     return documentJson({document:await saveDocument(member,request,form)});
   } catch(e){return documentError(e);}
 }

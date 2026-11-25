@@ -536,6 +536,18 @@ export async function getCredit(member:CreditMember,key:string):Promise<CreditDe
     return projectedDetail(member,record);
   },true);
 }
+export async function listCreditCommitments(member:CreditMember,key:string,requestedCenter?:string){
+  own(member);
+  const center=requestedCenter?centerId(requestedCenter):member.centerId;
+  if(member.role==='centro'&&center!==member.centerId)return forbidden();
+  return creditTransaction(async tx=>{
+    const record=await getStoredCredit(tx,member,id(key));
+    const detail=projectedDetail(member,record);
+    if(center&&!detail.balance.centers.some(c=>c.centerId===center&&(c.basisPoints>0||c.commitmentCount>0)))return absent();
+    const notes=await linked(tx,member,record.id);
+    return {commitments:notes.filter(n=>!center||n.centerId===center).map(publicCommitment)};
+  },true);
+}
 export async function getCommitment(member:CreditMember,key:string):Promise<{commitment:CommitmentRecord}> {
   own(member);
   return creditTransaction(async tx=>{
