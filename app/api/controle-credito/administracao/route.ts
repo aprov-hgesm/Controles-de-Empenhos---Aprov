@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireCreditMember, creditAuthFailure, CreditAccessError } from '@/lib/server/creditControlAuth';
 import { listCreditAdministration, mutateCreditAdministration } from '@/lib/server/creditControlMembers';
+import {withCreditSharingLock} from '@/lib/server/creditSharingLock';
+import {revokeCreditShares} from '@/lib/server/creditControlDocuments';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const respond=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
@@ -24,6 +26,19 @@ export async function POST(request:Request){
     finally{reader.releaseLock();}
     let body:unknown;try{body=JSON.parse(text);}catch{throw new CreditAccessError(422,'JSON inválido.');}
     if(!body||typeof body!=='object'||Array.isArray(body))throw new CreditAccessError(422,'Dados inválidos.');
-    return respond(await mutateCreditAdministration(member,body as Record<string,unknown>));
+    const input=body as Record<string,unknown>;
+    return respond(await withCreditSharingLock(member,'administration',async()=>{
+      if(input.action==='revokeMember'||input.action==='saveMember'){
+        const current=await listCreditAdministration(member);
+        if(!('members' in current)||current.truncated)throw new CreditAccessError(409,'Não foi possível confirmar todos os acessos da UG.');
+        const old=current.members?.find(x=>x?.uid===input.uid);
+        if(old?.role==='centro'&&old.centerId&&(input.action==='revokeMember'||old.centerId!==input.centerId||old.email!==String(input.email).trim().toLowerCase())){
+          await revokeCreditShares(member,request,{centerId:old.centerId,email:old.email});
+        }
+      }else if(input.action==='saveCenter'&&input.active===false&&typeof input.id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(input.id)){
+        await revokeCreditShares(member,request,{centerId:input.id});
+      }
+      return mutateCreditAdministration(member,input);
+    }));
   }catch(error){return failure(error);}
 }
